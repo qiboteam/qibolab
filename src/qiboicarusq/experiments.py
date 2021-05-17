@@ -75,7 +75,7 @@ class IcarusQ(Experiment):
         pulse_file = 'C:/fpga_python/fpga/tmp/wave_ch1.csv'
 
         # Temporary calibration result placeholder when actual calibration is not available
-        from qibo.hardware import pulses
+        from qiboicarusq import pulses
         calibration_placeholder = [{
             "id": 0,
             "qubit_frequency": 3.0473825e9,
@@ -200,7 +200,7 @@ class AWGSystem(Experiment):
         pulse_file = 'C:/fpga_python/fpga/tmp/wave_ch1.csv'
 
         # Temporary calibration result placeholder when actual calibration is not available
-        from qibo.hardware import pulses
+        from qiboicarusq import pulses
         calibration_placeholder = [{
             "id": 0,
             "qubit_frequency": 3.06362669e9,
