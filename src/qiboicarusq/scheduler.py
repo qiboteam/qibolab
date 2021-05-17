@@ -2,8 +2,8 @@ import numpy as np
 from concurrent.futures import ThreadPoolExecutor, Future
 from qibo import K
 from qibo.config import raise_error
-from qibo.hardware import pulses
-from qibo.hardware.circuit import PulseSequence
+from qiboicarusq import pulses
+from qiboicarusq.circuit import PulseSequence
 
 
 class TaskScheduler:
@@ -93,5 +93,3 @@ class TaskScheduler:
         K.experiment.stop()
         res = K.experiment.download()
         return res
-
-        

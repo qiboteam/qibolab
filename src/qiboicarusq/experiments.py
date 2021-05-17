@@ -1,8 +1,8 @@
 import numpy as np
 from abc import ABC, abstractmethod
 from io import BytesIO
-from qibo.hardware import connections
-from qibo.hardware.instruments import AcquisitionController
+from qiboicarusq import connections
+from qiboicarusq.instruments import AcquisitionController
 from qibo.config import raise_error, log
 
 

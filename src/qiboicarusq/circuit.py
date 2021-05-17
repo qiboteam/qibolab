@@ -5,8 +5,8 @@ import tensorflow as tf
 from qibo import K, gates
 from qibo.abstractions import circuit
 from qibo.config import raise_error
-from qibo.hardware import pulses, tomography
 from qibo.core import measurements
+from qiboicarusq import pulses, tomography
 
 
 class PulseSequence:
