@@ -1,8 +1,7 @@
 import copy
 import bisect
 import numpy as np
-from qibo import K, gates
-from qibo.abstractions import circuit
+from qibo import gates
 from qibo.config import raise_error
 from qibo.core import measurements
 from qiboicarusq import pulses, tomography, experiment, scheduler
@@ -84,17 +83,7 @@ class PulseSequence:
         return ", ".join([pulse.serial() for pulse in self.pulses])
 
 
-class Circuit(circuit.AbstractCircuit):
-
-    def __init__(self, nqubits):
-        super().__init__(nqubits)
-        self.param_tensor_types = K.tensor_types
-
-    def _add_layer(self):
-        raise_error(NotImplementedError)
-
-    def fuse(self):
-        raise_error(NotImplementedError)
+class HardwareCircuit:
 
     @staticmethod
     def _probability_extraction(data, refer_0, refer_1):
@@ -215,15 +204,6 @@ class Circuit(circuit.AbstractCircuit):
 
                 self._final_state = output
 
-        return self._final_state
-
-    def __call__(self, nshots):
-        return self.execute(nshots)
-
-    @property
-    def final_state(self):
-        if self._final_state is None:
-            raise_error(RuntimeError)
         return self._final_state
 
     def _parse_result(self, qubit, raw_data):
