@@ -1,5 +1,5 @@
 import numpy as np
-from qibo.hardware.instruments import AcquisitionController
+from qiboicarusq.instruments import AcquisitionController
 from qiboicarusq.experiments.abstract import AbstractExperiment
 
 

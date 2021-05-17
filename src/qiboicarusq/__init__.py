@@ -1,3 +1,5 @@
+__version__ = '0.0.1-dev'
+
 from qiboicarusq.experiments import Experiment
 experiment = Experiment()
 from qiboicarusq.schedulers import TaskScheduler
