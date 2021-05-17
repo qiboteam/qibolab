@@ -1,9 +1,7 @@
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, Future
-from qibo import K
 from qibo.config import raise_error
-from qiboicarusq import pulses
-from qiboicarusq.circuit import PulseSequence
+from qiboicarusq import pulses, experiment
 
 
 class TaskScheduler:
@@ -47,6 +45,7 @@ class TaskScheduler:
         Returns:
             concurrent.futures.Future object representing task status
         """
+        from qiboicarusq.circuit import PulseSequence
         if not isinstance(pulse_sequence, PulseSequence):
             raise_error(TypeError, "Pulse sequence {} has invalid type."
                                    "".format(pulse_sequence))
@@ -60,13 +59,13 @@ class TaskScheduler:
     @staticmethod
     def _execute_pulse_sequence(pulse_sequence, nshots):
         wfm = pulse_sequence.compile()
-        K.experiment.upload(wfm)
-        K.experiment.start()
+        experiment.upload(wfm)
+        experiment.start()
         # NIY
         #self._pi_trig.trigger(shots, delay=50e6)
         # OPC?
-        K.experiment.stop()
-        res = K.experiment.download()
+        experiment.stop()
+        res = experiment.download()
         return res
 
     def execute_batch_sequence(self, pulse_batch, nshots):
@@ -82,14 +81,14 @@ class TaskScheduler:
         wfm = pulse_batch[0].compile()
         steps = len(pulse_batch)
         sample_size = len(wfm[0])
-        wfm_batch = np.zeros((K.experiment.static.nchannels, steps, sample_size))
+        wfm_batch = np.zeros((experiment.static.nchannels, steps, sample_size))
         for i in range(steps):
             wfm = pulse_batch[i].compile()
-            for j in range(K.experiment.static.nchannels):
+            for j in range(experiment.static.nchannels):
                 wfm_batch[j, i] = wfm[j]
 
-        K.experiment.upload_batch(wfm_batch, nshots)
-        K.experiment.start_batch(steps)
-        K.experiment.stop()
-        res = K.experiment.download()
+        experiment.upload_batch(wfm_batch, nshots)
+        experiment.start_batch(steps)
+        experiment.stop()
+        res = experiment.download()
         return res
