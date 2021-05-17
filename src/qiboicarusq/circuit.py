@@ -1,7 +1,6 @@
 import copy
 import bisect
 import numpy as np
-import tensorflow as tf
 from qibo import K, gates
 from qibo.abstractions import circuit
 from qibo.config import raise_error
@@ -162,7 +161,7 @@ class Circuit(circuit.AbstractCircuit):
                         ref_zero = np.array(self.qubit_config[q]["iq_state"]["0"])
                         ref_one = np.array(self.qubit_config[q]["iq_state"]["1"])
                         p = self._probability_extraction(data, ref_zero, ref_one)
-                        probabilities = tf.constant([1 - p, p])
+                        probabilities = np.array([1 - p, p])
                         output = measurements.MeasurementResult(target_qubits, probabilities, nshots)
 
                 self._final_state = output
@@ -211,7 +210,7 @@ class Circuit(circuit.AbstractCircuit):
                     tom = tomography.Tomography(amp, states)
                     tom.minimize(1e-5)
                     fit = tom.fit
-                    probabilities = tf.constant([fit[k, k].real for k in range(4)])
+                    probabilities = np.array([fit[k, k].real for k in range(4)])
                     output = measurements.MeasurementResult(target_qubits, probabilities, nshots)
 
                 self._final_state = output
