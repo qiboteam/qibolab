@@ -41,7 +41,8 @@ def test_gaussian_shape():
     assert gauss.sigma == 1.5
     assert repr(gauss) == "(gaussian, 1.5)"
     target_envelop = 4.4108940298803985
-    assert gauss.envelope(1.0, 0.2, 2.2, 4.5) == target_envelop
+    time = np.array([1.0])
+    assert gauss.envelope(time, 0.2, 2.2, 4.5) == target_envelop
 
 
 def test_drag_shape():
@@ -51,17 +52,18 @@ def test_drag_shape():
     assert drag.beta == 2.5
     assert repr(drag) == "(drag, 1.5, 2.5)"
     target_envelop = 4.4108940298803985 + 1.470298009960133j
-    assert drag.envelope(1.0, 0.2, 2.2, 4.5) == target_envelop
+    time = np.array([1.0])
+    assert drag.envelope(time, 0.2, 2.2, 4.5) == target_envelop
 
 
-@pytest.mark.skip("Skipping until the issue with `len(time)` is sorted out.")
 def test_swipht_shape():
     swipht = pulses.SWIPHT(2.2)
     assert swipht.name == "SWIPHT"
     assert swipht.g == 2.2
     assert repr(swipht) == "(SWIPHT, 2.2)"
     target_envelop = 4.4108940298803985
-    assert swipht.envelope(1.0, 0.2, 2.2, 4.5) == target_envelop
+    time = np.array([1.0])
+    assert swipht.envelope(time, 0.2, 2.2, 4.5) == 4.5
 
 
 # TODO: Fix these tests so that waveform is not zero
