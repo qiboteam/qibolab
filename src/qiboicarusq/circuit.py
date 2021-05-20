@@ -1,5 +1,4 @@
 import copy
-import bisect
 import numpy as np
 from qibo import gates
 from qibo.config import raise_error
@@ -42,40 +41,7 @@ class PulseSequence:
         """
         waveform = np.zeros((self.nchannels, self.sample_size))
         for pulse in self.pulses:
-            #if pulse.serial[0] == "P":
-            if isinstance(pulse, pulses.BasicPulse):
-                waveform = self._compile_basic(waveform, pulse)
-            #elif pulse.serial[0] == "M":
-            elif isinstance(pulse, pulses.MultifrequencyPulse):
-                waveform = self._compile_multi(waveform, pulse)
-            #elif pulse.serial[0] == "F":
-            elif isinstance(pulse, pulses.FilePulse):
-                waveform = self._compile_file(waveform, pulse)
-            else:
-                raise_error(TypeError, "Invalid pulse type {}.".format(pulse))
-        return waveform
-
-    def _compile_basic(self, waveform, pulse):
-        i_start = bisect.bisect(self.time, pulse.start)
-        #i_start = int((pulse.start / self.duration) * self.sample_size)
-        i_duration = int((pulse.duration / self.duration) * self.sample_size)
-        time = self.time[i_start:i_start + i_duration]
-        envelope = pulse.shape.envelope(time, pulse.start, pulse.duration, pulse.amplitude)
-        waveform[pulse.channel, i_start:i_start + i_duration] += envelope * np.sin(2 * np.pi * pulse.frequency * time + pulse.phase)
-        return waveform
-
-    def _compile_multi(self, waveform, pulse):
-        for m in pulse.members:
-            if m.serial[0] == "P":
-                waveform += self._compile_basic(waveform, m)
-            elif m.serial[0] == "F":
-                waveform += self._compile_file(waveform, m)
-        return waveform
-
-    def _compile_file(self, waveform, pulse):
-        i_start = int((pulse.start / self.duration) * self.sample_size)
-        arr = np.genfromtxt(self.file_dir, delimiter=',')[:-1]
-        waveform[pulse.channel, i_start:i_start + len(arr)] = arr
+            waveform = pulse.compile(waveform, self)
         return waveform
 
     def serialize(self):
