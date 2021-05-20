@@ -1,12 +1,10 @@
 import copy
 import bisect
 import numpy as np
-import tensorflow as tf
-from qibo import K, gates
-from qibo.abstractions import circuit
+from qibo import gates
 from qibo.config import raise_error
-from qibo.hardware import pulses, tomography
 from qibo.core import measurements
+from qiboicarusq import pulses, tomography, experiment, scheduler
 
 
 class PulseSequence:
@@ -21,17 +19,17 @@ class PulseSequence:
     """
     def __init__(self, pulses, duration=None):
         self.pulses = pulses
-        self.nchannels = K.experiment.static.nchannels
-        self.sample_size = K.experiment.static.sample_size
-        self.sampling_rate = K.experiment.static.sampling_rate
-        self.file_dir = K.experiment.static.pulse_file
+        self.nchannels = experiment.static.nchannels
+        self.sample_size = experiment.static.sample_size
+        self.sampling_rate = experiment.static.sampling_rate
+        self.file_dir = experiment.static.pulse_file
 
         if duration is None:
             self.duration = self.sample_size / self.sampling_rate
         else:
             self.duration = duration
             self.sample_size = int(duration * self.sampling_rate)
-        end = K.experiment.static.readout_pulse_duration + 1e-6
+        end = experiment.static.readout_pulse_duration + 1e-6
         self.time = np.linspace(end - self.duration, end, num=self.sample_size)
 
     def compile(self):
@@ -85,17 +83,7 @@ class PulseSequence:
         return ", ".join([pulse.serial() for pulse in self.pulses])
 
 
-class Circuit(circuit.AbstractCircuit):
-
-    def __init__(self, nqubits):
-        super().__init__(nqubits)
-        self.param_tensor_types = K.tensor_types
-
-    def _add_layer(self):
-        raise_error(NotImplementedError)
-
-    def fuse(self):
-        raise_error(NotImplementedError)
+class HardwareCircuit:
 
     @staticmethod
     def _probability_extraction(data, refer_0, refer_1):
@@ -121,7 +109,7 @@ class Circuit(circuit.AbstractCircuit):
 
         qubit_phases = np.zeros(self.nqubits)
         # Get calibration data
-        self.qubit_config = K.scheduler.fetch_config()
+        self.qubit_config = scheduler.fetch_config()
 
         # Compile pulse sequence
         if self.measurement_gate is None:
@@ -141,13 +129,13 @@ class Circuit(circuit.AbstractCircuit):
         # For one qubit, we can rely on IQ data projection to get the probability p
         if len(target_qubits) == 1:
             # Calculate qubit control pulse duration and move it before readout
-            qubit_times = K.experiment.static.readout_start_time - self._calculate_sequence_duration(self.queue)
+            qubit_times = experiment.static.readout_start_time - self._calculate_sequence_duration(self.queue)
             pulse_sequence = [pulse for gate in (self.queue + [measurement_gate])
                 for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)]
 
             # Execute pulse sequence and project data to probability if requested
             pulse_sequence = PulseSequence(pulse_sequence)
-            job = K.scheduler.execute_pulse_sequence(pulse_sequence, nshots)
+            job = scheduler.execute_pulse_sequence(pulse_sequence, nshots)
             raw_data = job.result()
             if measurement_level == 0:
                 self._final_state = raw_data
@@ -162,7 +150,7 @@ class Circuit(circuit.AbstractCircuit):
                         ref_zero = np.array(self.qubit_config[q]["iq_state"]["0"])
                         ref_one = np.array(self.qubit_config[q]["iq_state"]["1"])
                         p = self._probability_extraction(data, ref_zero, ref_one)
-                        probabilities = tf.constant([1 - p, p])
+                        probabilities = np.array([1 - p, p])
                         output = measurements.MeasurementResult(target_qubits, probabilities, nshots)
 
                 self._final_state = output
@@ -190,7 +178,7 @@ class Circuit(circuit.AbstractCircuit):
                     for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)])
 
             ps_array = [PulseSequence(ps) for ps in ps_array]
-            job = K.scheduler.execute_batch_sequence(ps_array, nshots)
+            job = scheduler.execute_batch_sequence(ps_array, nshots)
             raw_data = job.result()
 
             if measurement_level == 0:
@@ -211,31 +199,22 @@ class Circuit(circuit.AbstractCircuit):
                     tom = tomography.Tomography(amp, states)
                     tom.minimize(1e-5)
                     fit = tom.fit
-                    probabilities = tf.constant([fit[k, k].real for k in range(4)])
+                    probabilities = np.array([fit[k, k].real for k in range(4)])
                     output = measurements.MeasurementResult(target_qubits, probabilities, nshots)
 
                 self._final_state = output
 
         return self._final_state
 
-    def __call__(self, nshots):
-        return self.execute(nshots)
-
-    @property
-    def final_state(self):
-        if self._final_state is None:
-            raise_error(RuntimeError)
-        return self._final_state
-
     def _parse_result(self, qubit, raw_data):
-        final = K.experiment.static.ADC_length / K.experiment.static.ADC_sampling_rate
-        step = 1 / K.experiment.static.ADC_sampling_rate
+        final = experiment.static.ADC_length / experiment.static.ADC_sampling_rate
+        step = 1 / experiment.static.ADC_sampling_rate
         ADC_time_array = np.arange(0, final, step)[50:]
 
-        static_data = K.experiment.static.qubit_static_parameters[self.qubit_config[qubit]["id"]]
+        static_data = experiment.static.qubit_static_parameters[self.qubit_config[qubit]["id"]]
         ro_channel = static_data["channel"][2]
         # For now readout is done with mixers
-        IF_frequency = static_data["resonator_frequency"] - K.experiment.static.lo_frequency # downconversion
+        IF_frequency = static_data["resonator_frequency"] - experiment.static.lo_frequency # downconversion
 
         #raw_data = self.final_state.result()
         # TODO: Implement a method to detect when the readout signal starts in the ADC data

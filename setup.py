@@ -41,7 +41,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering :: Physics",
     ],
-    install_requires=['numpy'],
+    install_requires=['numpy', 'visa', 'qcodes'],
     python_requires=">=3.6.0",
     long_description=long_description,
     long_description_content_type='text/markdown',

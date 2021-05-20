@@ -2,9 +2,9 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 import qibo
-from qibo import K, gates
-from qibo.models import Circuit
+from qibo import models, gates
 from qibo.config import log, raise_error
+from qiboicarusq import experiment, scheduler
 qibo.set_backend("icarusq")
 
 
@@ -109,7 +109,7 @@ def randomized_benchmark(q, ngates):
             for gate in inverse_gates:
                 res = np.matmul(gate.unitary, res)
             if np.allclose(res, np.eye(2)):
-                c = Circuit(2)
+                c = models.Circuit(2)
                 c.add(initial_gates)
                 c.add(inverse_gates)
                 break
@@ -124,16 +124,16 @@ def randomized_benchmark(q, ngates):
 
 def main(qubit, ngates, nshots, address, username, password):
     if address is not None:
-        K.experiment.connect(address, username, password)
+        experiment.connect(address, username, password)
     else:
         # set hard=coded calibration data
-        K.scheduler._qubit_config = K.experiment.static.calibration_placeholder
+        scheduler._qubit_config = experiment.static.calibration_placeholder
 
     circuits = randomized_benchmark(qubit, ngates)
 
     results = []
     for circuit in circuits:
-        results.append(circuit(nshots)[qubit])
+        results.append(circuit(nshots=nshots)[qubit])
 
     sweep = range(1, ngates + 1)
     plt.plot(sweep, results)
