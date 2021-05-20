@@ -33,7 +33,7 @@ setup(
     description="Quantum hardware backend for IcarusQ experiment",
     author="The Qibo team",
     author_email="",
-    url="https://github.com/Quantum-TII/qiboicarusq",
+    url="https://github.com/qiboteam/qiboicarusq",
     packages=find_packages("src"),
     package_dir={"": "src"},
     zip_safe=False,
