@@ -171,7 +171,6 @@ class SWIPHT(PulseShape):
 
         ki_qq = self.g * np.pi
         t_g = 5.87 / (2 * abs(ki_qq))
-        # TODO: Check if using `len(time)` is correct here
         t = np.linspace(0, t_g, len(time))
 
         gamma = 138.9 * (t / t_g)**4 *(1 - t / t_g)**4 + np.pi / 4
