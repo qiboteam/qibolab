@@ -13,7 +13,7 @@ class AbstractExperiment(ABC):
     def connection(self):
         if self._connection is None:
             raise_error(RuntimeError, "Cannot establish connection.")
-        return self.connection
+        return self._connection
 
     @abstractmethod
     def connect(self):
