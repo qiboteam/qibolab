@@ -69,14 +69,19 @@ def test_tomography_find_beta():
     np.testing.assert_allclose(tom.find_beta(state), target_beta)
 
 
+def get_path():
+    filepath = os.path.dirname(os.path.realpath(__file__))
+    targetpath = os.path.join(filepath, "data")
+    if not os.path.exists(targetpath):
+        os.mkdir(targetpath)
+    return targetpath
+
+
 def test_tomography_default_gates():
     amplitudes = np.random.random(16)
     state = np.array([1, 2, 3, 4])
     tom = Tomography(amplitudes, state)
-    target_path = os.path.join(os.getcwd(), "data")
-    if not os.path.exists(target_path):
-        os.mkdir("results")
-    target_path = os.path.join(os.getcwd(), "data", "default_gates.npy")
+    target_path = os.path.join(get_path(), "default_gates.npy")
     if os.path.exists(target_path):
         target_gates = np.load(target_path)
         np.testing.assert_allclose(tom.gates, target_gates)
@@ -89,7 +94,7 @@ def test_tomography_linear():
     amplitudes = amplitudes / amplitudes.sum()
     state = np.array([0.48721439, 0.61111949, 0.44811308, 0.05143444])
     tom = Tomography(amplitudes, state)
-    target_path = os.path.join(os.getcwd(), "data", "linear_estimation.npy")
+    target_path = os.path.join(get_path(), "linear_estimation.npy")
     if os.path.exists(target_path):
         target_linear = np.load(target_path)
         np.testing.assert_allclose(tom.linear, target_linear)
@@ -108,7 +113,7 @@ def test_tomography_fit():
     tom.minimize()
     assert tom.success
 
-    target_path = os.path.join(os.getcwd(), "data", "mlefit_estimation.npy")
+    target_path = os.path.join(get_path(), "mlefit_estimation.npy")
     if os.path.exists(target_path):
         target_fit = np.load(target_path)
         np.testing.assert_allclose(tom.fit, target_fit)
@@ -128,9 +133,8 @@ def extract_json(filepath):
                           (2, 65.06114271984393), (3, 22.230579223385284)])
 def test_tomography_example(state_value, target_fidelity):
     target_file = "tomo_181120-{0:02b}.json".format(state_value)
-    print(target_file)
-    state_path = os.path.join(os.getcwd(), "data", "states_181120.json")
-    amplitude_path = os.path.join(os.getcwd(), "data", target_file)
+    state_path = os.path.join(get_path(), "states_181120.json")
+    amplitude_path = os.path.join(get_path(), target_file)
     if not os.path.exists(state_path):
         pytest.skip("Skipping tomography test because data are not available.")
     state = extract_json(state_path)
