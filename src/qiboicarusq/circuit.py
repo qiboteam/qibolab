@@ -71,8 +71,95 @@ class HardwareCircuit:
             new_data[0] = new_refer_1[0]
         return new_data[0]/new_refer_1[0]
 
-    def execute(self, nshots, measurement_level=2):
+    def _execute_one_qubit(self, nshots, measurement_level=2):
+        """For one qubit, we can rely on IQ data projection to get the probability p."""
+        measurement_gate = self.measurement_gate
+        target_qubits = measurement_gate.target_qubits
+        # Calculate qubit control pulse duration and move it before readout
+        qubit_times = experiment.static.readout_start_time - self._calculate_sequence_duration(self.queue)
+        pulse_sequence = [pulse for gate in (self.queue + [measurement_gate])
+            for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)]
 
+        # Execute pulse sequence and project data to probability if requested
+        pulse_sequence = PulseSequence(pulse_sequence)
+        job = scheduler.execute_pulse_sequence(pulse_sequence, nshots)
+        raw_data = job.result()
+        if measurement_level == 0:
+            self._final_state = raw_data
+        else:
+            for q in target_qubits:
+                data = self._parse_result(q, raw_data) # Get IQ values
+
+                if measurement_level == 1:
+                    output = data
+
+                elif measurement_level == 2:
+                    ref_zero = np.array(self.qubit_config[q]["iq_state"]["0"])
+                    ref_one = np.array(self.qubit_config[q]["iq_state"]["1"])
+                    p = self._probability_extraction(data, ref_zero, ref_one)
+                    probabilities = np.array([1 - p, p])
+                    output = measurements.MeasurementResult(target_qubits, probabilities, nshots)
+
+            self._final_state = output
+
+        return self._final_state
+
+    def _execute_many_qubits(self, nshots, measurement_level=2):
+        """For 2+ qubits, since we do not have a TWPA
+        (and individual qubit resonator) on this system,
+        we need to do tomography to get the density matrix
+        """
+        # TODO: n-qubit dynamic tomography
+        ps_states = tomography.Tomography.basis_states(2)
+        prerotation = tomography.Tomography.gate_sequence(2)
+        ps_array = []
+
+        # Set pulse sequence to get the state vectors
+        for state_gate in ps_states:
+            qubit_times = np.zeros(self.nqubits) - max(self._calculate_sequence_duration(state_gate))
+            qubit_phases = np.zeros(self.nqubits)
+            ps_array.append([pulse for gate in (state_gate + [measurement_gate])
+                for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)])
+
+        # Append prerotation to the circuit sequence for tomography
+        for prerotation_sequence in prerotation:
+            qubit_phases = np.zeros(self.nqubits)
+            seq = self.queue + [gates.Align(*tuple(range(self.nqubits)))] + prerotation_sequence
+            qubit_times = np.zeros(self.nqubits) - max(self._calculate_sequence_duration(seq))
+            ps_array.append([pulse for gate in (seq + [measurement_gate])
+                for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)])
+
+        ps_array = [PulseSequence(ps) for ps in ps_array]
+        job = scheduler.execute_batch_sequence(ps_array, nshots)
+        raw_data = job.result()
+
+        if measurement_level == 0:
+            self._final_state = raw_data
+        else:
+            data = [self._parse_result(0, raw_data[k]) for k in range(len(ps_array))] # Get IQ values
+
+            if measurement_level == 1:
+                output = data
+
+            elif measurement_level == 2:
+                # Map each measurement to the phase value and seperate state from prerotations
+                data = np.array([np.arctan2(data[k][1], data[k][0]) * 180 / np.pi for k in range(len(ps_array))])
+                states = data[0:4]
+                amp = data[4:20]
+
+                # TODO: Repeated minimize, tomography fail decision, tolerance
+                tom = tomography.Tomography(amp, states)
+                tom.minimize(1e-5)
+                fit = tom.fit
+                probabilities = np.array([fit[k, k].real for k in range(4)])
+                output = measurements.MeasurementResult(target_qubits, probabilities, nshots)
+
+            self._final_state = output
+
+        return self._final_state
+
+
+    def execute(self, nshots, measurement_level=2):
         qubit_phases = np.zeros(self.nqubits)
         # Get calibration data
         self.qubit_config = scheduler.fetch_config()
@@ -80,8 +167,6 @@ class HardwareCircuit:
         # Compile pulse sequence
         if self.measurement_gate is None:
             raise_error(RuntimeError, "No measurement register assigned")
-        measurement_gate = self.measurement_gate
-        target_qubits = measurement_gate.target_qubits
 
         # Parse results according to desired measurement level
 
@@ -90,87 +175,11 @@ class HardwareCircuit:
         # Level 1: IQ Values
         # Level 2: Qubit State
 
-        # TODO: Move data fitting to qibo.hardware.experiments
-
-        # For one qubit, we can rely on IQ data projection to get the probability p
+        # TODO: Move data fitting to qiboicarusq.experiments
         if len(target_qubits) == 1:
-            # Calculate qubit control pulse duration and move it before readout
-            qubit_times = experiment.static.readout_start_time - self._calculate_sequence_duration(self.queue)
-            pulse_sequence = [pulse for gate in (self.queue + [measurement_gate])
-                for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)]
-
-            # Execute pulse sequence and project data to probability if requested
-            pulse_sequence = PulseSequence(pulse_sequence)
-            job = scheduler.execute_pulse_sequence(pulse_sequence, nshots)
-            raw_data = job.result()
-            if measurement_level == 0:
-                self._final_state = raw_data
-            else:
-                for q in target_qubits:
-                    data = self._parse_result(q, raw_data) # Get IQ values
-
-                    if measurement_level == 1:
-                        output = data
-
-                    elif measurement_level == 2:
-                        ref_zero = np.array(self.qubit_config[q]["iq_state"]["0"])
-                        ref_one = np.array(self.qubit_config[q]["iq_state"]["1"])
-                        p = self._probability_extraction(data, ref_zero, ref_one)
-                        probabilities = np.array([1 - p, p])
-                        output = measurements.MeasurementResult(target_qubits, probabilities, nshots)
-
-                self._final_state = output
-
-        # For 2+ qubits, since we do not have a TWPA (and individual qubit resonator) on this system, we need to do tomography to get the density matrix
+            return self._execute_one_qubit(nshots, measurement_level)
         else:
-            # TODO: n-qubit dynamic tomography
-            ps_states = tomography.Tomography.basis_states(2)
-            prerotation = tomography.Tomography.gate_sequence(2)
-            ps_array = []
-
-            # Set pulse sequence to get the state vectors
-            for state_gate in ps_states:
-                qubit_times = np.zeros(self.nqubits) - max(self._calculate_sequence_duration(state_gate))
-                qubit_phases = np.zeros(self.nqubits)
-                ps_array.append([pulse for gate in (state_gate + [measurement_gate])
-                    for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)])
-
-            # Append prerotation to the circuit sequence for tomography
-            for prerotation_sequence in prerotation:
-                qubit_phases = np.zeros(self.nqubits)
-                seq = self.queue + [gates.Align(*tuple(range(self.nqubits)))] + prerotation_sequence
-                qubit_times = np.zeros(self.nqubits) - max(self._calculate_sequence_duration(seq))
-                ps_array.append([pulse for gate in (seq + [measurement_gate])
-                    for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)])
-
-            ps_array = [PulseSequence(ps) for ps in ps_array]
-            job = scheduler.execute_batch_sequence(ps_array, nshots)
-            raw_data = job.result()
-
-            if measurement_level == 0:
-                self._final_state = raw_data
-            else:
-                data = [self._parse_result(0, raw_data[k]) for k in range(len(ps_array))] # Get IQ values
-
-                if measurement_level == 1:
-                    output = data
-
-                elif measurement_level == 2:
-                    # Map each measurement to the phase value and seperate state from prerotations
-                    data = np.array([np.arctan2(data[k][1], data[k][0]) * 180 / np.pi for k in range(len(ps_array))])
-                    states = data[0:4]
-                    amp = data[4:20]
-
-                    # TODO: Repeated minimize, tomography fail decision, tolerance
-                    tom = tomography.Tomography(amp, states)
-                    tom.minimize(1e-5)
-                    fit = tom.fit
-                    probabilities = np.array([fit[k, k].real for k in range(4)])
-                    output = measurements.MeasurementResult(target_qubits, probabilities, nshots)
-
-                self._final_state = output
-
-        return self._final_state
+            return self._execute_many_qubits(nshots, measurement_level)
 
     def _parse_result(self, qubit, raw_data):
         final = experiment.static.ADC_length / experiment.static.ADC_sampling_rate
