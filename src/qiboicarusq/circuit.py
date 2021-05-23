@@ -69,19 +69,47 @@ class HardwareCircuit:
             new_data[0] = 0
         elif new_data[0] > new_refer_1[0]:
             new_data[0] = new_refer_1[0]
-        return new_data[0]/new_refer_1[0]
+        return new_data[0] / new_refer_1[0]
+
+    def _calculate_sequence_duration(self, gate_sequence):
+        qubit_times = np.zeros(self.nqubits)
+        for gate in gate_sequence:
+            q = gate.target_qubits[0]
+
+            if isinstance(gate, gates.Align):
+                m = 0
+                for q in gate.target_qubits:
+                    m = max(m, qubit_times[q])
+
+                for q in gate.target_qubits:
+                    qubit_times[q] = m
+
+            elif isinstance(gate, gates.CNOT):
+                control = gate.control_qubits[0]
+                start = max(qubit_times[q], qubit_times[control])
+                qubit_times[q] = start + gate.duration(self.qubit_config)
+                qubit_times[control] = qubit_times[q]
+
+            else:
+                qubit_times[q] += gate.duration(self.qubit_config)
+
+        return qubit_times
+
+    def create_pulse_sequence(self, queue, qubit_times, qubit_phases):
+        args = [self.qubit_config, qubit_times, qubit_phases]
+        for gate in queue:
+            sequence.extend(gate.pulse_sequence(*args))
+        sequence.extend(self.measurement_gate.pulse_sequence(*args))
+        return PulseSequence(sequence)
 
     def _execute_one_qubit(self, nshots, measurement_level=2):
         """For one qubit, we can rely on IQ data projection to get the probability p."""
-        measurement_gate = self.measurement_gate
-        target_qubits = measurement_gate.target_qubits
+        target_qubits = self.measurement_gate.target_qubits
         # Calculate qubit control pulse duration and move it before readout
+        qubit_phases = np.zeros(self.nqubits)
         qubit_times = experiment.static.readout_start_time - self._calculate_sequence_duration(self.queue)
-        pulse_sequence = [pulse for gate in (self.queue + [measurement_gate])
-            for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)]
-
+        pulse_sequence = self.create_pulse_sequence(self.queue, qubit_times, qubit_phases)
         # Execute pulse sequence and project data to probability if requested
-        pulse_sequence = PulseSequence(pulse_sequence)
         job = scheduler.execute_pulse_sequence(pulse_sequence, nshots)
         raw_data = job.result()
         if measurement_level == 0:
@@ -113,23 +141,19 @@ class HardwareCircuit:
         ps_states = tomography.Tomography.basis_states(2)
         prerotation = tomography.Tomography.gate_sequence(2)
         ps_array = []
-
         # Set pulse sequence to get the state vectors
         for state_gate in ps_states:
             qubit_times = np.zeros(self.nqubits) - max(self._calculate_sequence_duration(state_gate))
             qubit_phases = np.zeros(self.nqubits)
-            ps_array.append([pulse for gate in (state_gate + [measurement_gate])
-                for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)])
+            ps_array.append(self.create_pulse_sequence(state_gate, qubit_times, qubit_phases))
 
         # Append prerotation to the circuit sequence for tomography
         for prerotation_sequence in prerotation:
             qubit_phases = np.zeros(self.nqubits)
             seq = self.queue + [gates.Align(*tuple(range(self.nqubits)))] + prerotation_sequence
             qubit_times = np.zeros(self.nqubits) - max(self._calculate_sequence_duration(seq))
-            ps_array.append([pulse for gate in (seq + [measurement_gate])
-                for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)])
+            ps_array.append(self.create_pulse_sequence(seq, qubit_times, qubit_phases))
 
-        ps_array = [PulseSequence(ps) for ps in ps_array]
         job = scheduler.execute_batch_sequence(ps_array, nshots)
         raw_data = job.result()
 
@@ -158,9 +182,7 @@ class HardwareCircuit:
 
         return self._final_state
 
-
     def execute(self, nshots, measurement_level=2):
-        qubit_phases = np.zeros(self.nqubits)
         # Get calibration data
         self.qubit_config = scheduler.fetch_config()
 
@@ -197,27 +219,3 @@ class HardwareCircuit:
         it = np.sum(raw_data[ro_channel[0]] * cos)
         qt = np.sum(raw_data[ro_channel[1]] * cos)
         return np.array([it, qt])
-
-    def _calculate_sequence_duration(self, gate_sequence):
-        qubit_times = np.zeros(self.nqubits)
-        for gate in gate_sequence:
-            q = gate.target_qubits[0]
-
-            if isinstance(gate, gates.Align):
-                m = 0
-                for q in gate.target_qubits:
-                    m = max(m, qubit_times[q])
-
-                for q in gate.target_qubits:
-                    qubit_times[q] = m
-
-            elif isinstance(gate, gates.CNOT):
-                control = gate.control_qubits[0]
-                start = max(qubit_times[q], qubit_times[control])
-                qubit_times[q] = start + gate.duration(self.qubit_config)
-                qubit_times[control] = qubit_times[q]
-
-            else:
-                qubit_times[q] += gate.duration(self.qubit_config)
-
-        return qubit_times
