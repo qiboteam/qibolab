@@ -1,5 +1,7 @@
 import pytest
 import numpy as np
+import qibo
+from qibo import gates, models
 from qiboicarusq import pulses
 from qiboicarusq.circuit import PulseSequence, HardwareCircuit
 # TODO: Parametrize these tests using experiment
@@ -40,4 +42,41 @@ def test_pulse_sequence_serialize():
     assert seq.serialize() == target_repr
 
 
-# TODO: Test HardwareCircuit
+def test_hardwarecircuit_probability_extraction():
+    data = np.array([0.94215182, 0.78059634])
+    refer_0 = np.array([0.0160003, 0.17812875])
+    refer_1 = np.array([0.06994418, 0.25887865])
+    result = HardwareCircuit._probability_extraction(data, refer_0, refer_1)
+    target_result = 1
+    np.testing.assert_allclose(result, target_result)
+
+
+def test_hardwarecircuit_sequence_duration():
+    from qiboicarusq import experiment
+    qibo.set_backend("icarusq")
+    c = models.Circuit(2)
+    c.add(gates.RX(0, theta=0.123))
+    c.add(gates.RY(0, theta=0.123))
+    c.add(gates.Align(0))
+    c.qubit_config = experiment.static.calibration_placeholder
+    qubit_times = c._calculate_sequence_duration(c.queue)
+    target_qubit_times = [1.940379e-09, 0]
+    np.testing.assert_allclose(qubit_times, target_qubit_times)
+
+
+def test_hardwarecircuit_create_pulse_sequence():
+    from qiboicarusq import experiment
+    qibo.set_backend("icarusq")
+    c = models.Circuit(2)
+    c.add(gates.RX(0, theta=0.123))
+    c.add(gates.RY(0, theta=0.123))
+    c.add(gates.Align(0))
+    c.add(gates.M(0))
+    c.qubit_config = experiment.static.calibration_placeholder
+    c.qubit_config[0]["gates"]["measure"] = []
+    qubit_times = np.zeros(c.nqubits) - c._calculate_sequence_duration(c.queue)
+    qubit_phases = np.zeros(c.nqubits)
+    pulse_sequence = c.create_pulse_sequence(c.queue, qubit_times, qubit_phases)
+    target_pulse_sequence = "P(3, -1.940378868990046e-09, 9.70189434495023e-10, 0.375, 747382500.0, 0.0, (rectangular)), "\
+                            "P(3, -9.70189434495023e-10, 9.70189434495023e-10, 0.375, 747382500.0, 90.0, (rectangular))"
+    pulse_sequence.serialize() == target_pulse_sequence

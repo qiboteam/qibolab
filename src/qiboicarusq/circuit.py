@@ -2,7 +2,7 @@ import copy
 import numpy as np
 from qibo import gates
 from qibo.config import raise_error
-from qibo.core import measurements
+from qibo.core import measurements, circuit
 from qiboicarusq import pulses, tomography, experiment, scheduler
 
 
@@ -49,7 +49,7 @@ class PulseSequence:
         return ", ".join([pulse.serial() for pulse in self.pulses])
 
 
-class HardwareCircuit:
+class HardwareCircuit(circuit.HardwareCircuit):
 
     @staticmethod
     def _probability_extraction(data, refer_0, refer_1):
@@ -97,6 +97,7 @@ class HardwareCircuit:
 
     def create_pulse_sequence(self, queue, qubit_times, qubit_phases):
         args = [self.qubit_config, qubit_times, qubit_phases]
+        sequence = []
         for gate in queue:
             sequence.extend(gate.pulse_sequence(*args))
         sequence.extend(self.measurement_gate.pulse_sequence(*args))
@@ -183,6 +184,7 @@ class HardwareCircuit:
         return self._final_state
 
     def execute(self, nshots, measurement_level=2):
+        super().execute(None, nshots, measurement_level)
         # Get calibration data
         self.qubit_config = scheduler.fetch_config()
 
