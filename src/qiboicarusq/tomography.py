@@ -1,5 +1,4 @@
 import numpy as np
-from qibo import matrices
 from qibo.config import raise_error
 from scipy.linalg import solve, sqrtm
 from scipy.optimize import minimize
@@ -175,7 +174,10 @@ class Tomography:
     @staticmethod
     def default_gates(beta):
         """Calculates default gate matrices for a given beta."""
-        I, X, Y, Z = matrices.I, matrices.X, matrices.Y, matrices.Z
+        I = np.eye(2, dtype=complex)
+        X = np.array([[0, 1], [1, 0]], dtype=complex)
+        Y = np.array([[0, -1j], [1j, 0]], dtype=complex)
+        Z = np.array([[1, 0], [0, -1]], dtype=complex)
         return np.array([
             beta[0]*np.kron(I,I) + beta[1]*np.kron(Z,I) + beta[2]*np.kron(I,Z) + beta[3]*np.kron(Z,Z),
             beta[0]*np.kron(I,I) - beta[1]*np.kron(Z,I) + beta[2]*np.kron(I,Z) - beta[3]*np.kron(Z,Z),
@@ -268,7 +270,7 @@ class Tomography:
 
         pi = np.pi
         pio2 = pi / 2
-        
+
         return [
             [gates.I(0), gates.I(1)],
             [gates.RX(0, pi), gates.I(1)],
@@ -300,4 +302,3 @@ class Tomography:
             [gates.RX(1, np.pi)], #|01>
             [gates.RX(1, np.pi), gates.Align(0, 1), gates.RX(0, np.pi)] #|11>
         ]
-
