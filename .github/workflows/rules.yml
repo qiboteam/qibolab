@@ -8,7 +8,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest] # TODO update this when going online
-        python-version: [3.9]
+        python-version: [3.8]
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v1
@@ -21,7 +21,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install pylint
         pip install pytest-cov
-        pip install .
+        pip install .[tests]
     - name: Test with pylint
       run: |
         pylint src -E -d E1123,E1120

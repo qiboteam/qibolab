@@ -21,6 +21,11 @@ def get_version():
             return mo.group(1)
 
 
+# Read in requirements
+requirements = open('requirements.txt').readlines()
+requirements = [r.strip() for r in requirements]
+
+
 # load long description from README
 this_directory = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(this_directory, "README.md"), encoding="utf-8") as f:
@@ -41,7 +46,10 @@ setup(
         "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering :: Physics",
     ],
-    install_requires=['numpy', 'visa', 'qcodes'],
+    install_requires=requirements,
+    extras_require={
+        "tests": ["qibo"],
+    },
     python_requires=">=3.6.0",
     long_description=long_description,
     long_description_content_type='text/markdown',
