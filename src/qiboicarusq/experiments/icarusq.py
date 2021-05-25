@@ -104,8 +104,7 @@ class IcarusQ(AbstractExperiment):
                 dump.seek(0)
                 #waveform.append(np.genfromtxt(local + 'ADC_CH{}.txt', delimiter=',')[:-1])
                 waveform[i] = np.genfromtxt(dump, delimiter=',')[:-1]
-
-        sftp.close()
+            sftp.close()
         dump.close()
 
         return waveform
