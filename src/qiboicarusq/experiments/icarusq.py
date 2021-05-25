@@ -74,7 +74,7 @@ class IcarusQ(AbstractExperiment):
         self.connection.exec_command('clk-control')
 
     def start(self, adc_delay=0.0, verbose=False):
-        stdin, stdout, stderr = self.connection.exec_command(
+        stdin, stdout, stderr = self.connection.exec_command( # pylint: disable=E1111
             'cd /tmp; ./cqtaws 1 {:.06f}'.format(adc_delay * 1e6))  # delay in us
         if verbose:
             for line in stdout:
@@ -104,7 +104,6 @@ class IcarusQ(AbstractExperiment):
                 dump.seek(0)
                 #waveform.append(np.genfromtxt(local + 'ADC_CH{}.txt', delimiter=',')[:-1])
                 waveform[i] = np.genfromtxt(dump, delimiter=',')[:-1]
-            sftp.close()
         dump.close()
 
         return waveform
