@@ -1,7 +1,7 @@
 import numpy as np
 from qibo import K
-from qibo.hardware import pulses
-from qibo.hardware.calibration import fitting, tasks
+from qiboicarusq import pulses
+from qiboicarusq.calibration import fitting, tasks
 
 class Qubit:
     def __init__(self):
@@ -65,7 +65,7 @@ def _execute_pulse_sequences(scheduler, pulse_sequences, static_config):
 
 def partial_qubit_calibration(static_config: dict, qubit: Qubit):
     """ Calibrate a qubit's frequency and pi-pulse only
-    
+
     """
     log = {}
 

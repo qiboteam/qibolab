@@ -1,7 +1,7 @@
 import numpy as np
 from qibo import K
 from qiboicarusq import pulses
-from qibo.hardware.calibration import fitting, tasks
+from qiboicarusq.calibration import fitting, tasks
 
 default_averaging = K.experiment.static.default_averaging
 
