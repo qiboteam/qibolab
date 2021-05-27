@@ -1,7 +1,7 @@
 import numpy as np
 from qibo import K
 from qiboicarusq import pulses
-from qibo.hardware.calibration import fitting, tasks
+from qiboicarusq.calibration import fitting, tasks
 
 default_averaging = K.experiment.static.default_averaging
 
@@ -94,8 +94,8 @@ def partial_qubit_calibration(static_config: dict, qubit: Qubit):
     return qubit, log
 
 if __name__ == "__main__":
-    from qibo.hardware.scheduler import TaskScheduler
     import json
+    from qiboicarusq.schedulers import TaskScheduler
     ts = TaskScheduler()
     static_config = K.experiment.static.qubit_static_parameters[0]
     qb = Qubit()

@@ -8,7 +8,7 @@ import visa
 class QuicSyn():
     def __init__(self, address: Optional[str] = 'ASRL4::INSTR',
                  timeout: Optional[Union[int, float]] = 10000):
-        rm = visa.ResourceManager()
+        rm = visa.ResourceManager() # pylint: disable=E1101
         self.synt = rm.open_resource(address, timeout=timeout)
 
     def setup(self, frequency: Union[int, float]) -> None:

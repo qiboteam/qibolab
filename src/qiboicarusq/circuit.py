@@ -177,6 +177,7 @@ class HardwareCircuit(circuit.HardwareCircuit):
                 tom.minimize(1e-5)
                 fit = tom.fit
                 probabilities = np.array([fit[k, k].real for k in range(4)])
+                target_qubits = self.measurement_gate.target_qubits
                 output = measurements.MeasurementResult(target_qubits, probabilities, nshots)
 
             self._final_state = output
@@ -200,7 +201,7 @@ class HardwareCircuit(circuit.HardwareCircuit):
         # Level 2: Qubit State
 
         # TODO: Move data fitting to qiboicarusq.experiments
-        if len(target_qubits) == 1:
+        if len(self.measurement_gate.target_qubits) == 1:
             return self._execute_one_qubit(nshots, measurement_level)
         else:
             return self._execute_many_qubits(nshots, measurement_level)

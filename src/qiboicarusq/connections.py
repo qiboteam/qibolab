@@ -28,7 +28,7 @@ class Connection(ABC):
 class ParamikoSSH(Connection):
 
     def __init__(self, hostname, username, password):
-        import paramiko
+        import paramiko # pylint: disable=E0401
         self.ssh = paramiko.SSHClient()
         self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self.ssh.connect(hostname=hostname, username=username, password=password)

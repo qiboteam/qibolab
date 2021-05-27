@@ -7,7 +7,7 @@ import visa
 
 class RG():
     def __init__(self, address: str = 'TCPIP0::192.168.0.7::INSTR'):
-        rm = visa.ResourceManager()
+        rm = visa.ResourceManager() # pylint: disable=E1101
         self.RG = rm.open_resource(address)
         self.RG.write(':SOUR1:FUNC:SHAP DC') #Change waveform to DC
 

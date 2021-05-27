@@ -59,7 +59,7 @@ def test_hardwarecircuit_sequence_duration():
     c.add(gates.RY(0, theta=0.123))
     c.add(gates.Align(0))
     c.qubit_config = experiment.static.calibration_placeholder
-    qubit_times = c._calculate_sequence_duration(c.queue)
+    qubit_times = c._calculate_sequence_duration(c.queue) # pylint: disable=E1101
     target_qubit_times = [1.940379e-09, 0]
     np.testing.assert_allclose(qubit_times, target_qubit_times)
 
@@ -74,9 +74,9 @@ def test_hardwarecircuit_create_pulse_sequence():
     c.add(gates.M(0))
     c.qubit_config = experiment.static.calibration_placeholder
     c.qubit_config[0]["gates"]["measure"] = []
-    qubit_times = np.zeros(c.nqubits) - c._calculate_sequence_duration(c.queue)
+    qubit_times = np.zeros(c.nqubits) - c._calculate_sequence_duration(c.queue) # pylint: disable=E1101
     qubit_phases = np.zeros(c.nqubits)
-    pulse_sequence = c.create_pulse_sequence(c.queue, qubit_times, qubit_phases)
+    pulse_sequence = c.create_pulse_sequence(c.queue, qubit_times, qubit_phases) # pylint: disable=E1101
     target_pulse_sequence = "P(3, -1.940378868990046e-09, 9.70189434495023e-10, 0.375, 747382500.0, 0.0, (rectangular)), "\
                             "P(3, -9.70189434495023e-10, 9.70189434495023e-10, 0.375, 747382500.0, 90.0, (rectangular))"
     pulse_sequence.serialize() == target_pulse_sequence
