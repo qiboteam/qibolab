@@ -18,7 +18,7 @@ class AWG():
     """
     def __init__(self, address: Optional[str] = 'TCPIP0::192.168.0.2::inst0::INSTR',
                  timeout: Optional[int] = 240 * 1000) -> None:
-        rm = visa.ResourceManager()
+        rm = visa.ResourceManager() # pylint: disable=E1101
         self.awg = rm.open_resource(address)
         self.awg.timeout = timeout
 
@@ -97,7 +97,7 @@ class AWG():
         # Write it into a file and transfer it via Windows Robocopy
         """ with open("./filesend.bat", "w+") as w:
             w.write('net use \\\\192.168.0.2\IPC$ oem  /USER:"OEM" \n')
-            w.write('robocopy {}\seq \\\\192.168.0.2\\Users\\OEM\\Documents'.format(os.getcwd()))   
+            w.write('robocopy {}\seq \\\\192.168.0.2\\Users\\OEM\\Documents'.format(os.getcwd()))
         p = subprocess.Popen("filesend.bat", shell=True)
         p.wait() """
 

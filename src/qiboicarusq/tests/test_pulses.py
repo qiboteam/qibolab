@@ -90,7 +90,7 @@ def test_multifrequency_pulse_compile():
 
 
 @pytest.mark.skip("Skipping this test because `sequence.file_dir` is not available")
-def test_basic_pulse_compile():
+def test_file_pulse_compile():
     seq = PulseSequence([])
     waveform = np.zeros((seq.nchannels, seq.sample_size))
     filep = pulses.FilePulse(0, 1.0, "file")
