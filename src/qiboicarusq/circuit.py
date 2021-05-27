@@ -184,12 +184,11 @@ class HardwareCircuit(circuit.HardwareCircuit):
 
         return self._final_state
 
-    def execute(self, nshots, measurement_level=2):
-        super().execute(None, nshots, measurement_level)
+    def execute(self, initial_state=None, nshots=None, measurement_level=2):
+        super().execute(initial_state, nshots, measurement_level)
         # Get calibration data
         self.qubit_config = scheduler.fetch_config()
 
-        # Compile pulse sequence
         if self.measurement_gate is None:
             raise_error(RuntimeError, "No measurement register assigned")
 
