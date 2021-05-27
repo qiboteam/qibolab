@@ -4,18 +4,6 @@ import json
 import numpy as np
 from qiboicarusq import tomography
 
-state_file = "./data/states_181120.json"
-
-measurement_files = [("./data/tomo_181120-00.json", rho_theory(0)),
-                     ("./data/tomo_181120-01.json", rho_theory(1)),
-                     ("./data/tomo_181120-10.json", rho_theory(2)),
-                     ("./data/tomo_181120-11.json", rho_theory(3))]
-
-
-parser = argparse.ArgumentParser()
-parser.add_argument("--index", default=0, type=int)
-parser.add_argument("--plot", action="store_true")
-
 
 def rho_theory(i):
     rho = np.zeros((4, 4), dtype=complex)
@@ -29,7 +17,20 @@ def extract(filename):
     return raw
 
 
-def plot(tomography, rho_theory, width=0.8, depth=0.8):
+state_file = "./data/states_181120.json"
+
+measurement_files = [("./data/tomo_181120-00.json", rho_theory(0)),
+                     ("./data/tomo_181120-01.json", rho_theory(1)),
+                     ("./data/tomo_181120-10.json", rho_theory(2)),
+                     ("./data/tomo_181120-11.json", rho_theory(3))]
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--index", default=0, type=int)
+parser.add_argument("--plot", action="store_true")
+
+
+def plotfunc(tomography, rho_theory, width=0.8, depth=0.8):
     """Plots histograms of theory and estimated density matrices.
 
     Args:
@@ -149,8 +150,7 @@ def main(index, plot):
     print("Fidelity: {}".format(fidelity))
 
     if plot:
-        from plot import plot # pylint: disable=import-error
-        plot(tom, rho_theory)
+        plotfunc(tom, rho_theory)
 
 
 if __name__ == "__main__":
