@@ -1,9 +1,9 @@
+import json
 import numpy as np
-from qibo import K
-from qiboicarusq import pulses
+from qiboicarusq import pulses, experiment, scheduler
 from qiboicarusq.calibration import fitting, tasks
 
-default_averaging = K.experiment.static.default_averaging
+default_averaging = experiment.static.default_averaging
 
 class Qubit:
     def __init__(self):
@@ -23,14 +23,14 @@ class Qubit:
         self.drive_channel = static_config["channel"][0]
 
 def _parse_result(raw_data, static_config):
-    final = K.experiment.static.sample_size / K.experiment.static.ADC_sampling_rate
-    step = 1 / K.experiment.static.ADC_sampling_rate
+    final = experiment.static.sample_size / experiment.static.ADC_sampling_rate
+    step = 1 / experiment.static.ADC_sampling_rate
     ADC_time_array = np.arange(0, final, step)
     ADC_time_array = ADC_time_array[50:]
 
     ro_channel = static_config["channel"][2]
     # For now readout is done with mixers
-    IF_frequency = static_config["resonator_frequency"] - K.experiment.static.lo_frequency # downconversion
+    IF_frequency = static_config["resonator_frequency"] - experiment.static.lo_frequency # downconversion
 
     cos = np.cos(2 * np.pi * IF_frequency * ADC_time_array)
     it = np.sum(raw_data[ro_channel[0]] * cos)
@@ -44,7 +44,7 @@ def _execute_pulse_sequences(pulse_sequences, static_config):
     steps = len(pulse_sequences)
     res = np.zeros((4, steps))
     for i in range(steps):
-        data = K.scheduler.execute_pulse_sequence(pulse_sequences[i], static_config).result()
+        data = scheduler.execute_pulse_sequence(pulse_sequences[i], static_config).result()
         it, qt, ampl, phase = _parse_result(data, static_config)
         res[0, i] = it
         res[1, i] = qt
@@ -87,17 +87,14 @@ def partial_qubit_calibration(static_config: dict, qubit: Qubit):
         "0": [res[0, idx_zero], res[1, idx_zero]],
         "1": [res[0, idx_one], res[1, idx_one]]
     }
-    freq_nyquist = freq - K.experiment.static.sampling_rate
+    freq_nyquist = freq - experiment.static.sampling_rate
     qubit["rx"] = [pulses.BasicPulse(channel, 0, pi_pulse, amplitude, freq_nyquist, 0, pulses.Rectangular())]
     qubit["ry"] = [pulses.BasicPulse(channel, 0, pi_pulse, amplitude, freq_nyquist, 90, pulses.Rectangular())]
 
     return qubit, log
 
 if __name__ == "__main__":
-    import json
-    from qiboicarusq.schedulers import TaskScheduler
-    ts = TaskScheduler()
-    static_config = K.experiment.static.qubit_static_parameters[0]
+    static_config = experiment.static.qubit_static_parameters[0]
     qb = Qubit()
     qb.load_from_staic_config(static_config)
     qb, log = partial_qubit_calibration(static_config, qb)

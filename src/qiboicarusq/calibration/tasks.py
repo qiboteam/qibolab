@@ -1,6 +1,6 @@
 import numpy as np
 from typing import List
-from qibo import K
+from qiboicarusq import experiment
 from qiboicarusq.circuit import PulseSequence
 from qiboicarusq.pulses import BasicPulse, Rectangular
 
@@ -24,10 +24,10 @@ def PulseSpectroscopy(frequency_start: float, frequency_stop: float, qubit_ampli
     seq = []
     pulse_length = 40e-6
     duration = 50e-6
-    pulse_start = K.experiment.static.readout_pulse_duration - pulse_length
+    pulse_start = experiment.static.readout_pulse_duration - pulse_length
 
     for freq in frequency_sweep:
-        pulse_freq = freq - K.experiment.static.sampling_rate
+        pulse_freq = freq - experiment.static.sampling_rate
         p = BasicPulse(channel, pulse_start, pulse_length, qubit_amplitude, pulse_freq, 0, Rectangular())
         ps = PulseSequence([p], duration)
         seq.append(ps)
@@ -55,10 +55,10 @@ def RabiTime(time_start: float, time_stop: float, time_step: float, qubit_freque
     duration = max(10e-6, time_stop + 7e-6)
     seq = []
     pulse_sweep = np.arange(time_start, time_stop, time_step)
-    freq = qubit_frequency - K.experiment.static.sampling_rate
+    freq = qubit_frequency - experiment.static.sampling_rate
 
     for pulse_length in pulse_sweep:
-        pulse_start = K.experiment.static.readout_pulse_duration - pulse_length
+        pulse_start = experiment.static.readout_pulse_duration - pulse_length
 
         p = BasicPulse(channel, pulse_start, pulse_length, qubit_amplitude, freq, 0, Rectangular())
         ps = PulseSequence([p], duration)
@@ -89,9 +89,9 @@ def Ramsey(tau_start, tau_stop, tau_step, qubit_frequency, qubit_amplitude, pi_p
     duration = max(10e-6, tau_stop + 7e-6)
     seq = []
     tau_sweep = np.arange(tau_start, tau_stop, tau_step)
-    freq = qubit_frequency - K.experiment.static.sampling_rate
+    freq = qubit_frequency - experiment.static.sampling_rate
     pi_half = pi_pulse / 2
-    p2_start = K.experiment.static.readout_pulse_duration - pi_half
+    p2_start = experiment.static.readout_pulse_duration - pi_half
     p2 = BasicPulse(channel, p2_start, pi_half, 0.75 / 2, freq, phase_shift, Rectangular())
 
     for tau in tau_sweep:
@@ -124,9 +124,9 @@ def Spinecho(qubit_frequency, qubit_amplitude, pi_pulse, channel, tau_start=0, t
     duration = max(3e-5, tau_stop + 7e-6)
     seq = []
     tau_sweep = np.arange(tau_start, tau_stop, tau_step)
-    freq = qubit_frequency - K.experiment.static.sampling_rate
+    freq = qubit_frequency - experiment.static.sampling_rate
     pi_half = pi_pulse / 2
-    p3_start = K.experiment.static.readout_pulse_duration - pi_half
+    p3_start = experiment.static.readout_pulse_duration - pi_half
     p3 = BasicPulse(channel, p3_start, pi_half, 0.75 / 2, freq, 0, Rectangular())
 
     for tau in tau_sweep:
@@ -163,11 +163,11 @@ def T1(qubit_frequency, qubit_amplitude, pi_pulse, channel, tau_start=-2e-6, tau
     duration = max(30e-6, tau_stop + 7e-6)
     seq = []
     tau_sweep = np.arange(tau_start, tau_stop, tau_step)
-    freq = qubit_frequency - K.experiment.static.sampling_rate
+    freq = qubit_frequency - experiment.static.sampling_rate
 
     for tau in tau_sweep:
         if tau >= 0:
-            start = K.experiment.static.readout_pulse_duration - tau
+            start = experiment.static.readout_pulse_duration - tau
             p = BasicPulse(channel, start, pi_pulse, 0.75 / 2, freq, 0, Rectangular())
             ps = PulseSequence([p], duration)
         else:
