@@ -49,7 +49,15 @@ class PulseSequence:
         return ", ".join([pulse.serial() for pulse in self.pulses])
 
 
-class HardwareCircuit(circuit.HardwareCircuit):
+class HardwareCircuit(circuit.Circuit):
+
+    def _add_layer(self):
+        raise_error(NotImplementedError, "VariationalLayer gate is not "
+                                         "implemented for hardware backends.")
+
+    def fuse(self):
+        raise_error(NotImplementedError, "Circuit fusion is not implemented "
+                                         "for hardware backends.")
 
     @staticmethod
     def _probability_extraction(data, refer_0, refer_1):
@@ -185,12 +193,15 @@ class HardwareCircuit(circuit.HardwareCircuit):
         return self._final_state
 
     def execute(self, initial_state=None, nshots=None, measurement_level=2):
-        super().execute(initial_state, nshots, measurement_level)
-        # Get calibration data
-        self.qubit_config = scheduler.fetch_config()
+        if initial_state is not None:
+            raise_error(ValueError, "Hardware backend does not support "
+                                    "initial state in circuits.")
 
         if self.measurement_gate is None:
             raise_error(RuntimeError, "No measurement register assigned")
+
+        # Get calibration data
+        self.qubit_config = scheduler.fetch_config()
 
         # Parse results according to desired measurement level
 
@@ -204,6 +215,9 @@ class HardwareCircuit(circuit.HardwareCircuit):
             return self._execute_one_qubit(nshots, measurement_level)
         else:
             return self._execute_many_qubits(nshots, measurement_level)
+
+    def __call__(self, initial_state=None, nshots=None, measurement_level=2):
+        return self.execute(initial_state, nshots, measurement_level)
 
     def _parse_result(self, qubit, raw_data):
         final = experiment.static.ADC_length / experiment.static.ADC_sampling_rate
