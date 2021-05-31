@@ -3,6 +3,7 @@ import math
 import copy
 from abc import ABC, abstractmethod
 from qibo import gates
+from qibo.config import raise_error
 
 
 class AbstractHardwareGate(ABC):
