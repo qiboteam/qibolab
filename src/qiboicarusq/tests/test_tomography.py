@@ -96,7 +96,7 @@ def test_tomography_default_gates():
     amplitudes = np.random.random(16)
     state = np.array([1, 2, 3, 4])
     tom = Tomography(amplitudes, state)
-    assert_regression_fixture(tom.gates, "default_gates.npy")
+    assert_regression_fixture(tom.gates, "default_gates")
 
 
 def test_tomography_linear():
@@ -104,7 +104,7 @@ def test_tomography_linear():
     amplitudes = amplitudes / amplitudes.sum()
     state = np.array([0.48721439, 0.61111949, 0.44811308, 0.05143444])
     tom = Tomography(amplitudes, state)
-    assert_regression_fixture(tom.linear, "linear_estimation.npy")
+    assert_regression_fixture(tom.linear, "linear_estimation")
 
 
 def test_tomography_fit():
@@ -117,7 +117,7 @@ def test_tomography_fit():
 
     tom.minimize()
     assert tom.success
-    assert_regression_fixture(tom.fit, "mlefit_estimation.npy")
+    assert_regression_fixture(tom.fit, "mlefit_estimation")
 
 
 def extract_json(filepath):

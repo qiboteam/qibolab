@@ -93,6 +93,7 @@ class HardwareCircuit(circuit.Circuit):
                     qubit_times[q] = m
 
             elif isinstance(gate, gates.CNOT):
+                # CNOT cannot be tested because calibration placeholder supports single qubit only
                 control = gate.control_qubits[0]
                 start = max(qubit_times[q], qubit_times[control])
                 qubit_times[q] = start + gate.duration(self.qubit_config)

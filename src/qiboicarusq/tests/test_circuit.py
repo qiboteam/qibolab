@@ -42,6 +42,15 @@ def test_pulse_sequence_serialize():
     assert seq.serialize() == target_repr
 
 
+def test_hardwarecircuit_errors():
+    qibo.set_backend("icarusq")
+    c = models.Circuit(5)
+    with pytest.raises(NotImplementedError):
+        c._add_layer()
+    with pytest.raises(NotImplementedError):
+        c.fuse()
+
+
 def test_hardwarecircuit_probability_extraction():
     data = np.array([0.94215182, 0.78059634])
     refer_0 = np.array([0.0160003, 0.17812875])
