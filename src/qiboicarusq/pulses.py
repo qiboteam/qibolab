@@ -7,16 +7,16 @@ from qibo.config import raise_error
 
 class Pulse(ABC):
     """Describes a pulse to be added onto the channel waveform."""
-    def __init__(self):
+    def __init__(self): # pragma: no cover
         self.channel = None
 
     @abstractmethod
-    def serial(self):
+    def serial(self): # pragma: no cover
         """Returns the serialized pulse."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def compile(self, waveform, sequence):
+    def compile(self, waveform, sequence): # pragma: no cover
         raise_error(NotImplementedError)
 
     def __repr__(self):
@@ -93,13 +93,14 @@ class FilePulse(Pulse):
         return waveform
 
 
-class PulseShape:
+class PulseShape(ABC):
     """Describes the pulse shape to be used
     """
-    def __init__(self):
+    def __init__(self): # pragma: no cover
         self.name = ""
 
-    def envelope(self, time, start, duration, amplitude):
+    @abstractmethod
+    def envelope(self, time, start, duration, amplitude): # pragma: no cover
         raise_error(NotImplementedError)
 
     def __repr__(self):
