@@ -66,10 +66,12 @@ def test_hardwarecircuit_sequence_duration():
     c = models.Circuit(2)
     c.add(gates.RX(0, theta=0.123))
     c.add(gates.RY(0, theta=0.123))
+    c.add(gates.H(0))
     c.add(gates.Align(0))
+    c.add(gates.M(0))
     c.qubit_config = experiment.static.calibration_placeholder
     qubit_times = c._calculate_sequence_duration(c.queue) # pylint: disable=E1101
-    target_qubit_times = [1.940379e-09, 0]
+    target_qubit_times = [3.911038e-08, 0]
     np.testing.assert_allclose(qubit_times, target_qubit_times)
 
 
@@ -79,6 +81,7 @@ def test_hardwarecircuit_create_pulse_sequence():
     c = models.Circuit(2)
     c.add(gates.RX(0, theta=0.123))
     c.add(gates.RY(0, theta=0.123))
+    c.add(gates.H(0))
     c.add(gates.Align(0))
     c.add(gates.M(0))
     c.qubit_config = experiment.static.calibration_placeholder

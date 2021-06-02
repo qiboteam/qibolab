@@ -10,11 +10,11 @@ class AbstractHardwareGate(ABC):
     module = sys.modules[__name__]
 
     @abstractmethod
-    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def duration(self, qubit_config):
+    def duration(self, qubit_config): # pragma: no cover
         raise_error(NotImplementedError)
 
 
@@ -119,6 +119,7 @@ class RY(AbstractHardwareGate, gates.RY):
 
 
 class CNOT(AbstractHardwareGate, gates.CNOT):
+    # CNOT gate is not tested because `qubit_config` placeholder is single qubit
 
     def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
         q = self.target_qubits[0]
