@@ -1,6 +1,5 @@
 import pytest
 import qiboicarusq
-import numpy as np
 
 
 def test_experiment_getter_setter():
