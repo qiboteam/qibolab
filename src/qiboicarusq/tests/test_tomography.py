@@ -1,8 +1,31 @@
 import os
 import json
+import pathlib
 import pytest
 import numpy as np
 from qiboicarusq.tomography import Cholesky, Tomography
+
+REGRESSION_FOLDER = pathlib.Path(__file__).with_name("regressions")
+
+
+def assert_regression_fixture(array, filename):
+    """Check array matches data inside filename.
+
+    Args:
+        array: numpy array
+        filename: fixture filename
+
+    If filename does not exists, this function
+    creates the missing file otherwise it loads
+    from file and compare.
+    """
+    filename = REGRESSION_FOLDER/filename
+    try:
+        target = np.load(filename)
+        np.testing.assert_allclose(array, target)
+    except: # pragma: no cover
+        # case not tested in GitHub workflows because files exist
+        np.save(filename, array)
 
 
 def test_cholesky_init():
@@ -69,24 +92,11 @@ def test_tomography_find_beta():
     np.testing.assert_allclose(tom.find_beta(state), target_beta)
 
 
-def get_path():
-    filepath = os.path.dirname(os.path.realpath(__file__))
-    targetpath = os.path.join(filepath, "data")
-    if not os.path.exists(targetpath):
-        os.mkdir(targetpath)
-    return targetpath
-
-
 def test_tomography_default_gates():
     amplitudes = np.random.random(16)
     state = np.array([1, 2, 3, 4])
     tom = Tomography(amplitudes, state)
-    target_path = os.path.join(get_path(), "default_gates.npy")
-    if os.path.exists(target_path):
-        target_gates = np.load(target_path)
-        np.testing.assert_allclose(tom.gates, target_gates)
-    else:
-        np.save(target_path, tom.gates)
+    assert_regression_fixture(tom.gates, "default_gates.npy")
 
 
 def test_tomography_linear():
@@ -94,12 +104,7 @@ def test_tomography_linear():
     amplitudes = amplitudes / amplitudes.sum()
     state = np.array([0.48721439, 0.61111949, 0.44811308, 0.05143444])
     tom = Tomography(amplitudes, state)
-    target_path = os.path.join(get_path(), "linear_estimation.npy")
-    if os.path.exists(target_path):
-        target_linear = np.load(target_path)
-        np.testing.assert_allclose(tom.linear, target_linear)
-    else:
-        np.save(target_path, tom.linear)
+    assert_regression_fixture(tom.linear, "linear_estimation.npy")
 
 
 def test_tomography_fit():
@@ -112,13 +117,7 @@ def test_tomography_fit():
 
     tom.minimize()
     assert tom.success
-
-    target_path = os.path.join(get_path(), "mlefit_estimation.npy")
-    if os.path.exists(target_path):
-        target_fit = np.load(target_path)
-        np.testing.assert_allclose(tom.fit, target_fit)
-    else:
-        np.save(target_path, tom.fit)
+    assert_regression_fixture(tom.fit, "mlefit_estimation.npy")
 
 
 def extract_json(filepath):
@@ -132,11 +131,9 @@ def extract_json(filepath):
                          [(0, 93.01278047175582), (1, 82.30795926024483),
                           (2, 65.06114271984393), (3, 22.230579223385284)])
 def test_tomography_example(state_value, target_fidelity):
-    target_file = "tomo_181120-{0:02b}.json".format(state_value)
-    state_path = os.path.join(get_path(), "states_181120.json")
-    amplitude_path = os.path.join(get_path(), target_file)
-    if not os.path.exists(state_path):
-        pytest.skip("Skipping tomography test because data are not available.")
+    state_path = REGRESSION_FOLDER / "states_181120.json"
+    amplitude_path = "tomo_181120-{0:02b}.json".format(state_value)
+    amplitude_path = REGRESSION_FOLDER / amplitude_path
     state = extract_json(state_path)
     amp = extract_json(amplitude_path)
     tom = Tomography(amp, state)
