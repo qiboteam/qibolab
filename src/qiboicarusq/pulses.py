@@ -87,6 +87,7 @@ class FilePulse(Pulse):
         return "F({}, {}, {})".format(self.channel, self.start, self.filename)
 
     def compile(self, waveform, sequence):
+        # `FilePulse` cannot be tested in CI because a file is not available
         i_start = int((self.start / sequence.duration) * sequence.sample_size)
         arr = np.genfromtxt(sequence.file_dir, delimiter=',')[:-1]
         waveform[self.channel, i_start:i_start + len(arr)] = arr
