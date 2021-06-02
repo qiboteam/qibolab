@@ -5,23 +5,23 @@ from qibo.config import raise_error
 class Connection(ABC):
 
     @abstractmethod
-    def exec_command(self, command):
+    def exec_command(self, command): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def __enter__(self):
+    def __enter__(self): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def __exit__(self, *args):
+    def __exit__(self, *args): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def putfo(self):
+    def putfo(self): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def getfo(self):
+    def getfo(self): # pragma: no cover
         raise_error(NotImplementedError)
 
 
