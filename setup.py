@@ -41,6 +41,7 @@ setup(
     url="https://github.com/qiboteam/qiboicarusq",
     packages=find_packages("src"),
     package_dir={"": "src"},
+    package_data={"": ["*.json", "*.npy"]},
     zip_safe=False,
     classifiers=[
         "Programming Language :: Python :: 3",
