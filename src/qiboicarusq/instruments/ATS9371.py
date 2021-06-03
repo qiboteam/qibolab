@@ -413,6 +413,6 @@ class AlazarTech_ATS9371(AlazarTech_ATS):
             # 26th bit to 0. We do that by making a bitwise and
             # with a number that has a 0 on the 26th place and 1
             # otherwise
-            disable_mask = ~np.uint32(1 << 26)
+            disable_mask = ~np.uint32(1 << 26) # pylint: disable=E1130
             new_value = current_value & disable_mask
         self._write_register(58, new_value)

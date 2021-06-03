@@ -1,4 +1,7 @@
-__version__ = "0.0.1-dev"
+__version__ = "0.0.1.dev0"
+
+from qiboicarusq import gates
+
 
 from qiboicarusq.experiments import Experiment
 experiment = Experiment()

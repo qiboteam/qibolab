@@ -7,10 +7,10 @@ import logging
 import math
 import numpy as np
 import broadbean as bb
-from .quicsyn import QuicSyn
-from .attenuator import MCAttenuator
-from .awg import AWG
-from .rigol import RG
+from qiboicarusq.instruments.quicsyn import QuicSyn
+from qiboicarusq.instruments.attenuator import MCAttenuator
+from qiboicarusq.instruments.awg import AWG
+from qiboicarusq.instruments.rigol import RG
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ class InstrumentController():
         """
         Convert waveforms into Broadbean sequence, upload and load into AWG
         """
-        
+
         # Create delay waveform
         delay_time = math.ceil(delay_time / 1.5)
         sample_delay = int(1.5e-6 * sampling_rate)
@@ -99,7 +99,7 @@ class InstrumentController():
         """
         Convert waveforms into Broadbean sequence, upload and load into AWG
         """
-        
+
         # Create delay waveform
         delay_time = int(delay_time / 1.5)
         sample_delay = int(1.5e-6 * sampling_rate)
@@ -159,7 +159,7 @@ class InstrumentController():
         logger.info("Setting up instruments for scanning")
         self.RG.set_voltage(flux_offset)
         self.RG.start()
-        
+
         # Fetch the dispersive peak
         #readout_frequency = self._get_dispersive_peak()
         #self.RFsource_RO.set_frequency(readout_frequency - readout_IF)
@@ -172,11 +172,11 @@ class InstrumentController():
 
         #return readout_frequency
 
-    
+
     """ def scan(self, current_step: int) -> Tuple[Any]:
-        
+
         Performs a scan and returns a tuple of I_raw_data and Q_raw data
-        
+
         self.osc.clear_sweeps()
         self.awg.trigger() # Trigger the AWG
 

@@ -1,7 +1,8 @@
 import numpy as np
-from .InstrumentController import InstrumentController
 from qcodes.instrument_drivers.AlazarTech import ATS
-from .ATS9371 import AlazarTech_ATS9371
+from qiboicarusq.instruments.ATS9371 import AlazarTech_ATS9371
+from qiboicarusq.instruments.instrument_controller import InstrumentController
+
 
 class AcquisitionController(ATS.AcquisitionController):
     def __init__(self, name="alz_cont", alazar_name="Alazar1", **kwargs):
@@ -122,7 +123,7 @@ class AcquisitionController(ATS.AcquisitionController):
             return self.buffer, self.buffers_per_acquisition, self.records_per_buffer, self.samples_per_record, self.time_array
         else:
             raise Exception("Could not find CHANNEL_B during data extraction")
-      
+
     def stop(self):
         self.ic.stop()
 

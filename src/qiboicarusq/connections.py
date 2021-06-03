@@ -5,30 +5,30 @@ from qibo.config import raise_error
 class Connection(ABC):
 
     @abstractmethod
-    def exec_command(self, command):
+    def exec_command(self, command): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def __enter__(self):
+    def __enter__(self): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def __exit__(self, *args):
+    def __exit__(self, *args): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def putfo(self):
+    def putfo(self): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def getfo(self):
+    def getfo(self): # pragma: no cover
         raise_error(NotImplementedError)
 
 
 class ParamikoSSH(Connection):
 
     def __init__(self, hostname, username, password):
-        import paramiko
+        import paramiko # pylint: disable=E0401
         self.ssh = paramiko.SSHClient()
         self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self.ssh.connect(hostname=hostname, username=username, password=password)

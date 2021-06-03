@@ -13,24 +13,24 @@ class AbstractExperiment(ABC):
     def connection(self):
         if self._connection is None:
             raise_error(RuntimeError, "Cannot establish connection.")
-        return self.connection
+        return self._connection
 
     @abstractmethod
-    def connect(self):
+    def connect(self): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def start(self):
+    def start(self): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def stop(self):
+    def stop(self): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def upload(self):
+    def upload(self): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def download(self):
+    def download(self): # pragma: no cover
         raise_error(NotImplementedError)

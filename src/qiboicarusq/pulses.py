@@ -1,16 +1,22 @@
 """Contains the pulse abstraction and pulse shaping for the FPGA."""
+import bisect
+import numpy as np
 from abc import ABC, abstractmethod
 from qibo.config import raise_error
 
 
 class Pulse(ABC):
     """Describes a pulse to be added onto the channel waveform."""
-    def __init__(self):
+    def __init__(self): # pragma: no cover
         self.channel = None
 
     @abstractmethod
-    def serial(self):
+    def serial(self): # pragma: no cover
         """Returns the serialized pulse."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def compile(self, waveform, sequence): # pragma: no cover
         raise_error(NotImplementedError)
 
     def __repr__(self):
@@ -41,6 +47,16 @@ class BasicPulse(Pulse):
         return "P({}, {}, {}, {}, {}, {}, {})".format(self.channel, self.start, self.duration,
                                                       self.amplitude, self.frequency, self.phase, self.shape)
 
+    def compile(self, waveform, sequence):
+        i_start = bisect.bisect(sequence.time, self.start)
+        #i_start = int((self.start / sequence.duration) * sequence.sample_size)
+        i_duration = int((self.duration / sequence.duration) * sequence.sample_size)
+        time = sequence.time[i_start:i_start + i_duration]
+        envelope = self.shape.envelope(time, self.start, self.duration, self.amplitude)
+        waveform[self.channel, i_start:i_start + i_duration] += (
+            envelope * np.sin(2 * np.pi * self.frequency * time + self.phase))
+        return waveform
+
 
 class MultifrequencyPulse(Pulse):
     """Describes multiple pulses to be added to waveform array.
@@ -52,6 +68,11 @@ class MultifrequencyPulse(Pulse):
 
     def serial(self):
         return "M({})".format(", ".join([m.serial() for m in self.members]))
+
+    def compile(self, waveform, sequence):
+        for member in self.members:
+            waveform += member.compile(waveform, sequence)
+        return waveform
 
 
 class FilePulse(Pulse):
@@ -65,14 +86,22 @@ class FilePulse(Pulse):
     def serial(self):
         return "F({}, {}, {})".format(self.channel, self.start, self.filename)
 
+    def compile(self, waveform, sequence):
+        # `FilePulse` cannot be tested in CI because a file is not available
+        i_start = int((self.start / sequence.duration) * sequence.sample_size)
+        arr = np.genfromtxt(sequence.file_dir, delimiter=',')[:-1]
+        waveform[self.channel, i_start:i_start + len(arr)] = arr
+        return waveform
 
-class PulseShape:
+
+class PulseShape(ABC):
     """Describes the pulse shape to be used
     """
-    def __init__(self):
+    def __init__(self): # pragma: no cover
         self.name = ""
 
-    def envelope(self, time, start, duration, amplitude):
+    @abstractmethod
+    def envelope(self, time, start, duration, amplitude): # pragma: no cover
         raise_error(NotImplementedError)
 
     def __repr__(self):
