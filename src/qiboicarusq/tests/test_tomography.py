@@ -134,12 +134,8 @@ def test_tomography_example(state_value, target_fidelity):
     state_path = REGRESSION_FOLDER / "states_181120.json"
     amplitude_path = "tomo_181120-{0:02b}.json".format(state_value)
     amplitude_path = REGRESSION_FOLDER / amplitude_path
-    try:
-        state = extract_json(state_path)
-        amp = extract_json(amplitude_path)
-    except FileNotFoundError:
-        pytest.skip("Skipping tomography example test because files "
-                    "could not be loaded.")
+    state = extract_json(state_path)
+    amp = extract_json(amplitude_path)
     tom = Tomography(amp, state)
     tom.minimize()
     assert tom.success
