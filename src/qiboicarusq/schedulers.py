@@ -92,3 +92,7 @@ class TaskScheduler:
         experiment.stop()
         res = experiment.download()
         return res
+
+    @staticmethod
+    def check_tomography_required(nqubits):
+        return experiment.check_tomography_required(nqubits)

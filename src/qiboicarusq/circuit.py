@@ -51,6 +51,10 @@ class PulseSequence:
 
 class HardwareCircuit(circuit.Circuit):
 
+    def __init__(self, nqubits, density_matrix=False):
+        super(circuit.Circuit, self).__init__(nqubits)
+        self._density_matrix = density_matrix
+
     def _add_layer(self):
         raise_error(NotImplementedError, "VariationalLayer gate is not "
                                          "implemented for hardware backends.")
@@ -112,7 +116,7 @@ class HardwareCircuit(circuit.Circuit):
         sequence.extend(self.measurement_gate.pulse_sequence(*args))
         return PulseSequence(sequence)
 
-    def _execute_one_qubit(self, nshots, measurement_level=2):
+    def _execute_sequence(self, nshots):
         """For one qubit, we can rely on IQ data projection to get the probability p."""
         target_qubits = self.measurement_gate.target_qubits
         # Calculate qubit control pulse duration and move it before readout
@@ -142,7 +146,7 @@ class HardwareCircuit(circuit.Circuit):
 
         return self._final_state
 
-    def _execute_many_qubits(self, nshots, measurement_level=2):
+    def _execute_tomography_sequence(self, nshots, measurement_level=2):
         """For 2+ qubits, since we do not have a TWPA
         (and individual qubit resonator) on this system,
         we need to do tomography to get the density matrix
@@ -193,7 +197,7 @@ class HardwareCircuit(circuit.Circuit):
 
         return self._final_state
 
-    def execute(self, initial_state=None, nshots=None, measurement_level=2):
+    def execute(self, initial_state=None, nshots=None):
         if initial_state is not None:
             raise_error(ValueError, "Hardware backend does not support "
                                     "initial state in circuits.")
@@ -204,18 +208,11 @@ class HardwareCircuit(circuit.Circuit):
         # Get calibration data
         self.qubit_config = scheduler.fetch_config()
 
-        # Parse results according to desired measurement level
-
-        # We use the same standard as OpenPulses measurement output level
-        # Level 0: Raw
-        # Level 1: IQ Values
-        # Level 2: Qubit State
-
         # TODO: Move data fitting to qiboicarusq.experiments
-        if len(self.measurement_gate.target_qubits) == 1:
-            return self._execute_one_qubit(nshots, measurement_level)
+        if len(scheduler.check_tomography_required() or self._density_matrix):
+            return self._execute_tomography_sequence(nshots)
         else:
-            return self._execute_many_qubits(nshots, measurement_level)
+            return self._execute_sequence(nshots)
 
     def __call__(self, initial_state=None, nshots=None, measurement_level=2):
         return self.execute(initial_state, nshots, measurement_level)

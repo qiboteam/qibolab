@@ -105,6 +105,12 @@ class AWGSystem(AbstractExperiment):
             }
         }]
 
+        # Same standard as OpenPulses measurement output level
+        # Level 0: Raw Signal, IQ Values and Qubit State
+        # Level 1: IQ Values and Qubit State
+        # Level 2: Qubit State
+        measurement_level = 2
+
     def __init__(self):
         super().__init__()
         self.name = "awg"
