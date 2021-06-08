@@ -10,7 +10,7 @@ class TaskScheduler:
     def __init__(self):
         self._executor = ThreadPoolExecutor(max_workers=1)
         self._pi_trig = None # NIY
-        self._qubit_config = None
+        self._qubit_config = experiment.static.initial_config
 
     def fetch_config(self):
         """Fetches the qubit configuration data

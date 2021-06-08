@@ -1,7 +1,7 @@
 import numpy as np
 from io import BytesIO
 from qibo.config import log
-from qiboicarusq import connections
+from qiboicarusq import connections, pulses
 from qiboicarusq.experiments.abstract import AbstractExperiment
 
 
@@ -40,9 +40,8 @@ class IcarusQ(AbstractExperiment):
         dac_mode_for_nyquist = ["NRZ", "MIX", "MIX", "NRZ"] # fifth onwards not calibrated yet
         pulse_file = 'C:/fpga_python/fpga/tmp/wave_ch1.csv'
 
-        # Temporary calibration result placeholder when actual calibration is not available
-        from qiboicarusq import pulses
-        calibration_placeholder = [{
+        # Initial calibrated parameters to speed up calibration  
+        initial_calibration = [{
             "id": 0,
             "qubit_frequency": 3.0473825e9,
             "qubit_amplitude": 0.75 / 2,
@@ -107,3 +106,6 @@ class IcarusQ(AbstractExperiment):
         dump.close()
 
         return waveform
+
+    def check_tomography_required(nqubits):
+        return nqubits > 1

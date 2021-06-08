@@ -1,7 +1,7 @@
 import numpy as np
+from qiboicarusq import pulses
 from qiboicarusq.instruments import AcquisitionController
 from qiboicarusq.experiments.abstract import AbstractExperiment
-
 
 class AWGSystem(AbstractExperiment):
 
@@ -56,11 +56,9 @@ class AWGSystem(AbstractExperiment):
             },
         ]
         dac_mode_for_nyquist = ["NRZ", "MIX", "MIX", "NRZ"] # fifth onwards not calibrated yet
-        pulse_file = 'C:/fpga_python/fpga/tmp/wave_ch1.csv'
 
-        # Temporary calibration result placeholder when actual calibration is not available
-        from qiboicarusq import pulses
-        calibration_placeholder = [{
+        # Initial calibrated parameters to speed up calibration
+        initial_calibration = [{
             "id": 0,
             "qubit_frequency": 3.06362669e9,
             "qubit_amplitude": 0.375 / 2,
@@ -265,3 +263,6 @@ class AWGSystem(AbstractExperiment):
 
     def download(self):
         return self.results
+
+    def check_tomography_required(nqubits):
+        return nqubits > 1
