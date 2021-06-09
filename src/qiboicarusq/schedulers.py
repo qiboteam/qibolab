@@ -60,10 +60,7 @@ class TaskScheduler:
     def _execute_pulse_sequence(pulse_sequence, nshots):
         wfm = pulse_sequence.compile()
         experiment.upload(wfm)
-        experiment.start()
-        # NIY
-        #self._pi_trig.trigger(shots, delay=50e6)
-        # OPC?
+        experiment.start(nshots)
         experiment.stop()
         res = experiment.download()
         return res
@@ -88,11 +85,38 @@ class TaskScheduler:
                 wfm_batch[j, i] = wfm[j]
 
         experiment.upload_batch(wfm_batch, nshots)
-        experiment.start_batch(steps)
+        experiment.start_batch(steps, nshots)
         experiment.stop()
         res = experiment.download()
         return res
 
     @staticmethod
-    def check_tomography_required(nqubits):
-        return experiment.check_tomography_required(nqubits)
+    def check_tomography_required(target_qubits):
+        return experiment.check_tomography_required(target_qubits)
+
+    def execute_circuit(self, pulse_sequence, nshots, target_qubits):
+        job = self.execute_pulse_sequence(pulse_sequence, nshots)
+        raw_data = job.result()
+        iq_signals = experiment.parse_raw(raw_data, target_qubits)
+        qubit_states = experiment.parse_iq(iq_signals, target_qubits)
+        
+        if experiment.static.measurement_level == 2:
+            return (qubit_states,)
+        elif experiment.static.measurement_level == 1:
+            return (qubit_states, iq_signals)
+        else:
+            return (qubit_states, iq_signals, raw_data)
+
+    def execute_tomography(self, pulse_batch, nshots, target_qubits):
+        job = self.execute_batch_sequence(pulse_batch, nshots)
+        raw_data = job.result()
+        iq_signals = [experiment.parse_raw(raw_signals, target_qubits) for raw_signals in raw_data]
+        density_matrix = experiment.parse_tomography(raw_data, target_qubits)
+        
+        if experiment.static.measurement_level == 2:
+            return (density_matrix,)
+        elif experiment.static.measurement_level == 1:
+            return (density_matrix, iq_signals)
+        else:
+            return (density_matrix, iq_signals, raw_data)
+

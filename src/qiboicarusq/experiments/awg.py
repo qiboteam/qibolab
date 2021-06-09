@@ -1,5 +1,7 @@
+import copy
+import itertools
 import numpy as np
-from qiboicarusq import pulses
+from qiboicarusq import pulses, tomography
 from qiboicarusq.instruments import AcquisitionController
 from qiboicarusq.experiments.abstract import AbstractExperiment
 
@@ -68,10 +70,8 @@ class AWGSystem(AbstractExperiment):
             "pi-pulse": 100.21e-9,
             "drive_channel": 2,
             "readout_channel": (0, 1),
-            "iq_state": {
-                "0": [0.002117188393398148, 0.020081601323807922],
-                "1": [0.007347951048047871, 0.015370747296983345]
-            },
+            "readout_IF_frequency": 100e6,
+            "iq_state": ([0.002117188393398148, 0.020081601323807922], [0.007347951048047871, 0.015370747296983345]),
             "gates": {
                 "rx": [pulses.BasicPulse(2, 0, 100.21e-9, 0.375 / 2, 3.06362669e9 - sampling_rate, 0, pulses.Rectangular()),
                        pulses.BasicPulse(2, 0, 69.77e-9, 0.375 / 2, 3.086e9 - sampling_rate, 0, pulses.Rectangular())],
@@ -91,10 +91,8 @@ class AWGSystem(AbstractExperiment):
             "pi-pulse": 112.16e-9,
             "drive_channel": 3,
             "readout_channel": (0, 1),
-            "iq_state": {
-                "0": [0.002117188393398148, 0.020081601323807922],
-                "1": [0.005251298773123129, 0.018463491059057126]
-            },
+            "readout_IF_frequency": 100e6,
+            "iq_state": ([0.002117188393398148, 0.020081601323807922], [0.005251298773123129, 0.018463491059057126]),
             "gates": {
                 "rx": [pulses.BasicPulse(3, 0, 112.16e-9, 0.375 / 2, 3.284049061e9 - sampling_rate, 0, pulses.Rectangular()),
                        pulses.BasicPulse(3, 0, 131.12e-9, 0.375 / 2, 3.23e9 - sampling_rate, 0, pulses.Rectangular())],
@@ -118,6 +116,7 @@ class AWGSystem(AbstractExperiment):
         self.ac = AcquisitionController()
         self.ic = self.ac.ic
         self.results = None
+        self.qubit_config = self.static.initial_calibration
 
     def connect(self):
         pass
@@ -125,7 +124,7 @@ class AWGSystem(AbstractExperiment):
     def clock(self):
         pass
 
-    def start(self):
+    def start(self, nshots):
         buffer, buffers_per_acquisition, records_per_buffer, samples_per_record, time_array = self.ac.do_acquisition()
         records_per_acquisition = (1. * buffers_per_acquisition * records_per_buffer)
         # Skip first 50 anomalous points
@@ -247,7 +246,7 @@ class AWGSystem(AbstractExperiment):
                                          allocated_buffers=100,
                                          buffer_timeout=100000)
 
-    def start_batch(self, steps):
+    def start_batch(self, steps, nshots):
         self.results = np.zeros((steps, 2, self.static.ADC_length - 50))
         for k in range(steps):
 
@@ -270,5 +269,82 @@ class AWGSystem(AbstractExperiment):
     def download(self):
         return self.results
 
-    def check_tomography_required(nqubits):
-        return nqubits > 1
+    @staticmethod
+    def check_tomography_required(target_qubits):
+        return len(target_qubits) > 1
+
+    def parse_raw(self, raw_signals, target_qubits):
+        result = []
+        final = self.static.ADC_length / self.static.ADC_sampling_rate
+        step = 1 / self.static.ADC_sampling_rate
+        ADC_time_array = np.arange(0, final, step)[50:]
+
+        for qubit in target_qubits:
+            qubit_config = self.qubit_config[qubit]
+            i_ch, q_ch = qubit_config["readout_channel"]
+            i_sig = raw_signals[i_ch]
+            q_sig = raw_signals[q_ch]
+            IF_freq = qubit_config["readout_IF_frequency"]
+
+            cos = np.cos(2 * np.pi * IF_freq * ADC_time_array)
+            it = np.sum(i_sig * cos)
+            qt = np.sum(q_sig * cos)
+            result.append((it, qt))
+        
+        return result
+
+    # Shallow method, to be reused for single shot measurement
+    def parse_iq(self, iq_signals, target_qubits):
+        prob = np.zeros(len(target_qubits))
+
+        # First, we extract the probability p of finding each qubit in the 1 state
+        # For each qubit, we assign p based on the distance between the zero and one state iq values and the measurement
+        for idx, qubit in enumerate(target_qubits):
+            data = np.array(iq_signals[idx])
+            qubit_config = self.qubit_config[qubit]
+            refer_0, refer_1 = qubit_config["iq_states"]
+
+            move = copy.copy(refer_0)
+            refer_0 = refer_0 - move
+            refer_1 = refer_1 - move
+            data = data - move
+            # Rotate the data so that vector 0-1 is overlapping with Ox
+            angle = copy.copy(np.arccos(refer_1[0]/np.sqrt(refer_1[0]**2 + refer_1[1]**2))*np.sign(refer_1[1]))
+            new_data = np.array([data[0]*np.cos(angle) + data[1]*np.sin(angle),
+                                -data[0]*np.sin(angle) + data[1]*np.cos(angle)])
+            # Rotate refer_1 to get state 1 reference
+            new_refer_1 = np.array([refer_1[0]*np.cos(angle) + refer_1[1]*np.sin(angle),
+                                    -refer_1[0]*np.sin(angle) + refer_1[1]*np.cos(angle)])
+            # Condition for data outside bound
+            if new_data[0] < 0:
+                new_data[0] = 0
+            elif new_data[0] > new_refer_1[0]:
+                new_data[0] = new_refer_1[0]
+            prob[idx] = new_data[0] / new_refer_1[0]
+        
+        # Next, we process the probabilities into qubit states
+        # Note: There are no correlations established here, this is solely for disconnected and unentangled qubits
+        binary = list(itertools.product([0, 1], repeat=len(target_qubits)))
+        result = np.zeros(len(binary)) + 1
+        for idx, state in enumerate(binary):
+            for idx2, qubit_state in state:
+                p = prob[idx2]
+                if qubit_state == 1:
+                    p = 1 - p
+
+                result[idx] *= p
+
+        return result
+
+    # Joint readout method
+    def parse_tomography(self, iq_values, target_qubits):
+        nqubits = len(target_qubits)
+        nstates = int(2**nqubits)
+        data = np.array([np.arctan2(q, i) * 180 / np.pi for i, q in iq_values])
+        states = data[0:nstates]
+        phase = data[nstates:len(iq_values)]
+        tom = tomography.Tomography(phase, states)
+        tom.minimize(1e-5)
+        fit = tom.fit
+
+        return fit
