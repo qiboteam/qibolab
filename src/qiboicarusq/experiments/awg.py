@@ -3,120 +3,134 @@ import itertools
 import numpy as np
 from qiboicarusq import pulses, tomography
 from qiboicarusq.instruments import AcquisitionController
-from qiboicarusq.experiments.abstract import AbstractExperiment
+from qiboicarusq.experiments.abstract import AbstractExperiment, ParameterList, BoundsValidator, EnumValidator
+
+
+# To be used for initial calibtation
+qubit_static_parameters = [
+    {
+        "id": 0,
+        "name": "Left/Bottom Qubit",
+        "channel": [2, None, [0, 1]], # XY control, Z line, readout
+        "frequency_range": [3e9, 3.1e9],
+        "resonator_frequency": 4.5172671e9,
+        "amplitude": 0.375 / 2,
+        "neighbours": [2]
+    }, {
+        "id": 1,
+        "name": "Right/Top Qubit",
+        "channel": [3, None, [0, 1]],
+        "frequency_range": [2.14e9, 3.15e9],
+        "resonator_frequency": 4.5172671e9,
+        "amplitude": 0.375 / 2,
+        "neighbours": [1]
+    },
+]
+
+initial_calibration = [{
+    "id": 0,
+    "qubit_frequency": 3.06362669e9,
+    "qubit_amplitude": 0.375 / 2,
+    "T1": 5.89e-6,
+    "T2": 1.27e-6,
+    "T2_Spinecho": 3.5e-6,
+    "pi-pulse": 100.21e-9,
+    "drive_channel": 2,
+    "readout_channel": (0, 1),
+    "readout_IF_frequency": 100e6,
+    "iq_state": ([0.002117188393398148, 0.020081601323807922], [0.007347951048047871, 0.015370747296983345]),
+    "gates": {
+        "rx": [pulses.BasicPulse(2, 0, 100.21e-9, 0.375 / 2, 3.06362669e9 - 2.3e9, 0, pulses.Rectangular()),
+                pulses.BasicPulse(2, 0, 69.77e-9, 0.375 / 2, 3.086e9 - 2.3e9, 0, pulses.Rectangular())],
+        "ry": [pulses.BasicPulse(2, 0, 100.21e-9, 0.375 / 2, 3.06362669e9 - 2.3e9, 90, pulses.Rectangular()),
+                pulses.BasicPulse(2, 0, 69.77e-9, 0.375 / 2, 3.086e9 - 2.3e9, 90, pulses.Rectangular())],
+        "measure": [pulses.BasicPulse(0, 0, 5e-6, 0.75 / 2, 100e6, 90, pulses.Rectangular()), # I cosine
+                    pulses.BasicPulse(1, 0, 5e-6, 0.75 / 2, 100e6, 0, pulses.Rectangular())], # Q negative sine
+        "cx_1": [pulses.BasicPulse(3, 0, 46.71e-9, 0.396 / 2, 3.06362669e9 - 2.3e9, 0, pulses.SWIPHT(20e6))],
+    }
+}, {
+    "id": 1,
+    "qubit_frequency": 3.284049061e9,
+    "qubit_amplitude": 0.375 / 2,
+    "T1": 5.89e-6,
+    "T2": 1.27e-6,
+    "T2_Spinecho": 3.5e-6,
+    "pi-pulse": 112.16e-9,
+    "drive_channel": 3,
+    "readout_channel": (0, 1),
+    "readout_IF_frequency": 100e6,
+    "iq_state": ([0.002117188393398148, 0.020081601323807922], [0.005251298773123129, 0.018463491059057126]),
+    "gates": {
+        "rx": [pulses.BasicPulse(3, 0, 112.16e-9, 0.375 / 2, 3.284049061e9 - 2.3e9, 0, pulses.Rectangular()),
+                pulses.BasicPulse(3, 0, 131.12e-9, 0.375 / 2, 3.23e9 - 2.3e9, 0, pulses.Rectangular())],
+        "ry": [pulses.BasicPulse(3, 0, 112.16e-9, 0.375 / 2, 3.284049061e9 - 2.3e9, 90, pulses.Rectangular()),
+                pulses.BasicPulse(3, 0, 131.12e-9, 0.375 / 2, 3.23e9 - 2.3e9, 90, pulses.Rectangular())],
+        "measure": [pulses.BasicPulse(0, 0, 5e-6, 0.75 / 2, 100e6, 90, pulses.Rectangular()), # I cosine
+                    pulses.BasicPulse(1, 0, 5e-6, 0.75 / 2, 100e6, 0, pulses.Rectangular())], # Q negative sine
+    }
+}]
+
 
 class AWGSystem(AbstractExperiment):
-
-    class StaticParameters:
-        """Hardware static parameters."""
-        num_qubits = 2
-        sampling_rate = 2.3e9
-        nchannels = 4
-        sample_size = 23001
-        duration = 10e-6
-        readout_pulse_type = "IQ"
-        readout_pulse_duration = 5e-6
-        readout_pulse_amplitude = 0.75 / 2
-        readout_IF_frequency = 100e6
-        readout_attenuation = 14
-        qubit_attenuation = 7
-        default_averaging = 10000
-        lo_frequency = 4.5172671e9 - 100e6
-        ADC_sampling_rate = 1e9
-        ADC_length = 4992
-        readout_start_time = 0
-
-        ADC_delay = 266e-9 + 16e-9
-        RO_SW_delay = 266e-9 - 22e-9
-        QB_SW_delay = 266e-9 + 26e-9
-        readout_phase = [-6.2, 0.2]
-
-        awg_params = {
-            "offset": [-0.001, 0, 0, 0],
-            "phase": [-6.2, 0.2, 0, 0],
-            "amplitude": [0.75, 0.75, 0.75, 0.75]
-        }
-
-
-        qubit_static_parameters = [
-            {
-                "id": 0,
-                "name": "Left/Bottom Qubit",
-                "channel": [2, None, [0, 1]], # XY control, Z line, readout
-                "frequency_range": [3e9, 3.1e9],
-                "resonator_frequency": 4.5172671e9,
-                "amplitude": 0.375 / 2,
-                "neighbours": [2]
-            }, {
-                "id": 1,
-                "name": "Right/Top Qubit",
-                "channel": [3, None, [0, 1]],
-                "frequency_range": [2.14e9, 3.15e9],
-                "resonator_frequency": 4.5172671e9,
-                "amplitude": 0.375 / 2,
-                "neighbours": [1]
-            },
-        ]
-        dac_mode_for_nyquist = ["NRZ", "MIX", "MIX", "NRZ"] # fifth onwards not calibrated yet
-
-        # Initial calibrated parameters to speed up calibration
-        initial_calibration = [{
-            "id": 0,
-            "qubit_frequency": 3.06362669e9,
-            "qubit_amplitude": 0.375 / 2,
-            "T1": 5.89e-6,
-            "T2": 1.27e-6,
-            "T2_Spinecho": 3.5e-6,
-            "pi-pulse": 100.21e-9,
-            "drive_channel": 2,
-            "readout_channel": (0, 1),
-            "readout_IF_frequency": 100e6,
-            "iq_state": ([0.002117188393398148, 0.020081601323807922], [0.007347951048047871, 0.015370747296983345]),
-            "gates": {
-                "rx": [pulses.BasicPulse(2, 0, 100.21e-9, 0.375 / 2, 3.06362669e9 - sampling_rate, 0, pulses.Rectangular()),
-                       pulses.BasicPulse(2, 0, 69.77e-9, 0.375 / 2, 3.086e9 - sampling_rate, 0, pulses.Rectangular())],
-                "ry": [pulses.BasicPulse(2, 0, 100.21e-9, 0.375 / 2, 3.06362669e9 - sampling_rate, 90, pulses.Rectangular()),
-                       pulses.BasicPulse(2, 0, 69.77e-9, 0.375 / 2, 3.086e9 - sampling_rate, 90, pulses.Rectangular())],
-                "measure": [pulses.BasicPulse(0, 0, readout_pulse_duration, readout_pulse_amplitude, readout_IF_frequency, 90, pulses.Rectangular()), # I cosine
-                            pulses.BasicPulse(1, 0, readout_pulse_duration, readout_pulse_amplitude, readout_IF_frequency, 0, pulses.Rectangular())], # Q negative sine
-                "cx_1": [pulses.BasicPulse(3, 0, 46.71e-9, 0.396 / 2, 3.06362669e9 - sampling_rate, 0, pulses.SWIPHT(20e6))],
-            }
-        }, {
-            "id": 1,
-            "qubit_frequency": 3.284049061e9,
-            "qubit_amplitude": 0.375 / 2,
-            "T1": 5.89e-6,
-            "T2": 1.27e-6,
-            "T2_Spinecho": 3.5e-6,
-            "pi-pulse": 112.16e-9,
-            "drive_channel": 3,
-            "readout_channel": (0, 1),
-            "readout_IF_frequency": 100e6,
-            "iq_state": ([0.002117188393398148, 0.020081601323807922], [0.005251298773123129, 0.018463491059057126]),
-            "gates": {
-                "rx": [pulses.BasicPulse(3, 0, 112.16e-9, 0.375 / 2, 3.284049061e9 - sampling_rate, 0, pulses.Rectangular()),
-                       pulses.BasicPulse(3, 0, 131.12e-9, 0.375 / 2, 3.23e9 - sampling_rate, 0, pulses.Rectangular())],
-                "ry": [pulses.BasicPulse(3, 0, 112.16e-9, 0.375 / 2, 3.284049061e9 - sampling_rate, 90, pulses.Rectangular()),
-                       pulses.BasicPulse(3, 0, 131.12e-9, 0.375 / 2, 3.23e9 - sampling_rate, 90, pulses.Rectangular())],
-                "measure": [pulses.BasicPulse(0, 0, readout_pulse_duration, readout_pulse_amplitude, readout_IF_frequency, 90, pulses.Rectangular()), # I cosine
-                            pulses.BasicPulse(1, 0, readout_pulse_duration, readout_pulse_amplitude, readout_IF_frequency, 0, pulses.Rectangular())], # Q negative sine
-            }
-        }]
-
-        # Same standard as OpenPulses measurement output level
-        # Level 0: Raw Signal, IQ Values and Qubit State
-        # Level 1: IQ Values and Qubit State
-        # Level 2: Qubit State
-        measurement_level = 2
 
     def __init__(self):
         super().__init__()
         self.name = "awg"
-        self.static = self.StaticParameters()
         self.ac = AcquisitionController()
         self.ic = self.ac.ic
         self.results = None
-        self.qubit_config = self.static.initial_calibration
+        self.qubit_config = initial_calibration
+        self.num_qubits = 2
+        self.nchannels = 4
+
+        self.readout_params = ParameterList()
+        self.readout_params.add_parameter("LO_frequency",
+                                           default=4.4172671e9,
+                                           vals=(1e9, 10e9),
+                                           validator=BoundsValidator)
+        self.readout_params.add_parameter("attenuation",
+                                          default=14,
+                                          vals=(0, 35),
+                                          validator=BoundsValidator)
+        self.readout_params.add_parameter("ADC_delay",
+                                          default=266e-9 + 16e-9)
+        self.readout_params.add_parameter("RO_delay",
+                                          default=266e-9 - 22e-9)
+        self.readout_params.add_parameter("QB_delay",
+                                          default=266e-9 + 26e-9)
+        self.readout_params.add_parameter("ADC_sampling_rate",
+                                          default=1e9)
+        self.readout_params.add_parameter("ADC_sample_size",
+                                          default=4992)
+        self.readout_params.add_parameter("measurement_level",
+                                          default=2,
+                                          values=[0, 1, 2],
+                                          validator=EnumValidator)
+        self.readout_params.add_parameter("duration",
+                                          default=5e-6)
+        self.readout_params.add_parameter("buffer",
+                                          default=1e-6)
+        self.readout_params.add_parameter("amplitude",
+                                          default=0.75 / 2)
+        self.readout_params.add_parameter("IF_frequency",
+                                          default=100e6)
+
+        self.awg_params = ParameterList()
+        offset = [-0.001, 0, 0, 0]
+        phase = [-6.2, 0.2, 0, 0]
+        amplitude = [0.75, 0.75, 0.75, 0.75]
+        self.awg_params.add_parameter("sampling_rate",
+                                      default=2.3e9,
+                                      vals=(1e9, 2.5e9),
+                                      validator=BoundsValidator)
+        for i in self.nchannels:
+            self.awg_params.add_parameter("CH{}_offset".format(i + 1),
+                                          default=offset[i])
+            self.awg_params.add_parameter("CH{}_phase".format(i + 1),
+                                          default=phase[i])
+            self.awg_params.add_parameter("CH{}_amplitude".format(i + 1),
+                                          default=amplitude[i])
+
 
     def connect(self):
         pass
@@ -155,9 +169,8 @@ class AWGSystem(AbstractExperiment):
         self.ac.stop()
 
     def _generate_readout_TTL(self, samples):
-        end = self.static.readout_start_time + self.static.readout_pulse_duration + 1e-6
-        duration = self.static.duration
-        #time_array = np.linspace(self.static.readout_pulse_duration + readout_buffer - duration, readout_buffer + self.static.readout_pulse_duration, samples)
+        end = self.readout_params.duration() + self.readout_params.buffer()
+        duration = len(samples) / self.awg_params.sampling_rate()
         time_array = np.linspace(end - duration, end, num=samples)
 
         def TTL(t, start, duration, amplitude):
@@ -165,16 +178,16 @@ class AWGSystem(AbstractExperiment):
             return x
 
         # ADC TTL
-        start = self.static.readout_start_time + self.static.ADC_delay
+        start = self.readout_params.ADC_delay()
         adc_ttl = TTL(time_array, start, 10e-9, 1)
 
         # RO SW TTL
-        start = self.static.readout_start_time + self.static.RO_SW_delay
-        ro_ttl = TTL(time_array, start, self.static.readout_pulse_duration, 1)
+        start = self.readout_params.RO_delay()
+        ro_ttl = TTL(time_array, start, self.readout_params.duration(), 1)
 
         # QB SW TTL
-        start = self.static.readout_start_time + self.static.QB_SW_delay
-        qb_ttl = TTL(time_array, start, self.static.readout_pulse_duration, 1)
+        start = self.readout_params.QB_SW_delay()
+        qb_ttl = TTL(time_array, start, self.readout_params.duration(), 1)
 
         def square(t, start, duration, amplitude, freq, I_phase, Q_phase, *args, **kwargs):
             # Basic rectangular pulse
@@ -185,8 +198,9 @@ class AWGSystem(AbstractExperiment):
             q = - x * np.sin(2 * np.pi * freq * t + Q_phase)
             return i, q
 
-        start = self.static.readout_start_time
-        i_readout, q_readout = square(time_array, start, self.static.readout_pulse_duration, self.static.readout_pulse_amplitude, self.static.readout_IF_frequency, -6.2, 0.2)
+        start = 0
+        i_readout, q_readout = square(time_array, start, self.readout_params.duration(),self.readout_params.amplitude(),
+                                      self.readout_params.IF_frequency(), -6.2, 0.2)
 
         return i_readout, q_readout, adc_ttl, ro_ttl, qb_ttl
 
@@ -201,11 +215,11 @@ class AWGSystem(AbstractExperiment):
         i_readout, q_readout, adc_ttl, ro_ttl, qb_ttl = self._generate_readout_TTL(len(ch3_drive))
         #i_readout = waveform[0]
         #q_readout = waveform[1]
-        output = self.ic.generate_pulse_sequence(i_readout, q_readout, ch3_drive, ch4_drive, adc_ttl, ro_ttl, qb_ttl, 20, averaging, self.static.sampling_rate)
+        output = self.ic.generate_pulse_sequence(i_readout, q_readout, ch3_drive, ch4_drive, adc_ttl, ro_ttl, qb_ttl, 20, averaging, self.awg_params.sampling_rate())
         self.ic.awg.upload_sequence(output, 1)
-        self.ic.ready_instruments_for_scanning(self.static.qubit_attenuation, self.static.readout_attenuation, 0)
+        self.ic.ready_instruments_for_scanning(7, self.readout_params.attenuation(), 0)
         self.ac.update_acquisitionkwargs(mode='NPT',
-                                         samples_per_record=self.static.ADC_length,
+                                         samples_per_record=self.readout_params.ADC_length(),
                                          records_per_buffer=10,
                                          buffers_per_acquisition=int(averaging / 10),
                                          #channel_selection='AB',
@@ -230,9 +244,9 @@ class AWGSystem(AbstractExperiment):
         steps = len(ch3_drive)
         output = self.ic.generate_broadbean_sequence(i_readout, q_readout, ch3_drive, ch4_drive, steps, adc_ttl, ro_ttl, qb_ttl, 20, averaging, self.static.sampling_rate)
         self.ic.awg.upload_sequence(output, steps)
-        self.ic.ready_instruments_for_scanning(self.static.qubit_attenuation, self.static.readout_attenuation, 0)
+        self.ic.ready_instruments_for_scanning(7, self.readout_params.attenuation(), 0)
         self.ac.update_acquisitionkwargs(mode='NPT',
-                                         samples_per_record=self.static.ADC_length,
+                                         samples_per_record=self.readout_params.ADC_sample_size(),
                                          records_per_buffer=10,
                                          buffers_per_acquisition=int(averaging / 10),
                                          #channel_selection='AB',
@@ -247,7 +261,7 @@ class AWGSystem(AbstractExperiment):
                                          buffer_timeout=100000)
 
     def start_batch(self, steps, nshots):
-        self.results = np.zeros((steps, 2, self.static.ADC_length - 50))
+        self.results = np.zeros((steps, 2, self.readout_params.ADC_sample_size() - 50))
         for k in range(steps):
 
             buffer, buffers_per_acquisition, records_per_buffer, samples_per_record, time_array = self.ac.do_acquisition()
@@ -275,8 +289,8 @@ class AWGSystem(AbstractExperiment):
 
     def parse_raw(self, raw_signals, target_qubits):
         result = []
-        final = self.static.ADC_length / self.static.ADC_sampling_rate
-        step = 1 / self.static.ADC_sampling_rate
+        final = self.readout_params.ADC_sample_size() / self.readout_params.ADC_sampling_rate()
+        step = 1 / self.readout_params.ADC_sampling_rate()
         ADC_time_array = np.arange(0, final, step)[50:]
 
         for qubit in target_qubits:
