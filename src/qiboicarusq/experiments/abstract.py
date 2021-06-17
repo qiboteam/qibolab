@@ -75,15 +75,10 @@ def BoundsValidator(value, bounds):
 def EnumValidator(value, enum):
     return value in enum
 
-class ParameterList:
-    def __init__(self):
-        self.parameters = {}
+class ParameterList(dict):
 
     def add_parameter(self, name: str, default=None, vals=None, val_mapping=None, get_wrapper=None, validator=None):
-        self.parameters[name] = BaseParameter(name, default, vals, val_mapping, get_wrapper, validator)
-
-    def __getitem__(self, key: str):
-        return self.parameters[key]
+        self[name] = BaseParameter(name, default, vals, val_mapping, get_wrapper, validator)
 
     def __getattr__(self, key: str) -> Any:
-        return self.parameters[key]
+        return self[key]
