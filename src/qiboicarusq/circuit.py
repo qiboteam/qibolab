@@ -51,9 +51,9 @@ class PulseSequence:
 
 class HardwareCircuit(circuit.Circuit):
 
-    def __init__(self, nqubits, density_matrix=False):
+    def __init__(self, nqubits, force_tomography=False):
         super(circuit.Circuit, self).__init__(nqubits)
-        self._density_matrix = density_matrix
+        self._force_tomography = force_tomography
         self._raw = None
 
     def _add_layer(self):
@@ -178,7 +178,7 @@ class HardwareCircuit(circuit.Circuit):
         self.qubit_config = scheduler.fetch_config()
 
         # TODO: Move data fitting to qiboicarusq.experiments
-        if len(scheduler.check_tomography_required() or self._density_matrix):
+        if len(scheduler.check_tomography_required() or self._force_tomography):
             return self._execute_tomography_sequence(nshots)
         else:
             return self._execute_sequence(nshots)
