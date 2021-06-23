@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from qibo.config import raise_error
-from typing import Any
+from typing import Any, Union
 
 
 class AbstractExperiment(ABC):
@@ -82,3 +82,64 @@ class ParameterList(dict):
 
     def __getattr__(self, key: str) -> Any:
         return self[key]
+
+
+class GateSet(dict):
+
+    from qibo import gates
+    two_qubit_gates = [gates.CNOT]
+
+
+    def set(self, gate, pulse_sequence: list):
+        gate_name = gate.name
+
+        if self.is_two_qubit_gate(gate):
+            gate_name += "_{}".format(gate.control_qubits)
+
+        self[gate_name] = pulse_sequence
+
+    def set_from_dict(self, obj):
+        for key, value in obj.items():
+            self[key] = value
+        
+    def _is_two_qubit_gate(self, gate):
+        return any(isinstance(gate, x) for x in self.two_qubit_gates)
+
+    def get(self, gate):
+        gate_name = gate.name
+
+        if self.is_two_qubit_gate(gate):
+            gate_name += "_{}".format(gate.control_qubits)
+
+        return self[gate_name]
+
+
+class Qubit(ParameterList):
+    def __init__(self, id: int = None, qubit_frequency: float = 0, qubit_frequency_bounds: tuple = (0, 0), connected_qubits: list = [],
+                 drive_channel: Union[tuple, int] = None, resonator_frequency: float = 0, resonator_frequency_bounds: list = (0, 0),
+                 flux_channel: int = None, readout_channel: Union[tuple, int] = None, initial_gates: dict = {},
+                 zero_iq_reference: tuple = (), one_iq_reference: tuple = ()):
+
+        super().__init__()
+        # static
+        self["id"] = id
+        self["qubit_frequency"] = qubit_frequency
+        self["connected_qubits"] = connected_qubits
+        self["drive_channel"] = drive_channel
+        self["readout_channel"] = readout_channel
+
+        # Optional for flux tunable qubits
+        self["flux_channel"] = flux_channel
+        # WIP: flux tuning term
+
+        # configurables
+        self.add_parameter("qubit_frequency", qubit_frequency, qubit_frequency_bounds, validator=BoundsValidator)
+        self.add_parameter("resonator_frequency", resonator_frequency, resonator_frequency_bounds, validator=BoundsValidator)
+        self.add_parameter("zero_iq_reference", zero_iq_reference)
+        self.add_parameter("one_iq_reference", one_iq_reference)
+
+        self["gates"] = GateSet()
+        self.gates.set_from_dict(initial_gates)
+
+    def edges(self):
+        return [(self.id, q) for q in self.connected_qubits]
