@@ -3,7 +3,7 @@ import itertools
 import numpy as np
 from qiboicarusq import pulses, tomography
 from qiboicarusq.instruments import AcquisitionController
-from qiboicarusq.experiments.abstract import AbstractExperiment, ParameterList, BoundsValidator, EnumValidator
+from qiboicarusq.experiments.abstract import AbstractExperiment, ParameterList, BoundsValidator, EnumValidator, Qubit
 
 
 # To be used for initial calibtation
@@ -12,55 +12,61 @@ qubit_static_parameters = [
         "id": 0,
         "name": "Left/Bottom Qubit",
         "channel": [2, None, [0, 1]], # XY control, Z line, readout
-        "frequency_range": [3e9, 3.1e9],
+        "frequency_range": (3e9, 3.1e9),
         "resonator_frequency": 4.5172671e9,
         "amplitude": 0.375 / 2,
-        "neighbours": [2]
+        "connected_qubits": [1]
     }, {
         "id": 1,
         "name": "Right/Top Qubit",
         "channel": [3, None, [0, 1]],
-        "frequency_range": [2.14e9, 3.15e9],
+        "frequency_range": (2.14e9, 3.15e9),
         "resonator_frequency": 4.5172671e9,
         "amplitude": 0.375 / 2,
-        "neighbours": [1]
+        "connected_qubits": [0]
     },
 ]
 
 initial_calibration = [{
     "id": 0,
     "qubit_frequency": 3.06362669e9,
-    "qubit_amplitude": 0.375 / 2,
+    "qubit_frequency_bounds": (3e9, 3.1e9),
+    "resonator_frequency": 4.5172671e9,
+    "resonator_frequency_bounds": (4.51e9, 4.525e9),
     "T1": 5.89e-6,
     "T2": 1.27e-6,
     "T2_Spinecho": 3.5e-6,
     "pi-pulse": 100.21e-9,
     "drive_channel": 2,
     "readout_channel": (0, 1),
-    "readout_IF_frequency": 100e6,
-    "iq_state": ([0.002117188393398148, 0.020081601323807922], [0.007347951048047871, 0.015370747296983345]),
-    "gates": {
+    "connected_qubits": [1],
+    "zero_iq_reference": (0.002117188393398148, 0.020081601323807922),
+    "one_iq_reference": (0.007347951048047871, 0.015370747296983345),
+    "initial_gates": {
         "rx": [pulses.BasicPulse(2, 0, 100.21e-9, 0.375 / 2, 3.06362669e9 - 2.3e9, 0, pulses.Rectangular()),
                 pulses.BasicPulse(2, 0, 69.77e-9, 0.375 / 2, 3.086e9 - 2.3e9, 0, pulses.Rectangular())],
         "ry": [pulses.BasicPulse(2, 0, 100.21e-9, 0.375 / 2, 3.06362669e9 - 2.3e9, 90, pulses.Rectangular()),
                 pulses.BasicPulse(2, 0, 69.77e-9, 0.375 / 2, 3.086e9 - 2.3e9, 90, pulses.Rectangular())],
         "measure": [pulses.BasicPulse(0, 0, 5e-6, 0.75 / 2, 100e6, 90, pulses.Rectangular()), # I cosine
                     pulses.BasicPulse(1, 0, 5e-6, 0.75 / 2, 100e6, 0, pulses.Rectangular())], # Q negative sine
-        "cx_1": [pulses.BasicPulse(3, 0, 46.71e-9, 0.396 / 2, 3.06362669e9 - 2.3e9, 0, pulses.SWIPHT(20e6))],
+        "cx_(1,)": [pulses.BasicPulse(3, 0, 46.71e-9, 0.396 / 2, 3.06362669e9 - 2.3e9, 0, pulses.SWIPHT(20e6))],
     }
 }, {
     "id": 1,
     "qubit_frequency": 3.284049061e9,
-    "qubit_amplitude": 0.375 / 2,
+    "qubit_frequency_bounds": (3.27e9, 3.29e9),
+    "resonator_frequency": 4.5172671e9,
+    "resonator_frequency_bounds": (4.51e9, 4.525e9),
     "T1": 5.89e-6,
     "T2": 1.27e-6,
     "T2_Spinecho": 3.5e-6,
     "pi-pulse": 112.16e-9,
     "drive_channel": 3,
     "readout_channel": (0, 1),
-    "readout_IF_frequency": 100e6,
-    "iq_state": ([0.002117188393398148, 0.020081601323807922], [0.005251298773123129, 0.018463491059057126]),
-    "gates": {
+    "connected_qubits": [0],
+    "zero_iq_reference": (0.002117188393398148, 0.020081601323807922),
+    "one_iq_reference": (0.007347951048047871, 0.015370747296983345),
+    "initial_gates": {
         "rx": [pulses.BasicPulse(3, 0, 112.16e-9, 0.375 / 2, 3.284049061e9 - 2.3e9, 0, pulses.Rectangular()),
                 pulses.BasicPulse(3, 0, 131.12e-9, 0.375 / 2, 3.23e9 - 2.3e9, 0, pulses.Rectangular())],
         "ry": [pulses.BasicPulse(3, 0, 112.16e-9, 0.375 / 2, 3.284049061e9 - 2.3e9, 90, pulses.Rectangular()),
@@ -131,6 +137,7 @@ class AWGSystem(AbstractExperiment):
             self.awg_params.add_parameter("CH{}_amplitude".format(i + 1),
                                           default=amplitude[i])
 
+        self.qubits = [Qubit(*qb) for qb in initial_calibration]
 
     def connect(self):
         pass
