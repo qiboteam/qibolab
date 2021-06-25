@@ -94,7 +94,7 @@ def BoundsValidator(value, bounds):
 def EnumValidator(value, enum):
     return value in enum
 
-class ParameterList(dict[str, BaseParameter]):
+class ParameterList(dict):
     """Dictionary class that holds BaseParameters.
     """
     def add_parameter(self, name: str, default=None, vals=None, val_mapping=None, get_wrapper=None, validator=None):
@@ -126,7 +126,7 @@ class GateSet(dict):
         """
         gate_name = gate.name
 
-        if self.is_two_qubit_gate(gate):
+        if self._is_two_qubit_gate(gate):
             gate_name += "_{}".format(gate.control_qubits)
 
         self[gate_name] = pulse_sequence
@@ -150,7 +150,7 @@ class GateSet(dict):
         """
         gate_name = gate.name
 
-        if self.is_two_qubit_gate(gate):
+        if self._is_two_qubit_gate(gate):
             gate_name += "_{}".format(gate.control_qubits)
 
         return self[gate_name]

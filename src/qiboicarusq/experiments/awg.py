@@ -110,7 +110,7 @@ class AWGSystem(AbstractExperiment):
                                           default=4992)
         self.readout_params.add_parameter("measurement_level",
                                           default=2,
-                                          values=[0, 1, 2],
+                                          vals=[0, 1, 2],
                                           validator=EnumValidator)
         self.readout_params.add_parameter("duration",
                                           default=5e-6)

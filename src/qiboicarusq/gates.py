@@ -46,7 +46,7 @@ class I(AbstractHardwareGate, gates.I):
         return 0
 
 
-class Align(AbstractHardwareGate, gates.Align):
+class Align(AbstractHardwareGate, gates.I):
 
     def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
         m = max(qubit_times[q] for q in self.target_qubits)

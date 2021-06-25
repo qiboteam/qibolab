@@ -24,7 +24,7 @@ class Experiment:
             if name in self.available_experiments:
                 new_experiment = self.available_experiments.get(name)()
                 self.constructed_experiments[name] = new_experiment
-                self.active_experiment = new_experiment
+                self._active_experiment = new_experiment
             else:
                 raise_error(KeyError, "Unknown experiment {}.".format(name))
 
