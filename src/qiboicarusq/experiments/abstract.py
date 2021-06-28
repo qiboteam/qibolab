@@ -162,7 +162,7 @@ class Qubit(ParameterList):
     def __init__(self, id: int = None, qubit_frequency: float = 0, qubit_frequency_bounds: tuple = (0, 0), connected_qubits: list = [],
                  drive_channel: Union[tuple, int] = None, resonator_frequency: float = 0, resonator_frequency_bounds: list = (0, 0),
                  flux_channel: int = None, readout_channel: Union[tuple, int] = None, initial_gates: dict = {},
-                 zero_iq_reference: tuple = (), one_iq_reference: tuple = ()):
+                 zero_iq_reference: tuple = (), one_iq_reference: tuple = (), *args, **kwargs):
 
         super().__init__()
         # static

@@ -129,7 +129,7 @@ class AWGSystem(AbstractExperiment):
                                       default=2.3e9,
                                       vals=(1e9, 2.5e9),
                                       validator=BoundsValidator)
-        for i in self.nchannels:
+        for i in range(self.nchannels):
             self.awg_params.add_parameter("CH{}_offset".format(i + 1),
                                           default=offset[i])
             self.awg_params.add_parameter("CH{}_phase".format(i + 1),
@@ -137,7 +137,7 @@ class AWGSystem(AbstractExperiment):
             self.awg_params.add_parameter("CH{}_amplitude".format(i + 1),
                                           default=amplitude[i])
 
-        self.qubits = [Qubit(*qb) for qb in initial_calibration]
+        self.qubits = [Qubit(**qb) for qb in initial_calibration]
 
     def connect(self):
         pass
