@@ -1,11 +1,12 @@
 from qiboicarusq.experiments.icarusq import IcarusQ
 from qiboicarusq.experiments.awg import AWGSystem
+from qiboicarusq.experiments.awg10q import AWGSystem10Qubits
 from qibo.config import raise_error
 
 
 class Experiment:
 
-    available_experiments = {"icarusq": IcarusQ, "awg": AWGSystem}
+    available_experiments = {"icarusq": IcarusQ, "awg": AWGSystem, "awg10q": AWGSystem10Qubits}
 
     def __init__(self):
         # construct `IcarusQ` as the default experiment
