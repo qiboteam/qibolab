@@ -57,6 +57,40 @@ class BasicPulse(Pulse):
             envelope * np.sin(2 * np.pi * self.frequency * time + self.phase))
         return waveform
 
+class IQReadoutPulse(Pulse):
+    """ Describes a pair of IQ pulses for the readout
+
+    Args:
+        channels (int): Pair of FPGA channels to play pulses on.
+        start (float): Start time of pulse in seconds.
+        duration (float): Pulse duration in seconds.
+        amplitude (float): Pulse amplitude in volts.
+        frequency (float): Pulse frequency in Hz.
+        phases (float): Pulse phase offset for mixer sideband.
+    """
+
+    def __init__(self, channels, start, duration, amplitude, frequency, phases):
+        self.channels = channels
+        self.start = start
+        self.duration = duration
+        self.amplitude = amplitude
+        self.frequency = frequency
+        self.phases = phases
+
+    def serial(self):
+        return ""
+
+    def compile(self, waveform, sequence):
+        i_start = bisect.bisect(sequence.time, self.start)
+        #i_start = int((self.start / sequence.duration) * sequence.sample_size)
+        i_duration = int((self.duration / sequence.duration) * sequence.sample_size)
+        time = sequence.time[i_start:i_start + i_duration]
+
+        waveform[self.channels[0], i_start:i_start + i_duration] += self.amplitude * np.cos(2 * np.pi * self.frequency * time + self.phases[0])
+        waveform[self.channels[1], i_start:i_start + i_duration] -= self.amplitude * np.sin(2 * np.pi * self.frequency * time + self.phases[1])
+        
+        return waveform
+
 
 class MultifrequencyPulse(Pulse):
     """Describes multiple pulses to be added to waveform array.

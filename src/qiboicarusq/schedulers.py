@@ -10,7 +10,7 @@ class TaskScheduler:
     def __init__(self):
         self._executor = ThreadPoolExecutor(max_workers=1)
         self._pi_trig = None # NIY
-        self._qubit_config = experiment.static.initial_config
+        #self._qubit_config = experiment.static.initial_config #NIU
 
     def fetch_config(self):
         """Fetches the qubit configuration data
@@ -78,11 +78,11 @@ class TaskScheduler:
         wfm = pulse_batch[0].compile()
         steps = len(pulse_batch)
         sample_size = len(wfm[0])
-        wfm_batch = np.zeros((experiment.static.nchannels, steps, sample_size))
+        wfm_batch = np.zeros((steps, experiment.static.nchannels, sample_size))
         for i in range(steps):
             wfm = pulse_batch[i].compile()
             for j in range(experiment.static.nchannels):
-                wfm_batch[j, i] = wfm[j]
+                wfm_batch[i, j] = wfm[j]
 
         experiment.upload_batch(wfm_batch, nshots)
         experiment.start_batch(steps, nshots)

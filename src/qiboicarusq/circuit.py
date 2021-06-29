@@ -3,8 +3,8 @@ import numpy as np
 from qibo import gates
 from qibo.config import raise_error
 from qibo.core import measurements, circuit
-from qiboicarusq import pulses, tomography, experiment, scheduler
-
+from qiboicarusq import tomography, experiment, scheduler
+from qiboicarusq.gates import Align
 
 class PulseSequence:
     """Describes a sequence of pulses for the FPGA to unpack and convert into arrays
@@ -16,19 +16,15 @@ class PulseSequence:
     Args:
         pulses: Array of Pulse objects
     """
-    def __init__(self, pulses, duration=None):
+    def __init__(self, pulses, duration=10e-6):
         self.pulses = pulses
-        self.nchannels = experiment.static.nchannels
-        self.sample_size = experiment.static.sample_size
-        self.sampling_rate = experiment.static.sampling_rate
-        self.file_dir = experiment.static.pulse_file
+        self.nchannels = experiment.nchannels
+        self.sampling_rate = experiment.sampling_rate()
+        self.sample_size = int(self.sampling_rate * duration)
+        self.duration = duration
+        #self.file_dir = experiment.pulse_file # NIU
 
-        if duration is None:
-            self.duration = self.sample_size / self.sampling_rate
-        else:
-            self.duration = duration
-            self.sample_size = int(duration * self.sampling_rate)
-        end = experiment.static.readout_pulse_duration + 1e-6
+        end = experiment.readout_pulse_duration() + 1e-6
         self.time = np.linspace(end - self.duration, end, num=self.sample_size)
 
     def compile(self):
@@ -89,7 +85,8 @@ class HardwareCircuit(circuit.Circuit):
         for gate in gate_sequence:
             q = gate.target_qubits[0]
 
-            if isinstance(gate, gates.Align):
+            
+            if isinstance(gate, Align):
                 m = 0
                 for q in gate.target_qubits:
                     m = max(m, qubit_times[q])
@@ -97,20 +94,21 @@ class HardwareCircuit(circuit.Circuit):
                 for q in gate.target_qubits:
                     qubit_times[q] = m
 
+            # TODO: Condition for two/three qubit gates
             elif isinstance(gate, gates.CNOT):
                 # CNOT cannot be tested because calibration placeholder supports single qubit only
                 control = gate.control_qubits[0]
                 start = max(qubit_times[q], qubit_times[control])
-                qubit_times[q] = start + gate.duration(self.qubit_config)
+                qubit_times[q] = start + gate.duration(experiment.qubits)
                 qubit_times[control] = qubit_times[q]
 
             else:
-                qubit_times[q] += gate.duration(self.qubit_config)
+                qubit_times[q] += gate.duration(experiment.qubits)
 
         return qubit_times
 
     def create_pulse_sequence(self, queue, qubit_times, qubit_phases):
-        args = [self.qubit_config, qubit_times, qubit_phases]
+        args = [experiment.qubits, qubit_times, qubit_phases]
         sequence = []
         for gate in queue:
             sequence.extend(gate.pulse_sequence(*args))
