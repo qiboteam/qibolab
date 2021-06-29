@@ -156,7 +156,6 @@ class Rectangular(PulseShape):
 
 class Gaussian(PulseShape):
     """Gaussian pulse shape"""
-    import numpy as np
 
     def __init__(self, sigma):
         self.name = "gaussian"
@@ -167,7 +166,7 @@ class Gaussian(PulseShape):
         A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}
         """
         mu = start + duration / 2
-        return amplitude * self.np.exp(-0.5 * (time - mu) ** 2 / self.sigma ** 2)
+        return amplitude * np.exp(-0.5 * (time - mu) ** 2 / self.sigma ** 2)
 
     def __repr__(self):
         return "({}, {})".format(self.name, self.sigma)
@@ -175,7 +174,6 @@ class Gaussian(PulseShape):
 
 class Drag(PulseShape):
     """Derivative Removal by Adiabatic Gate (DRAG) pulse shape"""
-    import numpy as np
 
     def __init__(self, sigma, beta):
         self.name = "drag"
@@ -188,7 +186,7 @@ class Drag(PulseShape):
         where Gaussian G = A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}
         """
         mu = start + duration / 2
-        gaussian = amplitude * self.np.exp(-0.5 * (time - mu) ** 2 / self.sigma ** 2)
+        gaussian = amplitude * np.exp(-0.5 * (time - mu) ** 2 / self.sigma ** 2)
         return gaussian + 1j * self.beta * (-(time - mu) / self.sigma ** 2) * gaussian
 
     def __repr__(self):
@@ -203,7 +201,6 @@ class SWIPHT(PulseShape):
         self.g = g
 
     def envelope(self, time, start, duration, amplitude):
-        import numpy as np
 
         ki_qq = self.g * np.pi
         t_g = 5.87 / (2 * abs(ki_qq))
