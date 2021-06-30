@@ -34,26 +34,22 @@ class ParamikoSSH(Connection):
         self.ssh.connect(hostname=hostname, username=username, password=password)
 
         self.sftp = None
-        self.sftp_counter = 1
         self.putfo_dir = '/tmp/wave_ch{}.csv'
-        self.getfo_dir = '/tmp/ADC_CH{}.txt'
+        self.getfo_dir = '/tmp/adc_{:03d}_ch{}.txt'
 
     def exec_command(self, command):
         self.ssh.exec_command(command)
 
     def __enter__(self):
         self.sftp = self.ssh.open_sftp()
-        self.sftp_counter = 1
         return self
 
     def __exit__(self, *args):
         self.sftp.close()
 
-    def putfo(self, dump):
-        self.sftp.putfo(dump, self.putfo_dir.format(self.sftp_counter))
-        self.sftp_counter += 1
+    def putfo(self, dump, channel):
+        self.sftp.putfo(dump, self.putfo_dir.format(channel + 1))
 
-    def getfo(self, dump):
-        self.sftp.getfo(self.getfo_dir.format(self.sftp_counter), dump)
-        self.sftp_counter += 1
+    def getfo(self, dump, shot, channel):
+        self.sftp.getfo(self.getfo_dir.format(shot, channel + 1), dump)
         return dump

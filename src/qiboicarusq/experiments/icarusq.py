@@ -2,6 +2,7 @@ import copy
 import itertools
 import numpy as np
 from io import BytesIO
+from concurrent.futures import ThreadPoolExecutor
 from qibo.config import log, raise_error
 from qiboicarusq import connections, pulses
 from qiboicarusq.experiments.abstract import AbstractExperiment
@@ -73,22 +74,33 @@ class IcarusQ(AbstractExperiment):
         super().__init__()
         self.name = "icarusq"
         self.static = self.StaticParameters()
+        self.executor = ThreadPoolExecutor(max_workers=1)
+        self._thread = None
 
     def connect(self, address, username, password):
         self._connection = connections.ParamikoSSH(address, username, password)
 
-    def clock(self):
-        self.connection.exec_command('clk-control')
+    def clock(self, external=True):
+        # external clock: 122.88 MHz, 2 Vpp, through J19
+        exbit = 1
+        if not external:
+            exbit = 0
+        cmd='[[ "$(yes 16 | ./clk-control {})" =~ "ERROR" ]] && echo "1"'.format(exbit)
+        stdin, stdout, stderr = self.ssh.exec_command('cd /usr/bin; {}'.format(cmd))
+        lline = "0"
+        for line in stdout:
+            lline=line
+        return int(lline)
 
-    def start(self, nshots, adc_delay=0.0, verbose=False):
-        stdin, stdout, stderr = self.connection.exec_command( # pylint: disable=E1111
-            'cd /tmp; ./cqtaws 1 {:.06f}'.format(adc_delay * 1e6))  # delay in us
+    def start(self, dac_shots, adc_shots, verbose=False):
+        command = 'cd /tmp; ./cqtaws {} {}'.format(dac_shots, adc_shots)
+        self._thread = self.executor.submit(self._start, command, verbose)
+
+    def _start(self, command, verbose):
+        stdin, stdout, stderr = self.ssh.exec_command(command)
         if verbose:
             for line in stdout:
-                log.info(line.strip('\n'))
-
-    def stop(self):
-        self.connection.exec_command('cd /tmp; ./cqtaws 0 0')
+                print(line.strip('\n'))
 
     def upload(self, waveform):
         dump = BytesIO()
@@ -97,23 +109,32 @@ class IcarusQ(AbstractExperiment):
                 dump.seek(0)
                 np.savetxt(dump, waveform[i], fmt='%d', newline=',')
                 dump.seek(0)
-                sftp.putfo(dump)
+                sftp.putfo(dump, channel=i)
         dump.close()
 
-    def download(self):
-        waveform = np.zeros((self.static.nchannels, self.static.sample_size))
+    def download(self, adc_shots):
+        waveform = np.zeros((adc_shots, self.static.nchannels, self.static.sample_size))
         dump = BytesIO()
         with self.connection as sftp:
-            for i in range(self.static.nchannels):
-                dump.seek(0)
-                #sftp.get('/tmp/ADC_CH{}.txt'.format(i + 1), local + 'ADC_CH{}.txt'.format(i + 1))
-                dump = sftp.getfo(dump)
-                dump.seek(0)
-                #waveform.append(np.genfromtxt(local + 'ADC_CH{}.txt', delimiter=',')[:-1])
-                waveform[i] = np.genfromtxt(dump, delimiter=',')[:-1]
+            for j in range(adc_shots):
+                for i in range(self.static.nchannels):
+                    dump.seek(0)
+                    dump = sftp.getfo(dump, shot=j, channel=i)
+                    dump.seek(0)
+                    waveform[j, i] = np.genfromtxt(dump, delimiter=',')[:-1]
         dump.close()
-
         return waveform
+
+    def is_running(self) -> bool:
+        if self._thread is None:
+            return False
+
+        return not self._thread.running()
+
+    def wait(self):
+        if self._thread is None:
+            raise RuntimeError("Not started yet")
+        self._thread.result()
 
     @staticmethod
     def check_tomography_required(target_qubits):
