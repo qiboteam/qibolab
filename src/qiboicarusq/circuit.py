@@ -16,12 +16,20 @@ class PulseSequence:
     Args:
         pulses: Array of Pulse objects
     """
-    def __init__(self, pulses, duration=10e-6):
+    def __init__(self, pulses, duration = None, sample_size = None):
+        if duration is None and sample_size is None:
+            raise_error(RuntimeError("Either duration or sample size need to be defined"))
+
         self.pulses = pulses
         self.nchannels = experiment.nchannels
         self.sampling_rate = experiment.sampling_rate()
-        self.sample_size = int(self.sampling_rate * duration)
-        self.duration = duration
+        if duration is not None:
+            self.duration = duration
+            self.sample_size = int(self.sampling_rate * duration)
+        
+        if sample_size is not None:
+            self.sample_size = sample_size
+            self.duration = sample_size / self.sampling_rate
         #self.file_dir = experiment.pulse_file # NIU
 
         end = experiment.readout_pulse_duration() + 1e-6
@@ -113,7 +121,7 @@ class HardwareCircuit(circuit.Circuit):
         for gate in queue:
             sequence.extend(gate.pulse_sequence(*args))
         sequence.extend(self.measurement_gate.pulse_sequence(*args))
-        return PulseSequence(sequence)
+        return PulseSequence(sequence, experiment.default_pulse_duration, experiment.default_sample_size)
 
     def _execute_sequence(self, nshots):
         """For one qubit, we can rely on IQ data projection to get the probability p."""
