@@ -38,7 +38,7 @@ class ParamikoSSH(Connection):
         self.getfo_dir = '/tmp/adc_{:03d}_ch{}.txt'
 
     def exec_command(self, command):
-        self.ssh.exec_command(command)
+        return self.ssh.exec_command(command)
 
     def __enter__(self):
         self.sftp = self.ssh.open_sftp()

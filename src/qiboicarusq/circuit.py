@@ -16,7 +16,7 @@ class PulseSequence:
     Args:
         pulses: Array of Pulse objects
     """
-    def __init__(self, pulses, duration = experiment.default_pulse_duration, sample_size = experiment.default_sample_size):
+    def __init__(self, pulses, duration=experiment.default_pulse_duration, sample_size=experiment.default_sample_size):
         if duration is None and sample_size is None:
             raise_error(RuntimeError("Either duration or sample size need to be defined"))
 

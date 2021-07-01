@@ -76,8 +76,11 @@ class IcarusQ(AbstractExperiment):
         self.static = self.StaticParameters()
         self.executor = ThreadPoolExecutor(max_workers=1)
         self._thread = None
+        self.nchannels = 16
         self.default_sample_size = 65536
         self.default_pulse_duration = None
+        self.sampling_rate = lambda: 1966.08e6
+        self.readout_pulse_duration = lambda: 5e-6
 
     def connect(self, address, username, password):
         self._connection = connections.ParamikoSSH(address, username, password)
@@ -88,7 +91,7 @@ class IcarusQ(AbstractExperiment):
         if not external:
             exbit = 0
         cmd='[[ "$(yes 16 | ./clk-control {})" =~ "ERROR" ]] && echo "1"'.format(exbit)
-        stdin, stdout, stderr = self.ssh.exec_command('cd /usr/bin; {}'.format(cmd))
+        stdin, stdout, stderr = self._connection.exec_command('cd /usr/bin; {}'.format(cmd))
         lline = "0"
         for line in stdout:
             lline=line
@@ -99,7 +102,7 @@ class IcarusQ(AbstractExperiment):
         self._thread = self.executor.submit(self._start, command, verbose)
 
     def _start(self, command, verbose):
-        stdin, stdout, stderr = self.ssh.exec_command(command)
+        stdin, stdout, stderr = self._connection.exec_command(command)
         if verbose:
             for line in stdout:
                 print(line.strip('\n'))
@@ -110,7 +113,7 @@ class IcarusQ(AbstractExperiment):
     def upload(self, waveform):
         dump = BytesIO()
         with self.connection as sftp:
-            for i in range(self.static.nchannels):
+            for i in range(self.nchannels):
                 dump.seek(0)
                 np.savetxt(dump, waveform[i], fmt='%d', newline=',')
                 dump.seek(0)
@@ -118,11 +121,12 @@ class IcarusQ(AbstractExperiment):
         dump.close()
 
     def download(self, adc_shots):
-        waveform = np.zeros((adc_shots, self.static.nchannels, self.static.sample_size))
+        adc_nchannels = 8
+        waveform = np.zeros((adc_shots, adc_nchannels, self.default_sample_size))
         dump = BytesIO()
         with self.connection as sftp:
             for j in range(adc_shots):
-                for i in range(self.static.nchannels):
+                for i in range(adc_nchannels):
                     dump.seek(0)
                     dump = sftp.getfo(dump, shot=j, channel=i)
                     dump.seek(0)
