@@ -102,6 +102,9 @@ class IcarusQ(AbstractExperiment):
             for line in stdout:
                 print(line.strip('\n'))
 
+    def stop(self):
+        pass
+
     def upload(self, waveform):
         dump = BytesIO()
         with self.connection as sftp:
