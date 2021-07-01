@@ -51,7 +51,6 @@ def RabiSpectroscopy(scan_start: float, scan_stop: float, scan_step: float, qubi
 
     Returns an array of i, q pairs
     """
-    duration = 10e-6
     readout_start = 0
     readout_duration = 5e-6
     readout_amplitude = 0.75 / 2 / 5
@@ -62,7 +61,7 @@ def RabiSpectroscopy(scan_start: float, scan_stop: float, scan_step: float, qubi
     sweep = np.arange(scan_start, scan_stop, scan_step)
     for pulse_time in sweep:
         drive = BasicPulse(qubit_channel, readout_start - pulse_time, pulse_time, 0.75 / 2, qubit_frequency, 0, Rectangular())
-        sequence.append(PulseSequence([drive, readout], duration=duration))
+        sequence.append(PulseSequence([drive, readout]))
 
     job = scheduler.execute_batch_sequence(sequence, nshots)
     result = job.result()
@@ -77,7 +76,6 @@ def RamseyInferometry(scan_start: float, scan_stop: float, scan_step: float, qub
  
     Returns an array of i, q pairs
     """
-    duration = 10e-6
     readout_start = 0
     readout_duration = 5e-6
     readout_amplitude = 0.75 / 2 / 5
@@ -89,7 +87,7 @@ def RamseyInferometry(scan_start: float, scan_stop: float, scan_step: float, qub
     second_pulse = BasicPulse(qubit_channel, readout_start - pi_half, pi_half, 0.75 / 2, qubit_frequency, 0, Rectangular())
     for tau in sweep:
         first_pulse = BasicPulse(qubit_channel, readout_start - pi_half - tau - pi_half, pi_half, 0.75 / 2, qubit_frequency, 0, Rectangular())
-        sequence.append(PulseSequence([first_pulse, second_pulse, readout], duration=duration))
+        sequence.append(PulseSequence([first_pulse, second_pulse, readout]))
 
     job = scheduler.execute_batch_sequence(sequence, nshots)
     result = job.result()
@@ -103,7 +101,6 @@ def T1(scan_start: float, scan_stop: float, scan_step: float, qubit_channel: int
  
     Returns an array of i, q pairs
     """
-    duration = 10e-6
     readout_start = 0
     readout_duration = 5e-6
     readout_amplitude = 0.75 / 2 / 5
@@ -115,9 +112,9 @@ def T1(scan_start: float, scan_stop: float, scan_step: float, qubit_channel: int
     for tau in sweep:
         if tau >= 0:
             drive = BasicPulse(qubit_channel, readout_start - tau - pi_pulse, pi_pulse, 0.75 / 2, qubit_frequency, 0, Rectangular())
-            sequence.append(PulseSequence([drive, readout], duration=duration))
+            sequence.append(PulseSequence([drive, readout]))
         else:
-            sequence.append(PulseSequence([readout], duration=duration))
+            sequence.append(PulseSequence([readout]))
 
     job = scheduler.execute_batch_sequence(sequence, nshots)
     result = job.result()
@@ -132,7 +129,6 @@ def Spinecho(scan_start: float, scan_stop: float, scan_step: float, qubit_channe
  
     Returns an array of i, q pairs
     """
-    duration = 10e-6
     readout_start = 0
     readout_duration = 5e-6
     readout_amplitude = 0.75 / 2 / 5
@@ -148,7 +144,7 @@ def Spinecho(scan_start: float, scan_stop: float, scan_step: float, qubit_channe
         middle_pulse = BasicPulse(qubit_channel, start, pi_pulse, 0.75 / 2, qubit_frequency, 0, Rectangular())
         start = start - tau_half - pi_half
         first_half_pulse = BasicPulse(qubit_channel, start, pi_half, 0.75 / 2, qubit_frequency, 0, Rectangular())
-        sequence.append(PulseSequence([first_half_pulse, middle_pulse, second_half_pulse, readout], duration=duration))
+        sequence.append(PulseSequence([first_half_pulse, middle_pulse, second_half_pulse, readout]))
 
     job = scheduler.execute_batch_sequence(sequence, nshots)
     result = job.result()

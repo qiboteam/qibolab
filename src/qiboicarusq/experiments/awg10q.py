@@ -48,7 +48,7 @@ initial_calibration = [{
         "ry": [pulses.BasicPulse(2, 0, 100.21e-9, 0.375 / 2, 3.06362669e9 - 2.3e9, 90, pulses.Rectangular()),
                 pulses.BasicPulse(2, 0, 69.77e-9, 0.375 / 2, 3.086e9 - 2.3e9, 90, pulses.Rectangular())],
         "cx_(1,)": [pulses.BasicPulse(3, 0, 46.71e-9, 0.396 / 2, 3.06362669e9 - 2.3e9, 0, pulses.SWIPHT(20e6))],
-        "measure": [pulses.IQReadoutPulse((0, 1), 0, 5e-6, 0.75 / 4, 100e6, (-6.2, 0.2))]
+        "measure": [pulses.IQReadoutPulse((0, 1), 0, 5e-6, 0.75 / 4, 100e6, (-6.2 / 180 * np.pi, 0.2 / 180 * np.pi))]
     }
 }, {
     "id": 1,
@@ -70,7 +70,7 @@ initial_calibration = [{
                 pulses.BasicPulse(3, 0, 131.12e-9, 0.375 / 2, 3.23e9 - 2.3e9, 0, pulses.Rectangular())],
         "ry": [pulses.BasicPulse(3, 0, 112.16e-9, 0.375 / 2, 3.284049061e9 - 2.3e9, 90, pulses.Rectangular()),
                 pulses.BasicPulse(3, 0, 131.12e-9, 0.375 / 2, 3.23e9 - 2.3e9, 90, pulses.Rectangular())],
-        "measure": [pulses.IQReadoutPulse((0, 1), 0, 5e-6, 0.75 / 4, 150e6, (-6.2, 0.2))]
+        "measure": [pulses.IQReadoutPulse((0, 1), 0, 5e-6, 0.75 / 4, 150e6, (-6.2 / 180 * np.pi, 0.2 / 180 * np.pi))]
     }
 }]
 
@@ -85,6 +85,8 @@ class AWGSystem10Qubits(AbstractExperiment):
         self.qubit_config = initial_calibration
         self.num_qubits = 2
         self.nchannels = 4
+        self.default_sample_size = None
+        self.default_pulse_duration = 10e-6
 
         self.readout_params = ParameterList()
         self.readout_params.add_parameter("LO_frequency",

@@ -76,8 +76,8 @@ class IcarusQ(AbstractExperiment):
         self.static = self.StaticParameters()
         self.executor = ThreadPoolExecutor(max_workers=1)
         self._thread = None
-        self.default_sample_size = None
-        self.default_pulse_duration = 10e-6
+        self.default_sample_size = 65536
+        self.default_pulse_duration = None
 
     def connect(self, address, username, password):
         self._connection = connections.ParamikoSSH(address, username, password)
