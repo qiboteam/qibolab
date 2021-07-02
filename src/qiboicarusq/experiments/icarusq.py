@@ -1,6 +1,7 @@
 import copy
 import itertools
 import numpy as np
+import struct
 from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor
 from qibo.config import log, raise_error
@@ -129,10 +130,18 @@ class IcarusQ(AbstractExperiment):
                 for i in range(adc_nchannels):
                     dump.seek(0)
                     dump = sftp.getfo(dump, shot=j, channel=i)
-                    dump.seek(0)
-                    waveform[j, i] = np.genfromtxt(dump, delimiter=',')[:-1]
+                    waveform[j, i] = self._decode(dump.getvalue())
         dump.close()
         return waveform
+    
+    def _decode(self, data, v_range=1, v_bits=12):
+        v_resolution = 2 ** v_bits
+        v_div = v_range / v_resolution
+        array = []
+        for i in range(0, len(data), 2):
+            d = struct.unpack("<h", data[i:i+2])
+            array.append(d[0] * v_div)
+        return array
 
     def is_running(self) -> bool:
         if self._thread is None:

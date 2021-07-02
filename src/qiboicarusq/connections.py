@@ -35,7 +35,7 @@ class ParamikoSSH(Connection):
 
         self.sftp = None
         self.putfo_dir = '/tmp/wave_ch{}.csv'
-        self.getfo_dir = '/tmp/adc_{:03d}_ch{}.txt'
+        self.getfo_dir = '/tmp/adc_{:03d}_CH{}.txt'
 
     def exec_command(self, command):
         return self.ssh.exec_command(command)
@@ -51,5 +51,5 @@ class ParamikoSSH(Connection):
         self.sftp.putfo(dump, self.putfo_dir.format(channel + 1))
 
     def getfo(self, dump, shot, channel):
-        self.sftp.getfo(self.getfo_dir.format(shot, channel + 1), dump)
+        self.sftp.getfo(self.getfo_dir.format(shot, channel), dump)
         return dump
