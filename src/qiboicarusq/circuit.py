@@ -16,7 +16,8 @@ class PulseSequence:
     Args:
         pulses: Array of Pulse objects
     """
-    def __init__(self, pulses, duration=experiment.default_pulse_duration, sample_size=experiment.default_sample_size):
+    def __init__(self, pulses, duration=experiment.default_pulse_duration, sample_size=experiment.default_sample_size,
+                 fixed_readout=True, time_offset=experiment.readout_pulse_duration() + 1e-6):
         if duration is None and sample_size is None:
             raise_error(RuntimeError("Either duration or sample size need to be defined"))
 
@@ -30,10 +31,15 @@ class PulseSequence:
         if sample_size is not None:
             self.sample_size = sample_size
             self.duration = sample_size / self.sampling_rate
+
+            #if duration is not None:
+                #warn("Defaulting to fixed sample size")
         #self.file_dir = experiment.pulse_file # NIU
 
-        end = experiment.readout_pulse_duration() + 1e-6
-        self.time = np.linspace(end - self.duration, end, num=self.sample_size)
+        if fixed_readout:
+            self.time = np.linspace(time_offset - self.duration, time_offset, num=self.sample_size)
+        else:
+            self.time = np.linspace(0, self.duration, self.sample_size)
 
     def compile(self):
         """Compiles pulse sequence into waveform arrays
@@ -68,26 +74,6 @@ class HardwareCircuit(circuit.Circuit):
         raise_error(NotImplementedError, "Circuit fusion is not implemented "
                                          "for hardware backends.")
 
-    @staticmethod
-    def _probability_extraction(data, refer_0, refer_1):
-        move = copy.copy(refer_0)
-        refer_0 = refer_0 - move
-        refer_1 = refer_1 - move
-        data = data - move
-        # Rotate the data so that vector 0-1 is overlapping with Ox
-        angle = copy.copy(np.arccos(refer_1[0]/np.sqrt(refer_1[0]**2 + refer_1[1]**2))*np.sign(refer_1[1]))
-        new_data = np.array([data[0]*np.cos(angle) + data[1]*np.sin(angle),
-                             -data[0]*np.sin(angle) + data[1]*np.cos(angle)])
-        # Rotate refer_1 to get state 1 reference
-        new_refer_1 = np.array([refer_1[0]*np.cos(angle) + refer_1[1]*np.sin(angle),
-                                -refer_1[0]*np.sin(angle) + refer_1[1]*np.cos(angle)])
-        # Condition for data outside bound
-        if new_data[0] < 0:
-            new_data[0] = 0
-        elif new_data[0] > new_refer_1[0]:
-            new_data[0] = new_refer_1[0]
-        return new_data[0] / new_refer_1[0]
-
     def _calculate_sequence_duration(self, gate_sequence):
         qubit_times = np.zeros(self.nqubits)
         for gate in gate_sequence:
@@ -121,7 +107,7 @@ class HardwareCircuit(circuit.Circuit):
         for gate in queue:
             sequence.extend(gate.pulse_sequence(*args))
         sequence.extend(self.measurement_gate.pulse_sequence(*args))
-        return PulseSequence(sequence, experiment.default_pulse_duration, experiment.default_sample_size)
+        return PulseSequence(sequence)
 
     def _execute_sequence(self, nshots):
         """For one qubit, we can rely on IQ data projection to get the probability p."""
