@@ -132,9 +132,9 @@ class HardwareCircuit(circuit.Circuit):
         """
         # TODO: n-qubit dynamic tomography
         target_qubits = self.measurement_gate.target_qubits
-        nstates = int(2**len(target_qubits))
-        ps_states = tomography.Tomography.basis_states(nstates)
-        prerotation = tomography.Tomography.gate_sequence(nstates)
+        nqubits = len(target_qubits)
+        ps_states = tomography.Tomography.basis_states(nqubits)
+        prerotation = tomography.Tomography.gate_sequence(nqubits)
         ps_array = []
         # Set pulse sequence to get the state vectors
         for state_gate in ps_states:
@@ -151,7 +151,7 @@ class HardwareCircuit(circuit.Circuit):
 
         self._raw = scheduler.execute_tomography(ps_array, nshots)
         density_matrix = self._raw[0]
-        probabilities = np.array([density_matrix[k, k].real for k in range(nstates)])
+        probabilities = np.array([density_matrix[k, k].real for k in range(nqubits)])
         target_qubits = self.measurement_gate.target_qubits
         output = measurements.MeasurementResult(target_qubits, probabilities, nshots)
         self._final_state = output

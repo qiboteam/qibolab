@@ -332,13 +332,8 @@ class AWGSystem10Qubits(AbstractExperiment):
 
     # Joint readout method
     def parse_tomography(self, iq_values, target_qubits):
-        nqubits = len(target_qubits)
-        nstates = int(2**nqubits)
-        data = np.array([np.arctan2(q, i) * 180 / np.pi for i, q in iq_values])
-        states = data[0:nstates]
-        phase = data[nstates:len(iq_values)]
-        tom = tomography.Tomography(phase, states)
+        res = self.parse_iq(iq_values, target_qubits)
+        tom = tomography.Tomography(res)
         tom.minimize(1e-5)
         fit = tom.fit
-
         return fit
