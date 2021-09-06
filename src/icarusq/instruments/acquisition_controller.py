@@ -1,7 +1,7 @@
 import numpy as np
 from qcodes.instrument_drivers.AlazarTech import ATS
-from qiboicarusq.instruments.ATS9371 import AlazarTech_ATS9371
-from qiboicarusq.instruments.instrument_controller import InstrumentController
+from icarusq.instruments.ATS9371 import AlazarTech_ATS9371
+from icarusq.instruments.instrument_controller import InstrumentController
 
 
 class AcquisitionController(ATS.AcquisitionController):

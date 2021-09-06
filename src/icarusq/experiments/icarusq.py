@@ -1,8 +1,8 @@
 import numpy as np
 from io import BytesIO
 from qibo.config import log
-from qiboicarusq import connections
-from qiboicarusq.experiments.abstract import AbstractExperiment
+from icarusq import connections
+from icarusq.experiments.abstract import AbstractExperiment
 
 
 class IcarusQ(AbstractExperiment):
@@ -41,7 +41,7 @@ class IcarusQ(AbstractExperiment):
         pulse_file = 'C:/fpga_python/fpga/tmp/wave_ch1.csv'
 
         # Temporary calibration result placeholder when actual calibration is not available
-        from qiboicarusq import pulses
+        from icarusq import pulses
         calibration_placeholder = [{
             "id": 0,
             "qubit_frequency": 3.0473825e9,

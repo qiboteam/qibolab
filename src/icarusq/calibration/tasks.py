@@ -1,8 +1,8 @@
 import numpy as np
 from typing import List
-from qiboicarusq import experiment
-from qiboicarusq.circuit import PulseSequence
-from qiboicarusq.pulses import BasicPulse, Rectangular
+from icarusq import experiment
+from icarusq.circuit import PulseSequence
+from icarusq.pulses import BasicPulse, Rectangular
 
 
 def PulseSpectroscopy(frequency_start: float, frequency_stop: float, qubit_amplitude: float, channel: int) -> List[PulseSequence]:

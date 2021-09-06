@@ -3,7 +3,7 @@ import numpy as np
 from qibo import gates
 from qibo.config import raise_error
 from qibo.core import measurements, circuit
-from qiboicarusq import pulses, tomography, experiment, scheduler
+from icarusq import pulses, tomography, experiment, scheduler
 
 
 class PulseSequence:
@@ -211,7 +211,7 @@ class HardwareCircuit(circuit.Circuit):
         # Level 1: IQ Values
         # Level 2: Qubit State
 
-        # TODO: Move data fitting to qiboicarusq.experiments
+        # TODO: Move data fitting to icarusq.experiments
         if len(self.measurement_gate.target_qubits) == 1:
             return self._execute_one_qubit(nshots, measurement_level)
         else:

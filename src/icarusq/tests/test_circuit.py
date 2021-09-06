@@ -2,8 +2,8 @@ import pytest
 import numpy as np
 import qibo
 from qibo import gates, models
-from qiboicarusq import pulses
-from qiboicarusq.circuit import PulseSequence, HardwareCircuit
+from icarusq import pulses
+from icarusq.circuit import PulseSequence, HardwareCircuit
 # TODO: Parametrize these tests using experiment
 
 
@@ -61,7 +61,7 @@ def test_hardwarecircuit_probability_extraction():
 
 
 def test_hardwarecircuit_sequence_duration():
-    from qiboicarusq import experiment
+    from icarusq import experiment
     qibo.set_backend("icarusq")
     c = models.Circuit(2)
     c.add(gates.RX(0, theta=0.123))
@@ -76,7 +76,7 @@ def test_hardwarecircuit_sequence_duration():
 
 
 def test_hardwarecircuit_create_pulse_sequence():
-    from qiboicarusq import experiment
+    from icarusq import experiment
     qibo.set_backend("icarusq")
     c = models.Circuit(2)
     c.add(gates.RX(0, theta=0.123))

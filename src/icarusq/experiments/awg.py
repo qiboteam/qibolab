@@ -1,6 +1,6 @@
 import numpy as np
-from qiboicarusq.instruments import AcquisitionController
-from qiboicarusq.experiments.abstract import AbstractExperiment
+from icarusq.instruments import AcquisitionController
+from icarusq.experiments.abstract import AbstractExperiment
 
 
 class AWGSystem(AbstractExperiment):
@@ -59,7 +59,7 @@ class AWGSystem(AbstractExperiment):
         pulse_file = 'C:/fpga_python/fpga/tmp/wave_ch1.csv'
 
         # Temporary calibration result placeholder when actual calibration is not available
-        from qiboicarusq import pulses
+        from icarusq import pulses
         calibration_placeholder = [{
             "id": 0,
             "qubit_frequency": 3.06362669e9,

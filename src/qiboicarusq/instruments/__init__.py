@@ -1,6 +1,0 @@
-from qiboicarusq.instruments.awg import AWG
-from qiboicarusq.instruments.attenuator import MCAttenuator
-from qiboicarusq.instruments.quicsyn import QuicSyn
-from qiboicarusq.instruments.rigol import RG
-from qiboicarusq.instruments.instrument_controller import InstrumentController
-from qiboicarusq.instruments.acquisition_controller import AcquisitionController

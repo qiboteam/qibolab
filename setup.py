@@ -5,7 +5,7 @@ import os
 import re
 import sys
 
-PACKAGE = "qiboicarusq"
+PACKAGE = "icarusq"
 
 
 # Returns the version
@@ -38,7 +38,7 @@ setup(
     description="Quantum hardware backend for IcarusQ experiment",
     author="The Qibo team",
     author_email="",
-    url="https://github.com/qiboteam/qiboicarusq",
+    url="https://github.com/qiboteam/icarusq",
     packages=find_packages("src"),
     package_dir={"": "src"},
     package_data={"": ["*.json", "*.npy"]},

@@ -1,5 +1,5 @@
-from qiboicarusq.experiments.icarusq import IcarusQ
-from qiboicarusq.experiments.awg import AWGSystem
+from icarusq.experiments.icarusq import IcarusQ
+from icarusq.experiments.awg import AWGSystem
 from qibo.config import raise_error
 
 

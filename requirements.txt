@@ -1,4 +1,4 @@
-# Runtime requirements for qiboicarusq
+# Runtime requirements for icarusq
 
 numpy
 visa

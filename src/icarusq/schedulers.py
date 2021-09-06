@@ -1,7 +1,7 @@
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, Future
 from qibo.config import raise_error
-from qiboicarusq import pulses, experiment
+from icarusq import pulses, experiment
 
 
 class TaskScheduler:
@@ -45,7 +45,7 @@ class TaskScheduler:
         Returns:
             concurrent.futures.Future object representing task status
         """
-        from qiboicarusq.circuit import PulseSequence
+        from icarusq.circuit import PulseSequence
         if not isinstance(pulse_sequence, PulseSequence):
             raise_error(TypeError, "Pulse sequence {} has invalid type."
                                    "".format(pulse_sequence))
