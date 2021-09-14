@@ -53,3 +53,7 @@ class ParamikoSSH(Connection):
     def getfo(self, dump, shot, channel):
         self.sftp.getfo(self.getfo_dir.format(shot, channel), dump)
         return dump
+
+    def getfo_ascii(self, dump, shot, channel):
+        self.sftp.getfo('/tmp/adc_ascii_{:03}_CH{}.csv'.format(shot, channel), dump)
+        return dump
