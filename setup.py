@@ -1,9 +1,7 @@
 # Installation script for python
 from setuptools import setup, find_packages
-import subprocess
 import os
 import re
-import sys
 
 PACKAGE = "qiboicarusq"
 
@@ -19,11 +17,6 @@ def get_version():
         mo = re.search(VSRE, line, re.M)
         if mo:
             return mo.group(1)
-
-
-# Read in requirements
-requirements = open('requirements.txt').readlines()
-requirements = [r.strip() for r in requirements]
 
 
 # load long description from README
@@ -47,7 +40,12 @@ setup(
         "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering :: Physics",
     ],
-    install_requires=requirements,
+    install_requires=[
+        "numpy",
+        "visa",
+        "qcodes",
+        "scipy"
+    ],
     extras_require={
         "tests": ["qibo"],
     },
