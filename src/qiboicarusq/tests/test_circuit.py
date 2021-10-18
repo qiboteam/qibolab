@@ -43,7 +43,7 @@ def test_pulse_sequence_serialize():
 
 
 def test_hardwarecircuit_errors():
-    qibo.set_backend("icarusq")
+    qibo.set_backend("qiboicarusq")
     c = models.Circuit(5)
     with pytest.raises(NotImplementedError):
         c._add_layer()
@@ -62,7 +62,7 @@ def test_hardwarecircuit_probability_extraction():
 
 def test_hardwarecircuit_sequence_duration():
     from qiboicarusq import experiment
-    qibo.set_backend("icarusq")
+    qibo.set_backend("qiboicarusq")
     c = models.Circuit(2)
     c.add(gates.RX(0, theta=0.123))
     c.add(gates.RY(0, theta=0.123))
@@ -77,7 +77,7 @@ def test_hardwarecircuit_sequence_duration():
 
 def test_hardwarecircuit_create_pulse_sequence():
     from qiboicarusq import experiment
-    qibo.set_backend("icarusq")
+    qibo.set_backend("qiboicarusq")
     c = models.Circuit(2)
     c.add(gates.RX(0, theta=0.123))
     c.add(gates.RY(0, theta=0.123))
