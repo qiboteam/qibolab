@@ -59,13 +59,12 @@ class Pulsar_QRM():
         self._set_reference_clock(QRM_info[ref_clock]) #set reference clock source
         self.set_data_dictionary(QRM_info[data_dictionary]) #set data directory for generated waveforms
 
-        #No se si deberia ir aqui esto????? set up instrument integration and modulation
+        #Set up instrument integration and modulation parameters
         self.start_sample = QRM_info[start_sample]
         self.hardware_avg = QRM_info[hardware_avg]
         self.integration_length = QRM_info[integration_length]
         self.sampling_rate = QRM_info[sampling_rate]
         self.mode = QRM_info[mode]
-
 
     #Modifiers
     def set_data_dictionary(self, data_dict):
@@ -77,18 +76,81 @@ class Pulsar_QRM():
         #set external reference clock QRM and QCM
         self.qrm.reference_source(ref_clock)
 
+    def set_waveforms(self, IF_frequency, waveform_length, offset_i, offset_q, amplitude):
+        #Setting waveform parameters
+        self.freq_if = IF_frequency
+        self.leng = waveform_length
+        self.offset_i = offset_i
+        self.offset_q = offset_q
+        self.amp = amplitude
+
+    def modulate_envolope(self):
+        #Waveform UP coversion
+        envelope_i = amp*np.ones(self.leng)
+        envelope_q = amp*np.zeros(self.leng)
+        time = np.arange(envelope_i.shape[0])*1e-9
+        cosalpha = np.cos(2*np.pi*self.freq_if*time)
+        sinalpha = np.sin(2*np.pi*self.freq_if*time)
+        mod_matrix = np.array([[cosalpha,sinalpha],[-sinalpha,cosalpha]])
+        result = []
+        for it,t,ii,qq in zip(np.arange(envelope_i.shape[0]),time,envelope_i,envelope_q):
+            result.append(mod_matrix[:,:,it]@np.array([ii,qq]))
+        mod_signals = np.array(result)
+        #Waveform dictionary (data will hold the sampples and index will be used to select the waveforms in the instrumment).
+        waveforms = {
+                "modI_qrm": {"data": [], "index": 0},
+                "modQ_qrm": {"data": [], "index": 1}
+            }
+        # adding mixer offsets
+        waveforms["modI_qrm"]["data"] = mod_signals[:,0]+self.offset_i
+        waveforms["modQ_qrm"]["data"] = mod_signals[:,1]+self.offset_q
+        self.waveforms = waveforms
+
+    def specify_acquisitions(self):
+        #define type Qblox QRM acquisitions. See Qblox documentation to understand format
+        acquisitions = {"single":   {"num_bins": 1, "index":0}}
+        self.acquisitions = acquisitions
+
+    def set_sequence(self, seq):
+        #set Q1ASM sequence to be executed in the QRM
+        self.seq_prog = seq
+
+    def upload_waveforms(self):
+        # Reformat waveforms to lists if necessary.
+        for name in waveforms:
+            if str(type(self.waveforms[name]["data"]).__name__) == "ndarray":
+                self.waveforms[name]["data"] = self.waveforms[name]["data"].tolist()  # JSON only supports lists
+
+        #Add sequence program and waveforms to single dictionary and write to JSON file.
+        wave_and_prog_dict = {"waveforms": self.waveforms, "weights":{}, "acquisitions": self.acquisitions, "program": self.seq_prog}
+        with open("qrm_sequence.json", 'w', encoding='utf-8') as file:
+            json.dump(wave_and_prog_dict, file, indent=4)
+            file.close()
+
+         #Upload waveforms and programs.
+        self.qrm.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), "qrm_sequence.json"))
+        self.wave_and_prog_dict = wave_and_prog_dict
+
+    def enable_hardware_averaging(self):
+        #Enable QRM acquisition average mode
+        self.qrm.scope_acq_sequencer_select(0)
+        self.qrm.scope_acq_avg_mode_en_path0(True)
+        self.qrm.scope_acq_avg_mode_en_path1(True)
+
+    def configure_sequencer_sync(self):
+        self.qrm.sequencer0_sync_en(True)
 
 	#Destructoras
 	def _reset (self):
-	#reset QRM
-    self.pulsar_qrm.reset()
+        #reset QRM
+        self.pulsar_qrm.reset()
 
 	def stop(self):
-	#stop current sequence running in QRM
-        self.pulsar_qrm.stop_sequencer()
+	    #stop current sequence running in QRM
+        self.pulsar_qrm.stop_sequencers()
 
 	def close(self):
-	#close connection to QRM
+	    #close connection to QRM
         self.pulsar_qrm.close()
 
 
