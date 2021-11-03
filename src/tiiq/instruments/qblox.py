@@ -12,7 +12,7 @@ import xarray as xr
 
 #from qcodes import ManualParameter, Parameter
 #from pathlib import Path
-#from quantify.data.handling import get_datadir, set_datadir
+from quantify_core.data.handling import get_datadir, set_datadir
 #from quantify.measurement import MeasurementControl
 #from quantify.measurement.control import Settable, Gettable
 #import quantify.visualization.pyqt_plotmon as pqm
@@ -37,7 +37,7 @@ class Pulsar_QRM():
         self.qrm = pulsar_qrm(label, ip)
 
     #QRM Configuration method
-    def setup(QRM_info: dict):
+    def setup(self, QRM_info: dict):
         '''
         Function for setting up the Qblox QRM parameters
         Params example:
@@ -53,16 +53,16 @@ class Pulsar_QRM():
             }
         '''
         #Set up instrument integration and modulation parameters
-        self.start_sample = QRM_info[start_sample]
-        self.hardware_avg = QRM_info[hardware_avg]
-        self.integration_length = QRM_info[integration_length]
-        self.sampling_rate = QRM_info[sampling_rate]
-        self.mode = QRM_info[mode]
+        self.start_sample = QRM_info['start_sample']
+        self.hardware_avg = QRM_info['hardware_avg']
+        self.integration_length = QRM_info['integration_length']
+        self.sampling_rate = QRM_info['sampling_rate']
+        self.mode = QRM_info['mode']
 
 
         self._reset() #reset instrument from previous state
-        self._set_reference_clock(QRM_info[ref_clock]) #set reference clock source
-        self.set_data_dictionary(QRM_info[data_dictionary]) #set data directory for generated waveforms
+        self._set_reference_clock(QRM_info['ref_clock']) #set reference clock source
+        self.set_data_dictionary(QRM_info['data_dictionary']) #set data directory for generated waveforms
         self.specify_acquisitions() #specify acquisitions params in QRM
         self.enable_hardware_averaging() #specify QRM HW averaging
         self.configure_sequencer_sync() #enable sequencer sync
@@ -125,7 +125,7 @@ class Pulsar_QRM():
         #set Q1ASM sequence to be executed in the QRM
         self.seq_prog = seq
 
-    def upload_waveforms(self):
+    def upload_waveforms(self, waveforms):
         # Reformat waveforms to lists if necessary.
         for name in waveforms:
             if str(type(self.waveforms[name]["data"]).__name__) == "ndarray":
@@ -142,17 +142,17 @@ class Pulsar_QRM():
         self.wave_and_prog_dict = wave_and_prog_dict
 
 	#Destructoras
-	def _reset (self):
+    def _reset(self):
         #reset QRM
-        self.pulsar_qrm.reset()
+        self.qrm.reset()
 
-	def stop(self):
+    def stop(self):
 	    #stop current sequence running in QRM
-        self.pulsar_qrm.stop_sequencer()
+        self.qrm.stop_sequencer()
 
-	def close(self):
+    def close(self):
 	    #close connection to QRM
-        self.pulsar_qrm.close()
+        self.qrm.close()
 
 
 class Pulsar_QCM():
@@ -195,7 +195,7 @@ class Pulsar_QCM():
     def modulate_envolope(self):
         #Waveform UP coversion
         std = self.leng/5
-        print(f'parsed amp = {amp} V')
+        print(f'parsed amp = {self.amp} V')
         if self.wf_type == 'Block':
             envelope_i = self.amp*np.ones(self.leng)
             envelope_q = self.amp*np.ones(self.leng)
@@ -214,11 +214,10 @@ class Pulsar_QCM():
         mod_signals = np.array(result)
 
         #Waveform dictionary (data will hold the sampples and index will be used to select the waveforms in the instrumment).
-        waveforms =
-        {
-            "modI_qcm_1": {"data": [], "index": 0},
-            "modQ_qcm_1": {"data": [], "index": 1}
-        }
+        waveforms = {
+                        "modI_qcm_1": {"data": [], "index": 0},
+                        "modQ_qcm_1": {"data": [], "index": 1}
+                    }
 
         # adding mixer offsets
         waveforms["modI_qcm_1"]["data"] = mod_signals[:,0]+self.offset_i
@@ -243,22 +242,23 @@ class Pulsar_QCM():
             self.qcm.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), "qcm_sequence.json"))
             self.wave_and_prog_dict = wave_and_prog_dict
 
-    def set_gain(gain):
+    def set_gain(self, gain):
         #set gain of the QCM
         #print(slef.qcm.sequencer0_gain_awg_path0())
         self.qcm.sequencer0_gain_awg_path0(gain)
         self.qcm.sequencer0_gain_awg_path1(gain)
         #print(qcm.pulsar_qcm.sequencer0_gain_awg_path0())
 
-	#Destructoras
-	def _reset (self):
-        #reset QRM
-        self.pulsar_qcm.reset()
+    #Destructoras
 
-	def stop(self):
+    def _reset(self):
+         #reset QRM
+        self.qcm.reset()
+
+    def stop(self):
 	    #stop current sequence running in QRM
         self.qcm.stop_sequencer()
 
-	def close(self):
+    def close(self):
 	    #close connection to QRM
         self.qcm.close()

@@ -21,43 +21,43 @@ class SGS100A():
         self.label = label
         logger.info("Local oscillator connected")
 
-    def set_power(power):
+    def set_power(self, power):
         #set dbm power to Local Oscillator
         self.LO.power(power)
         self.power = power
         logger.info("Local oscillator power set")
 
-    def set_frequency(frequency):
+    def set_frequency(self, frequency):
         #set dbm frequency to Local oscillator
         self.LO.frequency(frequency)
         self.frequency = frequency
         logger.info("Local oscillator frequency set")
 
-    def on():
+    def on(self):
         # start generating microwaves
         self.LO.on()
         self.state = "ON"
         logger.info("Local oscillator on")
 
-    def off():
+    def off(self):
         # stop generating microwaves
         self.LO.off()
         self.state = "OFF"
         logger.info("Local oscillator off")
 
-    def getName():
+    def getName(self):
         # return actual LO name
         return self.label
 
-    def getIP():
+    def getIP(self):
         # return actual LO network ip
         return self.ip
 
 
-    def getPower():
+    def getPower(self):
         # return actual LO power
         return self.power
 
-    def getFrequency():
+    def getFrequency(self):
         # return actual LO frquency
         return self.frequency

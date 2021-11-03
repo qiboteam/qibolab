@@ -3,16 +3,19 @@ CLASS FILE FOR INSTRUMENT COMMUNICATION AND UTILITY
 """
 
 #import qblox, rhode_schwarz and AcquisitionController classes
-from tiiq.instruments.rohde_schwarz import SGS100A
-from tiiq.instruments.qblox import Pulsar_QCM
-from tiiq.instruments.qblox import Pulsar_QRM
-from tiiq.instruments.qblox import AcquisitionController
+from rohde_schwarz import SGS100A
+from qblox import Pulsar_QCM
+from qblox import Pulsar_QRM
+from acquisition_controller import AcquisitionController
+
+import logging
+logger = logging.getLogger(__name__)
 
 class InstrumentController():
     """
     InstrumentController class to interface and provide shortcut to instrument functions
     """
-    def __init__():
+    def __init__(self):
         #instanciate and connect all setup hardware: AWG, QCM y QRM (parte de instantiate_instruments de Ramiro)
         self.LO_qrm = SGS100A("LO_qrm", '192.168.0.7')
         self.LO_qcm = SGS100A("LO_qcm", '192.168.0.8')
@@ -54,7 +57,7 @@ class InstrumentController():
         self.qrm.setup(QRM_settings)
 
         #prepare QCM with the same clock reference than QRM
-        self.qcm.setup(QRM_settings[ref_clock])
+        self.qcm.setup(QRM_settings['ref_clock'])
 
     def upload_waveform_sequence(self, QRM_wave_params: dict, QCM_wave_params: dict, QRM_sequence, QCM_sequence):
         """
@@ -73,11 +76,11 @@ class InstrumentController():
         }
         """
         #characterize QRM waveform
-        self.qrm.set_waveforms(QRM_wave_params[IF_frequency],
-                               QRM_wave_params[waveform_length],
-                               QRM_wave_params[offset_i],
-                               QRM_wave_params[offset_q],
-                               QRM_wave_params[amplitude])
+        self.qrm.set_waveforms(QRM_wave_params['IF_frequency'],
+                               QRM_wave_params['waveform_length'],
+                               QRM_wave_params['offset_i'],
+                               QRM_wave_params['offset_q'],
+                               QRM_wave_params['amplitude'])
 
         """
         QCM parameters for charaterization of the waveform
@@ -97,17 +100,17 @@ class InstrumentController():
         }
         """
         #characterize QCM waveform
-        self.qcm.set_waveforms(QCM_wave_params[waveform_type],
-                               QCM_wave_params[amplitude],
-                               QCM_wave_params[IF_frequency],
-                               QCM_wave_params[waveform_length],
-                               #QCM_wave_params[waveform_length_start], #not used in Ramiro's code
-                               #QCM_wave_params[waveform_length_stop], #not used in Ramiro's code
-                               #QCM_wave_params[waveform_length_step], #not used in Ramiro's code
-                               QCM_wave_params[offset_i],
-                               QCM_wave_params[offset_q],
-                               QCM_wave_params[gain],
-                               #QCM_wave_params[standard_deviation] #calculated directly from waveform_length param
+        self.qcm.set_waveforms(QCM_wave_params['waveform_type'],
+                               QCM_wave_params['amplitude'],
+                               QCM_wave_params['IF_frequency'],
+                               QCM_wave_params['waveform_length'],
+                               #QCM_wave_params['waveform_length_start'], #not used in Ramiro's code
+                               #QCM_wave_params['waveform_length_stop'], #not used in Ramiro's code
+                               #QCM_wave_params['waveform_length_step'], #not used in Ramiro's code
+                               QCM_wave_params['offset_i'],
+                               QCM_wave_params['offset_q'],
+                               QCM_wave_params['gain'],
+                               #QCM_wave_params['standard_deviation'] #calculated directly from waveform_length param
                               )
 
         #modulate QRM signal (UP conversion)

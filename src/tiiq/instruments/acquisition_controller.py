@@ -4,11 +4,11 @@ CLASS FILE FOR READOUT EXPERIMENTS DATA
 
 from qcodes import ManualParameter, Parameter
 from pathlib import Path
-from quantify.data.handling import get_datadir, set_datadir
-from quantify.measurement import MeasurementControl
-from quantify.measurement.control import Settable, Gettable
-import quantify.visualization.pyqt_plotmon as pqm
-from quantify.visualization.instrument_monitor import InstrumentMonitor
+from quantify_core.data.handling import get_datadir, set_datadir
+from quantify_core.measurement import MeasurementControl
+from quantify_core.measurement.control import Settable, Gettable
+import quantify_core.visualization.pyqt_plotmon as pqm
+from quantify_core.visualization.instrument_monitor import InstrumentMonitor
 from qcodes.instrument import Instrument
 
 class AcquisitionController():
