@@ -46,7 +46,7 @@ class I(AbstractHardwareGate, gates.I):
         return 0
 
 
-class Align(AbstractHardwareGate, gates.Align):
+class Align(AbstractHardwareGate, gates.I):
 
     def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
         m = max(qubit_times[q] for q in self.target_qubits)
@@ -63,12 +63,13 @@ class M(AbstractHardwareGate, gates.M):
     def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
         pulses = []
         for q in self.target_qubits:
-            pulses += qubit_config[q]["gates"][self.name]
+            pulses += copy.deepcopy(qubit_config[q].gates.get(self))
         return pulses
 
     def duration(self, qubit_config):
-        q = self.target_qubits[0]
-        pulses = qubit_config[q]["gates"][self.name]
+        pulses = []
+        for q in self.target_qubits:
+            pulses += copy.deepcopy(qubit_config[q].gates.get(self))
         m = 0
         for p in pulses:
             m = max(p.duration, m)
@@ -87,7 +88,7 @@ class RX(AbstractHardwareGate, gates.RX):
         phase_mod += qubit_phases[q]
         m = 0
 
-        pulses = copy.deepcopy(qubit_config[q]["gates"][self.name])
+        pulses = copy.deepcopy(qubit_config[q].gates.get(self))
         for p in pulses:
             duration = p.duration * time_mod
             p.start = qubit_times[q]
@@ -101,7 +102,7 @@ class RX(AbstractHardwareGate, gates.RX):
     def duration(self, qubit_config):
         q = self.target_qubits[0]
         time_mod = abs(self.parameters / math.pi)
-        pulses = qubit_config[q]["gates"][self.name]
+        pulses = copy.deepcopy(qubit_config[q].gates.get(self))
         m = 0
 
         for p in pulses:
@@ -125,7 +126,7 @@ class CNOT(AbstractHardwareGate, gates.CNOT):
         q = self.target_qubits[0]
         control = self.control_qubits[0]
         start = max(qubit_times[q], qubit_times[control])
-        pulses = copy.deepcopy(qubit_config[q]["gates"][self.name + "_{}".format(control)])
+        pulses = copy.deepcopy(qubit_config[q].gates.get(self))
 
         for p in pulses:
             duration = p.duration

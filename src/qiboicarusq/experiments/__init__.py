@@ -1,11 +1,12 @@
 from qiboicarusq.experiments.icarusq import IcarusQ
 from qiboicarusq.experiments.awg import AWGSystem
+from qiboicarusq.experiments.awg10q import AWGSystem10Qubits
 from qibo.config import raise_error
 
 
 class Experiment:
 
-    available_experiments = {"icarusq": IcarusQ, "awg": AWGSystem}
+    available_experiments = {"icarusq": IcarusQ, "awg": AWGSystem, "awg10q": AWGSystem10Qubits}
 
     def __init__(self):
         # construct `IcarusQ` as the default experiment
@@ -24,7 +25,7 @@ class Experiment:
             if name in self.available_experiments:
                 new_experiment = self.available_experiments.get(name)()
                 self.constructed_experiments[name] = new_experiment
-                self.active_experiment = new_experiment
+                self._active_experiment = new_experiment
             else:
                 raise_error(KeyError, "Unknown experiment {}.".format(name))
 
