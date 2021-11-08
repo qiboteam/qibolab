@@ -8,7 +8,7 @@ This package provides the quantum hardware control implementation for multi-plat
 
 ## Documentation
 
-The qibola backend documentation is available at [qibolab.readthedocs.io](https://qibolab.readthedocs.io/en/stable).
+The qibolab backend documentation is available at [qibolab.readthedocs.io](https://qibolab.readthedocs.io/en/stable).
 
 ## Citation policy
 
