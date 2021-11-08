@@ -1,4 +1,4 @@
-from qiboicarusq.inst import Instrument
+from qibolab.inst import Instrument
 
 class QuicSyn(Instrument):
 

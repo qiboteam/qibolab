@@ -1,8 +1,8 @@
 from typing import Tuple
 import numpy as np
-from qiboicarusq import experiment, scheduler
-from qiboicarusq.circuit import PulseSequence
-from qiboicarusq.pulses import BasicPulse, Rectangular, IQReadoutPulse
+from qibolab import experiment, scheduler
+from qibolab.circuit import PulseSequence
+from qibolab.pulses import BasicPulse, Rectangular, IQReadoutPulse
 
 def parse_iq(raw_signals, if_frequency):
     final = experiment.readout_params.ADC_sample_size() / experiment.readout_params.ADC_sampling_rate()

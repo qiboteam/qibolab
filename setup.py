@@ -1,11 +1,9 @@
 # Installation script for python
 from setuptools import setup, find_packages
-import subprocess
 import os
 import re
-import sys
 
-PACKAGE = "qiboicarusq"
+PACKAGE = "qibolab"
 
 
 # Returns the version
@@ -21,11 +19,6 @@ def get_version():
             return mo.group(1)
 
 
-# Read in requirements
-requirements = open('requirements.txt').readlines()
-requirements = [r.strip() for r in requirements]
-
-
 # load long description from README
 this_directory = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(this_directory, "README.md"), encoding="utf-8") as f:
@@ -35,10 +28,10 @@ with open(os.path.join(this_directory, "README.md"), encoding="utf-8") as f:
 setup(
     name=PACKAGE,
     version=get_version(),
-    description="Quantum hardware backend for IcarusQ experiment",
+    description="Quantum hardware backend for Qibo",
     author="The Qibo team",
     author_email="",
-    url="https://github.com/qiboteam/qiboicarusq",
+    url="https://github.com/qiboteam/qibolab",
     packages=find_packages("src"),
     package_dir={"": "src"},
     package_data={"": ["*.json", "*.npy"]},
@@ -47,7 +40,12 @@ setup(
         "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering :: Physics",
     ],
-    install_requires=requirements,
+    install_requires=[
+        "numpy",
+        "visa",
+        "qcodes",
+        "scipy"
+    ],
     extras_require={
         "tests": ["qibo"],
     },

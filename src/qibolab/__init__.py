@@ -1,11 +1,11 @@
 __version__ = "0.0.1.dev0"
 
-from qiboicarusq import gates
+from qibolab import gates
 
 
-from qiboicarusq.experiments import Experiment
+from qibolab.experiments import Experiment
 experiment = Experiment()
-from qiboicarusq.schedulers import TaskScheduler
+from qibolab.schedulers import TaskScheduler
 scheduler = TaskScheduler()
 
 

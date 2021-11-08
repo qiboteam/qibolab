@@ -7,10 +7,10 @@ import logging
 import math
 import numpy as np
 import broadbean as bb
-from qiboicarusq.instruments.quicsyn import QuicSyn
-from qiboicarusq.instruments.attenuator import MCAttenuator
-from qiboicarusq.instruments.awg import AWG
-from qiboicarusq.instruments.rigol import RG
+from qibolab.instruments.quicsyn import QuicSyn
+from qibolab.instruments.attenuator import MCAttenuator
+from qibolab.instruments.awg import AWG
+from qibolab.instruments.rigol import RG
 
 logger = logging.getLogger(__name__)
 

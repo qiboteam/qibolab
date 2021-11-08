@@ -1,6 +1,6 @@
 import numpy as np
-from qiboicarusq import pulses, experiment, scheduler
-from qiboicarusq.calibration import fitting, tasks
+from qibolab import pulses, experiment, scheduler
+from qibolab.calibration import fitting, tasks
 
 class Qubit:
     def __init__(self):

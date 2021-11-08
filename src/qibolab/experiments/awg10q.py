@@ -1,9 +1,9 @@
 import copy
 import itertools
 import numpy as np
-from qiboicarusq import pulses, tomography
-from qiboicarusq.inst import InstrumentController
-from qiboicarusq.experiments.abstract import AbstractExperiment, ParameterList, BoundsValidator, EnumValidator, Qubit
+from qibolab import pulses, tomography
+from qibolab.inst import InstrumentController
+from qibolab.experiments.abstract import AbstractExperiment, ParameterList, BoundsValidator, EnumValidator, Qubit
 
 
 # AWG can only drive two qubits and read one line

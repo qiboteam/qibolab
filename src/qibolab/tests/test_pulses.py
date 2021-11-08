@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
-from qiboicarusq import pulses
-from qiboicarusq.circuit import PulseSequence
+from qibolab import pulses
+from qibolab.circuit import PulseSequence
 
 
 def test_basic_pulse():

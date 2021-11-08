@@ -3,7 +3,7 @@ from typing import Union, Optional, Tuple, List
 import broadbean as bb
 import numpy as np
 from qcodes.instrument_drivers.tektronix.AWG70000A import AWG70000A
-from qiboicarusq.inst import Instrument
+from qibolab.inst import Instrument
 
 class AWG5204(Instrument):
     def __init__(self, address:str='TCPIP0::192.168.0.2::inst0::INSTR', timeout:int = 240000, sampling_rate=2.4e9):

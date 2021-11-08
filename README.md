@@ -1,14 +1,14 @@
-# qiboicarusq
+# qibolab
 
-![Tests](https://github.com/qiboteam/qiboicarusq/workflows/Tests/badge.svg)
-[![codecov](https://codecov.io/gh/qiboteam/qiboicarusq/branch/main/graph/badge.svg?token=11UENAPBPH)](https://codecov.io/gh/qiboteam/qiboicarusq)
+![Tests](https://github.com/qiboteam/qibolab/workflows/Tests/badge.svg)
+[![codecov](https://codecov.io/gh/qiboteam/qibolab/branch/main/graph/badge.svg?token=11UENAPBPH)](https://codecov.io/gh/qiboteam/qibolab)
 ZENODO_BADGE
 
-This package provides the quantum hardware control implementation of the IcarusQ experiment at [CQT](https://www.quantumlah.org/) for [Qibo](https://github.com/qiboteam/qibo).
+This package provides the quantum hardware control implementation for multi-platform.
 
 ## Documentation
 
-The qiboicarusq backend documentation is available at [qiboicarusq.readthedocs.io](https://qiboicarusq.readthedocs.io/en/stable).
+The qibola backend documentation is available at [qibolab.readthedocs.io](https://qibolab.readthedocs.io/en/stable).
 
 ## Citation policy
 

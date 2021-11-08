@@ -3,8 +3,8 @@ import numpy as np
 from qibo import gates
 from qibo.config import raise_error
 from qibo.core import measurements, circuit
-from qiboicarusq import tomography, experiment, scheduler
-from qiboicarusq.gates import Align
+from qibolab import tomography, experiment, scheduler
+from qibolab.gates import Align
 
 class PulseSequence:
     """Describes a sequence of pulses for the FPGA to unpack and convert into arrays
@@ -169,7 +169,7 @@ class HardwareCircuit(circuit.Circuit):
         # Get calibration data
         self.qubit_config = scheduler.fetch_config()
 
-        # TODO: Move data fitting to qiboicarusq.experiments
+        # TODO: Move data fitting to qibolab.experiments
         if len(scheduler.check_tomography_required() or self._force_tomography):
             return self._execute_tomography_sequence(nshots)
         else:
