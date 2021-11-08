@@ -2,7 +2,7 @@
 import argparse
 import json
 import numpy as np
-from qiboicarusq import tomography
+from qibolab import tomography
 
 
 def rho_theory(i):
