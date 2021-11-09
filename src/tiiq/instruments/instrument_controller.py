@@ -26,7 +26,7 @@ class InstrumentController():
         # Two windows will be created, the main will feature 1D plots and any 2D plots will go to the secondary
         self.ac = AcquisitionController('MC')
 
-    def setup(self, LO_qcm_freq, LO_qcm_power, LO_qrm_freq, LO_qrm_power, QRM_settings: dict):
+    def setup(self, LO_qcm_freq, LO_qcm_power, LO_qrm_freq, LO_qrm_power, MC_params: dict, QRM_settings: dict):
         #Pass from experiment or callibration class parameters characterizing the HW setup
 
         #setting up LO for QRM (resonator) and QCM (qubit)
@@ -36,7 +36,19 @@ class InstrumentController():
         self.LO_qcm.set_frequency(LO_qcm_freq)
 
         #setting up acquisition_controller for real time plotting and control
-        self.ac.setup()
+        #setting up QRM parameters
+        """
+        Measurement Control parameters needed for your experiment/callibration
+        Dict example for MC 'qcm_leng', initial_value=0, unit='ns', label='Time'
+        MC_params =
+        {
+            "name": 'qcm_leng',
+            "initial_value": 0,
+            "unit": 'ns',
+            "label": 'Time',
+        }
+        """
+        self.ac.setup(MC_params)
 
         #setting up QRM parameters
         """
@@ -135,27 +147,38 @@ class InstrumentController():
         #set QCM gain. Gain defined by the wavweform uploaded
         self.qcm.set_gain(self.qcm.gain)
 
-    def play(self):
+    def hw_play(self):
+        #function for playing sequences in Qblox instruments + feeding acquisition_controller for live plotting.
+
         #turn on configured LOs
         self.LO_qrm.on()
         self.LO_qcm.on()
 
-        #Play waveform sequences loaded in QRM and QCM (see Ramiros's code for functions like run_ramsey and private classes like IQSignal_)
-        #ro_gettable = IQSignal_ramsey(self.info,qrm,qcm,self.pars)
-        #self.ro_gettable = Gettable(ro_gettable)
+        #Play waveform sequences loaded in QRM and QCM (see Ramiros's code IQSignal_qubit_spec() and inherit calsses)
+        self.qrm.arm_and_start_sequencer()
+        self.qcm.arm_and_start_sequencer()
+        self.qcm.wait_sequencer_to_stop()
 
-        #Also plot in real time the experiment using AcquisitionController (MeasurementControl object)
-        #MC.settables(self.pars.ramsey_wait)
+        self.qrm.acquisition()
+        #self.qrm.plot_acquisitions()
 
-        # as a QCoDeS parameter, 't' obeys the JSON schema for a valid Settable and can be passed to the MC directly.
-        #MC.setpoints(np.arange(leng_start,leng_stop,leng_step))
+        preconfigured_getsignal = lambda : self.qrm.demodulate_and_integrate()
+        i,q = preconfigured_getsignal()
+        return np.sqrt(i**2+q**2),np.arctan2(q,i),i,q  #return demodulated and integrated signal data to feed MC
 
-        #MC.setpoints(setpoints_time)
-        #MC.gettables(self.ro_gettable)
+    def play(self, **Kwargs):
+        #kwargs example: Variable number of arguments needed
+        #for run the experiment with Measurement Control
+        #Example: software_averages, setpoints_length, setpoints_freq, setpoints_time, setpoints_gain...
 
-        # as a QCoDeS parameter, 'sig' obeys the JSON schema for a valid Gettable and can be passed to the MC directly.
-        #dataset = MC.run(f'ramsey_{setpoints_time.max()}', soft_avg = self.soft_avg_numnber)
+        #quantify Gettable object needs only 1 param and hw_play() returns 4 params. Probably not working.
+        #auxiliar object will be needed, containing all params that MC has to manipulate.
 
+        #create a private class containing all the params returned by hw_play() + QRM and QCM object to provide access to MC
+        self.gettable = Gettable(hw_play())
+        #run the live plotting
+        #Each run method needs different number of params (use **kwargs).
+        acquisition_controller.play(self.gettable, **Kwargs) #TO BE IMPLEMENTED
 
     def stop(self):
         #stop ALL instruments

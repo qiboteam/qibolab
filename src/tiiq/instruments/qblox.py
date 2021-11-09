@@ -137,9 +137,65 @@ class Pulsar_QRM():
             json.dump(wave_and_prog_dict, file, indent=4)
             file.close()
 
-         #Upload waveforms and programs.
+        #Upload waveforms and programs.
         self.qrm.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), "qrm_sequence.json"))
         self.wave_and_prog_dict = wave_and_prog_dict
+
+    def arm_and_start_sequencer(self):
+        #arm sequencer and start playing sequence
+        self.qrm.arm_sequencer()
+        self.qrm.start_sequencer()
+        self.status_start_seqencer0 = self.qrm.get_sequencer_state(0)
+
+    def acquisition(self):
+        #start acquisition of data
+        #Wait for the sequencer to stop with a timeout period of one minute.
+        self.qrm.get_sequencer_state(0, 1)
+        #Wait for the acquisition to finish with a timeout period of one second.
+        self.qrm.get_acquisition_state(0, 1)
+        #Move acquisition data from temporary memory to acquisition list.
+        self.qrm.store_scope_acquisition(0, "single")
+        #Get acquisition list from instrument.
+        self.single_acq = pulsar_qrm.get_acquisitions(0)
+
+    def plot_acquisitions(self):
+        #Plot acquired signal on both inputs.
+        fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
+        ax.plot(self.single_acq["single"]["acquisition"]["scope"]["path0"]["data"][120:6500])
+        ax.plot(self.single_acq["single"]["acquisition"]["scope"]["path1"]["data"][120:6500])
+        ax.set_xlabel('Time (ns)')
+        ax.set_ylabel('Relative amplitude')
+        plt.show()
+
+    def demodulate_and_integrate(self):
+        #DOWN Conversion
+        norm_factor = 1./(self.integration_length)
+        input_vec_I = np.array(self.single_acq["single"]["acquisition"]["scope"]["path0"]["data"][self.start_sample:self.start_sample+self.integration_length])
+        input_vec_Q = np.array(self.single_acq["single"]["acquisition"]["scope"]["path1"]["data"][self.start_sample:self.start_sample+self.integration_length])
+        input_vec_I -= np.mean(input_vec_I)
+        input_vec_Q -= np.mean(input_vec_Q)
+
+        if self.mode == 'ssb':
+            modulated_i = input_vec_I
+            modulated_q = input_vec_Q
+            time = np.arange(modulated_i.shape[0])*1e-9
+            cosalpha = np.cos(2*np.pi*self.freq_if*time)
+            sinalpha = np.sin(2*np.pi*self.freq_if*time)
+            demod_matrix = 2*np.array([[cosalpha,-sinalpha],[sinalpha,cosalpha]])
+            result = []
+            for it,t,ii,qq in zip(np.arange(modulated_i.shape[0]),time,modulated_i,modulated_q):
+                result.append(demod_matrix[:,:,it]@np.array([ii,qq]))
+            demodulated_signal = np.array(result)
+            integrated_signal = norm_factor*np.sum(demodulated_signal,axis=0)
+            #print(integrated_signal,demodulated_signal[:,0].max()-demodulated_signal[:,0].min(),demodulated_signal[:,1].max()-demodulated_signal[:,1].min())
+            self.integrated_signal = integrated_signal
+            self.demodulated_signal = demodulated_signal.tolist()
+
+        elif mode=='optimal':
+            raise NotImplementedError('Optimal Demodulation Mode not coded yet.')
+        else:
+            raise NotImplementedError('Demodulation mode not understood.')
+        return integrated_signal
 
 	#Destructoras
     def _reset(self):
@@ -249,8 +305,18 @@ class Pulsar_QCM():
         self.qcm.sequencer0_gain_awg_path1(gain)
         #print(qcm.pulsar_qcm.sequencer0_gain_awg_path0())
 
-    #Destructoras
+    def arm_and_start_sequencer(self):
+        #arm sequencer and start playing sequence
+        self.qcm.arm_sequencer()
+        self.qcm.start_sequencer()
+        self.status_start_seqencer0 = self.qcm.get_sequencer_state(0)
 
+    def wait_sequencer_to_stop(self):
+        #Wait for the sequencer to stop with a timeout period of one minute.
+        self.pulsar_qcm.get_sequencer_state(0,1)
+
+
+    #Destructoras
     def _reset(self):
          #reset QRM
         self.qcm.reset()
