@@ -68,7 +68,7 @@ class Pulsar_QRM():
         self.configure_sequencer_sync() #enable sequencer sync
 
     #Modifiers
-    def _set_reference_clock(self, ref_clock):
+    def _set_reference_clock(self, ref_clock = 'internal'):
         #set external reference clock QRM
         self.qrm.reference_source(ref_clock)
 
@@ -77,19 +77,18 @@ class Pulsar_QRM():
         print(f"Data will be saved in:\n{get_datadir()}")
         return get_datadir()
 
-    def specify_acquisitions(self):
+    def specify_acquisitions(self, acquisitions = {"single":   {"num_bins": 1, "index":0}}):
         #define type Qblox QRM acquisitions. See Qblox documentation to understand format
-        acquisitions = {"single":   {"num_bins": 1, "index":0}}
         self.acquisitions = acquisitions
 
-    def enable_hardware_averaging(self):
+    def enable_hardware_averaging(self, enable = True):
         #Enable QRM acquisition average mode
         self.qrm.scope_acq_sequencer_select(0)
-        self.qrm.scope_acq_avg_mode_en_path0(True)
-        self.qrm.scope_acq_avg_mode_en_path1(True)
+        self.qrm.scope_acq_avg_mode_en_path0(enable)
+        self.qrm.scope_acq_avg_mode_en_path1(enable)
 
-    def configure_sequencer_sync(self):
-        self.qrm.sequencer0_sync_en(True)
+    def configure_sequencer_sync(self, enable = True):
+        self.qrm.sequencer0_sync_en(enable)
 
     def set_waveforms(self, IF_frequency, waveform_length, offset_i, offset_q, amplitude):
         #Setting waveform parameters
@@ -227,16 +226,16 @@ class Pulsar_QCM():
     #QCM Configuration method
     def setup(self, ref_clock):
         self.reset() #reset instrument from previous state
-        self._set_reference_clock(ref_clock) #set reference clock source
+        self._set_reference_clock(ref_clock = 'internal') #set reference clock source
         self.enable_sequencer_sync() #enable sync of QCM
 
     def _set_reference_clock(self, ref_clock):
         #set external reference clock to QCM
         self.qcm.reference_source(ref_clock)
 
-    def enable_sequencer_sync(self):
+    def enable_sequencer_sync(self, enable = True):
         #enable sequencer sync
-        self.qcm.sequencer0_sync_en(True)
+        self.qcm.sequencer0_sync_en(enable)
 
     def set_waveforms(self, waveform_type, amplitude, IF_frequency, waveform_length, offset_i, offset_q, gain):
         #Setting QCM waveforms parameters
