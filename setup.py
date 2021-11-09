@@ -41,13 +41,11 @@ setup(
         "Topic :: Scientific/Engineering :: Physics",
     ],
     install_requires=[
-        "numpy",
+        "qibo",
         "visa",
         "qcodes",
-        "scipy"
     ],
     extras_require={
-        "tests": ["qibo"],
         # TII system dependencies
         "tiiq": [
             "qcodes==0.26",
