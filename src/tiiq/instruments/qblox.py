@@ -191,7 +191,7 @@ class Pulsar_QRM():
             self.integrated_signal = integrated_signal
             self.demodulated_signal = demodulated_signal.tolist()
 
-        elif mode=='optimal':
+        elif self.mode=='optimal':
             raise NotImplementedError('Optimal Demodulation Mode not coded yet.')
         else:
             raise NotImplementedError('Demodulation mode not understood.')
