@@ -60,7 +60,7 @@ class Pulsar_QRM():
         self.mode = QRM_info['mode']
 
 
-        self._reset() #reset instrument from previous state
+        self.reset() #reset instrument from previous state
         self._set_reference_clock(QRM_info['ref_clock']) #set reference clock source
         self.set_data_dictionary(QRM_info['data_dictionary']) #set data directory for generated waveforms
         self.specify_acquisitions() #specify acquisitions params in QRM
@@ -198,7 +198,7 @@ class Pulsar_QRM():
         return integrated_signal
 
 	#Destructoras
-    def _reset(self):
+    def reset(self):
         #reset QRM
         self.qrm.reset()
 
@@ -226,7 +226,7 @@ class Pulsar_QCM():
 
     #QCM Configuration method
     def setup(self, ref_clock):
-        self._reset() #reset instrument from previous state
+        self.reset() #reset instrument from previous state
         self._set_reference_clock(ref_clock) #set reference clock source
         self.enable_sequencer_sync() #enable sync of QCM
 
@@ -317,7 +317,7 @@ class Pulsar_QCM():
 
 
     #Destructoras
-    def _reset(self):
+    def reset(self):
          #reset QRM
         self.qcm.reset()
 
