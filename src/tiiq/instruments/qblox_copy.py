@@ -1,5 +1,5 @@
 """
-class for interfacing with Qblox Qubit Control and Readout Modules (Pulsar QCM & Pulsar QRM)
+Class for interfacing with Qblox Qubit Control and Readout Modules (Pulsar QCM & Pulsar QRM)
 """
 import os
 import scipy.signal
@@ -19,7 +19,7 @@ debugging = False
 
 def prepare_waveforms(pulse):
     """
-    this function generates the I & Q waveforms to be sent to the sequencers based on the key parameters of the pulse (length, amplitude, shape, etc.) 
+    This function generates the I & Q waveforms to be sent to the sequencers based on the key parameters of the pulse (length, amplitude, shape, etc.) 
     """
     freq_if = pulse["freq_if"]      # Pulse Intermediate Frequency in Hz [10e6 to 300e6]
     amplitude = pulse["amplitude"]  # Pulse digital amplitude (unitless) [0 to 1]
@@ -73,19 +73,22 @@ def calculate_repetition_rate(repetition_duration,
 
 
 class Pulsar_QRM():
+    """
+    Class for interfacing with Pulsar QRM. It implements Quantify Gettable Interface so that real time plotting can be done
+    """
 
 	# Construction method
-    def __init__(self, label, ip, settings = {}):
+    def __init__(self, label, ip):
         # Quantify Gettable Interface Implementation        
         self.label = ['Amplitude', 'Phase','I','Q']
         self.unit = ['V', 'Radians','V','V']
         self.name = ['A', 'Phi','I','Q']
-
+        # Instantiate base object from qblox library and connect to it
         qrm = pulsar_qrm(label, ip)
         self._qrm = qrm
-        self.setup(settings)
 
     def setup(self, settings = {}):
+
         settings.setdefault('ref_clock', 'external')
         settings.setdefault('gain', 0.5)
         settings.setdefault('hardware_avg_en', True)
@@ -288,10 +291,9 @@ class Pulsar_QRM():
 
 class Pulsar_QCM():
 
-    def __init__(self, label, ip, settings = {}):
+    def __init__(self, label, ip):
         qcm = pulsar_qcm(label, ip)
         self._qcm = qcm
-        self.setup(settings)
 
 
     def setup(self, settings = {}):
