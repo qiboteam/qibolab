@@ -11,7 +11,7 @@ class QibolabBackend(NumpyBackend): # pragma: no cover
         super().__init__()
         self.name = "qiboicarusq"
         self.custom_gates = True
-        import qiboicarusq # pylint: disable=E0401
+        import qibolab # pylint: disable=E0401
         self.is_hardware = True
         self.hardware_module = qibolab
         self.hardware_gates = qibolab.gates
