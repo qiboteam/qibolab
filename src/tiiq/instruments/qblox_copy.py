@@ -74,7 +74,7 @@ def calculate_repetition_rate(repetition_duration,
 
 class Pulsar_QRM():
     """
-    Class for interfacing with Pulsar QRM. It implements Quantify Gettable Interface so that real time plotting can be done
+    Class for interfacing with Pulsar QRM. It implements Quantify Gettable Interface to allow for real time plotting
     """
 
 	# Construction method
@@ -88,7 +88,36 @@ class Pulsar_QRM():
         self._qrm = qrm
 
     def setup(self, settings = {}):
+        """
+        This method configures the device with the settings provided
+            All parameters are optional, their default values are:
+            QRM_settings = {
+                    'ref_clock': 'external',                        # Clock source ['external', 'internal']
+                    'gain': 0.5,                                    # Analog amplification gain [0 - 1]
+                    'hardware_avg_en': True,                        # If enabled, the device repeats the pulse multiple times (hardware_avg)
+                    'hardware_avg': 1024,
+                    'sequencer': 0,
+                    'acq_trigger_mode': 'sequencer',
+                    'sync_en': True,
 
+                    'data_dictionary': 'quantify-data/',
+                    
+                    'ro_pulse': {	"freq_if": 20e6,                # Pulse Intermediate Frequency in Hz [10e6 to 300e6]
+                                    "amplitude": 0.5,               # Pulse digital amplitude (unitless) [0 to 1]
+                                    "length": 6000,                 # pulse duration in ns
+                                    "offset_i": 0,                  # Pulse I offset (unitless). (amplitude + offset) should be between [0 and 1]
+                                    "offset_q": 0,                  # Pulse Q offset (unitless). (amplitude + offset) should be between [0 and 1]
+                                    "shape": "Block",               # Pulse shape ['Block', 'Gaussian']
+                                    "delay_before": 344,            # Delay before the bulse in ns
+                                    "repetition_duration": 200000,  # Total time between pulses = delay before + pulse length + delay after
+                                                },
+
+                    'start_sample': 130,                            # Number of samples to skip before integration starts 
+                    'integration_length': 5000,                     # Number of samples to integrate over (start_sample + integration_length) < pulse length
+                    'sampling_rate': 1e9,                           # device sampling rate in samples per second
+                    'mode': 'ssb',                                  # demodulation mode ['ssb', ...]
+            }
+        """
         settings.setdefault('ref_clock', 'external')
         settings.setdefault('gain', 0.5)
         settings.setdefault('hardware_avg_en', True)
@@ -110,12 +139,12 @@ class Pulsar_QRM():
                                       })
 
         settings.setdefault('start_sample', 130)
-        settings.setdefault('integration_length', 600)
+        settings.setdefault('integration_length', 5000)
         settings.setdefault('sampling_rate', 1e9)
         settings.setdefault('mode', 'ssb')
         qrm = self._qrm
 
-        # Reset and configure
+        # Reset and configure 
         qrm.reset()
         qrm.reference_source(settings['ref_clock'])
 
