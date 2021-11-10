@@ -11,11 +11,7 @@ class QibolabBackend(NumpyBackend): # pragma: no cover
         super().__init__()
         self.name = "qiboicarusq"
         self.custom_gates = True
-        import qibolab # pylint: disable=E0401
         self.is_hardware = True
-        self.hardware_module = qibolab
-        self.hardware_gates = qibolab.gates
-        self.hardware_circuit = qibolab.circuit.HardwareCircuit
 
     def circuit_class(self, accelerators=None, density_matrix=False):
         if accelerators is not None:
@@ -26,6 +22,10 @@ class QibolabBackend(NumpyBackend): # pragma: no cover
                                              "density matrix simulation.")
         from qibolab.circuit import HardwareCircuit
         return HardwareCircuit
+
+    def create_gate(self, cls, *args, **kwargs):
+        from qibolab import gates
+        return getattr(gates, cls.__name__)(*args, **kwargs)
 
     def create_einsum_cache(self, qubits, nqubits, ncontrol=None): # pragma: no cover
         raise_error(NotImplementedError, "`create_einsum_cache` method is "
