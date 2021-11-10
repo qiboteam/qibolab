@@ -61,3 +61,9 @@ class SGS100A():
     def getFrequency(self):
         # return actual LO frquency
         return self.frequency
+
+    def close(self):
+        self.LO.close()
+    def __del__(self):
+        self.LO.close()
+
