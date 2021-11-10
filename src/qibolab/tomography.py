@@ -69,7 +69,7 @@ class Tomography:
 
     @staticmethod
     def basis_states(n):
-        from qibo import gates
+        from qibo.gates import I, RX
         base = [I(0), RX(0)]
         index_combinations = Tomography._iter_indices(base, n)
         g = [base[c] for c in index_combinations]
