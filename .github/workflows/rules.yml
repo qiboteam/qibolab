@@ -22,6 +22,7 @@ jobs:
         pip install pylint
         pip install pytest-cov
         pip install qibo --pre
+        pip install pyvisa-py
         pip install .
     - name: Test with pylint
       run: |
