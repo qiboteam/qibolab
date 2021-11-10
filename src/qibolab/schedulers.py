@@ -10,7 +10,7 @@ class TaskScheduler:
     def __init__(self):
         self._executor = ThreadPoolExecutor(max_workers=1)
         self._pi_trig = None # NIY
-        #self._qubit_config = experiment.static.initial_config #NIU
+        self._qubit_config = experiment.static.initial_config #NIU
 
     def fetch_config(self):
         """Fetches the qubit configuration data
@@ -99,7 +99,7 @@ class TaskScheduler:
         raw_data = job.result()
         iq_signals = experiment.parse_raw(raw_data, target_qubits)
         qubit_states = experiment.parse_iq(iq_signals, target_qubits)
-        
+
         if experiment.static.measurement_level == 2:
             return (qubit_states,)
         elif experiment.static.measurement_level == 1:
@@ -112,7 +112,7 @@ class TaskScheduler:
         raw_data = job.result()
         iq_signals = [experiment.parse_raw(raw_signals, target_qubits) for raw_signals in raw_data]
         density_matrix = experiment.parse_tomography(raw_data, target_qubits)
-        
+
         if experiment.static.measurement_level == 2:
             return (density_matrix,)
         elif experiment.static.measurement_level == 1:

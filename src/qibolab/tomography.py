@@ -20,7 +20,6 @@ class Tomography:
         # implementation for 4**n rotations
         # we change to just 3 base rotations in the future
         self._gates = tomo_gates
-        self._base = [gates.I(0), gates.RX(0, np.pi), gates.RX(0, np.pi / 2), gates.RY(0, np.pi / 2)]
         self._n = int(np.log(len(states)) / np.log(4))
         self._d = np.array(self.gates).shape[-1]
 
@@ -28,7 +27,7 @@ class Tomography:
         self._linear = None
         self._fitres = None
         self._fitrho = None
-    
+
     @property
     def measurement_operators(self):
         # makes UMU from M
@@ -41,11 +40,11 @@ class Tomography:
         if self._gates is None:
             self._gates = self.default_gates()
         return self._gates
-    
+
     def default_gates(self):
-        base_matrices = [g.matrix for g in self._base]
+        base_matrices = [g.matrix for g in self._base()]
         return self.tensor_product_combinations(base_matrices, self._n)
-    
+
     def tensor_product_combinations(self, base, n):
         # n-fold tensor products of the base list
         base = np.array(base)
@@ -62,12 +61,16 @@ class Tomography:
             for i in range(len(gi)):
                 gi[i].target_qubits = tuple(i)
         return g
-    
+
+    @staticmethod
+    def _base():
+        return [gates.I(0), gates.RX(0, np.pi), gates.RX(0, np.pi / 2), gates.RY(0, np.pi / 2)]
+
     @staticmethod
     def basis_states(n):
         base = [gates.I(0), gates.RX(0)]
         index_combinations = Tomography._iter_indices(base, n)
-        g = [base[(c,)] for c in index_combinations]
+        g = [base[c] for c in index_combinations]
         for gi in g:
             for i in range(len(gi)):
                 gi[i].target_qubits = tuple(i)
@@ -83,7 +86,7 @@ class Tomography:
         for m in matrices:
             r = np.kron(r, m)
         return r
-    
+
     @property
     def linear(self):
         if self._linear is None:
@@ -91,7 +94,7 @@ class Tomography:
             c = np.linalg.solve(A, self.states)
             self._linear = np.einsum('i,ijk->jk', c, self.measurement_operators, optimize=True)
         return self._linear
-    
+
     @property
     def fit(self):
         """MLE estimation of the density matrix from given measurements."""
@@ -128,7 +131,7 @@ class Tomography:
             return np.sum(np.abs((self.states - np.einsum('ijk,kj->i', self.measurement_operators, rho))))
 
         self._fitres = minimize(_mle, t_initial, tol=tol)
-        
+
         t = self._fitres.x
         T = np.zeros((self._d, self._d), dtype=complex)
         T[np.tril_indices(self._d, k=0)] = t[:len(t_real)]
@@ -140,11 +143,3 @@ class Tomography:
     def fidelity(self, theory):
         sqrt_th = sqrtm(theory)
         return abs(np.trace(sqrtm(sqrt_th @ self.fit @ sqrt_th))) * 100
-
-# # testing the code liek this lmao
-# n = 2
-# states = np.random.random((4**n, n))
-# tom = Tomography(states)
-# tom.minimize()
-# fit = tom.fit
-# print(fit)

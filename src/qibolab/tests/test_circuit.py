@@ -51,15 +51,6 @@ def test_hardwarecircuit_errors():
         c.fuse()
 
 
-def test_hardwarecircuit_probability_extraction():
-    data = np.array([0.94215182, 0.78059634])
-    refer_0 = np.array([0.0160003, 0.17812875])
-    refer_1 = np.array([0.06994418, 0.25887865])
-    result = HardwareCircuit._probability_extraction(data, refer_0, refer_1)
-    target_result = 1
-    np.testing.assert_allclose(result, target_result)
-
-
 def test_hardwarecircuit_sequence_duration():
     from qibolab import experiment
     qibo.set_backend("icarusq")

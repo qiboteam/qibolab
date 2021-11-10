@@ -23,6 +23,7 @@ class IcarusQ(AbstractExperiment):
         lo_frequency = 4.51e9
         readout_nyquist_zone = 4
         ADC_sampling_rate = 2e9
+        ADC_length = None # To be adjusted
         default_averaging = 10000
         qubit_static_parameters = [
             {
@@ -44,7 +45,7 @@ class IcarusQ(AbstractExperiment):
         dac_mode_for_nyquist = ["NRZ", "MIX", "MIX", "NRZ"] # fifth onwards not calibrated yet
         pulse_file = 'C:/fpga_python/fpga/tmp/wave_ch1.csv'
 
-        # Initial calibrated parameters to speed up calibration  
+        # Initial calibrated parameters to speed up calibration
         initial_calibration = [{
             "id": 0,
             "qubit_frequency": 3.0473825e9,
@@ -83,6 +84,7 @@ class IcarusQ(AbstractExperiment):
         self.sampling_rate = lambda: 1966.08e6
         self.readout_pulse_duration = lambda: 5e-6
         self._ready = False
+        self.qubit_config = None # To be set
 
     def connect(self, address, username, password):
         self._connection = connections.ParamikoSSH(address, username, password)
@@ -121,7 +123,7 @@ class IcarusQ(AbstractExperiment):
             if self._ready:
                 self.executor.submit(self._stop, verbose)
                 break
-            
+
     def _stop(self, verbose):
         stdin, stdout, stderr = self._connection.exec_command("""kill -s INT $(ps ax | awk 'match($4,"cqtaws") {print $1}')""")
         if verbose:
@@ -167,7 +169,7 @@ class IcarusQ(AbstractExperiment):
                         waveform[j, i] = self._decode(dump.getvalue())
         dump.close()
         return waveform
-    
+
     def _decode(self, data, v_range=1, v_bits=12):
         # v_resolution = 2 ** (v_bits - 1)
         #v_div = v_range / v_resolution
@@ -211,7 +213,7 @@ class IcarusQ(AbstractExperiment):
             it = np.sum(i_sig * cos)
             qt = np.sum(q_sig * cos)
             result.append((it, qt))
-        
+
         return result
 
     # Shallow method, to be reused for single shot measurement
@@ -242,7 +244,7 @@ class IcarusQ(AbstractExperiment):
             elif new_data[0] > new_refer_1[0]:
                 new_data[0] = new_refer_1[0]
             prob[idx] = new_data[0] / new_refer_1[0]
-        
+
         # Next, we process the probabilities into qubit states
         # Note: There are no correlations established here, this is solely for disconnected and unentangled qubits
         binary = list(itertools.product([0, 1], repeat=len(target_qubits)))

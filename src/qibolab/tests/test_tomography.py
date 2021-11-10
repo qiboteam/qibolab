@@ -3,7 +3,7 @@ import json
 import pathlib
 import pytest
 import numpy as np
-from qibolab.tomography import Cholesky, Tomography
+from qibolab.tomography import Tomography
 
 REGRESSION_FOLDER = pathlib.Path(__file__).with_name("regressions")
 

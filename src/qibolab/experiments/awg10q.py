@@ -148,7 +148,7 @@ class AWGSystem10Qubits(AbstractExperiment):
         pass
 
     def start(self, nshots):
-        buffer, buffers_per_acquisition, records_per_buffer, samples_per_record = self.do_acquisition()
+        buffer, buffers_per_acquisition, records_per_buffer, samples_per_record = self.ic.do_acquisition()
         records_per_acquisition = (1. * buffers_per_acquisition * records_per_buffer)
         # Skip first 50 anomalous points
         recordA = np.zeros(samples_per_record - 50)
@@ -244,7 +244,7 @@ class AWGSystem10Qubits(AbstractExperiment):
         self.results = np.zeros((steps, 2, self.readout_params.ADC_sample_size() - 50))
         for k in range(steps):
 
-            buffer, buffers_per_acquisition, records_per_buffer, samples_per_record = self.ac.do_acquisition()
+            buffer, buffers_per_acquisition, records_per_buffer, samples_per_record = self.ic.do_acquisition()
             records_per_acquisition = (1. * buffers_per_acquisition * records_per_buffer)
             # Skip first 50 anomalous points
             recordA = np.zeros(samples_per_record - 50)
@@ -284,7 +284,7 @@ class AWGSystem10Qubits(AbstractExperiment):
             it = np.sum(i_sig * cos)
             qt = np.sum(q_sig * cos)
             result.append((it, qt))
-        
+
         return result
 
     # Shallow method, to be reused for single shot measurement
@@ -315,7 +315,7 @@ class AWGSystem10Qubits(AbstractExperiment):
             elif new_data[0] > new_refer_1[0]:
                 new_data[0] = new_refer_1[0]
             prob[idx] = new_data[0] / new_refer_1[0]
-        
+
         # Next, we process the probabilities into qubit states
         # Note: There are no correlations established here, this is solely for disconnected and unentangled qubits
         binary = list(itertools.product([0, 1], repeat=len(target_qubits)))
