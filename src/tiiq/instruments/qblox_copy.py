@@ -171,7 +171,7 @@ class Pulsar_QRM():
 
         # Prepare sequence program
         wait_loop_step=1000
-        duration_base=16380
+        duration_base=16380 # this is the maximum length of a waveform in number of samples (defined by the device memory)
         
         
         delay_before = settings["ro_pulse"]["delay_before"]
@@ -205,18 +205,18 @@ class Pulsar_QRM():
         weights = {}
         # Upload waveforms and program
         
-        # Reformat waveforms to lists.
+        # Reformat waveforms to lists
         for name in waveforms:
             if str(type(waveforms[name]["data"]).__name__) == "ndarray":
                 waveforms[name]["data"] = waveforms[name]["data"].tolist()  # JSON only supports lists
 
-        #Add sequence program and waveforms to single dictionary and write to JSON file.
+        #Add sequence program and waveforms to single dictionary and write to JSON file
         wave_and_prog_dict = {"waveforms": waveforms, "weights": weights, "acquisitions": acquisitions, "program": program}
         with open("qrm_sequence.json", 'w', encoding='utf-8') as file:
             json.dump(wave_and_prog_dict, file, indent=4)
             file.close()
 
-        #Upload waveforms and programs.
+        #Upload json file to the device
         if settings['sequencer'] == 1:
             qrm.sequencer1_waveforms_and_program(os.path.join(os.getcwd(), "qrm_sequence.json"))
         else:
@@ -252,13 +252,13 @@ class Pulsar_QRM():
         self._acquisition_results = acquisition_results
         return acquisition_results
 
-    # Gettable Interface Implementation
+    # Quantify Gettable Interface Implementation
     def get(self):
         return self.run()
     
 
     def _plot_acquisitions(self):
-        #Plot acquired signal on both inputs.
+        #Plot acquired signal on both inputs I and Q
         fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
         ax.plot(self._single_acq["single"]["acquisition"]["scope"]["path0"]["data"][120:6500])
         ax.plot(self._single_acq["single"]["acquisition"]["scope"]["path1"]["data"][120:6500])
