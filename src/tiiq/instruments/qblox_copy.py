@@ -1,5 +1,5 @@
 """
-class for interfacing with Qblox QRM and QCM
+class for interfacing with Qblox Qubit Control and Readout Modules (Pulsar QCM & Pulsar QRM)
 """
 import os
 import scipy.signal
@@ -11,19 +11,24 @@ import matplotlib.pyplot as plt
 #from scipy.signal import waveforms
 import xarray as xr
 
+# qblox-instruments libraries. this code was tested against qblox-instruments 0.4.0
 from pulsar_qcm.pulsar_qcm import pulsar_qcm
 from pulsar_qrm.pulsar_qrm import pulsar_qrm
 
 debugging = False
 
 def prepare_waveforms(pulse):
-    freq_if = pulse["freq_if"]
-    amplitude = pulse["amplitude"]
-    length = pulse["length"]
-    offset_i = pulse["offset_i"]
-    offset_q = pulse["offset_q"]
-    shape = pulse["shape"]
+    """
+    this function generates the I & Q waveforms to be sent to the sequencers based on the key parameters of the pulse (length, amplitude, shape, etc.) 
+    """
+    freq_if = pulse["freq_if"]      # Pulse Intermediate Frequency in Hz [10e6 to 300e6]
+    amplitude = pulse["amplitude"]  # Pulse digital amplitude (unitless) [0 to 1]
+    length = pulse["length"]        # pulse duration in ns
+    offset_i = pulse["offset_i"]    # Pulse I offset (unitless). (amplitude + offset) should be between [0 and 1] 
+    offset_q = pulse["offset_q"]    # Pulse Q offset (unitless). (amplitude + offset) should be between [0 and 1] 
+    shape = pulse["shape"]          # Pulse shape ['Block', 'Gaussian']
 
+    # Generate pulse envelope
     if shape == 'Block':
         envelope_i = amplitude*np.ones(int(length))
         envelope_q = amplitude*np.zeros(int(length))
@@ -32,6 +37,7 @@ def prepare_waveforms(pulse):
         envelope_i = amplitude*scipy.signal.gaussian(length, std=std)
         envelope_q = amplitude*np.zeros(int(length))
 
+    # Use the envelope to modulate a sinusoldal signal of frequency freq_if
     time = np.arange(length)*1e-9
     cosalpha = np.cos(2*np.pi*freq_if*time)
     sinalpha = np.sin(2*np.pi*freq_if*time)
@@ -45,15 +51,16 @@ def prepare_waveforms(pulse):
             "modI_qrm": {"data": [], "index": 0},
             "modQ_qrm": {"data": [], "index": 1}
         }
-    # adding mixer offsets
+    # add offsets to compensate mixer leakage
     waveforms["modI_qrm"]["data"] = mod_signals[:,0]+offset_i
     waveforms["modQ_qrm"]["data"] = mod_signals[:,1]+offset_q
     
     if debugging: 
+        # Plot the result
         fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
         ax.plot(waveforms["modI_qrm"]["data"],'-',color='C0')
         ax.plot(waveforms["modQ_qrm"]["data"],'-',color='C1')
-        ax.title.set_text('QRM read out pulse')
+        ax.title.set_text('pulse')
     return waveforms
 
 def calculate_repetition_rate(repetition_duration,
@@ -69,7 +76,7 @@ class Pulsar_QRM():
 
 	# Construction method
     def __init__(self, label, ip, settings = {}):
-        # Gettable Interface Implementation        
+        # Quantify Gettable Interface Implementation        
         self.label = ['Amplitude', 'Phase','I','Q']
         self.unit = ['V', 'Radians','V','V']
         self.name = ['A', 'Phi','I','Q']
