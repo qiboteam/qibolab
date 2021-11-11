@@ -1,329 +1,440 @@
 """
-class for interfacing with Qblox QRM and QCM
+Class for interfacing with Qblox Qubit Control and Readout Modules (Pulsar QCM & Pulsar QRM)
 """
 import os
 import scipy.signal
-import math
+#import math
 import json
 import numpy as np
 import matplotlib.pyplot as plt
-import lmfit
+#import lmfit
+#from scipy.signal import waveforms
 import xarray as xr
 
-#from qcodes import ManualParameter, Parameter
-#from pathlib import Path
-from quantify_core.data.handling import get_datadir, set_datadir
-#from quantify.measurement import MeasurementControl
-#from quantify.measurement.control import Settable, Gettable
-#import quantify.visualization.pyqt_plotmon as pqm
-#from quantify.visualization.instrument_monitor import InstrumentMonitor
-
+# qblox-instruments libraries. this code was tested against qblox-instruments 0.4.0
 from pulsar_qcm.pulsar_qcm import pulsar_qcm
 from pulsar_qrm.pulsar_qrm import pulsar_qrm
 
+debugging = False
+
+def prepare_waveforms(pulse):
+    """
+    This function generates the I & Q waveforms to be sent to the sequencers based on the key parameters of the pulse (length, amplitude, shape, etc.) 
+    """
+    freq_if = pulse["freq_if"]      # Pulse Intermediate Frequency in Hz [10e6 to 300e6]
+    amplitude = pulse["amplitude"]  # Pulse digital amplitude (unitless) [0 to 1]
+    length = pulse["length"]        # pulse duration in ns
+    offset_i = pulse["offset_i"]    # Pulse I offset (unitless). (amplitude + offset) should be between [0 and 1] 
+    offset_q = pulse["offset_q"]    # Pulse Q offset (unitless). (amplitude + offset) should be between [0 and 1] 
+    shape = pulse["shape"]          # Pulse shape ['Block', 'Gaussian']
+
+    # Generate pulse envelope
+    if shape == 'Block':
+        envelope_i = amplitude*np.ones(int(length))
+        envelope_q = amplitude*np.zeros(int(length))
+    elif shape == 'Gaussian':
+        std = length/5
+        envelope_i = amplitude*scipy.signal.gaussian(length, std=std)
+        envelope_q = amplitude*np.zeros(int(length))
+
+    # Use the envelope to modulate a sinusoldal signal of frequency freq_if
+    time = np.arange(length)*1e-9
+    cosalpha = np.cos(2*np.pi*freq_if*time)
+    sinalpha = np.sin(2*np.pi*freq_if*time)
+    mod_matrix = np.array([[cosalpha,sinalpha],[-sinalpha,cosalpha]])
+    result = []
+    for it,t,ii,qq in zip(np.arange(length),time,envelope_i,envelope_q):
+        result.append(mod_matrix[:,:,it]@np.array([ii,qq]))
+    mod_signals = np.array(result)
+
+    waveforms = {
+            "modI_qrm": {"data": [], "index": 0},
+            "modQ_qrm": {"data": [], "index": 1}
+        }
+    # add offsets to compensate mixer leakage
+    waveforms["modI_qrm"]["data"] = mod_signals[:,0]+offset_i
+    waveforms["modQ_qrm"]["data"] = mod_signals[:,1]+offset_q
+    
+    if debugging: 
+        # Plot the result
+        fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
+        ax.plot(waveforms["modI_qrm"]["data"],'-',color='C0')
+        ax.plot(waveforms["modQ_qrm"]["data"],'-',color='C1')
+        ax.title.set_text('pulse')
+    return waveforms
+
+def calculate_repetition_rate(repetition_duration,
+                            wait_loop_step,
+                            duration_base):
+    extra_duration = repetition_duration-duration_base
+    extra_wait = extra_duration%wait_loop_step
+    num_wait_loops = (extra_duration-extra_wait)//wait_loop_step
+    return num_wait_loops,extra_wait
+
 
 class Pulsar_QRM():
-
-	# Construction method
+    """
+    Class for interfacing with Pulsar QRM. It implements Quantify Gettable Interface to allow for real time plotting
+    """
     def __init__(self, label, ip):
+        # Instantiate base object from qblox library and connect to it
+        qrm = pulsar_qrm(label, ip)
+        self._qrm = qrm
+
+    def setup(self, settings = {}):
         """
-        create Qblox QRM with name = label and connect to it in local IP = ip and set reference clock source
-        Params format example:
-                "ip": '192.168.0.2' (only 192.168.0.X accepted by Qblox)
-                "label": "qcm"
+        This method configures the device with the settings provided
+            All parameters are optional, their default values are:
+            QRM_settings = {
+                    'ref_clock': 'external',                        # Clock source ['external', 'internal']
+                    'gain': 0.5,                                    # Analog amplification gain [0 - 1]
+                    'hardware_avg_en': True,                        # If enabled, the device repeats the pulse multiple times (hardware_avg)
+                    'hardware_avg': 1024,
+                    'sequencer': 0,
+                    'acq_trigger_mode': 'sequencer',
+                    'sync_en': True,
+
+                    'data_dictionary': 'quantify-data/',
+                    
+                    'ro_pulse': {	"freq_if": 20e6,                # Pulse Intermediate Frequency in Hz [10e6 to 300e6]
+                                    "amplitude": 0.5,               # Pulse digital amplitude (unitless) [0 to 1]
+                                    "length": 6000,                 # pulse duration in ns
+                                    "offset_i": 0,                  # Pulse I offset (unitless). (amplitude + offset) should be between [0 and 1]
+                                    "offset_q": 0,                  # Pulse Q offset (unitless). (amplitude + offset) should be between [0 and 1]
+                                    "shape": "Block",               # Pulse shape ['Block', 'Gaussian']
+                                    "delay_before": 344,            # Delay before the bulse in ns
+                                    "repetition_duration": 200000,  # Total time between pulses = delay before + pulse length + delay after
+                                                },
+
+                    'start_sample': 130,                            # Number of samples to skip before integration starts 
+                    'integration_length': 5000,                     # Number of samples to integrate over (start_sample + integration_length) < pulse length
+                    'sampling_rate': 1e9,                           # device sampling rate in samples per second
+                    'mode': 'ssb',                                  # demodulation mode ['ssb', ...]
+            }
         """
-        self.label = label
-        self.ip = ip
-        self.qrm = pulsar_qrm(label, ip)
+        settings.setdefault('ref_clock', 'external')
+        settings.setdefault('gain', 0.5)
+        settings.setdefault('hardware_avg_en', True)
+        settings.setdefault('hardware_avg', 1024)
+        settings.setdefault('sequencer', 0)
+        settings.setdefault('acq_trigger_mode', 'sequencer')
+        settings.setdefault('sync_en', True)
 
-    #QRM Configuration method
-    def setup(self, QRM_info: dict):
-        '''
-        Function for setting up the Qblox QRM parameters
-        Params example:
-            QRM_info =
-            {
-                "data_dictionary": "quantify-data/",
-                "ref_clock": external,
-                "start_sample": 130,
-                'hardware_avg': 1024,
-                "integration_length": 600,
-                "sampling_rate": 1e9,
-                "mode": "ssb"
-            }
-        '''
-        #Set up instrument integration and modulation parameters
-        self.start_sample = QRM_info['start_sample']
-        self.hardware_avg = QRM_info['hardware_avg']
-        self.integration_length = QRM_info['integration_length']
-        self.sampling_rate = QRM_info['sampling_rate']
-        self.mode = QRM_info['mode']
+        settings.setdefault('data_dictionary', 'quantify-data/')
+        
+        settings.setdefault('ro_pulse', {"freq_if": 20e6,
+                                        "amplitude": 0.5, 
+                                        "length": 6000,
+                                        "offset_i": 0,
+                                        "offset_q": 0,
+                                        "shape": "Block",
+                                        "delay_before": 344,
+                                        "repetition_duration": 200000,
+                                      })
+
+        settings.setdefault('start_sample', 130)
+        settings.setdefault('integration_length', 5000)
+        settings.setdefault('sampling_rate', 1e9)
+        settings.setdefault('mode', 'ssb')
+        qrm = self._qrm
+
+        # Reset and configure 
+        qrm.reset()
+        qrm.reference_source(settings['ref_clock'])
+
+        qrm.scope_acq_sequencer_select(settings['sequencer']) 
+        qrm.scope_acq_avg_mode_en_path0(settings['hardware_avg_en'])
+        qrm.scope_acq_avg_mode_en_path1(settings['hardware_avg_en'])
+
+        qrm.scope_acq_trigger_mode_path0(settings['acq_trigger_mode'])
+        qrm.scope_acq_trigger_mode_path1(settings['acq_trigger_mode'])
+
+        if settings['sequencer'] == 1:
+            qrm.sequencer1_sync_en(settings['sync_en'])
+            qrm.sequencer1_gain_awg_path0(settings['gain'])
+            qrm.sequencer1_gain_awg_path1(settings['gain'])
+        else:
+            qrm.sequencer0_sync_en(settings['sync_en'])
+            qrm.sequencer0_gain_awg_path0(settings['gain'])
+            qrm.sequencer0_gain_awg_path1(settings['gain'])
 
 
-        self.reset() #reset instrument from previous state
-        self._set_reference_clock(QRM_info['ref_clock']) #set reference clock source
-        self.set_data_dictionary(QRM_info['data_dictionary']) #set data directory for generated waveforms
-        self.specify_acquisitions() #specify acquisitions params in QRM
-        self.enable_hardware_averaging() #specify QRM HW averaging
-        self.configure_sequencer_sync() #enable sequencer sync
 
-    #Modifiers
-    def _set_reference_clock(self, ref_clock = 'internal'):
-        #set external reference clock QRM
-        self.qrm.reference_source(ref_clock)
+        # Prepare read out pulse waveforms
+        waveforms = prepare_waveforms(settings['ro_pulse'])
 
-    def set_data_dictionary(self, data_dict):
-        set_datadir(data_dict)
-        print(f"Data will be saved in:\n{get_datadir()}")
-        return get_datadir()
+        # Prepare sequence program
+        wait_loop_step=1000
+        duration_base=16380 # this is the maximum length of a waveform in number of samples (defined by the device memory)
+        
+        
+        delay_before = settings["ro_pulse"]["delay_before"]
+        repetition_duration= settings["ro_pulse"]["repetition_duration"]
+        num_wait_loops,extra_wait = calculate_repetition_rate(repetition_duration, wait_loop_step, duration_base)
 
-    def specify_acquisitions(self, acquisitions = {"single":   {"num_bins": 1, "index":0}}):
-        #define type Qblox QRM acquisitions. See Qblox documentation to understand format
-        self.acquisitions = acquisitions
+        program = f"""
+            move    {settings["hardware_avg"]},R0
+            nop
+            wait_sync 4          # Synchronize sequencers over multiple instruments
 
-    def enable_hardware_averaging(self, enable = True):
-        #Enable QRM acquisition average mode
-        self.qrm.scope_acq_sequencer_select(0)
-        self.qrm.scope_acq_avg_mode_en_path0(enable)
-        self.qrm.scope_acq_avg_mode_en_path1(enable)
+        loop:
+            wait      {delay_before}       # idle for xx ns gaussian pulse + 40 ns buffer
+            play      0,1,4      # Play waveforms (0,1) in channels (O0,O1) and wait 4ns.
+            acquire   0,0,4      # Acquire waveforms over remaining duration of acquisition of input vector of length = 16380 with integration weights 0,0
+            wait      {duration_base-4-delay_before}
+            move      {num_wait_loops},R1     # repetion rate loop iterator
+            nop
+            repeatloop:
+                wait      {wait_loop_step}
+                loop      R1,@repeatloop
+            wait      {extra_wait}
+            loop    R0,@loop
 
-    def configure_sequencer_sync(self, enable = True):
-        self.qrm.sequencer0_sync_en(enable)
-
-    def set_waveforms(self, IF_frequency, waveform_length, offset_i, offset_q, amplitude):
-        #Setting waveform parameters
-        self.freq_if = IF_frequency
-        self.leng = waveform_length
-        self.offset_i = offset_i
-        self.offset_q = offset_q
-        self.amp = amplitude
-
-    def modulate_envolope(self):
-        #Waveform UP coversion
-        envelope_i = self.amp*np.ones(self.leng)
-        envelope_q = self.amp*np.zeros(self.leng)
-        time = np.arange(envelope_i.shape[0])*1e-9
-        cosalpha = np.cos(2*np.pi*self.freq_if*time)
-        sinalpha = np.sin(2*np.pi*self.freq_if*time)
-        mod_matrix = np.array([[cosalpha,sinalpha],[-sinalpha,cosalpha]])
-        result = []
-        for it,t,ii,qq in zip(np.arange(envelope_i.shape[0]),time,envelope_i,envelope_q):
-            result.append(mod_matrix[:,:,it]@np.array([ii,qq]))
-        mod_signals = np.array(result)
-        #Waveform dictionary (data will hold the sampples and index will be used to select the waveforms in the instrumment).
-        waveforms = {
-                "modI_qrm": {"data": [], "index": 0},
-                "modQ_qrm": {"data": [], "index": 1}
-            }
-        # adding mixer offsets
-        waveforms["modI_qrm"]["data"] = mod_signals[:,0]+self.offset_i
-        waveforms["modQ_qrm"]["data"] = mod_signals[:,1]+self.offset_q
-        self.waveforms = waveforms
-
-    def set_sequence(self, seq):
-        #set Q1ASM sequence to be executed in the QRM
-        self.seq_prog = seq
-
-    def upload_waveforms(self, waveforms):
-        # Reformat waveforms to lists if necessary.
+            stop
+        """
+        if debugging: 
+            print(program)
+        
+        acquisitions = {"single":   {"num_bins": 1, "index":0}}
+        weights = {}
+        # Upload waveforms and program
+        
+        # Reformat waveforms to lists
         for name in waveforms:
-            if str(type(self.waveforms[name]["data"]).__name__) == "ndarray":
-                self.waveforms[name]["data"] = self.waveforms[name]["data"].tolist()  # JSON only supports lists
+            if str(type(waveforms[name]["data"]).__name__) == "ndarray":
+                waveforms[name]["data"] = waveforms[name]["data"].tolist()  # JSON only supports lists
 
-        #Add sequence program and waveforms to single dictionary and write to JSON file.
-        wave_and_prog_dict = {"waveforms": self.waveforms, "weights":{}, "acquisitions": self.acquisitions, "program": self.seq_prog}
+        #Add sequence program and waveforms to single dictionary and write to JSON file
+        wave_and_prog_dict = {"waveforms": waveforms, "weights": weights, "acquisitions": acquisitions, "program": program}
         with open("qrm_sequence.json", 'w', encoding='utf-8') as file:
             json.dump(wave_and_prog_dict, file, indent=4)
             file.close()
 
-        #Upload waveforms and programs.
-        self.qrm.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), "qrm_sequence.json"))
-        self.wave_and_prog_dict = wave_and_prog_dict
+        #Upload json file to the device
+        if settings['sequencer'] == 1:
+            qrm.sequencer1_waveforms_and_program(os.path.join(os.getcwd(), "qrm_sequence.json"))
+        else:
+            qrm.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), "qrm_sequence.json"))
 
-    def arm_and_start_sequencer(self):
+        self._settings = settings
+        self._waveforms = waveforms
+        self._program = program
+        self._wave_and_prog_dict = wave_and_prog_dict
+
+    def run(self):
+        qrm = self._qrm
+        settings = self._settings
+        sequencer = settings['sequencer']
         #arm sequencer and start playing sequence
-        self.qrm.arm_sequencer()
-        self.qrm.start_sequencer()
-        self.status_start_seqencer0 = self.qrm.get_sequencer_state(0)
-
-    def acquisition(self):
+        qrm.arm_sequencer()
+        qrm.start_sequencer()
+        if debugging:
+            print(qrm.get_sequencer_state(sequencer))
         #start acquisition of data
         #Wait for the sequencer to stop with a timeout period of one minute.
-        self.qrm.get_sequencer_state(0, 1)
+        qrm.get_sequencer_state(0, 1)
         #Wait for the acquisition to finish with a timeout period of one second.
-        self.qrm.get_acquisition_state(0, 1)
+        qrm.get_acquisition_state(sequencer, 1)
         #Move acquisition data from temporary memory to acquisition list.
-        self.qrm.store_scope_acquisition(0, "single")
+        qrm.store_scope_acquisition(sequencer, "single")
         #Get acquisition list from instrument.
-        self.single_acq = pulsar_qrm.get_acquisitions(0)
+        self._single_acq = qrm.get_acquisitions(sequencer)
+        if debugging:
+            self._plot_acquisitions()
+        i,q = self._demodulate_and_integrate()
+        acquisition_results = np.sqrt(i**2+q**2),np.arctan2(q,i),i,q
+        self._acquisition_results = acquisition_results
+        return acquisition_results
 
-    def plot_acquisitions(self):
-        #Plot acquired signal on both inputs.
+
+    
+
+    def _plot_acquisitions(self):
+        #Plot acquired signal on both inputs I and Q
         fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-        ax.plot(self.single_acq["single"]["acquisition"]["scope"]["path0"]["data"][120:6500])
-        ax.plot(self.single_acq["single"]["acquisition"]["scope"]["path1"]["data"][120:6500])
+        ax.plot(self._single_acq["single"]["acquisition"]["scope"]["path0"]["data"][120:6500])
+        ax.plot(self._single_acq["single"]["acquisition"]["scope"]["path1"]["data"][120:6500])
         ax.set_xlabel('Time (ns)')
         ax.set_ylabel('Relative amplitude')
         plt.show()
 
-    def demodulate_and_integrate(self):
+    def _demodulate_and_integrate(self):
+        settings = self._settings
+        freq_if = settings['ro_pulse']['freq_if']
+        start_sample =   settings['start_sample']
+        integration_length = settings['integration_length']
+        sampling_rate = settings['sampling_rate']
+        mode = settings['mode']
+
         #DOWN Conversion
-        norm_factor = 1./(self.integration_length)
-        input_vec_I = np.array(self.single_acq["single"]["acquisition"]["scope"]["path0"]["data"][self.start_sample:self.start_sample+self.integration_length])
-        input_vec_Q = np.array(self.single_acq["single"]["acquisition"]["scope"]["path1"]["data"][self.start_sample:self.start_sample+self.integration_length])
+        norm_factor = 1./(integration_length)
+        input_vec_I = np.array(self._single_acq["single"]["acquisition"]["scope"]["path0"]["data"][start_sample:start_sample+integration_length])
+        input_vec_Q = np.array(self._single_acq["single"]["acquisition"]["scope"]["path1"]["data"][start_sample:start_sample+integration_length])
         input_vec_I -= np.mean(input_vec_I)
         input_vec_Q -= np.mean(input_vec_Q)
 
-        if self.mode == 'ssb':
+        if mode == 'ssb':
             modulated_i = input_vec_I
             modulated_q = input_vec_Q
             time = np.arange(modulated_i.shape[0])*1e-9
-            cosalpha = np.cos(2*np.pi*self.freq_if*time)
-            sinalpha = np.sin(2*np.pi*self.freq_if*time)
+            cosalpha = np.cos(2*np.pi*freq_if*time)
+            sinalpha = np.sin(2*np.pi*freq_if*time)
             demod_matrix = 2*np.array([[cosalpha,-sinalpha],[sinalpha,cosalpha]])
             result = []
             for it,t,ii,qq in zip(np.arange(modulated_i.shape[0]),time,modulated_i,modulated_q):
                 result.append(demod_matrix[:,:,it]@np.array([ii,qq]))
             demodulated_signal = np.array(result)
             integrated_signal = norm_factor*np.sum(demodulated_signal,axis=0)
-            #print(integrated_signal,demodulated_signal[:,0].max()-demodulated_signal[:,0].min(),demodulated_signal[:,1].max()-demodulated_signal[:,1].min())
-            self.integrated_signal = integrated_signal
-            self.demodulated_signal = demodulated_signal.tolist()
-
-        elif self.mode=='optimal':
+            if debugging:
+                print(integrated_signal,demodulated_signal[:,0].max()-demodulated_signal[:,0].min(),demodulated_signal[:,1].max()-demodulated_signal[:,1].min())
+        elif mode == 'optimal':
             raise NotImplementedError('Optimal Demodulation Mode not coded yet.')
         else:
             raise NotImplementedError('Demodulation mode not understood.')
+        
+        self.integrated_signal = integrated_signal
+        self.demodulated_signal = demodulated_signal.tolist()
+
         return integrated_signal
 
-	#Destructoras
-    def reset(self):
+    def _reset(self):
         #reset QRM
-        self.qrm.reset()
+        self._qrm.reset()
 
     def stop(self):
 	    #stop current sequence running in QRM
-        self.qrm.stop_sequencer()
+        self._qrm.stop_sequencer()
 
-    def close(self):
+    def __del__(self):
 	    #close connection to QRM
-        self.qrm.close()
-
+        self._qrm.close()
+    
+    # Quantify Gettable Interface Implementation
+    label = ['Amplitude', 'Phase','I','Q']
+    unit = ['V', 'Radians','V','V']
+    name = ['A', 'Phi','I','Q']
+    
+    def get(self):
+        return self.run()
 
 class Pulsar_QCM():
 
     def __init__(self, label, ip):
+        qcm = pulsar_qcm(label, ip)
+        self._qcm = qcm
+
+
+    def setup(self, settings = {}):
+        settings.setdefault('ref_clock', 'external')
+        settings.setdefault('gain', 0.5)
+        settings.setdefault('hardware_avg', 1024)
+        settings.setdefault('sequencer', 0)
+        settings.setdefault('sync_en', True)
+        settings.setdefault('pulse', {"freq_if": 100e6,
+                                        "amplitude": 0.25, 
+                                        "length": 300,
+                                        "offset_i": 0,
+                                        "offset_q": 0,
+                                        "shape": "Gaussian",
+                                        "delay_before": 4,
+                                        "repetition_duration": 200000,
+                                      })
+
+        qcm = self._qcm
+
+        # Reset and configure
+        qcm.reset()
+        qcm.reference_source(settings['ref_clock'])
+
+        if settings['sequencer'] == 1:
+            qcm.sequencer1_sync_en(settings['sync_en'])
+            qcm.sequencer1_gain_awg_path0(settings['gain'])
+            qcm.sequencer1_gain_awg_path1(settings['gain'])
+        else:
+            qcm.sequencer0_sync_en(settings['sync_en'])
+            qcm.sequencer0_gain_awg_path0(settings['gain'])
+            qcm.sequencer0_gain_awg_path1(settings['gain'])
+
+        # Prepare read out pulse waveforms
+        waveforms = prepare_waveforms(settings['pulse'])
+
+        # Prepare sequence program
+        wait_loop_step=1000
+        duration_base=16380
+        
+        delay_before = settings["pulse"]["delay_before"]
+        repetition_duration= settings["pulse"]["repetition_duration"]
+        num_wait_loops,extra_wait = calculate_repetition_rate(repetition_duration, wait_loop_step, duration_base)
+
+        program = f"""
+            move    {settings["hardware_avg"]},R0
+            nop
+            wait_sync 4          # Synchronize sequencers over multiple instruments
+
+        loop:
+            wait      {delay_before}       # idle for xx ns gaussian pulse + 40 ns buffer
+            play      0,1,4      # Play waveforms (0,1) in channels (O0,O1) and wait 4ns.
+            acquire   0,0,4      # Acquire waveforms over remaining duration of acquisition of input vector of length = 16380 with integration weights 0,0
+            wait      {duration_base-4-delay_before}
+            move      {num_wait_loops},R1     # repetion rate loop iterator
+            nop
+            repeatloop:
+                wait      {wait_loop_step}
+                loop      R1,@repeatloop
+            wait      {extra_wait}
+            loop    R0,@loop
+
+            stop
         """
-        create Qblox QCM with name = label and connect to it in local IP = ip and set reference clock source
-        Params format example:
-                "ip": '192.168.0.3' (only 192.168.0.X accepted by Qblox)
-                "label": "qcm"
-        """
-        self.label = label
-        self.ip = ip
-        self.qcm = pulsar_qcm(label, ip)
-
-    #QCM Configuration method
-    def setup(self, ref_clock):
-        self.reset() #reset instrument from previous state
-        self._set_reference_clock(ref_clock = 'internal') #set reference clock source
-        self.enable_sequencer_sync() #enable sync of QCM
-
-    def _set_reference_clock(self, ref_clock):
-        #set external reference clock to QCM
-        self.qcm.reference_source(ref_clock)
-
-    def enable_sequencer_sync(self, enable = True):
-        #enable sequencer sync
-        self.qcm.sequencer0_sync_en(enable)
-
-    def set_waveforms(self, waveform_type, amplitude, IF_frequency, waveform_length, offset_i, offset_q, gain):
-        #Setting QCM waveforms parameters
-        self.wf_type = waveform_type
-        self.amp = amplitude
-        self.freq_if = IF_frequency
-        self.leng = waveform_length
-        self.offset_i = offset_i
-        self.offset_q = offset_q
-        self.gain = gain
-
-    def modulate_envolope(self):
-        #Waveform UP coversion
-        std = self.leng/5
-        print(f'parsed amp = {self.amp} V')
-        if self.wf_type == 'Block':
-            envelope_i = self.amp*np.ones(self.leng)
-            envelope_q = self.amp*np.ones(self.leng)
-        elif self.wf_type == 'Gaussian':
-            envelope_i = self.amp*scipy.signal.gaussian(self.leng, std=std)
-            envelope_q = np.zeros(self.leng) #amp*scipy.signal.gaussian(leng, std=std)
-        time = np.arange(envelope_i.shape[0])*1e-9
-        cosalpha = np.cos(2*np.pi*self.freq_if*time)
-        sinalpha = np.sin(2*np.pi*self.freq_if*time)
-        mod_matrix = np.array([[cosalpha,sinalpha],[-sinalpha,cosalpha]])
-
-        result = []
-        for it,t,ii,qq in zip(np.arange(envelope_i.shape[0]),time,envelope_i,envelope_q):
-            result.append(mod_matrix[:,:,it]@np.array([ii,qq]))
-
-        mod_signals = np.array(result)
-
-        #Waveform dictionary (data will hold the sampples and index will be used to select the waveforms in the instrumment).
-        waveforms = {
-                        "modI_qcm_1": {"data": [], "index": 0},
-                        "modQ_qcm_1": {"data": [], "index": 1}
-                    }
-
-        # adding mixer offsets
-        waveforms["modI_qcm_1"]["data"] = mod_signals[:,0]+self.offset_i
-        waveforms["modQ_qcm_1"]["data"] = mod_signals[:,1]+self.offset_q
-        self.waveforms = waveforms
-
-    def set_sequence(self, seq):
-        #set Q1ASM sequence to be executed in the QRM
-        self.seq_prog = seq
-
-    def upload_waveforms(self, acquisitions_qrm):
-        # Reformat waveforms to lists if necessary.
-        for name in self.waveforms:
-            if str(type(self.waveforms[name]["data"]).__name__) == "ndarray":
-                self.waveforms[name]["data"] = self.waveforms[name]["data"].tolist()  # JSON only supports lists
+        if debugging: 
+            print(program)
+        
+        acquisitions = {"single":   {"num_bins": 1, "index":0}}
+        weights = {}
+        # Upload waveforms and program
+        
+        # Reformat waveforms to lists.
+        for name in waveforms:
+            if str(type(waveforms[name]["data"]).__name__) == "ndarray":
+                waveforms[name]["data"] = waveforms[name]["data"].tolist()  # JSON only supports lists
 
         #Add sequence program and waveforms to single dictionary and write to JSON file.
-        wave_and_prog_dict = {"waveforms": self.waveforms, "weights":{}, "acquisitions": acquisitions_qrm, "program": self.seq_prog}
+        wave_and_prog_dict = {"waveforms": waveforms, "weights": weights, "acquisitions": acquisitions, "program": program}
         with open("qcm_sequence.json", 'w', encoding='utf-8') as file:
             json.dump(wave_and_prog_dict, file, indent=4)
             file.close()
-            self.qcm.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), "qcm_sequence.json"))
-            self.wave_and_prog_dict = wave_and_prog_dict
 
-    def set_gain(self, gain):
-        #set gain of the QCM
-        #print(slef.qcm.sequencer0_gain_awg_path0())
-        self.qcm.sequencer0_gain_awg_path0(gain)
-        self.qcm.sequencer0_gain_awg_path1(gain)
-        #print(qcm.pulsar_qcm.sequencer0_gain_awg_path0())
+        #Upload waveforms and programs.
+        if settings['sequencer'] == 1:
+            qcm.sequencer1_waveforms_and_program(os.path.join(os.getcwd(), "qcm_sequence.json"))
+        else:
+            qcm.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), "qcm_sequence.json"))
 
-    def arm_and_start_sequencer(self):
+        self._settings = settings
+        self._waveforms = waveforms
+        self._program = program
+        self._wave_and_prog_dict = wave_and_prog_dict
+
+
+
+    def run(self):
+        qcm = self._qcm
+        settings = self._settings
+        sequencer = settings['acq_sequencer']
         #arm sequencer and start playing sequence
-        self.qcm.arm_sequencer()
-        self.qcm.start_sequencer()
-        self.status_start_seqencer0 = self.qcm.get_sequencer_state(0)
+        qcm.arm_sequencer()
+        qcm.start_sequencer()
+        if debugging:
+            print(qcm.get_sequencer_state(sequencer))
 
-    def wait_sequencer_to_stop(self):
-        #Wait for the sequencer to stop with a timeout period of one minute.
-        self.pulsar_qcm.get_sequencer_state(0,1)
-
-
-    #Destructoras
-    def reset(self):
-         #reset QRM
-        self.qcm.reset()
+    def _reset(self):
+        #reset QCM
+        self._qcm.reset()
 
     def stop(self):
-	    #stop current sequence running in QRM
-        self.qcm.stop_sequencer()
+	    #stop current sequence running in QCM
+        self._qcm.stop_sequencer()
 
-    def close(self):
-	    #close connection to QRM
-        self.qcm.close()
+    def __del__(self):
+	    #close connection to QCM
+        self._qcm.close()
