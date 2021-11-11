@@ -76,13 +76,7 @@ class Pulsar_QRM():
     """
     Class for interfacing with Pulsar QRM. It implements Quantify Gettable Interface to allow for real time plotting
     """
-
-	# Construction method
     def __init__(self, label, ip):
-        # Quantify Gettable Interface Implementation        
-        self.label = ['Amplitude', 'Phase','I','Q']
-        self.unit = ['V', 'Radians','V','V']
-        self.name = ['A', 'Phi','I','Q']
         # Instantiate base object from qblox library and connect to it
         qrm = pulsar_qrm(label, ip)
         self._qrm = qrm
@@ -252,9 +246,7 @@ class Pulsar_QRM():
         self._acquisition_results = acquisition_results
         return acquisition_results
 
-    # Quantify Gettable Interface Implementation
-    def get(self):
-        return self.run()
+
     
 
     def _plot_acquisitions(self):
@@ -316,7 +308,14 @@ class Pulsar_QRM():
     def __del__(self):
 	    #close connection to QRM
         self._qrm.close()
-
+    
+    # Quantify Gettable Interface Implementation
+    label = ['Amplitude', 'Phase','I','Q']
+    unit = ['V', 'Radians','V','V']
+    name = ['A', 'Phi','I','Q']
+    
+    def get(self):
+        return self.run()
 
 class Pulsar_QCM():
 
