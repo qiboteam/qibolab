@@ -3,13 +3,13 @@ from qibo.config import raise_error
 
 
 class QibolabBackend(NumpyBackend): # pragma: no cover
-    # hardware backend is not tested until `qiboicarusq` is available
+    # hardware backend is not tested until `qibolab` is available
 
     description = "" # TODO: Write proper description
 
     def __init__(self):
         super().__init__()
-        self.name = "qiboicarusq"
+        self.name = "qibolab"
         self.custom_gates = True
         self.is_hardware = True
 

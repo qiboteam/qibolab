@@ -1,9 +1,9 @@
 import copy
 import itertools
 import numpy as np
-from qiboicarusq import pulses, tomography
-from qiboicarusq.instruments import AcquisitionController
-from qiboicarusq.experiments.abstract import AbstractExperiment, ParameterList, BoundsValidator, EnumValidator, Qubit
+from qibolab import pulses, tomography
+from qibolab.instruments import AcquisitionController
+from qibolab.experiments.abstract import AbstractExperiment, ParameterList, BoundsValidator, EnumValidator, Qubit
 
 
 # To be used for initial calibtation

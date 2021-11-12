@@ -6,7 +6,7 @@ experiment = Experiment()
 from qibolab.schedulers import TaskScheduler
 scheduler = TaskScheduler()
 
-from qiboicarusq import gates, circuit
+from qibolab import gates, circuit
 
 
 def get_experiment():
