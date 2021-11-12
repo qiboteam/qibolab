@@ -1,7 +1,7 @@
 import json
 import numpy as np
 from qibolab import pulses, experiment, scheduler
-from qibolab.calibration import fitting, tasks
+from qibolab.calibration.icarusq import fitting, tasks
 
 default_averaging = experiment.static.default_averaging
 

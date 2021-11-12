@@ -1,6 +1,6 @@
-from tiiq.experiments.abstract import Experiment, Qubit, Resonator
-from tiiq.instruments.qblox import Qblox_QCM, Qblox_QRM
-from tiiq.instruments.rohde_schwarz import SGS100A
+from qibolab.platforms.tiiq.abstract import Experiment, Qubit, Resonator
+from qibolab.instruments.qblox import Qblox_QCM, Qblox_QRM
+from qibolab.instruments.rohde_schwarz import SGS100A
 
 
 r0 = Resonator(frequency= 7e9, ro_pulse_amplitude= 0.5, ro_pulse_duration= 3e-6)

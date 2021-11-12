@@ -3,7 +3,7 @@ import itertools
 import numpy as np
 from qibolab import pulses, tomography
 from qibolab.instruments import AcquisitionController
-from qibolab.experiments.abstract import AbstractExperiment, ParameterList, BoundsValidator, EnumValidator, Qubit
+from qibolab.platforms.abstract import AbstractExperiment, ParameterList, BoundsValidator, EnumValidator, Qubit
 
 
 # To be used for initial calibtation
@@ -11,11 +11,19 @@ qubit_static_parameters = [
     {
         "id": 0,
         "name": "Left/Bottom Qubit",
-        "channel": [2, None, [0, 1]],  # XY control, Z line, readout
+        "channel": [2, None, [0, 1]], # XY control, Z line, readout
         "frequency_range": (3e9, 3.1e9),
         "resonator_frequency": 4.5172671e9,
         "amplitude": 0.375 / 2,
         "connected_qubits": [1]
+    }, {
+        "id": 1,
+        "name": "Right/Top Qubit",
+        "channel": [3, None, [0, 1]],
+        "frequency_range": (2.14e9, 3.15e9),
+        "resonator_frequency": 4.5172671e9,
+        "amplitude": 0.375 / 2,
+        "connected_qubits": [0]
     },
 ]
 
@@ -36,33 +44,56 @@ initial_calibration = [{
     "one_iq_reference": (0.007347951048047871, 0.015370747296983345),
     "initial_gates": {
         "rx": [pulses.BasicPulse(2, 0, 100.21e-9, 0.375 / 2, 3.06362669e9 - 2.3e9, 0, pulses.Rectangular()),
-               pulses.BasicPulse(2, 0, 69.77e-9, 0.375 / 2, 3.086e9 - 2.3e9, 0, pulses.Rectangular())],
+                pulses.BasicPulse(2, 0, 69.77e-9, 0.375 / 2, 3.086e9 - 2.3e9, 0, pulses.Rectangular())],
         "ry": [pulses.BasicPulse(2, 0, 100.21e-9, 0.375 / 2, 3.06362669e9 - 2.3e9, 90, pulses.Rectangular()),
-               pulses.BasicPulse(2, 0, 69.77e-9, 0.375 / 2, 3.086e9 - 2.3e9, 90, pulses.Rectangular())],
-        "measure": [pulses.BasicPulse(0, 0, 5e-6, 0.75 / 2, 100e6, 90, pulses.Rectangular()),  # I cosine
-                    pulses.BasicPulse(1, 0, 5e-6, 0.75 / 2, 100e6, 0, pulses.Rectangular())],  # Q negative sine
+                pulses.BasicPulse(2, 0, 69.77e-9, 0.375 / 2, 3.086e9 - 2.3e9, 90, pulses.Rectangular())],
+        "measure": [pulses.BasicPulse(0, 0, 5e-6, 0.75 / 2, 100e6, 90, pulses.Rectangular()), # I cosine
+                    pulses.BasicPulse(1, 0, 5e-6, 0.75 / 2, 100e6, 0, pulses.Rectangular())], # Q negative sine
         "cx_(1,)": [pulses.BasicPulse(3, 0, 46.71e-9, 0.396 / 2, 3.06362669e9 - 2.3e9, 0, pulses.SWIPHT(20e6))],
     }
-}, ]
+}, {
+    "id": 1,
+    "qubit_frequency": 3.284049061e9,
+    "qubit_frequency_bounds": (3.27e9, 3.29e9),
+    "resonator_frequency": 4.5172671e9,
+    "resonator_frequency_bounds": (4.51e9, 4.525e9),
+    "T1": 5.89e-6,
+    "T2": 1.27e-6,
+    "T2_Spinecho": 3.5e-6,
+    "pi-pulse": 112.16e-9,
+    "drive_channel": 3,
+    "readout_channel": (0, 1),
+    "connected_qubits": [0],
+    "zero_iq_reference": (0.002117188393398148, 0.020081601323807922),
+    "one_iq_reference": (0.007347951048047871, 0.015370747296983345),
+    "initial_gates": {
+        "rx": [pulses.BasicPulse(3, 0, 112.16e-9, 0.375 / 2, 3.284049061e9 - 2.3e9, 0, pulses.Rectangular()),
+                pulses.BasicPulse(3, 0, 131.12e-9, 0.375 / 2, 3.23e9 - 2.3e9, 0, pulses.Rectangular())],
+        "ry": [pulses.BasicPulse(3, 0, 112.16e-9, 0.375 / 2, 3.284049061e9 - 2.3e9, 90, pulses.Rectangular()),
+                pulses.BasicPulse(3, 0, 131.12e-9, 0.375 / 2, 3.23e9 - 2.3e9, 90, pulses.Rectangular())],
+        "measure": [pulses.BasicPulse(0, 0, 5e-6, 0.75 / 2, 100e6, 90, pulses.Rectangular()), # I cosine
+                    pulses.BasicPulse(1, 0, 5e-6, 0.75 / 2, 100e6, 0, pulses.Rectangular())], # Q negative sine
+    }
+}]
 
 
-class qblox1q(AbstractExperiment):
+class AWGSystem(AbstractExperiment):
 
     def __init__(self):
         super().__init__()
-        self.name = "qblox1q"
-        self.ac = AcquisitionController() # TODO: add QBLOX implementation
+        self.name = "awg"
+        self.ac = AcquisitionController()
         self.ic = self.ac.ic
         self.results = None
         self.qubit_config = initial_calibration
-        self.num_qubits = 1
+        self.num_qubits = 2
         self.nchannels = 4
 
         self.readout_params = ParameterList()
         self.readout_params.add_parameter("LO_frequency",
-                                          default=4.4172671e9,
-                                          vals=(1e9, 10e9),
-                                          validator=BoundsValidator)
+                                           default=4.4172671e9,
+                                           vals=(1e9, 10e9),
+                                           validator=BoundsValidator)
         self.readout_params.add_parameter("attenuation",
                                           default=14,
                                           vals=(0, 35),
@@ -116,8 +147,7 @@ class qblox1q(AbstractExperiment):
 
     def start(self, nshots):
         buffer, buffers_per_acquisition, records_per_buffer, samples_per_record, time_array = self.ac.do_acquisition()
-        records_per_acquisition = (
-            1. * buffers_per_acquisition * records_per_buffer)
+        records_per_acquisition = (1. * buffers_per_acquisition * records_per_buffer)
         # Skip first 50 anomalous points
         recordA = np.zeros(samples_per_record - 50)
         recordB = np.zeros(samples_per_record - 50)
@@ -176,85 +206,73 @@ class qblox1q(AbstractExperiment):
             return i, q
 
         start = 0
-        i_readout, q_readout = square(time_array, start, self.readout_params.duration(), self.readout_params.amplitude(),
+        i_readout, q_readout = square(time_array, start, self.readout_params.duration(),self.readout_params.amplitude(),
                                       self.readout_params.IF_frequency(), -6.2, 0.2)
 
         return i_readout, q_readout, adc_ttl, ro_ttl, qb_ttl
 
     def upload(self, waveform, averaging):
-        self.ic.setup(self.static.awg_params, self.static.lo_frequency,
-                      self.static.qubit_attenuation, self.static.readout_attenuation, 0)
+        self.ic.setup(self.static.awg_params, self.static.lo_frequency, self.static.qubit_attenuation, self.static.readout_attenuation, 0)
         self.ic.awg.set_nyquist_mode()
         ch3_drive = waveform[2]
         ch4_drive = waveform[3]
         #adc_ttl = waveform[4]
         #ro_ttl = waveform[5]
         #qb_ttl = waveform[6]
-        i_readout, q_readout, adc_ttl, ro_ttl, qb_ttl = self._generate_readout_TTL(
-            len(ch3_drive))
+        i_readout, q_readout, adc_ttl, ro_ttl, qb_ttl = self._generate_readout_TTL(len(ch3_drive))
         #i_readout = waveform[0]
         #q_readout = waveform[1]
-        output = self.ic.generate_pulse_sequence(
-            i_readout, q_readout, ch3_drive, ch4_drive, adc_ttl, ro_ttl, qb_ttl, 20, averaging, self.awg_params.sampling_rate())
+        output = self.ic.generate_pulse_sequence(i_readout, q_readout, ch3_drive, ch4_drive, adc_ttl, ro_ttl, qb_ttl, 20, averaging, self.awg_params.sampling_rate())
         self.ic.awg.upload_sequence(output, 1)
-        self.ic.ready_instruments_for_scanning(
-            7, self.readout_params.attenuation(), 0)
+        self.ic.ready_instruments_for_scanning(7, self.readout_params.attenuation(), 0)
         self.ac.update_acquisitionkwargs(mode='NPT',
                                          samples_per_record=self.readout_params.ADC_length(),
                                          records_per_buffer=10,
-                                         buffers_per_acquisition=int(
-                                             averaging / 10),
-                                         # channel_selection='AB',
-                                         # transfer_offset=0,
-                                         # external_startcapture='ENABLED',
-                                         # enable_record_headers='DISABLED',
-                                         # alloc_buffers='DISABLED',
-                                         # fifo_only_streaming='DISABLED',
+                                         buffers_per_acquisition=int(averaging / 10),
+                                         #channel_selection='AB',
+                                         #transfer_offset=0,
+                                         #external_startcapture='ENABLED',
+                                         #enable_record_headers='DISABLED',
+                                         #alloc_buffers='DISABLED',
+                                         #fifo_only_streaming='DISABLED',
                                          interleave_samples='DISABLED',
-                                         # get_processed_data='DISABLED',
+                                         #get_processed_data='DISABLED',
                                          allocated_buffers=100,
                                          buffer_timeout=100000)
 
     def upload_batch(self, waveform_batch, averaging):
-        self.ic.setup(self.static.awg_params, self.static.lo_frequency,
-                      self.static.qubit_attenuation, self.static.readout_attenuation, 0)
+        self.ic.setup(self.static.awg_params, self.static.lo_frequency, self.static.qubit_attenuation, self.static.readout_attenuation, 0)
         self.ic.awg.set_nyquist_mode()
         i_readout = waveform_batch[0, 0]
         q_readout = waveform_batch[1, 0]
         ch3_drive = waveform_batch[2]
         ch4_drive = waveform_batch[3]
-        i_readout, q_readout, adc_ttl, ro_ttl, qb_ttl = self._generate_readout_TTL(
-            len(i_readout))
+        i_readout, q_readout, adc_ttl, ro_ttl, qb_ttl = self._generate_readout_TTL(len(i_readout))
         steps = len(ch3_drive)
-        output = self.ic.generate_broadbean_sequence(
-            i_readout, q_readout, ch3_drive, ch4_drive, steps, adc_ttl, ro_ttl, qb_ttl, 20, averaging, self.static.sampling_rate)
+        output = self.ic.generate_broadbean_sequence(i_readout, q_readout, ch3_drive, ch4_drive, steps, adc_ttl, ro_ttl, qb_ttl, 20, averaging, self.static.sampling_rate)
         self.ic.awg.upload_sequence(output, steps)
-        self.ic.ready_instruments_for_scanning(
-            7, self.readout_params.attenuation(), 0)
+        self.ic.ready_instruments_for_scanning(7, self.readout_params.attenuation(), 0)
         self.ac.update_acquisitionkwargs(mode='NPT',
                                          samples_per_record=self.readout_params.ADC_sample_size(),
                                          records_per_buffer=10,
-                                         buffers_per_acquisition=int(
-                                             averaging / 10),
-                                         # channel_selection='AB',
-                                         # transfer_offset=0,
-                                         # external_startcapture='ENABLED',
-                                         # enable_record_headers='DISABLED',
-                                         # alloc_buffers='DISABLED',
-                                         # fifo_only_streaming='DISABLED',
+                                         buffers_per_acquisition=int(averaging / 10),
+                                         #channel_selection='AB',
+                                         #transfer_offset=0,
+                                         #external_startcapture='ENABLED',
+                                         #enable_record_headers='DISABLED',
+                                         #alloc_buffers='DISABLED',
+                                         #fifo_only_streaming='DISABLED',
                                          interleave_samples='DISABLED',
-                                         # get_processed_data='DISABLED',
+                                         #get_processed_data='DISABLED',
                                          allocated_buffers=100,
                                          buffer_timeout=100000)
 
     def start_batch(self, steps, nshots):
-        self.results = np.zeros(
-            (steps, 2, self.readout_params.ADC_sample_size() - 50))
+        self.results = np.zeros((steps, 2, self.readout_params.ADC_sample_size() - 50))
         for k in range(steps):
 
             buffer, buffers_per_acquisition, records_per_buffer, samples_per_record, time_array = self.ac.do_acquisition()
-            records_per_acquisition = (
-                1. * buffers_per_acquisition * records_per_buffer)
+            records_per_acquisition = (1. * buffers_per_acquisition * records_per_buffer)
             # Skip first 50 anomalous points
             recordA = np.zeros(samples_per_record - 50)
             recordB = np.zeros(samples_per_record - 50)
@@ -278,8 +296,7 @@ class qblox1q(AbstractExperiment):
 
     def parse_raw(self, raw_signals, target_qubits):
         result = []
-        final = self.readout_params.ADC_sample_size(
-        ) / self.readout_params.ADC_sampling_rate()
+        final = self.readout_params.ADC_sample_size() / self.readout_params.ADC_sampling_rate()
         step = 1 / self.readout_params.ADC_sampling_rate()
         ADC_time_array = np.arange(0, final, step)[50:]
 
@@ -294,7 +311,7 @@ class qblox1q(AbstractExperiment):
             it = np.sum(i_sig * cos)
             qt = np.sum(q_sig * cos)
             result.append((it, qt))
-
+        
         return result
 
     # Shallow method, to be reused for single shot measurement
@@ -313,8 +330,7 @@ class qblox1q(AbstractExperiment):
             refer_1 = refer_1 - move
             data = data - move
             # Rotate the data so that vector 0-1 is overlapping with Ox
-            angle = copy.copy(np.arccos(
-                refer_1[0]/np.sqrt(refer_1[0]**2 + refer_1[1]**2))*np.sign(refer_1[1]))
+            angle = copy.copy(np.arccos(refer_1[0]/np.sqrt(refer_1[0]**2 + refer_1[1]**2))*np.sign(refer_1[1]))
             new_data = np.array([data[0]*np.cos(angle) + data[1]*np.sin(angle),
                                 -data[0]*np.sin(angle) + data[1]*np.cos(angle)])
             # Rotate refer_1 to get state 1 reference
@@ -326,7 +342,7 @@ class qblox1q(AbstractExperiment):
             elif new_data[0] > new_refer_1[0]:
                 new_data[0] = new_refer_1[0]
             prob[idx] = new_data[0] / new_refer_1[0]
-
+        
         # Next, we process the probabilities into qubit states
         # Note: There are no correlations established here, this is solely for disconnected and unentangled qubits
         binary = list(itertools.product([0, 1], repeat=len(target_qubits)))

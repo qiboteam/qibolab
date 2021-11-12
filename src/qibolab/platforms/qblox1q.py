@@ -2,28 +2,20 @@ import copy
 import itertools
 import numpy as np
 from qibolab import pulses, tomography
-from qibolab.inst import InstrumentController
-from qibolab.experiments.abstract import AbstractExperiment, ParameterList, BoundsValidator, EnumValidator, Qubit
+from qibolab.instruments import AcquisitionController
+from qibolab.platforms.abstract import AbstractExperiment, ParameterList, BoundsValidator, EnumValidator, Qubit
 
 
-# AWG can only drive two qubits and read one line
+# To be used for initial calibtation
 qubit_static_parameters = [
     {
         "id": 0,
-        "name": "Qubit 1",
-        "channel": [2, None, [0, 1]], # XY control, Z line, readout
-        "frequency_range": (6e9, 7e9),
-        "resonator_frequency": 4.5e9,
+        "name": "Left/Bottom Qubit",
+        "channel": [2, None, [0, 1]],  # XY control, Z line, readout
+        "frequency_range": (3e9, 3.1e9),
+        "resonator_frequency": 4.5172671e9,
         "amplitude": 0.375 / 2,
         "connected_qubits": [1]
-    }, {
-        "id": 1,
-        "name": "Qubit 2",
-        "channel": [3, None, [0, 1]],
-        "frequency_range": (6e9, 7e9),
-        "resonator_frequency": 5.5e9,
-        "amplitude": 0.375 / 2,
-        "connected_qubits": [0]
     },
 ]
 
@@ -44,55 +36,33 @@ initial_calibration = [{
     "one_iq_reference": (0.007347951048047871, 0.015370747296983345),
     "initial_gates": {
         "rx": [pulses.BasicPulse(2, 0, 100.21e-9, 0.375 / 2, 3.06362669e9 - 2.3e9, 0, pulses.Rectangular()),
-                pulses.BasicPulse(2, 0, 69.77e-9, 0.375 / 2, 3.086e9 - 2.3e9, 0, pulses.Rectangular())],
+               pulses.BasicPulse(2, 0, 69.77e-9, 0.375 / 2, 3.086e9 - 2.3e9, 0, pulses.Rectangular())],
         "ry": [pulses.BasicPulse(2, 0, 100.21e-9, 0.375 / 2, 3.06362669e9 - 2.3e9, 90, pulses.Rectangular()),
-                pulses.BasicPulse(2, 0, 69.77e-9, 0.375 / 2, 3.086e9 - 2.3e9, 90, pulses.Rectangular())],
+               pulses.BasicPulse(2, 0, 69.77e-9, 0.375 / 2, 3.086e9 - 2.3e9, 90, pulses.Rectangular())],
+        "measure": [pulses.BasicPulse(0, 0, 5e-6, 0.75 / 2, 100e6, 90, pulses.Rectangular()),  # I cosine
+                    pulses.BasicPulse(1, 0, 5e-6, 0.75 / 2, 100e6, 0, pulses.Rectangular())],  # Q negative sine
         "cx_(1,)": [pulses.BasicPulse(3, 0, 46.71e-9, 0.396 / 2, 3.06362669e9 - 2.3e9, 0, pulses.SWIPHT(20e6))],
-        "measure": [pulses.IQReadoutPulse((0, 1), 0, 5e-6, 0.75 / 4, 100e6, (-6.2 / 180 * np.pi, 0.2 / 180 * np.pi))]
     }
-}, {
-    "id": 1,
-    "qubit_frequency": 3.284049061e9,
-    "qubit_frequency_bounds": (3.27e9, 3.29e9),
-    "resonator_frequency": 4.5172671e9,
-    "resonator_frequency_bounds": (4.51e9, 4.525e9),
-    "T1": 5.89e-6,
-    "T2": 1.27e-6,
-    "T2_Spinecho": 3.5e-6,
-    "pi-pulse": 112.16e-9,
-    "drive_channel": 3,
-    "readout_channel": (0, 1),
-    "connected_qubits": [0],
-    "zero_iq_reference": (0.002117188393398148, 0.020081601323807922),
-    "one_iq_reference": (0.007347951048047871, 0.015370747296983345),
-    "initial_gates": {
-        "rx": [pulses.BasicPulse(3, 0, 112.16e-9, 0.375 / 2, 3.284049061e9 - 2.3e9, 0, pulses.Rectangular()),
-                pulses.BasicPulse(3, 0, 131.12e-9, 0.375 / 2, 3.23e9 - 2.3e9, 0, pulses.Rectangular())],
-        "ry": [pulses.BasicPulse(3, 0, 112.16e-9, 0.375 / 2, 3.284049061e9 - 2.3e9, 90, pulses.Rectangular()),
-                pulses.BasicPulse(3, 0, 131.12e-9, 0.375 / 2, 3.23e9 - 2.3e9, 90, pulses.Rectangular())],
-        "measure": [pulses.IQReadoutPulse((0, 1), 0, 5e-6, 0.75 / 4, 150e6, (-6.2 / 180 * np.pi, 0.2 / 180 * np.pi))]
-    }
-}]
+}, ]
 
 
-class AWGSystem10Qubits(AbstractExperiment):
+class qblox1q(AbstractExperiment):
 
     def __init__(self):
         super().__init__()
-        self.name = "awg10q"
-        self.ic = InstrumentController()
+        self.name = "qblox1q"
+        self.ac = AcquisitionController() # TODO: add QBLOX implementation
+        self.ic = self.ac.ic
         self.results = None
         self.qubit_config = initial_calibration
-        self.num_qubits = 2
+        self.num_qubits = 1
         self.nchannels = 4
-        self.default_sample_size = None
-        self.default_pulse_duration = 10e-6
 
         self.readout_params = ParameterList()
         self.readout_params.add_parameter("LO_frequency",
-                                           default=4.35e9,
-                                           vals=(1e9, 10e9),
-                                           validator=BoundsValidator)
+                                          default=4.4172671e9,
+                                          vals=(1e9, 10e9),
+                                          validator=BoundsValidator)
         self.readout_params.add_parameter("attenuation",
                                           default=14,
                                           vals=(0, 35),
@@ -117,15 +87,15 @@ class AWGSystem10Qubits(AbstractExperiment):
                                           default=1e-6)
         self.readout_params.add_parameter("amplitude",
                                           default=0.75 / 2)
-        self.readout_params.add_parameter("start_time",
-                                          default=0)
+        self.readout_params.add_parameter("IF_frequency",
+                                          default=100e6)
 
         self.awg_params = ParameterList()
         offset = [-0.001, 0, 0, 0]
         phase = [-6.2, 0.2, 0, 0]
         amplitude = [0.75, 0.75, 0.75, 0.75]
         self.awg_params.add_parameter("sampling_rate",
-                                      default=2.4e9,
+                                      default=2.3e9,
                                       vals=(1e9, 2.5e9),
                                       validator=BoundsValidator)
         for i in range(self.nchannels):
@@ -138,9 +108,6 @@ class AWGSystem10Qubits(AbstractExperiment):
 
         self.qubits = [Qubit(**qb) for qb in initial_calibration]
 
-        self.sampling_rate = self.awg_params.sampling_rate
-        self.readout_pulse_duration = self.readout_params.duration
-
     def connect(self):
         pass
 
@@ -148,8 +115,9 @@ class AWGSystem10Qubits(AbstractExperiment):
         pass
 
     def start(self, nshots):
-        buffer, buffers_per_acquisition, records_per_buffer, samples_per_record = self.ic.do_acquisition()
-        records_per_acquisition = (1. * buffers_per_acquisition * records_per_buffer)
+        buffer, buffers_per_acquisition, records_per_buffer, samples_per_record, time_array = self.ac.do_acquisition()
+        records_per_acquisition = (
+            1. * buffers_per_acquisition * records_per_buffer)
         # Skip first 50 anomalous points
         recordA = np.zeros(samples_per_record - 50)
         recordB = np.zeros(samples_per_record - 50)
@@ -175,11 +143,11 @@ class AWGSystem10Qubits(AbstractExperiment):
         return voltdiv * (u12 - codeZero) / codeRange
 
     def stop(self):
-        self.ic.stop()
+        self.ac.stop()
 
-    def _generate_TTL_pulses(self, samples):
+    def _generate_readout_TTL(self, samples):
         end = self.readout_params.duration() + self.readout_params.buffer()
-        duration = samples / self.awg_params.sampling_rate()
+        duration = len(samples) / self.awg_params.sampling_rate()
         time_array = np.linspace(end - duration, end, num=samples)
 
         def TTL(t, start, duration, amplitude):
@@ -198,54 +166,95 @@ class AWGSystem10Qubits(AbstractExperiment):
         start = self.readout_params.QB_SW_delay()
         qb_ttl = TTL(time_array, start, self.readout_params.duration(), 1)
 
-        return adc_ttl, ro_ttl, qb_ttl
+        def square(t, start, duration, amplitude, freq, I_phase, Q_phase, *args, **kwargs):
+            # Basic rectangular pulse
+            x = amplitude * (1 * (start < t) & 1 * (start+duration > t))
+            I_phase = I_phase * np.pi / 180
+            Q_phase = Q_phase * np.pi / 180
+            i = x * np.cos(2 * np.pi * freq * t + I_phase)
+            q = - x * np.sin(2 * np.pi * freq * t + Q_phase)
+            return i, q
+
+        start = 0
+        i_readout, q_readout = square(time_array, start, self.readout_params.duration(), self.readout_params.amplitude(),
+                                      self.readout_params.IF_frequency(), -6.2, 0.2)
+
+        return i_readout, q_readout, adc_ttl, ro_ttl, qb_ttl
 
     def upload(self, waveform, averaging):
-        self.ic.readout_attenuator.set_attenuation(0)
-        self.ic.qubit_attenuator.set_attenuation(0)
-        self.ic.lo.set_frequency(self.readout_params.LO_frequency())
-        self.ic.awg.setup([self.awg_params["CH{}_offset".format(i + 1)] for i in self.nchannels], sampling_rate=self.awg_params.sampling_rate())
-
-        sample_size = len(waveform[0])
-        seq = np.zeros((1, self.nchannels, 3, sample_size))
-        for i in range(self.nchannels):
-            seq[0, i, 0] = waveform[i]
-        adc_ttl, ro_ttl, qb_ttl = self._generate_TTL_pulses(sample_size)
-        seq[0, 0, 1] = adc_ttl
-        seq[0, 0, 2] = ro_ttl
-        seq[0, 1, 2] = qb_ttl
-
-        self.ic.awg.upload_sequence(seq, averaging)
-        self.ic.update_adc(self.readout_params.ADC_sample_size(), averaging)
+        self.ic.setup(self.static.awg_params, self.static.lo_frequency,
+                      self.static.qubit_attenuation, self.static.readout_attenuation, 0)
+        self.ic.awg.set_nyquist_mode()
+        ch3_drive = waveform[2]
+        ch4_drive = waveform[3]
+        #adc_ttl = waveform[4]
+        #ro_ttl = waveform[5]
+        #qb_ttl = waveform[6]
+        i_readout, q_readout, adc_ttl, ro_ttl, qb_ttl = self._generate_readout_TTL(
+            len(ch3_drive))
+        #i_readout = waveform[0]
+        #q_readout = waveform[1]
+        output = self.ic.generate_pulse_sequence(
+            i_readout, q_readout, ch3_drive, ch4_drive, adc_ttl, ro_ttl, qb_ttl, 20, averaging, self.awg_params.sampling_rate())
+        self.ic.awg.upload_sequence(output, 1)
+        self.ic.ready_instruments_for_scanning(
+            7, self.readout_params.attenuation(), 0)
+        self.ac.update_acquisitionkwargs(mode='NPT',
+                                         samples_per_record=self.readout_params.ADC_length(),
+                                         records_per_buffer=10,
+                                         buffers_per_acquisition=int(
+                                             averaging / 10),
+                                         # channel_selection='AB',
+                                         # transfer_offset=0,
+                                         # external_startcapture='ENABLED',
+                                         # enable_record_headers='DISABLED',
+                                         # alloc_buffers='DISABLED',
+                                         # fifo_only_streaming='DISABLED',
+                                         interleave_samples='DISABLED',
+                                         # get_processed_data='DISABLED',
+                                         allocated_buffers=100,
+                                         buffer_timeout=100000)
 
     def upload_batch(self, waveform_batch, averaging):
-        self.ic.readout_attenuator.set_attenuation(self.readout_params.attenuation())
-        self.ic.qubit_attenuator.set_attenuation(0)
-        self.ic.lo.set_frequency(self.readout_params.LO_frequency())
-        self.ic.awg.setup([self.awg_params["CH{}_offset".format(i + 1)] for i in self.nchannels], sampling_rate=self.awg_params.sampling_rate())
-
-        sample_size = len(waveform_batch[0, 0])
-        steps = len(waveform_batch)
-        adc_ttl, ro_ttl, qb_ttl = self._generate_TTL_pulses(sample_size)
-        seq = np.zeros((steps, self.nchannels, 3, sample_size))
-
-        for idx, waveform in enumerate(waveform_batch):
-            for i in range(self.nchannels):
-                seq[idx][i, 0] = waveform[i]
-
-            seq[idx, 0, 1] = adc_ttl
-            seq[idx, 0, 2] = ro_ttl
-            seq[idx, 1, 2] = qb_ttl
-
-        self.ic.awg.upload_sequence(seq, averaging)
-        self.ic.update_adc(self.readout_params.ADC_sample_size(), averaging)
+        self.ic.setup(self.static.awg_params, self.static.lo_frequency,
+                      self.static.qubit_attenuation, self.static.readout_attenuation, 0)
+        self.ic.awg.set_nyquist_mode()
+        i_readout = waveform_batch[0, 0]
+        q_readout = waveform_batch[1, 0]
+        ch3_drive = waveform_batch[2]
+        ch4_drive = waveform_batch[3]
+        i_readout, q_readout, adc_ttl, ro_ttl, qb_ttl = self._generate_readout_TTL(
+            len(i_readout))
+        steps = len(ch3_drive)
+        output = self.ic.generate_broadbean_sequence(
+            i_readout, q_readout, ch3_drive, ch4_drive, steps, adc_ttl, ro_ttl, qb_ttl, 20, averaging, self.static.sampling_rate)
+        self.ic.awg.upload_sequence(output, steps)
+        self.ic.ready_instruments_for_scanning(
+            7, self.readout_params.attenuation(), 0)
+        self.ac.update_acquisitionkwargs(mode='NPT',
+                                         samples_per_record=self.readout_params.ADC_sample_size(),
+                                         records_per_buffer=10,
+                                         buffers_per_acquisition=int(
+                                             averaging / 10),
+                                         # channel_selection='AB',
+                                         # transfer_offset=0,
+                                         # external_startcapture='ENABLED',
+                                         # enable_record_headers='DISABLED',
+                                         # alloc_buffers='DISABLED',
+                                         # fifo_only_streaming='DISABLED',
+                                         interleave_samples='DISABLED',
+                                         # get_processed_data='DISABLED',
+                                         allocated_buffers=100,
+                                         buffer_timeout=100000)
 
     def start_batch(self, steps, nshots):
-        self.results = np.zeros((steps, 2, self.readout_params.ADC_sample_size() - 50))
+        self.results = np.zeros(
+            (steps, 2, self.readout_params.ADC_sample_size() - 50))
         for k in range(steps):
 
-            buffer, buffers_per_acquisition, records_per_buffer, samples_per_record = self.ic.do_acquisition()
-            records_per_acquisition = (1. * buffers_per_acquisition * records_per_buffer)
+            buffer, buffers_per_acquisition, records_per_buffer, samples_per_record, time_array = self.ac.do_acquisition()
+            records_per_acquisition = (
+                1. * buffers_per_acquisition * records_per_buffer)
             # Skip first 50 anomalous points
             recordA = np.zeros(samples_per_record - 50)
             recordB = np.zeros(samples_per_record - 50)
@@ -269,7 +278,8 @@ class AWGSystem10Qubits(AbstractExperiment):
 
     def parse_raw(self, raw_signals, target_qubits):
         result = []
-        final = self.readout_params.ADC_sample_size() / self.readout_params.ADC_sampling_rate()
+        final = self.readout_params.ADC_sample_size(
+        ) / self.readout_params.ADC_sampling_rate()
         step = 1 / self.readout_params.ADC_sampling_rate()
         ADC_time_array = np.arange(0, final, step)[50:]
 
@@ -303,7 +313,8 @@ class AWGSystem10Qubits(AbstractExperiment):
             refer_1 = refer_1 - move
             data = data - move
             # Rotate the data so that vector 0-1 is overlapping with Ox
-            angle = copy.copy(np.arccos(refer_1[0]/np.sqrt(refer_1[0]**2 + refer_1[1]**2))*np.sign(refer_1[1]))
+            angle = copy.copy(np.arccos(
+                refer_1[0]/np.sqrt(refer_1[0]**2 + refer_1[1]**2))*np.sign(refer_1[1]))
             new_data = np.array([data[0]*np.cos(angle) + data[1]*np.sin(angle),
                                 -data[0]*np.sin(angle) + data[1]*np.cos(angle)])
             # Rotate refer_1 to get state 1 reference
@@ -332,8 +343,13 @@ class AWGSystem10Qubits(AbstractExperiment):
 
     # Joint readout method
     def parse_tomography(self, iq_values, target_qubits):
-        res = self.parse_iq(iq_values, target_qubits)
-        tom = tomography.Tomography(res)
+        nqubits = len(target_qubits)
+        nstates = int(2**nqubits)
+        data = np.array([np.arctan2(q, i) * 180 / np.pi for i, q in iq_values])
+        states = data[0:nstates]
+        phase = data[nstates:len(iq_values)]
+        tom = tomography.Tomography(phase, states)
         tom.minimize(1e-5)
         fit = tom.fit
+
         return fit

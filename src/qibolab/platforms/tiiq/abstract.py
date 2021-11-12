@@ -1,4 +1,3 @@
-from tiiq.instruments.abstract import Instrument
 
 
 class Resonator():
@@ -11,11 +10,11 @@ class Resonator():
         return self._frequency
     @property
     def ro_pulse_amplitude(self):
-        return self._ro_pulse_amplitude    
+        return self._ro_pulse_amplitude
     @property
     def ro_pulse_duration(self):
-        return self._ro_pulse_duration  
-    
+        return self._ro_pulse_duration
+
     def calibrate(self):
         pass
 
@@ -32,10 +31,10 @@ class Qubit():
         return self._frequency
     @property
     def pi_pulse_amplitude(self):
-        return self._pi_pulse_amplitude  
+        return self._pi_pulse_amplitude
     @property
     def pi_pulse_duration(self):
-        return self._pi_pulse_duration    
+        return self._pi_pulse_duration
     @property
     def T1(self):
         return self._T1
@@ -52,10 +51,10 @@ class Qubit():
 
 class Experiment():
     name = ""
-    
+
     _resonators = []
-    _qubits = []      
-    _instruments = [] 
+    _qubits = []
+    _instruments = []
 
     _last_calibration_date = None
 
@@ -74,14 +73,14 @@ class Experiment():
     def calibrate(self):
         for resonator in self._resonators:
             resonator.calibrate()
-        
+
         for qubit in self._qubits:
             qubit.calibrate()
-        
+
         # self._last_calibration_date = now
         self._save_calibration()
         pass
-    
+
     def _save_calibration():
         # calibration file path
         # write values to file
@@ -105,7 +104,7 @@ class Experiment():
         return self._qubits.count
     @property
     def instruments(self):
-        return self._instruments     
+        return self._instruments
 
 
 

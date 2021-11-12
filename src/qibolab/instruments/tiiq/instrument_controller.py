@@ -3,10 +3,10 @@ CLASS FILE FOR INSTRUMENT COMMUNICATION AND UTILITY
 """
 
 #import qblox, rhode_schwarz and AcquisitionController classes
-from rohde_schwarz import SGS100A
-from qblox import Pulsar_QCM
-from qblox import Pulsar_QRM
-from acquisition_controller import AcquisitionController
+from qibolab.instruments.rohde_schwarz import SGS100A
+from qibolab.instruments.qblox import Pulsar_QCM
+from qibolab.instruments.qblox import Pulsar_QRM
+from qibolab.instruments.tiiq.acquisition_controller import AcquisitionController
 
 import logging
 logger = logging.getLogger(__name__)

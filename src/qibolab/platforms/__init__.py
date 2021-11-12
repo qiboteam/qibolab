@@ -1,7 +1,7 @@
-from qibolab.experiments.icarusq import IcarusQ
-from qibolab.experiments.awg import AWGSystem
-from qibolab.experiments.awg10q import AWGSystem10Qubits
-from qibolab.experiments.qblox1q import qblox1q
+from qibolab.platforms.icarusq import IcarusQ
+from qibolab.platforms.awg import AWGSystem
+from qibolab.platforms.awg10q import AWGSystem10Qubits
+from qibolab.platforms.qblox1q import qblox1q
 from qibo.config import raise_error
 
 
