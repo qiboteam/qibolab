@@ -21,7 +21,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install pylint
         pip install pytest-cov
-        pip install qibo --pre
+        pip install pyvisa-py
+        pip install .
+        git clone https://github.com/qiboteam/qibo
+        cd qibo
+        git checkout rmhardware
         pip install .
     - name: Test with pylint
       run: |

@@ -4,8 +4,8 @@ import itertools
 import time
 from scipy.optimize import minimize
 from scipy.linalg import sqrtm
-from qibo import gates
 from qibo.config import raise_error
+
 
 class Tomography:
     """
@@ -64,11 +64,13 @@ class Tomography:
 
     @staticmethod
     def _base():
-        return [gates.I(0), gates.RX(0, np.pi), gates.RX(0, np.pi / 2), gates.RY(0, np.pi / 2)]
+        from qibo.gates import I, RX, RY
+        return [I(0), RX(0, np.pi), RX(0, np.pi / 2), RY(0, np.pi / 2)]
 
     @staticmethod
     def basis_states(n):
-        base = [gates.I(0), gates.RX(0)]
+        from qibo.gates import I, RX
+        base = [I(0), RX(0)]
         index_combinations = Tomography._iter_indices(base, n)
         g = [base[c] for c in index_combinations]
         for gi in g:

@@ -82,6 +82,7 @@ def assert_regression_fixture(array, filename):
 #     np.testing.assert_allclose(tom.find_beta(state), target_beta)
 
 
+@pytest.mark.skip
 def test_tomography_init():
     n = 3
     states = np.random.random((4**n, n))
@@ -105,6 +106,7 @@ def test_tomography_linear():
     assert_regression_fixture(tom.linear, "linear_estimation.npy")
 
 
+@pytest.mark.skip
 def test_tomography_fit():
     n = 3
     states = np.random.random((4**n, n))
@@ -124,6 +126,7 @@ def extract_json(filepath):
     return np.sqrt((data ** 2).sum(axis=1))
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize("state_value,target_fidelity",
                          [(0, 93.01278047175582), (1, 82.30795926024483),
                           (2, 65.06114271984393), (3, 22.230579223385284)])
