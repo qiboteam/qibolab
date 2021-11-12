@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 import os
 import re
 
-PACKAGE = "qiboicarusq"
+PACKAGE = "qibolab"
 
 
 # Returns the version
@@ -28,10 +28,10 @@ with open(os.path.join(this_directory, "README.md"), encoding="utf-8") as f:
 setup(
     name=PACKAGE,
     version=get_version(),
-    description="Quantum hardware backend for IcarusQ experiment",
+    description="Quantum hardware backend for Qibo",
     author="The Qibo team",
     author_email="",
-    url="https://github.com/qiboteam/qiboicarusq",
+    url="https://github.com/qiboteam/qibolab",
     packages=find_packages("src"),
     package_dir={"": "src"},
     package_data={"": ["*.json", "*.npy"]},
@@ -41,13 +41,20 @@ setup(
         "Topic :: Scientific/Engineering :: Physics",
     ],
     install_requires=[
-        "numpy",
+        "qibo",
         "visa",
+        "pyvisa-py",
         "qcodes",
-        "scipy"
     ],
     extras_require={
-        "tests": ["qibo"],
+        # TII system dependencies
+        "tiiq": [
+            "qcodes==0.26",
+            "quantify-core==0.4.0",
+            "pyVISA==1.11.3",
+            "pyVISA-py==0.5.2",
+            "qblox-instruments==0.2.3"
+        ]
     },
     python_requires=">=3.6.0",
     long_description=long_description,
