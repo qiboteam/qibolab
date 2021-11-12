@@ -56,7 +56,7 @@ class BaseParameter:
         self.value = default
         self.get_wrapper = get_wrapper
         self.validator = validator
-    
+
     def get(self):
         """Fetches the parameter value.
 
@@ -75,7 +75,7 @@ class BaseParameter:
         if self.validator is not None:
             if not self.validator(value, self.vals):
                 raise RuntimeError("Invalid Value", value)
-                
+
         self.value = value
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
@@ -99,7 +99,7 @@ class ParameterList(dict):
     """
     def add_parameter(self, name: str, default=None, vals=None, val_mapping=None, get_wrapper=None, validator=None):
         """Adds a new parameter to the dictionary
-        
+
         @see BaseParameter for arguments
         """
         self[name] = BaseParameter(name, default, vals, val_mapping, get_wrapper, validator)
@@ -111,10 +111,7 @@ class ParameterList(dict):
 class GateSet(dict):
     """Dictionary containing the PulseSequence objects for each gate.
     """
-
-    from qibo import gates
-    two_qubit_gates = [gates.CNOT]
-
+    two_qubit_gates = ["CNOT"]
 
     def set(self, gate, pulse_sequence: list):
         """Sets a qibo gate into the register with its corresponding pulse sequence.
@@ -134,9 +131,10 @@ class GateSet(dict):
     def set_from_dict(self, obj: dict):
         for key, value in obj.items():
             self[key] = value
-        
+
     def _is_two_qubit_gate(self, gate):
-        return any(isinstance(gate, x) for x in self.two_qubit_gates)
+        from qibo import gates
+        return any(isinstance(gate, getattr(gates, x)) for x in self.two_qubit_gates)
 
     def get(self, gate) -> List[Any]:
         """Fetches the pulse representation of a qibo gate

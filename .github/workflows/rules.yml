@@ -11,9 +11,9 @@ jobs:
         python-version: [3.8]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install package
@@ -21,7 +21,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install pylint
         pip install pytest-cov
-        pip install qibo --pre
+        pip install pyvisa-py
+        pip install .
+        git clone https://github.com/qiboteam/qibo
+        cd qibo
+        git checkout rmhardware
         pip install .
     - name: Test with pylint
       run: |
@@ -31,7 +35,7 @@ jobs:
         pytest --cov=qibolab --cov-report=xml --pyargs qibolab
     - name: Upload coverage to Codecov
       if: startsWith(matrix.os, 'ubuntu')
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v2
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml

@@ -27,7 +27,7 @@ class PulseSequence:
         if duration is not None:
             self.duration = duration
             self.sample_size = int(self.sampling_rate * duration)
-        
+
         if sample_size is not None:
             self.sample_size = sample_size
             self.duration = sample_size / self.sampling_rate
@@ -62,7 +62,7 @@ class PulseSequence:
 class HardwareCircuit(circuit.Circuit):
 
     def __init__(self, nqubits, force_tomography=False):
-        super(circuit.Circuit, self).__init__(nqubits)
+        super().__init__(nqubits)
         self._force_tomography = force_tomography
         self._raw = None
 
@@ -79,7 +79,7 @@ class HardwareCircuit(circuit.Circuit):
         for gate in gate_sequence:
             q = gate.target_qubits[0]
 
-            
+
             if isinstance(gate, Align):
                 m = 0
                 for q in gate.target_qubits:
@@ -175,5 +175,5 @@ class HardwareCircuit(circuit.Circuit):
         else:
             return self._execute_sequence(nshots)
 
-    def __call__(self, initial_state=None, nshots=None, measurement_level=2):
-        return self.execute(initial_state, nshots, measurement_level)
+    def __call__(self, initial_state=None, nshots=None):
+        return self.execute(initial_state, nshots)
