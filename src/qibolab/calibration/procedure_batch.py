@@ -85,7 +85,7 @@ def partial_qubit_calibration(static_config: dict, qubit: Qubit):
     qubit.qubit_frequency = freq
 
     # Next, do Rabi oscillation to determine pi-pulse time
-    time_sweep, seq = tasks.RabiTime(0, 600e-9, 3e-9, freq, amplitude, channel)
+    time_sweep, seq = tasks.RabiSpectroscopy(0, 600e-9, 3e-9, freq, amplitude, channel)
     res = scheduler.execute_batch_sequence(seq, experiment.static.default_averaging).result()
     res = _parse_batch_result(res, static_config)
     log["rabi"] = {
