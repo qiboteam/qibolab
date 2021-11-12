@@ -21,7 +21,6 @@ jobs:
         python -m pip install --upgrade pip
         pip install pylint
         pip install pytest-cov
-        pip install pyvisa-py
         pip install .
         git clone https://github.com/qiboteam/qibo
         cd qibo
