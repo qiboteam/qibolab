@@ -43,6 +43,7 @@ setup(
     install_requires=[
         "qibo",
         "visa",
+        "py-visa",
         "qcodes",
     ],
     extras_require={
