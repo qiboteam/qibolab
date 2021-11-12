@@ -1,6 +1,0 @@
-# Runtime requirements for qiboicarusq
-
-numpy
-visa
-qcodes
-scipy
