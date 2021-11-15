@@ -246,9 +246,6 @@ class Pulsar_QRM():
         self._acquisition_results = acquisition_results
         return acquisition_results
 
-
-
-
     def _plot_acquisitions(self):
         #Plot acquired signal on both inputs I and Q
         fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
