@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath('.'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'Qibolab'
+project = 'qibolab'
 copyright = '2021, The Qibo team'
 author = 'The Qibo team'
 

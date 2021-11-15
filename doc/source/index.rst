@@ -4,10 +4,10 @@
    contain the root `toctree` directive.
 
 .. title::
-   Qibolab's documentation
+   qibolab's documentation
 
 ===================================
-Welcome to Qibolab's documentation!
+Welcome to qibolab's documentation!
 ===================================
 
 .. toctree::
