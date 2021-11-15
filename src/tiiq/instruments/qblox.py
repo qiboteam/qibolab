@@ -59,7 +59,6 @@ class Pulsar_QRM():
         self.sampling_rate = QRM_info['sampling_rate']
         self.mode = QRM_info['mode']
 
-
         self._reset() #reset instrument from previous state
         self._set_reference_clock(QRM_info['ref_clock']) #set reference clock source
         self.set_data_dictionary(QRM_info['data_dictionary']) #set data directory for generated waveforms

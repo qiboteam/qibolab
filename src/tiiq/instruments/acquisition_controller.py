@@ -43,13 +43,13 @@ class AcquisitionController():
 
     def play(self, Gettable ro_gettable, **Kwargs):
         #Plot in real time the experiment using AcquisitionController (MeasurementControl object)
-        self.MC.settables(self.pars.ramsey_wait)
+        #self.MC.settables(self.pars.ramsey_wait)
 
         # as a QCoDeS parameter, 't' obeys the JSON schema for a valid Settable and can be passed to the MC directly.
-        self.MC.setpoints(np.arange(leng_start,leng_stop,leng_step))
+        #self.MC.setpoints(np.arange(leng_start,leng_stop,leng_step))
 
-        self.MC.setpoints(setpoints_time)
-        self.MC.gettables(self.ro_gettable)
+        #self.MC.setpoints(setpoints_time)
+        #self.MC.gettables(self.ro_gettable)
 
         # as a QCoDeS parameter, 'sig' obeys the JSON schema for a valid Gettable and can be passed to the MC directly.
-        dataset = self.MC.run(f'ramsey_{setpoints_time.max()}', soft_avg = self.soft_avg_numnber)
+        #dataset = self.MC.run(f'ramsey_{setpoints_time.max()}', soft_avg = self.soft_avg_numnber)
