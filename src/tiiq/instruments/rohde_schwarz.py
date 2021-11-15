@@ -13,7 +13,7 @@ class SGS100A():
         """
         create Local Oscillator with name = label and connect to it in local IP = ip
         Params format example:
-                "ip": 'TCPIP0::192.168.0.8::inst0::INSTR',
+                "ip": '192.168.0.8',
                 "label": "qcm_LO"
         """
         self.LO = LO_SGS100A.RohdeSchwarz_SGS100A(label, 'TCPIP0::'+ip+'::inst0::INSTR')
@@ -61,3 +61,9 @@ class SGS100A():
     def getFrequency(self):
         # return actual LO frquency
         return self.frequency
+
+    def close(self):
+        self.LO.close()
+    def __del__(self):
+        self.LO.close()
+
