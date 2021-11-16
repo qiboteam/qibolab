@@ -49,11 +49,12 @@ setup(
     extras_require={
         # TII system dependencies
         "tiiq": [
-            "qcodes==0.26",
-            "quantify-core==0.4.0",
+            "qblox-instruments==0.4.0",
+			"lmfit",
+            "quantify-core==0.5.1",
             "pyVISA==1.11.3",
             "pyVISA-py==0.5.2",
-            "qblox-instruments==0.2.3"
+
         ]
     },
     python_requires=">=3.6.0",
