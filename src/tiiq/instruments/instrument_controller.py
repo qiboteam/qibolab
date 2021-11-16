@@ -6,9 +6,12 @@ CLASS FILE FOR INSTRUMENT COMMUNICATION AND UTILITY
 from rohde_schwarz import SGS100A
 from qblox import Pulsar_QCM
 from qblox import Pulsar_QRM
-from acquisition_controller import AcquisitionController
+
 from quantify_core.data.handling import get_datadir, set_datadir
+from quantify_core.measurement import MeasurementControl
 from quantify_core.measurement.control import Settable, Gettable
+import quantify_core.visualization.pyqt_plotmon as pqm
+from quantify_core.visualization.instrument_monitor import InstrumentMonitor
 
 import logging
 logger = logging.getLogger(__name__)
@@ -31,7 +34,7 @@ class InstrumentController():
         self.plotmon = pqm.PlotMonitor_pyqt('plotmon')
         self.insmon = InstrumentMonitor("Instruments Monitor")
 
-    def setup(self, LO_qrm_freq, LO_qrm_power, LO_qcm_freq, LO_qcm_power, QRM_settings: dict, QCM_settings: dict):
+    def setup(self, QRM_LO_settings: dict, QCM_LO_settings: dict, QRM_settings: dict, QCM_settings: dict):
         #Pass from experiment or callibration class parameters characterizing the HW setup
 
         # Connect the live plotting monitor to the measurement control
@@ -42,10 +45,8 @@ class InstrumentController():
         self.MC.instrument_monitor(self.insmon.name)
 
         #setting up LO for QRM (resonator) and QCM (qubit)
-        self.LO_qrm.set_power(LO_qrm_power)
-        self.LO_qrm.set_frequency(LO_qrm_freq)
-        self.LO_qcm.set_power(LO_qcm_power)
-        self.LO_qcm.set_frequency(LO_qcm_freq)
+        self.LO_qrm.setup(QRM_LO_settings)
+        self.LO_qcm.setup(QCM_LO_settings)
 
         #setting up QRM parameters
         self.qrm.setup(QRM_settings)
@@ -55,20 +56,24 @@ class InstrumentController():
 
         #set folder for storage data
         set_datadir(QRM_settings['data_dictionary'])
-        print(f"Data will be saved in:\n{get_datadir()}")
+        # print(f"Data will be saved in:\n{get_datadir()}")
 
 
-    def play(self, label, setpoints, soft_avg_numnber, **Kwargs):
+    def play(self, label, setpoints, soft_avg_numnber, sweep_type):
         #Activate QRM Local oscillators
         self.LO_qrm.on()
         self.LO_qcm.on()
 
-        for key, value in kwargs.items():
-            if (key == frequency) self.MC.settables(self.LO_qcm.LO.frequency)
+        if sweep_type == 'qrm_lo_frequency':
+            self.MC.settables(self.LO_qrm.LO.frequency)
+        elif sweep_type == 'qcm_lo_frequency':
+            self.MC.settables(self.LO_qcm.LO.frequency)
+        elif sweep_type == 'qc_pulse_length':
+            self.MC.settables(self.qcm._settings['pulse']['length'])
 
         self.MC.setpoints(setpoints)
-        self.MC.gettables(Gettable(self.qrm)) #won't work in a plattform with QRM y QCM configuration
-        dataset = MC.run(label, soft_avg = soft_avg_numnber)
+        self.MC.gettables(Gettable(self.qrm))
+        dataset = self.MC.run(label, soft_avg = soft_avg_numnber)
 
     def stop(self):
         #stop ALL instruments
