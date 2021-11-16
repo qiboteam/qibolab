@@ -42,7 +42,7 @@ jobs:
         name: codecov-umbrella
         fail_ci_if_error: true
     - name: Sphinx compile
-      if: github.ref == 'refs/heads/master'
+      if: github.ref == 'refs/heads/main'
       run: |
         pip install sphinx
         make -C doc html
