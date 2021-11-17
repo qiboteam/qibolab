@@ -17,7 +17,7 @@ from quantify_core.visualization.instrument_monitor import InstrumentMonitor
 class TIISingleQubit():
 
     _settings = {
-        'data_dictionary': '.quantify-data/',
+        'data_dictionary': '.data/',
         "hardware_avg": 1024,
         "sampling_rate": 1e9,
         "software_averages": 1,
@@ -25,14 +25,16 @@ class TIISingleQubit():
     _QRM_settings = {
             'gain': 0.4,
             'hardware_avg': _settings['hardware_avg'],
+            'initial_delay': 0,
+            "repetition_duration": 200000,
             'pulses': {
                 'ro_pulse': {	"freq_if": 20e6,
-                                "amplitude": 0.9, 
+                                "amplitude": 0.9,
+                                "start": 300+40, 
                                 "length": 6000,
                                 "offset_i": 0,
                                 "offset_q": 0,
                                 "shape": "Block",
-                                "delay_before": 350,
                                 "repetition_duration": _settings['repetition_duration'],
                             }
                         },
@@ -44,6 +46,8 @@ class TIISingleQubit():
     _QCM_settings = {
             'gain': 0.5,
             'hardware_avg': _settings['hardware_avg'],
+            'initial_delay': 0,
+            "repetition_duration": 200000,
             'pulses': {
                 'qc_pulse':{	"freq_if": 200e6,
                             "amplitude": 0.25, 
@@ -55,10 +59,10 @@ class TIISingleQubit():
                             "repetition_duration": _settings['repetition_duration'],
                             }
                         }}
-    _LO_QRM_settings = { "power": 10,
+    _LO_QRM_settings = { "power": 15,
                         "frequency":7.79813e9 - _QRM_settings['pulses']['ro_pulse']['freq_if']}
     _LO_QCM_settings = { "power": 12,
-                        "frequency":8.72e9 + _QCM_settings['pulses']['qc_pulse']['freq_if']}
+                        "frequency":8.724e9 + _QCM_settings['pulses']['qc_pulse']['freq_if']}
 
     def __init__(self):
         self._LO_qrm = SGS100A("LO_qrm", '192.168.0.7')
@@ -121,8 +125,8 @@ class TIISingleQubit():
 
     def run_Rabi_pulse_length(self):
         self.setup()
-        self._MC.settables(QCPulseLengthParameter(self._qcm))
-        self._MC.setpoints(np.arange(50,4000,10))
+        self._MC.settables(QCPulseLengthParameter(self._qrm, self._qcm))
+        self._MC.setpoints(np.arange(1,3000,5))
         self._MC.gettables(Gettable(ROController(self._qrm, self._qcm)))
         self._LO_qrm.on()
         self._LO_qcm.on()
@@ -177,33 +181,31 @@ class QCPulseLengthParameter():
     unit = 'ns'
     name = 'qc_pulse_length'
     
-    def __init__(self, device):
-        self._device = device
- #   def get(self):
- #       return settings['qc_pulse']['length']
+    def __init__(self, qrm: Pulsar_QRM, qcm: Pulsar_QCM):
+        self._qrm = qrm
+        self._qcm = qcm
         
     def set(self,value):
-        self._device._settings['pulses']['qc_pulse']['length']=value
+        self._qcm._settings['pulses']['qc_pulse']['length']=value
+        self._qrm._settings['pulses']['ro_pulse']['start']=value+40
+
 class QCPulseGainParameter():
 
     label = 'Qubit Control Gain'
     unit = '(V/V)'
     name = 'qc_pulse_gain'
     
-    def __init__(self, device):
-        self._device = device
-
-#    def get(self):
-#        return self.awg.sequencer0_gain_awg_path0()
+    def __init__(self, qcm: Pulsar_QCM):
+        self._qcm = qcm
         
     def set(self,value):
         sequencer = self._device._settings['sequencer']
         if sequencer == 1:
-            self.awg.sequencer1_gain_awg_path0(value)
-            self.awg.sequencer1_gain_awg_path1(value)
+            self._qcm.sequencer1_gain_awg_path0(value)
+            self._qcm.sequencer1_gain_awg_path1(value)
         else:
-            self.awg.sequencer0_gain_awg_path0(value)
-            self.awg.sequencer0_gain_awg_path1(value)
+            self._qcm.sequencer0_gain_awg_path0(value)
+            self._qcm.sequencer0_gain_awg_path1(value)
 
 
 # T1: RX(pi) - wait t(rotates z) - readout

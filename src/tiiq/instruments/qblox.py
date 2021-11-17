@@ -269,15 +269,15 @@ class Pulsar_QRM():
 
         #Add sequence program and waveforms to single dictionary and write to JSON file
         wave_and_prog_dict = {"waveforms": waveforms, "weights": weights, "acquisitions": acquisitions, "program": program}
-        with open("qrm_sequence.json", 'w', encoding='utf-8') as file:
+        with open(".data/qrm_sequence.json", 'w', encoding='utf-8') as file:
             json.dump(wave_and_prog_dict, file, indent=4)
             file.close()
 
         #Upload json file to the device
         if sequencer == 1:
-            qrm.sequencer1_waveforms_and_program(os.path.join(os.getcwd(), "qrm_sequence.json"))
+            qrm.sequencer1_waveforms_and_program(os.path.join(os.getcwd(), ".data/qrm_sequence.json"))
         else:
-            qrm.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), "qrm_sequence.json"))
+            qrm.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), ".data/qrm_sequence.json"))
 
         self._wave_and_prog_dict = wave_and_prog_dict
 
@@ -469,15 +469,15 @@ class Pulsar_QCM():
 
         #Add sequence program and waveforms to single dictionary and write to JSON file.
         wave_and_prog_dict = {"waveforms": waveforms, "weights": weights, "acquisitions": acquisitions, "program": program}
-        with open("qcm_sequence.json", 'w', encoding='utf-8') as file:
+        with open(".data/qcm_sequence.json", 'w', encoding='utf-8') as file:
             json.dump(wave_and_prog_dict, file, indent=4)
             file.close()
 
         #Upload waveforms and programs.
         if sequencer == 1:
-            qcm.sequencer1_waveforms_and_program(os.path.join(os.getcwd(), "qcm_sequence.json"))
+            qcm.sequencer1_waveforms_and_program(os.path.join(os.getcwd(), ".data/qcm_sequence.json"))
         else:
-            qcm.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), "qcm_sequence.json"))
+            qcm.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), ".data/qcm_sequence.json"))
 
         self._wave_and_prog_dict = wave_and_prog_dict
 

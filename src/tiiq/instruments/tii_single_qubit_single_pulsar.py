@@ -17,7 +17,7 @@ from quantify_core.visualization.instrument_monitor import InstrumentMonitor
 class TIISingleQubitSinglePulsar():
 
     _settings = {
-        'data_dictionary': '.quantify-data/',
+        'data_dictionary': '.data/',
         "hardware_avg": 1024,
         "sampling_rate": 1e9,
         "software_averages": 1,
@@ -35,7 +35,6 @@ class TIISingleQubitSinglePulsar():
                                 "offset_i": 0,
                                 "offset_q": 0,
                                 "shape": "Gaussian",
-
                                 "repetition_duration": _settings['repetition_duration'],
                             },
                 'ro_pulse': {	"freq_if": 20e6,
@@ -160,11 +159,9 @@ class QCPulseLengthParameter():
     unit = 'ns'
     name = 'qc_pulse_length'
     
-    def __init__(self, device):
-        self._device = device
- #   def get(self):
- #       return settings['qc_pulse']['length']
+    def __init__(self, qrm: Pulsar_QRM):
+        self._qrm = qrm
         
     def set(self,value):
-        self._device._settings['pulses']['qc_pulse']['length']=value
-        self._device._settings['pulses']['ro_pulse']['start']=value+40
+        self._qrm._settings['pulses']['qc_pulse']['length']=value
+        self._qrm._settings['pulses']['ro_pulse']['start']=value+40
