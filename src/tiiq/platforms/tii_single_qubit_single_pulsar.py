@@ -1,12 +1,12 @@
 import numpy as np
 
-# from tiiq.instruments.rohde_schwarz import SGS100A
-# from tiiq.instruments.qblox import Pulsar_QCM
-# from tiiq.instruments.qblox import Pulsar_QRM
+from tiiq.instruments.rohde_schwarz import SGS100A
+from tiiq.instruments.qblox import Pulsar_QCM
+from tiiq.instruments.qblox import Pulsar_QRM
 
-from rohde_schwarz import SGS100A
-from qblox import Pulsar_QCM
-from qblox import Pulsar_QRM
+# from rohde_schwarz import SGS100A
+# from qblox import Pulsar_QCM
+# from qblox import Pulsar_QRM
 
 from quantify_core.data.handling import get_datadir, set_datadir
 from quantify_core.measurement import MeasurementControl
