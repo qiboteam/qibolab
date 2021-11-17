@@ -35,7 +35,6 @@ class TIISingleQubitSinglePulsar():
                                 "offset_i": 0,
                                 "offset_q": 0,
                                 "shape": "Gaussian",
-                                "repetition_duration": _settings['repetition_duration'],
                             },
                 'ro_pulse': {	"freq_if": 20e6,
                                 "amplitude": 0.9,
@@ -44,7 +43,6 @@ class TIISingleQubitSinglePulsar():
                                 "offset_i": 0,
                                 "offset_q": 0,
                                 "shape": "Block",
-                                "repetition_duration": _settings['repetition_duration'],
                             },
                         },
             'start_sample': 130,
@@ -163,5 +161,5 @@ class QCPulseLengthParameter():
         self._qrm = qrm
         
     def set(self,value):
-        self._qrm._settings['pulses']['qc_pulse']['length']=value
-        self._qrm._settings['pulses']['ro_pulse']['start']=value+40
+        self._qrm._settings['pulses']['qc_pulse']['length'] = value
+        self._qrm._settings['pulses']['ro_pulse']['start'] = value+40

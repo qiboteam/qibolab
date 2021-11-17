@@ -35,7 +35,6 @@ class TIISingleQubit():
                                 "offset_i": 0,
                                 "offset_q": 0,
                                 "shape": "Block",
-                                "repetition_duration": _settings['repetition_duration'],
                             }
                         },
 
@@ -56,7 +55,6 @@ class TIISingleQubit():
                             "offset_q": 0,
                             "shape": "Gaussian",
                             "delay_before": 10, # cannot be 0
-                            "repetition_duration": _settings['repetition_duration'],
                             }
                         }}
     _LO_QRM_settings = { "power": 15,
@@ -213,6 +211,7 @@ class QCPulseGainParameter():
 # Spin Echo: RX(pi/2) - wait t(rotates z) - RX(pi) - wait t(rotates z) - readout
 # Spin Echo: RX(pi/2) - wait t(rotates z) - RX(pi) - wait t(rotates z) - RX(pi/2) - readout
 
+# Ignore all functions after this point
 
 def sequence_program_single(self):
     seq_prog = """
