@@ -15,7 +15,7 @@ import xarray as xr
 from pulsar_qcm.pulsar_qcm import pulsar_qcm
 from pulsar_qrm.pulsar_qrm import pulsar_qrm
 
-debugging = True
+debugging = False
 
 def generate_waveforms(pulse):
     """
@@ -112,12 +112,8 @@ def generate_program(program_parameters):
 
         stop
     """
-    #if debugging:
-    #    print(program)
-    print(f"""wait      {initial_delay}           # idle for xx ns gaussian pulse + 40 ns buffer
-        play      0,1,{pause}      # Play waveforms (0,1) in channels (O0,O1) and wait 4ns.
-        {acquire_instruction}
-        wait      {duration_base-initial_delay-pause}""")
+    if debugging:
+        print(program)
 
     return program
 
@@ -192,23 +188,23 @@ class Pulsar_QRM():
             }
         """
 
-        settings.setdefault('gain', 0.5)
-        settings.setdefault('hardware_avg', 1024)
+        #settings.setdefault('gain', 0.5)
+        #settings.setdefault('hardware_avg', 1024)
 
-        settings.setdefault('ro_pulse', {"freq_if": 20e6,
-                                        "amplitude": 0.5,
-                                        "length": 6000,
-                                        "offset_i": 0,
-                                        "offset_q": 0,
-                                        "shape": "Block",
-                                        "delay_before": 344,
-                                        "repetition_duration": 200000,
-                                      })
+        #settings.setdefault('ro_pulse', {"freq_if": 20e6,
+        #                                "amplitude": 0.5,
+        #                                "length": 6000,
+        #                                "offset_i": 0,
+        #                                "offset_q": 0,
+        #                                "shape": "Block",
+        #                                "delay_before": 344,
+        #                                "repetition_duration": 200000,
+        #                              })
 
-        settings.setdefault('start_sample', 130)
-        settings.setdefault('integration_length', 5000)
-        settings.setdefault('sampling_rate', 1e9)
-        settings.setdefault('mode', 'ssb')        
+        #settings.setdefault('start_sample', 130)
+        #settings.setdefault('integration_length', 5000)
+        #settings.setdefault('sampling_rate', 1e9)
+        #settings.setdefault('mode', 'ssb')        
 
         self._settings.update(settings)
 
@@ -321,7 +317,7 @@ class Pulsar_QRM():
 
     def _demodulate_and_integrate(self):
         settings = self._settings
-        freq_if = settings['ro_pulse']['freq_if']
+        freq_if = settings['pulses']['ro_pulse']['freq_if']
         start_sample =   settings['start_sample']
         integration_length = settings['integration_length']
         sampling_rate = settings['sampling_rate']
@@ -442,7 +438,7 @@ class Pulsar_QCM():
             combined_waveforms["modQ_qcm"]["data"] = np.concatenate((combined_waveforms["modQ_qcm"]["data"],np.zeros(4), pulse_waveforms["modQ"]["data"]))
         self._waveforms = combined_waveforms
         if debugging:
-        # Plot the result
+            # Plot the result
             fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
             ax.plot(combined_waveforms["modI_qcm"]["data"],'-',color='C0')
             ax.plot(combined_waveforms["modQ_qcm"]["data"],'-',color='C1')

@@ -55,7 +55,7 @@ class TIISingleQubitSinglePulsar():
     _LO_QRM_settings = { "power": 15,
                         "frequency":7.79813e9 - _QRM_settings['pulses']['ro_pulse']['freq_if']}
     _LO_QCM_settings = { "power": 12,
-                        "frequency":8.72e9 + _QRM_settings['pulses']['qc_pulse']['freq_if']}
+                        "frequency":8.724e9 + _QRM_settings['pulses']['qc_pulse']['freq_if']}
 
     def __init__(self):
         self._LO_qrm = SGS100A("LO_qrm", '192.168.0.7')
