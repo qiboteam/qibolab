@@ -1,0 +1,645 @@
+{
+    "instruments": {
+        "LO_qrm": {
+            "submodules": {},
+            "parameters": {
+                "IDN": {
+                    "value": {
+                        "vendor": "Rohde&Schwarz",
+                        "model": "SGS100A",
+                        "serial": "1416.0505k02/113301",
+                        "firmware": "4.2.76.0-4.30.046.295"
+                    },
+                    "ts": "2021-11-17 09:23:58",
+                    "unit": "",
+                    "name": "IDN",
+                    "label": "IDN"
+                },
+                "timeout": {
+                    "value": 5.0,
+                    "ts": "2021-11-17 09:24:20",
+                    "unit": "s",
+                    "name": "timeout",
+                    "label": "timeout"
+                },
+                "frequency": {
+                    "value": 7778130000.0,
+                    "ts": "2021-11-17 09:27:33",
+                    "unit": "Hz",
+                    "name": "frequency",
+                    "label": "Frequency"
+                },
+                "phase": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "deg",
+                    "name": "phase",
+                    "label": "Phase"
+                },
+                "power": {
+                    "value": 10,
+                    "ts": "2021-11-17 09:27:33",
+                    "unit": "dBm",
+                    "name": "power",
+                    "label": "Power"
+                },
+                "status": {
+                    "value": "on",
+                    "ts": "2021-11-17 09:27:33",
+                    "unit": "",
+                    "name": "status",
+                    "label": "RF Output"
+                },
+                "IQ_state": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "IQ_state",
+                    "label": "IQ Modulation"
+                },
+                "pulsemod_state": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "pulsemod_state",
+                    "label": "Pulse Modulation"
+                },
+                "pulsemod_source": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "pulsemod_source",
+                    "label": "Pulse Modulation Source"
+                },
+                "ref_osc_source": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "ref_osc_source",
+                    "label": "Reference Oscillator Source"
+                },
+                "LO_source": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "LO_source",
+                    "label": "Local Oscillator Source"
+                },
+                "ref_LO_out": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "ref_LO_out",
+                    "label": "REF/LO Output"
+                },
+                "ref_osc_output_freq": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "ref_osc_output_freq",
+                    "label": "Reference Oscillator Output Frequency"
+                },
+                "ref_osc_external_freq": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "ref_osc_external_freq",
+                    "label": "Reference Oscillator External Frequency"
+                },
+                "IQ_impairments": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "IQ_impairments",
+                    "label": "IQ Impairments"
+                },
+                "I_offset": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "I_offset",
+                    "label": "I Offset"
+                },
+                "Q_offset": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "Q_offset",
+                    "label": "Q Offset"
+                },
+                "IQ_gain_imbalance": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "IQ_gain_imbalance",
+                    "label": "IQ Gain Imbalance"
+                },
+                "IQ_angle": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "IQ_angle",
+                    "label": "IQ Angle Offset"
+                }
+            },
+            "name": "LO_qrm",
+            "address": "TCPIP0::192.168.0.7::inst0::INSTR",
+            "terminator": "\n",
+            "timeout": 5.0
+        },
+        "LO_qcm": {
+            "submodules": {},
+            "parameters": {
+                "IDN": {
+                    "value": {
+                        "vendor": "Rohde&Schwarz",
+                        "model": "SGS100A",
+                        "serial": "1416.0505k02/113300",
+                        "firmware": "4.2.76.0-4.30.046.295"
+                    },
+                    "ts": "2021-11-17 09:23:58",
+                    "unit": "",
+                    "name": "IDN",
+                    "label": "IDN"
+                },
+                "timeout": {
+                    "value": 5.0,
+                    "ts": "2021-11-17 09:24:20",
+                    "unit": "s",
+                    "name": "timeout",
+                    "label": "timeout"
+                },
+                "frequency": {
+                    "value": 8920000000.0,
+                    "ts": "2021-11-17 09:27:33",
+                    "unit": "Hz",
+                    "name": "frequency",
+                    "label": "Frequency"
+                },
+                "phase": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "deg",
+                    "name": "phase",
+                    "label": "Phase"
+                },
+                "power": {
+                    "value": 12,
+                    "ts": "2021-11-17 09:27:33",
+                    "unit": "dBm",
+                    "name": "power",
+                    "label": "Power"
+                },
+                "status": {
+                    "value": "off",
+                    "ts": "2021-11-17 09:27:33",
+                    "unit": "",
+                    "name": "status",
+                    "label": "RF Output"
+                },
+                "IQ_state": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "IQ_state",
+                    "label": "IQ Modulation"
+                },
+                "pulsemod_state": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "pulsemod_state",
+                    "label": "Pulse Modulation"
+                },
+                "pulsemod_source": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "pulsemod_source",
+                    "label": "Pulse Modulation Source"
+                },
+                "ref_osc_source": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "ref_osc_source",
+                    "label": "Reference Oscillator Source"
+                },
+                "LO_source": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "LO_source",
+                    "label": "Local Oscillator Source"
+                },
+                "ref_LO_out": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "ref_LO_out",
+                    "label": "REF/LO Output"
+                },
+                "ref_osc_output_freq": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "ref_osc_output_freq",
+                    "label": "Reference Oscillator Output Frequency"
+                },
+                "ref_osc_external_freq": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "ref_osc_external_freq",
+                    "label": "Reference Oscillator External Frequency"
+                },
+                "IQ_impairments": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "IQ_impairments",
+                    "label": "IQ Impairments"
+                },
+                "I_offset": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "I_offset",
+                    "label": "I Offset"
+                },
+                "Q_offset": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "Q_offset",
+                    "label": "Q Offset"
+                },
+                "IQ_gain_imbalance": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "IQ_gain_imbalance",
+                    "label": "IQ Gain Imbalance"
+                },
+                "IQ_angle": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "IQ_angle",
+                    "label": "IQ Angle Offset"
+                }
+            },
+            "name": "LO_qcm",
+            "address": "TCPIP0::192.168.0.101::inst0::INSTR",
+            "terminator": "\n",
+            "timeout": 5.0
+        },
+        "qrm": {
+            "submodules": {},
+            "parameters": {
+                "IDN": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "IDN",
+                    "label": "IDN"
+                },
+                "reference_source": {
+                    "value": "external",
+                    "ts": "2021-11-17 09:23:58",
+                    "unit": "",
+                    "name": "reference_source",
+                    "label": "Reference source."
+                },
+                "in0_amp_gain": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "dB",
+                    "name": "in0_amp_gain",
+                    "label": "Input 0 amplifier gain."
+                },
+                "in1_amp_gain": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "dB",
+                    "name": "in1_amp_gain",
+                    "label": "Input 1 amplifier gain."
+                },
+                "scope_acq_trigger_mode_path0": {
+                    "value": "sequencer",
+                    "ts": "2021-11-17 09:23:58",
+                    "unit": "",
+                    "name": "scope_acq_trigger_mode_path0",
+                    "label": "Scope acquisition trigger mode for input path 0."
+                },
+                "scope_acq_trigger_mode_path1": {
+                    "value": "sequencer",
+                    "ts": "2021-11-17 09:23:58",
+                    "unit": "",
+                    "name": "scope_acq_trigger_mode_path1",
+                    "label": "Scope acquisition trigger mode for input path 0."
+                },
+                "scope_acq_trigger_level_path0": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "scope_acq_trigger_level_path0",
+                    "label": "Scope acquisition trigger level when using input level trigger mode for input path 0."
+                },
+                "scope_acq_trigger_level_path1": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "scope_acq_trigger_level_path1",
+                    "label": "Scope acquisition trigger level when using input level trigger mode for input path 1."
+                },
+                "scope_acq_sequencer_select": {
+                    "value": 0,
+                    "ts": "2021-11-17 09:23:58",
+                    "unit": "",
+                    "name": "scope_acq_sequencer_select",
+                    "label": "Scope acquisition sequencer select for when using sequencer trigger mode."
+                },
+                "scope_acq_avg_mode_en_path0": {
+                    "value": true,
+                    "ts": "2021-11-17 09:23:58",
+                    "unit": "",
+                    "name": "scope_acq_avg_mode_en_path0",
+                    "label": "Scope acquisition averaging mode enable for input path 0."
+                },
+                "scope_acq_avg_mode_en_path1": {
+                    "value": true,
+                    "ts": "2021-11-17 09:23:58",
+                    "unit": "",
+                    "name": "scope_acq_avg_mode_en_path1",
+                    "label": "Scope acquisition averaging mode enable for input path 0."
+                },
+                "sequencer0_sync_en": {
+                    "value": true,
+                    "ts": "2021-11-17 09:23:58",
+                    "unit": "",
+                    "name": "sequencer0_sync_en",
+                    "label": "Sequencer 0 synchronization enable which enables party-line synchronization."
+                },
+                "sequencer0_nco_freq": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "Hz",
+                    "name": "sequencer0_nco_freq",
+                    "label": "Sequencer 0 NCO frequency."
+                },
+                "sequencer0_nco_phase_offs": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "Degrees",
+                    "name": "sequencer0_nco_phase_offs",
+                    "label": "Sequencer 0 NCO phase offset."
+                },
+                "sequencer0_marker_ovr_en": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "sequencer0_marker_ovr_en",
+                    "label": "Sequencer 0 marker override enable."
+                },
+                "sequencer0_marker_ovr_value": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "sequencer0_marker_ovr_value",
+                    "label": "Sequencer 0 marker override value."
+                },
+                "sequencer0_waveforms_and_program": {
+                    "value": "d:\\Alvaro\\Projects\\GitHub\\qibolab\\src\\tiiq\\instruments\\qrm_sequence.json",
+                    "ts": "2021-11-17 09:24:24",
+                    "unit": "",
+                    "name": "sequencer0_waveforms_and_program",
+                    "label": "Sequencer 0 AWG waveforms, acquistion weights, acquisitions and ASM program."
+                },
+                "sequencer0_cont_mode_en_awg_path0": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "sequencer0_cont_mode_en_awg_path0",
+                    "label": "Sequencer 0 continous waveform mode enable for AWG path 0."
+                },
+                "sequencer0_cont_mode_en_awg_path1": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "sequencer0_cont_mode_en_awg_path1",
+                    "label": "Sequencer 0 continous waveform mode enable for AWG path 1."
+                },
+                "sequencer0_cont_mode_waveform_idx_awg_path0": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "sequencer0_cont_mode_waveform_idx_awg_path0",
+                    "label": "Sequencer 0 continous waveform mode waveform index for AWG path 0."
+                },
+                "sequencer0_cont_mode_waveform_idx_awg_path1": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "sequencer0_cont_mode_waveform_idx_awg_path1",
+                    "label": "Sequencer 0 continous waveform mode waveform index for AWG path 1."
+                },
+                "sequencer0_upsample_rate_awg_path0": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "sequencer0_upsample_rate_awg_path0",
+                    "label": "Sequencer 0 upsample rate for AWG path 0."
+                },
+                "sequencer0_upsample_rate_awg_path1": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "sequencer0_upsample_rate_awg_path1",
+                    "label": "Sequencer 0 upsample rate for AWG path 1."
+                },
+                "sequencer0_gain_awg_path0": {
+                    "value": 0.4,
+                    "ts": "2021-11-17 09:27:33",
+                    "unit": "",
+                    "name": "sequencer0_gain_awg_path0",
+                    "label": "Sequencer 0 gain for AWG path 0."
+                },
+                "sequencer0_gain_awg_path1": {
+                    "value": 0.4,
+                    "ts": "2021-11-17 09:27:33",
+                    "unit": "",
+                    "name": "sequencer0_gain_awg_path1",
+                    "label": "Sequencer 0 gain for AWG path 1."
+                },
+                "sequencer0_offset_awg_path0": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "sequencer0_offset_awg_path0",
+                    "label": "Sequencer 0 offset for AWG path 0."
+                },
+                "sequencer0_offset_awg_path1": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "sequencer0_offset_awg_path1",
+                    "label": "Sequencer 0 offset for AWG path 1."
+                },
+                "sequencer0_mod_en_awg": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "sequencer0_mod_en_awg",
+                    "label": "Sequencer 0 modulation enable for AWG."
+                },
+                "sequencer0_demod_en_acq": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "sequencer0_demod_en_acq",
+                    "label": "Sequencer 0 demodulation enable for acquisition."
+                },
+                "sequencer0_integration_length_acq": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "sequencer0_integration_length_acq",
+                    "label": "Sequencer 0 integration length for acquisition paths 0 and 1"
+                },
+                "sequencer0_phase_rotation_acq": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "Degrees",
+                    "name": "sequencer0_phase_rotation_acq",
+                    "label": "Sequencer 0 integration result phase rotation"
+                },
+                "sequencer0_discretization_threshold_acq": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "sequencer0_discretization_threshold_acq",
+                    "label": "Sequencer 0 discretization threshold"
+                }
+            },
+            "name": "qrm"
+        },
+        "MC": {
+            "submodules": {},
+            "parameters": {
+                "IDN": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "IDN",
+                    "label": "IDN"
+                },
+                "lazy_set": {
+                    "value": false,
+                    "ts": "2021-11-17 09:27:33",
+                    "unit": "",
+                    "name": "lazy_set",
+                    "label": "lazy_set"
+                },
+                "verbose": {
+                    "value": true,
+                    "ts": "2021-11-17 09:24:24",
+                    "unit": "",
+                    "name": "verbose",
+                    "label": "verbose"
+                },
+                "on_progress_callback": {
+                    "value": null,
+                    "ts": "2021-11-17 09:24:24",
+                    "unit": "",
+                    "name": "on_progress_callback",
+                    "label": "on_progress_callback"
+                },
+                "instr_plotmon": {
+                    "value": "Plot Monitor",
+                    "ts": "2021-11-17 09:27:33",
+                    "unit": "",
+                    "name": "instr_plotmon",
+                    "label": "instr_plotmon"
+                },
+                "instrument_monitor": {
+                    "value": "Instruments Monitor",
+                    "ts": "2021-11-17 09:24:24",
+                    "unit": "",
+                    "name": "instrument_monitor",
+                    "label": "instrument_monitor"
+                },
+                "update_interval": {
+                    "value": 0.5,
+                    "ts": "2021-11-17 09:24:24",
+                    "unit": "",
+                    "name": "update_interval",
+                    "label": "update_interval"
+                }
+            },
+            "name": "MC"
+        },
+        "Plot Monitor": {
+            "submodules": {},
+            "parameters": {
+                "IDN": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "IDN",
+                    "label": "IDN"
+                },
+                "tuids_max_num": {
+                    "value": 3,
+                    "ts": "2021-11-17 09:24:01",
+                    "unit": "",
+                    "name": "tuids_max_num",
+                    "label": "tuids_max_num"
+                },
+                "tuids": {
+                    "value": [],
+                    "ts": "2021-11-17 09:24:01",
+                    "unit": "",
+                    "name": "tuids",
+                    "label": "tuids"
+                },
+                "tuids_extra": {
+                    "value": [],
+                    "ts": "2021-11-17 09:24:01",
+                    "unit": "",
+                    "name": "tuids_extra",
+                    "label": "tuids_extra"
+                }
+            },
+            "name": "Plot Monitor"
+        },
+        "Instruments Monitor": {
+            "submodules": {},
+            "parameters": {
+                "IDN": {
+                    "value": null,
+                    "ts": null,
+                    "unit": "",
+                    "name": "IDN",
+                    "label": "IDN"
+                },
+                "update_interval": {
+                    "value": 5,
+                    "ts": "2021-11-17 09:24:24",
+                    "unit": "s",
+                    "name": "update_interval",
+                    "label": "update_interval"
+                },
+                "update_snapshot": {
+                    "value": false,
+                    "ts": "2021-11-17 09:24:20",
+                    "unit": "",
+                    "name": "update_snapshot",
+                    "label": "update_snapshot"
+                }
+            },
+            "name": "Instruments Monitor"
+        }
+    },
+    "parameters": {}
+}

@@ -15,7 +15,7 @@ import xarray as xr
 from pulsar_qcm.pulsar_qcm import pulsar_qcm
 from pulsar_qrm.pulsar_qrm import pulsar_qrm
 
-debugging = False
+debugging = True
 
 def generate_waveforms(pulse):
     """
@@ -48,18 +48,18 @@ def generate_waveforms(pulse):
     mod_signals = np.array(result)
 
     waveforms = {
-            "modI_qrm": {"data": [], "index": 0},
-            "modQ_qrm": {"data": [], "index": 1}
+            "modI": {"data": [], "index": 0},
+            "modQ": {"data": [], "index": 1}
         }
     # add offsets to compensate mixer leakage
-    waveforms["modI_qrm"]["data"] = mod_signals[:,0]+offset_i
-    waveforms["modQ_qrm"]["data"] = mod_signals[:,1]+offset_q
+    waveforms["modI"]["data"] = mod_signals[:,0]+offset_i
+    waveforms["modQ"]["data"] = mod_signals[:,1]+offset_q
 
     if debugging:
         # Plot the result
         fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-        ax.plot(waveforms["modI_qrm"]["data"],'-',color='C0')
-        ax.plot(waveforms["modQ_qrm"]["data"],'-',color='C1')
+        ax.plot(waveforms["modI"]["data"],'-',color='C0')
+        ax.plot(waveforms["modQ"]["data"],'-',color='C1')
         ax.title.set_text('pulse')
     return waveforms
 
@@ -75,23 +75,34 @@ def generate_program(program_parameters):
     # Prepare sequence program
     wait_loop_step=1000
     duration_base=16380 # this is the maximum length of a waveform in number of samples (defined by the device memory)
-    pulse = program_parameters['pulses']['ro_pulse']
-
-    delay_before = pulse["delay_before"]
-    repetition_duration= pulse["repetition_duration"]
+    hardware_avg = program_parameters["hardware_avg"]
+    initial_delay = program_parameters["initial_delay"]
+    repetition_duration= program_parameters["repetition_duration"]
+    pulses = program_parameters['pulses']
+    
     num_wait_loops,extra_wait = calculate_repetition_rate(repetition_duration, wait_loop_step, duration_base)
+    if 'ro_pulse' in pulses:
+        acquire_instruction = "acquire   0,0,4      # Acquire waveforms over remaining duration of acquisition of input vector of length = 16380 with integration weights 0,0"
+        pause = pulses['ro_pulse']['start']
+    else:
+        acquire_instruction = ""
+        pause = 4
 
+    if initial_delay != 0: 
+        initial_wait_instruction = f"wait      {initial_delay}"
+    else:
+        initial_wait_instruction = ""
     program = f"""
-        move    {program_parameters["hardware_avg"]},R0
+        move    {hardware_avg},R0
         nop
         wait_sync 4          # Synchronize sequencers over multiple instruments
 
     loop:
-        wait      {delay_before}       # idle for xx ns gaussian pulse + 40 ns buffer
-        play      0,1,4      # Play waveforms (0,1) in channels (O0,O1) and wait 4ns.
-        acquire   0,0,4      # Acquire waveforms over remaining duration of acquisition of input vector of length = 16380 with integration weights 0,0
-        wait      {duration_base-4-delay_before}
-        move      {num_wait_loops},R1     # repetion rate loop iterator
+        {initial_wait_instruction}           
+        play      0,1,{pause}      
+        {acquire_instruction}
+        wait      {duration_base-initial_delay-pause}
+        move      {num_wait_loops},R1     
         nop
         repeatloop:
             wait      {wait_loop_step}
@@ -101,8 +112,14 @@ def generate_program(program_parameters):
 
         stop
     """
-    if debugging:
-        print(program)
+    #if debugging:
+    #    print(program)
+    print(f"""wait      {initial_delay}           # idle for xx ns gaussian pulse + 40 ns buffer
+        play      0,1,{pause}      # Play waveforms (0,1) in channels (O0,O1) and wait 4ns.
+        {acquire_instruction}
+        wait      {duration_base-initial_delay-pause}""")
+
+    return program
 
 
 class Pulsar_QRM():
@@ -207,18 +224,24 @@ class Pulsar_QRM():
 
     def set_waveforms(self, waveforms):
         self._waveforms = waveforms
-    def set_waveforms_from_pulses_definition(self, pulses_definition):
-        for pulse in pulses_definition['pulses']:
+    def set_waveforms_from_pulses_definition(self, pulses_definition: dict):
+        pulses_list = list(pulses_definition.values())
+        pulse_waveforms = generate_waveforms(pulses_list.pop(0))
+        combined_waveforms = {
+            "modI_qrm": {"data": [], "index": 0},
+            "modQ_qrm": {"data": [], "index": 1}
+        }
+        combined_waveforms["modI_qrm"]["data"] = pulse_waveforms["modI"]["data"]
+        combined_waveforms["modQ_qrm"]["data"] = pulse_waveforms["modQ"]["data"]
+
+        for pulse in pulses_list:
             pulse_waveforms = generate_waveforms(pulse)
-            combined_waveforms = {
-                "modI_qrm": {"data": [], "index": 0},
-                "modQ_qrm": {"data": [], "index": 1}
-            }
-            combined_waveforms["modI_qrm"]["data"] = np.concatenate((combined_waveforms["modI_qrm"]["data"],np.zeros(4), pulse_waveforms["modI_qrm"]["data"]))
-            combined_waveforms["modQ_qrm"]["data"] = np.concatenate((combined_waveforms["modQ_qrm"]["data"],np.zeros(4), pulse_waveforms["modQ_qrm"]["data"]))
+            combined_waveforms["modI_qrm"]["data"] = np.concatenate((combined_waveforms["modI_qrm"]["data"],np.zeros(4), pulse_waveforms["modI"]["data"]))
+            combined_waveforms["modQ_qrm"]["data"] = np.concatenate((combined_waveforms["modQ_qrm"]["data"],np.zeros(4), pulse_waveforms["modQ"]["data"]))
+
         self._waveforms = combined_waveforms
         if debugging:
-        # Plot the result
+            # Plot the result
             fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
             ax.plot(combined_waveforms["modI_qrm"]["data"],'-',color='C0')
             ax.plot(combined_waveforms["modQ_qrm"]["data"],'-',color='C1')
@@ -408,8 +431,22 @@ class Pulsar_QCM():
 
     def set_waveforms(self, waveforms):
         self._waveforms = waveforms
-    def set_waveforms_from_pulses_definition(self, pulse_definition):
-        self._waveforms = generate_waveforms(pulse_definition)
+    def set_waveforms_from_pulses_definition(self, pulses_definition: dict):
+        for name,pulse in pulses_definition.items():
+            pulse_waveforms = generate_waveforms(pulse)
+            combined_waveforms = {
+                "modI_qcm": {"data": [], "index": 0},
+                "modQ_qcm": {"data": [], "index": 1}
+            }
+            combined_waveforms["modI_qcm"]["data"] = np.concatenate((combined_waveforms["modI_qcm"]["data"],np.zeros(4), pulse_waveforms["modI"]["data"]))
+            combined_waveforms["modQ_qcm"]["data"] = np.concatenate((combined_waveforms["modQ_qcm"]["data"],np.zeros(4), pulse_waveforms["modQ"]["data"]))
+        self._waveforms = combined_waveforms
+        if debugging:
+        # Plot the result
+            fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
+            ax.plot(combined_waveforms["modI_qcm"]["data"],'-',color='C0')
+            ax.plot(combined_waveforms["modQ_qcm"]["data"],'-',color='C1')
+            ax.title.set_text('Combined Pulses')
     
     def set_program(self, program):
         self._program = program
@@ -450,7 +487,7 @@ class Pulsar_QCM():
 
 
 
-    def run(self):
+    def play_sequence(self):
         qcm = self._qcm
         settings = self._settings
         sequencer = settings['acq_sequencer']
