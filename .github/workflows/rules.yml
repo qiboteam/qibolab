@@ -22,10 +22,7 @@ jobs:
         pip install pylint
         pip install pytest-cov
         pip install .[docs]
-        git clone https://github.com/qiboteam/qibo
-        cd qibo
-        git checkout rmhardware
-        pip install .
+        pip install qibo --pre
     - name: Test with pylint
       run: |
         pylint src -E -d E1123,E1120
