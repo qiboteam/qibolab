@@ -50,7 +50,7 @@ setup(
         # TII system dependencies
         "tiiq": [
             "qblox-instruments==0.4.0",
-			"lmfit",
+            "lmfit",
             "quantify-core==0.5.1",
             "pyVISA==1.11.3",
             "pyVISA-py==0.5.2",
