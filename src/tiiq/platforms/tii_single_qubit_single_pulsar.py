@@ -1,4 +1,6 @@
 import numpy as np
+import json
+
 
 from tiiq.instruments.rohde_schwarz import SGS100A
 from tiiq.instruments.qblox import Pulsar_QCM
@@ -55,6 +57,15 @@ class TIISingleQubitSinglePulsar():
                         "frequency":8.724e9 + _QRM_settings['pulses']['qc_pulse']['freq_if']}
 
     def __init__(self):
+
+        #Read platform settings from json file
+        #config = open('platform_config.json',) 
+        #data = json.load(config)
+        #_settings = data["_settings"]
+        #_QRM_settings = data["_QRM_settings"]
+        #_LO_QRM_settings = data["_LO_QRM_settings"]
+        #_LO_QCM_settings = data["_LO_QCM_settings"]
+    
         self._LO_qrm = SGS100A("LO_qrm", '192.168.0.7')
         self._LO_qcm = SGS100A("LO_qcm", '192.168.0.101')
         self._qrm = Pulsar_QRM("qrm", '192.168.0.2')
