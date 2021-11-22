@@ -58,7 +58,7 @@ setup(
         # TII system dependencies
         "tiiq": [
             "qblox-instruments==0.4.0",
-			 "qcodes==0.29.1",
+			"qcodes==0.29.1",
 			"lmfit",
             "quantify-core==0.5.1",
             "pyVISA==1.11.3",
@@ -66,7 +66,7 @@ setup(
 
         ]
     },
-    python_requires=">=3.6.0",
+    python_requires=">=3.7.0",
     long_description=long_description,
     long_description_content_type='text/markdown',
 )
