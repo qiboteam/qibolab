@@ -79,7 +79,7 @@ def generate_program(program_parameters):
     initial_delay = program_parameters["initial_delay"]
     repetition_duration= program_parameters["repetition_duration"]
     pulses = program_parameters['pulses']
-    
+
     num_wait_loops,extra_wait = calculate_repetition_rate(repetition_duration, wait_loop_step, duration_base)
     if 'ro_pulse' in pulses:
         acquire_instruction = "acquire   0,0,4      # Acquire waveforms over remaining duration of acquisition of input vector of length = 16380 with integration weights 0,0"
@@ -88,7 +88,7 @@ def generate_program(program_parameters):
         acquire_instruction = ""
         pause = 4
 
-    if initial_delay != 0: 
+    if initial_delay != 0:
         initial_wait_instruction = f"wait      {initial_delay}"
     else:
         initial_wait_instruction = ""
@@ -98,11 +98,11 @@ def generate_program(program_parameters):
         wait_sync 4          # Synchronize sequencers over multiple instruments
 
     loop:
-        {initial_wait_instruction}           
-        play      0,1,{pause}      
+        {initial_wait_instruction}
+        play      0,1,{pause}
         {acquire_instruction}
         wait      {duration_base-initial_delay-pause}
-        move      {num_wait_loops},R1     
+        move      {num_wait_loops},R1
         nop
         repeatloop:
             wait      {wait_loop_step}
@@ -124,7 +124,7 @@ class Pulsar_QRM():
     """
     def __init__(self, label, ip, settings = {}):
         """
-        This method connects to the Pulsar QRM and configures it with those settings 
+        This method connects to the Pulsar QRM and configures it with those settings
         that are not expected to change.
         All parameters within settings are optional, their default values are:
             QRM_init_settings = {
@@ -159,7 +159,7 @@ class Pulsar_QRM():
             qrm.sequencer1_sync_en(settings['sync_en'])
         else:
             qrm.sequencer0_sync_en(settings['sync_en'])
-            
+
         self._qrm = qrm
         self._settings = settings
 
@@ -204,7 +204,7 @@ class Pulsar_QRM():
         #settings.setdefault('start_sample', 130)
         #settings.setdefault('integration_length', 5000)
         #settings.setdefault('sampling_rate', 1e9)
-        #settings.setdefault('mode', 'ssb')        
+        #settings.setdefault('mode', 'ssb')
 
         self._settings.update(settings)
 
@@ -247,13 +247,13 @@ class Pulsar_QRM():
         self._program = program
     def set_program_from_parameters(self, parameters):
         self._program = generate_program(parameters)
-    
+
     def set_acquisitions(self, acquisitions = {"single":   {"num_bins": 1, "index":0}}):
         self._acquisitions = acquisitions
     def set_weights(self, weights = {}):
         self._weights = weights
-    
-    def upload_sequence(self):    
+
+    def upload_sequence(self):
         waveforms = self._waveforms
         program = self._program
         acquisitions = self._acquisitions
@@ -374,7 +374,7 @@ class Pulsar_QCM():
 
     def __init__(self, label, ip, settings = {}):
         """
-        This method connects to the Pulsar QCM and configures it with those settings 
+        This method connects to the Pulsar QCM and configures it with those settings
         that are not expected to change.
         All parameters within settings are optional, their default values are:
             QRM_init_settings = {
@@ -382,7 +382,7 @@ class Pulsar_QCM():
                     'sequencer': 0,
                     'sync_en': True,
             }
-        """        
+        """
         settings.setdefault('ref_clock', 'external')
         settings.setdefault('sequencer', 0)
         settings.setdefault('sync_en', True)
@@ -447,18 +447,18 @@ class Pulsar_QCM():
             ax.plot(combined_waveforms["modI_qcm"]["data"],'-',color='C0')
             ax.plot(combined_waveforms["modQ_qcm"]["data"],'-',color='C1')
             ax.title.set_text('Combined Pulses')
-    
+
     def set_program(self, program):
         self._program = program
     def set_program_from_parameters(self, parameters):
         self._program = generate_program(parameters)
-    
+
     def set_acquisitions(self, acquisitions = {"single":   {"num_bins": 1, "index":0}}):
         self._acquisitions = acquisitions
     def set_weights(self, weights = {}):
         self._weights = weights
 
-    def upload_sequence(self):    
+    def upload_sequence(self):
         waveforms = self._waveforms
         program = self._program
         acquisitions = self._acquisitions
@@ -504,11 +504,11 @@ class Pulsar_QCM():
     def stop(self):
 	    #stop current sequence running in QCM
         self._qcm.stop_sequencer()
-        
+
     def close(self):
 	    #Close connection
-        self._qrm.close()
-        
+        self._qcm.close()
+
     def __del__(self):
 	    #close connection to QCM
         self._qcm.close()
