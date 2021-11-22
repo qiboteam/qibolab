@@ -64,7 +64,6 @@ setup(
             "quantify-core==0.5.1",
             "pyVISA==1.11.3",
             "pyVISA-py==0.5.2",
-            "PyQt5-Qt5<5.15.6"
         ]
     },
     python_requires=">=3.7.0",
