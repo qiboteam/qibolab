@@ -362,6 +362,10 @@ class Pulsar_QRM():
 	    #stop current sequence running in QRM
         self._qrm.stop_sequencer()
 
+    def close(self):
+	    #Close connection
+        self._qrm.close()
+
     def __del__(self):
 	    #close connection to QRM
         self._qrm.close()
@@ -500,7 +504,11 @@ class Pulsar_QCM():
     def stop(self):
 	    #stop current sequence running in QCM
         self._qcm.stop_sequencer()
-
+        
+    def close(self):
+	    #Close connection
+        self._qrm.close()
+        
     def __del__(self):
 	    #close connection to QCM
         self._qcm.close()

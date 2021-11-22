@@ -89,6 +89,15 @@ class TIISingleQubit():
         self._qrm.stop()
         self._qcm.stop()
 
+    def close(self):
+        self._LO_qrm.close()
+        self._LO_qcm.close()
+        self._qrm.close()
+        self._qcm.close()
+    
+    def __del__(self):
+        self.close()
+
     def run_resonator_spectroscopy(self):
         self.setup()
         lowres_width = 30e6
@@ -112,6 +121,8 @@ class TIISingleQubit():
         highres_width = 5e6
         highres_step = 0.2e6
         scanrange = np.concatenate((np.arange(-lowres_width,-highres_width,lowres_step),np.arange(-highres_width,highres_width,highres_step),np.arange(highres_width,lowres_width,lowres_step)))
+        self._qcm._settings['pulses']['qc_pulse']['length']=3000
+        self._qrm._settings['pulses']['ro_pulse']['start']=3000+40
 
         self._MC.settables(self._LO_qcm.LO.frequency)
         self._MC.setpoints(scanrange + self._LO_QCM_settings['frequency'])
