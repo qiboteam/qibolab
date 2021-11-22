@@ -8,7 +8,7 @@ Subpackages
    :maxdepth: 4
 
    qibolab.calibration
-   qibolab.experiments
+   qibolab.platforms
    qibolab.inst
    qibolab.instruments
    qibolab.tests

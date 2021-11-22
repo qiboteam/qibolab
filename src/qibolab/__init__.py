@@ -1,7 +1,7 @@
 __version__ = "0.0.1.dev0"
 
 
-from qibolab.experiments import Experiment
+from qibolab.platforms import Experiment
 experiment = Experiment()
 from qibolab.schedulers import TaskScheduler
 scheduler = TaskScheduler()

@@ -3,7 +3,7 @@ import itertools
 import numpy as np
 from qibolab import pulses, tomography
 from qibolab.inst import InstrumentController
-from qibolab.experiments.abstract import AbstractExperiment, ParameterList, BoundsValidator, EnumValidator, Qubit
+from qibolab.platforms.abstract import AbstractExperiment, ParameterList, BoundsValidator, EnumValidator, Qubit
 
 
 # AWG can only drive two qubits and read one line

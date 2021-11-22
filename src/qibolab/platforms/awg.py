@@ -3,7 +3,7 @@ import itertools
 import numpy as np
 from qibolab import pulses, tomography
 from qibolab.instruments import AcquisitionController
-from qibolab.experiments.abstract import AbstractExperiment, ParameterList, BoundsValidator, EnumValidator, Qubit
+from qibolab.platforms.abstract import AbstractExperiment, ParameterList, BoundsValidator, EnumValidator, Qubit
 
 
 # To be used for initial calibtation
@@ -311,7 +311,7 @@ class AWGSystem(AbstractExperiment):
             it = np.sum(i_sig * cos)
             qt = np.sum(q_sig * cos)
             result.append((it, qt))
-        
+
         return result
 
     # Shallow method, to be reused for single shot measurement
@@ -342,7 +342,7 @@ class AWGSystem(AbstractExperiment):
             elif new_data[0] > new_refer_1[0]:
                 new_data[0] = new_refer_1[0]
             prob[idx] = new_data[0] / new_refer_1[0]
-        
+
         # Next, we process the probabilities into qubit states
         # Note: There are no correlations established here, this is solely for disconnected and unentangled qubits
         binary = list(itertools.product([0, 1], repeat=len(target_qubits)))
