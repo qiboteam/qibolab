@@ -54,7 +54,8 @@ setup(
             "sphinxcontrib-bibtex",
             "sphinx_markdown_tables",
             "nbsphinx",
-            "IPython"],
+            "IPython"
+        ],
         # TII system dependencies
         "tiiq": [
             "qblox-instruments==0.4.0",
@@ -63,7 +64,6 @@ setup(
             "quantify-core==0.5.1",
             "pyVISA==1.11.3",
             "pyVISA-py==0.5.2",
-
         ]
     },
     python_requires=">=3.7.0",

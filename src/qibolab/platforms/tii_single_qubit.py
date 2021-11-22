@@ -1,8 +1,8 @@
 import numpy as np
 
-from tiiq.instruments.rohde_schwarz import SGS100A
-from tiiq.instruments.qblox import Pulsar_QCM
-from tiiq.instruments.qblox import Pulsar_QRM
+from qibolab.instruments.rohde_schwarz import SGS100A
+from qibolab.instruments.qblox import Pulsar_QCM
+from qibolab.instruments.qblox import Pulsar_QRM
 
 # from rohde_schwarz import SGS100A
 # from qblox import Pulsar_QCM
@@ -30,7 +30,7 @@ class TIISingleQubit():
             'pulses': {
                 'ro_pulse': {	"freq_if": 20e6,
                                 "amplitude": 0.9,
-                                "start": 300+40, 
+                                "start": 300+40,
                                 "length": 6000,
                                 "offset_i": 0,
                                 "offset_q": 0,
@@ -49,7 +49,7 @@ class TIISingleQubit():
             "repetition_duration": 200000,
             'pulses': {
                 'qc_pulse':{	"freq_if": 200e6,
-                            "amplitude": 0.25, 
+                            "amplitude": 0.25,
                             "length": 300,
                             "offset_i": 0,
                             "offset_q": 0,
@@ -130,7 +130,7 @@ class TIISingleQubit():
         self._LO_qcm.on()
         dataset = self._MC.run('Rabi Pulse Length', soft_avg = self._settings['software_averages'])
         self.stop()
-    
+
     def run_Rabi_pulse_gain(self):
         pass
     def run_t1(self):
@@ -162,14 +162,14 @@ class ROController():
         qrm.set_acquisitions()
         qrm.set_weights()
         qrm.upload_sequence()
-        
+
         qcm.setup(qcm._settings)
         qcm.set_waveforms_from_pulses_definition(qcm._settings['pulses'])
         qcm.set_program_from_parameters(qcm._settings)
         qcm.set_acquisitions()
         qcm.set_weights()
         qcm.upload_sequence()
-        
+
         # qcm.play_sequence() # if sync enabled I believe it is not necessary
         return qrm.play_sequence_and_acquire()
 
@@ -178,11 +178,11 @@ class QCPulseLengthParameter():
     label = 'Qubit Control Pulse Length'
     unit = 'ns'
     name = 'qc_pulse_length'
-    
+
     def __init__(self, qrm: Pulsar_QRM, qcm: Pulsar_QCM):
         self._qrm = qrm
         self._qcm = qcm
-        
+
     def set(self,value):
         self._qcm._settings['pulses']['qc_pulse']['length']=value
         self._qrm._settings['pulses']['ro_pulse']['start']=value+40
@@ -192,10 +192,10 @@ class QCPulseGainParameter():
     label = 'Qubit Control Gain'
     unit = '(V/V)'
     name = 'qc_pulse_gain'
-    
+
     def __init__(self, qcm: Pulsar_QCM):
         self._qcm = qcm
-        
+
     def set(self,value):
         sequencer = self._device._settings['sequencer']
         if sequencer == 1:

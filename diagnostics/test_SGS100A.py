@@ -1,4 +1,4 @@
-from tiiq.instruments.rohde_schwarz import SGS100A
+from qibolab.instruments.rohde_schwarz import SGS100A
 
 LO_qrm = SGS100A("LO_qrm", '192.168.0.7')
 LO_qrm.set_power(15)
