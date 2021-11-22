@@ -19,7 +19,7 @@ from quantify_core.visualization.instrument_monitor import InstrumentMonitor
 class TIISingleQubitSinglePulsar():
 
     _settings = {
-        'data_dictionary': '.data/',
+        'data_folder': '.data/',
         "hardware_avg": 1024,
         "sampling_rate": 1e9,
         "software_averages": 1,
@@ -77,7 +77,7 @@ class TIISingleQubitSinglePulsar():
         self._MC.instr_plotmon(self._plotmon.name)
         self._MC.instrument_monitor(self._insmon.name)
 
-        set_datadir(self._settings['data_dictionary'])
+        set_datadir(self._settings['data_folder'])
 
     def setup(self):
         self._LO_qrm.setup(self._LO_QRM_settings)

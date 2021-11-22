@@ -1,6 +1,6 @@
 {
     "_settings": {
-        "data_dictionary": ".data/",
+        "data_folder": ".data/",
         "hardware_avg": "1024",
         "sampling_rate": "1000000000.0",
         "software_averages": "1",
