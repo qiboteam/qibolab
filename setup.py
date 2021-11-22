@@ -47,6 +47,14 @@ setup(
         "qcodes",
     ],
     extras_require={
+        "docs": [
+            "sphinx",
+            "sphinx_rtd_theme",
+            "recommonmark",
+            "sphinxcontrib-bibtex",
+            "sphinx_markdown_tables",
+            "nbsphinx",
+            "IPython"],
         # TII system dependencies
         "tiiq": [
             "qblox-instruments==0.4.0",
