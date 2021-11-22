@@ -22,7 +22,7 @@ jobs:
         pip install pylint
         pip install pytest-cov
         pip install qibo --pre
-        pip install .[docs]
+        pip install .[docs,tiiq]
     - name: Test with pylint
       run: |
         pylint src -E -d E1123,E1120
