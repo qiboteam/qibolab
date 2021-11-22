@@ -2,9 +2,9 @@ import numpy as np
 import json
 
 
-from tiiq.instruments.rohde_schwarz import SGS100A
-from tiiq.instruments.qblox import Pulsar_QCM
-from tiiq.instruments.qblox import Pulsar_QRM
+from qibolab.instruments.rohde_schwarz import SGS100A
+from qibolab.instruments.qblox import Pulsar_QCM
+from qibolab.instruments.qblox import Pulsar_QRM
 
 # from rohde_schwarz import SGS100A
 # from qblox import Pulsar_QCM
@@ -27,11 +27,11 @@ class TIISingleQubitSinglePulsar():
     _QRM_settings = {
             'gain': 0.4,
             'hardware_avg': _settings['hardware_avg'],
-            'initial_delay': 0, 
+            'initial_delay': 0,
             "repetition_duration": 200000,
             'pulses': {
                 'qc_pulse':{	"freq_if": 200e6,
-                                "amplitude": 0.2, 
+                                "amplitude": 0.2,
                                 "start": 0,        # cannot be <10?
                                 "length": 4000,
                                 "offset_i": 0,
@@ -40,7 +40,7 @@ class TIISingleQubitSinglePulsar():
                             },
                 'ro_pulse': {	"freq_if": 20e6,
                                 "amplitude": 0.9,
-                                "start": 4000+40,  
+                                "start": 4000+40,
                                 "length": 3000,
                                 "offset_i": 0,
                                 "offset_q": 0,
@@ -59,13 +59,13 @@ class TIISingleQubitSinglePulsar():
     def __init__(self):
 
         #Read platform settings from json file
-        #config = open('platform_config.json',) 
+        #config = open('platform_config.json',)
         #data = json.load(config)
         #_settings = data["_settings"]
         #_QRM_settings = data["_QRM_settings"]
         #_LO_QRM_settings = data["_LO_QRM_settings"]
         #_LO_QCM_settings = data["_LO_QCM_settings"]
-    
+
         self._LO_qrm = SGS100A("LO_qrm", '192.168.0.7')
         self._LO_qcm = SGS100A("LO_qcm", '192.168.0.101')
         self._qrm = Pulsar_QRM("qrm", '192.168.0.2')
@@ -167,10 +167,10 @@ class QCPulseLengthParameter():
     label = 'Qubit Control Pulse Length'
     unit = 'ns'
     name = 'qc_pulse_length'
-    
+
     def __init__(self, qrm: Pulsar_QRM):
         self._qrm = qrm
-        
+
     def set(self,value):
         self._qrm._settings['pulses']['qc_pulse']['length'] = value
         self._qrm._settings['pulses']['ro_pulse']['start'] = value+40

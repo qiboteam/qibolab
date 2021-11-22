@@ -6,7 +6,7 @@ from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor
 from qibo.config import log, raise_error
 from qibolab import connections, pulses
-from qibolab.experiments.abstract import AbstractExperiment
+from qibolab.platforms.abstract import AbstractExperiment
 
 
 class IcarusQ(AbstractExperiment):

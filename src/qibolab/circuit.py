@@ -169,7 +169,7 @@ class HardwareCircuit(circuit.Circuit):
         # Get calibration data
         self.qubit_config = scheduler.fetch_config()
 
-        # TODO: Move data fitting to qibolab.experiments
+        # TODO: Move data fitting to qibolab.platforms
         if len(scheduler.check_tomography_required() or self._force_tomography):
             return self._execute_tomography_sequence(nshots)
         else:

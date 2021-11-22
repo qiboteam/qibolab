@@ -21,11 +21,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install pylint
         pip install pytest-cov
-        pip install .
-        git clone https://github.com/qiboteam/qibo
-        cd qibo
-        git checkout rmhardware
-        pip install .
+        pip install qibo --pre
+        pip install .[docs,tiiq]
     - name: Test with pylint
       run: |
         pylint src -E -d E1123,E1120
@@ -41,3 +38,15 @@ jobs:
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: true
+    - name: Sphinx compile
+      if: github.ref == 'refs/heads/main'
+      run: |
+        pip install sphinx
+        make -C doc html
+        KEY=$( mktemp )
+        echo "$QIBO_TEAM" | base64 --decode > "$KEY"
+        scp -r -i "$KEY" -o StrictHostKeyChecking=no\
+          doc/build/html/* \
+          ubuntu@34.240.99.72:/var/www/html/qibolab/
+      env:
+        QIBO_TEAM: ${{ secrets.QIBO_TEAM }}

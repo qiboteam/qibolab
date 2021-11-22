@@ -1,8 +1,8 @@
 import numpy as np
 
-from tiiq.instruments.rohde_schwarz import SGS100A
-from tiiq.instruments.qblox import Pulsar_QCM
-from tiiq.instruments.qblox import Pulsar_QRM
+from qibolab.instruments.rohde_schwarz import SGS100A
+from qibolab.instruments.qblox import Pulsar_QCM
+from qibolab.instruments.qblox import Pulsar_QRM
 
 # from rohde_schwarz import SGS100A
 # from qblox import Pulsar_QCM
@@ -30,7 +30,7 @@ class TIISingleQubit():
             'pulses': {
                 'ro_pulse': {	"freq_if": 20e6,
                                 "amplitude": 0.9,
-                                "start": 300+40, 
+                                "start": 300+40,
                                 "length": 6000,
                                 "offset_i": 0,
                                 "offset_q": 0,
@@ -49,7 +49,7 @@ class TIISingleQubit():
             "repetition_duration": 200000,
             'pulses': {
                 'qc_pulse':{	"freq_if": 200e6,
-                            "amplitude": 0.25, 
+                            "amplitude": 0.25,
                             "length": 300,
                             "offset_i": 0,
                             "offset_q": 0,
@@ -141,7 +141,7 @@ class TIISingleQubit():
         self._LO_qcm.on()
         dataset = self._MC.run('Rabi Pulse Length', soft_avg = self._settings['software_averages'])
         self.stop()
-    
+
     def run_Rabi_pulse_gain(self):
         pass
     def run_t1(self):
@@ -173,14 +173,14 @@ class ROController():
         qrm.set_acquisitions()
         qrm.set_weights()
         qrm.upload_sequence()
-        
+
         qcm.setup(qcm._settings)
         qcm.set_waveforms_from_pulses_definition(qcm._settings['pulses'])
         qcm.set_program_from_parameters(qcm._settings)
         qcm.set_acquisitions()
         qcm.set_weights()
         qcm.upload_sequence()
-        
+
         # qcm.play_sequence() # if sync enabled I believe it is not necessary
         return qrm.play_sequence_and_acquire()
 
@@ -189,11 +189,11 @@ class QCPulseLengthParameter():
     label = 'Qubit Control Pulse Length'
     unit = 'ns'
     name = 'qc_pulse_length'
-    
+
     def __init__(self, qrm: Pulsar_QRM, qcm: Pulsar_QCM):
         self._qrm = qrm
         self._qcm = qcm
-        
+
     def set(self,value):
         self._qcm._settings['pulses']['qc_pulse']['length']=value
         self._qrm._settings['pulses']['ro_pulse']['start']=value+40
@@ -203,12 +203,12 @@ class QCPulseGainParameter():
     label = 'Qubit Control Gain'
     unit = '(V/V)'
     name = 'qc_pulse_gain'
-    
+
     def __init__(self, qcm: Pulsar_QCM):
         self._qcm = qcm
-        
-    def set(self,value):
-        sequencer = self._device._settings['sequencer']
+
+    def set(self,value, sequencer):
+        #sequencer = self._device._settings['sequencer']
         if sequencer == 1:
             self._qcm.sequencer1_gain_awg_path0(value)
             self._qcm.sequencer1_gain_awg_path1(value)
@@ -223,152 +223,10 @@ class QCPulseGainParameter():
 # Spin Echo: RX(pi/2) - wait t(rotates z) - RX(pi) - wait t(rotates z) - RX(pi/2) - readout
 
 # Ignore all functions after this point
-
-def sequence_program_single(self):
-    seq_prog = """
-    play    0,1,4     # Play waveforms (0,1) in channels (O0,O1) and wait 4ns.
-    acquire 0,0,16380 # Acquire waveforms over remaining duration of acquisition of input vector of length = 16380 with integration weights 0,0
-    stop              # Stop.
-    """
-    self.seq_prog = seq_prog
-
-def sequence_program_average(self):
-    seq_prog = f"""
-        move    {self.info["number_of_average"]},R0
-        nop
-    loop:
-        play    0,1,4
-        acquire 0,0,16380
-        loop    R0,@loop
-
-        stop
-    """
-    self.seq_prog = seq_prog
-
-def sequence_program_qubit_spec(self,qcm_leng,repetition_duration=200000):
-    wait_loop_step=1000
-    num_wait_loops,extra_wait = calculate_repetition_rate(repetition_duration=repetition_duration,
-                                                            wait_loop_step=wait_loop_step,
-                                                            duration_base=16384)
-    buffer_time = 40  #ns
-
-
-    seq_prog = f"""
-        move    {self.info["number_of_average"]},R0
-        nop
-        wait_sync 4           # Synchronize sequencers over multiple instruments
-
-    loop:
-        wait      {qcm_leng+buffer_time} # idle for xx ns gaussian pulse + 40 ns buffer
-        play      0,1,4      # Play waveforms (0,1) in channels (O0,O1) and wait 4ns.
-        acquire   0,0,4      # Acquire waveforms over remaining duration of acquisition of input vector of length = 16380 with integration weights 0,0
-        wait      {16380-4-qcm_leng-buffer_time}
-        move      {num_wait_loops},R1      # repetion rate loop iterator
-        nop
-        reprateloop:
-            wait      {wait_loop_step}
-            loop      R1,@reprateloop
-        wait      {extra_wait}
-        loop    R0,@loop
-
-        stop
-    """
-
-
-    self.seq_prog = seq_prog
-
-
-def sequence_program_t1(self,qcm_leng,wait_time_ns=20,repetition_duration=200000):
-    wait_loop_step=1000
-    num_wait_loops,extra_wait = calculate_repetition_rate(repetition_duration=repetition_duration-wait_time_ns,
-                                                            wait_loop_step=wait_loop_step,
-                                                            duration_base=16384)
-    buffer_time = 40  #ns
-
-
-    seq_prog = f"""
-        move    {self.info["number_of_average"]},R0
-        nop
-        wait_sync 4           # Synchronize sequencers over multiple instruments
-
-    loop:
-        wait      {qcm_leng+buffer_time} # idle for xx ns gaussian pulse + 40 ns buffer
-        wait      {wait_time_ns}
-        play      0,1,4      # Play waveforms (0,1) in channels (O0,O1) and wait 4ns.
-        acquire   0,0,4      # Acquire waveforms over remaining duration of acquisition of input vector of length = 16380 with integration weights 0,0
-        wait      {16380-4-qcm_leng-buffer_time}
-        move      {num_wait_loops},R1      # repetion rate loop iterator
-        nop
-        reprateloop:
-            wait      {wait_loop_step}
-            loop      R1,@reprateloop
-        wait      {extra_wait}
-        loop    R0,@loop
-
-        stop
-    """
-
-
-    self.seq_prog = seq_prog
-
-def sequence_program_echo(self,qcm_leng,wait_time_ns=20,repetition_duration=200000):
-    wait_loop_step=1000
-    num_wait_loops,extra_wait = calculate_repetition_rate(repetition_duration=repetition_duration-wait_time_ns,
-                                                            wait_loop_step=wait_loop_step,
-                                                            duration_base=16384)
-    buffer_time = 40  #ns
-
-
-
-
-    seq_prog = f"""
-        move    {self.info["number_of_average"]},R0
-        nop
-        wait_sync 4           # Synchronize sequencers over multiple instruments
-
-    loop:
-        wait      {3*qcm_leng+wait_time_ns+2*qcm_leng+buffer_time} # idle for xx ns gaussian pulse + 40 ns buffer
-        play      0,1,4      # Play waveforms (0,1) in channels (O0,O1) and wait 4ns.
-        acquire   0,0,4      # Acquire waveforms over remaining duration of acquisition of input vector of length = 16380 with integration weights 0,0
-        wait      {16384-4-4-3*qcm_leng-2*qcm_leng-buffer_time}
-        move      {num_wait_loops},R1      # repetion rate loop iterator
-        nop
-        reprateloop:
-            wait      {wait_loop_step}
-            loop      R1,@reprateloop
-        wait      {extra_wait}
-        loop    R0,@loop
-
-        stop
-    """
-
-    self.seq_prog = seq_prog
-
-def sequence_program_ramsey(self,qcm_leng,wait_time_ns=20,repetition_duration=200000):
-    wait_loop_step=1000
-    num_wait_loops,extra_wait = calculate_repetition_rate(repetition_duration=repetition_duration-wait_time_ns,
-                                                            wait_loop_step=wait_loop_step,
-                                                            duration_base=16384)
-    buffer_time = 40  #ns
-
-
-    seq_prog = f"""
-        move    {self.info["number_of_average"]},R0
-        nop
-        wait_sync 4           # Synchronize sequencers over multiple instruments
-
-    loop:
-        wait      {qcm_leng*3+wait_time_ns+buffer_time} # idle for xx ns gaussian pulse + 40 ns buffer
-        play      0,1,4      # Play waveforms (0,1) in channels (O0,O1) and wait 4ns.
-        acquire   0,0,4      # Acquire waveforms over remaining duration of acquisition of input vector of length = 16380 with integration weights 0,0
-        wait      {16384-4-4-3*qcm_leng-buffer_time}
-        move      {num_wait_loops},R1      # repetion rate loop iterator
-        nop
-        reprateloop:
-            wait      {wait_loop_step}
-            loop      R1,@reprateloop
-        wait      {extra_wait}
-        loop    R0,@loop
-
-        stop
-    """
+#Check Ramiros code to generate sequences
+    #def sequence_program_single(self):
+    #def sequence_program_average(self):
+    #def sequence_program_qubit_spec(self,qcm_leng,repetition_duration=200000):
+    #def sequence_program_t1(self,qcm_leng,wait_time_ns=20,repetition_duration=200000):
+    #def sequence_program_echo(self,qcm_leng,wait_time_ns=20,repetition_duration=200000):
+    #def sequence_program_ramsey(self,qcm_leng,wait_time_ns=20,repetition_duration=200000):

@@ -47,18 +47,26 @@ setup(
         "qcodes",
     ],
     extras_require={
+        "docs": [
+            "sphinx",
+            "sphinx_rtd_theme",
+            "recommonmark",
+            "sphinxcontrib-bibtex",
+            "sphinx_markdown_tables",
+            "nbsphinx",
+            "IPython"
+        ],
         # TII system dependencies
         "tiiq": [
             "qblox-instruments==0.4.0",
-			 "qcodes==0.29.1",
-			"lmfit",
+            "qcodes==0.29.1",
+            "lmfit",
             "quantify-core==0.5.1",
             "pyVISA==1.11.3",
             "pyVISA-py==0.5.2",
-
         ]
     },
-    python_requires=">=3.6.0",
+    python_requires=">=3.7.0",
     long_description=long_description,
     long_description_content_type='text/markdown',
 )
