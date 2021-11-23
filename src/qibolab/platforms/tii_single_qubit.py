@@ -5,7 +5,7 @@ from qibolab.instruments.rohde_schwarz import SGS100A
 from qibolab.instruments.qblox import Pulsar_QCM
 from qibolab.instruments.qblox import Pulsar_QRM
 
-import qibolab.callibration.fitting 
+import qibolab.calibration.fitting 
 
 # from rohde_schwarz import SGS100A
 # from qblox import Pulsar_QCM
@@ -258,4 +258,3 @@ class QCPulseGainParameter():
     #def sequence_program_t1(self,qcm_leng,wait_time_ns=20,repetition_duration=200000):
     #def sequence_program_echo(self,qcm_leng,wait_time_ns=20,repetition_duration=200000):
     #def sequence_program_ramsey(self,qcm_leng,wait_time_ns=20,repetition_duration=200000):
-    
