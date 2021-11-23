@@ -46,13 +46,13 @@ circuit through  the HardwareCircuit class and its execute method. The circuit
 gates are converted into pulses which are send to the platform drivers after
 appropriate conversion.
 
-![This is an image](hardwarecircuit.png)
+<img src="hardwarecircuit.png" height="250" />
 
 The results are then stored back in a format suitable for qibo operations.
 
 The qibolab module is composed by multiple features. From pulse definition, instrument drivers, calibration procedures, operation scheduling and readout operations.
 
-![This is an image](qibolab.png)
+<img src="qibolab.png" height="500" />
 
 This layout should be adjusted and maintained in order to always accommodate
 multiple quantum technologies.
