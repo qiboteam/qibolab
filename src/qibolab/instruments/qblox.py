@@ -490,7 +490,7 @@ class Pulsar_QCM():
     def play_sequence(self):
         qcm = self._qcm
         settings = self._settings
-        sequencer = settings['acq_sequencer']
+        sequencer = settings['sequencer']
         #arm sequencer and start playing sequence
         qcm.arm_sequencer()
         qcm.start_sequencer()
