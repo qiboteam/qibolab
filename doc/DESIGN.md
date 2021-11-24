@@ -41,10 +41,10 @@ We should avoid as much as possible:
 
 ## Current layout
 
-In the current qibolab layout delegates the execution of a user defined qibo
-circuit through  the HardwareCircuit class and its execute method. The circuit
-gates are converted into pulses which are send to the platform drivers after
-appropriate conversion.
+In the current qibolab layout delegates the execution of a user defined circuit
+through the HardwareCircuit class and its execute method. The circuit gates are
+converted into pulses which are send to the platform drivers after appropriate
+conversion.
 
 <img src="hardwarecircuit.png" height="250" />
 
