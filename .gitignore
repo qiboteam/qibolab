@@ -131,3 +131,4 @@ dmypy.json
 
 #qibolab diagnostics
 diagnostics/.data/
+diagnostics/test_tii_single_qubit.ipynb
