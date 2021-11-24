@@ -41,7 +41,6 @@ use the following command:
       you perform the installation of the ``tiiq`` dependencies on Windows
       in a conda environment with Python 3.8.
 
-      In this case make sure to create a conda environment with a different Python
-      version.
+      In this case make sure to create a conda environment with Python>=3.9.
 
 
