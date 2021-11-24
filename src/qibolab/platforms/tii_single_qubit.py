@@ -7,10 +7,6 @@ from qibolab.instruments.qblox import Pulsar_QRM
 
 import qibolab.calibration.fitting 
 
-# from rohde_schwarz import SGS100A
-# from qblox import Pulsar_QCM
-# from qblox import Pulsar_QRM
-
 from quantify_core.data.handling import get_datadir, set_datadir
 from quantify_core.measurement import MeasurementControl
 from quantify_core.measurement.control import Settable, Gettable
@@ -39,45 +35,57 @@ class TIISingleQubit():
             "sampling_rate": 1e9,
             "software_averages": 1,
             "repetition_duration": 200000}
+        self._QRM_init_settings = {
+            'ref_clock': 'external',                        # Clock source ['external', 'internal']
+            'sequencer': 0,
+            'sync_en': True,
+            'hardware_avg_en': True,                        # If enabled, the device repeats the pulse (hardware_avg) times 
+            'acq_trigger_mode': 'sequencer'}
         self._QRM_settings = {
-                'gain': 0.4,
-                'hardware_avg': self._settings['hardware_avg'],
-                'initial_delay': 0,
-                "repetition_duration": 200000,
-                'pulses': {
-                    'ro_pulse': {	"freq_if": 20e6,
-                                    "amplitude": 0.9,
-                                    "start": 300+40, 
-                                    "length": 6000,
-                                    "offset_i": 0,
-                                    "offset_q": 0,
-                                    "shape": "Block",
-                                }
-                            },
-
-                'start_sample': 130,
-                'integration_length': 2500,
-                'sampling_rate': self._settings['sampling_rate'],
-                'mode': 'ssb'}
-        self._QCM_settings = {
-                'gain': 0.5,
-                'hardware_avg': self._settings['hardware_avg'],
-                'initial_delay': 0,
-                "repetition_duration": 200000,
-                'pulses': {
-                    'qc_pulse':{	"freq_if": 200e6,
-                                "amplitude": 0.25, 
-                                "length": 300,
+            'gain': 0.4,
+            'hardware_avg': self._settings['hardware_avg'],
+            'initial_delay': 0,
+            "repetition_duration": 200000,
+            'pulses': {
+                'ro_pulse': {	"freq_if": 20e6,
+                                "amplitude": 0.9,
+                                "start": 300+40, 
+                                "length": 6000,
                                 "offset_i": 0,
                                 "offset_q": 0,
-                                "shape": "Gaussian",
-                                "delay_before": 10, # cannot be 0
-                                }
-                            }}
-        self._LO_QRM_settings = { "power": 15,
-                            "frequency":7.79813e9 - self._QRM_settings['pulses']['ro_pulse']['freq_if']}
-        self._LO_QCM_settings = { "power": 12,
-                            "frequency":8.724e9 + self._QCM_settings['pulses']['qc_pulse']['freq_if']}
+                                "shape": "Block",
+                            }
+                        },
+
+            'start_sample': 130,
+            'integration_length': 2500,
+            'sampling_rate': self._settings['sampling_rate'],
+            'mode': 'ssb'}
+        self._QCM_init_settings = {
+            'ref_clock': 'external',                        # Clock source ['external', 'internal']
+            'sequencer': 0,
+            'sync_en': True}
+        self._QCM_settings = {
+            'gain': 0.5,
+            'hardware_avg': self._settings['hardware_avg'],
+            'initial_delay': 0,
+            "repetition_duration": 200000,
+            'pulses': {
+                'qc_pulse':{	"freq_if": 200e6,
+                            "amplitude": 0.25, 
+                            "length": 300,
+                            "offset_i": 0,
+                            "offset_q": 0,
+                            "shape": "Gaussian",
+                            "delay_before": 10, # cannot be 0
+                            }
+                        }}
+        self._LO_QRM_settings = { 
+            "power": 15,
+            "frequency":7.79813e9 - self._QRM_settings['pulses']['ro_pulse']['freq_if']}
+        self._LO_QCM_settings = { 
+            "power": 12,
+            "frequency":8.724e9 + self._QCM_settings['pulses']['qc_pulse']['freq_if']}
 
     def load_setting_from_file(self):
         #Read platform settings from json file
@@ -85,7 +93,9 @@ class TIISingleQubit():
         data = json.load(config_file)
         self._settings = data["_settings"]
         self._QRM_settings = data["_QRM_settings"]
-        self._QCM_settings = data["_QRM_settings"]
+        self._QRM_init_settings = data["_QRM_init_settings"]
+        self._QCM_settings = data["_QCM_settings"]
+        self._QCM_init_settings = data["_QCM_init_settings"]
         self._LO_QRM_settings = data["_LO_QRM_settings"]
         self._LO_QCM_settings = data["_LO_QCM_settings"]
 

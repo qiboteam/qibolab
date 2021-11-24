@@ -377,7 +377,7 @@ class Pulsar_QCM():
         This method connects to the Pulsar QCM and configures it with those settings
         that are not expected to change.
         All parameters within settings are optional, their default values are:
-            QRM_init_settings = {
+            QCM_init_settings = {
                     'ref_clock': 'external',                        # Clock source ['external', 'internal']
                     'sequencer': 0,
                     'sync_en': True,
