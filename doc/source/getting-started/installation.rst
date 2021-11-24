@@ -37,7 +37,7 @@ use the following command:
       pip install .[tiiq] # or pip install -e .[tiiq]
 
 .. note::
-      Currently there is an issue with the ``PyQt5-Qt5`` package if 
+      Currently there is an issue with the ``PyQt5`` package if 
       you perform the installation of the ``tiiq`` dependencies on Windows
       in a conda environment with Python 3.8.
 
