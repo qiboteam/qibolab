@@ -2,7 +2,7 @@ from tkinter import *
 import json, os
 import qibolab
 
-platform_file = os.path.dirname(qibolab.__file__) + '/platforms/platform_config.json'
+platform_file = os.path.dirname(qibolab.__file__) + '/platforms/tii_single_qubit_config.json'
 
 class ConfigWindow:
     def __init__(self, window):
@@ -32,11 +32,11 @@ class ConfigWindow:
         lbl_settings=Label(window, text="_settings", fg='black', font=("arial", 10))
         lbl_settings.place(x=100, y=120)
 
-        lbl_data_dictionary=Label(window, text="data_dictionary", fg='gray', font=("arial", 10))
+        lbl_data_dictionary=Label(window, text="data_folder", fg='gray', font=("arial", 10))
         lbl_data_dictionary.place(x=20, y=160)
         self.txtfld_data_dictionary=Entry(window, text="", bd=3)
         self.txtfld_data_dictionary.place(x=140, y=160)
-        self.txtfld_data_dictionary.insert(0, _settings['data_dictionary'])
+        self.txtfld_data_dictionary.insert(0, _settings['data_folder'])
 
         lbl_hardware_avg=Label(window, text="hardware_avg", fg='gray', font=("arial", 10))
         lbl_hardware_avg.place(x=20, y=190)
