@@ -1,7 +1,6 @@
 import numpy as np
 import json
 
-
 from qibolab.instruments.rohde_schwarz import SGS100A
 from qibolab.instruments.qblox import Pulsar_QCM
 from qibolab.instruments.qblox import Pulsar_QRM
@@ -16,56 +15,10 @@ from quantify_core.measurement.control import Settable, Gettable
 from quantify_core.visualization.pyqt_plotmon import PlotMonitor_pyqt
 from quantify_core.visualization.instrument_monitor import InstrumentMonitor
 
+
 class TIISingleQubitSinglePulsar():
 
-    _settings = {
-        'data_folder': '.data/',
-        "hardware_avg": 1024,
-        "sampling_rate": 1e9,
-        "software_averages": 1,
-        "repetition_duration": 200000}
-    _QRM_settings = {
-            'gain': 0.4,
-            'hardware_avg': _settings['hardware_avg'],
-            'initial_delay': 0,
-            "repetition_duration": 200000,
-            'pulses': {
-                'qc_pulse':{	"freq_if": 200e6,
-                                "amplitude": 0.2,
-                                "start": 0,        # cannot be <10?
-                                "length": 4000,
-                                "offset_i": 0,
-                                "offset_q": 0,
-                                "shape": "Gaussian",
-                            },
-                'ro_pulse': {	"freq_if": 20e6,
-                                "amplitude": 0.9,
-                                "start": 4000+40,
-                                "length": 3000,
-                                "offset_i": 0,
-                                "offset_q": 0,
-                                "shape": "Block",
-                            },
-                        },
-            'start_sample': 130,
-            'integration_length': 2500,
-            'sampling_rate': _settings['sampling_rate'],
-            'mode': 'ssb'}
-    _LO_QRM_settings = { "power": 15,
-                        "frequency":7.79813e9 - _QRM_settings['pulses']['ro_pulse']['freq_if']}
-    _LO_QCM_settings = { "power": 12,
-                        "frequency":8.724e9 + _QRM_settings['pulses']['qc_pulse']['freq_if']}
-
     def __init__(self):
-
-        #Read platform settings from json file
-        #config = open('platform_config.json',)
-        #data = json.load(config)
-        #_settings = data["_settings"]
-        #_QRM_settings = data["_QRM_settings"]
-        #_LO_QRM_settings = data["_LO_QRM_settings"]
-        #_LO_QCM_settings = data["_LO_QCM_settings"]
-
         self._LO_qrm = SGS100A("LO_qrm", '192.168.0.7')
         self._LO_qcm = SGS100A("LO_qcm", '192.168.0.101')
         self._qrm = Pulsar_QRM("qrm", '192.168.0.2')
@@ -77,7 +30,26 @@ class TIISingleQubitSinglePulsar():
         self._MC.instr_plotmon(self._plotmon.name)
         self._MC.instrument_monitor(self._insmon.name)
 
+        self._settings = None
+        self._QRM_settings = None
+        self._LO_QRM_settings = None
+        self._LO_QCM_settings = None
+
+        #Read platform settings from json file
+        self._config_filename = "tii_single_qubit_config2.json"
+        self.load_setting_from_file(self._config_filename)
         set_datadir(self._settings['data_folder'])
+
+    def load_setting_from_file(self, filename):
+        """Read platform settings from json file."""
+        with open(filename, "r") as file:
+            data = json.load(file)
+        for name, value in data.items():
+            if not hasattr(self, name):
+                raise KeyError(f"Unknown argument {name} passed in config json.")
+            if getattr(self, name) is not None:
+                raise KeyError(f"Cannot set {name} from json as it is already set.")
+            setattr(self, name, value)
 
     def setup(self):
         self._LO_qrm.setup(self._LO_QRM_settings)
@@ -133,12 +105,16 @@ class TIISingleQubitSinglePulsar():
 
     def run_Rabi_pulse_gain(self):
         pass
+
     def run_t1(self):
         pass
+
     def run_ramsey(self):
         pass
+
     def run_spin_echo(self):
         pass
+
 
 class ROController():
 
@@ -161,6 +137,7 @@ class ROController():
         qrm.upload_sequence()
 
         return qrm.play_sequence_and_acquire()
+
 
 class QCPulseLengthParameter():
 
