@@ -6,13 +6,6 @@
         "software_averages": 1,
         "repetition_duration": 200000
     },
-    "_QRM_init_settings": {
-            "ref_clock": "external",
-            "sequencer": 0,
-            "sync_en": true,
-            "hardware_avg_en": true,
-            "acq_trigger_mode": "sequencer"
-          },
     "_QRM_settings": {
         "gain": 0.4,
         "hardware_avg": 1024,
@@ -23,36 +16,23 @@
         "sampling_rate": 1000000000.0,
         "mode": "ssb",
         "pulses": {
+            "qc_pulse": {
+                "freq_if": 200000000.0,
+                "amplitude": 0.2,
+                "start": 0,
+                "length": 4000,
+                "offset_i": 0,
+                "offset_q": 0,
+                "shape": "Gaussian"
+            },
             "ro_pulse": {
                 "freq_if": 20000000.0,
                 "amplitude": 0.9,
-                "start": 340,
-                "length": 6000,
+                "start": 4040,
+                "length": 3000,
                 "offset_i": 0,
                 "offset_q": 0,
                 "shape": "Block"
-            }
-        }
-    },
-    "_QCM_init_settings": {
-        "ref_clock": "external",
-        "sequencer": 0,
-        "sync_en": true
-    },
-    "_QCM_settings": {
-        "gain": 0.5,
-        "hardware_avg": 1024,
-        "initial_delay": 0,
-        "repetition_duration": 200000,
-        "pulses": {
-            "qc_pulse": {
-                "freq_if": 200e6,
-                "amplitude": 0.25,
-                "length": 300,
-                "offset_i": 0,
-                "offset_q": 0,
-                "shape": "Gaussian",
-                "delay_before": 10
             }
         }
     },
@@ -61,7 +41,7 @@
         "frequency": 7778130000.0
     },
     "_LO_QCM_settings": {
-        "power": 15,
+        "power": 12,
         "frequency": 8924000000.0
     }
 }

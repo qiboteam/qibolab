@@ -36,7 +36,7 @@ class TIISingleQubitSinglePulsar():
         self._LO_QCM_settings = None
 
         #Read platform settings from json file
-        self._config_filename = "tii_single_qubit_config2.json"
+        self._config_filename = "tii_single_qubit_config_pulsar.json"
         self.load_setting_from_file(self._config_filename)
         set_datadir(self._settings['data_folder'])
 

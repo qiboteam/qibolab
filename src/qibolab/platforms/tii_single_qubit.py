@@ -52,7 +52,7 @@ class TIISingleQubit():
         self._LO_QRM_settings = None
         self._LO_QCM_settings = None
 
-        self._config_filename = "tii_single_qubit_config2.json"
+        self._config_filename = "tii_single_qubit_config.json"
         self.load_setting_from_file(self._config_filename)
         set_datadir(self._settings.get('data_folder'))
 
