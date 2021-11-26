@@ -2,7 +2,7 @@ import copy
 import itertools
 import numpy as np
 from qibolab import pulses, tomography
-from qibolab.inst import InstrumentController
+from qibolab.instruments.icarusqawg_controller import InstrumentController
 from qibolab.platforms.abstract import AbstractExperiment, ParameterList, BoundsValidator, EnumValidator, Qubit
 
 

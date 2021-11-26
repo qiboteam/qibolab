@@ -1,11 +1,38 @@
 import time
-from typing import Union, Optional, Tuple, List
-import broadbean as bb
 import numpy as np
+import pyvisa as visa
 from qcodes.instrument_drivers.tektronix.AWG70000A import AWG70000A
-from qibolab.inst import Instrument
+import broadbean as bb
+import urllib3
+from typing import List, Optional, Union
 
-class AWG5204(Instrument):
+http = urllib3.PoolManager()
+rm = visa.ResourceManager()
+
+class MCAttenuator:
+    def __init__(self, address: str):
+        self.address = address
+
+    def set_attenuation(self, attenuation: int) -> None:
+        http.request('GET', 'http://{}/SETATT={}'.format(self.address, attenuation))
+
+class VisaInstrument:
+    def __init__(self, address: str, timeout: int = 10000) -> None:
+        self._visa_handle = rm.open_resource(address, timeout=timeout)
+
+    def write(self, msg: Union[bytes, str]) -> None:
+        self._visa_handle.write(msg)
+
+    def query(self, msg: Union[bytes, str]) -> str:
+        return self._visa_handle.query(msg)
+
+    def read(self) -> str:
+        return self._visa_handle.read()
+
+    def close(self) -> None:
+        self._visa_handle.close()
+
+class AWG5204(VisaInstrument):
     def __init__(self, address:str='TCPIP0::192.168.0.2::inst0::INSTR', timeout:int = 240000, sampling_rate=2.4e9):
         super().__init__(address, timeout)
         self._nchannels = 4
@@ -118,3 +145,47 @@ class AWG5204(Instrument):
 
     def trigger(self):
         self.write('TRIGger:IMMediate ATRigger')
+
+class QuicSyn(VisaInstrument):
+
+    def setup(self):
+        self.write('0601') # EXT REF
+
+    def set_frequency(self, frequency):
+        """
+        Sets the frequency in Hz
+        """
+        self.write('FREQ {0:f}Hz'.format(frequency))
+
+    def start(self):
+        self.write('0F01')
+
+    def stop(self):
+        self.write('0F00')
+
+class RG():
+    def __init__(self, address: str = 'TCPIP0::192.168.0.7::INSTR'):
+        rm = visa.ResourceManager() # pylint: disable=E1101
+        self.RG = rm.open_resource(address)
+        self.RG.write(':SOUR1:FUNC:SHAP DC') #Change waveform to DC
+
+    def set_voltage(self, voltage: Union[int, float]):
+        """
+        Sets the Rigol offset voltage
+        """
+        self.stop()
+        self.RG.write(':SOUR1:VOLT:LEV:IMM:OFFS {}'.format(voltage)) #Input DC offset
+        self.start()
+
+    def start(self):
+        """
+        Starts the Rigol
+        """
+        self.RG.write(':OUTP1 ON ') #Turn Channel 1 on
+
+    def stop(self):
+        """
+        Stops the Rigol
+        """
+        self.RG.write(':OUTP1 OFF ') #Turn Channel 1 off
+

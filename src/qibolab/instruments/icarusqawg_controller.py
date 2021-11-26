@@ -1,6 +1,7 @@
 import numpy as np
 from qcodes.instrument_drivers.AlazarTech import ATS
-from qibolab.inst import AWG5204, QuicSyn, MCAttenuator, AlazarTech_ATS9371
+from qibolab.instruments.ATS9371 import AlazarTech_ATS9371
+from qibolab.instruments.icarusqawg_devices import AWG5204, QuicSyn, MCAttenuator
 
 trigger_volts = 1
 
