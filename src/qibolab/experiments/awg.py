@@ -176,9 +176,9 @@ class AWGSystem(AbstractExperiment):
     def stop(self):
         self.ic.stop()
 
-    def _generate_readout_TTL(self, samples):
+    def _generate_TTL_pulses(self, samples):
         end = self.readout_params.duration() + self.readout_params.buffer()
-        duration = len(samples) / self.awg_params.sampling_rate()
+        duration = samples / self.awg_params.sampling_rate()
         time_array = np.linspace(end - duration, end, num=samples)
 
         def TTL(t, start, duration, amplitude):
@@ -197,20 +197,7 @@ class AWGSystem(AbstractExperiment):
         start = self.readout_params.QB_SW_delay()
         qb_ttl = TTL(time_array, start, self.readout_params.duration(), 1)
 
-        def square(t, start, duration, amplitude, freq, I_phase, Q_phase, *args, **kwargs):
-            # Basic rectangular pulse
-            x = amplitude * (1 * (start < t) & 1 * (start+duration > t))
-            I_phase = I_phase * np.pi / 180
-            Q_phase = Q_phase * np.pi / 180
-            i = x * np.cos(2 * np.pi * freq * t + I_phase)
-            q = - x * np.sin(2 * np.pi * freq * t + Q_phase)
-            return i, q
-
-        start = 0
-        i_readout, q_readout = square(time_array, start, self.readout_params.duration(),self.readout_params.amplitude(),
-                                      self.readout_params.IF_frequency(), -6.2, 0.2)
-
-        return i_readout, q_readout, adc_ttl, ro_ttl, qb_ttl
+        return adc_ttl, ro_ttl, qb_ttl
 
     def upload(self, waveform, averaging):
         self.ic.readout_attenuator.set_attenuation(0)
