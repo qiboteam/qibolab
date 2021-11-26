@@ -1,3 +1,7 @@
+"""
+Adapted from the qcodes ATS9373 driver
+"""
+
 from distutils.version import LooseVersion
 
 import numpy as np
