@@ -44,12 +44,10 @@ class TIISingleQubitSinglePulsar():
         """Read platform settings from json file."""
         with open(filename, "r") as file:
             data = json.load(file)
-        for name, value in data.items():
-            if not hasattr(self, name):
-                raise KeyError(f"Unknown argument {name} passed in config json.")
-            if getattr(self, name) is not None:
-                raise KeyError(f"Cannot set {name} from json as it is already set.")
-            setattr(self, name, value)
+        self._settings = data.get("_settings")
+        self._QRM_settings = data.get("_QRM_settings")
+        self._LO_QRM_settings = data.get("_LO_QRM_settings")
+        self._LO_QCM_settings = data.get("_LO_QCM_settings")
 
     def setup(self):
         self._LO_qrm.setup(self._LO_QRM_settings)
