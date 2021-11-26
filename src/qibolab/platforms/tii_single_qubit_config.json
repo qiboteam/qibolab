@@ -38,10 +38,10 @@
     },
     "_LO_QRM_settings": {
         "power": 15,
-        "frequency": 7798130000.0 - 20000000.0
+        "frequency": 7778130000.0
     },
     "_LO_QCM_settings": {
         "power": 12,
-        "frequency": 8724000000.0 + 200000000.0
+        "frequency": 8924000000.0
     }
 }
