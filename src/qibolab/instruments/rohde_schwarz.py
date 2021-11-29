@@ -57,7 +57,6 @@ class SGS100A():
         # return actual LO network ip
         return self.ip
 
-
     def getPower(self):
         # return actual LO power
         return self.power
@@ -68,6 +67,6 @@ class SGS100A():
 
     def close(self):
         self.LO.close()
-    def __del__(self):
-        self.LO.close()
 
+        def __del__(self):
+        self.LO.close()
