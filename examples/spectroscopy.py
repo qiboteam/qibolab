@@ -1,8 +1,9 @@
 import numpy as np
 from qibolab.platforms import TIIq
 
+# TODO: Have a look in the documentation of ``MeasurementControl``
 from quantify_core.measurement import MeasurementControl
-from quantify_core.measurement.control import Settable, Gettable
+from quantify_core.measurement.control import Gettable
 
 
 class ROController():
@@ -59,12 +60,13 @@ def run_resonator_spectroscopy():
     tiiq.setup() # TODO: Give settings json directory here
 
     # Fast Sweep
-    tiisq.software_averages = 1
+    tiiq.software_averages = 1
+    # TODO: Make the following arguments of the main function and add argument parser
     scanrange = variable_resolution_scanrange(lowres_width= 30e6, lowres_step= 1e6, highres_width= 1e6, highres_step= 0.1e6)
 
     mc = MeasurementControl('MC')
-    mc.settables(tiisq.LO_qrm.frequency)
-    mc.setpoints(scanrange + tiisq.LO_qrm.frequency)
+    mc.settables(tiiq.LO_qrm.frequency)
+    mc.setpoints(scanrange + tiiq.LO_qrm.frequency)
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm))) # Implement ROController
 
     tiiq.LO_qrm.on()
@@ -72,25 +74,28 @@ def run_resonator_spectroscopy():
 
     dataset = mc.run("Resonator Spectroscopy Fast", soft_avg=tiiq.software_averages)
     # http://xarray.pydata.org/en/stable/getting-started-guide/quick-overview.html
-    tiisq.stop()
-    tiisq.LO_QRM_settings['frequency'] = dataset['x0'].values[dataset['y0'].argmax().values]
+    tiiq.stop()
+    tiiq.LO_qrm.set_frequency(dataset['x0'].values[dataset['y0'].argmax().values])
 
     # Precision Sweep
-    tiisq._settings['software_averages'] = 1 # 3
+    tiiq.software_averages = 1 # 3
     scanrange = np.arange(-0.5e6, 0.5e6, 0.02e6)
-    MC.settables(tiisq._LO_qrm.LO.frequency)
-    MC.setpoints(scanrange + tiisq._LO_QRM_settings['frequency'])
-    MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
-    tiisq.LO_qrm.on()
-    tiisq.LO_qcm.off()
-    dataset = MC.run('Resonator Spectroscopy Precision', soft_avg = tiisq._settings['software_averages'])
-    tiisq.stop()
+    MC.settables(tiiq.LO_qrm.frequency)
+    MC.setpoints(scanrange + tiiq.LO_qrm.frequency)
+    MC.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm)))
+    tiiq.LO_qrm.on()
+    tiiq.LO_qcm.off()
+    dataset = MC.run("Resonator Spectroscopy Precision", soft_avg=tiiq.software_averages)
+    tiiq.stop()
 
+    # TODO: Add ``savgol_filter`` method
     smooth_dataset = savgol_filter(dataset['y0'].values, 25, 2)
-    tiisq._LO_QRM_settings['frequency'] = dataset['x0'].values[smooth_dataset.argmax()]
-    tiisq.resonator_freq = dataset['x0'].values[smooth_dataset.argmax()] + tiisq._QRM_settings['pulses']['ro_pulse']['freq_if']
-    print(f"Resonator Frequency = {tiisq.resonator_freq}")
+    # TODO: is the following call really needed given that the oscillator is never used after that?
+    tiiq.LO_qrm.set_frequency(dataset['x0'].values[smooth_dataset.argmax()])
 
+    # TODO: Remove ``_QRM_settings`` from here given that we will use a different pulse mechanism
+    resonator_freq = dataset['x0'].values[smooth_dataset.argmax()] + tiiq._QRM_settings['pulses']['ro_pulse']['freq_if']
+    print(f"Resonator Frequency = {resonator_freq}")
     print(len(dataset['y0'].values))
     print(len(smooth_dataset))
 
