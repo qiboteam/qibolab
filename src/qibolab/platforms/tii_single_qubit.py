@@ -5,60 +5,42 @@ from qibolab.instruments.rohde_schwarz import SGS100A
 from qibolab.instruments.qblox import Pulsar_QCM
 from qibolab.instruments.qblox import Pulsar_QRM
 
-import qibolab.calibration.fitting
+from qibolab.platforms.abstract import AbstractPlatform
 
-from quantify_core.data.handling import get_datadir, set_datadir
-from quantify_core.measurement import MeasurementControl
-from quantify_core.measurement.control import Settable, Gettable
-from quantify_core.visualization.pyqt_plotmon import PlotMonitor_pyqt
-from quantify_core.visualization.instrument_monitor import InstrumentMonitor
-
-def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step):
-    #[.     .     .     .     .     .][...................]0[...................][.     .     .     .     .     .]
-    #[-------- lowres_width ---------][-- highres_width --] [-- highres_width --][-------- lowres_width ---------]
-    #>.     .< lowres_step
-    #                                 >..< highres_step
-    #                                                      ^ centre value = 0
-    scanrange = np.concatenate(
-        (   np.arange(-lowres_width,-highres_width,lowres_step),
-            np.arange(-highres_width,highres_width,highres_step),
-            np.arange(highres_width,lowres_width,lowres_step)
-        )
-    )
-    return scanrange
-
-class TIISingleQubit():
-    def load_default_settings(self):
+class TIISingleQubit(AbstractPlatform):
+    def load_default_settings(self):   
+        # reorganise settings, all in one as a dictionary of devices with their names and settings
         self._settings = {
             'data_folder': '.data/',
             "hardware_avg": 1024,
             "sampling_rate": 1e9,
             "software_averages": 1,
-            "repetition_duration": 200000}
+            "repetition_duration": 200000}  # Subject to calibration
         self._QRM_init_settings = {
             'ref_clock': 'external',                        # Clock source ['external', 'internal']
             'sequencer': 0,
             'sync_en': True,
-            'hardware_avg_en': True,                        # If enabled, the device repeats the pulse (hardware_avg) times
+            'hardware_avg_en': True,                        # If enabled, the device repeats the pulse (hardware_avg) times 
             'acq_trigger_mode': 'sequencer'}
         self._QRM_settings = {
-            'gain': 0.4,
+            'gain': 0.35,   # Subject to calibration
             'hardware_avg': self._settings['hardware_avg'],
             'initial_delay': 0,
             "repetition_duration": 200000,
             'pulses': {
                 'ro_pulse': {	"freq_if": 20e6,
-                                "amplitude": 0.9,
-                                "start": 300+40,
-                                "length": 6000,
+                                "amplitude": 0.5,   # Subject to calibration
+                                "start": 60+10, 
+                                "length": 3000, # Subject to calibration
                                 "offset_i": 0,
                                 "offset_q": 0,
                                 "shape": "Block",
+                                "delay_before_readout": 4
                             }
                         },
 
-            'start_sample': 130,
-            'integration_length': 2500,
+            'start_sample': 100,    # Subject to calibration
+            'integration_length': 2500,    # Subject to calibration
             'sampling_rate': self._settings['sampling_rate'],
             'mode': 'ssb'}
         self._QCM_init_settings = {
@@ -66,30 +48,30 @@ class TIISingleQubit():
             'sequencer': 0,
             'sync_en': True}
         self._QCM_settings = {
-            'gain': 0.5,
+            'gain': 0.3,
             'hardware_avg': self._settings['hardware_avg'],
             'initial_delay': 0,
             "repetition_duration": 200000,
             'pulses': {
                 'qc_pulse':{	"freq_if": 200e6,
-                            "amplitude": 0.25,
-                            "length": 300,
+                            "amplitude": 0.3,    # Subject to calibration
+                            "start": 0,  
+                            "length": 60,    # Subject to calibration
                             "offset_i": 0,
                             "offset_q": 0,
                             "shape": "Gaussian",
-                            "delay_before": 10, # cannot be 0
                             }
                         }}
-        self._LO_QRM_settings = {
-            "power": 15,
-            "frequency":7.79813e9 - self._QRM_settings['pulses']['ro_pulse']['freq_if']}
-        self._LO_QCM_settings = {
-            "power": 12,
-            "frequency":8.724e9 + self._QCM_settings['pulses']['qc_pulse']['freq_if']}
+        self._LO_QRM_settings = { 
+            "power": 6,    # Subject to calibration
+            "frequency":7.79825e9 - self._QRM_settings['pulses']['ro_pulse']['freq_if']}    # Subject to calibration
+        self._LO_QCM_settings = { 
+            "power": 6,    # Subject to calibration
+            "frequency":8.722e9 + self._QCM_settings['pulses']['qc_pulse']['freq_if']}    # Subject to calibration
 
-    def load_setting_from_file(self):
+    def load_settings_from_file(self):
         #Read platform settings from json file
-        config_file = open('tii_single_qubit_config.json',)
+        config_file = open('tii_single_qubit_config.json',) 
         data = json.load(config_file)
         self._settings = data["_settings"]
         self._QRM_settings = data["_QRM_settings"]
@@ -99,20 +81,15 @@ class TIISingleQubit():
         self._LO_QRM_settings = data["_LO_QRM_settings"]
         self._LO_QCM_settings = data["_LO_QCM_settings"]
 
+    def load_settings(self):
+        self.load_default_settings()
+
     def __init__(self):
+        self.load_settings()
         self._LO_qrm = SGS100A("LO_qrm", '192.168.0.7')
         self._LO_qcm = SGS100A("LO_qcm", '192.168.0.101')
         self._qrm = Pulsar_QRM("qrm", '192.168.0.2')
         self._qcm = Pulsar_QCM("qcm", '192.168.0.3')
-
-        self._MC = MeasurementControl('MC')
-        self._plotmon = PlotMonitor_pyqt('Plot Monitor')
-        self._insmon = InstrumentMonitor("Instruments Monitor")
-
-        self._MC.instr_plotmon(self._plotmon.name)
-        self._MC.instrument_monitor(self._insmon.name)
-        self.load_default_settings()
-        set_datadir(self._settings['data_folder'])
 
     def setup(self):
         self._LO_qrm.setup(self._LO_QRM_settings)
@@ -126,145 +103,47 @@ class TIISingleQubit():
         self._qrm.stop()
         self._qcm.stop()
 
-    def close(self):
+    def __del__(self):
         self._LO_qrm.close()
         self._LO_qcm.close()
         self._qrm.close()
         self._qcm.close()
 
-    def __del__(self):
-        self.close()
+    def calibrate(self):
+        # not implemented yet
+        pass
 
+    def get_calibration_settings(self):
+        self.calibrate()
+        return self._calibration_settings
 
+    def execute(self, pulse_sequence, nshots):
+        results = {}
 
-    def run_resonator_spectroscopy(self):
-        self.load_default_settings()
+        self.load_settings()
         self.setup()
-        scanrange = variable_resolution_scanrange(lowres_width= 30e6, lowres_step= 1e6, highres_width= 1e6, highres_step= 0.05e6)
 
-        self._MC.settables(self._LO_qrm.LO.frequency)
-        self._MC.setpoints(scanrange + self._LO_QRM_settings['frequency'])
-        self._MC.gettables(Gettable(ROController(self._qrm, self._qcm)))
-        self._LO_qrm.on()
-        self._LO_qcm.off()
-        dataset = self._MC.run('Resonator Spectroscopy', soft_avg = self._settings['software_averages'])
-        # http://xarray.pydata.org/en/stable/getting-started-guide/quick-overview.html
-        # print(dataset)
-        # freq = fit_pulse(dataset.[''], freq_sweep)
-        self.stop()
-        return dataset
-
-    def run_qubit_spectroscopy(self):
-        self.load_default_settings()
-        self._qcm._settings['pulses']['qc_pulse']['length'] = 3000
-        self._qrm._settings['pulses']['ro_pulse']['start'] = self._qcm._settings['pulses']['qc_pulse']['length']+40
-        self.setup()
-        scanrange = variable_resolution_scanrange(lowres_width= 30e6, lowres_step= 2e6, highres_width= 5e6, highres_step= 0.2e6)
-
-        self._MC.settables(self._LO_qcm.LO.frequency)
-        self._MC.setpoints(scanrange + self._LO_QCM_settings['frequency'])
-        self._MC.gettables(Gettable(ROController(self._qrm, self._qcm)))
-        self._LO_qrm.on()
-        self._LO_qcm.on()
-        dataset = self._MC.run('Resonator Spectroscopy', soft_avg = self._settings['software_averages'])
-        self.stop()
-
-    def run_Rabi_pulse_length(self):
-        self.setup()
-        self._MC.settables(QCPulseLengthParameter(self._qrm, self._qcm))
-        self._MC.setpoints(np.arange(1,3000,5))
-        self._MC.gettables(Gettable(ROController(self._qrm, self._qcm)))
-        self._LO_qrm.on()
-        self._LO_qcm.on()
-        dataset = self._MC.run('Rabi Pulse Length', soft_avg = self._settings['software_averages'])
-        self.stop()
-
-    def run_Rabi_pulse_gain(self):
-        pass
-    def run_t1(self):
-        pass
-    def run_ramsey(self):
-        pass
-    def run_spin_echo(self):
-        pass
-
-
-class ROController():
-
-    # Quantify Gettable Interface Implementation
-    label = ['Amplitude', 'Phase','I','Q']
-    unit = ['V', 'Radians','V','V']
-    name = ['A', 'Phi','I','Q']
-
-    def __init__(self, qrm: Pulsar_QRM, qcm: Pulsar_QCM):
-        self._qrm = qrm
-        self._qcm = qcm
-
-    def get(self):
         qrm = self._qrm
         qcm = self._qcm
 
         qrm.setup(qrm._settings)
-        qrm.set_waveforms_from_pulses_definition(qrm._settings['pulses'])
+        qrm.set_waveforms_from_pulses_definition(pulse_sequence.pulses[0])
         qrm.set_program_from_parameters(qrm._settings)
         qrm.set_acquisitions()
         qrm.set_weights()
         qrm.upload_sequence()
-
+        
         qcm.setup(qcm._settings)
-        qcm.set_waveforms_from_pulses_definition(qcm._settings['pulses'])
+        qcm.set_waveforms_from_pulses_definition(pulse_sequence.pulses[1:])
         qcm.set_program_from_parameters(qcm._settings)
         qcm.set_acquisitions()
         qcm.set_weights()
         qcm.upload_sequence()
-
+        
+        self._LO_qrm.on()
+        self._LO_qcm.on()
         qcm.play_sequence()
         acquisition_results = qrm.play_sequence_and_acquire()
+        self.stop()
+
         return acquisition_results
-
-class QCPulseLengthParameter():
-
-    label = 'Qubit Control Pulse Length'
-    unit = 'ns'
-    name = 'qc_pulse_length'
-
-    def __init__(self, qrm: Pulsar_QRM, qcm: Pulsar_QCM):
-        self._qrm = qrm
-        self._qcm = qcm
-
-    def set(self,value):
-        self._qcm._settings['pulses']['qc_pulse']['length']=value
-        self._qrm._settings['pulses']['ro_pulse']['start']=value+40
-
-class QCPulseGainParameter():
-
-    label = 'Qubit Control Gain'
-    unit = '(V/V)'
-    name = 'qc_pulse_gain'
-
-    def __init__(self, qcm: Pulsar_QCM):
-        self._qcm = qcm
-
-    def set(self,value):
-        sequencer = self._qcm._settings['sequencer']
-        if sequencer == 1:
-            self._qcm.sequencer1_gain_awg_path0(value)
-            self._qcm.sequencer1_gain_awg_path1(value)
-        else:
-            self._qcm.sequencer0_gain_awg_path0(value)
-            self._qcm.sequencer0_gain_awg_path1(value)
-
-
-# T1: RX(pi) - wait t(rotates z) - readout
-# Ramsey: RX(pi/2) - wait t(rotates z) - RX(pi/2) - readout
-# Spin Echo: RX(pi/2) - wait t(rotates z) - RX(pi) - wait t(rotates z) - readout
-# Spin Echo: RX(pi/2) - wait t(rotates z) - RX(pi) - wait t(rotates z) - RX(pi/2) - readout
-
-# Ignore all functions after this point
-# Check Ramiros code to generate sequences
-    #def sequence_program_single(self):
-    #def sequence_program_average(self):
-    #def sequence_program_qubit_spec(self,qcm_leng,repetition_duration=200000):
-    #def sequence_program_t1(self,qcm_leng,wait_time_ns=20,repetition_duration=200000):
-    #def sequence_program_echo(self,qcm_leng,wait_time_ns=20,repetition_duration=200000):
-    #def sequence_program_ramsey(self,qcm_leng,wait_time_ns=20,repetition_duration=200000):

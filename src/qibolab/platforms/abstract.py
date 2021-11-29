@@ -3,6 +3,21 @@ from qibo.config import raise_error
 from typing import Any, Union, List, Tuple
 
 
+class AbstractPlatform(ABC):
+    _settings = {}
+    _instruments = {}
+
+    def __init__(self):
+        self.name = "abstract"
+
+    @abstractmethod
+    def calibrate(self): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def execute(self, pulse_sequence, nshots): # pragma: no cover
+        raise_error(NotImplementedError)
+
 class AbstractExperiment(ABC):
 
     def __init__(self):

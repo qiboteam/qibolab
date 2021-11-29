@@ -17,7 +17,7 @@ from pulsar_qrm.pulsar_qrm import pulsar_qrm
 
 debugging = False
 
-def generate_waveforms(pulse):
+def generate_single_pulse_waveforms(pulse):
     """
     This function generates the I & Q waveforms to be sent to the sequencers based on the key parameters of the pulse (length, amplitude, shape, etc.)
     """
@@ -62,7 +62,24 @@ def generate_waveforms(pulse):
         ax.plot(waveforms["modQ"]["data"],'-',color='C1')
         ax.title.set_text('pulse')
     return waveforms
-
+"""
+def generate_waveforms_from_pulses_definition(pulses_definition: dict):
+        for name,pulse in pulses_definition.items():
+            pulse_waveforms = generate_single_pulse_waveforms(pulse)
+            combined_waveforms = {
+                "modI_qcm": {"data": [], "index": 0},
+                "modQ_qcm": {"data": [], "index": 1}
+            }
+            combined_waveforms["modI_qcm"]["data"] = np.concatenate((combined_waveforms["modI_qcm"]["data"],np.zeros(4), pulse_waveforms["modI"]["data"]))
+            combined_waveforms["modQ_qcm"]["data"] = np.concatenate((combined_waveforms["modQ_qcm"]["data"],np.zeros(4), pulse_waveforms["modQ"]["data"]))
+        self._waveforms = combined_waveforms
+        if debugging:
+            # Plot the result
+            fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
+            ax.plot(combined_waveforms["modI_qcm"]["data"],'-',color='C0')
+            ax.plot(combined_waveforms["modQ_qcm"]["data"],'-',color='C1')
+            ax.title.set_text('Combined Pulses')
+"""
 def calculate_repetition_rate(repetition_duration,
                             wait_loop_step,
                             duration_base):
@@ -76,17 +93,19 @@ def generate_program(program_parameters):
     wait_loop_step=1000
     duration_base=16380 # this is the maximum length of a waveform in number of samples (defined by the device memory)
     hardware_avg = program_parameters["hardware_avg"]
-    initial_delay = program_parameters["initial_delay"]
+    initial_delay = next(iter(program_parameters['pulses'].values()))['start']
     repetition_duration= program_parameters["repetition_duration"]
     pulses = program_parameters['pulses']
 
     num_wait_loops,extra_wait = calculate_repetition_rate(repetition_duration, wait_loop_step, duration_base)
     if 'ro_pulse' in pulses:
+        delay_before_readout = program_parameters['pulses']['ro_pulse']['delay_before_readout']
         acquire_instruction = "acquire   0,0,4      # Acquire waveforms over remaining duration of acquisition of input vector of length = 16380 with integration weights 0,0"
-        pause = pulses['ro_pulse']['start']
+        wait_time = duration_base-initial_delay-delay_before_readout-4 # pulses['ro_pulse']['start']
     else:
+        delay_before_readout = 4
         acquire_instruction = ""
-        pause = 4
+        wait_time = duration_base-initial_delay-delay_before_readout
 
     if initial_delay != 0:
         initial_wait_instruction = f"wait      {initial_delay}"
@@ -99,9 +118,9 @@ def generate_program(program_parameters):
 
     loop:
         {initial_wait_instruction}
-        play      0,1,{pause}
+        play      0,1,{delay_before_readout}
         {acquire_instruction}
-        wait      {duration_base-initial_delay-pause}
+        wait      {wait_time}
         move      {num_wait_loops},R1
         nop
         repeatloop:
@@ -222,16 +241,15 @@ class Pulsar_QRM():
         self._waveforms = waveforms
     def set_waveforms_from_pulses_definition(self, pulses_definition: dict):
         pulses_list = list(pulses_definition.values())
-        pulse_waveforms = generate_waveforms(pulses_list.pop(0))
+        pulse_waveforms = generate_single_pulse_waveforms(pulses_list.pop(0))
         combined_waveforms = {
             "modI_qrm": {"data": [], "index": 0},
             "modQ_qrm": {"data": [], "index": 1}
         }
         combined_waveforms["modI_qrm"]["data"] = pulse_waveforms["modI"]["data"]
         combined_waveforms["modQ_qrm"]["data"] = pulse_waveforms["modQ"]["data"]
-
         for pulse in pulses_list:
-            pulse_waveforms = generate_waveforms(pulse)
+            pulse_waveforms = generate_single_pulse_waveforms(pulse)
             combined_waveforms["modI_qrm"]["data"] = np.concatenate((combined_waveforms["modI_qrm"]["data"],np.zeros(4), pulse_waveforms["modI"]["data"]))
             combined_waveforms["modQ_qrm"]["data"] = np.concatenate((combined_waveforms["modQ_qrm"]["data"],np.zeros(4), pulse_waveforms["modQ"]["data"]))
 
@@ -301,6 +319,9 @@ class Pulsar_QRM():
         self._single_acq = qrm.get_acquisitions(sequencer)
         if debugging:
             self._plot_acquisitions()
+            with open(".data/results.json", 'w', encoding='utf-8') as file:
+                json.dump(self._single_acq, file, indent=4)
+                file.close()
         i,q = self._demodulate_and_integrate()
         acquisition_results = np.sqrt(i**2+q**2),np.arctan2(q,i),i,q
         self._acquisition_results = acquisition_results
@@ -432,14 +453,19 @@ class Pulsar_QCM():
     def set_waveforms(self, waveforms):
         self._waveforms = waveforms
     def set_waveforms_from_pulses_definition(self, pulses_definition: dict):
-        for name,pulse in pulses_definition.items():
-            pulse_waveforms = generate_waveforms(pulse)
-            combined_waveforms = {
-                "modI_qcm": {"data": [], "index": 0},
-                "modQ_qcm": {"data": [], "index": 1}
-            }
+        pulses_list = list(pulses_definition.values())
+        pulse_waveforms = generate_single_pulse_waveforms(pulses_list.pop(0))
+        combined_waveforms = {
+            "modI_qcm": {"data": [], "index": 0},
+            "modQ_qcm": {"data": [], "index": 1}
+        }
+        combined_waveforms["modI_qcm"]["data"] = pulse_waveforms["modI"]["data"]
+        combined_waveforms["modQ_qcm"]["data"] = pulse_waveforms["modQ"]["data"]
+        for pulse in pulses_list:
+            pulse_waveforms = generate_single_pulse_waveforms(pulse)
             combined_waveforms["modI_qcm"]["data"] = np.concatenate((combined_waveforms["modI_qcm"]["data"],np.zeros(4), pulse_waveforms["modI"]["data"]))
             combined_waveforms["modQ_qcm"]["data"] = np.concatenate((combined_waveforms["modQ_qcm"]["data"],np.zeros(4), pulse_waveforms["modQ"]["data"]))
+
         self._waveforms = combined_waveforms
         if debugging:
             # Plot the result
