@@ -4,13 +4,11 @@ import json
 class TIIq:
 
     def __init__(self):
-        self.qrm = Pulsar_QRM("qrm", '192.168.0.2')
-        self.qcm = Pulsar_QCM("qcm", '192.168.0.3')
-
-        from qibolab.instruments import SGS100A
+        from qibolab.instruments import PulsarQRM, PulsarQCM, SGS100A
+        self.qrm = PulsarQRM("qrm", '192.168.0.2')
+        self.qcm = PulsarQCM("qcm", '192.168.0.3')
         self.LO_qrm = SGS100A("LO_qrm", "192.168.0.7"")
         self.LO_qcm = SGS100A("LO_qcm", "192.168.0.101")
-
         self.software_averages = None
 
     def setup(self, filename):
@@ -20,7 +18,9 @@ class TIIq:
         self.LO_qrm.setup(**settings.get("_LO_QRM_settings"))
         self.LO_qcm.setup(**settings.get("_LO_QCM_settings"))
 
-        self.qrm.setup(self.QRM_settings)
+        gain = settings.get("QRM_settings").get("gain")
+        self.qrm.setup(gain)
+
         self.qcm.setup(self.QCM_settings)
 
     def stop(self):
