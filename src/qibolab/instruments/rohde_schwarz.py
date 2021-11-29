@@ -68,5 +68,5 @@ class SGS100A():
     def close(self):
         self.LO.close()
 
-        def __del__(self):
+    def __del__(self):
         self.LO.close()
