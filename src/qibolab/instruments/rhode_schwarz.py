@@ -21,18 +21,24 @@ class SGS100A(LO_SGS100A.RohdeSchwarz_SGS100A):
         logger.info("Local oscillator connected")
 
     def setup(self, power, frequency):
-        #set dbm power to Local Oscillator
+        self.set_power(power)
+        self.set_frequency(frequency)
+
+    def set_power(self, power):
+        """Set dbm power to local oscillator."""
         self.power(power)
         logger.info(f"Local oscillator power set to {power}.")
+
+    def set_frequency(self, frequency):
         self.frequency(frequency)
         logger.info(f"Local oscillator frequency set to {frequency}.")
 
     def on(self):
         """Start generating microwaves."""
-        self.on()
+        super().on()
         logger.info("Local oscillator on.")
 
     def off(self):
         """Stop generating microwaves."""
-        self.off()
+        super().off()
         logger.info("Local oscillator off.")

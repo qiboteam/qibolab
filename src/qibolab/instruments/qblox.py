@@ -51,14 +51,14 @@ class PulsarQCM(pulsar_qcm):
 
         self.sequencer = sequencer
         if self.sequencer == 1:
-            qcm.sequencer1_sync_en(sync_en)
+            self.sequencer1_sync_en(sync_en)
         else:
-            qcm.sequencer0_sync_en(sync_en)
+            self.sequencer0_sync_en(sync_en)
 
     def setup(self, gain=0.5):
         if self.sequencer == 1:
-            qcm.sequencer1_gain_awg_path0(gain)
-            qcm.sequencer1_gain_awg_path1(gain)
+            self.sequencer1_gain_awg_path0(gain)
+            self.sequencer1_gain_awg_path1(gain)
         else:
-            qcm.sequencer0_gain_awg_path0(gain)
-            qcm.sequencer0_gain_awg_path1(gain)
+            self.sequencer0_gain_awg_path0(gain)
+            self.sequencer0_gain_awg_path1(gain)
