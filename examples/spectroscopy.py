@@ -7,6 +7,8 @@ from quantify_core.measurement.control import Gettable
 
 
 class ROController():
+    # TODO: ``ROController`` implementation
+    # This should be the complicated part as it involves the pulses
 
     # Quantify Gettable Interface Implementation
     label = ['Amplitude', 'Phase','I','Q']
@@ -67,7 +69,7 @@ def run_resonator_spectroscopy():
     mc = MeasurementControl('MC')
     mc.settables(tiiq.LO_qrm.frequency)
     mc.setpoints(scanrange + tiiq.LO_qrm.frequency)
-    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm))) # Implement ROController
+    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm)))
 
     tiiq.LO_qrm.on()
     tiiq.LO_qcm.off()
@@ -106,7 +108,5 @@ def run_resonator_spectroscopy():
     #ax.xlabel("Frequency")
     #ax.ylabel("Amplitude")
     ax.plot(dataset['x0'].values[smooth_dataset.argmax()], smooth_dataset[smooth_dataset.argmax()], 'o', color='C2')
-
     # determine off-resonance amplitude and typical noise
-
     return dataset
