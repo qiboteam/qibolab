@@ -27,11 +27,6 @@
             }
         }
     },
-    "_QCM_init_settings": {
-        "ref_clock": "external",
-        "sequencer": 0,
-        "sync_en": true
-    },
     "_QCM_settings": {
         "gain": 0.5,
         "hardware_avg": 1024,

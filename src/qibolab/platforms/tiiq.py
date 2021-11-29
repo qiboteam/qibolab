@@ -18,10 +18,8 @@ class TIIq:
         self.LO_qrm.setup(**settings.get("_LO_QRM_settings"))
         self.LO_qcm.setup(**settings.get("_LO_QCM_settings"))
 
-        gain = settings.get("QRM_settings").get("gain")
-        self.qrm.setup(gain)
-
-        self.qcm.setup(self.QCM_settings)
+        self.qrm.setup(settings.get("QRM_settings").get("gain"))
+        self.qcm.setup(settings.get("QCM_settings").get("gain"))
 
     def stop(self):
         self.LO_qrm.off()

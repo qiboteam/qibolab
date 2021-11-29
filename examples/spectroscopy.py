@@ -5,6 +5,40 @@ from quantify_core.measurement import MeasurementControl
 from quantify_core.measurement.control import Settable, Gettable
 
 
+class ROController():
+
+    # Quantify Gettable Interface Implementation
+    label = ['Amplitude', 'Phase','I','Q']
+    unit = ['V', 'Radians','V','V']
+    name = ['A', 'Phi','I','Q']
+
+    def __init__(self, qrm, qcm):
+        self._qrm = qrm
+        self._qcm = qcm
+
+    def get(self):
+        qrm = self._qrm
+        qcm = self._qcm
+
+        qrm.setup(qrm._settings)
+        qrm.set_waveforms_from_pulses(qrm._settings['pulses'])
+        qrm.set_program_from_parameters(qrm._settings)
+        qrm.set_acquisitions()
+        qrm.set_weights()
+        qrm.upload_sequence()
+
+        qcm.setup(qcm._settings)
+        qcm.set_waveforms_from_pulses_definition(qcm._settings['pulses'])
+        qcm.set_program_from_parameters(qcm._settings)
+        qcm.set_acquisitions()
+        qcm.set_weights()
+        qcm.upload_sequence()
+
+        qcm.play_sequence()
+        acquisition_results = qrm.play_sequence_and_acquire()
+        return acquisition_results
+
+
 def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step):
     #[.     .     .     .     .     .][...................]0[...................][.     .     .     .     .     .]
     #[-------- lowres_width ---------][-- highres_width --] [-- highres_width --][-------- lowres_width ---------]
@@ -31,12 +65,12 @@ def run_resonator_spectroscopy():
     mc = MeasurementControl('MC')
     mc.settables(tiisq.LO_qrm.frequency)
     mc.setpoints(scanrange + tiisq.LO_qrm.frequency)
-    mc.gettables(Gettable(ROController(tiisq.qrm, tiisq.qcm))) # Implement ROController
+    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm))) # Implement ROController
 
-    tiisq.LO_qrm.on()
-    tiisq.LO_qcm.off()
+    tiiq.LO_qrm.on()
+    tiiq.LO_qcm.off()
 
-    dataset = mc.run('Resonator Spectroscopy Fast', soft_avg = tiisq._settings['software_averages'])
+    dataset = mc.run("Resonator Spectroscopy Fast", soft_avg=tiiq.software_averages)
     # http://xarray.pydata.org/en/stable/getting-started-guide/quick-overview.html
     tiisq.stop()
     tiisq.LO_QRM_settings['frequency'] = dataset['x0'].values[dataset['y0'].argmax().values]
