@@ -29,13 +29,17 @@ class PulsarQRM(pulsar_qrm):
 
         self.debugging = debugging
 
-    def setup(self, gain):
+    def setup(self, gain, hardware_avg, initial_delay, repetition_duration,
+              start_sample, integration_length, sampling_rate, mode):
         if self.sequencer == 1:
             self.sequencer1_gain_awg_path0(gain)
             self.sequencer1_gain_awg_path1(gain)
         else:
             self.sequencer0_gain_awg_path0(gain)
             self.sequencer0_gain_awg_path1(gain)
+        self.hardware_avg = hardware_avg
+        self.initial_delay = initial_delay
+        self.repetition_duration = repetition_duration
 
     def translate(self, pulses):
         waveform = pulses[0].waveform()
@@ -58,7 +62,93 @@ class PulsarQRM(pulsar_qrm):
             ax.plot(combined_waveforms["modQ_qrm"]["data"],'-',color='C1')
             ax.title.set_text('Combined Pulses')
 
-        return waveforms
+        ro_pulse = None # TODO: We can use PulseSequence.readout_pulse
+        for pulse in pulses:
+            if pulse.name == "ro_pulse": # isinstance(pulse, ReadoutPulse)
+                ro_pulse = pulse
+        program = self.generate_program(pulses[0].start, ro_pulse)
+        return waveforms, program
+
+    @staticmethod
+    def calculate_repetition_rate(self, repetition_duration,
+                                  wait_loop_step, duration_base):
+        extra_duration = repetition_duration-duration_base
+        extra_wait = extra_duration % wait_loop_step
+        num_wait_loops = (extra_duration - extra_wait) // wait_loop_step
+        return num_wait_loops, extra_wait
+
+    def generate_program(self, initial_delay, ro_pulse=None):
+        # Prepare sequence program
+        wait_loop_step=1000
+        duration_base=16380 # this is the maximum length of a waveform in number of samples (defined by the device memory)
+
+        num_wait_loops, extra_wait = calculate_repetition_rate(self.repetition_duration, wait_loop_step, duration_base)
+        if ro_pulse is not None:
+            delay_before_readout = ro_pulse.delay_before_readout
+            acquire_instruction = "acquire   0,0,4      # Acquire waveforms over remaining duration of acquisition of input vector of length = 16380 with integration weights 0,0"
+            wait_time = duration_base - initial_delay - delay_before_readout - 4 # pulses['ro_pulse']['start']
+        else:
+            delay_before_readout = 4
+            acquire_instruction = ""
+            wait_time = duration_base - initial_delay - delay_before_readout
+
+        if initial_delay != 0:
+            initial_wait_instruction = f"wait      {initial_delay}"
+        else:
+            initial_wait_instruction = ""
+        program = f"""
+            move    {self.hardware_avg},R0
+            nop
+            wait_sync 4          # Synchronize sequencers over multiple instruments
+        loop:
+            {initial_wait_instruction}
+            play      0,1,{delay_before_readout}
+            {acquire_instruction}
+            wait      {wait_time}
+            move      {num_wait_loops},R1
+            nop
+            repeatloop:
+                wait      {wait_loop_step}
+                loop      R1,@repeatloop
+            wait      {extra_wait}
+            loop    R0,@loop
+            stop
+        """
+        if self.debugging:
+            print(program)
+
+        return program
+
+    def get_acquisitions(self, acquisitions={"single": {"num_bins": 1, "index":0}}):
+        return acquisitions
+
+    def get_weights(self, weights = {}):
+        return weights
+
+    def upload(self, waveforms, program, acquisitions, weights, data_folder):
+        import os
+        # Upload waveforms and program
+        # Reformat waveforms to lists
+        for name, waveform in waveforms.items():
+            if isinstance(waveform["data"], np.ndarray):
+                waveforms[name]["data"] = waveforms[name]["data"].tolist()  # JSON only supports lists
+
+        #Add sequence program and waveforms to single dictionary and write to JSON file
+        filename = f"{data_folder}/qrm_sequence.json"
+        wave_and_prog_dict = {
+            "waveforms": waveforms,
+            "weights": weights,
+            "acquisitions": acquisitions,
+            "program": program
+            }
+        with open(filename, "w", encoding="utf-8") as file:
+            json.dump(wave_and_prog_dict, file, indent=4)
+
+        # Upload json file to the device
+        if self.sequencer == 1:
+            self.sequencer1_waveforms_and_program(os.path.join(os.getcwd(), filename))
+        else:
+            self.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), filename))
 
 
 class PulsarQCM(pulsar_qcm):

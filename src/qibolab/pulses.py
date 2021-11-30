@@ -36,14 +36,17 @@ class TIIPulse:
         offset_q (float): Pulse Q offset (unitless). (amplitude + offset) should be between [0 and 1].
     """
 
-    def __init__(self, name, frequency, amplitude, length, shape, offset_i=0, offset_q=0):
+    def __init__(self, name, start, frequency, amplitude, length, shape, delay_before_readout=0,
+                offset_i=0, offset_q=0):
         self.name = name
+        self.start = start
         self.frequency = frequency
         self.amplitude = amplitude
         self.length = length
         self.shape = shape
         self.offset_i = offset_i
         self.offset_q = offset_q
+        self.delay_before_readout = delay_before_readout
 
     def waveform(self):
         """

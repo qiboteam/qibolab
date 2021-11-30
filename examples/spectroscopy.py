@@ -28,11 +28,10 @@ class ROController():
         qcm = self._qcm
 
         #qrm.setup(qrm._settings) # this has already been done earlier?
-        waveform = qrm.translate(self.qrm_pulses)
-        qrm.set_program_from_parameters(qrm._settings)
-        qrm.set_acquisitions()
-        qrm.set_weights()
-        qrm.upload_sequence()
+        waveforms, program = qrm.translate(self.qrm_pulses)
+        acquisitions = qrm.set_acquisitions()
+        weights = qrm.set_weights()
+        qrm.upload(waveforms, program, acquisitions, weights, "./data")
 
         #qcm.setup(qcm._settings)
         qcm.set_waveforms_from_pulses_definition(qcm._settings['pulses'])
@@ -66,6 +65,7 @@ def run_resonator_spectroscopy():
     tiiq.setup() # TODO: Give settings json directory here
 
     mc = MeasurementControl('MC')
+
     qrm_pulses = [pulses.TIIPulse(
                             name="ro_pulse",
                             frequency=20000000.0,
@@ -105,7 +105,7 @@ def run_resonator_spectroscopy():
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm)))
     tiiq.LO_qrm.on()
     tiiq.LO_qcm.off()
-    dataset = MC.run("Resonator Spectroscopy Precision", soft_avg=tiiq.software_averages)
+    dataset = mc.run("Resonator Spectroscopy Precision", soft_avg=tiiq.software_averages)
     tiiq.stop()
 
     # TODO: Add ``savgol_filter`` method
