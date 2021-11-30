@@ -1,50 +1,20 @@
-from pulsar_qcm.pulsar_qcm import pulsar_qcm
-from pulsar_qrm.pulsar_qrm import pulsar_qrm
+class GenericPulsar:
 
-
-class PulsarQRM(pulsar_qrm):
-    """Class for interfacing with Pulsar QRM."""
-
-    def __init__(self, label, ip,
-                 ref_clock="external", sequencer=0, sync_en=True,
-                 hardware_avg_en=True, acq_trigger_mode="sequencer",
-                 debugging=False):
-        # Instantiate base object from qblox library and connect to it
-        super().__init__(label, ip)
-        self.name = "qrm"
-
-        # Reset and configure
-        self.reset()
-        self.reference_source(ref_clock)
-        self.scope_acq_sequencer_select(sequencer)
-        self.scope_acq_avg_mode_en_path0(hardware_avg_en)
-        self.scope_acq_avg_mode_en_path1(hardware_avg_en)
-        self.scope_acq_trigger_mode_path0(acq_trigger_mode)
-        self.scope_acq_trigger_mode_path1(acq_trigger_mode)
-
+    def __init__(self, sequencer=0, debugging=False):
+        self.name = None
         self.sequencer = sequencer
-        if self.sequencer == 1:
-            self.sequencer1_sync_en(sync_en)
-        else:
-            self.sequencer0_sync_en(sync_en)
-
         self.debugging = debugging
 
-    def setup(self, gain, hardware_avg, initial_delay, repetition_duration,
-              start_sample, integration_length, sampling_rate, mode):
+    def setup(self, gain, hardware_avg, initial_delay, repetition_duration):
         if self.sequencer == 1:
-            self.sequencer1_gain_awg_path0(gain)
-            self.sequencer1_gain_awg_path1(gain)
+            self.device.sequencer1_gain_awg_path0(gain)
+            self.device.sequencer1_gain_awg_path1(gain)
         else:
             self.sequencer0_gain_awg_path0(gain)
             self.sequencer0_gain_awg_path1(gain)
         self.hardware_avg = hardware_avg
         self.initial_delay = initial_delay
         self.repetition_duration = repetition_duration
-        self.start_sample = start_sample
-        self.integration_length = integration_length
-        self.sampling_rate = sampling_rate
-        self.mode = mode
         self.acquisitions = {"single": {"num_bins": 1, "index":0}}
         self.weights = {}
 
@@ -182,21 +152,58 @@ class PulsarQRM(pulsar_qrm):
         else:
             self.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), filename))
 
+    def play_sequence(self):
+        # arm sequencer and start playing sequence
+        self.device.arm_sequencer()
+        self.device.start_sequencer()
+        if self.debugging:
+            print(self.device.get_sequencer_state(self.sequencer))
+
+
+class PulsarQRM(GenericPulsar):
+    """Class for interfacing with Pulsar QRM."""
+
+    def __init__(self, label, ip,
+                 ref_clock="external", sequencer=0, sync_en=True,
+                 hardware_avg_en=True, acq_trigger_mode="sequencer",
+                 debugging=False):
+        from pulsar_qrm.pulsar_qrm import pulsar_qrm
+        super().__init__(sequencer, debugging)
+        # Instantiate base object from qblox library and connect to it
+        self.device = pulsar_qrm(label, ip)
+        self.name = "qrm"
+
+        # Reset and configure
+        self.device.reset()
+        self.device.reference_source(ref_clock)
+        self.device.scope_acq_sequencer_select(sequencer)
+        self.device.scope_acq_avg_mode_en_path0(hardware_avg_en)
+        self.device.scope_acq_avg_mode_en_path1(hardware_avg_en)
+        self.device.scope_acq_trigger_mode_path0(acq_trigger_mode)
+        self.device.scope_acq_trigger_mode_path1(acq_trigger_mode)
+        # sync sequencer
+        getattr(self.device, f"sequencer{sequencer}_sync_en")(sync_en)
+
+    def setup(self, gain, hardware_avg, initial_delay, repetition_duration,
+              start_sample, integration_length, sampling_rate, mode):
+        super().setup(gain, hardware_avg, initial_delay, repetition_duration)
+        self.start_sample = start_sample
+        self.integration_length = integration_length
+        self.sampling_rate = sampling_rate
+        self.mode = mode
+
     def play_sequence_and_acquire(self, ro_pulse):
         #arm sequencer and start playing sequence
-        self.arm_sequencer()
-        self.start_sequencer()
-        if self.debugging:
-            print(self.get_sequencer_state(self.sequencer))
+        super().play_sequence()
         #start acquisition of data
         #Wait for the sequencer to stop with a timeout period of one minute.
-        self.get_sequencer_state(0, 1)
+        self.device.get_sequencer_state(0, 1)
         #Wait for the acquisition to finish with a timeout period of one second.
-        self.get_acquisition_state(self.sequencer, 1)
+        self.device.get_acquisition_state(self.sequencer, 1)
         #Move acquisition data from temporary memory to acquisition list.
-        self.store_scope_acquisition(self.sequencer, "single")
+        self.device.store_scope_acquisition(self.sequencer, "single")
         #Get acquisition list from instrument.
-        single_acq = self.get_acquisitions(self.sequencer)
+        single_acq = self.device.get_acquisitions(self.sequencer)
         if self.debugging:
             self._plot_acquisitions(single_acq)
             with open(".data/results.json", 'w', encoding='utf-8') as file:
@@ -243,52 +250,20 @@ class PulsarQRM(pulsar_qrm):
             raise NotImplementedError('Optimal Demodulation Mode not coded yet.')
         else:
             raise NotImplementedError('Demodulation mode not understood.')
-
         return integrated_signal
 
 
-class PulsarQCM(pulsar_qcm):
+class PulsarQCM(GenericPulsar):
 
     def __init__(self, label, ip,
                  ref_clock="external", sequencer=0, sync_en=True,
                  debugging=False):
+        from pulsar_qcm.pulsar_qcm import pulsar_qcm
+        super().__init__(sequencer, debugging)
         # Instantiate base object from qblox library and connect to it
-        super().__init__(label, ip)
-
+        self.device = pulsar_qcm(label, ip)
+        self.name = "qcm"
         # Reset and configure
-        self.reset()
-        self.reference_source(ref_clock)
-
-        self.sequencer = sequencer
-        if self.sequencer == 1:
-            self.sequencer1_sync_en(sync_en)
-        else:
-            self.sequencer0_sync_en(sync_en)
-
-        self.debugging = debugging
-
-    def setup(self, gain, hardware_avg, initial_delay, repetition_duration):
-        if self.sequencer == 1:
-            self.sequencer1_gain_awg_path0(gain)
-            self.sequencer1_gain_awg_path1(gain)
-        else:
-            self.sequencer0_gain_awg_path0(gain)
-            self.sequencer0_gain_awg_path1(gain)
-        self.hardware_avg = hardware_avg
-        self.initial_delay = initial_delay
-        self.repetition_duration = repetition_duration
-        self.acquisitions = {"single": {"num_bins": 1, "index":0}}
-        self.weights = {}
-
-    def translate(self, pulses):
-        return PulsarQRM.translate(self, pulses)
-
-    def upload(self, waveforms, program, data_folder):
-        PulsarQRM.upload(self, waveforms, program, data_folder)
-
-    def play_sequence(self):
-        # arm sequencer and start playing sequence
-        self.arm_sequencer()
-        self.start_sequencer()
-        if self.debugging:
-            print(self.get_sequencer_state(self.sequencer))
+        self.device.reset()
+        self.device.reference_source(ref_clock)
+        getattr(self.device, f"sequencer{sequencer}_sync_en")(sync_en)

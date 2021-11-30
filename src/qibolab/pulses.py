@@ -71,6 +71,7 @@ class PulseSequence(list):
     # TODO: Move this to a different file (temporarily here as placeholder)
 
     def __init__(self):
+        super().__init__()
         self.readout_pulse = None
 
     def add(self, pulse):
