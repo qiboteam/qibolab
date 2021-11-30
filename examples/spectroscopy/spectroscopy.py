@@ -77,20 +77,20 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
 
     mc = MeasurementControl('MC')
 
-    qrm_pulses = [pulses.TIIPulse(
-                            name="ro_pulse",
-                            frequency=20000000.0,
-                            amplitude=0.5,
-                            start=70,
-                            length=3000,
-                            delay_before_readout=4,
-                            shape="Block")]
-    qcm_pulses = [pulses.TIIPulse(
-                            name="qc_pulse",
-                            frequency=200000000.0,
-                            amplitude=0.3,
-                            length=60,
-                            shape="Gaussian")]
+    ro_pulse = pulses.TIIPulse(name="ro_pulse",
+                               frequency=20000000.0,
+                               amplitude=0.5,
+                               start=70,
+                               length=3000,
+                               delay_before_readout=4,
+                               shape="Block")
+    qc_pulse = pulses.TIIPulse(name="qc_pulse",
+                               frequency=200000000.0,
+                               amplitude=0.3,
+                               length=60,
+                               shape="Gaussian")
+    qrm_pulses = [ro_pulse]
+    qcm_pulses = [qc_pulse]
 
     # Fast Sweep
     tiiq.software_averages = 1
@@ -126,7 +126,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     tiiq.LO_qrm.set_frequency(dataset['x0'].values[smooth_dataset.argmax()])
 
     # TODO: Remove ``_QRM_settings`` from here given that we will use a different pulse mechanism
-    resonator_freq = dataset['x0'].values[smooth_dataset.argmax()] + tiiq._QRM_settings['pulses']['ro_pulse']['freq_if']
+    resonator_freq = dataset['x0'].values[smooth_dataset.argmax()] + ro_pulse.frequency
     print(f"Resonator Frequency = {resonator_freq}")
     print(len(dataset['y0'].values))
     print(len(smooth_dataset))
