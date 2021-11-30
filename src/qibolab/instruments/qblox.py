@@ -47,8 +47,36 @@ class PulsarQRM(pulsar_qrm):
         self.acquisitions = {"single": {"num_bins": 1, "index":0}}
         self.weights = {}
 
+    def _translate_single_pulse(self, pulse):
+        # Use the envelope to modulate a sinusoldal signal of frequency freq_if
+        envelope_i, envelope_q = pulse.envelopes()
+        time = np.arange(pulse.length) * 1e-9
+        # FIXME: There should be a simpler way to construct this array
+        cosalpha = np.cos(2 * np.pi * pulse.frequency * time)
+        sinalpha = np.sin(2 * np.pi * pulse.frequency * time)
+        mod_matrix = np.array([[cosalpha,sinalpha], [-sinalpha,cosalpha]])
+        result = []
+        for it, t, ii, qq in zip(np.arange(pulse.length), time, envelope_i, envelope_q):
+            result.append(mod_matrix[:, :, it] @ np.array([ii, qq]))
+        mod_signals = np.array(result)
+
+        # add offsets to compensate mixer leakage
+        waveform = {
+                "modI": {"data": mod_signals[:, 0] + pulse.offset_i, "index": 0},
+                "modQ": {"data": mod_signals[:, 1] + pulse.offset_q, "index": 1}
+            }
+
+        if self.debugging:
+            # Plot the result
+            fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
+            ax.plot(waveform["modI"]["data"],'-',color='C0')
+            ax.plot(waveform["modQ"]["data"],'-',color='C1')
+            ax.title.set_text('pulse')
+
+        return waveform
+
     def translate(self, pulses):
-        waveform = pulses[0].waveform()
+        waveform = self._translate_single_pulse(pulses[0])
         waveforms = {
             "modI_qrm": {"data": [], "index": 0},
             "modQ_qrm": {"data": [], "index": 1}
@@ -57,7 +85,7 @@ class PulsarQRM(pulsar_qrm):
         waveforms["modQ_qrm"]["data"] = waveform.get("modQ").get("data")
 
         for pulse in pulses[1:]:
-            waveform = pulse.waveform()
+            waveform = self._translate_single_pulse(pulse)
             waveforms["modI_qrm"]["data"] = np.concatenate((waveforms["modI_qrm"]["data"], np.zeros(4), waveform["modI"]["data"]))
             waveforms["modQ_qrm"]["data"] = np.concatenate((waveforms["modQ_qrm"]["data"], np.zeros(4), waveform["modQ"]["data"]))
 

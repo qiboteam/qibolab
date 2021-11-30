@@ -1,6 +1,3 @@
-import json
-
-
 class TIIq:
 
     def __init__(self):
@@ -11,13 +8,9 @@ class TIIq:
         self.LO_qcm = SGS100A("LO_qcm", "192.168.0.101")
         self.software_averages = None
 
-    def setup(self, filename):
-        with open(filename, "r") as file:
-            settings = json.load(file)
-
+    def setup(self, settings):
         self.LO_qrm.setup(**settings.get("_LO_QRM_settings"))
         self.LO_qcm.setup(**settings.get("_LO_QCM_settings"))
-
         self.qrm.setup(**settings.get("QRM_settings"))
         self.qcm.setup(**settings.get("QCM_settings"))
 

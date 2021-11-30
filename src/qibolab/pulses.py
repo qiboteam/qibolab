@@ -48,7 +48,7 @@ class TIIPulse:
         self.offset_q = offset_q
         self.delay_before_readout = delay_before_readout
 
-    def waveform(self):
+    def envelopes(self):
         """
         Generates the I & Q waveforms to be sent to the sequencers based on the
         key parameters of the pulse (length, amplitude, shape, etc.)
@@ -65,31 +65,7 @@ class TIIPulse:
         else:
             raise_error(NotImplementedError, f"Unknown pulse shape {self.shape}.")
 
-        # Use the envelope to modulate a sinusoldal signal of frequency freq_if
-        time = np.arange(self.length) * 1e-9
-        # FIXME: There should be a simpler way to construct this array
-        cosalpha = np.cos(2 * np.pi * self.freq_if * time)
-        sinalpha = np.sin(2 * np.pi * self.freq_if * time)
-        mod_matrix = np.array([[cosalpha,sinalpha], [-sinalpha,cosalpha]])
-        result = []
-        for it, t, ii, qq in zip(np.arange(length), time, envelope_i, envelope_q):
-            result.append(mod_matrix[:, :, it] @ np.array([ii, qq]))
-        mod_signals = np.array(result)
-
-        # add offsets to compensate mixer leakage
-        waveforms = {
-                "modI": {"data": mod_signals[:, 0] + offset_i, "index": 0},
-                "modQ": {"data": mod_signals[:, 1] + offset_q, "index": 1}
-            }
-
-        if debugging:
-            # Plot the result
-            fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-            ax.plot(waveforms["modI"]["data"],'-',color='C0')
-            ax.plot(waveforms["modQ"]["data"],'-',color='C1')
-            ax.title.set_text('pulse')
-
-        return waveforms
+        return envelope_i, envelope_q
 
 
 class BasicPulse(Pulse):
