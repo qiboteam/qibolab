@@ -54,8 +54,8 @@ class TIIPulse:
         """
         # Generate pulse envelope
         if self.shape == 'Block':
-            envelope_i = amplitude*np.ones(int(length))
-            envelope_q = amplitude*np.zeros(int(length))
+            envelope_i = self.amplitude * np.ones(int(self.length))
+            envelope_q = self.amplitude * np.zeros(int(self.length))
         elif self.shape == 'Gaussian':
             from scipy.signal import gaussian
             std = self.length / 5
