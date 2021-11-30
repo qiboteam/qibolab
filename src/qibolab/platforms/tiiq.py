@@ -4,7 +4,7 @@ class TIIq:
         from qibolab.instruments import PulsarQRM, PulsarQCM, SGS100A
         self.qrm = PulsarQRM("qrm", '192.168.0.2')
         self.qcm = PulsarQCM("qcm", '192.168.0.3')
-        self.LO_qrm = SGS100A("LO_qrm", "192.168.0.7"")
+        self.LO_qrm = SGS100A("LO_qrm", "192.168.0.7")
         self.LO_qcm = SGS100A("LO_qcm", "192.168.0.101")
         self.software_averages = None
 

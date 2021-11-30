@@ -1,12 +1,21 @@
+import argparse
 import json
 import numpy as np
 from qibolab import pulses
 from qibolab.platforms import TIIq
 
-
 # TODO: Have a look in the documentation of ``MeasurementControl``
 from quantify_core.measurement import MeasurementControl
 from quantify_core.measurement.control import Gettable
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--lowres-width", default=30e6, type=float)
+parser.add_argument("--lowres-step", default=1e6, type=float)
+parser.add_argument("--highres-width", default=1e6, type=float)
+parser.add_argument("--highres-step", default=0.1e6, type=float)
+parser.add_argument("--precision-width", default=0.5e6, type=float)
+parser.add_argument("--precision-step", default=0.02e6, type=float)
 
 
 class ROController():
@@ -57,7 +66,9 @@ def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, high
     return scanrange
 
 
-def run_resonator_spectroscopy():
+def run_resonator_spectroscopy(lowres_width, lowres_step,
+                               highres_width, highres_step,
+                               precision_width, precision_step):
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
 
@@ -84,7 +95,7 @@ def run_resonator_spectroscopy():
     # Fast Sweep
     tiiq.software_averages = 1
     # TODO: Make the following arguments of the main function and add argument parser
-    scanrange = variable_resolution_scanrange(lowres_width= 30e6, lowres_step= 1e6, highres_width= 1e6, highres_step= 0.1e6)
+    scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
     mc.settables(tiiq.LO_qrm.frequency)
     mc.setpoints(scanrange + tiiq.LO_qrm.frequency)
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_pulses, qcm_pulses)))
@@ -99,7 +110,7 @@ def run_resonator_spectroscopy():
 
     # Precision Sweep
     tiiq.software_averages = 1 # 3
-    scanrange = np.arange(-0.5e6, 0.5e6, 0.02e6)
+    scanrange = np.arange(-precision_width, precision_width, precision_step)
     mc.settables(tiiq.LO_qrm.frequency)
     mc.setpoints(scanrange + tiiq.LO_qrm.frequency)
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm)))
@@ -129,3 +140,8 @@ def run_resonator_spectroscopy():
     ax.plot(dataset['x0'].values[smooth_dataset.argmax()], smooth_dataset[smooth_dataset.argmax()], 'o', color='C2')
     # determine off-resonance amplitude and typical noise
     return dataset
+
+
+if __name__ == "__main__":
+    args = vars(parser.parse_args())
+    run_resonator_spectroscopy(**args)
