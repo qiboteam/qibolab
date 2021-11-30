@@ -40,6 +40,12 @@ class PulsarQRM(pulsar_qrm):
         self.hardware_avg = hardware_avg
         self.initial_delay = initial_delay
         self.repetition_duration = repetition_duration
+        self.start_sample = start_sample
+        self.integration_length = integration_length
+        self.sampling_rate = sampling_rate
+        self.mode = mode
+        self.acquisitions = {"single": {"num_bins": 1, "index":0}}
+        self.weights = {}
 
     def translate(self, pulses):
         waveform = pulses[0].waveform()
@@ -67,7 +73,7 @@ class PulsarQRM(pulsar_qrm):
             if pulse.name == "ro_pulse": # isinstance(pulse, ReadoutPulse)
                 ro_pulse = pulse
         program = self.generate_program(pulses[0].start, ro_pulse)
-        return waveforms, program
+        return waveforms, program, ro_pulse
 
     @staticmethod
     def calculate_repetition_rate(self, repetition_duration,
@@ -119,13 +125,7 @@ class PulsarQRM(pulsar_qrm):
 
         return program
 
-    def get_acquisitions(self, acquisitions={"single": {"num_bins": 1, "index":0}}):
-        return acquisitions
-
-    def get_weights(self, weights = {}):
-        return weights
-
-    def upload(self, waveforms, program, acquisitions, weights, data_folder):
+    def upload(self, waveforms, program, data_folder):
         import os
         # Upload waveforms and program
         # Reformat waveforms to lists
@@ -135,14 +135,14 @@ class PulsarQRM(pulsar_qrm):
 
         #Add sequence program and waveforms to single dictionary and write to JSON file
         filename = f"{data_folder}/qrm_sequence.json"
-        wave_and_prog_dict = {
+        program_dict = {
             "waveforms": waveforms,
-            "weights": weights,
-            "acquisitions": acquisitions,
+            "weights": self.weights,
+            "acquisitions": self.acquisitions,
             "program": program
             }
         with open(filename, "w", encoding="utf-8") as file:
-            json.dump(wave_and_prog_dict, file, indent=4)
+            json.dump(program_dict, file, indent=4)
 
         # Upload json file to the device
         if self.sequencer == 1:
@@ -150,11 +150,76 @@ class PulsarQRM(pulsar_qrm):
         else:
             self.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), filename))
 
+    def play_sequence_and_acquire(self, ro_pulse):
+        #arm sequencer and start playing sequence
+        self.arm_sequencer()
+        self.start_sequencer()
+        if self.debugging:
+            print(self.get_sequencer_state(self.sequencer))
+        #start acquisition of data
+        #Wait for the sequencer to stop with a timeout period of one minute.
+        self.get_sequencer_state(0, 1)
+        #Wait for the acquisition to finish with a timeout period of one second.
+        self.get_acquisition_state(self.sequencer, 1)
+        #Move acquisition data from temporary memory to acquisition list.
+        self.store_scope_acquisition(self.sequencer, "single")
+        #Get acquisition list from instrument.
+        single_acq = self.get_acquisitions(self.sequencer)
+        if self.debugging:
+            self._plot_acquisitions(single_acq)
+            with open(".data/results.json", 'w', encoding='utf-8') as file:
+                json.dump(single_acq, file, indent=4)
+        i, q = self._demodulate_and_integrate(single_acq, ro_pulse)
+        acquisition_results = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
+        return acquisition_results
+
+    @staticmethod
+    def _plot_acquisitions(single_acq):
+        #Plot acquired signal on both inputs I and Q
+        fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
+        ax.plot(single_acq["single"]["acquisition"]["scope"]["path0"]["data"][120:6500])
+        ax.plot(single_acq["single"]["acquisition"]["scope"]["path1"]["data"][120:6500])
+        ax.set_xlabel('Time (ns)')
+        ax.set_ylabel('Relative amplitude')
+        plt.show()
+
+    def _demodulate_and_integrate(self, single_acq, ro_pulse):
+        #DOWN Conversion
+        norm_factor = 1. / (self.integration_length)
+        n0 = self.start_sample
+        n1 = self.start_sample + self.integration_length
+        input_vec_I = np.array(single_acq["single"]["acquisition"]["scope"]["path0"]["data"][n0: n1])
+        input_vec_Q = np.array(single_acq["single"]["acquisition"]["scope"]["path1"]["data"][n0: n1])
+        input_vec_I -= np.mean(input_vec_I)
+        input_vec_Q -= np.mean(input_vec_Q)
+
+        if self.mode == 'ssb':
+            modulated_i = input_vec_I
+            modulated_q = input_vec_Q
+            time = np.arange(modulated_i.shape[0])*1e-9
+            cosalpha = np.cos(2 * np.pi * ro_pulse.frequency * time)
+            sinalpha = np.sin(2 * np.pi * ro_pulse.frequency * time)
+            demod_matrix = 2 * np.array([[cosalpha, -sinalpha], [sinalpha, cosalpha]])
+            result = []
+            for it, t, ii, qq in zip(np.arange(modulated_i.shape[0]), time,modulated_i, modulated_q):
+                result.append(demod_matrix[:,:,it] @ np.array([ii, qq]))
+            demodulated_signal = np.array(result)
+            integrated_signal = norm_factor*np.sum(demodulated_signal,axis=0)
+            if self.debugging:
+                print(integrated_signal,demodulated_signal[:,0].max()-demodulated_signal[:,0].min(),demodulated_signal[:,1].max()-demodulated_signal[:,1].min())
+        elif self.mode == 'optimal':
+            raise NotImplementedError('Optimal Demodulation Mode not coded yet.')
+        else:
+            raise NotImplementedError('Demodulation mode not understood.')
+
+        return integrated_signal
+
 
 class PulsarQCM(pulsar_qcm):
 
     def __init__(self, label, ip,
-                 ref_clock="external", sequencer=0, sync_en=True):
+                 ref_clock="external", sequencer=0, sync_en=True,
+                 debugging=False):
         # Instantiate base object from qblox library and connect to it
         super().__init__(label, ip)
 
@@ -168,10 +233,54 @@ class PulsarQCM(pulsar_qcm):
         else:
             self.sequencer0_sync_en(sync_en)
 
-    def setup(self, gain=0.5):
+        self.debugging = debugging
+
+    def setup(self, gain, hardware_avg, initial_delay, repetition_duration):
         if self.sequencer == 1:
             self.sequencer1_gain_awg_path0(gain)
             self.sequencer1_gain_awg_path1(gain)
         else:
             self.sequencer0_gain_awg_path0(gain)
             self.sequencer0_gain_awg_path1(gain)
+        self.hardware_avg = hardware_avg
+        self.initial_delay = initial_delay
+        self.repetition_duration = repetition_duration
+        self.acquisitions = {"single": {"num_bins": 1, "index":0}}
+        self.weights = {}
+
+    def translate(self, pulses):
+        waveform = pulses[0].waveform()
+        waveforms = {
+            "modI_qcm": {"data": [], "index": 0},
+            "modQ_qcm": {"data": [], "index": 1}
+        }
+        waveforms["modI_qcm"]["data"] = waveform["modI"]["data"]
+        waveforms["modQ_qcm"]["data"] = waveform["modQ"]["data"]
+        for pulse in pulses[1:]:
+            waveform = pulse.waveform()
+            waveforms["modI_qcm"]["data"] = np.concatenate((waveforms["modI_qcm"]["data"], np.zeros(4), waveform["modI"]["data"]))
+            waveforms["modQ_qcm"]["data"] = np.concatenate((waveforms["modQ_qcm"]["data"], np.zeros(4), waveform["modQ"]["data"]))
+
+        if self.debugging:
+            # Plot the result
+            fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
+            ax.plot(combined_waveforms["modI_qcm"]["data"],'-',color='C0')
+            ax.plot(combined_waveforms["modQ_qcm"]["data"],'-',color='C1')
+            ax.title.set_text('Combined Pulses')
+
+        ro_pulse = None # TODO: We can use PulseSequence.readout_pulse
+        for pulse in pulses:
+            if pulse.name == "ro_pulse": # isinstance(pulse, ReadoutPulse)
+                ro_pulse = pulse
+        program = PulsarQRM.generate_program(self, pulses[0].start, ro_pulse)
+        return waveforms, program
+
+    def upload(self, waveforms, program, data_folder):
+        PulsarQRM.upload(self, waveforms, program, data_folder)
+
+    def play_sequence(self):
+        # arm sequencer and start playing sequence
+        self.arm_sequencer()
+        self.start_sequencer()
+        if self.debugging:
+            print(self.get_sequencer_state(self.sequencer))

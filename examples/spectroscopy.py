@@ -28,20 +28,16 @@ class ROController():
         qcm = self._qcm
 
         #qrm.setup(qrm._settings) # this has already been done earlier?
-        waveforms, program = qrm.translate(self.qrm_pulses)
-        acquisitions = qrm.set_acquisitions()
-        weights = qrm.set_weights()
-        qrm.upload(waveforms, program, acquisitions, weights, "./data")
+        waveforms, program, ro_pulse = qrm.translate(self.qrm_pulses)
+        qrm.upload(waveforms, program, "./data")
 
         #qcm.setup(qcm._settings)
-        qcm.set_waveforms_from_pulses_definition(qcm._settings['pulses'])
-        qcm.set_program_from_parameters(qcm._settings)
-        qcm.set_acquisitions()
-        qcm.set_weights()
-        qcm.upload_sequence()
+        waveforms, program = qcm.translate(self.qcm_pulses)
+        qcm.upload(waveforms, program, "./data")
 
         qcm.play_sequence()
-        acquisition_results = qrm.play_sequence_and_acquire()
+        # TODO: Find a better way to pass the frequency of readout pulse here
+        acquisition_results = qrm.play_sequence_and_acquire(ro_pulse)
         return acquisition_results
 
 
