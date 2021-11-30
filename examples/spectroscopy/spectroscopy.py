@@ -27,27 +27,24 @@ class ROController():
     unit = ['V', 'Radians','V','V']
     name = ['A', 'Phi','I','Q']
 
-    def __init__(self, qrm, qcm, qrm_pulses, qcm_pulses):
-        self._qrm = qrm
-        self._qcm = qcm
-        self.qrm_pulses = qrm_pulses
-        self.qcm_pulses = qcm_pulses
+    def __init__(self, qrm, qcm, qrm_sequence, qcm_sequence):
+        self.qrm = qrm
+        self.qcm = qcm
+        self.qrm_sequence = qrm_sequence
+        self.qcm_sequence = qcm_sequence
 
     def get(self):
-        qrm = self._qrm
-        qcm = self._qcm
-
         #qrm.setup(qrm._settings) # this has already been done earlier?
-        waveforms, program, ro_pulse = qrm.translate(self.qrm_pulses)
-        qrm.upload(waveforms, program, "./data")
+        waveforms, program = qrm.translate(self.qrm_sequence)
+        self.qrm.upload(waveforms, program, "./data")
 
         #qcm.setup(qcm._settings)
-        waveforms, program = qcm.translate(self.qcm_pulses)
-        qcm.upload(waveforms, program, "./data")
+        waveforms, program = qcm.translate(self.qcm_sequence)
+        self.qcm.upload(waveforms, program, "./data")
 
-        qcm.play_sequence()
+        self.qcm.play_sequence()
         # TODO: Find a better way to pass the frequency of readout pulse here
-        acquisition_results = qrm.play_sequence_and_acquire(ro_pulse)
+        acquisition_results = self.qrm.play_sequence_and_acquire(self.qrm_sequence.readout_pulse)
         return acquisition_results
 
 
@@ -75,30 +72,31 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     tiiq = TIIq()
     tiiq.setup(settings) # TODO: Give settings json directory here
 
-    mc = MeasurementControl('MC')
-
-    ro_pulse = pulses.TIIPulse(name="ro_pulse",
-                               frequency=20000000.0,
-                               amplitude=0.5,
-                               start=70,
-                               length=3000,
-                               delay_before_readout=4,
-                               shape="Block")
+    ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
+                                      frequency=20000000.0,
+                                      amplitude=0.5,
+                                      start=70,
+                                      length=3000,
+                                      delay_before_readout=4,
+                                      shape="Block")
     qc_pulse = pulses.TIIPulse(name="qc_pulse",
                                frequency=200000000.0,
                                amplitude=0.3,
                                length=60,
                                shape="Gaussian")
-    qrm_pulses = [ro_pulse]
-    qcm_pulses = [qc_pulse]
+    qrm_sequence = pulses.PulseSequence()
+    qrm_sequence.add(ro_pulse)
+    qcm_sequence = pulses.PulseSequence()
+    qcm_sequence.add(qc_pulse)
 
+    mc = MeasurementControl('MC')
     # Fast Sweep
     tiiq.software_averages = 1
     # TODO: Make the following arguments of the main function and add argument parser
     scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
     mc.settables(tiiq.LO_qrm.frequency)
     mc.setpoints(scanrange + tiiq.LO_qrm.frequency)
-    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_pulses, qcm_pulses)))
+    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
 
     tiiq.LO_qrm.on()
     tiiq.LO_qcm.off()

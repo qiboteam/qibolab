@@ -11,6 +11,7 @@ class PulsarQRM(pulsar_qrm):
                  debugging=False):
         # Instantiate base object from qblox library and connect to it
         super().__init__(label, ip)
+        self.name = "qrm"
 
         # Reset and configure
         self.reset()
@@ -75,33 +76,36 @@ class PulsarQRM(pulsar_qrm):
 
         return waveform
 
-    def translate(self, pulses):
+    def translate(self, sequence):
+        pulses = list(sequence)
+        if sequence.readout_pulse is not None:
+            pulses.append(sequence.readout_pulse)
+        if not pulses:
+            raise NotImplementedError("Cannot translate empty sequence.")
+
+        name = self.name
         waveform = self._translate_single_pulse(pulses[0])
         waveforms = {
-            "modI_qrm": {"data": [], "index": 0},
-            "modQ_qrm": {"data": [], "index": 1}
+            f"modI_{name}": {"data": [], "index": 0},
+            f"modQ_{name}": {"data": [], "index": 1}
         }
-        waveforms["modI_qrm"]["data"] = waveform.get("modI").get("data")
-        waveforms["modQ_qrm"]["data"] = waveform.get("modQ").get("data")
+        waveforms[f"modI_{name}"]["data"] = waveform.get("modI").get("data")
+        waveforms[f"modQ_{name}"]["data"] = waveform.get("modQ").get("data")
 
-        for pulse in pulses[1:]:
+        for pulse in sequence[1:]:
             waveform = self._translate_single_pulse(pulse)
-            waveforms["modI_qrm"]["data"] = np.concatenate((waveforms["modI_qrm"]["data"], np.zeros(4), waveform["modI"]["data"]))
-            waveforms["modQ_qrm"]["data"] = np.concatenate((waveforms["modQ_qrm"]["data"], np.zeros(4), waveform["modQ"]["data"]))
+            waveforms[f"modI_{name}"]["data"] = np.concatenate((waveforms[f"modI_{name}"]["data"], np.zeros(4), waveform["modI"]["data"]))
+            waveforms[f"modQ_{name}"]["data"] = np.concatenate((waveforms[f"modQ_{name}"]["data"], np.zeros(4), waveform["modQ"]["data"]))
 
         if self.debugging:
             # Plot the result
             fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-            ax.plot(combined_waveforms["modI_qrm"]["data"],'-',color='C0')
-            ax.plot(combined_waveforms["modQ_qrm"]["data"],'-',color='C1')
+            ax.plot(combined_waveforms[f"modI_{name}"]["data"], '-', color='C0')
+            ax.plot(combined_waveforms[f"modQ_{name}"]["data"], '-', color='C1')
             ax.title.set_text('Combined Pulses')
 
-        ro_pulse = None # TODO: We can use PulseSequence.readout_pulse
-        for pulse in pulses:
-            if pulse.name == "ro_pulse": # isinstance(pulse, ReadoutPulse)
-                ro_pulse = pulse
-        program = self.generate_program(pulses[0].start, ro_pulse)
-        return waveforms, program, ro_pulse
+        program = self.generate_program(sequence.start, sequence.readout_pulse)
+        return waveforms, program
 
     @staticmethod
     def calculate_repetition_rate(self, repetition_duration,
@@ -277,31 +281,7 @@ class PulsarQCM(pulsar_qcm):
         self.weights = {}
 
     def translate(self, pulses):
-        waveform = pulses[0].waveform()
-        waveforms = {
-            "modI_qcm": {"data": [], "index": 0},
-            "modQ_qcm": {"data": [], "index": 1}
-        }
-        waveforms["modI_qcm"]["data"] = waveform["modI"]["data"]
-        waveforms["modQ_qcm"]["data"] = waveform["modQ"]["data"]
-        for pulse in pulses[1:]:
-            waveform = pulse.waveform()
-            waveforms["modI_qcm"]["data"] = np.concatenate((waveforms["modI_qcm"]["data"], np.zeros(4), waveform["modI"]["data"]))
-            waveforms["modQ_qcm"]["data"] = np.concatenate((waveforms["modQ_qcm"]["data"], np.zeros(4), waveform["modQ"]["data"]))
-
-        if self.debugging:
-            # Plot the result
-            fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-            ax.plot(combined_waveforms["modI_qcm"]["data"],'-',color='C0')
-            ax.plot(combined_waveforms["modQ_qcm"]["data"],'-',color='C1')
-            ax.title.set_text('Combined Pulses')
-
-        ro_pulse = None # TODO: We can use PulseSequence.readout_pulse
-        for pulse in pulses:
-            if pulse.name == "ro_pulse": # isinstance(pulse, ReadoutPulse)
-                ro_pulse = pulse
-        program = PulsarQRM.generate_program(self, pulses[0].start, ro_pulse)
-        return waveforms, program
+        return PulsarQRM.translate(self, pulses)
 
     def upload(self, waveforms, program, data_folder):
         PulsarQRM.upload(self, waveforms, program, data_folder)
