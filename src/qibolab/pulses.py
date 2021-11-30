@@ -23,6 +23,72 @@ class Pulse(ABC):
         return self.serial()
 
 
+class TIIPulse:
+    """Abstraction for pulses used in TIIq experiments (to be merged with existing pulses).
+
+    Args:
+        name (str): Name of the pulse.
+        frequency (float): Pulse Intermediate Frequency in Hz [10e6 to 300e6].
+        amplitude (float): Pulse digital amplitude (unitless) [0 to 1].
+        length (float): pulse duration in ns.
+        shape (str): Pulse shape ['Block', 'Gaussian'].
+        offset_i (float): Pulse I offset (unitless). (amplitude + offset) should be between [0 and 1].
+        offset_q (float): Pulse Q offset (unitless). (amplitude + offset) should be between [0 and 1].
+    """
+
+    def __init__(self, name, frequency, amplitude, length, shape, offset_i=0, offset_q=0):
+        self.name = name
+        self.frequency = frequency
+        self.amplitude = amplitude
+        self.length = length
+        self.shape = shape
+        self.offset_i = offset_i
+        self.offset_q = offset_q
+
+    def waveform(self):
+        """
+        Generates the I & Q waveforms to be sent to the sequencers based on the
+        key parameters of the pulse (length, amplitude, shape, etc.)
+        """
+        # Generate pulse envelope
+        if self.shape == 'Block':
+            envelope_i = amplitude*np.ones(int(length))
+            envelope_q = amplitude*np.zeros(int(length))
+        elif self.shape == 'Gaussian':
+            from scipy.signal import gaussian
+            std = self.length / 5
+            envelope_i = self.amplitude * gaussian(self.length, std=std)
+            envelope_q = self.amplitude * np.zeros(int(self.length))
+        else:
+            raise_error(NotImplementedError, f"Unknown pulse shape {self.shape}.")
+
+        # Use the envelope to modulate a sinusoldal signal of frequency freq_if
+        time = np.arange(self.length) * 1e-9
+        # FIXME: There should be a simpler way to construct this array
+        cosalpha = np.cos(2 * np.pi * self.freq_if * time)
+        sinalpha = np.sin(2 * np.pi * self.freq_if * time)
+        mod_matrix = np.array([[cosalpha,sinalpha], [-sinalpha,cosalpha]])
+        result = []
+        for it, t, ii, qq in zip(np.arange(length), time, envelope_i, envelope_q):
+            result.append(mod_matrix[:, :, it] @ np.array([ii, qq]))
+        mod_signals = np.array(result)
+
+        # add offsets to compensate mixer leakage
+        waveforms = {
+                "modI": {"data": mod_signals[:, 0] + offset_i, "index": 0},
+                "modQ": {"data": mod_signals[:, 1] + offset_q, "index": 1}
+            }
+
+        if debugging:
+            # Plot the result
+            fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
+            ax.plot(waveforms["modI"]["data"],'-',color='C0')
+            ax.plot(waveforms["modQ"]["data"],'-',color='C1')
+            ax.title.set_text('pulse')
+
+        return waveforms
+
+
 class BasicPulse(Pulse):
     """Describes a single pulse to be added to waveform array.
 
@@ -88,7 +154,7 @@ class IQReadoutPulse(Pulse):
 
         waveform[self.channels[0], i_start:i_start + i_duration] += self.amplitude * np.cos(2 * np.pi * self.frequency * time + self.phases[0])
         waveform[self.channels[1], i_start:i_start + i_duration] -= self.amplitude * np.sin(2 * np.pi * self.frequency * time + self.phases[1])
-        
+
         return waveform
 
 

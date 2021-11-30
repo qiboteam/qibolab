@@ -37,6 +37,29 @@ class PulsarQRM(pulsar_qrm):
             self.sequencer0_gain_awg_path0(gain)
             self.sequencer0_gain_awg_path1(gain)
 
+    def translate(self, pulses):
+        waveform = pulses[0].waveform()
+        waveforms = {
+            "modI_qrm": {"data": [], "index": 0},
+            "modQ_qrm": {"data": [], "index": 1}
+        }
+        waveforms["modI_qrm"]["data"] = waveform.get("modI").get("data")
+        waveforms["modQ_qrm"]["data"] = waveform.get("modQ").get("data")
+
+        for pulse in pulses[1:]:
+            waveform = pulse.waveform()
+            waveforms["modI_qrm"]["data"] = np.concatenate((waveforms["modI_qrm"]["data"], np.zeros(4), waveform["modI"]["data"]))
+            waveforms["modQ_qrm"]["data"] = np.concatenate((waveforms["modQ_qrm"]["data"], np.zeros(4), waveform["modQ"]["data"]))
+
+        if self.debugging:
+            # Plot the result
+            fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
+            ax.plot(combined_waveforms["modI_qrm"]["data"],'-',color='C0')
+            ax.plot(combined_waveforms["modQ_qrm"]["data"],'-',color='C1')
+            ax.title.set_text('Combined Pulses')
+
+        return waveforms
+
 
 class PulsarQCM(pulsar_qcm):
 

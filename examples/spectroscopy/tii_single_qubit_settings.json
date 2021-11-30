@@ -15,34 +15,12 @@
         "integration_length": 2500,
         "sampling_rate": 1000000000.0,
         "mode": "ssb",
-        "pulses": {
-            "ro_pulse": {
-                "freq_if": 20000000.0,
-                "amplitude": 0.9,
-                "start": 340,
-                "length": 6000,
-                "offset_i": 0,
-                "offset_q": 0,
-                "shape": "Block"
-            }
-        }
     },
     "_QCM_settings": {
         "gain": 0.5,
         "hardware_avg": 1024,
         "initial_delay": 0,
         "repetition_duration": 200000,
-        "pulses": {
-            "qc_pulse": {
-                "freq_if": 200e6,
-                "amplitude": 0.25,
-                "length": 300,
-                "offset_i": 0,
-                "offset_q": 0,
-                "shape": "Gaussian",
-                "delay_before": 10
-            }
-        }
     },
     "_LO_QRM_settings": {
         "power": 15,

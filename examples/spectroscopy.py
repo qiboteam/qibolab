@@ -1,5 +1,7 @@
 import numpy as np
+from qibolab import pulses
 from qibolab.platforms import TIIq
+
 
 # TODO: Have a look in the documentation of ``MeasurementControl``
 from quantify_core.measurement import MeasurementControl
@@ -15,22 +17,24 @@ class ROController():
     unit = ['V', 'Radians','V','V']
     name = ['A', 'Phi','I','Q']
 
-    def __init__(self, qrm, qcm):
+    def __init__(self, qrm, qcm, qrm_pulses, qcm_pulses):
         self._qrm = qrm
         self._qcm = qcm
+        self.qrm_pulses = qrm_pulses
+        self.qcm_pulses = qcm_pulses
 
     def get(self):
         qrm = self._qrm
         qcm = self._qcm
 
-        qrm.setup(qrm._settings)
-        qrm.set_waveforms_from_pulses(qrm._settings['pulses'])
+        #qrm.setup(qrm._settings) # this has already been done earlier?
+        waveform = qrm.translate(self.qrm_pulses)
         qrm.set_program_from_parameters(qrm._settings)
         qrm.set_acquisitions()
         qrm.set_weights()
         qrm.upload_sequence()
 
-        qcm.setup(qcm._settings)
+        #qcm.setup(qcm._settings)
         qcm.set_waveforms_from_pulses_definition(qcm._settings['pulses'])
         qcm.set_program_from_parameters(qcm._settings)
         qcm.set_acquisitions()
@@ -61,15 +65,29 @@ def run_resonator_spectroscopy():
     tiiq = TIIq()
     tiiq.setup() # TODO: Give settings json directory here
 
+    mc = MeasurementControl('MC')
+    qrm_pulses = [pulses.TIIPulse(
+                            name="ro_pulse",
+                            frequency=20000000.0,
+                            amplitude=0.9,
+                            #start=340,
+                            length=6000,
+                            shape="Block")]
+    qcm_pulses = [pulses.TIIPulse(
+                            name="qc_pulse",
+                            frequency=200e6,
+                            amplitude=0.25,
+                            length=300,
+                            #delay_before=10,
+                            shape="Gaussian")]
+
     # Fast Sweep
     tiiq.software_averages = 1
     # TODO: Make the following arguments of the main function and add argument parser
     scanrange = variable_resolution_scanrange(lowres_width= 30e6, lowres_step= 1e6, highres_width= 1e6, highres_step= 0.1e6)
-
-    mc = MeasurementControl('MC')
     mc.settables(tiiq.LO_qrm.frequency)
     mc.setpoints(scanrange + tiiq.LO_qrm.frequency)
-    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm)))
+    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_pulses, qcm_pulses)))
 
     tiiq.LO_qrm.on()
     tiiq.LO_qcm.off()
@@ -82,9 +100,9 @@ def run_resonator_spectroscopy():
     # Precision Sweep
     tiiq.software_averages = 1 # 3
     scanrange = np.arange(-0.5e6, 0.5e6, 0.02e6)
-    MC.settables(tiiq.LO_qrm.frequency)
-    MC.setpoints(scanrange + tiiq.LO_qrm.frequency)
-    MC.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm)))
+    mc.settables(tiiq.LO_qrm.frequency)
+    mc.setpoints(scanrange + tiiq.LO_qrm.frequency)
+    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm)))
     tiiq.LO_qrm.on()
     tiiq.LO_qcm.off()
     dataset = MC.run("Resonator Spectroscopy Precision", soft_avg=tiiq.software_averages)
