@@ -32,7 +32,7 @@
         "gain": 0.3,
         "hardware_avg": 1024,
         "initial_delay": 0,
-        "repetition_duration": 200000,
+        "repetition_duration": 200000
     },
     "_LO_QRM_settings": {
         "power": 6,
