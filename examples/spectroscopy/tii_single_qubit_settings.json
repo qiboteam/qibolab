@@ -6,28 +6,40 @@
         "software_averages": 1,
         "repetition_duration": 200000
     },
+    "_QRM_init_settings": {
+        "ref_clock": "external",
+        "sequencer": 0,
+        "sync_en": true,
+        "hardware_avg_en": true,
+        "acq_trigger_mode": "sequencer"
+    },
     "_QRM_settings": {
-        "gain": 0.4,
+        "gain": 0.35,
         "hardware_avg": 1024,
         "initial_delay": 0,
         "repetition_duration": 200000,
-        "start_sample": 130,
+        "start_sample": 100,
         "integration_length": 2500,
         "sampling_rate": 1000000000.0,
-        "mode": "ssb",
+        "mode": "ssb"
+    },
+    "_QCM_init_settings": {
+        "ref_clock": "external",
+        "sequencer": 0,
+        "sync_en": true
     },
     "_QCM_settings": {
-        "gain": 0.5,
+        "gain": 0.3,
         "hardware_avg": 1024,
         "initial_delay": 0,
         "repetition_duration": 200000,
     },
     "_LO_QRM_settings": {
-        "power": 15,
-        "frequency": 7778130000.0
+        "power": 6,
+        "frequency": 7778250000.0
     },
     "_LO_QCM_settings": {
-        "power": 15,
-        "frequency": 8924000000.0
+        "power": 6,
+        "frequency": 8922000000.0
     }
 }
