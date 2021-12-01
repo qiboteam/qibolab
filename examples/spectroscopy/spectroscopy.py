@@ -34,12 +34,12 @@ class ROController():
         self.qcm_sequence = qcm_sequence
 
     def get(self):
-        #qrm.setup(qrm._settings) # this has already been done earlier?
-        waveforms, program = qrm.translate(self.qrm_sequence)
+        #self.qrm.setup(qrm._settings) # this has already been done earlier?
+        waveforms, program = self.qrm.translate(self.qrm_sequence)
         self.qrm.upload(waveforms, program, "./data")
 
-        #qcm.setup(qcm._settings)
-        waveforms, program = qcm.translate(self.qcm_sequence)
+        #self.qcm.setup(qcm._settings)
+        waveforms, program = self.qcm.translate(self.qcm_sequence)
         self.qcm.upload(waveforms, program, "./data")
 
         self.qcm.play_sequence()

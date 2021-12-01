@@ -20,14 +20,14 @@ class TIIq:
         self.qrm.stop()
         self.qcm.stop()
 
-    def execute(self, qrm_pulses, qcm_pulses, folder="./data"):
-        waveforms, program, ro_pulse = qrm.translate(qrm_pulses)
+    def execute(self, qrm_sequence, qcm_sequence, folder="./data"):
+        waveforms, program = self.qrm.translate(qrm_sequence)
         self.qrm.upload(waveforms, program, folder)
 
-        waveforms, program = qcm.translate(qcm_pulses)
+        waveforms, program = self.qcm.translate(qcm_sequence)
         self.qcm.upload(waveforms, program, folder)
 
         self.qcm.play_sequence()
         # TODO: Find a better way to pass the frequency of readout pulse here
-        acquisition_results = qrm.play_sequence_and_acquire(ro_pulse)
+        acquisition_results = self.qrm.play_sequence_and_acquire(qrm_sequence.readout_pulse)
         return acquisition_results

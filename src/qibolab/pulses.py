@@ -75,7 +75,7 @@ class PulseSequence(list):
         self.readout_pulse = None
 
     def add(self, pulse):
-        if isinstance(pulse, PulseSequence):
+        if isinstance(pulse, TIIReadoutPulse):
             if self.readout_pulse is not None:
                 raise_error(RuntimeError, "Readout pulse already exists.")
             self.readout_pulse = pulse
