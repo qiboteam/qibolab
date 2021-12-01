@@ -75,8 +75,8 @@ class GenericPulsar:
         if self.debugging:
             # Plot the result
             fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-            ax.plot(combined_waveforms[f"modI_{name}"]["data"], '-', color='C0')
-            ax.plot(combined_waveforms[f"modQ_{name}"]["data"], '-', color='C1')
+            ax.plot(waveforms[f"modI_{name}"]["data"], '-', color='C0')
+            ax.plot(waveforms[f"modQ_{name}"]["data"], '-', color='C1')
             ax.title.set_text('Combined Pulses')
 
         program = self.generate_program(sequence.start, sequence.readout_pulse)
