@@ -1,3 +1,8 @@
+import json
+import numpy as np
+import matplotlib.pyplot as plt
+
+
 class GenericPulsar:
 
     def __init__(self, sequencer=0, debugging=False):
@@ -182,7 +187,10 @@ class PulsarQRM(GenericPulsar):
         self.device.scope_acq_trigger_mode_path0(acq_trigger_mode)
         self.device.scope_acq_trigger_mode_path1(acq_trigger_mode)
         # sync sequencer
-        getattr(self.device, f"sequencer{sequencer}_sync_en")(sync_en)
+        if self.sequencer == 1:
+            self.device.sequencer1_sync_en(sync_en)
+        else:
+            self.device.sequencer0_sync_en(sync_en)
 
     def setup(self, gain, hardware_avg, initial_delay, repetition_duration,
               start_sample, integration_length, sampling_rate, mode):
@@ -266,4 +274,7 @@ class PulsarQCM(GenericPulsar):
         # Reset and configure
         self.device.reset()
         self.device.reference_source(ref_clock)
-        getattr(self.device, f"sequencer{sequencer}_sync_en")(sync_en)
+        if self.sequencer == 1:
+            self.device.sequencer1_sync_en(sync_en)
+        else:
+            self.device.sequencer0_sync_en(sync_en)
