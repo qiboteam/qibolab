@@ -11,8 +11,8 @@ class TIIq:
     def setup(self, settings):
         self.LO_qrm.setup(**settings.get("_LO_QRM_settings"))
         self.LO_qcm.setup(**settings.get("_LO_QCM_settings"))
-        self.qrm.setup(**settings.get("QRM_settings"))
-        self.qcm.setup(**settings.get("QCM_settings"))
+        self.qrm.setup(**settings.get("_QRM_settings"))
+        self.qcm.setup(**settings.get("_QCM_settings"))
 
     def stop(self):
         self.LO_qrm.off()

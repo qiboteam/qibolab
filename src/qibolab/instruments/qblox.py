@@ -15,8 +15,8 @@ class GenericPulsar:
             self.device.sequencer1_gain_awg_path0(gain)
             self.device.sequencer1_gain_awg_path1(gain)
         else:
-            self.sequencer0_gain_awg_path0(gain)
-            self.sequencer0_gain_awg_path1(gain)
+            self.device.sequencer0_gain_awg_path0(gain)
+            self.device.sequencer0_gain_awg_path1(gain)
         self.hardware_avg = hardware_avg
         self.initial_delay = initial_delay
         self.repetition_duration = repetition_duration
@@ -83,8 +83,7 @@ class GenericPulsar:
         return waveforms, program
 
     @staticmethod
-    def calculate_repetition_rate(self, repetition_duration,
-                                  wait_loop_step, duration_base):
+    def calculate_repetition_rate(repetition_duration, wait_loop_step, duration_base):
         extra_duration = repetition_duration-duration_base
         extra_wait = extra_duration % wait_loop_step
         num_wait_loops = (extra_duration - extra_wait) // wait_loop_step
@@ -95,7 +94,7 @@ class GenericPulsar:
         wait_loop_step=1000
         duration_base=16380 # this is the maximum length of a waveform in number of samples (defined by the device memory)
 
-        num_wait_loops, extra_wait = calculate_repetition_rate(self.repetition_duration, wait_loop_step, duration_base)
+        num_wait_loops, extra_wait = self.calculate_repetition_rate(self.repetition_duration, wait_loop_step, duration_base)
         if ro_pulse is not None:
             delay_before_readout = ro_pulse.delay_before_readout
             acquire_instruction = "acquire   0,0,4      # Acquire waveforms over remaining duration of acquisition of input vector of length = 16380 with integration weights 0,0"
@@ -148,14 +147,16 @@ class GenericPulsar:
             "acquisitions": self.acquisitions,
             "program": program
             }
+        if not os.path.exists(data_folder):
+            os.makedirs(data_folder)
         with open(filename, "w", encoding="utf-8") as file:
             json.dump(program_dict, file, indent=4)
 
         # Upload json file to the device
         if self.sequencer == 1:
-            self.sequencer1_waveforms_and_program(os.path.join(os.getcwd(), filename))
+            self.device.sequencer1_waveforms_and_program(os.path.join(os.getcwd(), filename))
         else:
-            self.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), filename))
+            self.device.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), filename))
 
     def play_sequence(self):
         # arm sequencer and start playing sequence
@@ -163,6 +164,9 @@ class GenericPulsar:
         self.device.start_sequencer()
         if self.debugging:
             print(self.device.get_sequencer_state(self.sequencer))
+
+    def stop(self):
+        self.device.stop_sequencer()
 
 
 class PulsarQRM(GenericPulsar):

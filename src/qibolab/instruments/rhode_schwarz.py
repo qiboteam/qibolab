@@ -19,6 +19,7 @@ class SGS100A(LO_SGS100A.RohdeSchwarz_SGS100A):
         """
         super().__init__(label, f"TCPIP0::{ip}::inst0::INSTR")
         logger.info("Local oscillator connected")
+        self._frequency = None
 
     def setup(self, power, frequency):
         self.set_power(power)
@@ -30,8 +31,12 @@ class SGS100A(LO_SGS100A.RohdeSchwarz_SGS100A):
         logger.info(f"Local oscillator power set to {power}.")
 
     def set_frequency(self, frequency):
+        self._frequency = frequency
         self.frequency(frequency)
         logger.info(f"Local oscillator frequency set to {frequency}.")
+
+    def get_frequency(self):
+        return self._frequency
 
     def on(self):
         """Start generating microwaves."""

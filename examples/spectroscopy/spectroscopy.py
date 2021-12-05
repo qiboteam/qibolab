@@ -1,12 +1,17 @@
 import argparse
 import json
+import pathlib
 import numpy as np
+import matplotlib.pyplot as plt
 from qibolab import pulses
 from qibolab.platforms import TIIq
 
 # TODO: Have a look in the documentation of ``MeasurementControl``
 from quantify_core.measurement import MeasurementControl
 from quantify_core.measurement.control import Gettable
+from quantify_core.data.handling import set_datadir
+# TODO: Check why this set_datadir is needed
+set_datadir(pathlib.Path(__file__).parent / "data")
 
 
 parser = argparse.ArgumentParser()
@@ -73,13 +78,14 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     tiiq.setup(settings) # TODO: Give settings json directory here
 
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
+                                      start=70,
                                       frequency=20000000.0,
                                       amplitude=0.5,
-                                      start=70,
                                       length=3000,
-                                      delay_before_readout=4,
-                                      shape="Block")
+                                      shape="Block",
+                                      delay_before_readout=4)
     qc_pulse = pulses.TIIPulse(name="qc_pulse",
+                               start=0,
                                frequency=200000000.0,
                                amplitude=0.3,
                                length=60,
@@ -95,7 +101,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     # TODO: Make the following arguments of the main function and add argument parser
     scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
     mc.settables(tiiq.LO_qrm.frequency)
-    mc.setpoints(scanrange + tiiq.LO_qrm.frequency)
+    mc.setpoints(scanrange + tiiq.LO_qrm.get_frequency())
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
 
     tiiq.LO_qrm.on()
@@ -110,8 +116,8 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     tiiq.software_averages = 1 # 3
     scanrange = np.arange(-precision_width, precision_width, precision_step)
     mc.settables(tiiq.LO_qrm.frequency)
-    mc.setpoints(scanrange + tiiq.LO_qrm.frequency)
-    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm)))
+    mc.setpoints(scanrange + tiiq.LO_qrm.get_frequency())
+    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
     tiiq.LO_qrm.on()
     tiiq.LO_qcm.off()
     dataset = mc.run("Resonator Spectroscopy Precision", soft_avg=tiiq.software_averages)
@@ -125,7 +131,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
 
     # TODO: Remove ``_QRM_settings`` from here given that we will use a different pulse mechanism
     resonator_freq = dataset['x0'].values[smooth_dataset.argmax()] + ro_pulse.frequency
-    print(f"Resonator Frequency = {resonator_freq}")
+    print(f"\nResonator Frequency = {resonator_freq}")
     print(len(dataset['y0'].values))
     print(len(smooth_dataset))
 
@@ -137,6 +143,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     #ax.ylabel("Amplitude")
     ax.plot(dataset['x0'].values[smooth_dataset.argmax()], smooth_dataset[smooth_dataset.argmax()], 'o', color='C2')
     # determine off-resonance amplitude and typical noise
+    plt.savefig("run_resonator_spectroscopy.pdf")
     return dataset
 
 

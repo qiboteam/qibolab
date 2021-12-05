@@ -84,7 +84,12 @@ class PulseSequence(list):
 
     @property
     def start(self):
-        return self[0].start
+        if len(self) > 0:
+            return self[0].start
+        elif self.readout_pulse is not None:
+            return self.readout_pulse.start
+        else:
+            raise IndexError
 
 
 class TIIReadoutPulse(TIIPulse):
