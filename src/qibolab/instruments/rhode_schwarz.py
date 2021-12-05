@@ -19,6 +19,7 @@ class SGS100A(LO_SGS100A.RohdeSchwarz_SGS100A):
         """
         super().__init__(label, f"TCPIP0::{ip}::inst0::INSTR")
         logger.info("Local oscillator connected")
+        self._power = None
         self._frequency = None
 
     def setup(self, power, frequency):
@@ -27,6 +28,7 @@ class SGS100A(LO_SGS100A.RohdeSchwarz_SGS100A):
 
     def set_power(self, power):
         """Set dbm power to local oscillator."""
+        self._power = power
         self.power(power)
         logger.info(f"Local oscillator power set to {power}.")
 
@@ -34,6 +36,11 @@ class SGS100A(LO_SGS100A.RohdeSchwarz_SGS100A):
         self._frequency = frequency
         self.frequency(frequency)
         logger.info(f"Local oscillator frequency set to {frequency}.")
+
+    def get_power(self):
+        if self._power is not None:
+            return self._power
+        raise RuntimeError("Local oscillator power was not set.")
 
     def get_frequency(self):
         if self._frequency is not None:
