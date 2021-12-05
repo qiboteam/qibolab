@@ -36,7 +36,9 @@ class SGS100A(LO_SGS100A.RohdeSchwarz_SGS100A):
         logger.info(f"Local oscillator frequency set to {frequency}.")
 
     def get_frequency(self):
-        return self._frequency
+        if self._frequency is not None:
+            return self._frequency
+        raise RuntimeError("Local oscillator frequency was not set.")
 
     def on(self):
         """Start generating microwaves."""
