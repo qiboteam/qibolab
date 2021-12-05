@@ -1,0 +1,18 @@
+{
+    "resonator_spectroscopy": {
+        "lowres_width": 30e6,
+        "lowres_step": 1e6,
+        "highres_width": 1e6,
+        "highres_step": 0.1e6,
+        "precision_width": 0.5e6,
+        "precision_step": 0.02e6
+    },
+    "qubit_spectroscopy": {
+      "fast_start": -300e6,
+      "fast_end": 100e6,
+      "fast_step": 1e6,
+      "precision_start": -30e6,
+      "precision_end": 30e6,
+      "precision_step": 0.5e6
+    }
+}
