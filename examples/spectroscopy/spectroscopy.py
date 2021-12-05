@@ -15,6 +15,7 @@ set_datadir(pathlib.Path(__file__).parent / "data")
 
 
 parser = argparse.ArgumentParser()
+parser.add_argument("--name", default="resonator_spectroscopy", type=str)
 parser.add_argument("--lowres-width", default=30e6, type=float)
 parser.add_argument("--lowres-step", default=1e6, type=float)
 parser.add_argument("--highres-width", default=1e6, type=float)
@@ -149,4 +150,8 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
 
 if __name__ == "__main__":
     args = vars(parser.parse_args())
-    run_resonator_spectroscopy(**args)
+    name = args.pop("name")
+    if name == "resonator_spectroscopy":
+        run_resonator_spectroscopy(**args)
+    else:
+        raise NotImplementedError(f"Unknown diagnostic {name}.")
