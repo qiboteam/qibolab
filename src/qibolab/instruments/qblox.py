@@ -34,7 +34,7 @@ class GenericPulsar:
                              [-np.sin(arg), np.cos(arg)]])
         mod_signals = np.zeros((2, len(time)))
         for index, t in enumerate(time):
-            mod_signals[:, index] = mod_matrix(pulse.frequency, t) @ envelope[:, t]
+            mod_signals[:, index] = mod_matrix(pulse.frequency, t) @ envelope[:, index]
 
         # add offsets to compensate mixer leakage
         waveform = {
