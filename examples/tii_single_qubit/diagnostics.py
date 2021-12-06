@@ -1,4 +1,3 @@
-import argparse
 import json
 import pathlib
 import numpy as np
@@ -204,11 +203,3 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
     plt.savefig("run_qubit_spectroscopy.pdf")
 
     return qubit_freq, dataset
-
-
-if __name__ == "__main__":
-    with open("diagnostics_settings.json", "r") as file:
-        settings = json.load(file)
-
-    resonator_freq, _ = run_resonator_spectroscopy(**settings["resonator_spectroscopy"])
-    qubit_freq, _ = run_qubit_spectroscopy(**settings["qubit_spectroscopy"])
