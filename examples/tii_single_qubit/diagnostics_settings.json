@@ -24,5 +24,10 @@
       "start_start": 4,
       "start_end": 500,
       "start_step": 10
+    },
+    "spin_echo": {
+      "start_start": 4,
+      "start_end": 500,
+      "start_step": 10
     }
 }
