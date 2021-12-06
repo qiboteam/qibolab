@@ -235,6 +235,7 @@ def run_t1(resonator_freq, qubit_freq, pi_pulse_length, pi_pulse_gain,
 
     tiiq = TIIq()
     settings['_QCM_settings']['gain'] = pi_pulse_gain
+    tiiq.setup(settings) # TODO: Give settings json directory here
 
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
                                       start=70,
@@ -249,10 +250,13 @@ def run_t1(resonator_freq, qubit_freq, pi_pulse_length, pi_pulse_gain,
                                amplitude=0.3,
                                length=pi_pulse_length,
                                shape="Gaussian")
+    qrm_sequence = pulses.PulseSequence()
+    qrm_sequence.add(ro_pulse)
+    qcm_sequence = pulses.PulseSequence()
+    qcm_sequence.add(qc_pulse)
+
     tiiq.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
-
-    tiiq.setup(settings) # TODO: Give settings json directory here
 
     mc = MeasurementControl('MC_T1')
     mc.settables(T1WaitParameter(tiiq.qrm))
@@ -277,6 +281,7 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
 
     tiiq = TIIq()
     settings['_QCM_settings']['gain'] = pi_pulse_gain
+    tiiq.setup(settings) # TODO: Give settings json directory here
 
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
                                       start=70,
@@ -297,11 +302,15 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
                                amplitude=0.3,
                                length=pi_pulse_length//2,
                                shape="Gaussian")
+    qrm_sequence = pulses.PulseSequence()
+    qrm_sequence.add(ro_pulse)
+    qcm_sequence = pulses.PulseSequence()
+    qcm_sequence.add(qc_pulse)
+    qcm_sequence.add(qc2_pulse)
 
     tiiq.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     # TODO: check if this is the right frequency
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
-    tiiq.setup(settings) # TODO: Give settings json directory here
 
     mc = MeasurementControl('MC_Ramsey')
     mc.settables(RamseyWaitParameter(tiiq.qrm, tiiq.qcm, ro_pulse,
@@ -315,4 +324,5 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
     # fit data and determine Ramsey Time and dephasing
     # platform.ramsey = 
     # platform.qubit_freq += dephasing
-    
+
+    return dataset    
