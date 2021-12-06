@@ -3,12 +3,11 @@ Class to interface with the local oscillator RohdeSchwarz SGS100A
 """
 
 import logging
-import qcodes.instrument_drivers.rohde_schwarz.SGS100A as LO_SGS100A
 
 logger = logging.getLogger(__name__)  # TODO: Consider using a global logger
 
 
-class SGS100A(LO_SGS100A.RohdeSchwarz_SGS100A):
+class SGS100A:
 
     def __init__(self, label, ip):
         """
@@ -17,7 +16,8 @@ class SGS100A(LO_SGS100A.RohdeSchwarz_SGS100A):
                 "ip": '192.168.0.8',
                 "label": "qcm_LO"
         """
-        super().__init__(label, f"TCPIP0::{ip}::inst0::INSTR")
+        import qcodes.instrument_drivers.rohde_schwarz.SGS100A as LO_SGS100A
+        self.device = LO_SGS100A.RohdeSchwarz_SGS100A(label, f"TCPIP0::{ip}::inst0::INSTR")
         logger.info("Local oscillator connected")
         self._power = None
         self._frequency = None
@@ -29,12 +29,12 @@ class SGS100A(LO_SGS100A.RohdeSchwarz_SGS100A):
     def set_power(self, power):
         """Set dbm power to local oscillator."""
         self._power = power
-        self.power(power)
+        self.device.power(power)
         logger.info(f"Local oscillator power set to {power}.")
 
     def set_frequency(self, frequency):
         self._frequency = frequency
-        self.frequency(frequency)
+        self.device.frequency(frequency)
         logger.info(f"Local oscillator frequency set to {frequency}.")
 
     def get_power(self):
@@ -49,10 +49,16 @@ class SGS100A(LO_SGS100A.RohdeSchwarz_SGS100A):
 
     def on(self):
         """Start generating microwaves."""
-        super().on()
+        self.device.on()
         logger.info("Local oscillator on.")
 
     def off(self):
         """Stop generating microwaves."""
-        super().off()
+        self.device.off()
         logger.info("Local oscillator off.")
+
+    def close(self):
+        self.device.close()
+
+    def __del__(self):
+        self.device.close()
