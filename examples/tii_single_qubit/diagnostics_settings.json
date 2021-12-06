@@ -19,5 +19,10 @@
       "delay_before_readout_start": 4,
       "delay_before_readout_end": 500,
       "delay_before_readout_step": 10
+    },
+    "ramsey": {
+      "start_start": 4,
+      "start_end": 500,
+      "start_step": 10
     }
 }
