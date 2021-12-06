@@ -14,10 +14,6 @@ from quantify_core.data.handling import set_datadir
 set_datadir(pathlib.Path(__file__).parent / "data")
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--name", default="resonator_spectroscopy", type=str)
-
-
 class ROController():
     # TODO: ``ROController`` implementation
     # This should be the complicated part as it involves the pulses
@@ -134,7 +130,8 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     ax.plot(dataset['x0'].values[smooth_dataset.argmax()], smooth_dataset[smooth_dataset.argmax()], 'o', color='C2')
     # determine off-resonance amplitude and typical noise
     plt.savefig("run_resonator_spectroscopy.pdf")
-    return dataset
+
+    return resonator_freq, dataset
 
 
 def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
@@ -174,7 +171,7 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
     dataset = mc.run("Qubit Spectroscopy Fast", soft_avg=tiiq.software_averages)
     # http://xarray.pydata.org/en/stable/getting-started-guide/quick-overview.html
     tiiq.stop()
-    tiisq.LO_qcm.set_frequency(dataset['x0'].values[dataset['y0'].argmin().values])
+    tiiq.LO_qcm.set_frequency(dataset['x0'].values[dataset['y0'].argmin().values])
 
     # Precision Sweep
     tiiq.software_averages = 3
@@ -205,11 +202,13 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
     #ax.ylabel("Amplitude")
     ax.plot(dataset['x0'].values[smooth_dataset.argmin()], smooth_dataset[smooth_dataset.argmin()], 'o', color='C2')
     plt.savefig("run_qubit_spectroscopy.pdf")
-    return dataset
+
+    return qubit_freq, dataset
 
 
 if __name__ == "__main__":
     with open("diagnostics_settings.json", "r") as file:
         settings = json.load(file)
-    name = vars(parser.parse_args()).pop("name")
-    locals()[f"run_{name}"](**settings[name])
+
+    resonator_freq, _ = run_resonator_spectroscopy(**settings["resonator_spectroscopy"])
+    qubit_freq, _ = run_qubit_spectroscopy(**settings["qubit_spectroscopy"])
