@@ -1,4 +1,3 @@
-import argparse
 import json
 import pathlib
 import numpy as np
@@ -14,20 +13,7 @@ from quantify_core.data.handling import set_datadir
 set_datadir(pathlib.Path(__file__).parent / "data")
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--name", default="resonator_spectroscopy", type=str)
-parser.add_argument("--lowres-width", default=30e6, type=float)
-parser.add_argument("--lowres-step", default=1e6, type=float)
-parser.add_argument("--highres-width", default=1e6, type=float)
-parser.add_argument("--highres-step", default=0.1e6, type=float)
-parser.add_argument("--precision-width", default=0.5e6, type=float)
-parser.add_argument("--precision-step", default=0.02e6, type=float)
-
-
 class ROController():
-    # TODO: ``ROController`` implementation
-    # This should be the complicated part as it involves the pulses
-
     # Quantify Gettable Interface Implementation
     label = ['Amplitude', 'Phase','I','Q']
     unit = ['V', 'Radians','V','V']
@@ -49,7 +35,6 @@ class ROController():
         self.qcm.upload(waveforms, program, "./data")
 
         self.qcm.play_sequence()
-        # TODO: Find a better way to pass the frequency of readout pulse here
         acquisition_results = self.qrm.play_sequence_and_acquire(self.qrm_sequence.readout_pulse)
         return acquisition_results
 
@@ -76,7 +61,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
         settings = json.load(file)
 
     tiiq = TIIq()
-    tiiq.setup(settings) # TODO: Give settings json directory here
+    tiiq.setup(settings)
 
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
                                       start=70,
@@ -96,18 +81,15 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     qcm_sequence = pulses.PulseSequence()
     qcm_sequence.add(qc_pulse)
 
-    mc = MeasurementControl('MC')
+    mc = MeasurementControl('MC_resonator_spectroscopy')
     # Fast Sweep
     tiiq.software_averages = 1
-    # TODO: Make the following arguments of the main function and add argument parser
     scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
     mc.settables(tiiq.LO_qrm.device.frequency)
     mc.setpoints(scanrange + tiiq.LO_qrm.get_frequency())
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
-
     tiiq.LO_qrm.on()
     tiiq.LO_qcm.off()
-
     dataset = mc.run("Resonator Spectroscopy Fast", soft_avg=tiiq.software_averages)
     # http://xarray.pydata.org/en/stable/getting-started-guide/quick-overview.html
     tiiq.stop()
@@ -124,13 +106,8 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     dataset = mc.run("Resonator Spectroscopy Precision", soft_avg=tiiq.software_averages)
     tiiq.stop()
 
-    # TODO: Add ``savgol_filter`` method
     from scipy.signal import savgol_filter
     smooth_dataset = savgol_filter(dataset['y0'].values, 25, 2)
-    # TODO: is the following call really needed given that the oscillator is never used after that?
-    tiiq.LO_qrm.set_frequency(dataset['x0'].values[smooth_dataset.argmax()])
-
-    # TODO: Remove ``_QRM_settings`` from here given that we will use a different pulse mechanism
     resonator_freq = dataset['x0'].values[smooth_dataset.argmax()] + ro_pulse.frequency
     print(f"\nResonator Frequency = {resonator_freq}")
     print(len(dataset['y0'].values))
@@ -145,13 +122,76 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     ax.plot(dataset['x0'].values[smooth_dataset.argmax()], smooth_dataset[smooth_dataset.argmax()], 'o', color='C2')
     # determine off-resonance amplitude and typical noise
     plt.savefig("run_resonator_spectroscopy.pdf")
-    return dataset
+
+    return resonator_freq, dataset
 
 
-if __name__ == "__main__":
-    args = vars(parser.parse_args())
-    name = args.pop("name")
-    if name == "resonator_spectroscopy":
-        run_resonator_spectroscopy(**args)
-    else:
-        raise NotImplementedError(f"Unknown diagnostic {name}.")
+def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
+                           precision_start, precision_end, precision_step):
+    with open("tii_single_qubit_settings.json", "r") as file:
+        settings = json.load(file)
+
+    tiiq = TIIq()
+    tiiq.setup(settings)
+
+    ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
+                                      start=70,
+                                      frequency=20000000.0,
+                                      amplitude=0.5,
+                                      length=4040,
+                                      shape="Block",
+                                      delay_before_readout=4)
+    qc_pulse = pulses.TIIPulse(name="qc_pulse",
+                               start=0,
+                               frequency=200000000.0,
+                               amplitude=0.3,
+                               length=4000,
+                               shape="Gaussian")
+    qrm_sequence = pulses.PulseSequence()
+    qrm_sequence.add(ro_pulse)
+    qcm_sequence = pulses.PulseSequence()
+    qcm_sequence.add(qc_pulse)
+
+    mc = MeasurementControl('MC_qubit_spectroscopy')
+    # Fast Sweep
+    tiiq.software_averages = 1
+    scanrange = np.arange(fast_start, fast_end, fast_step)
+    mc.settables(tiiq.LO_qcm.device.frequency)
+    mc.setpoints(scanrange + tiiq.LO_qcm.get_frequency())
+    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
+    tiiq.LO_qrm.on()
+    tiiq.LO_qcm.off()
+    dataset = mc.run("Qubit Spectroscopy Fast", soft_avg=tiiq.software_averages)
+    # http://xarray.pydata.org/en/stable/getting-started-guide/quick-overview.html
+    tiiq.stop()
+    tiiq.LO_qcm.set_frequency(dataset['x0'].values[dataset['y0'].argmin().values])
+
+    # Precision Sweep
+    tiiq.software_averages = 3
+    scanrange = np.arange(precision_start, precision_end, precision_step)
+    mc.settables(tiiq.LO_qcm.device.frequency)
+    mc.setpoints(scanrange + tiiq.LO_qcm.get_frequency())
+    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
+    tiiq.LO_qrm.on()
+    tiiq.LO_qcm.off()
+    dataset = mc.run("Qubit Spectroscopy Precision", soft_avg=tiiq.software_averages)
+    tiiq.stop()
+
+    from scipy.signal import savgol_filter
+    smooth_dataset = savgol_filter(dataset['y0'].values, 11, 2)
+    qubit_freq = dataset['x0'].values[smooth_dataset.argmin()] - qc_pulse.frequency
+    print(dataset['x0'].values[smooth_dataset.argmin()])
+    print(f"Qubit Frequency = {qubit_freq}")
+    print(len(dataset['y0'].values))
+    print(len(smooth_dataset))
+
+    fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
+    ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
+    ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
+    ax.title.set_text('Original')
+    #ax.xlabel("Frequency")
+    #ax.ylabel("Amplitude")
+    ax.plot(dataset['x0'].values[smooth_dataset.argmin()], smooth_dataset[smooth_dataset.argmin()], 'o', color='C2')
+    plt.savefig("run_qubit_spectroscopy.pdf")
+
+    return qubit_freq, dataset

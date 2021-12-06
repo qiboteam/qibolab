@@ -3,7 +3,6 @@ Class to interface with the local oscillator RohdeSchwarz SGS100A
 """
 
 import logging
-import qcodes.instrument_drivers.rohde_schwarz.SGS100A as LO_SGS100A
 
 logger = logging.getLogger(__name__)  # TODO: Consider using a global logger
 
@@ -17,6 +16,7 @@ class SGS100A:
                 "ip": '192.168.0.8',
                 "label": "qcm_LO"
         """
+        import qcodes.instrument_drivers.rohde_schwarz.SGS100A as LO_SGS100A
         self.device = LO_SGS100A.RohdeSchwarz_SGS100A(label, f"TCPIP0::{ip}::inst0::INSTR")
         logger.info("Local oscillator connected")
         self._power = None
