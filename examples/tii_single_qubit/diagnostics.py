@@ -206,7 +206,7 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
     return qubit_freq, dataset
 
 
-def run_rabi_pulse_length():
+def run_rabi_pulse_length(resonator_freq, qubit_freq):
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
     tiiq = TIIq()
@@ -228,8 +228,8 @@ def run_rabi_pulse_length():
     qrm_sequence.add(ro_pulse)
     qcm_sequence = pulses.PulseSequence()
     qcm_sequence.add(qc_pulse)
-    tiiq.LO_QRM.set_frequency(tiiq.resonator_freq - ro_pulse.frequency)
-    tiiq.LO_QCM.set_frequency(tiiq.qubit_freq + qc_pulse.frequency)
+    tiiq.LO_QRM.set_frequency(resonator_freq - ro_pulse.frequency)
+    tiiq.LO_QCM.set_frequency(qubit_freq + qc_pulse.frequency)
     mc = MeasurementControl('MC')
     mc.settables(QCPulseLengthParameter(ro_pulse, qc_pulse))
     mc.setpoints(np.arange(1, 2000, 5))
@@ -240,7 +240,7 @@ def run_rabi_pulse_length():
     tiiq.stop()
 
 
-def run_Rabi_pulse_gain():
+def run_Rabi_pulse_gain(resonator_freq, qubit_freq):
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
     tiiq = TIIq()
@@ -262,8 +262,8 @@ def run_Rabi_pulse_gain():
     qrm_sequence.add(ro_pulse)
     qcm_sequence = pulses.PulseSequence()
     qcm_sequence.add(qc_pulse)
-    tiiq.LO_QRM.set_frequency(tiiq.resonator_freq - ro_pulse.frequency)
-    tiiq.LO_QCM.set_frequency(tiiq.qubit_freq + qc_pulse.frequency)
+    tiiq.LO_QRM.set_frequency(resonator_freq - ro_pulse.frequency)
+    tiiq.LO_QCM.set_frequency(qubit_freq + qc_pulse.frequency)
     mc = MeasurementControl('MC')
     mc.settables(QCPulseGainParameter(tiiq.qcm))
     mc.setpoints(np.arange(0, 1, 0.02))
@@ -274,7 +274,7 @@ def run_Rabi_pulse_gain():
     tiiq.stop()
 
 
-def run_Rabi_pulse_length_and_gain():
+def run_Rabi_pulse_length_and_gain(resonator_freq, qubit_freq):
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
     tiiq = TIIq()
@@ -296,8 +296,8 @@ def run_Rabi_pulse_length_and_gain():
     qrm_sequence.add(ro_pulse)
     qcm_sequence = pulses.PulseSequence()
     qcm_sequence.add(qc_pulse)
-    tiiq.LO_QRM.set_frequency(tiiq.resonator_freq - ro_pulse.frequency)
-    tiiq.LO_QCM.set_frequency(tiiq.qubit_freq + qc_pulse.frequency)
+    tiiq.LO_QRM.set_frequency(resonator_freq - ro_pulse.frequency)
+    tiiq.LO_QCM.set_frequency(qubit_freq + qc_pulse.frequency)
     mc = MeasurementControl('MC')
     mc.settables([QCPulseLengthParameter(ro_pulse, qc_pulse), QCPulseGainParameter(tiiq.qcm)])
     setpoints_length = np.arange(1, 200, 10)
@@ -313,7 +313,7 @@ def run_Rabi_pulse_length_and_gain():
     tiiq.stop()
 
 
-def run_Rabi_pulse_length_and_amplitude():
+def run_Rabi_pulse_length_and_amplitude(resonator_freq, qubit_freq):
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
     tiiq = TIIq()
@@ -335,8 +335,8 @@ def run_Rabi_pulse_length_and_amplitude():
     qrm_sequence.add(ro_pulse)
     qcm_sequence = pulses.PulseSequence()
     qcm_sequence.add(qc_pulse)
-    tiiq.LO_QRM.set_frequency(tiiq.resonator_freq - ro_pulse.frequency)
-    tiiq.LO_QCM.set_frequency(tiiq.qubit_freq + qc_pulse.frequency)
+    tiiq.LO_QRM.set_frequency(resonator_freq - ro_pulse.frequency)
+    tiiq.LO_QCM.set_frequency(qubit_freq + qc_pulse.frequency)
     mc = MeasurementControl('MC')
     mc.settables([QCPulseLengthParameter(ro_pulse, qc_pulse), QCPulseAmplitudeParameter(qc_pulse)])
     setpoints_length = np.arange(1, 200, 10)
