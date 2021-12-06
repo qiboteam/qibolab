@@ -277,6 +277,84 @@ def run_Rabi_pulse_gain():
     tiiq.stop()
 
 
+def run_Rabi_pulse_length_and_gain():
+    with open("tii_single_qubit_settings.json", "r") as file:
+        settings = json.load(file)
+    tiiq = TIIq()
+    tiiq.setup(settings) # TODO: Give settings json directory here
+    ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
+                                      start=70,
+                                      frequency=20000000.0,
+                                      amplitude=0.5,
+                                      length=3000,
+                                      shape="Block",
+                                      delay_before_readout=4)
+    qc_pulse = pulses.TIIPulse(name="qc_pulse",
+                               start=0,
+                               frequency=200000000.0,
+                               amplitude=0.3,
+                               length=60,
+                               shape="Gaussian")
+    qrm_sequence = pulses.PulseSequence()
+    qrm_sequence.add(ro_pulse)
+    qcm_sequence = pulses.PulseSequence()
+    qcm_sequence.add(qc_pulse)
+    tiiq.LO_QRM.set_frequency = tiiq.resonator_freq - ro_pulse.frequency
+    tiiq.LO_QCM.set_frequency = tiiq.qubit_freq + qc_pulse.frequency
+    mc = MeasurementControl('MC')
+    mc.settables([QCPulseLengthParameter(ro_pulse, qc_pulse), QCPulseGainParameter(tiiq.qcm)])
+    setpoints_length = np.arange(1, 200, 10)
+    setpoints_gain = np.arange(0, 100, 5)
+    mc.setpoints_grid([setpoints_length, setpoints_gain])
+    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
+    tiiq.LO_qrm.on()
+    tiiq.LO_qcm.on()
+    dataset = mc.run('Rabi Pulse Length and Gain', soft_avg = tiiq.software_averages)
+    # Analyse data to look for the smallest qc_pulse length that renders off-resonance amplitude, determine corresponding pi_pulse gain
+    # platform.pi_pulse_length =
+    # platform.pi_pulse_gain =
+    tiiq.stop()
+
+
+def run_Rabi_pulse_length_and_amplitude():
+    with open("tii_single_qubit_settings.json", "r") as file:
+        settings = json.load(file)
+    tiiq = TIIq()
+    tiiq.setup(settings) # TODO: Give settings json directory here
+    ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
+                                      start=70,
+                                      frequency=20000000.0,
+                                      amplitude=0.5,
+                                      length=3000,
+                                      shape="Block",
+                                      delay_before_readout=4)
+    qc_pulse = pulses.TIIPulse(name="qc_pulse",
+                               start=0,
+                               frequency=200000000.0,
+                               amplitude=0.3,
+                               length=60,
+                               shape="Gaussian")
+    qrm_sequence = pulses.PulseSequence()
+    qrm_sequence.add(ro_pulse)
+    qcm_sequence = pulses.PulseSequence()
+    qcm_sequence.add(qc_pulse)
+    tiiq.LO_QRM.set_frequency = tiiq.resonator_freq - ro_pulse.frequency
+    tiiq.LO_QCM.set_frequency = tiiq.qubit_freq + qc_pulse.frequency
+    mc = MeasurementControl('MC')
+    mc.settables([QCPulseLengthParameter(ro_pulse, qc_pulse), QCPulseAmplitudeParameter(qc_pulse)])
+    setpoints_length = np.arange(1, 200, 10)
+    setpoints_amplitude = np.arange(0, 100, 5)
+    mc.setpoints_grid([setpoints_length, setpoints_amplitude])
+    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
+    tiiq.LO_qrm.on()
+    tiiq.LO_qcm.on()
+    dataset = mc.run('Rabi Pulse Length and Gain', soft_avg = tiiq.software_averages)
+    # Analyse data to look for the smallest qc_pulse length that renders off-resonance amplitude, determine corresponding pi_pulse gain
+    # platform.pi_pulse_length =
+    # platform.pi_pulse_gain =
+    tiiq.stop()
+
+
 class QCPulseLengthParameter():
 
     label = 'Qubit Control Pulse Length'
@@ -312,6 +390,19 @@ class QCPulseGainParameter():
         else:
             self.qcm.device.sequencer0_gain_awg_path0(gain)
             self.qcm.device.sequencer0_gain_awg_path1(gain)
+
+
+class QCPulseAmplitudeParameter():
+
+    label = 'Qubit Control Pulse Amplitude'
+    unit = '%'
+    name = 'qc_pulse_amplitude'
+
+    def __init__(self, qc_pulse: pulses.TIIPulse):
+        self.qc_pulse = qc_pulse
+
+    def set(self, value):
+        self.qc_pulse.amplitude = value / 100
 
 
 if __name__ == "__main__":
