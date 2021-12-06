@@ -1,7 +1,7 @@
 import json
-
 from diagnostics import run_resonator_spectroscopy, \
                         run_qubit_spectroscopy
+
 
 if __name__ == "__main__":
     with open("diagnostics_settings.json", "r") as file:
