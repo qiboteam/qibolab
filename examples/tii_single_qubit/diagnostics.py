@@ -81,7 +81,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     qcm_sequence = pulses.PulseSequence()
     qcm_sequence.add(qc_pulse)
 
-    mc = MeasurementControl('MC')
+    mc = MeasurementControl('MC_resonator_spectroscopy')
     # Fast Sweep
     tiiq.software_averages = 1
     scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
@@ -152,7 +152,7 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
     qcm_sequence = pulses.PulseSequence()
     qcm_sequence.add(qc_pulse)
 
-    mc = MeasurementControl('MC')
+    mc = MeasurementControl('MC_qubit_spectroscopy')
     # Fast Sweep
     scanrange = np.arange(fast_start, fast_end, fast_step)
     mc.settables(tiiq.LO_qcm.frequency)
