@@ -70,6 +70,23 @@ class RamseyWaitParameter():
         self.qc2_pulse.start = self.pi_pulse_length//2 + value
         self.ro_pulse.start = self.pi_pulse_length + value + 4
 
+class SpinEchoWaitParameter():
+    label = 'Time'
+    unit = 'ns'
+    name = 'spin_echo_wait'
+    initial_value = 0
+    
+    def __init__(self, qrm, qcm, ro_pulse, qc2_pulse, pi_pulse_length):
+        self.qrm = qrm
+        self.qcm = qcm
+        self.ro_pulse = ro_pulse
+        self.qc2_pulse = qc2_pulse
+        self.pi_pulse_length = pi_pulse_length
+        
+    def set(self,value):
+        self.qc2_pulse.start = self.pi_pulse_length//2 + value
+        self.ro_pulse.start = 3 * self.pi_pulse_length//2 + 2 * value + 4
+
 
 def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step):
     #[.     .     .     .     .     .][...................]0[...................][.     .     .     .     .     .]
@@ -324,5 +341,54 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
     # fit data and determine Ramsey Time and dephasing
     # platform.ramsey = 
     # platform.qubit_freq += dephasing
+    return dataset
 
-    return dataset    
+def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
+                  start_start, start_end, start_step):
+    with open("tii_single_qubit_settings.json", "r") as file:
+        settings = json.load(file)
+    tiiq = TIIq()
+    settings['_QCM_settings']['gain'] = pi_pulse_gain
+    tiiq.setup(settings) # TODO: Give settings json directory here
+
+    ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
+                                      start=70,
+                                      frequency=20000000.0,
+                                      amplitude=0.5,
+                                      length=3000,
+                                      shape="Block",
+                                      delay_before_readout=4)
+    qc_pulse = pulses.TIIPulse(name="qc_pulse",
+                               start=0,
+                               frequency=200e6,
+                               amplitude=0.3,
+                               length=pi_pulse_length//2,
+                               shape="Gaussian")
+    qc2_pulse = pulses.TIIPulse(name="qc2_pulse",
+                               start=pi_pulse_length//2 + 0, # TODO: +0?
+                               frequency=200e6,
+                               amplitude=0.3,
+                               length=pi_pulse_length//2,
+                               shape="Gaussian")
+
+    qrm_sequence = pulses.PulseSequence()
+    qrm_sequence.add(ro_pulse)
+    qcm_sequence = pulses.PulseSequence()
+    qcm_sequence.add(qc_pulse)
+    qcm_sequence.add(qc2_pulse)
+
+    tiiq.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
+    # TODO: check if this is the right frequency
+    tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
+
+    mc = MeasurementControl('MC_Spin_Echo')
+    mc.settables(SpinEchoWaitParameter(tiiq.qrm, tiiq.qcm, ro_pulse,
+                                     qc2_pulse, pi_pulse_length))
+    mc.setpoints(np.arange(start_start, start_end, start_step))
+    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm)))
+    tiiq._LO_qrm.on()
+    tiiq._LO_qcm.on()
+    dataset = mc.run('Spin Echo', soft_avg = tiiq.software_averages)
+    tiiq.stop()
+    
+    return dataset   
