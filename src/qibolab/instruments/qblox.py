@@ -168,6 +168,11 @@ class GenericPulsar:
     def stop(self):
         self.device.stop_sequencer()
 
+    def close(self):
+        self.device.close()
+
+    def __del__(self):
+        self.device.close()
 
 class PulsarQRM(GenericPulsar):
     """Class for interfacing with Pulsar QRM."""
