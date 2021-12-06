@@ -234,7 +234,7 @@ def run_rabi_pulse_length():
     tiiq.LO_QRM.set_frequency(tiiq.resonator_freq - ro_pulse.frequency)
     tiiq.LO_QCM.set_frequency(tiiq.qubit_freq + qc_pulse.frequency)
     mc = MeasurementControl('MC')
-    mc.settables(QCPulseLengthParameter(qrm_sequence, qcm_sequence))
+    mc.settables(QCPulseLengthParameter(ro_pulse, qc_pulse))
     mc.setpoints(np.arange(1, 2000, 5))
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
     tiiq.LO_qrm.on()
@@ -268,7 +268,7 @@ def run_Rabi_pulse_gain():
     tiiq.LO_QRM.set_frequency = tiiq.resonator_freq - ro_pulse.frequency
     tiiq.LO_QCM.set_frequency = tiiq.qubit_freq + qc_pulse.frequency
     mc = MeasurementControl('MC')
-    mc.settables(QCPulseGainParameter(tiisq._qcm))
+    mc.settables(QCPulseGainParameter(tiiq.qcm))
     mc.setpoints(np.arange(0, 1, 0.02))
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
     tiiq.LO_qrm.on()
@@ -284,14 +284,14 @@ class QCPulseLengthParameter():
     name = 'qc_pulse_length'
 
     def __init__(self,
-                 qrm_sequence: pulses.PulseSequence,
-                 qcm_sequence: pulses.PulseSequence):
-        self.qrm_sequence = qrm_sequence
-        self.qcm_sequence = qcm_sequence
+                 ro_pulse: pulses.TIIReadoutPulse,
+                 qc_pulse: pulses.TIIPulse):
+        self.ro_pulse = ro_pulse
+        self.qc_pulse = qc_pulse
 
     def set(self, value):
-        self.qcm_sequence[0].length = value
-        self.qrm_sequence.readout_pulse.start = value + 4
+        self.qc_pulse.length = value
+        self.ro_pulse.start = value + 4
 
 
 class QCPulseGainParameter():
