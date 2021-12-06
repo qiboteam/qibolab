@@ -174,6 +174,7 @@ class GenericPulsar:
     def __del__(self):
         self.device.close()
 
+
 class PulsarQRM(GenericPulsar):
     """Class for interfacing with Pulsar QRM."""
 
