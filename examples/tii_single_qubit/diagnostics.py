@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from qibolab import pulses
 from qibolab.platforms import TIIq
+from qibolab.instruments.qblox import PulsarQCM
 
 # TODO: Have a look in the documentation of ``MeasurementControl``
 from quantify_core.measurement import MeasurementControl
@@ -242,6 +243,40 @@ def run_rabi_pulse_length():
     tiiq.stop()
 
 
+def run_Rabi_pulse_gain():
+    with open("tii_single_qubit_settings.json", "r") as file:
+        settings = json.load(file)
+    tiiq = TIIq()
+    tiiq.setup(settings) # TODO: Give settings json directory here
+    ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
+                                      start=70,
+                                      frequency=20000000.0,
+                                      amplitude=0.5,
+                                      length=3000,
+                                      shape="Block",
+                                      delay_before_readout=4)
+    qc_pulse = pulses.TIIPulse(name="qc_pulse",
+                               start=0,
+                               frequency=200000000.0,
+                               amplitude=0.3,
+                               length=60,
+                               shape="Gaussian")
+    qrm_sequence = pulses.PulseSequence()
+    qrm_sequence.add(ro_pulse)
+    qcm_sequence = pulses.PulseSequence()
+    qcm_sequence.add(qc_pulse)
+    tiiq.LO_QRM.set_frequency = tiiq.resonator_freq - ro_pulse.frequency
+    tiiq.LO_QCM.set_frequency = tiiq.qubit_freq + qc_pulse.frequency
+    mc = MeasurementControl('MC')
+    mc.settables(QCPulseGainParameter(tiisq._qcm))
+    mc.setpoints(np.arange(0, 1, 0.02))
+    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
+    tiiq.LO_qrm.on()
+    tiiq.LO_qcm.on()
+    dataset = mc.run('Rabi Pulse Gain', soft_avg = tiiq.software_averages)
+    tiiq.stop()
+
+
 class QCPulseLengthParameter():
 
     label = 'Qubit Control Pulse Length'
@@ -257,6 +292,26 @@ class QCPulseLengthParameter():
     def set(self, value):
         self.qcm_sequence[0].length = value
         self.qrm_sequence.readout_pulse.start = value + 4
+
+
+class QCPulseGainParameter():
+
+    label = 'Qubit Control Gain'
+    unit = '%'
+    name = 'qc_pulse_gain'
+
+    def __init__(self, qcm: PulsarQCM):
+        self.qcm = qcm
+
+    def set(self,value):
+        # TODO: Replace with a ``set_gain`` method
+        gain = value / 100
+        if self.qcm.sequencer == 1:
+            self.qcm.device.sequencer1_gain_awg_path0(gain)
+            self.qcm.device.sequencer1_gain_awg_path1(gain)
+        else:
+            self.qcm.device.sequencer0_gain_awg_path0(gain)
+            self.qcm.device.sequencer0_gain_awg_path1(gain)
 
 
 if __name__ == "__main__":
