@@ -1,7 +1,6 @@
 import json
 import pathlib
 import numpy as np
-import matplotlib.pyplot as plt
 from qibolab import pulses
 from qibolab.platforms import TIIq
 
@@ -14,9 +13,6 @@ set_datadir(pathlib.Path(__file__).parent / "data")
 
 
 class ROController():
-    # TODO: ``ROController`` implementation
-    # This should be the complicated part as it involves the pulses
-
     # Quantify Gettable Interface Implementation
     label = ['Amplitude', 'Phase','I','Q']
     unit = ['V', 'Radians','V','V']
@@ -38,7 +34,6 @@ class ROController():
         self.qcm.upload(waveforms, program, "./data")
 
         self.qcm.play_sequence()
-        # TODO: Find a better way to pass the frequency of readout pulse here
         acquisition_results = self.qrm.play_sequence_and_acquire(self.qrm_sequence.readout_pulse)
         return acquisition_results
 
@@ -65,7 +60,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
         settings = json.load(file)
 
     tiiq = TIIq()
-    tiiq.setup(settings) # TODO: Give settings json directory here
+    tiiq.setup(settings)
 
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
                                       start=70,
@@ -112,24 +107,10 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
 
     from scipy.signal import savgol_filter
     smooth_dataset = savgol_filter(dataset['y0'].values, 25, 2)
-    # TODO: is the following call really needed given that the oscillator is never used after that?
-    tiiq.LO_qrm.set_frequency(dataset['x0'].values[smooth_dataset.argmax()])
-
     resonator_freq = dataset['x0'].values[smooth_dataset.argmax()] + ro_pulse.frequency
     print(f"\nResonator Frequency = {resonator_freq}")
     print(len(dataset['y0'].values))
     print(len(smooth_dataset))
-
-    fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-    ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
-    ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
-    ax.title.set_text('Original')
-    #ax.xlabel("Frequency")
-    #ax.ylabel("Amplitude")
-    ax.plot(dataset['x0'].values[smooth_dataset.argmax()], smooth_dataset[smooth_dataset.argmax()], 'o', color='C2')
-    # determine off-resonance amplitude and typical noise
-    plt.savefig("run_resonator_spectroscopy.pdf")
-
     return resonator_freq, dataset
 
 
@@ -139,7 +120,7 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
         settings = json.load(file)
 
     tiiq = TIIq()
-    tiiq.setup(settings) # TODO: Give settings json directory here
+    tiiq.setup(settings)
 
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
                                       start=70,
@@ -185,8 +166,6 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
 
     from scipy.signal import savgol_filter
     smooth_dataset = savgol_filter(dataset['y0'].values, 11, 2)
-    # TODO: is the following call really needed given that the oscillator is never used after that?
-    tiiq.LO_qcm.set_frequency(dataset['x0'].values[smooth_dataset.argmin()])
     qubit_freq = dataset['x0'].values[smooth_dataset.argmin()] - qc_pulse.frequency
     print(dataset['x0'].values[smooth_dataset.argmin()])
     print(f"Qubit Frequency = {qubit_freq}")
