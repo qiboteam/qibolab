@@ -1,7 +1,6 @@
-from diagnostics import run_resonator_spectroscopy
 import json
 
-from diagnostics import run_qubit_spectroscopy, \
+from diagnostics import run_resonator_spectroscopy, \
                         run_qubit_spectroscopy
 
 if __name__ == "__main__":
