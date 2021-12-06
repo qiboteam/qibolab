@@ -7,24 +7,9 @@ from qibolab.platforms import TIIq
 # TODO: Have a look in the documentation of ``MeasurementControl``
 from quantify_core.measurement import MeasurementControl
 from quantify_core.measurement.control import Gettable
-
-
-def create_measurement_control():
-    from quantify_core.data.handling import set_datadir
-    # TODO: Check why this set_datadir is needed
-    set_datadir(pathlib.Path(__file__).parent / "data")
-
-    mc = MeasurementControl('MC')
-    from quantify_core.visualization.pyqt_plotmon import PlotMonitor_pyqt
-    plotmon = PlotMonitor_pyqt('Plot Monitor')
-    plotmon.tuids_max_num(3)
-    mc.instr_plotmon(plotmon.name)
-
-    from quantify_core.visualization.instrument_monitor import InstrumentMonitor
-    insmon = InstrumentMonitor("Instruments Monitor")
-    mc.instrument_monitor(insmon.name)
-
-    return mc
+from quantify_core.data.handling import set_datadir
+# TODO: Check why this set_datadir is needed
+set_datadir(pathlib.Path(__file__).parent / "data")
 
 
 class ROController():
@@ -95,7 +80,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     qcm_sequence = pulses.PulseSequence()
     qcm_sequence.add(qc_pulse)
 
-    mc = create_measurement_control()
+    mc = MeasurementControl('MC')
     # Fast Sweep
     tiiq.software_averages = 1
     scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
@@ -126,16 +111,6 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     print(f"\nResonator Frequency = {resonator_freq}")
     print(len(dataset['y0'].values))
     print(len(smooth_dataset))
-
-    fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-    ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
-    ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
-    ax.plot(dataset['x0'].values[smooth_dataset.argmax()], smooth_dataset[smooth_dataset.argmax()], 'o', color='C2')
-    ax.title.set_text('Original')
-    ax.xlabel("Frequency")
-    ax.ylabel("Amplitude")
-    plt.savefig("run_resonator_spectroscopy.pdf")
-
     return resonator_freq, dataset
 
 
@@ -165,7 +140,7 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
     qcm_sequence = pulses.PulseSequence()
     qcm_sequence.add(qc_pulse)
 
-    mc = create_measurement_control()
+    mc = MeasurementControl('MC')
     # Fast Sweep
     scanrange = np.arange(fast_start, fast_end, fast_step)
     mc.settables(tiiq.LO_qcm.frequency)
@@ -200,10 +175,10 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
     fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
     ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
     ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
-    ax.plot(dataset['x0'].values[smooth_dataset.argmin()], smooth_dataset[smooth_dataset.argmin()], 'o', color='C2')
     ax.title.set_text('Original')
-    ax.xlabel("Frequency")
-    ax.ylabel("Amplitude")
+    #ax.xlabel("Frequency")
+    #ax.ylabel("Amplitude")
+    ax.plot(dataset['x0'].values[smooth_dataset.argmin()], smooth_dataset[smooth_dataset.argmin()], 'o', color='C2')
     plt.savefig("run_qubit_spectroscopy.pdf")
 
     return qubit_freq, dataset
