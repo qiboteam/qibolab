@@ -246,6 +246,8 @@ def run_t1(resonator_freq, qubit_freq, pi_pulse_length, pi_pulse_gain,
     tiiq._LO_qcm.on()
     dataset = mc.run('T1', soft_avg = tiiq.software_averages)
     tiiq.stop()
+    # fit data and determine T1
+    # platform.t1 = 
 
     return dataset
 
