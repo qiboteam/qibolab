@@ -1,6 +1,7 @@
 import json
 import pathlib
 import numpy as np
+import matplotlib.pyplot as plt
 from qibolab import pulses
 from qibolab.platforms import TIIq
 
@@ -111,6 +112,17 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     print(f"\nResonator Frequency = {resonator_freq}")
     print(len(dataset['y0'].values))
     print(len(smooth_dataset))
+
+    fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
+    ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
+    ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
+    ax.title.set_text('Original')
+    ax.xlabel("Frequency")
+    ax.ylabel("Amplitude")
+    ax.plot(dataset['x0'].values[smooth_dataset.argmax()], smooth_dataset[smooth_dataset.argmax()], 'o', color='C2')
+    # determine off-resonance amplitude and typical noise
+    plt.savefig("run_resonator_spectroscopy.pdf")
+
     return resonator_freq, dataset
 
 
@@ -176,8 +188,8 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
     ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
     ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
     ax.title.set_text('Original')
-    #ax.xlabel("Frequency")
-    #ax.ylabel("Amplitude")
+    ax.xlabel("Frequency")
+    ax.ylabel("Amplitude")
     ax.plot(dataset['x0'].values[smooth_dataset.argmin()], smooth_dataset[smooth_dataset.argmin()], 'o', color='C2')
     plt.savefig("run_qubit_spectroscopy.pdf")
 
