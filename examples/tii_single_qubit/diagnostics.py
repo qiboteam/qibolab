@@ -117,8 +117,8 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
     ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
     ax.title.set_text('Original')
-    ax.xlabel("Frequency")
-    ax.ylabel("Amplitude")
+    #ax.xlabel("Frequency")
+    #ax.ylabel("Amplitude")
     ax.plot(dataset['x0'].values[smooth_dataset.argmax()], smooth_dataset[smooth_dataset.argmax()], 'o', color='C2')
     # determine off-resonance amplitude and typical noise
     plt.savefig("run_resonator_spectroscopy.pdf")
@@ -188,8 +188,8 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
     ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
     ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
     ax.title.set_text('Original')
-    ax.xlabel("Frequency")
-    ax.ylabel("Amplitude")
+    #ax.xlabel("Frequency")
+    #ax.ylabel("Amplitude")
     ax.plot(dataset['x0'].values[smooth_dataset.argmin()], smooth_dataset[smooth_dataset.argmin()], 'o', color='C2')
     plt.savefig("run_qubit_spectroscopy.pdf")
 
