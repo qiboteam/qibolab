@@ -240,7 +240,7 @@ def run_rabi_pulse_length(resonator_freq, qubit_freq):
     tiiq.stop()
 
 
-def run_Rabi_pulse_gain(resonator_freq, qubit_freq):
+def run_rabi_pulse_gain(resonator_freq, qubit_freq):
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
     tiiq = TIIq()
@@ -274,7 +274,7 @@ def run_Rabi_pulse_gain(resonator_freq, qubit_freq):
     tiiq.stop()
 
 
-def run_Rabi_pulse_length_and_gain(resonator_freq, qubit_freq):
+def run_rabi_pulse_length_and_gain(resonator_freq, qubit_freq):
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
     tiiq = TIIq()
@@ -313,7 +313,7 @@ def run_Rabi_pulse_length_and_gain(resonator_freq, qubit_freq):
     tiiq.stop()
 
 
-def run_Rabi_pulse_length_and_amplitude(resonator_freq, qubit_freq):
+def run_rabi_pulse_length_and_amplitude(resonator_freq, qubit_freq):
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
     tiiq = TIIq()
