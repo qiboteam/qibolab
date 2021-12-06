@@ -147,6 +147,57 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     return dataset
 
 
+def run_rabi_pulse_length():
+    with open("tii_single_qubit_settings.json", "r") as file:
+        settings = json.load(file)
+    tiiq = TIIq()
+    tiiq.setup(settings) # TODO: Give settings json directory here
+    ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
+                                      start=70,
+                                      frequency=20000000.0,
+                                      amplitude=0.5,
+                                      length=3000,
+                                      shape="Block",
+                                      delay_before_readout=4)
+    qc_pulse = pulses.TIIPulse(name="qc_pulse",
+                               start=0,
+                               frequency=200000000.0,
+                               amplitude=0.3,
+                               length=60,
+                               shape="Gaussian")
+    qrm_sequence = pulses.PulseSequence()
+    qrm_sequence.add(ro_pulse)
+    qcm_sequence = pulses.PulseSequence()
+    qcm_sequence.add(qc_pulse)
+    tiiq.LO_QRM.set_frequency(tiiq.resonator_freq - ro_pulse.frequency)
+    tiiq.LO_QCM.set_frequency(tiiq.qubit_freq + qc_pulse.frequency)
+    mc = MeasurementControl('MC')
+    mc.settables(QCPulseLengthParameter(qrm_sequence, qcm_sequence))
+    mc.setpoints(np.arange(1, 2000, 5))
+    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
+    tiiq.LO_qrm.on()
+    tiiq.LO_qcm.on()
+    dataset = mc.run('Rabi Pulse Length', soft_avg = tiiq.software_averages)
+    tiiq.stop()
+
+
+class QCPulseLengthParameter():
+
+    label = 'Qubit Control Pulse Length'
+    unit = 'ns'
+    name = 'qc_pulse_length'
+
+    def __init__(self,
+                 qrm_sequence: pulses.PulseSequence,
+                 qcm_sequence: pulses.PulseSequence):
+        self.qrm_sequence = qrm_sequence
+        self.qcm_sequence = qcm_sequence
+
+    def set(self, value):
+        self.qcm_sequence[0].length = value
+        self.qrm_sequence.readout_pulse.start = value + 4
+
+
 if __name__ == "__main__":
     args = vars(parser.parse_args())
     run_resonator_spectroscopy(**args)
