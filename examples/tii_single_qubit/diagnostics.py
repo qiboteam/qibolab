@@ -48,11 +48,10 @@ class T1WaitParameter():
         self.qrm = qrm
         self.qcm_ro_pulse = ro_pulse
         
-    def set(self,value):
+    def set(self, value):
         # TODO: implement following condition
         #must be >= 4ns <= 65535
         self.ro_pulse.delay_before_readout = value
-
 
 
 def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step):
