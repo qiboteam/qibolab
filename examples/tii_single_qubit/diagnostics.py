@@ -4,7 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from qibolab import pulses
 from qibolab.platforms import TIIq
-from qibolab.instruments.qblox import PulsarQCM
 
 # TODO: Have a look in the documentation of ``MeasurementControl``
 from quantify_core.measurement import MeasurementControl
@@ -354,9 +353,7 @@ class QCPulseLengthParameter():
     unit = 'ns'
     name = 'qc_pulse_length'
 
-    def __init__(self,
-                 ro_pulse: pulses.TIIReadoutPulse,
-                 qc_pulse: pulses.TIIPulse):
+    def __init__(self, ro_pulse, qc_pulse):
         self.ro_pulse = ro_pulse
         self.qc_pulse = qc_pulse
 
@@ -371,7 +368,7 @@ class QCPulseGainParameter():
     unit = '%'
     name = 'qc_pulse_gain'
 
-    def __init__(self, qcm: PulsarQCM):
+    def __init__(self, qcm):
         self.qcm = qcm
 
     def set(self,value):
@@ -391,7 +388,7 @@ class QCPulseAmplitudeParameter():
     unit = '%'
     name = 'qc_pulse_amplitude'
 
-    def __init__(self, qc_pulse: pulses.TIIPulse):
+    def __init__(self, qc_pulse):
         self.qc_pulse = qc_pulse
 
     def set(self, value):
