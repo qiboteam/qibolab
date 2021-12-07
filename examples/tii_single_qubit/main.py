@@ -19,13 +19,13 @@ if __name__ == "__main__":
     pi_pulse_length = 50
     pi_pulse_gain = 0.5
     print("\nRun t1.\n")
-    run_t1(resonator_freq, qubit_freq, pi_pulse_length,
-           pi_pulse_gain, **settings["t1"])
+    run_t1(resonator_freq, qubit_freq, pi_pulse_gain,
+           pi_pulse_length, **settings["t1"])
     print("\nRun ramsey.\n")
-    run_ramsey(resonator_freq, qubit_freq, pi_pulse_length,
-           pi_pulse_gain, **settings["ramsey"])
+    run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain,
+           pi_pulse_length, **settings["ramsey"])
     print("\nRun Spin Echo.\n")
-    run_spin_echo(resonator_freq, qubit_freq, pi_pulse_length,
-           pi_pulse_gain, **settings["spin_echo"])
+    run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain,
+           pi_pulse_length, **settings["spin_echo"])
     print("\nDiagnostics completed.\n")
     
