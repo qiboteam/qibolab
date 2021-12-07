@@ -4,7 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from qibolab import pulses
 from qibolab.platforms import TIIq
-from qibolab.instruments.qblox import PulsarQCM
 
 # TODO: Have a look in the documentation of ``MeasurementControl``
 from quantify_core.measurement import MeasurementControl
@@ -224,7 +223,7 @@ def run_rabi_pulse_length(resonator_freq, qubit_freq, plotmon=False):
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
     tiiq = TIIq()
-    tiiq.setup(settings) # TODO: Give settings json directory here
+    tiiq.setup(settings)
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
                                       start=70,
                                       frequency=20000000.0,
@@ -262,7 +261,7 @@ def run_rabi_pulse_gain(resonator_freq, qubit_freq, plotmon=False):
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
     tiiq = TIIq()
-    tiiq.setup(settings) # TODO: Give settings json directory here
+    tiiq.setup(settings)
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
                                       start=70,
                                       frequency=20000000.0,
@@ -300,7 +299,7 @@ def run_rabi_pulse_length_and_gain(resonator_freq, qubit_freq, plotmon=False):
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
     tiiq = TIIq()
-    tiiq.setup(settings) # TODO: Give settings json directory here
+    tiiq.setup(settings)
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
                                       start=70,
                                       frequency=20000000.0,
@@ -343,7 +342,7 @@ def run_rabi_pulse_length_and_amplitude(resonator_freq, qubit_freq, plotmon=Fals
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
     tiiq = TIIq()
-    tiiq.setup(settings) # TODO: Give settings json directory here
+    tiiq.setup(settings)
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
                                       start=70,
                                       frequency=20000000.0,
@@ -388,9 +387,7 @@ class QCPulseLengthParameter():
     unit = 'ns'
     name = 'qc_pulse_length'
 
-    def __init__(self,
-                 ro_pulse: pulses.TIIReadoutPulse,
-                 qc_pulse: pulses.TIIPulse):
+    def __init__(self, ro_pulse, qc_pulse):
         self.ro_pulse = ro_pulse
         self.qc_pulse = qc_pulse
 
@@ -405,7 +402,7 @@ class QCPulseGainParameter():
     unit = '%'
     name = 'qc_pulse_gain'
 
-    def __init__(self, qcm: PulsarQCM):
+    def __init__(self, qcm):
         self.qcm = qcm
 
     def set(self,value):
@@ -425,7 +422,7 @@ class QCPulseAmplitudeParameter():
     unit = '%'
     name = 'qc_pulse_amplitude'
 
-    def __init__(self, qc_pulse: pulses.TIIPulse):
+    def __init__(self, qc_pulse):
         self.qc_pulse = qc_pulse
 
     def set(self, value):
