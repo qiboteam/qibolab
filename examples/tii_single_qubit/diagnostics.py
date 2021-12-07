@@ -223,6 +223,7 @@ def run_rabi_pulse_length(resonator_freq, qubit_freq):
     tiiq.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
     mc = MeasurementControl('MC_Rabi_pulse_length')
+    tiiq.software_averages = 1
     mc.settables(QCPulseLengthParameter(ro_pulse, qc_pulse))
     mc.setpoints(np.arange(1, 2000, 5))
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
@@ -257,6 +258,7 @@ def run_rabi_pulse_gain(resonator_freq, qubit_freq):
     tiiq.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
     mc = MeasurementControl('MC_Rabi_pulse_gain')
+    tiiq.software_averages = 1
     mc.settables(QCPulseGainParameter(tiiq.qcm))
     mc.setpoints(np.arange(0, 1, 0.02))
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
@@ -291,6 +293,7 @@ def run_rabi_pulse_length_and_gain(resonator_freq, qubit_freq):
     tiiq.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
     mc = MeasurementControl('MC_Rabi_pulse_length_and_gain')
+    tiiq.software_averages = 1
     mc.settables([QCPulseLengthParameter(ro_pulse, qc_pulse), QCPulseGainParameter(tiiq.qcm)])
     setpoints_length = np.arange(1, 200, 10)
     setpoints_gain = np.arange(0, 100, 5)
@@ -330,6 +333,7 @@ def run_rabi_pulse_length_and_amplitude(resonator_freq, qubit_freq):
     tiiq.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
     mc = MeasurementControl('MC_Rabi_pulse_length_and_amplitude')
+    tiiq.software_averages = 1
     mc.settables([QCPulseLengthParameter(ro_pulse, qc_pulse), QCPulseAmplitudeParameter(qc_pulse)])
     setpoints_length = np.arange(1, 200, 10)
     setpoints_amplitude = np.arange(0, 100, 5)
