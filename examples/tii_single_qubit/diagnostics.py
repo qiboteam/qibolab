@@ -44,14 +44,14 @@ class T1WaitParameter():
     name = 't1_wait'
     initial_value = 0
     
-    def __init__(self, qrm, ro_pulse):
-        self.qrm = qrm
-        self.qcm_ro_pulse = ro_pulse
+    def __init__(self, ro_pulse):
+        self.ro_pulse = ro_pulse
         
     def set(self, value):
         # TODO: implement following condition
         #must be >= 4ns <= 65535
         self.ro_pulse.delay_before_readout = value
+
 
 class RamseyWaitParameter():
     label = 'Time'
@@ -59,9 +59,7 @@ class RamseyWaitParameter():
     name = 'ramsey_wait'
     initial_value = 0
     
-    def __init__(self, qrm, qcm, ro_pulse, qc2_pulse, pi_pulse_length):
-        self.qrm = qrm
-        self.qcm = qcm
+    def __init__(self, ro_pulse, qc2_pulse, pi_pulse_length):
         self.ro_pulse = ro_pulse
         self.qc2_pulse = qc2_pulse
         self.pi_pulse_length = pi_pulse_length
@@ -70,20 +68,19 @@ class RamseyWaitParameter():
         self.qc2_pulse.start = self.pi_pulse_length//2 + value
         self.ro_pulse.start = self.pi_pulse_length + value + 4
 
+
 class SpinEchoWaitParameter():
     label = 'Time'
     unit = 'ns'
     name = 'spin_echo_wait'
     initial_value = 0
     
-    def __init__(self, qrm, qcm, ro_pulse, qc2_pulse, pi_pulse_length):
-        self.qrm = qrm
-        self.qcm = qcm
+    def __init__(self, ro_pulse, qc2_pulse, pi_pulse_length):
         self.ro_pulse = ro_pulse
         self.qc2_pulse = qc2_pulse
         self.pi_pulse_length = pi_pulse_length
         
-    def set(self,value):
+    def set(self, value):
         self.qc2_pulse.start = self.pi_pulse_length//2 + value
         self.ro_pulse.start = 3 * self.pi_pulse_length//2 + 2 * value + 4
 
@@ -174,6 +171,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
 
     return resonator_freq, dataset
 
+
 def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
                            precision_start, precision_end, precision_step):
     with open("tii_single_qubit_settings.json", "r") as file:
@@ -244,6 +242,7 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
 
     return qubit_freq, dataset
 
+
 def run_t1(resonator_freq, qubit_freq, pi_pulse_length, pi_pulse_gain,
             delay_before_readout_start, delay_before_readout_end,
             delay_before_readout_step):
@@ -290,6 +289,7 @@ def run_t1(resonator_freq, qubit_freq, pi_pulse_length, pi_pulse_gain,
 
     return dataset
 
+
 def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
                start_start, start_end, start_step):
 
@@ -309,13 +309,13 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
                                       delay_before_readout=4)
     qc_pulse = pulses.TIIPulse(name="qc_pulse",
                                start=0,
-                               frequency=200e6,
+                               frequency=200000000.0,
                                amplitude=0.3,
                                length=pi_pulse_length//2,
                                shape="Gaussian")
     qc2_pulse = pulses.TIIPulse(name="qc2_pulse",
                                start=pi_pulse_length//2 + 0, # TODO: +0?
-                               frequency=200e6,
+                               frequency=200000000.0,
                                amplitude=0.3,
                                length=pi_pulse_length//2,
                                shape="Gaussian")
@@ -326,7 +326,6 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
     qcm_sequence.add(qc2_pulse)
 
     tiiq.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
-    # TODO: check if this is the right frequency
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
 
     mc = MeasurementControl('MC_Ramsey')
@@ -343,11 +342,13 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
     # platform.qubit_freq += dephasing
     return dataset
 
+
 def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
                   start_start, start_end, start_step):
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
     tiiq = TIIq()
+    # TODO: add set_gain method?
     settings['_QCM_settings']['gain'] = pi_pulse_gain
     tiiq.setup(settings) # TODO: Give settings json directory here
 
@@ -360,13 +361,13 @@ def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
                                       delay_before_readout=4)
     qc_pulse = pulses.TIIPulse(name="qc_pulse",
                                start=0,
-                               frequency=200e6,
+                               frequency=200000000.0,
                                amplitude=0.3,
                                length=pi_pulse_length//2,
                                shape="Gaussian")
     qc2_pulse = pulses.TIIPulse(name="qc2_pulse",
                                start=pi_pulse_length//2 + 0, # TODO: +0?
-                               frequency=200e6,
+                               frequency=200000000.0,
                                amplitude=0.3,
                                length=pi_pulse_length//2,
                                shape="Gaussian")
@@ -378,7 +379,6 @@ def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
     qcm_sequence.add(qc2_pulse)
 
     tiiq.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
-    # TODO: check if this is the right frequency
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
 
     mc = MeasurementControl('MC_Spin_Echo')
