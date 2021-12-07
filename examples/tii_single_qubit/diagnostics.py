@@ -9,13 +9,12 @@ from qibolab.instruments.qblox import PulsarQCM
 # TODO: Have a look in the documentation of ``MeasurementControl``
 from quantify_core.measurement import MeasurementControl
 from quantify_core.measurement.control import Gettable
+from quantify_core.data.handling import set_datadir
+# TODO: Check why this set_datadir is needed
+set_datadir(pathlib.Path(__file__).parent / "data")
 
 
 def create_measurement_control(name):
-    from quantify_core.data.handling import set_datadir
-    # TODO: Check why this set_datadir is needed
-    set_datadir(pathlib.Path(__file__).parent / "data")
-
     mc = MeasurementControl(f'MC {name}')
     from quantify_core.visualization.pyqt_plotmon import PlotMonitor_pyqt
     plotmon = PlotMonitor_pyqt(f'Plot Monitor {name}')
