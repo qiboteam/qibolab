@@ -7,7 +7,7 @@ from qibolab.platforms import TIIq
 
 # TODO: Have a look in the documentation of ``MeasurementControl``
 from quantify_core.measurement import MeasurementControl
-from quantify_core.measurement.control import Gettable, Settable
+from quantify_core.measurement.control import Gettable
 from quantify_core.data.handling import set_datadir
 # TODO: Check why this set_datadir is needed
 set_datadir(pathlib.Path(__file__).parent / "data")
