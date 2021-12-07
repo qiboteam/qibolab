@@ -27,6 +27,7 @@ def generate_single_pulse_waveforms(pulse):
     offset_i = pulse["offset_i"]    # Pulse I offset (unitless). (amplitude + offset) should be between [0 and 1]
     offset_q = pulse["offset_q"]    # Pulse Q offset (unitless). (amplitude + offset) should be between [0 and 1]
     shape = pulse["shape"]          # Pulse shape ['Block', 'Gaussian']
+    #phase = pulse["phase"]         # Pulse phase
 
     # Generate pulse envelope
     if shape == 'Block':
@@ -37,10 +38,18 @@ def generate_single_pulse_waveforms(pulse):
         envelope_i = amplitude*scipy.signal.gaussian(length, std=std)
         envelope_q = amplitude*np.zeros(int(length))
 
+    #best method: envelope vomes from AWG 
+    #enevelope_i = enevelope_i*np.cos(self.phase) - enevelope_q*np.sin(self.phase)
+    #enevelope_q = enevelope_q*np.cos(self.phase) + enevelope_i*np.sin(self.phase)
+
+    
     # Use the envelope to modulate a sinusoldal signal of frequency freq_if
     time = np.arange(length)*1e-9
-    cosalpha = np.cos(2*np.pi*freq_if*time)
-    sinalpha = np.sin(2*np.pi*freq_if*time)
+
+    #not the best option: affects the phase of w_if instead of the AWG I and Q phase (envelope)
+    #this phase defines the qubit X axes. be careful! 
+    cosalpha = np.cos(2*np.pi*freq_if*time) #+ self.phase)
+    sinalpha = np.sin(2*np.pi*freq_if*time) #+ self.phase)
     mod_matrix = np.array([[cosalpha,sinalpha],[-sinalpha,cosalpha]])
     result = []
     for it,t,ii,qq in zip(np.arange(length),time,envelope_i,envelope_q):
