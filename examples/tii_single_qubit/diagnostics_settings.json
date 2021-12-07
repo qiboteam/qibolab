@@ -8,26 +8,26 @@
         "precision_step": 0.02e6
     },
     "qubit_spectroscopy": {
-      "fast_start": -300e6,
-      "fast_end": 100e6,
-      "fast_step": 1e6,
-      "precision_start": -30e6,
-      "precision_end": 30e6,
-      "precision_step": 0.5e6
+        "fast_start": -300e6,
+        "fast_end": 100e6,
+        "fast_step": 1e6,
+        "precision_start": -30e6,
+        "precision_end": 30e6,
+        "precision_step": 0.5e6
     },
     "t1": {
-      "delay_before_readout_start": 4,
-      "delay_before_readout_end": 500,
-      "delay_before_readout_step": 10
+        "delay_before_readout_start": 4,
+        "delay_before_readout_end": 500,
+        "delay_before_readout_step": 10
     },
     "ramsey": {
-      "start_start": 4,
-      "start_end": 500,
-      "start_step": 10
+        "start_start": 4,
+        "start_end": 500,
+        "start_step": 10
     },
     "spin_echo": {
-      "start_start": 4,
-      "start_end": 500,
-      "start_step": 10
+        "start_start": 4,
+        "start_end": 500,
+        "start_step": 10
     }
 }
