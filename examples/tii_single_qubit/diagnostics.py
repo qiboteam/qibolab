@@ -9,9 +9,24 @@ from qibolab.instruments.qblox import PulsarQCM
 # TODO: Have a look in the documentation of ``MeasurementControl``
 from quantify_core.measurement import MeasurementControl
 from quantify_core.measurement.control import Gettable
-from quantify_core.data.handling import set_datadir
-# TODO: Check why this set_datadir is needed
-set_datadir(pathlib.Path(__file__).parent / "data")
+
+
+def create_measurement_control(name):
+    from quantify_core.data.handling import set_datadir
+    # TODO: Check why this set_datadir is needed
+    set_datadir(pathlib.Path(__file__).parent / "data")
+
+    mc = MeasurementControl(f'MC {name}')
+    from quantify_core.visualization.pyqt_plotmon import PlotMonitor_pyqt
+    plotmon = PlotMonitor_pyqt(f'Plot Monitor {name}')
+    plotmon.tuids_max_num(3)
+    mc.instr_plotmon(plotmon.name)
+
+    from quantify_core.visualization.instrument_monitor import InstrumentMonitor
+    insmon = InstrumentMonitor(f"Instruments Monitor {name}")
+    mc.instrument_monitor(insmon.name)
+
+    return mc
 
 
 class ROController():
@@ -82,7 +97,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     qcm_sequence = pulses.PulseSequence()
     qcm_sequence.add(qc_pulse)
 
-    mc = MeasurementControl('MC_resonator_spectroscopy')
+    mc = create_measurement_control('resonator_spectroscopy')
     # Fast Sweep
     tiiq.software_averages = 1
     scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
