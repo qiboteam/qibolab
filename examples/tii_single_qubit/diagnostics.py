@@ -279,7 +279,7 @@ def run_t1(resonator_freq, qubit_freq, pi_pulse_length, pi_pulse_gain,
     mc.setpoints(np.arange(delay_before_readout_start,
                            delay_before_readout_end,
                            delay_before_readout_step))
-    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm)))
+    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
     tiiq._LO_qrm.on()
     tiiq._LO_qcm.on()
     dataset = mc.run('T1', soft_avg = tiiq.software_averages)
@@ -332,7 +332,7 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
     mc.settables(RamseyWaitParameter(tiiq.qrm, tiiq.qcm, ro_pulse,
                                      qc2_pulse, pi_pulse_length))
     mc.setpoints(np.arange(start_start, start_end, start_step))
-    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm)))
+    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
     tiiq._LO_qrm.on()
     tiiq._LO_qcm.on()
     dataset = mc.run('Ramsey', soft_avg = tiiq.software_averages)
@@ -385,7 +385,7 @@ def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
     mc.settables(SpinEchoWaitParameter(tiiq.qrm, tiiq.qcm, ro_pulse,
                                      qc2_pulse, pi_pulse_length))
     mc.setpoints(np.arange(start_start, start_end, start_step))
-    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm)))
+    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
     tiiq._LO_qrm.on()
     tiiq._LO_qcm.on()
     dataset = mc.run('Spin Echo', soft_avg = tiiq.software_averages)
