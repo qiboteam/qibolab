@@ -15,9 +15,6 @@ set_datadir(pathlib.Path(__file__).parent / "data")
 
 
 class ROController():
-    # TODO: ``ROController`` implementation
-    # This should be the complicated part as it involves the pulses
-
     # Quantify Gettable Interface Implementation
     label = ['Amplitude', 'Phase','I','Q']
     unit = ['V', 'Radians','V','V']
@@ -39,7 +36,6 @@ class ROController():
         self.qcm.upload(waveforms, program, "./data")
 
         self.qcm.play_sequence()
-        # TODO: Find a better way to pass the frequency of readout pulse here
         acquisition_results = self.qrm.play_sequence_and_acquire(self.qrm_sequence.readout_pulse)
         return acquisition_results
 
@@ -66,7 +62,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
         settings = json.load(file)
 
     tiiq = TIIq()
-    tiiq.setup(settings) # TODO: Give settings json directory here
+    tiiq.setup(settings)
 
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
                                       start=70,
@@ -86,11 +82,11 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     qcm_sequence = pulses.PulseSequence()
     qcm_sequence.add(qc_pulse)
 
-    mc = MeasurementControl('MC')
+    mc = MeasurementControl('MC_resonator_spectroscopy')
     # Fast Sweep
     tiiq.software_averages = 1
     scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
-    mc.settables(tiiq.LO_qrm.frequency)
+    mc.settables(tiiq.LO_qrm.device.frequency)
     mc.setpoints(scanrange + tiiq.LO_qrm.get_frequency())
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
     tiiq.LO_qrm.on()
@@ -103,7 +99,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     # Precision Sweep
     tiiq.software_averages = 1 # 3
     scanrange = np.arange(-precision_width, precision_width, precision_step)
-    mc.settables(tiiq.LO_qrm.frequency)
+    mc.settables(tiiq.LO_qrm.device.frequency)
     mc.setpoints(scanrange + tiiq.LO_qrm.get_frequency())
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
     tiiq.LO_qrm.on()
@@ -113,9 +109,6 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
 
     from scipy.signal import savgol_filter
     smooth_dataset = savgol_filter(dataset['y0'].values, 25, 2)
-    # TODO: is the following call really needed given that the oscillator is never used after that?
-    tiiq.LO_qrm.set_frequency(dataset['x0'].values[smooth_dataset.argmax()])
-
     resonator_freq = dataset['x0'].values[smooth_dataset.argmax()] + ro_pulse.frequency
     print(f"\nResonator Frequency = {resonator_freq}")
     print(len(dataset['y0'].values))
@@ -140,7 +133,7 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
         settings = json.load(file)
 
     tiiq = TIIq()
-    tiiq.setup(settings) # TODO: Give settings json directory here
+    tiiq.setup(settings)
 
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
                                       start=70,
@@ -160,10 +153,11 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
     qcm_sequence = pulses.PulseSequence()
     qcm_sequence.add(qc_pulse)
 
-    mc = MeasurementControl('MC')
+    mc = MeasurementControl('MC_qubit_spectroscopy')
     # Fast Sweep
+    tiiq.software_averages = 1
     scanrange = np.arange(fast_start, fast_end, fast_step)
-    mc.settables(tiiq.LO_qcm.frequency)
+    mc.settables(tiiq.LO_qcm.device.frequency)
     mc.setpoints(scanrange + tiiq.LO_qcm.get_frequency())
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
     tiiq.LO_qrm.on()
@@ -176,7 +170,7 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
     # Precision Sweep
     tiiq.software_averages = 3
     scanrange = np.arange(precision_start, precision_end, precision_step)
-    mc.settables(tiiq.LO_qcm.frequency)
+    mc.settables(tiiq.LO_qcm.device.frequency)
     mc.setpoints(scanrange + tiiq.LO_qcm.get_frequency())
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
     tiiq.LO_qrm.on()
@@ -186,8 +180,6 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
 
     from scipy.signal import savgol_filter
     smooth_dataset = savgol_filter(dataset['y0'].values, 11, 2)
-    # TODO: is the following call really needed given that the oscillator is never used after that?
-    tiiq.LO_qcm.set_frequency(dataset['x0'].values[smooth_dataset.argmin()])
     qubit_freq = dataset['x0'].values[smooth_dataset.argmin()] - qc_pulse.frequency
     print(dataset['x0'].values[smooth_dataset.argmin()])
     print(f"Qubit Frequency = {qubit_freq}")
