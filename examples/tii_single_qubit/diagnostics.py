@@ -202,7 +202,7 @@ def run_rabi_pulse_length(resonator_freq, qubit_freq):
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
     tiiq = TIIq()
-    tiiq.setup(settings) # TODO: Give settings json directory here
+    tiiq.setup(settings)
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
                                       start=70,
                                       frequency=20000000.0,
