@@ -72,7 +72,8 @@ def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, high
 
 def run_resonator_spectroscopy(lowres_width, lowres_step,
                                highres_width, highres_step,
-                               precision_width, precision_step):
+                               precision_width, precision_step,
+                               plotmon=False):
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
 
@@ -97,7 +98,10 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     qcm_sequence = pulses.PulseSequence()
     qcm_sequence.add(qc_pulse)
 
-    mc = create_measurement_control('resonator_spectroscopy')
+    if plotmon:
+        mc = create_measurement_control('resonator_spectroscopy')
+    else:
+        mc = MeasurementControl('MC_resonator_spectroscopy')
     # Fast Sweep
     tiiq.software_averages = 1
     scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
@@ -143,7 +147,8 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
 
 
 def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
-                           precision_start, precision_end, precision_step):
+                           precision_start, precision_end, precision_step,
+                           plotmon=False):
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
 
@@ -168,7 +173,10 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
     qcm_sequence = pulses.PulseSequence()
     qcm_sequence.add(qc_pulse)
 
-    mc = MeasurementControl('MC_qubit_spectroscopy')
+    if plotmon:
+        mc = create_measurement_control('qubit_spectroscopy')
+    else:
+        mc = MeasurementControl('MC_qubit_spectroscopy')
     # Fast Sweep
     tiiq.software_averages = 1
     scanrange = np.arange(fast_start, fast_end, fast_step)
@@ -213,7 +221,7 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
     return qubit_freq, dataset
 
 
-def run_rabi_pulse_length(resonator_freq, qubit_freq):
+def run_rabi_pulse_length(resonator_freq, qubit_freq, plotmon=False):
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
     tiiq = TIIq()
@@ -237,7 +245,10 @@ def run_rabi_pulse_length(resonator_freq, qubit_freq):
     qcm_sequence.add(qc_pulse)
     tiiq.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
-    mc = MeasurementControl('MC_Rabi_pulse_length')
+    if plotmon:
+        mc = create_measurement_control('Rabi_pulse_length')
+    else:
+        mc = MeasurementControl('MC_Rabi_pulse_length')
     tiiq.software_averages = 1
     mc.settables(QCPulseLengthParameter(ro_pulse, qc_pulse))
     mc.setpoints(np.arange(1, 2000, 5))
@@ -248,7 +259,7 @@ def run_rabi_pulse_length(resonator_freq, qubit_freq):
     tiiq.stop()
 
 
-def run_rabi_pulse_gain(resonator_freq, qubit_freq):
+def run_rabi_pulse_gain(resonator_freq, qubit_freq, plotmon=False):
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
     tiiq = TIIq()
@@ -272,7 +283,10 @@ def run_rabi_pulse_gain(resonator_freq, qubit_freq):
     qcm_sequence.add(qc_pulse)
     tiiq.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
-    mc = MeasurementControl('MC_Rabi_pulse_gain')
+    if plotmon:
+        mc = create_measurement_control('Rabi_pulse_gain')
+    else:
+        mc = MeasurementControl('MC_Rabi_pulse_gain')
     tiiq.software_averages = 1
     mc.settables(QCPulseGainParameter(tiiq.qcm))
     mc.setpoints(np.arange(0, 1, 0.02))
@@ -283,7 +297,7 @@ def run_rabi_pulse_gain(resonator_freq, qubit_freq):
     tiiq.stop()
 
 
-def run_rabi_pulse_length_and_gain(resonator_freq, qubit_freq):
+def run_rabi_pulse_length_and_gain(resonator_freq, qubit_freq, plotmon=False):
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
     tiiq = TIIq()
@@ -307,7 +321,10 @@ def run_rabi_pulse_length_and_gain(resonator_freq, qubit_freq):
     qcm_sequence.add(qc_pulse)
     tiiq.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
-    mc = MeasurementControl('MC_Rabi_pulse_length_and_gain')
+    if plotmon:
+        mc = create_measurement_control('Rabi_pulse_length_and_gain')
+    else:
+        mc = MeasurementControl('MC_Rabi_pulse_length_and_gain')
     tiiq.software_averages = 1
     mc.settables([QCPulseLengthParameter(ro_pulse, qc_pulse), QCPulseGainParameter(tiiq.qcm)])
     setpoints_length = np.arange(1, 200, 10)
@@ -323,7 +340,7 @@ def run_rabi_pulse_length_and_gain(resonator_freq, qubit_freq):
     tiiq.stop()
 
 
-def run_rabi_pulse_length_and_amplitude(resonator_freq, qubit_freq):
+def run_rabi_pulse_length_and_amplitude(resonator_freq, qubit_freq, plotmon=False):
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
     tiiq = TIIq()
@@ -347,7 +364,10 @@ def run_rabi_pulse_length_and_amplitude(resonator_freq, qubit_freq):
     qcm_sequence.add(qc_pulse)
     tiiq.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
-    mc = MeasurementControl('MC_Rabi_pulse_length_and_amplitude')
+    if plotmon:
+        mc = create_measurement_control('Rabi_pulse_length_and_amplitude')
+    else:
+        mc = MeasurementControl('MC_Rabi_pulse_length_and_amplitude')
     tiiq.software_averages = 1
     mc.settables([QCPulseLengthParameter(ro_pulse, qc_pulse), QCPulseAmplitudeParameter(qc_pulse)])
     setpoints_length = np.arange(1, 200, 10)
