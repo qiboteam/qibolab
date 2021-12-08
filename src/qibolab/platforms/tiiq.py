@@ -26,14 +26,18 @@ class TIIq:
         self.qrm.close()
         self.qcm.close()
 
-    def execute(self, qrm_sequence, qcm_sequence, folder="./data"):
-        waveforms, program = self.qrm.translate(qrm_sequence)
-        self.qrm.upload(waveforms, program, folder)
-
-        waveforms, program = self.qcm.translate(qcm_sequence)
+    def execute(self, sequence, folder="./data"):
+        waveforms, program = self.qcm.translate(sequence)
         self.qcm.upload(waveforms, program, folder)
 
+        if sequence.readout_pulses:
+            waveforms, program = self.qrm.translate(sequence)
+            self.qrm.upload(waveforms, program, folder)
+
         self.qcm.play_sequence()
-        # TODO: Find a better way to pass the frequency of readout pulse here
-        acquisition_results = self.qrm.play_sequence_and_acquire(qrm_sequence.readout_pulse)
-        return acquisition_results
+        if sequence.readout_pulses:
+            # TODO: Find a better way to pass the frequency of readout pulse here
+            acquisition_results = self.qrm.play_sequence_and_acquire(sequence.readout_pulses[0])
+            return acquisition_results
+
+        return None

@@ -20,23 +20,22 @@ class ROController():
     unit = ['V', 'Radians','V','V']
     name = ['A', 'Phi','I','Q']
 
-    def __init__(self, qrm, qcm, qrm_sequence, qcm_sequence):
+    def __init__(self, qrm, qcm, sequence):
         self.qrm = qrm
         self.qcm = qcm
-        self.qrm_sequence = qrm_sequence
-        self.qcm_sequence = qcm_sequence
+        self.sequence = sequence
 
     def get(self):
-        #self.qrm.setup(qrm._settings) # this has already been done earlier?
-        waveforms, program = self.qrm.translate(self.qrm_sequence)
-        self.qrm.upload(waveforms, program, "./data")
-
         #self.qcm.setup(qcm._settings)
-        waveforms, program = self.qcm.translate(self.qcm_sequence)
+        waveforms, program = self.qcm.translate(self.sequence)
         self.qcm.upload(waveforms, program, "./data")
 
+        #self.qrm.setup(qrm._settings) # this has already been done earlier?
+        waveforms, program = self.qrm.translate(self.sequence)
+        self.qrm.upload(waveforms, program, "./data")
+
         self.qcm.play_sequence()
-        acquisition_results = self.qrm.play_sequence_and_acquire(self.qrm_sequence.readout_pulse)
+        acquisition_results = self.qrm.play_sequence_and_acquire(self.sequence.readout_pulses[0])
         return acquisition_results
 
 
@@ -75,10 +74,9 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
                             amplitude=0.3,
                             length=60,
                             shape=Gaussian(60 / 5))
-    qrm_sequence = pulses.PulseSequence()
-    qrm_sequence.add(ro_pulse)
-    qcm_sequence = pulses.PulseSequence()
-    qcm_sequence.add(qc_pulse)
+    sequence = pulses.PulseSequence()
+    sequence.add(qc_pulse)
+    sequence.add(ro_pulse)
 
     mc = MeasurementControl('MC_resonator_spectroscopy')
     # Fast Sweep
@@ -86,7 +84,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
     mc.settables(tiiq.LO_qrm.device.frequency)
     mc.setpoints(scanrange + tiiq.LO_qrm.get_frequency())
-    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
+    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, sequence)))
     tiiq.LO_qrm.on()
     tiiq.LO_qcm.off()
     dataset = mc.run("Resonator Spectroscopy Fast", soft_avg=tiiq.software_averages)
@@ -99,7 +97,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     scanrange = np.arange(-precision_width, precision_width, precision_step)
     mc.settables(tiiq.LO_qrm.device.frequency)
     mc.setpoints(scanrange + tiiq.LO_qrm.get_frequency())
-    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
+    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, sequence)))
     tiiq.LO_qrm.on()
     tiiq.LO_qcm.off()
     dataset = mc.run("Resonator Spectroscopy Precision", soft_avg=tiiq.software_averages)
@@ -143,10 +141,9 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
                             amplitude=0.3,
                             length=4000,
                             shape=Gaussian(4000 / 5))
-    qrm_sequence = pulses.PulseSequence()
-    qrm_sequence.add(ro_pulse)
-    qcm_sequence = pulses.PulseSequence()
-    qcm_sequence.add(qc_pulse)
+    sequence = pulses.PulseSequence()
+    sequence.add(qc_pulse)
+    sequence.add(ro_pulse)
 
     mc = MeasurementControl('MC_qubit_spectroscopy')
     # Fast Sweep
@@ -154,7 +151,7 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
     scanrange = np.arange(fast_start, fast_end, fast_step)
     mc.settables(tiiq.LO_qcm.device.frequency)
     mc.setpoints(scanrange + tiiq.LO_qcm.get_frequency())
-    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
+    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, sequence)))
     tiiq.LO_qrm.on()
     tiiq.LO_qcm.off()
     dataset = mc.run("Qubit Spectroscopy Fast", soft_avg=tiiq.software_averages)
@@ -167,7 +164,7 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
     scanrange = np.arange(precision_start, precision_end, precision_step)
     mc.settables(tiiq.LO_qcm.device.frequency)
     mc.setpoints(scanrange + tiiq.LO_qcm.get_frequency())
-    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
+    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, sequence)))
     tiiq.LO_qrm.on()
     tiiq.LO_qcm.off()
     dataset = mc.run("Qubit Spectroscopy Precision", soft_avg=tiiq.software_averages)
