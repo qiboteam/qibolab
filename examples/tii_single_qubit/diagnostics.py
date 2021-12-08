@@ -391,15 +391,7 @@ class QCPulseGainParameter():
         self.qcm = qcm
 
     def set(self,value):
-        # TODO: Replace with a ``set_gain`` method
-        gain = value / 100
-        if self.qcm.sequencer == 1:
-            self.qcm.device.sequencer1_gain_awg_path0(gain)
-            self.qcm.device.sequencer1_gain_awg_path1(gain)
-        else:
-            self.qcm.device.sequencer0_gain_awg_path0(gain)
-            self.qcm.device.sequencer0_gain_awg_path1(gain)
-
+        self.qcm.gain = value / 100
 
 class QCPulseAmplitudeParameter():
 

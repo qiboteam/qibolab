@@ -7,16 +7,26 @@ class GenericPulsar:
 
     def __init__(self, sequencer=0, debugging=False):
         self.name = None
+        self._gain = None
         self.sequencer = sequencer
         self.debugging = debugging
 
-    def setup(self, gain, hardware_avg, initial_delay, repetition_duration):
+    @property
+    def gain(self):
+        return self._gain
+
+    @gain.setter
+    def gain(self, gain):
+        self._gain = gain
         if self.sequencer == 1:
             self.device.sequencer1_gain_awg_path0(gain)
             self.device.sequencer1_gain_awg_path1(gain)
         else:
             self.device.sequencer0_gain_awg_path0(gain)
             self.device.sequencer0_gain_awg_path1(gain)
+
+    def setup(self, gain, hardware_avg, initial_delay, repetition_duration):
+        self.gain = gain
         self.hardware_avg = hardware_avg
         self.initial_delay = initial_delay
         self.repetition_duration = repetition_duration
