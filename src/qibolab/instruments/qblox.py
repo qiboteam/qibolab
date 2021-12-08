@@ -1,14 +1,12 @@
 import json
 import numpy as np
-import matplotlib.pyplot as plt
 
 
 class GenericPulsar:
 
-    def __init__(self, sequencer=0, debugging=False):
+    def __init__(self, sequencer=0):
         self.name = None
         self.sequencer = sequencer
-        self.debugging = debugging
 
     def setup(self, gain, hardware_avg, initial_delay, repetition_duration):
         if self.sequencer == 1:
@@ -44,13 +42,6 @@ class GenericPulsar:
             "modI": {"data": mod_signals[:, 0] + pulse.offset_i, "index": 0},
             "modQ": {"data": mod_signals[:, 1] + pulse.offset_q, "index": 1}
         }
-        if self.debugging:
-            # Plot the result
-            fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-            ax.plot(waveform["modI"]["data"],'-',color='C0')
-            ax.plot(waveform["modQ"]["data"],'-',color='C1')
-            ax.title.set_text('pulse')
-
         return waveform
 
     def translate(self, sequence):
@@ -70,13 +61,6 @@ class GenericPulsar:
             waveform = self._translate_single_pulse(pulse)
             waveforms[f"modI_{name}"]["data"] = np.concatenate((waveforms[f"modI_{name}"]["data"], np.zeros(4), waveform["modI"]["data"]))
             waveforms[f"modQ_{name}"]["data"] = np.concatenate((waveforms[f"modQ_{name}"]["data"], np.zeros(4), waveform["modQ"]["data"]))
-
-        if self.debugging:
-            # Plot the result
-            fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-            ax.plot(waveforms[f"modI_{name}"]["data"], '-', color='C0')
-            ax.plot(waveforms[f"modQ_{name}"]["data"], '-', color='C1')
-            ax.title.set_text('Combined Pulses')
 
         if sequence.readout_pulses:
             program = self.generate_program(sequence.start, sequence.readout_pulses[0])
@@ -128,9 +112,6 @@ class GenericPulsar:
             loop    R0,@loop
             stop
         """
-        if self.debugging:
-            print(program)
-
         return program
 
     def upload(self, waveforms, program, data_folder):
@@ -164,8 +145,6 @@ class GenericPulsar:
         # arm sequencer and start playing sequence
         self.device.arm_sequencer()
         self.device.start_sequencer()
-        if self.debugging:
-            print(self.device.get_sequencer_state(self.sequencer))
 
     def stop(self):
         self.device.stop_sequencer()
@@ -224,23 +203,9 @@ class PulsarQRM(GenericPulsar):
         self.device.store_scope_acquisition(self.sequencer, "single")
         #Get acquisition list from instrument.
         single_acq = self.device.get_acquisitions(self.sequencer)
-        if self.debugging:
-            self._plot_acquisitions(single_acq)
-            with open(".data/results.json", 'w', encoding='utf-8') as file:
-                json.dump(single_acq, file, indent=4)
         i, q = self._demodulate_and_integrate(single_acq, ro_pulse)
         acquisition_results = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
         return acquisition_results
-
-    @staticmethod
-    def _plot_acquisitions(single_acq):
-        #Plot acquired signal on both inputs I and Q
-        fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-        ax.plot(single_acq["single"]["acquisition"]["scope"]["path0"]["data"][120:6500])
-        ax.plot(single_acq["single"]["acquisition"]["scope"]["path1"]["data"][120:6500])
-        ax.set_xlabel('Time (ns)')
-        ax.set_ylabel('Relative amplitude')
-        plt.show()
 
     def _demodulate_and_integrate(self, single_acq, ro_pulse):
         #DOWN Conversion
@@ -264,8 +229,7 @@ class PulsarQRM(GenericPulsar):
                 result.append(demod_matrix[:,:,it] @ np.array([ii, qq]))
             demodulated_signal = np.array(result)
             integrated_signal = norm_factor*np.sum(demodulated_signal,axis=0)
-            if self.debugging:
-                print(integrated_signal,demodulated_signal[:,0].max()-demodulated_signal[:,0].min(),demodulated_signal[:,1].max()-demodulated_signal[:,1].min())
+
         elif self.mode == 'optimal':
             raise NotImplementedError('Optimal Demodulation Mode not coded yet.')
         else:
