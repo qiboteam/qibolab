@@ -3,6 +3,7 @@ import pathlib
 import numpy as np
 import matplotlib.pyplot as plt
 from qibolab import pulses
+from qibolab.pulse_shapes import Rectangular, Gaussian
 from qibolab.platforms import TIIq
 
 # TODO: Have a look in the documentation of ``MeasurementControl``
@@ -63,19 +64,17 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     tiiq = TIIq()
     tiiq.setup(settings)
 
-    ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
-                                      start=70,
-                                      frequency=20000000.0,
-                                      amplitude=0.5,
-                                      length=3000,
-                                      shape="Block",
-                                      delay_before_readout=4)
-    qc_pulse = pulses.TIIPulse(name="qc_pulse",
-                               start=0,
-                               frequency=200000000.0,
-                               amplitude=0.3,
-                               length=60,
-                               shape="Gaussian")
+    ro_pulse = pulses.ReadoutPulse(start=70,
+                                   frequency=20000000.0,
+                                   amplitude=0.5,
+                                   length=3000,
+                                   shape=Rectangular(),
+                                   delay_before_readout=4)
+    qc_pulse = pulses.Pulse(start=0,
+                            frequency=200000000.0,
+                            amplitude=0.3,
+                            length=60,
+                            shape=Gaussian(60 / 5))
     qrm_sequence = pulses.PulseSequence()
     qrm_sequence.add(ro_pulse)
     qcm_sequence = pulses.PulseSequence()
@@ -134,19 +133,16 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
     tiiq = TIIq()
     tiiq.setup(settings)
 
-    ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
-                                      start=70,
-                                      frequency=20000000.0,
-                                      amplitude=0.5,
-                                      length=4040,
-                                      shape="Block",
-                                      delay_before_readout=4)
-    qc_pulse = pulses.TIIPulse(name="qc_pulse",
-                               start=0,
-                               frequency=200000000.0,
-                               amplitude=0.3,
-                               length=4000,
-                               shape="Gaussian")
+    ro_pulse = pulses.ReadoutPulse(start=70,
+                                   frequency=20000000.0, amplitude=0.5,
+                                   length=4040,
+                                   shape=Rectangular(),
+                                   delay_before_readout=4)
+    qc_pulse = pulses.Pulse(start=0,
+                            frequency=200000000.0,
+                            amplitude=0.3,
+                            length=4000,
+                            shape=Gaussian(4000 / 5))
     qrm_sequence = pulses.PulseSequence()
     qrm_sequence.add(ro_pulse)
     qcm_sequence = pulses.PulseSequence()

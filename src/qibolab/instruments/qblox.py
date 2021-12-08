@@ -25,7 +25,7 @@ class GenericPulsar:
 
     def _translate_single_pulse(self, pulse):
         # Use the envelope to modulate a sinusoldal signal of frequency freq_if
-        envelope_i, envelope_q = pulse.envelopes()
+        envelope_i, envelope_q = pulse.compile()
         time = np.arange(pulse.length) * 1e-9
         # FIXME: There should be a simpler way to construct this array
         cosalpha = np.cos(2 * np.pi * pulse.frequency * time)
