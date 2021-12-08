@@ -1,33 +1,38 @@
 """Pulse abstractions."""
 import bisect
+import itertools
 import numpy as np
-from abc import ABC, abstractmethod
 from qibo.config import raise_error
 
 
-class PulseSequence(list):
+class PulseSequence:
     # TODO: Move this to a different file (temporarily here as placeholder)
 
     def __init__(self):
         super().__init__()
-        self.readout_pulse = None
+        self.qubit_pulses = []
+        self.readout_pulses = []
 
     def add(self, pulse):
-        if isinstance(pulse, TIIReadoutPulse):
-            if self.readout_pulse is not None:
-                raise_error(RuntimeError, "Readout pulse already exists.")
-            self.readout_pulse = pulse
+        if isinstance(pulse, ReadoutPulse):
+            self.readout_pulses.append(pulse)
         else:
-            self.append(pulse)
+            self.qubit_pulses.append(pulse)
+
+    def __len__(self):
+        return len(self.qubit_pulses) + len(self.readout_pulses)
+
+    def __iter__(self):
+        return itertools.chain(self.qubit_pulses, self.readout_pulses)
 
     @property
     def start(self):
-        if len(self) > 0:
-            return self[0].start
+        if self.qubit_pulses:
+            return self.qubit_pulses[0].start
         elif self.readout_pulse is not None:
-            return self.readout_pulse.start
+            return self.readout_pulses[0].start
         else:
-            raise IndexError
+            raise_error(ValueError, "Cannot calculate start of an empy pulse sequence.")
 
 
 class Pulse:
@@ -46,6 +51,8 @@ class Pulse:
             (amplitude + offset) should be between [0 and 1].
     """
     def __init__(self, start, length, amplitude, frequency, phase, shape, offset_i=0, offset_q=0):
+        # FIXME: Since the ``start`` value depends on the previous pulses we are
+        # not sure if it should be a local property of the ``Pulse`` object
         self.start = start
         self.length = length
         self.amplitude = amplitude

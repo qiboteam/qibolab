@@ -55,8 +55,6 @@ class GenericPulsar:
 
     def translate(self, sequence):
         pulses = list(sequence)
-        if sequence.readout_pulse is not None:
-            pulses.append(sequence.readout_pulse)
         if not pulses:
             raise NotImplementedError("Cannot translate empty sequence.")
 
@@ -68,8 +66,7 @@ class GenericPulsar:
         }
         waveforms[f"modI_{name}"]["data"] = waveform.get("modI").get("data")
         waveforms[f"modQ_{name}"]["data"] = waveform.get("modQ").get("data")
-
-        for pulse in sequence[1:]:
+        for pulse in pulses[1:]:
             waveform = self._translate_single_pulse(pulse)
             waveforms[f"modI_{name}"]["data"] = np.concatenate((waveforms[f"modI_{name}"]["data"], np.zeros(4), waveform["modI"]["data"]))
             waveforms[f"modQ_{name}"]["data"] = np.concatenate((waveforms[f"modQ_{name}"]["data"], np.zeros(4), waveform["modQ"]["data"]))
@@ -81,7 +78,10 @@ class GenericPulsar:
             ax.plot(waveforms[f"modQ_{name}"]["data"], '-', color='C1')
             ax.title.set_text('Combined Pulses')
 
-        program = self.generate_program(sequence.start, sequence.readout_pulse)
+        if sequence.readout_pulses:
+            program = self.generate_program(sequence.start, sequence.readout_pulses[0])
+        else:
+            program = self.generate_program(sequence.start)
         return waveforms, program
 
     @staticmethod
