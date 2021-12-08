@@ -7,6 +7,7 @@ class GenericPulsar:
 
     def __init__(self, sequencer=0, debugging=False):
         self.name = None
+        self._gain = None
         self.sequencer = sequencer
         self.debugging = debugging
 
