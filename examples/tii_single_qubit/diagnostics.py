@@ -353,7 +353,7 @@ def run_t1(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
         settings = json.load(file)
 
     tiiq = TIIq()
-    settings['_QCM_settings']['gain'] = pi_pulse_gain
+    tiiq.qcm.gain = pi_pulse_gain
     tiiq.setup(settings)
 
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
@@ -401,7 +401,7 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
         settings = json.load(file)
 
     tiiq = TIIq()
-    settings['_QCM_settings']['gain'] = pi_pulse_gain
+    tiiq.qcm.gain = pi_pulse_gain
     tiiq.setup(settings) # TODO: Give settings json directory here
 
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
@@ -452,8 +452,7 @@ def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
     tiiq = TIIq()
-    # TODO: add set_gain method?
-    settings['_QCM_settings']['gain'] = pi_pulse_gain
+    tiiq.qcm.gain = pi_pulse_gain
     tiiq.setup(settings) # TODO: Give settings json directory here
 
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
