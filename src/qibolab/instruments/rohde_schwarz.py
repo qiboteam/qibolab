@@ -58,7 +58,9 @@ class SGS100A:
         logger.info("Local oscillator off.")
 
     def close(self):
+        self.off()
         self.device.close()
 
     def __del__(self):
+        self.off()
         self.device.close()
