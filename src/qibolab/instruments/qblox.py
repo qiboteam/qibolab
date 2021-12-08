@@ -25,7 +25,10 @@ class GenericPulsar:
 
     def _translate_single_pulse(self, pulse):
         # Use the envelope to modulate a sinusoldal signal of frequency freq_if
-        envelope_i, envelope_q = pulse.compile()
+        envelope_i = pulse.compile()
+        # TODO: if ``envelope_q`` is not always 0 we need to find how to
+        # calculate it
+        envelope_q = np.zeros(int(self.length))
         time = np.arange(pulse.length) * 1e-9
         # FIXME: There should be a simpler way to construct this array
         cosalpha = np.cos(2 * np.pi * pulse.frequency * time)
@@ -38,10 +41,9 @@ class GenericPulsar:
 
         # add offsets to compensate mixer leakage
         waveform = {
-                "modI": {"data": mod_signals[:, 0] + pulse.offset_i, "index": 0},
-                "modQ": {"data": mod_signals[:, 1] + pulse.offset_q, "index": 1}
-            }
-
+            "modI": {"data": mod_signals[:, 0] + pulse.offset_i, "index": 0},
+            "modQ": {"data": mod_signals[:, 1] + pulse.offset_q, "index": 1}
+        }
         if self.debugging:
             # Plot the result
             fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))

@@ -70,25 +70,10 @@ class Pulse:
     #    return waveform
 
     def compile(self):
-        # TIIq specific method
-        """
-        Generates the I & Q waveforms to be sent to the sequencers based on the
-        key parameters of the pulse (length, amplitude, shape, etc.)
-        """
-        envelope_i = self.amplitude * self.shape.envelope(self.length)
-        envelope_q = self.amplitude * np.zeros(int(self.length))
-        return envelope_i, envelope_q
+        return self.amplitude * self.shape.envelope(self.length)
 
     def __repr__(self):
         return self.serial()
-
-
-class TIIReadoutPulse(TIIPulse):
-
-    def __init__(self, name, start, frequency, amplitude, length, shape, delay_before_readout=0,
-                 offset_i=0, offset_q=0):
-        super().__init__(name, start, frequency, amplitude, length, shape, offset_i, offset_q)
-        self.delay_before_readout = delay_before_readout
 
 
 class ReadoutPulse(Pulse):

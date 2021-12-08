@@ -36,7 +36,6 @@ class Gaussian(PulseShape):
 
     def envelope(self, length, sigma):
         from scipy.signal import gaussian
-        mu = start + duration / 2
         return gaussian(int(length), std=self.sigma)
 
     def __repr__(self):
