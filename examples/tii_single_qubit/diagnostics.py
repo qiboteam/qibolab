@@ -14,17 +14,20 @@ set_datadir(pathlib.Path(__file__).parent / "data")
 
 
 def create_measurement_control(name):
-    mc = MeasurementControl(f'MC {name}')
-    from quantify_core.visualization.pyqt_plotmon import PlotMonitor_pyqt
-    plotmon = PlotMonitor_pyqt(f'Plot Monitor {name}')
-    plotmon.tuids_max_num(3)
-    mc.instr_plotmon(plotmon.name)
-
-    from quantify_core.visualization.instrument_monitor import InstrumentMonitor
-    insmon = InstrumentMonitor(f"Instruments Monitor {name}")
-    mc.instrument_monitor(insmon.name)
-
-    return mc, plotmon, insmon
+    import os
+    if os.environ.get("ENABLE_PLOTMON", False):
+        mc = MeasurementControl(f'MC {name}')
+        from quantify_core.visualization.pyqt_plotmon import PlotMonitor_pyqt
+        plotmon = PlotMonitor_pyqt(f'Plot Monitor {name}')
+        plotmon.tuids_max_num(3)
+        mc.instr_plotmon(plotmon.name)
+        from quantify_core.visualization.instrument_monitor import InstrumentMonitor
+        insmon = InstrumentMonitor(f"Instruments Monitor {name}")
+        mc.instrument_monitor(insmon.name)
+        return mc, plotmon, insmon
+    else:
+        mc = MeasurementControl(f'MC {name}')
+        return mc, None, None
 
 
 class ROController():
@@ -96,10 +99,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     qcm_sequence = pulses.PulseSequence()
     qcm_sequence.add(qc_pulse)
 
-    if plotmon:
-        mc, pl, ins = create_measurement_control('resonator_spectroscopy')
-    else:
-        mc = MeasurementControl('MC_resonator_spectroscopy')
+    mc, pl, ins = create_measurement_control('resonator_spectroscopy')
     # Fast Sweep
     tiiq.software_averages = 1
     scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
@@ -171,10 +171,7 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
     qcm_sequence = pulses.PulseSequence()
     qcm_sequence.add(qc_pulse)
 
-    if plotmon:
-        mc, pl, ins = create_measurement_control('qubit_spectroscopy')
-    else:
-        mc = MeasurementControl('MC_qubit_spectroscopy')
+    mc, pl, ins = create_measurement_control('qubit_spectroscopy')
     # Fast Sweep
     tiiq.software_averages = 1
     scanrange = np.arange(fast_start, fast_end, fast_step)
@@ -243,10 +240,7 @@ def run_rabi_pulse_length(resonator_freq, qubit_freq, plotmon=False):
     qcm_sequence.add(qc_pulse)
     tiiq.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
-    if plotmon:
-        mc, pl, ins = create_measurement_control('Rabi_pulse_length')
-    else:
-        mc = MeasurementControl('MC_Rabi_pulse_length')
+    mc, pl, ins = create_measurement_control('Rabi_pulse_length')
     tiiq.software_averages = 1
     mc.settables(QCPulseLengthParameter(ro_pulse, qc_pulse))
     mc.setpoints(np.arange(1, 2000, 5))
@@ -281,10 +275,7 @@ def run_rabi_pulse_gain(resonator_freq, qubit_freq, plotmon=False):
     qcm_sequence.add(qc_pulse)
     tiiq.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
-    if plotmon:
-        mc, pl, ins = create_measurement_control('Rabi_pulse_gain')
-    else:
-        mc = MeasurementControl('MC_Rabi_pulse_gain')
+    mc, pl, ins = create_measurement_control('Rabi_pulse_gain')
     tiiq.software_averages = 1
     mc.settables(QCPulseGainParameter(tiiq.qcm))
     mc.setpoints(np.arange(0, 1, 0.02))
@@ -319,10 +310,7 @@ def run_rabi_pulse_length_and_gain(resonator_freq, qubit_freq, plotmon=False):
     qcm_sequence.add(qc_pulse)
     tiiq.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
-    if plotmon:
-        mc, pl, ins = create_measurement_control('Rabi_pulse_length_and_gain')
-    else:
-        mc = MeasurementControl('MC_Rabi_pulse_length_and_gain')
+    mc, pl, ins = create_measurement_control('Rabi_pulse_length_and_gain')
     tiiq.software_averages = 1
     mc.settables([QCPulseLengthParameter(ro_pulse, qc_pulse), QCPulseGainParameter(tiiq.qcm)])
     setpoints_length = np.arange(1, 200, 10)
@@ -362,10 +350,7 @@ def run_rabi_pulse_length_and_amplitude(resonator_freq, qubit_freq, plotmon=Fals
     qcm_sequence.add(qc_pulse)
     tiiq.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
-    if plotmon:
-        mc, pl, ins = create_measurement_control('Rabi_pulse_length_and_amplitude')
-    else:
-        mc = MeasurementControl('MC_Rabi_pulse_length_and_amplitude')
+    mc, pl, ins = create_measurement_control('Rabi_pulse_length_and_amplitude')
     tiiq.software_averages = 1
     mc.settables([QCPulseLengthParameter(ro_pulse, qc_pulse), QCPulseAmplitudeParameter(qc_pulse)])
     setpoints_length = np.arange(1, 200, 10)
