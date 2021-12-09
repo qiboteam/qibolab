@@ -353,7 +353,6 @@ def run_t1(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
         settings = json.load(file)
 
     tiiq = TIIq()
-    tiiq.qcm.gain = pi_pulse_gain
     tiiq.setup(settings)
 
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
@@ -376,6 +375,7 @@ def run_t1(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
 
     tiiq.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
+    tiiq.qcm.gain = pi_pulse_gain
 
     mc = MeasurementControl('MC_T1')
     mc.settables(T1WaitParameter(ro_pulse))
@@ -401,7 +401,6 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
         settings = json.load(file)
 
     tiiq = TIIq()
-    tiiq.qcm.gain = pi_pulse_gain
     tiiq.setup(settings)
 
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
@@ -418,7 +417,7 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
                                length=pi_pulse_length//2,
                                shape="Gaussian")
     qc2_pulse = pulses.TIIPulse(name="qc2_pulse",
-                               start=pi_pulse_length//2 + 0, # TODO: +0?
+                               start=pi_pulse_length//2 + 0,
                                frequency=200000000.0,
                                amplitude=0.3,
                                length=pi_pulse_length//2,
@@ -431,6 +430,7 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
 
     tiiq.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
+    tiiq.qcm.gain = pi_pulse_gain
 
     mc = MeasurementControl('MC_Ramsey')
     mc.settables(RamseyWaitParameter(ro_pulse, qc2_pulse, pi_pulse_length))
@@ -452,7 +452,6 @@ def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
     tiiq = TIIq()
-    tiiq.qcm.gain = pi_pulse_gain
     tiiq.setup(settings)
 
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
@@ -483,6 +482,7 @@ def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
 
     tiiq.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
+    tiiq.qcm.gain = pi_pulse_gain
 
     mc = MeasurementControl('MC_Spin_Echo')
     mc.settables(SpinEchoWaitParameter(ro_pulse, qc2_pulse, pi_pulse_length))
