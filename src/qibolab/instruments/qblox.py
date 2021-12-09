@@ -169,11 +169,11 @@ class GenericPulsar:
         self.device.stop_sequencer()
 
     def close(self):
-        self.stop()
+        self.device.stop_sequencer()
         self.device.close()
 
     def __del__(self):
-        self.stop()
+        self.device.stop_sequencer()
         self.device.close()
 
 
