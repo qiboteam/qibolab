@@ -57,11 +57,6 @@ def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, high
 def run_resonator_spectroscopy(lowres_width, lowres_step,
                                highres_width, highres_step,
                                precision_width, precision_step):
-    with open("tii_single_qubit_settings.json", "r") as file:
-        settings = json.load(file)
-
-    tiiq = TIIq(settings)
-
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
                                       start=70,
                                       frequency=20000000.0,
@@ -80,6 +75,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     qcm_sequence = pulses.PulseSequence()
     qcm_sequence.add(qc_pulse)
 
+    tiiq = TIIq()
     mc = MeasurementControl('MC_resonator_spectroscopy')
     # Fast Sweep
     tiiq.software_averages = 1
@@ -127,11 +123,6 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
 
 def run_qubit_spectroscopy(resonator_freq, fast_start, fast_end, fast_step,
                            precision_start, precision_end, precision_step):
-    with open("tii_single_qubit_settings.json", "r") as file:
-        settings = json.load(file)
-
-    tiiq = TIIq(settings)
-
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
                                       start=70,
                                       frequency=20000000.0,
@@ -150,6 +141,7 @@ def run_qubit_spectroscopy(resonator_freq, fast_start, fast_end, fast_step,
     qcm_sequence = pulses.PulseSequence()
     qcm_sequence.add(qc_pulse)
 
+    tiiq = TIIq()
     # set optimal resonator frequency found in ``run_resonator_spectroscopy``
     tiiq.LO_qrm.set_frequency(resonator_freq)
 

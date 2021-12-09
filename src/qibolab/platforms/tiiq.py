@@ -1,3 +1,6 @@
+import json
+
+
 class TIIq:
     """Platform for controlling TII device.
 
@@ -9,7 +12,11 @@ class TIIq:
             for an example for this dictionary.
     """
 
-    def __init__(self, settings):
+    def __init__(self):
+        # load latest calibration settings from json
+        settings = self.load_settings()
+
+        # initialize instruments
         from qibolab.instruments import PulsarQRM, PulsarQCM, SGS100A
         self.qrm = PulsarQRM(**settings.get("_QRM_init_settings"))
         self.qcm = PulsarQCM(**settings.get("_QCM_init_settings"))
@@ -25,6 +32,26 @@ class TIIq:
         self.setup_platform(settings.get("_settings"))
         # initial instrument setup
         self.setup(settings)
+
+    def load_settings(self, filedir=None):
+        """Loads json with calibration settings.
+
+        Args:
+            filedir (str): Path to the json file to load.
+                If ``None`` the default settings file located in ``platforms``
+                will be used.
+
+        Returns:
+            The ``settings`` dictionary required for instrument setup.
+        """
+        if filedir is None:
+            # use default file
+            import pathlib
+            filedir = pathlib.Path(__file__).parent / "tiiq_settings.json"
+
+        with open(filedir, "r") as file:
+            settings = json.load(file)
+        return settings
 
     def setup(self, settings):
         """Configures instruments using the latest calibration settings.
