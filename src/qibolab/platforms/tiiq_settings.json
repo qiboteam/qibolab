@@ -7,6 +7,8 @@
         "repetition_duration": 200000
     },
     "_QRM_init_settings": {
+        "label": "qrm",
+        "ip": "192.168.0.2",
         "ref_clock": "external",
         "sequencer": 0,
         "sync_en": true,
@@ -24,6 +26,8 @@
         "mode": "ssb"
     },
     "_QCM_init_settings": {
+        "label": "qcm",
+        "ip": "192.168.0.3",
         "ref_clock": "external",
         "sequencer": 0,
         "sync_en": true
@@ -34,9 +38,17 @@
         "initial_delay": 0,
         "repetition_duration": 200000
     },
+    "_LO_QRM_init_settings": {
+        "label": "LO_qrm",
+        "ip": "192.168.0.7"
+    },
     "_LO_QRM_settings": {
         "power": 6,
         "frequency": 7778250000.0
+    },
+    "_LO_QCM_init_settings": {
+        "label": "LO_qcm",
+        "ip": "192.168.0.101"
     },
     "_LO_QCM_settings": {
         "power": 6,

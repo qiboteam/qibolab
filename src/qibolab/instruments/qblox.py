@@ -4,9 +4,19 @@ import numpy as np
 
 class GenericPulsar:
 
-    def __init__(self, sequencer=0):
+    def __init__(self):
+        # To be defined in each instrument
         self.name = None
-        self.sequencer = sequencer
+        self.device = None
+        self.sequencer = None
+        self.ref_clock = None
+        self.sync_en = None
+        # To be defined during setup
+        self.hardware_avg = None
+        self.initial_delay = None
+        self.repetition_duration = None
+        self.acquisitions = {"single": {"num_bins": 1, "index":0}}
+        self.weights = {}
 
     def setup(self, gain, hardware_avg, initial_delay, repetition_duration):
         if self.sequencer == 1:
@@ -18,8 +28,6 @@ class GenericPulsar:
         self.hardware_avg = hardware_avg
         self.initial_delay = initial_delay
         self.repetition_duration = repetition_duration
-        self.acquisitions = {"single": {"num_bins": 1, "index":0}}
-        self.weights = {}
 
     def _translate_single_pulse(self, pulse):
         # Use the envelope to modulate a sinusoldal signal of frequency freq_if
@@ -159,15 +167,15 @@ class GenericPulsar:
 class PulsarQRM(GenericPulsar):
     """Class for interfacing with Pulsar QRM."""
 
-    def __init__(self, label, ip,
-                 ref_clock="external", sequencer=0, sync_en=True,
-                 hardware_avg_en=True, acq_trigger_mode="sequencer",
-                 debugging=False):
-        from pulsar_qrm.pulsar_qrm import pulsar_qrm
-        super().__init__(sequencer, debugging)
+    def __init__(self, label, ip, ref_clock="external", sequencer=0, sync_en=True,
+                 hardware_avg_en=True, acq_trigger_mode="sequencer"):
+        from pulsar_qrm.pulsar_qrm import pulsar_qrm # pylint: disable=E0401
+        super().__init__()
         # Instantiate base object from qblox library and connect to it
-        self.device = pulsar_qrm(label, ip)
         self.name = "qrm"
+        self.device = pulsar_qrm(label, ip)
+        self.sequencer = sequencer
+        self.hardware_avg_en = hardware_avg_en
 
         # Reset and configure
         self.device.reset()
@@ -239,14 +247,13 @@ class PulsarQRM(GenericPulsar):
 
 class PulsarQCM(GenericPulsar):
 
-    def __init__(self, label, ip,
-                 ref_clock="external", sequencer=0, sync_en=True,
-                 debugging=False):
-        from pulsar_qcm.pulsar_qcm import pulsar_qcm
-        super().__init__(sequencer, debugging)
+    def __init__(self, label, ip, sequencer=0, ref_clock="external", sync_en=True):
+        from pulsar_qcm.pulsar_qcm import pulsar_qcm # pylint: disable=E0401
+        super().__init__()
         # Instantiate base object from qblox library and connect to it
-        self.device = pulsar_qcm(label, ip)
         self.name = "qcm"
+        self.device = pulsar_qcm(label, ip)
+        self.sequencer = sequencer
         # Reset and configure
         self.device.reset()
         self.device.reference_source(ref_clock)

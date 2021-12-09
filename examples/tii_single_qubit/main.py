@@ -8,4 +8,4 @@ if __name__ == "__main__":
         settings = json.load(file)
 
     resonator_freq, _ = run_resonator_spectroscopy(**settings["resonator_spectroscopy"])
-    qubit_freq, _ = run_qubit_spectroscopy(**settings["qubit_spectroscopy"])
+    qubit_freq, _ = run_qubit_spectroscopy(resonator_freq, **settings["qubit_spectroscopy"])
