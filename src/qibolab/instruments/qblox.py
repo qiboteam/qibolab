@@ -158,10 +158,9 @@ class PulsarQRM(GenericPulsar):
 
     def __init__(self, label, ip,
                  ref_clock="external", sequencer=0, sync_en=True,
-                 hardware_avg_en=True, acq_trigger_mode="sequencer",
-                 debugging=False):
+                 hardware_avg_en=True, acq_trigger_mode="sequencer"):
         from pulsar_qrm.pulsar_qrm import pulsar_qrm
-        super().__init__(sequencer, debugging)
+        super().__init__(sequencer)
         # Instantiate base object from qblox library and connect to it
         self.device = pulsar_qrm(label, ip)
         self.name = "qrm"
@@ -237,10 +236,9 @@ class PulsarQRM(GenericPulsar):
 class PulsarQCM(GenericPulsar):
 
     def __init__(self, label, ip,
-                 ref_clock="external", sequencer=0, sync_en=True,
-                 debugging=False):
+                 ref_clock="external", sequencer=0, sync_en=True):
         from pulsar_qcm.pulsar_qcm import pulsar_qcm
-        super().__init__(sequencer, debugging)
+        super().__init__(sequencer)
         # Instantiate base object from qblox library and connect to it
         self.device = pulsar_qcm(label, ip)
         self.name = "qcm"
