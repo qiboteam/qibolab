@@ -6,6 +6,7 @@ from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor
 from qibo.config import log, raise_error
 from qibolab import connections, pulses
+from qibolab.pulse_shapes import Rectangular
 from qibolab.experiments.abstract import AbstractExperiment
 
 
@@ -61,8 +62,8 @@ class IcarusQ(AbstractExperiment):
                 "1": [0.009458352995780546, -0.008570922209494462]
             },
             "gates": {
-                "rx": [pulses.BasicPulse(3, 0, 24.78e-9, 0.375, 3.0473825e9 - sampling_rate, 0, pulses.Rectangular())],
-                "ry": [pulses.BasicPulse(3, 0, 24.78e-9, 0.375, 3.0473825e9 - sampling_rate, 90, pulses.Rectangular())],
+                "rx": [pulses.BasicPulse(3, 0, 24.78e-9, 0.375, 3.0473825e9 - sampling_rate, 0, Rectangular())],
+                "ry": [pulses.BasicPulse(3, 0, 24.78e-9, 0.375, 3.0473825e9 - sampling_rate, 90, Rectangular())],
             }
         }]
 

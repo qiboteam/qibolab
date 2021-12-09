@@ -57,19 +57,19 @@ def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, high
 def run_resonator_spectroscopy(lowres_width, lowres_step,
                                highres_width, highres_step,
                                precision_width, precision_step):
-    ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
-                                      start=70,
-                                      frequency=20000000.0,
-                                      amplitude=0.5,
-                                      length=3000,
-                                      shape="Block",
-                                      delay_before_readout=4)
-    qc_pulse = pulses.TIIPulse(name="qc_pulse",
-                               start=0,
-                               frequency=200000000.0,
-                               amplitude=0.3,
-                               length=60,
-                               shape="Gaussian")
+    ro_pulse = pulses.ReadoutPulse(start=70,
+                                   frequency=20000000.0,
+                                   amplitude=0.5,
+                                   length=3000,
+                                   phase=0,
+                                   shape="Block",
+                                   delay_before_readout=4)
+    qc_pulse = pulses.Pulse(start=0,
+                            frequency=200000000.0,
+                            amplitude=0.3,
+                            length=60,
+                            phase=0,
+                            shape="Gaussian")
     qrm_sequence = pulses.PulseSequence()
     qrm_sequence.add(ro_pulse)
     qcm_sequence = pulses.PulseSequence()
@@ -123,19 +123,19 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
 
 def run_qubit_spectroscopy(resonator_freq, fast_start, fast_end, fast_step,
                            precision_start, precision_end, precision_step):
-    ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
-                                      start=70,
-                                      frequency=20000000.0,
-                                      amplitude=0.5,
-                                      length=4040,
-                                      shape="Block",
-                                      delay_before_readout=4)
-    qc_pulse = pulses.TIIPulse(name="qc_pulse",
-                               start=0,
-                               frequency=200000000.0,
-                               amplitude=0.3,
-                               length=4000,
-                               shape="Gaussian")
+    ro_pulse = pulses.ReadoutPulse(start=70,
+                                   frequency=20000000.0,
+                                   amplitude=0.5,
+                                   length=4040,
+                                   phase=0,
+                                   shape="Block",
+                                   delay_before_readout=4)
+    qc_pulse = pulses.Pulse(start=0,
+                            frequency=200000000.0,
+                            amplitude=0.3,
+                            length=4000,
+                            phase=0,
+                            shape="Gaussian")
     qrm_sequence = pulses.PulseSequence()
     qrm_sequence.add(ro_pulse)
     qcm_sequence = pulses.PulseSequence()
