@@ -20,12 +20,6 @@ class TIIq:
         self.qrm.stop()
         self.qcm.stop()
 
-    def __del__(self):
-        self.LO_qrm.close()
-        self.LO_qcm.close()
-        self.qrm.close()
-        self.qcm.close()
-
     def execute(self, qrm_sequence, qcm_sequence, folder="./data"):
         waveforms, program = self.qrm.translate(qrm_sequence)
         self.qrm.upload(waveforms, program, folder)
