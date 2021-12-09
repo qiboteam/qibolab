@@ -66,6 +66,7 @@ class SGS100A:
     def close(self):
         self.device.off()
         self.device.close()
+        self._connected = False
 
     def __del__(self):
         if self._connected:
