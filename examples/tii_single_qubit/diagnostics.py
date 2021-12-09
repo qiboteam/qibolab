@@ -70,10 +70,9 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
                             length=60,
                             phase=0,
                             shape="Gaussian")
-    qrm_sequence = pulses.PulseSequence()
-    qrm_sequence.add(ro_pulse)
-    qcm_sequence = pulses.PulseSequence()
-    qcm_sequence.add(qc_pulse)
+    sequence = pulses.PulseSequence()
+    sequence.add(qc_pulse)
+    sequence.add(ro_pulse)
 
     tiiq = TIIq()
     mc = MeasurementControl('MC_resonator_spectroscopy')
@@ -136,10 +135,9 @@ def run_qubit_spectroscopy(resonator_freq, fast_start, fast_end, fast_step,
                             length=4000,
                             phase=0,
                             shape="Gaussian")
-    qrm_sequence = pulses.PulseSequence()
-    qrm_sequence.add(ro_pulse)
-    qcm_sequence = pulses.PulseSequence()
-    qcm_sequence.add(qc_pulse)
+    sequence = pulses.PulseSequence()
+    sequence.add(qc_pulse)
+    sequence.add(ro_pulse)
 
     tiiq = TIIq()
     # set optimal resonator frequency found in ``run_resonator_spectroscopy``
