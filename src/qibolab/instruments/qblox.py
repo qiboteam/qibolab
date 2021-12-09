@@ -1,8 +1,9 @@
 import json
 import numpy as np
+from abc import ABC, abstractmethod
 
 
-class GenericPulsar:
+class GenericPulsar(ABC):
 
     def __init__(self):
         # To be defined in each instrument
@@ -52,11 +53,9 @@ class GenericPulsar:
         }
         return waveform
 
-    def translate(self, sequence):
-        pulses = list(sequence)
+    def generate_waveforms(self, pulses):
         if not pulses:
-            raise NotImplementedError("Cannot translate empty sequence.")
-
+            raise_error(NotImplementedError, "Cannot translate empty pulse sequence.")
         name = self.name
         waveform = self._translate_single_pulse(pulses[0])
         waveforms = {
@@ -69,19 +68,7 @@ class GenericPulsar:
             waveform = self._translate_single_pulse(pulse)
             waveforms[f"modI_{name}"]["data"] = np.concatenate((waveforms[f"modI_{name}"]["data"], np.zeros(4), waveform["modI"]["data"]))
             waveforms[f"modQ_{name}"]["data"] = np.concatenate((waveforms[f"modQ_{name}"]["data"], np.zeros(4), waveform["modQ"]["data"]))
-
-        if sequence.readout_pulses:
-            program = self.generate_program(sequence.start, sequence.readout_pulses[0])
-        else:
-            program = self.generate_program(sequence.start)
-        return waveforms, program
-
-    @staticmethod
-    def calculate_repetition_rate(repetition_duration, wait_loop_step, duration_base):
-        extra_duration = repetition_duration-duration_base
-        extra_wait = extra_duration % wait_loop_step
-        num_wait_loops = (extra_duration - extra_wait) // wait_loop_step
-        return num_wait_loops, extra_wait
+        return waveforms
 
     def generate_program(self, initial_delay, ro_pulse=None):
         # Prepare sequence program
@@ -121,6 +108,17 @@ class GenericPulsar:
             stop
         """
         return program
+
+    @abstractmethod
+    def translate(self, sequence):
+        raise_error(NotImplementedError)
+
+    @staticmethod
+    def calculate_repetition_rate(repetition_duration, wait_loop_step, duration_base):
+        extra_duration = repetition_duration-duration_base
+        extra_wait = extra_duration % wait_loop_step
+        num_wait_loops = (extra_duration - extra_wait) // wait_loop_step
+        return num_wait_loops, extra_wait
 
     def upload(self, waveforms, program, data_folder):
         import os
@@ -199,6 +197,12 @@ class PulsarQRM(GenericPulsar):
         self.sampling_rate = sampling_rate
         self.mode = mode
 
+    def translate(self, sequence):
+        # Allocate only readout pulses to PulsarQRM
+        waveforms = self.generate_waveforms(pulses.readout_pulses)
+        program = self.generate_program(sequence.start, sequence.readout_pulses[0])
+        return waveforms, program
+
     def play_sequence_and_acquire(self, ro_pulse):
         #arm sequencer and start playing sequence
         super().play_sequence()
@@ -239,9 +243,9 @@ class PulsarQRM(GenericPulsar):
             integrated_signal = norm_factor*np.sum(demodulated_signal,axis=0)
 
         elif self.mode == 'optimal':
-            raise NotImplementedError('Optimal Demodulation Mode not coded yet.')
+            raise_error(NotImplementedError, "Optimal Demodulation Mode not coded yet.")
         else:
-            raise NotImplementedError('Demodulation mode not understood.')
+            raise_error(NotImplementedError, "Demodulation mode not understood.")
         return integrated_signal
 
 
@@ -261,3 +265,9 @@ class PulsarQCM(GenericPulsar):
             self.device.sequencer1_sync_en(sync_en)
         else:
             self.device.sequencer0_sync_en(sync_en)
+
+    def translate(self, sequence):
+        # Allocate only qubit pulses to PulsarQRM
+        waveforms = self.generate_waveforms(sequence.qubit_pulses)
+        program = self.generate_program(sequence.start)
+        return waveforms, program
