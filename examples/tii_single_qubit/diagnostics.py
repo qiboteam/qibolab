@@ -7,7 +7,7 @@ from qibolab.platforms import TIIq
 
 # TODO: Have a look in the documentation of ``MeasurementControl``
 from quantify_core.measurement import MeasurementControl
-from quantify_core.measurement.control import Gettable
+from quantify_core.measurement.control import Gettable, Settable
 from quantify_core.data.handling import set_datadir
 # TODO: Check why this set_datadir is needed
 set_datadir(pathlib.Path(__file__).parent / "data")
@@ -222,7 +222,7 @@ def run_rabi_pulse_length(resonator_freq, qubit_freq):
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
     mc = MeasurementControl('MC_Rabi_pulse_length')
     tiiq.software_averages = 1
-    mc.settables(QCPulseLengthParameter(ro_pulse, qc_pulse))
+    mc.settables(Settable(QCPulseLengthParameter(ro_pulse, qc_pulse)))
     mc.setpoints(np.arange(1, 2000, 5))
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
     tiiq.LO_qrm.on()
@@ -257,7 +257,7 @@ def run_rabi_pulse_gain(resonator_freq, qubit_freq):
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
     mc = MeasurementControl('MC_Rabi_pulse_gain')
     tiiq.software_averages = 1
-    mc.settables(QCPulseGainParameter(tiiq.qcm))
+    mc.settables(Settable(QCPulseGainParameter(tiiq.qcm)))
     mc.setpoints(np.arange(0, 1, 0.02))
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
     tiiq.LO_qrm.on()
@@ -292,7 +292,8 @@ def run_rabi_pulse_length_and_gain(resonator_freq, qubit_freq):
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
     mc = MeasurementControl('MC_Rabi_pulse_length_and_gain')
     tiiq.software_averages = 1
-    mc.settables([QCPulseLengthParameter(ro_pulse, qc_pulse), QCPulseGainParameter(tiiq.qcm)])
+    mc.settables([Settable(QCPulseLengthParameter(ro_pulse, qc_pulse)),
+                  Settable(QCPulseGainParameter(tiiq.qcm))])
     setpoints_length = np.arange(1, 200, 10)
     setpoints_gain = np.arange(0, 100, 5)
     mc.setpoints_grid([setpoints_length, setpoints_gain])
@@ -332,7 +333,8 @@ def run_rabi_pulse_length_and_amplitude(resonator_freq, qubit_freq):
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
     mc = MeasurementControl('MC_Rabi_pulse_length_and_amplitude')
     tiiq.software_averages = 1
-    mc.settables([QCPulseLengthParameter(ro_pulse, qc_pulse), QCPulseAmplitudeParameter(qc_pulse)])
+    mc.settables([Settable(QCPulseLengthParameter(ro_pulse, qc_pulse)),
+                  Settable(QCPulseAmplitudeParameter(qc_pulse))])
     setpoints_length = np.arange(1, 200, 10)
     setpoints_amplitude = np.arange(0, 100, 5)
     mc.setpoints_grid([setpoints_length, setpoints_amplitude])
@@ -378,7 +380,7 @@ def run_t1(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
     tiiq.qcm.gain = pi_pulse_gain
 
     mc = MeasurementControl('MC_T1')
-    mc.settables(T1WaitParameter(ro_pulse))
+    mc.settables(Settable(T1WaitParameter(ro_pulse)))
     mc.setpoints(np.arange(delay_before_readout_start,
                            delay_before_readout_end,
                            delay_before_readout_step))
@@ -433,7 +435,7 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
     tiiq.qcm.gain = pi_pulse_gain
 
     mc = MeasurementControl('MC_Ramsey')
-    mc.settables(RamseyWaitParameter(ro_pulse, qc2_pulse, pi_pulse_length))
+    mc.settables(Settable(RamseyWaitParameter(ro_pulse, qc2_pulse, pi_pulse_length)))
     mc.setpoints(np.arange(start_start, start_end, start_step))
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
     tiiq.LO_qrm.on()
@@ -485,7 +487,7 @@ def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
     tiiq.qcm.gain = pi_pulse_gain
 
     mc = MeasurementControl('MC_Spin_Echo')
-    mc.settables(SpinEchoWaitParameter(ro_pulse, qc2_pulse, pi_pulse_length))
+    mc.settables(Settable(SpinEchoWaitParameter(ro_pulse, qc2_pulse, pi_pulse_length)))
     mc.setpoints(np.arange(start_start, start_end, start_step))
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
     tiiq.LO_qrm.on()
