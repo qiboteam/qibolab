@@ -9,6 +9,7 @@ class GenericPulsar:
         self.name = None
         self.sequencer = sequencer
         self.debugging = debugging
+        self._connected = False
 
     def setup(self, gain, hardware_avg, initial_delay, repetition_duration):
         if self.sequencer == 1:
@@ -171,10 +172,12 @@ class GenericPulsar:
     def close(self):
         self.device.stop_sequencer()
         self.device.close()
+        self._connected = False
 
     def __del__(self):
-        self.device.stop_sequencer()
-        self.device.close()
+        if self._connected:
+            self.device.stop_sequencer()
+            self.device.close()
 
 
 class PulsarQRM(GenericPulsar):
@@ -189,6 +192,7 @@ class PulsarQRM(GenericPulsar):
         # Instantiate base object from qblox library and connect to it
         self.device = pulsar_qrm(label, ip)
         self.name = "qrm"
+        self._connected = True
 
         # Reset and configure
         self.device.reset()
@@ -283,6 +287,7 @@ class PulsarQCM(GenericPulsar):
         # Instantiate base object from qblox library and connect to it
         self.device = pulsar_qcm(label, ip)
         self.name = "qcm"
+        self._connected = True
         # Reset and configure
         self.device.reset()
         self.device.reference_source(ref_clock)
