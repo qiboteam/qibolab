@@ -1,4 +1,13 @@
 class TIIq:
+    """Platform for controlling TII device.
+
+    Controls the PulsarQRM, PulsarQCM and two SGS100A local oscillators.
+
+    Args:
+        settings (dict): Dictionary with calibration data.
+            See ``examples/tii_single_qubit/tii_single_qubit_settings.json``
+            for an example for this dictionary.
+    """
 
     def __init__(self, settings):
         from qibolab.instruments import PulsarQRM, PulsarQCM, SGS100A
@@ -7,20 +16,35 @@ class TIIq:
         self.LO_qrm = SGS100A(**settings.get("_LO_QRM_init_settings"))
         self.LO_qcm = SGS100A(**settings.get("_LO_QCM_init_settings"))
 
+        # initial platform setup
         self.data_folder = None
         self.hardware_avg = None
         self.sampling_rate = None
         self.software_averages = None
         self.repetition_duration = None
         self.setup_platform(settings.get("_settings"))
+        # initial instrument setup
+        self.setup(settings)
 
     def setup(self, settings):
+        """Configures instruments using the latest calibration settings.
+
+        Args:
+            settings (dict): Dictionary with calibration data.
+                See ``examples/tii_single_qubit/tii_single_qubit_settings.json``
+                for an example for this dictionary.
+        """
         self.qrm.setup(**settings.get("_QRM_settings"))
         self.qcm.setup(**settings.get("_QCM_settings"))
         self.LO_qrm.setup(**settings.get("_LO_QRM_settings"))
         self.LO_qcm.setup(**settings.get("_LO_QCM_settings"))
 
     def setup_platform(self, settings):
+        """Updates the platform parameters.
+
+        Args:
+            settings (dict): Dictionary with platform data.
+        """
         self.data_folder = settings.get("data_folder", self.data_folder)
         self.hardware_avg = settings.get("hardware_avg", self.hardware_avg)
         self.sampling_rate = settings.get("sampling_rate", self.sampling_rate)
