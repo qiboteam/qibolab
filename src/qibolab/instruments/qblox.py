@@ -172,8 +172,6 @@ class PulsarQRM(GenericPulsar):
         self.name = "qrm"
         self.device = pulsar_qrm(label, ip)
         self.sequencer = sequencer
-        self.ref_clock = ref_clock
-        self.sync_en = sync_en
         self.hardware_avg_en = hardware_avg_en
 
         # Reset and configure
@@ -253,8 +251,6 @@ class PulsarQCM(GenericPulsar):
         self.name = "qcm"
         self.device = pulsar_qcm(label, ip)
         self.sequencer = sequencer
-        self.ref_clock = ref_clock
-        self.sync_en = sync_en
         # Reset and configure
         self.device.reset()
         self.device.reference_source(ref_clock)

@@ -60,7 +60,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
 
-    tiiq = TIIq()
+    tiiq = TIIq(settings)
     tiiq.setup(settings)
 
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
@@ -131,7 +131,7 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
 
-    tiiq = TIIq()
+    tiiq = TIIq(settings)
     tiiq.setup(settings)
 
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
