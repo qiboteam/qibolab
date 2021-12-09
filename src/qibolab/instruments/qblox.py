@@ -170,14 +170,13 @@ class GenericPulsar:
         self.device.stop_sequencer()
 
     def close(self):
-        self.device.stop_sequencer()
-        self.device.close()
-        self._connected = False
+        if self._connected:
+            self.stop()
+            self.device.close()
+            self._connected = False
 
     def __del__(self):
-        if self._connected:
-            self.device.stop_sequencer()
-            self.device.close()
+        self.close()
 
 
 class PulsarQRM(GenericPulsar):
