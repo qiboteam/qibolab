@@ -91,17 +91,21 @@ class TIIq:
         self.qcm.close()
 
     def execute(self, sequence):
-        waveforms, program = self.qcm.translate(sequence)
-        self.qcm.upload(waveforms, program, self.data_folder)
-
-        if sequence.readout_pulses:
+        # Translate and upload instructions to instruments
+        if sequence.qcm_pulses:
+            waveforms, program = self.qcm.translate(sequence)
+            self.qcm.upload(waveforms, program, self.data_folder)
+        if sequence.qrm_pulses:
             waveforms, program = self.qrm.translate(sequence)
             self.qrm.upload(waveforms, program, self.data_folder)
 
-        self.qcm.play_sequence()
+        # Execute instructions
+        if sequence.qcm_pulses:
+            self.qcm.play_sequence()
         if sequence.readout_pulses:
-            # TODO: Find a better way to pass the frequency of readout pulse here
-            acquisition_results = self.qrm.play_sequence_and_acquire(sequence.readout_pulses[0])
-            return acquisition_results
+            # TODO: Find a better way to pass the readout pulse here
+            acquisition_results = self.qrm.play_sequence_and_acquire(sequence.qrm_pulses[0])
+        else:
+            acquisition_results = None
 
-        return None
+        return acquisition_results

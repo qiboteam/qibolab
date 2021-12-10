@@ -35,7 +35,7 @@ class ROController():
         self.qrm.upload(waveforms, program, "./data")
 
         self.qcm.play_sequence()
-        acquisition_results = self.qrm.play_sequence_and_acquire(self.sequence.readout_pulses[0])
+        acquisition_results = self.qrm.play_sequence_and_acquire(self.sequence.qrm_pulses[0])
         return acquisition_results
 
 
@@ -57,18 +57,20 @@ def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, high
 def run_resonator_spectroscopy(lowres_width, lowres_step,
                                highres_width, highres_step,
                                precision_width, precision_step):
-    ro_pulse = pulses.ReadoutPulse(start=70,
-                                   frequency=20000000.0,
-                                   amplitude=0.5,
-                                   duration=3000,
-                                   phase=0,
-                                   shape=Rectangular())
+    ro_pulse = pulses.Pulse(start=70,
+                            frequency=20000000.0,
+                            amplitude=0.5,
+                            duration=3000,
+                            phase=0,
+                            shape=Rectangular(),
+                            channel="qrm")
     qc_pulse = pulses.Pulse(start=0,
                             frequency=200000000.0,
                             amplitude=0.3,
                             duration=60,
                             phase=0,
-                            shape=Gaussian(60 / 5))
+                            shape=Gaussian(60 / 5),
+                            channel="qcm")
     sequence = pulses.PulseSequence()
     sequence.add(qc_pulse)
     sequence.add(ro_pulse)
@@ -121,18 +123,20 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
 
 def run_qubit_spectroscopy(resonator_freq, fast_start, fast_end, fast_step,
                            precision_start, precision_end, precision_step):
-    ro_pulse = pulses.ReadoutPulse(start=70,
-                                   frequency=20000000.0,
-                                   amplitude=0.5,
-                                   duration=4040,
-                                   phase=0,
-                                   shape=Rectangular())
+    ro_pulse = pulses.Pulse(start=70,
+                            frequency=20000000.0,
+                            amplitude=0.5,
+                            duration=4040,
+                            phase=0,
+                            shape=Rectangular(),
+                            channel="qrm")
     qc_pulse = pulses.Pulse(start=0,
                             frequency=200000000.0,
                             amplitude=0.3,
                             duration=4000,
                             phase=0,
-                            shape=Gaussian(4000 / 5))
+                            shape=Gaussian(4000 / 5),
+                            channel="qcm")
     sequence = pulses.PulseSequence()
     sequence.add(qc_pulse)
     sequence.add(ro_pulse)

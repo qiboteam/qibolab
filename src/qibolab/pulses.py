@@ -10,29 +10,14 @@ class PulseSequence:
 
     def __init__(self):
         super().__init__()
-        self.qubit_pulses = []
-        self.readout_pulses = []
+        self.qcm_pulses = []
+        self.qrm_pulses = []
 
     def add(self, pulse):
-        if isinstance(pulse, ReadoutPulse):
-            self.readout_pulses.append(pulse)
+        if pulse.channel == "qrm":
+            self.qrm_pulses.append(pulse)
         else:
-            self.qubit_pulses.append(pulse)
-
-    def __len__(self):
-        return len(self.qubit_pulses) + len(self.readout_pulses)
-
-    def __iter__(self):
-        return itertools.chain(self.qubit_pulses, self.readout_pulses)
-
-    @property
-    def start(self):
-        if self.qubit_pulses:
-            return self.qubit_pulses[0].start
-        elif self.readout_pulse is not None:
-            return self.readout_pulses[0].start
-        else:
-            raise_error(ValueError, "Cannot calculate start of an empy pulse sequence.")
+            self.qcm_pulses.append(pulse)
 
 
 class Pulse:
@@ -46,7 +31,8 @@ class Pulse:
         phase (float): TODO.
         shape: (PulseShape): Pulse shape, see :class:`qibolab.pulses.Rectangular`,
         :class:`qibolab.pulses.Gaussian` for more information.
-        channel (int): Leftover from IcarusQ.
+        channel (int/str): Specifies the device that will execute this pulse.
+            FPGA channel (int) for IcarusQ or qrm/qcm (str) for TIIq.
             May be useful to distinguish QRM and QCM pulses?
         offset_i (float): Optional pulse I offset (unitless).
             (amplitude + offset) should be between [0 and 1].
@@ -62,7 +48,6 @@ class Pulse:
         self.frequency = frequency
         self.phase = phase
         self.shape = shape  # PulseShape objects
-
         self.channel = channel
         self.offset_i = offset_i
         self.offset_q = offset_q
@@ -87,25 +72,6 @@ class Pulse:
 
     def __repr__(self):
         return self.serial()
-
-
-class ReadoutPulse(Pulse):
-    """ Describes a pair of IQ pulses for the readout
-
-    Args:
-        start (float): Start time of pulse in seconds.
-        duration (float): Pulse duration in ns.
-        amplitude (float): Pulse amplitude unitless [0 to 1].
-        frequency (float): Pulse frequency in Hz.
-        phase (float): Pulse phase offset for mixer sideband.
-    """
-
-    def __init__(self, start, duration, amplitude, frequency, phase, shape,
-                 channel=0, offset_i=0, offset_q=0, delay_before_readout=0):
-        super().__init__(start, duration, amplitude, frequency, phase, shape, channel, offset_i, offset_q)
-
-    def serial(self):
-        return ""
 
     ### IcarusQ specific method ###
     #def compile(self, waveform, sequence):
