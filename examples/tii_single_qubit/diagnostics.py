@@ -62,8 +62,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
                                    amplitude=0.5,
                                    duration=3000,
                                    phase=0,
-                                   shape=Rectangular(),
-                                   delay_before_readout=4)
+                                   shape=Rectangular())
     qc_pulse = pulses.Pulse(start=0,
                             frequency=200000000.0,
                             amplitude=0.3,
@@ -127,8 +126,7 @@ def run_qubit_spectroscopy(resonator_freq, fast_start, fast_end, fast_step,
                                    amplitude=0.5,
                                    duration=4040,
                                    phase=0,
-                                   shape=Rectangular(),
-                                   delay_before_readout=4)
+                                   shape=Rectangular())
     qc_pulse = pulses.Pulse(start=0,
                             frequency=200000000.0,
                             amplitude=0.3,

@@ -16,8 +16,11 @@ class GenericPulsar(ABC):
         self.hardware_avg = None
         self.initial_delay = None
         self.repetition_duration = None
-        self.acquisitions = {"single": {"num_bins": 1, "index":0}}
-        self.weights = {}
+        # hardcoded values used in ``generate_program``
+        self.delay_before_readout = 4 # same value is used for all readout pulses (?)
+        self.wait_loop_step = 1000
+        self.duration_base = 16380 # maximum length of a waveform in number of samples (defined by the device memory).
+        # hardcoded values used in ``upload``
 
     def setup(self, gain, hardware_avg, initial_delay, repetition_duration):
         if self.sequencer == 1:
@@ -70,32 +73,32 @@ class GenericPulsar(ABC):
             waveforms[f"modQ_{name}"]["data"] = np.concatenate((waveforms[f"modQ_{name}"]["data"], np.zeros(4), waveform["modQ"]["data"]))
         return waveforms
 
-    def generate_program(self, initial_delay, ro_pulse=None):
-        # Prepare sequence program
-        wait_loop_step=1000
-        duration_base=16380 # this is the maximum length of a waveform in number of samples (defined by the device memory)
+    def generate_program(self, initial_delay, acquire_instruction, wait_time):
+        """Generates the program to be uploaded to instruments."""
+        extra_duration = self.repetition_duration - self.duration_base
+        extra_wait = extra_duration % wait_loop_step
+        num_wait_loops = (extra_duration - extra_wait) // self. wait_loop_step
 
-        num_wait_loops, extra_wait = self.calculate_repetition_rate(self.repetition_duration, wait_loop_step, duration_base)
-        if ro_pulse is not None:
-            delay_before_readout = ro_pulse.delay_before_readout
-            acquire_instruction = "acquire   0,0,4      # Acquire waveforms over remaining duration of acquisition of input vector of length = 16380 with integration weights 0,0"
-            wait_time = duration_base - initial_delay - delay_before_readout - 4 # pulses['ro_pulse']['start']
-        else:
-            delay_before_readout = 4
-            acquire_instruction = ""
-            wait_time = duration_base - initial_delay - delay_before_readout
+        # This calculation was moved to `PulsarQCM` and `PulsarQRM`
+        #if ro_pulse is not None:
+        #    acquire_instruction = "acquire   0,0,4"
+        #    wait_time = self.duration_base - initial_delay - delay_before_readout - 4
+        #else:
+        #    acquire_instruction = ""
+        #    wait_time = self.duration_base - initial_delay - delay_before_readout
 
         if initial_delay != 0:
             initial_wait_instruction = f"wait      {initial_delay}"
         else:
             initial_wait_instruction = ""
+
         program = f"""
             move    {self.hardware_avg},R0
             nop
             wait_sync 4          # Synchronize sequencers over multiple instruments
         loop:
             {initial_wait_instruction}
-            play      0,1,{delay_before_readout}
+            play      0,1,{self.delay_before_readout}
             {acquire_instruction}
             wait      {wait_time}
             move      {num_wait_loops},R1
@@ -113,13 +116,6 @@ class GenericPulsar(ABC):
     def translate(self, sequence):
         raise_error(NotImplementedError)
 
-    @staticmethod
-    def calculate_repetition_rate(repetition_duration, wait_loop_step, duration_base):
-        extra_duration = repetition_duration-duration_base
-        extra_wait = extra_duration % wait_loop_step
-        num_wait_loops = (extra_duration - extra_wait) // wait_loop_step
-        return num_wait_loops, extra_wait
-
     def upload(self, waveforms, program, data_folder):
         import os
         # Upload waveforms and program
@@ -128,7 +124,7 @@ class GenericPulsar(ABC):
             if isinstance(waveform["data"], np.ndarray):
                 waveforms[name]["data"] = waveforms[name]["data"].tolist()  # JSON only supports lists
 
-        #Add sequence program and waveforms to single dictionary and write to JSON file
+        # Add sequence program and waveforms to single dictionary and write to JSON file
         filename = f"{data_folder}/qrm_sequence.json"
         program_dict = {
             "waveforms": waveforms,
@@ -200,7 +196,14 @@ class PulsarQRM(GenericPulsar):
     def translate(self, sequence):
         # Allocate only readout pulses to PulsarQRM
         waveforms = self.generate_waveforms(pulses.readout_pulses)
-        program = self.generate_program(sequence.start, sequence.readout_pulses[0])
+
+        # Generate program without acquire instruction
+        initial_delay = sequence.start
+        # Acquire waveforms over remaining duration of acquisition of input vector of length = 16380 with integration weights 0,0
+        acquire_instruction = "acquire   0,0,4"
+        wait_time = self.duration_base - initial_delay - self.delay_before_readout - 4 # FIXME: Not sure why this hardcoded 4 is needed
+        program = self.generate_program(initial_delay, acquire_instruction, wait_time)
+
         return waveforms, program
 
     def play_sequence_and_acquire(self, ro_pulse):
@@ -269,5 +272,11 @@ class PulsarQCM(GenericPulsar):
     def translate(self, sequence):
         # Allocate only qubit pulses to PulsarQRM
         waveforms = self.generate_waveforms(sequence.qubit_pulses)
-        program = self.generate_program(sequence.start)
+
+        # Generate program without acquire instruction
+        initial_delay = sequence.start
+        acquire_instruction = ""
+        wait_time = self.duration_base - initial_delay - self.delay_before_readout
+        program = self.generate_program(initial_delay, acquire_instruction, wait_time)
+
         return waveforms, program

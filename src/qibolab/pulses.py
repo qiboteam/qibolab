@@ -43,6 +43,7 @@ class Pulse:
         duration (float): Pulse duration in ns.
         amplitude (float): Pulse digital amplitude (unitless) [0 to 1].
         frequency (float): Pulse Intermediate Frequency in Hz [10e6 to 300e6].
+        phase (float): TODO.
         shape: (PulseShape): Pulse shape, see :class:`qibolab.pulses.Rectangular`,
         :class:`qibolab.pulses.Gaussian` for more information.
         channel (int): Leftover from IcarusQ.
@@ -93,17 +94,15 @@ class ReadoutPulse(Pulse):
 
     Args:
         start (float): Start time of pulse in seconds.
-        duration (float): Pulse duration in seconds.
-        amplitude (float): Pulse amplitude in volts.
+        duration (float): Pulse duration in ns.
+        amplitude (float): Pulse amplitude unitless [0 to 1].
         frequency (float): Pulse frequency in Hz.
-        phases (float): Pulse phase offset for mixer sideband.
+        phase (float): Pulse phase offset for mixer sideband.
     """
 
-    def __init__(self, start, duration, amplitude, frequency, phase, shape, offset_i=0, offset_q=0,
-                 delay_before_readout=0):
-        super().__init__(start, duration, amplitude, frequency, phase, shape, offset_i, offset_q)
-        # TODO: Remove delay before readout from here
-        self.delay_before_readout = delay_before_readout
+    def __init__(self, start, duration, amplitude, frequency, phase, shape,
+                 channel=0, offset_i=0, offset_q=0, delay_before_readout=0):
+        super().__init__(start, duration, amplitude, frequency, phase, shape, channel, offset_i, offset_q)
 
     def serial(self):
         return ""
@@ -120,7 +119,7 @@ class ReadoutPulse(Pulse):
 
 
 class IQReadoutPulse(Pulse):
-    # TODO: Remove this.
+    # TODO: Remove this or think how to merge with ``ReadoutPulse``.
     # Currently keeping it for compatibility with IcarusQ as it breaks the import
     """ Describes a pair of IQ pulses for the readout
 
