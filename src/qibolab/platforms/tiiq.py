@@ -102,10 +102,13 @@ class TIIq:
         # Execute instructions
         if sequence.qcm_pulses:
             self.qcm.play_sequence()
-        if sequence.readout_pulses:
+        if sequence.qrm_pulses:
             # TODO: Find a better way to pass the readout pulse here
             acquisition_results = self.qrm.play_sequence_and_acquire(sequence.qrm_pulses[0])
         else:
             acquisition_results = None
 
         return acquisition_results
+
+    def __call__(self, sequence):
+        return self.execute(sequence)
