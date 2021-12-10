@@ -1,5 +1,6 @@
 import numpy as np
 from abc import ABC, abstractmethod
+from qibo.config import raise_error
 
 
 class PulseShape(ABC):

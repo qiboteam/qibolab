@@ -1,6 +1,7 @@
 import json
 import numpy as np
 from abc import ABC, abstractmethod
+from qibo.config import raise_error
 
 
 class GenericPulsar(ABC):
@@ -21,6 +22,8 @@ class GenericPulsar(ABC):
         self.wait_loop_step = 1000
         self.duration_base = 16380 # maximum length of a waveform in number of samples (defined by the device memory).
         # hardcoded values used in ``upload``
+        self.acquisitions = {"single": {"num_bins": 1, "index":0}}
+        self.weights = {}
 
     def setup(self, gain, hardware_avg, initial_delay, repetition_duration):
         if self.sequencer == 1:
@@ -38,14 +41,14 @@ class GenericPulsar(ABC):
         envelope_i = pulse.compile()
         # TODO: if ``envelope_q`` is not always 0 we need to find how to
         # calculate it
-        envelope_q = np.zeros(int(self.length))
-        time = np.arange(pulse.length) * 1e-9
+        envelope_q = np.zeros(int(pulse.duration))
+        time = np.arange(pulse.duration) * 1e-9
         # FIXME: There should be a simpler way to construct this array
         cosalpha = np.cos(2 * np.pi * pulse.frequency * time)
         sinalpha = np.sin(2 * np.pi * pulse.frequency * time)
         mod_matrix = np.array([[cosalpha,sinalpha], [-sinalpha,cosalpha]])
         result = []
-        for it, t, ii, qq in zip(np.arange(pulse.length), time, envelope_i, envelope_q):
+        for it, t, ii, qq in zip(np.arange(pulse.duration), time, envelope_i, envelope_q):
             result.append(mod_matrix[:, :, it] @ np.array([ii, qq]))
         mod_signals = np.array(result)
 
@@ -76,7 +79,7 @@ class GenericPulsar(ABC):
     def generate_program(self, initial_delay, acquire_instruction, wait_time):
         """Generates the program to be uploaded to instruments."""
         extra_duration = self.repetition_duration - self.duration_base
-        extra_wait = extra_duration % wait_loop_step
+        extra_wait = extra_duration % self.wait_loop_step
         num_wait_loops = (extra_duration - extra_wait) // self. wait_loop_step
 
         # This calculation was moved to `PulsarQCM` and `PulsarQRM`
@@ -104,7 +107,7 @@ class GenericPulsar(ABC):
             move      {num_wait_loops},R1
             nop
             repeatloop:
-                wait      {wait_loop_step}
+                wait      {self.wait_loop_step}
                 loop      R1,@repeatloop
             wait      {extra_wait}
             loop    R0,@loop
