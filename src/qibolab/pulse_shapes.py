@@ -1,11 +1,10 @@
-"""Pulse shape abstractions."""
 import numpy as np
 from abc import ABC, abstractmethod
-from qibo.config import raise_error
 
 
 class PulseShape(ABC):
-    """Describes the pulse shape to be used."""
+    """Describes the pulse shape to be used
+    """
     def __init__(self): # pragma: no cover
         self.name = ""
 
@@ -18,13 +17,17 @@ class PulseShape(ABC):
 
 
 class Rectangular(PulseShape):
-    """Rectangular/square pulse shape."""
+    """Rectangular/square pulse shape
+    """
     def __init__(self):
         self.name = "rectangular"
 
-    def envelope(self, length):
-        """Constant amplitude envelope."""
-        return np.ones(int(length))
+    def envelope(self, time, start, duration, amplitude):
+        """Constant amplitude envelope
+        """
+        #return amplitude
+        # FIXME: This may have broken IcarusQ
+        return amplitude * np.ones(int(duration))
 
 
 class Gaussian(PulseShape):
@@ -34,9 +37,15 @@ class Gaussian(PulseShape):
         self.name = "gaussian"
         self.sigma = sigma
 
-    def envelope(self, length, sigma):
+    def envelope(self, time, start, duration, amplitude):
+        """Gaussian envelope centered with respect to the pulse:
+        A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}
+        """
         from scipy.signal import gaussian
-        return gaussian(int(length), std=self.sigma)
+        return amplitude * gaussian(int(duration), std=self.sigma)
+        # FIXME: This may have broken IcarusQ
+        #mu = start + duration / 2
+        #return amplitude * np.exp(-0.5 * (time - mu) ** 2 / self.sigma ** 2)
 
     def __repr__(self):
         return "({}, {})".format(self.name, self.sigma)

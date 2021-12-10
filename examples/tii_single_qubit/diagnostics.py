@@ -60,16 +60,16 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     ro_pulse = pulses.ReadoutPulse(start=70,
                                    frequency=20000000.0,
                                    amplitude=0.5,
-                                   length=3000,
+                                   duration=3000,
                                    phase=0,
-                                   shape="Block",
+                                   shape=Rectangular(),
                                    delay_before_readout=4)
     qc_pulse = pulses.Pulse(start=0,
                             frequency=200000000.0,
                             amplitude=0.3,
-                            length=60,
+                            duration=60,
                             phase=0,
-                            shape="Gaussian")
+                            shape=Gaussian(60 / 5))
     sequence = pulses.PulseSequence()
     sequence.add(qc_pulse)
     sequence.add(ro_pulse)
@@ -125,16 +125,16 @@ def run_qubit_spectroscopy(resonator_freq, fast_start, fast_end, fast_step,
     ro_pulse = pulses.ReadoutPulse(start=70,
                                    frequency=20000000.0,
                                    amplitude=0.5,
-                                   length=4040,
+                                   duration=4040,
                                    phase=0,
-                                   shape="Block",
+                                   shape=Rectangular(),
                                    delay_before_readout=4)
     qc_pulse = pulses.Pulse(start=0,
                             frequency=200000000.0,
                             amplitude=0.3,
-                            length=4000,
+                            duration=4000,
                             phase=0,
-                            shape="Gaussian")
+                            shape=Gaussian(4000 / 5))
     sequence = pulses.PulseSequence()
     sequence.add(qc_pulse)
     sequence.add(ro_pulse)

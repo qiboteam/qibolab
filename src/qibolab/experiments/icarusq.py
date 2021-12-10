@@ -62,8 +62,8 @@ class IcarusQ(AbstractExperiment):
                 "1": [0.009458352995780546, -0.008570922209494462]
             },
             "gates": {
-                "rx": [pulses.BasicPulse(3, 0, 24.78e-9, 0.375, 3.0473825e9 - sampling_rate, 0, Rectangular())],
-                "ry": [pulses.BasicPulse(3, 0, 24.78e-9, 0.375, 3.0473825e9 - sampling_rate, 90, Rectangular())],
+                "rx": [pulses.Pulse(0, 24.78e-9, 0.375, 3.0473825e9 - sampling_rate, 0, Rectangular(), channel=3)],
+                "ry": [pulses.Pulse(0, 24.78e-9, 0.375, 3.0473825e9 - sampling_rate, 90, Rectangular(), channel=3)],
             }
         }]
 

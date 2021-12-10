@@ -44,13 +44,13 @@ initial_calibration = [{
     "zero_iq_reference": (0.002117188393398148, 0.020081601323807922),
     "one_iq_reference": (0.007347951048047871, 0.015370747296983345),
     "initial_gates": {
-        "rx": [pulses.BasicPulse(2, 0, 100.21e-9, 0.375 / 2, 3.06362669e9 - 2.3e9, 0, Rectangular()),
-                pulses.BasicPulse(2, 0, 69.77e-9, 0.375 / 2, 3.086e9 - 2.3e9, 0, Rectangular())],
-        "ry": [pulses.BasicPulse(2, 0, 100.21e-9, 0.375 / 2, 3.06362669e9 - 2.3e9, 90, Rectangular()),
-                pulses.BasicPulse(2, 0, 69.77e-9, 0.375 / 2, 3.086e9 - 2.3e9, 90, Rectangular())],
-        "measure": [pulses.BasicPulse(0, 0, 5e-6, 0.75 / 2, 100e6, 90, Rectangular()), # I cosine
-                    pulses.BasicPulse(1, 0, 5e-6, 0.75 / 2, 100e6, 0, Rectangular())], # Q negative sine
-        "cx_(1,)": [pulses.BasicPulse(3, 0, 46.71e-9, 0.396 / 2, 3.06362669e9 - 2.3e9, 0, SWIPHT(20e6))],
+        "rx": [pulses.Pulse(0, 100.21e-9, 0.375 / 2, 3.06362669e9 - 2.3e9, 0, Rectangular(), channel=2),
+                pulses.Pulse(0, 69.77e-9, 0.375 / 2, 3.086e9 - 2.3e9, 0, Rectangular(), channel=2)],
+        "ry": [pulses.Pulse(0, 100.21e-9, 0.375 / 2, 3.06362669e9 - 2.3e9, 90, Rectangular(), channel=2),
+                pulses.Pulse(0, 69.77e-9, 0.375 / 2, 3.086e9 - 2.3e9, 90, Rectangular(), channel=2)],
+        "measure": [pulses.Pulse(0, 5e-6, 0.75 / 2, 100e6, 90, Rectangular(), channel=0), # I cosine
+                    pulses.Pulse(0, 5e-6, 0.75 / 2, 100e6, 0, Rectangular(), channel=1)], # Q negative sine
+        "cx_(1,)": [pulses.Pulse(0, 46.71e-9, 0.396 / 2, 3.06362669e9 - 2.3e9, 0, SWIPHT(20e6), channel=3)],
     }
 }, {
     "id": 1,
@@ -68,12 +68,12 @@ initial_calibration = [{
     "zero_iq_reference": (0.002117188393398148, 0.020081601323807922),
     "one_iq_reference": (0.007347951048047871, 0.015370747296983345),
     "initial_gates": {
-        "rx": [pulses.BasicPulse(3, 0, 112.16e-9, 0.375 / 2, 3.284049061e9 - 2.3e9, 0, Rectangular()),
-                pulses.BasicPulse(3, 0, 131.12e-9, 0.375 / 2, 3.23e9 - 2.3e9, 0, Rectangular())],
-        "ry": [pulses.BasicPulse(3, 0, 112.16e-9, 0.375 / 2, 3.284049061e9 - 2.3e9, 90, Rectangular()),
-                pulses.BasicPulse(3, 0, 131.12e-9, 0.375 / 2, 3.23e9 - 2.3e9, 90, Rectangular())],
-        "measure": [pulses.BasicPulse(0, 0, 5e-6, 0.75 / 2, 100e6, 90, Rectangular()), # I cosine
-                    pulses.BasicPulse(1, 0, 5e-6, 0.75 / 2, 100e6, 0, Rectangular())], # Q negative sine
+        "rx": [pulses.Pulse(0, 112.16e-9, 0.375 / 2, 3.284049061e9 - 2.3e9, 0, Rectangular(), channel=3),
+                pulses.Pulse(0, 131.12e-9, 0.375 / 2, 3.23e9 - 2.3e9, 0, Rectangular(), channel=3)],
+        "ry": [pulses.Pulse(0, 112.16e-9, 0.375 / 2, 3.284049061e9 - 2.3e9, 90, Rectangular(), channel=3),
+                pulses.Pulse(0, 131.12e-9, 0.375 / 2, 3.23e9 - 2.3e9, 90, Rectangular(), channel=3)],
+        "measure": [pulses.Pulse(0, 5e-6, 0.75 / 2, 100e6, 90, Rectangular(), channel=0), # I cosine
+                    pulses.Pulse(0, 5e-6, 0.75 / 2, 100e6, 0, Rectangular(), channel=1)], # Q negative sine
     }
 }]
 

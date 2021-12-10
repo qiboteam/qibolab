@@ -40,30 +40,35 @@ class Pulse:
 
     Args:
         start (float): Start time of pulse in ns.
-        length (float): Pulse duration in ns.
+        duration (float): Pulse duration in ns.
         amplitude (float): Pulse digital amplitude (unitless) [0 to 1].
         frequency (float): Pulse Intermediate Frequency in Hz [10e6 to 300e6].
         shape: (PulseShape): Pulse shape, see :class:`qibolab.pulses.Rectangular`,
         :class:`qibolab.pulses.Gaussian` for more information.
+        channel (int): Leftover from IcarusQ.
+            May be useful to distinguish QRM and QCM pulses?
         offset_i (float): Optional pulse I offset (unitless).
             (amplitude + offset) should be between [0 and 1].
         offset_q (float): Optional pulse Q offset (unitless).
             (amplitude + offset) should be between [0 and 1].
     """
-    def __init__(self, start, length, amplitude, frequency, phase, shape, offset_i=0, offset_q=0):
+    def __init__(self, start, duration, amplitude, frequency, phase, shape, channel=0, offset_i=0, offset_q=0):
         # FIXME: Since the ``start`` value depends on the previous pulses we are
         # not sure if it should be a local property of the ``Pulse`` object
         self.start = start
-        self.length = length
+        self.duration = duration
         self.amplitude = amplitude
         self.frequency = frequency
         self.phase = phase
         self.shape = shape  # PulseShape objects
+
+        self.channel = channel
         self.offset_i = offset_i
         self.offset_q = offset_q
 
     def serial(self):
-        raise_error(NotImplementedError)
+        return "P({}, {}, {}, {}, {}, {}, {})".format(self.channel, self.start, self.duration,
+                                                      self.amplitude, self.frequency, self.phase, self.shape)
 
     ### IcarusQ specific method ###
     #def compile(self, waveform, sequence):
@@ -77,7 +82,7 @@ class Pulse:
     #    return waveform
 
     def compile(self):
-        return self.amplitude * self.shape.envelope(self.length)
+        return self.shape.envelope(None, None, self.duration, self.amplitude)
 
     def __repr__(self):
         return self.serial()
@@ -94,9 +99,9 @@ class ReadoutPulse(Pulse):
         phases (float): Pulse phase offset for mixer sideband.
     """
 
-    def __init__(self, start, length, amplitude, frequency, phase, shape, offset_i=0, offset_q=0,
+    def __init__(self, start, duration, amplitude, frequency, phase, shape, offset_i=0, offset_q=0,
                  delay_before_readout=0):
-        super().__init__(start, length, amplitude, frequency, phase, shape, offset_i, offset_q)
+        super().__init__(start, duration, amplitude, frequency, phase, shape, offset_i, offset_q)
         # TODO: Remove delay before readout from here
         self.delay_before_readout = delay_before_readout
 
@@ -112,42 +117,6 @@ class ReadoutPulse(Pulse):
     #    waveform[self.channels[0], i_start:i_start + i_duration] += self.amplitude * np.cos(2 * np.pi * self.frequency * time + self.phases[0])
     #    waveform[self.channels[1], i_start:i_start + i_duration] -= self.amplitude * np.sin(2 * np.pi * self.frequency * time + self.phases[1])
     #    return waveform
-
-
-class BasicPulse(Pulse):
-    # TODO: Remove this.
-    # Currently keeping it for compatibility with IcarusQ as it breaks the import
-    """Describes a single pulse to be added to waveform array.
-    Args:
-        channel (int): FPGA channel to play pulse on.
-        start (float): Start time of pulse in seconds.
-        duration (float): Pulse duration in seconds.
-        amplitude (float): Pulse amplitude in volts.
-        frequency (float): Pulse frequency in Hz.
-        shape: (PulseShape): Pulse shape, @see Rectangular, Gaussian, DRAG for more information.
-    """
-    def __init__(self, channel, start, duration, amplitude, frequency, phase, shape):
-        self.channel = channel
-        self.start = start
-        self.duration = duration
-        self.amplitude = amplitude
-        self.frequency = frequency
-        self.phase = phase
-        self.shape = shape  # PulseShape objects
-
-    def serial(self):
-        return "P({}, {}, {}, {}, {}, {}, {})".format(self.channel, self.start, self.duration,
-                                                      self.amplitude, self.frequency, self.phase, self.shape)
-
-    def compile(self, waveform, sequence):
-        i_start = bisect.bisect(sequence.time, self.start)
-        #i_start = int((self.start / sequence.duration) * sequence.sample_size)
-        i_duration = int((self.duration / sequence.duration) * sequence.sample_size)
-        time = sequence.time[i_start:i_start + i_duration]
-        envelope = self.shape.envelope(time, self.start, self.duration, self.amplitude)
-        waveform[self.channel, i_start:i_start + i_duration] += (
-            envelope * np.sin(2 * np.pi * self.frequency * time + self.phase))
-        return waveform
 
 
 class IQReadoutPulse(Pulse):
