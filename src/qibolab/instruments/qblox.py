@@ -1,3 +1,4 @@
+from abc import abstractmethod
 import json
 import numpy as np
 
@@ -18,6 +19,10 @@ class GenericPulsar:
         self.repetition_duration = None
         self.acquisitions = {"single": {"num_bins": 1, "index":0}}
         self.weights = {}
+
+    @abstractmethod
+    def connect(self, label, ip):
+        raise(NotImplementedError)
 
     def setup(self, gain, hardware_avg, initial_delay, repetition_duration):
         if self.sequencer == 1:
@@ -174,7 +179,7 @@ class PulsarQRM(GenericPulsar):
         super().__init__()
         # Instantiate base object from qblox library and connect to it
         self.name = "qrm"
-        self.device = pulsar_qrm(label, ip)
+        self.connect(label, ip)
         self._connected = True
         self.sequencer = sequencer
         self.hardware_avg_en = hardware_avg_en
@@ -192,6 +197,13 @@ class PulsarQRM(GenericPulsar):
             self.device.sequencer1_sync_en(sync_en)
         else:
             self.device.sequencer0_sync_en(sync_en)
+
+    def connect(self, label, ip):
+        if not self._connected:
+            self.device = pulsar_qrm(label, ip)
+            self._connected = True
+        else:
+            raise(RuntimeError)
 
     def setup(self, gain, hardware_avg, initial_delay, repetition_duration,
               start_sample, integration_length, sampling_rate, mode):
@@ -254,8 +266,7 @@ class PulsarQCM(GenericPulsar):
         super().__init__()
         # Instantiate base object from qblox library and connect to it
         self.name = "qcm"
-        self.device = pulsar_qcm(label, ip)
-        self._connected = True
+        self.connect(label, ip)
         self.sequencer = sequencer
         # Reset and configure
         self.device.reset()
@@ -264,3 +275,10 @@ class PulsarQCM(GenericPulsar):
             self.device.sequencer1_sync_en(sync_en)
         else:
             self.device.sequencer0_sync_en(sync_en)
+
+    def connect(self, label, ip):
+        if not self._connected:
+            self.device = pulsar_qcm(label, ip)
+            self._connected = True
+        else:
+            raise(RuntimeError)
