@@ -57,12 +57,6 @@ def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, high
 def run_resonator_spectroscopy(lowres_width, lowres_step,
                                highres_width, highres_step,
                                precision_width, precision_step):
-    with open("tii_single_qubit_settings.json", "r") as file:
-        settings = json.load(file)
-
-    tiiq = TIIq()
-    tiiq.setup(settings)
-
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
                                       start=70,
                                       frequency=20000000.0,
@@ -81,6 +75,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     qcm_sequence = pulses.PulseSequence()
     qcm_sequence.add(qc_pulse)
 
+    tiiq = TIIq()
     mc = MeasurementControl('MC_resonator_spectroscopy')
     # Fast Sweep
     tiiq.software_averages = 1
@@ -126,14 +121,8 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     return resonator_freq, dataset
 
 
-def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
+def run_qubit_spectroscopy(resonator_freq, fast_start, fast_end, fast_step,
                            precision_start, precision_end, precision_step):
-    with open("tii_single_qubit_settings.json", "r") as file:
-        settings = json.load(file)
-
-    tiiq = TIIq()
-    tiiq.setup(settings)
-
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
                                       start=70,
                                       frequency=20000000.0,
@@ -152,6 +141,10 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
     qcm_sequence = pulses.PulseSequence()
     qcm_sequence.add(qc_pulse)
 
+    tiiq = TIIq()
+    # set optimal resonator frequency found in ``run_resonator_spectroscopy``
+    tiiq.LO_qrm.set_frequency(resonator_freq)
+
     mc = MeasurementControl('MC_qubit_spectroscopy')
     # Fast Sweep
     tiiq.software_averages = 1
@@ -160,10 +153,10 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
     mc.setpoints(scanrange + tiiq.LO_qcm.get_frequency())
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
     tiiq.LO_qrm.on()
-    tiiq.LO_qcm.off()
+    tiiq.LO_qcm.on()
     dataset = mc.run("Qubit Spectroscopy Fast", soft_avg=tiiq.software_averages)
-    # http://xarray.pydata.org/en/stable/getting-started-guide/quick-overview.html
     tiiq.stop()
+    # http://xarray.pydata.org/en/stable/getting-started-guide/quick-overview.html
     tiiq.LO_qcm.set_frequency(dataset['x0'].values[dataset['y0'].argmin().values])
 
     # Precision Sweep
@@ -173,7 +166,7 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
     mc.setpoints(scanrange + tiiq.LO_qcm.get_frequency())
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
     tiiq.LO_qrm.on()
-    tiiq.LO_qcm.off()
+    tiiq.LO_qcm.on()
     dataset = mc.run("Qubit Spectroscopy Precision", soft_avg=tiiq.software_averages)
     tiiq.stop()
 
