@@ -1,5 +1,6 @@
 import os
 import json
+from qibo.config import raise_error, log
 
 
 class TIIq:
@@ -33,7 +34,6 @@ class TIIq:
         try:
             self.connect()
         except: # capture time-out errors when importing outside the lab (bad practice)
-            from qibo.config import log
             log.warning("Cannot establish connection to TIIq instruments. Skipping...")
         # initial instrument setup
         self.setup()
@@ -132,6 +132,9 @@ class TIIq:
             Readout results acquired by :class:`qibolab.instruments.qblox.PulsarQRM`
             after execution.
         """
+        if not self._connected:
+            raise_error(RuntimeError, "Execution failed because instruments are not connected.")
+
         # Translate and upload instructions to instruments
         if sequence.qcm_pulses:
             waveforms, program = self.qcm.translate(sequence)
