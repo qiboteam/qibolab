@@ -26,15 +26,13 @@ sequence.add(pulses.Pulse(start=0,
                           amplitude=0.3,
                           duration=60,
                           phase=0,
-                          shape=Gaussian(60 / 5), # Gaussian shape with std = duration / 5
-                          channel="qcm"))
-sequence.add(pulses.Pulse(start=70,
-                          frequency=20000000.0,
-                          amplitude=0.5,
-                          duration=3000,
-                          phase=0,
-                          shape=Rectangular(),
-                          channel="qrm"))
+                          shape=Gaussian(60 / 5))) # Gaussian shape with std = duration / 5
+sequence.add(pulses.ReadoutPulse(start=70,
+                                 frequency=20000000.0,
+                                 amplitude=0.5,
+                                 duration=3000,
+                                 phase=0,
+                                 shape=Rectangular()))
 
 # turn on instruments
 platform.start()

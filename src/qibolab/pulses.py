@@ -23,7 +23,7 @@ class PulseSequence:
         Args:
             pulse (`qibolab.pulses.Pulse`): Pulse object to add.
         """
-        if pulse.channel == "qrm":
+        if pulse.channel == "qrm" or pulse.channel == 1:
             self.qrm_pulses.append(pulse)
         else:
             self.qcm_pulses.append(pulse)
@@ -40,15 +40,15 @@ class Pulse:
         phase (float): To be added.
         shape: (PulseShape): Pulse shape.
             See :py:mod:`qibolab.pulses_shapes` for list of available shapes.
-        channel (int/str): Specifies the device that will execute this pulse.
-            FPGA channel (int) for IcarusQ or qrm/qcm (str) for TIIq.
-            May be useful to distinguish QRM and QCM pulses?
         offset_i (float): Optional pulse I offset (unitless).
             (amplitude + offset) should be between [0 and 1].
         offset_q (float): Optional pulse Q offset (unitless).
             (amplitude + offset) should be between [0 and 1].
+        channel (int/str): Specifies the device that will execute this pulse.
+            FPGA channel (int) for IcarusQ or qrm/qcm (str) for TIIq.
+            May be useful to distinguish QRM and QCM pulses?
     """
-    def __init__(self, start, duration, amplitude, frequency, phase, shape, channel=0, offset_i=0, offset_q=0):
+    def __init__(self, start, duration, amplitude, frequency, phase, shape, offset_i=0, offset_q=0, channel="qcm"):
         # FIXME: Since the ``start`` value depends on the previous pulses we are
         # not sure if it should be a local property of the ``Pulse`` object
         self.start = start
@@ -81,6 +81,16 @@ class Pulse:
 
     def __repr__(self):
         return self.serial()
+
+
+class ReadoutPulse(Pulse):
+    """Describes a readout pulse.
+
+    See :class:`qibolab.pulses.Pulse` for argument desciption.
+    """
+
+    def __init__(self, start, duration, amplitude, frequency, phase, shape, offset_i=0, offset_q=0, channel="qrm"):
+        super().__init__(start, duration, amplitude, frequency, phase, shape, offset_i, offset_q, channel)
 
 
 class IQReadoutPulse(Pulse):
