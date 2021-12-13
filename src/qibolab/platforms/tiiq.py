@@ -144,9 +144,6 @@ class TIIq:
             self._qcm.close()
             self._connected = False
 
-    def __del__(self):
-        self.disconnect()
-
     def execute(self, sequence):
         """Executes a pulse sequence.
 

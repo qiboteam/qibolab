@@ -208,8 +208,9 @@ class GenericPulsar(ABC):
             self.device.close()
             self._connected = False
 
-    def __del__(self):
-        self.close()
+    # TODO: Figure out how to fix this
+    #def __del__(self):
+    #    self.close()
 
 
 class PulsarQRM(GenericPulsar):
