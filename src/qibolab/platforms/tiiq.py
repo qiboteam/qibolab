@@ -17,11 +17,16 @@ class TIIq:
         settings = self.load_settings()
 
         # initialize instruments
-        from qibolab.instruments import PulsarQRM, PulsarQCM, SGS100A
-        self.qrm = PulsarQRM(**settings.get("_QRM_init_settings"))
-        self.qcm = PulsarQCM(**settings.get("_QCM_init_settings"))
-        self.LO_qrm = SGS100A(**settings.get("_LO_QRM_init_settings"))
-        self.LO_qcm = SGS100A(**settings.get("_LO_QCM_init_settings"))
+        self._connected = False
+        self.qrm = None
+        self.qcm = None
+        self.LO_qrm = None
+        self.LO_qcm = None
+        try:
+            self.connect()
+        except: # capture time-out errors when importing outside the lab (bad practice)
+            from qibo.config import log
+            log.warning("Cannot establish connection to TIIq instruments. Skipping...")
 
         # initial platform setup
         self.data_folder = None
@@ -53,6 +58,21 @@ class TIIq:
             settings = json.load(file)
         return settings
 
+    def connect(self):
+        """Connects to lab instruments using the details specified in the loaded settings.
+
+        Two QBlox (:class:`qibolab.instruments.qblox.PulsarQRM` and
+        :class:`qibolab.instruments.qblox.PulsarQCM`) and two local oscillators
+        (:class:`qibolab.instruments.rohde_schwarz.SGS100A`) are used in the
+        TIIq configuration.
+        """
+        from qibolab.instruments import PulsarQRM, PulsarQCM, SGS100A
+        self.qrm = PulsarQRM(**settings.get("_QRM_init_settings"))
+        self.qcm = PulsarQCM(**settings.get("_QCM_init_settings"))
+        self.LO_qrm = SGS100A(**settings.get("_LO_QRM_init_settings"))
+        self.LO_qcm = SGS100A(**settings.get("_LO_QCM_init_settings"))
+        self._connected = True
+
     def setup(self, settings):
         """Configures instruments using the latest calibration settings.
 
@@ -78,21 +98,44 @@ class TIIq:
         self.software_averages = settings.get("software_averages", self.software_averages)
         self.repetition_duration = settings.get("repetition_duration", self.repetition_duration)
 
+    def start(self):
+        """Turns-on the local oscillators.
+
+        The QBlox insturments are turned-on automatically during execution after
+        the required pulse sequences are loaded.
+        """
+        self.LO_qcm.on()
+        self.LO_qrm.on()
+
     def stop(self):
+        """Turns-off all the lab instruments."""
         self.LO_qrm.off()
         self.LO_qcm.off()
         self.qrm.stop()
         self.qcm.stop()
 
+    def disconnect(self):
+        """Disconnects from the lab instruments."""
+        if self._connected:
+            self.LO_qrm.close()
+            self.LO_qcm.close()
+            self.qrm.close()
+            self.qcm.close()
+            self._connected = False
+
     def __del__(self):
-        self.LO_qrm.close()
-        self.LO_qcm.close()
-        self.qrm.close()
-        self.qcm.close()
+        self.disconnect()
 
     def execute(self, sequence):
-        # TODO: Turn on and off the local oscillators
-        
+        """Executes a pulse sequence.
+
+        Args:
+            sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
+
+        Returns:
+            Readout results acquired by :class:`qibolab.instruments.qblox.PulsarQRM`
+            after execution.
+        """
         # Translate and upload instructions to instruments
         if sequence.qcm_pulses:
             waveforms, program = self.qcm.translate(sequence)
