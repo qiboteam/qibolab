@@ -5,14 +5,11 @@
         "sampling_rate": 1000000000.0,
         "software_averages": 3,
         "repetition_duration": 200000,
-        "resonator_freq": 7798070000.0,
-        "qubit_freq": 8726500000.0,
-        "pi_pulse_gain": 0.14,
-        "pi_pulse_amplitude": 0.9,
-        "pi_pulse_length": 50,
-        "resonator_spectroscopy_avg_min_ro_voltage": 189.01058063631086,
-        "resonator_spectroscopy_max_ro_voltage": 623.4344492182624,
-        "qubit_spectroscopy_min_ro_voltage": 463.2114894017597
+        "resonator_freq": 7798110000.0,
+        "qubit_freq": 8727000000.0,
+        "resonator_spectroscopy_avg_min_ro_voltage": 0.0001946970970531491,
+        "resonator_spectroscopy_max_ro_voltage": 624.3804772627196,
+        "qubit_spectroscopy_min_ro_voltage": 437.33270387304395
     },
     "_QRM_init_settings": {
         "ref_clock": "external",
@@ -49,7 +46,7 @@
         "sync_en": true
     },
     "_QCM_settings": {
-        "gain": 0.14,
+        "gain": 0.1,
         "hardware_avg": 1024,
         "initial_delay": 0,
         "repetition_duration": 200000,
@@ -67,10 +64,10 @@
     },
     "_LO_QRM_settings": {
         "power": 10,
-        "frequency": 7778070000.0
+        "frequency": 7778110000.0
     },
     "_LO_QCM_settings": {
-        "power": -5,
-        "frequency": 8926500000.0
+        "power": -10,
+        "frequency": 8927000000.0
     }
 }

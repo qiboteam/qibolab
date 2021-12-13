@@ -705,6 +705,7 @@ class Pulsar_QCM():
         #arm sequencer and start playing sequence
         qcm.arm_sequencer()
         qcm.start_sequencer()
+
         if debugging:
             print(qcm.get_sequencer_state(sequencer))
 

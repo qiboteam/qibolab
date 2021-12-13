@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.signal import savgol_filter
+from scipy.optimize import curve_fit
 import qibolab.calibration.fitting 
 
 import matplotlib.pyplot as plt
@@ -140,6 +141,7 @@ def run_resonator_spectroscopy():
     tiisq.setup()
     
     # Fast Sweep
+    tiisq._general_settings['software_averages'] = 1 
     scanrange = variable_resolution_scanrange(lowres_width= 30e6, lowres_step= 2e6, highres_width= 1e6, highres_step= 0.2e6)
 
     MC.settables(tiisq._LO_qrm.LO.frequency)
@@ -151,6 +153,7 @@ def run_resonator_spectroscopy():
     # http://xarray.pydata.org/en/stable/getting-started-guide/quick-overview.html
     tiisq.stop()
     tiisq._LO_QRM_settings['frequency'] = dataset['x0'].values[dataset['y0'].argmax().values]
+    tiisq._general_settings['resonator_spectroscopy_avg_min_ro_voltage'] = np.mean(dataset['y0'].values[:25]) * 1e6
     
     # Precision Sweep
     tiisq._general_settings['software_averages'] = 1 # 3
@@ -166,9 +169,12 @@ def run_resonator_spectroscopy():
     smooth_dataset = savgol_filter(dataset['y0'].values, 25, 2)
     tiisq._LO_QRM_settings['frequency'] = dataset['x0'].values[smooth_dataset.argmax()]
     tiisq._general_settings['resonator_freq'] = dataset['x0'].values[smooth_dataset.argmax()] + tiisq._QRM_settings['pulses']['ro_pulse']['freq_if']
+    # tiisq._general_settings['max_ro_voltage'] = dataset['y0'].max().item() * 1e6
+    tiisq._general_settings['resonator_spectroscopy_max_ro_voltage'] = smooth_dataset.max() * 1e6
     print('\n')
     print(f"Resonator Frequency = {tiisq._general_settings['resonator_freq']}")
-    print(f"Maximum Voltage Measured = {dataset['y0'].max().item() * 1e6} μV")
+    print(f"Maximum Voltage Measured = { tiisq._general_settings['resonator_spectroscopy_max_ro_voltage']} μV")
+    print(f"Average Minimum Voltage Measured = {tiisq._general_settings['resonator_spectroscopy_avg_min_ro_voltage']} μV")
 
     tiisq.save_settings_to_file() # instead of saving all parameters, it would be safer to save _general_settings['resonator_freq'] & _LO_QRM_settings['frequency']
 
@@ -186,17 +192,20 @@ def run_resonator_spectroscopy():
 
     # determine off-resonance amplitude and typical noise
 
+
     return dataset
 
 def run_qubit_spectroscopy():
     tiisq.load_settings()
     tiisq._QCM_settings['pulses']['qc_pulse']['length'] = 4000
-    tiisq._QRM_settings['pulses']['ro_pulse']['start'] = tiisq._QCM_settings['pulses']['qc_pulse']['length']+40
+    tiisq._QRM_settings['pulses']['ro_pulse']['start'] = tiisq._QCM_settings['pulses']['qc_pulse']['length']+4
     tiisq.setup()
-    """
+    
+    
     # Fast Sweep
     #scanrange = variable_resolution_scanrange(lowres_width= 30e6, lowres_step= 2e6, highres_width= 2e6, highres_step= 0.2e6)
-    scanrange = np.arange(-300e6, 100e6, 1e6)
+    tiisq._general_settings['software_averages'] = 1
+    scanrange = np.arange(-400e6, 100e6, 2e6)
 
     MC.settables(tiisq._LO_qcm.LO.frequency)
     MC.setpoints(scanrange + tiisq._LO_QCM_settings['frequency'])
@@ -207,9 +216,10 @@ def run_qubit_spectroscopy():
     tiisq.stop()
 
     # tiisq._LO_QCM_settings['frequency'] = dataset['x0'].values[dataset['y0'].argmin().values]
-    """
+    
 
     # Precision Sweep
+    tiisq._general_settings['software_averages'] = 3
     scanrange = np.arange(-30e6, 30e6, 0.5e6)
     MC.settables(tiisq._LO_qcm.LO.frequency)
     MC.setpoints(scanrange + tiisq._LO_QCM_settings['frequency'])
@@ -223,7 +233,10 @@ def run_qubit_spectroscopy():
     tiisq._LO_QCM_settings['frequency'] = dataset['x0'].values[smooth_dataset.argmin()]
     print(dataset['x0'].values[smooth_dataset.argmin()])
     tiisq._general_settings['qubit_freq'] = dataset['x0'].values[smooth_dataset.argmin()] - tiisq._QCM_settings['pulses']['qc_pulse']['freq_if']
+    tiisq._general_settings['qubit_spectroscopy_min_ro_voltage'] = smooth_dataset.min() * 1e6
+    print('\n')
     print(f"Qubit Frequency = {tiisq._general_settings['qubit_freq']}")
+    print(f"Minimum Voltage Measured = {tiisq._general_settings['qubit_spectroscopy_min_ro_voltage']} μV")
 
     tiisq.save_settings_to_file()
 
@@ -250,12 +263,51 @@ def run_Rabi_pulse_length():
     tiisq._LO_qcm.on()
     dataset = MC.run('Rabi Pulse Length', soft_avg = tiisq._general_settings['software_averages'])
     tiisq.stop()
+    pi_pulse_duration = fit_rabi(dataset['y0'].values, dataset['x0'].values)
+
+
+
+
+
+def rabi(x, *p) :
+    # A fit to Superconducting Qubit Rabi Oscillation
+    #   Offset                       : p[0]
+    #   Oscillation amplitude        : p[1]
+    #   Period    T                  : p[2]
+    #   Phase                        : p[3]
+    #   Arbitrary parameter T_2      : p[4]
+    return p[0] + p[1] * np.sin(2 * np.pi / p[2] * x + p[3]) * np.exp(-x / p[4])
+
+def sin(x, *p) :
+    # A fit to Superconducting Qubit Rabi Oscillation
+    #   Offset                       : p[0]
+    #   Oscillation amplitude        : p[1]
+    #   Period    T                  : p[2]
+    #   Phase                        : p[3]
+    return p[0] + p[1] * np.sin(2 * np.pi / p[2] * x + p[3])
+
+def fit_rabi(amp_array, time_array):
+    pguess = [
+        np.mean(amp_array),
+        max(amp_array) - min(amp_array),
+        35e-9,
+        np.pi/2,
+        0.1e-6
+    ]
+    popt, pcov = curve_fit(rabi, time_array, amp_array, p0=pguess)
+    pi_pulse_duration = popt[2] / 2
+    return (pi_pulse_duration, popt, pcov)
+
+
+
 
 def run_Rabi_pulse_gain():
     tiisq.load_settings()
+    tiisq._QCM_settings['pulses']['qc_pulse']['length'] = 50
+    tiisq._QRM_settings['pulses']['ro_pulse']['start'] = tiisq._QCM_settings['pulses']['qc_pulse']['length']+4
     tiisq.setup()
     MC.settables(QCPulseGainParameter(tiisq._qcm))
-    MC.setpoints(np.arange(0,1,0.02))
+    MC.setpoints(np.arange(0,100,1))
     MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
     tiisq._LO_qrm.on()
     tiisq._LO_qcm.on()
@@ -268,8 +320,8 @@ def run_Rabi_pulse_length_and_gain():
     tiisq._LO_QCM_settings['frequency'] = tiisq._general_settings['qubit_freq'] + tiisq._QCM_settings['pulses']['qc_pulse']['freq_if']
     tiisq.setup()
     MC.settables([QCPulseLengthParameter(tiisq._qrm, tiisq._qcm), QCPulseGainParameter(tiisq._qcm)])
-    setpoints_length = np.arange(1,200,10)
-    setpoints_gain = np.arange(0,100,5)
+    setpoints_length = np.arange(1,400,2)
+    setpoints_gain = np.arange(0,20,1)
     MC.setpoints_grid([setpoints_length,setpoints_gain])
     MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
     tiisq._LO_qrm.on()
@@ -304,11 +356,12 @@ def run_t1():
     tiisq.load_settings()
     tiisq._LO_QRM_settings['frequency'] = tiisq._general_settings['resonator_freq'] - tiisq._QRM_settings['pulses']['ro_pulse']['freq_if']
     tiisq._LO_QCM_settings['frequency'] = tiisq._general_settings['qubit_freq'] + tiisq._QCM_settings['pulses']['qc_pulse']['freq_if']
-    tiisq._QCM_settings['pulses']['qc_pulse']['length'] = tiisq.pi_pulse_length
-    tiisq._QCM_settings['gain'] = tiisq.pi_pulse_gain
+    tiisq._QCM_settings['pulses']['qc_pulse']['length'] = tiisq._general_settings['pi_pulse_length']
+    tiisq._QRM_settings['pulses']['ro_pulse']['start']= tiisq._QCM_settings['pulses']['qc_pulse']['length'] + 4
+    tiisq._QCM_settings['gain'] = tiisq._general_settings['pi_pulse_gain']
     tiisq.setup()
-    MC.settables(T1WaitParameter(tiisq._qrm))
-    MC.setpoints(np.arange(4,500,10))
+    MC.settables(T1WaitParameter(tiisq._qrm, tiisq._qcm))
+    MC.setpoints(np.arange(0,8000,30))
     MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
     tiisq._LO_qrm.on()
     tiisq._LO_qcm.on()
@@ -322,20 +375,20 @@ def run_ramsey():
     tiisq.load_settings()
     tiisq._LO_QRM_settings['frequency'] = tiisq._general_settings['resonator_freq'] - tiisq._QRM_settings['pulses']['ro_pulse']['freq_if']
     tiisq._LO_QCM_settings['frequency'] = tiisq._general_settings['qubit_freq'] + tiisq._QCM_settings['pulses']['qc_pulse']['freq_if']
-    tiisq._QCM_settings['gain'] = tiisq.pi_pulse_gain
+    tiisq._QCM_settings['gain'] = tiisq._general_settings['pi_pulse_gain'],
     tiisq._QCM_settings['pulses'] = {
             'qc_pulse':{	"freq_if": 200e6,
-                        "amplitude": 0.3,
+                        "amplitude": tiisq._general_settings['pi_pulse_amplitude'],
                         "start": 0,  
-                        "length": tiisq.pi_pulse_length//2,    
+                        "length": tiisq._general_settings['pi_pulse_length']//2,    
                         "offset_i": 0,
                         "offset_q": 0,
                         "shape": "Gaussian",
                         },
             'qc2_pulse':{	"freq_if": 200e6,
-                        "amplitude": 0.3,    
-                        "start": tiisq.pi_pulse_length//2 + 0,  
-                        "length": tiisq.pi_pulse_length//2,
+                        "amplitude": tiisq._general_settings['pi_pulse_amplitude'],
+                        "start": tiisq._general_settings['pi_pulse_length']//2 + 0,  
+                        "length": tiisq._general_settings['pi_pulse_length']//2,
                         "offset_i": 0,
                         "offset_q": 0,
                         "shape": "Gaussian",
@@ -354,25 +407,24 @@ def run_ramsey():
     # platform.qubit_freq += dephasing
 
 # Spin Echo: RX(pi/2) - wait t(rotates z) - RX(pi) - wait t(rotates z) - readout
-# Spin Echo: RX(pi/2) - wait t(rotates z) - RX(pi) - wait t(rotates z) - RX(pi/2) - readout
 def run_spin_echo():
     tiisq.load_settings()
     tiisq._LO_QRM_settings['frequency'] = tiisq._general_settings['resonator_freq'] - tiisq._QRM_settings['pulses']['ro_pulse']['freq_if']
     tiisq._LO_QCM_settings['frequency'] = tiisq._general_settings['qubit_freq'] + tiisq._QCM_settings['pulses']['qc_pulse']['freq_if']
-    tiisq._QCM_settings['gain'] = tiisq.pi_pulse_gain
+    tiisq._QCM_settings['gain'] = tiisq._general_settings['pi_pulse_gain'],
     tiisq._QCM_settings['pulses'] = {
             'qc_pulse':{	"freq_if": 200e6,
-                        "amplitude": 0.3,
+                        "amplitude": tiisq._general_settings['pi_pulse_amplitude'],
                         "start": 0,  
-                        "length": tiisq.pi_pulse_length//2,    
+                        "length": tiisq._general_settings['pi_pulse_length']//2,    
                         "offset_i": 0,
                         "offset_q": 0,
                         "shape": "Gaussian",
                         },
             'qc2_pulse':{	"freq_if": 200e6,
-                        "amplitude": 0.3,    
-                        "start": tiisq.pi_pulse_length//2 + 0,  
-                        "length": tiisq.pi_pulse_length,
+                        "amplitude": tiisq._general_settings['pi_pulse_amplitude'],    
+                        "start": tiisq._general_settings['pi_pulse_length']//2 + 0,  
+                        "length": tiisq._general_settings['pi_pulse_length'],
                         "offset_i": 0,
                         "offset_q": 0,
                         "shape": "Gaussian",
@@ -388,6 +440,47 @@ def run_spin_echo():
     tiisq.stop()
     # ?
 
+# Spin Echo 3 Pulses: RX(pi/2) - wait t(rotates z) - RX(pi) - wait t(rotates z) - RX(pi/2) - readout
+def run_spin_echo_3pulses():
+    tiisq.load_settings()
+    tiisq._LO_QRM_settings['frequency'] = tiisq._general_settings['resonator_freq'] - tiisq._QRM_settings['pulses']['ro_pulse']['freq_if']
+    tiisq._LO_QCM_settings['frequency'] = tiisq._general_settings['qubit_freq'] + tiisq._QCM_settings['pulses']['qc_pulse']['freq_if']
+    tiisq._QCM_settings['gain'] = tiisq._general_settings['pi_pulse_gain'],
+    tiisq._QCM_settings['pulses'] = {
+            'qc_pulse':{	"freq_if": 200e6,
+                        "amplitude": tiisq._general_settings['pi_pulse_amplitude'],
+                        "start": 0,  
+                        "length": tiisq._general_settings['pi_pulse_length']//2,    
+                        "offset_i": 0,
+                        "offset_q": 0,
+                        "shape": "Gaussian",
+                        },
+            'qc2_pulse':{	"freq_if": 200e6,
+                        "amplitude": tiisq._general_settings['pi_pulse_amplitude'],    
+                        "start": tiisq._general_settings['pi_pulse_length']//2 + 0,  
+                        "length": tiisq._general_settings['pi_pulse_length'],
+                        "offset_i": 0,
+                        "offset_q": 0,
+                        "shape": "Gaussian",
+                        },
+            'qc3_pulse':{	"freq_if": 200e6,
+                        "amplitude": tiisq._general_settings['pi_pulse_amplitude'],    
+                        "start": (3 * tiisq._general_settings['pi_pulse_length'])//2 + 0,  
+                        "length": tiisq._general_settings['pi_pulse_length']//2,
+                        "offset_i": 0,
+                        "offset_q": 0,
+                        "shape": "Gaussian",
+                        }
+    }
+    tiisq.setup()
+    MC.settables(SpinEcho3PWaitParameter(tiisq._qrm, tiisq._qcm))
+    MC.setpoints(np.arange(4,500,10))
+    MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
+    tiisq._LO_qrm.on()
+    tiisq._LO_qcm.on()
+    dataset = MC.run('Spin Echo', soft_avg = tiisq._general_settings['software_averages'])
+    tiisq.stop()
+    # ?
 
 class ROController():
 
@@ -446,14 +539,8 @@ class QCPulseGainParameter():
         self._qcm = qcm
         
     def set(self,value):
-        sequencer = self._qcm._settings['sequencer']
         gain = value / 100
-        if sequencer == 1:
-            self._qcm._qcm.sequencer1_gain_awg_path0(gain)
-            self._qcm._qcm.sequencer1_gain_awg_path1(gain)
-        else:
-            self._qcm._qcm.sequencer0_gain_awg_path0(gain)
-            self._qcm._qcm.sequencer0_gain_awg_path1(gain)
+        self._qcm._settings['gain'] = gain
 
 class QCPulseAmplitudeParameter():
 
@@ -473,12 +560,12 @@ class T1WaitParameter():
     name = 't1_wait'
     initial_value = 0
     
-    def __init__(self, qrm: Pulsar_QRM):
+    def __init__(self, qrm: Pulsar_QRM, qcm: Pulsar_QCM):
         self._qrm = qrm
         
     def set(self,value):
         #must be >= 4ns <= 65535
-        self._qrm._settings['pulses']['ro_pulse']['delay_before_readout'] = value
+        self._qrm._settings['pulses']['ro_pulse']['start'] = self._qcm._settings['pulses']['qc_pulse']['length'] + 4 + value
     
 class RamseyWaitParameter():
     label = 'Time'
@@ -491,8 +578,8 @@ class RamseyWaitParameter():
         self._qcm = qcm
         
     def set(self,value):
-        self._qcm._settings['pulses']['qc2_pulse']['start'] = tiisq.pi_pulse_length//2 + value
-        self._qrm._settings['pulses']['ro_pulse']['start']= tiisq.pi_pulse_length + value + 4
+        self._qcm._settings['pulses']['qc2_pulse']['start'] = tiisq._general_settings['pi_pulse_length']//2 + value
+        self._qrm._settings['pulses']['ro_pulse']['start']= tiisq._general_settings['pi_pulse_length'] + value + 4
         
 class SpinEchoWaitParameter():
     label = 'Time'
@@ -505,6 +592,20 @@ class SpinEchoWaitParameter():
         self._qcm = qcm
         
     def set(self,value):
-        self._qcm._settings['pulses']['qc2_pulse']['start'] = tiisq.pi_pulse_length//2 + value
-        self._qrm._settings['pulses']['ro_pulse']['start']= 3 * tiisq.pi_pulse_length//2 + 2 * value + 4
+        self._qcm._settings['pulses']['qc2_pulse']['start'] = tiisq._general_settings['pi_pulse_length']//2 + value
+        self._qrm._settings['pulses']['ro_pulse']['start']= 3 * tiisq._general_settings['pi_pulse_length']//2 + 2 * value + 4
 
+class SpinEcho3PWaitParameter():
+    label = 'Time'
+    unit = 'ns'
+    name = 'spin_echo_wait'
+    initial_value = 0
+    
+    def __init__(self, qrm: Pulsar_QRM, qcm: Pulsar_QCM):
+        self._qrm = qrm
+        self._qcm = qcm
+        
+    def set(self,value):
+        self._qcm._settings['pulses']['qc2_pulse']['start'] = tiisq._general_settings['pi_pulse_length']//2 + value
+        self._qcm._settings['pulses']['qc3_pulse']['start'] = (3 * tiisq._general_settings['pi_pulse_length'])//2 + 2 * value
+        self._qrm._settings['pulses']['ro_pulse']['start']= 2 * tiisq._general_settings['pi_pulse_length'] + 2 * value + 4

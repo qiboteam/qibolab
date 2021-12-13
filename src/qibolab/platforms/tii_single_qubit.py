@@ -120,12 +120,15 @@ class TIISingleQubit(AbstractPlatform):
         self._LO_qcm.off()
         self._qrm.stop()
         self._qcm.stop()
+        print("Closing")
+
 
     def __del__(self):
         self._LO_qrm.close()
         self._LO_qcm.close()
         self._qrm.close()
         self._qcm.close()
+        print("Destructor Closing")
 
     def calibrate(self):
         # not implemented yet
