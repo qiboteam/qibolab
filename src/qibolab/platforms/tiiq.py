@@ -91,6 +91,8 @@ class TIIq:
         self.qcm.close()
 
     def execute(self, sequence):
+        # TODO: Turn on and off the local oscillators
+        
         # Translate and upload instructions to instruments
         if sequence.qcm_pulses:
             waveforms, program = self.qcm.translate(sequence)

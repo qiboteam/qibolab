@@ -28,9 +28,9 @@ class Pulse:
         duration (float): Pulse duration in ns.
         amplitude (float): Pulse digital amplitude (unitless) [0 to 1].
         frequency (float): Pulse Intermediate Frequency in Hz [10e6 to 300e6].
-        phase (float): TODO.
-        shape: (PulseShape): Pulse shape, see :class:`qibolab.pulses.Rectangular`,
-        :class:`qibolab.pulses.Gaussian` for more information.
+        phase (float): To be added.
+        shape: (PulseShape): Pulse shape.
+            See :py:mod:`qibolab.pulses_shapes` for list of available shapes.
         channel (int/str): Specifies the device that will execute this pulse.
             FPGA channel (int) for IcarusQ or qrm/qcm (str) for TIIq.
             May be useful to distinguish QRM and QCM pulses?
@@ -72,16 +72,6 @@ class Pulse:
 
     def __repr__(self):
         return self.serial()
-
-    ### IcarusQ specific method ###
-    #def compile(self, waveform, sequence):
-    #    i_start = bisect.bisect(sequence.time, self.start)
-        #i_start = int((self.start / sequence.duration) * sequence.sample_size)
-    #    i_duration = int((self.duration / sequence.duration) * sequence.sample_size)
-    #    time = sequence.time[i_start:i_start + i_duration]
-    #    waveform[self.channels[0], i_start:i_start + i_duration] += self.amplitude * np.cos(2 * np.pi * self.frequency * time + self.phases[0])
-    #    waveform[self.channels[1], i_start:i_start + i_duration] -= self.amplitude * np.sin(2 * np.pi * self.frequency * time + self.phases[1])
-    #    return waveform
 
 
 class IQReadoutPulse(Pulse):

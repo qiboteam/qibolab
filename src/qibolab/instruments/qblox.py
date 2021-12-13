@@ -69,13 +69,15 @@ class GenericPulsar(ABC):
         if not pulses:
             raise_error(NotImplementedError, "Cannot translate empty pulse sequence.")
         name = self.name
-        waveform = self._translate_single_pulse(pulses[0])
         waveforms = {
             f"modI_{name}": {"data": [], "index": 0},
             f"modQ_{name}": {"data": [], "index": 1}
         }
-        waveforms[f"modI_{name}"]["data"] = waveform.get("modI").get("data")
-        waveforms[f"modQ_{name}"]["data"] = waveform.get("modQ").get("data")
+        # Create the waveforms arrays by processing the first pulse
+        waveform = self._translate_single_pulse(pulses[0])
+        waveforms[f"modI_{name}"]["data"] = waveform["modI"]["data"]
+        waveforms[f"modQ_{name}"]["data"] = waveform["modQ"]["data"]
+        # Concatenate the waveforms of the rest of pulses
         for pulse in pulses[1:]:
             waveform = self._translate_single_pulse(pulse)
             waveforms[f"modI_{name}"]["data"] = np.concatenate((waveforms[f"modI_{name}"]["data"], np.zeros(4), waveform["modI"]["data"]))

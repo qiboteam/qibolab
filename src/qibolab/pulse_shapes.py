@@ -4,8 +4,7 @@ from qibo.config import raise_error
 
 
 class PulseShape(ABC):
-    """Describes the pulse shape to be used
-    """
+    """Describes the pulse shape to be used."""
     def __init__(self): # pragma: no cover
         self.name = ""
 
@@ -18,14 +17,12 @@ class PulseShape(ABC):
 
 
 class Rectangular(PulseShape):
-    """Rectangular/square pulse shape
-    """
+    """Rectangular/square pulse shape."""
     def __init__(self):
         self.name = "rectangular"
 
     def envelope(self, time, start, duration, amplitude):
-        """Constant amplitude envelope
-        """
+        """Constant amplitude envelope."""
         #return amplitude
         # FIXME: This may have broken IcarusQ
         return amplitude * np.ones(int(duration))
@@ -39,8 +36,10 @@ class Gaussian(PulseShape):
         self.sigma = sigma
 
     def envelope(self, time, start, duration, amplitude):
-        """Gaussian envelope centered with respect to the pulse:
-        A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}
+        """Gaussian envelope centered with respect to the pulse.
+
+        .. math::
+            A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}
         """
         from scipy.signal import gaussian
         return amplitude * gaussian(int(duration), std=self.sigma)
@@ -53,7 +52,7 @@ class Gaussian(PulseShape):
 
 
 class Drag(PulseShape):
-    """Derivative Removal by Adiabatic Gate (DRAG) pulse shape"""
+    """Derivative Removal by Adiabatic Gate (DRAG) pulse shape."""
 
     def __init__(self, sigma, beta):
         self.name = "drag"
@@ -61,9 +60,15 @@ class Drag(PulseShape):
         self.beta = beta
 
     def envelope(self, time, start, duration, amplitude):
-        """DRAG envelope centered with respect to the pulse:
-        G + i\beta(-\frac{t-\mu}{\sigma^2})G
-        where Gaussian G = A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}
+        """DRAG envelope centered with respect to the pulse.
+
+        .. math::
+            G + i\beta(-\frac{t-\mu}{\sigma^2})G
+
+        where
+
+        .. math::
+            G = A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}
         """
         mu = start + duration / 2
         gaussian = amplitude * np.exp(-0.5 * (time - mu) ** 2 / self.sigma ** 2)
@@ -74,7 +79,7 @@ class Drag(PulseShape):
 
 
 class SWIPHT(PulseShape):
-    """Speeding up Wave forms by Inducing Phase to Harmful Transitions pulse shape"""
+    """Speeding up Wave forms by Inducing Phase to Harmful Transitions pulse shape."""
 
     def __init__(self, g):
         self.name = "SWIPHT"
