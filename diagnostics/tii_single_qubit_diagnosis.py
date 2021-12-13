@@ -15,6 +15,10 @@ from quantify_core.visualization.instrument_monitor import InstrumentMonitor
 from qcodes import ManualParameter, Parameter
 from qcodes.instrument import Instrument
 
+import pyqtgraph.multiprocess as pgmp
+from qcodes.plots.pyqtgraph import QtPlot, TransformState
+import matplotlib.colors as mplc
+
 from qibolab.instruments.qblox import Pulsar_QCM
 from qibolab.instruments.qblox import Pulsar_QRM
 
@@ -29,6 +33,93 @@ insmon = InstrumentMonitor("Instruments Monitor")
 MC.instr_plotmon(plotmon.name)
 MC.instrument_monitor(insmon.name)
 set_datadir('.data/')
+
+
+## TODOs ##
+# Change settable clases so that sweeps are done without changing settings
+# Pass the turning on of the LO_qrm and LO_qcm to the ROController class
+# Implement pulses class
+# Review and rewrite wave and program generation classes
+#   - pulses in parallel
+# Implement a script to optimise readout paraments with live plotting of incoming pulses
+# Implement run_shifted_resonator_spectroscopy to see the cavity resonance when the qubit is excited with a pi pulse
+# Pulse phases
+
+def test_plot(dset: xr.Dataset):
+    pw = PlotWindow(window_title = "Test Plot")
+    pw.add_trace(
+        tuid = 'pulse envelope',
+        x=dset['x0'].values,
+        y=dset['y0'].values,
+        subplot=1,
+        xlabel=dset['x0'].attrs["long_name"],
+        xunit=dset['x0'].attrs["units"],
+        ylabel=dset['y0'].attrs["long_name"],
+        yunit=dset['y0'].attrs["units"],
+        symbol="o",
+        symbolSize=6,
+        color=mplc.to_rgb("#1f77b4"),
+        name= 'pulse envelope'
+    )
+    pw.update(tuid = 'pulse envelope', x = dset['x0'].values, y = dset['y0'].values)
+
+class PlotWindow():
+    def __init__(self, window_title):
+        self.proc = pgmp.QtProcess(processRequests=False)
+        timeout = 60
+        self._remote_ppr = self.proc._import("tii_single_qubit_diagnosis", timeout=timeout)
+        self._remote_plot = self._remote_ppr.PlotWindowRemote(window_title = window_title)
+    def add_trace(self, tuid, x, y, subplot, xlabel, xunit, ylabel, yunit, symbol, symbolSize, color, name):
+        self._remote_plot.add_trace(
+                        tuid = tuid,
+                        x=x,
+                        y=y,
+                        subplot=subplot,
+                        xlabel=xlabel,
+                        xunit=xunit,
+                        ylabel=ylabel,
+                        yunit=yunit,
+                        symbol=symbol,
+                        symbolSize=symbolSize,
+                        color=color,
+                        name=name
+                    )
+    def clear(self):
+        self._remote_plot.clear()
+    def update(self, tuid, x, y):
+        self._remote_plot.update(tuid, x, y)
+
+class PlotWindowRemote():
+    curves = {}
+    def __init__(self, window_title = "Plot"):
+        self.main_QtPlot = QtPlot(
+            window_title=window_title,
+            figsize=(600, 400),
+            remote=False,
+        )
+    def add_trace(self, tuid, x, y, subplot, xlabel, xunit, ylabel, yunit, symbol, symbolSize, color, name):
+        self.main_QtPlot.add(
+                        x=x,
+                        y=y,
+                        subplot=subplot,
+                        xlabel=xlabel,
+                        xunit=xunit,
+                        ylabel=ylabel,
+                        yunit=yunit,
+                        symbol=symbol,
+                        symbolSize=symbolSize,
+                        color=color,
+                        name=name
+                    )
+        self.curves[tuid] = self.main_QtPlot.traces[-1]
+
+    def clear(self):
+        if self.main_QtPlot.traces:
+            self.main_QtPlot.clear()
+    def update(self, tuid, x, y):
+        self.curves[tuid]["config"]["x"] = x
+        self.curves[tuid]["config"]["y"] = y
+        self.main_QtPlot.update_plot()
 
 def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step):
     #[.     .     .     .     .     .][...................]0[...................][.     .     .     .     .     .]
@@ -45,41 +136,45 @@ def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, high
     return scanrange
 
 def run_resonator_spectroscopy():
-    tiisq.load_default_settings()
+    tiisq.load_settings()
     tiisq.setup()
     
     # Fast Sweep
-    tiisq._settings['software_averages'] = 1
-    scanrange = variable_resolution_scanrange(lowres_width= 30e6, lowres_step= 1e6, highres_width= 1e6, highres_step= 0.1e6)
+    scanrange = variable_resolution_scanrange(lowres_width= 30e6, lowres_step= 2e6, highres_width= 1e6, highres_step= 0.2e6)
 
     MC.settables(tiisq._LO_qrm.LO.frequency)
     MC.setpoints(scanrange + tiisq._LO_QRM_settings['frequency'])
     MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
     tiisq._LO_qrm.on()
     tiisq._LO_qcm.off()
-    dataset = MC.run('Resonator Spectroscopy Fast', soft_avg = tiisq._settings['software_averages'])
+    dataset = MC.run('Resonator Spectroscopy Fast', soft_avg = tiisq._general_settings['software_averages'])
     # http://xarray.pydata.org/en/stable/getting-started-guide/quick-overview.html
     tiisq.stop()
     tiisq._LO_QRM_settings['frequency'] = dataset['x0'].values[dataset['y0'].argmax().values]
     
     # Precision Sweep
-    tiisq._settings['software_averages'] = 1 # 3
+    tiisq._general_settings['software_averages'] = 1 # 3
     scanrange = np.arange(-0.5e6, 0.5e6, 0.02e6)
     MC.settables(tiisq._LO_qrm.LO.frequency)
     MC.setpoints(scanrange + tiisq._LO_QRM_settings['frequency'])
     MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
     tiisq._LO_qrm.on()
     tiisq._LO_qcm.off()
-    dataset = MC.run('Resonator Spectroscopy Precision', soft_avg = tiisq._settings['software_averages'])
+    dataset = MC.run('Resonator Spectroscopy Precision', soft_avg = tiisq._general_settings['software_averages'])
     tiisq.stop()
 
     smooth_dataset = savgol_filter(dataset['y0'].values, 25, 2)
     tiisq._LO_QRM_settings['frequency'] = dataset['x0'].values[smooth_dataset.argmax()]
-    tiisq.resonator_freq = dataset['x0'].values[smooth_dataset.argmax()] + tiisq._QRM_settings['pulses']['ro_pulse']['freq_if']
-    print(f"Resonator Frequency = {tiisq.resonator_freq}")
+    tiisq._general_settings['resonator_freq'] = dataset['x0'].values[smooth_dataset.argmax()] + tiisq._QRM_settings['pulses']['ro_pulse']['freq_if']
+    print('\n')
+    print(f"Resonator Frequency = {tiisq._general_settings['resonator_freq']}")
+    print(f"Maximum Voltage Measured = {dataset['y0'].max().item() * 1e6} μV")
 
-    print(len(dataset['y0'].values))
-    print(len(smooth_dataset))
+    tiisq.save_settings_to_file() # instead of saving all parameters, it would be safer to save _general_settings['resonator_freq'] & _LO_QRM_settings['frequency']
+
+
+    # print(len(dataset['y0'].values))
+    # print(len(smooth_dataset))
 
     fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
     ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
@@ -94,11 +189,11 @@ def run_resonator_spectroscopy():
     return dataset
 
 def run_qubit_spectroscopy():
-    tiisq.load_default_settings()
+    tiisq.load_settings()
     tiisq._QCM_settings['pulses']['qc_pulse']['length'] = 4000
     tiisq._QRM_settings['pulses']['ro_pulse']['start'] = tiisq._QCM_settings['pulses']['qc_pulse']['length']+40
     tiisq.setup()
-
+    """
     # Fast Sweep
     #scanrange = variable_resolution_scanrange(lowres_width= 30e6, lowres_step= 2e6, highres_width= 2e6, highres_step= 0.2e6)
     scanrange = np.arange(-300e6, 100e6, 1e6)
@@ -108,31 +203,32 @@ def run_qubit_spectroscopy():
     MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
     tiisq._LO_qrm.on()
     tiisq._LO_qcm.on()
-    dataset = MC.run('Qubit Spectroscopy Fast', soft_avg = tiisq._settings['software_averages'])
+    dataset = MC.run('Qubit Spectroscopy Fast', soft_avg = tiisq._general_settings['software_averages'])
     tiisq.stop()
 
-    tiisq._LO_QCM_settings['frequency'] = dataset['x0'].values[dataset['y0'].argmin().values]
-    
+    # tiisq._LO_QCM_settings['frequency'] = dataset['x0'].values[dataset['y0'].argmin().values]
+    """
 
     # Precision Sweep
-    tiisq._settings['software_averages'] = 3
     scanrange = np.arange(-30e6, 30e6, 0.5e6)
     MC.settables(tiisq._LO_qcm.LO.frequency)
     MC.setpoints(scanrange + tiisq._LO_QCM_settings['frequency'])
     MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
     tiisq._LO_qrm.on()
     tiisq._LO_qcm.on()
-    dataset = MC.run('Qubit Spectroscopy Precision', soft_avg = tiisq._settings['software_averages'])
+    dataset = MC.run('Qubit Spectroscopy Precision', soft_avg = tiisq._general_settings['software_averages'])
     tiisq.stop()
 
     smooth_dataset = savgol_filter(dataset['y0'].values, 11, 2)
     tiisq._LO_QCM_settings['frequency'] = dataset['x0'].values[smooth_dataset.argmin()]
     print(dataset['x0'].values[smooth_dataset.argmin()])
-    tiisq.qubit_freq = dataset['x0'].values[smooth_dataset.argmin()] - tiisq._QCM_settings['pulses']['qc_pulse']['freq_if']
-    print(f"Qubit Frequency = {tiisq.qubit_freq}")
+    tiisq._general_settings['qubit_freq'] = dataset['x0'].values[smooth_dataset.argmin()] - tiisq._QCM_settings['pulses']['qc_pulse']['freq_if']
+    print(f"Qubit Frequency = {tiisq._general_settings['qubit_freq']}")
 
-    print(len(dataset['y0'].values))
-    print(len(smooth_dataset))
+    tiisq.save_settings_to_file()
+
+    # print(len(dataset['y0'].values))
+    # print(len(smooth_dataset))
 
     fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
     ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
@@ -145,35 +241,31 @@ def run_qubit_spectroscopy():
     return dataset
 
 def run_Rabi_pulse_length():
-    tiisq.load_default_settings()
-    tiisq._LO_QRM_settings['frequency'] = tiisq.resonator_freq - tiisq._QRM_settings['pulses']['ro_pulse']['freq_if']
-    tiisq._LO_QCM_settings['frequency'] = tiisq.qubit_freq + tiisq._QCM_settings['pulses']['qc_pulse']['freq_if']
+    tiisq.load_settings()
     tiisq.setup()
     MC.settables(QCPulseLengthParameter(tiisq._qrm, tiisq._qcm))
     MC.setpoints(np.arange(1,2000,5))
     MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
     tiisq._LO_qrm.on()
     tiisq._LO_qcm.on()
-    dataset = MC.run('Rabi Pulse Length', soft_avg = tiisq._settings['software_averages'])
+    dataset = MC.run('Rabi Pulse Length', soft_avg = tiisq._general_settings['software_averages'])
     tiisq.stop()
 
 def run_Rabi_pulse_gain():
-    tiisq.load_default_settings()
-    tiisq._LO_QRM_settings['frequency'] = tiisq.resonator_freq - tiisq._QRM_settings['pulses']['ro_pulse']['freq_if']
-    tiisq._LO_QCM_settings['frequency'] = tiisq.qubit_freq + tiisq._QCM_settings['pulses']['qc_pulse']['freq_if']
+    tiisq.load_settings()
     tiisq.setup()
     MC.settables(QCPulseGainParameter(tiisq._qcm))
     MC.setpoints(np.arange(0,1,0.02))
     MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
     tiisq._LO_qrm.on()
     tiisq._LO_qcm.on()
-    dataset = MC.run('Rabi Pulse Gain', soft_avg = tiisq._settings['software_averages'])
+    dataset = MC.run('Rabi Pulse Gain', soft_avg = tiisq._general_settings['software_averages'])
     tiisq.stop()
 
 def run_Rabi_pulse_length_and_gain():
-    tiisq.load_default_settings()
-    tiisq._LO_QRM_settings['frequency'] = tiisq.resonator_freq - tiisq._QRM_settings['pulses']['ro_pulse']['freq_if']
-    tiisq._LO_QCM_settings['frequency'] = tiisq.qubit_freq + tiisq._QCM_settings['pulses']['qc_pulse']['freq_if']
+    tiisq.load_settings()
+    tiisq._LO_QRM_settings['frequency'] = tiisq._general_settings['resonator_freq'] - tiisq._QRM_settings['pulses']['ro_pulse']['freq_if']
+    tiisq._LO_QCM_settings['frequency'] = tiisq._general_settings['qubit_freq'] + tiisq._QCM_settings['pulses']['qc_pulse']['freq_if']
     tiisq.setup()
     MC.settables([QCPulseLengthParameter(tiisq._qrm, tiisq._qcm), QCPulseGainParameter(tiisq._qcm)])
     setpoints_length = np.arange(1,200,10)
@@ -182,15 +274,15 @@ def run_Rabi_pulse_length_and_gain():
     MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
     tiisq._LO_qrm.on()
     tiisq._LO_qcm.on()
-    dataset = MC.run('Rabi Pulse Length and Gain', soft_avg = tiisq._settings['software_averages'])
+    dataset = MC.run('Rabi Pulse Length and Gain', soft_avg = tiisq._general_settings['software_averages'])
     # Analyse data to look for the smallest qc_pulse length that renders off-resonance amplitude, determine corresponding pi_pulse gain
     # platform.pi_pulse_length = 
     # platform.pi_pulse_gain = 
 
 def run_Rabi_pulse_length_and_amplitude():
-    tiisq.load_default_settings()
-    tiisq._LO_QRM_settings['frequency'] = tiisq.resonator_freq - tiisq._QRM_settings['pulses']['ro_pulse']['freq_if']
-    tiisq._LO_QCM_settings['frequency'] = tiisq.qubit_freq + tiisq._QCM_settings['pulses']['qc_pulse']['freq_if']
+    tiisq.load_settings()
+    tiisq._LO_QRM_settings['frequency'] = tiisq._general_settings['resonator_freq'] - tiisq._QRM_settings['pulses']['ro_pulse']['freq_if']
+    tiisq._LO_QCM_settings['frequency'] = tiisq._general_settings['qubit_freq'] + tiisq._QCM_settings['pulses']['qc_pulse']['freq_if']
     tiisq.setup()
     MC.settables([QCPulseLengthParameter(tiisq._qrm, tiisq._qcm), QCPulseAmplitudeParameter(tiisq._qcm)])
     setpoints_length = np.arange(1,200,10)
@@ -199,15 +291,19 @@ def run_Rabi_pulse_length_and_amplitude():
     MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
     tiisq._LO_qrm.on()
     tiisq._LO_qcm.on()
-    dataset = MC.run('Rabi Pulse Length and Gain', soft_avg = tiisq._settings['software_averages'])
+    dataset = MC.run('Rabi Pulse Length and Gain', soft_avg = tiisq._general_settings['software_averages'])
     # Analyse data to look for the smallest qc_pulse length that renders off-resonance amplitude, determine corresponding pi_pulse gain
     # platform.pi_pulse_length = 
     # platform.pi_pulse_gain = 
 
+def run_shifted_resonator_spectroscopy():
+    pass
+
+# T1: RX(pi) - wait t(rotates z) - readout
 def run_t1():
-    tiisq.load_default_settings()
-    tiisq._LO_QRM_settings['frequency'] = tiisq.resonator_freq - tiisq._QRM_settings['pulses']['ro_pulse']['freq_if']
-    tiisq._LO_QCM_settings['frequency'] = tiisq.qubit_freq + tiisq._QCM_settings['pulses']['qc_pulse']['freq_if']
+    tiisq.load_settings()
+    tiisq._LO_QRM_settings['frequency'] = tiisq._general_settings['resonator_freq'] - tiisq._QRM_settings['pulses']['ro_pulse']['freq_if']
+    tiisq._LO_QCM_settings['frequency'] = tiisq._general_settings['qubit_freq'] + tiisq._QCM_settings['pulses']['qc_pulse']['freq_if']
     tiisq._QCM_settings['pulses']['qc_pulse']['length'] = tiisq.pi_pulse_length
     tiisq._QCM_settings['gain'] = tiisq.pi_pulse_gain
     tiisq.setup()
@@ -216,15 +312,16 @@ def run_t1():
     MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
     tiisq._LO_qrm.on()
     tiisq._LO_qcm.on()
-    dataset = MC.run('T1', soft_avg = tiisq._settings['software_averages'])
+    dataset = MC.run('T1', soft_avg = tiisq._general_settings['software_averages'])
     tiisq.stop()
     # fit data and determine T1
     # platform.t1 = 
 
+# Ramsey: RX(pi/2) - wait t(rotates z) - RX(pi/2) - readout
 def run_ramsey():
-    tiisq.load_default_settings()
-    tiisq._LO_QRM_settings['frequency'] = tiisq.resonator_freq - tiisq._QRM_settings['pulses']['ro_pulse']['freq_if']
-    tiisq._LO_QCM_settings['frequency'] = tiisq.qubit_freq + tiisq._QCM_settings['pulses']['qc_pulse']['freq_if']
+    tiisq.load_settings()
+    tiisq._LO_QRM_settings['frequency'] = tiisq._general_settings['resonator_freq'] - tiisq._QRM_settings['pulses']['ro_pulse']['freq_if']
+    tiisq._LO_QCM_settings['frequency'] = tiisq._general_settings['qubit_freq'] + tiisq._QCM_settings['pulses']['qc_pulse']['freq_if']
     tiisq._QCM_settings['gain'] = tiisq.pi_pulse_gain
     tiisq._QCM_settings['pulses'] = {
             'qc_pulse':{	"freq_if": 200e6,
@@ -250,16 +347,18 @@ def run_ramsey():
     MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
     tiisq._LO_qrm.on()
     tiisq._LO_qcm.on()
-    dataset = MC.run('Ramsey', soft_avg = tiisq._settings['software_averages'])
+    dataset = MC.run('Ramsey', soft_avg = tiisq._general_settings['software_averages'])
     tiisq.stop()
     # fit data and determine Ramsey Time and dephasing
     # platform.ramsey = 
     # platform.qubit_freq += dephasing
 
+# Spin Echo: RX(pi/2) - wait t(rotates z) - RX(pi) - wait t(rotates z) - readout
+# Spin Echo: RX(pi/2) - wait t(rotates z) - RX(pi) - wait t(rotates z) - RX(pi/2) - readout
 def run_spin_echo():
-    tiisq.load_default_settings()
-    tiisq._LO_QRM_settings['frequency'] = tiisq.resonator_freq - tiisq._QRM_settings['pulses']['ro_pulse']['freq_if']
-    tiisq._LO_QCM_settings['frequency'] = tiisq.qubit_freq + tiisq._QCM_settings['pulses']['qc_pulse']['freq_if']
+    tiisq.load_settings()
+    tiisq._LO_QRM_settings['frequency'] = tiisq._general_settings['resonator_freq'] - tiisq._QRM_settings['pulses']['ro_pulse']['freq_if']
+    tiisq._LO_QCM_settings['frequency'] = tiisq._general_settings['qubit_freq'] + tiisq._QCM_settings['pulses']['qc_pulse']['freq_if']
     tiisq._QCM_settings['gain'] = tiisq.pi_pulse_gain
     tiisq._QCM_settings['pulses'] = {
             'qc_pulse':{	"freq_if": 200e6,
@@ -285,11 +384,10 @@ def run_spin_echo():
     MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
     tiisq._LO_qrm.on()
     tiisq._LO_qcm.on()
-    dataset = MC.run('Spin Echo', soft_avg = tiisq._settings['software_averages'])
+    dataset = MC.run('Spin Echo', soft_avg = tiisq._general_settings['software_averages'])
     tiisq.stop()
     # ?
 
-# run resonator shifted spectroscopy with pi pulse
 
 class ROController():
 
@@ -410,16 +508,3 @@ class SpinEchoWaitParameter():
         self._qcm._settings['pulses']['qc2_pulse']['start'] = tiisq.pi_pulse_length//2 + value
         self._qrm._settings['pulses']['ro_pulse']['start']= 3 * tiisq.pi_pulse_length//2 + 2 * value + 4
 
-# T1: RX(pi) - wait t(rotates z) - readout
-# Ramsey: RX(pi/2) - wait t(rotates z) - RX(pi/2) - readout
-# Spin Echo: RX(pi/2) - wait t(rotates z) - RX(pi) - wait t(rotates z) - readout
-# Spin Echo: RX(pi/2) - wait t(rotates z) - RX(pi) - wait t(rotates z) - RX(pi/2) - readout
-
-# Ignore all functions after this point
-# Check Ramiros code to generate sequences
-    #def sequence_program_single(self):
-    #def sequence_program_average(self):
-    #def sequence_program_qubit_spec(self,qcm_leng,repetition_duration=200000):
-    #def sequence_program_t1(self,qcm_leng,wait_time_ns=20,repetition_duration=200000):
-    #def sequence_program_echo(self,qcm_leng,wait_time_ns=20,repetition_duration=200000):
-    #def sequence_program_ramsey(self,qcm_leng,wait_time_ns=20,repetition_duration=200000):

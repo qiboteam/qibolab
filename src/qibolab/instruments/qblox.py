@@ -11,11 +11,99 @@ import matplotlib.pyplot as plt
 #from scipy.signal import waveforms
 import xarray as xr
 
+from IPython.display import clear_output
+
+
 # qblox-instruments libraries. this code was tested against qblox-instruments 0.4.0
 from pulsar_qcm.pulsar_qcm import pulsar_qcm
 from pulsar_qrm.pulsar_qrm import pulsar_qrm
 
 debugging = False
+
+
+import pyqtgraph.multiprocess as pgmp
+from qcodes.plots.pyqtgraph import QtPlot, TransformState
+import matplotlib.colors as mplc
+
+def test_plot(dset: xr.Dataset):
+    pw = PlotWindow(window_title = "Test Plot")
+    pw.add_trace(
+        tuid = 'pulse envelope',
+        x=dset['x0'].values,
+        y=dset['y0'].values,
+        subplot=1,
+        xlabel=dset['x0'].attrs["long_name"],
+        xunit=dset['x0'].attrs["units"],
+        ylabel=dset['y0'].attrs["long_name"],
+        yunit=dset['y0'].attrs["units"],
+        symbol="o",
+        symbolSize=6,
+        color=mplc.to_rgb("#1f77b4"),
+        name= 'pulse envelope'
+    )
+    pw.update(tuid = 'pulse envelope', x = dset['x0'].values, y = dset['y0'].values)
+
+class PlotWindow():
+    def __init__(self, window_title):
+        self.proc = pgmp.QtProcess(processRequests=False)
+        timeout = 60
+        self._remote_ppr = self.proc._import("qibolab.instruments.qblox", timeout=timeout)
+        self._remote_plot = self._remote_ppr.PlotWindowRemote(window_title = window_title)
+    def add_trace(self, tuid, x, y, subplot, xlabel, xunit, ylabel, yunit, symbol, symbolSize, color, name):
+        self._remote_plot.add_trace(
+                        tuid = tuid,
+                        x=x,
+                        y=y,
+                        subplot=subplot,
+                        xlabel=xlabel,
+                        xunit=xunit,
+                        ylabel=ylabel,
+                        yunit=yunit,
+                        symbol=symbol,
+                        symbolSize=symbolSize,
+                        color=color,
+                        name=name
+                    )
+    def clear(self):
+        self._remote_plot.clear()
+    def update(self, tuid, x, y):
+        self._remote_plot.update(tuid, x, y)
+
+class PlotWindowRemote():
+    curves = {}
+    def __init__(self, window_title = "Plot"):
+        self.main_QtPlot = QtPlot(
+            window_title=window_title,
+            figsize=(600, 400),
+            remote=False,
+        )
+    def add_trace(self, tuid, x, y, subplot, xlabel, xunit, ylabel, yunit, symbol, symbolSize, color, name):
+        self.main_QtPlot.add(
+                        x=x,
+                        y=y,
+                        subplot=subplot,
+                        xlabel=xlabel,
+                        xunit=xunit,
+                        ylabel=ylabel,
+                        yunit=yunit,
+                        symbol=symbol,
+                        symbolSize=symbolSize,
+                        color=color,
+                        name=name
+                    )
+        self.curves[tuid] = self.main_QtPlot.traces[-1]
+
+    def clear(self):
+        if self.main_QtPlot.traces:
+            self.main_QtPlot.clear()
+    def update(self, tuid, x, y):
+        self.curves[tuid]["config"]["x"] = x
+        self.curves[tuid]["config"]["y"] = y
+        self.main_QtPlot.update_plot()
+
+
+
+
 
 def generate_single_pulse_waveforms(pulse):
     """
@@ -145,6 +233,20 @@ def generate_program(program_parameters):
 
     return program
 
+def butter_bandpass(lowcut, highcut, fs, order=5):
+    nyq = 0.5 * fs
+    low = lowcut / nyq
+    high = highcut / nyq
+    b, a = scipy.signal.butter(order, [low, high], btype='band')
+    return b, a
+
+
+def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
+    b, a = butter_bandpass(lowcut, highcut, fs, order=order)
+    y = scipy.signal.lfilter(b, a, data)
+    return y
+
+
 
 class Pulsar_QRM():
     """
@@ -190,6 +292,35 @@ class Pulsar_QRM():
 
         self._qrm = qrm
         self._settings = settings
+        self.pw = PlotWindow(window_title = "Incoming Pulses")
+        self.pw.add_trace(
+            tuid = 'demodulated pulse',
+            x=[],
+            y=[],
+            subplot=1,
+            xlabel="pulse length",
+            xunit="ns",
+            ylabel="pulse amplitude",
+            yunit="V",
+            symbol="o",
+            symbolSize=3,
+            color=None,
+            name= 'demodulated pulse'
+        )
+        self.pw.add_trace(
+            tuid = 'raw pulse',
+            x=[],
+            y=[],
+            subplot=1,
+            xlabel="pulse length",
+            xunit="ns",
+            ylabel="pulse amplitude",
+            yunit="V",
+            symbol="o",
+            symbolSize=3,
+            color=None,
+            name= 'raw pulse'
+        )
 
     def setup(self, settings = {}):
         """
@@ -326,6 +457,7 @@ class Pulsar_QRM():
         qrm.store_scope_acquisition(sequencer, "single")
         #Get acquisition list from instrument.
         self._single_acq = qrm.get_acquisitions(sequencer)
+        self._plot_acquisitions()
         if debugging:
             self._plot_acquisitions()
             with open(".data/results.json", 'w', encoding='utf-8') as file:
@@ -337,13 +469,57 @@ class Pulsar_QRM():
         return acquisition_results
 
     def _plot_acquisitions(self):
+        settings = self._settings
+        freq_if = settings['pulses']['ro_pulse']['freq_if']
+        start_sample =   settings['start_sample']
+        integration_length = settings['integration_length']
+        sampling_rate = settings['sampling_rate']
+        mode = settings['mode']
+        window_start = 0
+        window_end = 3000
+
+        #DOWN Conversion
+        norm_factor = 1./(integration_length)
+        input_vec_I = np.array(self._single_acq["single"]["acquisition"]["scope"]["path0"]["data"][window_start:window_end])
+        input_vec_Q = np.array(self._single_acq["single"]["acquisition"]["scope"]["path1"]["data"][window_start:window_end])
+        input_vec_I -= np.mean(input_vec_I)
+        input_vec_Q -= np.mean(input_vec_Q)
+
+        fs = 1e9
+        lowcut = 10e6
+        highcut = 30e6
+        input_vec_I = butter_bandpass_filter(input_vec_I, lowcut, highcut, fs, order=6)
+        input_vec_Q = butter_bandpass_filter(input_vec_Q, lowcut, highcut, fs, order=6)
+
+        if mode == 'ssb':
+            modulated_i = input_vec_I
+            modulated_q = input_vec_Q
+            time = np.arange(modulated_i.shape[0])*1e-9
+            cosalpha = np.cos(2*np.pi*freq_if*time)
+            sinalpha = np.sin(2*np.pi*freq_if*time)
+            demod_matrix = 2*np.array([[cosalpha,-sinalpha],[sinalpha,cosalpha]])
+            result = []
+            for it,t,ii,qq in zip(np.arange(modulated_i.shape[0]),time,modulated_i,modulated_q):
+                result.append(demod_matrix[:,:,it]@np.array([ii,qq]))
+            demodulated_signal = np.array(result)
+
+        signal_amplitude = np.sqrt(demodulated_signal[:,0]**2+demodulated_signal[:,1]**2)
+        self.pw.update(tuid = 'demodulated pulse', x =  np.arange(window_start, window_end, 1), y = signal_amplitude)
+        self.pw.update(tuid = 'raw pulse', x =  np.arange(window_start, window_end, 1), y = input_vec_I)
+
         #Plot acquired signal on both inputs I and Q
-        fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-        ax.plot(self._single_acq["single"]["acquisition"]["scope"]["path0"]["data"][120:6500])
-        ax.plot(self._single_acq["single"]["acquisition"]["scope"]["path1"]["data"][120:6500])
-        ax.set_xlabel('Time (ns)')
-        ax.set_ylabel('Relative amplitude')
-        plt.show()
+        clear_output
+        #fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
+        #ax.plot(input_vec_I, '-',color='C0')
+        #ax.plot(input_vec_Q, '-',color='C1')
+        
+        #ax.plot(demodulated_signal[:,0], '-',color='C2')
+        #ax.plot(demodulated_signal[:,1], '-',color='C3')
+        #ax.plot (np.sqrt(demodulated_signal[:,0]**2+demodulated_signal[:,1]**2), '-',color='C4')
+        #ax.set_xlabel('Time (ns)')
+        #ax.set_ylabel('Relative amplitude')
+        #ax.set_ylim(-0.005,0.005)
+        #plt.show()
 
     def _demodulate_and_integrate(self):
         settings = self._settings
@@ -371,6 +547,7 @@ class Pulsar_QRM():
             for it,t,ii,qq in zip(np.arange(modulated_i.shape[0]),time,modulated_i,modulated_q):
                 result.append(demod_matrix[:,:,it]@np.array([ii,qq]))
             demodulated_signal = np.array(result)
+            
             integrated_signal = norm_factor*np.sum(demodulated_signal,axis=0)
             if debugging:
                 print(integrated_signal,demodulated_signal[:,0].max()-demodulated_signal[:,0].min(),demodulated_signal[:,1].max()-demodulated_signal[:,1].min())
@@ -434,18 +611,17 @@ class Pulsar_QCM():
 
 
     def setup(self, settings = {}):
-        settings.setdefault('gain', 0.5)
-        settings.setdefault('hardware_avg', 1024)
+        # settings.setdefault('gain', 0.5)
+        # settings.setdefault('hardware_avg', 1024)
 
-        settings.setdefault('pulse', {"freq_if": 100e6,
-                                        "amplitude": 0.25,
-                                        "length": 300,
-                                        "offset_i": 0,
-                                        "offset_q": 0,
-                                        "shape": "Gaussian",
-                                        "delay_before": 4,
-                                        "repetition_duration": 200000,
-                                      })
+        # settings['pulses'].setdefault('qc_pulse', {"freq_if": 200e6,
+        #                                 "amplitude": 0.25,
+        #                                 "start": 0,
+        #                                 "length": 300,
+        #                                 "offset_i": 0,
+        #                                 "offset_q": 0,
+        #                                 "shape": "Gaussian",
+        #                               })
 
         self._settings.update(settings)
 

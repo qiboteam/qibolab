@@ -10,7 +10,10 @@ from qibolab.platforms.abstract import AbstractPlatform
 class TIISingleQubit(AbstractPlatform):
     def load_default_settings(self):   
         # reorganise settings, all in one as a dictionary of devices with their names and settings
-        self._settings = {
+        self._general_settings = {
+            'resonator_freq': 7.79813e9,
+            'qubit_freq': 8.724e9,
+
             'data_folder': '.data/',
             "hardware_avg": 1024,
             "sampling_rate": 1e9,
@@ -24,7 +27,7 @@ class TIISingleQubit(AbstractPlatform):
             'acq_trigger_mode': 'sequencer'}
         self._QRM_settings = {
             'gain': 0.35,   # Subject to calibration
-            'hardware_avg': self._settings['hardware_avg'],
+            'hardware_avg': self._general_settings['hardware_avg'],
             'initial_delay': 0,
             "repetition_duration": 200000,
             'pulses': {
@@ -41,7 +44,7 @@ class TIISingleQubit(AbstractPlatform):
 
             'start_sample': 100,    # Subject to calibration
             'integration_length': 2500,    # Subject to calibration
-            'sampling_rate': self._settings['sampling_rate'],
+            'sampling_rate': self._general_settings['sampling_rate'],
             'mode': 'ssb'}
         self._QCM_init_settings = {
             'ref_clock': 'external',                        # Clock source ['external', 'internal']
@@ -49,7 +52,7 @@ class TIISingleQubit(AbstractPlatform):
             'sync_en': True}
         self._QCM_settings = {
             'gain': 0.3,
-            'hardware_avg': self._settings['hardware_avg'],
+            'hardware_avg': self._general_settings['hardware_avg'],
             'initial_delay': 0,
             "repetition_duration": 200000,
             'pulses': {
@@ -64,25 +67,40 @@ class TIISingleQubit(AbstractPlatform):
                         }}
         self._LO_QRM_settings = { 
             "power": 6,    # Subject to calibration
-            "frequency":7.79825e9 - self._QRM_settings['pulses']['ro_pulse']['freq_if']}    # Subject to calibration
+            "frequency":self._general_settings['resonator_freq'] - self._QRM_settings['pulses']['ro_pulse']['freq_if']}    # Subject to calibration
         self._LO_QCM_settings = { 
             "power": 6,    # Subject to calibration
-            "frequency":8.722e9 + self._QCM_settings['pulses']['qc_pulse']['freq_if']}    # Subject to calibration
+            "frequency":self._general_settings['qubit_freq'] + self._QCM_settings['pulses']['qc_pulse']['freq_if']}    # Subject to calibration
+        self._settings = {
+            '_general_settings': self._general_settings,
+            '_QRM_init_settings': self._QRM_init_settings,
+            '_QRM_settings': self._QRM_settings,
+            '_QCM_init_settings': self._QCM_init_settings,
+            '_QCM_settings': self._QCM_settings,
+            '_LO_QRM_settings': self._LO_QRM_settings,
+            '_LO_QCM_settings': self._LO_QCM_settings,}
 
-    def load_settings_from_file(self):
+    def load_settings_from_file(self, file_name = 'tii_single_qubit_config.json'):
         #Read platform settings from json file
-        config_file = open('tii_single_qubit_config.json',) 
-        data = json.load(config_file)
-        self._settings = data["_settings"]
-        self._QRM_settings = data["_QRM_settings"]
-        self._QRM_init_settings = data["_QRM_init_settings"]
-        self._QCM_settings = data["_QCM_settings"]
-        self._QCM_init_settings = data["_QCM_init_settings"]
-        self._LO_QRM_settings = data["_LO_QRM_settings"]
-        self._LO_QCM_settings = data["_LO_QCM_settings"]
+        config_file = open(file_name) 
+        self._settings = json.load(config_file)
+        self._general_settings = self._settings["_general_settings"]
+        self._QRM_settings = self._settings["_QRM_settings"]
+        self._QRM_init_settings = self._settings["_QRM_init_settings"]
+        self._QCM_settings = self._settings["_QCM_settings"]
+        self._QCM_init_settings = self._settings["_QCM_init_settings"]
+        self._LO_QRM_settings = self._settings["_LO_QRM_settings"]
+        self._LO_QCM_settings = self._settings["_LO_QCM_settings"]
+
+    def save_settings_to_file(self):
+        #save current platform settings to json file
+       with open("tii_single_qubit_config.json", 'w', encoding='utf-8') as file:
+            json.dump(self._settings, file, indent=4)
+            file.close()
 
     def load_settings(self):
-        self.load_default_settings()
+        # self.load_default_settings()
+        self.load_settings_from_file()
 
     def __init__(self):
         self.load_settings()
