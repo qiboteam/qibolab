@@ -21,14 +21,22 @@ How to define a pulse?
                           channel="qcm"))
 
     # rectangular pulse
-    pulse1 = pulses.Pulse(start=70,
+    pulse2 = pulses.Pulse(start=70,
                           frequency=20000000.0,
                           amplitude=0.5,
                           duration=3000,
                           phase=0,
                           shape=Rectangular(),
                           channel="qrm"))
-    
+
+    # readout pulse (automatically allocated to QRM)
+    pulse3 = pulses.ReadoutPulse(start=70,
+                                 frequency=20000000.0,
+                                 amplitude=0.5,
+                                 duration=3000,
+                                 phase=0,
+                                 shape=Rectangular())
+
 
 How to execute a circuit?
 -------------------------
@@ -36,19 +44,28 @@ How to execute a circuit?
 
 .. code-block::  python
 
-    from qibolab import platform
-    from qibolab.pulses import Pulse, PulseSequence
+    from qibolab import platform, pulses
 
     # platform.connect() is performed in the constructor
 
     platform.start() # turn on the instruments
 
     # define pulses as above
-    pulse1 = Pulse(...)
-    pulse2 = Pulse(...)
+    pulse1 = pulses.Pulse(start=0,
+                          frequency=200000000.0,
+                          amplitude=0.3,
+                          duration=60,
+                          phase=0,
+                          shape=Gaussian(60 / 5))
+    pulse2 = pulses.ReadoutPulse(start=70,
+                                 frequency=20000000.0,
+                                 amplitude=0.5,
+                                 duration=3000,
+                                 phase=0,
+                                 shape=Rectangular())
 
     # define PulseSequence object and add pulses
-    pulseseq = PulseSequence()
+    pulseseq = pulses.PulseSequence()
     pulseseq.add(pulse1)
     pulseseq.add(pulse2)
 
@@ -59,11 +76,3 @@ How to execute a circuit?
     platform.stop()
 
     # platform.disconnect() is performed in the destructor
-
-
-
-
-
-
-
-    

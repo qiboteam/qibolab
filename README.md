@@ -37,7 +37,7 @@ sequence.add(pulses.ReadoutPulse(start=70,
 # turn on instruments
 platform.start()
 # execute sequence and acquire results
-results = platform(sequence)
+results = platform.execute(sequence)
 # turn off instruments
 platform.stop()
 ```
