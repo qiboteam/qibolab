@@ -53,7 +53,7 @@ How to execute a circuit?
     pulseseq.add(pulse2)
 
     # execute and acquire result
-    result = platform.execute()
+    result = platform.execute(pulseseq)
 
     # stop the instruments
     platform.stop()
