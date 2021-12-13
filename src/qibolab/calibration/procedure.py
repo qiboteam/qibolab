@@ -89,8 +89,8 @@ def partial_qubit_calibration(static_config: dict, qubit: Qubit):
         "1": [res[0, idx_one], res[1, idx_one]]
     }
     freq_nyquist = freq - experiment.static.sampling_rate
-    qubit["rx"] = [pulses.BasicPulse(channel, 0, pi_pulse, amplitude, freq_nyquist, 0, Rectangular())]
-    qubit["ry"] = [pulses.BasicPulse(channel, 0, pi_pulse, amplitude, freq_nyquist, 90, Rectangular())]
+    qubit["rx"] = [pulses.Pulse(channel, 0, pi_pulse, amplitude, freq_nyquist, 0, Rectangular(), channel=channel)]
+    qubit["ry"] = [pulses.Pulse(channel, 0, pi_pulse, amplitude, freq_nyquist, 90, Rectangular(), channel=channel)]
 
     return qubit, log
 

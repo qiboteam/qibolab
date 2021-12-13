@@ -29,9 +29,18 @@ class GenericPulsar(ABC):
 
     @abstractmethod
     def connect(self, label, ip):
+        """Connects to the instruments."""
         raise(NotImplementedError)
 
     def setup(self, gain, hardware_avg, initial_delay, repetition_duration):
+        """Sets calibration setting to QBlox instruments.
+
+        Args:
+            gain (float):
+            hardware_avg ():
+            initial_delay ():
+            repetition_duration ():
+        """
         if self.sequencer == 1:
             self.device.sequencer1_gain_awg_path0(gain)
             self.device.sequencer1_gain_awg_path1(gain)
@@ -43,6 +52,16 @@ class GenericPulsar(ABC):
         self.repetition_duration = repetition_duration
 
     def _translate_single_pulse(self, pulse):
+        """Translates a single pulse to the instrument waveform format.
+
+        Helper method for :meth:`qibolab.instruments.qblox.GenericPulsar.generate_waveforms`.
+
+        Args:
+            pulse (:class:`qibolab.pulses.Pulse`): Pulse object to translate.
+
+        Returns:
+            Dictionary containing the waveform corresponding to the pulse.
+        """
         # Use the envelope to modulate a sinusoldal signal of frequency freq_if
         envelope_i = pulse.compile()
         # TODO: if ``envelope_q`` is not always 0 we need to find how to
@@ -66,6 +85,14 @@ class GenericPulsar(ABC):
         return waveform
 
     def generate_waveforms(self, pulses):
+        """Translates a list of pulses to the instrument waveform format.
+
+        Args:
+            pulses (list): List of :class:`qibolab.pulses.Pulse` objects.
+
+        Returns:
+            Dictionary containing waveforms corresponding to all pulses.
+        """
         if not pulses:
             raise_error(NotImplementedError, "Cannot translate empty pulse sequence.")
         name = self.name
@@ -125,9 +152,19 @@ class GenericPulsar(ABC):
 
     @abstractmethod
     def translate(self, sequence):
+        """Translates an abstract pulse sequence to QBlox format.
+
+        Args:
+            sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence.
+
+        Returns:
+            The waveforms (dict) and program (str) required to execute the
+            pulse sequence on QBlox instruments.
+        """
         raise_error(NotImplementedError)
 
     def upload(self, waveforms, program, data_folder):
+        """Uploads waveforms and programs to QBlox sequencer to prepare execution."""
         import os
         # Upload waveforms and program
         # Reformat waveforms to lists
@@ -155,14 +192,17 @@ class GenericPulsar(ABC):
             self.device.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), filename))
 
     def play_sequence(self):
+        """Executes the uploaded instructions."""
         # arm sequencer and start playing sequence
         self.device.arm_sequencer()
         self.device.start_sequencer()
 
     def stop(self):
+        """Stops the QBlox sequencer from sending pulses."""
         self.device.stop_sequencer()
 
     def close(self):
+        """Disconnects from the instrument."""
         if self._connected:
             self.stop()
             self.device.close()
@@ -229,6 +269,12 @@ class PulsarQRM(GenericPulsar):
         return waveforms, program
 
     def play_sequence_and_acquire(self, ro_pulse):
+        """Executes the uploaded instructions and retrieves the readout results.
+
+        Args:
+            ro_pulse (:class:`qibolab.pulses.Pulse`): Readout pulse to use for
+                retrieving the results.
+        """
         #arm sequencer and start playing sequence
         super().play_sequence()
         #start acquisition of data
