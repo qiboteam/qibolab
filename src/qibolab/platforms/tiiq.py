@@ -97,9 +97,9 @@ class TIIq:
             self.LO_qcm.setup(**self._settings.get("_LO_QCM_settings"))
 
     def start(self):
-        """Turns-on the local oscillators.
+        """Turns on the local oscillators.
 
-        The QBlox insturments are turned-on automatically during execution after
+        The QBlox insturments are turned on automatically during execution after
         the required pulse sequences are loaded.
         """
         if self._connected:
@@ -107,7 +107,7 @@ class TIIq:
             self.LO_qrm.on()
 
     def stop(self):
-        """Turns-off all the lab instruments."""
+        """Turns off all the lab instruments."""
         self.LO_qrm.off()
         self.LO_qcm.off()
         self.qrm.stop()
