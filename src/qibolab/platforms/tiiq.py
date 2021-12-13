@@ -1,3 +1,4 @@
+import os
 import json
 
 
@@ -5,11 +6,16 @@ class TIIq:
     """Platform for controlling TII device.
 
     Controls the PulsarQRM, PulsarQCM and two SGS100A local oscillators.
+    Uses calibration parameters provided through a json to setup the instruments.
+    The path of the calibration json can be provided using the
+    ``"CALIBRATION_PATH"`` environment variable.
+    If no path is provided the default path (``platforms/tiiq_settings.json``)
+    will be used.
     """
 
-    def __init__(self, calibration_path=None):
+    def __init__(self):
         # TODO: Consider passing ``calibration_path` as environment variable
-        self.calibration_path = calibration_path
+        self.calibration_path = os.environ.get("CALIBRATION_PATH")
         if self.calibration_path is None:
             # use default file
             import pathlib
@@ -43,6 +49,11 @@ class TIIq:
     @property
     def software_averages(self):
         return self._settings.get("_settings").get("software_averages")
+
+    @software_averages.setter
+    def software_averages(self, x):
+        # I don't like that this updates the local dictionary but not the json
+        self._settings["_settings"]["software_averages"] = x
 
     @property
     def hardware_avg(self):
