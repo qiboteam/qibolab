@@ -5,16 +5,18 @@ class TIIq:
     """Platform for controlling TII device.
 
     Controls the PulsarQRM, PulsarQCM and two SGS100A local oscillators.
-
-    Args:
-        settings (dict): Dictionary with calibration data.
-            See ``examples/tii_single_qubit/tii_single_qubit_settings.json``
-            for an example for this dictionary.
     """
 
-    def __init__(self):
-        # load latest calibration settings from json
-        settings = self.load_settings()
+    def __init__(self, calibration_path=None):
+        # TODO: Consider passing ``calibration_path` as environment variable
+        self.calibration_path = calibration_path
+        if self.calibration_path is None:
+            # use default file
+            import pathlib
+            self.calibration_path = pathlib.Path(__file__).parent / "tiiq_settings.json"
+        # Load calibration settings
+        with open(self.calibration_path, "r") as file:
+            self._settings = json.load(file)
 
         # initialize instruments
         self._connected = False
@@ -27,36 +29,38 @@ class TIIq:
         except: # capture time-out errors when importing outside the lab (bad practice)
             from qibo.config import log
             log.warning("Cannot establish connection to TIIq instruments. Skipping...")
-
-        # initial platform setup
-        self.data_folder = None
-        self.hardware_avg = None
-        self.sampling_rate = None
-        self.software_averages = None
-        self.repetition_duration = None
-        self.setup_platform(settings.get("_settings"))
         # initial instrument setup
-        self.setup(settings)
+        self.setup()
 
-    def load_settings(self, filedir=None):
-        """Loads json with calibration settings.
+    @property
+    def data_folder(self):
+        return self._settings.get("_settings").get("data_folder")
 
-        Args:
-            filedir (str): Path to the json file to load.
-                If ``None`` the default settings file located in ``platforms``
-                will be used.
+    @property
+    def hardware_avg(self):
+        return self._settings.get("_settings").get("hardware_avg")
 
-        Returns:
-            The ``settings`` dictionary required for instrument setup.
-        """
-        if filedir is None:
-            # use default file
-            import pathlib
-            filedir = pathlib.Path(__file__).parent / "tiiq_settings.json"
+    @property
+    def software_averages(self):
+        return self._settings.get("_settings").get("software_averages")
 
-        with open(filedir, "r") as file:
-            settings = json.load(file)
-        return settings
+    @property
+    def hardware_avg(self):
+        return self._settings.get("_settings").get("hardware_avg")
+
+    @property
+    def repetition_duration(self):
+        return self._settings.get("_settings").get("repetition_duration")
+
+    def run_calibration(self):
+        """Executes calibration routines and updates the settings json."""
+        # TODO: Implement calibration routines and update ``self._settings``.
+
+        # update instruments with new calibration settings
+        self.setup()
+        # save new calibration settings to json
+        with open(self.calibration_path, "w") as file:
+            json.dump(self._settings, file)
 
     def connect(self):
         """Connects to lab instruments using the details specified in the loaded settings.
@@ -67,36 +71,19 @@ class TIIq:
         TIIq configuration.
         """
         from qibolab.instruments import PulsarQRM, PulsarQCM, SGS100A
-        self.qrm = PulsarQRM(**settings.get("_QRM_init_settings"))
-        self.qcm = PulsarQCM(**settings.get("_QCM_init_settings"))
-        self.LO_qrm = SGS100A(**settings.get("_LO_QRM_init_settings"))
-        self.LO_qcm = SGS100A(**settings.get("_LO_QCM_init_settings"))
+        self.qrm = PulsarQRM(**self._settings.get("_QRM_init_settings"))
+        self.qcm = PulsarQCM(**self._settings.get("_QCM_init_settings"))
+        self.LO_qrm = SGS100A(**self._settings.get("_LO_QRM_init_settings"))
+        self.LO_qcm = SGS100A(**self._settings.get("_LO_QCM_init_settings"))
         self._connected = True
 
-    def setup(self, settings):
-        """Configures instruments using the latest calibration settings.
-
-        Args:
-            settings (dict): Dictionary with calibration data.
-                See ``examples/tii_single_qubit/tii_single_qubit_settings.json``
-                for an example for this dictionary.
-        """
-        self.qrm.setup(**settings.get("_QRM_settings"))
-        self.qcm.setup(**settings.get("_QCM_settings"))
-        self.LO_qrm.setup(**settings.get("_LO_QRM_settings"))
-        self.LO_qcm.setup(**settings.get("_LO_QCM_settings"))
-
-    def setup_platform(self, settings):
-        """Updates the platform parameters.
-
-        Args:
-            settings (dict): Dictionary with platform data.
-        """
-        self.data_folder = settings.get("data_folder", self.data_folder)
-        self.hardware_avg = settings.get("hardware_avg", self.hardware_avg)
-        self.sampling_rate = settings.get("sampling_rate", self.sampling_rate)
-        self.software_averages = settings.get("software_averages", self.software_averages)
-        self.repetition_duration = settings.get("repetition_duration", self.repetition_duration)
+    def setup(self):
+        """Configures instruments using the loaded calibration settings."""
+        if self._connected:
+            self.qrm.setup(**self._settings.get("_QRM_settings"))
+            self.qcm.setup(**self._settings.get("_QCM_settings"))
+            self.LO_qrm.setup(**self._settings.get("_LO_QRM_settings"))
+            self.LO_qcm.setup(**self._settings.get("_LO_QCM_settings"))
 
     def start(self):
         """Turns-on the local oscillators.
@@ -104,8 +91,9 @@ class TIIq:
         The QBlox insturments are turned-on automatically during execution after
         the required pulse sequences are loaded.
         """
-        self.LO_qcm.on()
-        self.LO_qrm.on()
+        if self._connected:
+            self.LO_qcm.on()
+            self.LO_qrm.on()
 
     def stop(self):
         """Turns-off all the lab instruments."""
@@ -122,9 +110,6 @@ class TIIq:
             self.qrm.close()
             self.qcm.close()
             self._connected = False
-
-    def __del__(self):
-        self.disconnect()
 
     def execute(self, sequence):
         """Executes a pulse sequence.
