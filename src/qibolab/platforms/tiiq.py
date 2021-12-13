@@ -75,6 +75,10 @@ class TIIq:
         return self._settings.get("_settings").get("hardware_avg")
 
     @property
+    def sampling_rate(self):
+        return self._settings.get("_settings").get("hardware_avg")
+
+    @property
     def software_averages(self):
         return self._settings.get("_settings").get("software_averages")
 
@@ -82,10 +86,6 @@ class TIIq:
     def software_averages(self, x):
         # I don't like that this updates the local dictionary but not the json
         self._settings["_settings"]["software_averages"] = x
-
-    @property
-    def hardware_avg(self):
-        return self._settings.get("_settings").get("hardware_avg")
 
     @property
     def repetition_duration(self):
