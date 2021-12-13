@@ -9,10 +9,10 @@
         "qubit_freq": 8726500000.0,
         "pi_pulse_gain": 0.14,
         "pi_pulse_amplitude": 0.9,
-        "pi_pulse_length": 50,
-        "resonator_spectroscopy_avg_min_ro_voltage": 189.01058063631086,
-        "resonator_spectroscopy_max_ro_voltage": 623.4344492182624,
-        "qubit_spectroscopy_min_ro_voltage": 463.2114894017597
+        "pi_pulse_length": 45,
+        "resonator_spectroscopy_avg_min_ro_voltage": 186.97303401220287,
+        "resonator_spectroscopy_max_ro_voltage": 615.6231906561537,
+        "qubit_spectroscopy_min_ro_voltage": 371.8957806457759
     },
     "_QRM_init_settings": {
         "ref_clock": "external",
@@ -30,8 +30,8 @@
             "ro_pulse": {
                 "freq_if": 20000000.0,
                 "amplitude": 0.9,
-                "start": 4040,
-                "length": 3000,
+                "start": 4004,
+                "length": 2000,
                 "offset_i": 0,
                 "offset_q": 0,
                 "shape": "Block",

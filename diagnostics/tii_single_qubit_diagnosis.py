@@ -256,8 +256,9 @@ def run_qubit_spectroscopy():
 def run_Rabi_pulse_length():
     tiisq.load_settings()
     tiisq.setup()
+    tiisq._general_settings['software_averages'] = 1 # 3
     MC.settables(QCPulseLengthParameter(tiisq._qrm, tiisq._qcm))
-    MC.setpoints(np.arange(1,2000,5))
+    MC.setpoints(np.arange(1,200,1))
     MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
     tiisq._LO_qrm.on()
     tiisq._LO_qcm.on()
@@ -337,8 +338,8 @@ def run_Rabi_pulse_length_and_amplitude():
     tiisq._LO_QCM_settings['frequency'] = tiisq._general_settings['qubit_freq'] + tiisq._QCM_settings['pulses']['qc_pulse']['freq_if']
     tiisq.setup()
     MC.settables([QCPulseLengthParameter(tiisq._qrm, tiisq._qcm), QCPulseAmplitudeParameter(tiisq._qcm)])
-    setpoints_length = np.arange(1,200,10)
-    setpoints_amplitude = np.arange(0,100,5)
+    setpoints_length = np.arange(1,1000,2)
+    setpoints_amplitude = np.arange(0,100,2)
     MC.setpoints_grid([setpoints_length,setpoints_amplitude])
     MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
     tiisq._LO_qrm.on()
@@ -361,7 +362,7 @@ def run_t1():
     tiisq._QCM_settings['gain'] = tiisq._general_settings['pi_pulse_gain']
     tiisq.setup()
     MC.settables(T1WaitParameter(tiisq._qrm, tiisq._qcm))
-    MC.setpoints(np.arange(0,8000,30))
+    MC.setpoints(np.arange(0,4500,30))
     MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
     tiisq._LO_qrm.on()
     tiisq._LO_qcm.on()
@@ -375,7 +376,7 @@ def run_ramsey():
     tiisq.load_settings()
     tiisq._LO_QRM_settings['frequency'] = tiisq._general_settings['resonator_freq'] - tiisq._QRM_settings['pulses']['ro_pulse']['freq_if']
     tiisq._LO_QCM_settings['frequency'] = tiisq._general_settings['qubit_freq'] + tiisq._QCM_settings['pulses']['qc_pulse']['freq_if']
-    tiisq._QCM_settings['gain'] = tiisq._general_settings['pi_pulse_gain'],
+    tiisq._QCM_settings['gain'] = tiisq._general_settings['pi_pulse_gain']
     tiisq._QCM_settings['pulses'] = {
             'qc_pulse':{	"freq_if": 200e6,
                         "amplitude": tiisq._general_settings['pi_pulse_amplitude'],
@@ -562,7 +563,7 @@ class T1WaitParameter():
     
     def __init__(self, qrm: Pulsar_QRM, qcm: Pulsar_QCM):
         self._qrm = qrm
-        
+        self._qcm = qcm
     def set(self,value):
         #must be >= 4ns <= 65535
         self._qrm._settings['pulses']['ro_pulse']['start'] = self._qcm._settings['pulses']['qc_pulse']['length'] + 4 + value
