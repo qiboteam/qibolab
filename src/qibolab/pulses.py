@@ -6,6 +6,10 @@ from qibo.config import raise_error
 
 
 class PulseSequence:
+    """List of pulses.
+
+    Holds a separate list for each instrument.
+    """
     # TODO: Move this to a different file (temporarily here as placeholder)
 
     def __init__(self):
@@ -14,6 +18,11 @@ class PulseSequence:
         self.qrm_pulses = []
 
     def add(self, pulse):
+        """Add a pulse to the list.
+
+        Args:
+            pulse (`qibolab.pulses.Pulse`): Pulse object to add.
+        """
         if pulse.channel == "qrm":
             self.qrm_pulses.append(pulse)
         else:
@@ -114,7 +123,7 @@ class IQReadoutPulse(Pulse):
 class MultifrequencyPulse(Pulse):
     """Describes multiple pulses to be added to waveform array.
 
-    Used when multiple pulses are overlapping to avoid overwrite
+    Used when multiple pulses are overlapping to avoid overwrite.
     """
     def __init__(self, members):
         self.members = members
@@ -129,8 +138,7 @@ class MultifrequencyPulse(Pulse):
 
 
 class FilePulse(Pulse):
-    """Commands the FPGA to load a file as a waveform array in the specified channel
-    """
+    """Commands the FPGA to load a file as a waveform array in the specified channel."""
     def __init__(self, channel, start, filename):
         self.channel = channel
         self.start = start
