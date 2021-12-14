@@ -218,7 +218,7 @@ def run_rabi_pulse_length_and_gain(resonator_freq, qubit_freq):
     platform.software_averages = 1
     mc.settables([Settable(QCPulseLengthParameter(ro_pulse, qc_pulse)),
                   Settable(QCPulseGainParameter(platform.qcm))])
-    setpoints_length = np.arange(1, 400, 2)
+    setpoints_length = np.arange(1, 400, 10)
     setpoints_gain = np.arange(0, 20, 1)
     mc.setpoints_grid([setpoints_length, setpoints_gain])
     mc.gettables(Gettable(ROController(sequence)))
@@ -262,8 +262,8 @@ def run_t1(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
     platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
     platform.qcm.gain = pi_pulse_gain
 
-    mc = MeasurementControl('MC_T1')
-    mc.settables(Settable(T1WaitParameter(ro_pulse)))
+    mc, pl, ins = create_measurement_control('t1')
+    mc.settables(Settable(T1WaitParameter(ro_pulse, qc_pulse)))
     mc.setpoints(np.arange(delay_before_readout_start,
                            delay_before_readout_end,
                            delay_before_readout_step))
@@ -409,13 +409,15 @@ class T1WaitParameter():
     name = 't1_wait'
     initial_value = 0
 
-    def __init__(self, ro_pulse):
+    def __init__(self, ro_pulse, qc_pulse):
         self.ro_pulse = ro_pulse
+        self.base_duration = qc_pulse.duration
 
     def set(self, value):
         # TODO: implement following condition
         #must be >= 4ns <= 65535
-        self.ro_pulse.delay_before_readout = value
+        #platform.delay_before_readout = value
+        self.ro_pulse.start = self.base_duration + 4 + value
 
 
 class RamseyWaitParameter():
