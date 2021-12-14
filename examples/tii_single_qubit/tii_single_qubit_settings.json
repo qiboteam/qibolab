@@ -3,7 +3,7 @@
         "data_folder": ".data/",
         "hardware_avg": 1024,
         "sampling_rate": 1000000000.0,
-        "software_averages": 1,
+        "software_averages": 3,
         "repetition_duration": 200000
     },
     "_QRM_init_settings": {
@@ -14,12 +14,24 @@
         "acq_trigger_mode": "sequencer"
     },
     "_QRM_settings": {
-        "gain": 0.35,
+        "gain": 0.4,
         "hardware_avg": 1024,
         "initial_delay": 0,
         "repetition_duration": 200000,
-        "start_sample": 100,
-        "integration_length": 2500,
+        "pulses": {
+            "ro_pulse": {
+                "freq_if": 20000000.0,
+                "amplitude": 0.9,
+                "start": 4004,
+                "length": 2000,
+                "offset_i": 0,
+                "offset_q": 0,
+                "shape": "Block",
+                "delay_before_readout": 4
+            }
+        },
+        "start_sample": 130,
+        "integration_length": 1500,
         "sampling_rate": 1000000000.0,
         "mode": "ssb"
     },
@@ -29,17 +41,28 @@
         "sync_en": true
     },
     "_QCM_settings": {
-        "gain": 0.3,
+        "gain": 0.14,
         "hardware_avg": 1024,
         "initial_delay": 0,
-        "repetition_duration": 200000
+        "repetition_duration": 200000,
+        "pulses": {
+            "qc_pulse": {
+                "freq_if": 200000000.0,
+                "amplitude": 0.9,
+                "start": 0,
+                "length": 4000,
+                "offset_i": 0,
+                "offset_q": 0,
+                "shape": "Gaussian"
+            }
+        }
     },
     "_LO_QRM_settings": {
-        "power": 6,
-        "frequency": 7778250000.0
+        "power": 10,
+        "frequency": 7778070000.0
     },
     "_LO_QCM_settings": {
-        "power": 6,
-        "frequency": 8922000000.0
+        "power": -5,
+        "frequency": 8926500000.0
     }
 }

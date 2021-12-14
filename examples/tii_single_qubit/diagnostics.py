@@ -82,17 +82,17 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     tiiq.setup(settings)
 
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
-                                      start=70,
+                                      start=4004,
                                       frequency=20000000.0,
-                                      amplitude=0.5,
-                                      length=3000,
+                                      amplitude=0.9,
+                                      length=2000,
                                       shape="Block",
                                       delay_before_readout=4)
     qc_pulse = pulses.TIIPulse(name="qc_pulse",
                                start=0,
                                frequency=200000000.0,
-                               amplitude=0.3,
-                               length=60,
+                               amplitude=0.9,
+                               length=4000,
                                shape="Gaussian")
     qrm_sequence = pulses.PulseSequence()
     qrm_sequence.add(ro_pulse)
@@ -144,7 +144,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     return resonator_freq, dataset
 
 
-def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
+def run_qubit_spectroscopy(resonator_freq, fast_start, fast_end, fast_step,
                            precision_start, precision_end, precision_step,
                            plotmon=False):
     with open("tii_single_qubit_settings.json", "r") as file:
@@ -152,18 +152,18 @@ def run_qubit_spectroscopy(fast_start, fast_end, fast_step,
 
     tiiq = TIIq()
     tiiq.setup(settings)
-
+    tiiq.LO_qrm.set_frequency(resonator_freq)
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
-                                      start=70,
+                                      start=4004,
                                       frequency=20000000.0,
-                                      amplitude=0.5,
-                                      length=4040,
+                                      amplitude=0.9,
+                                      length=2000,
                                       shape="Block",
                                       delay_before_readout=4)
     qc_pulse = pulses.TIIPulse(name="qc_pulse",
                                start=0,
                                frequency=200000000.0,
-                               amplitude=0.3,
+                               amplitude=0.9,
                                length=4000,
                                shape="Gaussian")
     qrm_sequence = pulses.PulseSequence()
@@ -221,18 +221,20 @@ def run_rabi_pulse_length(resonator_freq, qubit_freq, plotmon=False):
         settings = json.load(file)
     tiiq = TIIq()
     tiiq.setup(settings)
+    tiiq.LO_qrm.set_frequency(resonator_freq)
+    tiiq.LO_qcm.set_frequency(qubit_freq)
     ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
-                                      start=70,
+                                      start=4004,
                                       frequency=20000000.0,
-                                      amplitude=0.5,
-                                      length=3000,
+                                      amplitude=0.9,
+                                      length=2000,
                                       shape="Block",
                                       delay_before_readout=4)
     qc_pulse = pulses.TIIPulse(name="qc_pulse",
                                start=0,
                                frequency=200000000.0,
-                               amplitude=0.3,
-                               length=60,
+                               amplitude=0.9,
+                               length=4000,
                                shape="Gaussian")
     qrm_sequence = pulses.PulseSequence()
     qrm_sequence.add(ro_pulse)
@@ -243,7 +245,7 @@ def run_rabi_pulse_length(resonator_freq, qubit_freq, plotmon=False):
     mc, pl, ins = create_measurement_control('Rabi_pulse_length')
     tiiq.software_averages = 1
     mc.settables(QCPulseLengthParameter(ro_pulse, qc_pulse))
-    mc.setpoints(np.arange(1, 2000, 5))
+    mc.setpoints(np.arange(1, 200, 1))
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
     tiiq.LO_qrm.on()
     tiiq.LO_qcm.on()
