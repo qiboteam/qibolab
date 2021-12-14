@@ -13,9 +13,15 @@ class PulseSequence:
     # TODO: Move this to a different file (temporarily here as placeholder)
 
     def __init__(self):
+        from qibolab import platform
         super().__init__()
         self.qcm_pulses = []
         self.qrm_pulses = []
+        self.time = 0
+        self.phase = 0
+        # Requirement from platform: delay between pulses
+        self.platform = platform
+        self.delay = platform.delay
 
     def add(self, pulse):
         """Add a pulse to the list.
@@ -27,6 +33,26 @@ class PulseSequence:
             self.qrm_pulses.append(pulse)
         else:
             self.qcm_pulses.append(pulse)
+        self.time += pulse.duration + self.delay
+
+    def add_u3(self, theta, phi, lam):
+        """Add pulses that implement a U3 gate.
+
+        Args:
+            theta, phi, lam (float): Parameters of the U3 gate.
+        """
+        # Pi/2 pulse from calibration
+        amplitude = self.platform.pi_half_amplitude
+        duration = self.platform.pi_half_duration
+        frequency = 0
+
+        self.phase += phi - np.pi / 2
+        self.add(Pulse(self.time, duration, amplitude, frequency, self.phase, Gaussian(duration / 5)))
+        self.phase += np.pi - theta
+        self.time += duration + self.platform.delay
+        self.add(Pulse(self.time, duration, amplitude, frequency, self.phase, Gaussian(duration / 5)))
+        self.phase += lam - np.pi / 2
+        self.time += duration + self.platform.delay
 
 
 class Pulse:
