@@ -289,7 +289,8 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pu
     qc2_pulse = pulses.Pulse(start=pi_pulse_length // 2 + 0,
                                frequency=200000000.0,
                                amplitude=pi_pulse_amplitude,
-                               length=pi_pulse_length // 2,
+                               duration=pi_pulse_length // 2,
+                               phase=0,
                                shape=Gaussian(pi_pulse_length // 10))
     start = qc_pulse.duration + qc2_pulse.duration + 4
     ro_pulse = pulses.ReadoutPulse(start=start,
@@ -307,7 +308,7 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pu
     platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
     platform.qcm.gain = pi_pulse_gain
 
-    mc = MeasurementControl('MC_Ramsey')
+    mc, pl, ins = create_measurement_control('ramsey')
     mc.settables(Settable(RamseyWaitParameter(ro_pulse, qc2_pulse, pi_pulse_length)))
     mc.setpoints(np.arange(start_start, start_end, start_step))
     mc.gettables(Gettable(ROController(sequence)))
@@ -332,7 +333,8 @@ def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi
     qc2_pulse = pulses.Pulse(start=pi_pulse_length // 2 + 0,
                              frequency=200000000.0,
                              amplitude=pi_pulse_amplitude,
-                             length=pi_pulse_length // 2,
+                             duration=pi_pulse_length // 2,
+                             phase=0,
                              shape=Gaussian(pi_pulse_length // 10))
     start = qc_pulse.duration + qc2_pulse.duration + 4
     ro_pulse = pulses.ReadoutPulse(start=start,
@@ -350,7 +352,7 @@ def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi
     platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
     platform.qcm.gain = pi_pulse_gain
 
-    mc = MeasurementControl('MC_Spin_Echo')
+    mc, pl, ins = create_measurement_control('spin_echo')
     mc.settables(Settable(SpinEchoWaitParameter(ro_pulse, qc2_pulse, pi_pulse_length)))
     mc.setpoints(np.arange(start_start, start_end, start_step))
     mc.gettables(Gettable(ROController(sequence)))
