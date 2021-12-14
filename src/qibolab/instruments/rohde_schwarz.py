@@ -16,11 +16,17 @@ class SGS100A:
                 "ip": '192.168.0.8',
                 "label": "qcm_LO"
         """
+        self.device  = None
+        self._power  = None
+        self._frequency = None
+        self._connected = False
+        self.connect(label, ip)
+
+    def connect(self, label, ip):
         import qcodes.instrument_drivers.rohde_schwarz.SGS100A as LO_SGS100A
         self.device = LO_SGS100A.RohdeSchwarz_SGS100A(label, f"TCPIP0::{ip}::inst0::INSTR")
+        self._connected = True
         logger.info("Local oscillator connected")
-        self._power = None
-        self._frequency = None
 
     def setup(self, power, frequency):
         self.set_power(power)
@@ -58,7 +64,11 @@ class SGS100A:
         logger.info("Local oscillator off.")
 
     def close(self):
-        self.device.close()
+        if self._connected:
+            self.off()
+            self.device.close()
+            self._connected = False
 
-    def __del__(self):
-        self.device.close()
+    # TODO: Figure out how to fix this
+    #def __del__(self):
+    #    self.close()

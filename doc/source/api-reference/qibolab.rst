@@ -1,54 +1,7 @@
-qibolab package
+qibolab
 ===============
 
-Subpackages
------------
-
-.. toctree::
-   :maxdepth: 4
-
-   qibolab.calibration
-   qibolab.experiments
-   qibolab.inst
-   qibolab.instruments
-   qibolab.tests
-
-Submodules
-----------
-
-qibolab.backend module
-----------------------
-
-.. automodule:: qibolab.backend
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-qibolab.circuit module
-----------------------
-
-.. automodule:: qibolab.circuit
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-qibolab.connections module
---------------------------
-
-.. automodule:: qibolab.connections
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-qibolab.gates module
---------------------
-
-.. automodule:: qibolab.gates
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-qibolab.pulses module
+Pulses
 ---------------------
 
 .. automodule:: qibolab.pulses
@@ -56,26 +9,32 @@ qibolab.pulses module
    :undoc-members:
    :show-inheritance:
 
-qibolab.schedulers module
+Platforms
 -------------------------
 
-.. automodule:: qibolab.schedulers
+.. autoclass:: qibolab.platforms.TIIq
    :members:
-   :undoc-members:
-   :show-inheritance:
+   :member-order: bysource
 
-qibolab.tomography module
+Instruments
 -------------------------
 
-.. automodule:: qibolab.tomography
-   :members:
-   :undoc-members:
-   :show-inheritance:
+Qblox
+^^^^^
 
-Module contents
----------------
-
-.. automodule:: qibolab
+.. automodule:: qibolab.instruments.qblox
    :members:
-   :undoc-members:
-   :show-inheritance:
+   :member-order: bysource
+
+
+RohdeSchwarz
+^^^^^^^^^^^^
+
+.. autoclass:: qibolab.instruments.rohde_schwarz.SGS100A
+   :members:
+   :member-order: bysource
+
+
+
+
+
