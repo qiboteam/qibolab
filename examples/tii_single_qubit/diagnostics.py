@@ -280,12 +280,6 @@ def run_t1(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
 
 def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pulse_amplitude,
                start_start, start_end, start_step):
-    ro_pulse = pulses.ReadoutPulse(start=duration + 4,
-                            frequency=20000000.0,
-                            amplitude=0.9,
-                            duration=2000,
-                            phase=0,
-                            shape=Rectangular())
     qc_pulse = pulses.Pulse(start=0,
                             frequency=200000000.0,
                             amplitude=pi_pulse_amplitude,
@@ -297,6 +291,13 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pu
                                amplitude=pi_pulse_amplitude,
                                length=pi_pulse_length // 2,
                                shape=Gaussian(pi_pulse_length // 10))
+    start = qc_pulse.duration + qc2_pulse.duration + 4
+    ro_pulse = pulses.ReadoutPulse(start=start,
+                                   frequency=20000000.0,
+                                   amplitude=0.9,
+                                   duration=2000,
+                                   phase=0,
+                                   shape=Rectangular())
     sequence = pulses.PulseSequence()
     sequence.add(qc_pulse)
     sequence.add(qc2_pulse)
@@ -322,12 +323,6 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pu
 
 def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pulse_amplitude,
                   start_start, start_end, start_step):
-    ro_pulse = pulses.ReadoutPulse(start=duration + 4,
-                                   frequency=20000000.0,
-                                   amplitude=0.9,
-                                   duration=2000,
-                                   phase=0,
-                                   shape=Rectangular())
     qc_pulse = pulses.Pulse(start=0,
                             frequency=200000000.0,
                             amplitude=pi_pulse_amplitude,
@@ -339,6 +334,13 @@ def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi
                              amplitude=pi_pulse_amplitude,
                              length=pi_pulse_length // 2,
                              shape=Gaussian(pi_pulse_length // 10))
+    start = qc_pulse.duration + qc2_pulse.duration + 4
+    ro_pulse = pulses.ReadoutPulse(start=start,
+                                   frequency=20000000.0,
+                                   amplitude=0.9,
+                                   duration=2000,
+                                   phase=0,
+                                   shape=Rectangular())
     sequence = pulses.PulseSequence()
     sequence.add(qc_pulse)
     sequence.add(qc2_pulse)
