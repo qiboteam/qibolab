@@ -32,6 +32,20 @@ class GenericPulsar(ABC):
         """Connects to the instruments."""
         raise(NotImplementedError)
 
+    @property
+    def gain(self):
+        return self._gain
+
+    @gain.setter
+    def gain(self, gain):
+        self._gain = gain
+        if self.sequencer == 1:
+            self.device.sequencer1_gain_awg_path0(gain)
+            self.device.sequencer1_gain_awg_path1(gain)
+        else:
+            self.device.sequencer0_gain_awg_path0(gain)
+            self.device.sequencer0_gain_awg_path1(gain)
+
     def setup(self, gain, hardware_avg, initial_delay, repetition_duration):
         """Sets calibration setting to QBlox instruments.
 
@@ -41,12 +55,7 @@ class GenericPulsar(ABC):
             initial_delay ():
             repetition_duration ():
         """
-        if self.sequencer == 1:
-            self.device.sequencer1_gain_awg_path0(gain)
-            self.device.sequencer1_gain_awg_path1(gain)
-        else:
-            self.device.sequencer0_gain_awg_path0(gain)
-            self.device.sequencer0_gain_awg_path1(gain)
+        self.gain = gain
         self.hardware_avg = hardware_avg
         self.initial_delay = initial_delay
         self.repetition_duration = repetition_duration
