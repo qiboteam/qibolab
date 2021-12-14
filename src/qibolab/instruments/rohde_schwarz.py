@@ -20,11 +20,13 @@ class SGS100A():
         self.ip = ip
         self.label = label
         logger.info("Local oscillator connected")
+        #self._settings = {}
 
     def setup(self, settings):
+        #self._settings.update(settings)
         self.set_power(settings['power'])
         self.set_frequency(settings['frequency'])
-
+        
     def set_power(self, power):
         #set dbm power to Local Oscillator
         self.LO.power(power)

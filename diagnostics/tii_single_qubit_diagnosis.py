@@ -22,6 +22,7 @@ import matplotlib.colors as mplc
 
 from qibolab.instruments.qblox import Pulsar_QCM
 from qibolab.instruments.qblox import Pulsar_QRM
+from qibolab.instruments.rohde_schwarz import SGS100A
 
 from qibolab.platforms.tii_single_qubit import TIISingleQubit
 
@@ -256,7 +257,7 @@ def run_qubit_spectroscopy():
 def run_Rabi_pulse_length():
     tiisq.load_settings()
     tiisq.setup()
-    tiisq._general_settings['software_averages'] = 1 # 3
+    tiisq._general_settings['software_averages'] = 3
     MC.settables(QCPulseLengthParameter(tiisq._qrm, tiisq._qcm))
     MC.setpoints(np.arange(1,200,1))
     MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
@@ -265,7 +266,7 @@ def run_Rabi_pulse_length():
     dataset = MC.run('Rabi Pulse Length', soft_avg = tiisq._general_settings['software_averages'])
     tiisq.stop()
     pi_pulse_duration = fit_rabi(dataset['y0'].values, dataset['x0'].values)
-
+    print(pi_pulse_duration)
 
 
 
@@ -304,11 +305,12 @@ def fit_rabi(amp_array, time_array):
 
 def run_Rabi_pulse_gain():
     tiisq.load_settings()
-    tiisq._QCM_settings['pulses']['qc_pulse']['length'] = 50
+    tiisq._QCM_settings['pulses']['qc_pulse']['length'] = 200
     tiisq._QRM_settings['pulses']['ro_pulse']['start'] = tiisq._QCM_settings['pulses']['qc_pulse']['length']+4
+    tiisq._LO_QCM_settings['power'] = 10
     tiisq.setup()
     MC.settables(QCPulseGainParameter(tiisq._qcm))
-    MC.setpoints(np.arange(0,100,1))
+    MC.setpoints(np.arange(0,50,1))
     MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
     tiisq._LO_qrm.on()
     tiisq._LO_qcm.on()
@@ -397,8 +399,9 @@ def run_ramsey():
     }
     tiisq.setup()
     MC.settables(RamseyWaitParameter(tiisq._qrm, tiisq._qcm))
-    MC.setpoints(np.arange(4,500,10))
+    MC.setpoints(np.arange(4,1000,4))
     MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
+    print(tiisq._general_settings['pi_pulse_length']//2)
     tiisq._LO_qrm.on()
     tiisq._LO_qcm.on()
     dataset = MC.run('Ramsey', soft_avg = tiisq._general_settings['software_averages'])
@@ -537,11 +540,14 @@ class QCPulseGainParameter():
     name = 'qc_pulse_gain'
     
     def __init__(self, qcm: Pulsar_QCM):
+    #, LO_qcm: SGS100A):
         self._qcm = qcm
+        #self._LO_qcm = LO_qcm
         
     def set(self,value):
         gain = value / 100
         self._qcm._settings['gain'] = gain
+        #self._LO_qcm._settings['power'] = -1
 
 class QCPulseAmplitudeParameter():
 
