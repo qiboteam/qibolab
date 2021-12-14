@@ -1,6 +1,10 @@
 __version__ = "0.0.1.dev1"
 
 
+from qibolab.platforms import TIIq
+platform = TIIq() # TODO: Implement a platform selector
+
+# TODO: Remove ``experiment`` when it is merged with ``platform``
 from qibolab.experiments import Experiment
 experiment = Experiment()
 from qibolab.schedulers import TaskScheduler

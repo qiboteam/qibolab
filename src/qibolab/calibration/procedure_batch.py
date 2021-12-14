@@ -1,5 +1,6 @@
 import numpy as np
 from qibolab import pulses, experiment, scheduler
+from qibolab.pulse_shapes import Rectangular
 from qibolab.calibration import fitting, tasks
 
 class Qubit:
@@ -100,8 +101,8 @@ def partial_qubit_calibration(static_config: dict, qubit: Qubit):
         "1": [res[0, idx_one], res[1, idx_one]]
     }
     freq_nyquist = freq - experiment.static.sampling_rate
-    qubit.pulses["rx"] = [pulses.BasicPulse(channel, 0, pi_pulse, amplitude, freq_nyquist, 0, pulses.Rectangular())]
-    qubit.pulses["ry"] = [pulses.BasicPulse(channel, 0, pi_pulse, amplitude, freq_nyquist, 90, pulses.Rectangular())]
+    qubit.pulses["rx"] = [pulses.Pulse(0, pi_pulse, amplitude, freq_nyquist, 0, Rectangular(), channel=channel)]
+    qubit.pulses["ry"] = [pulses.Pulse(0, pi_pulse, amplitude, freq_nyquist, 90, Rectangular(), channel=channel)]
     log["pi-pulse"] = pi_pulse
 
     return qubit, log

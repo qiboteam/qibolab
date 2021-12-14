@@ -1,0 +1,57 @@
+{
+    "_settings": {
+        "data_folder": ".data/",
+        "hardware_avg": 1024,
+        "sampling_rate": 1000000000.0,
+        "software_averages": 3,
+        "repetition_duration": 200000
+    },
+    "_QRM_init_settings": {
+        "label": "qrm",
+        "ip": "192.168.0.2",
+        "ref_clock": "external",
+        "sequencer": 0,
+        "sync_en": true,
+        "hardware_avg_en": true,
+        "acq_trigger_mode": "sequencer"
+    },
+    "_QRM_settings": {
+        "gain": 0.4,
+        "hardware_avg": 1024,
+        "initial_delay": 0,
+        "repetition_duration": 200000,
+        "start_sample": 130,
+        "integration_length": 1500,
+        "sampling_rate": 1000000000.0,
+        "mode": "ssb"
+    },
+    "_QCM_init_settings": {
+        "label": "qcm",
+        "ip": "192.168.0.3",
+        "ref_clock": "external",
+        "sequencer": 0,
+        "sync_en": true
+    },
+    "_QCM_settings": {
+        "gain": 0.14,
+        "hardware_avg": 1024,
+        "initial_delay": 0,
+        "repetition_duration": 200000
+    },
+    "_LO_QRM_init_settings": {
+        "label": "LO_qrm",
+        "ip": "192.168.0.7"
+    },
+    "_LO_QRM_settings": {
+        "power": 10,
+        "frequency": 7778070000.0
+    },
+    "_LO_QCM_init_settings": {
+        "label": "LO_qcm",
+        "ip": "192.168.0.101"
+    },
+    "_LO_QCM_settings": {
+        "power": -5,
+        "frequency": 8926500000.0
+    }
+}
