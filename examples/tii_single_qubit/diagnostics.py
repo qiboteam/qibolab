@@ -7,7 +7,7 @@ from qibolab.platforms import TIIq
 
 # TODO: Have a look in the documentation of ``MeasurementControl``
 from quantify_core.measurement import MeasurementControl
-from quantify_core.measurement.control import Gettable
+from quantify_core.measurement.control import Gettable, Settable
 from quantify_core.data.handling import set_datadir
 # TODO: Check why this set_datadir is needed
 set_datadir(pathlib.Path(__file__).parent / "data")
@@ -102,7 +102,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     # Fast Sweep
     tiiq.software_averages = 1
     scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
-    mc.settables(tiiq.LO_qrm.device.frequency)
+    mc.settables(Settable(tiiq.LO_qrm.device.frequency))
     mc.setpoints(scanrange + tiiq.LO_qrm.get_frequency())
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
     tiiq.LO_qrm.on()
@@ -115,7 +115,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     # Precision Sweep
     tiiq.software_averages = 1 # 3
     scanrange = np.arange(-precision_width, precision_width, precision_step)
-    mc.settables(tiiq.LO_qrm.device.frequency)
+    mc.settables(Settable(tiiq.LO_qrm.device.frequency))
     mc.setpoints(scanrange + tiiq.LO_qrm.get_frequency())
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
     tiiq.LO_qrm.on()
@@ -174,7 +174,7 @@ def run_qubit_spectroscopy(resonator_freq, fast_start, fast_end, fast_step,
     # Fast Sweep
     tiiq.software_averages = 1
     scanrange = np.arange(fast_start, fast_end, fast_step)
-    mc.settables(tiiq.LO_qcm.device.frequency)
+    mc.settables(Settable(tiiq.LO_qcm.device.frequency))
     mc.setpoints(scanrange + qcm_frequency)
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
     tiiq.LO_qrm.on()
@@ -187,7 +187,7 @@ def run_qubit_spectroscopy(resonator_freq, fast_start, fast_end, fast_step,
     # Precision Sweep
     tiiq.software_averages = 3
     scanrange = np.arange(precision_start, precision_end, precision_step)
-    mc.settables(tiiq.LO_qcm.device.frequency)
+    mc.settables(Settable(tiiq.LO_qcm.device.frequency))
     mc.setpoints(scanrange + qcm_frequency)
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
     tiiq.LO_qrm.on()
@@ -213,7 +213,6 @@ def run_qubit_spectroscopy(resonator_freq, fast_start, fast_end, fast_step,
     plt.savefig("run_qubit_spectroscopy.pdf")
 
     return qubit_freq, dataset
-
 
 def run_rabi_pulse_length(resonator_freq, qubit_freq):
     with open("tii_single_qubit_settings.json", "r") as file:
@@ -243,7 +242,7 @@ def run_rabi_pulse_length(resonator_freq, qubit_freq):
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
     mc, pl, ins = create_measurement_control('Rabi_pulse_length')
     tiiq.software_averages = 1
-    mc.settables(QCPulseLengthParameter(ro_pulse, qc_pulse))
+    mc.settables(Settable(QCPulseLengthParameter(ro_pulse, qc_pulse)))
     mc.setpoints(np.arange(1, 200, 1))
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
     tiiq.LO_qrm.on()
@@ -252,7 +251,7 @@ def run_rabi_pulse_length(resonator_freq, qubit_freq):
     tiiq.stop()
 
 
-def run_rabi_pulse_gain(resonator_freq, qubit_freq, plotmon=False):
+def run_rabi_pulse_gain(resonator_freq, qubit_freq):
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
     tiiq = TIIq()
@@ -278,7 +277,7 @@ def run_rabi_pulse_gain(resonator_freq, qubit_freq, plotmon=False):
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
     mc, pl, ins = create_measurement_control('Rabi_pulse_gain')
     tiiq.software_averages = 1
-    mc.settables(QCPulseGainParameter(tiiq.qcm))
+    mc.settables(Settable(QCPulseGainParameter(tiiq.qcm)))
     mc.setpoints(np.arange(0, 100))
     mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
     tiiq.LO_qrm.on()
@@ -287,7 +286,7 @@ def run_rabi_pulse_gain(resonator_freq, qubit_freq, plotmon=False):
     tiiq.stop()
 
 
-def run_rabi_pulse_length_and_gain(resonator_freq, qubit_freq, plotmon=False):
+def run_rabi_pulse_length_and_gain(resonator_freq, qubit_freq):
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
     tiiq = TIIq()
@@ -313,7 +312,8 @@ def run_rabi_pulse_length_and_gain(resonator_freq, qubit_freq, plotmon=False):
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
     mc, pl, ins = create_measurement_control('Rabi_pulse_length_and_gain')
     tiiq.software_averages = 1
-    mc.settables([QCPulseLengthParameter(ro_pulse, qc_pulse), QCPulseGainParameter(tiiq.qcm)])
+    mc.settables([Settable(QCPulseLengthParameter(ro_pulse, qc_pulse)),
+                  Settable(QCPulseGainParameter(tiiq.qcm))])
     setpoints_length = np.arange(1, 400, 2)
     setpoints_gain = np.arange(0, 20, 1)
     mc.setpoints_grid([setpoints_length, setpoints_gain])
@@ -327,7 +327,7 @@ def run_rabi_pulse_length_and_gain(resonator_freq, qubit_freq, plotmon=False):
     tiiq.stop()
 
 
-def run_rabi_pulse_length_and_amplitude(resonator_freq, qubit_freq, plotmon=False):
+def run_rabi_pulse_length_and_amplitude(resonator_freq, qubit_freq):
     with open("tii_single_qubit_settings.json", "r") as file:
         settings = json.load(file)
     tiiq = TIIq()
@@ -353,7 +353,8 @@ def run_rabi_pulse_length_and_amplitude(resonator_freq, qubit_freq, plotmon=Fals
     tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
     mc, pl, ins = create_measurement_control('Rabi_pulse_length_and_amplitude')
     tiiq.software_averages = 1
-    mc.settables([QCPulseLengthParameter(ro_pulse, qc_pulse), QCPulseAmplitudeParameter(qc_pulse)])
+    mc.settables([Settable(QCPulseLengthParameter(ro_pulse, qc_pulse)),
+                  Settable(QCPulseAmplitudeParameter(qc_pulse))])
     setpoints_length = np.arange(1, 1000, 2)
     setpoints_amplitude = np.arange(0, 100, 2)
     mc.setpoints_grid([setpoints_length, setpoints_amplitude])
@@ -366,6 +367,158 @@ def run_rabi_pulse_length_and_amplitude(resonator_freq, qubit_freq, plotmon=Fals
     # platform.pi_pulse_gain =
     tiiq.stop()
 
+
+def run_t1(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
+            delay_before_readout_start, delay_before_readout_end,
+            delay_before_readout_step):
+    with open("tii_single_qubit_settings.json", "r") as file:
+        settings = json.load(file)
+
+    tiiq = TIIq()
+    tiiq.setup(settings)
+
+    ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
+                                      start=70,
+                                      frequency=20000000.0,
+                                      amplitude=0.5,
+                                      length=3000,
+                                      shape="Block",
+                                      delay_before_readout=4)
+    qc_pulse = pulses.TIIPulse(name="qc_pulse",
+                               start=0,
+                               frequency=200000000.0,
+                               amplitude=0.3,
+                               length=pi_pulse_length,
+                               shape="Gaussian")
+    qrm_sequence = pulses.PulseSequence()
+    qrm_sequence.add(ro_pulse)
+    qcm_sequence = pulses.PulseSequence()
+    qcm_sequence.add(qc_pulse)
+
+    tiiq.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
+    tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
+    tiiq.qcm.gain = pi_pulse_gain
+
+    mc = MeasurementControl('MC_T1')
+    mc.settables(Settable(T1WaitParameter(ro_pulse)))
+    mc.setpoints(np.arange(delay_before_readout_start,
+                           delay_before_readout_end,
+                           delay_before_readout_step))
+    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
+    tiiq.LO_qrm.on()
+    tiiq.LO_qcm.on()
+    tiiq.software_averages = 1 # 3
+    dataset = mc.run('T1', soft_avg = tiiq.software_averages)
+    tiiq.stop()
+    # fit data and determine T1
+    # platform.t1 =
+
+    return dataset
+
+
+def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
+               start_start, start_end, start_step):
+
+    with open("tii_single_qubit_settings.json", "r") as file:
+        settings = json.load(file)
+
+    tiiq = TIIq()
+    tiiq.setup(settings)
+
+    ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
+                                      start=70,
+                                      frequency=20000000.0,
+                                      amplitude=0.5,
+                                      length=3000,
+                                      shape="Block",
+                                      delay_before_readout=4)
+    qc_pulse = pulses.TIIPulse(name="qc_pulse",
+                               start=0,
+                               frequency=200000000.0,
+                               amplitude=0.3,
+                               length=pi_pulse_length//2,
+                               shape="Gaussian")
+    qc2_pulse = pulses.TIIPulse(name="qc2_pulse",
+                               start=pi_pulse_length//2 + 0,
+                               frequency=200000000.0,
+                               amplitude=0.3,
+                               length=pi_pulse_length//2,
+                               shape="Gaussian")
+    qrm_sequence = pulses.PulseSequence()
+    qrm_sequence.add(ro_pulse)
+    qcm_sequence = pulses.PulseSequence()
+    qcm_sequence.add(qc_pulse)
+    qcm_sequence.add(qc2_pulse)
+
+    tiiq.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
+    tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
+    tiiq.qcm.gain = pi_pulse_gain
+
+    mc = MeasurementControl('MC_Ramsey')
+    mc.settables(Settable(RamseyWaitParameter(ro_pulse, qc2_pulse, pi_pulse_length)))
+    mc.setpoints(np.arange(start_start, start_end, start_step))
+    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
+    tiiq.LO_qrm.on()
+    tiiq.LO_qcm.on()
+    tiiq.software_averages = 1 # 3
+    dataset = mc.run('Ramsey', soft_avg = tiiq.software_averages)
+    tiiq.stop()
+    # fit data and determine Ramsey Time and dephasing
+    # platform.ramsey =
+    # platform.qubit_freq += dephasing
+    return dataset
+
+
+def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
+                  start_start, start_end, start_step):
+    with open("tii_single_qubit_settings.json", "r") as file:
+        settings = json.load(file)
+    tiiq = TIIq()
+    tiiq.setup(settings)
+
+    ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
+                                      start=70,
+                                      frequency=20000000.0,
+                                      amplitude=0.5,
+                                      length=3000,
+                                      shape="Block",
+                                      delay_before_readout=4)
+    qc_pulse = pulses.TIIPulse(name="qc_pulse",
+                               start=0,
+                               frequency=200000000.0,
+                               amplitude=0.3,
+                               length=pi_pulse_length//2,
+                               shape="Gaussian")
+    qc2_pulse = pulses.TIIPulse(name="qc2_pulse",
+                               start=pi_pulse_length//2 + 0, # TODO: +0?
+                               frequency=200000000.0,
+                               amplitude=0.3,
+                               length=pi_pulse_length//2,
+                               shape="Gaussian")
+
+    qrm_sequence = pulses.PulseSequence()
+    qrm_sequence.add(ro_pulse)
+    qcm_sequence = pulses.PulseSequence()
+    qcm_sequence.add(qc_pulse)
+    qcm_sequence.add(qc2_pulse)
+
+    tiiq.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
+    tiiq.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
+    tiiq.qcm.gain = pi_pulse_gain
+
+    mc = MeasurementControl('MC_Spin_Echo')
+    mc.settables(Settable(SpinEchoWaitParameter(ro_pulse, qc2_pulse, pi_pulse_length)))
+    mc.setpoints(np.arange(start_start, start_end, start_step))
+    mc.gettables(Gettable(ROController(tiiq.qrm, tiiq.qcm, qrm_sequence, qcm_sequence)))
+    tiiq.LO_qrm.on()
+    tiiq.LO_qcm.on()
+    tiiq.software_averages = 1 # 3
+    dataset = mc.run('Spin Echo', soft_avg = tiiq.software_averages)
+    tiiq.stop()
+
+    return dataset
+
+# help classes
 
 class QCPulseLengthParameter():
 
@@ -405,3 +558,50 @@ class QCPulseAmplitudeParameter():
 
     def set(self, value):
         self.qc_pulse.amplitude = value / 100
+
+
+class T1WaitParameter():
+    label = 'Time'
+    unit = 'ns'
+    name = 't1_wait'
+    initial_value = 0
+
+    def __init__(self, ro_pulse):
+        self.ro_pulse = ro_pulse
+
+    def set(self, value):
+        # TODO: implement following condition
+        #must be >= 4ns <= 65535
+        self.ro_pulse.delay_before_readout = value
+
+
+class RamseyWaitParameter():
+    label = 'Time'
+    unit = 'ns'
+    name = 'ramsey_wait'
+    initial_value = 0
+
+    def __init__(self, ro_pulse, qc2_pulse, pi_pulse_length):
+        self.ro_pulse = ro_pulse
+        self.qc2_pulse = qc2_pulse
+        self.pi_pulse_length = pi_pulse_length
+
+    def set(self, value):
+        self.qc2_pulse.start = self.pi_pulse_length//2 + value
+        self.ro_pulse.start = self.pi_pulse_length + value + 4
+
+
+class SpinEchoWaitParameter():
+    label = 'Time'
+    unit = 'ns'
+    name = 'spin_echo_wait'
+    initial_value = 0
+
+    def __init__(self, ro_pulse, qc2_pulse, pi_pulse_length):
+        self.ro_pulse = ro_pulse
+        self.qc2_pulse = qc2_pulse
+        self.pi_pulse_length = pi_pulse_length
+
+    def set(self, value):
+        self.qc2_pulse.start = self.pi_pulse_length//2 + value
+        self.ro_pulse.start = 3 * self.pi_pulse_length//2 + 2 * value + 4
