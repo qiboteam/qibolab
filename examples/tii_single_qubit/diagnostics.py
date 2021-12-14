@@ -256,7 +256,7 @@ def run_rabi_pulse_length_and_amplitude(resonator_freq, qubit_freq):
 def run_t1(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
             delay_before_readout_start, delay_before_readout_end,
             delay_before_readout_step):
-    sequence, qc_pulse, ro_pulse = get_pulse_sequence()
+    sequence, qc_pulse, ro_pulse = get_pulse_sequence(duration=pi_pulse_length)
 
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
@@ -270,7 +270,6 @@ def run_t1(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
     mc.gettables(Gettable(ROController(sequence)))
     platform.LO_qrm.on()
     platform.LO_qcm.on()
-    platform.software_averages = 1 # 3
     dataset = mc.run('T1', soft_avg = platform.software_averages)
     platform.stop()
     # fit data and determine T1
@@ -279,32 +278,29 @@ def run_t1(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
     return dataset
 
 
-def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
+def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pulse_amplitude,
                start_start, start_end, start_step):
-    ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
-                                      start=70,
-                                      frequency=20000000.0,
-                                      amplitude=0.5,
-                                      length=3000,
-                                      shape="Block",
-                                      delay_before_readout=4)
-    qc_pulse = pulses.TIIPulse(name="qc_pulse",
-                               start=0,
+    ro_pulse = pulses.ReadoutPulse(start=duration + 4,
+                            frequency=20000000.0,
+                            amplitude=0.9,
+                            duration=2000,
+                            phase=0,
+                            shape=Rectangular())
+    qc_pulse = pulses.Pulse(start=0,
+                            frequency=200000000.0,
+                            amplitude=pi_pulse_amplitude,
+                            duration=pi_pulse_length // 2,
+                            phase=0,
+                            shape=Gaussian(pi_pulse_length // 10))
+    qc2_pulse = pulses.Pulse(start=pi_pulse_length // 2 + 0,
                                frequency=200000000.0,
-                               amplitude=0.3,
-                               length=pi_pulse_length//2,
-                               shape="Gaussian")
-    qc2_pulse = pulses.TIIPulse(name="qc2_pulse",
-                               start=pi_pulse_length//2 + 0,
-                               frequency=200000000.0,
-                               amplitude=0.3,
-                               length=pi_pulse_length//2,
-                               shape="Gaussian")
-    qrm_sequence = pulses.PulseSequence()
-    qrm_sequence.add(ro_pulse)
-    qcm_sequence = pulses.PulseSequence()
-    qcm_sequence.add(qc_pulse)
-    qcm_sequence.add(qc2_pulse)
+                               amplitude=pi_pulse_amplitude,
+                               length=pi_pulse_length // 2,
+                               shape=Gaussian(pi_pulse_length // 10))
+    sequence = pulses.PulseSequence()
+    sequence.add(qc_pulse)
+    sequence.add(qc2_pulse)
+    sequence.add(ro_pulse)
 
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
@@ -316,7 +312,6 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
     mc.gettables(Gettable(ROController(sequence)))
     platform.LO_qrm.on()
     platform.LO_qcm.on()
-    platform.software_averages = 1 # 3
     dataset = mc.run('Ramsey', soft_avg = platform.software_averages)
     platform.stop()
     # fit data and determine Ramsey Time and dephasing
@@ -325,33 +320,29 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
     return dataset
 
 
-def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
+def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pulse_amplitude,
                   start_start, start_end, start_step):
-    ro_pulse = pulses.TIIReadoutPulse(name="ro_pulse",
-                                      start=70,
-                                      frequency=20000000.0,
-                                      amplitude=0.5,
-                                      length=3000,
-                                      shape="Block",
-                                      delay_before_readout=4)
-    qc_pulse = pulses.TIIPulse(name="qc_pulse",
-                               start=0,
-                               frequency=200000000.0,
-                               amplitude=0.3,
-                               length=pi_pulse_length//2,
-                               shape="Gaussian")
-    qc2_pulse = pulses.TIIPulse(name="qc2_pulse",
-                               start=pi_pulse_length//2 + 0, # TODO: +0?
-                               frequency=200000000.0,
-                               amplitude=0.3,
-                               length=pi_pulse_length//2,
-                               shape="Gaussian")
-
-    qrm_sequence = pulses.PulseSequence()
-    qrm_sequence.add(ro_pulse)
-    qcm_sequence = pulses.PulseSequence()
-    qcm_sequence.add(qc_pulse)
-    qcm_sequence.add(qc2_pulse)
+    ro_pulse = pulses.ReadoutPulse(start=duration + 4,
+                                   frequency=20000000.0,
+                                   amplitude=0.9,
+                                   duration=2000,
+                                   phase=0,
+                                   shape=Rectangular())
+    qc_pulse = pulses.Pulse(start=0,
+                            frequency=200000000.0,
+                            amplitude=pi_pulse_amplitude,
+                            duration=pi_pulse_length // 2,
+                            phase=0,
+                            shape=Gaussian(pi_pulse_length // 10))
+    qc2_pulse = pulses.Pulse(start=pi_pulse_length // 2 + 0,
+                             frequency=200000000.0,
+                             amplitude=pi_pulse_amplitude,
+                             length=pi_pulse_length // 2,
+                             shape=Gaussian(pi_pulse_length // 10))
+    sequence = pulses.PulseSequence()
+    sequence.add(qc_pulse)
+    sequence.add(qc2_pulse)
+    sequence.add(ro_pulse)
 
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
@@ -363,7 +354,6 @@ def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
     mc.gettables(Gettable(ROController(sequence)))
     platform.LO_qrm.on()
     platform.LO_qcm.on()
-    platform.software_averages = 1 # 3
     dataset = mc.run('Spin Echo', soft_avg = platform.software_averages)
     platform.stop()
 
@@ -438,7 +428,7 @@ class RamseyWaitParameter():
         self.pi_pulse_length = pi_pulse_length
 
     def set(self, value):
-        self.qc2_pulse.start = self.pi_pulse_length//2 + value
+        self.qc2_pulse.start = self.pi_pulse_length // 2 + value
         self.ro_pulse.start = self.pi_pulse_length + value + 4
 
 

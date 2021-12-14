@@ -16,14 +16,14 @@
         "precision_step": 0.5e6
     },
     "t1": {
-        "delay_before_readout_start": 4,
-        "delay_before_readout_end": 500,
-        "delay_before_readout_step": 10
+        "delay_before_readout_start": 0,
+        "delay_before_readout_end": 4500,
+        "delay_before_readout_step": 30
     },
     "ramsey": {
         "start_start": 4,
-        "start_end": 500,
-        "start_step": 10
+        "start_end": 1000,
+        "start_step": 4
     },
     "spin_echo": {
         "start_start": 4,
