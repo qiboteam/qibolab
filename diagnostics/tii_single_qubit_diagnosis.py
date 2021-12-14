@@ -368,7 +368,7 @@ def run_t1():
     tiisq.stop()
     # fit data and determine T1
     #T1 = 
-    print(T1) 
+    #print(T1) 
     # platform.t1 = 
 
 # Ramsey: RX(pi/2) - wait t(rotates z) - RX(pi/2) - readout
