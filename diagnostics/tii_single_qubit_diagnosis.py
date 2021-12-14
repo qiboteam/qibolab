@@ -269,8 +269,6 @@ def run_Rabi_pulse_length():
     print(pi_pulse_duration)
 
 
-
-
 def rabi(x, *p) :
     # A fit to Superconducting Qubit Rabi Oscillation
     #   Offset                       : p[0]
@@ -299,8 +297,6 @@ def fit_rabi(amp_array, time_array):
     popt, pcov = curve_fit(rabi, time_array, amp_array, p0=pguess)
     pi_pulse_duration = popt[2] / 2
     return (pi_pulse_duration, popt, pcov)
-
-
 
 
 def run_Rabi_pulse_gain():
@@ -371,6 +367,8 @@ def run_t1():
     dataset = MC.run('T1', soft_avg = tiisq._general_settings['software_averages'])
     tiisq.stop()
     # fit data and determine T1
+    #T1 = 
+    print(T1) 
     # platform.t1 = 
 
 # Ramsey: RX(pi/2) - wait t(rotates z) - RX(pi/2) - readout
