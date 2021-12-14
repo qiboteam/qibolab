@@ -18,18 +18,6 @@
         "hardware_avg": 1024,
         "initial_delay": 0,
         "repetition_duration": 200000,
-        "pulses": {
-            "ro_pulse": {
-                "freq_if": 20000000.0,
-                "amplitude": 0.9,
-                "start": 4004,
-                "length": 2000,
-                "offset_i": 0,
-                "offset_q": 0,
-                "shape": "Block",
-                "delay_before_readout": 4
-            }
-        },
         "start_sample": 130,
         "integration_length": 1500,
         "sampling_rate": 1000000000.0,
@@ -44,18 +32,7 @@
         "gain": 0.14,
         "hardware_avg": 1024,
         "initial_delay": 0,
-        "repetition_duration": 200000,
-        "pulses": {
-            "qc_pulse": {
-                "freq_if": 200000000.0,
-                "amplitude": 0.9,
-                "start": 0,
-                "length": 4000,
-                "offset_i": 0,
-                "offset_q": 0,
-                "shape": "Gaussian"
-            }
-        }
+        "repetition_duration": 200000
     },
     "_LO_QRM_settings": {
         "power": 10,
