@@ -59,18 +59,18 @@ def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, high
 
 
 def get_pulse_sequence(duration=4000):
-    ro_pulse = pulses.ReadoutPulse(start=duration + 4,
-                            frequency=20000000.0,
-                            amplitude=0.9,
-                            duration=2000,
-                            phase=0,
-                            shape=Rectangular())
     qc_pulse = pulses.Pulse(start=0,
                             frequency=200000000.0,
                             amplitude=0.9,
                             duration=duration,
                             phase=0,
                             shape=Gaussian(4000 / 5))
+    ro_pulse = pulses.ReadoutPulse(start=duration + 4,
+                                   frequency=20000000.0,
+                                   amplitude=0.9,
+                                   duration=2000,
+                                   phase=0,
+                                   shape=Rectangular())
     sequence = pulses.PulseSequence()
     sequence.add(qc_pulse)
     sequence.add(ro_pulse)
@@ -183,7 +183,7 @@ def run_rabi_pulse_length(resonator_freq, qubit_freq):
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
     mc, pl, ins = create_measurement_control('Rabi_pulse_length')
-    platform.software_averages = 3
+    platform.software_averages = 1
     mc.settables(Settable(QCPulseLengthParameter(ro_pulse, qc_pulse)))
     mc.setpoints(np.arange(1, 200, 1))
     mc.gettables(Gettable(ROController(sequence)))
@@ -374,7 +374,7 @@ class QCPulseLengthParameter():
         self.qc_pulse = qc_pulse
 
     def set(self, value):
-        self.qc_pulse.length = value
+        self.qc_pulse.duration = value
         self.ro_pulse.start = value + 4
 
 

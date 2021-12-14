@@ -21,10 +21,10 @@ if __name__ == "__main__":
     pi_pulse_length = 45
     pi_pulse_gain = 0.14
 
-    print("\nRun resonator spectroscopy.\n")
-    resonator_freq, _ = run_resonator_spectroscopy(**settings["resonator_spectroscopy"])
-    print("\nRun qubit spectroscopy.\n")
-    qubit_freq, _ = run_qubit_spectroscopy(resonator_freq, **settings["qubit_spectroscopy"])
+    #print("\nRun resonator spectroscopy.\n")
+    #resonator_freq, _ = run_resonator_spectroscopy(**settings["resonator_spectroscopy"])
+    #print("\nRun qubit spectroscopy.\n")
+    #qubit_freq, _ = run_qubit_spectroscopy(resonator_freq, **settings["qubit_spectroscopy"])
     print("\nRun Rabi pulse length.\n")
     run_rabi_pulse_length(resonator_freq, qubit_freq)
     #print("\nRun Rabi pulse gain.\n")
