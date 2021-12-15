@@ -3,17 +3,18 @@
         "data_folder": ".data/",
         "hardware_avg": 1024,
         "sampling_rate": 1000000000.0,
-        "software_averages": 1,
+        "software_averages": 3,
         "repetition_duration": 200000,
         "resonator_freq": 7798010000.0,
-        "qubit_freq": 8726500000.0,
+        "qubit_freq": 8727500000.0,
         "pi_pulse_gain": 0.14,
         "pi_pulse_amplitude": 0.9,
-        "pi_pulse_length": 44,
-        "resonator_spectroscopy_avg_min_ro_voltage": 186.29374231390761,
-        "resonator_spectroscopy_max_ro_voltage": 608.1741602814537,
-        "qubit_spectroscopy_min_ro_voltage": 362.3274614557734,
-        "rabi_oscillations_pi_pulse_min_voltage": 200
+        "pi_pulse_length": 39,
+        "resonator_spectroscopy_avg_min_ro_voltage": 188.94298909015745,
+        "resonator_spectroscopy_max_ro_voltage": 599.537471864111,
+        "qubit_spectroscopy_min_ro_voltage": 347.5289571465715,
+        "rabi_oscillations_pi_pulse_min_voltage": 351.00346393552206,
+        "T1": 1436.6948248872309
     },
     "_QRM_init_settings": {
         "ref_clock": "external",
@@ -72,6 +73,6 @@
     },
     "_LO_QCM_settings": {
         "power": -5,
-        "frequency": 8926500000.0
+        "frequency": 8927500000.0
     }
 }
