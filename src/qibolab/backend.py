@@ -20,8 +20,8 @@ class QibolabBackend(NumpyBackend): # pragma: no cover
         if density_matrix:
             raise_error(NotImplementedError, "Hardware backend does not support "
                                              "density matrix simulation.")
-        from qibolab.circuit import HardwareCircuit
-        return HardwareCircuit
+        from qibolab.circuit import TIICircuit
+        return TIICircuit
 
     def create_gate(self, cls, *args, **kwargs):
         from qibolab import gates

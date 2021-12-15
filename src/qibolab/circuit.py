@@ -203,6 +203,6 @@ class TIICircuit(circuit.Circuit):
             raise_error(RuntimeError, "No measurement register assigned.")
 
         platform.start()
-        result = platform(sequence)
+        result = platform(sequence, shots)
         platform.stop()
         return result
