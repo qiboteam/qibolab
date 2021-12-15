@@ -194,8 +194,7 @@ class TIICircuit(circuit.Circuit):
 
         sequence = pulses.PulseSequence()
         for gate in self.queue:
-            assert isinstance(gate, gates.U3)
-            sequence.add_u3(*gate.parameters)
+            sequence.add_u3(*gate.to_u3_parameters())
 
         if self.measurement_gate is not None:
             sequence.add_measurement()

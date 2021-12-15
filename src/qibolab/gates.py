@@ -109,6 +109,13 @@ class RX(AbstractHardwareGate, gates.RX):
             m = max(p.duration * time_mod, m)
         return m
 
+    def to_u3_parameters(self):
+        q = self.target_qubits[0]
+        theta = self.parameters[0]
+        phi = - math.pi / 2
+        lam = math.pi / 2
+        return (theta, phi, lam)
+
 
 class RY(AbstractHardwareGate, gates.RY):
 
@@ -117,6 +124,23 @@ class RY(AbstractHardwareGate, gates.RY):
 
     def duration(self, qubit_config):
         return RX.duration(self, qubit_config)
+
+    def to_u3_parameters(self):
+        q = self.target_qubits[0]
+        theta = self.parameters
+        phi = 0
+        lam = 0
+        return (theta, phi, lam)
+
+
+class RZ(gates.RZ):
+
+    def to_u3_parameters(self):
+        q = self.target_qubits[0]
+        theta = 0
+        phi = self.parameters[0] / 2
+        lam = self.parameters[0] / 2
+        return (theta, phi, lam)
 
 
 class CNOT(AbstractHardwareGate, gates.CNOT):
@@ -150,4 +174,6 @@ class CNOT(AbstractHardwareGate, gates.CNOT):
 
 
 class U3(gates.U3):
-    pass
+
+    def to_u3_parameters(self):
+        return tuple(self.parameters)
