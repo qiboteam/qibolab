@@ -91,6 +91,46 @@ class TIIq:
     def repetition_duration(self):
         return self._settings.get("_settings").get("repetition_duration")
 
+    @property
+    def resonator_frequency(self):
+        return self._settings.get("_settings").get("resonator_freq")
+
+    @property
+    def qubit_frequency(self):
+        return self._settings.get("_settings").get("qubit_freq")
+
+    @property
+    def pi_pulse_gain(self):
+        return self._settings.get("_settings").get("pi_pulse_gain")
+
+    @property
+    def pi_pulse_amplitude(self):
+        return self._settings.get("_settings").get("pi_pulse_amplitude")
+
+    @property
+    def pi_pulse_length(self):
+        return self._settings.get("_settings").get("pi_pulse_length")
+
+    @property
+    def resonator_spectroscopy_avg_min_ro_voltage(self):
+        return self._settings.get("_settings").get("resonator_spectroscopy_avg_min_ro_voltage")
+
+    @property
+    def resonator_spectroscopy_max_ro_voltage(self):
+        return self._settings.get("_settings").get("resonator_spectroscopy_max_ro_voltage")
+
+    @property
+    def qubit_spectroscopy_min_ro_voltage(self):
+        return self._settings.get("_settings").get("qubit_spectroscopy_min_ro_voltage")
+
+    @property
+    def delay_between_pulses(self):
+        return 0
+
+    @property
+    def delay_before_readout(self):
+        return self._qrm.delay_before_readout
+
     def run_calibration(self):
         """Executes calibration routines and updates the settings json."""
         # TODO: Implement calibration routines and update ``self._settings``.
