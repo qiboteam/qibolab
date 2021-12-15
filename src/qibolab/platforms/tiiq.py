@@ -133,7 +133,7 @@ class TIIq:
 
     @property
     def delay_before_readout(self):
-        return self._qrm.delay_before_readout
+        return self._settings.get("_settings").get("delay_before_readout")
 
     def run_calibration(self):
         """Executes calibration routines and updates the settings json."""

@@ -19,7 +19,9 @@
         },
         "resonator_spectroscopy_avg_min_ro_voltage": 186.97303401220287,
         "resonator_spectroscopy_max_ro_voltage": 615.6231906561537,
-        "qubit_spectroscopy_min_ro_voltage": 371.8957806457759
+        "qubit_spectroscopy_min_ro_voltage": 371.8957806457759,
+        "delay_between_pulses": 0,
+        "delay_before_readout": 4
     },
     "_QRM_init_settings": {
         "label": "qrm",
