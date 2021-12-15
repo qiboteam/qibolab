@@ -3,7 +3,7 @@ import numpy as np
 from qibo import gates
 from qibo.config import raise_error
 from qibo.core import measurements, circuit
-from qibolab import tomography, experiment, scheduler, pulses
+from qibolab import tomography, experiment, scheduler, pulses, platform
 from qibolab.gates import Align
 
 
@@ -183,12 +183,9 @@ class HardwareCircuit(circuit.Circuit):
 class TIICircuit(circuit.Circuit):
 
     def __init__(self, nqubits):
-        super().__init__(nqubits)
-
-    def _add(self, gate):
-        if gate.qubits != (0,):
+        if nqubits > 1:
             raise ValueError("Device has only one qubit.")
-        super()._add(gate)
+        super().__init__(nqubits)
 
     def execute(self, initial_state=None, nshots=None):
         if initial_state is not None:
@@ -198,11 +195,14 @@ class TIICircuit(circuit.Circuit):
         sequence = pulses.PulseSequence()
         for gate in self.queue:
             assert isinstance(gate, gates.U3)
-            sequence.add_u3(gate.theta, gate.phi, gate.lam)
+            sequence.add_u3(*gate.parameters)
 
         if self.measurement_gate is not None:
             sequence.add_measurement()
         else:
             raise_error(RuntimeError, "No measurement register assigned.")
 
-        return platform(sequence)
+        platform.start()
+        result = platform(sequence)
+        platform.stop()
+        return result

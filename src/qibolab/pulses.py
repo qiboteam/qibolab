@@ -47,9 +47,10 @@ class PulseSequence:
         Args:
             theta, phi, lam (float): Parameters of the U3 gate.
         """
+        from qibolab.pulse_shapes import Gaussian
         # Pi/2 pulse from calibration
-        amplitude = self.platform.pi_half_amplitude
-        duration = self.platform.pi_half_duration
+        amplitude = self.platform.pi_pulse_amplitude
+        duration = self.platform.pi_pulse_duration // 2
         frequency = 0
 
         self.phase += phi - np.pi / 2
@@ -64,7 +65,7 @@ class PulseSequence:
         from qibolab.pulse_shapes import Rectangular
         kwargs = self.platform.readout_pulse
         kwargs["start"] = self.time + self.delay_before_readout
-        kwargs["phase"] = phase
+        kwargs["phase"] = self.phase
         kwargs["shape"] = Rectangular()
         self.add(ReadoutPulse(**kwargs))
 

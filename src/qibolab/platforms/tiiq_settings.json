@@ -9,7 +9,7 @@
         "qubit_freq": 8726500000.0,
         "pi_pulse_gain": 0.14,
         "pi_pulse_amplitude": 0.9,
-        "pi_pulse_length": 45,
+        "pi_pulse_duration": 45,
         "readout_pulse": {
             "frequency": 20000000.0,
             "amplitude": 0.9,
