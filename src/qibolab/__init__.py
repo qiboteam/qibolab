@@ -1,8 +1,8 @@
 __version__ = "0.0.1.dev1"
 
 
-from qibolab.platforms import TIIq
-platform = TIIq() # TODO: Implement a platform selector
+from qibolab.platforms import Qili
+platform = Qili() # TODO: Implement a platform selector
 
 # TODO: Remove ``experiment`` when it is merged with ``platform``
 from qibolab.experiments import Experiment
