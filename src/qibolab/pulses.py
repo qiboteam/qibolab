@@ -39,7 +39,7 @@ class PulseSequence:
             self.qrm_pulses.append(pulse)
         else:
             self.qcm_pulses.append(pulse)
-        self.time += pulse.duration + self.delay_between_pulses
+        #self.time += pulse.duration + self.delay_between_pulses
 
     def add_u3(self, theta, phi, lam):
         """Add pulses that implement a U3 gate.
@@ -50,16 +50,19 @@ class PulseSequence:
         from qibolab.pulse_shapes import Gaussian
         # Pi/2 pulse from calibration
         amplitude = self.platform.pi_pulse_amplitude
-        duration = self.platform.pi_pulse_duration // 2
-        frequency = 0
+        duration = self.platform.pi_pulse_duration
+        frequency = 200000000.0
 
-        self.phase += phi - np.pi / 2
-        self.add(Pulse(self.time, duration, amplitude, frequency, self.phase, Gaussian(duration / 5)))
-        self.phase += np.pi - theta
+        #self.phase += phi - np.pi / 2
+        #self.add(Pulse(self.time, duration, amplitude, frequency, self.phase, Gaussian(duration / 5)))
+        #self.phase += np.pi - theta
+        #self.time += duration + self.delay_between_pulses
+        #self.add(Pulse(self.time, duration, amplitude, frequency, self.phase, Gaussian(duration / 5)))
+        #self.phase += lam - np.pi / 2
+        #self.time += duration + self.delay_between_pulses
+        self.add(Pulse(self.time, duration, amplitude, frequency, 0, Gaussian(duration / 5)))
         self.time += duration + self.delay_between_pulses
-        self.add(Pulse(self.time, duration, amplitude, frequency, self.phase, Gaussian(duration / 5)))
-        self.phase += lam - np.pi / 2
-        self.time += duration + self.delay_between_pulses
+
 
     def add_measurement(self):
         from qibolab.pulse_shapes import Rectangular

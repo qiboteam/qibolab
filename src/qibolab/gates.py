@@ -111,7 +111,7 @@ class RX(AbstractHardwareGate, gates.RX):
 
     def to_u3_parameters(self):
         q = self.target_qubits[0]
-        theta = self.parameters[0]
+        theta = self.parameters
         phi = - math.pi / 2
         lam = math.pi / 2
         return (theta, phi, lam)
@@ -173,7 +173,13 @@ class CNOT(AbstractHardwareGate, gates.CNOT):
         return m
 
 
-class U3(gates.U3):
+class U3(AbstractHardwareGate, gates.U3):
+
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def duration(self, qubit_config): # pragma: no cover
+        raise_error(NotImplementedError)
 
     def to_u3_parameters(self):
         return tuple(self.parameters)
