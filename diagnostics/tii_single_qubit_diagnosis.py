@@ -1,3 +1,4 @@
+from os import fdopen
 import numpy as np
 from scipy.signal import savgol_filter
 from scipy.optimize import curve_fit
@@ -257,7 +258,7 @@ def run_qubit_spectroscopy():
 def run_Rabi_pulse_length():
     tiisq.load_settings()
     tiisq.setup()
-    tiisq._general_settings['software_averages'] = 3
+    tiisq._general_settings['software_averages'] = 1
     MC.settables(QCPulseLengthParameter(tiisq._qrm, tiisq._qcm))
     MC.setpoints(np.arange(1,200,1))
     MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
@@ -265,38 +266,38 @@ def run_Rabi_pulse_length():
     tiisq._LO_qcm.on()
     dataset = MC.run('Rabi Pulse Length', soft_avg = tiisq._general_settings['software_averages'])
     tiisq.stop()
-    pi_pulse_duration = fit_rabi(dataset['y0'].values, dataset['x0'].values)
-    print(pi_pulse_duration)
+    pi_pulse_duration, rabi_oscillations_pi_pulse_min_voltage = fit_rabi(dataset['y0'].values, dataset['x0'].values)
+    #save pi_pulse_duration in settings
+    tiisq.load_settings() 
+    tiisq._general_settings['pi_pulse_length'] = pi_pulse_duration
+    tiisq._general_settings['rabi_oscillations_pi_pulse_min_voltage'] = rabi_oscillations_pi_pulse_min_voltage
+    tiisq.save_settings_to_file()
+    
 
-
-def rabi(x, *p) :
+def rabi(x, p0, p1, p2, p3, p4):
     # A fit to Superconducting Qubit Rabi Oscillation
     #   Offset                       : p[0]
     #   Oscillation amplitude        : p[1]
-    #   Period    T                  : p[2]
+    #   Period    T                  : 1/p[2]
     #   Phase                        : p[3]
-    #   Arbitrary parameter T_2      : p[4]
-    return p[0] + p[1] * np.sin(2 * np.pi / p[2] * x + p[3]) * np.exp(-x / p[4])
-
-def sin(x, *p) :
-    # A fit to Superconducting Qubit Rabi Oscillation
-    #   Offset                       : p[0]
-    #   Oscillation amplitude        : p[1]
-    #   Period    T                  : p[2]
-    #   Phase                        : p[3]
-    return p[0] + p[1] * np.sin(2 * np.pi / p[2] * x + p[3])
-
+    #   Arbitrary parameter T_2      : 1/p[4]
+    #return p[0] + p[1] * np.sin(2 * np.pi / p[2] * x + p[3]) * np.exp(-x / p[4])
+    return p0 + p1 * np.sin(2 * np.pi * x * p2 + p3) * np.exp(- x * p4)
+    
 def fit_rabi(amp_array, time_array):
     pguess = [
         np.mean(amp_array),
         max(amp_array) - min(amp_array),
-        35e-9,
+        0.5/time_array[np.argmin(amp_array)], 
         np.pi/2,
         0.1e-6
     ]
-    popt, pcov = curve_fit(rabi, time_array, amp_array, p0=pguess)
-    pi_pulse_duration = popt[2] / 2
-    return (pi_pulse_duration, popt, pcov)
+    popt, pcov = curve_fit(rabi, time_array, amp_array, p0=pguess)#[0,1,0.1,-np.pi/2,0.5])
+    pi_pulse_duration = np.abs((1.0 / popt[2]) / 2)
+    rabi_oscillations_pi_pulse_min_voltage = time_array[np.argmin(amp_array)]
+    t_2 = 1.0 / popt[4]
+    #print(pi_pulse_duration, t_2, popt, pcov)
+    return pi_pulse_duration, rabi_oscillations_pi_pulse_min_voltage
 
 
 def run_Rabi_pulse_gain():
