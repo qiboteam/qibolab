@@ -147,3 +147,7 @@ class CNOT(AbstractHardwareGate, gates.CNOT):
         for p in pulses:
             m = max(p.duration, m)
         return m
+
+
+class U3(gates.U3):
+    pass
