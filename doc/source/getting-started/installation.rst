@@ -28,11 +28,21 @@ _______________________
 tiiq
 ^^^^
 
-In order to install the dependencies for the ``tiiq`` experiment 
+In order to install the dependencies for the ``tiiq`` platform
 use the following command:
 
 
 .. code-block::
 
       pip install .[tiiq] # or pip install -e .[tiiq]
+
+.. note::
+
+      If you are working with the latest versions of MacOS, where the default shell is now ``zsh``,
+      you will need to put ``.[tiiq]`` in quotes:
+
+      .. code-block::
+
+            pip install ".[tiiq]" # or pip install -e ".[tiiq]"
+
 

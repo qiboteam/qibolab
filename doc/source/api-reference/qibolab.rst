@@ -1,23 +1,36 @@
-qibolab
-===============
-
 Pulses
----------------------
+------
 
-.. automodule:: qibolab.pulses
+.. autoclass:: qibolab.pulses.Pulse
    :members:
    :undoc-members:
    :show-inheritance:
 
+.. autoclass:: qibolab.pulses.ReadoutPulse
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: qibolab.pulses.PulseSequence
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: qibolab.pulse_shapes
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
 Platforms
--------------------------
+---------
 
 .. autoclass:: qibolab.platforms.TIIq
    :members:
    :member-order: bysource
 
 Instruments
--------------------------
+-----------
 
 Qblox
 ^^^^^
