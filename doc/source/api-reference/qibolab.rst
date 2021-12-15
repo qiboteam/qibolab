@@ -16,6 +16,12 @@ Pulses
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: qibolab.pulse_shapes
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
 Platforms
 ---------
 
