@@ -4,7 +4,22 @@
         "hardware_avg": 1024,
         "sampling_rate": 1000000000.0,
         "software_averages": 3,
-        "repetition_duration": 200000
+        "repetition_duration": 200000,
+        "resonator_freq": 7798070000.0,
+        "qubit_freq": 8726500000.0,
+        "pi_pulse_gain": 0.14,
+        "pi_pulse_amplitude": 0.9,
+        "pi_pulse_length": 45,
+        "readout_pulse": {
+            "frequency": 20000000.0,
+            "amplitude": 0.9,
+            "duration": 2000,
+            "offset_i": 0,
+            "offset_q": 0
+        },
+        "resonator_spectroscopy_avg_min_ro_voltage": 186.97303401220287,
+        "resonator_spectroscopy_max_ro_voltage": 615.6231906561537,
+        "qubit_spectroscopy_min_ro_voltage": 371.8957806457759
     },
     "_QRM_init_settings": {
         "label": "qrm",

@@ -3,8 +3,9 @@ import numpy as np
 from qibo import gates
 from qibo.config import raise_error
 from qibo.core import measurements, circuit
-from qibolab import tomography, experiment, scheduler
+from qibolab import tomography, experiment, scheduler, pulses
 from qibolab.gates import Align
+
 
 class PulseSequence:
     """Describes a sequence of pulses for the FPGA to unpack and convert into arrays
@@ -177,3 +178,31 @@ class HardwareCircuit(circuit.Circuit):
 
     def __call__(self, initial_state=None, nshots=None):
         return self.execute(initial_state, nshots)
+
+
+class TIICircuit(circuit.Circuit):
+
+    def __init__(self, nqubits):
+        super().__init__(nqubits)
+
+    def _add(self, gate):
+        if gate.qubits != (0,):
+            raise ValueError("Device has only one qubit.")
+        super()._add(gate)
+
+    def execute(self, initial_state=None, nshots=None):
+        if initial_state is not None:
+            raise_error(ValueError, "Hardware backend does not support "
+                                    "initial state in circuits.")
+
+        sequence = pulses.PulseSequence()
+        for gate in self.queue:
+            assert isinstance(gate, gates.U3)
+            sequence.add_u3(gate.theta, gate.phi, gate.lam)
+
+        if self.measurement_gate is not None:
+            sequence.add_measurement()
+        else:
+            raise_error(RuntimeError, "No measurement register assigned.")
+
+        return platform(sequence)

@@ -112,6 +112,10 @@ class TIIq:
         return self._settings.get("_settings").get("pi_pulse_length")
 
     @property
+    def readout_pulse(self):
+        return self._settings.get("_settings").get("readout_pulse")
+
+    @property
     def resonator_spectroscopy_avg_min_ro_voltage(self):
         return self._settings.get("_settings").get("resonator_spectroscopy_avg_min_ro_voltage")
 
@@ -125,7 +129,7 @@ class TIIq:
 
     @property
     def delay_between_pulses(self):
-        return 0
+        return self._settings.get("_settings").get("delay_between_pulses")
 
     @property
     def delay_before_readout(self):
