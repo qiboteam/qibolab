@@ -41,7 +41,6 @@ How to define a pulse?
 How to execute a circuit?
 -------------------------
 
-
 .. code-block::  python
 
     from qibolab import platform, pulses
