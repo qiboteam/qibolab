@@ -50,7 +50,8 @@ class PulseSequence:
         from qibolab.pulse_shapes import Gaussian
         # Pi/2 pulse from calibration
         amplitude = self.platform.pi_pulse_amplitude
-        duration = self.platform.pi_pulse_duration
+        duration = int(self.platform.pi_pulse_duration * theta / np.pi)
+        if not duration: duration = 1
         frequency = 200000000.0
 
         #self.phase += phi - np.pi / 2
@@ -60,8 +61,11 @@ class PulseSequence:
         #self.add(Pulse(self.time, duration, amplitude, frequency, self.phase, Gaussian(duration / 5)))
         #self.phase += lam - np.pi / 2
         #self.time += duration + self.delay_between_pulses
+
         self.add(Pulse(self.time, duration, amplitude, frequency, 0, Gaussian(duration / 5)))
         self.time += duration + self.delay_between_pulses
+        #self.add(Pulse(self.time, duration, amplitude, frequency, 0, Gaussian(duration / 5)))
+        #self.time += duration + self.delay_between_pulses
 
 
     def add_measurement(self):

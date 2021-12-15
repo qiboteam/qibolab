@@ -101,19 +101,17 @@ class GenericPulsar(ABC):
         if not pulses:
             raise_error(NotImplementedError, "Cannot translate empty pulse sequence.")
         name = self.name
+
+        combined_length = max(pulse.start + pulse.duration for pulse in pulses)
         waveforms = {
-            f"modI_{name}": {"data": [], "index": 0},
-            f"modQ_{name}": {"data": [], "index": 1}
+            f"modI_{name}": {"data": np.zeros(combined_length), "index": 0},
+            f"modQ_{name}": {"data": np.zeros(combined_length), "index": 1}
         }
-        # Create the waveforms arrays by processing the first pulse
-        waveform = self._translate_single_pulse(pulses[0])
-        waveforms[f"modI_{name}"]["data"] = waveform["modI"]["data"]
-        waveforms[f"modQ_{name}"]["data"] = waveform["modQ"]["data"]
-        # Concatenate the waveforms of the rest of pulses
-        for pulse in pulses[1:]:
+        for pulse in pulses:
             waveform = self._translate_single_pulse(pulse)
-            waveforms[f"modI_{name}"]["data"] = np.concatenate((waveforms[f"modI_{name}"]["data"], np.zeros(4), waveform["modI"]["data"]))
-            waveforms[f"modQ_{name}"]["data"] = np.concatenate((waveforms[f"modQ_{name}"]["data"], np.zeros(4), waveform["modQ"]["data"]))
+            i0, i1 = pulse.start, pulse.start + pulse.duration
+            waveforms[f"modI_{name}"]["data"][i0:i1] += waveform["modI"]["data"]
+            waveforms[f"modQ_{name}"]["data"][i0:i1] += waveform["modQ"]["data"]
         return waveforms
 
     def generate_program(self, hardware_avg, initial_delay, delay_before_readout, acquire_instruction, wait_time):
