@@ -44,13 +44,13 @@ class TIIq:
 
     @property
     def qrm(self):
-        """Reference to :class:`qibolab.instruments.qblox.PulsarQRM` insturment."""
+        """Reference to :class:`qibolab.instruments.qblox.PulsarQRM` instrument."""
         self._check_connected()
         return self._qrm
 
     @property
     def qcm(self):
-        """Reference to :class:`qibolab.instruments.qblox.PulsarQCM` insturment."""
+        """Reference to :class:`qibolab.instruments.qblox.PulsarQCM` instrument."""
         self._check_connected()
         return self._qcm
 
