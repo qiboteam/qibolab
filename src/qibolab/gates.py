@@ -133,13 +133,19 @@ class RY(AbstractHardwareGate, gates.RY):
         return (theta, phi, lam)
 
 
-class RZ(gates.RZ):
+class RZ(AbstractHardwareGate, gates.RZ):
+
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def duration(self, qubit_config): # pragma: no cover
+        raise_error(NotImplementedError)
 
     def to_u3_parameters(self):
         q = self.target_qubits[0]
         theta = 0
-        phi = self.parameters[0] / 2
-        lam = self.parameters[0] / 2
+        phi = self.parameters / 2
+        lam = self.parameters / 2
         return (theta, phi, lam)
 
 

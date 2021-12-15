@@ -74,8 +74,8 @@ class GenericPulsar(ABC):
         envelope_q = np.zeros(int(pulse.duration))
         time = np.arange(pulse.duration) * 1e-9
         # FIXME: There should be a simpler way to construct this array
-        cosalpha = np.cos(2 * np.pi * pulse.frequency * time)
-        sinalpha = np.sin(2 * np.pi * pulse.frequency * time)
+        cosalpha = np.cos(2 * np.pi * pulse.frequency * time + pulse.phase)
+        sinalpha = np.sin(2 * np.pi * pulse.frequency * time + pulse.phase)
         mod_matrix = np.array([[cosalpha,sinalpha], [-sinalpha,cosalpha]])
         result = []
         for it, t, ii, qq in zip(np.arange(pulse.duration), time, envelope_i, envelope_q):
