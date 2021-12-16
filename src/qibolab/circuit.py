@@ -3,7 +3,7 @@ import numpy as np
 from qibo import gates
 from qibo.config import raise_error
 from qibo.core import measurements, circuit
-from qibolab import tomography, experiment, scheduler, pulses, platform
+from qibolab import tomography, experiment, scheduler, pulses, platform, states
 from qibolab.gates import Align
 
 
@@ -205,6 +205,9 @@ class TIICircuit(circuit.Circuit):
             raise_error(RuntimeError, "No measurement register assigned.")
 
         platform.start()
-        result = platform(sequence, nshots)
+        readout = platform(sequence, nshots)
         platform.stop()
-        return result
+
+        min_v = platform.min_readout_voltage
+        max_v = platform.max_readout_voltage
+        return states.HardwareState.from_readout(readout, min_v, max_v)
