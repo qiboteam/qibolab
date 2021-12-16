@@ -9,7 +9,7 @@ class QibolabBackend(NumpyBackend): # pragma: no cover
 
     def __init__(self):
         super().__init__()
-        self.name = "qiboicarusq"
+        self.name = "qibolab"
         self.custom_gates = True
         self.is_hardware = True
 

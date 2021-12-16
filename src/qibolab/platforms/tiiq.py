@@ -116,16 +116,12 @@ class TIIq:
         return self._settings.get("_settings").get("readout_pulse")
 
     @property
-    def resonator_spectroscopy_avg_min_ro_voltage(self):
-        return self._settings.get("_settings").get("resonator_spectroscopy_avg_min_ro_voltage")
-
-    @property
-    def resonator_spectroscopy_max_ro_voltage(self):
+    def max_readout_voltage(self):
         return self._settings.get("_settings").get("resonator_spectroscopy_max_ro_voltage")
 
     @property
-    def qubit_spectroscopy_min_ro_voltage(self):
-        return self._settings.get("_settings").get("qubit_spectroscopy_min_ro_voltage")
+    def min_readout_voltage(self):
+        return self._settings.get("_settings").get("rabi_oscillations_pi_pulse_min_voltage")
 
     @property
     def delay_between_pulses(self):
