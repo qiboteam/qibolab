@@ -86,4 +86,4 @@ class HardwareState(AbstractState):
         raise_error(NotImplementedError, "Noise simulation is not required for hardware.")
 
     def expectation(self, hamiltonian, normalize=False): # pragma: no cover
-        raise_error(NotImplementedError)
+        return 2 * self.probabilities()[0] - 1

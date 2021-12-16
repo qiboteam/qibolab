@@ -37,7 +37,7 @@ class H(AbstractHardwareGate, gates.H):
         return d
 
     def to_u3_parameters(self):
-        return (7 * np.pi / 2, np.pi, 0)
+        return (7 * math.pi / 2, math.pi, 0)
 
 
 class I(AbstractHardwareGate, gates.I):
@@ -191,7 +191,7 @@ class U2(AbstractHardwareGate, gates.U2):
         raise_error(NotImplementedError)
 
     def to_u3_parameters(self):
-        return (np.pi / 2,) + self.parameters
+        return (math.pi / 2,) + self.parameters
 
 
 class U3(AbstractHardwareGate, gates.U3):
@@ -215,7 +215,7 @@ class X(AbstractHardwareGate, gates.X):
         raise_error(NotImplementedError)
 
     def to_u3_parameters(self):
-        return (np.pi, 0, np.pi)
+        return (math.pi, 0, math.pi)
 
 
 class Y(AbstractHardwareGate, gates.Y):
@@ -227,7 +227,7 @@ class Y(AbstractHardwareGate, gates.Y):
         raise_error(NotImplementedError)
 
     def to_u3_parameters(self):
-        return (np.pi, 0, 0)
+        return (math.pi, 0, 0)
 
 
 class Z(AbstractHardwareGate, gates.Z):
@@ -239,4 +239,4 @@ class Z(AbstractHardwareGate, gates.Z):
         raise_error(NotImplementedError)
 
     def to_u3_parameters(self):
-        return (0, np.pi, 0)
+        return (0, math.pi, 0)
