@@ -36,6 +36,9 @@ class H(AbstractHardwareGate, gates.H):
             d += gate.duration(qubit_config)
         return d
 
+    def to_u3_parameters(self):
+        return (7 * np.pi / 2, np.pi, 0)
+
 
 class I(AbstractHardwareGate, gates.I):
 
@@ -179,6 +182,18 @@ class CNOT(AbstractHardwareGate, gates.CNOT):
         return m
 
 
+class U2(AbstractHardwareGate, gates.U2):
+
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def duration(self, qubit_config): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def to_u3_parameters(self):
+        return (np.pi / 2,) + self.parameters
+
+
 class U3(AbstractHardwareGate, gates.U3):
 
     def pulse_sequence(self, qubit_config, qubit_times, qubit_phases): # pragma: no cover
@@ -189,3 +204,39 @@ class U3(AbstractHardwareGate, gates.U3):
 
     def to_u3_parameters(self):
         return tuple(self.parameters)
+
+
+class X(AbstractHardwareGate, gates.X):
+
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def duration(self, qubit_config): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def to_u3_parameters(self):
+        return (np.pi, 0, np.pi)
+
+
+class Y(AbstractHardwareGate, gates.Y):
+
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def duration(self, qubit_config): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def to_u3_parameters(self):
+        return (np.pi, 0, 0)
+
+
+class Z(AbstractHardwareGate, gates.Z):
+
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def duration(self, qubit_config): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def to_u3_parameters(self):
+        return (0, np.pi, 0)
