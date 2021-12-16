@@ -36,11 +36,13 @@ class HardwareState(AbstractState):
 
     @classmethod
     def from_readout(cls, readout, min_voltage, max_voltage):
-        self.readout = readout
-        self.min_voltage = min_voltage
-        self.max_voltage = max_voltage
+        state = cls(1)
+        state.readout = readout
+        state.min_voltage = min_voltage
+        state.max_voltage = max_voltage
         norm = max_voltage - min_voltage
-        self.normalized_voltage = (readout[0] * 1e6 - min_voltage) / norm
+        state.normalized_voltage = (readout[0] * 1e6 - min_voltage) / norm
+        return state
 
     @classmethod
     def zero_state(cls, nqubits): # pragma: no cover
