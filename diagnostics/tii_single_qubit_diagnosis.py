@@ -311,6 +311,17 @@ def rabi(x, p0, p1, p2, p3, p4):
     #return p[0] + p[1] * np.sin(2 * np.pi / p[2] * x + p[3]) * np.exp(-x / p[4])
     return p0 + p1 * np.sin(2 * np.pi * x * p2 + p3) * np.exp(- x * p4)
 
+def ramsey(x, p0, p1, p2, p3, p4):
+    # A fit to Superconducting Qubit Rabi Oscillation
+    #   Offset                       : p[0]
+    #   Oscillation amplitude        : p[1]
+    #   DeltaFreq                    : p[2]
+    #   Phase                        : p[3]
+    #   Arbitrary parameter T_2      : 1/p[4]
+    #return p[0] + p[1] * np.sin(2 * np.pi / p[2] * x + p[3]) * np.exp(-x / p[4])
+    return p0 + p1 * np.sin(2 * np.pi * x * p2 + p3) * np.exp(- x * p4)
+
+
 def exp(x,*p) :
     return p[0] - p[1]*np.exp(-1 * x * p[2])    
 #############################################################################
@@ -478,13 +489,39 @@ def run_ramsey(software_averages = 3):
     }
     tiisq.setup()
     MC.settables(RamseyWaitParameter(tiisq._qrm, tiisq._qcm))
-    MC.setpoints(np.arange(4,5000,10))
+    MC.setpoints(np.arange(1,2500,10))
     MC.gettables(Gettable(ROController(tiisq._qrm, tiisq._qcm)))
     print(tiisq._general_settings['pi_pulse_length']//2)
     tiisq._LO_qrm.on()
     tiisq._LO_qcm.on()
     dataset = MC.run('Ramsey', soft_avg = software_averages)
     tiisq.stop()
+
+    pguess = [
+        np.mean(dataset['y0'].values),
+        np.max(dataset['y0'].values) - np.min(dataset['y0'].values),
+        0.5/dataset['x0'].values[np.argmin(dataset['y0'].values)], 
+        np.pi/2,
+        0.1e-6
+    ]
+    popt, pcov = curve_fit(ramsey, dataset['x0'].values, dataset['y0'].values, p0=pguess)
+    smooth_dataset = ramsey(dataset['x0'].values, *popt)
+    delta_frequency = popt[2]
+    t2 = 1.0 / popt[4]
+    
+    print('\n')
+    print(f"Delta Frequency = {delta_frequency}")
+    print(f"T2 = {t2} ns")
+
+
+    fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
+    ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
+    ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
+    ax.title.set_text('Rabi Length')
+    #ax.xlabel("Frequency")
+    #ax.ylabel("Amplitude")
+    ax.plot(dataset['x0'].values[smooth_dataset.argmin()], smooth_dataset[smooth_dataset.argmin()], 'o', color='C2')
+
     # fit data and determine Ramsey Time and dephasing
     # platform.ramsey = 
     # platform.qubit_freq += dephasing
