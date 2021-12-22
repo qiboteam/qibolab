@@ -86,4 +86,5 @@ class HardwareState(AbstractState):
         raise_error(NotImplementedError, "Noise simulation is not required for hardware.")
 
     def expectation(self, hamiltonian, normalize=False): # pragma: no cover
+        # FIXME: This is the expectation value of <Z> only!
         return 2 * self.probabilities()[0] - 1
