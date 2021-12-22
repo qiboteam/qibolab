@@ -3,7 +3,6 @@ from qibo.config import raise_error
 
 
 class QibolabBackend(NumpyBackend): # pragma: no cover
-    # hardware backend is not tested until `qiboicarusq` is available
 
     description = "" # TODO: Write proper description
 

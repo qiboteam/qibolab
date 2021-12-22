@@ -181,6 +181,7 @@ class HardwareCircuit(circuit.Circuit):
 
 
 class TIICircuit(circuit.Circuit):
+    # TODO: Merge this with the ``HardwareCircuit`` class
 
     def __init__(self, nqubits):
         if nqubits > 1:
@@ -191,19 +192,16 @@ class TIICircuit(circuit.Circuit):
         if initial_state is not None:
             raise_error(ValueError, "Hardware backend does not support "
                                     "initial state in circuits.")
-
-        sequence = pulses.PulseSequence()
-        for gate in self.queue:
-            if isinstance(gate, gates.RZ):
-                sequence.add_rz(gate.parameters)
-            else:
-                sequence.add_u3(*gate.to_u3_parameters())
-
-        if self.measurement_gate is not None:
-            sequence.add_measurement()
-        else:
+        if self.measurement_gate is None:
             raise_error(RuntimeError, "No measurement register assigned.")
 
+        # Translate gates to pulses and create a ``PulseSequence``
+        sequence = pulses.PulseSequence()
+        for gate in self.queue:
+            gate.to_sequence(sequence)
+        self.measure_gate.to_sequence(sequence)
+
+        # Execute the pulse sequence on the platform
         platform.start()
         readout = platform(sequence, nshots)
         platform.stop()
