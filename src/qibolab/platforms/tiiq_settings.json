@@ -10,6 +10,7 @@
         "pi_pulse_gain": 0.14,
         "pi_pulse_amplitude": 0.9,
         "pi_pulse_duration": 40,
+        "pi_pulse_frequency": 200000000.0,
         "readout_pulse": {
             "frequency": 20000000.0,
             "amplitude": 0.9,

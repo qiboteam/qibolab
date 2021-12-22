@@ -112,6 +112,10 @@ class TIIq:
         return self._settings.get("_settings").get("pi_pulse_duration")
 
     @property
+    def pi_pulse_frequency(self):
+        return self._settings.get("_settings").get("pi_pulse_frequency")
+
+    @property
     def readout_pulse(self):
         return self._settings.get("_settings").get("readout_pulse")
 

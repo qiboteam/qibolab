@@ -30,7 +30,7 @@ class PulseSequence:
         return self.platform.delay_before_readout
 
     def add(self, pulse):
-        """Add a pulse to the list.
+        """Add a pulse to the sequence.
 
         Args:
             pulse (`qibolab.pulses.Pulse`): Pulse object to add.
@@ -51,7 +51,7 @@ class PulseSequence:
         # Pi/2 pulse from calibration
         amplitude = self.platform.pi_pulse_amplitude
         duration = self.platform.pi_pulse_duration // 2
-        frequency = 200000000.0
+        frequency = self.platform.pi_pulse_frequency
 
         self.phase += phi - np.pi / 2
         self.add(Pulse(self.time, duration, amplitude, frequency, self.phase, Gaussian(duration / 5)))
