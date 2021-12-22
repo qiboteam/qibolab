@@ -199,7 +199,7 @@ class TIICircuit(circuit.Circuit):
         sequence = pulses.PulseSequence()
         for gate in self.queue:
             gate.to_sequence(sequence)
-        self.measure_gate.to_sequence(sequence)
+        self.measurement_gate.to_sequence(sequence)
 
         # Execute the pulse sequence on the platform
         platform.start()
