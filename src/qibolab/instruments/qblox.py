@@ -44,7 +44,7 @@ class GenericPulsar(ABC):
             self.device.sequencer0_gain_awg_path0(gain)
             self.device.sequencer0_gain_awg_path1(gain)
 
-    def setup(self, gain, hardware_avg, initial_delay, repetition_duration):
+    def setup(self, gain, initial_delay, repetition_duration):
         """Sets calibration setting to QBlox instruments.
 
         Args:
@@ -251,9 +251,9 @@ class PulsarQRM(GenericPulsar):
         else:
             raise(RuntimeError)
 
-    def setup(self, gain, hardware_avg, initial_delay, repetition_duration,
+    def setup(self, gain, initial_delay, repetition_duration,
               start_sample, integration_length, sampling_rate, mode):
-        super().setup(gain, hardware_avg, initial_delay, repetition_duration)
+        super().setup(gain, initial_delay, repetition_duration)
         self.start_sample = start_sample
         self.integration_length = integration_length
         self.sampling_rate = sampling_rate
