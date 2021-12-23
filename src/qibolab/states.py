@@ -56,11 +56,15 @@ class HardwareState(AbstractState):
         new = super().copy()
         new.readout = self.readout
         if min_voltage is not None:
-            self.min_voltage = min_voltage
+            new.min_voltage = min_voltage
+        else:
+            new.min_voltage = self.min_voltage
         if max_voltage is not None:
-            self.max_voltage = max_voltage
-        norm = self.max_voltage - self.min_voltage
-        new.normalized_voltage = (self.readout[0] * 1e6 - self.min_voltage) / norm
+            new.max_voltage = max_voltage
+        else:
+            new.max_voltage = self.max_voltage
+        norm = new.max_voltage - new.min_voltage
+        new.normalized_voltage = (new.readout[0] * 1e6 - new.min_voltage) / norm
         return new
 
     def to_density_matrix(self): # pragma: no cover

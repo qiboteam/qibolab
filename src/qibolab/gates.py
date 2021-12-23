@@ -127,7 +127,6 @@ class RX(AbstractHardwareGate, gates.RX):
         return m
 
     def to_sequence(self, sequence):
-        q = self.target_qubits[0]
         theta = self.parameters
         phi = - math.pi / 2
         lam = math.pi / 2
@@ -143,7 +142,6 @@ class RY(AbstractHardwareGate, gates.RY):
         return RX.duration(self, qubit_config)
 
     def to_sequence(self, sequence):
-        q = self.target_qubits[0]
         theta = self.parameters
         phi = 0
         lam = 0
@@ -161,7 +159,6 @@ class RZ(AbstractHardwareGate, gates.RZ):
     def to_sequence(self, sequence):
         # apply virtually by changing ``phase`` instead of using pulses
         sequence.phase += self.parameters
-        #q = self.target_qubits[0]
         #theta = 0
         #phi = self.parameters / 2
         #lam = self.parameters / 2
