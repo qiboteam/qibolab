@@ -48,7 +48,7 @@
     },
     "_LO_QCM_init_settings": {
         "label": "LO_qcm",
-        "ip": "192.168.0.11"
+        "ip": "192.168.0.10"
     },
     "_LO_QCM_settings": {
         "power": -5,
