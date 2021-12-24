@@ -3,18 +3,22 @@ import json
 import numpy as np
 from abc import ABC, abstractmethod
 from qibo.config import raise_error
+from .instrument import Instrument
+from pulsar_qrm.pulsar_qrm import pulsar_qrm # pylint: disable=E0401
+from pulsar_qcm.pulsar_qcm import pulsar_qcm # pylint: disable=E0401
 
 
-class GenericPulsar(ABC):
+class GenericPulsar(ABC, Instrument):
 
-    def __init__(self):
+    def __init__(self, label, ip, sequencer=0, ref_clock="external", sync_en=True):
+        self.label = label
+        self.ip = ip
+        self.sequencer = sequencer
+        self.ref_clock = ref_clock
+        self.sync_en = sync_en
         # To be defined in each instrument
         self.name = None
-        self.device = None
         self._connected = False
-        self.sequencer = None
-        self.ref_clock = None
-        self.sync_en = None
         # To be defined during setup
         self.hardware_avg = None
         self.initial_delay = None
@@ -28,7 +32,7 @@ class GenericPulsar(ABC):
         self.weights = {}
 
     @abstractmethod
-    def connect(self, label, ip):
+    def connect(self):
         """Connects to the instruments."""
         raise(NotImplementedError)
 
@@ -40,11 +44,11 @@ class GenericPulsar(ABC):
     def gain(self, gain):
         self._gain = gain
         if self.sequencer == 1:
-            self.device.sequencer1_gain_awg_path0(gain)
-            self.device.sequencer1_gain_awg_path1(gain)
+            self._driver.sequencer1_gain_awg_path0(gain)
+            self._driver.sequencer1_gain_awg_path1(gain)
         else:
-            self.device.sequencer0_gain_awg_path0(gain)
-            self.device.sequencer0_gain_awg_path1(gain)
+            self._driver.sequencer0_gain_awg_path0(gain)
+            self._driver.sequencer0_gain_awg_path1(gain)
 
     def setup(self, gain, hardware_avg, initial_delay, repetition_duration):
         """Sets calibration setting to QBlox instruments.
@@ -196,25 +200,25 @@ class GenericPulsar(ABC):
 
         # Upload json file to the device
         if self.sequencer == 1:
-            self.device.sequencer1_waveforms_and_program(os.path.join(os.getcwd(), filename))
+            self._driver.sequencer1_waveforms_and_program(os.path.join(os.getcwd(), filename))
         else:
-            self.device.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), filename))
+            self._driver.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), filename))
 
     def play_sequence(self):
         """Executes the uploaded instructions."""
         # arm sequencer and start playing sequence
-        self.device.arm_sequencer()
-        self.device.start_sequencer()
+        self._driver.arm_sequencer()
+        self._driver.start_sequencer()
 
     def stop(self):
         """Stops the QBlox sequencer from sending pulses."""
-        self.device.stop_sequencer()
+        self._driver.stop_sequencer()
 
     def close(self):
         """Disconnects from the instrument."""
         if self._connected:
             self.stop()
-            self.device.close()
+            self._driver.close()
             self._connected = False
 
     # TODO: Figure out how to fix this
@@ -227,35 +231,34 @@ class PulsarQRM(GenericPulsar):
 
     def __init__(self, label, ip, ref_clock="external", sequencer=0, sync_en=True,
                  hardware_avg_en=True, acq_trigger_mode="sequencer"):
-        super().__init__()
+        super().__init__(label, ip, sequencer, ref_clock, sync_en)
         # Instantiate base object from qblox library and connect to it
         self.name = "qrm"
-        self.connect(label, ip)
+        self._signature = f"{type(self).__name__}@{ip}"
+        self.connect()
         self._connected = True
-        self.sequencer = sequencer
         self.hardware_avg_en = hardware_avg_en
 
         # Reset and configure
-        self.device.reset()
-        self.device.reference_source(ref_clock)
-        self.device.scope_acq_sequencer_select(sequencer)
-        self.device.scope_acq_avg_mode_en_path0(hardware_avg_en)
-        self.device.scope_acq_avg_mode_en_path1(hardware_avg_en)
-        self.device.scope_acq_trigger_mode_path0(acq_trigger_mode)
-        self.device.scope_acq_trigger_mode_path1(acq_trigger_mode)
+        self._driver.reset()
+        self._driver.reference_source(self.ref_clock)
+        self._driver.scope_acq_sequencer_select(self.sequencer)
+        self._driver.scope_acq_avg_mode_en_path0(hardware_avg_en)
+        self._driver.scope_acq_avg_mode_en_path1(hardware_avg_en)
+        self._driver.scope_acq_trigger_mode_path0(acq_trigger_mode)
+        self._driver.scope_acq_trigger_mode_path1(acq_trigger_mode)
         # sync sequencer
         if self.sequencer == 1:
-            self.device.sequencer1_sync_en(sync_en)
+            self._driver.sequencer1_sync_en(self.sync_en)
         else:
-            self.device.sequencer0_sync_en(sync_en)
+            self._driver.sequencer0_sync_en(self.sync_en)
 
-    def connect(self, label, ip):
+    def connect(self):
         if not self._connected:
-            from pulsar_qrm.pulsar_qrm import pulsar_qrm # pylint: disable=E0401
             try:
-                self.device = pulsar_qrm(label, ip)
+                self._driver = pulsar_qrm(self.label, self.ip)
             except Exception as exc:
-                print(f"Can't connect to PulsarQRM at ip {ip}.")
+                print(f"Can't connect to {self._signature}.")
                 print(exc) 
                 raise exc
             self._connected = True
@@ -294,13 +297,13 @@ class PulsarQRM(GenericPulsar):
         super().play_sequence()
         #start acquisition of data
         #Wait for the sequencer to stop with a timeout period of one minute.
-        self.device.get_sequencer_state(0, 1)
+        self._driver.get_sequencer_state(0, 1)
         #Wait for the acquisition to finish with a timeout period of one second.
-        self.device.get_acquisition_state(self.sequencer, 1)
+        self._driver.get_acquisition_state(self.sequencer, 1)
         #Move acquisition data from temporary memory to acquisition list.
-        self.device.store_scope_acquisition(self.sequencer, "single")
+        self._driver.store_scope_acquisition(self.sequencer, "single")
         #Get acquisition list from instrument.
-        single_acq = self.device.get_acquisitions(self.sequencer)
+        single_acq = self._driver.get_acquisitions(self.sequencer)
         i, q = self._demodulate_and_integrate(single_acq, ro_pulse)
         acquisition_results = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
         return acquisition_results
@@ -338,18 +341,18 @@ class PulsarQRM(GenericPulsar):
 class PulsarQCM(GenericPulsar):
 
     def __init__(self, label, ip, sequencer=0, ref_clock="external", sync_en=True):
-        super().__init__()
+        super().__init__(label, ip, sequencer, ref_clock, sync_en)
         # Instantiate base object from qblox library and connect to it
         self.name = "qcm"
-        self.connect(label, ip)
-        self.sequencer = sequencer
+        self._signature = f"{type(self).__name__}@{ip}"
+        self.connect()
         # Reset and configure
-        self.device.reset()
-        self.device.reference_source(ref_clock)
+        self._driver.reset()
+        self._driver.reference_source(self.ref_clock)
         if self.sequencer == 1:
-            self.device.sequencer1_sync_en(sync_en)
+            self._driver.sequencer1_sync_en(self.sync_en)
         else:
-            self.device.sequencer0_sync_en(sync_en)
+            self._driver.sequencer0_sync_en(self.sync_en)
 
     def translate(self, sequence):
         # Allocate only qubit pulses to PulsarQRM
@@ -365,11 +368,10 @@ class PulsarQCM(GenericPulsar):
 
     def connect(self, label, ip):
         if not self._connected:
-            from pulsar_qcm.pulsar_qcm import pulsar_qcm # pylint: disable=E0401
             try:
-                self.device = pulsar_qcm(label, ip)
+                self._driver = pulsar_qcm(self.label, self.ip)
             except Exception as exc:
-                print(f"Can't connect to PulsarQCM at ip {ip}.")
+                print(f"Can't connect to {self._signature}.")
                 print(exc) 
                 raise exc
             self._connected = True
