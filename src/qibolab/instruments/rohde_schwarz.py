@@ -24,7 +24,12 @@ class SGS100A:
 
     def connect(self, label, ip):
         import qcodes.instrument_drivers.rohde_schwarz.SGS100A as LO_SGS100A
-        self.device = LO_SGS100A.RohdeSchwarz_SGS100A(label, f"TCPIP0::{ip}::inst0::INSTR")
+        try:
+            self.device = LO_SGS100A.RohdeSchwarz_SGS100A(label, f"TCPIP0::{ip}::inst0::INSTR")
+        except Exception as exc:
+            print(f"Can't connect to SGS100A at ip {ip}.")
+            print(exc) 
+            raise exc
         self._connected = True
         logger.info("Local oscillator connected")
 

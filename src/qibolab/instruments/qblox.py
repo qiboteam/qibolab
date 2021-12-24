@@ -252,7 +252,12 @@ class PulsarQRM(GenericPulsar):
     def connect(self, label, ip):
         if not self._connected:
             from pulsar_qrm.pulsar_qrm import pulsar_qrm # pylint: disable=E0401
-            self.device = pulsar_qrm(label, ip)
+            try:
+                self.device = pulsar_qrm(label, ip)
+            except Exception as exc:
+                print(f"Can't connect to PulsarQRM at ip {ip}.")
+                print(exc) 
+                raise exc
             self._connected = True
         else:
             raise(RuntimeError)
@@ -361,7 +366,12 @@ class PulsarQCM(GenericPulsar):
     def connect(self, label, ip):
         if not self._connected:
             from pulsar_qcm.pulsar_qcm import pulsar_qcm # pylint: disable=E0401
-            self.device = pulsar_qcm(label, ip)
+            try:
+                self.device = pulsar_qcm(label, ip)
+            except Exception as exc:
+                print(f"Can't connect to PulsarQCM at ip {ip}.")
+                print(exc) 
+                raise exc
             self._connected = True
         else:
             raise(RuntimeError)
