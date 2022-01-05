@@ -8,7 +8,7 @@ from pulsar_qrm.pulsar_qrm import pulsar_qrm # pylint: disable=E0401
 from pulsar_qcm.pulsar_qcm import pulsar_qcm # pylint: disable=E0401
 
 
-class GenericPulsar(ABC, Instrument):
+class GenericPulsar(Instrument, ABC):
 
     def __init__(self, label, ip, sequencer=0, ref_clock="external", sync_en=True):
         self.label = label
@@ -366,7 +366,7 @@ class PulsarQCM(GenericPulsar):
 
         return waveforms, program
 
-    def connect(self, label, ip):
+    def connect(self):
         if not self._connected:
             try:
                 self._driver = pulsar_qcm(self.label, self.ip)
