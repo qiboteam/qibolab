@@ -10,6 +10,7 @@ from qibolab.pulse_shapes import Rectangular, Gaussian
 from quantify_core.measurement import MeasurementControl
 from quantify_core.measurement.control import Gettable, Settable
 from quantify_core.data.handling import set_datadir
+from quantify_core.utilities.general import last_modified
 from quantify_core.visualization.pyqt_plotmon import PlotMonitor_pyqt
 from quantify_core.visualization.instrument_monitor import InstrumentMonitor
 # TODO: Check why this set_datadir is needed
@@ -24,9 +25,10 @@ import glob
 import os.path
 import scipy.optimize as scopt
 import math as mt
+import os
+import pandas as pd
 
 def create_measurement_control(name):
-    import os
     #from quantify_core.measurement import MeasurementControl
     mc = MeasurementControl(f'MC {name}')
     #from quantify_core.visualization.pyqt_plotmon import PlotMonitor_pyqt
@@ -52,20 +54,24 @@ class ROController():
         return platform(self.sequence)
 
 
-def scanrange(width, step):
+def rscanrange(span, step):
+    width = span/2
     scanrange = np.arange(-width,width,step)
     return scanrange
 
-def asymetric_scanrange(width, step):
+def asymetric_scanrange(span, step):
+    width = span/2
     scanrange = np.arange(-width,width/3,step)
     return scanrange
 
-def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step):
+def variable_resolution_scanrange(lowres_span, lowres_step, highres_span, highres_step):
     #[.     .     .     .     .     .][...................]0[...................][.     .     .     .     .     .]
     #[-------- lowres_width ---------][-- highres_width --] [-- highres_width --][-------- lowres_width ---------]
     #>.     .< lowres_step
     #                                 >..< highres_step
     #                                                      ^ centre value = 0
+    lowres_width = lowres_span/2
+    highres_width = highres_span/2
     scanrange = np.concatenate(
         (   np.arange(-lowres_width,-highres_width,lowres_step),
             np.arange(-highres_width,highres_width,highres_step),
@@ -73,7 +79,6 @@ def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, high
         )
     )
     return scanrange
-
 
 def get_pulse_sequence(duration=150, ro_amplitude=0.4, qc_amplitude=0.6):
     qc_pulse = pulses.Pulse(start=0,
@@ -93,13 +98,48 @@ def get_pulse_sequence(duration=150, ro_amplitude=0.4, qc_amplitude=0.6):
     sequence.add(ro_pulse)
     return sequence, qc_pulse, ro_pulse
 
+def run_resonator_spectroscopy(mc, sequence, ro_pulse, span, step):
+    #sequence, qc_pulse, ro_pulse = get_pulse_sequence()
+    
+    # Fast Sweep
+    platform.software_averages = 1
+    scanrange = rscanrange(span, step)
+    #mc, pl, ins = create_measurement_control('resonator_spectroscopy')
+    mc.settables(platform.LO_qrm.device.frequency)
+    mc.setpoints(scanrange + platform.LO_qrm.get_frequency())
+    mc.gettables(Gettable(ROController(sequence)))
+    platform.LO_qrm.on()
+    platform.LO_qcm.off()
+    dataset = mc.run("Resonator Spectroscopy Fast", soft_avg=platform.software_averages)
+    # http://xarray.pydata.org/en/stable/getting-started-guide/quick-overview.html
+    platform.stop()
+    platform.LO_qrm.set_frequency(dataset['x0'].values[dataset['y0'].argmax().values])
 
-def run_resonator_spectroscopy(mc, width, step):
+    from scipy.signal import savgol_filter
+    smooth_dataset = savgol_filter(dataset['y0'].values, 25, 2)
+    resonator_freq = dataset['x0'].values[smooth_dataset.argmax()] + ro_pulse.frequency
+    print(f"\nResonator Frequency = {resonator_freq}")
+    print(len(dataset['y0'].values))
+    print(len(smooth_dataset))
+
+    fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
+    ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
+    ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
+    ax.title.set_text('Original')
+    #ax.xlabel("Frequency")
+    #ax.ylabel("Amplitude")
+    ax.plot(dataset['x0'].values[smooth_dataset.argmax()], smooth_dataset[smooth_dataset.argmax()], 'o', color='C2')
+    # determine off-resonance amplitude and typical noise
+    plt.savefig("run_resonator_spectroscopy.pdf")
+
+    return resonator_freq, dataset
+
+def run_resonator_spectroscopy_smart(mc, span, step):
     sequence, qc_pulse, ro_pulse = get_pulse_sequence()
     
     # Fast Sweep
     platform.software_averages = 1
-    scanrange = scanrange(width, step)
+    scanrange = rscanrange(span, step)
     #mc, pl, ins = create_measurement_control('resonator_spectroscopy')
     mc.settables(platform.LO_qrm.device.frequency)
     mc.setpoints(scanrange + platform.LO_qrm.get_frequency())
@@ -122,7 +162,7 @@ def run_resonator_spectroscopy(mc, width, step):
     
     #small sweep
     platform.software_averages = 1
-    scanrange = variable_resolution_scanrange(6e6, 1e6, 2e6, 0.1e6)#(25e6, 2e6, 5e6, 0.5e6)
+    scanrange = variable_resolution_scanrange(12e6, 1e6, 4e6, 0.1e6)#(25e6, 2e6, 5e6, 0.5e6)
     mc.settables(platform.LO_qrm.device.frequency) #(resonator_freq)
     mc.setpoints(scanrange + platform.LO_qrm.get_frequency())
     mc.gettables(Gettable(ROController(sequence)))
@@ -143,7 +183,7 @@ def run_resonator_spectroscopy(mc, width, step):
 
     return resonator_freq, dataset
 
-def run_punchout(mc, resonator_freq, width, step):
+def run_punchout(mc, resonator_freq, span, step):
     sequence, qc_pulse, ro_pulse = get_pulse_sequence(ro_amplitude=1)
     
     #-30dBm to 3.98dBm = 0.02V to 1V
@@ -155,7 +195,7 @@ def run_punchout(mc, resonator_freq, width, step):
 
     # Fast Sweep
     platform.software_averages = 1
-    scanrange = scanrange(width, step)
+    scanrange = rscanrange(span, step)
     scanrange = (scanrange + (resonator_freq - ro_pulse.frequency))
 
     mc.settables([Settable(platform.LO_qrm.device.frequency),
@@ -179,16 +219,13 @@ def run_punchout(mc, resonator_freq, width, step):
 
     return resonator_freq, dataset
 
-
-def run_qubit_spectroscopy(mc, resonator_freq, width, step):
-    sequence, qc_pulse, ro_pulse = get_pulse_sequence()
-
-    #platform.LO_qcm.set_frequency(fq)
+def run_qubit_spectroscopy(mc, resonator_freq, sequence, qc_pulse, ro_pulse, span, step):
+    #sequence, qc_pulse, ro_pulse = get_pulse_sequence()
 
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     # Fast Sweep
-    platform.software_averages = 1
-    scanrange = scanrange(width, step)
+    platform.software_averages = 5
+    scanrange = rscanrange(span, step)
     mc.settables(platform.LO_qcm.device.frequency)
     mc.setpoints(scanrange + platform.LO_qcm.get_frequency())
     mc.gettables(Gettable(ROController(sequence)))
@@ -200,51 +237,38 @@ def run_qubit_spectroscopy(mc, resonator_freq, width, step):
     platform.LO_qcm.set_frequency(dataset['x0'].values[dataset['y0'].argmin().values])
 
 
-    qubit_freq = dataset['x0'].values[dataset['y0'].argmin()] - qc_pulse.frequency 
-    print(f"\nQubit Frequency = {qubit_freq}")
-    print(f"\nQubit LO Frequency  = {qubit_freq + qc_pulse.frequency}")
+    from scipy.signal import savgol_filter
+    smooth_dataset = savgol_filter(dataset['y0'].values, 11, 2)
+    qubit_freq = dataset['x0'].values[smooth_dataset.argmin()] + qc_pulse.frequency
+    print(dataset['x0'].values[smooth_dataset.argmin()])
+    print(f"Qubit Frequency = {qubit_freq}")
+    print(len(dataset['y0'].values))
+    print(len(smooth_dataset))
+
     fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-    ax.plot(dataset['x0'].values/1e9, dataset['y0'].values*1e3,'-',color='C0')
-    ax.tick_params(axis='x', colors='red')
-    ax.tick_params(axis='y', colors='red')
-    
-    #small sweep
-    platform.software_averages = 4 
-    scanrange = variable_resolution_scanrange(20e6, 1e6, 3e6, 0.2e6)#(25e6, 2e6, 5e6, 0.5e6)
-    mc.settables(platform.LO_qcm.device.frequency) #(resonator_freq)
-    mc.setpoints(scanrange + platform.LO_qcm.get_frequency())
-    mc.gettables(Gettable(ROController(sequence)))
-    platform.LO_qrm.on()
-    platform.LO_qcm.on()
-    dataset = mc.run("Qubit Spectroscopy precision", soft_avg=platform.software_averages)
-    # http://xarray.pydata.org/en/stable/getting-started-guide/quick-overview.html
-    platform.stop()
-    
-    qubit_freq = dataset['x0'].values[dataset['y0'].argmin()] - qc_pulse.frequency
-    print(f"\nQubit Frequency = {qubit_freq}")
-    print(f"\nQubit LO Frequency  = {qubit_freq + qc_pulse.frequency}")
-    fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-    ax.plot(dataset['x0'].values/1e9, dataset['y0'].values*1e3,'-',color='C0')
-    ax.tick_params(axis='x', colors='red')
-    ax.tick_params(axis='y', colors='red')
+    ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
+    ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
+    ax.title.set_text('Original')
+    #ax.xlabel("Frequency")
+    #ax.ylabel("Amplitude")
+    ax.plot(dataset['x0'].values[smooth_dataset.argmin()], smooth_dataset[smooth_dataset.argmin()], 'o', color='C2')
+    plt.savefig("run_qubit_spectroscopy.pdf")
 
     return qubit_freq, dataset
+
 
 def run_qubit_spectroscopy_gain(mc, resonator_freq, qubit_freq):
     sequence, qc_pulse, ro_pulse = get_pulse_sequence(qc_amplitude=1)
 
-
-    platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
-
+    platform.LO_qcm.set_frequency(qubit_freq - qc_pulse.frequency)
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     # Fast Sweep
     platform.software_averages = 4
-    scanrange = asymetric_scanrange(20e6,1e6) #variable scanrange doesn't work with grid.
+    scanrange = asymetric_scanrange(40e6,1e6) #variable scanrange doesn't work with grid.
     scanrange = (scanrange + platform.LO_qcm.get_frequency())
-
     mc.settables([Settable(platform.LO_qcm.device.frequency),
                   Settable(QCPulseGainParameter(platform.qcm))])
-    setpoints_gain = np.arange(10, 50, 20)
+    setpoints_gain = np.arange(0, 100, 10)
     mc.setpoints_grid([scanrange, setpoints_gain])
     mc.gettables(Gettable(ROController(sequence)))
     platform.LO_qrm.on()
@@ -253,8 +277,6 @@ def run_qubit_spectroscopy_gain(mc, resonator_freq, qubit_freq):
     platform.stop()
     # http://xarray.pydata.org/en/stable/getting-started-guide/quick-overview.html
     platform.LO_qcm.set_frequency(dataset['x0'].values[dataset['y0'].argmin().values])
-
-
     qubit_freq = dataset['x0'].values[dataset['y0'].argmin()] - qc_pulse.frequency 
     print(f"\nQubit Frequency = {qubit_freq}")
     print(f"\nQubit LO Frequency  = {qubit_freq + qc_pulse.frequency}")
@@ -266,15 +288,16 @@ def run_qubit_spectroscopy_gain(mc, resonator_freq, qubit_freq):
 
     return qubit_freq, dataset
 
-def run_rabi_pulse_length(resonator_freq, qubit_freq):
-    sequence, qc_pulse, ro_pulse = get_pulse_sequence()
+
+def run_rabi_pulse_length(mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_pulse):
+    #sequence, qc_pulse, ro_pulse = get_pulse_sequence()
 
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
-    platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
-    mc, pl, ins = create_measurement_control('Rabi_pulse_length')
-    platform.software_averages = 3
+    platform.LO_qcm.set_frequency(qubit_freq - qc_pulse.frequency)
+    #mc, pl, ins = create_measurement_control('Rabi_pulse_length')
+    platform.software_averages = 4
     mc.settables(Settable(QCPulseLengthParameter(ro_pulse, qc_pulse)))
-    mc.setpoints(np.arange(1, 1200, 10))
+    mc.setpoints(np.arange(1, 3000, 10))
     mc.gettables(Gettable(ROController(sequence)))
     platform.LO_qrm.on()
     platform.LO_qcm.on()
@@ -282,13 +305,13 @@ def run_rabi_pulse_length(resonator_freq, qubit_freq):
     platform.stop()
 
 
-def run_rabi_pulse_gain(resonator_freq, qubit_freq):
-    sequence, qc_pulse, ro_pulse = get_pulse_sequence(duration=200)
+def run_rabi_pulse_gain(mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_pulse):
+    #sequence, qc_pulse, ro_pulse = get_pulse_sequence(duration=200)
 
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
-    platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
-    mc, pl, ins = create_measurement_control('Rabi_pulse_gain')
-    platform.software_averages = 1
+    platform.LO_qcm.set_frequency(qubit_freq - qc_pulse.frequency)
+    #mc, pl, ins = create_measurement_control('Rabi_pulse_gain')
+    platform.software_averages = 5
     mc.settables(Settable(QCPulseGainParameter(platform.qcm)))
     mc.setpoints(np.arange(0, 100))
     mc.gettables(Gettable(ROController(sequence)))
@@ -298,17 +321,17 @@ def run_rabi_pulse_gain(resonator_freq, qubit_freq):
     platform.stop()
 
 
-def run_rabi_pulse_length_and_gain(resonator_freq, qubit_freq):
-    sequence, qc_pulse, ro_pulse = get_pulse_sequence()
+def run_rabi_pulse_length_and_gain(mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_pulse):
+    #sequence, qc_pulse, ro_pulse = get_pulse_sequence()
 
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
-    platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
-    mc, pl, ins = create_measurement_control('Rabi_pulse_length_and_gain')
-    platform.software_averages = 1
+    platform.LO_qcm.set_frequency(qubit_freq - qc_pulse.frequency)
+    #mc, pl, ins = create_measurement_control('Rabi_pulse_length_and_gain')
+    platform.software_averages = 5
     mc.settables([Settable(QCPulseLengthParameter(ro_pulse, qc_pulse)),
                   Settable(QCPulseGainParameter(platform.qcm))])
-    setpoints_length = np.arange(1, 400, 10)
-    setpoints_gain = np.arange(0, 20, 1)
+    setpoints_length = np.arange(4, 3000, 20)
+    setpoints_gain = np.arange(0, 100, 1)
     mc.setpoints_grid([setpoints_length, setpoints_gain])
     mc.gettables(Gettable(ROController(sequence)))
     platform.LO_qrm.on()
@@ -324,9 +347,9 @@ def run_rabi_pulse_length_and_amplitude(resonator_freq, qubit_freq):
     sequence, qc_pulse, ro_pulse = get_pulse_sequence()
 
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
-    platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
+    platform.LO_qcm.set_frequency(qubit_freq - qc_pulse.frequency)
     mc, pl, ins = create_measurement_control('Rabi_pulse_length_and_amplitude')
-    platform.software_averages = 1
+    platform.software_averages = 5
     mc.settables([Settable(QCPulseLengthParameter(ro_pulse, qc_pulse)),
                   Settable(QCPulseAmplitudeParameter(qc_pulse))])
     setpoints_length = np.arange(1, 1000, 2)
@@ -342,16 +365,17 @@ def run_rabi_pulse_length_and_amplitude(resonator_freq, qubit_freq):
     platform.stop()
 
 
-def run_t1(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
+def run_t1(mc, resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, sequence, qc_pulse, ro_pulse,
             delay_before_readout_start, delay_before_readout_end,
             delay_before_readout_step):
-    sequence, qc_pulse, ro_pulse = get_pulse_sequence(duration=pi_pulse_length)
+    #sequence, qc_pulse, ro_pulse = get_pulse_sequence(duration=pi_pulse_length)
+    platform.software_averages = 3
 
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
-    platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
+    platform.LO_qcm.set_frequency(qubit_freq - qc_pulse.frequency)
     platform.qcm.gain = pi_pulse_gain
 
-    mc, pl, ins = create_measurement_control('t1')
+    #mc, pl, ins = create_measurement_control('t1')
     mc.settables(Settable(T1WaitParameter(ro_pulse, qc_pulse)))
     mc.setpoints(np.arange(delay_before_readout_start,
                            delay_before_readout_end,
@@ -367,24 +391,26 @@ def run_t1(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
     return dataset
 
 
-def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pulse_amplitude,
+def run_ramsey(mc, resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pulse_amplitude,
                start_start, start_end, start_step):
     qc_pulse = pulses.Pulse(start=0,
-                            frequency=200000000.0,
+                            frequency=100e6,
                             amplitude=pi_pulse_amplitude,
                             duration=pi_pulse_length // 2,
                             phase=0,
-                            shape=Gaussian(pi_pulse_length // 10))
+                            #shape=Gaussian(pi_pulse_length // 10))
+                            shape=Gaussian(4000/5))
     qc2_pulse = pulses.Pulse(start=pi_pulse_length // 2 + 0,
-                               frequency=200000000.0,
+                               frequency=100e6,
                                amplitude=pi_pulse_amplitude,
                                duration=pi_pulse_length // 2,
                                phase=0,
-                               shape=Gaussian(pi_pulse_length // 10))
+                               #shape=Gaussian(pi_pulse_length // 10))
+                               shape=Gaussian(4000/5))
     start = qc_pulse.duration + qc2_pulse.duration + 4
     ro_pulse = pulses.ReadoutPulse(start=start,
-                                   frequency=20000000.0,
-                                   amplitude=0.9,
+                                   frequency=20e6,
+                                   amplitude=0.4,
                                    duration=2000,
                                    phase=0,
                                    shape=Rectangular())
@@ -394,10 +420,10 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pu
     sequence.add(ro_pulse)
 
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
-    platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
+    platform.LO_qcm.set_frequency(qubit_freq - qc_pulse.frequency)
     platform.qcm.gain = pi_pulse_gain
 
-    mc, pl, ins = create_measurement_control('ramsey')
+    #mc, pl, ins = create_measurement_control('ramsey')
     mc.settables(Settable(RamseyWaitParameter(ro_pulse, qc2_pulse, pi_pulse_length)))
     mc.setpoints(np.arange(start_start, start_end, start_step))
     mc.gettables(Gettable(ROController(sequence)))
@@ -411,7 +437,7 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pu
     return dataset
 
 
-def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pulse_amplitude,
+def run_spin_echo(mc, resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pulse_amplitude,
                   start_start, start_end, start_step):
     qc_pulse = pulses.Pulse(start=0,
                             frequency=200000000.0,
@@ -438,10 +464,10 @@ def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi
     sequence.add(ro_pulse)
 
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
-    platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
+    platform.LO_qcm.set_frequency(qubit_freq - qc_pulse.frequency)
     platform.qcm.gain = pi_pulse_gain
 
-    mc, pl, ins = create_measurement_control('spin_echo')
+    #mc, pl, ins = create_measurement_control('spin_echo')
     mc.settables(Settable(SpinEchoWaitParameter(ro_pulse, qc2_pulse, pi_pulse_length)))
     mc.setpoints(np.arange(start_start, start_end, start_step))
     mc.gettables(Gettable(ROController(sequence)))
@@ -451,7 +477,6 @@ def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi
     platform.stop()
 
     return dataset
-
 
 # help classes
 
@@ -564,12 +589,15 @@ Last update: 29/12/2021
 Qilimanjaro Quantum Tech
 """
 
-def data_post():
-    #get last measured file
-    directory = '.\data'
-    directory = max([os.path.join(directory,d) for d in os.listdir(directory)], key=os.path.getmtime)
-    directory = max([os.path.join(directory,d) for d in os.listdir(directory)], key=os.path.getmtime)
-    label = os.path.basename(os.path.normpath(directory))
+def data_post(dir = "last"):
+    if  dir == "last":
+        #get last measured file
+        directory = '.\data'
+        directory = max([os.path.join(directory,d) for d in os.listdir(directory)], key=os.path.getmtime)
+        directory = max([os.path.join(directory,d) for d in os.listdir(directory)], key=os.path.getmtime)
+        label = os.path.basename(os.path.normpath(directory))
+    else:
+        label = dir
     set_datadir('data')
     d = BaseAnalysis(tuid=label)
     d.run()
@@ -581,13 +609,16 @@ def data_post():
     for i in range(0, len(arr1)):    
         voltage[i] = float(arr1[i]);         
     arr1 = data.x0;        
-    frequency = [None] * len(arr1);       
+    x_axis = [None] * len(arr1);       
     for i in range(0, len(arr1)):    
-        frequency[i] = float(arr1[i]/1e9); 
-    return voltage, frequency, data, d
+        x_axis[i] = float(arr1[i]); 
+    plt.plot(x_axis,voltage)
+    return voltage, x_axis, data, d
 
 
-def Lorentzian_fit(voltage, frequency,peak, data):
+def lorentzian_fit(label, peak):
+    voltage, x_axis, data, d = data_post(label)
+    frequency = x_axis
     def resonator_peak(frequency,amplitude,center,sigma,offset):
         return (amplitude/np.pi) * (sigma/((frequency-center)**2 + sigma**2) + offset)
     model_Q = lmfit.Model(resonator_peak)
@@ -604,12 +635,10 @@ def Lorentzian_fit(voltage, frequency,peak, data):
     if peak == max:
         voltage_min_i = np.argmin(voltage)
         frequency_voltage_min = frequency[voltage_min_i]
-        guess_sigma = abs(frequency_voltage_min - guess_center)#5e-04 #500KHz*1e-9
-        model_Q.set_param_hint('sigma',value=guess_sigma,
-                                vary=True)
+        guess_sigma = abs(frequency_voltage_min - guess_center) #500KHz*1e-9
     else: 
         guess_sigma = 5e-03 #500KHz*1e-9
-        model_Q.set_param_hint('sigma',value=guess_sigma,
+    model_Q.set_param_hint('sigma',value=guess_sigma,
                                 vary=True)
     #to guess the amplitude 
     #http://openafox.com/science/peak-function-derivations.html
@@ -617,15 +646,16 @@ def Lorentzian_fit(voltage, frequency,peak, data):
     if peak == max:
         voltage_max = np.max(voltage)
         guess_amp = voltage_max*guess_sigma*np.pi
-        model_Q.set_param_hint('amplitude',value=guess_amp,
-                                vary=True)
     else:
         voltage_min = np.min(voltage)
         guess_amp = -voltage_min*guess_sigma*np.pi
-        model_Q.set_param_hint('amplitude',value=guess_amp,
+    model_Q.set_param_hint('amplitude',value=guess_amp,
                                 vary=True)
     #to guess the offset
-    guess_offset = voltage[0]*-2.5*1e5
+    if peak == max: 
+        guess_offset = 0
+    else:
+        guess_offset = voltage[0]*-2.5*1e5       
     model_Q.set_param_hint('offset',value=guess_offset,
                             vary=True)
     #guessed parameters
@@ -637,14 +667,14 @@ def Lorentzian_fit(voltage, frequency,peak, data):
     #print(fit_res.fit_report())
     #fit_res.best_values
     #get the values for postprocessing and for legend.
-    f0 = fit_res.best_values['center']
-    BW = fit_res.best_values['sigma']*2
+    f0 = fit_res.best_values['center']/1e9
+    BW = (fit_res.best_values['sigma']*2)/1e9
     Q = abs(f0/BW)
     #plot the fitted curve
     dummy_frequencies = np.linspace(np.amin(frequency),np.amax(frequency),101)
     fit_fine = resonator_peak(dummy_frequencies,**fit_res.best_values)
     fig,ax = plt.subplots(1,1,figsize=(8,3))
-    ax.plot(data.x0/1e9,data.y0*1e3,'o',label='Data')
+    ax.plot(data.x0,data.y0*1e3,'o',label='Data')
     ax.plot(dummy_frequencies,fit_fine*1e3,'r-',
             label=r"Fit $f_0$ ={:.4f} GHz"
             "\n" "     $Q$ ={:.0f}".format(f0,Q))
@@ -655,6 +685,7 @@ def Lorentzian_fit(voltage, frequency,peak, data):
     #fit_res.plot_fit(show_init=True)
     return f0, BW, Q
 
+#This function doesn't achieve a good approximation for the qubit frequency YET. Pending to look why
 def qubit_frequency_guess (resonator_freq, resonator_freq_highP, g, alpha):
     resonator_freq = resonator_freq/1e9
     resonator_freq_highP = resonator_freq_highP/1e9
@@ -668,8 +699,8 @@ def qubit_frequency_guess (resonator_freq, resonator_freq_highP, g, alpha):
     print(f"Approximated qubit frequency is around {fq} GHz")
     return fq
 
-def plot_punchout ():
-    voltage, frequency, data, d = data_post()
+def plot_2D (label,meas):
+    voltage, frequency, data, d = data_post(label)
     x_vec = d.dataset.x0[:d.dataset.xlen]
     y_vec = d.dataset.x1[::d.dataset.xlen]
     z_mat = np.array(d.dataset.y0).reshape((d.dataset.ylen,d.dataset.xlen))
@@ -688,5 +719,82 @@ def plot_punchout ():
     cbar.set_label('Integrated Voltage (mV)')
     ax.set_xlabel('Frequency (Hz)')
     ax.set_ylabel('Gain (a.u.)')
-    ax.set_title('Punchout')
+    if meas == "punchout":
+        ax.set_title('Punchout')
+    elif meas == "qubit":
+        ax.set_title('Qubit spectroscopy')
     fig.savefig('Punchout.pdf',format='pdf')
+
+def t1_fit(label, make_plots=False):
+    voltage, x_axis, data, d = data_post(label)
+    time = x_axis
+    
+    def t1_decay(time,amplitude,offset,T1):
+        return amplitude*np.exp(-time/T1)+offset
+    model_decay = lmfit.Model(t1_decay)
+    #to guess offset
+    voltage_last_value_index = len(voltage)
+    voltage_last_value = voltage[voltage_last_value_index - 1]
+    guess_offset = voltage_last_value #Argmax = Returns the indices of the maximum values along an axis.
+    model_decay.set_param_hint('offset',value=guess_offset,vary=True)
+    #to guess the amplitude 
+    voltage_first_value = voltage[0]
+    guess_amp = voltage_first_value - guess_offset
+    model_decay.set_param_hint('amplitude',value=guess_amp,
+                              vary=False)
+    #to guess T1
+    time_max = np.max(time)
+    guess_T1 = time_max/3
+    model_decay.set_param_hint('T1',value=guess_T1,vary=True)
+    #guessed parameters
+    guess_parameters = model_decay.make_params()
+#    guess_parameters
+    fit_res = model_decay.fit(data=voltage,time=time,params=guess_parameters)
+    T1 = fit_res.best_values['T1']
+    dummy_times = np.linspace(np.amin(time),np.amax(time),101)
+    fit_fine = t1_decay(dummy_times,**fit_res.best_values)
+#    fit_res.plot_fit(show_init=True) #this shows the fit vs the initial guess fit vs the data to see how far was the initial guess
+
+    if make_plots:
+        if not os.path.exists('figures'):
+            os.makedirs('figures')
+        fig,ax = plt.subplots(1,1,figsize=(8,3))
+        ax.plot(data.x0,data.y0*1e3,'o',label='Data')
+        ax.plot(dummy_times,fit_fine*1e3,'r-',
+                label=r'Fit $T_1$ ={:.0f} ns'.format(T1))
+        ax.set_ylabel('Integrated Voltage (mV)')
+        ax.set_xlabel('Pulse duration (ns)')
+        ax.set_title('label')
+        ax.legend()
+        fig.savefig(os.path.join('figures',f'{label}T1.pdf'),format='pdf')
+        
+    return T1
+
+def t1_histogram(plots = False):
+    t1_files = glob.glob('*data/*T1_batch*/*T1*') #This is done manually not to mix test T1 with the batch T1 meas. 
+    t1_values = []
+    working_files = []
+    for file in t1_files:
+        try:
+            full_path = file
+            relative_path ='data\\T1_batch'
+            file = os.path.relpath(full_path, relative_path)
+            t1 = t1_fit(file,make_plots=plots)
+            t1_values.append(t1)
+            working_files.append(file)
+        except Exception as e:
+            print(e)
+            print(f'Problem with file - {file}')
+            continue
+    # create dataframe and write to csv
+    t1_data = pd.DataFrame( {'TUID': working_files,
+        't1': t1_values,})
+    #filter data for unreal values
+    t1_data = t1_data[t1_data.t1<1e6]
+    t1_data.to_csv('t1_data.csv')
+    fig, ax = plt.subplots()
+    # Here i'm defining the binsize as 700ns
+    ax.hist(t1_data.t1.values,bins=np.arange(5000,25000,700))
+    ax.set_xlabel('T1(ns)')
+    ax.set_ylabel('count')
+    fig.savefig('t1_histogram.pdf',format='pdf')
