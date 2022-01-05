@@ -42,6 +42,13 @@ class Qili:
         if not self._connected:
             raise_error(RuntimeError, "Cannot access instrument because it is not connected.")
 
+    '''
+    def _set_property(sefl):
+        for key in self._settings:
+            if key != "_settings" and key!="_QRM_settings" and key!="_QCM_settings" and key!="_LO_QRM_settings" and key!="_LO_QCM_settings":            
+                exec("@property\ndef "+self._settings[key]["label"]+"(self):\n\tself._check_connected()\n\treturn self._"+self._settings[key]["label"], globals())
+
+    '''
     @property
     def qrm(self):
         """Reference to :class:`qibolab.instruments.qblox.PulsarQRM` instrument."""
@@ -65,6 +72,7 @@ class Qili:
         """Reference to QCM local oscillator (:class:`qibolab.instruments.rohde_schwarz.SGS100A`)."""
         self._check_connected()
         return self._LO_qcm
+    
 
     @property
     def data_folder(self):
@@ -103,11 +111,28 @@ class Qili:
 
     def connect(self):
         """Connects to lab instruments using the details specified in the calibration settings."""
-        from qibolab.instruments import PulsarQRM, PulsarQCM, SGS100A
-        self._qrm = PulsarQRM(**self._settings.get("_QRM_init_settings"))
-        self._qcm = PulsarQCM(**self._settings.get("_QCM_init_settings"))
-        self._LO_qrm = SGS100A(**self._settings.get("_LO_QRM_init_settings"))
-        self._LO_qcm = SGS100A(**self._settings.get("_LO_QCM_init_settings"))
+        
+        instruments = {}
+        n = 1
+        for key in self._settings:
+            if key != "_settings" and key!="_QRM_settings" and key!="_QCM_settings" and key!="_LO_QRM_settings" and key!="_LO_QCM_settings":
+                instruments[str(n)] = self._settings.get(key).get("instrument")
+                print(instruments.get(str(n)))
+                exec("from qibolab.instruments import "+ instruments[str(n)], globals())
+                n = n+1
+                
+        
+        #from qibolab.instruments import Qblox_PulsarQRM, Qblox_PulsarQCM, Rohde_Schwarz_SGS100A
+        
+        for key in self._settings:
+            if key != "_settings" and key!="_QRM_settings" and key!="_QCM_settings" and key!="_LO_QRM_settings" and key!="_LO_QCM_settings":
+                self._settings.get(key, {}).pop("instrument", None)
+                #exec("self._"+self._settings.get(key).get("label")+"="+self._settings.get(key).get("label")+"(**"+self._settings.get(key)+")")
+    
+        self._qrm = Qblox_PulsarQRM(**self._settings.get("_1"))
+        self._qcm = Qblox_PulsarQCM(**self._settings.get("_2"))
+        self._LO_qrm = Rohde_Schwarz_SGS100A(**self._settings.get("_3"))
+        self._LO_qcm = Rohde_Schwarz_SGS100A(**self._settings.get("_4"))
         self._connected = True
 
     def setup(self):
@@ -168,6 +193,8 @@ class Qili:
         # Execute instructions
         if sequence.qcm_pulses:
             self._qcm.play_sequence()
+            self._qcm.play_sequence_1()
+            
         if sequence.qrm_pulses:
             # TODO: Find a better way to pass the readout pulse here
             acquisition_results = self._qrm.play_sequence_and_acquire(sequence.qrm_pulses[0])

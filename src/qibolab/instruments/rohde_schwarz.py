@@ -7,7 +7,7 @@ import logging
 logger = logging.getLogger(__name__)  # TODO: Consider using a global logger
 
 
-class SGS100A:
+class Rohde_Schwarz_SGS100A:
 
     def __init__(self, label, ip):
         """

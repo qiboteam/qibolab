@@ -1,0 +1,33 @@
+{
+    "resonator_spectroscopy": {
+        "span": 500e6,
+        "step": 1e6
+    },
+    "punchout": {
+        "span": 8e6,
+        "step": 0.2e6
+    },
+    "fittings": {
+        "g": 106e6,
+        "alpha": 419e6
+    },
+    "qubit_spectroscopy": {
+        "span": 100e6,
+        "step": 2e6
+    },
+    "t1": {
+        "delay_before_readout_start": 20,
+        "delay_before_readout_end": 60000,
+        "delay_before_readout_step": 1000
+    },
+    "ramsey": {
+        "start_start": 4,
+        "start_end": 1000,
+        "start_step": 4
+    },
+    "spin_echo": {
+        "start_start": 4,
+        "start_end": 500,
+        "start_step": 10
+    }
+}

@@ -22,7 +22,7 @@ class GenericPulsar(ABC):
         # hardcoded values used in ``generate_program``
         self.delay_before_readout = 4 # same value is used for all readout pulses (?)
         self.wait_loop_step = 1000
-        self.duration_base = 16380 # maximum length of a waveform in number of samples (defined by the device memory).
+        self.duration_base = 65535 # maximum length of a waveform in number of samples (defined by the device memory).
         # hardcoded values used in ``upload``
         self.acquisitions = {"single": {"num_bins": 1, "index":0}}
         self.weights = {}
@@ -199,12 +199,19 @@ class GenericPulsar(ABC):
             self.device.sequencer1_waveforms_and_program(os.path.join(os.getcwd(), filename))
         else:
             self.device.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), filename))
-
+            
     def play_sequence(self):
         """Executes the uploaded instructions."""
+        # Map sequencers to specific outputs (but first disable all sequencer connections)
+        for sequencer in range(0,6):
+            for out in range(0,2):
+                self.device.set("sequencer{}_channel_map_path{}_out{}_en".format(sequencer, out%2, out), False)
+        self.device.sequencer0_channel_map_path0_out0_en(True)
+        self.device.sequencer0_channel_map_path1_out1_en(True)
         # arm sequencer and start playing sequence
-        self.device.arm_sequencer()
+        self.device.arm_sequencer(0)
         self.device.start_sequencer()
+
 
     def stop(self):
         """Stops the QBlox sequencer from sending pulses."""
@@ -222,7 +229,7 @@ class GenericPulsar(ABC):
     #    self.close()
 
 
-class PulsarQRM(GenericPulsar):
+class Qblox_PulsarQRM(GenericPulsar):
     """Class for interfacing with Pulsar QRM."""
 
     def __init__(self, label, ip, ref_clock="external", sequencer=0, sync_en=True,
@@ -252,12 +259,7 @@ class PulsarQRM(GenericPulsar):
     def connect(self, label, ip):
         if not self._connected:
             from pulsar_qrm.pulsar_qrm import pulsar_qrm # pylint: disable=E0401
-            try:
-                self.device = pulsar_qrm(label, ip)
-            except Exception as exc:
-                print(f"Can't connect to PulsarQRM at ip {ip}.")
-                print(exc) 
-                raise exc
+            self.device = pulsar_qrm(label, ip)
             self._connected = True
         else:
             raise(RuntimeError)
@@ -335,9 +337,9 @@ class PulsarQRM(GenericPulsar):
         return integrated_signal
 
 
-class PulsarQCM(GenericPulsar):
+class Qblox_PulsarQCM(GenericPulsar):
 
-    def __init__(self, label, ip, sequencer=0, ref_clock="external", sync_en=True):
+    def __init__(self, label, ip, sequencer=0, ref_clock="internal", sync_en=True):
         super().__init__()
         # Instantiate base object from qblox library and connect to it
         self.name = "qcm"
@@ -350,6 +352,15 @@ class PulsarQCM(GenericPulsar):
             self.device.sequencer1_sync_en(sync_en)
         else:
             self.device.sequencer0_sync_en(sync_en)
+            
+    def play_sequence_1(self):
+        if self.sequencer == 1:
+            for sequencer in range(0, 6):
+                for out in range(2, 4):
+                    self.device.set("sequencer{}_channel_map_path{}_out{}_en".format(sequencer, out%2, out), False)
+            self.device.sequencer1_channel_map_path0_out2_en(True)
+            self.device.sequencer1_channel_map_path1_out3_en(True)
+            self.device.arm_sequencer(1)
 
     def translate(self, sequence):
         # Allocate only qubit pulses to PulsarQRM
@@ -366,12 +377,7 @@ class PulsarQCM(GenericPulsar):
     def connect(self, label, ip):
         if not self._connected:
             from pulsar_qcm.pulsar_qcm import pulsar_qcm # pylint: disable=E0401
-            try:
-                self.device = pulsar_qcm(label, ip)
-            except Exception as exc:
-                print(f"Can't connect to PulsarQCM at ip {ip}.")
-                print(exc) 
-                raise exc
+            self.device = pulsar_qcm(label, ip)
             self._connected = True
         else:
             raise(RuntimeError)

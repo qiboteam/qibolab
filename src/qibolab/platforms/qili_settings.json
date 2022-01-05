@@ -3,11 +3,12 @@
         "data_folder": ".data/",
         "hardware_avg": 1024,
         "sampling_rate": 1000000000.0,
-        "software_averages": 3,
+        "software_averages": 10,
         "repetition_duration": 200000
     },
-    "_QRM_init_settings": {
+    "_1": {
         "label": "qrm",
+        "instrument": "Qblox_PulsarQRM",
         "ip": "192.168.0.4",
         "ref_clock": "external",
         "sequencer": 0,
@@ -15,43 +16,56 @@
         "hardware_avg_en": true,
         "acq_trigger_mode": "sequencer"
     },
-    "_QRM_settings": {
-        "gain": 0.4,
-        "hardware_avg": 1024,
-        "initial_delay": 0,
-        "repetition_duration": 200000,
-        "start_sample": 130,
-        "integration_length": 1500,
-        "sampling_rate": 1000000000.0,
-        "mode": "ssb"
-    },
-    "_QCM_init_settings": {
+
+    "_2": {
         "label": "qcm",
+        "instrument": "Qblox_PulsarQCM",
         "ip": "192.168.0.3",
         "ref_clock": "internal",
         "sequencer": 0,
         "sync_en": true
+
     },
+
+    "_3": {
+        "label": "LO_qrm",
+        "instrument": "Rohde_Schwarz_SGS100A",
+        "ip": "192.168.0.7"
+    },
+
+    "_4": {
+        "label": "LO_qcm",
+        "instrument": "Rohde_Schwarz_SGS100A",
+        "ip": "192.168.0.10" 
+    },
+
+
+
+    "_QRM_settings": {
+        "gain": 0.5,
+        "hardware_avg": 1024,
+        "initial_delay": 0,
+        "repetition_duration": 200000,
+        "start_sample": 130,
+        "integration_length": 2000,
+        "sampling_rate": 1000000000.0,
+        "mode": "ssb"
+    },
+
     "_QCM_settings": {
-        "gain": 0.14,
+        "gain": 0.5,
         "hardware_avg": 1024,
         "initial_delay": 0,
         "repetition_duration": 200000
     },
-    "_LO_QRM_init_settings": {
-        "label": "LO_qrm",
-        "ip": "192.168.0.7"
-    },
+
     "_LO_QRM_settings": {
-        "power": 10,
-        "frequency": 7327700000.0
+        "power": 15,
+        "frequency": 7.30772e9
     },
-    "_LO_QCM_init_settings": {
-        "label": "LO_qcm",
-        "ip": "192.168.0.10"
-    },
+
     "_LO_QCM_settings": {
-        "power": -5,
-        "frequency": 3651000000.0
+        "power": 15,
+        "frequency": 3.644e9
     }
 }
