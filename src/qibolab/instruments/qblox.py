@@ -16,11 +16,9 @@ class GenericPulsar(ABC):
         self.ref_clock = None
         self.sync_en = None
         # To be defined during setup
-        self.hardware_avg = None
         self.initial_delay = None
         self.repetition_duration = None
         # hardcoded values used in ``generate_program``
-        self.delay_before_readout = 4 # same value is used for all readout pulses (?)
         self.wait_loop_step = 1000
         self.duration_base = 16380 # maximum length of a waveform in number of samples (defined by the device memory).
         # hardcoded values used in ``upload``
@@ -46,17 +44,15 @@ class GenericPulsar(ABC):
             self.device.sequencer0_gain_awg_path0(gain)
             self.device.sequencer0_gain_awg_path1(gain)
 
-    def setup(self, gain, hardware_avg, initial_delay, repetition_duration):
+    def setup(self, gain, initial_delay, repetition_duration):
         """Sets calibration setting to QBlox instruments.
 
         Args:
             gain (float):
-            hardware_avg ():
             initial_delay ():
             repetition_duration ():
         """
         self.gain = gain
-        self.hardware_avg = hardware_avg
         self.initial_delay = initial_delay
         self.repetition_duration = repetition_duration
 
@@ -78,8 +74,8 @@ class GenericPulsar(ABC):
         envelope_q = np.zeros(int(pulse.duration))
         time = np.arange(pulse.duration) * 1e-9
         # FIXME: There should be a simpler way to construct this array
-        cosalpha = np.cos(2 * np.pi * pulse.frequency * time)
-        sinalpha = np.sin(2 * np.pi * pulse.frequency * time)
+        cosalpha = np.cos(2 * np.pi * pulse.frequency * time + pulse.phase)
+        sinalpha = np.sin(2 * np.pi * pulse.frequency * time + pulse.phase)
         mod_matrix = np.array([[cosalpha,sinalpha], [-sinalpha,cosalpha]])
         result = []
         for it, t, ii, qq in zip(np.arange(pulse.duration), time, envelope_i, envelope_q):
@@ -105,22 +101,20 @@ class GenericPulsar(ABC):
         if not pulses:
             raise_error(NotImplementedError, "Cannot translate empty pulse sequence.")
         name = self.name
+
+        combined_length = max(pulse.start + pulse.duration for pulse in pulses)
         waveforms = {
-            f"modI_{name}": {"data": [], "index": 0},
-            f"modQ_{name}": {"data": [], "index": 1}
+            f"modI_{name}": {"data": np.zeros(combined_length), "index": 0},
+            f"modQ_{name}": {"data": np.zeros(combined_length), "index": 1}
         }
-        # Create the waveforms arrays by processing the first pulse
-        waveform = self._translate_single_pulse(pulses[0])
-        waveforms[f"modI_{name}"]["data"] = waveform["modI"]["data"]
-        waveforms[f"modQ_{name}"]["data"] = waveform["modQ"]["data"]
-        # Concatenate the waveforms of the rest of pulses
-        for pulse in pulses[1:]:
+        for pulse in pulses:
             waveform = self._translate_single_pulse(pulse)
-            waveforms[f"modI_{name}"]["data"] = np.concatenate((waveforms[f"modI_{name}"]["data"], np.zeros(4), waveform["modI"]["data"]))
-            waveforms[f"modQ_{name}"]["data"] = np.concatenate((waveforms[f"modQ_{name}"]["data"], np.zeros(4), waveform["modQ"]["data"]))
+            i0, i1 = pulse.start, pulse.start + pulse.duration
+            waveforms[f"modI_{name}"]["data"][i0:i1] += waveform["modI"]["data"]
+            waveforms[f"modQ_{name}"]["data"][i0:i1] += waveform["modQ"]["data"]
         return waveforms
 
-    def generate_program(self, initial_delay, acquire_instruction, wait_time):
+    def generate_program(self, hardware_avg, initial_delay, delay_before_readout, acquire_instruction, wait_time):
         """Generates the program to be uploaded to instruments."""
         extra_duration = self.repetition_duration - self.duration_base
         extra_wait = extra_duration % self.wait_loop_step
@@ -140,12 +134,12 @@ class GenericPulsar(ABC):
             initial_wait_instruction = ""
 
         program = f"""
-            move    {self.hardware_avg},R0
+            move    {hardware_avg},R0
             nop
             wait_sync 4          # Synchronize sequencers over multiple instruments
         loop:
             {initial_wait_instruction}
-            play      0,1,{self.delay_before_readout}
+            play      0,1,{delay_before_readout}
             {acquire_instruction}
             wait      {wait_time}
             move      {num_wait_loops},R1
@@ -160,7 +154,7 @@ class GenericPulsar(ABC):
         return program
 
     @abstractmethod
-    def translate(self, sequence):
+    def translate(self, sequence, nshots):
         """Translates an abstract pulse sequence to QBlox format.
 
         Args:
@@ -257,15 +251,15 @@ class PulsarQRM(GenericPulsar):
         else:
             raise(RuntimeError)
 
-    def setup(self, gain, hardware_avg, initial_delay, repetition_duration,
+    def setup(self, gain, initial_delay, repetition_duration,
               start_sample, integration_length, sampling_rate, mode):
-        super().setup(gain, hardware_avg, initial_delay, repetition_duration)
+        super().setup(gain, initial_delay, repetition_duration)
         self.start_sample = start_sample
         self.integration_length = integration_length
         self.sampling_rate = sampling_rate
         self.mode = mode
 
-    def translate(self, sequence):
+    def translate(self, sequence, nshots):
         # Allocate only readout pulses to PulsarQRM
         waveforms = self.generate_waveforms(sequence.qrm_pulses)
 
@@ -273,8 +267,8 @@ class PulsarQRM(GenericPulsar):
         initial_delay = sequence.qrm_pulses[0].start
         # Acquire waveforms over remaining duration of acquisition of input vector of length = 16380 with integration weights 0,0
         acquire_instruction = "acquire   0,0,4"
-        wait_time = self.duration_base - initial_delay - self.delay_before_readout - 4 # FIXME: Not sure why this hardcoded 4 is needed
-        program = self.generate_program(initial_delay, acquire_instruction, wait_time)
+        wait_time = self.duration_base - initial_delay - sequence.delay_before_readout - 4 # FIXME: Not sure why this hardcoded 4 is needed
+        program = self.generate_program(nshots, initial_delay, sequence.delay_before_readout, acquire_instruction, wait_time)
 
         return waveforms, program
 
@@ -346,15 +340,15 @@ class PulsarQCM(GenericPulsar):
         else:
             self.device.sequencer0_sync_en(sync_en)
 
-    def translate(self, sequence):
+    def translate(self, sequence, nshots):
         # Allocate only qubit pulses to PulsarQRM
         waveforms = self.generate_waveforms(sequence.qcm_pulses)
 
         # Generate program without acquire instruction
         initial_delay = sequence.qcm_pulses[0].start
         acquire_instruction = ""
-        wait_time = self.duration_base - initial_delay - self.delay_before_readout
-        program = self.generate_program(initial_delay, acquire_instruction, wait_time)
+        wait_time = self.duration_base - initial_delay - sequence.delay_before_readout
+        program = self.generate_program(nshots, initial_delay, sequence.delay_before_readout, acquire_instruction, wait_time)
 
         return waveforms, program
 

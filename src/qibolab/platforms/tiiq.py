@@ -76,7 +76,7 @@ class TIIq:
 
     @property
     def sampling_rate(self):
-        return self._settings.get("_settings").get("hardware_avg")
+        return self._settings.get("_settings").get("sampling_rate")
 
     @property
     def software_averages(self):
@@ -90,6 +90,50 @@ class TIIq:
     @property
     def repetition_duration(self):
         return self._settings.get("_settings").get("repetition_duration")
+
+    @property
+    def resonator_frequency(self):
+        return self._settings.get("_settings").get("resonator_freq")
+
+    @property
+    def qubit_frequency(self):
+        return self._settings.get("_settings").get("qubit_freq")
+
+    @property
+    def pi_pulse_gain(self):
+        return self._settings.get("_settings").get("pi_pulse_gain")
+
+    @property
+    def pi_pulse_amplitude(self):
+        return self._settings.get("_settings").get("pi_pulse_amplitude")
+
+    @property
+    def pi_pulse_duration(self):
+        return self._settings.get("_settings").get("pi_pulse_duration")
+
+    @property
+    def pi_pulse_frequency(self):
+        return self._settings.get("_settings").get("pi_pulse_frequency")
+
+    @property
+    def readout_pulse(self):
+        return self._settings.get("_settings").get("readout_pulse")
+
+    @property
+    def max_readout_voltage(self):
+        return self._settings.get("_settings").get("resonator_spectroscopy_max_ro_voltage")
+
+    @property
+    def min_readout_voltage(self):
+        return self._settings.get("_settings").get("rabi_oscillations_pi_pulse_min_voltage")
+
+    @property
+    def delay_between_pulses(self):
+        return self._settings.get("_settings").get("delay_between_pulses")
+
+    @property
+    def delay_before_readout(self):
+        return self._settings.get("_settings").get("delay_before_readout")
 
     def run_calibration(self):
         """Executes calibration routines and updates the settings json."""
@@ -144,7 +188,7 @@ class TIIq:
             self._qcm.close()
             self._connected = False
 
-    def execute(self, sequence):
+    def execute(self, sequence, nshots=None):
         """Executes a pulse sequence.
 
         Args:
@@ -156,13 +200,15 @@ class TIIq:
         """
         if not self._connected:
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
+        if nshots is None:
+            nshots = self.hardware_avg
 
         # Translate and upload instructions to instruments
         if sequence.qcm_pulses:
-            waveforms, program = self._qcm.translate(sequence)
+            waveforms, program = self._qcm.translate(sequence, nshots)
             self._qcm.upload(waveforms, program, self.data_folder)
         if sequence.qrm_pulses:
-            waveforms, program = self._qrm.translate(sequence)
+            waveforms, program = self._qrm.translate(sequence, nshots)
             self._qrm.upload(waveforms, program, self.data_folder)
 
         # Execute instructions
@@ -176,5 +222,5 @@ class TIIq:
 
         return acquisition_results
 
-    def __call__(self, sequence):
-        return self.execute(sequence)
+    def __call__(self, sequence, nshots=None):
+        return self.execute(sequence, nshots)

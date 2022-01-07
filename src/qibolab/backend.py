@@ -3,13 +3,12 @@ from qibo.config import raise_error
 
 
 class QibolabBackend(NumpyBackend): # pragma: no cover
-    # hardware backend is not tested until `qiboicarusq` is available
 
     description = "" # TODO: Write proper description
 
     def __init__(self):
         super().__init__()
-        self.name = "qiboicarusq"
+        self.name = "qibolab"
         self.custom_gates = True
         self.is_hardware = True
 
@@ -20,8 +19,8 @@ class QibolabBackend(NumpyBackend): # pragma: no cover
         if density_matrix:
             raise_error(NotImplementedError, "Hardware backend does not support "
                                              "density matrix simulation.")
-        from qibolab.circuit import HardwareCircuit
-        return HardwareCircuit
+        from qibolab.circuit import TIICircuit
+        return TIICircuit
 
     def create_gate(self, cls, *args, **kwargs):
         from qibolab import gates
