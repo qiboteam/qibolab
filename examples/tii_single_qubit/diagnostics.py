@@ -16,7 +16,7 @@ set_datadir(pathlib.Path(__file__).parent / "data")
 
 def create_measurement_control(name):
     import os
-    if os.environ.get("ENABLE_PLOTMON", False):
+    if os.environ.get("ENABLE_PLOTMON", True):
         mc = MeasurementControl(f'MC {name}')
         from quantify_core.visualization.pyqt_plotmon import PlotMonitor_pyqt
         plotmon = PlotMonitor_pyqt(f'Plot Monitor {name}')
