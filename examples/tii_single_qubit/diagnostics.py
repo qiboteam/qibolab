@@ -211,6 +211,7 @@ def run_rabi_pulse_length(mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro
     dataset = mc.run('Rabi Pulse Length', soft_avg = platform.software_averages)
     platform.stop()
 
+    return dataset
 
 def run_rabi_pulse_gain(mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_pulse):
     #qubit pulse duration=200
@@ -224,6 +225,8 @@ def run_rabi_pulse_gain(mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_p
     platform.LO_qcm.on()
     dataset = mc.run('Rabi Pulse Gain', soft_avg = platform.software_averages)
     platform.stop()
+    
+    return dataset
 
 
 def run_rabi_pulse_length_and_gain(mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_pulse):
@@ -243,6 +246,8 @@ def run_rabi_pulse_length_and_gain(mc, resonator_freq, qubit_freq, sequence, qc_
     # platform.pi_pulse_length =
     # platform.pi_pulse_gain =
     platform.stop()
+    
+    return dataset
 
 
 def run_rabi_pulse_length_and_amplitude(mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_pulse):
@@ -262,6 +267,8 @@ def run_rabi_pulse_length_and_amplitude(mc, resonator_freq, qubit_freq, sequence
     # platform.pi_pulse_length =
     # platform.pi_pulse_gain =
     platform.stop()
+    
+    return dataset
 
 def run_t1(mc,
            resonator_freq, 
@@ -289,9 +296,8 @@ def run_t1(mc,
     platform.LO_qcm.on()
     dataset = mc.run('T1', soft_avg = platform.software_averages)
     platform.stop()
-    #fit data and determine T1
-    #platform.t1 =
-    #return dataset
+    
+    return dataset
 
 
 def run_ramsey(mc, 
@@ -318,11 +324,8 @@ def run_ramsey(mc,
     platform.LO_qcm.on()
     dataset = mc.run('Ramsey', soft_avg = platform.software_averages)
     platform.stop()
-    # fit data and determine Ramsey Time and dephasing
-    # platform.ramsey =
-    # platform.qubit_freq += dephasing
-    # return dataset
-
+    
+    return dataset
 
 def run_spin_echo(mc,
                   resonator_freq, 
@@ -348,7 +351,8 @@ def run_spin_echo(mc,
     platform.LO_qcm.on()
     dataset = mc.run('Spin Echo', soft_avg = platform.software_averages)
     platform.stop()
-    #return dataset
+    
+    return dataset
 
 
 # help classes
