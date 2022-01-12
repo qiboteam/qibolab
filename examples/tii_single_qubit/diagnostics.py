@@ -9,6 +9,7 @@ from qibolab.pulse_shapes import Rectangular, Gaussian
 from quantify_core.measurement import MeasurementControl
 from quantify_core.measurement.control import Gettable, Settable
 from quantify_core.data.handling import set_datadir
+
 # TODO: Check why this set_datadir is needed
 set_datadir(pathlib.Path(__file__).parent / "data")
 
@@ -58,31 +59,16 @@ def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, high
     return scanrange
 
 
-def get_pulse_sequence(duration=4000):
-    qc_pulse = pulses.Pulse(start=0,
-                            frequency=200000000.0,
-                            amplitude=0.9,
-                            duration=duration,
-                            phase=0,
-                            shape=Gaussian(4000 / 5))
-    ro_pulse = pulses.ReadoutPulse(start=duration + 4,
-                                   frequency=20000000.0,
-                                   amplitude=0.9,
-                                   duration=2000,
-                                   phase=0,
-                                   shape=Rectangular())
-    sequence = pulses.PulseSequence()
-    sequence.add(qc_pulse)
-    sequence.add(ro_pulse)
-    return sequence, qc_pulse, ro_pulse
+def run_resonator_spectroscopy(mc, 
+                               sequence,
+                               ro_pulse, 
+                               lowres_width, 
+                               lowres_step,
+                               highres_width, 
+                               highres_step,
+                               precision_width, 
+                               precision_step):
 
-
-def run_resonator_spectroscopy(lowres_width, lowres_step,
-                               highres_width, highres_step,
-                               precision_width, precision_step):
-    sequence, qc_pulse, ro_pulse = get_pulse_sequence()
-
-    mc, pl, ins = create_measurement_control('resonator_spectroscopy')
     # Fast Sweep
     platform.software_averages = 1
     scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
@@ -92,7 +78,6 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     platform.LO_qrm.on()
     platform.LO_qcm.off()
     dataset = mc.run("Resonator Spectroscopy Fast", soft_avg=platform.software_averages)
-    # http://xarray.pydata.org/en/stable/getting-started-guide/quick-overview.html
     platform.stop()
     platform.LO_qrm.set_frequency(dataset['x0'].values[dataset['y0'].argmax().values])
 
@@ -107,6 +92,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     dataset = mc.run("Resonator Spectroscopy Precision", soft_avg=platform.software_averages)
     platform.stop()
 
+    #Plot results
     from scipy.signal import savgol_filter
     smooth_dataset = savgol_filter(dataset['y0'].values, 25, 2)
     resonator_freq = dataset['x0'].values[smooth_dataset.argmax()] + ro_pulse.frequency
@@ -118,21 +104,28 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
     ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
     ax.title.set_text('Original')
-    #ax.xlabel("Frequency")
-    #ax.ylabel("Amplitude")
     ax.plot(dataset['x0'].values[smooth_dataset.argmax()], smooth_dataset[smooth_dataset.argmax()], 'o', color='C2')
+
     # determine off-resonance amplitude and typical noise
     plt.savefig("run_resonator_spectroscopy.pdf")
 
     return resonator_freq, dataset
 
 
-def run_qubit_spectroscopy(resonator_freq, fast_start, fast_end, fast_step,
-                           precision_start, precision_end, precision_step):
-    sequence, qc_pulse, ro_pulse = get_pulse_sequence()
-
+def run_qubit_spectroscopy(mc, 
+                           resonator_freq, 
+                           sequence, 
+                           qc_pulse, 
+                           ro_pulse, 
+                           fast_start, 
+                           fast_end, 
+                           fast_step,
+                           precision_start, 
+                           precision_end, 
+                           precision_step):
+    
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
-    mc, pl, ins = create_measurement_control('qubit_spectroscopy')
+
     # Fast Sweep
     platform.software_averages = 1
     scanrange = np.arange(fast_start, fast_end, fast_step)
@@ -143,9 +136,40 @@ def run_qubit_spectroscopy(resonator_freq, fast_start, fast_end, fast_step,
     platform.LO_qcm.on()
     dataset = mc.run("Qubit Spectroscopy Fast", soft_avg=platform.software_averages)
     platform.stop()
-    # http://xarray.pydata.org/en/stable/getting-started-guide/quick-overview.html
     platform.LO_qcm.set_frequency(dataset['x0'].values[dataset['y0'].argmin().values])
 
+
+    # Save qubit frequency found and shift IF
+    shift =  1000000.0 #MHz
+    qubit_freq = dataset['x0'].values[dataset['y0'].argmin().values] 
+
+    #Introduce shift in IF
+    qc_pulse = pulses.Pulse(start=0,
+                            frequency=200000000.0 - shift,
+                            amplitude=0.9,
+                            duration=4000,
+                            phase=0,
+                            shape=Gaussian(4000 / 5))
+
+    sequence2 = pulses.PulseSequence()
+    sequence2.add(qc_pulse)
+    sequence2.add(ro_pulse)
+
+    #Re-run cavity spectroscopy
+    mc.settables(platform.LO_qrm.device.frequency)
+    mc.setpoints(scanrange + platform.LO_qrm.get_frequency())
+    mc.gettables(Gettable(ROController(sequence2)))
+    platform.LO_qrm.on()
+    platform.LO_qcm.on()
+    dataset = mc.run("Qubit Spectroscopy Fast", soft_avg=platform.software_averages)
+    platform.stop()
+
+    # Check if the resonance frequency shifted as much as the IF_shift introduced
+    if ((qubit_freq - dataset['x0'].values[dataset['y0'].argmin().values]) < (shift * 0,25)):
+        #getting the mixer leakage
+        print(f"\nGetting LO leakge.\n Qubit Frequency = {qubit_freq} \n Qubit frequency after IF shift = {dataset['x0'].values[dataset['y0'].argmin().values]}")
+        return
+    
     # Precision Sweep
     platform.software_averages = 3
     scanrange = np.arange(precision_start, precision_end, precision_step)
@@ -169,20 +193,15 @@ def run_qubit_spectroscopy(resonator_freq, fast_start, fast_end, fast_step,
     ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
     ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
     ax.title.set_text('Original')
-    #ax.xlabel("Frequency")
-    #ax.ylabel("Amplitude")
     ax.plot(dataset['x0'].values[smooth_dataset.argmin()], smooth_dataset[smooth_dataset.argmin()], 'o', color='C2')
     plt.savefig("run_qubit_spectroscopy.pdf")
 
     return qubit_freq, dataset
 
 
-def run_rabi_pulse_length(resonator_freq, qubit_freq):
-    sequence, qc_pulse, ro_pulse = get_pulse_sequence()
-
+def run_rabi_pulse_length(mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_pulse):
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
-    platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
-    mc, pl, ins = create_measurement_control('Rabi_pulse_length')
+    platform.LO_qcm.set_frequency(qubit_freq - qc_pulse.frequency)
     platform.software_averages = 1
     mc.settables(Settable(QCPulseLengthParameter(ro_pulse, qc_pulse)))
     mc.setpoints(np.arange(1, 200, 1))
@@ -193,12 +212,10 @@ def run_rabi_pulse_length(resonator_freq, qubit_freq):
     platform.stop()
 
 
-def run_rabi_pulse_gain(resonator_freq, qubit_freq):
-    sequence, qc_pulse, ro_pulse = get_pulse_sequence(duration=200)
-
+def run_rabi_pulse_gain(mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_pulse):
+    #qubit pulse duration=200
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
-    mc, pl, ins = create_measurement_control('Rabi_pulse_gain')
     platform.software_averages = 1
     mc.settables(Settable(QCPulseGainParameter(platform.qcm)))
     mc.setpoints(np.arange(0, 100))
@@ -209,12 +226,9 @@ def run_rabi_pulse_gain(resonator_freq, qubit_freq):
     platform.stop()
 
 
-def run_rabi_pulse_length_and_gain(resonator_freq, qubit_freq):
-    sequence, qc_pulse, ro_pulse = get_pulse_sequence()
-
+def run_rabi_pulse_length_and_gain(mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_pulse):
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
-    mc, pl, ins = create_measurement_control('Rabi_pulse_length_and_gain')
     platform.software_averages = 1
     mc.settables([Settable(QCPulseLengthParameter(ro_pulse, qc_pulse)),
                   Settable(QCPulseGainParameter(platform.qcm))])
@@ -231,12 +245,9 @@ def run_rabi_pulse_length_and_gain(resonator_freq, qubit_freq):
     platform.stop()
 
 
-def run_rabi_pulse_length_and_amplitude(resonator_freq, qubit_freq):
-    sequence, qc_pulse, ro_pulse = get_pulse_sequence()
-
+def run_rabi_pulse_length_and_amplitude(mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_pulse):
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
-    mc, pl, ins = create_measurement_control('Rabi_pulse_length_and_amplitude')
     platform.software_averages = 1
     mc.settables([Settable(QCPulseLengthParameter(ro_pulse, qc_pulse)),
                   Settable(QCPulseAmplitudeParameter(qc_pulse))])
@@ -252,11 +263,17 @@ def run_rabi_pulse_length_and_amplitude(resonator_freq, qubit_freq):
     # platform.pi_pulse_gain =
     platform.stop()
 
-
-def run_t1(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
-            delay_before_readout_start, delay_before_readout_end,
-            delay_before_readout_step):
-    sequence, qc_pulse, ro_pulse = get_pulse_sequence(duration=pi_pulse_length)
+def run_t1(mc,
+           resonator_freq, 
+           qubit_freq, 
+           sequence, 
+           qc_pulse, 
+           ro_pulse,                
+           pi_pulse_gain, 
+           pi_pulse_length,
+           delay_before_readout_start, 
+           delay_before_readout_end,
+           delay_before_readout_step):
 
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
@@ -272,43 +289,28 @@ def run_t1(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
     platform.LO_qcm.on()
     dataset = mc.run('T1', soft_avg = platform.software_averages)
     platform.stop()
-    # fit data and determine T1
-    # platform.t1 =
+    #fit data and determine T1
+    #platform.t1 =
+    #return dataset
 
-    return dataset
 
-
-def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pulse_amplitude,
-               start_start, start_end, start_step):
-    qc_pulse = pulses.Pulse(start=0,
-                            frequency=200000000.0,
-                            amplitude=pi_pulse_amplitude,
-                            duration=pi_pulse_length // 2,
-                            phase=0,
-                            shape=Gaussian(pi_pulse_length // 10))
-    qc2_pulse = pulses.Pulse(start=pi_pulse_length // 2 + 0,
-                               frequency=200000000.0,
-                               amplitude=pi_pulse_amplitude,
-                               duration=pi_pulse_length // 2,
-                               phase=0,
-                               shape=Gaussian(pi_pulse_length // 10))
-    start = qc_pulse.duration + qc2_pulse.duration + 4
-    ro_pulse = pulses.ReadoutPulse(start=start,
-                                   frequency=20000000.0,
-                                   amplitude=0.9,
-                                   duration=2000,
-                                   phase=0,
-                                   shape=Rectangular())
-    sequence = pulses.PulseSequence()
-    sequence.add(qc_pulse)
-    sequence.add(qc2_pulse)
-    sequence.add(ro_pulse)
+def run_ramsey(mc, 
+               resonator_freq, 
+               qubit_freq, 
+               sequence, 
+               qc_pulse, 
+               qc2_pulse, 
+               ro_pulse, 
+               pi_pulse_gain, 
+               pi_pulse_length, 
+               pi_pulse_amplitude, #not used!!!!
+               start_start, 
+               start_end, start_step):
 
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
     platform.qcm.gain = pi_pulse_gain
 
-    mc, pl, ins = create_measurement_control('ramsey')
     mc.settables(Settable(RamseyWaitParameter(ro_pulse, qc2_pulse, pi_pulse_length)))
     mc.setpoints(np.arange(start_start, start_end, start_step))
     mc.gettables(Gettable(ROController(sequence)))
@@ -319,40 +321,26 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pu
     # fit data and determine Ramsey Time and dephasing
     # platform.ramsey =
     # platform.qubit_freq += dephasing
-    return dataset
+    # return dataset
 
 
-def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pulse_amplitude,
-                  start_start, start_end, start_step):
-    qc_pulse = pulses.Pulse(start=0,
-                            frequency=200000000.0,
-                            amplitude=pi_pulse_amplitude,
-                            duration=pi_pulse_length // 2,
-                            phase=0,
-                            shape=Gaussian(pi_pulse_length // 10))
-    qc2_pulse = pulses.Pulse(start=pi_pulse_length // 2 + 0,
-                             frequency=200000000.0,
-                             amplitude=pi_pulse_amplitude,
-                             duration=pi_pulse_length // 2,
-                             phase=0,
-                             shape=Gaussian(pi_pulse_length // 10))
-    start = qc_pulse.duration + qc2_pulse.duration + 4
-    ro_pulse = pulses.ReadoutPulse(start=start,
-                                   frequency=20000000.0,
-                                   amplitude=0.9,
-                                   duration=2000,
-                                   phase=0,
-                                   shape=Rectangular())
-    sequence = pulses.PulseSequence()
-    sequence.add(qc_pulse)
-    sequence.add(qc2_pulse)
-    sequence.add(ro_pulse)
+def run_spin_echo(mc,
+                  resonator_freq, 
+                  qubit_freq, 
+                  sequence,
+                  qc_pulse,
+                  qc2_pulse,
+                  ro_pulse,
+                  pi_pulse_gain, 
+                  pi_pulse_length, 
+                  pi_pulse_amplitude, #not used!!!
+                  start_start, 
+                  start_end, 
+                  start_step):
 
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
     platform.qcm.gain = pi_pulse_gain
-
-    mc, pl, ins = create_measurement_control('spin_echo')
     mc.settables(Settable(SpinEchoWaitParameter(ro_pulse, qc2_pulse, pi_pulse_length)))
     mc.setpoints(np.arange(start_start, start_end, start_step))
     mc.gettables(Gettable(ROController(sequence)))
@@ -360,11 +348,10 @@ def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi
     platform.LO_qcm.on()
     dataset = mc.run('Spin Echo', soft_avg = platform.software_averages)
     platform.stop()
+    #return dataset
 
-    return dataset
 
 # help classes
-
 class QCPulseLengthParameter():
 
     label = 'Qubit Control Pulse Length'
