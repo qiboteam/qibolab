@@ -9,10 +9,29 @@ from qibolab.pulse_shapes import Rectangular, Gaussian
 from quantify_core.measurement import MeasurementControl
 from quantify_core.measurement.control import Gettable, Settable
 from quantify_core.data.handling import set_datadir
+from scipy.signal import savgol_filter
 
 # TODO: Check why this set_datadir is needed
 set_datadir(pathlib.Path(__file__).parent / "data")
 
+##Aux diagnostics functions
+def plot_cavity_spectroscopy(dataset):
+    smooth_dataset = savgol_filter(dataset['y0'].values, 25, 2)
+    fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
+    ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
+    ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
+    ax.title.set_text('Original')
+    ax.plot(dataset['x0'].values[smooth_dataset.argmax()], smooth_dataset[smooth_dataset.argmax()], 'o', color='C2')
+    plt.savefig("run_resonator_spectroscopy.pdf")
+
+def plot_qubit_spectroscopy(dataset):
+    smooth_dataset = savgol_filter(dataset['y0'].values, 11, 2)
+    fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
+    ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
+    ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
+    ax.title.set_text('Original')
+    ax.plot(dataset['x0'].values[smooth_dataset.argmin()], smooth_dataset[smooth_dataset.argmin()], 'o', color='C2')
+    plt.savefig("run_qubit_spectroscopy.pdf")
 
 def create_measurement_control(name):
     import os
@@ -30,20 +49,6 @@ def create_measurement_control(name):
         mc = MeasurementControl(f'MC {name}')
         return mc, None, None
 
-
-class ROController():
-    # Quantify Gettable Interface Implementation
-    label = ['Amplitude', 'Phase','I','Q']
-    unit = ['V', 'Radians','V','V']
-    name = ['A', 'Phi','I','Q']
-
-    def __init__(self, sequence):
-        self.sequence = sequence
-
-    def get(self):
-        return platform(self.sequence)
-
-
 def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step):
     #[.     .     .     .     .     .][...................]0[...................][.     .     .     .     .     .]
     #[-------- lowres_width ---------][-- highres_width --] [-- highres_width --][-------- lowres_width ---------]
@@ -57,6 +62,18 @@ def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, high
         )
     )
     return scanrange
+
+class ROController():
+    # Quantify Gettable Interface Implementation
+    label = ['Amplitude', 'Phase','I','Q']
+    unit = ['V', 'Radians','V','V']
+    name = ['A', 'Phi','I','Q']
+
+    def __init__(self, sequence):
+        self.sequence = sequence
+
+    def get(self):
+        return platform(self.sequence)
 
 
 def run_resonator_spectroscopy(mc, 
@@ -93,21 +110,11 @@ def run_resonator_spectroscopy(mc,
     platform.stop()
 
     #Plot results
-    from scipy.signal import savgol_filter
     smooth_dataset = savgol_filter(dataset['y0'].values, 25, 2)
     resonator_freq = dataset['x0'].values[smooth_dataset.argmax()] + ro_pulse.frequency
     print(f"\nResonator Frequency = {resonator_freq}")
     print(len(dataset['y0'].values))
     print(len(smooth_dataset))
-
-    fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-    ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
-    ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
-    ax.title.set_text('Original')
-    ax.plot(dataset['x0'].values[smooth_dataset.argmax()], smooth_dataset[smooth_dataset.argmax()], 'o', color='C2')
-
-    # determine off-resonance amplitude and typical noise
-    plt.savefig("run_resonator_spectroscopy.pdf")
 
     return resonator_freq, dataset
 
@@ -181,20 +188,13 @@ def run_qubit_spectroscopy(mc,
     dataset = mc.run("Qubit Spectroscopy Precision", soft_avg=platform.software_averages)
     platform.stop()
 
-    from scipy.signal import savgol_filter
+#    from scipy.signal import savgol_filter
     smooth_dataset = savgol_filter(dataset['y0'].values, 11, 2)
     qubit_freq = dataset['x0'].values[smooth_dataset.argmin()] - qc_pulse.frequency
     print(dataset['x0'].values[smooth_dataset.argmin()])
     print(f"Qubit Frequency = {qubit_freq}")
     print(len(dataset['y0'].values))
     print(len(smooth_dataset))
-
-    fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-    ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
-    ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
-    ax.title.set_text('Original')
-    ax.plot(dataset['x0'].values[smooth_dataset.argmin()], smooth_dataset[smooth_dataset.argmin()], 'o', color='C2')
-    plt.savefig("run_qubit_spectroscopy.pdf")
 
     return qubit_freq, dataset
 
