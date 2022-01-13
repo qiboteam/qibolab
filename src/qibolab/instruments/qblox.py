@@ -44,17 +44,15 @@ class GenericPulsar(ABC):
             self.device.sequencer0_gain_awg_path0(gain)
             self.device.sequencer0_gain_awg_path1(gain)
 
-    def setup(self, gain, hardware_avg, initial_delay, repetition_duration):
+    def setup(self, gain, initial_delay, repetition_duration):
         """Sets calibration setting to QBlox instruments.
 
         Args:
             gain (float):
-            hardware_avg (int):
             initial_delay ():
             repetition_duration ():
         """
         self.gain = gain
-        self.hardware_avg = hardware_avg
         self.initial_delay = initial_delay
         self.repetition_duration = repetition_duration
 
@@ -253,15 +251,15 @@ class PulsarQRM(GenericPulsar):
         else:
             raise(RuntimeError)
 
-    def setup(self, gain, hardware_avg, initial_delay, repetition_duration,
+    def setup(self, gain, initial_delay, repetition_duration,
               start_sample, integration_length, sampling_rate, mode):
-        super().setup(gain, hardware_avg, initial_delay, repetition_duration)
+        super().setup(gain, initial_delay, repetition_duration)
         self.start_sample = start_sample
         self.integration_length = integration_length
         self.sampling_rate = sampling_rate
         self.mode = mode
 
-    def translate(self, sequence, nshots=None):
+    def translate(self, sequence, nshots):
         # Allocate only readout pulses to PulsarQRM
         waveforms = self.generate_waveforms(sequence.qrm_pulses)
 
@@ -270,8 +268,6 @@ class PulsarQRM(GenericPulsar):
         # Acquire waveforms over remaining duration of acquisition of input vector of length = 16380 with integration weights 0,0
         acquire_instruction = "acquire   0,0,4"
         wait_time = self.duration_base - initial_delay - sequence.delay_before_readout - 4 # FIXME: Not sure why this hardcoded 4 is needed
-        if nshots is None:
-            nshots = self.hardware_avg
         program = self.generate_program(nshots, initial_delay, sequence.delay_before_readout, acquire_instruction, wait_time)
 
         return waveforms, program
@@ -352,8 +348,6 @@ class PulsarQCM(GenericPulsar):
         initial_delay = sequence.qcm_pulses[0].start
         acquire_instruction = ""
         wait_time = self.duration_base - initial_delay - sequence.delay_before_readout
-        if nshots is None:
-            nshots = self.hardware_avg
         program = self.generate_program(nshots, initial_delay, sequence.delay_before_readout, acquire_instruction, wait_time)
 
         return waveforms, program
