@@ -20,7 +20,7 @@ def plot_cavity_spectroscopy(dataset):
     fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
     ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
     ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
-    ax.title.set_text('Original')
+    ax.title.set_text('Cavity spectroscopy')
     ax.plot(dataset['x0'].values[smooth_dataset.argmax()], smooth_dataset[smooth_dataset.argmax()], 'o', color='C2')
     plt.savefig("run_resonator_spectroscopy.pdf")
 
@@ -29,9 +29,29 @@ def plot_qubit_spectroscopy(dataset):
     fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
     ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
     ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
-    ax.title.set_text('Original')
+    ax.title.set_text('Qubit spectroscopy')
     ax.plot(dataset['x0'].values[smooth_dataset.argmin()], smooth_dataset[smooth_dataset.argmin()], 'o', color='C2')
     plt.savefig("run_qubit_spectroscopy.pdf")
+
+def plot_rabi_pulse_length(smooth_dataset, dataset):
+    fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
+    ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
+    ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
+    ax.title.set_text('Rabi Length')
+    ax.plot(dataset['x0'].values[smooth_dataset.argmin()], smooth_dataset[smooth_dataset.argmin()], 'o', color='C2')
+
+def plot_t1(smooth_dataset, dataset):
+    fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
+    ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
+    ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
+    ax.title.set_text('T1')
+
+def plot_ramsey(smooth_dataset, dataset):
+    fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
+    ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
+    ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
+    ax.title.set_text('Ramsey')
+    ax.plot(dataset['x0'].values[smooth_dataset.argmin()], smooth_dataset[smooth_dataset.argmin()], 'o', color='C2')
 
 def create_measurement_control(name):
     import os
@@ -109,7 +129,6 @@ def run_resonator_spectroscopy(mc,
     dataset = mc.run("Resonator Spectroscopy Precision", soft_avg=platform.software_averages)
     platform.stop()
 
-    #Plot results
     smooth_dataset = savgol_filter(dataset['y0'].values, 25, 2)
     resonator_freq = dataset['x0'].values[smooth_dataset.argmax()] + ro_pulse.frequency
     print(f"\nResonator Frequency = {resonator_freq}")
@@ -147,12 +166,12 @@ def run_qubit_spectroscopy(mc,
 
 
     # Save qubit frequency found and shift IF
-    shift =  1000000.0 #MHz
+    IF_shift =  30000000.0 #MHz
     qubit_freq = dataset['x0'].values[dataset['y0'].argmin().values] 
 
     #Introduce shift in IF
     qc_pulse = pulses.Pulse(start=0,
-                            frequency=200000000.0 - shift,
+                            frequency=200000000.0 - IF_shift,
                             amplitude=0.9,
                             duration=4000,
                             phase=0,
@@ -172,9 +191,10 @@ def run_qubit_spectroscopy(mc,
     platform.stop()
 
     # Check if the resonance frequency shifted as much as the IF_shift introduced
-    if ((qubit_freq - dataset['x0'].values[dataset['y0'].argmin().values]) < (shift * 0,25)):
+    if ((qubit_freq - dataset['x0'].values[dataset['y0'].argmin().values]) < (IF_shift * 0,25)):
         #getting the mixer leakage
         print(f"\nGetting LO leakge.\n Qubit Frequency = {qubit_freq} \n Qubit frequency after IF shift = {dataset['x0'].values[dataset['y0'].argmin().values]}")
+        #change sweep range freq to exclude leakge freq (TODO: Alvaro)
         return
     
     # Precision Sweep
@@ -219,7 +239,7 @@ def run_rabi_pulse_gain(mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_p
     platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
     platform.software_averages = 1
     mc.settables(Settable(QCPulseGainParameter(platform.qcm)))
-    mc.setpoints(np.arange(0, 100))
+    mc.setpoints(np.arange(0, 50, 1))
     mc.gettables(Gettable(ROController(sequence)))
     platform.LO_qrm.on()
     platform.LO_qcm.on()

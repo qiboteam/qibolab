@@ -15,7 +15,18 @@ def rabi_fit(dataset):
     pi_pulse_duration = np.abs((1.0 / popt[2]) / 2)
     rabi_oscillations_pi_pulse_min_voltage = smooth_dataset.min() * 1e6
     t1 = 1.0 / popt[4]
-    return pi_pulse_duration, rabi_oscillations_pi_pulse_min_voltage, t1
+    return smooth_dataset, pi_pulse_duration, rabi_oscillations_pi_pulse_min_voltage, t1
+
+def t1_fit(dataset):
+    pguess = [
+        max(dataset['y0'].values),
+        (max(dataset['y0'].values) - min(dataset['y0'].values)),
+        1/250
+    ]
+    popt, pcov = curve_fit(exp, dataset['x0'].values, dataset['y0'].values, p0=pguess)
+    smooth_dataset = exp(dataset['x0'].values, *popt)
+    t1 = abs(1/popt[2])
+    return smooth_dataset, t1
 
 def ramsey_fit(dataset):
     pguess = [
@@ -29,7 +40,7 @@ def ramsey_fit(dataset):
     smooth_dataset = ramsey(dataset['x0'].values, *popt)
     delta_frequency = popt[2]
     t2 = 1.0 / popt[4]
-    return delta_frequency, t2
+    return smooth_dataset, delta_frequency, t2
     
 def rabi(x, p0, p1, p2, p3, p4):
     # A fit to Superconducting Qubit Rabi Oscillation
