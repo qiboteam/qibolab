@@ -7,6 +7,14 @@
         "precision_width": 0.5e6,
         "precision_step": 0.02e6
     },
+    "resonator_spectroscopy_shifted": {
+        "lowres_width": 30e6,
+        "lowres_step": 2e6,
+        "highres_width": 1e6,
+        "highres_step": 0.2e6,
+        "precision_width": 0.5e6,
+        "precision_step": 0.02e6
+    },
     "qubit_spectroscopy": {
         "fast_start": -400e6,
         "fast_end": 100e6,
@@ -26,6 +34,11 @@
         "start_step": 4
     },
     "spin_echo": {
+        "start_start": 4,
+        "start_end": 500,
+        "start_step": 10
+    },
+    "spin_echo_3pulses": {
         "start_start": 4,
         "start_end": 500,
         "start_step": 10

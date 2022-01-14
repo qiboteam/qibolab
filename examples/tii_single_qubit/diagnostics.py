@@ -15,43 +15,24 @@ from scipy.signal import savgol_filter
 set_datadir(pathlib.Path(__file__).parent / "data")
 
 ##Aux diagnostics functions
-def plot_cavity_spectroscopy(dataset):
-    smooth_dataset = savgol_filter(dataset['y0'].values, 25, 2)
-    fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-    ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
-    ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
-    ax.title.set_text('Cavity spectroscopy')
-    ax.plot(dataset['x0'].values[smooth_dataset.argmax()], smooth_dataset[smooth_dataset.argmax()], 'o', color='C2')
-    plt.savefig("run_resonator_spectroscopy.pdf")
+def plot(smooth_dataset, dataset, label, type):
+    if (type == 0): #cavity plots
+        fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
+        ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
+        ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
+        ax.title.set_text(label)
+        ax.plot(dataset['x0'].values[smooth_dataset.argmax()], smooth_dataset[smooth_dataset.argmax()], 'o', color='C2')
+        plt.savefig(label+".pdf")
+        return
 
-def plot_qubit_spectroscopy(dataset):
-    smooth_dataset = savgol_filter(dataset['y0'].values, 11, 2)
-    fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-    ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
-    ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
-    ax.title.set_text('Qubit spectroscopy')
-    ax.plot(dataset['x0'].values[smooth_dataset.argmin()], smooth_dataset[smooth_dataset.argmin()], 'o', color='C2')
-    plt.savefig("run_qubit_spectroscopy.pdf")
-
-def plot_rabi_pulse_length(smooth_dataset, dataset):
-    fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-    ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
-    ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
-    ax.title.set_text('Rabi Length')
-    ax.plot(dataset['x0'].values[smooth_dataset.argmin()], smooth_dataset[smooth_dataset.argmin()], 'o', color='C2')
-
-def plot_t1(smooth_dataset, dataset):
-    fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-    ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
-    ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
-    ax.title.set_text('T1')
-
-def plot_ramsey(smooth_dataset, dataset):
-    fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-    ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
-    ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
-    ax.title.set_text('Ramsey')
-    ax.plot(dataset['x0'].values[smooth_dataset.argmin()], smooth_dataset[smooth_dataset.argmin()], 'o', color='C2')
+    if (type == 1): #qubit spec, rabi, ramsey, t1 plots
+        fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
+        ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
+        ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
+        ax.title.set_text(label)
+        ax.plot(dataset['x0'].values[smooth_dataset.argmin()], smooth_dataset[smooth_dataset.argmin()], 'o', color='C2')
+        plt.savefig(label+".pdf")
+        return
 
 def create_measurement_control(name):
     import os
@@ -135,7 +116,49 @@ def run_resonator_spectroscopy(mc,
     print(len(dataset['y0'].values))
     print(len(smooth_dataset))
 
-    return resonator_freq, dataset
+    return resonator_freq, smooth_dataset, dataset
+
+def run_shifted_resonator_spectroscopy(mc, 
+                                       sequence,
+                                       ro_pulse, 
+                                       lowres_width, 
+                                       lowres_step,
+                                       highres_width, 
+                                       highres_step,
+                                       precision_width, 
+                                       precision_step):
+          
+    # Fast Sweep
+    platform.software_averages = 1
+    scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
+    mc.settables(platform.LO_qrm.device.frequency)
+    mc.setpoints(scanrange + platform.LO_qrm.get_frequency())
+    mc.gettables(Gettable(ROController(sequence)))
+    platform.LO_qrm.on()
+    platform.LO_qcm.on()
+    dataset = mc.run("Resonator Spectroscopy Shifted Fast", soft_avg=platform.software_averages)
+    platform.stop()
+    shifted_LO_frequency = dataset['x0'].values[dataset['y0'].argmax().values]
+
+    # Precision Sweep
+    platform.software_averages = 3
+    scanrange = np.arange(-precision_width, precision_width, precision_step)
+    mc.settables(platform.LO_qrm.device.frequency)
+    mc.setpoints(scanrange + shifted_LO_frequency)
+    mc.gettables(Gettable(ROController(sequence)))
+    platform.LO_qrm.on()
+    platform.LO_qcm.on()
+    dataset = mc.run("Resonator Spectroscopy Shifted Precision", soft_avg=platform.software_averages)
+    platform.stop()
+
+    smooth_dataset = savgol_filter(dataset['y0'].values, 25, 2)
+    shifted_frequency = dataset['x0'].values[smooth_dataset.argmax()] + ro_pulse.frequency
+    shifted_max_ro_voltage = smooth_dataset.max() * 1e6
+    print('\n')
+    print(f"\nResonator Frequency = {shifted_frequency}")
+    print(f"Maximum Voltage Measured = {shifted_max_ro_voltage} μV")
+
+    return shifted_frequency, smooth_dataset, dataset
 
 
 def run_qubit_spectroscopy(mc, 
@@ -216,7 +239,7 @@ def run_qubit_spectroscopy(mc,
     print(len(dataset['y0'].values))
     print(len(smooth_dataset))
 
-    return qubit_freq, dataset
+    return qubit_freq, smooth_dataset, dataset
 
 
 def run_rabi_pulse_length(mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_pulse):
@@ -329,7 +352,6 @@ def run_ramsey(mc,
                ro_pulse, 
                pi_pulse_gain, 
                pi_pulse_length, 
-               pi_pulse_amplitude, #not used!!!!
                start_start, 
                start_end, start_step):
 
@@ -374,6 +396,33 @@ def run_spin_echo(mc,
     
     return dataset
 
+# Spin Echo 3 Pulses: RX(pi/2) - wait t(rotates z) - RX(pi) - wait t(rotates z) - RX(pi/2) - readout
+def run_spin_echo_3pulses(mc,
+                          resonator_freq,
+                          qubit_freq,
+                          sequence,
+                          qc_pulse,
+                          qc2_pulse,
+                          qc3_pulse,  
+                          ro_pulse,
+                          pi_pulse_gain, 
+                          pi_pulse_length, 
+                          pi_pulse_amplitude, #not used!!!
+                          start_start, 
+                          start_end, 
+                          start_step
+                        ):
+    
+    platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
+    platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
+    platform.qcm.gain = pi_pulse_gain
+    mc.settables(SpinEcho3PWaitParameter(ro_pulse, qc2_pulse, qc3_pulse, pi_pulse_length))
+    mc.setpoints(np.arange(start_start, start_end, start_step))
+    mc.gettables(Gettable(ROController(sequence)))
+    platform._LO_qrm.on()
+    platform._LO_qcm.on()
+    dataset = mc.run('Spin Echo 3 Pulses', soft_avg = platform.software_averages)
+    platform.stop()
 
 # help classes
 class QCPulseLengthParameter():
@@ -463,3 +512,20 @@ class SpinEchoWaitParameter():
     def set(self, value):
         self.qc2_pulse.start = self.pi_pulse_length//2 + value
         self.ro_pulse.start = 3 * self.pi_pulse_length//2 + 2 * value + 4
+
+class SpinEcho3PWaitParameter():
+    label = 'Time'
+    unit = 'ns'
+    name = 'spin_echo_wait'
+    initial_value = 0
+    
+    def __init__(self, ro_pulse, qc2_pulse, qc3_pulse, pi_pulse_length):
+        self.ro_pulse = ro_pulse
+        self.qc2_pulse = qc2_pulse
+        self.qc3_pulse = qc3_pulse
+        self.pi_pulse_length = pi_pulse_length
+        
+    def set(self,value):
+        self.qc2_pulse.start = self.pi_pulse_length//2 + value
+        self.qc3_pulse.start = (3 * self.pi_pulse_length)//2 + 2 * value
+        self.ro_pulse.start = 2 * self.pi_pulse_length + 2 * value + 4
