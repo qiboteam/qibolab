@@ -1,29 +1,31 @@
 import os
-import json
+import yaml
 from qibo.config import raise_error, log
 
 
-class TIIq:
-    """Platform for controlling TII device.
+class Platform:
+    """Platform for controlling quantum devices.
 
-    Controls the PulsarQRM, PulsarQCM and two SGS100A local oscillators.
-    Uses calibration parameters provided through a json to setup the instruments.
     The path of the calibration json can be provided using the
     ``"CALIBRATION_PATH"`` environment variable.
     If no path is provided the default path (``platforms/tiiq_settings.json``)
     will be used.
+
+    Args:
+        name (str): name of the platform stored in a yaml file in qibolab/platforms.
     """
 
-    def __init__(self):
+    def __init__(self, name):
+        log.info(f"Loading platform {name}")
         # TODO: Consider passing ``calibration_path` as environment variable
         self.calibration_path = os.environ.get("CALIBRATION_PATH")
         if self.calibration_path is None:
             # use default file
             import pathlib
-            self.calibration_path = pathlib.Path(__file__).parent / "tiiq_settings.json"
+            self.calibration_path = pathlib.Path(__file__).parent / "platforms" / f"{name}.yml"
         # Load calibration settings
         with open(self.calibration_path, "r") as file:
-            self._settings = json.load(file)
+            self._settings = yaml.safe_load(file)
 
         # initialize instruments
         self._connected = False
@@ -68,72 +70,72 @@ class TIIq:
 
     @property
     def data_folder(self):
-        return self._settings.get("_settings").get("data_folder")
+        return self._settings.get("settings").get("data_folder")
 
     @property
     def hardware_avg(self):
-        return self._settings.get("_settings").get("hardware_avg")
+        return self._settings.get("settings").get("hardware_avg")
 
     @property
     def sampling_rate(self):
-        return self._settings.get("_settings").get("sampling_rate")
+        return self._settings.get("settings").get("sampling_rate")
 
     @property
     def software_averages(self):
-        return self._settings.get("_settings").get("software_averages")
+        return self._settings.get("settings").get("software_averages")
 
     @software_averages.setter
     def software_averages(self, x):
         # I don't like that this updates the local dictionary but not the json
-        self._settings["_settings"]["software_averages"] = x
+        self._settings["settings"]["software_averages"] = x
 
     @property
     def repetition_duration(self):
-        return self._settings.get("_settings").get("repetition_duration")
+        return self._settings.get("settings").get("repetition_duration")
 
     @property
     def resonator_frequency(self):
-        return self._settings.get("_settings").get("resonator_freq")
+        return self._settings.get("settings").get("resonator_freq")
 
     @property
     def qubit_frequency(self):
-        return self._settings.get("_settings").get("qubit_freq")
+        return self._settings.get("settings").get("qubit_freq")
 
     @property
     def pi_pulse_gain(self):
-        return self._settings.get("_settings").get("pi_pulse_gain")
+        return self._settings.get("settings").get("pi_pulse_gain")
 
     @property
     def pi_pulse_amplitude(self):
-        return self._settings.get("_settings").get("pi_pulse_amplitude")
+        return self._settings.get("settings").get("pi_pulse_amplitude")
 
     @property
     def pi_pulse_duration(self):
-        return self._settings.get("_settings").get("pi_pulse_duration")
+        return self._settings.get("settings").get("pi_pulse_duration")
 
     @property
     def pi_pulse_frequency(self):
-        return self._settings.get("_settings").get("pi_pulse_frequency")
+        return self._settings.get("settings").get("pi_pulse_frequency")
 
     @property
     def readout_pulse(self):
-        return self._settings.get("_settings").get("readout_pulse")
+        return self._settings.get("settings").get("readout_pulse")
 
     @property
     def max_readout_voltage(self):
-        return self._settings.get("_settings").get("resonator_spectroscopy_max_ro_voltage")
+        return self._settings.get("settings").get("resonator_spectroscopy_max_ro_voltage")
 
     @property
     def min_readout_voltage(self):
-        return self._settings.get("_settings").get("rabi_oscillations_pi_pulse_min_voltage")
+        return self._settings.get("settings").get("rabi_oscillations_pi_pulse_min_voltage")
 
     @property
     def delay_between_pulses(self):
-        return self._settings.get("_settings").get("delay_between_pulses")
+        return self._settings.get("settings").get("delay_between_pulses")
 
     @property
     def delay_before_readout(self):
-        return self._settings.get("_settings").get("delay_before_readout")
+        return self._settings.get("settings").get("delay_before_readout")
 
     def run_calibration(self):
         """Executes calibration routines and updates the settings json."""
@@ -143,24 +145,24 @@ class TIIq:
         self.setup()
         # save new calibration settings to json
         with open(self.calibration_path, "w") as file:
-            json.dump(self._settings, file)
+            yaml.dump(self._settings, file)
 
     def connect(self):
         """Connects to lab instruments using the details specified in the calibration settings."""
         from qibolab.instruments import PulsarQRM, PulsarQCM, SGS100A
-        self._qrm = PulsarQRM(**self._settings.get("_QRM_init_settings"))
-        self._qcm = PulsarQCM(**self._settings.get("_QCM_init_settings"))
-        self._LO_qrm = SGS100A(**self._settings.get("_LO_QRM_init_settings"))
-        self._LO_qcm = SGS100A(**self._settings.get("_LO_QCM_init_settings"))
+        self._qrm = PulsarQRM(**self._settings.get("QRM_init_settings"))
+        self._qcm = PulsarQCM(**self._settings.get("QCM_init_settings"))
+        self._LO_qrm = SGS100A(**self._settings.get("LO_QRM_init_settings"))
+        self._LO_qcm = SGS100A(**self._settings.get("LO_QCM_init_settings"))
         self._connected = True
 
     def setup(self):
         """Configures instruments using the loaded calibration settings."""
         if self._connected:
-            self._qrm.setup(**self._settings.get("_QRM_settings"))
-            self._qcm.setup(**self._settings.get("_QCM_settings"))
-            self._LO_qrm.setup(**self._settings.get("_LO_QRM_settings"))
-            self._LO_qcm.setup(**self._settings.get("_LO_QCM_settings"))
+            self._qrm.setup(**self._settings.get("QRM_settings"))
+            self._qcm.setup(**self._settings.get("QCM_settings"))
+            self._LO_qrm.setup(**self._settings.get("LO_QRM_settings"))
+            self._LO_qcm.setup(**self._settings.get("LO_QCM_settings"))
 
     def start(self):
         """Turns on the local oscillators.
