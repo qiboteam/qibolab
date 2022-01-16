@@ -34,7 +34,7 @@ setup(
     url="https://github.com/qiboteam/qibolab",
     packages=find_packages("src"),
     package_dir={"": "src"},
-    package_data={"": ["*.json", "*.npy"]},
+    package_data={"": ["*.json", "*.npy", "*.html", "*.css", "*.js"]},
     zip_safe=False,
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -63,7 +63,14 @@ setup(
             "quantify-core==0.5.1",
             "pyVISA==1.11.3",
             "pyVISA-py==0.5.2",
+        ],
+        "dashboard": [
+            "uvicorn",
+            "fastapi",
         ]
+    },
+    entry_points = {"console_scripts":
+        ["qibolab-dashboard = qibolab.scripts.dashboard:main",]
     },
     python_requires=">=3.6.0",
     long_description=long_description,
