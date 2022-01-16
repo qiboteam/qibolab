@@ -340,7 +340,7 @@ class PulsarQCM(GenericPulsar):
         else:
             self.device.sequencer0_sync_en(sync_en)
 
-    def translate(self, sequence, nshots):
+    def translate(self, sequence, nshots=None):
         # Allocate only qubit pulses to PulsarQRM
         waveforms = self.generate_waveforms(sequence.qcm_pulses)
 

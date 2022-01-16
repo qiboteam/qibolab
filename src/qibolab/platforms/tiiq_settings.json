@@ -37,7 +37,6 @@
     },
     "_QRM_settings": {
         "gain": 0.4,
-        "hardware_avg": 1024,
         "initial_delay": 0,
         "repetition_duration": 200000,
         "start_sample": 130,
@@ -54,7 +53,6 @@
     },
     "_QCM_settings": {
         "gain": 0.14,
-        "hardware_avg": 1024,
         "initial_delay": 0,
         "repetition_duration": 200000
     },

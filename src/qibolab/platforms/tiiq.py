@@ -193,6 +193,9 @@ class TIIq:
 
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
+            nshots (int): Number of shots to sample from the experiment.
+                If ``None`` the default value provided as hardware_avg in the
+                calibration json will be used.
 
         Returns:
             Readout results acquired by :class:`qibolab.instruments.qblox.PulsarQRM`
