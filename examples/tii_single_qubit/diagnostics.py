@@ -160,6 +160,35 @@ def run_shifted_resonator_spectroscopy(mc,
 
     return shifted_frequency, smooth_dataset, dataset
 
+def run_punchout(mc, resonator_freq, sequence, qc_pulse, ro_pulse, precision_width, precision_step):   
+    #-30dBm to 3.98dBm = 0.02V to 1V
+    #Amplitude should be 1V then gain from 0.02 to 1 so values go from 0.02V to 1V so -30dBm to 3.98dBm
+    #The range in the punchout is from 5 to -20dBm in VNA - 30dB from the attenuator. So, from -50 to -25dBm. So, from 0.002V to 0.035V.
+    #5 to -20dBm = 1.125 to 0.063V.
+    #get_pulse_sequence defines default amplitude to 0.4 and default pulse duration to 2000.
+    #I see no color difference between gain 0 and gain 100.
+
+    # Fast Sweep
+    platform.software_averages = 1
+    scanrange = np.arange(-precision_width, precision_width, precision_step)
+    scanrange = (scanrange + (resonator_freq - ro_pulse.frequency))
+
+    mc.settables([Settable(platform.LO_qrm.device.frequency), Settable(QRPulseGainParameter(platform.qrm))])
+    setpoints_gain = np.arange(0, 100, 10)
+    mc.setpoints_grid([scanrange, setpoints_gain])
+    mc.gettables(Gettable(ROController(sequence)))
+    platform.LO_qrm.on()
+    platform.LO_qcm.off()
+    dataset = mc.run("Punchout", soft_avg=platform.software_averages)
+    # http://xarray.pydata.org/en/stable/getting-started-guide/quick-overview.html
+    platform.stop()
+
+    smooth_dataset = savgol_filter(dataset['y0'].values, 25, 2)
+    resonator_freq = dataset['x0'].values[smooth_dataset.argmax()] + ro_pulse.frequency
+    print(f"\nResonator Frequency = {resonator_freq}")
+    print(f"\nResonator LO Frequency  = {resonator_freq - ro_pulse.frequency}")
+
+    return resonator_freq, smooth_dataset, dataset
 
 def run_qubit_spectroscopy(mc, 
                            resonator_freq, 
@@ -241,7 +270,6 @@ def run_qubit_spectroscopy(mc,
 
     return qubit_freq, smooth_dataset, dataset
 
-
 def run_rabi_pulse_length(mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_pulse):
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     platform.LO_qcm.set_frequency(qubit_freq - qc_pulse.frequency)
@@ -271,7 +299,6 @@ def run_rabi_pulse_gain(mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_p
     
     return dataset
 
-
 def run_rabi_pulse_length_and_gain(mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_pulse):
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
@@ -291,7 +318,6 @@ def run_rabi_pulse_length_and_gain(mc, resonator_freq, qubit_freq, sequence, qc_
     platform.stop()
     
     return dataset
-
 
 def run_rabi_pulse_length_and_amplitude(mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_pulse):
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
@@ -341,7 +367,6 @@ def run_t1(mc,
     platform.stop()
     
     return dataset
-
 
 def run_ramsey(mc, 
                resonator_freq, 
@@ -439,7 +464,6 @@ class QCPulseLengthParameter():
         self.qc_pulse.duration = value
         self.ro_pulse.start = value + 4
 
-
 class QCPulseGainParameter():
 
     label = 'Qubit Control Gain'
@@ -464,7 +488,6 @@ class QCPulseAmplitudeParameter():
     def set(self, value):
         self.qc_pulse.amplitude = value / 100
 
-
 class T1WaitParameter():
     label = 'Time'
     unit = 'ns'
@@ -481,7 +504,6 @@ class T1WaitParameter():
         #platform.delay_before_readout = value
         self.ro_pulse.start = self.base_duration + 4 + value
 
-
 class RamseyWaitParameter():
     label = 'Time'
     unit = 'ns'
@@ -496,7 +518,6 @@ class RamseyWaitParameter():
     def set(self, value):
         self.qc2_pulse.start = self.pi_pulse_length // 2 + value
         self.ro_pulse.start = self.pi_pulse_length + value + 4
-
 
 class SpinEchoWaitParameter():
     label = 'Time'
@@ -529,3 +550,15 @@ class SpinEcho3PWaitParameter():
         self.qc2_pulse.start = self.pi_pulse_length//2 + value
         self.qc3_pulse.start = (3 * self.pi_pulse_length)//2 + 2 * value
         self.ro_pulse.start = 2 * self.pi_pulse_length + 2 * value + 4
+
+class QRPulseGainParameter():
+
+    label = 'Qubit Readout Gain'
+    unit = '%'
+    name = 'ro_pulse_gain'
+
+    def __init__(self, qrm):
+        self.qrm = qrm
+
+    def set(self,value):
+        self.qrm.gain = value / 100

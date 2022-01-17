@@ -15,6 +15,10 @@
         "precision_width": 0.5e6,
         "precision_step": 0.02e6
     },
+    "punchout": {
+        "precision_width": 0.5e6,
+        "precision_step": 0.02e6
+    },
     "qubit_spectroscopy": {
         "fast_start": -400e6,
         "fast_end": 100e6,
