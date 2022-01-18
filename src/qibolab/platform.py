@@ -1,4 +1,5 @@
 import os
+import pathlib
 import yaml
 from qibo.config import raise_error, log
 
@@ -17,13 +18,9 @@ class Platform:
 
     def __init__(self, name):
         log.info(f"Loading platform {name}")
-        # TODO: Consider passing ``calibration_path` as environment variable
-        self.calibration_path = os.environ.get("CALIBRATION_PATH")
-        if self.calibration_path is None:
-            # use default file
-            import pathlib
-            self.calibration_path = pathlib.Path(__file__).parent / "platforms" / f"{name}.yml"
+        self.name = name
         # Load calibration settings
+        self.calibration_path = pathlib.Path(__file__).parent / "platforms" / f"{name}.yml"
         with open(self.calibration_path, "r") as file:
             self._settings = yaml.safe_load(file)
 
