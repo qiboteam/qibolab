@@ -2,7 +2,7 @@ import json
 import pathlib
 import numpy as np
 import matplotlib.pyplot as plt
-from qibolab import pulses, platform
+from qibolab import pulses, Platform
 from qibolab.pulse_shapes import Rectangular, Gaussian
 
 # TODO: Have a look in the documentation of ``MeasurementControl``
@@ -80,6 +80,7 @@ def get_pulse_sequence(duration=4000):
 def run_resonator_spectroscopy(lowres_width, lowres_step,
                                highres_width, highres_step,
                                precision_width, precision_step):
+    platform = Platform("tiiq")
     sequence, qc_pulse, ro_pulse = get_pulse_sequence()
 
     mc, pl, ins = create_measurement_control('resonator_spectroscopy')
@@ -129,6 +130,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
 
 def run_qubit_spectroscopy(resonator_freq, fast_start, fast_end, fast_step,
                            precision_start, precision_end, precision_step):
+    platform = Platform("tiiq")
     sequence, qc_pulse, ro_pulse = get_pulse_sequence()
 
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
@@ -178,6 +180,7 @@ def run_qubit_spectroscopy(resonator_freq, fast_start, fast_end, fast_step,
 
 
 def run_rabi_pulse_length(resonator_freq, qubit_freq):
+    platform = Platform("tiiq")
     sequence, qc_pulse, ro_pulse = get_pulse_sequence()
 
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
@@ -194,6 +197,7 @@ def run_rabi_pulse_length(resonator_freq, qubit_freq):
 
 
 def run_rabi_pulse_gain(resonator_freq, qubit_freq):
+    platform = Platform("tiiq")
     sequence, qc_pulse, ro_pulse = get_pulse_sequence(duration=200)
 
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
@@ -210,6 +214,7 @@ def run_rabi_pulse_gain(resonator_freq, qubit_freq):
 
 
 def run_rabi_pulse_length_and_gain(resonator_freq, qubit_freq):
+    platform = Platform("tiiq")
     sequence, qc_pulse, ro_pulse = get_pulse_sequence()
 
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
@@ -232,6 +237,7 @@ def run_rabi_pulse_length_and_gain(resonator_freq, qubit_freq):
 
 
 def run_rabi_pulse_length_and_amplitude(resonator_freq, qubit_freq):
+    platform = Platform("tiiq")
     sequence, qc_pulse, ro_pulse = get_pulse_sequence()
 
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
@@ -256,6 +262,7 @@ def run_rabi_pulse_length_and_amplitude(resonator_freq, qubit_freq):
 def run_t1(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
             delay_before_readout_start, delay_before_readout_end,
             delay_before_readout_step):
+    platform = Platform("tiiq")
     sequence, qc_pulse, ro_pulse = get_pulse_sequence(duration=pi_pulse_length)
 
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
@@ -280,6 +287,7 @@ def run_t1(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
 
 def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pulse_amplitude,
                start_start, start_end, start_step):
+    platform = Platform("tiiq")
     qc_pulse = pulses.Pulse(start=0,
                             frequency=200000000.0,
                             amplitude=pi_pulse_amplitude,
@@ -324,6 +332,7 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pu
 
 def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pulse_amplitude,
                   start_start, start_end, start_step):
+    platform = Platform("tiiq")
     qc_pulse = pulses.Pulse(start=0,
                             frequency=200000000.0,
                             amplitude=pi_pulse_amplitude,
