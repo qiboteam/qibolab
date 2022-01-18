@@ -1,7 +1,10 @@
 import pathlib
 import numpy as np
 import matplotlib.pyplot as plt
-from qibolab import pulses, Platform
+
+from qibolab import Platform
+from qibolab.circuit import PulseSequence
+from qibolab.pulses import Pulse, ReadoutPulse
 from qibolab.pulse_shapes import Rectangular, Gaussian
 
 # TODO: Have a look in the documentation of ``MeasurementControl``
@@ -59,19 +62,19 @@ def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, high
 
 
 def get_pulse_sequence(duration=4000):
-    qc_pulse = pulses.Pulse(start=0,
-                            frequency=200000000.0,
+    qc_pulse = Pulse(start=0,
+                     frequency=200000000.0,
+                     amplitude=0.9,
+                     duration=duration,
+                     phase=0,
+                     shape=Gaussian(4000 / 5))
+    ro_pulse = ReadoutPulse(start=duration + 4,
+                            frequency=20000000.0,
                             amplitude=0.9,
-                            duration=duration,
+                            duration=2000,
                             phase=0,
-                            shape=Gaussian(4000 / 5))
-    ro_pulse = pulses.ReadoutPulse(start=duration + 4,
-                                   frequency=20000000.0,
-                                   amplitude=0.9,
-                                   duration=2000,
-                                   phase=0,
-                                   shape=Rectangular())
-    sequence = pulses.PulseSequence()
+                            shape=Rectangular())
+    sequence = PulseSequence()
     sequence.add(qc_pulse)
     sequence.add(ro_pulse)
     return sequence, qc_pulse, ro_pulse
@@ -288,26 +291,26 @@ def run_t1(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
 def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pulse_amplitude,
                start_start, start_end, start_step):
     platform = Platform("tiiq")
-    qc_pulse = pulses.Pulse(start=0,
-                            frequency=200000000.0,
-                            amplitude=pi_pulse_amplitude,
-                            duration=pi_pulse_length // 2,
-                            phase=0,
-                            shape=Gaussian(pi_pulse_length // 10))
-    qc2_pulse = pulses.Pulse(start=pi_pulse_length // 2 + 0,
-                               frequency=200000000.0,
-                               amplitude=pi_pulse_amplitude,
-                               duration=pi_pulse_length // 2,
-                               phase=0,
-                               shape=Gaussian(pi_pulse_length // 10))
+    qc_pulse = Pulse(start=0,
+                     frequency=200000000.0,
+                     amplitude=pi_pulse_amplitude,
+                     duration=pi_pulse_length // 2,
+                     phase=0,
+                     shape=Gaussian(pi_pulse_length // 10))
+    qc2_pulse = Pulse(start=pi_pulse_length // 2 + 0,
+                      frequency=200000000.0,
+                      amplitude=pi_pulse_amplitude,
+                      duration=pi_pulse_length // 2,
+                      phase=0,
+                      shape=Gaussian(pi_pulse_length // 10))
     start = qc_pulse.duration + qc2_pulse.duration + 4
-    ro_pulse = pulses.ReadoutPulse(start=start,
-                                   frequency=20000000.0,
-                                   amplitude=0.9,
-                                   duration=2000,
-                                   phase=0,
-                                   shape=Rectangular())
-    sequence = pulses.PulseSequence()
+    ro_pulse = ReadoutPulse(start=start,
+                            frequency=20000000.0,
+                            amplitude=0.9,
+                            duration=2000,
+                            phase=0,
+                            shape=Rectangular())
+    sequence = PulseSequence()
     sequence.add(qc_pulse)
     sequence.add(qc2_pulse)
     sequence.add(ro_pulse)
@@ -333,26 +336,26 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pu
 def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pulse_amplitude,
                   start_start, start_end, start_step):
     platform = Platform("tiiq")
-    qc_pulse = pulses.Pulse(start=0,
-                            frequency=200000000.0,
-                            amplitude=pi_pulse_amplitude,
-                            duration=pi_pulse_length // 2,
-                            phase=0,
-                            shape=Gaussian(pi_pulse_length // 10))
-    qc2_pulse = pulses.Pulse(start=pi_pulse_length // 2 + 0,
-                             frequency=200000000.0,
-                             amplitude=pi_pulse_amplitude,
-                             duration=pi_pulse_length // 2,
-                             phase=0,
-                             shape=Gaussian(pi_pulse_length // 10))
+    qc_pulse = Pulse(start=0,
+                     frequency=200000000.0,
+                     amplitude=pi_pulse_amplitude,
+                     duration=pi_pulse_length // 2,
+                     phase=0,
+                     shape=Gaussian(pi_pulse_length // 10))
+    qc2_pulse = Pulse(start=pi_pulse_length // 2 + 0,
+                      frequency=200000000.0,
+                      amplitude=pi_pulse_amplitude,
+                      duration=pi_pulse_length // 2,
+                      phase=0,
+                      shape=Gaussian(pi_pulse_length // 10))
     start = qc_pulse.duration + qc2_pulse.duration + 4
-    ro_pulse = pulses.ReadoutPulse(start=start,
-                                   frequency=20000000.0,
-                                   amplitude=0.9,
-                                   duration=2000,
-                                   phase=0,
-                                   shape=Rectangular())
-    sequence = pulses.PulseSequence()
+    ro_pulse = ReadoutPulse(start=start,
+                            frequency=20000000.0,
+                            amplitude=0.9,
+                            duration=2000,
+                            phase=0,
+                            shape=Rectangular())
+    sequence = PulseSequence()
     sequence.add(qc_pulse)
     sequence.add(qc2_pulse)
     sequence.add(ro_pulse)
