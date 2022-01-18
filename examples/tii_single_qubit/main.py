@@ -12,7 +12,7 @@ from diagnostics import run_resonator_spectroscopy, \
 
 
 if __name__ == "__main__":
-    with open("settings.json", "r") as file:
+    with open("settings.yaml", "r") as file:
         settings = yaml.safe_load(file)
 
     resonator_freq = 7798070000.0
