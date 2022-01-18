@@ -20,7 +20,6 @@ class SGS100A(Instrument):
         """
         self._power  = None
         self._frequency = None
-        self._connected = False
         self._signature = f"{type(self).__name__}@{ip}"
         self.label = label
         self.ip = ip

@@ -9,6 +9,7 @@ class Instrument(ABC):
         # Implement signature as InstrumentClassName@ip_address
         self._signature = None
         self._driver = None
+        self._connected = False
     
     @abstractmethod
     def connect(self):
@@ -19,7 +20,7 @@ class Instrument(ABC):
         raise NotImplementedError
 
     @property
-    def _signature(self):
+    def signature(self):
         return self._signature
 
     @abstractmethod
@@ -29,3 +30,11 @@ class Instrument(ABC):
         Set instrument values to idle values if required.
         """
         raise NotImplementedError
+
+
+class InstrumentException(Exception):
+    def __init__(self, instrument: Instrument, message: str):
+        header = f"Exception thrown connecting to {self.instrument.signature}"
+        full_msg = header + '\n' + message
+        super().__init__(full_msg)
+        self.instrument = instrument

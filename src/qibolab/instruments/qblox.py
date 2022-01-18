@@ -13,12 +13,12 @@ class GenericPulsar(Instrument, ABC):
     def __init__(self, label, ip, sequencer=0, ref_clock="external", sync_en=True):
         self.label = label
         self.ip = ip
+        # TODO When updating to the new firmware, use a sequencer mapping instead of setting a single sequencer
         self.sequencer = sequencer
         self.ref_clock = ref_clock
         self.sync_en = sync_en
         # To be defined in each instrument
         self.name = None
-        self._connected = False
         # To be defined during setup
         self.hardware_avg = None
         self.initial_delay = None
@@ -34,7 +34,16 @@ class GenericPulsar(Instrument, ABC):
     @abstractmethod
     def connect(self):
         """Connects to the instruments."""
-        raise(NotImplementedError)
+        if not self._connected:
+            try:
+                self._driver = self._Driver(self.label, self.ip)
+            except Exception as exc:
+                print(f"Can't connect to {self._signature}.")
+                print(exc) 
+                raise exc
+            self._connected = True
+        else:
+            raise(RuntimeError)
 
     @property
     def gain(self):
@@ -235,6 +244,7 @@ class PulsarQRM(GenericPulsar):
         # Instantiate base object from qblox library and connect to it
         self.name = "qrm"
         self._signature = f"{type(self).__name__}@{ip}"
+        self._Driver = pulsar_qrm
         self.connect()
         self._connected = True
         self.hardware_avg_en = hardware_avg_en
@@ -252,18 +262,6 @@ class PulsarQRM(GenericPulsar):
             self._driver.sequencer1_sync_en(self.sync_en)
         else:
             self._driver.sequencer0_sync_en(self.sync_en)
-
-    def connect(self):
-        if not self._connected:
-            try:
-                self._driver = pulsar_qrm(self.label, self.ip)
-            except Exception as exc:
-                print(f"Can't connect to {self._signature}.")
-                print(exc) 
-                raise exc
-            self._connected = True
-        else:
-            raise(RuntimeError)
 
     def setup(self, gain, hardware_avg, initial_delay, repetition_duration,
               start_sample, integration_length, sampling_rate, mode):
@@ -365,15 +363,3 @@ class PulsarQCM(GenericPulsar):
         program = self.generate_program(initial_delay, acquire_instruction, wait_time)
 
         return waveforms, program
-
-    def connect(self):
-        if not self._connected:
-            try:
-                self._driver = pulsar_qcm(self.label, self.ip)
-            except Exception as exc:
-                print(f"Can't connect to {self._signature}.")
-                print(exc) 
-                raise exc
-            self._connected = True
-        else:
-            raise(RuntimeError)
