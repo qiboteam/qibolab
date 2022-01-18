@@ -1,4 +1,4 @@
-import json
+import yaml
 import time
 from diagnostics import run_resonator_spectroscopy, \
                         run_qubit_spectroscopy, \
@@ -12,8 +12,8 @@ from diagnostics import run_resonator_spectroscopy, \
 
 
 if __name__ == "__main__":
-    with open("diagnostics_settings.json", "r") as file:
-        settings = json.load(file)
+    with open("settings.json", "r") as file:
+        settings = yaml.safe_load(file)
 
     resonator_freq = 7798070000.0
     qubit_freq = 8726500000.0
