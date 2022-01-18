@@ -3,7 +3,7 @@ Class to interface with the local oscillator RohdeSchwarz SGS100A
 """
 
 import logging
-from .instrument import Instrument
+from .instrument import Instrument, InstrumentException
 import qcodes.instrument_drivers.rohde_schwarz.SGS100A as LO_SGS100A
 
 logger = logging.getLogger(__name__)  # TODO: Consider using a global logger
@@ -29,9 +29,7 @@ class SGS100A(Instrument):
         try:
             self._driver = LO_SGS100A.RohdeSchwarz_SGS100A(self.label, f"TCPIP0::{self.ip}::inst0::INSTR")
         except Exception as exc:
-            print(f"Can't connect to SGS100A at ip {ip}.")
-            print(exc) 
-            raise exc
+            raise InstrumentException(self, str(exc))
         self._connected = True
         logger.info("Local oscillator connected")
 

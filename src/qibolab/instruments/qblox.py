@@ -3,7 +3,7 @@ import json
 import numpy as np
 from abc import ABC, abstractmethod
 from qibo.config import raise_error
-from .instrument import Instrument
+from .instrument import Instrument, InstrumentException
 from pulsar_qrm.pulsar_qrm import pulsar_qrm # pylint: disable=E0401
 from pulsar_qcm.pulsar_qcm import pulsar_qcm # pylint: disable=E0401
 
@@ -28,6 +28,7 @@ class GenericPulsar(Instrument, ABC):
         self.wait_loop_step = 1000
         self.duration_base = 16380 # maximum length of a waveform in number of samples (defined by the device memory).
         # hardcoded values used in ``upload``
+        # TODO QRM shouldn't have acquisitions
         self.acquisitions = {"single": {"num_bins": 1, "index":0}}
         self.weights = {}
 
@@ -38,9 +39,7 @@ class GenericPulsar(Instrument, ABC):
             try:
                 self._driver = self._Driver(self.label, self.ip)
             except Exception as exc:
-                print(f"Can't connect to {self._signature}.")
-                print(exc) 
-                raise exc
+                raise InstrumentException(self, str(exc))
             self._connected = True
         else:
             raise(RuntimeError)
@@ -343,6 +342,7 @@ class PulsarQCM(GenericPulsar):
         # Instantiate base object from qblox library and connect to it
         self.name = "qcm"
         self._signature = f"{type(self).__name__}@{ip}"
+        self._Driver = pulsar_qcm
         self.connect()
         # Reset and configure
         self._driver.reset()
