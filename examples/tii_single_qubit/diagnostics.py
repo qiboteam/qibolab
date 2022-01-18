@@ -35,11 +35,12 @@ class ROController():
     unit = ['V', 'Radians','V','V']
     name = ['A', 'Phi','I','Q']
 
-    def __init__(self, sequence):
+    def __init__(self, platform, sequence):
+        self.platform = platform
         self.sequence = sequence
 
     def get(self):
-        return platform(self.sequence)
+        return self.platform.execute(self.sequence)
 
 
 def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step):
@@ -88,7 +89,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
     mc.settables(platform.LO_qrm.device.frequency)
     mc.setpoints(scanrange + platform.LO_qrm.get_frequency())
-    mc.gettables(Gettable(ROController(sequence)))
+    mc.gettables(Gettable(ROController(platform, sequence)))
     platform.LO_qrm.on()
     platform.LO_qcm.off()
     dataset = mc.run("Resonator Spectroscopy Fast", soft_avg=platform.software_averages)
@@ -101,7 +102,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     scanrange = np.arange(-precision_width, precision_width, precision_step)
     mc.settables(platform.LO_qrm.device.frequency)
     mc.setpoints(scanrange + platform.LO_qrm.get_frequency())
-    mc.gettables(Gettable(ROController(sequence)))
+    mc.gettables(Gettable(ROController(platform, sequence)))
     platform.LO_qrm.on()
     platform.LO_qcm.off()
     dataset = mc.run("Resonator Spectroscopy Precision", soft_avg=platform.software_averages)
@@ -139,7 +140,7 @@ def run_qubit_spectroscopy(resonator_freq, fast_start, fast_end, fast_step,
     scanrange = np.arange(fast_start, fast_end, fast_step)
     mc.settables(platform.LO_qcm.device.frequency)
     mc.setpoints(scanrange + platform.LO_qcm.get_frequency())
-    mc.gettables(Gettable(ROController(sequence)))
+    mc.gettables(Gettable(ROController(platform, sequence)))
     platform.LO_qrm.on()
     platform.LO_qcm.on()
     dataset = mc.run("Qubit Spectroscopy Fast", soft_avg=platform.software_averages)
@@ -152,7 +153,7 @@ def run_qubit_spectroscopy(resonator_freq, fast_start, fast_end, fast_step,
     scanrange = np.arange(precision_start, precision_end, precision_step)
     mc.settables(platform.LO_qcm.device.frequency)
     mc.setpoints(scanrange + platform.LO_qcm.get_frequency())
-    mc.gettables(Gettable(ROController(sequence)))
+    mc.gettables(Gettable(ROController(platform, sequence)))
     platform.LO_qrm.on()
     platform.LO_qcm.on()
     dataset = mc.run("Qubit Spectroscopy Precision", soft_avg=platform.software_averages)
@@ -188,7 +189,7 @@ def run_rabi_pulse_length(resonator_freq, qubit_freq):
     platform.software_averages = 1
     mc.settables(Settable(QCPulseLengthParameter(ro_pulse, qc_pulse)))
     mc.setpoints(np.arange(1, 200, 1))
-    mc.gettables(Gettable(ROController(sequence)))
+    mc.gettables(Gettable(ROController(platform, sequence)))
     platform.LO_qrm.on()
     platform.LO_qcm.on()
     dataset = mc.run('Rabi Pulse Length', soft_avg = platform.software_averages)
@@ -205,7 +206,7 @@ def run_rabi_pulse_gain(resonator_freq, qubit_freq):
     platform.software_averages = 1
     mc.settables(Settable(QCPulseGainParameter(platform.qcm)))
     mc.setpoints(np.arange(0, 100))
-    mc.gettables(Gettable(ROController(sequence)))
+    mc.gettables(Gettable(ROController(platform, sequence)))
     platform.LO_qrm.on()
     platform.LO_qcm.on()
     dataset = mc.run('Rabi Pulse Gain', soft_avg = platform.software_averages)
@@ -225,7 +226,7 @@ def run_rabi_pulse_length_and_gain(resonator_freq, qubit_freq):
     setpoints_length = np.arange(1, 400, 10)
     setpoints_gain = np.arange(0, 20, 1)
     mc.setpoints_grid([setpoints_length, setpoints_gain])
-    mc.gettables(Gettable(ROController(sequence)))
+    mc.gettables(Gettable(ROController(platform, sequence)))
     platform.LO_qrm.on()
     platform.LO_qcm.on()
     dataset = mc.run('Rabi Pulse Length and Gain', soft_avg = platform.software_averages)
@@ -248,7 +249,7 @@ def run_rabi_pulse_length_and_amplitude(resonator_freq, qubit_freq):
     setpoints_length = np.arange(1, 1000, 2)
     setpoints_amplitude = np.arange(0, 100, 2)
     mc.setpoints_grid([setpoints_length, setpoints_amplitude])
-    mc.gettables(Gettable(ROController(sequence)))
+    mc.gettables(Gettable(ROController(platform, sequence)))
     platform.LO_qrm.on()
     platform.LO_qcm.on()
     dataset = mc.run('Rabi Pulse Length and Gain', soft_avg = platform.software_averages)
@@ -273,7 +274,7 @@ def run_t1(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length,
     mc.setpoints(np.arange(delay_before_readout_start,
                            delay_before_readout_end,
                            delay_before_readout_step))
-    mc.gettables(Gettable(ROController(sequence)))
+    mc.gettables(Gettable(ROController(platform, sequence)))
     platform.LO_qrm.on()
     platform.LO_qcm.on()
     dataset = mc.run('T1', soft_avg = platform.software_averages)
@@ -318,7 +319,7 @@ def run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pu
     mc, pl, ins = create_measurement_control('ramsey')
     mc.settables(Settable(RamseyWaitParameter(ro_pulse, qc2_pulse, pi_pulse_length)))
     mc.setpoints(np.arange(start_start, start_end, start_step))
-    mc.gettables(Gettable(ROController(sequence)))
+    mc.gettables(Gettable(ROController(platform, sequence)))
     platform.LO_qrm.on()
     platform.LO_qcm.on()
     dataset = mc.run('Ramsey', soft_avg = platform.software_averages)
@@ -363,7 +364,7 @@ def run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi
     mc, pl, ins = create_measurement_control('spin_echo')
     mc.settables(Settable(SpinEchoWaitParameter(ro_pulse, qc2_pulse, pi_pulse_length)))
     mc.setpoints(np.arange(start_start, start_end, start_step))
-    mc.gettables(Gettable(ROController(sequence)))
+    mc.gettables(Gettable(ROController(platform, sequence)))
     platform.LO_qrm.on()
     platform.LO_qcm.on()
     dataset = mc.run('Spin Echo', soft_avg = platform.software_averages)
@@ -427,6 +428,7 @@ class T1WaitParameter():
         # TODO: implement following condition
         #must be >= 4ns <= 65535
         #platform.delay_before_readout = value
+        # platform should be passed in ``__init__`` if needed as it is no longer a global object
         self.ro_pulse.start = self.base_duration + 4 + value
 
 
