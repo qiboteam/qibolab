@@ -143,7 +143,6 @@ class Platform:
         """Connects to lab instruments using the details specified in the calibration settings."""
         if not self.is_connected:
             log.info(f"Connecting to {self.name} instruments.")
-            import socket
             try:
                 from qibolab.instruments import PulsarQRM, PulsarQCM, SGS100A
                 self._qrm = PulsarQRM(**self._settings.get("QRM_init_settings"))
@@ -151,8 +150,10 @@ class Platform:
                 self._LO_qrm = SGS100A(**self._settings.get("LO_QRM_init_settings"))
                 self._LO_qcm = SGS100A(**self._settings.get("LO_QCM_init_settings"))
                 self.is_connected = True
-            except socket.timeout:
-                raise_error(RuntimeError, f"Cannot establish connection to {self.name} instruments.")
+            except Exception as exception:
+                raise_error(RuntimeError, "Cannot establish connection to "
+                                         f"{self.name} instruments. "
+                                         f"Error captured: '{exception}'")
         self.setup()
 
     def setup(self):
