@@ -17,25 +17,17 @@ class PulseSequence:
         self.time = 0
         self.phase = 0
 
-    @property
-    def delay_between_pulses(self):
-        return K.platform.delay_between_pulses
-
-    @property
-    def delay_before_readout(self):
-        return K.platform.delay_before_readout
-
     def add(self, pulse):
         """Add a pulse to the sequence.
 
         Args:
             pulse (`qibolab.pulses.Pulse`): Pulse object to add.
+            delay_between_pulses (int): Time to wait before applying the next pulse.
         """
         if pulse.channel == "qrm" or pulse.channel == 1:
             self.qrm_pulses.append(pulse)
         else:
             self.qcm_pulses.append(pulse)
-        self.time += pulse.duration + self.delay_between_pulses
 
     def add_u3(self, theta, phi, lam):
         """Add pulses that implement a U3 gate.
@@ -48,18 +40,21 @@ class PulseSequence:
         amplitude = K.platform.pi_pulse_amplitude
         duration = K.platform.pi_pulse_duration // 2
         frequency = K.platform.pi_pulse_frequency
+        delay = K.platform.delay_between_pulses
 
         self.phase += phi - np.pi / 2
         self.add(pulses.Pulse(self.time, duration, amplitude, frequency, self.phase, Gaussian(duration / 5)))
+        self.time += duration + delay
         self.phase += np.pi - theta
         self.add(pulses.Pulse(self.time, duration, amplitude, frequency, self.phase, Gaussian(duration / 5)))
+        self.time += duration + delay
         self.phase += lam - np.pi / 2
 
     def add_measurement(self):
         """Add measurement pulse."""
         from qibolab.pulse_shapes import Rectangular
         kwargs = K.platform.readout_pulse
-        kwargs["start"] = self.time + self.delay_before_readout
+        kwargs["start"] = self.time + K.platform.delay_before_readout
         kwargs["phase"] = self.phase
         kwargs["shape"] = Rectangular()
         self.add(pulses.ReadoutPulse(**kwargs))
