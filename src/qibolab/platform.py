@@ -1,45 +1,39 @@
 import os
-import json
+import pathlib
+import yaml
 from qibo.config import raise_error, log
 
 
-class TIIq:
-    """Platform for controlling TII device.
+class Platform:
+    """Platform for controlling quantum devices.
 
-    Controls the PulsarQRM, PulsarQCM and two SGS100A local oscillators.
-    Uses calibration parameters provided through a json to setup the instruments.
     The path of the calibration json can be provided using the
     ``"CALIBRATION_PATH"`` environment variable.
     If no path is provided the default path (``platforms/tiiq_settings.json``)
     will be used.
+
+    Args:
+        name (str): name of the platform stored in a yaml file in qibolab/platforms.
     """
 
-    def __init__(self):
-        # TODO: Consider passing ``calibration_path` as environment variable
-        self.calibration_path = os.environ.get("CALIBRATION_PATH")
-        if self.calibration_path is None:
-            # use default file
-            import pathlib
-            self.calibration_path = pathlib.Path(__file__).parent / "tiiq_settings.json"
+    def __init__(self, name):
+        log.info(f"Loading platform {name}.")
+        self.name = name
         # Load calibration settings
+        self.calibration_path = pathlib.Path(__file__).parent / "platforms" / f"{name}.yml"
         with open(self.calibration_path, "r") as file:
-            self._settings = json.load(file)
+            self._settings = yaml.safe_load(file)
 
-        # initialize instruments
-        self._connected = False
+        # Define references to instruments
+        self.is_connected = False
         self._qrm = None
         self._qcm = None
         self._LO_qrm = None
         self._LO_qcm = None
-        try:
-            self.connect()
-        except: # capture time-out errors when importing outside the lab (bad practice)
-            log.warning("Cannot establish connection to TIIq instruments. Skipping...")
-        # initial instrument setup
-        self.setup()
+        # instruments are connected in :meth:`qibolab.platform.Platform.start`
 
     def _check_connected(self):
-        if not self._connected:
+        if not self.is_connected:
             raise_error(RuntimeError, "Cannot access instrument because it is not connected.")
 
     @property
@@ -68,72 +62,72 @@ class TIIq:
 
     @property
     def data_folder(self):
-        return self._settings.get("_settings").get("data_folder")
+        return self._settings.get("settings").get("data_folder")
 
     @property
     def hardware_avg(self):
-        return self._settings.get("_settings").get("hardware_avg")
+        return self._settings.get("settings").get("hardware_avg")
 
     @property
     def sampling_rate(self):
-        return self._settings.get("_settings").get("sampling_rate")
+        return self._settings.get("settings").get("sampling_rate")
 
     @property
     def software_averages(self):
-        return self._settings.get("_settings").get("software_averages")
+        return self._settings.get("settings").get("software_averages")
 
     @software_averages.setter
     def software_averages(self, x):
         # I don't like that this updates the local dictionary but not the json
-        self._settings["_settings"]["software_averages"] = x
+        self._settings["settings"]["software_averages"] = x
 
     @property
     def repetition_duration(self):
-        return self._settings.get("_settings").get("repetition_duration")
+        return self._settings.get("settings").get("repetition_duration")
 
     @property
     def resonator_frequency(self):
-        return self._settings.get("_settings").get("resonator_freq")
+        return self._settings.get("settings").get("resonator_freq")
 
     @property
     def qubit_frequency(self):
-        return self._settings.get("_settings").get("qubit_freq")
+        return self._settings.get("settings").get("qubit_freq")
 
     @property
     def pi_pulse_gain(self):
-        return self._settings.get("_settings").get("pi_pulse_gain")
+        return self._settings.get("settings").get("pi_pulse_gain")
 
     @property
     def pi_pulse_amplitude(self):
-        return self._settings.get("_settings").get("pi_pulse_amplitude")
+        return self._settings.get("settings").get("pi_pulse_amplitude")
 
     @property
     def pi_pulse_duration(self):
-        return self._settings.get("_settings").get("pi_pulse_duration")
+        return self._settings.get("settings").get("pi_pulse_duration")
 
     @property
     def pi_pulse_frequency(self):
-        return self._settings.get("_settings").get("pi_pulse_frequency")
+        return self._settings.get("settings").get("pi_pulse_frequency")
 
     @property
     def readout_pulse(self):
-        return self._settings.get("_settings").get("readout_pulse")
+        return self._settings.get("settings").get("readout_pulse")
 
     @property
     def max_readout_voltage(self):
-        return self._settings.get("_settings").get("resonator_spectroscopy_max_ro_voltage")
+        return self._settings.get("settings").get("resonator_spectroscopy_max_ro_voltage")
 
     @property
     def min_readout_voltage(self):
-        return self._settings.get("_settings").get("rabi_oscillations_pi_pulse_min_voltage")
+        return self._settings.get("settings").get("rabi_oscillations_pi_pulse_min_voltage")
 
     @property
     def delay_between_pulses(self):
-        return self._settings.get("_settings").get("delay_between_pulses")
+        return self._settings.get("settings").get("delay_between_pulses")
 
     @property
     def delay_before_readout(self):
-        return self._settings.get("_settings").get("delay_before_readout")
+        return self._settings.get("settings").get("delay_before_readout")
 
     def run_calibration(self):
         """Executes calibration routines and updates the settings json."""
@@ -143,24 +137,32 @@ class TIIq:
         self.setup()
         # save new calibration settings to json
         with open(self.calibration_path, "w") as file:
-            json.dump(self._settings, file)
+            yaml.dump(self._settings, file)
 
     def connect(self):
         """Connects to lab instruments using the details specified in the calibration settings."""
-        from qibolab.instruments import PulsarQRM, PulsarQCM, SGS100A
-        self._qrm = PulsarQRM(**self._settings.get("_QRM_init_settings"))
-        self._qcm = PulsarQCM(**self._settings.get("_QCM_init_settings"))
-        self._LO_qrm = SGS100A(**self._settings.get("_LO_QRM_init_settings"))
-        self._LO_qcm = SGS100A(**self._settings.get("_LO_QCM_init_settings"))
-        self._connected = True
+        if not self.is_connected:
+            log.info(f"Connecting to {self.name} instruments.")
+            try:
+                from qibolab.instruments import PulsarQRM, PulsarQCM, SGS100A
+                self._qrm = PulsarQRM(**self._settings.get("QRM_init_settings"))
+                self._qcm = PulsarQCM(**self._settings.get("QCM_init_settings"))
+                self._LO_qrm = SGS100A(**self._settings.get("LO_QRM_init_settings"))
+                self._LO_qcm = SGS100A(**self._settings.get("LO_QCM_init_settings"))
+                self.is_connected = True
+            except Exception as exception:
+                raise_error(RuntimeError, "Cannot establish connection to "
+                                         f"{self.name} instruments. "
+                                         f"Error captured: '{exception}'")
+        self.setup()
 
     def setup(self):
         """Configures instruments using the loaded calibration settings."""
-        if self._connected:
-            self._qrm.setup(**self._settings.get("_QRM_settings"))
-            self._qcm.setup(**self._settings.get("_QCM_settings"))
-            self._LO_qrm.setup(**self._settings.get("_LO_QRM_settings"))
-            self._LO_qcm.setup(**self._settings.get("_LO_QCM_settings"))
+        if self.is_connected:
+            self._qrm.setup(**self._settings.get("QRM_settings"))
+            self._qcm.setup(**self._settings.get("QCM_settings"))
+            self._LO_qrm.setup(**self._settings.get("LO_QRM_settings"))
+            self._LO_qcm.setup(**self._settings.get("LO_QCM_settings"))
 
     def start(self):
         """Turns on the local oscillators.
@@ -168,9 +170,9 @@ class TIIq:
         The QBlox insturments are turned on automatically during execution after
         the required pulse sequences are loaded.
         """
-        if self._connected:
-            self._LO_qcm.on()
-            self._LO_qrm.on()
+        self.connect()
+        self._LO_qcm.on()
+        self._LO_qrm.on()
 
     def stop(self):
         """Turns off all the lab instruments."""
@@ -181,12 +183,12 @@ class TIIq:
 
     def disconnect(self):
         """Disconnects from the lab instruments."""
-        if self._connected:
+        if self.is_connected:
             self._LO_qrm.close()
             self._LO_qcm.close()
             self._qrm.close()
             self._qcm.close()
-            self._connected = False
+            self.is_connected = False
 
     def execute(self, sequence, nshots=None):
         """Executes a pulse sequence.
@@ -201,7 +203,7 @@ class TIIq:
             Readout results acquired by :class:`qibolab.instruments.qblox.PulsarQRM`
             after execution.
         """
-        if not self._connected:
+        if not self.is_connected:
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
         if nshots is None:
             nshots = self.hardware_avg
