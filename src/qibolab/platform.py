@@ -1,4 +1,5 @@
 import os
+import pathlib
 import yaml
 from qibo.config import raise_error, log
 
@@ -16,32 +17,23 @@ class Platform:
     """
 
     def __init__(self, name):
-        log.info(f"Loading platform {name}")
-        # TODO: Consider passing ``calibration_path` as environment variable
-        self.calibration_path = os.environ.get("CALIBRATION_PATH")
-        if self.calibration_path is None:
-            # use default file
-            import pathlib
-            self.calibration_path = pathlib.Path(__file__).parent / "platforms" / f"{name}.yml"
+        log.info(f"Loading platform {name}.")
+        self.name = name
         # Load calibration settings
+        self.calibration_path = pathlib.Path(__file__).parent / "platforms" / f"{name}.yml"
         with open(self.calibration_path, "r") as file:
             self._settings = yaml.safe_load(file)
 
-        # initialize instruments
-        self._connected = False
+        # Define references to instruments
+        self.is_connected = False
         self._qrm = None
         self._qcm = None
         self._LO_qrm = None
         self._LO_qcm = None
-        try:
-            self.connect()
-        except: # capture time-out errors when importing outside the lab (bad practice)
-            log.warning("Cannot establish connection to TIIq instruments. Skipping...")
-        # initial instrument setup
-        self.setup()
+        # instruments are connected in :meth:`qibolab.platform.Platform.start`
 
     def _check_connected(self):
-        if not self._connected:
+        if not self.is_connected:
             raise_error(RuntimeError, "Cannot access instrument because it is not connected.")
 
     @property
@@ -149,16 +141,24 @@ class Platform:
 
     def connect(self):
         """Connects to lab instruments using the details specified in the calibration settings."""
-        from qibolab.instruments import PulsarQRM, PulsarQCM, SGS100A
-        self._qrm = PulsarQRM(**self._settings.get("QRM_init_settings"))
-        self._qcm = PulsarQCM(**self._settings.get("QCM_init_settings"))
-        self._LO_qrm = SGS100A(**self._settings.get("LO_QRM_init_settings"))
-        self._LO_qcm = SGS100A(**self._settings.get("LO_QCM_init_settings"))
-        self._connected = True
+        if not self.is_connected:
+            log.info(f"Connecting to {self.name} instruments.")
+            try:
+                from qibolab.instruments import PulsarQRM, PulsarQCM, SGS100A
+                self._qrm = PulsarQRM(**self._settings.get("QRM_init_settings"))
+                self._qcm = PulsarQCM(**self._settings.get("QCM_init_settings"))
+                self._LO_qrm = SGS100A(**self._settings.get("LO_QRM_init_settings"))
+                self._LO_qcm = SGS100A(**self._settings.get("LO_QCM_init_settings"))
+                self.is_connected = True
+            except Exception as exception:
+                raise_error(RuntimeError, "Cannot establish connection to "
+                                         f"{self.name} instruments. "
+                                         f"Error captured: '{exception}'")
+        self.setup()
 
     def setup(self):
         """Configures instruments using the loaded calibration settings."""
-        if self._connected:
+        if self.is_connected:
             self._qrm.setup(**self._settings.get("QRM_settings"))
             self._qcm.setup(**self._settings.get("QCM_settings"))
             self._LO_qrm.setup(**self._settings.get("LO_QRM_settings"))
@@ -170,9 +170,9 @@ class Platform:
         The QBlox insturments are turned on automatically during execution after
         the required pulse sequences are loaded.
         """
-        if self._connected:
-            self._LO_qcm.on()
-            self._LO_qrm.on()
+        self.connect()
+        self._LO_qcm.on()
+        self._LO_qrm.on()
 
     def stop(self):
         """Turns off all the lab instruments."""
@@ -183,12 +183,12 @@ class Platform:
 
     def disconnect(self):
         """Disconnects from the lab instruments."""
-        if self._connected:
+        if self.is_connected:
             self._LO_qrm.close()
             self._LO_qcm.close()
             self._qrm.close()
             self._qcm.close()
-            self._connected = False
+            self.is_connected = False
 
     def execute(self, sequence, nshots=None):
         """Executes a pulse sequence.
@@ -203,7 +203,7 @@ class Platform:
             Readout results acquired by :class:`qibolab.instruments.qblox.PulsarQRM`
             after execution.
         """
-        if not self._connected:
+        if not self.is_connected:
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
         if nshots is None:
             nshots = self.hardware_avg
