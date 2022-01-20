@@ -15,25 +15,29 @@ The qibolab backend documentation is available at [qibolab.readthedocs.io](http:
 A simple example on how to import the TIIq platform and use it execute a pulse sequence:
 
 ```python
-from qibolab import platform, pulses # automatically connects to the platform
+from qibolab import Platform
+from qibolab.circuit import PulseSequence
+from qibolab.pulses import Pulse, ReadoutPulse
 from qibolab.pulse_shapes import Rectangular, Gaussian
 
 
 # define pulse sequence
-sequence = pulses.PulseSequence()
-sequence.add(pulses.Pulse(start=0,
-                          frequency=200000000.0,
-                          amplitude=0.3,
-                          duration=60,
+sequence = PulseSequence()
+sequence.add(Pulse(start=0,
+                   frequency=200000000.0,
+                   amplitude=0.3,
+                   duration=60,
+                   phase=0,
+                   shape=Gaussian(60 / 5))) # Gaussian shape with std = duration / 5
+sequence.add(ReadoutPulse(start=70,
+                          frequency=20000000.0,
+                          amplitude=0.5,
+                          duration=3000,
                           phase=0,
-                          shape=Gaussian(60 / 5))) # Gaussian shape with std = duration / 5
-sequence.add(pulses.ReadoutPulse(start=70,
-                                 frequency=20000000.0,
-                                 amplitude=0.5,
-                                 duration=3000,
-                                 phase=0,
-                                 shape=Rectangular()))
+                          shape=Rectangular()))
 
+# connect to hardware platform
+platform = Platform("tiiq")
 # turn on instruments
 platform.start()
 # execute sequence and acquire results

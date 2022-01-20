@@ -1,179 +1,90 @@
-import copy
-import numpy as np
-from qibo import gates
+from qibo import K
+from qibolab import states, pulses
 from qibo.config import raise_error
-from qibo.core import measurements, circuit
-from qibolab import tomography, experiment, scheduler
-from qibolab.gates import Align
+from qibo.core import circuit
+
 
 class PulseSequence:
-    """Describes a sequence of pulses for the FPGA to unpack and convert into arrays
+    """List of pulses.
 
-    Current FPGA binary has variable sampling rate but fixed sample size.
-    Due to software limitations we need to prepare all 16 DAC channel arrays.
-    @see BasicPulse, MultifrequencyPulse and FilePulse for more information about supported pulses.
-
-    Args:
-        pulses: Array of Pulse objects
+    Holds a separate list for each instrument.
     """
-    def __init__(self, pulses, duration=experiment.default_pulse_duration, sample_size=experiment.default_sample_size,
-                 fixed_readout=True, time_offset=experiment.readout_pulse_duration() + 1e-6):
-        if duration is None and sample_size is None:
-            raise_error(RuntimeError("Either duration or sample size need to be defined"))
 
-        self.pulses = pulses
-        self.nchannels = experiment.nchannels
-        self.sampling_rate = experiment.sampling_rate()
-        if duration is not None:
-            self.duration = duration
-            self.sample_size = int(self.sampling_rate * duration)
+    def __init__(self):
+        super().__init__()
+        self.qcm_pulses = []
+        self.qrm_pulses = []
+        self.time = 0
+        self.phase = 0
 
-        if sample_size is not None:
-            self.sample_size = sample_size
-            self.duration = sample_size / self.sampling_rate
+    def add(self, pulse):
+        """Add a pulse to the sequence.
 
-            #if duration is not None:
-                #warn("Defaulting to fixed sample size")
-        #self.file_dir = experiment.pulse_file # NIU
-
-        if fixed_readout:
-            self.time = np.linspace(time_offset - self.duration, time_offset, num=self.sample_size)
-        else:
-            self.time = np.linspace(0, self.duration, self.sample_size)
-
-    def compile(self):
-        """Compiles pulse sequence into waveform arrays
-
-        FPGA binary is currently unable to parse pulse sequences, so this is a temporary workaround to prepare the arrays
-
-        Returns:
-            Numpy.ndarray holding waveforms for each channel. Has shape (nchannels, sample_size).
+        Args:
+            pulse (`qibolab.pulses.Pulse`): Pulse object to add.
+            delay_between_pulses (int): Time to wait before applying the next pulse.
         """
-        waveform = np.zeros((self.nchannels, self.sample_size))
-        for pulse in self.pulses:
-            waveform = pulse.compile(waveform, self)
-        return waveform
+        if pulse.channel == "qrm" or pulse.channel == 1:
+            self.qrm_pulses.append(pulse)
+        else:
+            self.qcm_pulses.append(pulse)
 
-    def serialize(self):
-        """Returns the serialized pulse sequence."""
-        return ", ".join([pulse.serial() for pulse in self.pulses])
+    def add_u3(self, theta, phi, lam):
+        """Add pulses that implement a U3 gate.
+
+        Args:
+            theta, phi, lam (float): Parameters of the U3 gate.
+        """
+        from qibolab.pulse_shapes import Gaussian
+        # Pi/2 pulse from calibration
+        amplitude = K.platform.pi_pulse_amplitude
+        duration = K.platform.pi_pulse_duration // 2
+        frequency = K.platform.pi_pulse_frequency
+        delay = K.platform.delay_between_pulses
+
+        self.phase += phi - np.pi / 2
+        self.add(pulses.Pulse(self.time, duration, amplitude, frequency, self.phase, Gaussian(duration / 5)))
+        self.time += duration + delay
+        self.phase += np.pi - theta
+        self.add(pulses.Pulse(self.time, duration, amplitude, frequency, self.phase, Gaussian(duration / 5)))
+        self.time += duration + delay
+        self.phase += lam - np.pi / 2
+
+    def add_measurement(self):
+        """Add measurement pulse."""
+        from qibolab.pulse_shapes import Rectangular
+        kwargs = K.platform.readout_pulse
+        kwargs["start"] = self.time + K.platform.delay_before_readout
+        kwargs["phase"] = self.phase
+        kwargs["shape"] = Rectangular()
+        self.add(pulses.ReadoutPulse(**kwargs))
 
 
 class HardwareCircuit(circuit.Circuit):
 
-    def __init__(self, nqubits, force_tomography=False):
+    def __init__(self, nqubits):
+        if nqubits > 1:
+            raise ValueError("Device has only one qubit.")
         super().__init__(nqubits)
-        self._force_tomography = force_tomography
-        self._raw = None
-
-    def _add_layer(self):
-        raise_error(NotImplementedError, "VariationalLayer gate is not "
-                                         "implemented for hardware backends.")
-
-    def fuse(self):
-        raise_error(NotImplementedError, "Circuit fusion is not implemented "
-                                         "for hardware backends.")
-
-    def _calculate_sequence_duration(self, gate_sequence):
-        qubit_times = np.zeros(self.nqubits)
-        for gate in gate_sequence:
-            q = gate.target_qubits[0]
-
-
-            if isinstance(gate, Align):
-                m = 0
-                for q in gate.target_qubits:
-                    m = max(m, qubit_times[q])
-
-                for q in gate.target_qubits:
-                    qubit_times[q] = m
-
-            # TODO: Condition for two/three qubit gates
-            elif isinstance(gate, gates.CNOT):
-                # CNOT cannot be tested because calibration placeholder supports single qubit only
-                control = gate.control_qubits[0]
-                start = max(qubit_times[q], qubit_times[control])
-                qubit_times[q] = start + gate.duration(experiment.qubits)
-                qubit_times[control] = qubit_times[q]
-
-            else:
-                qubit_times[q] += gate.duration(experiment.qubits)
-
-        return qubit_times
-
-    def create_pulse_sequence(self, queue, qubit_times, qubit_phases):
-        args = [experiment.qubits, qubit_times, qubit_phases]
-        sequence = []
-        for gate in queue:
-            sequence.extend(gate.pulse_sequence(*args))
-        sequence.extend(self.measurement_gate.pulse_sequence(*args))
-        return PulseSequence(sequence)
-
-    def _execute_sequence(self, nshots):
-        """For one qubit, we can rely on IQ data projection to get the probability p."""
-        target_qubits = self.measurement_gate.target_qubits
-        # Calculate qubit control pulse duration and move it before readout
-        qubit_phases = np.zeros(self.nqubits)
-        qubit_times = experiment.static.readout_start_time - self._calculate_sequence_duration(self.queue)
-        pulse_sequence = self.create_pulse_sequence(self.queue, qubit_times, qubit_phases)
-        # Execute pulse sequence and project data to probability if requested
-        self._raw = scheduler.execute_pulse_sequence(pulse_sequence, nshots)
-        probabilities = self._raw[0]
-        # TODO: Adjust for single shot measurements
-        output = measurements.MeasurementResult(target_qubits, probabilities, nshots)
-        self._final_state = output
-
-        return self._final_state
-
-    def _execute_tomography_sequence(self, nshots):
-        """For 2+ qubits, since we do not have a TWPA
-        (and individual qubit resonator) on this system,
-        we need to do tomography to get the density matrix
-        """
-        # TODO: n-qubit dynamic tomography
-        target_qubits = self.measurement_gate.target_qubits
-        nqubits = len(target_qubits)
-        ps_states = tomography.Tomography.basis_states(nqubits)
-        prerotation = tomography.Tomography.gate_sequence(nqubits)
-        ps_array = []
-        # Set pulse sequence to get the state vectors
-        for state_gate in ps_states:
-            qubit_times = np.zeros(self.nqubits) - max(self._calculate_sequence_duration(state_gate))
-            qubit_phases = np.zeros(self.nqubits)
-            ps_array.append(self.create_pulse_sequence(state_gate, qubit_times, qubit_phases))
-
-        # Append prerotation to the circuit sequence for tomography
-        for prerotation_sequence in prerotation:
-            qubit_phases = np.zeros(self.nqubits)
-            seq = self.queue + [gates.Align(*tuple(range(self.nqubits)))] + prerotation_sequence
-            qubit_times = np.zeros(self.nqubits) - max(self._calculate_sequence_duration(seq))
-            ps_array.append(self.create_pulse_sequence(seq, qubit_times, qubit_phases))
-
-        self._raw = scheduler.execute_tomography(ps_array, nshots)
-        density_matrix = self._raw[0]
-        probabilities = np.array([density_matrix[k, k].real for k in range(nqubits)])
-        target_qubits = self.measurement_gate.target_qubits
-        output = measurements.MeasurementResult(target_qubits, probabilities, nshots)
-        self._final_state = output
-
-        return self._final_state
 
     def execute(self, initial_state=None, nshots=None):
         if initial_state is not None:
             raise_error(ValueError, "Hardware backend does not support "
                                     "initial state in circuits.")
-
         if self.measurement_gate is None:
-            raise_error(RuntimeError, "No measurement register assigned")
+            raise_error(RuntimeError, "No measurement register assigned.")
 
-        # Get calibration data
-        self.qubit_config = scheduler.fetch_config()
+        # Translate gates to pulses and create a ``PulseSequence``
+        sequence = PulseSequence()
+        for gate in self.queue:
+            gate.to_sequence(sequence)
+        self.measurement_gate.to_sequence(sequence)
 
-        # TODO: Move data fitting to qibolab.experiments
-        if len(scheduler.check_tomography_required() or self._force_tomography):
-            return self._execute_tomography_sequence(nshots)
-        else:
-            return self._execute_sequence(nshots)
+        # Execute the pulse sequence on the platform
+        K.platform.start()
+        readout = K.platform(sequence, nshots)
+        K.platform.stop()
 
-    def __call__(self, initial_state=None, nshots=None):
-        return self.execute(initial_state, nshots)
+        min_v = K.platform.min_readout_voltage
+        max_v = K.platform.max_readout_voltage
+        return states.HardwareState.from_readout(readout, min_v, max_v)

@@ -39,7 +39,8 @@ class Gaussian(PulseShape):
         """Gaussian envelope centered with respect to the pulse.
 
         .. math::
-            A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}
+
+            A\exp^{-\\frac{1}{2}\\frac{(t-\mu)^2}{\sigma^2}}
         """
         from scipy.signal import gaussian
         return amplitude * gaussian(int(duration), std=self.sigma)
@@ -63,12 +64,12 @@ class Drag(PulseShape):
         """DRAG envelope centered with respect to the pulse.
 
         .. math::
-            G + i\beta(-\frac{t-\mu}{\sigma^2})G
+            G + i\\beta(-\\frac{t-\mu}{\sigma^2})G
 
         where
 
         .. math::
-            G = A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}
+            G = A\exp^{-\\frac{1}{2}\\frac{(t-\mu)^2}{\sigma^2}}
         """
         mu = start + duration / 2
         gaussian = amplitude * np.exp(-0.5 * (time - mu) ** 2 / self.sigma ** 2)

@@ -1,32 +1,6 @@
 """Pulse abstractions."""
 import bisect
-import itertools
 import numpy as np
-from qibo.config import raise_error
-
-
-class PulseSequence:
-    """List of pulses.
-
-    Holds a separate list for each instrument.
-    """
-    # TODO: Move this to a different file (temporarily here as placeholder)
-
-    def __init__(self):
-        super().__init__()
-        self.qcm_pulses = []
-        self.qrm_pulses = []
-
-    def add(self, pulse):
-        """Add a pulse to the list.
-
-        Args:
-            pulse (`qibolab.pulses.Pulse`): Pulse object to add.
-        """
-        if pulse.channel == "qrm" or pulse.channel == 1:
-            self.qrm_pulses.append(pulse)
-        else:
-            self.qcm_pulses.append(pulse)
 
 
 class Pulse:
