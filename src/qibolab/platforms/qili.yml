@@ -12,7 +12,7 @@ settings:
 experimental_setup:
   control:
     pulse_generator:
-      instrument: Qblox_PulsarQCM
+      instrument: PulsarQCM
       setup:
         label: qcm
         ip: 192.168.0.3
@@ -24,7 +24,7 @@ experimental_setup:
         initial_delay: 0
         repetition_duration: 200000
     pulse_modulator:
-      instrument: Rohde_Schwards_SGS100A
+      instrument: SGS100A
       setup:
         label: LO_qcm
         ip: 192.168.0.10
@@ -33,7 +33,7 @@ experimental_setup:
         power: 15
   readout:
     pulse_generator:
-      instrument: Qblox_PulsarQRM
+      instrument: PulsarQRM
       setup:
         label: qrm
         ip: 192.168.0.4
@@ -51,7 +51,7 @@ experimental_setup:
         sampling_rate: 1000000000.0
         mode: ssb
     pulse_modulator:
-      instrument: Rohde_Schwards_SGS100A
+      instrument: SGS100A
       setup:
         ip: 192.168.0.7
         label: LO_qrm

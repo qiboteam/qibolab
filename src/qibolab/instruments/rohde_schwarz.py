@@ -7,7 +7,7 @@ import logging
 logger = logging.getLogger(__name__)  # TODO: Consider using a global logger
 
 
-class Rohde_Schwarz_SGS100A:
+class SGS100A:
 
     def __init__(self, label, ip):
         """
@@ -28,7 +28,7 @@ class Rohde_Schwarz_SGS100A:
             self.device = LO_SGS100A.RohdeSchwarz_SGS100A(label, f"TCPIP0::{ip}::inst0::INSTR")
         except Exception as exc:
             print(f"Can't connect to SGS100A at ip {ip}.")
-            print(exc) 
+            print(exc)
             raise exc
         self._connected = True
         logger.info("Local oscillator connected")

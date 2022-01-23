@@ -1,2 +1,2 @@
-from qibolab.instruments.qblox import Qblox_PulsarQRM, Qblox_PulsarQCM
-from qibolab.instruments.rohde_schwarz import Rohde_Schwarz_SGS100A
+from qibolab.instruments.qblox import PulsarQRM, PulsarQCM
+from qibolab.instruments.rohde_schwarz import SGS100A

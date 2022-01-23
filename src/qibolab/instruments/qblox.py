@@ -193,7 +193,7 @@ class GenericPulsar(ABC):
             self.device.sequencer1_waveforms_and_program(os.path.join(os.getcwd(), filename))
         else:
             self.device.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), filename))
-            
+
     def play_sequence(self):
         """Executes the uploaded instructions."""
         # Map sequencers to specific outputs (but first disable all sequencer connections)
@@ -223,7 +223,7 @@ class GenericPulsar(ABC):
     #    self.close()
 
 
-class Qblox_PulsarQRM(GenericPulsar):
+class PulsarQRM(GenericPulsar):
     """Class for interfacing with Pulsar QRM."""
 
     def __init__(self, label, ip, ref_clock="external", sequencer=0, sync_en=True,
@@ -331,7 +331,7 @@ class Qblox_PulsarQRM(GenericPulsar):
         return integrated_signal
 
 
-class Qblox_PulsarQCM(GenericPulsar):
+class PulsarQCM(GenericPulsar):
 
     def __init__(self, label, ip, sequencer=0, ref_clock="internal", sync_en=True):
         super().__init__()
@@ -346,7 +346,7 @@ class Qblox_PulsarQCM(GenericPulsar):
             self.device.sequencer1_sync_en(sync_en)
         else:
             self.device.sequencer0_sync_en(sync_en)
-            
+
     def play_sequence_1(self):
         if self.sequencer == 1:
             for sequencer in range(0, 6):

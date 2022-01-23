@@ -138,9 +138,9 @@ class Platform:
         if not self.is_connected:
             log.info(f"Connecting to {self.name} instruments.")
             try:
-                import qibolab.instruments as qi
-                control = self._runcard.get["experimental_setup"].get("control")
-                readout = self._runcard.get["experimental_setup"].get("readout")
+                from qibolab import instruments as qi
+                control = self._runcard.get("experimental_setup").get("control")
+                readout = self._runcard.get("experimental_setup").get("readout")
                 self._qrm = getattr(qi, readout.get("pulse_generator").get("instrument"))(**readout.get("pulse_generator").get("setup"))
                 self._qcm = getattr(qi, control.get("pulse_generator").get("instrument"))(**control.get("pulse_generator").get("setup"))
                 self._LO_qrm = getattr(qi, readout.get("pulse_modulator").get("instrument"))(**readout.get("pulse_modulator").get("setup"))
@@ -155,10 +155,12 @@ class Platform:
     def setup(self):
         """Configures instruments using the loaded calibration settings."""
         if self.is_connected:
-            self._qrm.setup(**self._runcard.get("experimental_setup").get("readout").get("pulse_generator").get("calibration"))
-            self._qcm.setup(**self._runcard.get("experimental_setup").get("control").get("pulse_generator").get("calibration"))
-            self._LO_qrm.setup(**self._runcard.get("experimental_setup").get("readout").get("pulse_modulator").get("calibration"))
-            self._LO_qcm.setup(**self._runcard.get("experimental_setup").get("control").get("pulse_modulator").get("calibration"))
+            control = self._runcard.get("experimental_setup").get("control")
+            readout = self._runcard.get("experimental_setup").get("readout")
+            self._qrm.setup(**readout.get("pulse_generator").get("calibration"))
+            self._qcm.setup(**control.get("pulse_generator").get("calibration"))
+            self._LO_qrm.setup(**readout.get("pulse_modulator").get("calibration"))
+            self._LO_qcm.setup(**control.get("pulse_modulator").get("calibration"))
 
     def start(self):
         """Turns on the local oscillators.

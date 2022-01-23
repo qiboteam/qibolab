@@ -11,7 +11,7 @@ Pulses
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: qibolab.pulses.PulseSequence
+.. autoclass:: qibolab.circuit.PulseSequence
    :members:
    :undoc-members:
    :show-inheritance:
@@ -25,7 +25,7 @@ Pulses
 Platforms
 ---------
 
-.. autoclass:: qibolab.platforms.TIIq
+.. autoclass:: qibolab.platform.Platform
    :members:
    :member-order: bysource
 
