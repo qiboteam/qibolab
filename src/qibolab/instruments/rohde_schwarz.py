@@ -24,6 +24,8 @@ class SGS100A(Instrument):
         self.label = label
         self.ip = ip
         self.connect()
+        # Frequency Settable object to be used by MeasurementControl
+        self.frequency_settable = self._driver.frequency
 
     def connect(self):
         try:
@@ -40,12 +42,12 @@ class SGS100A(Instrument):
     def set_power(self, power):
         """Set dBm power to local oscillator."""
         self._power = power
-        self.device.power(power)
+        self._driver.power(power)
         logger.info(f"Local oscillator power set to {power}.")
 
     def set_frequency(self, frequency):
         self._frequency = frequency
-        self.device.frequency(frequency)
+        self._driver.frequency(frequency)
         logger.info(f"Local oscillator frequency set to {frequency}.")
 
     def get_power(self):
@@ -60,18 +62,18 @@ class SGS100A(Instrument):
 
     def on(self):
         """Start generating microwaves."""
-        self.device.on()
+        self._driver.on()
         logger.info("Local oscillator on.")
 
     def off(self):
         """Stop generating microwaves."""
-        self.device.off()
+        self._driver.off()
         logger.info("Local oscillator off.")
 
     def close(self):
         if self._connected:
             self.off()
-            self.device.close()
+            self._driver.close()
             self._connected = False
 
     # TODO: Figure out how to fix this
