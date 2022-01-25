@@ -33,7 +33,8 @@ class Qili:
         self._LO_qcm = None
         try:
             self.connect()
-        except: # capture time-out errors when importing outside the lab (bad practice)
+        except Exception as exc: # capture time-out errors when importing outside the lab (bad practice)
+            log.error(exc)
             log.warning("Cannot establish connection to Qili instruments. Skipping...")
         # initial instrument setup
         self.setup()

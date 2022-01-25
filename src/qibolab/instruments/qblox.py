@@ -17,6 +17,7 @@ class GenericPulsar(Instrument, ABC):
         self.sequencer = sequencer
         self.ref_clock = ref_clock
         self.sync_en = sync_en
+        self._connected = False
         # To be defined in each instrument
         self.name = None
         # To be defined during setup
@@ -32,7 +33,6 @@ class GenericPulsar(Instrument, ABC):
         self.acquisitions = {"single": {"num_bins": 1, "index":0}}
         self.weights = {}
 
-    @abstractmethod
     def connect(self):
         """Connects to the instruments."""
         if not self._connected:

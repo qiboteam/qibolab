@@ -34,7 +34,8 @@ class Instrument(ABC):
 
 class InstrumentException(Exception):
     def __init__(self, instrument: Instrument, message: str):
-        header = f"Exception thrown connecting to {self.instrument.signature}"
-        full_msg = header + '\n' + message
+        self.instrument = instrument
+        header = f"InstrumentException with {self.instrument.signature}"
+        full_msg = header + ": " + message
         super().__init__(full_msg)
         self.instrument = instrument
