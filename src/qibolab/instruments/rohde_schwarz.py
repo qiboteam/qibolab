@@ -28,8 +28,7 @@ class SGS100A:
             self.device = LO_SGS100A.RohdeSchwarz_SGS100A(label, f"TCPIP0::{ip}::inst0::INSTR")
         except Exception as exc:
             print(f"Can't connect to SGS100A at ip {ip}.")
-            print(exc)
-            raise exc
+            raise_error(RuntimeError, f"Can't connect to SGS100A at ip {ip}. Error captured: {exc}")
         self._connected = True
         logger.info("Local oscillator connected")
 
