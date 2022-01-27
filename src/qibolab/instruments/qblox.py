@@ -3,32 +3,46 @@ import json
 import numpy as np
 from abc import ABC, abstractmethod
 from qibo.config import raise_error
+from .instrument import Instrument, InstrumentException
+from pulsar_qrm.pulsar_qrm import pulsar_qrm
+from pulsar_qcm.pulsar_qcm import pulsar_qcm
 
 
-class GenericPulsar(ABC):
+class GenericPulsar(Instrument, ABC):
 
-    def __init__(self):
+    def __init__(self, label, ip, sequencer, ref_clock, sync_en):
+        self.label = label
+        self.ip = ip
+        # TODO When updating to the new firmware, use a sequencer mapping instead of setting a single sequencer
+        self.sequencer = sequencer
+        self.ref_clock = ref_clock
+        self.sync_en = sync_en
+        self._connected = False
         # To be defined in each instrument
         self.name = None
-        self.device = None
-        self._connected = False
-        self.sequencer = None
-        self.ref_clock = None
-        self.sync_en = None
         # To be defined during setup
+        self.hardware_avg = None
         self.initial_delay = None
         self.repetition_duration = None
         # hardcoded values used in ``generate_program``
+        self.delay_before_readout = 4 # same value is used for all readout pulses (?)
         self.wait_loop_step = 1000
-        self.duration_base = 65535 # maximum length of a waveform in number of samples (defined by the device memory).
+        self.duration_base = 16380 # maximum length of a waveform in number of samples (defined by the device memory).
         # hardcoded values used in ``upload``
+        # TODO QCM shouldn't have acquisitions
         self.acquisitions = {"single": {"num_bins": 1, "index":0}}
         self.weights = {}
 
-    @abstractmethod
-    def connect(self, label, ip):
+    def connect(self):
         """Connects to the instruments."""
-        raise(NotImplementedError)
+        if not self._connected:
+            try:
+                self._driver = self._Driver(self.label, self.ip)
+            except Exception as exc:
+                raise InstrumentException(self, str(exc))
+            self._connected = True
+        else:
+            raise(RuntimeError)
 
     @property
     def gain(self):
@@ -228,12 +242,13 @@ class PulsarQRM(GenericPulsar):
 
     def __init__(self, label, ip, ref_clock="external", sequencer=0, sync_en=True,
                  hardware_avg_en=True, acq_trigger_mode="sequencer"):
-        super().__init__()
+        super().__init__(label, ip, sequencer, ref_clock, sync_en)
         # Instantiate base object from qblox library and connect to it
         self.name = "qrm"
-        self.connect(label, ip)
+        self._signature = f"{type(self).__name__}@{ip}"
+        self._Driver = pulsar_qrm
+        self.connect()
         self._connected = True
-        self.sequencer = sequencer
         self.hardware_avg_en = hardware_avg_en
 
         # Reset and configure
@@ -249,14 +264,6 @@ class PulsarQRM(GenericPulsar):
             self.device.sequencer1_sync_en(sync_en)
         else:
             self.device.sequencer0_sync_en(sync_en)
-
-    def connect(self, label, ip):
-        if not self._connected:
-            from pulsar_qrm.pulsar_qrm import pulsar_qrm # pylint: disable=E0401
-            self.device = pulsar_qrm(label, ip)
-            self._connected = True
-        else:
-            raise(RuntimeError)
 
     def setup(self, gain, initial_delay, repetition_duration,
               start_sample, integration_length, sampling_rate, mode):
@@ -334,10 +341,12 @@ class PulsarQRM(GenericPulsar):
 class PulsarQCM(GenericPulsar):
 
     def __init__(self, label, ip, sequencer=0, ref_clock="internal", sync_en=True):
-        super().__init__()
+        super().__init__(label, ip, sequencer, ref_clock, sync_en)
         # Instantiate base object from qblox library and connect to it
         self.name = "qcm"
-        self.connect(label, ip)
+        self._signature = f"{type(self).__name__}@{ip}"
+        self._Driver = pulsar_qcm
+        self.connect()
         self.sequencer = sequencer
         # Reset and configure
         self.device.reset()
@@ -367,11 +376,3 @@ class PulsarQCM(GenericPulsar):
         program = self.generate_program(nshots, initial_delay, sequence.delay_before_readout, acquire_instruction, wait_time)
 
         return waveforms, program
-
-    def connect(self, label, ip):
-        if not self._connected:
-            from pulsar_qcm.pulsar_qcm import pulsar_qcm # pylint: disable=E0401
-            self.device = pulsar_qcm(label, ip)
-            self._connected = True
-        else:
-            raise(RuntimeError)
