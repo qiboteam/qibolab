@@ -248,7 +248,6 @@ class PulsarQRM(GenericPulsar):
         self._signature = f"{type(self).__name__}@{ip}"
         self._Driver = pulsar_qrm
         self.connect()
-        self._connected = True
         self.hardware_avg_en = hardware_avg_en
 
         # Reset and configure
@@ -347,7 +346,6 @@ class PulsarQCM(GenericPulsar):
         self._signature = f"{type(self).__name__}@{ip}"
         self._Driver = pulsar_qcm
         self.connect()
-        self.sequencer = sequencer
         # Reset and configure
         self.device.reset()
         self.device.reference_source(ref_clock)
