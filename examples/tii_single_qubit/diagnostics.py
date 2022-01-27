@@ -90,7 +90,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     # Fast Sweep
     platform.software_averages = 1
     scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
-    mc.settables(platform.LO_qrm.device.frequency)
+    mc.settables(platform.LO_qrm.frequency_settable)
     mc.setpoints(scanrange + platform.LO_qrm.get_frequency())
     mc.gettables(Gettable(ROController(platform, sequence)))
     platform.LO_qrm.on()
@@ -103,7 +103,7 @@ def run_resonator_spectroscopy(lowres_width, lowres_step,
     # Precision Sweep
     platform.software_averages = 1 # 3
     scanrange = np.arange(-precision_width, precision_width, precision_step)
-    mc.settables(platform.LO_qrm.device.frequency)
+    mc.settables(platform.LO_qrm.frequency_settable)
     mc.setpoints(scanrange + platform.LO_qrm.get_frequency())
     mc.gettables(Gettable(ROController(platform, sequence)))
     platform.LO_qrm.on()
@@ -141,7 +141,7 @@ def run_qubit_spectroscopy(resonator_freq, fast_start, fast_end, fast_step,
     # Fast Sweep
     platform.software_averages = 1
     scanrange = np.arange(fast_start, fast_end, fast_step)
-    mc.settables(platform.LO_qcm.device.frequency)
+    mc.settables(platform.LO_qcm.frequency_settable)
     mc.setpoints(scanrange + platform.LO_qcm.get_frequency())
     mc.gettables(Gettable(ROController(platform, sequence)))
     platform.LO_qrm.on()
@@ -154,7 +154,7 @@ def run_qubit_spectroscopy(resonator_freq, fast_start, fast_end, fast_step,
     # Precision Sweep
     platform.software_averages = 3
     scanrange = np.arange(precision_start, precision_end, precision_step)
-    mc.settables(platform.LO_qcm.device.frequency)
+    mc.settables(platform.LO_qcm.frequency_settable)
     mc.setpoints(scanrange + platform.LO_qcm.get_frequency())
     mc.gettables(Gettable(ROController(platform, sequence)))
     platform.LO_qrm.on()
