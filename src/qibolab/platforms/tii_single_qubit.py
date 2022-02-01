@@ -105,7 +105,7 @@ class TIISingleQubit(AbstractPlatform):
     def __init__(self):
         self.load_settings()
         self._LO_qrm = SGS100A("LO_qrm", '192.168.0.7')
-        self._LO_qcm = SGS100A("LO_qcm", '192.168.0.101')
+        self._LO_qcm = SGS100A("LO_qcm", '192.168.0.103')
         self._qrm = Pulsar_QRM("qrm", '192.168.0.2')
         self._qcm = Pulsar_QCM("qcm", '192.168.0.3')
 

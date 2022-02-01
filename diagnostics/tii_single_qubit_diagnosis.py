@@ -141,7 +141,7 @@ def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, high
 
 def run_resonator_spectroscopy( fast_sweep_software_averages = 1, 
                                 precision_sweep_software_averages = 3,
-                                fast_sweep_scan_range =  variable_resolution_scanrange(lowres_width= 30e6, lowres_step= 2e6, highres_width= 1e6, highres_step= 0.2e6),
+                                fast_sweep_scan_range =  variable_resolution_scanrange(lowres_width= 30e6, lowres_step= 2e6, highres_width= 5e6, highres_step= 0.2e6),
                                 precision_sweep_scan_range = np.arange(-0.5e6, 0.5e6, 0.02e6)
                               ):
     tiisq.load_settings()
