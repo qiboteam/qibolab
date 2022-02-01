@@ -176,7 +176,7 @@ class GenericPulsar(ABC):
                 waveforms[name]["data"] = waveforms[name]["data"].tolist()  # JSON only supports lists
 
         # Add sequence program and waveforms to single dictionary and write to JSON file
-        filename = f"{data_folder}/qrm_sequence.json"
+        filename = f"{data_folder}/{self.name}_sequence.json"
         program_dict = {
             "waveforms": waveforms,
             "weights": self.weights,
