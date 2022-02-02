@@ -25,11 +25,11 @@ class SGS100A(Instrument):
         self.ip = ip
         self.connect()
         # Frequency Settable object to be used by MeasurementControl
-        self.frequency_settable = self._driver.frequency
+        self.frequency_settable = self.device.frequency
 
     def connect(self):
         try:
-            self._driver = LO_SGS100A.RohdeSchwarz_SGS100A(self.label, f"TCPIP0::{self.ip}::inst0::INSTR")
+            self.device = LO_SGS100A.RohdeSchwarz_SGS100A(self.label, f"TCPIP0::{self.ip}::inst0::INSTR")
         except Exception as exc:
             raise InstrumentException(self, str(exc))
         self._connected = True

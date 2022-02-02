@@ -37,7 +37,7 @@ class GenericPulsar(Instrument, ABC):
         """Connects to the instruments."""
         if not self._connected:
             try:
-                self._driver = self._Driver(self.label, self.ip)
+                self.device = self.Device(self.label, self.ip)
             except Exception as exc:
                 raise InstrumentException(self, str(exc))
             self._connected = True
@@ -246,7 +246,8 @@ class PulsarQRM(GenericPulsar):
         # Instantiate base object from qblox library and connect to it
         self.name = "qrm"
         self._signature = f"{type(self).__name__}@{ip}"
-        self._Driver = pulsar_qrm
+        self.Device = pulsar_qrm
+        self.device = None
         self.connect()
         self.hardware_avg_en = hardware_avg_en
 
@@ -344,7 +345,8 @@ class PulsarQCM(GenericPulsar):
         # Instantiate base object from qblox library and connect to it
         self.name = "qcm"
         self._signature = f"{type(self).__name__}@{ip}"
-        self._Driver = pulsar_qcm
+        self.Device = pulsar_qcm
+        self.device = None
         self.connect()
         # Reset and configure
         self.device.reset()
