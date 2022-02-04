@@ -16,6 +16,7 @@ class PulseSequence:
         self.qrm_pulses = []
         self.time = 0
         self.phase = 0
+        self.pulses = []
 
     def add(self, pulse):
         """Add a pulse to the sequence.
@@ -28,6 +29,7 @@ class PulseSequence:
             self.qrm_pulses.append(pulse)
         else:
             self.qcm_pulses.append(pulse)
+        self.pulses.append(pulse)
 
     def add_u3(self, theta, phi, lam):
         """Add pulses that implement a U3 gate.

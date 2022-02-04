@@ -1,0 +1,41 @@
+name: icarusq
+nqubits: 1
+description: Controls the Tektronix AWG5204, AlazarTech ATS9371, two MiniCircuit attenuators and two QuicSyn Lite local oscillators.
+
+instruments:
+  awg:
+    type: AWG
+    address: TCPIP0::192.168.0.2::inst0::INSTR
+    setup_parameters:
+      offset: [-0.001, 0, 0, 0]
+      amplitude: [0.75, 0.75, 0.75, 0.75]
+      resolution: 14
+      sampling_rate: 2500000000
+      mode: 1
+      sequence_delay: 0.00006
+      pulse_buffer: 0.000001
+      adc_delay: 0.000000282
+      qb_delay: 0.000000292
+      ro_delay: 0.000000266
+      ip: 192.168.0.2
+  qb_lo:
+    type: QuicSyn
+    address: ASRL6::INSTR
+    setup_parameters:
+      frequency: 0
+  ro_lo:
+    type: QuicSyn
+    address: ASRL3::INSTR
+    setup_parameters:
+      frequency: 0
+  qb_att:
+    type: MCAttenuator
+    address: 192.168.0.9:90
+    setup_parameters:
+      attenuation: 20
+  ro_att:
+    type: MCAttenuator
+    address: 192.168.0.10:100
+    setup_parameters:
+      attenuation: 5
+
