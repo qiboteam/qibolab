@@ -4,8 +4,9 @@ description: Controls the Tektronix AWG5204, AlazarTech ATS9371, two MiniCircuit
 
 instruments:
   awg:
-    type: AWG
+    type: TektronixAWG5204
     address: TCPIP0::192.168.0.2::inst0::INSTR
+    trigger: true
     setup_parameters:
       offset: [-0.001, 0, 0, 0]
       amplitude: [0.75, 0.75, 0.75, 0.75]
@@ -22,12 +23,12 @@ instruments:
     type: QuicSyn
     address: ASRL6::INSTR
     setup_parameters:
-      frequency: 0
+      frequency: 3800000000
   ro_lo:
     type: QuicSyn
     address: ASRL3::INSTR
     setup_parameters:
-      frequency: 0
+      frequency: 5000000000
   qb_att:
     type: MCAttenuator
     address: 192.168.0.9:90
@@ -38,4 +39,8 @@ instruments:
     address: 192.168.0.10:100
     setup_parameters:
       attenuation: 5
-
+  alazar_adc:
+    type: AlazarADC
+    address: Alazar1
+    setup_parameters:
+      samples: 4992

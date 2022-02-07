@@ -1,7 +1,7 @@
 """
 Class to control general communication with instruments
 """
-from qibolab.instruments.drivers import devices
+from qibolab.instruments import drivers as qi
 from qibolab.instruments.drivers.abstract import DAC, LO, ADC
 
 class InstrumentController:
@@ -16,7 +16,7 @@ class InstrumentController:
         """
         Searches for requested instrument and connects to it
         """
-        inst = devices.get(inst_type)(name, address)
+        inst = getattr(qi, inst_type)(name, address)
         self._instruments.append(inst)
 
         # There may be hybrid instruments with multiple capabilities, like the FPGA or the QRM
@@ -59,6 +59,7 @@ class InstrumentController:
         for inst in self._lo:
             inst.start()
 
+    # The QRM does not need the number of reps, but the ATS9371/FPGA do
     def arm_adc(self, shots):
         for adc in self._adc:
             adc.arm(shots)
@@ -77,6 +78,11 @@ class InstrumentController:
         for inst in self._dac + self._lo:
             inst.stop()
 
+    # Some instruments do not need a close method, use inherited pass
     def close(self):
         for inst in self._instruments:
             inst.close()
+        self._instruments = []
+        self._dac = []
+        self._lo = []
+        self._adc = []

@@ -42,7 +42,8 @@ class ICPlatform:
                 for name, params in instruments.items():
                     inst_type = params.get("type")
                     address = params.get("address")
-                    self.ic.add_instrument(inst_type, name, address)
+                    trigger = params.get("trigger")
+                    self.ic.add_instrument(inst_type, name, address, trigger)
                 self.is_connected = True
             except Exception as exception:
                 raise_error(RuntimeError, "Cannot establish connection to "
@@ -74,6 +75,7 @@ class ICPlatform:
         """Disconnects from the lab instruments."""
         if self.is_connected:
             self.ic.close()
+            self.is_connected = False
 
     def execute(self, sequence, nshots=None):
         """Executes a pulse sequence.
@@ -106,12 +108,12 @@ class ICPlatform:
             if isinstance(pulse, ReadoutPulse):
                 if pulse.adc not in robj.keys():
                     robj[pulse.adc] = []
-                    robj[pulse.adc].append(pulse.frequency)
-
+                robj[pulse.adc].append(pulse.frequency)
         # Translate and upload the pulse for each device
         for device, seq in sobj.items():
             self.ic.translate_and_upload(device, seq, nshots)
 
+        self.ic.arm_adc(nshots)
         # Trigger the experiment
         self.ic.trigger_experiment()
 

@@ -135,7 +135,7 @@ class TektronixAWG5204(VisaInstrument, DAC):
         from qibolab.pulses import ReadoutPulse
         from qcodes.instrument_drivers.tektronix.AWG70000A import AWG70000A
 
-        # First create np arrays for each channe;
+        # First create np arrays for each channel
         start = min(pulse.start for pulse in sequence) - self._pulse_buffer
         end = max(pulse.start + pulse.duration for pulse in sequence) + self._pulse_buffer
         t = np.arange(start, end, 1 / self._sampling_rate)
@@ -148,11 +148,11 @@ class TektronixAWG5204(VisaInstrument, DAC):
                 wfm[pulse.channel[0]] += i_wfm
                 wfm[pulse.channel[1]] += q_wfm
                 # ADC TTL
-                wfm[5] = TTL(t, pulse.start + self._adc_delay , 10e-9, 1)
+                wfm[4] = TTL(t, pulse.start + self._adc_delay , 10e-9, 1)
                 # RO SW TTL
-                wfm[6] = TTL(t, pulse.start + self._ro_delay, pulse.duration, 1)
+                wfm[5] = TTL(t, pulse.start + self._ro_delay, pulse.duration, 1)
                 # QB SW TTL
-                wfm[7] = TTL(t, pulse.start + self._qb_delay, pulse.duration, 1)
+                wfm[6] = TTL(t, pulse.start + self._qb_delay, pulse.duration, 1)
 
             else:
                 if self._mode == MODE_MIXER:
@@ -177,16 +177,16 @@ class TektronixAWG5204(VisaInstrument, DAC):
         for ch in range(1, 5):
             delay_wfm.addArray(ch, sample_delay, self._sampling_rate, m1=sample_delay, m2=sample_delay)
         
-        wfm = bb.Element()
-        wfm.addArray(1, wfm[0], self._sampling_rate, m1=wfm[4], m2=wfm[5])
-        wfm.addArray(2, wfm[1], self._sampling_rate, m1=dummy, m2=wfm[6])
-        wfm.addArray(3, wfm[2], self._sampling_rate, m1=dummy, m2=dummy)
-        wfm.addArray(4, wfm[3], self._sampling_rate, m1=dummy, m2=dummy)
+        waveform = bb.Element()
+        waveform.addArray(1, wfm[0], self._sampling_rate, m1=wfm[4], m2=wfm[5])
+        waveform.addArray(2, wfm[1], self._sampling_rate, m1=dummy, m2=wfm[6])
+        waveform.addArray(3, wfm[2], self._sampling_rate, m1=dummy, m2=dummy)
+        waveform.addArray(4, wfm[3], self._sampling_rate, m1=dummy, m2=dummy)
 
         subseq = bb.Sequence()
         subseq.name = "SubSeq"
         subseq.setSR(self._sampling_rate)
-        subseq.addElement(1, wfm)
+        subseq.addElement(1, waveform)
         subseq.addElement(2, delay_wfm)
         subseq.setSequencingNumberOfRepetitions(2, int(self._sequence_delay / unit_delay))
 
@@ -205,7 +205,7 @@ class TektronixAWG5204(VisaInstrument, DAC):
         Uploads the .seqx file to the AWG and loads it
         """
         import time
-        with open("//{}/Users/OEM/Documents/MainSeq.seqx".format(self.ip), "wb+") as w:
+        with open("//{}/Users/OEM/Documents/MainSeq.seqx".format(self._ip), "wb+") as w:
             w.write(payload)
 
         pathstr = 'C:\\Users\\OEM\\Documents\\MainSeq.seqx'
@@ -220,7 +220,9 @@ class TektronixAWG5204(VisaInstrument, DAC):
                 raise RuntimeError("AWG took too long to load waveforms")
 
         for ch in range(1, 5):
-            self.write('SOURCE{}:CASSet:SEQuence "MainSeq", {}'.format(ch + 1, ch + 1))
+            self.write('SOURCE{}:CASSet:SEQuence "MainSeq", {}'.format(ch, ch))
+        self.ready()
+        self.play()
         self.ready()
 
     def play(self):
@@ -297,11 +299,11 @@ class AlazarADC(ATS.AcquisitionController, ADC):
         self._samples = None
         self._thread = None
         super().__init__(name, address, **kwargs)
-        ADC.__init__(self, name)
         self.add_parameter("acquisition", get_cmd=self.do_acquisition)
 
 
-    def setup(self):
+    def setup(self, samples):
+        trigger_volts = 1
         input_range_volts = 2.5
         trigger_level_code = int(128 + 127 * trigger_volts / input_range_volts)
         with self.adc.syncing():
@@ -336,7 +338,7 @@ class AlazarADC(ATS.AcquisitionController, ADC):
             #self.aux_io_param('NONE') # TRIG_SLOPE_POSITIVE for seq mode on
             self.adc.timeout_ticks(0)
 
-        self._samples = 4992
+        self._samples = samples
 
             
     def update_acquisitionkwargs(self, **kwargs):
@@ -350,17 +352,15 @@ class AlazarADC(ATS.AcquisitionController, ADC):
 
     def arm(self, shots):
         import threading
-
         self.update_acquisitionkwargs(mode='NPT',
                                       samples_per_record=self._samples,
                                       records_per_buffer=10,
                                       buffers_per_acquisition=int(shots / 10),
                                       allocated_buffers=100,
-                                      buffer_timeout=100000)
+                                      buffer_timeout=10000)
         self.pre_start_capture()
         self._thread = threading.Thread(target=self.do_acquisition, args=())
         self._thread.start()
-
 
     def pre_start_capture(self):
         self.samples_per_record = self.adc.samples_per_record.get()
@@ -373,6 +373,16 @@ class AlazarADC(ATS.AcquisitionController, ADC):
                                self.records_per_buffer *
                                self.number_of_channels)
 
+    def pre_acquire(self):
+        """
+        See AcquisitionController
+        :return:
+        """
+        # this could be used to start an Arbitrary Waveform Generator, etc...
+        # using this method ensures that the contents are executed AFTER the
+        # Alazar card starts listening for a trigger pulse
+        pass
+
 
     def handle_buffer(self, data, buffer_number=None):
         """
@@ -380,6 +390,13 @@ class AlazarADC(ATS.AcquisitionController, ADC):
         :return:
         """
         self.buffer += data
+
+    def post_acquire(self):
+        """
+        See AcquisitionController
+        :return:
+        """
+        return self.buffer, self.buffers_per_acquisition, self.records_per_buffer, self.samples_per_record, self.time_array
 
     def do_acquisition(self):
         """
@@ -411,16 +428,16 @@ class AlazarADC(ATS.AcquisitionController, ADC):
             recordA += record_slice[0::2] / records_per_acquisition
             recordB += record_slice[1::2] / records_per_acquisition
 
-        recordA = signal_to_volt(recordA, self._voltdiv[0])
-        recordB = signal_to_volt(recordB, self._voltdiv[1])
+        recordA = signal_to_volt(recordA, 0.02)
+        recordB = signal_to_volt(recordB, 0.02)
 
         res = np.zeros((len(readout_if_frequencies), 4))
         for idx, readout_frequency in enumerate(readout_if_frequencies):
             it = 0
             qt = 0
             for i in range(self.samples_per_record):
-                it += signal_to_volt(recordA[i]) * np.cos(2 * np.pi * readout_frequency * self.time_array[i])
-                qt += signal_to_volt(recordB[i]) * np.cos(2 * np.pi * readout_frequency * self.time_array[i])
+                it += recordA[i] * np.cos(2 * np.pi * readout_frequency * self.time_array[i])
+                qt += recordB[i] * np.cos(2 * np.pi * readout_frequency * self.time_array[i])
             phase = np.arctan2(qt, it) * 180 / np.pi
             ampl = np.sqrt(it**2 + qt**2)
 
@@ -430,3 +447,7 @@ class AlazarADC(ATS.AcquisitionController, ADC):
             res[idx, 3] = ampl
         
         return res
+
+    def close(self):
+        self._alazar.close()
+        super().close()
