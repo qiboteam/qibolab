@@ -4,6 +4,8 @@ import numpy as np
 from abc import ABC, abstractmethod
 from qibo.config import raise_error
 
+import logging
+logger = logging.getLogger(__name__)  # TODO: Consider using a global logger
 
 class GenericPulsar(ABC):
 
@@ -112,6 +114,13 @@ class GenericPulsar(ABC):
             i0, i1 = pulse.start, pulse.start + pulse.duration
             waveforms[f"modI_{name}"]["data"][i0:i1] += waveform["modI"]["data"]
             waveforms[f"modQ_{name}"]["data"][i0:i1] += waveform["modQ"]["data"]
+
+        #Fixing 0s addded to the qrm waveform. Needs to be improved, but working well on TIIq
+        for pulse in pulses:
+            if(pulse.channel == "qrm"):
+                waveforms[f"modI_{name}"]["data"] = waveforms[f"modI_{name}"]["data"][pulse.start:]
+                waveforms[f"modQ_{name}"]["data"] = waveforms[f"modQ_{name}"]["data"][pulse.start:] 
+
         return waveforms
 
     def generate_program(self, hardware_avg, initial_delay, delay_before_readout, acquire_instruction, wait_time):
@@ -245,8 +254,10 @@ class PulsarQRM(GenericPulsar):
 
     def connect(self, label, ip):
         if not self._connected:
-            from pulsar_qrm.pulsar_qrm import pulsar_qrm # pylint: disable=E0401
-            self.device = pulsar_qrm(label, ip)
+            # Connecting to Qblox cluster qrm (only fot TII platform)
+            from cluster.cluster import cluster_qrm
+            self.device = cluster_qrm(label, ip)
+            logger.info("QRM connection stablished.")
             self._connected = True
         else:
             raise(RuntimeError)
@@ -354,8 +365,10 @@ class PulsarQCM(GenericPulsar):
 
     def connect(self, label, ip):
         if not self._connected:
-            from pulsar_qcm.pulsar_qcm import pulsar_qcm # pylint: disable=E0401
-            self.device = pulsar_qcm(label, ip)
+            # Connecting to Qblox cluster qrm (only fot TII platform)
+            from cluster.cluster import cluster_qcm
+            self.device = cluster_qcm(label, ip)
+            logger.info("QCM connection stablished.")
             self._connected = True
         else:
             raise(RuntimeError)
