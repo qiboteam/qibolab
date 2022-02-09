@@ -4,6 +4,8 @@ import numpy as np
 from abc import ABC, abstractmethod
 from qibo.config import raise_error
 
+import logging
+logger = logging.getLogger(__name__)  # TODO: Consider using a global logger
 
 class GenericPulsar(ABC):
 
@@ -255,7 +257,7 @@ class PulsarQRM(GenericPulsar):
             # Connecting to Qblox cluster qrm (only fot TII platform)
             from cluster.cluster import cluster_qrm
             self.device = cluster_qrm(label, ip)
-            print("Connected to qrm.")
+            logger.info("QRM connection stablished.")
             self._connected = True
         else:
             raise(RuntimeError)
@@ -366,7 +368,7 @@ class PulsarQCM(GenericPulsar):
             # Connecting to Qblox cluster qrm (only fot TII platform)
             from cluster.cluster import cluster_qcm
             self.device = cluster_qcm(label, ip)
-            print("Connected to qcm.")
+            logger.info("QRM connection stablished.")
             self._connected = True
         else:
             raise(RuntimeError)
