@@ -368,7 +368,7 @@ class PulsarQCM(GenericPulsar):
             # Connecting to Qblox cluster qrm (only fot TII platform)
             from cluster.cluster import cluster_qcm
             self.device = cluster_qcm(label, ip)
-            logger.info("QRM connection stablished.")
+            logger.info("QCM connection stablished.")
             self._connected = True
         else:
             raise(RuntimeError)
