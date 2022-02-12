@@ -27,7 +27,6 @@ class PulseSequence:
             self.qrm_pulses.append(pulse)
         else:
             self.qcm_pulses.append(pulse)
-            #self.time += pulse.duration + self.delay_between_pulses
 
     def add_u3(self, theta, phi, lam):
         """Add pulses that implement a U3 gate.

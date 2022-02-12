@@ -270,7 +270,7 @@ class PulsarQRM(GenericPulsar):
         self.sampling_rate = sampling_rate
         self.mode = mode
 
-    def translate(self, sequence, delay_before_read_out, nshots):
+    def translate(self, sequence, delay_before_readout, nshots):
         # Allocate only readout pulses to PulsarQRM
         waveforms = self.generate_waveforms(sequence.qrm_pulses)
 
@@ -278,8 +278,8 @@ class PulsarQRM(GenericPulsar):
         initial_delay = sequence.qrm_pulses[0].start
         # Acquire waveforms over remaining duration of acquisition of input vector of length = 16380 with integration weights 0,0
         acquire_instruction = "acquire   0,0,4"
-        wait_time = self.duration_base - initial_delay - delay_before_read_out - 4 # FIXME: Not sure why this hardcoded 4 is needed
-        program = self.generate_program(nshots, initial_delay, delay_before_read_out, acquire_instruction, wait_time)
+        wait_time = self.duration_base - initial_delay - delay_before_readout - 4 # FIXME: Not sure why this hardcoded 4 is needed
+        program = self.generate_program(nshots, initial_delay, delay_before_readout, acquire_instruction, wait_time)
 
         return waveforms, program
 
