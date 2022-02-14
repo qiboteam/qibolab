@@ -30,7 +30,7 @@ class Platform:
         self._qcm = None
         self._LO_qrm = None
         self._LO_qcm = None
-        # instruments are connected in :meth:`qibolab.platform.Platform.start`
+        self.connect()
 
     def _check_connected(self):
         if not self.is_connected:
@@ -170,7 +170,6 @@ class Platform:
         The QBlox insturments are turned on automatically during execution after
         the required pulse sequences are loaded.
         """
-        self.connect()
         self._LO_qcm.on()
         self._LO_qrm.on()
 
@@ -210,10 +209,10 @@ class Platform:
 
         # Translate and upload instructions to instruments
         if sequence.qcm_pulses:
-            waveforms, program = self._qcm.translate(sequence, nshots)
+            waveforms, program = self._qcm.translate(sequence, self.delay_before_readout, nshots)
             self._qcm.upload(waveforms, program, self.data_folder)
         if sequence.qrm_pulses:
-            waveforms, program = self._qrm.translate(sequence, nshots)
+            waveforms, program = self._qrm.translate(sequence, self.delay_before_readout, nshots)
             self._qrm.upload(waveforms, program, self.data_folder)
 
         # Execute instructions

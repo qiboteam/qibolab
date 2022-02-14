@@ -2,6 +2,7 @@ from qibo import K
 from qibolab import states, pulses
 from qibo.config import raise_error
 from qibo.core import circuit
+import numpy as np
 
 
 class PulseSequence:
@@ -19,10 +20,8 @@ class PulseSequence:
 
     def add(self, pulse):
         """Add a pulse to the sequence.
-
         Args:
             pulse (`qibolab.pulses.Pulse`): Pulse object to add.
-            delay_between_pulses (int): Time to wait before applying the next pulse.
         """
         if pulse.channel == "qrm" or pulse.channel == 1:
             self.qrm_pulses.append(pulse)

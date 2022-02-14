@@ -57,7 +57,7 @@ setup(
             "IPython"],
         # TII system dependencies
         "tiiq": [
-            "qblox-instruments==0.4.0",
+            "qblox-instruments==0.5.4",
             "qcodes==0.29.1",
             "lmfit",
             "quantify-core==0.5.1",
