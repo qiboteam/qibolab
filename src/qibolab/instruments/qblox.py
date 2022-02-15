@@ -4,6 +4,8 @@ import numpy as np
 from abc import ABC, abstractmethod
 from qibo.config import raise_error
 
+import logging
+logger = logging.getLogger(__name__)  # TODO: Consider using a global logger
 
 class GenericPulsar(ABC):
 
@@ -112,6 +114,13 @@ class GenericPulsar(ABC):
             i0, i1 = pulse.start, pulse.start + pulse.duration
             waveforms[f"modI_{name}"]["data"][i0:i1] += waveform["modI"]["data"]
             waveforms[f"modQ_{name}"]["data"][i0:i1] += waveform["modQ"]["data"]
+
+        #Fixing 0s addded to the qrm waveform. Needs to be improved, but working well on TIIq
+        for pulse in pulses:
+            if(pulse.channel == "qrm"):
+                waveforms[f"modI_{name}"]["data"] = waveforms[f"modI_{name}"]["data"][pulse.start:]
+                waveforms[f"modQ_{name}"]["data"] = waveforms[f"modQ_{name}"]["data"][pulse.start:] 
+
         return waveforms
 
     def generate_program(self, hardware_avg, initial_delay, delay_before_readout, acquire_instruction, wait_time):
@@ -245,8 +254,10 @@ class PulsarQRM(GenericPulsar):
 
     def connect(self, label, ip):
         if not self._connected:
-            from pulsar_qrm.pulsar_qrm import pulsar_qrm # pylint: disable=E0401
-            self.device = pulsar_qrm(label, ip)
+            # Connecting to Qblox cluster qrm (only fot TII platform)
+            from cluster.cluster import cluster_qrm
+            self.device = cluster_qrm(label, ip)
+            logger.info("QRM connection stablished.")
             self._connected = True
         else:
             raise(RuntimeError)
@@ -259,7 +270,7 @@ class PulsarQRM(GenericPulsar):
         self.sampling_rate = sampling_rate
         self.mode = mode
 
-    def translate(self, sequence, nshots):
+    def translate(self, sequence, delay_before_readout, nshots):
         # Allocate only readout pulses to PulsarQRM
         waveforms = self.generate_waveforms(sequence.qrm_pulses)
 
@@ -267,8 +278,8 @@ class PulsarQRM(GenericPulsar):
         initial_delay = sequence.qrm_pulses[0].start
         # Acquire waveforms over remaining duration of acquisition of input vector of length = 16380 with integration weights 0,0
         acquire_instruction = "acquire   0,0,4"
-        wait_time = self.duration_base - initial_delay - sequence.delay_before_readout - 4 # FIXME: Not sure why this hardcoded 4 is needed
-        program = self.generate_program(nshots, initial_delay, sequence.delay_before_readout, acquire_instruction, wait_time)
+        wait_time = self.duration_base - initial_delay - delay_before_readout - 4 # FIXME: Not sure why this hardcoded 4 is needed
+        program = self.generate_program(nshots, initial_delay, delay_before_readout, acquire_instruction, wait_time)
 
         return waveforms, program
 
@@ -340,22 +351,24 @@ class PulsarQCM(GenericPulsar):
         else:
             self.device.sequencer0_sync_en(sync_en)
 
-    def translate(self, sequence, nshots=None):
+    def translate(self, sequence, delay_before_read_out, nshots=None):
         # Allocate only qubit pulses to PulsarQRM
         waveforms = self.generate_waveforms(sequence.qcm_pulses)
 
         # Generate program without acquire instruction
         initial_delay = sequence.qcm_pulses[0].start
         acquire_instruction = ""
-        wait_time = self.duration_base - initial_delay - sequence.delay_before_readout
-        program = self.generate_program(nshots, initial_delay, sequence.delay_before_readout, acquire_instruction, wait_time)
+        wait_time = self.duration_base - initial_delay - delay_before_read_out
+        program = self.generate_program(nshots, initial_delay, delay_before_read_out, acquire_instruction, wait_time)
 
         return waveforms, program
 
     def connect(self, label, ip):
         if not self._connected:
-            from pulsar_qcm.pulsar_qcm import pulsar_qcm # pylint: disable=E0401
-            self.device = pulsar_qcm(label, ip)
+            # Connecting to Qblox cluster qrm (only fot TII platform)
+            from cluster.cluster import cluster_qcm
+            self.device = cluster_qcm(label, ip)
+            logger.info("QCM connection stablished.")
             self._connected = True
         else:
             raise(RuntimeError)
