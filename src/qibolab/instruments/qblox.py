@@ -25,21 +25,18 @@ class GenericPulsar:
 
     def _translate_single_pulse(self, pulse):
         # Use the envelope to modulate a sinusoldal signal of frequency freq_if
-        envelope = np.stack(pulse.envelopes(), axis=0)
-        time = np.arange(pulse.length) * 1e-9
-        def mod_matrix(nu, t):
-            """Rotation matrix (clockwise through an angle 2*pi*nu*t)""" 
-            arg = 2 * np.pi * nu * t
-            return np.array([[ np.cos(arg), np.sin(arg)],
-                             [-np.sin(arg), np.cos(arg)]])
-        mod_signals = np.zeros((2, len(time)))
-        for index, t in enumerate(time):
-            mod_signals[:, index] = mod_matrix(pulse.frequency, t) @ envelope[:, index]
+        envelopes   = np.stack(pulse.envelopes(), axis=0)
+        time        = np.arange(pulse.length) * 1e-9
+        cosalpha    = np.cos(2 * np.pi * pulse.frequency * time + pulse.phase)
+        sinalpha    = np.sin(2 * np.pi * pulse.frequency * time + pulse.phase)
+        mod_matrix  = np.array([[ cosalpha, sinalpha],
+                                [-sinalpha, cosalpha]])
+        mod_signals = np.einsum("abt,bt->ta", mod_matrix, envelopes)
 
         # add offsets to compensate mixer leakage
         waveform = {
-                "modI": {"data": mod_signals[0, :] + pulse.offset_i, "index": 0},
-                "modQ": {"data": mod_signals[1, :] + pulse.offset_q, "index": 1}
+                "modI": {"data": mod_signals[:, 0] + pulse.offset_i, "index": 0},
+                "modQ": {"data": mod_signals[:, 1] + pulse.offset_q, "index": 1}
             }
 
         if self.debugging:
