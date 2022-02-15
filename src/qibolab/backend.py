@@ -1,17 +1,25 @@
+import os
+from qibolab.platform import Platform
 from qibo.backends.numpy import NumpyBackend
 from qibo.config import raise_error
 
 
 class QibolabBackend(NumpyBackend): # pragma: no cover
-    # hardware backend is not tested until `qiboicarusq` is available
 
     description = "" # TODO: Write proper description
 
     def __init__(self):
         super().__init__()
-        self.name = "qiboicarusq"
+        self.name = "qibolab"
         self.custom_gates = True
         self.is_hardware = True
+        self.platform = self.set_platform(os.environ.get("QIBOLAB_PLATFORM", "tiiq"))
+
+    def set_platform(self, platform):
+        self.platform = Platform(platform)
+
+    def get_platform(self):
+        return self.platform.name
 
     def circuit_class(self, accelerators=None, density_matrix=False):
         if accelerators is not None:

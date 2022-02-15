@@ -1,81 +1,53 @@
-qibolab package
-===============
+Pulses
+------
 
-Subpackages
+.. autoclass:: qibolab.pulses.Pulse
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: qibolab.pulses.ReadoutPulse
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: qibolab.pulses.PulseSequence
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: qibolab.pulse_shapes
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+Platforms
+---------
+
+.. autoclass:: qibolab.platforms.TIIq
+   :members:
+   :member-order: bysource
+
+Instruments
 -----------
 
-.. toctree::
-   :maxdepth: 4
+Qblox
+^^^^^
 
-   qibolab.calibration
-   qibolab.experiments
-   qibolab.inst
-   qibolab.instruments
-   qibolab.tests
-
-Submodules
-----------
-
-qibolab.backend module
-----------------------
-
-.. automodule:: qibolab.backend
+.. automodule:: qibolab.instruments.qblox
    :members:
-   :undoc-members:
-   :show-inheritance:
+   :member-order: bysource
 
-qibolab.circuit module
-----------------------
 
-.. automodule:: qibolab.circuit
+RohdeSchwarz
+^^^^^^^^^^^^
+
+.. autoclass:: qibolab.instruments.rohde_schwarz.SGS100A
    :members:
-   :undoc-members:
-   :show-inheritance:
+   :member-order: bysource
 
-qibolab.connections module
---------------------------
 
-.. automodule:: qibolab.connections
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
-qibolab.gates module
---------------------
 
-.. automodule:: qibolab.gates
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
-qibolab.pulses module
----------------------
-
-.. automodule:: qibolab.pulses
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-qibolab.schedulers module
--------------------------
-
-.. automodule:: qibolab.schedulers
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-qibolab.tomography module
--------------------------
-
-.. automodule:: qibolab.tomography
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: qibolab
-   :members:
-   :undoc-members:
-   :show-inheritance:

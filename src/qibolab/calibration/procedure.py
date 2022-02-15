@@ -1,6 +1,7 @@
 import json
 import numpy as np
 from qibolab import pulses, experiment, scheduler
+from qibolab.pulse_shapes import Rectangular
 from qibolab.calibration import fitting, tasks
 
 default_averaging = experiment.static.default_averaging
@@ -88,8 +89,8 @@ def partial_qubit_calibration(static_config: dict, qubit: Qubit):
         "1": [res[0, idx_one], res[1, idx_one]]
     }
     freq_nyquist = freq - experiment.static.sampling_rate
-    qubit["rx"] = [pulses.BasicPulse(channel, 0, pi_pulse, amplitude, freq_nyquist, 0, pulses.Rectangular())]
-    qubit["ry"] = [pulses.BasicPulse(channel, 0, pi_pulse, amplitude, freq_nyquist, 90, pulses.Rectangular())]
+    qubit["rx"] = [pulses.Pulse(channel, 0, pi_pulse, amplitude, freq_nyquist, 0, Rectangular(), channel=channel)]
+    qubit["ry"] = [pulses.Pulse(channel, 0, pi_pulse, amplitude, freq_nyquist, 90, Rectangular(), channel=channel)]
 
     return qubit, log
 

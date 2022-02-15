@@ -1,31 +1,80 @@
+from abc import abstractmethod
 import json
 import numpy as np
-import matplotlib.pyplot as plt
+from abc import ABC, abstractmethod
+from qibo.config import raise_error
 
+import logging
+logger = logging.getLogger(__name__)  # TODO: Consider using a global logger
 
-class GenericPulsar:
+class GenericPulsar(ABC):
 
-    def __init__(self, sequencer=0, debugging=False):
+    def __init__(self):
+        # To be defined in each instrument
         self.name = None
-        self.sequencer = sequencer
-        self.debugging = debugging
+        self.device = None
+        self._connected = False
+        self.sequencer = None
+        self.ref_clock = None
+        self.sync_en = None
+        # To be defined during setup
+        self.initial_delay = None
+        self.repetition_duration = None
+        # hardcoded values used in ``generate_program``
+        self.wait_loop_step = 1000
+        self.duration_base = 16380 # maximum length of a waveform in number of samples (defined by the device memory).
+        # hardcoded values used in ``upload``
+        self.acquisitions = {"single": {"num_bins": 1, "index":0}}
+        self.weights = {}
 
-    def setup(self, gain, hardware_avg, initial_delay, repetition_duration):
+    @abstractmethod
+    def connect(self, label, ip):
+        """Connects to the instruments."""
+        raise(NotImplementedError)
+
+    @property
+    def gain(self):
+        return self._gain
+
+    @gain.setter
+    def gain(self, gain):
+        self._gain = gain
         if self.sequencer == 1:
             self.device.sequencer1_gain_awg_path0(gain)
             self.device.sequencer1_gain_awg_path1(gain)
         else:
-            self.sequencer0_gain_awg_path0(gain)
-            self.sequencer0_gain_awg_path1(gain)
-        self.hardware_avg = hardware_avg
+            self.device.sequencer0_gain_awg_path0(gain)
+            self.device.sequencer0_gain_awg_path1(gain)
+
+    def setup(self, gain, initial_delay, repetition_duration):
+        """Sets calibration setting to QBlox instruments.
+
+        Args:
+            gain (float):
+            initial_delay ():
+            repetition_duration ():
+        """
+        self.gain = gain
         self.initial_delay = initial_delay
         self.repetition_duration = repetition_duration
-        self.acquisitions = {"single": {"num_bins": 1, "index":0}}
-        self.weights = {}
 
     def _translate_single_pulse(self, pulse):
+        """Translates a single pulse to the instrument waveform format.
+
+        Helper method for :meth:`qibolab.instruments.qblox.GenericPulsar.generate_waveforms`.
+
+        Args:
+            pulse (:class:`qibolab.pulses.Pulse`): Pulse object to translate.
+
+        Returns:
+            Dictionary containing the waveform corresponding to the pulse.
+        """
         # Use the envelope to modulate a sinusoldal signal of frequency freq_if
-        envelopes   = np.stack(pulse.envelopes(), axis=0)
+        envelope_i  = pulse.compile()
+        # TODO: if ``envelope_q`` is not always 0 we need to find how to
+        # calculate it
+        envelope_q  = np.zeros(int(pulse.duration))
+        envelopes   = np.array([envelope_i, envelope_q])
         time        = np.arange(pulse.length) * 1e-9
         cosalpha    = np.cos(2 * np.pi * pulse.frequency * time + pulse.phase)
         sinalpha    = np.sin(2 * np.pi * pulse.frequency * time + pulse.phase)
@@ -35,79 +84,64 @@ class GenericPulsar:
 
         # add offsets to compensate mixer leakage
         waveform = {
-                "modI": {"data": mod_signals[:, 0] + pulse.offset_i, "index": 0},
-                "modQ": {"data": mod_signals[:, 1] + pulse.offset_q, "index": 1}
-            }
-
-        if self.debugging:
-            # Plot the result
-            fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-            ax.plot(waveform["modI"]["data"],'-',color='C0')
-            ax.plot(waveform["modQ"]["data"],'-',color='C1')
-            ax.title.set_text('pulse')
-
+            "modI": {"data": mod_signals[:, 0] + pulse.offset_i, "index": 0},
+            "modQ": {"data": mod_signals[:, 1] + pulse.offset_q, "index": 1}
+        }
         return waveform
 
-    def translate(self, sequence):
-        pulses = list(sequence)
-        if sequence.readout_pulse is not None:
-            pulses.append(sequence.readout_pulse)
+    def generate_waveforms(self, pulses):
+        """Translates a list of pulses to the instrument waveform format.
+
+        Args:
+            pulses (list): List of :class:`qibolab.pulses.Pulse` objects.
+
+        Returns:
+            Dictionary containing waveforms corresponding to all pulses.
+        """
         if not pulses:
-            raise NotImplementedError("Cannot translate empty sequence.")
-
+            raise_error(NotImplementedError, "Cannot translate empty pulse sequence.")
         name = self.name
-        waveform = self._translate_single_pulse(pulses[0])
+
+        combined_length = max(pulse.start + pulse.duration for pulse in pulses)
         waveforms = {
-            f"modI_{name}": {"data": [], "index": 0},
-            f"modQ_{name}": {"data": [], "index": 1}
+            f"modI_{name}": {"data": np.zeros(combined_length), "index": 0},
+            f"modQ_{name}": {"data": np.zeros(combined_length), "index": 1}
         }
-        waveforms[f"modI_{name}"]["data"] = waveform.get("modI").get("data")
-        waveforms[f"modQ_{name}"]["data"] = waveform.get("modQ").get("data")
-
-        for pulse in sequence[1:]:
+        for pulse in pulses:
             waveform = self._translate_single_pulse(pulse)
-            waveforms[f"modI_{name}"]["data"] = np.concatenate((waveforms[f"modI_{name}"]["data"], np.zeros(4), waveform["modI"]["data"]))
-            waveforms[f"modQ_{name}"]["data"] = np.concatenate((waveforms[f"modQ_{name}"]["data"], np.zeros(4), waveform["modQ"]["data"]))
+            i0, i1 = pulse.start, pulse.start + pulse.duration
+            waveforms[f"modI_{name}"]["data"][i0:i1] += waveform["modI"]["data"]
+            waveforms[f"modQ_{name}"]["data"][i0:i1] += waveform["modQ"]["data"]
 
-        if self.debugging:
-            # Plot the result
-            fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-            ax.plot(waveforms[f"modI_{name}"]["data"], '-', color='C0')
-            ax.plot(waveforms[f"modQ_{name}"]["data"], '-', color='C1')
-            ax.title.set_text('Combined Pulses')
+        #Fixing 0s addded to the qrm waveform. Needs to be improved, but working well on TIIq
+        for pulse in pulses:
+            if(pulse.channel == "qrm"):
+                waveforms[f"modI_{name}"]["data"] = waveforms[f"modI_{name}"]["data"][pulse.start:]
+                waveforms[f"modQ_{name}"]["data"] = waveforms[f"modQ_{name}"]["data"][pulse.start:] 
 
-        program = self.generate_program(sequence.start, sequence.readout_pulse)
-        return waveforms, program
+        return waveforms
 
-    @staticmethod
-    def calculate_repetition_rate(self, repetition_duration,
-                                  wait_loop_step, duration_base):
-        extra_duration = repetition_duration-duration_base
-        extra_wait = extra_duration % wait_loop_step
-        num_wait_loops = (extra_duration - extra_wait) // wait_loop_step
-        return num_wait_loops, extra_wait
+    def generate_program(self, hardware_avg, initial_delay, delay_before_readout, acquire_instruction, wait_time):
+        """Generates the program to be uploaded to instruments."""
+        extra_duration = self.repetition_duration - self.duration_base
+        extra_wait = extra_duration % self.wait_loop_step
+        num_wait_loops = (extra_duration - extra_wait) // self. wait_loop_step
 
-    def generate_program(self, initial_delay, ro_pulse=None):
-        # Prepare sequence program
-        wait_loop_step=1000
-        duration_base=16380 # this is the maximum length of a waveform in number of samples (defined by the device memory)
-
-        num_wait_loops, extra_wait = calculate_repetition_rate(self.repetition_duration, wait_loop_step, duration_base)
-        if ro_pulse is not None:
-            delay_before_readout = ro_pulse.delay_before_readout
-            acquire_instruction = "acquire   0,0,4      # Acquire waveforms over remaining duration of acquisition of input vector of length = 16380 with integration weights 0,0"
-            wait_time = duration_base - initial_delay - delay_before_readout - 4 # pulses['ro_pulse']['start']
-        else:
-            delay_before_readout = 4
-            acquire_instruction = ""
-            wait_time = duration_base - initial_delay - delay_before_readout
+        # This calculation was moved to `PulsarQCM` and `PulsarQRM`
+        #if ro_pulse is not None:
+        #    acquire_instruction = "acquire   0,0,4"
+        #    wait_time = self.duration_base - initial_delay - delay_before_readout - 4
+        #else:
+        #    acquire_instruction = ""
+        #    wait_time = self.duration_base - initial_delay - delay_before_readout
 
         if initial_delay != 0:
             initial_wait_instruction = f"wait      {initial_delay}"
         else:
             initial_wait_instruction = ""
+
         program = f"""
-            move    {self.hardware_avg},R0
+            move    {hardware_avg},R0
             nop
             wait_sync 4          # Synchronize sequencers over multiple instruments
         loop:
@@ -118,18 +152,29 @@ class GenericPulsar:
             move      {num_wait_loops},R1
             nop
             repeatloop:
-                wait      {wait_loop_step}
+                wait      {self.wait_loop_step}
                 loop      R1,@repeatloop
             wait      {extra_wait}
             loop    R0,@loop
             stop
         """
-        if self.debugging:
-            print(program)
-
         return program
 
+    @abstractmethod
+    def translate(self, sequence, nshots):
+        """Translates an abstract pulse sequence to QBlox format.
+
+        Args:
+            sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence.
+
+        Returns:
+            The waveforms (dict) and program (str) required to execute the
+            pulse sequence on QBlox instruments.
+        """
+        raise_error(NotImplementedError)
+
     def upload(self, waveforms, program, data_folder):
+        """Uploads waveforms and programs to QBlox sequencer to prepare execution."""
         import os
         # Upload waveforms and program
         # Reformat waveforms to lists
@@ -137,43 +182,59 @@ class GenericPulsar:
             if isinstance(waveform["data"], np.ndarray):
                 waveforms[name]["data"] = waveforms[name]["data"].tolist()  # JSON only supports lists
 
-        #Add sequence program and waveforms to single dictionary and write to JSON file
-        filename = f"{data_folder}/qrm_sequence.json"
+        # Add sequence program and waveforms to single dictionary and write to JSON file
+        filename = f"{data_folder}/{self.name}_sequence.json"
         program_dict = {
             "waveforms": waveforms,
             "weights": self.weights,
             "acquisitions": self.acquisitions,
             "program": program
             }
+        if not os.path.exists(data_folder):
+            os.makedirs(data_folder)
         with open(filename, "w", encoding="utf-8") as file:
             json.dump(program_dict, file, indent=4)
 
         # Upload json file to the device
         if self.sequencer == 1:
-            self.sequencer1_waveforms_and_program(os.path.join(os.getcwd(), filename))
+            self.device.sequencer1_waveforms_and_program(os.path.join(os.getcwd(), filename))
         else:
-            self.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), filename))
+            self.device.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), filename))
 
     def play_sequence(self):
+        """Executes the uploaded instructions."""
         # arm sequencer and start playing sequence
         self.device.arm_sequencer()
         self.device.start_sequencer()
-        if self.debugging:
-            print(self.device.get_sequencer_state(self.sequencer))
+
+    def stop(self):
+        """Stops the QBlox sequencer from sending pulses."""
+        self.device.stop_sequencer()
+
+    def close(self):
+        """Disconnects from the instrument."""
+        if self._connected:
+            self.stop()
+            self.device.close()
+            self._connected = False
+
+    # TODO: Figure out how to fix this
+    #def __del__(self):
+    #    self.close()
 
 
 class PulsarQRM(GenericPulsar):
     """Class for interfacing with Pulsar QRM."""
 
-    def __init__(self, label, ip,
-                 ref_clock="external", sequencer=0, sync_en=True,
-                 hardware_avg_en=True, acq_trigger_mode="sequencer",
-                 debugging=False):
-        from pulsar_qrm.pulsar_qrm import pulsar_qrm
-        super().__init__(sequencer, debugging)
+    def __init__(self, label, ip, ref_clock="external", sequencer=0, sync_en=True,
+                 hardware_avg_en=True, acq_trigger_mode="sequencer"):
+        super().__init__()
         # Instantiate base object from qblox library and connect to it
-        self.device = pulsar_qrm(label, ip)
         self.name = "qrm"
+        self.connect(label, ip)
+        self._connected = True
+        self.sequencer = sequencer
+        self.hardware_avg_en = hardware_avg_en
 
         # Reset and configure
         self.device.reset()
@@ -189,15 +250,44 @@ class PulsarQRM(GenericPulsar):
         else:
             self.device.sequencer0_sync_en(sync_en)
 
-    def setup(self, gain, hardware_avg, initial_delay, repetition_duration,
+    def connect(self, label, ip):
+        if not self._connected:
+            # Connecting to Qblox cluster qrm (only fot TII platform)
+            from cluster.cluster import cluster_qrm
+            self.device = cluster_qrm(label, ip)
+            logger.info("QRM connection stablished.")
+            self._connected = True
+        else:
+            raise(RuntimeError)
+
+    def setup(self, gain, initial_delay, repetition_duration,
               start_sample, integration_length, sampling_rate, mode):
-        super().setup(gain, hardware_avg, initial_delay, repetition_duration)
+        super().setup(gain, initial_delay, repetition_duration)
         self.start_sample = start_sample
         self.integration_length = integration_length
         self.sampling_rate = sampling_rate
         self.mode = mode
 
+    def translate(self, sequence, delay_before_readout, nshots):
+        # Allocate only readout pulses to PulsarQRM
+        waveforms = self.generate_waveforms(sequence.qrm_pulses)
+
+        # Generate program without acquire instruction
+        initial_delay = sequence.qrm_pulses[0].start
+        # Acquire waveforms over remaining duration of acquisition of input vector of length = 16380 with integration weights 0,0
+        acquire_instruction = "acquire   0,0,4"
+        wait_time = self.duration_base - initial_delay - delay_before_readout - 4 # FIXME: Not sure why this hardcoded 4 is needed
+        program = self.generate_program(nshots, initial_delay, delay_before_readout, acquire_instruction, wait_time)
+
+        return waveforms, program
+
     def play_sequence_and_acquire(self, ro_pulse):
+        """Executes the uploaded instructions and retrieves the readout results.
+
+        Args:
+            ro_pulse (:class:`qibolab.pulses.Pulse`): Readout pulse to use for
+                retrieving the results.
+        """
         #arm sequencer and start playing sequence
         super().play_sequence()
         #start acquisition of data
@@ -209,23 +299,9 @@ class PulsarQRM(GenericPulsar):
         self.device.store_scope_acquisition(self.sequencer, "single")
         #Get acquisition list from instrument.
         single_acq = self.device.get_acquisitions(self.sequencer)
-        if self.debugging:
-            self._plot_acquisitions(single_acq)
-            with open(".data/results.json", 'w', encoding='utf-8') as file:
-                json.dump(single_acq, file, indent=4)
         i, q = self._demodulate_and_integrate(single_acq, ro_pulse)
         acquisition_results = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
         return acquisition_results
-
-    @staticmethod
-    def _plot_acquisitions(single_acq):
-        #Plot acquired signal on both inputs I and Q
-        fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-        ax.plot(single_acq["single"]["acquisition"]["scope"]["path0"]["data"][120:6500])
-        ax.plot(single_acq["single"]["acquisition"]["scope"]["path1"]["data"][120:6500])
-        ax.set_xlabel('Time (ns)')
-        ax.set_ylabel('Relative amplitude')
-        plt.show()
 
     def _demodulate_and_integrate(self, single_acq, ro_pulse):
         #DOWN Conversion
@@ -249,25 +325,22 @@ class PulsarQRM(GenericPulsar):
                 result.append(demod_matrix[:,:,it] @ np.array([ii, qq]))
             demodulated_signal = np.array(result)
             integrated_signal = norm_factor*np.sum(demodulated_signal,axis=0)
-            if self.debugging:
-                print(integrated_signal,demodulated_signal[:,0].max()-demodulated_signal[:,0].min(),demodulated_signal[:,1].max()-demodulated_signal[:,1].min())
+
         elif self.mode == 'optimal':
-            raise NotImplementedError('Optimal Demodulation Mode not coded yet.')
+            raise_error(NotImplementedError, "Optimal Demodulation Mode not coded yet.")
         else:
-            raise NotImplementedError('Demodulation mode not understood.')
+            raise_error(NotImplementedError, "Demodulation mode not understood.")
         return integrated_signal
 
 
 class PulsarQCM(GenericPulsar):
 
-    def __init__(self, label, ip,
-                 ref_clock="external", sequencer=0, sync_en=True,
-                 debugging=False):
-        from pulsar_qcm.pulsar_qcm import pulsar_qcm
-        super().__init__(sequencer, debugging)
+    def __init__(self, label, ip, sequencer=0, ref_clock="external", sync_en=True):
+        super().__init__()
         # Instantiate base object from qblox library and connect to it
-        self.device = pulsar_qcm(label, ip)
         self.name = "qcm"
+        self.connect(label, ip)
+        self.sequencer = sequencer
         # Reset and configure
         self.device.reset()
         self.device.reference_source(ref_clock)
@@ -275,3 +348,25 @@ class PulsarQCM(GenericPulsar):
             self.device.sequencer1_sync_en(sync_en)
         else:
             self.device.sequencer0_sync_en(sync_en)
+
+    def translate(self, sequence, delay_before_read_out, nshots=None):
+        # Allocate only qubit pulses to PulsarQRM
+        waveforms = self.generate_waveforms(sequence.qcm_pulses)
+
+        # Generate program without acquire instruction
+        initial_delay = sequence.qcm_pulses[0].start
+        acquire_instruction = ""
+        wait_time = self.duration_base - initial_delay - delay_before_read_out
+        program = self.generate_program(nshots, initial_delay, delay_before_read_out, acquire_instruction, wait_time)
+
+        return waveforms, program
+
+    def connect(self, label, ip):
+        if not self._connected:
+            # Connecting to Qblox cluster qrm (only fot TII platform)
+            from cluster.cluster import cluster_qcm
+            self.device = cluster_qcm(label, ip)
+            logger.info("QCM connection stablished.")
+            self._connected = True
+        else:
+            raise(RuntimeError)
