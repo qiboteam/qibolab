@@ -2,7 +2,7 @@ from qibo.config import raise_error, log
 from qibolab.platforms.abstract import AbstractPlatform
 
 
-class QCMPlatform(AbstractPlatform):
+class QBloxPlatform(AbstractPlatform):
     """Platform for controlling quantum devices using QCM and QRM."""
 
     def __init__(self, name, runcard):

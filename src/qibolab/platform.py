@@ -15,7 +15,7 @@ def Platform(name, runcard=None):
     if not runcard:
         runcard = pathlib.Path(__file__).parent / "runcards" / f"{name}.yml"
     if name == 'tiiq' or name == 'qili':
-        from qibolab.platforms.qcmplatform import QCMPlatform as Device
+        from qibolab.platforms.qcmplatform import QBloxPlatform as Device
     elif name == 'icarusq':
         from qibolab.platforms.icplatform import ICPlatform as Device
     else:
