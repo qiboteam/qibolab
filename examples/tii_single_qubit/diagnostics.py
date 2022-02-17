@@ -17,7 +17,7 @@ def backup_config_file():
     import shutil
     import errno
     from datetime import datetime
-    original = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'qibolab', 'platforms', 'tiiq.yml'))
+    original = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'qibolab', 'runcards', 'tiiq.yml'))
     now = datetime.now()
     now = now.strftime("%d%m%Y%H%M%S")
     destination_file_name = "tiiq_" + now + ".yml" 
