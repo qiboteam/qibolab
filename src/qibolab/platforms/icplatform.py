@@ -6,7 +6,8 @@ class ICPlatform(AbstractPlatform):
     """Platform for controlling quantum devices with IC."""
 
     def __init__(self, name, runcard):
-        self._ic = None
+        self._instruments = []
+        self._lo = []
         super().__init__(name, runcard)
 
     def connect(self):
@@ -14,14 +15,14 @@ class ICPlatform(AbstractPlatform):
         if not self.is_connected:
             log.info(f"Connecting to {self.name} instruments.")
             try:
-                from qibolab.instruments.controller import InstrumentController
-                self.ic = InstrumentController()
+                import qibolab.instruments as qi
                 instruments = self._settings.get("instruments")
-                for name, params in instruments.items():
-                    inst_type = params.get("type")
-                    address = params.get("address")
-                    trigger = params.get("trigger")
-                    self.ic.add_instrument(inst_type, name, address, trigger)
+                for params in instruments.values():
+                    inst = getattr(qi, params.get("type"))(**params.get("init_settings"))
+                    self._instruments.append(inst)
+                    if params.get("lo"):
+                        self._lo.append(inst)
+                    
                 self.is_connected = True
             except Exception as exception:
                 raise_error(RuntimeError, "Cannot establish connection to "
@@ -33,26 +34,29 @@ class ICPlatform(AbstractPlatform):
         """Configures instruments using the loaded calibration settings."""
         if self.is_connected:
             instruments = self._settings.get("instruments")
-            for name, params in instruments.items():
-                setup_params = params.get("setup_parameters")
-                self.ic.setup_instrument(name, setup_params)
+            for inst in self._instruments:
+                inst.setup(**instruments.get(inst.name).get("settings"))
 
     def start(self):
         """Turns on the local oscillators.
 
         At this point, the pulse sequence have not been uploaded to the DACs, so they will not be started yet.
         """
-        self.connect()
-        self.ic.start_playback()
+        for lo in self._lo:
+            lo.start()
 
     def stop(self):
         """Turns off all the lab instruments."""
-        self.ic.stop()
+        for inst in self._instruments:
+            inst.stop()
 
     def disconnect(self):
         """Disconnects from the lab instruments."""
         if self.is_connected:
-            self.ic.close()
+            for inst in self._instruments:
+                inst.close()
+            self._instruments = []
+            self._lo = []
             self.is_connected = False
 
     def execute(self, sequence, nshots=None):

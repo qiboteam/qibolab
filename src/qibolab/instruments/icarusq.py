@@ -1,10 +1,7 @@
 import pyvisa as visa
 import numpy as np
 from typing import List, Optional, Union
-from qibolab.instruments.drivers.abstract import DAC, ADC, Attenuator, LO
 from qcodes.instrument_drivers.AlazarTech import ATS
-
-rm = visa.ResourceManager()
 
 MODE_NYQUIST = 0
 MODE_MIXER = 1
@@ -24,11 +21,25 @@ def sine(t, start, duration, frequency, amplitude, phase):
     wfm = x * np.sin(2 * np.pi * frequency * t + phase * np.pi / 180)
     return wfm
 
+class Instrument:
+    def connect():
+        pass
+
+    def start():
+        pass
+
+    def stop():
+        pass
+
+    def close():
+        pass
+
 class VisaInstrument:
     def __init__(self) -> None:
         self._visa_handle = None
 
     def connect(self, address: str, timeout: int = 10000) -> None:
+        rm = visa.ResourceManager()
         self._visa_handle = rm.open_resource(address, timeout=timeout)
 
     def write(self, msg: Union[bytes, str]) -> None:
@@ -49,13 +60,12 @@ class VisaInstrument:
         """
         self.query("*OPC?")
 
-class TektronixAWG5204(VisaInstrument, DAC):
+class TektronixAWG5204(VisaInstrument):
 
     def __init__(self, name, address):
         VisaInstrument.__init__(self)
-        DAC.__init__(self, name)
         self.connect(address)
-
+        self.name = name
         self._nchannels = 7
         self._sampling_rate = None
         self._mode = None
@@ -252,10 +262,10 @@ class TektronixAWG5204(VisaInstrument, DAC):
         self.write('TRIGger:IMMediate ATRigger')        
 
 
-class MCAttenuator(Attenuator):
+class MCAttenuator(Instrument):
 
     def __init__(self, name, address):
-        super().__init__(name)
+        self.name = name
         self._address = address
 
     def setup(self, attenuation: int):
@@ -264,11 +274,11 @@ class MCAttenuator(Attenuator):
         http.request('GET', 'http://{}/SETATT={}'.format(self._address, attenuation))
 
 
-class QuicSyn(VisaInstrument, LO):
+class QuicSyn(VisaInstrument):
 
     def __init__(self, name, address):
         VisaInstrument.__init__(self)
-        LO.__init__(self, name)
+        self.name = name
         self.connect(address)
         self.write('0601') # EXT REF
 
@@ -284,9 +294,9 @@ class QuicSyn(VisaInstrument, LO):
     def stop(self):
         self.write('0F00')
 
-class AlazarADC(ATS.AcquisitionController, ADC):
+class AlazarADC(ATS.AcquisitionController, Instrument):
     def __init__(self, name="alz_cont", address="Alazar1", **kwargs):
-        from qibolab.instruments.drivers.ATS9371 import AlazarTech_ATS9371
+        from qibolab.instruments.ATS9371 import AlazarTech_ATS9371
         
         self.adc = AlazarTech_ATS9371(address)
         self.acquisitionkwargs = {}

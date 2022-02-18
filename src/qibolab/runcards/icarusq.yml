@@ -41,6 +41,7 @@ instruments:
 
   qb_lo:
     type: QuicSyn
+    lo: true
     init_settings:
       name: qb_lo
       address: ASRL6::INSTR
@@ -49,6 +50,7 @@ instruments:
 
   ro_lo:
     type: QuicSyn
+    lo: true
     init_settings:
       name: ro_lo
       address: ASRL3::INSTR
