@@ -2,13 +2,30 @@ name: icarusq
 nqubits: 1
 description: Controls the Tektronix AWG5204, AlazarTech ATS9371, two MiniCircuit attenuators and two QuicSyn Lite local oscillators.
 
+settings:
+  delay_before_readout: 0
+  delay_between_pulses: 0
+  pi_pulse_amplitude: 0.375
+  pi_pulse_duration: 21.39
+  pi_pulse_frequency: 251000000
+  readout_pulse:
+    amplitude: 0.375
+    duration: 5000
+    frequency: 100000000
+    channel: [0, 1]
+    phase: [-0.10821, 0.00349066]
+  resonator_spectroscopy_max_ro_voltage: 13522.0351077
+  rabi_oscillations_pi_pulse_min_voltage: 11402.7440659
+
 instruments:
   awg:
+    init_settings:
+      name: awg
+      address: TCPIP0::192.168.0.2::inst0::INSTR
     type: TektronixAWG5204
-    address: TCPIP0::192.168.0.2::inst0::INSTR
     trigger: true
-    setup_parameters:
-      offset: [-0.001, 0, 0, 0]
+    settings:
+      offset: [-0.001, 0, -0.002, 0.016]
       amplitude: [0.75, 0.75, 0.75, 0.75]
       resolution: 14
       sampling_rate: 2500000000
@@ -19,28 +36,45 @@ instruments:
       qb_delay: 0.000000292
       ro_delay: 0.000000266
       ip: 192.168.0.2
+      channel_phase_deg: [-6.2, 0.2, 10.6, -2.2]
+      channel_phase: [-0.10821, 0.00349066, 0.1850049, -0.0383972]
+
   qb_lo:
     type: QuicSyn
-    address: ASRL6::INSTR
-    setup_parameters:
-      frequency: 3800000000
+    init_settings:
+      name: qb_lo
+      address: ASRL6::INSTR
+    settings:
+      frequency: 3869624000
+
   ro_lo:
     type: QuicSyn
-    address: ASRL3::INSTR
-    setup_parameters:
-      frequency: 5000000000
+    init_settings:
+      name: ro_lo
+      address: ASRL3::INSTR
+    settings:
+      frequency: 5029250000
+
   qb_att:
     type: MCAttenuator
-    address: 192.168.0.9:90
-    setup_parameters:
+    init_settings:
+      name: qb_att
+      address: 192.168.0.9:90
+    settings:
       attenuation: 20
+
   ro_att:
     type: MCAttenuator
-    address: 192.168.0.10:100
-    setup_parameters:
-      attenuation: 5
+    init_settings:
+      name: ro_att
+      address: 192.168.0.10:100
+    settings:
+      attenuation: 10
+
   alazar_adc:
     type: AlazarADC
-    address: Alazar1
-    setup_parameters:
+    init_settings:
+      name: alazar_adc
+      address: Alazar1
+    settings:
       samples: 4992
