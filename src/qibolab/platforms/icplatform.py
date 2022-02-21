@@ -98,13 +98,15 @@ class ICPlatform(AbstractPlatform):
             # Assign pulses to each respective waveform generator
             qubit = self.fetch_qubit(pulse.qubit)
             playback_device = qubit.get("playback")
-            if playback_device not in pulse_mapping.keys():
-                pulse_mapping[playback_device] = []
-            pulse_mapping[playback_device].append(pulse)
 
             # Track each qubit to measure
             if isinstance(pulse, ReadoutPulse):
                 qubits_to_measure.append(pulse.qubit)
+                playback_device = qubit.get("playback_readout")
+
+            if playback_device not in pulse_mapping.keys():
+                pulse_mapping[playback_device] = []
+            pulse_mapping[playback_device].append(pulse)
     
         # Translate and upload the pulse for each device
         for device, subsequence in pulse_mapping.items():

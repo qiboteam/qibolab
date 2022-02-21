@@ -25,6 +25,7 @@ qubits:
     resonator_spectroscopy_max_ro_voltage: 5726.62338856
     rabi_oscillations_pi_pulse_min_voltage: 5291.34802850
     playback: awg
+    playback_readout: awg
     readout: alazar_adc
     readout_channels: [0, 1]
 
