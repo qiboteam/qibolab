@@ -38,23 +38,40 @@ class PulseSequence:
         """
         from qibolab.pulse_shapes import Gaussian
         # Pi/2 pulse from calibration
-        amplitude = K.platform.pi_pulse_amplitude
-        duration = K.platform.pi_pulse_duration // 2
-        frequency = K.platform.pi_pulse_frequency
-        delay = K.platform.delay_between_pulses
 
+        if hasattr(K.platform, "qubits"):
+            # TODO: Fetch target qubit id from gate object
+            kwargs = K.platform.fetch_qubit().get("pi_pulse")
+        else:
+            kwargs = {
+                "amplitude": K.platform.pi_pulse_amplitude,
+                "duration": K.platform.pi_pulse_duration,
+                "frequency": K.platform.pi_pulse_frequency
+            }
+        kwargs["duration"] = kwargs["duration"] // 2
+        delay = K.platform.delay_between_pulses
+        duration = kwargs.get("duration")
+        kwargs["shape"] = Gaussian(duration / 5)
         self.phase += phi - np.pi / 2
-        self.add(pulses.Pulse(self.time, duration, amplitude, frequency, self.phase, Gaussian(duration / 5)))
+        kwargs["start"] = self.time
+        kwargs["phase"] = self.phase
+        self.add(pulses.Pulse(**kwargs))
         self.time += duration + delay
         self.phase += np.pi - theta
-        self.add(pulses.Pulse(self.time, duration, amplitude, frequency, self.phase, Gaussian(duration / 5)))
+        kwargs["start"] = self.time
+        kwargs["phase"] = self.phase
+        self.add(pulses.Pulse(**kwargs))       
         self.time += duration + delay
         self.phase += lam - np.pi / 2
 
     def add_measurement(self):
         """Add measurement pulse."""
         from qibolab.pulse_shapes import Rectangular
-        kwargs = K.platform.readout_pulse
+        # TODO: Fetch target qubit id from gate object
+        if hasattr(K.platform, "qubits"):
+            kwargs = K.platform.fetch_qubit().get("readout_pulse")
+        else:
+            kwargs = K.platform.readout_pulse
         kwargs["start"] = self.time + K.platform.delay_before_readout
         kwargs["phase"] = self.phase
         kwargs["shape"] = Rectangular()
@@ -86,6 +103,7 @@ class HardwareCircuit(circuit.Circuit):
         readout = K.platform(sequence, nshots)
         K.platform.stop()
 
+        # TODO: Use qubit id to fetch max and min voltages
         min_v = K.platform.min_readout_voltage
         max_v = K.platform.max_readout_voltage
         return states.HardwareState.from_readout(readout, min_v, max_v)

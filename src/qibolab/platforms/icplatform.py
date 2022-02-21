@@ -8,8 +8,13 @@ class ICPlatform(AbstractPlatform):
     def __init__(self, name, runcard):
         self._instruments = []
         self._lo = []
+        self._adc = []
         super().__init__(name, runcard)
 
+    @property
+    def qubits(self):
+        return self._settings.get("qubits")
+    
     def connect(self):
         """Connects to lab instruments using the details specified in the calibration settings."""
         if not self.is_connected:
@@ -20,8 +25,12 @@ class ICPlatform(AbstractPlatform):
                 for params in instruments.values():
                     inst = getattr(qi, params.get("type"))(**params.get("init_settings"))
                     self._instruments.append(inst)
+
                     if params.get("lo"):
                         self._lo.append(inst)
+
+                    if params.get("adc"):
+                        self._adc.append(inst)
                     
                 self.is_connected = True
             except Exception as exception:
@@ -57,6 +66,7 @@ class ICPlatform(AbstractPlatform):
                 inst.close()
             self._instruments = []
             self._lo = []
+            self._adc = []
             self.is_connected = False
 
     def execute(self, sequence, nshots=None):
@@ -78,28 +88,65 @@ class ICPlatform(AbstractPlatform):
         if nshots is None:
             nshots = self.hardware_avg
 
-        sobj = {}
-        robj = {}
         from qibolab.pulses import ReadoutPulse
+
+        qubits_to_measure = []
+        measurement_results = []
+        pulse_mapping = {}
+
         for pulse in sequence.pulses:
             # Assign pulses to each respective waveform generator
-            if pulse.device not in sobj.keys():
-                sobj[pulse.device] = []
-            sobj[pulse.device].append(pulse)
+            qubit = self.fetch_qubit(pulse.qubit)
+            playback_device = qubit.get("playback")
+            if playback_device not in pulse_mapping.keys():
+                pulse_mapping[playback_device] = []
+            pulse_mapping[playback_device].append(pulse)
 
-            # Track each readout pulse and frequency to its readout device
+            # Track each qubit to measure
             if isinstance(pulse, ReadoutPulse):
-                if pulse.adc not in robj.keys():
-                    robj[pulse.adc] = []
-                robj[pulse.adc].append(pulse.frequency)
+                qubits_to_measure.append(pulse.qubit)
+    
         # Translate and upload the pulse for each device
-        for device, seq in sobj.items():
-            self.ic.translate_and_upload(device, seq, nshots)
+        for device, subsequence in pulse_mapping.items():
+            inst = self.fetch_instrument(device)
+            inst.upload(inst.translate(subsequence, nshots))
+            inst.play_sequence()
 
-        self.ic.arm_adc(nshots)
-        # Trigger the experiment
-        self.ic.trigger_experiment()
+        for adc in self._adc:
+            adc.arm(nshots)
+        
+        # Start the experiment sequence
+        self.start_experiment()
 
         # Fetch the experiment results
-        result = self.ic.result(robj)
-        return result
+        for qubit_id in qubits_to_measure:
+            qubit = self.fetch_qubit(qubit_id)
+            inst = self.fetch_instrument(qubit.get("readout"))
+            measurement_results.append(inst.result(qubit.get("readout_frequency")))
+
+        if len(qubits_to_measure) == 1:
+            return measurement_results[0]
+        return measurement_results
+
+    def fetch_instrument(self, name):
+        """
+        Fetches for instruemnt from added instruments
+        """
+        try:
+            res = next(inst for inst in self._instruments if inst.name == name)
+            return res
+        except StopIteration:
+            raise_error(Exception, "Instrument not found")
+
+    def fetch_qubit(self, qubit_id=0):
+        """
+        Fetches the qubit based on the id
+        """
+        return self.qubits.get("qubit_{}".format(qubit_id))
+
+    def start_experiment(self):
+        """
+        Starts the instrument to start the experiment sequence
+        """
+        inst = self.fetch_instrument(self._settings.get("settings").get("experiment_start_instrument"))
+        inst.start_experiment()
