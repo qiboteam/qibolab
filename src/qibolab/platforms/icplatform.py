@@ -1,5 +1,38 @@
+import copy
 from qibo.config import raise_error, log
 from qibolab.platforms.abstract import AbstractPlatform
+
+class Qubit:
+    """Describes a single qubit in pulse control and readout extraction.
+
+    Args:
+        id (int): Qubit ID.
+        pi_pulse (dict): Qubit pi-pulse parameters.
+            See qibolab.pulses.Pulse for more information.
+        readout_pulse (dict): Qubit readout pulse parameters.
+            See qibolab.pulses.ReadoutPulse for more information.
+        resonator_spectroscopy_max_ro_voltage (float): Readout voltage corresponding to the ground state of the qubit.
+        rabi_oscillations_pi_pulse_min_voltage (float): Readout voltage corresponding to the excited state of the qubit.
+        playback (str): Instrument name for playing the qubit XY control pulses.
+        playback_readout (str): Instrument name for playing the qubit readout pulse.
+        readout_frequency (float): Readout frequency for IQ demodulation.
+        readout (str): Instrument name for reading the qubit.
+        readout_channels (int, int[]): Channels on the instrument associated to qubit readout.
+    """
+
+    def __init__(self, pi_pulse, readout_pulse, readout_frequency, resonator_spectroscopy_max_ro_voltage, rabi_oscillations_pi_pulse_min_voltage,
+             playback, playback_readout, readout, readout_channels):
+
+        self.id = id
+        self.pi_pulse = pi_pulse
+        self.readout_pulse = readout_pulse
+        self.readout_frequency = readout_frequency
+        self.max_readout_voltage = resonator_spectroscopy_max_ro_voltage
+        self.min_readout_voltage = rabi_oscillations_pi_pulse_min_voltage
+        self.playback = playback
+        self.playback_readout = playback_readout
+        self.readout = readout
+        self.readout_channels = readout_channels
 
 
 class ICPlatform(AbstractPlatform):
@@ -10,10 +43,10 @@ class ICPlatform(AbstractPlatform):
         self._lo = []
         self._adc = []
         super().__init__(name, runcard)
-
-    @property
-    def qubits(self):
-        return self._settings.get("qubits")
+        self.qubits = []
+        qubits = self._settings.get("qubits")
+        for qubit_dict in qubits.values():
+            self.qubits.append(Qubit(**qubit_dict))
     
     def connect(self):
         """Connects to lab instruments using the details specified in the calibration settings."""
@@ -97,12 +130,12 @@ class ICPlatform(AbstractPlatform):
         for pulse in sequence.pulses:
             # Assign pulses to each respective waveform generator
             qubit = self.fetch_qubit(pulse.qubit)
-            playback_device = qubit.get("playback")
+            playback_device = qubit.playback
 
             # Track each qubit to measure
             if isinstance(pulse, ReadoutPulse):
                 qubits_to_measure.append(pulse.qubit)
-                playback_device = qubit.get("playback_readout")
+                playback_device = qubit.playback_readout
 
             if playback_device not in pulse_mapping.keys():
                 pulse_mapping[playback_device] = []
@@ -123,16 +156,15 @@ class ICPlatform(AbstractPlatform):
         # Fetch the experiment results
         for qubit_id in qubits_to_measure:
             qubit = self.fetch_qubit(qubit_id)
-            inst = self.fetch_instrument(qubit.get("readout"))
-            measurement_results.append(inst.result(qubit.get("readout_frequency")))
+            inst = self.fetch_instrument(qubit.readout)
+            measurement_results.append(inst.result(qubit.readout_frequency))
 
         if len(qubits_to_measure) == 1:
             return measurement_results[0]
         return measurement_results
 
     def fetch_instrument(self, name):
-        """
-        Fetches for instruemnt from added instruments
+        """Returns a reference to an instrument.
         """
         try:
             res = next(inst for inst in self._instruments if inst.name == name)
@@ -140,15 +172,25 @@ class ICPlatform(AbstractPlatform):
         except StopIteration:
             raise_error(Exception, "Instrument not found")
 
-    def fetch_qubit(self, qubit_id=0):
+    def fetch_qubit(self, qubit_id=0) -> Qubit:
+        """Fetches the qubit based on the id.
         """
-        Fetches the qubit based on the id
-        """
-        return self.qubits.get("qubit_{}".format(qubit_id))
+        return self.qubits[qubit_id]
 
     def start_experiment(self):
-        """
-        Starts the instrument to start the experiment sequence
+        """Starts the instrument to start the experiment sequence.
         """
         inst = self.fetch_instrument(self._settings.get("settings").get("experiment_start_instrument"))
         inst.start_experiment()
+
+    def fetch_qubit_pi_pulse(self, qubit_id=0) -> dict:
+        """Fetches the qubit pi-pulse.
+        """
+        # Use copy to avoid mutability
+        return copy.copy(self.fetch_qubit(qubit_id).pi_pulse) 
+
+    def fetch_qubit_readout_pulse(self, qubit_id=0) -> dict:
+        """Fetches the qubit readout pulse.
+        """
+        # Use copy to avoid mutability
+        return copy.copy(self.fetch_qubit(qubit_id).readout_pulse)

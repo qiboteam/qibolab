@@ -8,8 +8,8 @@ MODE_MIXER = 1
 
 def square(t, start, duration, frequency, amplitude, phase):
     x = amplitude * (1 * (start < t) & 1 * (start+duration > t))
-    i = x * np.cos(2 * np.pi * frequency * t + phase[0] * np.pi)
-    q = - x * np.sin(2 * np.pi * frequency * t + phase[1] * np.pi)
+    i = x * np.cos(2 * np.pi * frequency * t + phase[0])
+    q = - x * np.sin(2 * np.pi * frequency * t + phase[1])
     return i, q
 
 def TTL(t, start, duration, amplitude):
@@ -18,7 +18,7 @@ def TTL(t, start, duration, amplitude):
 
 def sine(t, start, duration, frequency, amplitude, phase):
     x = amplitude * (1 * (start < t) & 1 * (start+duration > t))
-    wfm = x * np.sin(2 * np.pi * frequency * t + phase * np.pi)
+    wfm = x * np.sin(2 * np.pi * frequency * t + phase)
     return wfm
 
 class Instrument:

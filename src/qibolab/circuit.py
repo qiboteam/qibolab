@@ -30,7 +30,7 @@ class PulseSequence:
             self.qcm_pulses.append(pulse)
         self.pulses.append(pulse)
 
-    def add_u3(self, theta, phi, lam):
+    def add_u3(self, theta, phi, lam, qubit=0):
         """Add pulses that implement a U3 gate.
 
         Args:
@@ -40,8 +40,7 @@ class PulseSequence:
         # Pi/2 pulse from calibration
 
         if hasattr(K.platform, "qubits"):
-            # TODO: Fetch target qubit id from gate object
-            kwargs = K.platform.fetch_qubit().get("pi_pulse")
+            kwargs = K.platform.fetch_qubit_pi_pulse(qubit)
         else:
             kwargs = {
                 "amplitude": K.platform.pi_pulse_amplitude,
@@ -64,12 +63,11 @@ class PulseSequence:
         self.time += duration + delay
         self.phase += lam - np.pi / 2
 
-    def add_measurement(self):
+    def add_measurement(self, qubit=0):
         """Add measurement pulse."""
         from qibolab.pulse_shapes import Rectangular
-        # TODO: Fetch target qubit id from gate object
         if hasattr(K.platform, "qubits"):
-            kwargs = K.platform.fetch_qubit().get("readout_pulse")
+            kwargs = K.platform.fetch_qubit_readout_pulse(qubit)
         else:
             kwargs = K.platform.readout_pulse
         kwargs["start"] = self.time + K.platform.delay_before_readout
@@ -103,7 +101,12 @@ class HardwareCircuit(circuit.Circuit):
         readout = K.platform(sequence, nshots)
         K.platform.stop()
 
-        # TODO: Use qubit id to fetch max and min voltages
-        min_v = K.platform.min_readout_voltage
-        max_v = K.platform.max_readout_voltage
+        if hasattr(K.platform, "qubits"):
+            q = self.measurement_gate.target_qubits[0]
+            qubit = K.platform.fetch_qubit(q)
+            min_v = qubit.min_readout_voltage
+            max_v = qubit.max_readout_voltage
+        else:
+            min_v = K.platform.min_readout_voltage
+            max_v = K.platform.max_readout_voltage
         return states.HardwareState.from_readout(readout, min_v, max_v)
