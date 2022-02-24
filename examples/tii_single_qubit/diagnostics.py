@@ -86,6 +86,26 @@ def plot(smooth_dataset, dataset, label, type):
         plt.savefig(label+".pdf")
         return
 
+def plot_qubit_states(gnd_results, exc_results):
+    plt.figure(figsize=[4,4])
+    # Plot all the results
+    # All results from the gnd_schedule are plotted in blue
+    plt.scatter(np.real(gnd_results), np.imag(gnd_results), s=5, cmap='viridis', c='blue', alpha=0.5, label='state_0')
+    # All results from the exc_schedule are plotted in red
+    plt.scatter(np.real(exc_results), np.imag(exc_results), s=5, cmap='viridis', c='red', alpha=0.5, label='state_1')
+
+    # Plot a large dot for the average result of the 0 and 1 states.
+    mean_gnd = np.mean(gnd_results) # takes mean of both real and imaginary parts
+    mean_exc = np.mean(exc_results)
+    plt.scatter(np.real(mean_gnd), np.imag(mean_gnd), s=200, cmap='viridis', c='black',alpha=1.0, label='state_0_mean')
+    plt.scatter(np.real(mean_exc), np.imag(mean_exc), s=200, cmap='viridis', c='black',alpha=1.0, label='state_1_mean')
+
+    plt.ylabel('I [a.u.]', fontsize=15)
+    plt.xlabel('Q [a.u.]', fontsize=15)
+    plt.title("0-1 discrimination", fontsize=15)
+    plt.show()
+
+
 def create_measurement_control(name):
     import os
     if os.environ.get("ENABLE_PLOTMON", True):
@@ -391,6 +411,34 @@ def run_shifted_resonator_spectroscopy(platform, mc, resonator_freq, qubit_freq,
     print(f"Maximum Voltage Measured = {shifted_max_ro_voltage} μV")
 
     return shifted_frequency, shifted_max_ro_voltage, smooth_dataset, dataset
+
+def callibrate_qubit_states(platform, sequence, niter, nshots, meas_level, resonator_freq, qubit_freq, ro_pulse, qc_pulse=None):
+    import math
+    platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
+    if (qc_pulse != None):
+        platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
+
+    platform.start()
+    if (qc_pulse == None):
+        platform.LO_qcm.off()
+
+    all_states = []
+    for i in range(niter):
+        qubit_state = platform.execute(sequence, nshots)
+        #Compose complex point from i, q obtained from execution
+        point = complex(qubit_state[2], qubit_state[3])
+        all_states.add(point)
+
+    platform.stop()
+    return all_states, np.mean(all_states)
+
+def classify(point: complex, mean_gnd, mean_exc):
+    import math
+    """Classify the given state as |0> or |1>."""
+    def distance(a, b):
+        return math.sqrt((np.real(a) - np.real(b))**2 + (np.imag(a) - np.imag(b))**2)
+    
+    return int(distance(point, mean_exc) < distance(point, mean_gnd))
 
 
 
