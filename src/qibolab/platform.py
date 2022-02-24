@@ -30,7 +30,6 @@ class Platform:
         self._qcm = None
         self._LO_qrm = None
         self._LO_qcm = None
-        self.connect()
 
     def _check_connected(self):
         if not self.is_connected:
@@ -154,7 +153,6 @@ class Platform:
                 raise_error(RuntimeError, "Cannot establish connection to "
                                          f"{self.name} instruments. "
                                          f"Error captured: '{exception}'")
-        self.setup()
 
     def setup(self):
         """Configures instruments using the loaded calibration settings."""
