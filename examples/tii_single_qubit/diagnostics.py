@@ -412,7 +412,7 @@ def run_shifted_resonator_spectroscopy(platform, mc, resonator_freq, qubit_freq,
 
     return shifted_frequency, shifted_max_ro_voltage, smooth_dataset, dataset
 
-def callibrate_qubit_states(platform, sequence, niter, nshots, meas_level, resonator_freq, qubit_freq, ro_pulse, qc_pulse=None):
+def callibrate_qubit_states(platform, sequence, niter, nshots, resonator_freq, qubit_freq, ro_pulse, qc_pulse=None):
     import math
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     if (qc_pulse != None):
