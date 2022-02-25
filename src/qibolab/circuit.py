@@ -97,6 +97,8 @@ class HardwareCircuit(circuit.Circuit):
         self.measurement_gate.to_sequence(sequence)
 
         # Execute the pulse sequence on the platform
+        K.platform.connect()
+        K.platform.setup()
         K.platform.start()
         readout = K.platform(sequence, nshots)
         K.platform.stop()
