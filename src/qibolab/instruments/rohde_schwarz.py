@@ -3,11 +3,12 @@ Class to interface with the local oscillator RohdeSchwarz SGS100A
 """
 
 import logging
+from qibolab.instruments.instrument import Instrument, InstrumentException
 
 logger = logging.getLogger(__name__)  # TODO: Consider using a global logger
 
 
-class SGS100A:
+class SGS100A(Instrument):
 
     def __init__(self, label, ip):
         """
@@ -20,11 +21,17 @@ class SGS100A:
         self._power  = None
         self._frequency = None
         self._connected = False
-        self.connect(label, ip)
+        self._signature = f"{type(self).__name__}@{ip}"
+        self.label = label
+        self.ip = ip
+        self.connect()
 
-    def connect(self, label, ip):
+    def connect(self):
         import qcodes.instrument_drivers.rohde_schwarz.SGS100A as LO_SGS100A
-        self.device = LO_SGS100A.RohdeSchwarz_SGS100A(label, f"TCPIP0::{ip}::inst0::INSTR")
+        try:
+            self.device = LO_SGS100A.RohdeSchwarz_SGS100A(self.label, f"TCPIP0::{self.ip}::inst0::INSTR")
+        except Exception as exc:
+            raise InstrumentException(self, str(exc))
         self._connected = True
         logger.info("Local oscillator connected")
 
