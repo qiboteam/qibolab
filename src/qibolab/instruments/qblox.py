@@ -19,6 +19,7 @@ class GenericPulsar(Instrument, ABC):
         self.sync_en = sync_en
         self.is_cluster = is_cluster
         self._connected = False
+        self.Device = None
         self.device = None
         # To be defined in each instrument
         self.name = None
@@ -248,8 +249,12 @@ class PulsarQRM(GenericPulsar):
         # Instantiate base object from qblox library and connect to it
         self.name = "qrm"
         self._signature = f"{type(self).__name__}@{ip}"
-        from cluster.cluster import cluster_qrm
-        self.Device = cluster_qrm
+        if self.is_cluster:
+            from cluster.cluster import cluster_qcm
+            self.Device = cluster_qcm
+        else:
+            from pulsar_qcm.pulsar_qcm import pulsar_qcm
+            self.Device = pulsar_qcm
         self.connect()
         self.sequencer = sequencer
         self.hardware_avg_en = hardware_avg_en
@@ -348,8 +353,12 @@ class PulsarQCM(GenericPulsar):
         # Instantiate base object from qblox library and connect to it
         self.name = "qcm"
         self._signature = f"{type(self).__name__}@{ip}"
-        from cluster.cluster import cluster_qcm
-        self.Device = cluster_qcm
+        if self.is_cluster:
+            from cluster.cluster import cluster_qcm
+            self.Device = cluster_qcm
+        else:
+            from pulsar_qcm.pulsar_qcm import pulsar_qcm
+            self.Device = pulsar_qcm
         self.connect()
         self.sequencer = sequencer
         # Reset and configure
