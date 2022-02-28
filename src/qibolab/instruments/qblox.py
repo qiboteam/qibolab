@@ -3,6 +3,7 @@ import json
 import numpy as np
 from abc import ABC, abstractmethod
 from qibo.config import raise_error
+from qibolab.instruments.instrument import Instrument, InstrumentException
 
 import logging
 logger = logging.getLogger(__name__)  # TODO: Consider using a global logger
@@ -17,6 +18,7 @@ class GenericPulsar(Instrument, ABC):
         self.ref_clock = ref_clock
         self.sync_en = sync_en
         self._connected = False
+        self.device = None
         # To be defined in each instrument
         self.name = None
         # To be defined during setup
@@ -32,10 +34,16 @@ class GenericPulsar(Instrument, ABC):
         self.acquisitions = {"single": {"num_bins": 1, "index":0}}
         self.weights = {}
 
-    @abstractmethod
-    def connect(self, label, ip):
+    def connect(self):
         """Connects to the instruments."""
-        raise(NotImplementedError)
+        if not self._connected:
+            try:
+                self.device = self.Device(self.label, self.ip)
+            except Exception as exc:
+                raise InstrumentException(self, str(exc))
+            self._connected = True
+        else:
+            raise RuntimeError
 
     @property
     def gain(self):
@@ -238,8 +246,10 @@ class PulsarQRM(GenericPulsar):
         super().__init__(label, ip, sequencer, ref_clock, sync_en)
         # Instantiate base object from qblox library and connect to it
         self.name = "qrm"
-        self.connect(label, ip)
-        self._connected = True
+        self._signature = f"{type(self).__name__}@{ip}"
+        from cluster.cluster import cluster_qrm
+        self.Device = cluster_qrm
+        self.connect()
         self.sequencer = sequencer
         self.hardware_avg_en = hardware_avg_en
 
@@ -256,16 +266,6 @@ class PulsarQRM(GenericPulsar):
             self.device.sequencer1_sync_en(sync_en)
         else:
             self.device.sequencer0_sync_en(sync_en)
-
-    def connect(self, label, ip):
-        if not self._connected:
-            # Connecting to Qblox cluster qrm (only fot TII platform)
-            from cluster.cluster import cluster_qrm
-            self.device = cluster_qrm(label, ip)
-            logger.info("QRM connection stablished.")
-            self._connected = True
-        else:
-            raise(RuntimeError)
 
     def setup(self, gain, initial_delay, repetition_duration,
               start_sample, integration_length, sampling_rate, mode):
@@ -346,7 +346,10 @@ class PulsarQCM(GenericPulsar):
         super().__init__(label, ip, sequencer, ref_clock, sync_en)
         # Instantiate base object from qblox library and connect to it
         self.name = "qcm"
-        self.connect(label, ip)
+        self._signature = f"{type(self).__name__}@{ip}"
+        from cluster.cluster import cluster_qcm
+        self.Device = cluster_qcm
+        self.connect()
         self.sequencer = sequencer
         # Reset and configure
         self.device.reset()
@@ -367,13 +370,3 @@ class PulsarQCM(GenericPulsar):
         program = self.generate_program(nshots, initial_delay, delay_before_read_out, acquire_instruction, wait_time)
 
         return waveforms, program
-
-    def connect(self, label, ip):
-        if not self._connected:
-            # Connecting to Qblox cluster qrm (only fot TII platform)
-            from cluster.cluster import cluster_qcm
-            self.device = cluster_qcm(label, ip)
-            logger.info("QCM connection stablished.")
-            self._connected = True
-        else:
-            raise(RuntimeError)
