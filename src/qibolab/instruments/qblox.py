@@ -7,23 +7,28 @@ from qibo.config import raise_error
 import logging
 logger = logging.getLogger(__name__)  # TODO: Consider using a global logger
 
-class GenericPulsar(ABC):
+class GenericPulsar(Instrument, ABC):
 
-    def __init__(self):
+    def __init__(self, label, ip, sequencer, ref_clock, sync_en):
+        self.label = label
+        self.ip = ip
+        # TODO When updating to the new firmware, use a sequencer mapping instead of setting a single sequencer
+        self.sequencer = sequencer
+        self.ref_clock = ref_clock
+        self.sync_en = sync_en
+        self._connected = False
         # To be defined in each instrument
         self.name = None
-        self.device = None
-        self._connected = False
-        self.sequencer = None
-        self.ref_clock = None
-        self.sync_en = None
         # To be defined during setup
+        self.hardware_avg = None
         self.initial_delay = None
         self.repetition_duration = None
         # hardcoded values used in ``generate_program``
+        self.delay_before_readout = 4 # same value is used for all readout pulses (?)
         self.wait_loop_step = 1000
         self.duration_base = 16380 # maximum length of a waveform in number of samples (defined by the device memory).
         # hardcoded values used in ``upload``
+        # TODO QCM shouldn't have acquisitions
         self.acquisitions = {"single": {"num_bins": 1, "index":0}}
         self.weights = {}
 
@@ -230,7 +235,7 @@ class PulsarQRM(GenericPulsar):
 
     def __init__(self, label, ip, ref_clock="external", sequencer=0, sync_en=True,
                  hardware_avg_en=True, acq_trigger_mode="sequencer"):
-        super().__init__()
+        super().__init__(label, ip, sequencer, ref_clock, sync_en)
         # Instantiate base object from qblox library and connect to it
         self.name = "qrm"
         self.connect(label, ip)
@@ -338,7 +343,7 @@ class PulsarQRM(GenericPulsar):
 class PulsarQCM(GenericPulsar):
 
     def __init__(self, label, ip, sequencer=0, ref_clock="external", sync_en=True):
-        super().__init__()
+        super().__init__(label, ip, sequencer, ref_clock, sync_en)
         # Instantiate base object from qblox library and connect to it
         self.name = "qcm"
         self.connect(label, ip)
