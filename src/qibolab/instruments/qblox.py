@@ -249,11 +249,11 @@ class PulsarQRM(GenericPulsar):
         # Instantiate base object from qblox library and connect to it
         self.name = "qrm"
         if self.is_cluster:
-            from cluster.cluster import cluster_qcm
-            self.Device = cluster_qcm
+            from cluster.cluster import cluster_qrm
+            self.Device = cluster_qrm
         else:
-            from pulsar_qcm.pulsar_qcm import pulsar_qcm
-            self.Device = pulsar_qcm
+            from pulsar_qrm.pulsar_qrm import pulsar_qrm
+            self.Device = pulsar_qrm
         self.connect()
         self.sequencer = sequencer
         self.hardware_avg_en = hardware_avg_en
