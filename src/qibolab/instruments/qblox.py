@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)  # TODO: Consider using a global logger
 class GenericPulsar(Instrument, ABC):
 
     def __init__(self, label, ip, sequencer, ref_clock, sync_en, is_cluster):
+        super().__init__(ip)
         self.label = label
-        self.ip = ip
         # TODO When updating to the new firmware, use a sequencer mapping instead of setting a single sequencer
         self.sequencer = sequencer
         self.ref_clock = ref_clock
@@ -248,7 +248,6 @@ class PulsarQRM(GenericPulsar):
         super().__init__(label, ip, sequencer, ref_clock, sync_en, is_cluster)
         # Instantiate base object from qblox library and connect to it
         self.name = "qrm"
-        self._signature = f"{type(self).__name__}@{ip}"
         if self.is_cluster:
             from cluster.cluster import cluster_qcm
             self.Device = cluster_qcm
@@ -352,7 +351,6 @@ class PulsarQCM(GenericPulsar):
         super().__init__(label, ip, sequencer, ref_clock, sync_en, is_cluster)
         # Instantiate base object from qblox library and connect to it
         self.name = "qcm"
-        self._signature = f"{type(self).__name__}@{ip}"
         if self.is_cluster:
             from cluster.cluster import cluster_qcm
             self.Device = cluster_qcm

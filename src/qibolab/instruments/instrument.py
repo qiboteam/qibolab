@@ -4,10 +4,10 @@ class Instrument(ABC):
     """
     Parent class for all the instruments
     """
-    def __init__(self):
+    def __init__(self, ip):
         self._connected = False
-        # Implement signature as InstrumentClassName@ip_address
-        self._signature = None
+        self.ip = ip
+        self._signature = f"{type(self).__name__}@{ip}"
         self._driver = None
         self._connected = False
     

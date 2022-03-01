@@ -17,13 +17,13 @@ class SGS100A(Instrument):
                 "ip": '192.168.0.8',
                 "label": "qcm_LO"
         """
+        super().__init__(ip)
         self.device  = None
         self._power  = None
         self._frequency = None
         self._connected = False
         self._signature = f"{type(self).__name__}@{ip}"
         self.label = label
-        self.ip = ip
         self.connect()
 
     def connect(self):
