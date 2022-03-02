@@ -55,7 +55,6 @@ class QBloxPlatform(AbstractPlatform):
                 raise_error(RuntimeError, "Cannot establish connection to "
                             f"{self.name} instruments. "
                             f"Error captured: '{exception}'")
-        self.setup()
 
     def setup(self):
         """Configures instruments using the loaded calibration settings."""

@@ -22,7 +22,6 @@ class AbstractPlatform(ABC):
 
         # Define references to instruments
         self.is_connected = False
-        self.connect()
 
     def _check_connected(self):
         if not self.is_connected:

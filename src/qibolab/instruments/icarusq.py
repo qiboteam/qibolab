@@ -8,8 +8,8 @@ MODE_MIXER = 1
 
 def square(t, start, duration, frequency, amplitude, phase):
     x = amplitude * (1 * (start < t) & 1 * (start+duration > t))
-    i = x * np.cos(2 * np.pi * frequency * t + phase[0] * np.pi / 180)
-    q = - x * np.sin(2 * np.pi * frequency * t + phase[1] * np.pi / 180)
+    i = x * np.cos(2 * np.pi * frequency * t + phase[0])
+    q = - x * np.sin(2 * np.pi * frequency * t + phase[1])
     return i, q
 
 def TTL(t, start, duration, amplitude):
@@ -18,20 +18,20 @@ def TTL(t, start, duration, amplitude):
 
 def sine(t, start, duration, frequency, amplitude, phase):
     x = amplitude * (1 * (start < t) & 1 * (start+duration > t))
-    wfm = x * np.sin(2 * np.pi * frequency * t + phase * np.pi / 180)
+    wfm = x * np.sin(2 * np.pi * frequency * t + phase)
     return wfm
 
 class Instrument:
-    def connect():
+    def connect(self):
         pass
 
-    def start():
+    def start(self):
         pass
 
-    def stop():
+    def stop(self):
         pass
 
-    def close():
+    def close(self):
         pass
 
 class VisaInstrument:
@@ -76,6 +76,7 @@ class TektronixAWG5204(VisaInstrument):
         self._qb_delay = None
         self._ro_delay = None
         self._ip = None
+        self._channel_phase = None
 
     def setup(self,
               offset: List[Union[int, float]],
@@ -89,6 +90,7 @@ class TektronixAWG5204(VisaInstrument):
               qb_delay: float = 292e-9,
               ro_delay: float = 266e-9,
               ip: str = "192.168.0.2",
+              channel_phase: List[float] = [-0.10821, 0.00349066, 0.1850049, -0.0383972],
               **kwargs) -> None:
         """ 
         Sets the channel offset, maximum amplitude, DAC resolution and sampling rate of the AWG
@@ -123,6 +125,7 @@ class TektronixAWG5204(VisaInstrument):
         self._ro_delay = ro_delay
         self._adc_delay = adc_delay
         self._ip = ip
+        self._channel_phase = channel_phase
         self.ready()
 
     def reset(self) -> None:
@@ -146,33 +149,42 @@ class TektronixAWG5204(VisaInstrument):
         from qcodes.instrument_drivers.tektronix.AWG70000A import AWG70000A
 
         # First create np arrays for each channel
-        start = min(pulse.start for pulse in sequence) - self._pulse_buffer
-        end = max(pulse.start + pulse.duration for pulse in sequence) + self._pulse_buffer
-        t = np.arange(start, end, 1 / self._sampling_rate)
+        start = min(pulse.start for pulse in sequence)
+        end = max(pulse.start + pulse.duration for pulse in sequence)
+        t = np.arange(start * 1e-9 - self._pulse_buffer, end * 1e-9 + self._pulse_buffer, 1 / self._sampling_rate)
         wfm = np.zeros((self._nchannels, len(t)))
 
         for pulse in sequence:
+            # Convert pulse timings from nanoseconds to seconds
+            start = pulse.start * 1e-9
+            duration = pulse.duration * 1e-9
             if isinstance(pulse, ReadoutPulse):
                 # Readout IQ Signal
-                i_wfm, q_wfm = square(t, pulse.start, pulse.duration, pulse.frequency, pulse.amplitude, pulse.phase)
-                wfm[pulse.channel[0]] += i_wfm
-                wfm[pulse.channel[1]] += q_wfm
+                i_ch = pulse.channel[0]
+                q_ch = pulse.channel[1]
+                phase = (self._channel_phase[i_ch] + pulse.phase, self._channel_phase[q_ch] + pulse.phase)
+                i_wfm, q_wfm = square(t, start, duration, pulse.frequency, pulse.amplitude, phase)
+                wfm[i_ch] += i_wfm
+                wfm[q_ch] += q_wfm
                 # ADC TTL
-                wfm[4] = TTL(t, pulse.start + self._adc_delay , 10e-9, 1)
+                wfm[4] = TTL(t, start + self._adc_delay , 10e-9, 1)
                 # RO SW TTL
-                wfm[5] = TTL(t, pulse.start + self._ro_delay, pulse.duration, 1)
+                wfm[5] = TTL(t, start + self._ro_delay, duration, 1)
                 # QB SW TTL
-                wfm[6] = TTL(t, pulse.start + self._qb_delay, pulse.duration, 1)
+                wfm[6] = TTL(t, start + self._qb_delay, duration, 1)
 
             else:
                 if self._mode == MODE_MIXER:
                     # Qubit IQ signal
-                    i_wfm, q_wfm = square(t, pulse.start, pulse.duration, pulse.frequency, pulse.amplitude, pulse.phase)
-                    wfm[pulse.channel[0]] += i_wfm
-                    wfm[pulse.channel[1]] += q_wfm
+                    i_ch = pulse.channel[0]
+                    q_ch = pulse.channel[1]
+                    phase = (self._channel_phase[i_ch] + pulse.phase, self._channel_phase[q_ch] + pulse.phase)
+                    i_wfm, q_wfm = square(t, start, duration, pulse.frequency, pulse.amplitude, phase)
+                    wfm[i_ch] += i_wfm
+                    wfm[q_ch] += q_wfm
                 
                 else:
-                    qb_wfm = sine(t, pulse.start, pulse.duration, pulse.frequency, pulse.amplitude, pulse.phase)
+                    qb_wfm = sine(t, start, duration, pulse.frequency, pulse.amplitude, pulse.phase)
                     wfm[pulse.channel] += qb_wfm
 
         # Add waveform arrays to broadbean sequencing
@@ -232,10 +244,8 @@ class TektronixAWG5204(VisaInstrument):
         for ch in range(1, 5):
             self.write('SOURCE{}:CASSet:SEQuence "MainSeq", {}'.format(ch, ch))
         self.ready()
-        self.play()
-        self.ready()
 
-    def play(self):
+    def play_sequence(self):
         """
         Arms the AWG for playback on trigger A
         """
@@ -246,6 +256,7 @@ class TektronixAWG5204(VisaInstrument):
 
         # Arm the trigger
         self.write('AWGControl:RUN:IMMediate')
+        self.ready()
 
     def stop(self):
         """
@@ -255,7 +266,7 @@ class TektronixAWG5204(VisaInstrument):
         for ch in range(1, 5):
             self.write("OUTPut{}:STATe 0".format(ch))
 
-    def trigger(self):
+    def start_experiment(self):
         """
         Triggers the AWG to start playing
         """
@@ -308,6 +319,7 @@ class AlazarADC(ATS.AcquisitionController, Instrument):
         self.buffer = None
         self._samples = None
         self._thread = None
+        self._processed_data = None
         super().__init__(name, address, **kwargs)
         self.add_parameter("acquisition", get_cmd=self.do_acquisition)
 
@@ -362,6 +374,7 @@ class AlazarADC(ATS.AcquisitionController, Instrument):
 
     def arm(self, shots):
         import threading
+        import time
         self.update_acquisitionkwargs(mode='NPT',
                                       samples_per_record=self._samples,
                                       records_per_buffer=10,
@@ -371,6 +384,8 @@ class AlazarADC(ATS.AcquisitionController, Instrument):
         self.pre_start_capture()
         self._thread = threading.Thread(target=self.do_acquisition, args=())
         self._thread.start()
+        # TODO: Wait for armed flag instead of fixed time duration
+        time.sleep(1)
 
     def pre_start_capture(self):
         self.samples_per_record = self.adc.samples_per_record.get()
@@ -406,18 +421,6 @@ class AlazarADC(ATS.AcquisitionController, Instrument):
         See AcquisitionController
         :return:
         """
-        return self.buffer, self.buffers_per_acquisition, self.records_per_buffer, self.samples_per_record, self.time_array
-
-    def do_acquisition(self):
-        """
-        this method performs an acquisition, which is the get_cmd for the
-        acquisiion parameter of this instrument
-        :return:
-        """
-        self._get_alazar().acquire(acquisition_controller=self, **self.acquisitionkwargs)
-
-    def result(self, readout_if_frequencies):
-        self._thread.join()
 
         def signal_to_volt(signal, voltdiv):
             u12 = signal / 16
@@ -440,23 +443,32 @@ class AlazarADC(ATS.AcquisitionController, Instrument):
 
         recordA = signal_to_volt(recordA, 0.02)
         recordB = signal_to_volt(recordB, 0.02)
+        self._processed_data = np.array([recordA, recordB])
+        return self.buffer, self.buffers_per_acquisition, self.records_per_buffer, self.samples_per_record, self.time_array
 
-        res = np.zeros((len(readout_if_frequencies), 4))
-        for idx, readout_frequency in enumerate(readout_if_frequencies):
-            it = 0
-            qt = 0
-            for i in range(self.samples_per_record):
-                it += recordA[i] * np.cos(2 * np.pi * readout_frequency * self.time_array[i])
-                qt += recordB[i] * np.cos(2 * np.pi * readout_frequency * self.time_array[i])
-            phase = np.arctan2(qt, it) * 180 / np.pi
-            ampl = np.sqrt(it**2 + qt**2)
+    def do_acquisition(self):
+        """
+        this method performs an acquisition, which is the get_cmd for the
+        acquisiion parameter of this instrument
+        :return:
+        """
+        self._get_alazar().acquire(acquisition_controller=self, **self.acquisitionkwargs)
 
-            res[idx, 0] = it
-            res[idx, 1] = qt
-            res[idx, 2] = phase
-            res[idx, 3] = ampl
+    def result(self, readout_frequency):
+        self._thread.join()
+
+        # TODO: Pass ADC channel as arg instead of hardcoded channels
+        input_vec_I = self._processed_data[0]
+        input_vec_Q = self._processed_data[1]
+        it = 0
+        qt = 0
+        for i in range(self.samples_per_record):
+            it += input_vec_I[i] * np.cos(2 * np.pi * readout_frequency * self.time_array[i])
+            qt += input_vec_Q[i] * np.cos(2 * np.pi * readout_frequency * self.time_array[i])
+        phase = np.arctan2(qt, it) * 180 / np.pi
+        ampl = np.sqrt(it**2 + qt**2)
         
-        return res
+        return ampl, phase, it, qt
 
     def close(self):
         self._alazar.close()

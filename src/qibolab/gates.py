@@ -42,7 +42,8 @@ class H(AbstractHardwareGate, gates.H):
         return d
 
     def to_sequence(self, sequence):
-        sequence.add_u3(7 * math.pi / 2, math.pi, 0)
+        q = self.target_qubits[0]
+        sequence.add_u3(7 * math.pi / 2, math.pi, 0, q)
 
 
 class I(AbstractHardwareGate, gates.I):
@@ -90,7 +91,8 @@ class M(AbstractHardwareGate, gates.M):
         return m
 
     def to_sequence(self, sequence):
-        sequence.add_measurement()
+        for q in self.target_qubits:
+            sequence.add_measurement(q)
 
 
 class RX(AbstractHardwareGate, gates.RX):
@@ -127,10 +129,11 @@ class RX(AbstractHardwareGate, gates.RX):
         return m
 
     def to_sequence(self, sequence):
+        q = self.target_qubits[0]
         theta = self.parameters
         phi = - math.pi / 2
         lam = math.pi / 2
-        sequence.add_u3(theta, phi, lam)
+        sequence.add_u3(theta, phi, lam, q)
 
 
 class RY(AbstractHardwareGate, gates.RY):
@@ -142,10 +145,11 @@ class RY(AbstractHardwareGate, gates.RY):
         return RX.duration(self, qubit_config)
 
     def to_sequence(self, sequence):
+        q = self.target_qubits[0]
         theta = self.parameters
         phi = 0
         lam = 0
-        sequence.add_u3(theta, phi, lam)
+        sequence.add_u3(theta, phi, lam, q)
 
 
 class RZ(AbstractHardwareGate, gates.RZ):
