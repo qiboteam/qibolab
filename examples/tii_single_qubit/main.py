@@ -15,6 +15,7 @@ if __name__ == "__main__":
     with open("settings.yaml", "r") as file:
         settings = yaml.safe_load(file)
 
+    # TODO: Remove these hardcoded settings and update main.py code to match that of diagnostics.ipynb
     resonator_freq = 7798070000.0
     qubit_freq = 8726500000.0
     pi_pulse_length = 45
