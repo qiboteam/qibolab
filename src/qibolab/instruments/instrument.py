@@ -2,20 +2,19 @@ from abc import ABC, abstractmethod
 
 class Instrument(ABC):
     """
-    Parent class for all the instruments
+    Parent class for all the instruments connected via TCPIP.
     """
     def __init__(self, ip):
         self._connected = False
         self.ip = ip
         self._signature = f"{type(self).__name__}@{ip}"
-        self._driver = None
-        self._connected = False
+        self.device = None
     
     @abstractmethod
     def connect(self):
         """
         Establish connection with the instrument.
-        Initialize self._driver variable
+        Initialize self.device variable
         """
         raise NotImplementedError
 
