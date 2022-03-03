@@ -153,29 +153,27 @@ def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, high
 
 def run_resonator_spectroscopy(platform, mc, sequence, ro_pulse, 
                                lowres_width, lowres_step, highres_width, highres_step,
-                               precision_width, precision_step):
+                               precision_width, precision_step, precision_software_averages = 1):
     #Fast Sweep
-    platform.software_averages = 1
     scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
     mc.settables(platform.LO_qrm.device.frequency)
     mc.setpoints(scanrange + platform.LO_qrm.get_frequency())
     mc.gettables(Gettable(ROController(platform, sequence)))
     platform.start() 
     platform.LO_qcm.off()
-    dataset = mc.run("Resonator Spectroscopy Fast", soft_avg=platform.software_averages)
+    dataset = mc.run("Resonator Spectroscopy Fast", soft_avg=1)
     platform.stop()
     platform.LO_qrm.set_frequency(dataset['x0'].values[dataset['y0'].argmax().values])
     avg_min_voltage = np.mean(dataset['y0'].values[:25]) * 1e6
 
     # Precision Sweep
-    platform.software_averages = 1
     scanrange = np.arange(-precision_width, precision_width, precision_step)
     mc.settables(platform.LO_qrm.device.frequency)
     mc.setpoints(scanrange + platform.LO_qrm.get_frequency())
     mc.gettables(Gettable(ROController(platform, sequence)))
     platform.start() 
     platform.LO_qcm.off()
-    dataset = mc.run("Resonator Spectroscopy Precision", soft_avg=platform.software_averages)
+    dataset = mc.run("Resonator Spectroscopy Precision", soft_avg=precision_software_averages)
     platform.stop()
 
     smooth_dataset = savgol_filter(dataset['y0'].values, 25, 2)

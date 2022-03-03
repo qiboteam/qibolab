@@ -8,6 +8,7 @@ resonator_spectroscopy:
   highres_step: 200000
   precision_width: 2000000
   precision_step: 20000
+  precision_software_averages: 1
 
 resonator_spectroscopy_shifted:
   lowres_width: 30000000
