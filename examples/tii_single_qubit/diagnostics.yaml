@@ -2,33 +2,33 @@ name: tiiq_single_qubit_diagnostics
 description: Settings for diagnostic sweeps.
 
 resonator_spectroscopy:
-  lowres_width: 30000000
-  lowres_step: 2000000
-  highres_width: 5000000
-  highres_step: 200000
-  precision_width: 2000000
-  precision_step: 20000
-  precision_software_averages: 1
+  lowres_width: 30.e+6
+  lowres_step: 2.e+6
+  highres_width: 5.e+6
+  highres_step: 0.2e+6
+  precision_width: 2.e+6
+  precision_step: 0.02e+6
+  precision_software_averages: 2
 
 resonator_spectroscopy_shifted:
-  lowres_width: 30000000
-  lowres_step: 2000000
-  highres_width: 1000000
-  highres_step: 200000
-  precision_width: 500000
-  precision_step: 20000
+  lowres_width: 30.e+6
+  lowres_step: 2.e+6
+  highres_width: 1.e+6
+  highres_step: 0.2e+6
+  precision_width: 0.5e+6
+  precision_step: 0.02e+6
 
 punchout:
-  precision_width: 25000000
-  precision_step: 500000
+  precision_width: 25.e+6
+  precision_step: 0.5e+6
 
 qubit_spectroscopy:
-  fast_start: -500000000
-  fast_end: 300000000
-  fast_step: 2000000
-  precision_start: -30000000
-  precision_end: 30000000
-  precision_step: 500000
+  fast_start: -500.e+6
+  fast_end: 300.e+6
+  fast_step: 2.e+6
+  precision_start: -30.e+6
+  precision_end: 30.e+6
+  precision_step: 0.5e+6
 
 t1:
   delay_before_readout_start: 0
