@@ -152,7 +152,7 @@ def exp(x,*p) :
 def data_post(dir = "last"):
     if  dir == "last":
         #get last measured file
-        directory = '.\.data'
+        directory = '.\\.data'
         directory = max([os.path.join(directory,d) for d in os.listdir(directory)], key=os.path.getmtime)
         directory = max([os.path.join(directory,d) for d in os.listdir(directory)], key=os.path.getmtime)
         label = os.path.basename(os.path.normpath(directory))
