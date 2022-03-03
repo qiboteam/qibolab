@@ -59,6 +59,7 @@ class ICPlatform(AbstractPlatform):
                     inst = getattr(qi, params.get("type"))(**params.get("init_settings"))
                     self._instruments.append(inst)
 
+                    # Use yaml config to track instrument type
                     if params.get("lo"):
                         self._lo.append(inst)
 

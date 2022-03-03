@@ -3,9 +3,11 @@ import numpy as np
 from typing import List, Optional, Union
 from qcodes.instrument_drivers.AlazarTech import ATS
 
+# Frequency signal generation mode
 MODE_NYQUIST = 0
 MODE_MIXER = 1
 
+# Waveform functions
 def square(t, start, duration, frequency, amplitude, phase):
     x = amplitude * (1 * (start < t) & 1 * (start+duration > t))
     i = x * np.cos(2 * np.pi * frequency * t + phase[0])
@@ -22,6 +24,8 @@ def sine(t, start, duration, frequency, amplitude, phase):
     return wfm
 
 class Instrument:
+    """Abstract class for instrument methods.
+    """
     def connect(self):
         pass
 
@@ -35,23 +39,35 @@ class Instrument:
         pass
 
 class VisaInstrument:
+    """Instrument class that uses the VISA I/O standard. Implementation based on qcodes drivers.
+    """
     def __init__(self) -> None:
         self._visa_handle = None
 
     def connect(self, address: str, timeout: int = 10000) -> None:
+        """Connects to the instrument.
+        """
         rm = visa.ResourceManager()
         self._visa_handle = rm.open_resource(address, timeout=timeout)
 
     def write(self, msg: Union[bytes, str]) -> None:
+        """Writes a message to the instrument.
+        """
         self._visa_handle.write(msg)
 
     def query(self, msg: Union[bytes, str]) -> str:
+        """Writes a message to the instrument and read the response.
+        """
         return self._visa_handle.query(msg)
 
     def read(self) -> str:
+        """Waits for and reads the response from the instrument.
+        """
         return self._visa_handle.read()
 
     def close(self) -> None:
+        """Closes the instrument connection.
+        """
         self._visa_handle.close()
 
     def ready(self) -> None:
@@ -61,7 +77,8 @@ class VisaInstrument:
         self.query("*OPC?")
 
 class TektronixAWG5204(VisaInstrument):
-
+    """Driver for the Tektronix AWG5204 instrument.
+    """
     def __init__(self, name, address):
         VisaInstrument.__init__(self)
         self.connect(address)
@@ -93,9 +110,24 @@ class TektronixAWG5204(VisaInstrument):
               channel_phase: List[float] = [-0.10821, 0.00349066, 0.1850049, -0.0383972],
               **kwargs) -> None:
         """ 
-        Sets the channel offset, maximum amplitude, DAC resolution and sampling rate of the AWG
+        Setup the instrument and assigns constants to be used for later.
+
+        Arguments:
+            offset (float[4]): List of aplitude offset per channel in volts.
+            amplitude (float[4]): List of maximum peak-to-peak amplitude per channel in volts.
+            resolution (float): Bit resolution of the AWG DACs. Normally this is assigned per channel but the driver requires all channels to have the same resolution.
+            sampling_rate (float): Sampling rate of the AWG in S/s.
+            mode (int): Nyquist or mixer frequency generation selection.
+            sequence_delay (float): Time between each pulse sequence in seconds.
+            pulse_buffer (float): Pad time before the start of the pulse sequence and after the end of the pulse sequence in seconds.
+            adc_delay (float): Delay for the start of the ADC trigger signal in seconds.
+            qb_delay (float): Delay for the start of the qubit switch TTL signal in seconds.
+            ro_delay (float): Delay for the start of the readout switch TTL signal in seconds.
+            ip (str):  IP address for the device for waveform transfer.
+            channel_phase (float[4]): Phase in radians for each channel. Used primarily on mixer mode to promote target sideband.
         """
 
+        # Reset the instrument and assign amplitude, offset and resolution per channel
         self.reset()
         for idx in range(4):
             ch = idx + 1
@@ -104,6 +136,7 @@ class TektronixAWG5204(VisaInstrument):
             self.write("SOURCE{}:VOLTAGE:LEVEL:IMMEDIATE:OFFSET {}".format(ch, offset[ch - 1]))
             self.write("SOURce{}:DAC:RESolution {}".format(ch, resolution))
 
+        # Set the DAC modes and sampling rate
         self.write("SOUR1:DMOD NRZ")
         self.write("SOUR2:DMOD NRZ")
         self.write("CLOCk:SRATe {}".format(sampling_rate))
@@ -116,9 +149,9 @@ class TektronixAWG5204(VisaInstrument):
             self.write("SOUR3:DMOD NRZ")
             self.write("SOUR4:DMOD NRZ")
 
+        # Assigns constants to be used later
         self._mode = mode
         self._sampling_rate = sampling_rate
-        self._sequence_delay = 60
         self._pulse_buffer = pulse_buffer
         self._sequence_delay = sequence_delay
         self._qb_delay = qb_delay
@@ -129,12 +162,16 @@ class TektronixAWG5204(VisaInstrument):
         self.ready()
 
     def reset(self) -> None:
+        """Reset the instrument back to AWG mode.
+        """
         self.write("INSTrument:MODE AWG")
         self.write("CLOC:SOUR EFIX") # Set AWG to external reference, 10 MHz
         self.write("CLOC:OUTP:STAT OFF") # Disable clock output
         self.clear()
 
     def clear(self) -> None:
+        """Clear loaded waveform and sequences.
+        """
         self.write('SLISt:SEQuence:DELete ALL')
         self.write('WLISt:WAVeform:DELete ALL')
         self.ready()
@@ -142,6 +179,10 @@ class TektronixAWG5204(VisaInstrument):
     def translate(self, sequence, shots):
         """
         Translates the pulse sequence into Tektronix .seqx file
+
+        Arguments:
+            sequence (qibolab.pulses.Pulse[]): Array containing pulses to be fired on this instrument.
+            shots (int): Number of repetitions.
         """
 
         import broadbean as bb
@@ -192,6 +233,7 @@ class TektronixAWG5204(VisaInstrument):
         main_sequence.name = "MainSeq"
         main_sequence.setSR(self._sampling_rate)
 
+        # Dummy waveform on repeat to create delay between shots
         dummy = np.zeros(len(t))
         unit_delay = 1e-6
         sample_delay = np.zeros(int(unit_delay * self._sampling_rate))
@@ -199,12 +241,14 @@ class TektronixAWG5204(VisaInstrument):
         for ch in range(1, 5):
             delay_wfm.addArray(ch, sample_delay, self._sampling_rate, m1=sample_delay, m2=sample_delay)
         
+        # Add pulses into waveform
         waveform = bb.Element()
         waveform.addArray(1, wfm[0], self._sampling_rate, m1=wfm[4], m2=wfm[5])
         waveform.addArray(2, wfm[1], self._sampling_rate, m1=dummy, m2=wfm[6])
         waveform.addArray(3, wfm[2], self._sampling_rate, m1=dummy, m2=dummy)
         waveform.addArray(4, wfm[3], self._sampling_rate, m1=dummy, m2=dummy)
 
+        # Add subsequence to hold pulse waveforms and delay waveform
         subseq = bb.Sequence()
         subseq.name = "SubSeq"
         subseq.setSR(self._sampling_rate)
@@ -212,11 +256,14 @@ class TektronixAWG5204(VisaInstrument):
         subseq.addElement(2, delay_wfm)
         subseq.setSequencingNumberOfRepetitions(2, int(self._sequence_delay / unit_delay))
 
+        # Add sequence to play subsequence up to the number of shots.
         main_sequence.addSubSequence(1, subseq)
         main_sequence.setSequencingTriggerWait(1, 1)
         main_sequence.setSequencingNumberOfRepetitions(1, shots)
         main_sequence.setSequencingGoto(1, 1)
 
+        # Compile waveform into payload
+        # TODO: On fresh installation, fix bug in AWG70000A driver with regards to this method.
         payload = main_sequence.forge(apply_delays=False, apply_filters=False)
         payload = AWG70000A.make_SEQX_from_forged_sequence(payload, self._amplitude, "MainSeq")
 
@@ -274,18 +321,28 @@ class TektronixAWG5204(VisaInstrument):
 
 
 class MCAttenuator(Instrument):
+    """Driver for the MiniCircuit RCDAT-8000-30 variable attenuator.
+    """
 
     def __init__(self, name, address):
         self.name = name
         self._address = address
 
-    def setup(self, attenuation: int):
+    def setup(self, attenuation: float):
+        """Assigns the attenuation level on the attenuator.
+
+        Arguments:
+            attenuation(float): Attenuation setting in dB. Ranges from 0 to 35.
+        
+        """
         import urllib3
         http = urllib3.PoolManager()
         http.request('GET', 'http://{}/SETATT={}'.format(self._address, attenuation))
 
 
 class QuicSyn(VisaInstrument):
+    """Driver for the National Instrument QuicSyn Lite local oscillator.
+    """
 
     def __init__(self, name, address):
         VisaInstrument.__init__(self)
@@ -300,12 +357,18 @@ class QuicSyn(VisaInstrument):
         self.write('FREQ {0:f}Hz'.format(frequency))
 
     def start(self):
+        """Starts the instrument.
+        """
         self.write('0F01')
 
     def stop(self):
+        """Stops the instrument.
+        """
         self.write('0F00')
 
 class AlazarADC(ATS.AcquisitionController, Instrument):
+    """Driver for the AlazarTech ATS9371 ADC.
+    """
     def __init__(self, name="alz_cont", address="Alazar1", **kwargs):
         from qibolab.instruments.ATS9371 import AlazarTech_ATS9371
         
@@ -325,6 +388,13 @@ class AlazarADC(ATS.AcquisitionController, Instrument):
 
 
     def setup(self, samples):
+        """Setup the ADC.
+        
+        Arguments:
+            samples (int): Number of samples to be acquired.
+
+        TODO: Set trigger voltage as a variable.
+        """
         trigger_volts = 1
         input_range_volts = 2.5
         trigger_level_code = int(128 + 127 * trigger_volts / input_range_volts)
@@ -373,6 +443,13 @@ class AlazarADC(ATS.AcquisitionController, Instrument):
         self.acquisitionkwargs.update(**kwargs)
 
     def arm(self, shots):
+        """Arms the ADC for acqusition.
+
+        Arguments:
+            shots (int): Number of trigger signals to be expected.
+
+        TODO: Wait for ADC to be ready for acquisition instead of fixed time duration.
+        """
         import threading
         import time
         self.update_acquisitionkwargs(mode='NPT',
@@ -384,7 +461,6 @@ class AlazarADC(ATS.AcquisitionController, Instrument):
         self.pre_start_capture()
         self._thread = threading.Thread(target=self.do_acquisition, args=())
         self._thread.start()
-        # TODO: Wait for armed flag instead of fixed time duration
         time.sleep(1)
 
     def pre_start_capture(self):
@@ -455,6 +531,17 @@ class AlazarADC(ATS.AcquisitionController, Instrument):
         self._get_alazar().acquire(acquisition_controller=self, **self.acquisitionkwargs)
 
     def result(self, readout_frequency):
+        """Returns the processed signal result from the ADC.
+
+        Arguments:
+            readout_frequency (float): Frequency to be used for signal processing.
+
+        Returns:
+            ampl (float): Amplitude of the processed signal.
+            phase (float): Phase shift of the processed signal in degrees.
+            it (float): I component of the processed signal.
+            qt (float): Q component of the processed signal.
+        """
         self._thread.join()
 
         # TODO: Pass ADC channel as arg instead of hardcoded channels
@@ -471,5 +558,7 @@ class AlazarADC(ATS.AcquisitionController, Instrument):
         return ampl, phase, it, qt
 
     def close(self):
+        """Closes the instrument.        
+        """
         self._alazar.close()
         super().close()
