@@ -21,8 +21,9 @@ class Pulse:
         channel (int/str): Specifies the device that will execute this pulse.
             FPGA channel (int) for IcarusQ or qrm/qcm (str) for TIIq.
             May be useful to distinguish QRM and QCM pulses?
+        qubit (int): Target qubit ID
     """
-    def __init__(self, start, duration, amplitude, frequency, phase, shape, offset_i=0, offset_q=0, channel="qcm"):
+    def __init__(self, start, duration, amplitude, frequency, phase, shape, offset_i=0, offset_q=0, channel="qcm", qubit=0):
         # FIXME: Since the ``start`` value depends on the previous pulses we are
         # not sure if it should be a local property of the ``Pulse`` object
         self.start = start
@@ -34,6 +35,7 @@ class Pulse:
         self.channel = channel
         self.offset_i = offset_i
         self.offset_q = offset_q
+        self.qubit = qubit
 
     def serial(self):
         return "P({}, {}, {}, {}, {}, {}, {})".format(self.channel, self.start, self.duration,
@@ -63,8 +65,8 @@ class ReadoutPulse(Pulse):
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
 
-    def __init__(self, start, duration, amplitude, frequency, phase, shape, offset_i=0, offset_q=0, channel="qrm"):
-        super().__init__(start, duration, amplitude, frequency, phase, shape, offset_i, offset_q, channel)
+    def __init__(self, start, duration, amplitude, frequency, phase, shape, offset_i=0, offset_q=0, channel="qrm", qubit=0):
+        super().__init__(start, duration, amplitude, frequency, phase, shape, offset_i, offset_q, channel, qubit)
 
 
 class IQReadoutPulse(Pulse):

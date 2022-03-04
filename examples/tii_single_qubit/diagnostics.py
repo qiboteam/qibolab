@@ -17,7 +17,7 @@ def backup_config_file():
     import shutil
     import errno
     from datetime import datetime
-    original = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'qibolab', 'platforms', 'tiiq.yml'))
+    original = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'qibolab', 'runcards', 'tiiq.yml'))
     now = datetime.now()
     now = now.strftime("%d%m%Y%H%M%S")
     destination_file_name = "tiiq_" + now + ".yml" 
@@ -38,7 +38,7 @@ def backup_config_file():
 
 def get_config_parameter(dictID, dictID1, key):
     import os
-    calibration_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'qibolab', 'platforms', 'tiiq.yml'))
+    calibration_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'qibolab', 'runcards', 'tiiq.yml'))
     with open(calibration_path) as file:
         settings = yaml.safe_load(file)
     file.close()    
@@ -50,7 +50,7 @@ def get_config_parameter(dictID, dictID1, key):
 
 def save_config_parameter(dictID, dictID1, key, value):
     import os
-    calibration_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'qibolab', 'platforms', 'tiiq.yml'))
+    calibration_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'qibolab', 'runcards', 'tiiq.yml'))
     with open(calibration_path, "r") as file:
         settings = yaml.safe_load(file)
     file.close()
