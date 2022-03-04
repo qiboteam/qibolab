@@ -31,6 +31,8 @@ class Platform:
         self._LO_qrm = None
         self._LO_qcm = None
 
+        self.last_sequence = None
+
     def _check_connected(self):
         if not self.is_connected:
             raise_error(RuntimeError, "Cannot access instrument because it is not connected.")
@@ -204,14 +206,16 @@ class Platform:
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
         if nshots is None:
             nshots = self.hardware_avg
-
+        
         # Translate and upload instructions to instruments
-        if sequence.qcm_pulses:
-            waveforms, program = self._qcm.translate(sequence, self.delay_before_readout, nshots)
-            self._qcm.upload(waveforms, program, self.data_folder)
-        if sequence.qrm_pulses:
-            waveforms, program = self._qrm.translate(sequence, self.delay_before_readout, nshots)
-            self._qrm.upload(waveforms, program, self.data_folder)
+        if sequence is not self.last_sequence:
+            print('uploading waveforms and sequence')
+            if sequence.qcm_pulses:
+                waveforms, program = self._qcm.translate(sequence, self.delay_before_readout, nshots)
+                self._qcm.upload(waveforms, program, self.data_folder)
+            if sequence.qrm_pulses:
+                waveforms, program = self._qrm.translate(sequence, self.delay_before_readout, nshots)
+                self._qrm.upload(waveforms, program, self.data_folder)
 
         # Execute instructions
         if sequence.qcm_pulses:
@@ -222,6 +226,7 @@ class Platform:
         else:
             acquisition_results = None
 
+        self.last_sequence = sequence
         return acquisition_results
 
     def __call__(self, sequence, nshots=None):
