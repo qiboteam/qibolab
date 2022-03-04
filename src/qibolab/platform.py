@@ -2,7 +2,7 @@ import os
 import pathlib
 import yaml
 from qibo.config import raise_error, log
-
+import pickle
 
 class Platform:
     """Platform for controlling quantum devices.
@@ -31,7 +31,8 @@ class Platform:
         self._LO_qrm = None
         self._LO_qcm = None
 
-        self.last_sequence = None
+        self.last_qcm_pulses = None
+        self.last_qrm_pulses = None
 
     def _check_connected(self):
         if not self.is_connected:
@@ -208,12 +209,13 @@ class Platform:
             nshots = self.hardware_avg
         
         # Translate and upload instructions to instruments
-        if sequence is not self.last_sequence:
-            print('uploading waveforms and sequence')
-            if sequence.qcm_pulses:
+        
+        if sequence.qcm_pulses:
+            if self.last_qcm_pulses != pickle.dumps(sequence.qcm_pulses):
                 waveforms, program = self._qcm.translate(sequence, self.delay_before_readout, nshots)
                 self._qcm.upload(waveforms, program, self.data_folder)
-            if sequence.qrm_pulses:
+        if sequence.qrm_pulses:
+            if self.last_qrm_pulses != pickle.dumps(sequence.qcm_pulses):
                 waveforms, program = self._qrm.translate(sequence, self.delay_before_readout, nshots)
                 self._qrm.upload(waveforms, program, self.data_folder)
 
@@ -226,7 +228,9 @@ class Platform:
         else:
             acquisition_results = None
 
-        self.last_sequence = sequence
+        self.last_qcm_pulses = pickle.dumps(sequence.qcm_pulses)
+        self.last_qrm_pulses = pickle.dumps(sequence.qrm_pulses)
+
         return acquisition_results
 
     def __call__(self, sequence, nshots=None):
