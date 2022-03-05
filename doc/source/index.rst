@@ -4,13 +4,16 @@
    contain the root `toctree` directive.
 
 .. title::
-   qibolab's documentation
+   Qibolab's documentation
 
 ===================================
 Welcome to qibolab's documentation!
 ===================================
 
 This documentation refers to qibolab |release|.
+
+Contents
+========
 
 .. toctree::
     :maxdepth: 2
