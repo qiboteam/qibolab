@@ -19,9 +19,9 @@ methods. In particular the developer should:
 
     from qibolab import Platform
 
-    platform = Platform("<platform name>", "<path_to_runcard>")
+    platform = Platform("<platform_name>", "<path_to_runcard>")
     
-where ```<platform name>``` is the name of the in the yaml file and
+where ``<platform_name>`` is the name of the in the yaml file and
 ``<path_to_runcard>`` is the path to the yaml file.
 
 Here you have an example for the structure of the yaml file:
@@ -109,9 +109,9 @@ When including a new platform, you should include its:
 
 * **name:** The name of the new platform.
 * **nqubits:** Maximum number of qubits supported by the platform.
-* **description:** A brief description of the platform
-* **settings:** Platform settings
-* **instruments:** Dictionary of the instruments used by the platform with the setup parameters
+* **description:** A brief description of the platform.
+* **settings:** Platform settings.
+* **instruments:** Dictionary with the instruments used by the platform with their setup parameters.
 
 
 
