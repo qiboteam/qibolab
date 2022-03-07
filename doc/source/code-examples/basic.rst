@@ -64,4 +64,4 @@ specified.
     platform.disconnect()
 
 Remember to turn off the instruments and disconnect from the lab using the
-``stop()`` and ``disconnect()`` method of the platform.
+``stop()`` and ``disconnect()`` methods of the platform.
