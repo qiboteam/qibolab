@@ -17,6 +17,7 @@ class PulseSequence:
         self.qrm_pulses = []
         self.time = 0
         self.phase = 0
+        self.pulses = []
 
     def add(self, pulse):
         """Add a pulse to the sequence.
@@ -27,8 +28,9 @@ class PulseSequence:
             self.qrm_pulses.append(pulse)
         else:
             self.qcm_pulses.append(pulse)
+        self.pulses.append(pulse)
 
-    def add_u3(self, theta, phi, lam):
+    def add_u3(self, theta, phi, lam, qubit=0):
         """Add pulses that implement a U3 gate.
 
         Args:
@@ -36,23 +38,38 @@ class PulseSequence:
         """
         from qibolab.pulse_shapes import Gaussian
         # Pi/2 pulse from calibration
-        amplitude = K.platform.pi_pulse_amplitude
-        duration = K.platform.pi_pulse_duration // 2
-        frequency = K.platform.pi_pulse_frequency
-        delay = K.platform.delay_between_pulses
 
+        if hasattr(K.platform, "qubits"):
+            kwargs = K.platform.fetch_qubit_pi_pulse(qubit)
+        else:
+            kwargs = {
+                "amplitude": K.platform.pi_pulse_amplitude,
+                "duration": K.platform.pi_pulse_duration,
+                "frequency": K.platform.pi_pulse_frequency
+            }
+        kwargs["duration"] = kwargs["duration"] // 2
+        delay = K.platform.delay_between_pulses
+        duration = kwargs.get("duration")
+        kwargs["shape"] = Gaussian(duration / 5)
         self.phase += phi - np.pi / 2
-        self.add(pulses.Pulse(self.time, duration, amplitude, frequency, self.phase, Gaussian(duration / 5)))
+        kwargs["start"] = self.time
+        kwargs["phase"] = self.phase
+        self.add(pulses.Pulse(**kwargs))
         self.time += duration + delay
         self.phase += np.pi - theta
-        self.add(pulses.Pulse(self.time, duration, amplitude, frequency, self.phase, Gaussian(duration / 5)))
+        kwargs["start"] = self.time
+        kwargs["phase"] = self.phase
+        self.add(pulses.Pulse(**kwargs))       
         self.time += duration + delay
         self.phase += lam - np.pi / 2
 
-    def add_measurement(self):
+    def add_measurement(self, qubit=0):
         """Add measurement pulse."""
         from qibolab.pulse_shapes import Rectangular
-        kwargs = K.platform.readout_pulse
+        if hasattr(K.platform, "qubits"):
+            kwargs = K.platform.fetch_qubit_readout_pulse(qubit)
+        else:
+            kwargs = K.platform.readout_pulse
         kwargs["start"] = self.time + K.platform.delay_before_readout
         kwargs["phase"] = self.phase
         kwargs["shape"] = Rectangular()
@@ -80,10 +97,18 @@ class HardwareCircuit(circuit.Circuit):
         self.measurement_gate.to_sequence(sequence)
 
         # Execute the pulse sequence on the platform
+        K.platform.connect()
+        K.platform.setup()
         K.platform.start()
         readout = K.platform(sequence, nshots)
         K.platform.stop()
 
-        min_v = K.platform.min_readout_voltage
-        max_v = K.platform.max_readout_voltage
+        if hasattr(K.platform, "qubits"):
+            q = self.measurement_gate.target_qubits[0]
+            qubit = K.platform.fetch_qubit(q)
+            min_v = qubit.min_readout_voltage
+            max_v = qubit.max_readout_voltage
+        else:
+            min_v = K.platform.min_readout_voltage
+            max_v = K.platform.max_readout_voltage
         return states.HardwareState.from_readout(readout, min_v, max_v)
