@@ -3,6 +3,16 @@
 Platforms
 =========
 
+Qibolab provides support to different quantum laboratories.
+
+Each lab is implemented using a custom ``Platform`` class
+which inherits the :class:`qibolab.platforms.abstract.AbstractPlatform`
+which implements basic features including how to connect to the platform,
+how to start the instruments and how to run your model on the platform.
+Therefore, the ``Platform`` enables the user to interface with all
+the required lab instruments at the same time with minimum effort.
+
+
 Abstract platform
 """""""""""""""""
 
@@ -26,10 +36,19 @@ ICPlatform
 
 _______________________
 
-.. _pulse:
-
 Pulses
 ======
+
+In Qibolab we have a dedicated API to pulses and pulses sequence, which
+at the moment works for both qblox and FPGAs setups.
+
+The main component of the API is the :class:`qibolab.pulses.Pulse` object,
+which enables the user to code a pulse with specific parameters. We provide
+also a special object for the ``ReadoutPulse`` given its importance when dealing
+with a quantum hardware. Moreover, we supports different kinds of :ref:`pulseshape`.
+
+The :class:`qibolab.circuit.PulseSequence` class enables to combine different pulses
+into a sequence through the ``add`` method.
 
 Basic Pulse
 """""""""""
@@ -53,8 +72,10 @@ Pulse Sequence
    :members:
    :member-order: bysource
 
-Shape of the Pulses
-"""""""""""""""""""
+.. _pulseshape:
+
+Pulse shape
+"""""""""""
 
 Rectangular
 -----------
@@ -86,6 +107,9 @@ SWIPHT
 
 Instruments supported
 =====================
+
+Qibolab currently supports different instruments including
+local oscillators, qblox and FPGAs.
 
 Qblox
 """""
