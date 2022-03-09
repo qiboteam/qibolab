@@ -44,6 +44,7 @@ QCM_init_settings:
     ref_clock: external
     sequencer: 0
     sync_en: true
+    is_cluster: true
 QCM_settings:
     gain: 0.1
     initial_delay: 0
@@ -56,6 +57,7 @@ QRM_init_settings:
     ref_clock: external
     sequencer: 0
     sync_en: true
+    is_cluster: true
 QRM_settings:
     gain: 0.3
     initial_delay: 0
