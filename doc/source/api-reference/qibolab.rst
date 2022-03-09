@@ -144,7 +144,7 @@ MiniCircuit RCDAT-8000-30
 FPGA
 """"
 
-ATS9373
+ATS9371
 -------
 
 .. autoclass:: qibolab.instruments.ATS9371.AlazarTech_ATS9371
