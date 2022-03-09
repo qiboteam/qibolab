@@ -41,7 +41,8 @@ also takes care of loading the runcard containing all the calibration
 settings for that specific platform.
 
 After connecting and setting up the platform's instruments using the
-``connect()`` and ``setup()`` methods, the ``execute`` method will execute
+``connect()`` and ``setup()`` methods, the ``start`` method will turn on
+the local oscillators and the ``execute`` method will execute
 the previous defined pulse sequence according to the number of shots ``nshots``
 specified.
 
@@ -51,12 +52,13 @@ specified.
 
     # Define platform and load specific runcard
     platform = Platform("tiiq")
-    # Connect to the lab instruments
+    # Connects to lab instruments using the details specified in the calibration settings.
     platform.connect()
-    # Configure instruments using runcard settings
+    # Configures instruments using the loaded calibration settings.
     platform.setup()
-    # Execute pulse sequence with a given number of shots
-    # and retrieve the results
+    # Turns on the local oscillators
+    platform.start()
+    # Executes a pulse sequence.
     results = platform.execute(ps, nshots=10)
     # Turn off lab instruments
     platform.stop()
