@@ -46,7 +46,6 @@ def test_pulsar_setup():
     pass
 
 
-
 def test_translate_single_pulse():
     from qibolab.pulses import Pulse
     from qibolab.pulse_shapes import Gaussian
@@ -64,7 +63,6 @@ def test_translate_single_pulse():
     assert_regression_fixture(modQ.get("data"), "single_pulse_waveform_modQ.txt")
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize("device", ["QCM", "QRM"])
 def test_generate_waveforms(device):
     from qibolab.pulses import Pulse
@@ -85,8 +83,8 @@ def test_generate_waveforms(device):
     settings = load_runcard("tiiq")
     pulsar = getattr(qblox, f"Pulsar{device}")(**settings.get(f"{device}_init_settings"))
     waveforms = pulsar.generate_waveforms(pulses)
-    modI, modQ = waveform.get(f"modI_{device}"), waveform.get(f"modQ_{device}")
+    modI, modQ = waveforms.get(f"modI_{pulsar.name}"), waveforms.get(f"modQ_{pulsar.name}")
     assert modI.get("index") == 0
     assert modQ.get("index") == 1
-    assert_regression_fixture(modI.get("data"), "generate_waveforms_modI.txt")
-    assert_regression_fixture(modQ.get("data"), "generate_waveforms_modQ.txt")
+    assert_regression_fixture(modI.get("data"), f"generate_waveforms_modI_{pulsar.name}.txt")
+    assert_regression_fixture(modQ.get("data"), f"generate_waveforms_modQ_{pulsar.name}.txt")
