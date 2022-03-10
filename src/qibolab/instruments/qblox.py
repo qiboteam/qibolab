@@ -58,7 +58,8 @@ class GenericPulsar(ABC):
         self.initial_delay = initial_delay
         self.repetition_duration = repetition_duration
 
-    def _translate_single_pulse(self, pulse):
+    @staticmethod
+    def _translate_single_pulse(pulse):
         """Translates a single pulse to the instrument waveform format.
 
         Helper method for :meth:`qibolab.instruments.qblox.GenericPulsar.generate_waveforms`.
