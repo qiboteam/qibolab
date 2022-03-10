@@ -141,7 +141,7 @@ def test_upload_and_play_sequence(device):
         if device == "QCM":
             pulsar.play_sequence()
         else:
-            pulsar.play_sequence_and_acquire(self.qrm_pulses[-1])
+            pulsar.play_sequence_and_acquire(sequence.qrm_pulses[-1])
     else:
         with pytest.raises(AttributeError):
             pulsar.upload(waveforms, program, "./data")

@@ -13,7 +13,7 @@ class QibolabBackend(NumpyBackend): # pragma: no cover
         self.name = "qibolab"
         self.custom_gates = True
         self.is_hardware = True
-        self.platform = self.set_platform(os.environ.get("QIBOLAB_PLATFORM", "tiiq"))
+        self.set_platform(os.environ.get("QIBOLAB_PLATFORM", "tiiq"))
 
     def set_platform(self, platform):
         self.platform = Platform(platform)
