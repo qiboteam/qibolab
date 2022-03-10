@@ -10,7 +10,7 @@ from quantify_core.data.handling import set_datadir
 from scipy.signal import savgol_filter
 
 # TODO: Check why this set_datadir is needed
-set_datadir(pathlib.Path(__file__).parent / "data")
+set_datadir(pathlib.Path(__file__).parent / ".data")
 
 def backup_config_file():
     import os
@@ -74,7 +74,7 @@ def plot(smooth_dataset, dataset, label, type):
         ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
         ax.title.set_text(label)
         ax.plot(dataset['x0'].values[smooth_dataset.argmax()], smooth_dataset[smooth_dataset.argmax()], 'o', color='C2')
-        plt.savefig(label+".pdf")
+        plt.savefig("\\.data\\"+label+".pdf")
         return
 
     if (type == 1): #qubit spec, rabi, ramsey, t1 plots
@@ -83,7 +83,7 @@ def plot(smooth_dataset, dataset, label, type):
         ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
         ax.title.set_text(label)
         ax.plot(dataset['x0'].values[smooth_dataset.argmin()], smooth_dataset[smooth_dataset.argmin()], 'o', color='C2')
-        plt.savefig(label+".pdf")
+        plt.savefig("\\.data\\"+label+".pdf")
         return
 
 def create_measurement_control(name):
