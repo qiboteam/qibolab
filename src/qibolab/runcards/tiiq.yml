@@ -20,7 +20,7 @@ settings:
         frequency: 20000000.0
         offset_i: 0
         offset_q: 0
-    repetition_duration: 100000
+    repetition_duration: 50000
     resonator_freq: 7795479856.113952
     resonator_spectroscopy_avg_min_ro_voltage: 35.40356363831186
     resonator_spectroscopy_max_ro_voltage: 627.3151968914929
@@ -47,7 +47,7 @@ QCM_init_settings:
 QCM_settings:
     gain: 0.1
     initial_delay: 0
-    repetition_duration: 100000
+    repetition_duration: 50000
 QRM_init_settings:
     acq_trigger_mode: sequencer
     hardware_avg_en: true
@@ -61,6 +61,6 @@ QRM_settings:
     initial_delay: 0
     integration_length: 1500
     mode: ssb
-    repetition_duration: 100000
+    repetition_duration: 50000
     sampling_rate: 1000000000.0
     start_sample: 130

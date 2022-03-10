@@ -1,6 +1,6 @@
 from qibo.config import raise_error, log
 from qibolab.platforms.abstract import AbstractPlatform
-
+import pickle
 
 class QBloxPlatform(AbstractPlatform):
     """Platform for controlling quantum devices using QCM and QRM."""
@@ -11,6 +11,9 @@ class QBloxPlatform(AbstractPlatform):
         self._LO_qrm = None
         self._LO_qcm = None
         super().__init__(name, runcard)
+
+        self.last_qcm_pulses = None
+        self.last_qrm_pulses = None
 
     @property
     def qrm(self):
@@ -110,13 +113,13 @@ class QBloxPlatform(AbstractPlatform):
 
         # Translate and upload instructions to instruments
         if sequence.qcm_pulses:
-            waveforms, program = self._qcm.translate(
-                sequence, self.delay_before_readout, nshots)
-            self._qcm.upload(waveforms, program, self.data_folder)
+            if self.last_qcm_pulses != pickle.dumps(sequence.qcm_pulses):
+                waveforms, program = self._qcm.translate(sequence, self.delay_before_readout, nshots)
+                self._qcm.upload(waveforms, program, self.data_folder)
         if sequence.qrm_pulses:
-            waveforms, program = self._qrm.translate(
-                sequence, self.delay_before_readout, nshots)
-            self._qrm.upload(waveforms, program, self.data_folder)
+            if self.last_qrm_pulses != pickle.dumps(sequence.qcm_pulses):
+                waveforms, program = self._qrm.translate(sequence, self.delay_before_readout, nshots)
+                self._qrm.upload(waveforms, program, self.data_folder)
 
         # Execute instructions
         if sequence.qcm_pulses:
@@ -127,5 +130,9 @@ class QBloxPlatform(AbstractPlatform):
                 sequence.qrm_pulses[0])
         else:
             acquisition_results = None
+
+        self.last_qcm_pulses = pickle.dumps(sequence.qcm_pulses)
+        self.last_qrm_pulses = pickle.dumps(sequence.qrm_pulses)
+
 
         return acquisition_results
