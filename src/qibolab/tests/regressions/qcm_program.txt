@@ -1,0 +1,18 @@
+
+            move    100,R0
+            nop
+            wait_sync 4          # Synchronize sequencers over multiple instruments
+        loop:
+            
+            play      0,1,0
+            
+            wait      16380
+            move      83,R1
+            nop
+            repeatloop:
+                wait      1000
+                loop      R1,@repeatloop
+            wait      620
+            loop    R0,@loop
+            stop
+        

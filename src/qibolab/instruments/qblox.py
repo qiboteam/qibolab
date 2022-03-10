@@ -38,12 +38,15 @@ class GenericPulsar(ABC):
     @gain.setter
     def gain(self, gain):
         self._gain = gain
-        if self.sequencer == 1:
-            self.device.sequencer1_gain_awg_path0(gain)
-            self.device.sequencer1_gain_awg_path1(gain)
+        if self._connected:
+            if self.sequencer == 1:
+                self.device.sequencer1_gain_awg_path0(gain)
+                self.device.sequencer1_gain_awg_path1(gain)
+            else:
+                self.device.sequencer0_gain_awg_path0(gain)
+                self.device.sequencer0_gain_awg_path1(gain)
         else:
-            self.device.sequencer0_gain_awg_path0(gain)
-            self.device.sequencer0_gain_awg_path1(gain)
+            logger.warning("Cannot set gain because device is not connected.")
 
     def setup(self, gain, initial_delay, repetition_duration):
         """Sets calibration setting to QBlox instruments.
