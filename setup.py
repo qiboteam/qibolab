@@ -32,9 +32,9 @@ setup(
     author="The Qibo team",
     author_email="",
     url="https://github.com/qiboteam/qibolab",
-    packages=find_packages("src"),
+    packages=find_packages("src") + ["qibolab.runcards"],
     package_dir={"": "src"},
-    package_data={"": ["*.json", "*.npy"]},
+    package_data={"": ["*.yml", "*.yaml", "*.txt"]},
     zip_safe=False,
     classifiers=[
         "Programming Language :: Python :: 3",
