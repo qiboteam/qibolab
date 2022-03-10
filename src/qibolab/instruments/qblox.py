@@ -51,8 +51,8 @@ class GenericPulsar(ABC):
 
         Args:
             gain (float):
-            initial_delay ():
-            repetition_duration ():
+            initial_delay (float):
+            repetition_duration (float):
         """
         self.gain = gain
         self.initial_delay = initial_delay

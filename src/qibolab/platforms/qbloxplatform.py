@@ -3,7 +3,16 @@ from qibolab.platforms.abstract import AbstractPlatform
 
 
 class QBloxPlatform(AbstractPlatform):
-    """Platform for controlling quantum devices using QCM and QRM."""
+    """Platform for controlling quantum devices using QCM and QRM.
+
+    Example:
+        .. code-block:: python
+
+            from qibolab import Platform
+
+            platform = Platform("tiiq")
+
+    """
 
     def __init__(self, name, runcard):
         self._qrm = None

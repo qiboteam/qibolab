@@ -21,8 +21,37 @@ class PulseSequence:
 
     def add(self, pulse):
         """Add a pulse to the sequence.
+
         Args:
-            pulse (`qibolab.pulses.Pulse`): Pulse object to add.
+            pulse (:class:`qibolab.pulses.Pulse`): Pulse object to add.
+
+        Example:
+            .. code-block:: python
+
+                from qibolab.pulses import Pulse, ReadoutPulse
+                from qibolab.circuit import PulseSequence
+                from qibolab.pulse_shapes import Rectangular, Gaussian
+
+                # define two arbitrary pulses
+                pulse1 = Pulse(start=0,
+                               frequency=200000000.0,
+                               amplitude=0.3,
+                               duration=60,
+                               phase=0,
+                               shape=Gaussian(60 / 5)))
+                pulse2 = ReadoutPulse(start=70,
+                                      frequency=20000000.0,
+                                      amplitude=0.5,
+                                      duration=3000,
+                                      phase=0,
+                                      shape=Rectangular()))
+
+                # define the pulse sequence
+                sequence = PulseSequence()
+
+                # add pulses to the pulse sequence
+                sequence.add(pulse1)
+                sequence.add(pulse2)
         """
         if pulse.channel == "qrm" or pulse.channel == 1:
             self.qrm_pulses.append(pulse)
