@@ -10,7 +10,7 @@ from quantify_core.data.handling import set_datadir
 from scipy.signal import savgol_filter
 
 # TODO: Check why this set_datadir is needed
-set_datadir(pathlib.Path(__file__).parent / ".data")
+set_datadir(pathlib.Path(__file__).parent / ".data\\quantify")
 
 def backup_config_file():
     import os
@@ -21,7 +21,7 @@ def backup_config_file():
     now = datetime.now()
     now = now.strftime("%d%m%Y%H%M%S")
     destination_file_name = "tiiq_" + now + ".yml" 
-    target = os.path.realpath(os.path.join(os.path.dirname(__file__), 'settings_backups', destination_file_name))
+    target = os.path.realpath(os.path.join(os.path.dirname(__file__), '.data\\settings_backups', destination_file_name))
 
     try:
         print("Copying file: " + original)
