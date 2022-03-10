@@ -49,12 +49,22 @@ def load_runcard(name):
     return settings
 
 
-@pytest.mark.parametrize("device", ["QCM", "QRM"])
-def test_pulsar_init_and_setup(device):
-    """Tests if Pulsars can be initialized and setup."""
+def get_pulsar(device):
+    """Initializes and setups a pulsar for testing.
+    
+    Args:
+        device (str): 'QCM' or 'QRM'.
+    """
     settings = load_runcard("tiiq")
     pulsar = getattr(qblox, f"Pulsar{device}")(**settings.get(f"{device}_init_settings"))
     pulsar.setup(**settings.get(f"{device}_settings"))
+    return pulsar
+
+
+@pytest.mark.parametrize("device", ["QCM", "QRM"])
+def test_pulsar_init_and_setup(device):
+    """Tests if Pulsars can be initialized and setup."""
+    pulsar = get_pulsar(device)
     pulsar.close()
 
 
@@ -75,9 +85,8 @@ def test_translate_single_pulse():
     assert_regression_array(modQ.get("data"), "single_pulse_waveform_modQ.txt")
 
 
-@pytest.mark.parametrize("device", ["QCM", "QRM"])
-def test_translate(device):
-    """Tests ``generate_waveforms`` and ``generate_program``."""
+def generate_pulse_sequence():
+    """Generates a dummy pulse sequence to be used for testing pulsar methods."""
     from qibolab.pulses import Pulse, ReadoutPulse
     from qibolab.pulse_shapes import Gaussian, Rectangular
     from qibolab.circuit import PulseSequence
@@ -100,10 +109,14 @@ def test_translate(device):
                               duration=3000,
                               phase=0,
                               shape=Rectangular()))
+    return sequence
 
-    settings = load_runcard("tiiq")
-    pulsar = getattr(qblox, f"Pulsar{device}")(**settings.get(f"{device}_init_settings"))
-    pulsar.setup(**settings.get(f"{device}_settings"))
+
+@pytest.mark.parametrize("device", ["QCM", "QRM"])
+def test_translate(device):
+    """Tests ``generate_waveforms`` and ``generate_program``."""
+    pulsar = get_pulsar(device)
+    sequence = generate_pulse_sequence()
     waveforms, program = pulsar.translate(sequence, 0, 100)
     pulsar.close()
 
@@ -113,3 +126,28 @@ def test_translate(device):
     assert_regression_array(modI.get("data"), f"{pulsar.name}_waveforms_modI.txt")
     assert_regression_array(modQ.get("data"), f"{pulsar.name}_waveforms_modQ.txt")
     assert_regression_str(program, f"{pulsar.name}_program.txt")
+
+
+@pytest.mark.parametrize("device", ["QCM", "QRM"])
+def test_upload_and_play_sequence(device):
+    """Tests uploading and executing waveforms in pulsars."""
+    import shutil
+    pulsar = get_pulsar(device)
+    sequence = generate_pulse_sequence()
+    waveforms, program = pulsar.translate(sequence, 0, 100)
+
+    if pulsar._connected:
+        pulsar.upload(waveforms, program, "./data")
+        if device == "QCM":
+            pulsar.play_sequence()
+        else:
+            pulsar.play_sequence_and_acquire(self.qrm_pulses[-1])
+    else:
+        with pytest.raises(AttributeError):
+            pulsar.upload(waveforms, program, "./data")
+
+    pulsar.close()
+    shutil.rmtree("./data")
+
+
+# TODO: Test ``PulsarQRM._demodulate_and_integrate`` (requires some output from execution)
