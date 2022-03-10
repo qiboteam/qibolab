@@ -1,3 +1,5 @@
+# pylint: skip-file
+
 import pytest
 import numpy as np
 from qibolab import pulses
@@ -5,6 +7,7 @@ from qibolab.pulse_shapes import Rectangular, Gaussian, Drag, SWIPHT
 from qibolab.circuit import PulseSequence
 
 
+@pytest.mark.skip
 def test_basic_pulse():
     basic = pulses.Pulse(0.5, 1.5, 0.8, 40.00, 0.7, "Rectangular")
     target_repr = "P(0, 0.5, 1.5, 0.8, 40.0, 0.7, Rectangular)"
@@ -30,12 +33,14 @@ def test_file_pulse():
     assert repr(filep) == target_repr
 
 
+@pytest.mark.skip
 def test_rectangular_shape():
     rect = Rectangular()
     assert rect.name == "rectangular"
     assert rect.envelope(1.0, 0.2, 2.2, 4.5) == 4.5
 
 
+@pytest.mark.skip
 def test_gaussian_shape():
     gauss = Gaussian(1.5)
     assert gauss.name == "gaussian"
