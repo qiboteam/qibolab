@@ -27,7 +27,7 @@ class GenericPulsar(ABC):
         self.weights = {}
 
     @abstractmethod
-    def connect(self, label, ip):
+    def connect(self, label, ip):  # pragma: no cover
         """Connects to the instruments."""
         raise_error(NotImplementedError)
 
@@ -166,7 +166,7 @@ class GenericPulsar(ABC):
         return program
 
     @abstractmethod
-    def translate(self, sequence, nshots):
+    def translate(self, sequence, nshots):  # pragma: no cover
         """Translates an abstract pulse sequence to QBlox format.
 
         Args:

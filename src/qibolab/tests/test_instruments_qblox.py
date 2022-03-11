@@ -1,9 +1,9 @@
 import os
 import pathlib
 import pytest
-import yaml
 import numpy as np
 from qibolab.instruments import qblox
+from qibolab.tests.utils import load_runcard, generate_pulse_sequence
 
 REGRESSION_FOLDER = pathlib.Path(__file__).with_name("regressions")
 
@@ -42,13 +42,6 @@ def assert_regression_str(text, filename):
             file.write(text)
 
 
-def load_runcard(name):
-    runcard = pathlib.Path(__file__).parent.parent / "runcards" / f"{name}.yml"
-    with open(runcard, "r") as file:
-        settings = yaml.safe_load(file)
-    return settings
-
-
 def get_pulsar(device):
     """Initializes and setups a pulsar for testing.
     
@@ -83,33 +76,6 @@ def test_translate_single_pulse():
     assert modQ.get("index") == 1
     assert_regression_array(modI.get("data"), "single_pulse_waveform_modI.txt")
     assert_regression_array(modQ.get("data"), "single_pulse_waveform_modQ.txt")
-
-
-def generate_pulse_sequence():
-    """Generates a dummy pulse sequence to be used for testing pulsar methods."""
-    from qibolab.pulses import Pulse, ReadoutPulse
-    from qibolab.pulse_shapes import Gaussian, Rectangular
-    from qibolab.circuit import PulseSequence
-    sequence = PulseSequence()
-    sequence.add(Pulse(start=0,
-                       frequency=200000000.0,
-                        amplitude=0.3,
-                        duration=60,
-                        phase=0,
-                        shape=Gaussian(60 / 5)))
-    sequence.add(Pulse(start=65,
-                       frequency=200000000.0,
-                       amplitude=0.8,
-                       duration=25,
-                       phase=0,
-                       shape=Gaussian(25 / 5)))
-    sequence.add(ReadoutPulse(start=90,
-                              frequency=20000000.0,
-                              amplitude=0.5,
-                              duration=3000,
-                              phase=0,
-                              shape=Rectangular()))
-    return sequence
 
 
 @pytest.mark.parametrize("device", ["QCM", "QRM"])
