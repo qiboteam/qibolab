@@ -54,8 +54,8 @@ def test_qbloxplatform_start_stop():
     platform = QBloxPlatform("tiiq", runcard)
     platform.connect()
     platform.setup()
-    platform.on()
-    platform.off()
+    platform.start()
+    platform.stop()
     platform.disconnect()
 
 
@@ -73,8 +73,8 @@ def test_qbloxplatform_execute():
     platform = QBloxPlatform("tiiq", runcard)
     platform.connect()
     platform.setup()
-    platform.on()
+    platform.start()
     sequence = generate_pulse_sequence()
     results = platform(sequence, nshots=100)
-    platform.off()
+    platform.stop()
     platform.disconnect()
