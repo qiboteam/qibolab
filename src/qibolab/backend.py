@@ -13,6 +13,7 @@ class QibolabBackend(NumpyBackend): # pragma: no cover
         self.name = "qibolab"
         self.custom_gates = True
         self.is_hardware = True
+        self.platform = None
         self.set_platform(os.environ.get("QIBOLAB_PLATFORM", "tiiq"))
 
     def set_platform(self, platform):
@@ -35,10 +36,10 @@ class QibolabBackend(NumpyBackend): # pragma: no cover
         from qibolab import gates
         return getattr(gates, cls.__name__)(*args, **kwargs)
 
-    def create_einsum_cache(self, qubits, nqubits, ncontrol=None): # pragma: no cover
+    def create_einsum_cache(self, qubits, nqubits, ncontrol=None):  # pragma: no cover
         raise_error(NotImplementedError, "`create_einsum_cache` method is "
                                          "not required for hardware backends.")
 
-    def einsum_call(self, cache, state, matrix): # pragma: no cover
+    def einsum_call(self, cache, state, matrix):  # pragma: no cover
         raise_error(NotImplementedError, "`einsum_call` method is not required "
                                          "for hardware backends.")
