@@ -117,7 +117,7 @@ class QBloxPlatform(AbstractPlatform):
                 waveforms, program = self._qcm.translate(sequence, self.delay_before_readout, nshots)
                 self._qcm.upload(waveforms, program, self.data_folder)
         if sequence.qrm_pulses:
-            if self.last_qrm_pulses != pickle.dumps(sequence.qcm_pulses):
+            if self.last_qrm_pulses != pickle.dumps(sequence.qrm_pulses):
                 waveforms, program = self._qrm.translate(sequence, self.delay_before_readout, nshots)
                 self._qrm.upload(waveforms, program, self.data_folder)
 
