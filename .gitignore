@@ -131,4 +131,4 @@ dmypy.json
 
 
 # Qibolab data generated during benchmarking 
-.data/
+data/
