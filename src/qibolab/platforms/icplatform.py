@@ -36,7 +36,16 @@ class Qubit:
 
 
 class ICPlatform(AbstractPlatform):
-    """Platform for controlling quantum devices with IC."""
+    """Platform for controlling quantum devices with IC.
+
+    Example:
+        .. code-block:: python
+
+            from qibolab import Platform
+
+            platform = Platform("icarusq")
+
+    """
 
     def __init__(self, name, runcard):
         self._instruments = []
