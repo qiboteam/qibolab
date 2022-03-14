@@ -3,8 +3,13 @@ Installation instructions
 
 .. _installing-qibolab:
 
-qibolab
+Qibolab
 ^^^^^^^
+Installing with pip
+"""""""""""""""""""
+
+Installing with conda
+"""""""""""""""""""""
 
 Installing from source
 """"""""""""""""""""""
@@ -23,12 +28,24 @@ with:
 
 _______________________
 
-.. _installing-tiiq:
+.. _Platform:
 
-tiiq
-^^^^
+Platforms supported
+^^^^^^^^^^^^^^^^^^^
 
-In order to install the dependencies for the ``tiiq`` platform
+
+Qibolab already supports the following platforms:
+
+* Tiiq
+* IcarusQ
+
+In the following sections we provide the specific installation instructions
+to be ready to use Qibolab on the platform chosen.
+
+Tiiq
+""""
+
+In order to install the dependencies for the ``Tiiq`` platform
 use the following command:
 
 
@@ -44,5 +61,39 @@ use the following command:
       .. code-block::
 
             pip install ".[tiiq]" # or pip install -e ".[tiiq]"
+
+
+After that all you need to do to start using the ``Tiiq`` platform
+is the following:
+
+.. code-block:: python
+
+      from qibolab import Platform
+
+      platform = Platform("tiiq")
+
+For more detailed applications see the :ref:`Code example <examples>` section.
+
+IcarusQ
+"""""""
+
+In order to install the dependencies for the ``IcarusQ`` platform
+use the following command:
+
+
+.. code-block::
+
+      pip install .[tiiq] # or pip install -e .[tiiq]
+
+After that all you need to do to start using the ``IcarusQ`` platform
+is the following:
+
+.. code-block:: python
+
+      from qibolab import Platform
+
+      platform = Platform("icarusq")
+
+For more detailed applications see the :ref:`Code example <examples>` section.
 
 
