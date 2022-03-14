@@ -1,3 +1,4 @@
+import pathlib
 import numpy as np
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
@@ -77,7 +78,7 @@ def lorentzian_fit(label, peak):
     ax.set_xlabel('Frequency (GHz)')
     ax.legend()
     plt.show()
-    fig.savefig('Resonator_spec.pdf',format='pdf')
+    fig.savefig(pathlib.Path("data") / 'Resonator_Spectroscopy.pdf',format='pdf')
     #fit_res.plot_fit(show_init=True)
     return f0, BW, Q
 
@@ -152,14 +153,13 @@ def exp(x,*p) :
 def data_post(dir = "last"):
     if  dir == "last":
         #get last measured file
-        directory = '.\data'
-        directory = max([os.path.join(directory,d) for d in os.listdir(directory)], key=os.path.getmtime)
-        directory = max([os.path.join(directory,d) for d in os.listdir(directory)], key=os.path.getmtime)
+        directory = 'data/quantify'
+        directory = max([subdir for subdir, dirs, files in os.walk(directory)], key=os.path.getmtime)
         label = os.path.basename(os.path.normpath(directory))
     else:
         label = dir
 
-    set_datadir('data')
+    set_datadir('data/quantify')
     d = BaseAnalysis(tuid=label)
     d.run()
     data = d.dataset
