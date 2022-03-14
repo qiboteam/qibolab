@@ -15,7 +15,7 @@ class AbstractPlatform(ABC):
         log.info(f"Loading platform {name}")
         log.info(f"Loading runcard {runcard}")
         self.name = name
-
+        self.runcard = runcard
         # Load calibration settings
         with open(runcard, "r") as file:
             self._settings = yaml.safe_load(file)
@@ -26,6 +26,15 @@ class AbstractPlatform(ABC):
     def _check_connected(self):
         if not self.is_connected:
             raise_error(RuntimeError, "Cannot access instrument because it is not connected.")
+
+    def reload_settings(self):
+        with open(self.runcard, "r") as file:
+            self._settings = yaml.safe_load(file)
+        self.setup()
+
+    @property
+    def settings(self):
+        return self._settings
 
     @property
     def data_folder(self):
