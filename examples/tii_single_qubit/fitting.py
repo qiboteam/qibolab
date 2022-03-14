@@ -153,13 +153,13 @@ def exp(x,*p) :
 def data_post(dir = "last"):
     if  dir == "last":
         #get last measured file
-        directory = 'data' / 'quantify'
+        directory = 'data/quantify'
         directory = max([subdir for subdir, dirs, files in os.walk(directory)], key=os.path.getmtime)
         label = os.path.basename(os.path.normpath(directory))
     else:
         label = dir
 
-    set_datadir('data' / 'quantify')
+    set_datadir('data/quantify')
     d = BaseAnalysis(tuid=label)
     d.run()
     data = d.dataset
