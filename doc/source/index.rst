@@ -4,13 +4,26 @@
    contain the root `toctree` directive.
 
 .. title::
-   qibolab's documentation
+   Qibolab
 
-===================================
-Welcome to qibolab's documentation!
-===================================
+
+What is Qibolab?
+================
+
+Qibolab is the dedicated `Qibo <https://github.com/qiboteam/qibo>`_ backend for
+the automatic deployment of quantum circuits on quantum hardware.
+
+Qibolab key features:
+
+* Deploy Qibo models on quantum hardware easily.
+* Create custom experimental drivers for custom lab setup.
+* Support multiple heterogeneous platforms.
+* Use existing calibration procedures for experimentalists.
 
 This documentation refers to qibolab |release|.
+
+Contents
+========
 
 .. toctree::
     :maxdepth: 2
