@@ -1,6 +1,5 @@
 from qibo.config import raise_error, log
 from qibolab.platforms.abstract import AbstractPlatform
-import pickle
 
 class QBloxPlatform(AbstractPlatform):
     """Platform for controlling quantum devices using QCM and QRM.
@@ -124,14 +123,10 @@ class QBloxPlatform(AbstractPlatform):
         if sequence.qcm_pulses:
             if self.last_qcm_pulses != [pulse.serial() for pulse in sequence.qcm_pulses]:
                 waveforms, program = self._qcm.translate(sequence, self.delay_before_readout, nshots)
-                print('uploading: ')
-                print([pulse.serial() for pulse in sequence.qcm_pulses])
                 self._qcm.upload(waveforms, program, self.data_folder)
         if sequence.qrm_pulses:
             if self.last_qrm_pulses != [pulse.serial() for pulse in sequence.qrm_pulses]:
                 waveforms, program = self._qrm.translate(sequence, self.delay_before_readout, nshots)
-                print('uploading: ')
-                print([pulse.serial() for pulse in sequence.qrm_pulses])
                 self._qrm.upload(waveforms, program, self.data_folder)
 
         # Execute instructions
