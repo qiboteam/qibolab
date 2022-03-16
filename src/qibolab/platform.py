@@ -21,4 +21,3 @@ def Platform(name, runcard=None):
     else:
         raise_error(RuntimeError, f"Platform {name} is not supported.")
     return Device(name, runcard)
-
