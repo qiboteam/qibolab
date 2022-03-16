@@ -19,6 +19,9 @@ class PulseSequence:
         self.phase = 0
         self.pulses = []
 
+    def serial(self):
+        return ", ".join(pulse.serial() for pulse in self.pulses)
+
     def add(self, pulse):
         """Add a pulse to the sequence.
 
