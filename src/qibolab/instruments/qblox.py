@@ -73,19 +73,17 @@ class GenericPulsar(ABC):
             Dictionary containing the waveform corresponding to the pulse.
         """
         # Use the envelope to modulate a sinusoldal signal of frequency freq_if
-        envelope_i = pulse.compile()
+        envelope_i  = pulse.compile()
         # TODO: if ``envelope_q`` is not always 0 we need to find how to
         # calculate it
-        envelope_q = np.zeros(int(pulse.duration))
-        time = np.arange(pulse.duration) * 1e-9
-        # FIXME: There should be a simpler way to construct this array
-        cosalpha = np.cos(2 * np.pi * pulse.frequency * time + pulse.phase)
-        sinalpha = np.sin(2 * np.pi * pulse.frequency * time + pulse.phase)
-        mod_matrix = np.array([[cosalpha,sinalpha], [-sinalpha,cosalpha]])
-        result = []
-        for it, t, ii, qq in zip(np.arange(pulse.duration), time, envelope_i, envelope_q):
-            result.append(mod_matrix[:, :, it] @ np.array([ii, qq]))
-        mod_signals = np.array(result)
+        envelope_q  = np.zeros(int(pulse.duration))
+        envelopes   = np.array([envelope_i, envelope_q])
+        time        = np.arange(pulse.duration) * 1e-9
+        cosalpha    = np.cos(2 * np.pi * pulse.frequency * time + pulse.phase)
+        sinalpha    = np.sin(2 * np.pi * pulse.frequency * time + pulse.phase)
+        mod_matrix  = np.array([[ cosalpha, sinalpha],
+                                [-sinalpha, cosalpha]])
+        mod_signals = np.einsum("abt,bt->ta", mod_matrix, envelopes)
 
         # add offsets to compensate mixer leakage
         waveform = {
