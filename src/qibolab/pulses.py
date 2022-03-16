@@ -120,6 +120,7 @@ class IQReadoutPulse(Pulse):
 
 
 class MultifrequencyPulse(Pulse):
+    # TODO: Remove this if it is not used
     """Describes multiple pulses to be added to waveform array.
 
     Used when multiple pulses are overlapping to avoid overwrite.
@@ -136,7 +137,8 @@ class MultifrequencyPulse(Pulse):
         return waveform
 
 
-class FilePulse(Pulse):
+class FilePulse(Pulse):  # pragma: no cover
+    # TODO: Remove this if it is not needed
     """Commands the FPGA to load a file as a waveform array in the specified channel."""
     def __init__(self, channel, start, filename):
         self.channel = channel

@@ -63,22 +63,16 @@ def test_readout_pulse():
     np.testing.assert_allclose(pulse.compile(), 0.8 * np.ones(8))
 
 
-@pytest.mark.skip
 def test_multifrequency_pulse():
+    from qibolab.pulses import Pulse, MultifrequencyPulse
+    from qibolab.pulse_shapes import Rectangular, Gaussian
     members = [
-        pulses.Pulse(0.5, 1.5, 0.8, 40.00, 0.7, "Rectangular", channel=0),
-        pulses.Pulse(0.5, 5.0, 0.7, 100, 0.5, "Gaussian", channel=1),
-        pulses.Pulse(1.0, 3.5, 0.4, 70.0, 0.7, "Rectangular", channel=2)
-        ]
-    multi = pulses.MultifrequencyPulse(members)
-    target_repr = "M(P(0, 0.5, 1.5, 0.8, 40.0, 0.7, Rectangular), "\
-                  "P(1, 0.5, 5.0, 0.7, 100, 0.5, Gaussian), "\
-                  "P(2, 1.0, 3.5, 0.4, 70.0, 0.7, Rectangular))"
+        Pulse(0.5, 2.0, 0.8, 40.00, 0.7, Rectangular(), channel=0),
+        Pulse(0.5, 5.0, 0.7, 100, 0.5, Gaussian(0.1), channel=1),
+        Pulse(1.0, 4.0, 0.4, 70.0, 0.7, Rectangular(), channel=2)
+    ]
+    multi = MultifrequencyPulse(members)
+    target_repr = "M(P(0, 0.5, 2.0, 0.8, 40.0, 0.7, rectangular), "\
+                  "P(1, 0.5, 5.0, 0.7, 100, 0.5, gaussian(0.1)), "\
+                  "P(2, 1.0, 4.0, 0.4, 70.0, 0.7, rectangular))"
     assert repr(multi) == target_repr
-
-
-@pytest.mark.skip
-def test_file_pulse():
-    filep = pulses.FilePulse(0, 1.0, "testfile")
-    target_repr = "F(0, 1.0, testfile)"
-    assert repr(filep) == target_repr
