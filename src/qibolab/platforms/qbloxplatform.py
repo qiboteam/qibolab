@@ -101,7 +101,11 @@ class QBloxPlatform(AbstractPlatform):
             self.is_connected = False
 
     def execute(self, sequence, nshots=None):
-        """Executes a pulse sequence.
+        """Executes a pulse sequence. Pulses are being cached so that are not reuploaded 
+            if they are the same as the ones sent previously. This greatly accelerates 
+            some characterization routines that recurrently use the same set of pulses, 
+            i.e. qubit and resonator spectroscopy, spin echo, and future circuits based on
+            fixed gates.
 
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
