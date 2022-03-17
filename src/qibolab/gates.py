@@ -3,10 +3,11 @@ import math
 import copy
 from abc import ABC, abstractmethod
 from qibo import gates
+from qibo.abstractions import abstract_gates
 from qibo.config import raise_error
 
 
-class AbstractHardwareGate(ABC):
+class AbstractHardwareGate(abstract_gates.Gate):
     module = sys.modules[__name__]
 
     @abstractmethod

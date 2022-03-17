@@ -1,9 +1,9 @@
 import pytest
 import numpy as np
 import qibo
-from qibo import K, models, gates
+from qibo import K, gates
 from qibolab import pulses
-from qibolab.circuit import PulseSequence
+from qibolab.circuit import PulseSequence, HardwareCircuit
 
 
 def test_pulse_sequence_add():
@@ -115,15 +115,15 @@ def test_pulse_sequence_add_measurement():
 
 
 def test_hardwarecircuit_init():
-    circuit = models.Circuit(1)
+    circuit = HardwareCircuit(1)
     with pytest.raises(ValueError):
-        circuit = models.Circuit(2)
+        circuit = HardwareCircuit(2)
 
 
 def test_hardwarecircuit_create_sequence():
     # TODO: Test this method on IcarusQ (requires qubit)
     qibo.set_backend("qibolab")
-    circuit = models.Circuit(1)
+    circuit = HardwareCircuit(1)
     circuit.add(gates.RX(0, theta=0.1))
     circuit.add(gates.RY(0, theta=0.2))
     with pytest.raises(RuntimeError):
@@ -153,7 +153,7 @@ def test_hardwarecircuit_create_sequence():
 def test_hardwarecircuit_execute():
     # TODO: Test this method on IcarusQ (requires qubit)
     qibo.set_backend("qibolab")
-    circuit = models.Circuit(1)
+    circuit = HardwareCircuit(1)
     circuit.add(gates.X(0))
     circuit.add(gates.M(0))
     with pytest.raises(ValueError):

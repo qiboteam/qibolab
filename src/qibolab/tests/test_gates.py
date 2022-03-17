@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import qibo
-from qibo import gates
+from qibolab import gates
 
 
 def test_u3_to_sequence():
@@ -18,7 +18,7 @@ def test_measurement():
     qibo.set_backend("qibolab")
     gate = gates.M(0)
     with pytest.raises(NotImplementedError):
-        params = gate.to_u3_params()
+        gate.to_u3_params()
     sequence = PulseSequence()
     gate.to_sequence(sequence)
     assert len(sequence) == 1
@@ -28,7 +28,6 @@ def test_measurement():
 
 @pytest.mark.parametrize("gatename", ["H", "X", "Y", "Z"])
 def test_pauli_to_u3_params(gatename):
-    qibo.set_backend("qibolab")
     gate = getattr(gates, gatename)(0)
     params = gate.to_u3_params()
     u3 = gates.U3(0, *params)
@@ -40,7 +39,6 @@ def test_pauli_to_u3_params(gatename):
 
 @pytest.mark.parametrize("gatename", ["RX", "RY", "RZ"])
 def test_rotations_to_u3_params(gatename):
-    qibo.set_backend("qibolab")
     gate = getattr(gates, gatename)(0, theta=0.1)
     params = gate.to_u3_params()
     u3 = gates.U3(0, *params)
@@ -49,7 +47,6 @@ def test_rotations_to_u3_params(gatename):
 
 def test_rz_to_sequence():
     from qibolab.circuit import PulseSequence
-    qibo.set_backend("qibolab")
     gate = gates.RZ(0, theta=0.2)
     sequence = PulseSequence()
     gate.to_sequence(sequence)
@@ -58,7 +55,6 @@ def test_rz_to_sequence():
 
 
 def test_u2_to_u3_params():
-    qibo.set_backend("qibolab")
     gate = gates.U2(0, phi=0.1, lam=0.3)
     params = gate.to_u3_params()
     u3 = gates.U3(0, *params)
