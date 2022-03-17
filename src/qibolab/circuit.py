@@ -19,7 +19,11 @@ class PulseSequence:
         self.phase = 0
         self.pulses = []
 
+    def __len__(self):
+        return len(self.pulses)
+
     def serial(self):
+        """Serial form of the whole sequence using the serial of each pulse."""
         return ", ".join(pulse.serial() for pulse in self.pulses)
 
     def add(self, pulse):
@@ -115,18 +119,24 @@ class HardwareCircuit(circuit.Circuit):
             raise ValueError("Device has only one qubit.")
         super().__init__(nqubits)
 
-    def execute(self, initial_state=None, nshots=None):
-        if initial_state is not None:
-            raise_error(ValueError, "Hardware backend does not support "
-                                    "initial state in circuits.")
+    def create_sequence(self):
+        """Creates the :class:`qibolab.circuit.PulseSequence` corresponding to the circuit's gates."""
         if self.measurement_gate is None:
             raise_error(RuntimeError, "No measurement register assigned.")
 
-        # Translate gates to pulses and create a ``PulseSequence``
         sequence = PulseSequence()
         for gate in self.queue:
             gate.to_sequence(sequence)
         self.measurement_gate.to_sequence(sequence)
+        return sequence
+
+    def execute(self, initial_state=None, nshots=None):
+        if initial_state is not None:
+            raise_error(ValueError, "Hardware backend does not support "
+                                    "initial state in circuits.")
+
+        # Translate gates to pulses and create a ``PulseSequence``
+        sequence = self.create_sequence()
 
         # Execute the pulse sequence on the platform
         K.platform.connect()
