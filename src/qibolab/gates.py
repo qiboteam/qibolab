@@ -18,9 +18,14 @@ class AbstractHardwareGate(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def to_sequence(self, sequence):  # pragma: no cover
-        """Adds the pulses implementing the gate to the given ``PulseSequence``."""
+    def to_u3_params(self): # pragma: no cover
+        """Returns the angles of a U3 gate which implements the current gate."""
         raise_error(NotImplementedError)
+
+    def to_sequence(self, sequence):
+        """Adds the pulses implementing the gate to the given ``PulseSequence``."""
+        args = self.to_u3_params() + (self.target_qubits[0],)
+        sequence.add_u3(*args)
 
 
 class H(AbstractHardwareGate, gates.H):
@@ -41,9 +46,8 @@ class H(AbstractHardwareGate, gates.H):
             d += gate.duration(qubit_config)
         return d
 
-    def to_sequence(self, sequence):
-        q = self.target_qubits[0]
-        sequence.add_u3(7 * math.pi / 2, math.pi, 0, q)
+    def to_u3_params(self):
+        return (7 * math.pi / 2, math.pi, 0)
 
 
 class I(AbstractHardwareGate, gates.I):
@@ -54,11 +58,15 @@ class I(AbstractHardwareGate, gates.I):
     def duration(self, qubit_config):
         return 0
 
+    def to_u3_params(self):  # pragma: no cover
+        raise_error(NotImplementedError, "Identity gate is not implemented via U3.")
+
     def to_sequence(self, sequence):
         pass
 
 
-class Align(AbstractHardwareGate, gates.I):
+class Align(AbstractHardwareGate, gates.I):  # pragma: no cover
+    # TODO: Is this gate still needed?
 
     def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
         m = max(qubit_times[q] for q in self.target_qubits)
@@ -89,6 +97,9 @@ class M(AbstractHardwareGate, gates.M):
         for p in pulses:
             m = max(p.duration, m)
         return m
+
+    def to_u3_params(self):
+        raise_error(NotImplementedError, "Measurement gate is not implemented via U3.")
 
     def to_sequence(self, sequence):
         for q in self.target_qubits:
@@ -128,12 +139,8 @@ class RX(AbstractHardwareGate, gates.RX):
             m = max(p.duration * time_mod, m)
         return m
 
-    def to_sequence(self, sequence):
-        q = self.target_qubits[0]
-        theta = self.parameters
-        phi = - math.pi / 2
-        lam = math.pi / 2
-        sequence.add_u3(theta, phi, lam, q)
+    def to_u3_params(self):
+        return (self.parameters, -math.pi / 2, math.pi / 2)
 
 
 class RY(AbstractHardwareGate, gates.RY):
@@ -144,12 +151,8 @@ class RY(AbstractHardwareGate, gates.RY):
     def duration(self, qubit_config):
         return RX.duration(self, qubit_config)
 
-    def to_sequence(self, sequence):
-        q = self.target_qubits[0]
-        theta = self.parameters
-        phi = 0
-        lam = 0
-        sequence.add_u3(theta, phi, lam, q)
+    def to_u3_params(self):
+        return (self.parameters, 0, 0)
 
 
 class RZ(AbstractHardwareGate, gates.RZ):
@@ -160,13 +163,12 @@ class RZ(AbstractHardwareGate, gates.RZ):
     def duration(self, qubit_config): # pragma: no cover
         raise_error(NotImplementedError)
 
+    def to_u3_params(self):
+        return (0, self.parameters / 2, self.parameters / 2)
+
     def to_sequence(self, sequence):
         # apply virtually by changing ``phase`` instead of using pulses
         sequence.phase += self.parameters
-        #theta = 0
-        #phi = self.parameters / 2
-        #lam = self.parameters / 2
-        #return sequence.add_u3(theta, phi, lam)
 
 
 class CNOT(AbstractHardwareGate, gates.CNOT):
@@ -198,6 +200,9 @@ class CNOT(AbstractHardwareGate, gates.CNOT):
             m = max(p.duration, m)
         return m
 
+    def to_u3_params(self):
+        raise_error(NotImplementedError)
+
     def to_sequence(self, sequence):
         raise_error(NotImplementedError)
 
@@ -210,9 +215,8 @@ class U2(AbstractHardwareGate, gates.U2):
     def duration(self, qubit_config): # pragma: no cover
         raise_error(NotImplementedError)
 
-    def to_sequence(self, sequence):
-        args = (math.pi / 2,) + self.parameters
-        sequence.add_u3(*args)
+    def to_u3_params(self):
+        return (math.pi / 2,) + self.parameters
 
 
 class U3(AbstractHardwareGate, gates.U3):
@@ -223,8 +227,8 @@ class U3(AbstractHardwareGate, gates.U3):
     def duration(self, qubit_config): # pragma: no cover
         raise_error(NotImplementedError)
 
-    def to_sequence(self, sequence):
-        sequence.add_u3(*self.parameters)
+    def to_u3_params(self):
+        return self.parameters
 
 
 class X(AbstractHardwareGate, gates.X):
@@ -235,8 +239,8 @@ class X(AbstractHardwareGate, gates.X):
     def duration(self, qubit_config): # pragma: no cover
         raise_error(NotImplementedError)
 
-    def to_sequence(self, sequence):
-        sequence.add_u3(math.pi, 0, math.pi)
+    def to_u3_params(self):
+        return (math.pi, 0, math.pi)
 
 
 class Y(AbstractHardwareGate, gates.Y):
@@ -247,8 +251,8 @@ class Y(AbstractHardwareGate, gates.Y):
     def duration(self, qubit_config): # pragma: no cover
         raise_error(NotImplementedError)
 
-    def to_sequence(self, sequence):
-        sequence.add_u3(math.pi, 0, 0)
+    def to_u3_params(self):
+        return (math.pi, 0, 0)
 
 
 class Z(AbstractHardwareGate, gates.Z):
@@ -259,5 +263,5 @@ class Z(AbstractHardwareGate, gates.Z):
     def duration(self, qubit_config): # pragma: no cover
         raise_error(NotImplementedError)
 
-    def to_sequence(self, sequence):
-        sequence.add_u3(0, math.pi, 0)
+    def to_u3_params(self):
+        return (0, math.pi, 0)
