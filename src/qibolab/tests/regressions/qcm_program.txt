@@ -7,7 +7,7 @@
             play      0,1,0
             
             wait      16380
-            move      83,R1
+            move      33,R1
             nop
             repeatloop:
                 wait      1000
