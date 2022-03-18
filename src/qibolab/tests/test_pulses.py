@@ -50,7 +50,6 @@ def test_pulse():
     target = "P(qcm, 0.0, 8.0, 0.8, 40.0, 0.7, gaussian(1.0))"
     assert pulse.serial() == target
     assert repr(pulse) == target
-    assert pulse.compile().shape == (8,)
 
 
 def test_readout_pulse():
@@ -60,19 +59,3 @@ def test_readout_pulse():
     target = "P(qrm, 0.0, 8.0, 0.8, 40.0, 0.7, rectangular)"
     assert pulse.serial() == target
     assert repr(pulse) == target
-    np.testing.assert_allclose(pulse.compile(), 0.8 * np.ones(8))
-
-
-def test_multifrequency_pulse():
-    from qibolab.pulses import Pulse, MultifrequencyPulse
-    from qibolab.pulse_shapes import Rectangular, Gaussian
-    members = [
-        Pulse(0.5, 2.0, 0.8, 40.00, 0.7, Rectangular(), channel=0),
-        Pulse(0.5, 5.0, 0.7, 100, 0.5, Gaussian(0.1), channel=1),
-        Pulse(1.0, 4.0, 0.4, 70.0, 0.7, Rectangular(), channel=2)
-    ]
-    multi = MultifrequencyPulse(members)
-    target_repr = "M(P(0, 0.5, 2.0, 0.8, 40.0, 0.7, rectangular), "\
-                  "P(1, 0.5, 5.0, 0.7, 100, 0.5, gaussian(0.1)), "\
-                  "P(2, 1.0, 4.0, 0.4, 70.0, 0.7, rectangular))"
-    assert repr(multi) == target_repr
