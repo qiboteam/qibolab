@@ -28,6 +28,8 @@ def test_qbloxplatform_init():
     # test setter
     platform.software_averages = 5
     platform.software_averages == 5
+    with pytest.raises(RuntimeError):
+        platform._check_connected()
 
 # TODO: Test ``AbstractPlatform.run_calibration`` method
 

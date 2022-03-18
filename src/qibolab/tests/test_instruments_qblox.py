@@ -23,7 +23,8 @@ def assert_regression_array(array, filename):
     if os.path.exists(filedir):
         target = np.loadtxt(filedir)
         np.testing.assert_allclose(array, target)
-    else:
+    else:  # pragma: no cover
+        # regression file should be provided in the CI
         np.savetxt(filedir, array)
 
 
@@ -37,7 +38,8 @@ def assert_regression_str(text, filename):
         with open(filedir, "r") as file:
             target = file.read()
         assert text == target
-    else:
+    else:  # pragma: no cover
+        # regression file should be provided in the CI
         with open(filedir, "w") as file:
             file.write(text)
 
