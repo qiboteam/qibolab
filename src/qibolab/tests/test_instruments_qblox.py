@@ -63,6 +63,14 @@ def test_pulsar_init_and_setup(device):
     pulsar.close()
 
 
+@pytest.mark.parametrize("device", ["QCM", "QRM"])
+def test_gain_setter(device):
+    pulsar = get_pulsar(device)
+    gain = pulsar.gain
+    pulsar.gain = 0.1
+    pulsar.close()
+
+
 def test_translate_single_pulse():
     from qibolab.pulses import Pulse
     from qibolab.pulse_shapes import Gaussian
