@@ -37,6 +37,15 @@ def test_pauli_to_u3_params(gatename):
         np.testing.assert_allclose(gate.matrix, 1j * u3.matrix, atol=1e-15)
 
 
+def test_identity_gate():
+    from qibolab.circuit import PulseSequence
+    gate = gates.I(0)
+    with pytest.raises(NotImplementedError):
+        gate.to_u3_params()
+    sequence = PulseSequence()
+    gate.to_sequence(sequence)
+
+
 @pytest.mark.parametrize("gatename", ["RX", "RY", "RZ"])
 def test_rotations_to_u3_params(gatename):
     gate = getattr(gates, gatename)(0, theta=0.1)

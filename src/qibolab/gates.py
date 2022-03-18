@@ -27,9 +27,27 @@ class H(AbstractHardwareGate, gates.H):
         return (7 * math.pi / 2, math.pi, 0)
 
 
+class X(AbstractHardwareGate, gates.X):
+
+    def to_u3_params(self):
+        return (math.pi, 0, math.pi)
+
+
+class Y(AbstractHardwareGate, gates.Y):
+
+    def to_u3_params(self):
+        return (math.pi, 0, 0)
+
+
+class Z(AbstractHardwareGate, gates.Z):
+
+    def to_u3_params(self):
+        return (0, math.pi, 0)
+
+
 class I(AbstractHardwareGate, gates.I):
 
-    def to_u3_params(self):  # pragma: no cover
+    def to_u3_params(self):
         raise_error(NotImplementedError, "Identity gate is not implemented via U3.")
 
     def to_sequence(self, sequence):
@@ -94,21 +112,3 @@ class U3(AbstractHardwareGate, gates.U3):
 
     def to_u3_params(self):
         return self.parameters
-
-
-class X(AbstractHardwareGate, gates.X):
-
-    def to_u3_params(self):
-        return (math.pi, 0, math.pi)
-
-
-class Y(AbstractHardwareGate, gates.Y):
-
-    def to_u3_params(self):
-        return (math.pi, 0, 0)
-
-
-class Z(AbstractHardwareGate, gates.Z):
-
-    def to_u3_params(self):
-        return (0, math.pi, 0)
