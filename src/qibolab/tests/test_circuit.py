@@ -150,8 +150,8 @@ def test_hardwarecircuit_create_sequence():
     assert seq.serial() == ", ".join([pulse1, pulse2, pulse3, pulse4, pulse5])
 
 
-def test_hardwarecircuit_execute():
-    # TODO: Test this method on IcarusQ (requires qubit)
+def test_hardwarecircuit_execute_error():
+    # TODO: Test this method on IcarusQ
     qibo.set_backend("qibolab")
     circuit = HardwareCircuit(1)
     circuit.add(gates.X(0))
@@ -159,4 +159,12 @@ def test_hardwarecircuit_execute():
     with pytest.raises(ValueError):
         result = circuit(initial_state=np.ones(2))
 
-# TODO: Test ``HardwareCircuit.execute``
+
+@pytest.mark.xfail
+def test_hardwarecircuit_execute():
+    # TODO: Test this method on IcarusQ
+    qibo.set_backend("qibolab")
+    circuit = HardwareCircuit(1)
+    circuit.add(gates.X(0))
+    circuit.add(gates.M(0))
+    result = circuit(nshots=100)

@@ -111,7 +111,8 @@ def test_upload_and_play_sequence():
         qrm.play_sequence_and_acquire(sequence.qrm_pulses[-1])
     else:
         with pytest.raises(AttributeError):
-            pulsar.upload(waveforms, program, "data")
-    pulsar.close()
+            qcm.upload(qcm_waveforms, qcm_program, "data")
+    qcm.close()
+    qrm.close()
 
 # TODO: Test ``PulsarQRM._demodulate_and_integrate`` (requires some output from execution)
