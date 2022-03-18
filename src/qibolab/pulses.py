@@ -54,6 +54,9 @@ class Pulse:
         return "P({}, {}, {}, {}, {}, {}, {})".format(self.channel, self.start, self.duration,
                                                       self.amplitude, self.frequency, self.phase, self.shape)
 
+    def compile(self):
+        return self.shape.envelope(None, None, self.duration, self.amplitude)
+
     def __repr__(self):
         return self.serial()
 

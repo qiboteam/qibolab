@@ -50,6 +50,7 @@ def test_pulse():
     target = "P(qcm, 0.0, 8.0, 0.8, 40.0, 0.7, gaussian(1.0))"
     assert pulse.serial() == target
     assert repr(pulse) == target
+    assert pulse.compile().shape == (8,)
 
 
 def test_readout_pulse():
@@ -59,3 +60,4 @@ def test_readout_pulse():
     target = "P(qrm, 0.0, 8.0, 0.8, 40.0, 0.7, rectangular)"
     assert pulse.serial() == target
     assert repr(pulse) == target
+    np.testing.assert_allclose(pulse.compile(), 0.8 * np.ones(8))
