@@ -55,7 +55,7 @@ platform.setup()
 # Turns on the local oscillators
 platform.start()
 # Executes a pulse sequence.
-results = platform.execute(ps, nshots=10)
+results = platform.execute(sequence, nshots=10)
 # Turn off lab instruments
 platform.stop()
 # Disconnect from the instruments
