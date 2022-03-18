@@ -96,26 +96,22 @@ def test_translate(device):
     assert_regression_str(program, f"{pulsar.name}_program.txt")
 
 
-@pytest.mark.parametrize("device", ["QCM", "QRM"])
-def test_upload_and_play_sequence(device):
+def test_upload_and_play_sequence():
     """Tests uploading and executing waveforms in pulsars."""
-    import shutil
-    pulsar = get_pulsar(device)
+    qcm = get_pulsar("QCM")
+    qrm = get_pulsar("QRM")
     sequence = generate_pulse_sequence()
-    waveforms, program = pulsar.translate(sequence, 0, 100)
+    qcm_waveforms, qcm_program = qcm.translate(sequence, 4, 100)
+    qrm_waveforms, qrm_program = qrm.translate(sequence, 4, 100)
 
-    if pulsar._connected:
-        pulsar.upload(waveforms, program, "./data")
-        if device == "QCM":
-            pulsar.play_sequence()
-        else:
-            pulsar.play_sequence_and_acquire(sequence.qrm_pulses[-1])
+    if qcm._connected and qrm._connected:
+        qcm.upload(qcm_waveforms, qcm_program, "data")
+        qrm.upload(qrm_waveforms, qrm_program, "data")
+        qcm.play_sequence()
+        qrm.play_sequence_and_acquire(sequence.qrm_pulses[-1])
     else:
         with pytest.raises(AttributeError):
-            pulsar.upload(waveforms, program, "./data")
-
+            pulsar.upload(waveforms, program, "data")
     pulsar.close()
-    shutil.rmtree("./data")
-
 
 # TODO: Test ``PulsarQRM._demodulate_and_integrate`` (requires some output from execution)
