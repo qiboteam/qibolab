@@ -138,7 +138,7 @@ class ICPlatform(AbstractPlatform):
         qubits_to_measure = []
         measurement_results = []
         pulse_mapping = {}
-        seq_serial = []
+        seq_serial = {}
 
         for pulse in sequence.pulses:
             # Assign pulses to each respective waveform generator
@@ -152,13 +152,15 @@ class ICPlatform(AbstractPlatform):
 
             if playback_device not in pulse_mapping.keys():
                 pulse_mapping[playback_device] = []
+                seq_serial[playback_device] = []
+            # Map the pulse to the associated playback instrument.
             pulse_mapping[playback_device].append(pulse)
-            seq_serial.append(pulse.serial())
+            seq_serial[playback_device].append(pulse.serial)
     
-        # Translate and upload the pulse for each device if needed
+        # Translate and upload the pulse subsequence for each device if needed
         for device, subsequence in pulse_mapping.items():
             inst = self.fetch_instrument(device)
-            if seq_serial != self._last_sequence:
+            if self._last_sequence is None or seq_serial[device] != self._last_sequence[device]:
                 inst.upload(inst.translate(subsequence, nshots))
             inst.play_sequence()
         self._last_sequence = seq_serial
