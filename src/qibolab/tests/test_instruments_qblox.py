@@ -81,11 +81,19 @@ def test_translate_single_pulse():
 
 
 @pytest.mark.parametrize("device", ["QCM", "QRM"])
+def test_generate_waveform_empty(device):
+    pulsar = get_pulsar(device)
+    with pytest.raises(ValueError):
+        pulsar.generate_waveforms([])
+    pulsar.close()
+
+
+@pytest.mark.parametrize("device", ["QCM", "QRM"])
 def test_translate(device):
     """Tests ``generate_waveforms`` and ``generate_program``."""
     pulsar = get_pulsar(device)
     sequence = generate_pulse_sequence()
-    waveforms, program = pulsar.translate(sequence, 0, 100)
+    waveforms, program = pulsar.translate(sequence, 4, 100)
     pulsar.close()
 
     modI, modQ = waveforms.get(f"modI_{pulsar.name}"), waveforms.get(f"modQ_{pulsar.name}")

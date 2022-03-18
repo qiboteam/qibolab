@@ -4,9 +4,9 @@
             wait_sync 4          # Synchronize sequencers over multiple instruments
         loop:
             wait      90
-            play      0,1,0
+            play      0,1,4
             acquire   0,0,4
-            wait      16286
+            wait      16282
             move      33,R1
             nop
             repeatloop:

@@ -70,13 +70,15 @@ def test_qbloxplatform_execute_error():
 
 
 @pytest.mark.xfail
-def test_qbloxplatform_execute():
+@pytest.mark.parametrize("nshots", [None, 100])
+@pytest.mark.parametrize("readout", [False, True])
+def test_qbloxplatform_execute(nshots, readout):
     runcard = pathlib.Path(__file__).parent.parent / "runcards" / "tiiq.yml"
     platform = QBloxPlatform("tiiq", runcard)
     platform.connect()
     platform.setup()
     platform.start()
-    sequence = generate_pulse_sequence()
-    results = platform(sequence, nshots=100)
+    sequence = generate_pulse_sequence(readout)
+    results = platform(sequence, nshots=nshots)
     platform.stop()
     platform.disconnect()

@@ -102,7 +102,7 @@ class GenericPulsar(ABC):
             Dictionary containing waveforms corresponding to all pulses.
         """
         if not pulses:
-            raise_error(NotImplementedError, "Cannot translate empty pulse sequence.")
+            raise_error(ValueError, "Cannot translate empty pulse sequence.")
         name = self.name
 
         combined_length = max(pulse.start + pulse.duration for pulse in pulses)
@@ -164,7 +164,7 @@ class GenericPulsar(ABC):
         return program
 
     @abstractmethod
-    def translate(self, sequence, nshots):  # pragma: no cover
+    def translate(self, sequence, delay_before_readout, nshots):  # pragma: no cover
         """Translates an abstract pulse sequence to QBlox format.
 
         Args:
@@ -333,9 +333,9 @@ class PulsarQRM(GenericPulsar):
             demodulated_signal = np.array(result)
             integrated_signal = norm_factor*np.sum(demodulated_signal,axis=0)
 
-        elif self.mode == 'optimal':
+        elif self.mode == 'optimal':  # pragma: no cover
             raise_error(NotImplementedError, "Optimal Demodulation Mode not coded yet.")
-        else:
+        else:  # pragma: no cover
             raise_error(NotImplementedError, "Demodulation mode not understood.")
         return integrated_signal
 

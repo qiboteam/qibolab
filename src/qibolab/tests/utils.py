@@ -9,7 +9,7 @@ def load_runcard(name):
     return settings
 
 
-def generate_pulse_sequence():
+def generate_pulse_sequence(readout=True):
     """Generates a dummy pulse sequence to be used for testing pulsar methods."""
     from qibolab.pulses import Pulse, ReadoutPulse
     from qibolab.pulse_shapes import Gaussian, Rectangular
@@ -27,10 +27,11 @@ def generate_pulse_sequence():
                        duration=25,
                        phase=0,
                        shape=Gaussian(25 / 5)))
-    sequence.add(ReadoutPulse(start=90,
-                              frequency=20000000.0,
-                              amplitude=0.5,
-                              duration=3000,
-                              phase=0,
-                              shape=Rectangular()))
+    if readout:
+        sequence.add(ReadoutPulse(start=90,
+                                frequency=20000000.0,
+                                amplitude=0.5,
+                                duration=3000,
+                                phase=0,
+                                shape=Rectangular()))
     return sequence

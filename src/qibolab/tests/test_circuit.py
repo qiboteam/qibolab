@@ -168,3 +168,5 @@ def test_hardwarecircuit_execute():
     circuit.add(gates.X(0))
     circuit.add(gates.M(0))
     result = circuit(nshots=100)
+    # disconnect from instruments so that they are available for other tests
+    K.platform.disconnect()
