@@ -20,8 +20,21 @@ class Pulse:
             (amplitude + offset) should be between [0 and 1].
         channel (int/str): Specifies the device that will execute this pulse.
             FPGA channel (int) for IcarusQ or qrm/qcm (str) for TIIq.
-            May be useful to distinguish QRM and QCM pulses?
         qubit (int): Target qubit ID
+
+    Example:
+        .. code-block:: python
+
+            from qibolab.pulses import Pulse
+            from qibolab.pulse_shapes import Gaussian
+
+            # define pulse with Gaussian shape
+            pulse = Pulse(start=0,
+                          frequency=200000000.0,
+                          amplitude=0.3,
+                          duration=60,
+                          phase=0,
+                          shape=Gaussian(60 / 5))
     """
     def __init__(self, start, duration, amplitude, frequency, phase, shape, offset_i=0, offset_q=0, channel="qcm", qubit=0):
         # FIXME: Since the ``start`` value depends on the previous pulses we are
