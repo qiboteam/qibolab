@@ -73,7 +73,7 @@ class GenericPulsar(ABC):
             Dictionary containing the waveform corresponding to the pulse.
         """
         # Use the envelope to modulate a sinusoldal signal of frequency freq_if
-        envelope_i  = pulse.compile()
+        envelope_i = pulse.compile()
         # TODO: if ``envelope_q`` is not always 0 we need to find how to
         # calculate it
         envelope_q  = np.zeros(int(pulse.duration))
