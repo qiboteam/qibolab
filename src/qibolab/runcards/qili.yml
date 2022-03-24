@@ -1,77 +1,68 @@
 name: qili
 nqubits: 1
 description: Controls the PulsarQRM, PulsarQCM and two SGS100A local oscillators.
-
 settings:
-# T1: 2192.895853326451
-  data_folder: .data/
-# delay_before_readout: 4
-# delay_between_pulses: 0
-  hardware_avg: 1024
-# pi_pulse_amplitude: 0.15
-# pi_pulse_duration: 196
-# pi_pulse_frequency: 200000000.0
-# pi_pulse_gain: 0.1
-#  qubit_freq: 8580000000.0
-# qubit_spectroscopy_min_ro_voltage: 358.7029190893399
-# rabi_oscillations_pi_pulse_min_voltage: 384.10840270164533
-# readout_pulse:
-#   amplitude: 0.5
-#   duration: 2000
-#   frequency: 20000000.0
-#   offset_i: 0
-#   offset_q: 0
-  repetition_duration: 200000
-# resonator_freq: 7794751932.329939
-# resonator_spectroscopy_avg_min_ro_voltage: 42.671024606970605
-# resonator_spectroscopy_max_ro_voltage: 611.2952625898771
-  sampling_rate: 1000000000.0
-  software_averages: 10
-
+    T1: 2192.895853326451
+    data_folder: .data/
+    delay_before_readout: 4
+    delay_between_pulses: 0
+    hardware_avg: 1024
+    pi_pulse_amplitude: 0.15
+    pi_pulse_duration: 182
+    pi_pulse_frequency: 200000000.0
+    pi_pulse_gain: 0.5
+    qubit_freq: 3564500000.0
+    qubit_spectroscopy_min_ro_voltage: 1324.4572132729227
+    rabi_oscillations_pi_pulse_min_voltage: 4120.048939919676
+    readout_pulse:
+        amplitude: 0.5
+        duration: 2000
+        frequency: 20000000.0
+        offset_i: 0
+        offset_q: 0
+    repetition_duration: 200000
+    resonator_freq: 7327595128.299119
+    resonator_spectroscopy_avg_min_ro_voltage: 151.75333182986273
+    resonator_spectroscopy_max_ro_voltage: 1906.4647729320207
+    sampling_rate: 1000000000.0
+    software_averages: 10
 LO_QCM_init_settings:
-  ip: 192.168.0.10
-  label: LO_qcm
-
+    ip: 192.168.0.10
+    label: LO_qcm
 LO_QCM_settings:
-  frequency: 3644000000.0
-  power: 15
-
+    frequency: 3664500000.0
+    power: 15
 LO_QRM_init_settings:
-  ip: 192.168.0.7
-  label: LO_qrm
-
+    ip: 192.168.0.7
+    label: LO_qrm
 LO_QRM_settings:
-  frequency: 7307720000.0
-  power: 15
-
+    frequency: 7307595128.299119
+    power: 15
 QCM_init_settings:
-  ip: 192.168.0.3
-  label: qcm
-  ref_clock: internal
-  sequencer: 0
-  sync_en: true
-  is_cluster: false
-
+    ip: 192.168.0.3
+    label: qcm
+    ref_clock: internal
+    sequencer: 0
+    sync_en: true
+    is_cluster: false
 QCM_settings:
-  gain: 0.5
-  initial_delay: 0
-  repetition_duration: 200000
-
+    gain: 0.5
+    initial_delay: 0
+    repetition_duration: 200000
 QRM_init_settings:
-  acq_trigger_mode: sequencer
-  hardware_avg_en: true
-  ip: 192.168.0.4
-  label: qrm
-  ref_clock: external
-  sequencer: 0
-  sync_en: true
-  is_cluster: false
-
+    acq_trigger_mode: sequencer
+    hardware_avg_en: true
+    ip: 192.168.0.4
+    label: qrm
+    ref_clock: external
+    sequencer: 0
+    sync_en: true
+    is_cluster: false
 QRM_settings:
-  gain: 0.5
-  initial_delay: 0
-  integration_length: 2000
-  mode: ssb
-  repetition_duration: 200000
-  sampling_rate: 1000000000.0
-  start_sample: 130
+    gain: 0.5
+    initial_delay: 0
+    integration_length: 2000
+    mode: ssb
+    repetition_duration: 200000
+    sampling_rate: 1000000000.0
+    start_sample: 130

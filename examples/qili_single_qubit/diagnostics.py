@@ -17,10 +17,10 @@ def backup_config_file():
     import shutil
     import errno
     from datetime import datetime
-    original = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'qibolab', 'runcards', 'tiiq.yml'))
+    original = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'qibolab', 'runcards', 'qili.yml'))
     now = datetime.now()
     now = now.strftime("%d%m%Y%H%M%S")
-    destination_file_name = "tiiq_" + now + ".yml" 
+    destination_file_name = "qili_" + now + ".yml" 
     target = os.path.realpath(os.path.join(os.path.dirname(__file__), 'data/settings_backups', destination_file_name))
 
     try:
@@ -38,7 +38,7 @@ def backup_config_file():
 
 def get_config_parameter(dictID, dictID1, key):
     import os
-    calibration_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'qibolab', 'runcards', 'tiiq.yml'))
+    calibration_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'qibolab', 'runcards', 'qili.yml'))
     with open(calibration_path) as file:
         settings = yaml.safe_load(file)
     file.close()    
@@ -50,7 +50,7 @@ def get_config_parameter(dictID, dictID1, key):
 
 def save_config_parameter(dictID, dictID1, key, value):
     import os
-    calibration_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'qibolab', 'runcards', 'tiiq.yml'))
+    calibration_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'qibolab', 'runcards', 'qili.yml'))
     with open(calibration_path, "r") as file:
         settings = yaml.safe_load(file)
     file.close()
@@ -88,7 +88,7 @@ def plot(smooth_dataset, dataset, label, type):
 
 def create_measurement_control(name):
     import os
-    if os.environ.get("ENABLE_PLOTMON", True):
+    if os.environ.get("ENABLE_PLOTMON", False):
         mc = MeasurementControl(f'MC {name}')
         from quantify_core.visualization.pyqt_plotmon import PlotMonitor_pyqt
         plotmon = PlotMonitor_pyqt(f'Plot Monitor {name}')

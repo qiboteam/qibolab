@@ -18,8 +18,8 @@ resonator_spectroscopy_shifted:
   precision_step: 20000
 
 punchout:
-  precision_width: 25000000
-  precision_step: 500000
+  precision_width: 8.0e+6
+  precision_step: 0.2e+6
 
 qubit_spectroscopy:
   fast_start: -500000000
@@ -30,19 +30,19 @@ qubit_spectroscopy:
   precision_step: 500000
 
 t1:
-  delay_before_readout_start: 0
-  delay_before_readout_end: 4500
-  delay_before_readout_step: 30
+  delay_before_readout_start: 1
+  delay_before_readout_end: 60000
+  delay_before_readout_step: 2000
 
 ramsey:
-  start_start: 4
-  start_end: 1000
-  start_step: 4
+  start_start: 1
+  start_end: 4000
+  start_step: 10
 
 spin_echo:
-  start_start: 4
-  start_end: 500
-  start_step: 10
+  start_start: 10
+  start_end: 3000
+  start_step: 60
 
 spin_echo_3pulses": 
   start_start: 4
