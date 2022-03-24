@@ -11,8 +11,8 @@ settings:
     pi_pulse_duration: 182
     pi_pulse_frequency: 200000000.0
     pi_pulse_gain: 0.5
-    qubit_freq: 3564500000.0
-    qubit_spectroscopy_min_ro_voltage: 1324.4572132729227
+    qubit_freq: 3564000000.0
+    qubit_spectroscopy_min_ro_voltage: 384.0152109234878
     rabi_oscillations_pi_pulse_min_voltage: 4120.048939919676
     readout_pulse:
         amplitude: 0.5
@@ -30,7 +30,7 @@ LO_QCM_init_settings:
     ip: 192.168.0.10
     label: LO_qcm
 LO_QCM_settings:
-    frequency: 3664500000.0
+    frequency: 3664000000.0
     power: 15
 LO_QRM_init_settings:
     ip: 192.168.0.7
