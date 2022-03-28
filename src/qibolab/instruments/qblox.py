@@ -40,7 +40,7 @@ class GenericPulsar(Instrument, ABC):
         if not self._connected:
             import socket
             try:
-                self.device = self.Device(self.label, self.ip)
+                self.device = self.Device(self.label, self.ip) # pylint: disable=E1102
                 logger.info(f"{self.name} connection established.")
                 self._connected = True
             except socket.timeout:
