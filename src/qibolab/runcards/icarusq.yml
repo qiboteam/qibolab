@@ -1,6 +1,6 @@
 name: icarusq
 nqubits: 1
-description: Controls the Tektronix AWG5204, AlazarTech ATS9371, two MiniCircuit attenuators and two QuicSyn Lite local oscillators.
+description: Controls the Tektronix AWG5204, AlazarTech ATS9371, two MiniCircuit attenuators and two QuicSyn Lite local oscillators. Qubit sample used is AuAl1_220309.
 
 settings:
   delay_before_readout: 0
@@ -13,7 +13,7 @@ qubits:
   qubit_0:
     pi_pulse:
       amplitude: 0.375
-      duration: 40000
+      duration: 26.18
       frequency: 251000000
       channel: [2, 3]
     readout_pulse:
@@ -57,7 +57,7 @@ instruments:
       name: qb_lo
       address: ASRL6::INSTR
     settings:
-      frequency: 3866000000
+      frequency: 3414644400
 
   ro_lo:
     type: QuicSyn
@@ -66,7 +66,7 @@ instruments:
       name: ro_lo
       address: ASRL3::INSTR
     settings:
-      frequency: 5083250000
+      frequency: 5026600000
 
   qb_att:
     type: MCAttenuator
@@ -74,7 +74,7 @@ instruments:
       name: qb_att
       address: 192.168.0.9:90
     settings:
-      attenuation: 20
+      attenuation: 10
 
   ro_att:
     type: MCAttenuator
@@ -82,7 +82,7 @@ instruments:
       name: ro_att
       address: 192.168.0.10:100
     settings:
-      attenuation: 15
+      attenuation: 24
 
   alazar_adc:
     type: AlazarADC
