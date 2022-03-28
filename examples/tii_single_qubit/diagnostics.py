@@ -17,8 +17,7 @@ from qibolab.pulse_shapes import Rectangular, Gaussian
 
 
 # TODO: Check why this set_datadir is needed
-set_datadir(pathlib.Path(__file__).parent / ".data")
-
+set_datadir(pathlib.Path(__file__).parent / "data" / "quantify")
 
 def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step):
     #[.     .     .     .     .     .][...................]0[...................][.     .     .     .     .     .]
@@ -60,7 +59,7 @@ def backup_config_file():
 
 def get_config_parameter(dictID, dictID1, key):
     import os
-    calibration_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'qibolab', 'platforms', 'tiiq.yml'))
+    calibration_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'qibolab', 'runcards', 'tiiq.yml'))
     with open(calibration_path) as file:
         settings = yaml.safe_load(file)
     file.close()    
@@ -72,7 +71,7 @@ def get_config_parameter(dictID, dictID1, key):
 
 def save_config_parameter(dictID, dictID1, key, value):
     import os
-    calibration_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'qibolab', 'platforms', 'tiiq.yml'))
+    calibration_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'qibolab', 'runcards', 'tiiq.yml'))
     with open(calibration_path, "r") as file:
         settings = yaml.safe_load(file)
     file.close()
