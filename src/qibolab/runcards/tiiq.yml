@@ -11,8 +11,8 @@ settings:
     pi_pulse_duration: 324
     pi_pulse_frequency: 200000000.0
     pi_pulse_gain: 0.1
-    qubit_freq: 8607000000.0
-    qubit_spectroscopy_min_ro_voltage: 341.2570942619535
+    qubit_freq: 8589500000.0
+    qubit_spectroscopy_min_ro_voltage: 258.47488094152607
     rabi_oscillations_pi_pulse_min_voltage: 425.5904838711285
     readout_pulse:
         amplitude: 0.5
@@ -21,22 +21,22 @@ settings:
         offset_i: 0
         offset_q: 0
     repetition_duration: 50000
-    resonator_freq: 7795479856.113952
-    resonator_spectroscopy_avg_min_ro_voltage: 35.40356363831186
-    resonator_spectroscopy_max_ro_voltage: 627.3151968914929
+    resonator_freq: 7795083029.740155
+    resonator_spectroscopy_avg_min_ro_voltage: 30.067360701791042
+    resonator_spectroscopy_max_ro_voltage: 378.2690707639016
     sampling_rate: 1000000000.0
     software_averages: 3
 LO_QCM_init_settings:
-    ip: 192.168.0.103
+    ip: 192.168.0.8
     label: LO_qcm
 LO_QCM_settings:
-    frequency: 8807000000.0
+    frequency: 8789500000.0
     power: 12
 LO_QRM_init_settings:
     ip: 192.168.0.7
     label: LO_qrm
 LO_QRM_settings:
-    frequency: 7775479856.113952
+    frequency: 7775083029.740155
     power: 12
 QCM_init_settings:
     ip: 192.168.0.12
@@ -46,7 +46,7 @@ QCM_init_settings:
     sync_en: true
     is_cluster: true
 QCM_settings:
-    gain: 0.1
+    gain: 0.2
     initial_delay: 0
     repetition_duration: 50000
 QRM_init_settings:
