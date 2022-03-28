@@ -60,6 +60,8 @@ def get_pulsar(device):
 def test_pulsar_init_and_setup(device):
     """Tests if Pulsars can be initialized and setup."""
     pulsar = get_pulsar(device)
+    assert pulsar.name == device.lower()
+    assert f"Pulsar{device}" in pulsar.signature
     pulsar.close()
 
 

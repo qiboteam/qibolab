@@ -43,12 +43,12 @@ class GenericPulsar(Instrument, ABC):
                 self.device = self.Device(self.label, self.ip)
                 logger.info(f"{self.name} connection established.")
                 self._connected = True
-            #except Exception as exc:
-            #    raise InstrumentException(self, str(exc))
             except socket.timeout:
                 # Use warning instead of exception when instruments are
                 # not available so that we can run tests on different devices
                 logger.warning("Could not connect to QRM. Skipping...")
+            except Exception as exc:  # pragma: no cover
+                raise InstrumentException(self, str(exc))
         else:
             raise_error(RuntimeError, "QRM is already connected.")
 
