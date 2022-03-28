@@ -6,7 +6,6 @@ class Qubit:
     """Describes a single qubit in pulse control and readout extraction.
 
     Args:
-        id (int): Qubit ID.
         pi_pulse (dict): Qubit pi-pulse parameters.
             See qibolab.pulses.Pulse for more information.
         readout_pulse (dict): Qubit readout pulse parameters.
@@ -23,7 +22,6 @@ class Qubit:
     def __init__(self, pi_pulse, readout_pulse, readout_frequency, resonator_spectroscopy_max_ro_voltage, rabi_oscillations_pi_pulse_min_voltage,
              playback, playback_readout, readout, readout_channels):
 
-        self.id = id
         self.pi_pulse = pi_pulse
         self.readout_pulse = readout_pulse
         self.readout_frequency = readout_frequency
@@ -51,6 +49,7 @@ class ICPlatform(AbstractPlatform):
         self._instruments = []
         self._lo = []
         self._adc = []
+        self._last_sequence = None
         super().__init__(name, runcard)
         self.qubits = []
         qubits = self._settings.get("qubits")
@@ -112,7 +111,11 @@ class ICPlatform(AbstractPlatform):
             self.is_connected = False
 
     def execute(self, sequence, nshots=None):
-        """Executes a pulse sequence.
+        """Executes a pulse sequence. Pulses are being cached so that are not reuploaded 
+            if they are the same as the ones sent previously. This greatly accelerates 
+            some characterization routines that recurrently use the same set of pulses, 
+            i.e. qubit and resonator spectroscopy, spin echo, and future circuits based on
+            fixed gates.
 
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
@@ -121,7 +124,7 @@ class ICPlatform(AbstractPlatform):
                 calibration json will be used.
 
         Returns:
-            Readout results acquired by :class:`qibolab.instruments.qblox.PulsarQRM`
+            Readout results acquired by the assigned readout instrument
             after execution.
         """
         if not self.is_connected:
@@ -135,6 +138,7 @@ class ICPlatform(AbstractPlatform):
         qubits_to_measure = []
         measurement_results = []
         pulse_mapping = {}
+        seq_serial = {}
 
         for pulse in sequence.pulses:
             # Assign pulses to each respective waveform generator
@@ -148,13 +152,18 @@ class ICPlatform(AbstractPlatform):
 
             if playback_device not in pulse_mapping.keys():
                 pulse_mapping[playback_device] = []
+                seq_serial[playback_device] = []
+            # Map the pulse to the associated playback instrument.
             pulse_mapping[playback_device].append(pulse)
+            seq_serial[playback_device].append(pulse.serial)
     
-        # Translate and upload the pulse for each device
+        # Translate and upload the pulse subsequence for each device if needed
         for device, subsequence in pulse_mapping.items():
             inst = self.fetch_instrument(device)
-            inst.upload(inst.translate(subsequence, nshots))
+            if self._last_sequence is None or seq_serial[device] != self._last_sequence[device]:
+                inst.upload(inst.translate(subsequence, nshots))
             inst.play_sequence()
+        self._last_sequence = seq_serial
 
         for adc in self._adc:
             adc.arm(nshots)
@@ -163,10 +172,10 @@ class ICPlatform(AbstractPlatform):
         self.start_experiment()
 
         # Fetch the experiment results
-        for qubit_id in qubits_to_measure:
+        for qubit_id in set(qubits_to_measure):
             qubit = self.fetch_qubit(qubit_id)
             inst = self.fetch_instrument(qubit.readout)
-            measurement_results.append(inst.result(qubit.readout_frequency))
+            measurement_results.append(inst.result(qubit.readout_frequency, qubit.readout_channels))
 
         if len(qubits_to_measure) == 1:
             return measurement_results[0]

@@ -1,7 +1,6 @@
 from qibo.config import raise_error, log
 from qibolab.platforms.abstract import AbstractPlatform
 
-
 class QBloxPlatform(AbstractPlatform):
     """Platform for controlling quantum devices using QCM and QRM.
 
@@ -20,6 +19,9 @@ class QBloxPlatform(AbstractPlatform):
         self._LO_qrm = None
         self._LO_qcm = None
         super().__init__(name, runcard)
+
+        self.last_qcm_pulses = None
+        self.last_qrm_pulses = None
 
     @property
     def qrm(self):
@@ -99,7 +101,11 @@ class QBloxPlatform(AbstractPlatform):
             self.is_connected = False
 
     def execute(self, sequence, nshots=None):
-        """Executes a pulse sequence.
+        """Executes a pulse sequence. Pulses are being cached so that are not reuploaded 
+            if they are the same as the ones sent previously. This greatly accelerates 
+            some characterization routines that recurrently use the same set of pulses, 
+            i.e. qubit and resonator spectroscopy, spin echo, and future circuits based on
+            fixed gates.
 
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
@@ -119,13 +125,13 @@ class QBloxPlatform(AbstractPlatform):
 
         # Translate and upload instructions to instruments
         if sequence.qcm_pulses:
-            waveforms, program = self._qcm.translate(
-                sequence, self.delay_before_readout, nshots)
-            self._qcm.upload(waveforms, program, self.data_folder)
+            if self.last_qcm_pulses != [pulse.serial() for pulse in sequence.qcm_pulses]:
+                waveforms, program = self._qcm.translate(sequence, self.delay_before_readout, nshots)
+                self._qcm.upload(waveforms, program, self.data_folder)
         if sequence.qrm_pulses:
-            waveforms, program = self._qrm.translate(
-                sequence, self.delay_before_readout, nshots)
-            self._qrm.upload(waveforms, program, self.data_folder)
+            if self.last_qrm_pulses != [pulse.serial() for pulse in sequence.qrm_pulses]:
+                waveforms, program = self._qrm.translate(sequence, self.delay_before_readout, nshots)
+                self._qrm.upload(waveforms, program, self.data_folder)
 
         # Execute instructions
         if sequence.qcm_pulses:
@@ -136,5 +142,9 @@ class QBloxPlatform(AbstractPlatform):
                 sequence.qrm_pulses[0])
         else:
             acquisition_results = None
+
+        self.last_qcm_pulses = [pulse.serial() for pulse in sequence.qcm_pulses]
+        self.last_qrm_pulses = [pulse.serial() for pulse in sequence.qrm_pulses]
+
 
         return acquisition_results
