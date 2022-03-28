@@ -2,7 +2,7 @@ name: tiiq
 nqubits: 1
 description: Controls the PulsarQRM, PulsarQCM and two SGS100A local oscillators.
 settings:
-    data_folder: .data/
+    data_folder: data/
     hardware_avg: 3000
     sampling_rate: 1_000_000_000
     repetition_duration: 50_000
