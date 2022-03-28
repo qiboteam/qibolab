@@ -530,11 +530,12 @@ class AlazarADC(ATS.AcquisitionController, Instrument):
         """
         self._get_alazar().acquire(acquisition_controller=self, **self.acquisitionkwargs)
 
-    def result(self, readout_frequency):
+    def result(self, readout_frequency, readout_channels=[0, 1]):
         """Returns the processed signal result from the ADC.
 
         Arguments:
             readout_frequency (float): Frequency to be used for signal processing.
+            readout_channels (int[]): Channels to be used for signal processing.
 
         Returns:
             ampl (float): Amplitude of the processed signal.
@@ -544,9 +545,8 @@ class AlazarADC(ATS.AcquisitionController, Instrument):
         """
         self._thread.join()
 
-        # TODO: Pass ADC channel as arg instead of hardcoded channels
-        input_vec_I = self._processed_data[0]
-        input_vec_Q = self._processed_data[1]
+        input_vec_I = self._processed_data[readout_channels[0]]
+        input_vec_Q = self._processed_data[readout_channels[1]]
         it = 0
         qt = 0
         for i in range(self.samples_per_record):

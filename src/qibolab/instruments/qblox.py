@@ -2,34 +2,55 @@ import json
 import numpy as np
 from abc import ABC, abstractmethod
 from qibo.config import raise_error
+from qibolab.instruments.instrument import Instrument, InstrumentException
 
 import logging
 logger = logging.getLogger(__name__)  # TODO: Consider using a global logger
 
-class GenericPulsar(ABC):
+class GenericPulsar(Instrument, ABC):
 
-    def __init__(self):
+    def __init__(self, label, ip, sequencer, ref_clock, sync_en, is_cluster):
+        super().__init__(ip)
+        self.label = label
+        # TODO When updating to the new firmware, use a sequencer mapping instead of setting a single sequencer
+        self.sequencer = sequencer
+        self.ref_clock = ref_clock
+        self.sync_en = sync_en
+        self.is_cluster = is_cluster
+        self._connected = False
+        self.Device = None
+        self.device = None
         # To be defined in each instrument
         self.name = None
-        self.device = None
-        self._connected = False
-        self.sequencer = None
-        self.ref_clock = None
-        self.sync_en = None
         # To be defined during setup
+        self.hardware_avg = None
         self.initial_delay = None
         self.repetition_duration = None
         # hardcoded values used in ``generate_program``
+        self.delay_before_readout = 4 # same value is used for all readout pulses (?)
         self.wait_loop_step = 1000
         self.duration_base = 16380 # maximum length of a waveform in number of samples (defined by the device memory).
         # hardcoded values used in ``upload``
+        # TODO QCM shouldn't have acquisitions
         self.acquisitions = {"single": {"num_bins": 1, "index":0}}
         self.weights = {}
 
-    @abstractmethod
-    def connect(self, label, ip):  # pragma: no cover
+    def connect(self):
         """Connects to the instruments."""
-        raise_error(NotImplementedError)
+        if not self._connected:
+            import socket
+            try:
+                self.device = self.Device(self.label, self.ip)
+                logger.info(f"{self.name} connection established.")
+                self._connected = True
+            #except Exception as exc:
+            #    raise InstrumentException(self, str(exc))
+            except socket.timeout:
+                # Use warning instead of exception when instruments are
+                # not available so that we can run tests on different devices
+                logger.warning("Could not connect to QRM. Skipping...")
+        else:
+            raise_error(RuntimeError, "QRM is already connected.")
 
     @property
     def gain(self):
@@ -230,14 +251,21 @@ class PulsarQRM(GenericPulsar):
     """Class for interfacing with Pulsar QRM."""
 
     def __init__(self, label, ip, ref_clock="external", sequencer=0, sync_en=True,
-                 hardware_avg_en=True, acq_trigger_mode="sequencer"):
-        super().__init__()
+                 hardware_avg_en=True, acq_trigger_mode="sequencer", is_cluster=True):
+        super().__init__(label, ip, sequencer, ref_clock, sync_en, is_cluster)
         # Instantiate base object from qblox library and connect to it
         self.name = "qrm"
         self.sequencer = sequencer
         self.hardware_avg_en = hardware_avg_en
 
-        self.connect(label, ip)
+        if self.is_cluster:
+            from cluster.cluster import cluster_qrm
+            self.Device = cluster_qrm
+        else:
+            from pulsar_qrm.pulsar_qrm import pulsar_qrm
+            self.Device = pulsar_qrm
+
+        self.connect()
         if self._connected:
             # Reset and configure
             self.device.reset()
@@ -252,20 +280,6 @@ class PulsarQRM(GenericPulsar):
                 self.device.sequencer1_sync_en(sync_en)
             else:
                 self.device.sequencer0_sync_en(sync_en)
-
-    def connect(self, label, ip):
-        if not self._connected:
-            import socket
-            try:
-                # Connecting to Qblox cluster qrm (only for TII platform)
-                from cluster.cluster import cluster_qrm
-                self.device = cluster_qrm(label, ip)
-                logger.info("QRM connection established.")
-                self._connected = True
-            except socket.timeout:
-                logger.warning("Could not connect to QRM. Skipping...")
-        else:
-            raise_error(RuntimeError, "QRM is already connected.")
 
     def setup(self, gain, initial_delay, repetition_duration,
               start_sample, integration_length, sampling_rate, mode):
@@ -342,13 +356,20 @@ class PulsarQRM(GenericPulsar):
 
 class PulsarQCM(GenericPulsar):
 
-    def __init__(self, label, ip, sequencer=0, ref_clock="external", sync_en=True):
-        super().__init__()
+    def __init__(self, label, ip, sequencer=0, ref_clock="external", sync_en=True, is_cluster=True):
+        super().__init__(label, ip, sequencer, ref_clock, sync_en, is_cluster)
         # Instantiate base object from qblox library and connect to it
         self.name = "qcm"
         self.sequencer = sequencer
 
-        self.connect(label, ip)
+        if self.is_cluster:
+            from cluster.cluster import cluster_qcm
+            self.Device = cluster_qcm
+        else:
+            from pulsar_qcm.pulsar_qcm import pulsar_qcm
+            self.Device = pulsar_qcm
+
+        self.connect()
         if self._connected:
             # Reset and configure
             self.device.reset()
@@ -369,17 +390,3 @@ class PulsarQCM(GenericPulsar):
         program = self.generate_program(nshots, initial_delay, delay_before_read_out, acquire_instruction, wait_time)
 
         return waveforms, program
-
-    def connect(self, label, ip):
-        if not self._connected:
-            import socket
-            try:
-                # Connecting to Qblox cluster qrm (only for TII platform)
-                from cluster.cluster import cluster_qcm
-                self.device = cluster_qcm(label, ip)
-                logger.info("QCM connection established.")
-                self._connected = True
-            except socket.timeout:
-                logger.warning("Could not connect to QCM. Skipping...")
-        else:
-            raise_error(RuntimeError, "QCM is already connected.")
