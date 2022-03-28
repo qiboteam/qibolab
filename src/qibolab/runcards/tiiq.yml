@@ -4,61 +4,56 @@ description: Controls the PulsarQRM, PulsarQCM and two SGS100A local oscillators
 settings:
     data_folder: data/
     hardware_avg: 3000
-    sampling_rate: 1_000_000_000
-    repetition_duration: 50_000
+    sampling_rate: 1000000000
+    repetition_duration: 50000
     delay_before_readout: 4
     delay_between_pulses: 0
-
     qc_spectroscopy_pulse:
         start: 0
-        frequency: 200_000_000
-        amplitude: 0.15
+        frequency: 200000000
+        amplitude: 0.2
         duration: 4000
         phase: 0
         shape: Gaussian(4000 / 5)
-
     readout_pulse:
         start: 4004
-        frequency: 20_000_000
+        frequency: 20000000
         amplitude: 0.5
         duration: 2000
         phase: 0
         shape: Rectangular()
-
-    resonator_freq: 7795555845.462747
-    resonator_spectroscopy_avg_min_ro_voltage: 23.83550884938851
-    resonator_spectroscopy_max_ro_voltage: 599.0957225177408
-    qubit_freq: 8608000000.0
-    qubit_spectroscopy_min_ro_voltage: 329.8973082360044
-    rabi_oscillations_pi_pulse_min_voltage: 384.10840270164533
+    resonator_freq: 7795164914.265556
+    resonator_spectroscopy_avg_min_ro_voltage: 16.385041436795955
+    resonator_spectroscopy_max_ro_voltage: 378.1358820360145
+    qubit_freq: 8586400000.0
+    qubit_spectroscopy_min_ro_voltage: 320.1807606532162
+    rabi_oscillations_pi_pulse_min_voltage: 328.54111181366574
     T1: 2192.895853326451
-    pi_pulse_amplitude: 0.15
-    pi_pulse_duration: 23
+    pi_pulse_amplitude: 0.2
+    pi_pulse_duration: 239
     pi_pulse_frequency: 200000000.0
-    pi_pulse_gain: 0.1
+    pi_pulse_gain: 0.15
     pi_pulse_shape: Gaussian(4000 / 5)
-
 LO_QCM_settings:
-    frequency: 8808000000.0
+    frequency: 8786400000.0
     power: 12
 LO_QRM_settings:
-    frequency: 7775555845.462747
+    frequency: 7775164914.265556
     power: 12
 QCM_settings:
-    gain: 0.1
+    gain: 0.15
     initial_delay: 0
-    repetition_duration: 50000
+    repetition_duration: 100000
 QRM_settings:
     gain: 0.3
     initial_delay: 0
+    start_sample: 150
     integration_length: 1500
     mode: ssb
-    repetition_duration: 50_000
-    sampling_rate: 1_000_000_000
-    start_sample: 130
-
+    repetition_duration: 50000
+    sampling_rate: 1000000000
 LO_QCM_init_settings:
-    ip: 192.168.0.103
+    ip: 192.168.0.8
     label: LO_qcm
 LO_QRM_init_settings:
     ip: 192.168.0.7

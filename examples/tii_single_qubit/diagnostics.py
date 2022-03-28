@@ -33,16 +33,16 @@ def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, high
     )
     return scanrange
 
-def backup_config_file():
+def backup_config_file(platform):
     import os
     import shutil
     import errno
     from datetime import datetime
-    original = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'qibolab', 'runcards', 'tiiq.yml'))
+    original = str(platform.runcard)
     now = datetime.now()
     now = now.strftime("%d%m%Y%H%M%S")
     destination_file_name = "tiiq_" + now + ".yml" 
-    target = os.path.realpath(os.path.join(os.path.dirname(__file__), 'settings_backups', destination_file_name))
+    target = os.path.realpath(os.path.join(os.path.dirname(__file__), 'data/settings_backups', destination_file_name))
 
     try:
         print("Copying file: " + original)
@@ -173,14 +173,16 @@ class Diagnostics():
         sequence.add(qc_pulse)
         sequence.add(ro_pulse)
 
-        ds = self.load_settings()['resonator_spectroscopy']
+        ds = self.load_settings()
+        self.pl.tuids_max_num(ds['max_num_plots'])
+        software_averages = ds['software_averages']
+        ds = ds['resonator_spectroscopy']
         lowres_width = ds['lowres_width']
         lowres_step = ds['lowres_step']
         highres_width = ds['highres_width']
         highres_step = ds['highres_step']
         precision_width = ds['precision_width']
         precision_step = ds['precision_step']
-        precision_software_averages = ds['precision_software_averages']
 
         #Fast Sweep
         scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
@@ -201,7 +203,7 @@ class Diagnostics():
         mc.gettables(Gettable(ROController(platform, sequence)))
         platform.start() 
         platform.LO_qcm.off()
-        dataset = mc.run("Resonator Spectroscopy Precision", soft_avg=precision_software_averages)
+        dataset = mc.run("Resonator Spectroscopy Precision", soft_avg=software_averages)
         platform.stop()
 
         # Fitting
@@ -232,9 +234,11 @@ class Diagnostics():
         sequence.add(ro_pulse)
 
         ds = self.load_settings()['punchout']
+        self.pl.tuids_max_num(ds['max_num_plots'])
+        software_averages = ds['software_averages']
+        ds = ds['punchout']
         precision_width = ds['precision_width']
         precision_step = ds['precision_step']
-        software_averages = ds['software_averages']
 
         scanrange = np.arange(-precision_width, precision_width, precision_step)
         scanrange = scanrange + platform.LO_qrm.get_frequency()
@@ -273,15 +277,17 @@ class Diagnostics():
         sequence.add(qc_pulse)
         sequence.add(ro_pulse)
 
-        ds = self.load_settings()['qubit_spectroscopy']
+        ds = self.load_settings()
+        self.pl.tuids_max_num(ds['max_num_plots'])
+        software_averages = ds['software_averages']
+        ds = ds['qubit_spectroscopy']
         fast_start = ds['fast_start']
         fast_end = ds['fast_end']
         fast_step = ds['fast_step']
         precision_start = ds['precision_start']
         precision_end = ds['precision_end']
         precision_step = ds['precision_step']
-        precision_software_averages = ds['precision_software_averages']
-    
+        
         # Fast Sweep
         fast_sweep_scan_range = np.arange(fast_start, fast_end, fast_step)
         mc.settables(platform.LO_qcm.device.frequency)
@@ -298,7 +304,7 @@ class Diagnostics():
         mc.setpoints(precision_sweep_scan_range + platform.LO_qcm.get_frequency())
         mc.gettables(Gettable(ROController(platform, sequence)))
         platform.start() 
-        dataset = mc.run("Qubit Spectroscopy Precision", soft_avg=precision_software_averages)
+        dataset = mc.run("Qubit Spectroscopy Precision", soft_avg=software_averages)
         platform.stop()
 
         # Fitting
@@ -330,11 +336,14 @@ class Diagnostics():
         sequence.add(qc_pulse)
         sequence.add(ro_pulse)
 
-        ds = self.load_settings()['rabi_pulse_length']
+        ds = self.load_settings()
+        self.pl.tuids_max_num(ds['max_num_plots'])
+        software_averages = ds['software_averages']
+        ds = ds['rabi_pulse_length']
         pulse_duration_start = ds['pulse_duration_start']
         pulse_duration_end = ds['pulse_duration_end']
         pulse_duration_step = ds['pulse_duration_step']
-        software_averages = ds['software_averages']
+
 
         mc.settables(Settable(QCPulseLengthParameter(ro_pulse, qc_pulse)))
         mc.setpoints(np.arange(pulse_duration_start, pulse_duration_end, pulse_duration_step))
@@ -435,11 +444,13 @@ class Diagnostics():
         sequence.add(qc_pi_pulse)
         sequence.add(ro_pulse)
 
-        ds = self.load_settings()['t1']
+        ds = self.load_settings()
+        self.pl.tuids_max_num(ds['max_num_plots'])
+        software_averages = ds['software_averages']
+        ds = ds['t1']
         delay_before_readout_start = ds['delay_before_readout_start']
         delay_before_readout_end = ds['delay_before_readout_end']
         delay_before_readout_step = ds['delay_before_readout_step']
-        software_averages = ds['software_averages']
 
         mc.settables(Settable(T1WaitParameter(ro_pulse, qc_pi_pulse)))
         mc.setpoints(np.arange(delay_before_readout_start,
@@ -481,12 +492,14 @@ class Diagnostics():
         sequence.add(qc_pi_half_pulse_2)
         sequence.add(ro_pulse)
         
-        ds = self.load_settings()['ramsey']
+        ds = self.load_settings()
+        self.pl.tuids_max_num(ds['max_num_plots'])
+        software_averages = ds['software_averages']
+        ds = ds['ramsey']
         delay_between_pulses_start = ds['delay_between_pulses_start']
         delay_between_pulses_end = ds['delay_between_pulses_end']
         delay_between_pulses_step = ds['delay_between_pulses_step']
-        software_averages = ds['software_averages']
-
+        
         mc.settables(Settable(RamseyWaitParameter(ro_pulse, qc_pi_half_pulse_2, platform.settings['settings']['pi_pulse_duration'])))
         mc.setpoints(np.arange(delay_between_pulses_start, delay_between_pulses_end, delay_between_pulses_step))
         mc.gettables(Gettable(ROController(platform, sequence)))
@@ -526,11 +539,13 @@ class Diagnostics():
         sequence.add(qc_pi_pulse)
         sequence.add(ro_pulse)
         
-        ds = self.load_settings()['spin_echo']
+        ds = self.load_settings()
+        self.pl.tuids_max_num(ds['max_num_plots'])
+        software_averages = ds['software_averages']
+        ds = ds['spin_echo']
         delay_between_pulses_start = ds['delay_between_pulses_start']
         delay_between_pulses_end = ds['delay_between_pulses_end']
         delay_between_pulses_step = ds['delay_between_pulses_step']
-        software_averages = ds['software_averages']
 
         mc.settables(Settable(SpinEchoWaitParameter(ro_pulse, qc_pi_pulse, platform.settings['settings']['pi_pulse_duration'])))
         mc.setpoints(np.arange(delay_between_pulses_start, delay_between_pulses_end, delay_between_pulses_step))
@@ -570,11 +585,13 @@ class Diagnostics():
         sequence.add(qc_pi_half_pulse_2)
         sequence.add(ro_pulse)
         
-        ds = self.load_settings()['spin_echo_3pulses']
+        ds = self.load_settings()
+        self.pl.tuids_max_num(ds['max_num_plots'])
+        software_averages = ds['software_averages']
+        ds = ds['spin_echo_3pulses']        
         delay_between_pulses_start = ds['delay_between_pulses_start']
         delay_between_pulses_end = ds['delay_between_pulses_end']
         delay_between_pulses_step = ds['delay_between_pulses_step']
-        software_averages = ds['software_averages']
 
         mc.settables(SpinEcho3PWaitParameter(ro_pulse, qc_pi_pulse, qc_pi_half_pulse_2, platform.settings['settings']['pi_pulse_duration']))
         mc.setpoints(np.arange(delay_between_pulses_start, delay_between_pulses_end, delay_between_pulses_step))
