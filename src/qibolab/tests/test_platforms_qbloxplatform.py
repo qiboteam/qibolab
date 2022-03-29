@@ -31,6 +31,17 @@ def test_qbloxplatform_init():
     with pytest.raises(RuntimeError):
         platform._check_connected()
 
+
+def test_qbloxplatform_reload_settings():
+    runcard = pathlib.Path(__file__).parent.parent / "runcards" / "tiiq.yml"
+    with open(runcard, "r") as file:
+        settings = yaml.safe_load(file)
+    platform = QBloxPlatform("tiiq", runcard)
+    assert platform.settings == settings
+    platform.reload_settings()
+    assert platform.settings == settings
+
+
 # TODO: Test ``AbstractPlatform.run_calibration`` method
 
 def test_qbloxplatform_connect():
