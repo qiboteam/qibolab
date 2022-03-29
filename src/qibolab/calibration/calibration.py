@@ -24,7 +24,8 @@ class Calibration():
 
     def __init__(self, platform: Platform):
         self.platform = platform
-        self.mc, self.pl, self.ins = utils.create_measurement_control('Calibration')
+        # TODO: Set mc plotting to false when auto calibrates (default = True for diagnostics)
+        self.mc, self.pl, self.ins = utils.create_measurement_control('Calibration', True)
 
     def load_settings(self):
         # Load diagnostics settings

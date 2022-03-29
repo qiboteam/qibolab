@@ -111,9 +111,9 @@ def plot_qubit_states(gnd_results, exc_results):
     plt.title("0-1 discrimination", fontsize=15)
     plt.show()
 
-def create_measurement_control(name):
+def create_measurement_control(name, debug=True):
     import os
-    if os.environ.get("ENABLE_PLOTMON", True):
+    if os.environ.get("ENABLE_PLOTMON", debug):
         mc = MeasurementControl(f'MC {name}')
         from quantify_core.visualization.pyqt_plotmon import PlotMonitor_pyqt
         plotmon = PlotMonitor_pyqt(f'Plot Monitor {name}')
