@@ -1,0 +1,57 @@
+name: tiiq_single_qubit_diagnostics
+description: Settings for characterization scripts.
+software_averages: 10
+max_num_plots: 1
+
+resonator_spectroscopy:
+  lowres_width: 35_000_000
+  lowres_step: 2_000_000
+  highres_width: 5_000_000
+  highres_step: 200_000
+  precision_width: 2_000_000
+  precision_step: 40_000
+
+resonator_spectroscopy_shifted:
+  lowres_width: 30.e+6
+  lowres_step: 2.e+6
+  highres_width: 1.e+6
+  highres_step: 0.2e+6
+  precision_width: 0.5e+6
+  precision_step: 0.02e+6
+
+punchout:
+  precision_width: 25.e+6
+  precision_step: 0.5e+6
+
+qubit_spectroscopy:
+  fast_start: -300_000_000
+  fast_end: 100_000_000
+  fast_step: 2_000_000
+  precision_start: -30_000_000
+  precision_end: 30_000_000
+  precision_step: 1_000_000
+
+rabi_pulse_length:
+  pulse_duration_start: 1
+  pulse_duration_end: 500
+  pulse_duration_step: 2
+
+t1:
+  delay_before_readout_start: 0
+  delay_before_readout_end: 2000
+  delay_before_readout_step: 10
+
+ramsey:
+  delay_between_pulses_start: 4
+  delay_between_pulses_end: 1200
+  delay_between_pulses_step: 10
+
+spin_echo:
+  delay_between_pulses_start: 4
+  delay_between_pulses_end: 500
+  delay_between_pulses_step: 10
+
+spin_echo_3pulses: 
+  delay_between_pulses_start: 4
+  delay_between_pulses_end: 500
+  delay_between_pulses_step: 10

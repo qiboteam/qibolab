@@ -2,42 +2,62 @@ name: tiiq
 nqubits: 1
 description: Controls the PulsarQRM, PulsarQCM and two SGS100A local oscillators.
 settings:
-    T1: 1362
-    data_folder: data
+    data_folder: data/
+    hardware_avg: 3000
+    sampling_rate: 1000000000
+    repetition_duration: 50000
     delay_before_readout: 4
     delay_between_pulses: 0
-    hardware_avg: 1024
-    pi_pulse_amplitude: 0.15
-    pi_pulse_duration: 324
-    pi_pulse_frequency: 200000000.0
-    pi_pulse_gain: 0.1
-    qubit_freq: 8589500000.0
-    qubit_spectroscopy_min_ro_voltage: 258.47488094152607
-    rabi_oscillations_pi_pulse_min_voltage: 425.5904838711285
+    qc_spectroscopy_pulse:
+        start: 0
+        frequency: 200000000
+        amplitude: 0.2
+        duration: 4000
+        phase: 0
+        shape: Gaussian(4000 / 5)
     readout_pulse:
+        start: 4004
+        frequency: 20000000
         amplitude: 0.5
         duration: 2000
-        frequency: 20000000.0
-        offset_i: 0
-        offset_q: 0
+        phase: 0
+        shape: Rectangular()
+    resonator_freq: 7795108893.499539
+    resonator_spectroscopy_avg_min_ro_voltage: 16.558676254943574
+    resonator_spectroscopy_max_ro_voltage: 369.34690016364306
+    qubit_freq: 8587400000.0
+    qubit_spectroscopy_min_ro_voltage: 290.54695404377264
+    rabi_oscillations_pi_pulse_min_voltage: 288.99809651683194
+    T1: 2192.895853326451
+    pi_pulse_amplitude: 0.2
+    pi_pulse_duration: 12
+    pi_pulse_frequency: 200000000.0
+    pi_pulse_gain: 0.15
+    pi_pulse_shape: Gaussian(4000 / 5)
+LO_QCM_settings:
+    frequency: 8787400000.0
+    power: 12
+LO_QRM_settings:
+    frequency: 7775108893.499539
+    power: 12
+QCM_settings:
+    gain: 0.15
+    initial_delay: 0
+    repetition_duration: 100000
+QRM_settings:
+    gain: 0.3
+    initial_delay: 0
+    start_sample: 130
+    integration_length: 1500
+    mode: ssb
     repetition_duration: 50000
-    resonator_freq: 7795083029.740155
-    resonator_spectroscopy_avg_min_ro_voltage: 30.067360701791042
-    resonator_spectroscopy_max_ro_voltage: 378.2690707639016
-    sampling_rate: 1000000000.0
-    software_averages: 3
+    sampling_rate: 1000000000
 LO_QCM_init_settings:
     ip: 192.168.0.8
     label: LO_qcm
-LO_QCM_settings:
-    frequency: 8789500000.0
-    power: 12
 LO_QRM_init_settings:
     ip: 192.168.0.7
     label: LO_qrm
-LO_QRM_settings:
-    frequency: 7775083029.740155
-    power: 12
 QCM_init_settings:
     ip: 192.168.0.12
     label: qcm
@@ -45,10 +65,6 @@ QCM_init_settings:
     sequencer: 0
     sync_en: true
     is_cluster: true
-QCM_settings:
-    gain: 0.2
-    initial_delay: 0
-    repetition_duration: 50000
 QRM_init_settings:
     acq_trigger_mode: sequencer
     hardware_avg_en: true
@@ -58,11 +74,3 @@ QRM_init_settings:
     sequencer: 0
     sync_en: true
     is_cluster: true
-QRM_settings:
-    gain: 0.3
-    initial_delay: 0
-    integration_length: 1500
-    mode: ssb
-    repetition_duration: 50000
-    sampling_rate: 1000000000.0
-    start_sample: 130
