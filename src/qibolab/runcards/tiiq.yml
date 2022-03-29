@@ -22,23 +22,23 @@ settings:
         duration: 2000
         phase: 0
         shape: Rectangular()
-    resonator_freq: 7795164914.265556
-    resonator_spectroscopy_avg_min_ro_voltage: 16.385041436795955
-    resonator_spectroscopy_max_ro_voltage: 378.1358820360145
-    qubit_freq: 8586400000.0
-    qubit_spectroscopy_min_ro_voltage: 320.1807606532162
-    rabi_oscillations_pi_pulse_min_voltage: 328.54111181366574
+    resonator_freq: 7795108893.499539
+    resonator_spectroscopy_avg_min_ro_voltage: 16.558676254943574
+    resonator_spectroscopy_max_ro_voltage: 369.34690016364306
+    qubit_freq: 8587400000.0
+    qubit_spectroscopy_min_ro_voltage: 290.54695404377264
+    rabi_oscillations_pi_pulse_min_voltage: 288.99809651683194
     T1: 2192.895853326451
     pi_pulse_amplitude: 0.2
-    pi_pulse_duration: 239
+    pi_pulse_duration: 12
     pi_pulse_frequency: 200000000.0
     pi_pulse_gain: 0.15
     pi_pulse_shape: Gaussian(4000 / 5)
 LO_QCM_settings:
-    frequency: 8786400000.0
+    frequency: 8787400000.0
     power: 12
 LO_QRM_settings:
-    frequency: 7775164914.265556
+    frequency: 7775108893.499539
     power: 12
 QCM_settings:
     gain: 0.15
@@ -47,7 +47,7 @@ QCM_settings:
 QRM_settings:
     gain: 0.3
     initial_delay: 0
-    start_sample: 150
+    start_sample: 130
     integration_length: 1500
     mode: ssb
     repetition_duration: 50000
@@ -64,6 +64,7 @@ QCM_init_settings:
     ref_clock: external
     sequencer: 0
     sync_en: true
+    is_cluster: true
 QRM_init_settings:
     acq_trigger_mode: sequencer
     hardware_avg_en: true
@@ -72,3 +73,4 @@ QRM_init_settings:
     ref_clock: external
     sequencer: 0
     sync_en: true
+    is_cluster: true

@@ -19,6 +19,7 @@ from qibolab.pulse_shapes import Rectangular, Gaussian
 # TODO: Check why this set_datadir is needed
 set_datadir(pathlib.Path(__file__).parent / "data" / "quantify")
 
+
 def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step):
     #[.     .     .     .     .     .][...................]0[...................][.     .     .     .     .     .]
     #[-------- lowres_width ---------][-- highres_width --] [-- highres_width --][-------- lowres_width ---------]
@@ -95,7 +96,7 @@ def plot(smooth_dataset, dataset, label, type):
         ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
         ax.title.set_text(label)
         ax.plot(dataset['x0'].values[smooth_dataset.argmax()], smooth_dataset[smooth_dataset.argmax()], 'o', color='C2')
-        plt.savefig(label+".pdf")
+        plt.savefig(pathlib.Path("data") / f"{label}.pdf")
         return
 
     if (type == 1): #qubit spec, rabi, ramsey, t1 plots
@@ -104,7 +105,7 @@ def plot(smooth_dataset, dataset, label, type):
         ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
         ax.title.set_text(label)
         ax.plot(dataset['x0'].values[smooth_dataset.argmin()], smooth_dataset[smooth_dataset.argmin()], 'o', color='C2')
-        plt.savefig(label+".pdf")
+        plt.savefig(pathlib.Path("data") / f"{label}.pdf")
         return
 
 def plot_qubit_states(gnd_results, exc_results):
@@ -132,7 +133,6 @@ def create_measurement_control(name):
         mc = MeasurementControl(f'MC {name}')
         from quantify_core.visualization.pyqt_plotmon import PlotMonitor_pyqt
         plotmon = PlotMonitor_pyqt(f'Plot Monitor {name}')
-        plotmon.tuids_max_num(3)
         mc.instr_plotmon(plotmon.name)
         from quantify_core.visualization.instrument_monitor import InstrumentMonitor
         insmon = InstrumentMonitor(f"Instruments Monitor {name}")
@@ -184,6 +184,7 @@ class Diagnostics():
         precision_width = ds['precision_width']
         precision_step = ds['precision_step']
 
+
         #Fast Sweep
         scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
         mc.settables(platform.LO_qrm.device.frequency)
@@ -211,7 +212,7 @@ class Diagnostics():
         # resonator_freq = dataset['x0'].values[smooth_dataset.argmax()] + ro_pulse.frequency
         max_ro_voltage = smooth_dataset.max() * 1e6
 
-        f0, BW, Q = fitting.lorentzian_fit("last", max)
+        f0, BW, Q = fitting.lorentzian_fit("last", max, "Resonator_spectroscopy")
         resonator_freq = (f0*1e9 + ro_pulse.frequency)
 
         print(f"\nResonator Frequency = {resonator_freq}")
@@ -239,6 +240,7 @@ class Diagnostics():
         ds = ds['punchout']
         precision_width = ds['precision_width']
         precision_step = ds['precision_step']
+
 
         scanrange = np.arange(-precision_width, precision_width, precision_step)
         scanrange = scanrange + platform.LO_qrm.get_frequency()
@@ -288,6 +290,7 @@ class Diagnostics():
         precision_end = ds['precision_end']
         precision_step = ds['precision_step']
         
+
         # Fast Sweep
         fast_sweep_scan_range = np.arange(fast_start, fast_end, fast_step)
         mc.settables(platform.LO_qcm.device.frequency)
@@ -315,7 +318,7 @@ class Diagnostics():
         print(f"\nQubit Frequency = {qubit_freq}")
         plot(smooth_dataset, dataset, "Qubit_Spectroscopy", 1)
         print("Qubit freq ontained from MC results: ", qubit_freq)
-        f0, BW, Q = fitting.lorentzian_fit("last", min)
+        f0, BW, Q = fitting.lorentzian_fit("last", min, "Qubit_Spectroscopy")
         qubit_freq = (f0*1e9 - qc_pulse.frequency)
         print("Qubit freq ontained from fitting: ", qubit_freq)
         return qubit_freq, min_ro_voltage, smooth_dataset, dataset
@@ -452,6 +455,7 @@ class Diagnostics():
         delay_before_readout_end = ds['delay_before_readout_end']
         delay_before_readout_step = ds['delay_before_readout_step']
 
+
         mc.settables(Settable(T1WaitParameter(ro_pulse, qc_pi_pulse)))
         mc.setpoints(np.arange(delay_before_readout_start,
                             delay_before_readout_end,
@@ -500,6 +504,7 @@ class Diagnostics():
         delay_between_pulses_end = ds['delay_between_pulses_end']
         delay_between_pulses_step = ds['delay_between_pulses_step']
         
+
         mc.settables(Settable(RamseyWaitParameter(ro_pulse, qc_pi_half_pulse_2, platform.settings['settings']['pi_pulse_duration'])))
         mc.setpoints(np.arange(delay_between_pulses_start, delay_between_pulses_end, delay_between_pulses_step))
         mc.gettables(Gettable(ROController(platform, sequence)))
@@ -592,6 +597,7 @@ class Diagnostics():
         delay_between_pulses_start = ds['delay_between_pulses_start']
         delay_between_pulses_end = ds['delay_between_pulses_end']
         delay_between_pulses_step = ds['delay_between_pulses_step']
+
 
         mc.settables(SpinEcho3PWaitParameter(ro_pulse, qc_pi_pulse, qc_pi_half_pulse_2, platform.settings['settings']['pi_pulse_duration']))
         mc.setpoints(np.arange(delay_between_pulses_start, delay_between_pulses_end, delay_between_pulses_step))
