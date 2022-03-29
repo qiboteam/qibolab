@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 import yaml
 from qibo.config import raise_error, log
 
+from calibration import Calibration
+
 
 class AbstractPlatform(ABC):
     """Abstract platform for controlling quantum devices.
@@ -105,14 +107,14 @@ class AbstractPlatform(ABC):
         return self._settings.get("settings").get("delay_before_readout")
 
     def run_calibration(self, runcard):
-        """Executes calibration routines and updates the settings json."""
-        # TODO: Implement calibration routines and update ``self._settings``.
+        """Executes calibration routines and updates the settings yml file"""
+        if (runcard == "tiiq"):
+            from qibolab.calibration import calibration
+            ac = Calibration(self)
+            ac.auto_calibrate_plaform()     
 
         # update instruments with new calibration settings
         self.setup()
-        # save new calibration settings to json
-        with open(runcard, "w") as file:
-            yaml.dump(self._settings, file)
 
     def __call__(self, sequence, nshots=None):
         return self.execute(sequence, nshots)
