@@ -146,7 +146,7 @@ def test_hardwarecircuit_create_sequence():
     pulse3 = f"P(qcm, {2 * (duration + delay)}, {duration}, {amplitude}, {frequency}, -1.6707963267948966, gaussian({std}))"
     pulse4 = f"P(qcm, {3 * (duration + delay)}, {duration}, {amplitude}, {frequency}, 1.2707963267948963, gaussian({std}))"
     ro = K.platform.readout_pulse
-    pulse5 = f"P(qrm, 652, {ro.get('duration')}, {ro.get('amplitude')}, {ro.get('frequency')}, -0.30000000000000027, rectangular)"
+    pulse5 = f"P(qrm, 28, {ro.get('duration')}, {ro.get('amplitude')}, {ro.get('frequency')}, -0.30000000000000027, rectangular)"
     assert seq.serial() == ", ".join([pulse1, pulse2, pulse3, pulse4, pulse5])
 
 
