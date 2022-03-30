@@ -6,7 +6,7 @@ from qibolab import gates
 
 def test_u3_to_sequence():
     from qibolab.circuit import PulseSequence
-    qibo.set_backend("qibolab")
+    qibo.set_backend("qibolab", platform="tiiq")
     gate = gates.U3(0, theta=0.1, phi=0.2, lam=0.3)
     sequence = PulseSequence()
     gate.to_sequence(sequence)
@@ -15,7 +15,7 @@ def test_u3_to_sequence():
 
 def test_measurement():
     from qibolab.circuit import PulseSequence
-    qibo.set_backend("qibolab")
+    qibo.set_backend("qibolab", platform="tiiq")
     gate = gates.M(0)
     with pytest.raises(NotImplementedError):
         gate.to_u3_params()
