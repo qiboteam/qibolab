@@ -249,8 +249,8 @@ class Calibration():
         platform = self.platform
         platform.reload_settings()
         ps = platform.settings['settings']
-        niter=10
-        nshots=1
+        niter=50
+        nshots=100
 
         #create exc and gnd pulses 
         start = 0
@@ -260,40 +260,54 @@ class Calibration():
         phase = 0
         shape = eval(ps['pi_pulse_shape'])
         qc_pi_pulse = Pulse(start, duration, amplitude, frequency, phase, shape)
-
-        ro_pulse_shape = eval(ps['readout_pulse'].popitem()[1])
-        ro_pulse_settings = ps['readout_pulse']
-        ro_pulse = ReadoutPulse(**ro_pulse_settings, shape = ro_pulse_shape)
+    
+        #RO pulse starting just after pi pulse
+        #ro_pulse_settings = ps['readout_pulse']
+        #ro_start = ps['pi_pulse_duration'] + 4 # duration = 11 + 1
+        ro_start = 15
+        ro_frequency = 20000000
+        ro_amplitude = 0.5
+        ro_duration = 2000
+        ro_phase = 0
+        ro_pulse = ReadoutPulse(ro_start, ro_duration, ro_amplitude, ro_frequency, ro_phase, Rectangular())
         
         exc_sequence = PulseSequence()
         exc_sequence.add(qc_pi_pulse)
-        gnd_sequence.add(ro_pulse)
+        exc_sequence.add(ro_pulse)
+
 
         gnd_sequence = PulseSequence()
-        #ro_pulse.start=0
+        ro_pulse_shape = eval(ps['readout_pulse'].popitem()[1])
+        ro_pulse_settings = ps['readout_pulse']
+        ro_pulse = ReadoutPulse(**ro_pulse_settings, shape = ro_pulse_shape)
+
+        gnd_sequence.add(qc_pi_pulse)
         gnd_sequence.add(ro_pulse)
 
         platform.LO_qrm.set_frequency(ps['resonator_freq'] - ro_pulse.frequency)
         platform.LO_qcm.set_frequency(ps['qubit_freq'] + qc_pi_pulse.frequency)
         platform.start()
 
+        #Exectue niter single exc shots
+        all_exc_states = []
+        for i in range(niter):
+            print(f"Starting exc state calibration {i}")
+            qubit_state = platform.execute(exc_sequence, nshots)
+            print(f"Finished exc single shot execution  {i}")
+            #Compose complex point from i, q obtained from execution
+            point = complex(qubit_state[2], qubit_state[3])
+            all_exc_states.append(point)
+
         #Exectue niter single gnd shots
         platform.LO_qcm.off()
         all_gnd_states = []
         for i in range(niter):
+            print(f"Starting gnd state calibration  {i}")
             qubit_state = platform.execute(gnd_sequence, nshots)
+            print(f"Finished gnd single shot execution  {i}")
             #Compose complex point from i, q obtained from execution
             point = complex(qubit_state[2], qubit_state[3])
-            all_gnd_states.add(point)
-
-        #Exectue niter single exc shots
-        platform.LO_qcm.on()
-        all_exc_states = []
-        for i in range(niter):
-            qubit_state = platform.execute(exc_sequence, nshots)
-            #Compose complex point from i, q obtained from execution
-            point = complex(qubit_state[2], qubit_state[3])
-            all_exc_states.add(point)
+            all_gnd_states.append(point)
 
         platform.stop()
 
@@ -306,32 +320,32 @@ class Calibration():
         utils.backup_config_file(platform)
 
         #run and save cavity spectroscopy calibration
-        resonator_freq, avg_min_voltage, max_ro_voltage, smooth_dataset, dataset = self.run_resonator_spectroscopy()
+        #resonator_freq, avg_min_voltage, max_ro_voltage, smooth_dataset, dataset = self.run_resonator_spectroscopy()
 
-        print(utils.get_config_parameter("settings", "", "resonator_freq"))
-        print(utils.get_config_parameter("settings", "", "resonator_spectroscopy_avg_min_ro_voltage"))
-        print(utils.get_config_parameter("settings", "", "resonator_spectroscopy_max_ro_voltage"))
-        print(utils.get_config_parameter("LO_QRM_settings", "", "frequency"))
-        # utils.save_config_parameter("settings", "", "resonator_freq", float(resonator_freq))
+        # print(utils.get_config_parameter("settings", "", "resonator_freq"))
+        # print(utils.get_config_parameter("settings", "", "resonator_spectroscopy_avg_min_ro_voltage"))
+        # print(utils.get_config_parameter("settings", "", "resonator_spectroscopy_max_ro_voltage"))
+        # print(utils.get_config_parameter("LO_QRM_settings", "", "frequency"))
+        # # utils.save_config_parameter("settings", "", "resonator_freq", float(resonator_freq))
         # utils.save_config_parameter("settings", "", "resonator_spectroscopy_avg_min_ro_voltage", float(avg_min_voltage))
         # utils.save_config_parameter("settings", "", "resonator_spectroscopy_max_ro_voltage", float(max_ro_voltage))
         # utils.save_config_parameter("LO_QRM_settings", "", "frequency", float(resonator_freq - 20_000_000))
 
         #run and save qubit spectroscopy calibration
-        qubit_freq, min_ro_voltage, smooth_dataset, dataset = self.run_qubit_spectroscopy()
-        print(utils.get_config_parameter("settings", "", "qubit_freq"))
-        print(utils.get_config_parameter("LO_QCM_settings", "", "frequency"))
-        print(utils.get_config_parameter("settings", "", "qubit_spectroscopy_min_ro_voltage"))
-        # utils.save_config_parameter("settings", "", "qubit_freq", float(qubit_freq))
+        # qubit_freq, min_ro_voltage, smooth_dataset, dataset = self.run_qubit_spectroscopy()
+        # print(utils.get_config_parameter("settings", "", "qubit_freq"))
+        # print(utils.get_config_parameter("LO_QCM_settings", "", "frequency"))
+        # print(utils.get_config_parameter("settings", "", "qubit_spectroscopy_min_ro_voltage"))
+        # # utils.save_config_parameter("settings", "", "qubit_freq", float(qubit_freq))
         # utils.save_config_parameter("LO_QCM_settings", "", "frequency", float(qubit_freq + 200_000_000))
         # utils.save_config_parameter("settings", "", "qubit_spectroscopy_min_ro_voltage", float(min_ro_voltage))
 
         # #run Rabi and save Pi pulse params from calibration
-        dataset, pi_pulse_duration, pi_pulse_amplitude, pi_pulse_gain, rabi_oscillations_pi_pulse_min_voltage, t1 = self.run_rabi_pulse_length()
-        print(utils.get_config_parameter("settings", "", "pi_pulse_duration"))
-        print(utils.get_config_parameter("settings", "", "pi_pulse_amplitude"))
-        print(utils.get_config_parameter("settings", "", "pi_pulse_gain"))
-        print(utils.get_config_parameter("settings", "", "rabi_oscillations_pi_pulse_min_voltage"))
+        # dataset, pi_pulse_duration, pi_pulse_amplitude, pi_pulse_gain, rabi_oscillations_pi_pulse_min_voltage, t1 = self.run_rabi_pulse_length()
+        # print(utils.get_config_parameter("settings", "", "pi_pulse_duration"))
+        # print(utils.get_config_parameter("settings", "", "pi_pulse_amplitude"))
+        # print(utils.get_config_parameter("settings", "", "pi_pulse_gain"))
+        # print(utils.get_config_parameter("settings", "", "rabi_oscillations_pi_pulse_min_voltage"))
         # utils.save_config_parameter("settings", "", "pi_pulse_duration", int(pi_pulse_duration))
         # utils.save_config_parameter("settings", "", "pi_pulse_amplitude", float(pi_pulse_amplitude)) 
         # utils.save_config_parameter("settings", "", "pi_pulse_gain", float(pi_pulse_gain))
@@ -352,11 +366,11 @@ class Calibration():
         #Classify all points into 0 and 1
         classified_gnd_results = []
         for point in all_gnd_states: 
-             classified_gnd_results.add(utils.classify(point, mean_gnd_states, mean_exc_states))
+             classified_gnd_results.append(utils.classify(point, mean_gnd_states, mean_exc_states))
 
         classified_exc_results = []
         for point in all_exc_states:
-             classified_exc_results.add(utils.classify(point, mean_gnd_states, mean_exc_states))
+             classified_exc_results.append(utils.classify(point, mean_gnd_states, mean_exc_states))
 
         print(classified_gnd_results)
         print(classified_exc_results)

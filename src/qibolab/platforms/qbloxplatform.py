@@ -53,14 +53,10 @@ class QBloxPlatform(AbstractPlatform):
             log.info(f"Connecting to {self.name} instruments.")
             try:
                 from qibolab.instruments import PulsarQRM, PulsarQCM, SGS100A
-                self._qrm = PulsarQRM(
-                    **self._settings.get("QRM_init_settings"))
-                self._qcm = PulsarQCM(
-                    **self._settings.get("QCM_init_settings"))
-                self._LO_qrm = SGS100A(
-                    **self._settings.get("LO_QRM_init_settings"))
-                self._LO_qcm = SGS100A(
-                    **self._settings.get("LO_QCM_init_settings"))
+                self._qrm = PulsarQRM(**self._settings.get("QRM_init_settings"))
+                self._qcm = PulsarQCM(**self._settings.get("QCM_init_settings"))
+                self._LO_qrm = SGS100A(**self._settings.get("LO_QRM_init_settings"))
+                self._LO_qcm = SGS100A(**self._settings.get("LO_QCM_init_settings"))
                 self.is_connected = True
             except Exception as exception:
                 raise_error(RuntimeError, "Cannot establish connection to "
@@ -118,8 +114,7 @@ class QBloxPlatform(AbstractPlatform):
             after execution.
         """
         if not self.is_connected:
-            raise_error(
-                RuntimeError, "Execution failed because instruments are not connected.")
+            raise_error(RuntimeError, "Execution failed because instruments are not connected.")
         if nshots is None:
             nshots = self.hardware_avg
 
@@ -138,8 +133,7 @@ class QBloxPlatform(AbstractPlatform):
             self._qcm.play_sequence()
         if sequence.qrm_pulses:
             # TODO: Find a better way to pass the readout pulse here
-            acquisition_results = self._qrm.play_sequence_and_acquire(
-                sequence.qrm_pulses[0])
+            acquisition_results = self._qrm.play_sequence_and_acquire(sequence.qrm_pulses[0])
         else:
             acquisition_results = None
 
