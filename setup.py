@@ -34,7 +34,7 @@ setup(
     url="https://github.com/qiboteam/qibolab",
     packages=find_packages("src"),
     package_dir={"": "src"},
-    package_data={"": ["*.json", "*.npy"]},
+    package_data={"": ["runcards/*.yml", "*.txt"]},
     zip_safe=False,
     classifiers=[
         "Programming Language :: Python :: 3",

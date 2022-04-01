@@ -31,7 +31,7 @@ class HardwareState(AbstractState):
     def numpy(self): # pragma: no cover
         raise_error(NotImplementedError)
 
-    def state(self, numpy=False, decimals=-1, cutoff=1e-10, max_terms=20):
+    def state(self, numpy=False, decimals=-1, cutoff=1e-10, max_terms=20): # pragma: no cover
         raise_error(NotImplementedError)
 
     @classmethod
@@ -53,7 +53,7 @@ class HardwareState(AbstractState):
         raise_error(NotImplementedError)
 
     def copy(self, min_voltage=None, max_voltage=None):
-        new = super().copy()
+        new = self.__class__(1)
         new.readout = self.readout
         if min_voltage is not None:
             new.min_voltage = min_voltage
