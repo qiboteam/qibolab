@@ -1,5 +1,4 @@
 import pathlib
-from qibo.config import raise_error
 
 
 def Platform(name, runcard=None):
@@ -19,5 +18,6 @@ def Platform(name, runcard=None):
     elif name == 'icarusq':
         from qibolab.platforms.icplatform import ICPlatform as Device
     else:
+        from qibo.config import raise_error
         raise_error(RuntimeError, f"Platform {name} is not supported.")
     return Device(name, runcard)
