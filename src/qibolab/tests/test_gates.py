@@ -13,6 +13,18 @@ def test_u3_to_sequence():
     assert len(sequence) == 2
 
 
+def test_u3_sim_agreement():
+    theta, phi, lam = 0.1, 0.2, 0.3 
+    u3 = gates.U3(0, theta, phi, lam)
+    rz1 = gates.RZ(0, phi).matrix
+    rz2 = gates.RZ(0, theta).matrix
+    rz3 = gates.RZ(0, lam).matrix
+    rx1 = gates.RX(0, -np.pi / 2).matrix
+    rx2 = gates.RX(0, np.pi / 2).matrix
+    matrix = rz1 @ rx1 @ rz2 @ rx2 @ rz3
+    np.testing.assert_allclose(matrix, u3.matrix)
+
+
 def test_measurement():
     from qibolab.circuit import PulseSequence
     qibo.set_backend("qibolab", platform="tiiq")
