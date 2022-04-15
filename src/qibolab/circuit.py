@@ -97,9 +97,8 @@ class PulseSequence:
         # apply RZ(theta)
         self.phase += theta
         # apply RX(-pi/2)
-        self.phase -= math.pi
         kwargs["start"] = self.time
-        kwargs["phase"] = self.phase
+        kwargs["phase"] = self.phase - math.pi
         self.add(pulses.Pulse(**kwargs))
         self.time += duration + delay
         # apply RZ(phi)
