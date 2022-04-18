@@ -245,12 +245,12 @@ class Calibration():
         return t1, smooth_dataset, dataset
 
     def callibrate_qubit_states(self):
-   
+        mc = self.mc
         platform = self.platform
         platform.reload_settings()
         ps = platform.settings['settings']
-        niter=50
-        nshots=100
+        niter=20
+        nshots=1
 
         #create exc and gnd pulses 
         start = 0
@@ -275,19 +275,7 @@ class Calibration():
         exc_sequence.add(qc_pi_pulse)
         exc_sequence.add(ro_pulse)
 
-
-        gnd_sequence = PulseSequence()
-        ro_pulse_shape = eval(ps['readout_pulse'].popitem()[1])
-        ro_pulse_settings = ps['readout_pulse']
-        ro_pulse = ReadoutPulse(**ro_pulse_settings, shape = ro_pulse_shape)
-
-        gnd_sequence.add(qc_pi_pulse)
-        gnd_sequence.add(ro_pulse)
-
-        platform.LO_qrm.set_frequency(ps['resonator_freq'] - ro_pulse.frequency)
-        platform.LO_qcm.set_frequency(ps['qubit_freq'] + qc_pi_pulse.frequency)
         platform.start()
-
         #Exectue niter single exc shots
         all_exc_states = []
         for i in range(niter):
@@ -297,8 +285,20 @@ class Calibration():
             #Compose complex point from i, q obtained from execution
             point = complex(qubit_state[2], qubit_state[3])
             all_exc_states.append(point)
+        platform.stop()
 
+        ro_pulse_shape = eval(ps['readout_pulse'].popitem()[1])
+        ro_pulse_settings = ps['readout_pulse']
+        ro_pulse = ReadoutPulse(**ro_pulse_settings, shape = ro_pulse_shape)
+
+        gnd_sequence = PulseSequence()
+        gnd_sequence.add(qc_pi_pulse)
+        gnd_sequence.add(ro_pulse)
+
+        platform.LO_qrm.set_frequency(ps['resonator_freq'] - ro_pulse.frequency)
+        platform.LO_qcm.set_frequency(ps['qubit_freq'] + qc_pi_pulse.frequency)
         #Exectue niter single gnd shots
+        platform.start()
         platform.LO_qcm.off()
         all_gnd_states = []
         for i in range(niter):
@@ -308,7 +308,6 @@ class Calibration():
             #Compose complex point from i, q obtained from execution
             point = complex(qubit_state[2], qubit_state[3])
             all_gnd_states.append(point)
-
         platform.stop()
 
         return all_gnd_states, np.mean(all_gnd_states), all_exc_states, np.mean(all_exc_states)
@@ -332,11 +331,11 @@ class Calibration():
         # utils.save_config_parameter("LO_QRM_settings", "", "frequency", float(resonator_freq - 20_000_000))
 
         #run and save qubit spectroscopy calibration
-        # qubit_freq, min_ro_voltage, smooth_dataset, dataset = self.run_qubit_spectroscopy()
-        # print(utils.get_config_parameter("settings", "", "qubit_freq"))
-        # print(utils.get_config_parameter("LO_QCM_settings", "", "frequency"))
-        # print(utils.get_config_parameter("settings", "", "qubit_spectroscopy_min_ro_voltage"))
-        # # utils.save_config_parameter("settings", "", "qubit_freq", float(qubit_freq))
+        qubit_freq, min_ro_voltage, smooth_dataset, dataset = self.run_qubit_spectroscopy()
+        print(utils.get_config_parameter("settings", "", "qubit_freq"))
+        print(utils.get_config_parameter("LO_QCM_settings", "", "frequency"))
+        print(utils.get_config_parameter("settings", "", "qubit_spectroscopy_min_ro_voltage"))
+        # utils.save_config_parameter("settings", "", "qubit_freq", float(qubit_freq))
         # utils.save_config_parameter("LO_QCM_settings", "", "frequency", float(qubit_freq + 200_000_000))
         # utils.save_config_parameter("settings", "", "qubit_spectroscopy_min_ro_voltage", float(min_ro_voltage))
 
@@ -352,28 +351,28 @@ class Calibration():
         # utils.save_config_parameter("settings", "", "rabi_oscillations_pi_pulse_min_voltage", float(rabi_oscillations_pi_pulse_min_voltage))
 
         # #run calibration_qubit_states
-        all_gnd_states, mean_gnd_states, all_exc_states, mean_exc_states = self.callibrate_qubit_states()
-        # #TODO: save in runcard mean_gnd_states and mean_exc_states
-        print(all_gnd_states)
-        print(mean_gnd_states)
-        print(all_exc_states)
-        print(mean_exc_states)
+        # all_gnd_states, mean_gnd_states, all_exc_states, mean_exc_states = self.callibrate_qubit_states()
+        # # #TODO: save in runcard mean_gnd_states and mean_exc_states
+        # print(all_gnd_states)
+        # print(mean_gnd_states)
+        # print(all_exc_states)
+        # print(mean_exc_states)
 
         # #TODO: Remove plot qubit states results when tested
-        utils.plot_qubit_states(all_gnd_states, all_exc_states)
+        # utils.plot_qubit_states(all_gnd_states, all_exc_states)
 
-        #TODO: Remove 0 and 1 classification from auto calibration when tested
-        #Classify all points into 0 and 1
-        classified_gnd_results = []
-        for point in all_gnd_states: 
-             classified_gnd_results.append(utils.classify(point, mean_gnd_states, mean_exc_states))
+        # #TODO: Remove 0 and 1 classification from auto calibration when tested
+        # #Classify all points into 0 and 1
+        # classified_gnd_results = []
+        # for point in all_gnd_states: 
+        #      classified_gnd_results.append(utils.classify(point, mean_gnd_states, mean_exc_states))
 
-        classified_exc_results = []
-        for point in all_exc_states:
-             classified_exc_results.append(utils.classify(point, mean_gnd_states, mean_exc_states))
+        # classified_exc_results = []
+        # for point in all_exc_states:
+        #      classified_exc_results.append(utils.classify(point, mean_gnd_states, mean_exc_states))
 
-        print(classified_gnd_results)
-        print(classified_exc_results)
+        # print(classified_gnd_results)
+        # print(classified_exc_results)
 
 # help classes
 class QCPulseLengthParameter():

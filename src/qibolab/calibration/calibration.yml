@@ -1,6 +1,6 @@
 name: tiiq_single_qubit_diagnostics
 description: Settings for characterization scripts.
-software_averages: 1
+software_averages: 4
 max_num_plots: 2
 
 resonator_spectroscopy:
