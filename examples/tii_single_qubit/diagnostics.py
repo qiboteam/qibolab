@@ -2,8 +2,9 @@ import pathlib
 import numpy as np
 import matplotlib.pyplot as plt
 import yaml
-import fitting
 from qibolab import Platform
+from qibolab.calibration import utils
+from qibolab.calibration import fitting
 
 # TODO: Have a look in the documentation of ``MeasurementControl``
 from quantify_core.measurement import MeasurementControl
@@ -17,6 +18,7 @@ from qibolab.pulse_shapes import Rectangular, Gaussian
 
 
 # TODO: Check why this set_datadir is needed
+utils.check_data_dir()
 set_datadir(pathlib.Path(__file__).parent / "data" / "quantify")
 
 
@@ -34,98 +36,6 @@ def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, high
     )
     return scanrange
 
-def backup_config_file(platform):
-    import os
-    import shutil
-    import errno
-    from datetime import datetime
-    original = str(platform.runcard)
-    now = datetime.now()
-    now = now.strftime("%d%m%Y%H%M%S")
-    destination_file_name = "tiiq_" + now + ".yml" 
-    target = os.path.realpath(os.path.join(os.path.dirname(__file__), 'data/settings_backups', destination_file_name))
-
-    try:
-        print("Copying file: " + original)
-        print("Destination file" + target)
-        shutil.copyfile(original, target)
-        print("Platform settings backup done")
-    except IOError as e:
-        # ENOENT(2): file does not exist, raised also on missing dest parent dir
-        if e.errno != errno.ENOENT:
-            raise
-            # try creating parent directories
-        os.makedirs(os.path.dirname(target))
-        shutil.copy(original, target)
-
-def get_config_parameter(dictID, dictID1, key):
-    import os
-    calibration_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'qibolab', 'runcards', 'tiiq.yml'))
-    with open(calibration_path) as file:
-        settings = yaml.safe_load(file)
-    file.close()    
-
-    if (not dictID1):
-        return settings[dictID][key]
-    else:
-        return settings[dictID][dictID1][key]
-
-def save_config_parameter(dictID, dictID1, key, value):
-    import os
-    calibration_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'qibolab', 'runcards', 'tiiq.yml'))
-    with open(calibration_path, "r") as file:
-        settings = yaml.safe_load(file)
-    file.close()
-    
-    if (not dictID1):
-        settings[dictID][key] = value
-        print("Saved value: " + str(settings[dictID][key]))
-
-    else:
-        settings[dictID][dictID1][key] = value
-        print("Saved value: " + str(settings[dictID][dictID1][key]))
-
-    with open(calibration_path, "w") as file:
-        settings = yaml.dump(settings, file, sort_keys=False, indent=4)
-    file.close()
-
-def plot(smooth_dataset, dataset, label, type):
-    if (type == 0): #cavity plots
-        fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-        ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
-        ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
-        ax.title.set_text(label)
-        ax.plot(dataset['x0'].values[smooth_dataset.argmax()], smooth_dataset[smooth_dataset.argmax()], 'o', color='C2')
-        plt.savefig(pathlib.Path("data") / f"{label}.pdf")
-        return
-
-    if (type == 1): #qubit spec, rabi, ramsey, t1 plots
-        fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
-        ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
-        ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
-        ax.title.set_text(label)
-        ax.plot(dataset['x0'].values[smooth_dataset.argmin()], smooth_dataset[smooth_dataset.argmin()], 'o', color='C2')
-        plt.savefig(pathlib.Path("data") / f"{label}.pdf")
-        return
-
-def plot_qubit_states(gnd_results, exc_results):
-    plt.figure(figsize=[4,4])
-    # Plot all the results
-    # All results from the gnd_schedule are plotted in blue
-    plt.scatter(np.real(gnd_results), np.imag(gnd_results), s=5, cmap='viridis', c='blue', alpha=0.5, label='state_0')
-    # All results from the exc_schedule are plotted in red
-    plt.scatter(np.real(exc_results), np.imag(exc_results), s=5, cmap='viridis', c='red', alpha=0.5, label='state_1')
-
-    # Plot a large dot for the average result of the 0 and 1 states.
-    mean_gnd = np.mean(gnd_results) # takes mean of both real and imaginary parts
-    mean_exc = np.mean(exc_results)
-    plt.scatter(np.real(mean_gnd), np.imag(mean_gnd), s=200, cmap='viridis', c='black',alpha=1.0, label='state_0_mean')
-    plt.scatter(np.real(mean_exc), np.imag(mean_exc), s=200, cmap='viridis', c='black',alpha=1.0, label='state_1_mean')
-
-    plt.ylabel('I [a.u.]', fontsize=15)
-    plt.xlabel('Q [a.u.]', fontsize=15)
-    plt.title("0-1 discrimination", fontsize=15)
-    plt.show()
 
 def create_measurement_control(name):
     import os
@@ -142,9 +52,7 @@ def create_measurement_control(name):
         mc = MeasurementControl(f'MC {name}')
         return mc, plotmon, insmon
     # TODO: be able to choose which windows are opened and remember their sizes and dimensions 
-
-
-    
+   
 
 class Diagnostics():
 
@@ -176,6 +84,7 @@ class Diagnostics():
         ds = self.load_settings()
         self.pl.tuids_max_num(ds['max_num_plots'])
         software_averages = ds['software_averages']
+        software_averages_precision = ds['software_averages_precision']
         ds = ds['resonator_spectroscopy']
         lowres_width = ds['lowres_width']
         lowres_step = ds['lowres_step']
@@ -186,26 +95,28 @@ class Diagnostics():
 
 
         #Fast Sweep
-        scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
-        mc.settables(platform.LO_qrm.device.frequency)
-        mc.setpoints(scanrange + platform.LO_qrm.get_frequency())
-        mc.gettables(Gettable(ROController(platform, sequence)))
-        platform.start() 
-        platform.LO_qcm.off()
-        dataset = mc.run("Resonator Spectroscopy Fast", soft_avg=1)
-        platform.stop()
-        platform.LO_qrm.set_frequency(dataset['x0'].values[dataset['y0'].argmax().values])
-        avg_min_voltage = np.mean(dataset['y0'].values[:(lowres_width//lowres_step)]) * 1e6
+        if (software_averages !=0):
+            scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
+            mc.settables(platform.LO_qrm.device.frequency)
+            mc.setpoints(scanrange + platform.LO_qrm.get_frequency())
+            mc.gettables(Gettable(ROController(platform, sequence)))
+            platform.start() 
+            platform.LO_qcm.off()
+            dataset = mc.run("Resonator Spectroscopy Fast", soft_avg=software_averages)
+            platform.stop()
+            platform.LO_qrm.set_frequency(dataset['x0'].values[dataset['y0'].argmax().values])
+            avg_min_voltage = np.mean(dataset['y0'].values[:(lowres_width//lowres_step)]) * 1e6
 
         # Precision Sweep
-        scanrange = np.arange(-precision_width, precision_width, precision_step)
-        mc.settables(platform.LO_qrm.device.frequency)
-        mc.setpoints(scanrange + platform.LO_qrm.get_frequency())
-        mc.gettables(Gettable(ROController(platform, sequence)))
-        platform.start() 
-        platform.LO_qcm.off()
-        dataset = mc.run("Resonator Spectroscopy Precision", soft_avg=software_averages)
-        platform.stop()
+        if (software_averages_precision !=0):
+            scanrange = np.arange(-precision_width, precision_width, precision_step)
+            mc.settables(platform.LO_qrm.device.frequency)
+            mc.setpoints(scanrange + platform.LO_qrm.get_frequency())
+            mc.gettables(Gettable(ROController(platform, sequence)))
+            platform.start() 
+            platform.LO_qcm.off()
+            dataset = mc.run("Resonator Spectroscopy Precision", soft_avg=software_averages_precision)
+            platform.stop()
 
         # Fitting
         smooth_dataset = savgol_filter(dataset['y0'].values, 25, 2)
@@ -282,6 +193,7 @@ class Diagnostics():
         ds = self.load_settings()
         self.pl.tuids_max_num(ds['max_num_plots'])
         software_averages = ds['software_averages']
+        software_averages_precision = ds['software_averages_precision']
         ds = ds['qubit_spectroscopy']
         fast_start = ds['fast_start']
         fast_end = ds['fast_end']
@@ -292,23 +204,24 @@ class Diagnostics():
         
 
         # Fast Sweep
-        fast_sweep_scan_range = np.arange(fast_start, fast_end, fast_step)
-        mc.settables(platform.LO_qcm.device.frequency)
-        mc.setpoints(fast_sweep_scan_range + platform.LO_qcm.get_frequency())
-        mc.gettables(Gettable(ROController(platform, sequence)))
-        platform.start() 
-        dataset = mc.run("Qubit Spectroscopy Fast", soft_avg=1)
-        platform.stop()
-        
+        if (software_averages !=0):
+            fast_sweep_scan_range = np.arange(fast_start, fast_end, fast_step)
+            mc.settables(platform.LO_qcm.device.frequency)
+            mc.setpoints(fast_sweep_scan_range + platform.LO_qcm.get_frequency())
+            mc.gettables(Gettable(ROController(platform, sequence)))
+            platform.start() 
+            dataset = mc.run("Qubit Spectroscopy Fast", soft_avg=software_averages)
+            platform.stop()
+            
         # Precision Sweep
-        platform.software_averages = 1
-        precision_sweep_scan_range = np.arange(precision_start, precision_end, precision_step)
-        mc.settables(platform.LO_qcm.device.frequency)
-        mc.setpoints(precision_sweep_scan_range + platform.LO_qcm.get_frequency())
-        mc.gettables(Gettable(ROController(platform, sequence)))
-        platform.start() 
-        dataset = mc.run("Qubit Spectroscopy Precision", soft_avg=software_averages)
-        platform.stop()
+        if (software_averages_precision !=0):
+            precision_sweep_scan_range = np.arange(precision_start, precision_end, precision_step)
+            mc.settables(platform.LO_qcm.device.frequency)
+            mc.setpoints(precision_sweep_scan_range + platform.LO_qcm.get_frequency())
+            mc.gettables(Gettable(ROController(platform, sequence)))
+            platform.start() 
+            dataset = mc.run("Qubit Spectroscopy Precision", soft_avg=software_averages_precision)
+            platform.stop()
 
         # Fitting
         smooth_dataset = savgol_filter(dataset['y0'].values, 11, 2)
@@ -316,7 +229,7 @@ class Diagnostics():
         min_ro_voltage = smooth_dataset.min() * 1e6
 
         print(f"\nQubit Frequency = {qubit_freq}")
-        plot(smooth_dataset, dataset, "Qubit_Spectroscopy", 1)
+        utils.plot(smooth_dataset, dataset, "Qubit_Spectroscopy", 1)
         print("Qubit freq ontained from MC results: ", qubit_freq)
         f0, BW, Q = fitting.lorentzian_fit("last", min, "Qubit_Spectroscopy")
         qubit_freq = (f0*1e9 - qc_pulse.frequency)
@@ -360,7 +273,7 @@ class Diagnostics():
         pi_pulse_amplitude = qc_pulse.amplitude
         smooth_dataset, pi_pulse_duration, rabi_oscillations_pi_pulse_min_voltage, t1 = fitting.rabi_fit(dataset)
         pi_pulse_gain = platform.qcm.gain
-        plot(smooth_dataset, dataset, "Rabi_pulse_length", 1)
+        utils.plot(smooth_dataset, dataset, "Rabi_pulse_length", 1)
 
         print(f"\nPi pulse duration = {pi_pulse_duration}")
         print(f"\nPi pulse amplitude = {pi_pulse_amplitude}") #Check if the returned value from fitting is correct.
@@ -467,7 +380,7 @@ class Diagnostics():
 
         # Fitting
         smooth_dataset, t1 = fitting.t1_fit(dataset)
-        plot(smooth_dataset, dataset, "t1", 1)
+        utils.plot(smooth_dataset, dataset, "t1", 1)
         print(f'\nT1 = {t1}')
 
         return t1, smooth_dataset, dataset
@@ -514,7 +427,7 @@ class Diagnostics():
 
         # Fitting
         smooth_dataset, delta_frequency, t2 = fitting.ramsey_fit(dataset)
-        plot(smooth_dataset, dataset, "Ramsey", 1)
+        utils.plot(smooth_dataset, dataset, "Ramsey", 1)
         print(f"\nDelta Frequency = {delta_frequency}")
         print(f"\nT2 = {t2} ns")
 
@@ -646,34 +559,73 @@ class Diagnostics():
 
         return shifted_frequency, shifted_max_ro_voltage, smooth_dataset, dataset
 
-    def callibrate_qubit_states(self, platform, sequence, niter, nshots, resonator_freq, qubit_freq, ro_pulse, qc_pulse=None):
-        import math
-        platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
-        if (qc_pulse != None):
-            platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
+
+    def callibrate_qubit_states(self):
+        mc = self.mc
+        platform = self.platform
+        platform.reload_settings()
+        ps = platform.settings['settings']
+        niter=100
+        nshots=1
+
+        #create exc and gnd pulses 
+        start = 0
+        frequency = ps['pi_pulse_frequency']
+        amplitude = ps['pi_pulse_amplitude']
+        duration = ps['pi_pulse_duration']
+        phase = 0
+        shape = eval(ps['pi_pulse_shape'])
+        qc_pi_pulse = Pulse(start, duration, amplitude, frequency, phase, shape)
+    
+        #RO pulse starting just after pi pulse
+        ro_start = ps['pi_pulse_duration'] + 4
+        ro_pulse_settings = ps['readout_pulse']
+        ro_duration = ro_pulse_settings['duration']
+        ro_amplitude = ro_pulse_settings['amplitude']
+        ro_frequency = ro_pulse_settings['frequency']
+        ro_phase = ro_pulse_settings['phase']
+        ro_pulse = ReadoutPulse(ro_start, ro_duration, ro_amplitude, ro_frequency, ro_phase, Rectangular())
+        
+        exc_sequence = PulseSequence()
+        exc_sequence.add(qc_pi_pulse)
+        exc_sequence.add(ro_pulse)
 
         platform.start()
-        if (qc_pulse == None):
-            platform.LO_qcm.off()
-
-        all_states = []
+        #Exectue niter single exc shots
+        all_exc_states = []
         for i in range(niter):
-            qubit_state = platform.execute(sequence, nshots)
+            print(f"Starting exc state calibration {i}")
+            qubit_state = platform.execute(exc_sequence, nshots)
+            print(f"Finished exc single shot execution  {i}")
             #Compose complex point from i, q obtained from execution
             point = complex(qubit_state[2], qubit_state[3])
-            all_states.add(point)
-
+            all_exc_states.append(point)
         platform.stop()
-        return all_states, np.mean(all_states)
 
-    def classify(point: complex, mean_gnd, mean_exc):
-        import math
-        """Classify the given state as |0> or |1>."""
-        def distance(a, b):
-            return math.sqrt((np.real(a) - np.real(b))**2 + (np.imag(a) - np.imag(b))**2)
-        
-        return int(distance(point, mean_exc) < distance(point, mean_gnd))
+        ro_pulse_shape = eval(ps['readout_pulse'].popitem()[1])
+        ro_pulse_settings = ps['readout_pulse']
+        ro_pulse = ReadoutPulse(**ro_pulse_settings, shape = ro_pulse_shape)
 
+        gnd_sequence = PulseSequence()
+        gnd_sequence.add(qc_pi_pulse)
+        gnd_sequence.add(ro_pulse)
+
+        platform.LO_qrm.set_frequency(ps['resonator_freq'] - ro_pulse.frequency)
+        platform.LO_qcm.set_frequency(ps['qubit_freq'] + qc_pi_pulse.frequency)
+        #Exectue niter single gnd shots
+        platform.start()
+        platform.LO_qcm.off()
+        all_gnd_states = []
+        for i in range(niter):
+            print(f"Starting gnd state calibration  {i}")
+            qubit_state = platform.execute(gnd_sequence, nshots)
+            print(f"Finished gnd single shot execution  {i}")
+            #Compose complex point from i, q obtained from execution
+            point = complex(qubit_state[2], qubit_state[3])
+            all_gnd_states.append(point)
+        platform.stop()
+
+        return all_gnd_states, np.mean(all_gnd_states), all_exc_states, np.mean(all_exc_states)
 
 
     # help classes
@@ -690,6 +642,7 @@ class QCPulseLengthParameter():
     def set(self, value):
         self.qc_pulse.duration = value
         self.ro_pulse.start = value + 4
+
 
 class QCPulseGainParameter():
 

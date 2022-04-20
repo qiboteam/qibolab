@@ -18,6 +18,18 @@ def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, high
     )
     return scanrange
 
+def check_data_dir():
+    import os
+
+    # You should change 'test' to your preferred folder.
+    MYDIR = ("data")
+    CHECK_FOLDER = os.path.isdir(MYDIR)
+
+    # If folder doesn't exist, then create it.
+    if not CHECK_FOLDER:
+        os.makedirs(MYDIR)
+
+
 def backup_config_file(platform):
     import os
     import shutil
@@ -109,7 +121,9 @@ def plot_qubit_states(gnd_results, exc_results):
     plt.ylabel('I [a.u.]', fontsize=15)
     plt.xlabel('Q [a.u.]', fontsize=15)
     plt.title("0-1 discrimination", fontsize=15)
-    plt.show()
+    #plt.show()
+    plt.savefig(pathlib.Path("data") / "qubit_states_classification.pdf")
+
 
 def create_measurement_control(name, debug=True):
     import os
