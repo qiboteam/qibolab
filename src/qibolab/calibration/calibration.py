@@ -388,12 +388,6 @@ class Calibration():
         utils.save_config_parameter("settings", "", "rabi_oscillations_pi_pulse_min_voltage", float(rabi_oscillations_pi_pulse_min_voltage))
         utils.save_config_parameter("settings", "", "T1", float(t1))
 
-        #calcular T1
-        #
-        #
-        #
-        #
-
         # run Ramsey and save T2 calibration
         t2, delta_frequency, smooth_dataset, dataset = self.run_ramsey()
         print(f"\nDelta Frequency = {delta_frequency}")
