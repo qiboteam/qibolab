@@ -5,7 +5,7 @@ settings:
     data_folder: data/
     hardware_avg: 3000
     sampling_rate: 1000000000
-    repetition_duration: 50000
+    repetition_duration: 200000
     delay_before_readout: 4
     delay_between_pulses: 0
     qc_spectroscopy_pulse:
@@ -22,26 +22,26 @@ settings:
         duration: 2000
         phase: 0
         shape: Rectangular()
-    resonator_freq: 7824714602.298411
-    resonator_spectroscopy_avg_min_ro_voltage: 23.23379626600916
-    resonator_spectroscopy_max_ro_voltage: 932.1605967342421
-    qubit_freq: 5083221755.999099
-    qubit_spectroscopy_min_ro_voltage: 733.590643872864
-    rabi_oscillations_pi_pulse_min_voltage: 201.50439983854082
-    T1: 2872.1661132744066
+    resonator_freq: 7824715967.361432
+    resonator_spectroscopy_avg_min_ro_voltage: 25.360515861436944
+    resonator_spectroscopy_max_ro_voltage: 928.0588837870739
+    qubit_freq: 5082221756
+    qubit_spectroscopy_min_ro_voltage: 660.206769189153
+    rabi_oscillations_pi_pulse_min_voltage: 183.75781774907418
+    T1: 2192.895853326451
     T2: 6933.310025260633
     mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
     mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
     pi_pulse_amplitude: 0.4
-    pi_pulse_duration: 37
+    pi_pulse_duration: 36
     pi_pulse_frequency: 200000000.0
     pi_pulse_gain: 0.3
     pi_pulse_shape: Gaussian(4000 / 5)
 LO_QCM_settings:
-    frequency: 5283221756.0
+    frequency: 5282221756
     power: 12
 LO_QRM_settings:
-    frequency: 7804714602.298411
+    frequency: 7804715967.361432
     power: 12
 QCM_settings:
     gain: 0.3

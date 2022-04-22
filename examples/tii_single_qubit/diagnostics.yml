@@ -9,7 +9,7 @@ resonator_spectroscopy:
   lowres_step: 2_000_000
   highres_width: 5_000_000
   highres_step: 200_000
-  precision_width: 2_000_000
+  precision_width: 3_000_000
   precision_step: 40_000
 
 resonator_spectroscopy_shifted:
