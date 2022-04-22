@@ -5,53 +5,53 @@ settings:
     data_folder: data/
     hardware_avg: 3000
     sampling_rate: 1000000000
-    repetition_duration: 50000
+    repetition_duration: 200000
     delay_before_readout: 4
     delay_between_pulses: 0
     qc_spectroscopy_pulse:
         start: 0
         frequency: 200000000
-        amplitude: 0.2
+        amplitude: 0.4
         duration: 4000
         phase: 0
         shape: Gaussian(4000 / 5)
     readout_pulse:
         start: 4004
         frequency: 20000000
-        amplitude: 0.5
+        amplitude: 0.9
         duration: 2000
         phase: 0
         shape: Rectangular()
-    resonator_freq: 7795108893.499539
-    resonator_spectroscopy_avg_min_ro_voltage: 16.558676254943574
-    resonator_spectroscopy_max_ro_voltage: 369.34690016364306
-    qubit_freq: 8587400000.0
-    qubit_spectroscopy_min_ro_voltage: 290.54695404377264
-    rabi_oscillations_pi_pulse_min_voltage: 288.99809651683194
+    resonator_freq: 7824715967.361432
+    resonator_spectroscopy_avg_min_ro_voltage: 25.360515861436944
+    resonator_spectroscopy_max_ro_voltage: 928.0588837870739
+    qubit_freq: 5082221756
+    qubit_spectroscopy_min_ro_voltage: 660.206769189153
+    rabi_oscillations_pi_pulse_min_voltage: 183.75781774907418
     T1: 2192.895853326451
-    pi_pulse_amplitude: 0.2
-    pi_pulse_duration: 12
+    pi_pulse_amplitude: 0.4
+    pi_pulse_duration: 72
     pi_pulse_frequency: 200000000.0
-    pi_pulse_gain: 0.15
-    pi_pulse_shape: Gaussian(4000 / 5)
+    pi_pulse_gain: 0.3
+    pi_pulse_shape: Gaussian(72 / 5)
 LO_QCM_settings:
-    frequency: 8787400000.0
+    frequency: 5282221756
     power: 12
 LO_QRM_settings:
-    frequency: 7775108893.499539
+    frequency: 7804715967.361432
     power: 12
 QCM_settings:
-    gain: 0.15
-    initial_delay: 0
-    repetition_duration: 100000
-QRM_settings:
     gain: 0.3
     initial_delay: 0
-    start_sample: 130
+    repetition_duration: 50000
+QRM_settings:
+    gain: 0.4
+    initial_delay: 0
     integration_length: 1500
     mode: ssb
     repetition_duration: 50000
     sampling_rate: 1000000000
+    start_sample: 130
 LO_QCM_init_settings:
     ip: 192.168.0.8
     label: LO_qcm
@@ -64,7 +64,6 @@ QCM_init_settings:
     ref_clock: external
     sequencer: 0
     sync_en: true
-    is_cluster: true
 QRM_init_settings:
     acq_trigger_mode: sequencer
     hardware_avg_en: true
@@ -73,4 +72,3 @@ QRM_init_settings:
     ref_clock: external
     sequencer: 0
     sync_en: true
-    is_cluster: true
