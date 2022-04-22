@@ -301,7 +301,7 @@ class Calibration():
         platform = self.platform
         platform.reload_settings()
         ps = platform.settings['settings']
-        niter=5
+        niter=5 #TODO: Move to calibration.yaml
         nshots=1
 
         #create exc and gnd pulses 
@@ -386,7 +386,6 @@ class Calibration():
         utils.save_config_parameter("settings", "", "pi_pulse_amplitude", float(pi_pulse_amplitude)) 
         utils.save_config_parameter("settings", "", "pi_pulse_gain", float(pi_pulse_gain))
         utils.save_config_parameter("settings", "", "rabi_oscillations_pi_pulse_min_voltage", float(rabi_oscillations_pi_pulse_min_voltage))
-        utils.save_config_parameter("settings", "", "T1", float(t1))
 
         # run Ramsey and save T2 calibration
         t2, delta_frequency, smooth_dataset, dataset = self.run_ramsey()
