@@ -2,9 +2,9 @@ import pathlib
 import string
 import numpy as np
 #import matplotlib.pyplot as plt
-import utils
+from qibolab.calibration import utils
 import yaml
-import fitting
+from qibolab.calibration import fitting
 from qibolab import Platform
 
 # TODO: Have a look in the documentation of ``MeasurementControl``
