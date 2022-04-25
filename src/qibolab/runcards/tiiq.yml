@@ -27,13 +27,13 @@ settings:
     resonator_spectroscopy_max_ro_voltage: 928.0588837870739
     qubit_freq: 5082221756
     qubit_spectroscopy_min_ro_voltage: 660.206769189153
-    rabi_oscillations_pi_pulse_min_voltage: 183.75781774907418
+    rabi_oscillations_pi_pulse_min_voltage: 188.6583565781339
     T1: 2192.895853326451
     T2: 6933.310025260633
     mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
     mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
     pi_pulse_amplitude: 0.4
-    pi_pulse_duration: 36
+    pi_pulse_duration: 71
     pi_pulse_frequency: 200000000.0
     pi_pulse_gain: 0.3
     pi_pulse_shape: Gaussian(4000 / 5)
