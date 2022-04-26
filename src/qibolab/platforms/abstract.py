@@ -22,6 +22,20 @@ class AbstractPlatform(ABC):
 
         # Define references to instruments
         self.is_connected = False
+        
+    def __getstate__(self):
+        return {
+            "name": self.name,
+            "runcard": self.runcard,
+            "_settings": self._settings,
+            "is_connected": False
+        }
+
+    def __setstate__(self, data):
+        self.name = data.get("name")
+        self.runcard = data.get("runcard")
+        self._settings = data.get("_settings")
+        self.is_connected = data.get("is_connected")
 
     def _check_connected(self):
         if not self.is_connected:

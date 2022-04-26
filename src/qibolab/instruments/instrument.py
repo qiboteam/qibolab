@@ -12,16 +12,6 @@ class Instrument(ABC):
         self.ip = ip
         self._signature = f"{type(self).__name__}@{ip}"
         self.device = None
-
-    def __getstate__(self):
-        # Disable pickle for instruments because it is not 
-        # supported by ``qcodes``
-        pass
-
-    def __setstate__(self):
-        # Disable pickle for instruments because it is not 
-        # supported by ``qcodes``
-        pass
     
     @abstractmethod
     def connect(self):  # pragma: no cover
