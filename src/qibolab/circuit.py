@@ -83,7 +83,8 @@ class PulseSequence:
                 "frequency": K.platform.pi_pulse_frequency
             }
         kwargs["duration"] = kwargs["duration"] // 2
-        delay = K.platform.delay_between_pulses
+        #delay = K.platform.delay_between_pulses
+        delay = 4 # hardcode delay to 4 which seems to work better
         duration = kwargs.get("duration")
         kwargs["shape"] = Gaussian(duration / 5)
 
