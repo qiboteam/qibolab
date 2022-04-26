@@ -14,7 +14,7 @@ settings:
         amplitude: 0.2
         duration: 4000
         phase: 0
-        shape: Gaussian(4000 / 5)
+        shape: Gaussian(5)
     readout_pulse:
         start: 4004
         frequency: 20000000
@@ -32,8 +32,8 @@ settings:
     pi_pulse_amplitude: 0.2
     pi_pulse_duration: 12
     pi_pulse_frequency: 200000000.0
-    pi_pulse_gain: 0.15
-    pi_pulse_shape: Gaussian(4000 / 5)
+    pi_pulse_gain: 0.3
+    pi_pulse_shape: Gaussian(5)
 LO_QCM_settings:
     frequency: 8787400000.0
     power: 12
