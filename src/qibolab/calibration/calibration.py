@@ -418,7 +418,6 @@ class QCPulseLengthParameter():
 
     def set(self, value):
         self.qc_pulse.duration = value
-        self.qc_pulse.shape = Gaussian(value / 5)
         self.ro_pulse.start = value + 4
 
 class T1WaitParameter():
