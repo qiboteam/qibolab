@@ -14,7 +14,7 @@ def test_gaussian_shape():
     from qibolab.pulse_shapes import Gaussian
     gauss = Gaussian(1.5)
     assert gauss.name == "gaussian"
-    assert gauss.sigma == 1.5
+    assert gauss.rel_sigma == 1.5
     assert repr(gauss) == "gaussian(1.5)"
     envelope = gauss.envelope(0.0, 0.0, 10.0, 4.5)
     assert envelope.shape == (10,)
