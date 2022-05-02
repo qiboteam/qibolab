@@ -7,7 +7,7 @@ settings:
     sampling_rate: 1000000000
     repetition_duration: 200000
     delay_before_readout: 4
-    delay_between_pulses: 0
+    delay_between_pulses: 4
     qc_spectroscopy_pulse:
         start: 0
         frequency: 200000000
