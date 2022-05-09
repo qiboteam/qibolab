@@ -55,6 +55,9 @@ class ICPlatform(AbstractPlatform):
         qubits = self._settings.get("qubits")
         for qubit_dict in qubits.values():
             self.qubits.append(Qubit(**qubit_dict))
+
+    def run_calibration(self):  # pragma: no cover
+        raise_error(NotImplementedError)
     
     def connect(self):
         """Connects to lab instruments using the details specified in the calibration settings."""
