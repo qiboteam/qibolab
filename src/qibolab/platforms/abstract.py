@@ -117,15 +117,10 @@ class AbstractPlatform(ABC):
     def delay_before_readout(self):
         return self._settings.get("settings").get("delay_before_readout")
 
-    def run_calibration(self, runcard):
+    @abstractmethod
+    def run_calibration(self):  # pragma: no cover
         """Executes calibration routines and updates the settings yml file"""
-        if (runcard == "tiiq"):
-            from qibolab.calibration import calibration
-            ac = calibration.Calibration(self)
-            ac.auto_calibrate_plaform()     
-
-        # update instruments with new calibration settings
-        self.setup()
+        raise_error(NotImplementedError)
 
     def __call__(self, sequence, nshots=None):
         return self.execute(sequence, nshots)
