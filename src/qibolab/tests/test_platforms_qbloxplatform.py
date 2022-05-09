@@ -32,6 +32,15 @@ def test_qbloxplatform_init():
         platform._check_connected()
 
 
+def test_qbloxplatform_pickle():
+    import pickle
+    runcard = pathlib.Path(__file__).parent.parent / "runcards" / "tiiq.yml"
+    platform = QBloxPlatform("tiiq", runcard)
+    serial = pickle.dumps(platform)
+    new_platform = pickle.loads(serial)
+    assert platform.is_connected == False
+
+
 def test_qbloxplatform_reload_settings():
     runcard = pathlib.Path(__file__).parent.parent / "runcards" / "tiiq.yml"
     with open(runcard, "r") as file:
