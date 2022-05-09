@@ -45,7 +45,7 @@ class PulseSequence:
                                amplitude=0.3,
                                duration=60,
                                phase=0,
-                               shape=Gaussian(60 / 5)))
+                               shape=Gaussian(5)))
                 pulse2 = ReadoutPulse(start=70,
                                       frequency=20000000.0,
                                       amplitude=0.5,
@@ -85,7 +85,7 @@ class PulseSequence:
         kwargs["duration"] = kwargs["duration"] // 2
         delay = K.platform.delay_between_pulses
         duration = kwargs.get("duration")
-        kwargs["shape"] = Gaussian(duration / 5)
+        kwargs["shape"] = Gaussian(5)
 
         # apply RZ(lam)
         self.phase += lam

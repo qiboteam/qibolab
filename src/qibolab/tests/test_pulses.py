@@ -46,8 +46,8 @@ def test_swipht_shape():
 def test_pulse():
     from qibolab.pulses import Pulse
     from qibolab.pulse_shapes import Gaussian
-    pulse = Pulse(0.0, 8.0, 0.8, 40.0, 0.7, Gaussian(1.0))
-    target = "P(qcm, 0.0, 8.0, 0.8, 40.0, 0.7, (gaussian, 1.0))"
+    pulse = Pulse(0.0, 8.0, 0.8, 40.0, 0.7, Gaussian(2))
+    target = "P(qcm, 0.0, 8.0, 0.8, 40.0, 0.7, (gaussian, 2))"
     assert pulse.serial() == target
     assert repr(pulse) == target
     assert pulse.compile().shape == (8,)
