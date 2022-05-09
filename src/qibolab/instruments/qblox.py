@@ -1,4 +1,3 @@
-from abc import abstractmethod
 import json
 import numpy as np
 from abc import ABC, abstractmethod
@@ -39,13 +38,19 @@ class GenericPulsar(Instrument, ABC):
     def connect(self):
         """Connects to the instruments."""
         if not self._connected:
+            import socket
             try:
-                self.device = self.Device(self.label, self.ip)
-            except Exception as exc:
+                self.device = self.Device(self.label, self.ip) # pylint: disable=E1102
+                logger.info(f"{self.name} connection established.")
+                self._connected = True
+            except socket.timeout:
+                # Use warning instead of exception when instruments are
+                # not available so that we can run tests on different devices
+                logger.warning("Could not connect to QRM. Skipping...")
+            except Exception as exc:  # pragma: no cover
                 raise InstrumentException(self, str(exc))
-            self._connected = True
         else:
-            raise RuntimeError
+            raise_error(RuntimeError, "QRM is already connected.")
 
     @property
     def gain(self):
@@ -54,12 +59,15 @@ class GenericPulsar(Instrument, ABC):
     @gain.setter
     def gain(self, gain):
         self._gain = gain
-        if self.sequencer == 1:
-            self.device.sequencer1_gain_awg_path0(gain)
-            self.device.sequencer1_gain_awg_path1(gain)
+        if self._connected:
+            if self.sequencer == 1:
+                self.device.sequencer1_gain_awg_path0(gain)
+                self.device.sequencer1_gain_awg_path1(gain)
+            else:
+                self.device.sequencer0_gain_awg_path0(gain)
+                self.device.sequencer0_gain_awg_path1(gain)
         else:
-            self.device.sequencer0_gain_awg_path0(gain)
-            self.device.sequencer0_gain_awg_path1(gain)
+            logger.warning("Cannot set gain because device is not connected.")
 
     def setup(self, gain, initial_delay, repetition_duration):
         """Sets calibration setting to QBlox instruments.
@@ -73,7 +81,8 @@ class GenericPulsar(Instrument, ABC):
         self.initial_delay = initial_delay
         self.repetition_duration = repetition_duration
 
-    def _translate_single_pulse(self, pulse):
+    @staticmethod
+    def _translate_single_pulse(pulse):
         """Translates a single pulse to the instrument waveform format.
 
         Helper method for :meth:`qibolab.instruments.qblox.GenericPulsar.generate_waveforms`.
@@ -88,16 +97,14 @@ class GenericPulsar(Instrument, ABC):
         envelope_i = pulse.compile()
         # TODO: if ``envelope_q`` is not always 0 we need to find how to
         # calculate it
-        envelope_q = np.zeros(int(pulse.duration))
-        time = np.arange(pulse.duration) * 1e-9
-        # FIXME: There should be a simpler way to construct this array
-        cosalpha = np.cos(2 * np.pi * pulse.frequency * time + pulse.phase)
-        sinalpha = np.sin(2 * np.pi * pulse.frequency * time + pulse.phase)
-        mod_matrix = np.array([[cosalpha,sinalpha], [-sinalpha,cosalpha]])
-        result = []
-        for it, t, ii, qq in zip(np.arange(pulse.duration), time, envelope_i, envelope_q):
-            result.append(mod_matrix[:, :, it] @ np.array([ii, qq]))
-        mod_signals = np.array(result)
+        envelope_q  = np.zeros(int(pulse.duration))
+        envelopes   = np.array([envelope_i, envelope_q])
+        time        = np.arange(pulse.duration) * 1e-9
+        cosalpha    = np.cos(2 * np.pi * pulse.frequency * time + pulse.phase)
+        sinalpha    = np.sin(2 * np.pi * pulse.frequency * time + pulse.phase)
+        mod_matrix  = np.array([[ cosalpha, sinalpha],
+                                [-sinalpha, cosalpha]])
+        mod_signals = np.einsum("abt,bt->ta", mod_matrix, envelopes)
 
         # add offsets to compensate mixer leakage
         waveform = {
@@ -116,7 +123,7 @@ class GenericPulsar(Instrument, ABC):
             Dictionary containing waveforms corresponding to all pulses.
         """
         if not pulses:
-            raise_error(NotImplementedError, "Cannot translate empty pulse sequence.")
+            raise_error(ValueError, "Cannot translate empty pulse sequence.")
         name = self.name
 
         combined_length = max(pulse.start + pulse.duration for pulse in pulses)
@@ -178,7 +185,7 @@ class GenericPulsar(Instrument, ABC):
         return program
 
     @abstractmethod
-    def translate(self, sequence, nshots):
+    def translate(self, sequence, delay_before_readout, nshots):  # pragma: no cover
         """Translates an abstract pulse sequence to QBlox format.
 
         Args:
@@ -248,29 +255,31 @@ class PulsarQRM(GenericPulsar):
         super().__init__(label, ip, sequencer, ref_clock, sync_en, is_cluster)
         # Instantiate base object from qblox library and connect to it
         self.name = "qrm"
+        self.sequencer = sequencer
+        self.hardware_avg_en = hardware_avg_en
+
         if self.is_cluster:
             from cluster.cluster import cluster_qrm
             self.Device = cluster_qrm
         else:
             from pulsar_qrm.pulsar_qrm import pulsar_qrm
             self.Device = pulsar_qrm
-        self.connect()
-        self.sequencer = sequencer
-        self.hardware_avg_en = hardware_avg_en
 
-        # Reset and configure
-        self.device.reset()
-        self.device.reference_source(ref_clock)
-        self.device.scope_acq_sequencer_select(sequencer)
-        self.device.scope_acq_avg_mode_en_path0(hardware_avg_en)
-        self.device.scope_acq_avg_mode_en_path1(hardware_avg_en)
-        self.device.scope_acq_trigger_mode_path0(acq_trigger_mode)
-        self.device.scope_acq_trigger_mode_path1(acq_trigger_mode)
-        # sync sequencer
-        if self.sequencer == 1:
-            self.device.sequencer1_sync_en(sync_en)
-        else:
-            self.device.sequencer0_sync_en(sync_en)
+        self.connect()
+        if self._connected:
+            # Reset and configure
+            self.device.reset()
+            self.device.reference_source(ref_clock)
+            self.device.scope_acq_sequencer_select(sequencer)
+            self.device.scope_acq_avg_mode_en_path0(hardware_avg_en)
+            self.device.scope_acq_avg_mode_en_path1(hardware_avg_en)
+            self.device.scope_acq_trigger_mode_path0(acq_trigger_mode)
+            self.device.scope_acq_trigger_mode_path1(acq_trigger_mode)
+            # sync sequencer
+            if self.sequencer == 1:
+                self.device.sequencer1_sync_en(sync_en)
+            else:
+                self.device.sequencer0_sync_en(sync_en)
 
     def setup(self, gain, initial_delay, repetition_duration,
               start_sample, integration_length, sampling_rate, mode):
@@ -338,9 +347,9 @@ class PulsarQRM(GenericPulsar):
             demodulated_signal = np.array(result)
             integrated_signal = norm_factor*np.sum(demodulated_signal,axis=0)
 
-        elif self.mode == 'optimal':
+        elif self.mode == 'optimal':  # pragma: no cover
             raise_error(NotImplementedError, "Optimal Demodulation Mode not coded yet.")
-        else:
+        else:  # pragma: no cover
             raise_error(NotImplementedError, "Demodulation mode not understood.")
         return integrated_signal
 
@@ -351,21 +360,24 @@ class PulsarQCM(GenericPulsar):
         super().__init__(label, ip, sequencer, ref_clock, sync_en, is_cluster)
         # Instantiate base object from qblox library and connect to it
         self.name = "qcm"
+        self.sequencer = sequencer
+
         if self.is_cluster:
             from cluster.cluster import cluster_qcm
             self.Device = cluster_qcm
         else:
             from pulsar_qcm.pulsar_qcm import pulsar_qcm
             self.Device = pulsar_qcm
+
         self.connect()
-        self.sequencer = sequencer
-        # Reset and configure
-        self.device.reset()
-        self.device.reference_source(ref_clock)
-        if self.sequencer == 1:
-            self.device.sequencer1_sync_en(sync_en)
-        else:
-            self.device.sequencer0_sync_en(sync_en)
+        if self._connected:
+            # Reset and configure
+            self.device.reset()
+            self.device.reference_source(ref_clock)
+            if self.sequencer == 1:
+                self.device.sequencer1_sync_en(sync_en)
+            else:
+                self.device.sequencer0_sync_en(sync_en)
 
     def translate(self, sequence, delay_before_read_out, nshots=None):
         # Allocate only qubit pulses to PulsarQRM

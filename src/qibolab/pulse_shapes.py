@@ -13,7 +13,7 @@ class PulseShape(ABC):
         raise_error(NotImplementedError)
 
     def __repr__(self):
-        return "({})".format(self.name)
+        return self.name
 
 
 class Rectangular(PulseShape):
@@ -78,7 +78,7 @@ class Drag(PulseShape):
         return gaussian + 1j * self.beta * (-(time - mu) / self.sigma ** 2) * gaussian
 
     def __repr__(self):
-        return "({}, {}, {})".format(self.name, self.sigma, self.beta)
+        return "{}({}, {})".format(self.name, self.sigma, self.beta)
 
 
 class SWIPHT(PulseShape):
@@ -103,4 +103,4 @@ class SWIPHT(PulseShape):
         return omega * amplitude
 
     def __repr__(self):
-        return "({}, {})".format(self.name, self.g)
+        return "{}({})".format(self.name, self.g)

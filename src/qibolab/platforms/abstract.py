@@ -117,32 +117,32 @@ class AbstractPlatform(ABC):
         return self.execute(sequence, nshots)
 
     @abstractmethod
-    def connect(self):
+    def connect(self):  # pragma: no cover
         """Connects to lab instruments using the details specified in the calibration settings."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def setup(self):
+    def setup(self):  # pragma: no cover
         """Configures instruments using the loaded calibration settings."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def start(self):
+    def start(self):  # pragma: no cover
         """Turns on the local oscillators."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def stop(self):
+    def stop(self):  # pragma: no cover
         """Turns off all the lab instruments."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def disconnect(self):
+    def disconnect(self):  # pragma: no cover
         """Disconnects from the lab instruments."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def execute(self, sequence, nshots=None):
+    def execute(self, sequence, nshots=None):  # pragma: no cover
         """Executes a pulse sequence.
 
         Args:
