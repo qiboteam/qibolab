@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 import yaml
 from qibo.config import raise_error, log
 
-
 class AbstractPlatform(ABC):
     """Abstract platform for controlling quantum devices.
 
@@ -118,15 +117,10 @@ class AbstractPlatform(ABC):
     def delay_before_readout(self):
         return self._settings.get("settings").get("delay_before_readout")
 
-    def run_calibration(self, runcard):
-        """Executes calibration routines and updates the settings json."""
-        # TODO: Implement calibration routines and update ``self._settings``.
-
-        # update instruments with new calibration settings
-        self.setup()
-        # save new calibration settings to json
-        with open(runcard, "w") as file:
-            yaml.dump(self._settings, file)
+    @abstractmethod
+    def run_calibration(self):  # pragma: no cover
+        """Executes calibration routines and updates the settings yml file"""
+        raise_error(NotImplementedError)
 
     def __call__(self, sequence, nshots=None):
         return self.execute(sequence, nshots)

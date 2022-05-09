@@ -81,7 +81,7 @@ def test_translate_single_pulse():
                   amplitude=0.3,
                   duration=60,
                   phase=0,
-                  shape=Gaussian(60 / 5))
+                  shape=Gaussian(5))
     waveform = qblox.GenericPulsar._translate_single_pulse(pulse)
     modI, modQ = waveform.get("modI"), waveform.get("modQ")
     assert modI.get("index") == 0

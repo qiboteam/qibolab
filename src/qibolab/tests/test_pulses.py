@@ -14,8 +14,8 @@ def test_gaussian_shape():
     from qibolab.pulse_shapes import Gaussian
     gauss = Gaussian(1.5)
     assert gauss.name == "gaussian"
-    assert gauss.sigma == 1.5
-    assert repr(gauss) == "gaussian(1.5)"
+    assert gauss.rel_sigma == 1.5
+    assert repr(gauss) == "(gaussian, 1.5)"
     envelope = gauss.envelope(0.0, 0.0, 10.0, 4.5)
     assert envelope.shape == (10,)
 
@@ -47,7 +47,7 @@ def test_pulse():
     from qibolab.pulses import Pulse
     from qibolab.pulse_shapes import Gaussian
     pulse = Pulse(0.0, 8.0, 0.8, 40.0, 0.7, Gaussian(1.0))
-    target = "P(qcm, 0.0, 8.0, 0.8, 40.0, 0.7, gaussian(1.0))"
+    target = "P(qcm, 0.0, 8.0, 0.8, 40.0, 0.7, (gaussian, 1.0))"
     assert pulse.serial() == target
     assert repr(pulse) == target
     assert pulse.compile().shape == (8,)
