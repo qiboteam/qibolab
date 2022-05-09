@@ -20,13 +20,13 @@ def generate_pulse_sequence(readout=True):
                         amplitude=0.3,
                         duration=60,
                         phase=0,
-                        shape=Gaussian(60 / 5)))
+                        shape=Gaussian(5)))
     sequence.add(Pulse(start=65,
                        frequency=200000000.0,
                        amplitude=0.8,
                        duration=25,
                        phase=0,
-                       shape=Gaussian(25 / 5)))
+                       shape=Gaussian(5)))
     if readout:
         sequence.add(ReadoutPulse(start=90,
                                 frequency=20000000.0,
