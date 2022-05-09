@@ -31,9 +31,11 @@ class Rectangular(PulseShape):
 class Gaussian(PulseShape):
     """Gaussian pulse shape"""
 
-    def __init__(self, sigma):
+    def __init__(self, rel_sigma):
         self.name = "gaussian"
-        self.sigma = sigma
+        self.rel_sigma = rel_sigma 
+        # Standard Deviation (sigma) = duration / rel_sigma
+        # rel_sigma defines the pulse shape, irrespective of its duration
 
     def envelope(self, time, start, duration, amplitude):
         """Gaussian envelope centered with respect to the pulse.
@@ -43,13 +45,13 @@ class Gaussian(PulseShape):
             A\exp^{-\\frac{1}{2}\\frac{(t-\mu)^2}{\sigma^2}}
         """
         from scipy.signal import gaussian
-        return amplitude * gaussian(int(duration), std=self.sigma)
+        return amplitude * gaussian(int(duration), std=int(duration/self.rel_sigma))
         # FIXME: This may have broken IcarusQ
         #mu = start + duration / 2
         #return amplitude * np.exp(-0.5 * (time - mu) ** 2 / self.sigma ** 2)
 
     def __repr__(self):
-        return "{}({})".format(self.name, self.sigma)
+        return "({}, {})".format(self.name, self.rel_sigma)
 
 
 class Drag(PulseShape):
