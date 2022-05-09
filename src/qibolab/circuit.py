@@ -1,8 +1,8 @@
+import math
 from qibo import K
 from qibolab import states, pulses
 from qibo.config import raise_error
 from qibo.core import circuit
-import numpy as np
 
 
 class PulseSequence:
@@ -15,9 +15,9 @@ class PulseSequence:
         super().__init__()
         self.qcm_pulses = []
         self.qrm_pulses = []
-        self.time = 0
-        self.phase = 0
         self.pulses = []
+        self.time = 0
+        self.phase = 0        
 
     def __len__(self):
         return len(self.pulses)
@@ -73,8 +73,7 @@ class PulseSequence:
             theta, phi, lam (float): Parameters of the U3 gate.
         """
         from qibolab.pulse_shapes import Gaussian
-        # Pi/2 pulse from calibration
-
+        # Fetch pi/2 pulse from calibration
         if hasattr(K.platform, "qubits"):
             kwargs = K.platform.fetch_qubit_pi_pulse(qubit)
         else:
@@ -87,17 +86,23 @@ class PulseSequence:
         delay = K.platform.delay_between_pulses
         duration = kwargs.get("duration")
         kwargs["shape"] = Gaussian(duration / 5)
-        self.phase += phi - np.pi / 2
+
+        # apply RZ(lam)
+        self.phase += lam
+        # apply RX(pi/2)
         kwargs["start"] = self.time
         kwargs["phase"] = self.phase
         self.add(pulses.Pulse(**kwargs))
         self.time += duration + delay
-        self.phase += np.pi - theta
+        # apply RZ(theta)
+        self.phase += theta
+        # apply RX(-pi/2)
         kwargs["start"] = self.time
-        kwargs["phase"] = self.phase
-        self.add(pulses.Pulse(**kwargs))       
+        kwargs["phase"] = self.phase - math.pi
+        self.add(pulses.Pulse(**kwargs))
         self.time += duration + delay
-        self.phase += lam - np.pi / 2
+        # apply RZ(phi)
+        self.phase += phi
 
     def add_measurement(self, qubit=0):
         """Add measurement pulse."""

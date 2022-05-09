@@ -87,12 +87,12 @@ def test_pulse_sequence_add_u3(platform):
     
     cp = PiPulseRegression(platform)
     duration = cp.duration // 2
-    np.testing.assert_allclose(seq.phase, 0.4)
+    np.testing.assert_allclose(seq.phase, 0.6)
     if platform == "tiiq":
         assert len(seq.qcm_pulses) == 2
-        np.testing.assert_allclose(seq.time, 2 * (cp.duration // 2) + cp.delay)
-    pulse1 = f"P({cp.channel}, 0, {duration}, {cp.amplitude}, {cp.frequency}, -1.3707963267948966, (gaussian, {duration / 5}))"
-    pulse2 = f"P({cp.channel}, {duration + cp.delay}, {duration}, {cp.amplitude}, {cp.frequency}, 1.6707963267948964, (gaussian, {duration / 5}))"
+        np.testing.assert_allclose(seq.time, 2 * (cp.duration // 2) + 2 * cp.delay)
+    pulse1 = f"P({cp.channel}, 0, {duration}, {cp.amplitude}, {cp.frequency}, 0.3, (gaussian, {duration / 5}))"
+    pulse2 = f"P({cp.channel}, {duration + cp.delay}, {duration}, {cp.amplitude}, {cp.frequency}, {0.4 - np.pi}, (gaussian, {duration / 5}))"
     assert seq.serial() == f"{pulse1}, {pulse2}"
 
 
@@ -106,14 +106,14 @@ def test_pulse_sequence_add_two_u3(platform):
 
     cp = PiPulseRegression(platform)
     duration = cp.duration // 2
-    np.testing.assert_allclose(seq.phase, 1.1)
+    np.testing.assert_allclose(seq.phase, 0.6 + 1.5)
     if platform == "tiiq":
         assert len(seq.qcm_pulses) == 4
-        np.testing.assert_allclose(seq.time, 2 * (2 * (cp.duration // 2) + cp.delay))
-    pulse1 = f"P({cp.channel}, 0, {duration}, {cp.amplitude}, {cp.frequency}, -1.3707963267948966, (gaussian, {duration / 5}))"
-    pulse2 = f"P({cp.channel}, {duration + cp.delay}, {duration}, {cp.amplitude}, {cp.frequency}, 1.6707963267948964, (gaussian, {duration / 5}))"
-    pulse3 = f"P({cp.channel}, {2 * (duration + cp.delay)}, {duration}, {cp.amplitude}, {cp.frequency}, -0.5707963267948967, (gaussian, {duration / 5}))"
-    pulse4 = f"P({cp.channel}, {3 * (duration + cp.delay)}, {duration}, {cp.amplitude}, {cp.frequency}, 2.1707963267948966, (gaussian, {duration / 5}))"
+        np.testing.assert_allclose(seq.time, 2 * (2 * (cp.duration // 2) + 2 * cp.delay))
+    pulse1 = f"P({cp.channel}, 0, {duration}, {cp.amplitude}, {cp.frequency}, 0.3, (gaussian, {duration / 5}))"
+    pulse2 = f"P({cp.channel}, {duration + cp.delay}, {duration}, {cp.amplitude}, {cp.frequency}, {0.4 - np.pi}, (gaussian, {duration / 5}))"
+    pulse3 = f"P({cp.channel}, {2 * (duration + cp.delay)}, {duration}, {cp.amplitude}, {cp.frequency}, 1.1, (gaussian, {duration / 5}))"
+    pulse4 = f"P({cp.channel}, {3 * (duration + cp.delay)}, {duration}, {cp.amplitude}, {cp.frequency}, {1.5 - np.pi}, (gaussian, {duration / 5}))"
     assert seq.serial() == f"{pulse1}, {pulse2}, {pulse3}, {pulse4}"
 
 
@@ -130,10 +130,10 @@ def test_pulse_sequence_add_measurement(platform):
     
     cp = PiPulseRegression(platform)
     rp = ReadoutPulseRegression(platform)
-    np.testing.assert_allclose(seq.phase, 0.4)
+    np.testing.assert_allclose(seq.phase, 0.6)
     duration = cp.duration // 2
-    pulse1 = f"P({cp.channel}, 0, {duration}, {cp.amplitude}, {cp.frequency}, -1.3707963267948966, (gaussian, {duration / 5}))"
-    pulse2 = f"P({cp.channel}, {duration + cp.delay}, {duration}, {cp.amplitude}, {cp.frequency}, 1.6707963267948964, (gaussian, {duration / 5}))"
+    pulse1 = f"P({cp.channel}, 0, {duration}, {cp.amplitude}, {cp.frequency}, 0.3, (gaussian, {duration / 5}))"
+    pulse2 = f"P({cp.channel}, {duration + cp.delay}, {duration}, {cp.amplitude}, {cp.frequency}, {0.4 - np.pi}, (gaussian, {duration / 5}))"
     start = 2 * (duration + cp.delay) + K.platform.delay_before_readout
     pulse3 = f"P({rp.channel}, {start}, {rp.duration}, {rp.amplitude}, {rp.frequency}, {seq.phase}, rectangular)"
     assert seq.serial() == f"{pulse1}, {pulse2}, {pulse3}"
@@ -163,14 +163,22 @@ def test_hardwarecircuit_create_sequence(platform):
     cp = PiPulseRegression(platform)
     rp = ReadoutPulseRegression(platform)
     duration = cp.duration // 2
-    std = duration / 5
-    pulse1 = f"P({cp.channel}, 0, {duration}, {cp.amplitude}, {cp.frequency}, -3.141592653589793, (gaussian, {std}))"
-    pulse2 = f"P({cp.channel}, {duration + cp.delay}, {duration}, {cp.amplitude}, {cp.frequency}, -0.10000000000000009, (gaussian, {std}))"
-    pulse3 = f"P({cp.channel}, {2 * (duration + cp.delay)}, {duration}, {cp.amplitude}, {cp.frequency}, -1.6707963267948966, (gaussian, {std}))"
-    pulse4 = f"P({cp.channel}, {3 * (duration + cp.delay)}, {duration}, {cp.amplitude}, {cp.frequency}, 1.2707963267948963, (gaussian, {std}))"
+    phases = [np.pi / 2, 0.1 - np.pi / 2, 0.1, 0.3 - np.pi]
+    for i, (pulse, phase) in enumerate(zip(seq.pulses[:-1], phases)):
+        assert pulse.channel == cp.channel
+        np.testing.assert_allclose(pulse.start, i * (duration + cp.delay))
+        np.testing.assert_allclose(pulse.duration, duration)
+        np.testing.assert_allclose(pulse.amplitude, cp.amplitude)
+        np.testing.assert_allclose(pulse.frequency, cp.frequency)
+        np.testing.assert_allclose(pulse.phase, phase)
+    
+    pulse = seq.pulses[-1]
     start = 4 * (duration + cp.delay) + K.platform.delay_before_readout
-    pulse5 = f"P({rp.channel}, {start}, {rp.duration}, {rp.amplitude}, {rp.frequency}, -0.30000000000000027, rectangular)"
-    assert seq.serial() == ", ".join([pulse1, pulse2, pulse3, pulse4, pulse5])
+    np.testing.assert_allclose(pulse.start, start)
+    np.testing.assert_allclose(pulse.duration, rp.duration)
+    np.testing.assert_allclose(pulse.amplitude, rp.amplitude)
+    np.testing.assert_allclose(pulse.frequency, rp.frequency)
+    np.testing.assert_allclose(pulse.phase, 0.3)
 
 
 @pytest.mark.parametrize("platform", ["tiiq", "icarusq"])

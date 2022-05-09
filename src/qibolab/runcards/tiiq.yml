@@ -7,7 +7,7 @@ settings:
     sampling_rate: 1000000000
     repetition_duration: 200000
     delay_before_readout: 4
-    delay_between_pulses: 0
+    delay_between_pulses: 4
     qc_spectroscopy_pulse:
         start: 0
         frequency: 200000000
@@ -67,7 +67,6 @@ QCM_init_settings:
     ref_clock: external
     sequencer: 0
     sync_en: true
-    is_cluster: true
 QRM_init_settings:
     acq_trigger_mode: sequencer
     hardware_avg_en: true
@@ -76,4 +75,3 @@ QRM_init_settings:
     ref_clock: external
     sequencer: 0
     sync_en: true
-    is_cluster: true

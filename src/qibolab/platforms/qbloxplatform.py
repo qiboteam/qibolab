@@ -22,6 +22,19 @@ class QBloxPlatform(AbstractPlatform):
 
         self.last_qcm_pulses = None
         self.last_qrm_pulses = None
+        
+    def __getstate__(self):
+        data = super().__getstate__()
+        data.update({
+            "last_qcm_pulses": self.last_qcm_pulses,
+            "last_qrm_pulses": self.last_qrm_pulses
+        })
+        return data
+
+    def __setstate__(self, data):
+        super().__setstate__(data)
+        self.last_qcm_pulses = data.get("last_qcm_pulses")
+        self.last_qrm_pulses = data.get("last_qrm_pulses")
 
     @property
     def qrm(self):
