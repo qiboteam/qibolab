@@ -47,6 +47,16 @@ class QBloxPlatform(AbstractPlatform):
         self._check_connected()
         return self._LO_qcm
 
+    def run_calibration(self):  # pragma: no cover
+        """Executes calibration routines and updates the settings yml file"""
+        # TODO: Consider testing this
+        from qibolab.calibration import calibration
+        ac = calibration.Calibration(self)
+        ac.auto_calibrate_plaform()     
+
+        # update instruments with new calibration settings
+        self.setup()
+
     def connect(self):
         """Connects to lab instruments using the details specified in the calibration settings."""
         if not self.is_connected:

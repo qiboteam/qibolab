@@ -1,3 +1,4 @@
+import os
 import pathlib
 import string
 import numpy as np
@@ -18,7 +19,9 @@ from qibolab.pulse_shapes import Rectangular, Gaussian
 
 #set data dir for experiment results
 utils.check_data_dir()
+os.makedirs(pathlib.Path(__file__).parent / "data" / "quantify", exist_ok=True)
 set_datadir(pathlib.Path(__file__).parent / "data" / "quantify")
+
 
 class Calibration():
 
