@@ -34,7 +34,7 @@ class Pulse:
                           amplitude=0.3,
                           duration=60,
                           phase=0,
-                          shape=Gaussian(60 / 5))
+                          shape=Gaussian(5))
     """
     def __init__(self, start, duration, amplitude, frequency, phase, shape, offset_i=0, offset_q=0, channel="qcm", qubit=0):
         # FIXME: Since the ``start`` value depends on the previous pulses we are
