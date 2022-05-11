@@ -1,5 +1,5 @@
-from qibo.config import raise_error, log
 from qibolab.platforms.abstract import AbstractPlatform
+
 
 class QBloxPlatform(AbstractPlatform):
     """Platform for controlling quantum devices using QCM and QRM.
@@ -73,6 +73,7 @@ class QBloxPlatform(AbstractPlatform):
     def connect(self):
         """Connects to lab instruments using the details specified in the calibration settings."""
         if not self.is_connected:
+            from qibo.config import log
             log.info(f"Connecting to {self.name} instruments.")
             try:
                 from qibolab.instruments import PulsarQRM, PulsarQCM, SGS100A
@@ -82,6 +83,7 @@ class QBloxPlatform(AbstractPlatform):
                 self._LO_qcm = SGS100A(**self._settings.get("LO_QCM_init_settings"))
                 self.is_connected = True
             except Exception as exception:
+                from qibo.config import raise_error
                 raise_error(RuntimeError, "Cannot establish connection to "
                             f"{self.name} instruments. "
                             f"Error captured: '{exception}'")
@@ -137,6 +139,7 @@ class QBloxPlatform(AbstractPlatform):
             after execution.
         """
         if not self.is_connected:
+            from qibo.config import raise_error
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
         if nshots is None:
             nshots = self.hardware_avg

@@ -1,8 +1,8 @@
 import pytest
-from qibolab.backend import QibolabBackend
 
 
 def test_backend_init():
+    from qibolab.backend import QibolabBackend
     from qibolab.platforms.qbloxplatform import QBloxPlatform
     backend = QibolabBackend()
     assert backend.is_hardware
@@ -10,6 +10,7 @@ def test_backend_init():
 
 
 def test_backend_platform():
+    from qibolab.backend import QibolabBackend
     from qibolab.platforms.qbloxplatform import QBloxPlatform
     from qibolab.platforms.icplatform import ICPlatform
     backend = QibolabBackend()
@@ -31,6 +32,7 @@ def test_backend_platform():
 
 
 def test_backend_circuit_class():
+    from qibolab.backend import QibolabBackend
     from qibolab.circuit import HardwareCircuit
     backend = QibolabBackend()
     assert backend.circuit_class() == HardwareCircuit
