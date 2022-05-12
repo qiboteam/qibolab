@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import yaml
-from qibo.config import raise_error, log
+
 
 class AbstractPlatform(ABC):
     """Abstract platform for controlling quantum devices.
@@ -11,6 +11,7 @@ class AbstractPlatform(ABC):
     """
 
     def __init__(self, name, runcard):
+        from qibo.config import log
         log.info(f"Loading platform {name}")
         log.info(f"Loading runcard {runcard}")
         self.name = name
@@ -38,6 +39,7 @@ class AbstractPlatform(ABC):
 
     def _check_connected(self):
         if not self.is_connected:
+            from qibo.config import raise_error
             raise_error(RuntimeError, "Cannot access instrument because it is not connected.")
 
     def reload_settings(self):
@@ -120,7 +122,7 @@ class AbstractPlatform(ABC):
     @abstractmethod
     def run_calibration(self):  # pragma: no cover
         """Executes calibration routines and updates the settings yml file"""
-        raise_error(NotImplementedError)
+        raise NotImplementedError
 
     def __call__(self, sequence, nshots=None):
         return self.execute(sequence, nshots)
@@ -128,27 +130,27 @@ class AbstractPlatform(ABC):
     @abstractmethod
     def connect(self):  # pragma: no cover
         """Connects to lab instruments using the details specified in the calibration settings."""
-        raise_error(NotImplementedError)
+        raise NotImplementedError
 
     @abstractmethod
     def setup(self):  # pragma: no cover
         """Configures instruments using the loaded calibration settings."""
-        raise_error(NotImplementedError)
+        raise NotImplementedError
 
     @abstractmethod
     def start(self):  # pragma: no cover
         """Turns on the local oscillators."""
-        raise_error(NotImplementedError)
+        raise NotImplementedError
 
     @abstractmethod
     def stop(self):  # pragma: no cover
         """Turns off all the lab instruments."""
-        raise_error(NotImplementedError)
+        raise NotImplementedError
 
     @abstractmethod
     def disconnect(self):  # pragma: no cover
         """Disconnects from the lab instruments."""
-        raise_error(NotImplementedError)
+        raise NotImplementedError
 
     @abstractmethod
     def execute(self, sequence, nshots=None):  # pragma: no cover
@@ -163,4 +165,4 @@ class AbstractPlatform(ABC):
         Returns:
             Readout results acquired by after execution.
         """
-        raise_error(NotImplementedError)
+        raise NotImplementedError

@@ -1,5 +1,4 @@
 import copy
-from qibo.config import raise_error, log
 from qibolab.platforms.abstract import AbstractPlatform
 
 class Qubit:
@@ -57,11 +56,13 @@ class ICPlatform(AbstractPlatform):
             self.qubits.append(Qubit(**qubit_dict))
 
     def run_calibration(self):  # pragma: no cover
+        from qibo.config import raise_error
         raise_error(NotImplementedError)
     
     def connect(self):
         """Connects to lab instruments using the details specified in the calibration settings."""
         if not self.is_connected:
+            from qibo.config import log
             log.info(f"Connecting to {self.name} instruments.")
             try:
                 import qibolab.instruments as qi
@@ -79,6 +80,7 @@ class ICPlatform(AbstractPlatform):
                     
                 self.is_connected = True
             except Exception as exception:
+                from qibo.config import raise_error
                 raise_error(RuntimeError, "Cannot establish connection to "
                             f"{self.name} instruments. "
                             f"Error captured: '{exception}'")
@@ -131,6 +133,7 @@ class ICPlatform(AbstractPlatform):
             after execution.
         """
         if not self.is_connected:
+            from qibo.config import raise_error
             raise_error(
                 RuntimeError, "Execution failed because instruments are not connected.")
         if nshots is None:
@@ -191,6 +194,7 @@ class ICPlatform(AbstractPlatform):
             res = next(inst for inst in self._instruments if inst.name == name)
             return res
         except StopIteration:
+            from qibo.config import raise_error
             raise_error(Exception, "Instrument not found")
 
     def fetch_qubit(self, qubit_id=0) -> Qubit:
