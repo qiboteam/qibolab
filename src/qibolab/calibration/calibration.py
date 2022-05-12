@@ -304,8 +304,10 @@ class Calibration():
         platform = self.platform
         platform.reload_settings()
         ps = platform.settings['settings']
-        niter=5 #TODO: Move to calibration.yaml
-        nshots=1
+
+        ds = self.load_settings()
+        ds = ds['callibrate_qubit_states']
+        niter = ds['niter']
 
         #create exc and gnd pulses
         start = 0
@@ -334,7 +336,7 @@ class Calibration():
         all_exc_states = []
         for i in range(niter):
             print(f"Starting exc state calibration {i}")
-            qubit_state = platform.execute(exc_sequence, nshots)
+            qubit_state = platform.execute(exc_sequence, 1)
             #Compose complex point from i, q obtained from execution
             point = complex(qubit_state[2], qubit_state[3])
             all_exc_states.append(point)
@@ -356,7 +358,7 @@ class Calibration():
         all_gnd_states = []
         for i in range(niter):
             print(f"Starting gnd state calibration  {i}")
-            qubit_state = platform.execute(gnd_sequence, nshots)
+            qubit_state = platform.execute(gnd_sequence, 1)
             #Compose complex point from i, q obtained from execution
             point = complex(qubit_state[2], qubit_state[3])
             all_gnd_states.append(point)
