@@ -34,3 +34,6 @@ ramsey:
   delay_between_pulses_start: 4
   delay_between_pulses_end: 7999
   delay_between_pulses_step: 50
+
+callibrate_qubit_states:
+  niter: 1024

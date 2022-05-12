@@ -38,7 +38,7 @@ def backup_config_file(platform):
     original = str(platform.runcard)
     now = datetime.now()
     now = now.strftime("%d%m%Y%H%M%S")
-    destination_file_name = "tiiq_" + now + ".yml" 
+    destination_file_name = "tiiq_" + now + ".yml"
     target = os.path.realpath(os.path.join(os.path.dirname(__file__), 'data/settings_backups', destination_file_name))
 
     try:
@@ -59,7 +59,7 @@ def get_config_parameter(dictID, dictID1, key):
     calibration_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'runcards', 'tiiq.yml'))
     with open(calibration_path) as file:
         settings = yaml.safe_load(file)
-    file.close()    
+    file.close()
 
     if (not dictID1):
         return settings[dictID][key]
@@ -72,7 +72,7 @@ def save_config_parameter(dictID, dictID1, key, value):
     with open(calibration_path, "r") as file:
         settings = yaml.safe_load(file)
     file.close()
-    
+
     if (not dictID1):
         settings[dictID][key] = value
         print("Saved value: " + str(settings[dictID][key]))
@@ -138,8 +138,8 @@ def create_measurement_control(name, debug=True):
         return mc, plotmon, insmon
     else:
         mc = MeasurementControl(f'MC {name}')
-        return mc, plotmon, insmon
-    # TODO: be able to choose which windows are opened and remember their sizes and dimensions 
+        return mc, None, None
+    # TODO: be able to choose which windows are opened and remember their sizes and dimensions
 
 
 def classify(point: complex, mean_gnd, mean_exc):
@@ -147,5 +147,5 @@ def classify(point: complex, mean_gnd, mean_exc):
         """Classify the given state as |0> or |1>."""
         def distance(a, b):
             return math.sqrt((np.real(a) - np.real(b))**2 + (np.imag(a) - np.imag(b))**2)
-        
+
         return int(distance(point, mean_exc) < distance(point, mean_gnd))
