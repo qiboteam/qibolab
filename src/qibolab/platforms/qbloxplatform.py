@@ -60,11 +60,11 @@ class QBloxPlatform(AbstractPlatform):
         self._check_connected()
         return self._LO_qcm
 
-    def run_calibration(self):  # pragma: no cover
+    def run_calibration(self, show_plots=True):  # pragma: no cover
         """Executes calibration routines and updates the settings yml file"""
         # TODO: Consider testing this
         from qibolab.calibration import calibration
-        ac = calibration.Calibration(self)
+        ac = calibration.Calibration(self, show_plots)
         ac.auto_calibrate_plaform()     
 
         # update instruments with new calibration settings
