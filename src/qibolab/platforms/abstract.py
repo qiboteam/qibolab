@@ -120,7 +120,7 @@ class AbstractPlatform(ABC):
         return self._settings.get("settings").get("delay_before_readout")
 
     @abstractmethod
-    def run_calibration(self, show_plots=True):  # pragma: no cover
+    def run_calibration(self, show_plots=False):  # pragma: no cover
         """Executes calibration routines and updates the settings yml file"""
         raise NotImplementedError
 
