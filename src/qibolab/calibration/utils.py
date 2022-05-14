@@ -3,6 +3,7 @@ import numpy as np
 import yaml
 import matplotlib.pyplot as plt
 import pathlib
+import datetime
 
 def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step):
     #[.     .     .     .     .     .][...................]0[...................][.     .     .     .     .     .]
@@ -80,6 +81,9 @@ def save_config_parameter(dictID, dictID1, key, value):
     else:
         settings[dictID][dictID1][key] = value
         print("Saved value: " + str(settings[dictID][dictID1][key]))
+
+    # store latest timestamp
+    settings['timestamp'] = datetime.datetime.utcnow()
 
     with open(calibration_path, "w") as file:
         settings = yaml.dump(settings, file, sort_keys=False, indent=4)
