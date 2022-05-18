@@ -202,7 +202,7 @@ class GenericPulsar(Instrument, ABC):
         """
         raise_error(NotImplementedError)
 
-    def upload(self, waveforms, program, data_folder):
+    def upload(self, waveforms, program, data_f):
         """Uploads waveforms and programs to QBlox sequencer to prepare execution."""
         import os
         # Upload waveforms and program
@@ -225,9 +225,9 @@ class GenericPulsar(Instrument, ABC):
 
         # Upload json file to the device
         if self.sequencer == 1:
-            self.device.sequencer1_waveforms_and_program(data_folder / filename)
+            self.device.sequencer1_waveforms_and_program(str(data_folder / filename))
         else:
-            self.device.sequencer0_waveforms_and_program(data_folder / filename)
+            self.device.sequencer0_waveforms_and_program(str(data_folder / filename))
 
     def play_sequence(self):
         """Executes the uploaded instructions."""
