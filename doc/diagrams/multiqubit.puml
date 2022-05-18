@@ -1,0 +1,102 @@
+@startuml multiqubit
+!pragma layout smetana
+title qibolab
+
+package circuit.py {
+    class PulseSequence {
+    }
+    class HardwareCircuit extends qibo.Circuit {
+    }
+    qibo.K <-- HardwareCircuit
+    Pulse <-- PulseSequence
+    PulseShape <-- PulseSequence
+}
+
+
+package runcards {
+    entity multiqubit.yml  <<(y, orchid)>> 
+}
+package instruments {
+    package instruments/abstract.py{
+        class AbstractInstrument{
+            name
+            ip
+            is_connected
+            signature
+            device
+            --
+            {abstract} connect
+            {abstract} setup
+            {abstract} start
+            {abstract} stop
+            {abstract} disconnect
+        }
+    }
+    package qblox.py{
+        abstract class GenericPulsar extends AbstractInstrument{
+        }
+        class PulsarQRM extends GenericPulsar {
+        }
+        class PulsarQCM extends GenericPulsar {
+        }
+        class ClusterQRM extends AbstractInstrument {
+        }
+        class ClusterQCM extends AbstractInstrument {
+        }
+    }
+    package rohde_schwarz.py {
+        class SGS100A{
+        }
+    }
+}
+
+package platforms {
+    package platforms/abstract.py {
+        abstract class AbstractPlatform {
+            name
+            runcard
+            settings
+            is_connected
+            --
+            __init__(name, runcard)
+            __call__(sequence, nshots=None)
+            _check_connected()
+            reload_settings()
+            ..
+            {abstract} run_calibration(runcard)
+            {abstract} connect()
+            {abstract} setup()
+            {abstract} start()
+            {abstract} stop()
+            {abstract} disconnect()
+            {abstract} execute_pulse_sequence(sequence, nshots=None)
+        }
+    }
+    package multiqubit.py {
+        class MultiqubitPlatform extends AbstractPlatform {
+        }
+        ClusterQRM <-- MultiqubitPlatform
+        ClusterQCM <-- MultiqubitPlatform
+        SGS100A <-- MultiqubitPlatform
+        PulseSequence <-- MultiqubitPlatform
+        multiqubit.yml <-- MultiqubitPlatform
+    }
+    package qbloxplatform.py {
+        class QBloxPlatform extends AbstractPlatform 
+
+    }
+    package ictplatform.py {
+        class ICPlatform extends AbstractPlatform 
+    }
+}
+
+package platform.py {
+    entity "Platform(name, runcard)" as Platform  <<(f, LightYellow)>>
+    MultiqubitPlatform <-- Platform
+    QBloxPlatform <-- Platform
+    ICPlatform <-- Platform
+}
+
+'hide members
+
+@enduml
