@@ -1,0 +1,181 @@
+@startuml Instrument_changes
+!pragma layout smetana
+title Instrument Changes
+package instrument {
+    package abstract.py {
+        abstract class AbstractInstrument_New{
+            name
+            ip
+            is_connected
+            signature
+            device
+            --
+
+            --
+            __init__(name, ip)
+            __del__()
+            {abstract} connect()
+            {abstract} setup()
+            {abstract} start()
+            {abstract} stop()
+            {abstract} disconnect()
+        }
+    }
+    package instrument.py {
+        abstract class Instrument_Old{
+            _connected
+            ip
+            _signature
+            device
+            --
+            signature
+            --
+            __init__(ip)
+            {abstract} connect
+            {abstract} close
+        }
+    }
+    package rohde_schwarz.py {
+        class SGS100A_New extends AbstractInstrument_New{
+            device
+            power
+            frequency
+            __init__(name, ip)
+            connect()
+            setup(**kwargs)
+            start()
+            stop()
+            disconnect()
+            --
+            on()
+            off()
+            close()
+        }
+        class SGS100A_Old extends Instrument_Old{
+            device
+            _power
+            _frequency
+            _connected
+            _signature
+            label
+            __init__(label, ip)
+            connect()
+            setup(power, frequency)
+            set_power(power)
+            set_frequency(frequency)
+            get_power()
+            get_frequency()
+            on()
+            off()
+            close()
+        }
+    }
+    package qblox.py_New {
+        class ClusterQRM_New extends AbstractInstrument_New{
+            sequencer_channel_map
+            last_pulsequence_hash
+            current_pulsesequence_hash
+            kwargs = settings['shared_settings'] & instrument_settings[name]['setup']
+            wait_loop_step = 1000
+            waveform_max_length = 16384//2
+            sequencers
+            sequencer_channel_map
+            waveforms
+            acquisitions
+            program
+            weights
+            gain
+            __init__(self, name, ip)
+            connect(self)
+            setup(self, **kwargs)
+            _get_start(self, pulse)
+            process_pulse_sequence(self, channel_pulses, nshots)
+            generate_waveforms_from_pulse(self, pulse, modulate = True)
+            upload(self)
+            play_sequence(self)
+            play_sequence_and_acquire(self)
+            _demodulate_and_integrate(self, raw_results, acquisition)
+            start(self)
+            stop(self)
+            disconnect(self)
+        }
+        class ClusterQCM_New extends AbstractInstrument_New{
+            sequencer_channel_map
+            last_pulsequence_hash
+            current_pulsesequence_hash
+            kwargs = settings['shared_settings'] & instrument_settings[name]['setup']
+            wait_loop_step = 1000
+            waveform_max_length = 16384//2
+            sequencers
+            sequencer_channel_map
+            waveforms
+            program
+            gain
+            __init__(self, name, ip)
+            connect(self)
+            setup(self, **kwargs)
+            _get_start(self, pulse)
+            process_pulse_sequence(self, channel_pulses, nshots)
+            generate_waveforms_from_pulse(self, pulse, modulate = True)
+            upload(self)
+            play_sequence(self)
+            start(self)
+            stop(self)
+            disconnect(self)
+        }
+    }
+    package qblox.py_Old {
+        class GenericPulsar_Old extends Instrument_Old{
+            label
+            sequencer
+            ref_clock
+            sync_en
+            is_cluster
+            _connected
+            Device
+            device
+            name
+            hardware_avg
+            initial_delay
+            repetition_duration
+            delay_before_readout
+            wait_loop_step
+            duration_base
+            acquisitions
+            weights
+            gain
+            __init__(self, label, ip, sequencer, ref_clock, sync_en, is_cluster)
+            connect(self)
+            setup(self, gain, initial_delay, repetition_duration)
+            {static} _translate_single_pulse(pulse)
+            generate_waveforms(self, pulses)
+            generate_program(self, hardware_avg, initial_delay, delay_before_readout, acquire_instruction, wait_time)
+            {abstract} translate(self, sequence, delay_before_readout, nshots)
+            upload(self, waveforms, program, data_folder)
+            play_sequence(self)
+            stop()
+            close()
+        }
+        class PulsarQRM_Old extends GenericPulsar_Old{
+            hardware_avg_en
+            start_sample
+            integration_length
+            sampling_rate
+            mode
+            __init__(self, label, ip, ref_clock="external", sequencer=0, sync_en=True, hardware_avg_en=True, acq_trigger_mode="sequencer", is_cluster=True)
+            setup(self, gain, initial_delay, repetition_duration, start_sample, integration_length, sampling_rate, mode)
+            translate(self, sequence, delay_before_readout, nshots)
+            play_sequence_and_acquire(self, ro_pulse)
+            _demodulate_and_integrate(self, single_acq, ro_pulse)
+        }   
+        class PulsarQCM_Old extends GenericPulsar_Old{
+            __init__(self, label, ip, sequencer=0, ref_clock="external", sync_en=True, is_cluster=True)
+            translate(self, sequence, delay_before_read_out, nshots=None)
+        }
+    }
+}
+
+
+'hide members
+
+@enduml
