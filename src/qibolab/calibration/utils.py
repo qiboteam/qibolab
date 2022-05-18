@@ -53,7 +53,7 @@ def backup_config_file(platform):
     now = datetime.now()
     now = now.strftime("%d%m%Y%H%M%S")
     destination_file_name = "tiiq_" + now + ".yml"
-    target = settings_backups_folder / destination_file_name
+    target = str(settings_backups_folder / destination_file_name)
 
     try:
         print("Copying file: " + original)
