@@ -230,7 +230,6 @@ class GenericPulsar(AbstractInstrument, ABC):
 
     def upload(self, waveforms, program, data_f):
         """Uploads waveforms and programs to QBlox sequencer to prepare execution."""
-        import os
         # Upload waveforms and program
         # Reformat waveforms to lists
         for name, waveform in waveforms.items():
@@ -535,9 +534,6 @@ class ClusterQRM(AbstractInstrument):
         else:
             raise_error(Exception,'There is no connection to the instrument')
 
-    def _get_start(self, pulse):
-        # This is a helper method used to sort a list of pulses by their start time
-        return pulse.start
 
     def process_pulse_sequence(self, channel_pulses, nshots):
         """
@@ -558,7 +554,7 @@ class ClusterQRM(AbstractInstrument):
 
             # Sort pulses by their start time 
             for channel in channels:
-                channel_pulses[channel].sort(key=self._get_start) 
+                channel_pulses[channel].sort(key=lambda pulse: pulse.start) 
             
             # Check if pulses on the same channel overlap
             for channel in channels:
@@ -672,9 +668,9 @@ class ClusterQRM(AbstractInstrument):
 
                 # Add an initial wait instruction for the first pulse of the sequence
                 if pulses[sequencer][0].start != 0:
-                        initial_wait_instruction = f"\t\t\twait {pulses[sequencer][0].start}"
+                        initial_wait_instruction = f"                    wait {pulses[sequencer][0].start}"
                 else:
-                    initial_wait_instruction = "\t\t\t# wait 0"
+                    initial_wait_instruction = "                    # wait 0"
                 body += "\n" + initial_wait_instruction
 
                 for n in range(len(pulses[sequencer])):
@@ -694,7 +690,7 @@ class ClusterQRM(AbstractInstrument):
                         #   arg0 is the index of the I waveform 
                         #   arg1 is the index of the Q waveform
                         #   arg2 is the delay between starting the instruction and the next instruction
-                        play_instruction = f"\t\t\tplay {pulses[sequencer][n].waveform_indexes[0]},{pulses[sequencer][n].waveform_indexes[1]},{delay_after_play}"
+                        play_instruction = f"                    play {pulses[sequencer][n].waveform_indexes[0]},{pulses[sequencer][n].waveform_indexes[1]},{delay_after_play}"
                         # Add the serial of the pulse as a comment
                         play_instruction += " "*(26-len(play_instruction)) + f"# play waveforms {pulses[sequencer][n]}" 
                         body += "\n" + play_instruction
@@ -703,7 +699,7 @@ class ClusterQRM(AbstractInstrument):
                         #   arg0 is the index of the acquisition 
                         #   arg1 is the index of the data bin
                         #   arg2 is the delay between starting the instruction and the next instruction
-                        acquire_instruction = f"\t\t\tacquire {pulses[sequencer][n].acquisition_index},0,{delay_after_acquire}"
+                        acquire_instruction = f"                    acquire {pulses[sequencer][n].acquisition_index},0,{delay_after_acquire}"
                         # Add the serial of the pulse as a comment
                         body += "\n" + acquire_instruction
 
@@ -722,7 +718,7 @@ class ClusterQRM(AbstractInstrument):
                         #   arg0 is the index of the I waveform 
                         #   arg1 is the index of the Q waveform
                         #   arg2 is the delay between starting the instruction and the next instruction
-                        play_instruction = f"\t\t\tplay {pulses[sequencer][n].waveform_indexes[0]},{pulses[sequencer][n].waveform_indexes[1]},{delay_after_play}"
+                        play_instruction = f"                    play {pulses[sequencer][n].waveform_indexes[0]},{pulses[sequencer][n].waveform_indexes[1]},{delay_after_play}"
                         # Add the serial of the pulse as a comment
                         play_instruction += " "*(26-len(play_instruction)) + f"# play waveforms {pulses[sequencer][n]}" 
                         body += "\n" + play_instruction
@@ -766,11 +762,10 @@ class ClusterQRM(AbstractInstrument):
         """Uploads waveforms and programs all sequencers and arms them in preparation for execution."""
         if not self.current_pulsesequence_hash == self.last_pulsequence_hash:
             self.last_pulsequence_hash = self.current_pulsesequence_hash
-            import os
+
             # TODO: dont upload if the same 
             # Upload waveforms and program
             qblox_dict = {}
-            data_folder = self.data_folder
             for sequencer in self.sequencers:
                 # Reformat waveforms to lists
                 for name, waveform in self.waveforms[sequencer].items():
@@ -778,16 +773,14 @@ class ClusterQRM(AbstractInstrument):
                         self.waveforms[sequencer][name]["data"] = self.waveforms[sequencer][name]["data"].tolist()  # JSON only supports lists
 
                 # Add sequence program and waveforms to single dictionary and write to JSON file
-                filename = f"{data_folder}/{self.name}_sequencer{sequencer}_sequence.json"
+                filename = f"{self.name}_sequencer{sequencer}_sequence.json"
                 qblox_dict[sequencer] = {
                     "waveforms": self.waveforms[sequencer],
                     "weights": {}, #self.weights,
                     "acquisitions": self.acquisitions[sequencer],
                     "program": self.program[sequencer]
                     }
-                if not os.path.exists(data_folder):
-                    os.makedirs(data_folder)
-                with open(filename, "w", encoding="utf-8") as file:
+                with open(data_folder / filename, "w", encoding="utf-8") as file:
                     json.dump(qblox_dict[sequencer], file, indent=4)
 
                 # Route sequencers to specific outputs.
@@ -803,7 +796,7 @@ class ClusterQRM(AbstractInstrument):
 
 
                 # Upload json file to the device sequencers
-                self.device.set(f"sequencer{sequencer}_waveforms_and_program", os.path.join(os.getcwd(), filename))
+                self.device.set(f"sequencer{sequencer}_waveforms_and_program", str(data_folder / filename))
         # Arm all sequencers
         self.device.arm_sequencer()
         # DEBUG:
@@ -965,10 +958,6 @@ class ClusterQCM(AbstractInstrument):
         else:
             raise_error(Exception,'There is no connection to the instrument')
 
-    def _get_start(self, pulse):
-        # This is a helper method used to sort a list of pulses by their start time
-        return pulse.start
-
     def process_pulse_sequence(self, channel_pulses, nshots):
         """
         Processes a list of pulses, generating the waveforms and sequence program required by the instrument to synthesise them.
@@ -988,7 +977,7 @@ class ClusterQCM(AbstractInstrument):
 
             # Sort pulses by their start time 
             for channel in channels:
-                channel_pulses[channel].sort(key=self._get_start) 
+                channel_pulses[channel].sort(key=lambda pulse: pulse.start) 
             
             # Check if pulses on the same channel overlap
             for channel in channels:
@@ -1135,11 +1124,11 @@ class ClusterQCM(AbstractInstrument):
                 # Add an initial wait instruction for the first pulse of the sequence
                 if pulses[sequencer][0].start != 0:
                     if not pulses[sequencer][0].is_split:
-                        initial_wait_instruction = f"\t\t\twait {pulses[sequencer][0].start}"
+                        initial_wait_instruction = f"                    wait {pulses[sequencer][0].start}"
                     else:
-                        initial_wait_instruction = f"\t\t\twait {pulses[sequencer][0].start + pulses[sequencer][0].split_point}"
+                        initial_wait_instruction = f"                    wait {pulses[sequencer][0].start + pulses[sequencer][0].split_point}"
                 else:
-                    initial_wait_instruction = "\t\t\t# wait 0"
+                    initial_wait_instruction = "                    # wait 0"
                 body += "\n" + initial_wait_instruction
 
                 for n in range(len(pulses[sequencer])):
@@ -1166,7 +1155,7 @@ class ClusterQCM(AbstractInstrument):
                     #   arg0 is the index of the I waveform 
                     #   arg1 is the index of the Q waveform
                     #   arg2 is the delay between starting the instruction and the next instruction
-                    play_instruction = f"\t\t\tplay {pulses[sequencer][n].waveform_indexes[0]},{pulses[sequencer][n].waveform_indexes[1]},{delay_after_play}"
+                    play_instruction = f"                    play {pulses[sequencer][n].waveform_indexes[0]},{pulses[sequencer][n].waveform_indexes[1]},{delay_after_play}"
                     # Add the serial of the pulse as a comment
                     play_instruction += " "*(26-len(play_instruction)) + f"# play waveforms {pulses[sequencer][n]}" 
                     body += "\n" + play_instruction
@@ -1210,11 +1199,9 @@ class ClusterQCM(AbstractInstrument):
         """Uploads waveforms and programs all sequencers and arms them in preparation for execution."""
         if not self.current_pulsesequence_hash == self.last_pulsequence_hash:
             self.last_pulsequence_hash = self.current_pulsesequence_hash
-            import os
             # TODO: dont upload if the same 
             # Upload waveforms and program
             qblox_dict = {}
-            data_folder = self.data_folder
             for sequencer in self.sequencers:
                 # Reformat waveforms to lists
                 for name, waveform in self.waveforms[sequencer].items():
@@ -1222,16 +1209,14 @@ class ClusterQCM(AbstractInstrument):
                         self.waveforms[sequencer][name]["data"] = self.waveforms[sequencer][name]["data"].tolist()  # JSON only supports lists
 
                 # Add sequence program and waveforms to single dictionary and write to JSON file
-                filename = f"{data_folder}/{self.name}_sequencer{sequencer}_sequence.json"
+                filename = f"{self.name}_sequencer{sequencer}_sequence.json"
                 qblox_dict[sequencer] = {
                     "waveforms": self.waveforms[sequencer],
                     "weights": {}, #self.weights,
                     "acquisitions": {}, #self.acquisitions,
                     "program": self.program[sequencer]
                     }
-                if not os.path.exists(data_folder):
-                    os.makedirs(data_folder)
-                with open(filename, "w", encoding="utf-8") as file:
+                with open(data_folder / filename, "w", encoding="utf-8") as file:
                     json.dump(qblox_dict[sequencer], file, indent=4)
 
                 # Route sequencers to specific outputs.
@@ -1247,7 +1232,7 @@ class ClusterQCM(AbstractInstrument):
                 self.device.set(f"sequencer{sequencer}_sync_en", self.sync_en)
 
                 # Upload json file to the device sequencers
-                self.device.set(f"sequencer{sequencer}_waveforms_and_program", os.path.join(os.getcwd(), filename))
+                self.device.set(f"sequencer{sequencer}_waveforms_and_program", str(data_folder / filename))
         # Arm all sequencers
         self.device.arm_sequencer()
         # DEBUG:
