@@ -1,9 +1,22 @@
+import pathlib
+from qibolab.paths import qibolab_folder
 from quantify_core.measurement import MeasurementControl
 import numpy as np
 import yaml
 import matplotlib.pyplot as plt
 import pathlib
 import datetime
+
+script_folder = pathlib.Path(__file__).parent
+
+settings_backups_folder = qibolab_folder / "calibration" / "data" / "settings_backups"
+settings_backups_folder.mkdir(parents=True, exist_ok=True)
+
+data_folder = qibolab_folder / "calibration" / "data"
+data_folder.mkdir(parents=True, exist_ok=True)
+
+quantify_folder = qibolab_folder / "calibration" / "data" / "quantify"
+quantify_folder.mkdir(parents=True, exist_ok=True)
 
 def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step):
     #[.     .     .     .     .     .][...................]0[...................][.     .     .     .     .     .]
@@ -40,7 +53,7 @@ def backup_config_file(platform):
     now = datetime.now()
     now = now.strftime("%d%m%Y%H%M%S")
     destination_file_name = "tiiq_" + now + ".yml"
-    target = os.path.realpath(os.path.join(os.path.dirname(__file__), 'data/settings_backups', destination_file_name))
+    target = str(settings_backups_folder / destination_file_name)
 
     try:
         print("Copying file: " + original)
@@ -57,7 +70,7 @@ def backup_config_file(platform):
 
 def get_config_parameter(dictID, dictID1, key):
     import os
-    calibration_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'runcards', 'tiiq.yml'))
+    calibration_path = qibolab_folder / 'runcards' / 'tiiq.yml'
     with open(calibration_path) as file:
         settings = yaml.safe_load(file)
     file.close()
@@ -68,8 +81,7 @@ def get_config_parameter(dictID, dictID1, key):
         return settings[dictID][dictID1][key]
 
 def save_config_parameter(dictID, dictID1, key, value):
-    import os
-    calibration_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'runcards', 'tiiq.yml'))
+    calibration_path = qibolab_folder / 'runcards' / 'tiiq.yml'
     with open(calibration_path, "r") as file:
         settings = yaml.safe_load(file)
     file.close()
@@ -105,7 +117,7 @@ def plot(smooth_dataset, dataset, label, type):
         ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
         ax.title.set_text(label)
         ax.plot(dataset['x0'].values[smooth_dataset.argmin()], smooth_dataset[smooth_dataset.argmin()], 'o', color='C2')
-        plt.savefig(pathlib.Path("data") / f"{label}.pdf")
+        plt.savefig(data_folder / f"{label}.pdf")
         return
 
 def plot_qubit_states(gnd_results, exc_results):
@@ -126,7 +138,7 @@ def plot_qubit_states(gnd_results, exc_results):
     plt.xlabel('Q [a.u.]', fontsize=15)
     plt.title("0-1 discrimination", fontsize=15)
     #plt.show()
-    plt.savefig(pathlib.Path("data") / "qubit_states_classification.pdf")
+    plt.savefig( data_folder / "qubit_states_classification.pdf")
 
 
 def create_measurement_control(name, debug=True):

@@ -1,4 +1,5 @@
 import pathlib
+from qibolab.paths import qibolab_folder
 import numpy as np
 import matplotlib.pyplot as plt
 import yaml
@@ -17,9 +18,11 @@ from qibolab.circuit import PulseSequence
 from qibolab.pulse_shapes import Rectangular, Gaussian
 
 
-# TODO: Check why this set_datadir is needed
-utils.check_data_dir()
-set_datadir(pathlib.Path(__file__).parent / "data" / "quantify")
+script_folder = pathlib.Path(__file__).parent
+
+quantify_folder = qibolab_folder / "calibration" / "data" / "quantify"
+quantify_folder.mkdir(parents=True, exist_ok=True)
+set_datadir(quantify_folder)
 
 
 def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step):
@@ -62,7 +65,7 @@ class Diagnostics():
 
     def load_settings(self):
         # Load diagnostics settings
-        with open("diagnostics.yml", "r") as file:
+        with open(script_folder / "diagnostics.yml", "r") as file:
             return yaml.safe_load(file)
 
     def run_resonator_spectroscopy(self):

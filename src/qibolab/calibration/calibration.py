@@ -1,5 +1,5 @@
-import os
 import pathlib
+from qibolab.paths import qibolab_folder
 import string
 import numpy as np
 #import matplotlib.pyplot as plt
@@ -17,10 +17,12 @@ from qibolab.pulses import Pulse, ReadoutPulse
 from qibolab.circuit import PulseSequence
 from qibolab.pulse_shapes import Rectangular, Gaussian
 
-#set data dir for experiment results
-utils.check_data_dir()
-os.makedirs(pathlib.Path(__file__).parent / "data" / "quantify", exist_ok=True)
-set_datadir(pathlib.Path(__file__).parent / "data" / "quantify")
+
+script_folder = pathlib.Path(__file__).parent
+
+quantify_folder = qibolab_folder / "calibration" / "data" / "quantify"
+quantify_folder.mkdir(parents=True, exist_ok=True)
+set_datadir(quantify_folder)
 
 
 class Calibration():
@@ -32,7 +34,7 @@ class Calibration():
 
     def load_settings(self):
         # Load diagnostics settings
-        with open("calibration.yml", "r") as file:
+        with open(script_folder / "calibration.yml", "r") as file:
             return yaml.safe_load(file)
 
     def run_resonator_spectroscopy(self):

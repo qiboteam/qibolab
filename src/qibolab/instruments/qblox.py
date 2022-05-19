@@ -1,3 +1,5 @@
+import pathlib
+from qibolab.paths import qibolab_folder
 import json
 import numpy as np
 from abc import ABC, abstractmethod
@@ -6,6 +8,9 @@ from qibolab.instruments.instrument import Instrument, InstrumentException
 
 import logging
 logger = logging.getLogger(__name__)  # TODO: Consider using a global logger
+
+data_folder = qibolab_folder / "instruments" / "data"
+data_folder.mkdir(parents=True, exist_ok=True)
 
 class GenericPulsar(Instrument, ABC):
 
@@ -197,7 +202,7 @@ class GenericPulsar(Instrument, ABC):
         """
         raise_error(NotImplementedError)
 
-    def upload(self, waveforms, program, data_folder):
+    def upload(self, waveforms, program, data_f):
         """Uploads waveforms and programs to QBlox sequencer to prepare execution."""
         import os
         # Upload waveforms and program
@@ -207,23 +212,22 @@ class GenericPulsar(Instrument, ABC):
                 waveforms[name]["data"] = waveforms[name]["data"].tolist()  # JSON only supports lists
 
         # Add sequence program and waveforms to single dictionary and write to JSON file
-        filename = f"{data_folder}/{self.name}_sequence.json"
+        filename = f"{self.name}_sequence.json"
         program_dict = {
             "waveforms": waveforms,
             "weights": self.weights,
             "acquisitions": self.acquisitions,
             "program": program
             }
-        if not os.path.exists(data_folder):
-            os.makedirs(data_folder)
-        with open(filename, "w", encoding="utf-8") as file:
+
+        with open(data_folder / filename, "w", encoding="utf-8") as file:
             json.dump(program_dict, file, indent=4)
 
         # Upload json file to the device
         if self.sequencer == 1:
-            self.device.sequencer1_waveforms_and_program(os.path.join(os.getcwd(), filename))
+            self.device.sequencer1_waveforms_and_program(str(data_folder / filename))
         else:
-            self.device.sequencer0_waveforms_and_program(os.path.join(os.getcwd(), filename))
+            self.device.sequencer0_waveforms_and_program(str(data_folder / filename))
 
     def play_sequence(self):
         """Executes the uploaded instructions."""
