@@ -9,32 +9,29 @@ class AbstractPlatform(ABC):
         name (str): name of the platform.
         runcard (str): path to the yaml file containing the platform setup.
     """
-
     def __init__(self, name, runcard):
         from qibo.config import log
-        log.info(f"Loading platform {name}")
-        log.info(f"Loading runcard {runcard}")
+        log.info(f"Loading platform {name} from runcard {runcard}")
         self.name = name
         self.runcard = runcard
-        # Load calibration settings
+        # Load platform settings
         with open(runcard, "r") as file:
-            self._settings = yaml.safe_load(file)
-
-        # Define references to instruments
+            self.settings = yaml.safe_load(file)
+    
         self.is_connected = False
-        
+
     def __getstate__(self):
         return {
             "name": self.name,
             "runcard": self.runcard,
-            "_settings": self._settings,
-            "is_connected": False
+            "settings": self.settings,
+            "is_connected": self.is_connected
         }
 
     def __setstate__(self, data):
         self.name = data.get("name")
         self.runcard = data.get("runcard")
-        self._settings = data.get("_settings")
+        self.settings = data.get("settings")
         self.is_connected = data.get("is_connected")
 
     def _check_connected(self):
@@ -44,88 +41,13 @@ class AbstractPlatform(ABC):
 
     def reload_settings(self):
         with open(self.runcard, "r") as file:
-            self._settings = yaml.safe_load(file)
+            self.settings = yaml.safe_load(file)
         self.setup()
-
-    @property
-    def settings(self):
-        return self._settings
-
-    @property
-    def data_folder(self):
-        return self._settings.get("settings").get("data_folder")
-
-    @property
-    def hardware_avg(self):
-        return self._settings.get("settings").get("hardware_avg")
-
-    @property
-    def sampling_rate(self):
-        return self._settings.get("settings").get("sampling_rate")
-
-    @property
-    def software_averages(self):
-        return self._settings.get("settings").get("software_averages")
-
-    @software_averages.setter
-    def software_averages(self, x):
-        self._settings["settings"]["software_averages"] = x
-
-    @property
-    def repetition_duration(self):
-        return self._settings.get("settings").get("repetition_duration")
-
-    @property
-    def resonator_frequency(self):
-        return self._settings.get("settings").get("resonator_freq")
-
-    @property
-    def qubit_frequency(self):
-        return self._settings.get("settings").get("qubit_freq")
-
-    @property
-    def pi_pulse_gain(self):
-        return self._settings.get("settings").get("pi_pulse_gain")
-
-    @property
-    def pi_pulse_amplitude(self):
-        return self._settings.get("settings").get("pi_pulse_amplitude")
-
-    @property
-    def pi_pulse_duration(self):
-        return self._settings.get("settings").get("pi_pulse_duration")
-
-    @property
-    def pi_pulse_frequency(self):
-        return self._settings.get("settings").get("pi_pulse_frequency")
-
-    @property
-    def readout_pulse(self):
-        return self._settings.get("settings").get("readout_pulse")
-
-    @property
-    def max_readout_voltage(self):
-        return self._settings.get("settings").get("resonator_spectroscopy_max_ro_voltage")
-
-    @property
-    def min_readout_voltage(self):
-        return self._settings.get("settings").get("rabi_oscillations_pi_pulse_min_voltage")
-
-    @property
-    def delay_between_pulses(self):
-        return self._settings.get("settings").get("delay_between_pulses")
-
-    @property
-    def delay_before_readout(self):
-        return self._settings.get("settings").get("delay_before_readout")
 
     @abstractmethod
     def run_calibration(self, show_plots=False):  # pragma: no cover
         """Executes calibration routines and updates the settings yml file"""
-        raise NotImplementedError
-
-    def __call__(self, sequence, nshots=None):
-        return self.execute(sequence, nshots)
+        raise NotImplementedError   
 
     @abstractmethod
     def connect(self):  # pragma: no cover
@@ -152,8 +74,12 @@ class AbstractPlatform(ABC):
         """Disconnects from the lab instruments."""
         raise NotImplementedError
 
+
+    def __call__(self, sequence, nshots=None):
+        return self.execute_pulse_sequence(sequence, nshots)
+
     @abstractmethod
-    def execute(self, sequence, nshots=None):  # pragma: no cover
+    def execute_pulse_sequence(self, sequence, nshots=None):  # pragma: no cover
         """Executes a pulse sequence.
 
         Args:
