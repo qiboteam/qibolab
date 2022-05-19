@@ -37,19 +37,17 @@ class Pulse:
                           shape=Gaussian(5))
     """
     def __init__(self, start, duration, amplitude, frequency, phase, shape, channel, type = 'qd', offset_i=0, offset_q=0, qubit=0):
-        # FIXME: Since the ``start`` value depends on the previous pulses we are
-        # not sure if it should be a local property of the ``Pulse`` object
-        self.start = start
+        self.start = start # absolut pulse start time (does not depend on other pulses of the sequence)
         self.duration = duration
         self.amplitude = amplitude
         self.frequency = frequency
         self.phase = phase
-        self.shape = shape  # str
+        self.shape = shape  # (str): {'Rectangular', 'Gaussian(rel_sigma)', 'DRAG(rel_sigma, beta)'}
         self.channel = channel
         self.offset_i = offset_i
         self.offset_q = offset_q
         self.qubit = qubit
-        self.type = type
+        self.type = type # Pulse.type (str): {'qd', 'ro', 'qf'}
 
     @property
     def serial(self):
