@@ -87,7 +87,7 @@ class Pulse:
                 where sigma = duration/rel_sigma
             """
             from scipy.signal import gaussian
-            rel_sigma = self.shape_parameters[0]
+            rel_sigma = int(self.shape_parameters[0])
             envelope =  self.amplitude * gaussian(int(self.duration), std=int(self.duration/rel_sigma))
 
         elif 'DRAG' in self.shape:
@@ -105,7 +105,7 @@ class Pulse:
             """
             """
             from scipy.signal import gaussian
-            rel_sigma = self.shape_parameters[0]
+            rel_sigma = int(self.shape_parameters[0])
             envelope =  self.amplitude * gaussian(int(self.duration), std=int(self.duration/rel_sigma))
             """
             raise NotImplementedError
@@ -140,9 +140,9 @@ class Pulse:
         return envelope
 
     def __repr__(self):
-        return self.serial()
-
-
+        return self.serial
+ 
+ 
 class ReadoutPulse(Pulse):
     """Describes a readout pulse.
 

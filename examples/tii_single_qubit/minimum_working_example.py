@@ -30,7 +30,7 @@ platform.setup()
 # Turns on the local oscillators
 platform.start()
 # Executes a pulse sequence.
-results = platform.execute(sequence, nshots=3000)
+results = platform.execute_pulse_sequence(sequence, nshots=3000)
 print(f"results (amplitude, phase, i, q): {results}")
 # Turn off lab instruments
 platform.stop()

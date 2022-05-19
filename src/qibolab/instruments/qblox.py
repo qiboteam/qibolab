@@ -144,7 +144,7 @@ class GenericPulsar(AbstractInstrument, ABC):
                 waveform_sequence.append(idx)
                 waveform = self._translate_single_pulse(pulse)
                 for mod in ['I', 'Q']:
-                    new_waveform = {f"{pulse.serial()}_mod{mod}": {
+                    new_waveform = {f"{pulse.serial}_mod{mod}": {
                         "data": waveform[f"mod{mod}"]["data"], "index": idx}}
                     waveforms.update(new_waveform)
                     idx += 1
@@ -154,8 +154,8 @@ class GenericPulsar(AbstractInstrument, ABC):
         # # Fixing 0s addded to the qrm waveform. Needs to be improved, but working well on TIIq
         # for pulse in pulses:
         #     if(pulse.channel == "qrm"):
-        #         waveforms[f"{pulse.serial()}_I"]["data"] = waveforms[f"{pulse.serial()}_I"]["data"][pulse.start:]
-        #         waveforms[f"{pulse.serial()}_Q"]["data"] = waveforms[f"{pulse.serial()}_Q"]["data"][pulse.start:]
+        #         waveforms[f"{pulse.serial}_I"]["data"] = waveforms[f"{pulse.serial}_I"]["data"][pulse.start:]
+        #         waveforms[f"{pulse.serial}_Q"]["data"] = waveforms[f"{pulse.serial}_Q"]["data"][pulse.start:]
 
         return waveforms, waveform_sequence
 
@@ -553,7 +553,7 @@ class ClusterQRM(AbstractInstrument):
         self.current_pulsesequence_hash = ""
         for channel in channels:
             for pulse in channel_pulses[channel]:
-                self.current_pulsesequence_hash += pulse.serial()
+                self.current_pulsesequence_hash += pulse.serial
         if not self.current_pulsesequence_hash == self.last_pulsequence_hash:
 
             # Sort pulses by their start time 
@@ -567,7 +567,7 @@ class ClusterQRM(AbstractInstrument):
                     for n in range(m):
                         if channel_pulses[channel][m].start - channel_pulses[channel][n].start < channel_pulses[channel][n].duration:
                             channel_pulses[channel][m].overlaps.append(n)
-                for pulse in channel_pulses[channel]:
+                for m in range(1, len(channel_pulses[channel])):
                     if len(pulse.overlaps) > 0:
                         # TODO: Urgently needed in order to implement multiplexed readout
                         raise_error(NotImplementedError, "Overlaping pulses on the same channel are not yet supported.")
@@ -591,7 +591,7 @@ class ClusterQRM(AbstractInstrument):
                 # Iterate over the list of pulses to check if they are unique and if the overal length of the waveform exceeds the memory available
                 for pulse in channel_pulses[channel]:
                     sequencer_pulses[sequencer].append(pulse)
-                    pulse_serial = pulse.serial()[pulse.serial().find(',',pulse.serial().find(',')+1)+2:-1] # removes the channel and start information from Pulse.serial() to compare between pulses
+                    pulse_serial = pulse.serial[pulse.serial.find(',',pulse.serial.find(',')+1)+2:-1] # removes the channel and start information from Pulse.serial to compare between pulses
                     if pulse_serial not in unique_pulses.keys():
                         # If the pulse is unique (it hasn't been saved before):
                         # Mark it as unique
@@ -638,7 +638,7 @@ class ClusterQRM(AbstractInstrument):
                     if pulse.type == 'ro':
                         pulse.acquisition_index = ac
                         pulse.num_bins = 1
-                        self.acquisitions[sequencer][pulse.serial()] = {"num_bins": pulse.num_bins, "index":pulse.acquisition_index}
+                        self.acquisitions[sequencer][pulse.serial] = {"num_bins": pulse.num_bins, "index":pulse.acquisition_index}
                         ac += 1
 
                 # Program
@@ -983,7 +983,7 @@ class ClusterQCM(AbstractInstrument):
         self.current_pulsesequence_hash = ""
         for channel in channels:
             for pulse in channel_pulses[channel]:
-                self.current_pulsesequence_hash += pulse.serial()
+                self.current_pulsesequence_hash += pulse.serial
         if not self.current_pulsesequence_hash == self.last_pulsequence_hash:
 
             # Sort pulses by their start time 
@@ -997,8 +997,7 @@ class ClusterQCM(AbstractInstrument):
                     for n in range(m):
                         if channel_pulses[channel][m].start - channel_pulses[channel][n].start < channel_pulses[channel][n].duration:
                             channel_pulses[channel][m].overlaps.append(n)
-                for pulse in channel_pulses[channel]:
-                    if len(pulse.overlaps) > 0:
+                for m in range(1, len(channel_pulses[channel])):
                         raise_error(NotImplementedError, "Overlaping pulses on the same channel are not yet supported.")
             
 
@@ -1026,7 +1025,7 @@ class ClusterQCM(AbstractInstrument):
                 
                 # Iterate over the list of pulses to check if they are unique and if the overal length of the waveform exceeds the memory available
                 for pulse in channel_pulses[channel]:
-                    pulse_serial = pulse.serial()[pulse.serial().find(',',pulse.serial().find(',')+1)+2:-1] # removes the channel and start information from Pulse.serial() to compare between pulses
+                    pulse_serial = pulse.serial[pulse.serial.find(',',pulse.serial.find(',')+1)+2:-1] # removes the channel and start information from Pulse.serial to compare between pulses
                     if pulse_serial not in unique_pulses.keys():
                         # If the pulse is unique (it hasn't been saved before):
                         # Mark it as unique
