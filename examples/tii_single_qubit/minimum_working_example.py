@@ -1,7 +1,6 @@
 from qibolab import Platform
 from qibolab.pulses import Pulse, ReadoutPulse
 from qibolab.circuit import PulseSequence
-from qibolab.pulse_shapes import Rectangular, Gaussian
 
 # Define PulseSequence
 sequence = PulseSequence()
@@ -11,7 +10,7 @@ sequence.add(Pulse(start=0,
                    amplitude=0.3,
                    duration=4000,
                    phase=0,
-                   shape=Gaussian(5), # Gaussian shape with std = duration / 5
+                   shape='Gaussian(5)', # Gaussian shape with std = duration / 5
                    channel=1)) 
 
 sequence.add(ReadoutPulse(start=4004,
@@ -19,11 +18,11 @@ sequence.add(ReadoutPulse(start=4004,
                           amplitude=0.9,
                           duration=2000,
                           phase=0,
-                          shape=Rectangular(), 
+                          shape='Rectangular', 
                           channel=11)) 
 
 # Define platform and load specific runcard
-platform = Platform("tiiq")
+platform = Platform("multiqubit")
 # Connects to lab instruments using the details specified in the calibration settings.
 platform.connect()
 # Configures instruments using the loaded calibration settings.

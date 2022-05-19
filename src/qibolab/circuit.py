@@ -17,7 +17,7 @@ class PulseSequence:
         self.qrm_pulses = []
         self.pulses = []
         self.time = 0
-        self.phase = 0        
+        self.phase = 0
 
     def __len__(self):
         return len(self.pulses)
@@ -60,7 +60,7 @@ class PulseSequence:
                 sequence.add(pulse1)
                 sequence.add(pulse2)
         """
-        if pulse.channel == "qrm" or pulse.channel == 1:
+        if pulse.type == "ro":
             self.qrm_pulses.append(pulse)
         else:
             self.qcm_pulses.append(pulse)

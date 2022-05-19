@@ -36,7 +36,7 @@ class Pulse:
                           phase=0,
                           shape=Gaussian(5))
     """
-    def __init__(self, start, duration, amplitude, frequency, phase, shape, offset_i=0, offset_q=0, channel="qcm", qubit=0):
+    def __init__(self, start, duration, amplitude, frequency, phase, shape, channel, type = 'qd', offset_i=0, offset_q=0, qubit=0):
         # FIXME: Since the ``start`` value depends on the previous pulses we are
         # not sure if it should be a local property of the ``Pulse`` object
         self.start = start
@@ -44,18 +44,100 @@ class Pulse:
         self.amplitude = amplitude
         self.frequency = frequency
         self.phase = phase
-        self.shape = shape  # PulseShape objects
+        self.shape = shape  # str
         self.channel = channel
         self.offset_i = offset_i
         self.offset_q = offset_q
         self.qubit = qubit
+        self.type = type
 
+    @property
     def serial(self):
-        return "P({}, {}, {}, {}, {}, {}, {})".format(self.channel, self.start, self.duration,
-                                                      self.amplitude, self.frequency, self.phase, self.shape)
+        return "P({}, {}, {}, {}, {}, {}, {}, {})".format(self.channel, self.start, self.duration,
+                                                      self.amplitude, self.frequency, self.phase, self.shape, self.type)
 
     def compile(self):
         return self.shape.envelope(None, None, self.duration, self.amplitude)
+
+    @property
+    def shape_parameters(self):
+        shape = str(self.shape)
+        parameters = []
+        if '(' in shape:
+            if ')' in shape[shape.find('(')+1:]:
+                shape = shape[shape.find('(')+1:shape.find(')')]
+                if len(shape)>0:
+                    parameters = [parameter.strip() for parameter in shape.split(',')]
+        return parameters
+
+
+    @property
+    def envelope_i(self):
+        if 'Rectangular' in self.shape:
+            envelope = self.amplitude * np.ones(int(self.duration))
+        elif 'Gaussian' in self.shape:
+            """Gaussian envelope centered with respect to the pulse.
+            Gaussian(rel_sigma)
+            example: Gaussian(5)
+
+            .. math::
+
+                A\exp^{-\\frac{1}{2}\\frac{(t-\mu)^2}{\sigma^2}}
+
+                where sigma = duration/rel_sigma
+            """
+            from scipy.signal import gaussian
+            rel_sigma = self.shape_parameters[0]
+            envelope =  self.amplitude * gaussian(int(self.duration), std=int(self.duration/rel_sigma))
+
+        elif 'DRAG' in self.shape:
+            """DRAG envelope centered with respect to the pulse.
+            DRAG(rel_sigma, beta)
+            example: DRAG(5,1)
+            .. math::
+                G + i\\beta(-\\frac{t-\mu}{\sigma^2})G
+
+            .. math::
+                G = A\exp^{-\\frac{1}{2}\\frac{(t-\mu)^2}{\sigma^2}}
+
+                where sigma = duration/rel_sigma
+
+            """
+            """
+            from scipy.signal import gaussian
+            rel_sigma = self.shape_parameters[0]
+            envelope =  self.amplitude * gaussian(int(self.duration), std=int(self.duration/rel_sigma))
+            """
+            raise NotImplementedError
+
+        elif 'SWIPHT' in self.shape:
+            raise NotImplementedError
+        else:
+            raise NotImplementedError
+            
+        return envelope
+    @property
+    def envelope_q(self):
+        if 'Rectangular' in self.shape:
+            envelope = np.zeros(int(self.duration)) 
+        elif 'Gaussian' in self.shape:
+            envelope =  np.zeros(int(self.duration)) 
+        elif 'DRAG' in self.shape:
+            # FIXME: Fix implementation
+            """
+            rel_sigma = self.shape_parameters[0]
+            beta = self.shape_parameters[1]
+            
+            mu = self.duration / 2
+            gaussian = self.amplitude * np.exp(-0.5 * (time - mu) ** 2 / rel_sigma ** 2)
+            envelope = gaussian + 1j * beta * (-(time - mu) / rel_sigma ** 2) * gaussian
+            """
+            raise NotImplementedError
+        elif 'SWIPHT' in self.shape:
+            raise NotImplementedError
+        else:
+            raise NotImplementedError
+        return envelope
 
     def __repr__(self):
         return self.serial()
@@ -67,5 +149,5 @@ class ReadoutPulse(Pulse):
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
 
-    def __init__(self, start, duration, amplitude, frequency, phase, shape, offset_i=0, offset_q=0, channel="qrm", qubit=0):
-        super().__init__(start, duration, amplitude, frequency, phase, shape, offset_i, offset_q, channel, qubit)
+    def __init__(self, start, duration, amplitude, frequency, phase, shape, channel, type = 'ro', offset_i=0, offset_q=0, qubit=0):
+        super().__init__(start, duration, amplitude, frequency, phase, shape, channel, type , offset_i, offset_q, qubit)

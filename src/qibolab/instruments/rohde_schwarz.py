@@ -1,81 +1,64 @@
 """
 Class to interface with the local oscillator RohdeSchwarz SGS100A
 """
+from qibo.config import raise_error
+from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 
-import logging
-from qibolab.instruments.instrument import Instrument, InstrumentException
+class SGS100A(AbstractInstrument):
 
-logger = logging.getLogger(__name__)  # TODO: Consider using a global logger
+    def __init__(self, name, ip):
+        super().__init__(name, ip)
 
-
-class SGS100A(Instrument):
-
-    def __init__(self, label, ip):
-        """
-        create Local Oscillator with name = label and connect to it in local IP = ip
-        Params format example:
-                "ip": '192.168.0.8',
-                "label": "qcm_LO"
-        """
-        super().__init__(ip)
-        self.device  = None
-        self._power  = None
-        self._frequency = None
-        self._connected = False
-        self._signature = f"{type(self).__name__}@{ip}"
-        self.label = label
-        self.connect()
+    rw_property_wrapper = lambda parameter: property(lambda self: self.device.get(parameter), lambda self,x: self.device.set(parameter,x))
+    power = rw_property_wrapper('power')
+    frequency = rw_property_wrapper('frequency')
 
     def connect(self):
-        import qcodes.instrument_drivers.rohde_schwarz.SGS100A as LO_SGS100A
-        try:
-            self.device = LO_SGS100A.RohdeSchwarz_SGS100A(self.label, f"TCPIP0::{self.ip}::inst0::INSTR")
-        except Exception as exc:
-            raise InstrumentException(self, str(exc))
-        self._connected = True
-        logger.info("Local oscillator connected")
+        if not self.is_connected:
+            import qcodes.instrument_drivers.rohde_schwarz.SGS100A as LO_SGS100A
+            try:
+                self.device = LO_SGS100A.RohdeSchwarz_SGS100A(self.name, f"TCPIP0::{self.ip}::inst0::INSTR")
+            except Exception as exc:
+                raise InstrumentException(self, str(exc))
+            self.is_connected = True
+        else:
+            raise_error(Exception,'There is an open connection to the instrument already')
 
-    def setup(self, power, frequency):
-        self.set_power(power)
-        self.set_frequency(frequency)
 
-    def set_power(self, power):
-        """Set dbm power to local oscillator."""
-        self._power = power
-        self.device.power(power)
-        logger.info(f"Local oscillator power set to {power}.")
+    def setup(self, **kwargs):
+        if self.is_connected:
+            self.power = kwargs.pop('power')
+            self.frequency = kwargs.pop('frequency')
+            self.__dict__.update(kwargs)
+        else:
+            raise_error(Exception,'There is no connection to the instrument')
 
-    def set_frequency(self, frequency):
-        self._frequency = frequency
-        self.device.frequency(frequency)
-        logger.info(f"Local oscillator frequency set to {frequency}.")
+    def start(self):
+        self.device.on()
 
-    def get_power(self):
-        if self._power is not None:
-            return self._power
-        raise RuntimeError("Local oscillator power was not set.")
+    def stop(self):
+        self.device.off()
 
-    def get_frequency(self):
-        if self._frequency is not None:
-            return self._frequency
-        raise RuntimeError("Local oscillator frequency was not set.")
+    def disconnect(self):
+        if self.is_connected:
+            self.device.off()
+            self.device.close()
+            self.is_connected = False
+
+    def __del__(self):
+        self.disconnect()
+
 
     def on(self):
-        """Start generating microwaves."""
         self.device.on()
-        logger.info("Local oscillator on.")
 
     def off(self):
-        """Stop generating microwaves."""
         self.device.off()
-        logger.info("Local oscillator off.")
 
     def close(self):
-        if self._connected:
+        if self.is_connected:
             self.off()
             self.device.close()
-            self._connected = False
+            self.is_connected = False
 
-    # TODO: Figure out how to fix this
-    #def __del__(self):
-    #    self.close()
+

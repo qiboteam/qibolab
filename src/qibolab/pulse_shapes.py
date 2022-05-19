@@ -2,6 +2,9 @@ import numpy as np
 from abc import ABC, abstractmethod
 from qibo.config import raise_error
 
+# With the implementation of the envelopes as Pulse properties, these classes are no longer needed
+# Removing them will require to make changes in diagnostics, calibration, test_pulses, utils and all example
+# Until those changes are implemented pulse_shape.py is kept
 
 class PulseShape(ABC):
     """Describes the pulse shape to be used."""
