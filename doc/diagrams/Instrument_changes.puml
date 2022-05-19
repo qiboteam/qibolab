@@ -85,19 +85,19 @@ package instrument {
             program
             weights
             gain
-            __init__(self, name, ip)
-            connect(self)
-            setup(self, **kwargs)
-            _get_start(self, pulse)
-            process_pulse_sequence(self, channel_pulses, nshots)
-            generate_waveforms_from_pulse(self, pulse, modulate = True)
-            upload(self)
-            play_sequence(self)
-            play_sequence_and_acquire(self)
-            _demodulate_and_integrate(self, raw_results, acquisition)
-            start(self)
-            stop(self)
-            disconnect(self)
+            __init__(name, ip)
+            connect()
+            setup(**kwargs)
+            _get_start(pulse)
+            process_pulse_sequence(channel_pulses, nshots)
+            generate_waveforms_from_pulse(pulse, modulate = True)
+            upload()
+            play_sequence()
+            play_sequence_and_acquire()
+            _demodulate_and_integrate(raw_results, acquisition)
+            start()
+            stop()
+            disconnect()
         }
         class ClusterQCM_New extends AbstractInstrument_New{
             sequencer_channel_map
@@ -111,17 +111,17 @@ package instrument {
             waveforms
             program
             gain
-            __init__(self, name, ip)
-            connect(self)
-            setup(self, **kwargs)
-            _get_start(self, pulse)
-            process_pulse_sequence(self, channel_pulses, nshots)
-            generate_waveforms_from_pulse(self, pulse, modulate = True)
-            upload(self)
-            play_sequence(self)
-            start(self)
-            stop(self)
-            disconnect(self)
+            __init__(name, ip)
+            connect()
+            setup(**kwargs)
+            _get_start(pulse)
+            process_pulse_sequence(channel_pulses, nshots)
+            generate_waveforms_from_pulse(pulse, modulate = True)
+            upload()
+            play_sequence()
+            start()
+            stop()
+            disconnect()
         }
     }
     package qblox.py_Old {
@@ -144,15 +144,15 @@ package instrument {
             acquisitions
             weights
             gain
-            __init__(self, label, ip, sequencer, ref_clock, sync_en, is_cluster)
-            connect(self)
-            setup(self, gain, initial_delay, repetition_duration)
+            __init__(label, ip, sequencer, ref_clock, sync_en, is_cluster)
+            connect()
+            setup(gain, initial_delay, repetition_duration)
             {static} _translate_single_pulse(pulse)
-            generate_waveforms(self, pulses)
-            generate_program(self, hardware_avg, initial_delay, delay_before_readout, acquire_instruction, wait_time)
-            {abstract} translate(self, sequence, delay_before_readout, nshots)
-            upload(self, waveforms, program, data_folder)
-            play_sequence(self)
+            generate_waveforms(pulses)
+            generate_program(hardware_avg, initial_delay, delay_before_readout, acquire_instruction, wait_time)
+            {abstract} translate(sequence, delay_before_readout, nshots)
+            upload(waveforms, program, data_folder)
+            play_sequence()
             stop()
             close()
         }
@@ -162,15 +162,15 @@ package instrument {
             integration_length
             sampling_rate
             mode
-            __init__(self, label, ip, ref_clock="external", sequencer=0, sync_en=True, hardware_avg_en=True, acq_trigger_mode="sequencer", is_cluster=True)
-            setup(self, gain, initial_delay, repetition_duration, start_sample, integration_length, sampling_rate, mode)
-            translate(self, sequence, delay_before_readout, nshots)
-            play_sequence_and_acquire(self, ro_pulse)
-            _demodulate_and_integrate(self, single_acq, ro_pulse)
+            __init__(label, ip, ref_clock="external", sequencer=0, sync_en=True, hardware_avg_en=True, acq_trigger_mode="sequencer", is_cluster=True)
+            setup(gain, initial_delay, repetition_duration, start_sample, integration_length, sampling_rate, mode)
+            translate(sequence, delay_before_readout, nshots)
+            play_sequence_and_acquire(ro_pulse)
+            _demodulate_and_integrate(single_acq, ro_pulse)
         }   
         class PulsarQCM_Old extends GenericPulsar_Old{
-            __init__(self, label, ip, sequencer=0, ref_clock="external", sync_en=True, is_cluster=True)
-            translate(self, sequence, delay_before_read_out, nshots=None)
+            __init__(label, ip, sequencer=0, ref_clock="external", sync_en=True, is_cluster=True)
+            translate(sequence, delay_before_read_out, nshots=None)
         }
     }
 }
