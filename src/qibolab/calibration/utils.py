@@ -32,18 +32,6 @@ def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, high
     )
     return scanrange
 
-def check_data_dir():
-    import os
-
-    # You should change 'test' to your preferred folder.
-    MYDIR = ("data")
-    CHECK_FOLDER = os.path.isdir(MYDIR)
-
-    # If folder doesn't exist, then create it.
-    if not CHECK_FOLDER:
-        os.makedirs(MYDIR)
-
-
 def backup_config_file(platform):
     import os
     import shutil

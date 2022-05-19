@@ -2,7 +2,7 @@ nqubits: 5
 description: 5-qubit device controlled with Qblox and R&S instruments.
 shared_settings:
     data_folder: data/
-    hardware_avg: 3000
+    hardware_avg: 1000
     sampling_rate: 1_000_000_000
     repetition_duration: 200_000
     minimum_delay_between_instructions: 4
@@ -13,14 +13,16 @@ shared_settings:
         frequency: 200_000_000
         phase: 0
         shape: Gaussian(5)
+        type: qd # qubit drive
 
     readout_pulse:
         start: 4004
-        frequency: 20_000_000
-        amplitude: 0.5
         duration: 2000
+        amplitude: 0.5
+        frequency: 20_000_000
         phase: 0
         shape: Rectangular()
+        type: ro # readout
 
 topology: # qubit - qubit connections
 -   [ 1, 0, 1, 0, 0]
@@ -94,30 +96,28 @@ instruments:
 native_gates:
     single_qubit:
         1:
-            -   type: RX90
+            RX:
                 pulse_sequence:
-                    -   start: null
+                    -   start: 0
                         duration: 31
                         amplitude: 0.4
                         frequency: 200_000_000
                         shape: Gaussian(5)
-                        phase: null
-                        channel: 1
+                        phase: 0
                         type: qd # qubit drive
-            -   type: MZ
+            MZ:
                 pulse_sequence:
-                    -   start: null
+                    -   start: 0
                         duration: 2000
                         amplitude: 0.9
                         frequency: 20_000_000
                         shape: Rectangular()
-                        phase: 0.3
-                        channel: 11
+                        phase: 0
                         type: ro # readout
 
     two_qubit:
         1-3:
-            -   type: CZ
+            CZ:
                 pulse_sequence:
                     -   start: 0
                         duration: 20

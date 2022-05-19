@@ -987,6 +987,7 @@ class ClusterQCM(AbstractInstrument):
                         if channel_pulses[channel][m].start - channel_pulses[channel][n].start < channel_pulses[channel][n].duration:
                             channel_pulses[channel][m].overlaps.append(n)
                 for m in range(1, len(channel_pulses[channel])):
+                    if len(channel_pulses[channel][m].overlaps) > 0:
                         raise_error(NotImplementedError, "Overlaping pulses on the same channel are not yet supported.")
             
 
