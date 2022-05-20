@@ -1,4 +1,7 @@
 from abc import ABC, abstractmethod
+import pathlib
+from qibolab.paths import qibolab_folder
+
 
 class AbstractInstrument(ABC):
     """
@@ -8,12 +11,15 @@ class AbstractInstrument(ABC):
         name (str): Instrument name.
         ip (str): IP network address.     
     """
+
     def __init__(self, name, ip):
         self.name = name
         self.ip = ip
         self.is_connected = False
         self.signature = f"{type(self).__name__}@{ip}"
         self.device = None
+        self.data_folder = qibolab_folder / "instruments" / "data"
+        self.data_folder.mkdir(parents=True, exist_ok=True)
 
     @abstractmethod
     def connect(self):

@@ -10,7 +10,6 @@ platform.setup()
 # create a diagnostics object
 ds = diagnostics.Diagnostics(platform)
 
-
 utils.backup_config_file(platform)
 
 # Characterisation can be done by changing settings to qibolab/runcards/tiiq.yml and diagnostics.yml

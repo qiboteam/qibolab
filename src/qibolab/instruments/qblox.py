@@ -1,5 +1,3 @@
-import pathlib
-from qibolab.paths import qibolab_folder
 import json
 import numpy as np
 from abc import ABC, abstractmethod
@@ -9,8 +7,6 @@ from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 import logging
 logger = logging.getLogger(__name__)  # TODO: Consider using a global logger
 
-data_folder = qibolab_folder / "instruments" / "data"
-data_folder.mkdir(parents=True, exist_ok=True)
 
 class GenericPulsar(AbstractInstrument, ABC):
 
@@ -245,14 +241,14 @@ class GenericPulsar(AbstractInstrument, ABC):
             "program": program
             }
 
-        with open(data_folder / filename, "w", encoding="utf-8") as file:
+        with open(self.data_folder / filename, "w", encoding="utf-8") as file:
             json.dump(program_dict, file, indent=4)
 
         # Upload json file to the device
         if self.sequencer == 1:
-            self.device.sequencer1_waveforms_and_program(str(data_folder / filename))
+            self.device.sequencer1_waveforms_and_program(str(self.data_folder / filename))
         else:
-            self.device.sequencer0_waveforms_and_program(str(data_folder / filename))
+            self.device.sequencer0_waveforms_and_program(str(self.data_folder / filename))
 
     def play_sequence(self):
         """Executes the uploaded instructions."""
@@ -781,7 +777,7 @@ class ClusterQRM(AbstractInstrument):
                     "acquisitions": self.acquisitions[sequencer],
                     "program": self.program[sequencer]
                     }
-                with open(data_folder / filename, "w", encoding="utf-8") as file:
+                with open(self.data_folder / filename, "w", encoding="utf-8") as file:
                     json.dump(qblox_dict[sequencer], file, indent=4)
 
                 # Route sequencers to specific outputs.
@@ -797,7 +793,7 @@ class ClusterQRM(AbstractInstrument):
 
 
                 # Upload json file to the device sequencers
-                self.device.set(f"sequencer{sequencer}_waveforms_and_program", str(data_folder / filename))
+                self.device.set(f"sequencer{sequencer}_waveforms_and_program", str(self.data_folder / filename))
         # Arm all sequencers
         self.device.arm_sequencer()
         # DEBUG:
@@ -1216,7 +1212,7 @@ class ClusterQCM(AbstractInstrument):
                     "acquisitions": {}, #self.acquisitions,
                     "program": self.program[sequencer]
                     }
-                with open(data_folder / filename, "w", encoding="utf-8") as file:
+                with open(self.data_folder / filename, "w", encoding="utf-8") as file:
                     json.dump(qblox_dict[sequencer], file, indent=4)
 
                 # Route sequencers to specific outputs.
@@ -1232,7 +1228,7 @@ class ClusterQCM(AbstractInstrument):
                 self.device.set(f"sequencer{sequencer}_sync_en", self.sync_en)
 
                 # Upload json file to the device sequencers
-                self.device.set(f"sequencer{sequencer}_waveforms_and_program", str(data_folder / filename))
+                self.device.set(f"sequencer{sequencer}_waveforms_and_program", str(self.data_folder / filename))
         # Arm all sequencers
         self.device.arm_sequencer()
         # DEBUG:
