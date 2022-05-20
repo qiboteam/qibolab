@@ -60,9 +60,6 @@ class MultiqubitPlatform(AbstractPlatform):
                 self.instruments[name].disconnect()
             self.is_connected = False
 
-    def _get_start(self, pulse):
-        return pulse.start
-
     def execute_pulse_sequence(self, sequence, nshots=None):
         if not self.is_connected:
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
@@ -72,7 +69,7 @@ class MultiqubitPlatform(AbstractPlatform):
         # PreProcess Pulse Sequence
         # Sort by pulse start
         pulse_sequence = sequence.pulses
-        pulse_sequence.sort(key=self._get_start)
+        pulse_sequence.sortsort(key=lambda pulse: pulse.start) 
         pulse_sequence_duration = pulse_sequence[-1].start + pulse_sequence[-1].duration
 
         # Process Pulse Sequence. Generate Waveforms and Program
