@@ -52,8 +52,8 @@ instruments:
             scope_acq_avg_mode_en: true
             scope_acq_trigger_mode: sequencer
             gain: 0.4
-            start_sample: 130 # minimum 4ns
-            integration_length: 1500
+            acquisition_start: 130 # minimum 4ns
+            acquisition_duration: 1500
             mode: ssb
             channel_port_map:  # Refrigerator Channel : Instrument port
                 11: o1 # IQ Port = out0 & out1

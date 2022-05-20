@@ -217,6 +217,7 @@ class GenericPulsar(AbstractInstrument, ABC):
 
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence.
+            nshots (int): the number of times the sequence must be executed.
 
         Returns:
             The waveforms (dict) and program (str) required to execute the
@@ -488,11 +489,11 @@ class ClusterQRM(AbstractInstrument):
         Args:
             ref_clock (str): {'internal', 'external'} the source of the instrument clock
             sync_en (bool): {True, False} syncronise with other instruments
-            hardware_avg_en: true
-            acq_trigger_mode: sequencer
+            scope_acq_avg_mode_en (bool): {True, False} average the results of the multiple acquisitions
+            scope_acq_trigger_mode (str): {'sequencer', 'level'} 
             gain (float): {0 .. 1} the gain applied to all sequencers on their output paths
-            start_sample: 130
-            integration_length: 1500
+            acquisition_start (int): the delay between playing the readout pulse and the start of the acquisition (minimum 4ns)
+            acquisition_duration (int): the duration of the acquisition in ns.
             mode: ssb
             channel_port_map (dict): a dictionary of {channel (int): port (str) {'o1', 'o2', ...}}
         """
@@ -672,13 +673,13 @@ class ClusterQRM(AbstractInstrument):
 
                 for n in range(len(pulses[sequencer])):
                     if pulses[sequencer][n].type == 'ro':
-                        delay_after_play = self.start_sample - self.minimum_delay_between_instructions
+                        delay_after_play = self.acquisition_start - self.minimum_delay_between_instructions
                         
                         if len(pulses[sequencer]) > n + 1:
                             # If there are more pulses to be played, the delay is the time between the pulse end and the next pulse start
-                            delay_after_acquire = pulses[sequencer][n + 1].start - pulses[sequencer][n].start - self.start_sample
+                            delay_after_acquire = pulses[sequencer][n + 1].start - pulses[sequencer][n].start - self.acquisition_start
                         else:
-                            delay_after_acquire = sequence_total_duration - pulses[sequencer][n].start - self.start_sample
+                            delay_after_acquire = sequence_total_duration - pulses[sequencer][n].start - self.acquisition_start
                             
                         if delay_after_acquire < self.minimum_delay_between_instructions:
                                 raise_error(Exception, f"The minimum delay before starting acquisition is {self.minimum_delay_between_instructions}ns.")
@@ -834,9 +835,9 @@ class ClusterQRM(AbstractInstrument):
         acquisition_frequency = 20_000_000
         #TODO: obtain from acquisition info
         #DOWN Conversion
-        norm_factor = 1. / (self.integration_length)
-        n0 = 0 # self.start_sample
-        n1 = self.integration_length # self.start_sample + self.integration_length
+        norm_factor = 1. / (self.acquisition_duration)
+        n0 = 0 # self.acquisition_start
+        n1 = self.acquisition_duration # self.acquisition_start + self.acquisition_duration
         input_vec_I = np.array(raw_results[acquisition_name]["acquisition"]["scope"]["path0"]["data"][n0: n1])
         input_vec_Q = np.array(raw_results[acquisition_name]["acquisition"]["scope"]["path1"]["data"][n0: n1])
         input_vec_I -= np.mean(input_vec_I)
