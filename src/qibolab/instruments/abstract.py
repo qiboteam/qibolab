@@ -40,8 +40,6 @@ class AbstractInstrument(ABC):
 
 class InstrumentException(Exception):
     def __init__(self, instrument: AbstractInstrument, message: str):
-        self.instrument = instrument
         header = f"InstrumentException with {self.instrument.signature}"
         full_msg = header + ": " + message
         super().__init__(full_msg)
-        self.instrument = instrument
