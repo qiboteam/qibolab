@@ -1,6 +1,6 @@
 from qibo.config import raise_error
 from qibolab.platforms.abstract import AbstractPlatform
-import importlib
+
 
 class MultiqubitPlatform(AbstractPlatform):
     def __init__(self, name, runcard):
@@ -13,7 +13,8 @@ class MultiqubitPlatform(AbstractPlatform):
             lib = self.instrument_settings[name]['lib']
             i_class = self.instrument_settings[name]['class']
             ip = self.instrument_settings[name]['ip']
-            InstrumentClass = getattr(importlib.import_module(f"qibolab.instruments.{lib}"), i_class)
+            from importlib import import_module
+            InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
             instance = InstrumentClass(name, ip)
             # instance.__dict__.update(self.settings['shared_settings'])
             self.instruments[name] = instance

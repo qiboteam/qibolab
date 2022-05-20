@@ -1,11 +1,8 @@
 import json
 import numpy as np
 from abc import ABC, abstractmethod
-from qibo.config import raise_error
+from qibo.config import raise_error, log
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
-
-import logging
-logger = logging.getLogger(__name__)  # TODO: Consider using a global logger
 
 
 class GenericPulsar(AbstractInstrument, ABC):
@@ -44,12 +41,12 @@ class GenericPulsar(AbstractInstrument, ABC):
             import socket
             try:
                 self.device = self.Device(self.label, self.ip) # pylint: disable=E1102
-                logger.info(f"{self.name} connection established.")
+                log.info(f"{self.name} connection established.")
                 self._connected = True
             except socket.timeout:
                 # Use warning instead of exception when instruments are
                 # not available so that we can run tests on different devices
-                logger.warning("Could not connect to QRM. Skipping...")
+                log.warning("Could not connect to QRM. Skipping...")
             except Exception as exc:  # pragma: no cover
                 raise InstrumentException(self, str(exc))
         else:
@@ -70,7 +67,7 @@ class GenericPulsar(AbstractInstrument, ABC):
                 self.device.sequencer0_gain_awg_path0(gain)
                 self.device.sequencer0_gain_awg_path1(gain)
         else:
-            logger.warning("Cannot set gain because device is not connected.")
+            log.warning("Cannot set gain because device is not connected.")
 
     def setup(self, **kwargs):
         """Sets calibration setting to QBlox instruments.

@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-import pathlib
 from qibolab.paths import qibolab_folder
 
 
