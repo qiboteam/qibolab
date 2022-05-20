@@ -1,4 +1,4 @@
-from qibo.config import raise_error, log
+from qibo.config import raise_error
 from qibolab.platforms.abstract import AbstractPlatform
 import importlib
 
@@ -21,44 +21,6 @@ class MultiqubitPlatform(AbstractPlatform):
 
     def run_calibration(self):
         raise_error(NotImplementedError)
-
-    def connect(self):
-        if not self.is_connected:
-            log.info(f"Connecting to {self.name} instruments.")
-            try:
-                for name in self.instruments:
-                    self.instruments[name].connect()
-                self.is_connected = True
-            except Exception as exception:
-                raise_error(RuntimeError, "Cannot establish connection to "
-                            f"{self.name} instruments. "
-                            f"Error captured: '{exception}'")
-
-    def setup(self):
-        self.__dict__.update(self.settings['shared_settings'])
-        setattr(self, 'topology', self.settings['topology'])
-        setattr(self, 'qubit_channel_map', self.settings['qubit_channel_map'])
-        setattr(self, 'channels', self.settings['channels'])
-
-        if self.is_connected:
-            for name in self.instruments:
-                self.instruments[name].setup(**self.settings['shared_settings'], **self.instrument_settings[name]['setup'])
-
-    def start(self):
-        if self.is_connected:
-            for name in self.instruments:
-                self.instruments[name].start()
-
-    def stop(self):
-        if self.is_connected:
-            for name in self.instruments:
-                self.instruments[name].stop()
-
-    def disconnect(self):
-        if self.is_connected:
-            for name in self.instruments:
-                self.instruments[name].disconnect()
-            self.is_connected = False
 
     def execute_pulse_sequence(self, sequence, nshots=None):
         if not self.is_connected:

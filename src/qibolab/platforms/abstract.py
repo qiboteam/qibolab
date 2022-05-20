@@ -1,3 +1,4 @@
+from qibo.config import log
 from abc import ABC, abstractmethod
 import yaml
 
@@ -10,7 +11,6 @@ class AbstractPlatform(ABC):
         runcard (str): path to the yaml file containing the platform setup.
     """
     def __init__(self, name, runcard):
-        from qibo.config import log
         log.info(f"Loading platform {name} from runcard {runcard}")
         self.name = name
         self.runcard = runcard
@@ -49,31 +49,44 @@ class AbstractPlatform(ABC):
         """Executes calibration routines and updates the settings yml file"""
         raise NotImplementedError   
 
-    @abstractmethod
-    def connect(self):  # pragma: no cover
-        """Connects to lab instruments using the details specified in the calibration settings."""
-        raise NotImplementedError
+    def connect(self):
+        if not self.is_connected:
+            log.info(f"Connecting to {self.name} instruments.")
+            try:
+                for name in self.instruments:
+                    self.instruments[name].connect()
+                self.is_connected = True
+            except Exception as exception:
+                from qibo.config import raise_error
+                raise_error(RuntimeError, "Cannot establish connection to "
+                            f"{self.name} instruments. "
+                            f"Error captured: '{exception}'")
 
-    @abstractmethod
-    def setup(self):  # pragma: no cover
-        """Configures instruments using the loaded calibration settings."""
-        raise NotImplementedError
+    def setup(self):
+        self.__dict__.update(self.settings['shared_settings'])
+        setattr(self, 'topology', self.settings['topology'])
+        setattr(self, 'qubit_channel_map', self.settings['qubit_channel_map'])
+        setattr(self, 'channels', self.settings['channels'])
 
-    @abstractmethod
-    def start(self):  # pragma: no cover
-        """Turns on the local oscillators."""
-        raise NotImplementedError
+        if self.is_connected:
+            for name in self.instruments:
+                self.instruments[name].setup(**self.settings['shared_settings'], **self.instrument_settings[name]['setup'])
 
-    @abstractmethod
-    def stop(self):  # pragma: no cover
-        """Turns off all the lab instruments."""
-        raise NotImplementedError
+    def start(self):
+        if self.is_connected:
+            for name in self.instruments:
+                self.instruments[name].start()
 
-    @abstractmethod
-    def disconnect(self):  # pragma: no cover
-        """Disconnects from the lab instruments."""
-        raise NotImplementedError
+    def stop(self):
+        if self.is_connected:
+            for name in self.instruments:
+                self.instruments[name].stop()
 
+    def disconnect(self):
+        if self.is_connected:
+            for name in self.instruments:
+                self.instruments[name].disconnect()
+            self.is_connected = False
 
     def __call__(self, sequence, nshots=None):
         return self.execute_pulse_sequence(sequence, nshots)
