@@ -3,6 +3,10 @@ from abc import ABC, abstractmethod
 class AbstractInstrument(ABC):
     """
     Parent class for all the instruments connected via TCPIP.
+    
+    Args:
+        name (str): Instrument name.
+        ip (str): IP network address.     
     """
     def __init__(self, name, ip):
         self.name = name
