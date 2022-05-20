@@ -132,8 +132,8 @@ class GenericPulsar(AbstractInstrument, ABC):
         unique_pulses = []
         idx = 0
 
-        # TODO: no es necesario comprobar si son pulsos unicos. Ya lo hacemos en el platform.execute() antes 
-        # antes de llamara al translate() 
+        # TODO: It isn't necessary to check if pulses are unique. It's already being checked at platform.execute() before 
+        # calling translate() 
         for pulse in pulses:
             if pulse not in unique_pulses:
                 unique_pulses.append(pulse)
