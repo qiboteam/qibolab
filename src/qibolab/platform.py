@@ -1,6 +1,3 @@
-import pathlib
-from qibolab.paths import qibolab_folder
-
 def Platform(name, runcard=None):
     """Platform for controlling quantum devices.
 
@@ -12,6 +9,7 @@ def Platform(name, runcard=None):
         The plaform class.
     """
     if not runcard:
+        from qibolab.paths import qibolab_folder
         runcard = qibolab_folder / "runcards" / f"{name}.yml"
     if name == 'tiiq' or name == 'qili':
         from qibolab.platforms.qbloxplatform import QBloxPlatform as Device
