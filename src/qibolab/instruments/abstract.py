@@ -36,8 +36,6 @@ class AbstractInstrument(ABC):
         raise NotImplementedError
 
 
-
-
 class InstrumentException(Exception):
     def __init__(self, instrument: AbstractInstrument, message: str):
         header = f"InstrumentException with {self.instrument.signature}"

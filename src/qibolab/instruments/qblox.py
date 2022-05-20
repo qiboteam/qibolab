@@ -429,6 +429,7 @@ class PulsarQCM(GenericPulsar):
         print(f'QCM: {program}')
         return waveforms, program
 
+
 class GenericModule(AbstractInstrument, ABC):
         
     def connect(self):
@@ -883,8 +884,6 @@ class ClusterQRM(AbstractInstrument):
         self.disconnect()
 
 
-
-
 class ClusterQCM(AbstractInstrument):
 
     def __init__(self, name, ip):
@@ -1263,8 +1262,6 @@ class ClusterQCM(AbstractInstrument):
         self.disconnect()
 
 
-
-
 class ClusterQRM_blank(AbstractInstrument):
 
     def connect(self):
@@ -1287,9 +1284,6 @@ class ClusterQRM_blank(AbstractInstrument):
         self.disconnect()
 
 
-
-
-
 class ClusterQCMRF(AbstractInstrument):
 
     def connect(self):
@@ -1305,6 +1299,7 @@ class ClusterQCMRF(AbstractInstrument):
     
     def __del__(self):
         self.disconnect()
+
 
 class ClusterQRMRF(AbstractInstrument):
 

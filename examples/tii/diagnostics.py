@@ -653,6 +653,7 @@ class QCPulseGainParameter():
     def set(self,value):
         self.qcm.gain = value / 100
 
+
 class QCPulseAmplitudeParameter():
 
     label = 'Qubit Control Pulse Amplitude'
@@ -664,6 +665,7 @@ class QCPulseAmplitudeParameter():
 
     def set(self, value):
         self.qc_pulse.amplitude = value / 100
+
 
 class T1WaitParameter():
     label = 'Time'
@@ -681,6 +683,7 @@ class T1WaitParameter():
         #platform.delay_before_readout = value
         self.ro_pulse.start = self.base_duration + 4 + value
 
+
 class RamseyWaitParameter():
     label = 'Time'
     unit = 'ns'
@@ -696,6 +699,7 @@ class RamseyWaitParameter():
         self.qc2_pulse.start = self.pi_pulse_length  + value
         self.ro_pulse.start = self.pi_pulse_length * 2 + value + 4
 
+
 class SpinEchoWaitParameter():
     label = 'Time'
     unit = 'ns'
@@ -710,6 +714,7 @@ class SpinEchoWaitParameter():
     def set(self, value):
         self.qc2_pulse.start = self.pi_pulse_length + value
         self.ro_pulse.start = 2 * self.pi_pulse_length + 2 * value + 4
+
 
 class SpinEcho3PWaitParameter():
     label = 'Time'
@@ -728,6 +733,7 @@ class SpinEcho3PWaitParameter():
         self.qc3_pulse.start = 2 * self.pi_pulse_length + 2 * value
         self.ro_pulse.start = 3 * self.pi_pulse_length + 2 * value + 4
 
+
 class QRPulseGainParameter():
 
     label = 'Qubit Readout Gain'
@@ -739,6 +745,7 @@ class QRPulseGainParameter():
 
     def set(self,value):
         self.qrm.gain = value / 100
+
 
 class ROController():
     # Quantify Gettable Interface Implementation
