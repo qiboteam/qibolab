@@ -183,8 +183,8 @@ class GenericPulsar(AbstractInstrument, ABC):
             program += f"""
             play      {idx}, {idx+1}, {pulse_wait}"""
 
-        # Tiempo de inicio del pulso superior a 16383 ns (self.duration_base < pulses[-1].start)
-        # Comenzamos nuevo ciclo 
+        # Pulse start time > 16383 ns (self.duration_base < pulses[-1].start)
+        # Start a new cycle 
         while (wait_time <= 0):
             wait_time = wait_time + self.duration_base
 
