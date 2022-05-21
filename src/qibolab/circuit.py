@@ -13,8 +13,9 @@ class PulseSequence:
 
     def __init__(self):
         super().__init__()
-        self.qcm_pulses = []
-        self.qrm_pulses = []
+        self.ro_pulses = []
+        self.qd_pulses = []
+        self.qf_pulses = []
         self.pulses = []
         self.time = 0
         self.phase = 0
@@ -35,23 +36,25 @@ class PulseSequence:
         Example:
             .. code-block:: python
 
-                from qibolab.pulses import Pulse, ReadoutPulse
+                from qibolab.pulses import Pulse, ReadoutPulse, Rectangular, Gaussian, Drag
                 from qibolab.circuit import PulseSequence
-                from qibolab.pulse_shapes import Rectangular, Gaussian
-
                 # define two arbitrary pulses
-                pulse1 = Pulse(start=0,
-                               frequency=200000000.0,
-                               amplitude=0.3,
-                               duration=60,
-                               phase=0,
-                               shape=Gaussian(5)))
-                pulse2 = ReadoutPulse(start=70,
-                                      frequency=20000000.0,
-                                      amplitude=0.5,
-                                      duration=3000,
-                                      phase=0,
-                                      shape=Rectangular()))
+                pulse1 = Pulse( start=0,
+                                duration=60,
+                                amplitude=0.3,
+                                frequency=200_000_000.0,
+                                phase=0,
+                                shape=Gaussian(5),
+                                channel=1,
+                                type='qd')
+                pulse2 = Pulse( start=70,
+                                duration=2000,
+                                amplitude=0.5,
+                                frequency=20_000_000.0,
+                                phase=0,
+                                shape=Rectangular(),
+                                channel=2,
+                                type='ro')
 
                 # define the pulse sequence
                 sequence = PulseSequence()
@@ -61,9 +64,12 @@ class PulseSequence:
                 sequence.add(pulse2)
         """
         if pulse.type == "ro":
-            self.qrm_pulses.append(pulse)
-        else:
-            self.qcm_pulses.append(pulse)
+            self.ro_pulses.append(pulse)
+        elif pulse.type == "qd":
+            self.qd_pulses.append(pulse)
+        elif pulse.type == "qf":
+            self.qf_pulses.append(pulse)
+
         self.pulses.append(pulse)
 
     def add_u3(self, theta, phi, lam, qubit=0):
@@ -72,7 +78,7 @@ class PulseSequence:
         Args:
             theta, phi, lam (float): Parameters of the U3 gate.
         """
-        from qibolab.pulse_shapes import Gaussian
+        from qibolab.pulses import Gaussian
         # Fetch pi/2 pulse from calibration
         if hasattr(K.platform, "qubits"):
             kwargs = K.platform.fetch_qubit_pi_pulse(qubit)
@@ -106,7 +112,7 @@ class PulseSequence:
 
     def add_measurement(self, qubit=0):
         """Add measurement pulse."""
-        from qibolab.pulse_shapes import Rectangular
+        from qibolab.pulses import Rectangular
         if hasattr(K.platform, "qubits"):
             kwargs = K.platform.fetch_qubit_readout_pulse(qubit)
         else:

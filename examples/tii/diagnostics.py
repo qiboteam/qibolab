@@ -13,9 +13,9 @@ from quantify_core.measurement.control import Gettable, Settable
 from quantify_core.data.handling import set_datadir
 from scipy.signal import savgol_filter
 
-from qibolab.pulses import Pulse, ReadoutPulse
+from qibolab.pulses import Pulse, ReadoutPulse, Rectangular, Gaussian
 from qibolab.circuit import PulseSequence
-from qibolab.pulse_shapes import Rectangular, Gaussian
+
 
 
 script_folder = pathlib.Path(__file__).parent
