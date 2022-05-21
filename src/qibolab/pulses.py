@@ -136,9 +136,9 @@ class Gaussian(PulseShape):
     """
 
     def __init__(self, pulse, rel_sigma):
-        self.name = "gaussian"
+        self.name = "Gaussian"
         self.pulse = pulse
-        self.rel_sigma = rel_sigma 
+        self.rel_sigma = float(rel_sigma)
 
     @property
     def envelope_i(self):
@@ -165,10 +165,11 @@ class Drag(PulseShape):
     
     """
 
-    def __init__(self, rel_sigma, beta):
+    def __init__(self, pulse, rel_sigma, beta):
         self.name = "Drag"
-        self.rel_sigma = rel_sigma
-        self.beta = beta
+        self.pulse = pulse
+        self.rel_sigma = float(rel_sigma)
+        self.beta = float(beta)
 
     @property
     def envelope_i(self):
