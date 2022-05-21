@@ -144,21 +144,10 @@ class GenericPulsar(AbstractInstrument, ABC):
             else:
                 waveform_sequence.append(unique_pulses.index(pulse)*2)
 
-        # # Fixing 0s addded to the qrm waveform. Needs to be improved, but working well on TIIq
-        # for pulse in pulses:
-        #     if(pulse.channel == "qrm"):
-        #         waveforms[f"{pulse.serial}_I"]["data"] = waveforms[f"{pulse.serial}_I"]["data"][pulse.start:]
-        #         waveforms[f"{pulse.serial}_Q"]["data"] = waveforms[f"{pulse.serial}_Q"]["data"][pulse.start:]
-
         return waveforms, waveform_sequence
 
     def generate_program(self, hardware_avg, initial_delay, delay_before_readout, acquire_instruction, wait_time, pulses, waveform_sequence):
         """Generates the program to be uploaded to instruments."""
-
-        # This calculation was moved to `PulsarQCM` and `PulsarQRM`
-        # if ro_pulse is not None:
-        #    acquire_instruction = "acquire   0,0,4"
-        #    wait_time = self.duration_base - start_last_pulse - delay_before_read_out
 
         if initial_delay != 0:
             initial_wait_instruction = f"wait      {initial_delay}"

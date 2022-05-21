@@ -14,11 +14,24 @@ class AbstractPlatform(ABC):
         log.info(f"Loading platform {name} from runcard {runcard}")
         self.name = name
         self.runcard = runcard
+        self.is_connected = False        
         # Load platform settings
         with open(runcard, "r") as file:
             self.settings = yaml.safe_load(file)
-    
-        self.is_connected = False
+            
+        self.instruments = {}
+        self.instrument_settings = self.settings['instruments']
+
+        for name in self.instrument_settings:
+            lib = self.instrument_settings[name]['lib']
+            i_class = self.instrument_settings[name]['class']
+            ip = self.instrument_settings[name]['ip']
+            from importlib import import_module
+            InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
+            instance = InstrumentClass(name, ip)
+            # instance.__dict__.update(self.settings['shared_settings'])
+            self.instruments[name] = instance
+            setattr(self, name, instance)    
 
     def __getstate__(self):
         return {

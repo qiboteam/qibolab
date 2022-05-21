@@ -47,20 +47,20 @@ class Pulse:
         self.amplitude = amplitude
         self.frequency = frequency
         self.phase = phase
-        self.shape = shape  # (str): {'Rectangular', 'Gaussian(rel_sigma)', 'Drag(rel_sigma, beta)'}
-        shape_name = re.findall('(\w+)', shape)[0]
-        shape_parameters = re.findall('(\w+)', shape)[1:]
-        self.shape_object = globals()[shape_name](self, *shape_parameters) # eval(f"{shape_name}(self, {shape_parameters})")
+        self.shape = shape
         self.channel = channel
         self.offset_i = offset_i
         self.offset_q = offset_q
         self.qubit = qubit
-        self.type = type # Pulse.type (str): {'qd', 'ro', 'qf'}
+        self.type = type
+
+        shape_name = re.findall('(\w+)', shape)[0]
+        shape_parameters = re.findall('(\w+)', shape)[1:]
+        self.shape_object = globals()[shape_name](self, *shape_parameters) # eval(f"{shape_name}(self, {shape_parameters})")
 
     @property
     def serial(self):
-        return "P({}, {}, {}, {}, {}, {}, {}, {})".format(self.start, self.duration,
-                                                      self.amplitude, self.frequency, self.phase, self.shape, self.channel, self.type)
+        return f"P({self.start}, {self.duration}, {self.amplitude}, {self.frequency}, {self.phase}, {self.shape}, {self.channel}, {self.type})"
 
     @property
     def envelope_i(self):

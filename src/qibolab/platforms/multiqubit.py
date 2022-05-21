@@ -3,22 +3,6 @@ from qibolab.platforms.abstract import AbstractPlatform
 
 
 class MultiqubitPlatform(AbstractPlatform):
-    def __init__(self, name, runcard):
-        super().__init__(name, runcard)
-        
-        self.instrument_settings = self.settings['instruments']
-        self.instruments = {}
-
-        for name in self.instrument_settings:
-            lib = self.instrument_settings[name]['lib']
-            i_class = self.instrument_settings[name]['class']
-            ip = self.instrument_settings[name]['ip']
-            from importlib import import_module
-            InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
-            instance = InstrumentClass(name, ip)
-            # instance.__dict__.update(self.settings['shared_settings'])
-            self.instruments[name] = instance
-            setattr(self, name, instance)    
 
     def run_calibration(self):
         raise_error(NotImplementedError)
