@@ -1,6 +1,5 @@
 """Pulse abstractions."""
 import numpy as np
-from scipy.signal import gaussian
 import re
 from abc import ABC, abstractmethod
 from qibo.config import raise_error
@@ -60,7 +59,7 @@ class Pulse:
 
     @property
     def serial(self):
-        return f"P({self.start}, {self.duration}, {self.amplitude}, {self.frequency}, {self.phase}, {self.shape}, {self.channel}, {self.type})"
+        return f"Pulse({self.start}, {self.duration}, {self.amplitude}, {self.frequency}, {self.phase}, '{self.shape}', {self.channel}, '{self.type}')"
 
     @property
     def envelope_i(self):
@@ -82,6 +81,10 @@ class ReadoutPulse(Pulse):
 
     def __init__(self, start, duration, amplitude, frequency, phase, shape, channel, type = 'ro', offset_i=0, offset_q=0, qubit=0):
         super().__init__(start, duration, amplitude, frequency, phase, shape, channel, type , offset_i, offset_q, qubit)
+
+    @property
+    def serial(self):
+        return f"ReadoutPulse({self.start}, {self.duration}, {self.amplitude}, {self.frequency}, {self.phase}, '{self.shape}', {self.channel}, '{self.type}')"
 
 
 
@@ -142,7 +145,9 @@ class Gaussian(PulseShape):
 
     @property
     def envelope_i(self):
-        return self.pulse.amplitude * gaussian(int(self.pulse.duration), std=int(self.pulse.duration/self.rel_sigma))
+        x = np.arange(0,self.pulse.duration,1)
+        return self.pulse.amplitude * np.exp(-(1/2)*(((x-(self.pulse.duration-1)/2)**2)/(((self.pulse.duration)/self.rel_sigma)**2)))
+        # same as: self.pulse.amplitude * gaussian(int(self.pulse.duration), std=int(self.pulse.duration/self.rel_sigma))
 
     @property
     def envelope_q(self):
@@ -175,7 +180,6 @@ class Drag(PulseShape):
     def envelope_i(self):
         x = np.arange(0,self.pulse.duration,1)
         i = self.pulse.amplitude * np.exp(-(1/2)*(((x-(self.pulse.duration-1)/2)**2)/(((self.pulse.duration)/self.rel_sigma)**2)))
-        # same as: self.pulse.amplitude * gaussian(int(self.pulse.duration), std=int(self.pulse.duration/self.rel_sigma))
         return i
 
     @property
