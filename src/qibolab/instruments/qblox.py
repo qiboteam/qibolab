@@ -201,11 +201,11 @@ class QRM(AbstractInstrument):
                         sequencer_pulses[sequencer].append(pulse)
                         pulse.waveform_indexes = [0 + wc, 1 + wc]
                         if not is_split:
-                            unique_pulses[pulse_serial] =  [0 + wc, 1 + wc]
-                        wc += 2                      
+                            unique_pulses[pulse_serial] =  [0 + wc, 1 + wc]              
                         waveforms_length += pulse.duration
                         self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_I"] = {"data": I, "index": 0 + wc}
                         self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_Q"] = {"data": Q, "index": 1 + wc}
+                        wc += 2
 
                     else:
                         sequencer_pulses[sequencer].append(pulse)
@@ -651,11 +651,11 @@ class QCM(AbstractInstrument):
                         sequencer_pulses[sequencer].append(pulse)
                         pulse.waveform_indexes = [0 + wc, 1 + wc]
                         if not is_split:
-                            unique_pulses[pulse_serial] =  [0 + wc, 1 + wc]
-                        wc += 2                      
+                            unique_pulses[pulse_serial] =  [0 + wc, 1 + wc]                  
                         waveforms_length += pulse.duration
                         self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_I"] = {"data": I, "index": 0 + wc}
                         self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_Q"] = {"data": Q, "index": 1 + wc}
+                        wc += 2    
 
                     else:
                         sequencer_pulses[sequencer].append(pulse)
