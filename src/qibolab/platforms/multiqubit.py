@@ -19,7 +19,7 @@ class MultiqubitPlatform(AbstractPlatform):
         pulse_sequence.sort(key=lambda pulse: pulse.start) 
         pulse_sequence_duration = pulse_sequence[-1].start + pulse_sequence[-1].duration
 
-        # Process Pulse Sequence. Generate Waveforms and Program
+        # Process Pulse Sequence. Assign pulses to channels
         channel_pulses = {}
         for channel in self.channels:
             channel_pulses[channel] = []
@@ -29,6 +29,7 @@ class MultiqubitPlatform(AbstractPlatform):
             else:
                 raise_error(RuntimeError, f"{self.name} does not have channel {pulse.channel}, only:\n{self.channels}.")
 
+        # Process Pulse Sequence. Assign pulses to instruments and generate waveforms & program
         instrument_pulses = {}
         for name in self.instruments:
             instrument_pulses[name] = {}
@@ -41,12 +42,17 @@ class MultiqubitPlatform(AbstractPlatform):
 
         for name in self.instruments:
             if instrument_pulses[name] is not None:
-                if self.instrument_settings[name]['class'] in ['ClusterQCM']:
+                if 'QCM' in self.instrument_settings[name]['class']:
                     self.instruments[name].play_sequence()
 
+        acquisition_results = None
         for name in self.instruments:
             if instrument_pulses[name] is not None:
-                if self.instrument_settings[name]['class'] in ['ClusterQRM']:
-                    acquisition_results = self.instruments[name].play_sequence_and_acquire()
+                if 'QRM' in self.instrument_settings[name]['class']:
+                    
+                    if 'ro' in [p.type for ch in self.instruments[name].channel_port_map.keys() for p in instrument_pulses[name][ch]]:
+                        acquisition_results = self.instruments[name].play_sequence_and_acquire()
+                    else:
+                        self.instruments[name].play_sequence()
 
         return acquisition_results
