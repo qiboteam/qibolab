@@ -33,8 +33,8 @@ class MultiqubitPlatform(AbstractPlatform):
         instrument_pulses = {}
         for name in self.instruments:
             instrument_pulses[name] = {}
-            if self.instrument_settings[name]['class'] in ['ClusterQRM', 'ClusterQCM']:
-                for channel in self.instruments[name].channel_port_map.keys():
+            if 'QCM' in self.instrument_settings[name]['class'] or 'QRM' in self.instrument_settings[name]['class']:
+                for channel in self.instruments[name].channel_port_map:
                     if channel in self.channels:
                         instrument_pulses[name][channel] = channel_pulses[channel]
                 self.instruments[name].process_pulse_sequence(instrument_pulses[name], nshots)
@@ -49,8 +49,7 @@ class MultiqubitPlatform(AbstractPlatform):
         for name in self.instruments:
             if instrument_pulses[name] is not None:
                 if 'QRM' in self.instrument_settings[name]['class']:
-                    
-                    if 'ro' in [p.type for ch in self.instruments[name].channel_port_map.keys() for p in instrument_pulses[name][ch]]:
+                    if 'ro' in [p.type for ch in self.instruments[name].channel_port_map for p in instrument_pulses[name][ch]]:
                         acquisition_results = self.instruments[name].play_sequence_and_acquire()
                     else:
                         self.instruments[name].play_sequence()

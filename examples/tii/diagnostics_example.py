@@ -2,17 +2,23 @@ from qibolab import Platform
 import diagnostics
 from qibolab.calibration import utils
 
-# Create a platform; connect and configure it
-platform = Platform('multiqubit')
+
+# Define platform and load specific runcard
+platform = Platform("multiqubit")
+# Connects to lab instruments using the details specified in the calibration settings.
 platform.connect()
+# Configures instruments using the loaded calibration settings.
 platform.setup()
 
 # create a diagnostics object
 ds = diagnostics.Diagnostics(platform)
 
-utils.backup_config_file(platform)
-
 # Characterisation can be done by changing settings to qibolab/runcards/tiiq.yml and diagnostics.yml
+# These scripts do not save the characterisation results on the runcard; to do so use 
+#   from qibolab.calibration import utils
+#   utils.backup_config_file(platform)
+#   resonator_freq, avg_min_voltage, max_ro_voltage, smooth_dataset, dataset = ds.run_resonator_spectroscopy()
+#   utils.save_config_parameter("settings", "", "resonator_freq", float(resonator_freq))
 
 resonator_freq, avg_min_voltage, max_ro_voltage, smooth_dataset, dataset = ds.run_resonator_spectroscopy()
 

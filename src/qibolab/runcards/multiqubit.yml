@@ -17,7 +17,7 @@ shared_settings:
     readout_pulse:
         start: 4004
         duration: 2000
-        amplitude: 0.5
+        amplitude: 0.9
         frequency: 20_000_000
         phase: 0
         shape: Rectangular()
@@ -39,7 +39,6 @@ qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
     4: [11, 7, 8]
     5: [11, 9, 10]
 
-
 instruments:
     qrm:
         lib: qblox
@@ -57,8 +56,17 @@ instruments:
             channel_port_map:  # Refrigerator Channel : Instrument port
                 11: o1 # IQ Port = out0 & out1
                 #12: i1 
+            lo: lo_qrm
 
-    qcm:
+    lo_qrm:
+        lib: rohde_schwarz
+        class: SGS100A
+        ip: 192.168.0.7
+        setup:
+            frequency: 7_804_715_967
+            power: 12
+
+    qcm1:
         lib: qblox
         class: ClusterQCM
         ip: 192.168.0.12
@@ -68,29 +76,16 @@ instruments:
             gain: 0.3
             channel_port_map:  
                 1: o1 # IQ Port = out0 & out1
-                # X: o2     # IQ Port = out2 & out3
+                3: o2 # IQ Port = out2 & out3
+            lo: lo_qcm1
 
-
-    lo_qrm:
-        lib: rohde_schwarz
-        class: SGS100A
-        ip: 192.168.0.7
-        setup:
-            frequency: 7_804_715_967
-            power: 12
-            channel_port_map:  
-                11: o1
-                #12: o2
-
-    lo_qcm:
+    lo_qcm1:
         lib: rohde_schwarz
         class: SGS100A
         ip: 192.168.0.8
         setup:
             frequency: 5_282_221_756
             power: 12
-            channel_port_map:  
-                11: o1
 
 native_gates:
     single_qubit:

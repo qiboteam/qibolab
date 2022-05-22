@@ -30,8 +30,7 @@ class AbstractPlatform(ABC):
             InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
             instance = InstrumentClass(name, ip)
             # instance.__dict__.update(self.settings['shared_settings'])
-            self.instruments[name] = instance
-            setattr(self, name, instance)    
+            self.instruments[name] = instance    
 
     def __getstate__(self):
         return {
@@ -77,10 +76,43 @@ class AbstractPlatform(ABC):
 
     def setup(self):
         self.__dict__.update(self.settings['shared_settings'])
-        setattr(self, 'topology', self.settings['topology'])
-        setattr(self, 'qubit_channel_map', self.settings['qubit_channel_map'])
-        setattr(self, 'channels', self.settings['channels'])
-        setattr(self, 'native_gates', self.settings['native_gates'])
+        self.topology = self.settings['topology']
+        self.channels = self.settings['channels']
+        self.qubit_channel_map = self.settings['qubit_channel_map']
+        
+        # Generate qubit_instrument_map from qubit_channel_map and the instruments' channel_port_maps
+        self.qubit_instrument_map = {}
+        for qubit in self.qubit_channel_map:
+            self.qubit_instrument_map[qubit] = [None, None, None]
+            for name in self.instruments:
+                if 'channel_port_map' in self.instrument_settings[name]['setup']:
+                    for channel in self.instrument_settings[name]['setup']['channel_port_map']:
+                        if channel in self.qubit_channel_map[qubit]:
+                             self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
+        # Generate ro_channel[qubit], qd_channel[qubit], qf_channel[qubit], qrm[qubit], qcm[qubit], lo_qrm[qubit], lo_qcm[qubit]
+        self.ro_channel = {}
+        self.qd_channel = {}
+        self.qf_channel = {}
+        self.qrm = {}
+        self.lo_qrm = {}
+        self.qcm = {}
+        self.lo_qcm = {}
+        for qubit in self.qubit_channel_map:
+            self.ro_channel[qubit] = self.qubit_channel_map[qubit][0]
+            self.qd_channel[qubit] = self.qubit_channel_map[qubit][1]
+            self.qf_channel[qubit] = self.qubit_channel_map[qubit][2]
+
+            if not self.qubit_instrument_map[qubit][0] is None:
+                self.qrm[qubit]  = self.instruments[self.qubit_instrument_map[qubit][0]]
+                self.lo_qrm[qubit] = self.instruments[self.instrument_settings[self.qubit_instrument_map[qubit][0]]['setup']['lo']]
+            if not self.qubit_instrument_map[qubit][1] is None:
+                self.qcm[qubit]  = self.instruments[self.qubit_instrument_map[qubit][1]]
+                self.lo_qcm[qubit] = self.instruments[self.instrument_settings[self.qubit_instrument_map[qubit][1]]['setup']['lo']]
+            # TODO: implement qf modules
+
+
+        # Load Native Gates
+        self.native_gates = self.settings['native_gates']
 
         if self.is_connected:
             for name in self.instruments:

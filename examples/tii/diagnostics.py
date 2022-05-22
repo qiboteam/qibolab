@@ -1,25 +1,22 @@
 import pathlib
-from qibolab.paths import qibolab_folder
+from scipy.signal import savgol_filter
 import numpy as np
 import matplotlib.pyplot as plt
 import yaml
-from qibolab import Platform
-from qibolab.calibration import utils
-from qibolab.calibration import fitting
 
-# TODO: Have a look in the documentation of ``MeasurementControl``
 from quantify_core.measurement import MeasurementControl
 from quantify_core.measurement.control import Gettable, Settable
 from quantify_core.data.handling import set_datadir
-from scipy.signal import savgol_filter
 
+from qibolab import Platform
+from qibolab.paths import qibolab_folder
+from qibolab.calibration import utils
+from qibolab.calibration import fitting
 from qibolab.pulses import Pulse, ReadoutPulse, Rectangular, Gaussian
 from qibolab.circuit import PulseSequence
 
 
-
 script_folder = pathlib.Path(__file__).parent
-
 quantify_folder = qibolab_folder / "calibration" / "data" / "quantify"
 quantify_folder.mkdir(parents=True, exist_ok=True)
 set_datadir(quantify_folder)
@@ -73,11 +70,17 @@ class Diagnostics():
         self.load_settings()
 
     def run_resonator_spectroscopy(self, qubit=1):
-        # TODO: replace lo_qrm with generic access to the relevant instrument after searching for it based on the qubit/channel
         platform = self.platform
         platform.reload_settings()
         mc = self.mc
-        ro_channel = platform.settings['qubit_channel_map'][qubit][0]
+        ro_channel = platform.ro_channel[qubit]
+        qrm = platform.qrm[qubit]
+        lo_qrm = platform.lo_qrm[qubit]
+
+        qd_channel = platform.qd_channel[qubit]
+        qcm = platform.qcm[qubit]
+        lo_qcm = platform.lo_qcm[qubit]
+
 
         ps = platform.settings['shared_settings']
         ro_pulse_settings = ps['readout_pulse']
@@ -92,24 +95,24 @@ class Diagnostics():
         #Fast Sweep
         if (self.software_averages !=0):
             scanrange = variable_resolution_scanrange(self.lowres_width, self.lowres_step, self.highres_width, self.highres_step)
-            mc.settables(platform.lo_qrm.device.frequency)
-            mc.setpoints(scanrange + platform.lo_qrm.frequency)
+            mc.settables(lo_qrm.device.frequency)
+            mc.setpoints(scanrange + lo_qrm.frequency)
             mc.gettables(Gettable(ROController(platform, sequence)))
             platform.start() 
-            platform.lo_qcm.off()
+            lo_qcm.off()
             dataset = mc.run("Resonator Spectroscopy Fast", soft_avg=self.software_averages)
             platform.stop()
-            platform.lo_qrm.frequency = (dataset['x0'].values[dataset['y0'].argmax().values])
+            lo_qrm.frequency = (dataset['x0'].values[dataset['y0'].argmax().values])
             avg_min_voltage = np.mean(dataset['y0'].values[:(self.lowres_width//self.lowres_step)]) * 1e6
 
         # Precision Sweep
         if (self.software_averages_precision !=0):
             scanrange = np.arange(-self.precision_width, self.precision_width, self.precision_step)
-            mc.settables(platform.lo_qrm.device.frequency)
-            mc.setpoints(scanrange + platform.lo_qrm.frequency)
+            mc.settables(lo_qrm.device.frequency)
+            mc.setpoints(scanrange + lo_qrm.frequency)
             mc.gettables(Gettable(ROController(platform, sequence)))
             platform.start() 
-            platform.lo_qcm.off()
+            lo_qcm.off()
             dataset = mc.run("Resonator Spectroscopy Precision", soft_avg=self.software_averages_precision)
             platform.stop()
 
@@ -128,12 +131,17 @@ class Diagnostics():
         platform = self.platform
         platform.reload_settings()
         mc = self.mc
-        ro_channel = platform.settings['qubit_channel_map'][qubit][0]
-        qc_channel = platform.settings['qubit_channel_map'][qubit][1]
+        ro_channel = platform.ro_channel[qubit]
+        qrm = platform.qrm[qubit]
+        lo_qrm = platform.lo_qrm[qubit]
+
+        qd_channel = platform.qd_channel[qubit]
+        qcm = platform.qcm[qubit]
+        lo_qcm = platform.lo_qcm[qubit]
 
         ps = platform.settings['shared_settings']
         qc_pulse_settings = ps['qc_spectroscopy_pulse']
-        qc_pulse = Pulse(**qc_pulse_settings, channel = qc_channel)
+        qc_pulse = Pulse(**qc_pulse_settings, channel = qd_channel)
         ro_pulse_settings = ps['readout_pulse']
         ro_pulse = ReadoutPulse(**ro_pulse_settings, channel = ro_channel)
         sequence = PulseSequence()
@@ -144,25 +152,23 @@ class Diagnostics():
         self.__dict__.update(self.settings['qubit_spectroscopy'])
         self.pl.tuids_max_num(self.max_num_plots)
         
-        
         # Fast Sweep
         if (self.software_averages !=0):
-            lo_qcm_frequency = platform.lo_qcm.frequency
+            lo_qcm_frequency = lo_qcm.frequency
             fast_sweep_scan_range = np.arange(self.fast_start, self.fast_end, self.fast_step)
-            mc.settables(platform.lo_qcm.device.frequency)
-            mc.setpoints(fast_sweep_scan_range + platform.lo_qcm.frequency)
+            mc.settables(lo_qcm.device.frequency)
+            mc.setpoints(fast_sweep_scan_range + lo_qcm.frequency)
             mc.gettables(Gettable(ROController(platform, sequence)))
             platform.start() 
             dataset = mc.run("Qubit Spectroscopy Fast", soft_avg=self.software_averages)
             platform.stop()
 
-
         # Precision Sweep
         if (self.software_averages_precision !=0):
-            platform.lo_qcm.frequency = lo_qcm_frequency
+            lo_qcm.frequency = lo_qcm_frequency
             precision_sweep_scan_range = np.arange(self.precision_start, self.precision_end, self.precision_step)
-            mc.settables(platform.lo_qcm.device.frequency)
-            mc.setpoints(precision_sweep_scan_range + platform.lo_qcm.frequency)
+            mc.settables(lo_qcm.device.frequency)
+            mc.setpoints(precision_sweep_scan_range + lo_qcm.frequency)
             mc.gettables(Gettable(ROController(platform, sequence)))
             platform.start() 
             dataset = mc.run("Qubit Spectroscopy Precision", soft_avg=self.software_averages_precision)

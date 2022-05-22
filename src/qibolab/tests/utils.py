@@ -34,6 +34,6 @@ def generate_pulse_sequence(readout=True):
                           amplitude=0.9,
                           duration=2000,
                           phase=0,
-                          shape='Rectangular', 
+                          shape='Rectangular()', 
                           channel=11)) 
     return sequence
