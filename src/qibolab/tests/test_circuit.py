@@ -2,48 +2,63 @@ import pytest
 import numpy as np
 import qibo
 from qibo import K, gates
-from qibolab import pulses
+from qibolab.pulses import Pulse, ReadoutPulse
 from qibolab.circuit import PulseSequence, HardwareCircuit
 
 
 def test_pulse_sequence_add():
-    from qibolab.pulse_shapes import Gaussian
-    seq = PulseSequence()
-    seq.add(pulses.Pulse(start=0,
-                         frequency=200000000.0,
-                         amplitude=0.3,
-                         duration=60,
-                         phase=0,
-                         shape=Gaussian(5)))
-    seq.add(pulses.Pulse(start=60,
-                         frequency=200000000.0,
-                         amplitude=0.5,
-                         duration=20,
-                         phase=0,
-                         shape=Gaussian(5)))
-    assert len(seq.pulses) == 2
-    assert len(seq.qcm_pulses) == 2
+    sequence = PulseSequence()
+    sequence.add(Pulse(start=0,
+                    frequency=200_000_000,
+                    amplitude=0.3,
+                    duration=60,
+                    phase=0,
+                    shape='Gaussian(5)',
+                    channel=1)) 
+    sequence.add(Pulse(start=64,
+                    frequency=200_000_000,
+                    amplitude=0.3,
+                    duration=30,
+                    phase=0,
+                    shape='Gaussian(5)',
+                    channel=1)) 
+    assert len(sequence.pulses) == 2
+    assert len(sequence.qd_pulses) == 2
 
 
 def test_pulse_sequence_add_readout():
-    from qibolab.pulse_shapes import Gaussian
-    seq = PulseSequence()
-    seq.add(pulses.Pulse(start=0,
-                         frequency=200000000.0,
-                         amplitude=0.3,
-                         duration=60,
-                         phase=0,
-                         shape=Gaussian(5)))
-    seq.add(pulses.ReadoutPulse(start=60,
-                                frequency=200000000.0,
-                                amplitude=0.5,
-                                duration=20,
-                                phase=0,
-                                shape=Gaussian(5)))
-    assert len(seq.pulses) == 2
-    assert len(seq.qcm_pulses) == 1
-    assert len(seq.qrm_pulses) == 1
+    sequence = PulseSequence()
+    sequence.add(Pulse(start=0,
+                    frequency=200_000_000,
+                    amplitude=0.3,
+                    duration=60,
+                    phase=0,
+                    shape='Gaussian(5)',
+                    channel=1)) 
 
+    sequence.add(Pulse(start=64,
+                frequency=200_000_000,
+                amplitude=0.3,
+                duration=60,
+                phase=0,
+                shape='Drag(5, 2)', 
+                channel=1,
+                type = 'qf')) 
+
+    sequence.add(ReadoutPulse(start=128,
+                        frequency=20_000_000,
+                        amplitude=0.9,
+                        duration=2000,
+                        phase=0,
+                        shape='Rectangular()', 
+                        channel=11)) 
+    assert len(sequence.pulses) == 3
+    assert len(sequence.ro_pulses) == 1
+    assert len(sequence.qd_pulses) == 1
+    assert len(sequence.qf_pulses) == 1
+
+
+# TODO: Continue refactor. For that fetching of native gates in the new platform needs to be implemented.
 
 class PiPulseRegression:
 
