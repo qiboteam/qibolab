@@ -141,76 +141,77 @@ class QRM(AbstractInstrument):
             sequencer = -1              # initialised to -1 so that in the first iteration it becomes 0, the first sequencer number
             self.waveforms = {}
             for channel in channels:
-                # Select a sequencer and add it to the sequencer_channel_map
-                sequencer += 1
-                if sequencer > self.device._num_sequencers:
-                    raise_error(Exception, f"The number of sequencers requried to play the sequence exceeds the number available {self.device._num_sequencers}.")
-                # Initialise the corresponding variables 
-                self.sequencers.append(sequencer)
-                self.sequencer_channel_map[sequencer]=channel
-                sequencer_pulses[sequencer]=[]
-                self.waveforms[sequencer]={}
-                unique_pulses = {}      # a dictionary of {unique pulse IDs (str): and their I & Q indices (int)}
-                wc = 0                  # unique waveform counter
-                waveforms_length = 0        # accumulates the length of unique pulses per sequencer
+                if len(channel_pulses[channel]) > 0:
+                    # Select a sequencer and add it to the sequencer_channel_map
+                    sequencer += 1
+                    if sequencer > self.device._num_sequencers:
+                        raise_error(Exception, f"The number of sequencers requried to play the sequence exceeds the number available {self.device._num_sequencers}.")
+                    # Initialise the corresponding variables 
+                    self.sequencers.append(sequencer)
+                    self.sequencer_channel_map[sequencer]=channel
+                    sequencer_pulses[sequencer]=[]
+                    self.waveforms[sequencer]={}
+                    unique_pulses = {}      # a dictionary of {unique pulse IDs (str): and their I & Q indices (int)}
+                    wc = 0                  # unique waveform counter
+                    waveforms_length = 0        # accumulates the length of unique pulses per sequencer
 
-                # Iterate over the list of pulses to check if they are unique and if the overal length of the waveform exceeds the memory available
-                n = 0
-                while n < len(channel_pulses[channel]):
-                    pulse = channel_pulses[channel][n]
-                    pulse_serial = pulse.serial[pulse.serial.find(',',pulse.serial.find(',')+1)+2:-1] # removes the channel and start information from Pulse.serial to compare between pulses
-                    if pulse_serial not in unique_pulses.keys():
-                        # If the pulse is unique (it hasn't been saved before):
-                        I, Q = self.generate_waveforms_from_pulse(pulse)
-                        # Check if the overall length of the waveform exceeds memory size (waveform_max_length) and split it if necessary
-                        is_split = False
-                        part = 0
-                        while waveforms_length + pulse.duration > self.waveform_max_length:
-                            if pulse.type == 'ro':
-                                raise_error(NotImplementedError, f"Readout pulses longer than the memory available for a sequencer ({self.waveform_max_length}) are not supported.")
-                            import copy
-                            first_part = copy.deepcopy(pulse)
-                            first_part.duration = self.waveform_max_length - waveforms_length 
-                            channel_pulses[channel].insert(n, first_part)
-                            n += 1
-                            sequencer_pulses[sequencer].append(first_part)
-                            first_part.waveform_indexes = [0 + wc, 1 + wc]
-                            self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_I"] = {"data": I[:first_part.duration], "index": 0 + wc}
-                            self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_Q"] = {"data": Q[:first_part.duration], "index": 1 + wc}
-                            
-                            I, Q = I[first_part.duration:], Q[first_part.duration:]
-                            pulse.start = pulse.start + self.waveform_max_length - waveforms_length
-                            pulse.duration = pulse.duration - (self.waveform_max_length - waveforms_length)
-                            is_split = True
-                            part += 1
+                    # Iterate over the list of pulses to check if they are unique and if the overal length of the waveform exceeds the memory available
+                    n = 0
+                    while n < len(channel_pulses[channel]):
+                        pulse = channel_pulses[channel][n]
+                        pulse_serial = pulse.serial[pulse.serial.find(',',pulse.serial.find(',')+1)+2:-1] # removes the channel and start information from Pulse.serial to compare between pulses
+                        if pulse_serial not in unique_pulses.keys():
+                            # If the pulse is unique (it hasn't been saved before):
+                            I, Q = self.generate_waveforms_from_pulse(pulse)
+                            # Check if the overall length of the waveform exceeds memory size (waveform_max_length) and split it if necessary
+                            is_split = False
+                            part = 0
+                            while waveforms_length + pulse.duration > self.waveform_max_length:
+                                if pulse.type == 'ro':
+                                    raise_error(NotImplementedError, f"Readout pulses longer than the memory available for a sequencer ({self.waveform_max_length}) are not supported.")
+                                import copy
+                                first_part = copy.deepcopy(pulse)
+                                first_part.duration = self.waveform_max_length - waveforms_length 
+                                channel_pulses[channel].insert(n, first_part)
+                                n += 1
+                                sequencer_pulses[sequencer].append(first_part)
+                                first_part.waveform_indexes = [0 + wc, 1 + wc]
+                                self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_I"] = {"data": I[:first_part.duration], "index": 0 + wc}
+                                self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_Q"] = {"data": Q[:first_part.duration], "index": 1 + wc}
+                                
+                                I, Q = I[first_part.duration:], Q[first_part.duration:]
+                                pulse.start = pulse.start + self.waveform_max_length - waveforms_length
+                                pulse.duration = pulse.duration - (self.waveform_max_length - waveforms_length)
+                                is_split = True
+                                part += 1
 
-                            # Select a new sequencer
-                            sequencer += 1
-                            if sequencer > self.device._num_sequencers:
-                                    raise_error(Exception, f"The number of sequencers requried to play the sequence exceeds the number available {self.device._num_sequencers}.")
-                            # Initialise the corresponding variables 
-                            self.sequencers.append(sequencer)
-                            self.sequencer_channel_map[sequencer]=channel
-                            sequencer_pulses[sequencer]=[]
-                            self.waveforms[sequencer]={}
-                            unique_pulses = {} 
-                            wc = 0                 
-                            waveforms_length = 0
- 
-                        # Add the pulse to the list of pulses for the current sequencer and save the waveform indexes
-                        sequencer_pulses[sequencer].append(pulse)
-                        pulse.waveform_indexes = [0 + wc, 1 + wc]
-                        if not is_split:
-                            unique_pulses[pulse_serial] =  [0 + wc, 1 + wc]              
-                        waveforms_length += pulse.duration
-                        self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_I"] = {"data": I, "index": 0 + wc}
-                        self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_Q"] = {"data": Q, "index": 1 + wc}
-                        wc += 2
+                                # Select a new sequencer
+                                sequencer += 1
+                                if sequencer > self.device._num_sequencers:
+                                        raise_error(Exception, f"The number of sequencers requried to play the sequence exceeds the number available {self.device._num_sequencers}.")
+                                # Initialise the corresponding variables 
+                                self.sequencers.append(sequencer)
+                                self.sequencer_channel_map[sequencer]=channel
+                                sequencer_pulses[sequencer]=[]
+                                self.waveforms[sequencer]={}
+                                unique_pulses = {} 
+                                wc = 0                 
+                                waveforms_length = 0
+    
+                            # Add the pulse to the list of pulses for the current sequencer and save the waveform indexes
+                            sequencer_pulses[sequencer].append(pulse)
+                            pulse.waveform_indexes = [0 + wc, 1 + wc]
+                            if not is_split:
+                                unique_pulses[pulse_serial] =  [0 + wc, 1 + wc]              
+                            waveforms_length += pulse.duration
+                            self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_I"] = {"data": I, "index": 0 + wc}
+                            self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_Q"] = {"data": Q, "index": 1 + wc}
+                            wc += 2
 
-                    else:
-                        sequencer_pulses[sequencer].append(pulse)
-                        pulse.waveform_indexes = unique_pulses[pulse_serial]
-                    n += 1
+                        else:
+                            sequencer_pulses[sequencer].append(pulse)
+                            pulse.waveform_indexes = unique_pulses[pulse_serial]
+                        n += 1
 
             # Generate programs for each sequencer
             pulses = sequencer_pulses
@@ -318,8 +319,8 @@ class QRM(AbstractInstrument):
 
                 self.program[sequencer] = header + body + footer
 
-                # DEBUG:
-                print(f"{self.name} sequencer {sequencer} program:\n" + self.program[sequencer]) 
+                # DEBUG: QRM print sequencer program
+                # print(f"{self.name} sequencer {sequencer} program:\n" + self.program[sequencer]) 
 
     def generate_waveforms_from_pulse(self, pulse, modulate = True):
         """
@@ -337,12 +338,23 @@ class QRM(AbstractInstrument):
         assert len(envelope_i) == len(envelope_q)
         envelopes = np.array([envelope_i, envelope_q])
         if modulate:
-            time = np.arange(pulse.duration) * self.sampling_rate
+            time = np.arange(pulse.duration) / self.sampling_rate
             cosalpha = np.cos(2 * np.pi * pulse.frequency * time + pulse.phase)
             sinalpha = np.sin(2 * np.pi * pulse.frequency * time + pulse.phase)
             mod_matrix = np.array([[ cosalpha, sinalpha], 
                                    [-sinalpha, cosalpha]])
-            mod_signals = np.einsum("abt,bt->ta", mod_matrix, envelopes)
+            # mod_signals = np.einsum("abt,bt->ta", mod_matrix, envelopes)
+            result = []
+            for it, t, ii, qq in zip(np.arange(pulse.duration), time, envelope_i, envelope_q):
+                result.append(mod_matrix[:, :, it] @ np.array([ii, qq]))
+            mod_signals = np.array(result)
+
+            # DEBUG: QRM plot envelopes
+            # import matplotlib.pyplot as plt
+            # plt.plot(mod_signals[:, 0] + pulse.offset_i)
+            # plt.plot(mod_signals[:, 1] + pulse.offset_q)
+            # plt.show()
+
             return mod_signals[:, 0] + pulse.offset_i, mod_signals[:, 1] + pulse.offset_q
         else:
             return envelope_i, envelope_q
@@ -388,7 +400,7 @@ class QRM(AbstractInstrument):
                 self.device.set(f"sequencer{sequencer}_waveforms_and_program", str(self.data_folder / filename))
         # Arm all sequencers
         self.device.arm_sequencer()
-        # DEBUG:
+        # DEBUG: QRM Print Readable Snapshot
         # print(self.name)
         # self.device.print_readable_snapshot(update=True)
 
@@ -593,74 +605,75 @@ class QCM(AbstractInstrument):
             sequencer = -1              # initialised to -1 so that in the first iteration it becomes 0, the first sequencer number
             self.waveforms = {}
             for channel in channels:
-                # Select a sequencer and add it to the sequencer_channel_map
-                sequencer += 1
-                if sequencer > self.device._num_sequencers:
-                    raise_error(Exception, f"The number of sequencers requried to play the sequence exceeds the number available {self.device._num_sequencers}.")
-                # Initialise the corresponding variables 
-                self.sequencers.append(sequencer)
-                self.sequencer_channel_map[sequencer]=channel
-                sequencer_pulses[sequencer]=[]
-                self.waveforms[sequencer]={}
-                unique_pulses = {}      # a dictionary of {unique pulse IDs (str): and their I & Q indices (int)}
-                wc = 0                  # unique waveform counter
-                waveforms_length = 0        # accumulates the length of unique pulses per sequencer
+                if len(channel_pulses[channel]) > 0:
+                    # Select a sequencer and add it to the sequencer_channel_map
+                    sequencer += 1
+                    if sequencer > self.device._num_sequencers:
+                        raise_error(Exception, f"The number of sequencers requried to play the sequence exceeds the number available {self.device._num_sequencers}.")
+                    # Initialise the corresponding variables 
+                    self.sequencers.append(sequencer)
+                    self.sequencer_channel_map[sequencer]=channel
+                    sequencer_pulses[sequencer]=[]
+                    self.waveforms[sequencer]={}
+                    unique_pulses = {}      # a dictionary of {unique pulse IDs (str): and their I & Q indices (int)}
+                    wc = 0                  # unique waveform counter
+                    waveforms_length = 0        # accumulates the length of unique pulses per sequencer
 
-                # Iterate over the list of pulses to check if they are unique and if the overal length of the waveform exceeds the memory available
-                n = 0
-                while n < len(channel_pulses[channel]):
-                    pulse = channel_pulses[channel][n]
-                    pulse_serial = pulse.serial[pulse.serial.find(',',pulse.serial.find(',')+1)+2:-1] # removes the channel and start information from Pulse.serial to compare between pulses
-                    if pulse_serial not in unique_pulses.keys():
-                        # If the pulse is unique (it hasn't been saved before):
-                        I, Q = self.generate_waveforms_from_pulse(pulse)
-                        # Check if the overall length of the waveform exceeds memory size (waveform_max_length) and split it if necessary
-                        is_split = False
-                        part = 0
-                        while waveforms_length + pulse.duration > self.waveform_max_length:
-                            import copy
-                            first_part = copy.deepcopy(pulse)
-                            first_part.duration = self.waveform_max_length - waveforms_length 
-                            channel_pulses[channel].insert(n, first_part)
-                            n += 1
-                            sequencer_pulses[sequencer].append(first_part)
-                            first_part.waveform_indexes = [0 + wc, 1 + wc]
-                            self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_I"] = {"data": I[:first_part.duration], "index": 0 + wc}
-                            self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_Q"] = {"data": Q[:first_part.duration], "index": 1 + wc}
-                            
-                            I, Q = I[first_part.duration:], Q[first_part.duration:]
-                            pulse.start = pulse.start + self.waveform_max_length - waveforms_length
-                            pulse.duration = pulse.duration - (self.waveform_max_length - waveforms_length)
-                            is_split = True
-                            part += 1
+                    # Iterate over the list of pulses to check if they are unique and if the overal length of the waveform exceeds the memory available
+                    n = 0
+                    while n < len(channel_pulses[channel]):
+                        pulse = channel_pulses[channel][n]
+                        pulse_serial = pulse.serial[pulse.serial.find(',',pulse.serial.find(',')+1)+2:-1] # removes the channel and start information from Pulse.serial to compare between pulses
+                        if pulse_serial not in unique_pulses.keys():
+                            # If the pulse is unique (it hasn't been saved before):
+                            I, Q = self.generate_waveforms_from_pulse(pulse)
+                            # Check if the overall length of the waveform exceeds memory size (waveform_max_length) and split it if necessary
+                            is_split = False
+                            part = 0
+                            while waveforms_length + pulse.duration > self.waveform_max_length:
+                                import copy
+                                first_part = copy.deepcopy(pulse)
+                                first_part.duration = self.waveform_max_length - waveforms_length 
+                                channel_pulses[channel].insert(n, first_part)
+                                n += 1
+                                sequencer_pulses[sequencer].append(first_part)
+                                first_part.waveform_indexes = [0 + wc, 1 + wc]
+                                self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_I"] = {"data": I[:first_part.duration], "index": 0 + wc}
+                                self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_Q"] = {"data": Q[:first_part.duration], "index": 1 + wc}
+                                
+                                I, Q = I[first_part.duration:], Q[first_part.duration:]
+                                pulse.start = pulse.start + self.waveform_max_length - waveforms_length
+                                pulse.duration = pulse.duration - (self.waveform_max_length - waveforms_length)
+                                is_split = True
+                                part += 1
 
-                            # Select a new sequencer
-                            sequencer += 1
-                            if sequencer > self.device._num_sequencers:
-                                    raise_error(Exception, f"The number of sequencers requried to play the sequence exceeds the number available {self.device._num_sequencers}.")
-                            # Initialise the corresponding variables 
-                            self.sequencers.append(sequencer)
-                            self.sequencer_channel_map[sequencer]=channel
-                            sequencer_pulses[sequencer]=[]
-                            self.waveforms[sequencer]={}
-                            unique_pulses = {} 
-                            wc = 0                 
-                            waveforms_length = 0
- 
-                        # Add the pulse to the list of pulses for the current sequencer and save the waveform indexes
-                        sequencer_pulses[sequencer].append(pulse)
-                        pulse.waveform_indexes = [0 + wc, 1 + wc]
-                        if not is_split:
-                            unique_pulses[pulse_serial] =  [0 + wc, 1 + wc]                  
-                        waveforms_length += pulse.duration
-                        self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_I"] = {"data": I, "index": 0 + wc}
-                        self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_Q"] = {"data": Q, "index": 1 + wc}
-                        wc += 2    
+                                # Select a new sequencer
+                                sequencer += 1
+                                if sequencer > self.device._num_sequencers:
+                                        raise_error(Exception, f"The number of sequencers requried to play the sequence exceeds the number available {self.device._num_sequencers}.")
+                                # Initialise the corresponding variables 
+                                self.sequencers.append(sequencer)
+                                self.sequencer_channel_map[sequencer]=channel
+                                sequencer_pulses[sequencer]=[]
+                                self.waveforms[sequencer]={}
+                                unique_pulses = {} 
+                                wc = 0                 
+                                waveforms_length = 0
+    
+                            # Add the pulse to the list of pulses for the current sequencer and save the waveform indexes
+                            sequencer_pulses[sequencer].append(pulse)
+                            pulse.waveform_indexes = [0 + wc, 1 + wc]
+                            if not is_split:
+                                unique_pulses[pulse_serial] =  [0 + wc, 1 + wc]                  
+                            waveforms_length += pulse.duration
+                            self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_I"] = {"data": I, "index": 0 + wc}
+                            self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_Q"] = {"data": Q, "index": 1 + wc}
+                            wc += 2    
 
-                    else:
-                        sequencer_pulses[sequencer].append(pulse)
-                        pulse.waveform_indexes = unique_pulses[pulse_serial]
-                    n += 1
+                        else:
+                            sequencer_pulses[sequencer].append(pulse)
+                            pulse.waveform_indexes = unique_pulses[pulse_serial]
+                        n += 1
 
             # Generate programs for each sequencer
             pulses = sequencer_pulses
@@ -725,8 +738,8 @@ class QCM(AbstractInstrument):
 
                 self.program[sequencer] = header + body + footer
 
-                # DEBUG:
-                print(f"{self.name} sequencer {sequencer} program:\n" + self.program[sequencer]) 
+                # DEBUG: QCM print sequencer program
+                # print(f"{self.name} sequencer {sequencer} program:\n" + self.program[sequencer]) 
 
 
     def generate_waveforms_from_pulse(self, pulse, modulate = True):
@@ -745,12 +758,23 @@ class QCM(AbstractInstrument):
         assert len(envelope_i) == len(envelope_q)
         envelopes = np.array([envelope_i, envelope_q])
         if modulate:
-            time = np.arange(pulse.duration) * self.sampling_rate
+            time = np.arange(pulse.duration) / self.sampling_rate
             cosalpha = np.cos(2 * np.pi * pulse.frequency * time + pulse.phase)
             sinalpha = np.sin(2 * np.pi * pulse.frequency * time + pulse.phase)
             mod_matrix = np.array([[ cosalpha, sinalpha], 
                                    [-sinalpha, cosalpha]])
-            mod_signals = np.einsum("abt,bt->ta", mod_matrix, envelopes)
+            # mod_signals = np.einsum("abt,bt->ta", mod_matrix, envelopes)
+            result = []
+            for it, t, ii, qq in zip(np.arange(pulse.duration), time, envelope_i, envelope_q):
+                result.append(mod_matrix[:, :, it] @ np.array([ii, qq]))
+            mod_signals = np.array(result)
+
+            # DEBUG: QCM plot envelopes
+            # import matplotlib.pyplot as plt
+            # plt.plot(mod_signals[:, 0] + pulse.offset_i)
+            # plt.plot(mod_signals[:, 1] + pulse.offset_q)
+            # plt.show()
+
             return mod_signals[:, 0] + pulse.offset_i, mod_signals[:, 1] + pulse.offset_q
         else:
             return envelope_i, envelope_q
@@ -795,7 +819,7 @@ class QCM(AbstractInstrument):
                 self.device.set(f"sequencer{sequencer}_waveforms_and_program", str(self.data_folder / filename))
         # Arm all sequencers
         self.device.arm_sequencer()
-        # DEBUG:
+        # DEBUG: QCM Print Readable Snapshot
         # print(self.name)
         # self.device.print_readable_snapshot(update=True)
 
