@@ -212,7 +212,7 @@ class Diagnostics():
         mc.setpoints(np.arange(self.pulse_duration_start, self.pulse_duration_end, self.pulse_duration_step))
         mc.gettables(Gettable(ROController(platform, sequence)))
         platform.start()
-        dataset = mc.run('Rabi Pulse Length', soft_avg = self.software_averages)
+        dataset = mc.run('Rabi Pulse Length', soft_avg = self.software_averages_precision)
         platform.stop()
         
                 
