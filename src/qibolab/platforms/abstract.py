@@ -80,6 +80,7 @@ class AbstractPlatform(ABC):
         setattr(self, 'topology', self.settings['topology'])
         setattr(self, 'qubit_channel_map', self.settings['qubit_channel_map'])
         setattr(self, 'channels', self.settings['channels'])
+        setattr(self, 'native_gates', self.settings['native_gates'])
 
         if self.is_connected:
             for name in self.instruments:
