@@ -1,5 +1,6 @@
 import pathlib
 from scipy.signal import savgol_filter
+from qibolab.paths import qibolab_folder
 import numpy as np
 import matplotlib.pyplot as plt
 import yaml
@@ -65,6 +66,7 @@ class Diagnostics():
         with open(script_folder / "diagnostics.yml", "r") as file:
             self.settings = yaml.safe_load(file)
         self.__dict__.update(self.settings)
+        return self.settings
 
     def reload_settings(self):
         self.load_settings()

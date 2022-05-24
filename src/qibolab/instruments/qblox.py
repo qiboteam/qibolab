@@ -1,3 +1,5 @@
+import pathlib
+from qibolab.paths import qibolab_folder
 import json
 import numpy as np
 from qibo.config import raise_error, log
