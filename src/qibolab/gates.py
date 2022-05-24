@@ -123,8 +123,8 @@ class Unitary(AbstractHardwareGate, gates.Unitary):
         matrix = self.parameters
         su2 = matrix / np.sqrt(det(matrix))
         theta = 2 * np.arctan2(abs(su2[1, 0]), abs(su2[0, 0]))
-        plus = 2 * np.angle(su2[1, 1])
-        minus = 2 * np.angle(su2[1, 0])
-        phi = (plus + minus) / 2.0
-        lam = (plus - minus) / 2.0
+        plus = np.angle(su2[1, 1])
+        minus = np.angle(su2[1, 0])
+        phi = plus + minus
+        lam = plus - minus
         return theta, phi, lam
