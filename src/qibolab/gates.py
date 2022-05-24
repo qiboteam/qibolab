@@ -113,3 +113,19 @@ class U3(AbstractHardwareGate, gates.U3):
 
     def to_u3_params(self):
         return self.parameters
+
+
+class Unitary(AbstractHardwareGate, gates.Unitary):
+
+    def to_u3_params(self):
+        # https://github.com/Qiskit/qiskit-terra/blob/d2e3340adb79719f9154b665e8f6d8dc26b3e0aa/qiskit/quantum_info/synthesis/one_qubit_decompose.py#L221
+        import numpy as np
+        from scipy.linalg import det
+        matrix = self.parameters
+        su2 = matrix / np.sqrt(det(matrix))
+        theta = 2 * np.arctan2(abs(su2[1, 0]), abs(su2[0, 0]))
+        plus = 2 * np.angle(su2[1, 1])
+        minus = 2 * np.angle(su2[1, 0])
+        phi = (plus + minus) / 2.0
+        lam = (plus - minus) / 2.0
+        return theta, phi, lam

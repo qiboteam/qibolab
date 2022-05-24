@@ -80,3 +80,16 @@ def test_u2_to_u3_params():
     params = gate.to_u3_params()
     u3 = gates.U3(0, *params)
     np.testing.assert_allclose(gate.matrix, u3.matrix)
+
+
+def test_unitary_to_u3_params():
+    from scipy.linalg import expm, det
+    u = np.random.random((2, 2)) + 1j * np.random.random((2, 2))
+    # make random matrix unitary
+    u = expm(1j * (u + u.T.conj()))
+    # transform to SU(2) form
+    u = u / np.sqrt(det(u))
+    gate = gates.Unitary(u, 0)
+    params = gate.to_u3_params()
+    u3 = gates.U3(0, *params)
+    np.testing.assert_allclose(gate.matrix, u3.matrix)
