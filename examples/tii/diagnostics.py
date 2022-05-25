@@ -17,12 +17,6 @@ from qibolab.pulses import Pulse, ReadoutPulse, Rectangular, Gaussian
 from qibolab.circuit import PulseSequence
 
 
-script_folder = pathlib.Path(__file__).parent
-quantify_folder = qibolab_folder / "calibration" / "data" / "quantify"
-quantify_folder.mkdir(parents=True, exist_ok=True)
-set_datadir(quantify_folder)
-
-
 def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step):
     #[.     .     .     .     .     .][...................]0[...................][.     .     .     .     .     .]
     #[-------- lowres_width ---------][-- highres_width --] [-- highres_width --][-------- lowres_width ---------]
@@ -39,6 +33,9 @@ def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, high
 
 
 def create_measurement_control(name):
+    quantify_folder = qibolab_folder / "calibration" / "data" / "quantify"
+    quantify_folder.mkdir(parents=True, exist_ok=True)
+    set_datadir(quantify_folder)
     import os
     if os.environ.get("ENABLE_PLOTMON", True):
         mc = MeasurementControl(f'MC {name}')
@@ -63,6 +60,7 @@ class Diagnostics():
 
     def load_settings(self):
         # Load diagnostics settings
+        script_folder = pathlib.Path(__file__).parent
         with open(script_folder / "diagnostics.yml", "r") as file:
             self.settings = yaml.safe_load(file)
         self.__dict__.update(self.settings)
