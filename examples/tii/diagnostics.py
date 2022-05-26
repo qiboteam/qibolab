@@ -644,7 +644,7 @@ class QCPulseLengthParameter():
 
     def set(self, value):
         self.qc_pulse.duration = value
-        self.ro_pulse.start = value + 4
+        self.ro_pulse.start = value
 
 
 class QCPulseGainParameter():
@@ -687,7 +687,7 @@ class T1WaitParameter():
         # TODO: implement following condition
         #must be >= 4ns <= 65535
         #platform.delay_before_readout = value
-        self.ro_pulse.start = self.base_duration + 4 + value
+        self.ro_pulse.start = self.base_duration + value
 
 
 class RamseyWaitParameter():
