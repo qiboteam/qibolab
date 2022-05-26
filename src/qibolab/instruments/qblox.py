@@ -18,10 +18,11 @@ class QRM(AbstractInstrument):
     def __init__(self, name, ip):
         super().__init__(name, ip)
         self.device_class = None
+        self.sequencers = []
         self.sequencer_channel_map = {} 
-        self.last_pulsequence_hash = ""
+        self.last_pulsequence_hash = "uninitialised"
         self.current_pulsesequence_hash = ""
-
+        self.device_parameters = {}
 
     def connect(self):
         """
@@ -36,18 +37,19 @@ class QRM(AbstractInstrument):
         else:
             raise_error(Exception,'There is an open connection to the instrument already')
 
-    # Device Property Wrappers
-    @property
-    def gain(self):
-        return self._gain
 
-    @gain.setter
-    def gain(self, gain):
-        #TODO: Add support for independent control gains for each sequencer / path
-        self._gain = gain
-        for n in range(self.device._num_sequencers):
-            self.device.set(f"sequencer{n}_gain_awg_path0", gain)
-            self.device.set(f"sequencer{n}_gain_awg_path1", gain)
+    def set_device_parameter(self, parameter: str, value):
+        if not(parameter in self.device_parameters and self.device_parameters[parameter] == value):
+            if self.is_connected:
+                if hasattr(self.device, parameter):
+                    self.device.set(parameter, value)
+                    self.device_parameters[parameter] = value
+                    # DEBUG: QRM Parameter Setting Printing
+                    # print(f"Setting {self.name} {parameter} = {value}")
+                else:
+                    raise_error(Exception, f'The instrument {self.name} does not have parameter {parameter}')
+            else:
+                raise_error(Exception,'There is no connection to the instrument  {self.name}')
 
     def setup(self, **kwargs):
         """
@@ -66,7 +68,6 @@ class QRM(AbstractInstrument):
             channel_port_map (dict): a dictionary of {channel (int): port (str) {'o1', 'o2', ...}}
         """
         # Load settings as class attributes
-        gain = kwargs.pop('gain')
         self.__dict__.update(kwargs)
 
         # Hardcoded values used to generate sequence program
@@ -75,17 +76,20 @@ class QRM(AbstractInstrument):
 
         if self.is_connected:
             # Reset
-            self.device.reset()
-            self.gain = gain
-            # Configure clock source
-            self.device.reference_source(self.ref_clock)
+            if self.current_pulsesequence_hash != self.last_pulsequence_hash:
+                # print(f"Resetting {self.name}")
+                self.device.reset()            # Configure clock source
+                # DEBUG: QRM Log device Reset
+                # print("QCM status:")
+                # print(self.device.get_system_status())
+            self.set_device_parameter('reference_source', self.ref_clock)
             for n in range(self.device._num_sequencers):
                 # Configure the sequencers synchronization.
-                self.device.set(f"sequencer{n}_sync_en", False)
+                self.set_device_parameter(f"sequencer{n}_sync_en", False)
                 # Disable all sequencer - port connections
                 for out in range(0, 4):
                     if hasattr(self.device, f"sequencer{n}_channel_map_path{out%2}_out{out}_en"):
-                        self.device.set(f"sequencer{n}_channel_map_path{out%2}_out{out}_en", False)
+                        self.set_device_parameter(f"sequencer{n}_channel_map_path{out%2}_out{out}_en", False)
                 # The mapping of sequencers to ports is done in upload() as the number of sequencers needed 
                 # can only be determined after examining the pulse sequence
 
@@ -117,7 +121,7 @@ class QRM(AbstractInstrument):
         for channel in channels:
             for pulse in channel_pulses[channel]:
                 self.current_pulsesequence_hash += pulse.serial
-        if not self.current_pulsesequence_hash == self.last_pulsequence_hash:
+        if self.current_pulsesequence_hash != self.last_pulsequence_hash:
             # Sort pulses by their start time 
             for channel in channels:
                 channel_pulses[channel].sort(key=lambda pulse: pulse.start) 
@@ -271,13 +275,13 @@ class QRM(AbstractInstrument):
 
                 for n in range(len(pulses[sequencer])):
                     if pulses[sequencer][n].type == 'ro':
-                        delay_after_play = self.acquisition_start - self.minimum_delay_between_instructions #FIXME: This would not work for split pulses
+                        delay_after_play = self.minimum_delay_between_instructions # self.acquisition_start #FIXME: This would not work for split pulses
                         
                         if len(pulses[sequencer]) > n + 1:
                             # If there are more pulses to be played, the delay is the time between the pulse end and the next pulse start
-                            delay_after_acquire = pulses[sequencer][n + 1].start - pulses[sequencer][n].start - self.acquisition_start
+                            delay_after_acquire = pulses[sequencer][n + 1].start - pulses[sequencer][n].start - self.minimum_delay_between_instructions # self.acquisition_start
                         else:
-                            delay_after_acquire = sequence_total_duration - pulses[sequencer][n].start - self.acquisition_start
+                            delay_after_acquire = sequence_total_duration - pulses[sequencer][n].start - self.minimum_delay_between_instructions # self.acquisition_start
                             
                         if delay_after_acquire < self.minimum_delay_between_instructions:
                                 raise_error(Exception, f"The minimum delay before starting acquisition is {self.minimum_delay_between_instructions}ns.")
@@ -363,10 +367,21 @@ class QRM(AbstractInstrument):
 
     def upload(self):
         """Uploads waveforms and programs all sequencers and arms them in preparation for execution."""
-        if not self.current_pulsesequence_hash == self.last_pulsequence_hash:
+        # Setup
+        for sequencer in self.sequencers:
+            # Route sequencers to specific outputs.
+            port = int(self.channel_port_map[self.sequencer_channel_map[sequencer]][1:])-1
+            self.set_device_parameter(f"sequencer{sequencer}_channel_map_path0_out{2*port}_en", True)
+            self.set_device_parameter(f"sequencer{sequencer}_channel_map_path1_out{2*port+1}_en", True)
+            # Enable sequencer syncronisation
+            self.set_device_parameter(f"sequencer{sequencer}_sync_en", self.sync_en)
+            # Set gain
+            self.set_device_parameter(f"sequencer{sequencer}_gain_awg_path0", self.gain)
+            self.set_device_parameter(f"sequencer{sequencer}_gain_awg_path1", self.gain)
+    
+        # Upload
+        if self.current_pulsesequence_hash != self.last_pulsequence_hash:
             self.last_pulsequence_hash = self.current_pulsesequence_hash
-
-            # TODO: dont upload if the same 
             # Upload waveforms and program
             qblox_dict = {}
             for sequencer in self.sequencers:
@@ -385,23 +400,15 @@ class QRM(AbstractInstrument):
                     }
                 with open(self.data_folder / filename, "w", encoding="utf-8") as file:
                     json.dump(qblox_dict[sequencer], file, indent=4)
-
-                # Route sequencers to specific outputs.
-
-                port = int(self.channel_port_map[self.sequencer_channel_map[sequencer]][1:])-1
-                if hasattr(self.device, f"sequencer{sequencer}_channel_map_path0_out{2*port}_en"):
-                    self.device.set(f"sequencer{sequencer}_channel_map_path0_out{2*port}_en", True)
-                    self.device.set(f"sequencer{sequencer}_channel_map_path1_out{2*port+1}_en", True)
-                else:
-                    raise_error(Exception, f"The device does not have port {port}")
-                
-                self.device.set(f"sequencer{sequencer}_sync_en", self.sync_en)
-
-
+                    
                 # Upload json file to the device sequencers
                 self.device.set(f"sequencer{sequencer}_waveforms_and_program", str(self.data_folder / filename))
-        # Arm all sequencers
-        self.device.arm_sequencer()
+        
+        # Arm
+        for sequencer in self.sequencers:
+            # Arm sequencer
+            self.device.arm_sequencer(sequencer)
+
         # DEBUG: QRM Print Readable Snapshot
         # print(self.name)
         # self.device.print_readable_snapshot(update=True)
@@ -409,13 +416,15 @@ class QRM(AbstractInstrument):
     def play_sequence(self):
         """Executes the sequence of instructions."""
         # Start playing sequences in all sequencers
-        self.device.start_sequencer()
+        for sequencer in self.sequencers:
+            self.device.start_sequencer(sequencer)
 
     def play_sequence_and_acquire(self):
         """Executes the sequence of instructions and retrieves the readout results.
         """
         # Start playing sequences in all sequencers
-        self.device.start_sequencer()
+        for sequencer in self.sequencers:
+            self.device.start_sequencer(sequencer)
         
         acquisition_results = {}
         # Retrieve data
@@ -441,8 +450,8 @@ class QRM(AbstractInstrument):
         #TODO: obtain from acquisition info
         #DOWN Conversion
         norm_factor = 1. / (self.acquisition_duration)
-        n0 = 0 # self.acquisition_start
-        n1 = self.acquisition_duration # self.acquisition_start + self.acquisition_duration
+        n0 = self.acquisition_start # 0
+        n1 = self.acquisition_start + self.acquisition_duration # self.acquisition_duration # 
         input_vec_I = np.array(raw_results[acquisition_name]["acquisition"]["scope"]["path0"]["data"][n0: n1])
         input_vec_Q = np.array(raw_results[acquisition_name]["acquisition"]["scope"]["path1"]["data"][n0: n1])
         input_vec_I -= np.mean(input_vec_I)
@@ -498,10 +507,11 @@ class QCM(AbstractInstrument):
     def __init__(self, name, ip):
         super().__init__(name, ip)
         self.device_class = None
+        self.sequencers = []
         self.sequencer_channel_map = {} 
-        self.last_pulsequence_hash = ""
+        self.last_pulsequence_hash = "uninitialised"
         self.current_pulsesequence_hash = ""
-
+        self.device_parameters = {}
 
     def connect(self):
         """
@@ -516,18 +526,18 @@ class QCM(AbstractInstrument):
         else:
             raise_error(Exception,'There is an open connection to the instrument already')
 
-    # Device Property Wrappers
-    @property
-    def gain(self):
-        return self._gain
-
-    @gain.setter
-    def gain(self, gain):
-        #TODO: Add support for independent control gains for each sequencer / path
-        self._gain = gain
-        for n in range(self.device._num_sequencers):
-            self.device.set(f"sequencer{n}_gain_awg_path0", gain)
-            self.device.set(f"sequencer{n}_gain_awg_path1", gain)
+    def set_device_parameter(self, parameter: str, value):
+        if not(parameter in self.device_parameters and self.device_parameters[parameter] == value):
+            if self.is_connected:
+                if hasattr(self.device, parameter):
+                    self.device.set(parameter, value)
+                    self.device_parameters[parameter] = value
+                    # DEBUG: QCM Parameter Setting Printing
+                    # print(f"Setting {self.name} {parameter} = {value}")
+                else:
+                    raise_error(Exception, f'The instrument {self.name} does not have parameter {parameter}')
+            else:
+                raise_error(Exception,'There is no connection to the instrument  {self.name}')
 
     def setup(self, **kwargs):
         """
@@ -541,7 +551,6 @@ class QCM(AbstractInstrument):
             channel_port_map (dict): a dictionary of {channel (int): port (str) {'o1', 'o2', ...}}
         """
         # Load settings as class attributes
-        gain = kwargs.pop('gain')
         self.__dict__.update(kwargs)
 
         # Hardcoded values used to generate sequence program
@@ -550,17 +559,20 @@ class QCM(AbstractInstrument):
 
         if self.is_connected:
             # Reset
-            self.device.reset()
-            self.gain = gain
+            if self.current_pulsesequence_hash != self.last_pulsequence_hash:
+                # print(f"Resetting {self.name}")
+                self.device.reset()
+                # DEBUG: QCM Log device Reset                
+                # print("QCM status:")
+                # print(self.device.get_system_status())
             # Configure clock source
-            self.device.reference_source(self.ref_clock)
+            self.set_device_parameter('reference_source', self.ref_clock)
             for n in range(self.device._num_sequencers):
                 # Configure the sequencers synchronization.
-                self.device.set(f"sequencer{n}_sync_en", False)
+                self.set_device_parameter(f"sequencer{n}_sync_en", False)
                 # Disable all sequencer - port connections
                 for out in range(0, 4):
-                    if hasattr(self.device, f"sequencer{n}_channel_map_path{out%2}_out{out}_en"):
-                        self.device.set(f"sequencer{n}_channel_map_path{out%2}_out{out}_en", False)
+                        self.set_device_parameter(f"sequencer{n}_channel_map_path{out%2}_out{out}_en", False)
                 # The mapping of sequencers to ports is done in upload() as the number of sequencers needed 
                 # can only be determined after examining the pulse sequence
         else:
@@ -582,7 +594,7 @@ class QCM(AbstractInstrument):
         for channel in channels:
             for pulse in channel_pulses[channel]:
                 self.current_pulsesequence_hash += pulse.serial
-        if not self.current_pulsesequence_hash == self.last_pulsequence_hash:
+        if self.current_pulsesequence_hash != self.last_pulsequence_hash:
             # Sort pulses by their start time 
             for channel in channels:
                 channel_pulses[channel].sort(key=lambda pulse: pulse.start) 
@@ -783,7 +795,20 @@ class QCM(AbstractInstrument):
 
     def upload(self):
         """Uploads waveforms and programs all sequencers and arms them in preparation for execution."""
-        if not self.current_pulsesequence_hash == self.last_pulsequence_hash:
+        # Setup
+        for sequencer in self.sequencers:
+            # Route sequencers to specific outputs.
+            port = int(self.channel_port_map[self.sequencer_channel_map[sequencer]][1:])-1
+            self.set_device_parameter(f"sequencer{sequencer}_channel_map_path0_out{2*port}_en", True)
+            self.set_device_parameter(f"sequencer{sequencer}_channel_map_path1_out{2*port+1}_en", True)
+            # Enable sequencer syncronisation
+            self.set_device_parameter(f"sequencer{sequencer}_sync_en", self.sync_en)
+            # Set gain
+            self.set_device_parameter(f"sequencer{sequencer}_gain_awg_path0", self.gain)
+            self.set_device_parameter(f"sequencer{sequencer}_gain_awg_path1", self.gain)
+            
+        # Upload
+        if self.current_pulsesequence_hash != self.last_pulsequence_hash:
             self.last_pulsequence_hash = self.current_pulsesequence_hash
             # TODO: dont upload if the same 
             # Upload waveforms and program
@@ -804,31 +829,23 @@ class QCM(AbstractInstrument):
                     }
                 with open(self.data_folder / filename, "w", encoding="utf-8") as file:
                     json.dump(qblox_dict[sequencer], file, indent=4)
-
-                # Route sequencers to specific outputs.
-
-                port = int(self.channel_port_map[self.sequencer_channel_map[sequencer]][1:])-1
-                if hasattr(self.device, f"sequencer{sequencer}_channel_map_path0_out{2*port}_en"):
-                    self.device.set(f"sequencer{sequencer}_channel_map_path0_out{2*port}_en", True)
-                    self.device.set(f"sequencer{sequencer}_channel_map_path1_out{2*port+1}_en", True)
-                else:
-                    raise_error(Exception, f"The device does not have port {port}")
-                
-                # Configure syncronisation
-                self.device.set(f"sequencer{sequencer}_sync_en", self.sync_en)
-
                 # Upload json file to the device sequencers
-                self.device.set(f"sequencer{sequencer}_waveforms_and_program", str(self.data_folder / filename))
-        # Arm all sequencers
-        self.device.arm_sequencer()
+                self.device.set(f"sequencer{sequencer}_waveforms_and_program", str(self.data_folder / filename))            
+
+        # Arm
+        for sequencer in self.sequencers:
+            # Arm sequencer
+            self.device.arm_sequencer(sequencer)
+
         # DEBUG: QCM Print Readable Snapshot
         # print(self.name)
         # self.device.print_readable_snapshot(update=True)
 
     def play_sequence(self):
         """Executes the sequence of instructions."""
-        # Start playing sequences in all sequencers
-        self.device.start_sequencer()
+        for sequencer in self.sequencers:
+            # Start sequencer
+            self.device.start_sequencer(sequencer)
 
     def start(self):
         pass
