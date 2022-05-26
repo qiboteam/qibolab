@@ -1,11 +1,11 @@
 nqubits: 5
 description: 5-qubit device controlled with Qblox and R&S instruments.
 shared_settings:
-    hardware_avg: 1000
+    hardware_avg: 1024
     sampling_rate: 1_000_000_000
     repetition_duration: 200_000
     minimum_delay_between_instructions: 4
-    qc_spectroscopy_pulse:
+    qd_spectroscopy_pulse:
         start: 0
         duration: 4000        
         amplitude: 0.4
@@ -93,7 +93,7 @@ native_gates:
             RX:
                 pulse_sequence:
                     -   start: 0
-                        duration: 31
+                        duration: 71
                         amplitude: 0.4
                         frequency: 200_000_000
                         shape: Gaussian(5)

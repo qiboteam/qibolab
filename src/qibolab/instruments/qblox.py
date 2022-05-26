@@ -185,6 +185,7 @@ class QRM(AbstractInstrument):
                                 self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_I"] = {"data": I[:first_part.duration], "index": 0 + wc}
                                 self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_Q"] = {"data": Q[:first_part.duration], "index": 1 + wc}
                                 
+                                pulse = copy.deepcopy(pulse)
                                 I, Q = I[first_part.duration:], Q[first_part.duration:]
                                 pulse.start = pulse.start + self.waveform_max_length - waveforms_length
                                 pulse.duration = pulse.duration - (self.waveform_max_length - waveforms_length)
@@ -241,8 +242,10 @@ class QRM(AbstractInstrument):
                 sequence_total_duration = pulses[sequencer][-1].start + pulses[sequencer][-1].duration + self.minimum_delay_between_instructions # the minimum delay between instructions is 4ns
                 time_between_repetitions = self.repetition_duration - sequence_total_duration
                 assert time_between_repetitions > 0
-                extra_wait = time_between_repetitions % self.wait_loop_step
-                num_wait_loops = (time_between_repetitions - extra_wait) // self. wait_loop_step
+
+                wait_time = time_between_repetitions
+                extra_wait = wait_time % self.wait_loop_step
+                num_wait_loops = (wait_time - extra_wait) // self. wait_loop_step
 
                 header = f"""
                 move {nshots},R0 # nshots
@@ -252,26 +255,52 @@ class QRM(AbstractInstrument):
                 body = ""
 
                 footer = f"""
-                    # wait {time_between_repetitions} ns"""
+                    # wait {wait_time} ns"""
                 if num_wait_loops > 0:
                     footer += f"""
-                    move {num_wait_loops},R1
+                    move {num_wait_loops},R2
                     nop
-                    waitloop:
+                    waitloop2:
                         wait {self.wait_loop_step}
-                        loop R1,@waitloop"""
+                        loop R2,@waitloop2"""
+                if extra_wait > 0: 
+                    footer += f"""
+                        wait {extra_wait}"""
+                else:
+                    footer += f"""
+                        # wait 0"""
+
                 footer += f"""
-                    wait {extra_wait}
                 loop R0,@loop
                 stop 
                 """
 
                 # Add an initial wait instruction for the first pulse of the sequence
-                if pulses[sequencer][0].start != 0:
-                        initial_wait_instruction = f"                    wait {pulses[sequencer][0].start}"
+                wait_time = pulses[sequencer][0].start
+                extra_wait = wait_time % self.wait_loop_step
+                num_wait_loops = (wait_time - extra_wait) // self. wait_loop_step
+
+                if wait_time > 0:
+                    initial_wait_instruction = f"""
+                    # wait {wait_time} ns"""
+                    if num_wait_loops > 0:
+                        initial_wait_instruction += f"""
+                    move {num_wait_loops},R1
+                    nop
+                    waitloop1:
+                        wait {self.wait_loop_step}
+                        loop R1,@waitloop1"""
+                    if extra_wait > 0: 
+                        initial_wait_instruction += f"""
+                        wait {extra_wait}"""
+                    else:
+                        initial_wait_instruction += f"""
+                        # wait 0"""
                 else:
-                    initial_wait_instruction = "                    # wait 0"
-                body += "\n" + initial_wait_instruction
+                    initial_wait_instruction = """
+                    # wait 0"""
+
+                body += initial_wait_instruction
 
                 for n in range(len(pulses[sequencer])):
                     if pulses[sequencer][n].type == 'ro':
@@ -655,6 +684,7 @@ class QCM(AbstractInstrument):
                                 self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_I"] = {"data": I[:first_part.duration], "index": 0 + wc}
                                 self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_Q"] = {"data": Q[:first_part.duration], "index": 1 + wc}
                                 
+                                pulse = copy.deepcopy(pulse)
                                 I, Q = I[first_part.duration:], Q[first_part.duration:]
                                 pulse.start = pulse.start + self.waveform_max_length - waveforms_length
                                 pulse.duration = pulse.duration - (self.waveform_max_length - waveforms_length)
@@ -698,8 +728,10 @@ class QCM(AbstractInstrument):
                 sequence_total_duration = pulses[sequencer][-1].start + pulses[sequencer][-1].duration + self.minimum_delay_between_instructions # the minimum delay between instructions is 4ns
                 time_between_repetitions = self.repetition_duration - sequence_total_duration
                 assert time_between_repetitions > 0
-                extra_wait = time_between_repetitions % self.wait_loop_step
-                num_wait_loops = (time_between_repetitions - extra_wait) // self. wait_loop_step
+
+                wait_time = time_between_repetitions
+                extra_wait = wait_time % self.wait_loop_step
+                num_wait_loops = (wait_time - extra_wait) // self. wait_loop_step
 
                 header = f"""
                 move {nshots},R0 # nshots
@@ -709,26 +741,52 @@ class QCM(AbstractInstrument):
                 body = ""
 
                 footer = f"""
-                    # wait {time_between_repetitions} ns"""
+                    # wait {wait_time} ns"""
                 if num_wait_loops > 0:
                     footer += f"""
-                    move {num_wait_loops},R1
+                    move {num_wait_loops},R2
                     nop
-                    waitloop:
+                    waitloop2:
                         wait {self.wait_loop_step}
-                        loop R1,@waitloop"""
+                        loop R2,@waitloop2"""
+                if extra_wait > 0: 
+                    footer += f"""
+                        wait {extra_wait}"""
+                else:
+                    footer += f"""
+                        # wait 0"""
+
                 footer += f"""
-                    wait {extra_wait}
                 loop R0,@loop
                 stop 
                 """
 
                 # Add an initial wait instruction for the first pulse of the sequence
-                if pulses[sequencer][0].start != 0:
-                    initial_wait_instruction = f"                    wait {pulses[sequencer][0].start}"
+                wait_time = pulses[sequencer][0].start
+                extra_wait = wait_time % self.wait_loop_step
+                num_wait_loops = (wait_time - extra_wait) // self. wait_loop_step
+
+                if wait_time > 0:
+                    initial_wait_instruction = f"""
+                    # wait {wait_time} ns"""
+                    if num_wait_loops > 0:
+                        initial_wait_instruction += f"""
+                    move {num_wait_loops},R1
+                    nop
+                    waitloop1:
+                        wait {self.wait_loop_step}
+                        loop R1,@waitloop1"""
+                    if extra_wait > 0: 
+                        initial_wait_instruction += f"""
+                    wait {extra_wait}"""
+                    else:
+                        initial_wait_instruction += f"""
+                    # wait 0"""
                 else:
-                    initial_wait_instruction = "                    # wait 0"
-                body += "\n" + initial_wait_instruction
+                    initial_wait_instruction = """
+                    # wait 0"""
+
+                body += initial_wait_instruction
 
                 for n in range(len(pulses[sequencer])):
                     # Calculate the delay_after_play that is to be used as an argument to the play instruction

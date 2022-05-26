@@ -34,11 +34,16 @@ qubit_spectroscopy:
 
 rabi_pulse_length:
   pulse_duration_start: 4 # minimum 4ns
-  pulse_duration_end: 1000
+  pulse_duration_end: 300
   pulse_duration_step: 1
 
+rabi_pulse_gain:
+  pulse_gain_start: 0
+  pulse_gain_end: 100
+  pulse_gain_step: 1
+
 t1:
-  delay_before_readout_start: 0
+  delay_before_readout_start: 4
   delay_before_readout_end: 50000
   delay_before_readout_step: 500
 
