@@ -12,11 +12,11 @@ class QRM(AbstractInstrument):
     
     Args:
         name (str): unique name given to the instrument
-        ip (str): IP address (IPv4) of the instrument
+        address (str): IP address (IPv4) of the instrument
 
     """
-    def __init__(self, name, ip):
-        super().__init__(name, ip)
+    def __init__(self, name, address):
+        super().__init__(name, address)
         self.device_class = None
         self.sequencers = []
         self.sequencer_channel_map = {} 
@@ -30,7 +30,7 @@ class QRM(AbstractInstrument):
         """
         if not self.is_connected:
             try:
-                self.device = self.device_class(self.name, self.ip)
+                self.device = self.device_class(self.name, self.address)
             except Exception as exc:
                 raise InstrumentException(self, str(exc))
             self.is_connected = True
@@ -530,11 +530,11 @@ class QCM(AbstractInstrument):
     
     Args:
         name (str): unique name given to the instrument
-        ip (str): IP address (IPv4) of the instrument
+        address (str): IP address (IPv4) of the instrument
 
     """
-    def __init__(self, name, ip):
-        super().__init__(name, ip)
+    def __init__(self, name, address):
+        super().__init__(name, address)
         self.device_class = None
         self.sequencers = []
         self.sequencer_channel_map = {} 
@@ -548,7 +548,7 @@ class QCM(AbstractInstrument):
         """
         if not self.is_connected:
             try:
-                self.device = self.device_class(self.name, self.ip)
+                self.device = self.device_class(self.name, self.address)
             except Exception as exc:
                 raise InstrumentException(self, str(exc))
             self.is_connected = True
@@ -925,31 +925,31 @@ class QCM(AbstractInstrument):
 
 class ClusterQRM(QRM):
     
-    def __init__(self, name, ip):
-        super().__init__(name, ip)
+    def __init__(self, name, address):
+        super().__init__(name, address)
         from cluster.cluster import cluster_qrm
         self.device_class = cluster_qrm
 
 
 class PulsarQRM(QRM):
     
-    def __init__(self, name, ip):
-        super().__init__(name, ip)
+    def __init__(self, name, address):
+        super().__init__(name, address)
         from pulsar_qrm.pulsar_qrm import pulsar_qrm
         self.device_class = pulsar_qrm
 
 
 class ClusterQCM(QCM):
     
-    def __init__(self, name, ip):
-        super().__init__(name, ip)
+    def __init__(self, name, address):
+        super().__init__(name, address)
         from cluster.cluster import cluster_qcm
         self.device_class = cluster_qcm
 
 
 class PulsarQCM(QCM):
     
-    def __init__(self, name, ip):
-        super().__init__(name, ip)
+    def __init__(self, name, address):
+        super().__init__(name, address)
         from pulsar_qcm.pulsar_qcm import pulsar_qcm
         self.device_class = pulsar_qcm

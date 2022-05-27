@@ -43,7 +43,7 @@ instruments:
     qrm:
         lib: qblox
         class: ClusterQRM
-        ip: 192.168.0.14
+        address: 192.168.0.14
         setup:
             ref_clock: external
             sync_en: true
@@ -61,7 +61,7 @@ instruments:
     lo_qrm:
         lib: rohde_schwarz
         class: SGS100A
-        ip: 192.168.0.7
+        address: 192.168.0.7
         setup:
             frequency: 7_804_715_967
             power: 12
@@ -69,7 +69,7 @@ instruments:
     qcm1:
         lib: qblox
         class: ClusterQCM
-        ip: 192.168.0.12
+        address: 192.168.0.12
         setup:
             ref_clock: external
             sync_en: true
@@ -82,7 +82,7 @@ instruments:
     lo_qcm1:
         lib: rohde_schwarz
         class: SGS100A
-        ip: 192.168.0.8
+        address: 192.168.0.8
         setup:
             frequency: 5_282_221_756
             power: 12

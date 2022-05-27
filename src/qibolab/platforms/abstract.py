@@ -25,10 +25,10 @@ class AbstractPlatform(ABC):
         for name in self.instrument_settings:
             lib = self.instrument_settings[name]['lib']
             i_class = self.instrument_settings[name]['class']
-            ip = self.instrument_settings[name]['ip']
+            address = self.instrument_settings[name]['address']
             from importlib import import_module
             InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
-            instance = InstrumentClass(name, ip)
+            instance = InstrumentClass(name, address)
             # instance.__dict__.update(self.settings['shared_settings'])
             self.instruments[name] = instance    
 

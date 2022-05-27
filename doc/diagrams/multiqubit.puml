@@ -19,7 +19,7 @@ package instruments {
     package instruments/abstract.py{
         class AbstractInstrument{
             name
-            ip
+            address
             is_connected
             signature
             device
@@ -30,7 +30,7 @@ package instruments {
             {abstract} stop
             {abstract} disconnect
             --
-            __init__(name, ip)
+            __init__(name, address)
         }
     }
     package qblox.py{
@@ -47,7 +47,7 @@ package instruments {
             start()
             stop()
             disconnect()
-            __init__(name, ip)
+            __init__(name, address)
             __del__()
         }
         abstract class QCM extends AbstractInstrument{
@@ -61,20 +61,20 @@ package instruments {
             start()
             stop()
             disconnect()
-            __init__(name, ip)
+            __init__(name, address)
             __del__()
         }
         class PulsarQRM extends QRM {
-            __init__(name, ip)
+            __init__(name, address)
         }
         class PulsarQCM extends QCM {
-            __init__(name, ip)
+            __init__(name, address)
         }
         class ClusterQRM extends QRM {
-            __init__(name, ip)
+            __init__(name, address)
         }
         class ClusterQCM extends QCM {
-            __init__(name, ip)
+            __init__(name, address)
         }
     }
     package rohde_schwarz.py {
@@ -91,7 +91,7 @@ package instruments {
             on()
             off()
             stop()
-            __init__(name, ip)
+            __init__(name, address)
             __del__()
         }
     }

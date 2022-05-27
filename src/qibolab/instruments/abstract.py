@@ -8,14 +8,14 @@ class AbstractInstrument(ABC):
     
     Args:
         name (str): Instrument name.
-        ip (str): IP network address.     
+        address (str): Instrument network address.     
     """
 
-    def __init__(self, name, ip):
+    def __init__(self, name, address):
         self.name = name
-        self.ip = ip
+        self.address = address
         self.is_connected = False
-        self.signature = f"{type(self).__name__}@{ip}"
+        self.signature = f"{type(self).__name__}@{address}"
         self.device = None
         self.data_folder = qibolab_folder / "instruments" / "data"
         self.data_folder.mkdir(parents=True, exist_ok=True)

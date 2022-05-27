@@ -6,8 +6,8 @@ from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 
 class SGS100A(AbstractInstrument):
 
-    def __init__(self, name, ip):
-        super().__init__(name, ip)
+    def __init__(self, name, address):
+        super().__init__(name, address)
 
     rw_property_wrapper = lambda parameter: property(lambda self: self.device.get(parameter), lambda self,x: self.device.set(parameter,x))
     power = rw_property_wrapper('power')
@@ -17,7 +17,7 @@ class SGS100A(AbstractInstrument):
         if not self.is_connected:
             import qcodes.instrument_drivers.rohde_schwarz.SGS100A as LO_SGS100A
             try:
-                self.device = LO_SGS100A.RohdeSchwarz_SGS100A(self.name, f"TCPIP0::{self.ip}::inst0::INSTR")
+                self.device = LO_SGS100A.RohdeSchwarz_SGS100A(self.name, f"TCPIP0::{self.address}::inst0::INSTR")
             except Exception as exc:
                 raise InstrumentException(self, str(exc))
             self.is_connected = True
