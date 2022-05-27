@@ -21,7 +21,7 @@ class AbstractPlatform(ABC):
             
         self.instruments = {}
         self.instrument_settings = self.settings['instruments']
-
+        # Instantiate instruments 
         for name in self.instrument_settings:
             lib = self.instrument_settings[name]['lib']
             i_class = self.instrument_settings[name]['class']
@@ -62,6 +62,7 @@ class AbstractPlatform(ABC):
         raise NotImplementedError   
 
     def connect(self):
+        """Connects to lab instruments using the details specified in the calibration settings."""
         if not self.is_connected:
             try:
                 for name in self.instruments:

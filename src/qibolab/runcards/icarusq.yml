@@ -31,11 +31,10 @@ qubits:
 
 instruments:
   awg:
-    init_settings:
-      name: awg
-      address: TCPIP0::192.168.0.2::inst0::INSTR
-    type: TektronixAWG5204
-    settings:
+    ip: TCPIP0::192.168.0.2::inst0::INSTR
+    lib: icarusq
+    class: TektronixAWG5204
+    setup:
       offset: [-0.001, 0, -0.002, 0.016]
       amplitude: [0.75, 0.75, 0.75, 0.75]
       resolution: 14
@@ -51,44 +50,39 @@ instruments:
       channel_phase: [-0.10821, 0.00349066, 0.1850049, -0.0383972]
 
   qb_lo:
-    type: QuicSyn
+    lib: icarusq
+    class: QuicSyn
     lo: true
-    init_settings:
-      name: qb_lo
-      address: ASRL6::INSTR
-    settings:
+    ip: ASRL6::INSTR
+    setup:
       frequency: 3414644400
 
   ro_lo:
-    type: QuicSyn
+    lib: icarusq
+    class: QuicSyn
     lo: true
-    init_settings:
-      name: ro_lo
-      address: ASRL3::INSTR
-    settings:
+    ip: ASRL3::INSTR
+    setup:
       frequency: 5026600000
 
   qb_att:
-    type: MCAttenuator
-    init_settings:
-      name: qb_att
-      address: 192.168.0.9:90
-    settings:
+    lib: icarusq
+    class: MCAttenuator
+    ip: 192.168.0.9:90
+    setup:
       attenuation: 10
 
   ro_att:
-    type: MCAttenuator
-    init_settings:
-      name: ro_att
-      address: 192.168.0.10:100
-    settings:
+    lib: icarusq
+    class: MCAttenuator
+    ip: 192.168.0.10:100
+    setup:
       attenuation: 24
 
   alazar_adc:
-    type: AlazarADC
+    lib: icarusq
+    class: AlazarADC
     adc: true
-    init_settings:
-      name: alazar_adc
-      address: Alazar1
-    settings:
+    ip: Alazar1
+    setup:
       samples: 4992

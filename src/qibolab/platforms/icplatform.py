@@ -60,62 +60,13 @@ class ICPlatform(AbstractPlatform):
         raise_error(NotImplementedError)
     
     def connect(self):
-        """Connects to lab instruments using the details specified in the calibration settings."""
-        if not self.is_connected:
-            from qibo.config import log
-            log.info(f"Connecting to {self.name} instruments.")
-            try:
-                import qibolab.instruments as qi
-                instruments = self._settings.get("instruments")
-                for params in instruments.values():
-                    inst = getattr(qi, params.get("type"))(**params.get("init_settings"))
-                    self._instruments.append(inst)
+        # This method overwrites the platform nethod
+        # TODO: move the connection functionality of the instruments to a connect() method
+        #  so that the connect() method of the abstract platform can be used
+        self.is_connected = True
 
-                    # Use yaml config to track instrument type
-                    if params.get("lo"):
-                        self._lo.append(inst)
 
-                    if params.get("adc"):
-                        self._adc.append(inst)
-                    
-                self.is_connected = True
-            except Exception as exception:
-                from qibo.config import raise_error
-                raise_error(RuntimeError, "Cannot establish connection to "
-                            f"{self.name} instruments. "
-                            f"Error captured: '{exception}'")
-
-    def setup(self):
-        """Configures instruments using the loaded calibration settings."""
-        if self.is_connected:
-            instruments = self._settings.get("instruments")
-            for inst in self._instruments:
-                inst.setup(**instruments.get(inst.name).get("settings"))
-
-    def start(self):
-        """Turns on the local oscillators.
-
-        At this point, the pulse sequence have not been uploaded to the DACs, so they will not be started yet.
-        """
-        for lo in self._lo:
-            lo.start()
-
-    def stop(self):
-        """Turns off all the lab instruments."""
-        for inst in self._instruments:
-            inst.stop()
-
-    def disconnect(self):
-        """Disconnects from the lab instruments."""
-        if self.is_connected:
-            for inst in self._instruments:
-                inst.close()
-            self._instruments = []
-            self._lo = []
-            self._adc = []
-            self.is_connected = False
-
-    def execute(self, sequence, nshots=None):
+    def execute_pulse_sequence(self, sequence, nshots=None):
         """Executes a pulse sequence. Pulses are being cached so that are not reuploaded 
             if they are the same as the ones sent previously. This greatly accelerates 
             some characterization routines that recurrently use the same set of pulses, 

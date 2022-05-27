@@ -168,3 +168,7 @@ class QBloxPlatform(AbstractPlatform):
 
 
         return acquisition_results
+
+    def execute_pulse_sequence(self):
+        from qibo.config import raise_error
+        raise_error(NotImplementedError)
