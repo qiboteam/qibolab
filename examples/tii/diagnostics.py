@@ -17,46 +17,11 @@ from qibolab.pulses import Pulse, ReadoutPulse, Rectangular, Gaussian
 from qibolab.circuit import PulseSequence
 
 
-def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step):
-    #[.     .     .     .     .     .][...................]0[...................][.     .     .     .     .     .]
-    #[-------- lowres_width ---------][-- highres_width --] [-- highres_width --][-------- lowres_width ---------]
-    #>.     .< lowres_step
-    #                                 >..< highres_step
-    #                                                      ^ centre value = 0
-    scanrange = np.concatenate(
-        (   np.arange(-lowres_width,-highres_width,lowres_step),
-            np.arange(-highres_width,highres_width,highres_step),
-            np.arange(highres_width,lowres_width,lowres_step)
-        )
-    )
-    return scanrange
-
-
-def create_measurement_control(name):
-    quantify_folder = qibolab_folder / "calibration" / "data" / "quantify"
-    quantify_folder.mkdir(parents=True, exist_ok=True)
-    set_datadir(quantify_folder)
-    import os
-    if os.environ.get("ENABLE_PLOTMON", True):
-        mc = MeasurementControl(f'MC {name}')
-        from quantify_core.visualization.pyqt_plotmon import PlotMonitor_pyqt
-        plotmon = PlotMonitor_pyqt(f'Plot Monitor {name}')
-        mc.instr_plotmon(plotmon.name)
-        from quantify_core.visualization.instrument_monitor import InstrumentMonitor
-        insmon = InstrumentMonitor(f"Instruments Monitor {name}")
-        mc.instrument_monitor(insmon.name)
-        return mc, plotmon, insmon
-    else:
-        mc = MeasurementControl(f'MC {name}')
-        return mc, plotmon, insmon
-    # TODO: be able to choose which windows are opened and remember their sizes and dimensions 
-   
-
 class Diagnostics():
 
     def __init__(self, platform: Platform):
         self.platform = platform
-        self.mc, self.pl, self.ins = create_measurement_control('Diagnostics')
+        self.mc, self.pl, self.ins = utils.create_measurement_control('Diagnostics')
 
     def load_settings(self):
         # Load diagnostics settings
@@ -94,7 +59,7 @@ class Diagnostics():
 
         #Fast Sweep
         if (self.software_averages !=0):
-            scanrange = variable_resolution_scanrange(self.lowres_width, self.lowres_step, self.highres_width, self.highres_step)
+            scanrange = utils.variable_resolution_scanrange(self.lowres_width, self.lowres_step, self.highres_width, self.highres_step)
             mc.settables(lo_qrm.device.frequency)
             mc.setpoints(scanrange + lo_qrm.frequency)
             mc.gettables(Gettable(ROController(platform, sequence)))
@@ -493,7 +458,7 @@ class Diagnostics():
 
         # Fast Sweep
         platform.software_averages = 1
-        scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
+        scanrange = utils.variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
         mc.settables(platform.lo_qrm.device.frequency)
         mc.setpoints(scanrange + platform.lo_qrm.frequency)
         mc.gettables(Gettable(ROController(platform, sequence)))

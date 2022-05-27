@@ -131,6 +131,8 @@ def plot_qubit_states(gnd_results, exc_results):
 
 def create_measurement_control(name, debug=True):
     import os
+    from qibo.config import log
+    log.info(f"Creating MeasurementControl {name}")
     if os.environ.get("ENABLE_PLOTMON", debug):
         mc = MeasurementControl(f'MC {name}')
         from quantify_core.visualization.pyqt_plotmon import PlotMonitor_pyqt
