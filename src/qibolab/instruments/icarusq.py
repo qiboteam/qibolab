@@ -44,11 +44,11 @@ class VisaInstrument:
     def __init__(self) -> None:
         self._visa_handle = None
 
-    def connect(self, address: str, timeout: int = 10000) -> None:
+    def connect(self, timeout: int = 10000) -> None:
         """Connects to the instrument.
         """
         rm = visa.ResourceManager()
-        self._visa_handle = rm.open_resource(address, timeout=timeout)
+        self._visa_handle = rm.open_resource(self.address, timeout=timeout)
 
     def write(self, msg: Union[bytes, str]) -> None:
         """Writes a message to the instrument.
@@ -81,7 +81,7 @@ class TektronixAWG5204(VisaInstrument):
     """
     def __init__(self, name, address):
         VisaInstrument.__init__(self)
-        self.connect(address)
+        self.address = address
         self.name = name
         self._nchannels = 7
         self._sampling_rate = None
@@ -347,7 +347,7 @@ class QuicSyn(VisaInstrument):
     def __init__(self, name, address):
         VisaInstrument.__init__(self)
         self.name = name
-        self.connect(address)
+        self.address = address
         self.write('0601') # EXT REF
 
     def setup(self, frequency):

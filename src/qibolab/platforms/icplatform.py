@@ -58,13 +58,6 @@ class ICPlatform(AbstractPlatform):
     def run_calibration(self):  # pragma: no cover
         from qibo.config import raise_error
         raise_error(NotImplementedError)
-    
-    def connect(self):
-        # This method overwrites the platform nethod
-        # TODO: move the connection functionality of the instruments to a connect() method
-        #  so that the connect() method of the abstract platform can be used
-        self.is_connected = True
-
 
     def execute_pulse_sequence(self, sequence, nshots=None):
         """Executes a pulse sequence. Pulses are being cached so that are not reuploaded 
