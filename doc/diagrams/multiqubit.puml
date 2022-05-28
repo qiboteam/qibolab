@@ -6,7 +6,7 @@ package runcards {
     entity multiqubit.yml  <<(y, orchid)>> {
         nqubits
         description
-        shared_settings
+        settings
         topology
         channels
         qubit_channel_map

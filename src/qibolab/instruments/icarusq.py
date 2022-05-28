@@ -348,12 +348,13 @@ class QuicSyn(VisaInstrument):
         VisaInstrument.__init__(self)
         self.name = name
         self.address = address
-        self.write('0601') # EXT REF
+
 
     def setup(self, frequency):
         """
         Sets the frequency in Hz
         """
+        self.write('0601') # EXT REF
         self.write('FREQ {0:f}Hz'.format(frequency))
 
     def start(self):
