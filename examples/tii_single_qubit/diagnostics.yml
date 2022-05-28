@@ -47,6 +47,13 @@ ramsey:
   delay_between_pulses_end: 7999
   delay_between_pulses_step: 50
 
+ramsey_freq:
+  t_start: 4
+  t_end: [2000,2000]
+  t_step: 50
+  offset_freq: 1_000_000
+  N_osc: 4
+
 spin_echo:
   delay_between_pulses_start: 4
   delay_between_pulses_end: 500
