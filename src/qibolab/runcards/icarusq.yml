@@ -1,6 +1,6 @@
 name: icarusq
 nqubits: 1
-descraddresstion: Controls the Tektronix AWG5204, AlazarTech ATS9371, two MiniCircuit attenuators and two QuicSyn Lite local oscillators. Qubit sample used is AuAl1_220309.
+description: Controls the Tektronix AWG5204, AlazarTech ATS9371, two MiniCircuit attenuators and two QuicSyn Lite local oscillators. Qubit sample used is AuAl1_220309.
 
 settings:
   delay_before_readout: 0
@@ -34,7 +34,7 @@ instruments:
     address: TCPIP0::192.168.0.2::inst0::INSTR
     lib: icarusq
     class: TektronixAWG5204
-    setup:
+    settings:
       offset: [-0.001, 0, -0.002, 0.016]
       amplitude: [0.75, 0.75, 0.75, 0.75]
       resolution: 14
@@ -54,7 +54,7 @@ instruments:
     class: QuicSyn
     lo: true
     address: ASRL6::INSTR
-    setup:
+    settings:
       frequency: 3414644400
 
   ro_lo:
@@ -62,21 +62,21 @@ instruments:
     class: QuicSyn
     lo: true
     address: ASRL3::INSTR
-    setup:
+    settings:
       frequency: 5026600000
 
   qb_att:
     lib: icarusq
     class: MCAttenuator
     address: 192.168.0.9:90
-    setup:
+    settings:
       attenuation: 10
 
   ro_att:
     lib: icarusq
     class: MCAttenuator
     address: 192.168.0.10:100
-    setup:
+    settings:
       attenuation: 24
 
   alazar_adc:
@@ -84,5 +84,5 @@ instruments:
     class: AlazarADC
     adc: true
     address: Alazar1
-    setup:
+    settings:
       samples: 4992

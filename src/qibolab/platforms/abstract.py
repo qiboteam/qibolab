@@ -29,7 +29,7 @@ class AbstractPlatform(ABC):
             from importlib import import_module
             InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
             instance = InstrumentClass(name, address)
-            # instance.__dict__.update(self.settings['shared_settings'])
+            # instance.__dict__.update(self.settings['settings'])
             self.instruments[name] = instance    
 
     def __getstate__(self):
@@ -76,7 +76,7 @@ class AbstractPlatform(ABC):
                             f"Error captured: '{exception}'")
 
     def setup(self):
-        self.__dict__.update(self.settings['shared_settings'])
+        self.__dict__.update(self.settings['settings'])
         self.topology = self.settings['topology']
         self.channels = self.settings['channels']
         self.qubit_channel_map = self.settings['qubit_channel_map']
@@ -86,8 +86,8 @@ class AbstractPlatform(ABC):
         for qubit in self.qubit_channel_map:
             self.qubit_instrument_map[qubit] = [None, None, None]
             for name in self.instruments:
-                if 'channel_port_map' in self.instrument_settings[name]['setup']:
-                    for channel in self.instrument_settings[name]['setup']['channel_port_map']:
+                if 'channel_port_map' in self.instrument_settings[name]['settings']:
+                    for channel in self.instrument_settings[name]['settings']['channel_port_map']:
                         if channel in self.qubit_channel_map[qubit]:
                              self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
         # Generate ro_channel[qubit], qd_channel[qubit], qf_channel[qubit], qrm[qubit], qcm[qubit], lo_qrm[qubit], lo_qcm[qubit]
@@ -105,10 +105,10 @@ class AbstractPlatform(ABC):
 
             if not self.qubit_instrument_map[qubit][0] is None:
                 self.qrm[qubit]  = self.instruments[self.qubit_instrument_map[qubit][0]]
-                self.lo_qrm[qubit] = self.instruments[self.instrument_settings[self.qubit_instrument_map[qubit][0]]['setup']['lo']]
+                self.lo_qrm[qubit] = self.instruments[self.instrument_settings[self.qubit_instrument_map[qubit][0]]['settings']['lo']]
             if not self.qubit_instrument_map[qubit][1] is None:
                 self.qcm[qubit]  = self.instruments[self.qubit_instrument_map[qubit][1]]
-                self.lo_qcm[qubit] = self.instruments[self.instrument_settings[self.qubit_instrument_map[qubit][1]]['setup']['lo']]
+                self.lo_qcm[qubit] = self.instruments[self.instrument_settings[self.qubit_instrument_map[qubit][1]]['settings']['lo']]
             # TODO: implement qf modules
 
 
@@ -117,7 +117,8 @@ class AbstractPlatform(ABC):
 
         if self.is_connected:
             for name in self.instruments:
-                self.instruments[name].setup(**self.settings['shared_settings'], **self.instrument_settings[name]['setup'])
+                # Set up every with the platform settings and the instrument settings 
+                self.instruments[name].setup(**self.settings['settings'], **self.instrument_settings[name]['settings'])
 
     def start(self):
         if self.is_connected:
