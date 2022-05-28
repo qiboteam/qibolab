@@ -630,8 +630,69 @@ class Diagnostics():
 
         return all_gnd_states, np.mean(all_gnd_states), all_exc_states, np.mean(all_exc_states)
 
+    # Ramsey: RX(pi/2) - wait t(rotates z) - RX(pi/2) - readout
+    def run_ramsey_freq(self):
+        platform = self.platform
+        platform.reload_settings()
+        mc = self.mc
+        
+        ps = platform.settings['settings']
+        start = 0
+        frequency = ps['pi_pulse_frequency']
+        amplitude = ps['pi_pulse_amplitude']
+        duration = ps['pi_pulse_duration']
+        phase = ps['pi_pulse_phase']
 
-    # help classes
+        shape = eval(ps['pi_pulse_shape'])
+        qc_pi_half_pulse_1 = Pulse(start, duration, amplitude/2, frequency, phase, shape)
+        qc_pi_half_pulse_2 = Pulse(qc_pi_half_pulse_1.start + qc_pi_half_pulse_1.duration, duration, amplitude/2, frequency, phase, shape)
+
+        ro_pulse_shape = eval(ps['readout_pulse'].popitem()[1])
+        ro_pulse_settings = ps['readout_pulse']
+        ro_pulse = ReadoutPulse(**ro_pulse_settings, shape = ro_pulse_shape)
+        sequence = PulseSequence()
+        sequence.add(qc_pi_half_pulse_1)
+        sequence.add(qc_pi_half_pulse_2)
+        sequence.add(ro_pulse)
+        
+        ds = self.load_settings()
+        self.pl.tuids_max_num(ds['max_num_plots'])
+        software_averages = ds['software_averages']
+        ds = ds['ramsey_freq']
+        t_start = ds['t_start']
+        t_end = ds['t_end']
+        t_step = ds['t_step']
+        N_osc=ds['N_osc']
+
+        #t_end (optimo) = 3.5 * T2 (limitado por el hardware a 7999ns)
+        # [1000, 2000, 4000, 7999]
+        # condicionar for a no ver incremento de T2
+        for t_max in t_end:
+            offset_freq = (N_osc / t_max) * 1e9 #Hz
+            t_range = np.arange(t_start, t_max, t_step)
+            mc.settables(Settable(RamseyFreqWaitParameter(ro_pulse, qc_pi_half_pulse_2, offset_freq)))
+            mc.setpoints(t_range)
+            mc.gettables(Gettable(ROController(platform, sequence)))
+            platform.start()
+            dataset = mc.run('Ramsey_freq', soft_avg = software_averages)
+            platform.stop()
+
+            # Fitting
+            smooth_dataset, delta_fitting, t2 = fitting.ramsey_fit(dataset)
+            utils.plot(smooth_dataset, dataset, "Ramsey", 1)
+            print(f"\nDelta artificial = {offset_freq}")
+            print(f"\nDelta Fitting = {delta_fitting}")
+            delta_phys = (delta_fitting * 1e9) - offset_freq #corregir unidades???
+            print(f"\nDelta Phys = {delta_phys}")
+            print(f"\nT2 = {t2} ns")
+            #actualizar qubit_freq = qubit_freq +/-? delta phys (delta phys ha de tender a 0)
+            #print desplazamiento de la qubit_freq salvado en runcard
+            #corregir qubit freq en runcard
+            #corregir LO_QCM freq en runcard
+
+        return t2, delta_phys, smooth_dataset, dataset
+
+# help classes
 class QCPulseLengthParameter():
 
     label = 'Qubit Control Pulse Length'
@@ -702,6 +763,24 @@ class RamseyWaitParameter():
         self.qc2_pulse.start = self.pi_pulse_length  + value
         self.ro_pulse.start = self.pi_pulse_length * 2 + value + 4
 
+class RamseyFreqWaitParameter():
+    label = 'Time'
+    unit = 'ns'
+    name = 'ramsey_freq'
+    initial_value = 0
+
+    def __init__(self, ro_pulse,  qc2_pulse, offset_freq):
+        self.ro_pulse = ro_pulse
+        self.qc2_pulse = qc2_pulse
+        self.pi_pulse_length = qc2_pulse.duration
+        self.offset_freq = offset_freq
+
+    def set(self, value):
+        self.ro_pulse.start = self.pi_pulse_length * 2 + value + 4
+        self.qc2_pulse.start = self.pi_pulse_length + value
+        value_phase = (value * 1e-9) * 2 * np.pi * self.offset_freq
+        self.qc2_pulse.phase = value_phase
+        
 class SpinEchoWaitParameter():
     label = 'Time'
     unit = 'ns'

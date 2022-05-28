@@ -37,6 +37,7 @@ settings:
     pi_pulse_duration: 71
     pi_pulse_frequency: 200000000.0
     pi_pulse_gain: 0.3
+    pi_pulse_phase: 0
     pi_pulse_shape: Gaussian(5)
 LO_QCM_settings:
     frequency: 5282221756
@@ -68,6 +69,7 @@ QCM_init_settings:
     ref_clock: external
     sequencer: 0
     sync_en: true
+    is_cluster: true
 QRM_init_settings:
     acq_trigger_mode: sequencer
     hardware_avg_en: true
@@ -76,3 +78,4 @@ QRM_init_settings:
     ref_clock: external
     sequencer: 0
     sync_en: true
+    is_cluster: true

@@ -134,6 +134,20 @@ def ramsey_fit(dataset):
     t2 = 1.0 / popt[4]
     return smooth_dataset, delta_frequency, t2
 
+def ramsey_freq_fit(dataset):
+    pguess = [
+        np.mean(dataset['y0'].values),
+        np.max(dataset['y0'].values) - np.min(dataset['y0'].values),
+        0.5/dataset['x0'].values[np.argmin(dataset['y0'].values)], 
+        np.pi/2,
+        0.1e-6
+    ]
+    popt, pcov = curve_fit(ramsey, dataset['x0'].values, dataset['y0'].values, p0=pguess)
+    smooth_dataset = ramsey(dataset['x0'].values, *popt)
+    delta_phase = popt[3]
+    t2 = 1.0 / popt[4]
+    return smooth_dataset, delta_phase, t2
+
 def resonator_peak(frequency,amplitude,center,sigma,offset):
     #http://openafox.com/science/peak-function-derivations.html
     return (amplitude/np.pi) * (sigma/((frequency-center)**2 + sigma**2) + offset)
