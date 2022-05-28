@@ -12,9 +12,7 @@ def Platform(name, runcard=None):
     if not runcard:
         from qibolab.paths import qibolab_folder
         runcard = qibolab_folder / "runcards" / f"{name}.yml"
-    if name == 'tiiq' or name == 'qili':
-        from qibolab.platforms.qbloxplatform import QBloxPlatform as Device
-    elif name == 'multiqubit':
+    if name == 'multiqubit' or name == 'tiiq' or name == 'qili':
         from qibolab.platforms.multiqubit import MultiqubitPlatform as Device
     elif name == 'icarusq':
         from qibolab.platforms.icplatform import ICPlatform as Device

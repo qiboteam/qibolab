@@ -1,5 +1,6 @@
 nqubits: 5
 description: 5-qubit device controlled with Qblox and R&S instruments.
+
 settings:
     hardware_avg: 1024
     sampling_rate: 1_000_000_000

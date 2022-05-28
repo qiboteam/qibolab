@@ -1,68 +1,104 @@
-name: qili
 nqubits: 1
-description: Controls the PulsarQRM, PulsarQCM and two SGS100A local oscillators.
+description: Qilimanjaro's 1-qubit device controlled with Qblox and R&S instruments.
+
 settings:
-    T1: 2192.895853326451
-    data_folder: .data/
-    delay_before_readout: 4
-    delay_between_pulses: 0
     hardware_avg: 1024
-    pi_pulse_amplitude: 0.15
-    pi_pulse_duration: 182
-    pi_pulse_frequency: 200000000.0
-    pi_pulse_gain: 0.5
-    qubit_freq: 3564000000.0
-    qubit_spectroscopy_min_ro_voltage: 384.0152109234878
-    rabi_oscillations_pi_pulse_min_voltage: 4120.048939919676
+    sampling_rate: 1_000_000_000
+    repetition_duration: 200_000
+    minimum_delay_between_instructions: 4
+
+    qd_spectroscopy_pulse:
+        start: 0
+        duration: 4000        
+        amplitude: 0.4
+        frequency: 200_000_000
+        phase: 0
+        shape: Gaussian(5)
+        type: qd # qubit drive
+
     readout_pulse:
-        amplitude: 0.5
+        start: 4004
         duration: 2000
-        frequency: 20000000.0
-        offset_i: 0
-        offset_q: 0
-    repetition_duration: 200000
-    resonator_freq: 7327595128.299119
-    resonator_spectroscopy_avg_min_ro_voltage: 151.75333182986273
-    resonator_spectroscopy_max_ro_voltage: 1906.4647729320207
-    sampling_rate: 1000000000.0
-    software_averages: 10
-LO_QCM_init_settings:
-    ip: 192.168.0.10
-    label: LO_qcm
-LO_QCM_settings:
-    frequency: 3664000000.0
-    power: 15
-LO_QRM_init_settings:
-    ip: 192.168.0.7
-    label: LO_qrm
-LO_QRM_settings:
-    frequency: 7307595128.299119
-    power: 15
-QCM_init_settings:
-    ip: 192.168.0.3
-    label: qcm
-    ref_clock: internal
-    sequencer: 0
-    sync_en: true
-    is_cluster: false
-QCM_settings:
-    gain: 0.5
-    initial_delay: 0
-    repetition_duration: 200000
-QRM_init_settings:
-    acq_trigger_mode: sequencer
-    hardware_avg_en: true
-    ip: 192.168.0.4
-    label: qrm
-    ref_clock: external
-    sequencer: 0
-    sync_en: true
-    is_cluster: false
-QRM_settings:
-    gain: 0.5
-    initial_delay: 0
-    integration_length: 2000
-    mode: ssb
-    repetition_duration: 200000
-    sampling_rate: 1000000000.0
-    start_sample: 130
+        amplitude: 0.5
+        frequency: 20_000_000
+        phase: 0
+        shape: Rectangular()
+        type: ro # readout
+
+topology: # qubit - qubit connections
+-   [ 1]
+
+channels: [1, 2, 3]
+
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux] 
+    1: [2, 1, null]
+
+instruments:
+    qrm:
+        lib: qblox
+        class: PulsarQRM
+        address: 192.168.0.4
+        settings:
+            ref_clock: external
+            sync_en: true
+            scope_acq_avg_mode_en: true
+            scope_acq_trigger_mode: sequencer
+            gain: 0.5
+            acquisition_start: 130 # minimum 4ns
+            acquisition_duration: 2000
+            mode: ssb
+            channel_port_map:  # Refrigerator Channel : Instrument port
+                2: o1 # IQ Port = out0 & out1
+                3: i1 
+            lo: lo_qrm
+
+    lo_qrm:
+        lib: rohde_schwarz
+        class: SGS100A
+        address: 192.168.0.7
+        settings:
+            frequency: 7_307_595_128.299119
+            power: 15
+
+    qcm:
+        lib: qblox
+        class: PulsarQCM
+        address: 192.168.0.3
+        settings:
+            ref_clock: external # internal?
+            sync_en: true
+            gain: 0.5
+            channel_port_map:  
+                1: o1 # IQ Port = out0 & out1
+            lo: lo_qcm
+
+    lo_qcm:
+        lib: rohde_schwarz
+        class: SGS100A
+        address: 192.168.0.10
+        settings:
+            frequency: 3_664_000_000
+            power: 15
+
+native_gates:
+    single_qubit:
+        1: # qubit number
+            RX:
+                pulse_sequence:
+                    -   start: 0
+                        duration: 182
+                        amplitude: 0.15
+                        frequency: 200_000_000
+                        shape: Gaussian(5)
+                        phase: 0
+                        type: qd # qubit drive
+
+characterization:
+    single_qubit:
+        1:
+            resonator_freq: 7327595128.299119
+            qubit_freq: 3564000000.0
+            T1: 2192.895853326451
+            T2: null
+            mean_gnd_states: null
+            mean_exc_states: null
