@@ -4,6 +4,8 @@ software_averages: 1
 software_averages_precision: 2
 max_num_plots: 2
 
+# Single qubit experiments
+
 resonator_spectroscopy:
   lowres_width: 30_000_000
   lowres_step: 2_000_000
@@ -11,18 +13,6 @@ resonator_spectroscopy:
   highres_step: 200_000
   precision_width: 3_000_000
   precision_step: 100_000
-
-resonator_spectroscopy_shifted:
-  lowres_width: 30.e+6
-  lowres_step: 2.e+6
-  highres_width: 1.e+6
-  highres_step: 0.2e+6
-  precision_width: 0.5e+6
-  precision_step: 0.02e+6
-
-punchout:
-  precision_width: 25.e+6
-  precision_step: 0.5e+6
 
 qubit_spectroscopy:
   fast_start: -500_000_000
@@ -37,19 +27,37 @@ rabi_pulse_length:
   pulse_duration_end: 300
   pulse_duration_step: 1
 
-rabi_pulse_gain:
-  pulse_gain_start: 0
-  pulse_gain_end: 100
-  pulse_gain_step: 1
-
 t1:
   delay_before_readout_start: 4
-  delay_before_readout_end: 50000
+  delay_before_readout_end: 50_000
   delay_before_readout_step: 500
 
 ramsey:
   delay_between_pulses_start: 4
-  delay_between_pulses_end: 50000
+  delay_between_pulses_end: 400
+  delay_between_pulses_step: 1
+
+calibrate_qubit_states:
+  niter: 1024
+
+# Other Experiments
+
+resonator_spectroscopy_shifted:
+  lowres_width: 30.e+6
+  lowres_step: 2.e+6
+  highres_width: 1.e+6
+  highres_step: 0.2e+6
+  precision_width: 0.5e+6
+  precision_step: 0.02e+6
+
+punchout:
+  precision_width: 25.e+6
+  precision_step: 0.5e+6
+
+rabi_pulse_gain:
+  pulse_gain_start: 0
+  pulse_gain_end: 100
+  pulse_gain_step: 1
   delay_between_pulses_step: 500
 
 spin_echo:
@@ -61,3 +69,6 @@ spin_echo_3pulses:
   delay_between_pulses_start: 4
   delay_between_pulses_end: 500
   delay_between_pulses_step: 10
+
+
+# Multi qubit experiments

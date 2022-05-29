@@ -9,8 +9,7 @@ import datetime
 
 script_folder = pathlib.Path(__file__).parent
 
-settings_backups_folder = qibolab_folder / "calibration" / "data" / "settings_backups"
-settings_backups_folder.mkdir(parents=True, exist_ok=True)
+
 
 data_folder = qibolab_folder / "calibration" / "data"
 data_folder.mkdir(parents=True, exist_ok=True)
@@ -31,57 +30,6 @@ def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, high
         )
     )
     return scanrange
-
-def backup_config_file(platform):
-    import os
-    import shutil
-    import errno
-    from datetime import datetime
-    original = str(platform.runcard)
-    original_file_name = pathlib.Path(original).name
-    timestamp = datetime.now()
-    timestamp = timestamp.strftime("%Y%m%d%H%M%S")
-    destination_file_name = timestamp + '_' + original_file_name
-    target = str(settings_backups_folder / destination_file_name)
-
-    print("Copying file: " + original)
-    print("Destination file" + target)
-    shutil.copyfile(original, target)
-    print("Platform settings backup done")
-
-
-def get_config_parameter(dictID, dictID1, key):
-    import os
-    calibration_path = qibolab_folder / 'runcards' / 'tiiq.yml'
-    with open(calibration_path) as file:
-        settings = yaml.safe_load(file)
-    file.close()
-
-    if (not dictID1):
-        return settings[dictID][key]
-    else:
-        return settings[dictID][dictID1][key]
-
-def save_config_parameter(dictID, dictID1, key, value):
-    calibration_path = qibolab_folder / 'runcards' / 'tiiq.yml'
-    with open(calibration_path, "r") as file:
-        settings = yaml.safe_load(file)
-    file.close()
-
-    if (not dictID1):
-        settings[dictID][key] = value
-        print("Saved value: " + str(settings[dictID][key]))
-
-    else:
-        settings[dictID][dictID1][key] = value
-        print("Saved value: " + str(settings[dictID][dictID1][key]))
-
-    # store latest timestamp
-    settings['timestamp'] = datetime.datetime.utcnow()
-
-    with open(calibration_path, "w") as file:
-        settings = yaml.dump(settings, file, sort_keys=False, indent=4)
-    file.close()
 
 def plot(smooth_dataset, dataset, label, type):
     if (type == 0): #cavity plots

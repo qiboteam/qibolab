@@ -77,6 +77,7 @@ class AbstractPlatform(ABC):
 
     def setup(self):
         self.__dict__.update(self.settings['settings'])
+        self.qubits = self.settings['qubits']
         self.topology = self.settings['topology']
         self.channels = self.settings['channels']
         self.qubit_channel_map = self.settings['qubit_channel_map']
@@ -119,6 +120,9 @@ class AbstractPlatform(ABC):
             for name in self.instruments:
                 # Set up every with the platform settings and the instrument settings 
                 self.instruments[name].setup(**self.settings['settings'], **self.instrument_settings[name]['settings'])
+        
+        # Load Characterization settings
+        self.characterization = self.settings['characterization']
 
     def start(self):
         if self.is_connected:
