@@ -25,6 +25,8 @@ settings:
         shape: Rectangular()
         type: ro # readout
 
+qubits: [1]
+
 topology: # qubit - qubit connections
 -   [ 1]
 
