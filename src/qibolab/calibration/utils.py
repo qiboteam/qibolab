@@ -40,7 +40,7 @@ def backup_config_file(platform):
     original = str(platform.runcard)
     original_file_name = pathlib.Path(original).name
     timestamp = datetime.now()
-    timestamp = timestamp.strftime("%d%m%Y%H%M%S")
+    timestamp = timestamp.strftime("%Y%m%d%H%M%S")
     destination_file_name = timestamp + '_' + original_file_name
     target = str(settings_backups_folder / destination_file_name)
 
