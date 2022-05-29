@@ -80,7 +80,7 @@ class QRM(AbstractInstrument):
                 # print(f"Resetting {self.name}")
                 self.device.reset()            # Configure clock source
                 # DEBUG: QRM Log device Reset
-                # print("QCM status:")
+                # print("QRM reset. Status:")
                 # print(self.device.get_system_status())
             self.set_device_parameter('reference_source', self.ref_clock)
             for n in range(self.device._num_sequencers):
@@ -592,7 +592,7 @@ class QCM(AbstractInstrument):
                 # print(f"Resetting {self.name}")
                 self.device.reset()
                 # DEBUG: QCM Log device Reset                
-                # print("QCM status:")
+                # print("QCM reset. Status:")
                 # print(self.device.get_system_status())
             # Configure clock source
             self.set_device_parameter('reference_source', self.ref_clock)
@@ -731,7 +731,10 @@ class QCM(AbstractInstrument):
 
                 wait_time = time_between_repetitions
                 extra_wait = wait_time % self.wait_loop_step
-                num_wait_loops = (wait_time - extra_wait) // self. wait_loop_step
+                if extra_wait < 4:
+                    self.wait_loop_step += 1
+                    extra_wait = wait_time % self.wait_loop_step
+                num_wait_loops = (wait_time - extra_wait) // self.wait_loop_step
 
                 header = f"""
                 move {nshots},R0 # nshots
@@ -752,9 +755,6 @@ class QCM(AbstractInstrument):
                 if extra_wait > 0: 
                     footer += f"""
                         wait {extra_wait}"""
-                else:
-                    footer += f"""
-                        # wait 0"""
 
                 footer += f"""
                 loop R0,@loop
@@ -763,7 +763,9 @@ class QCM(AbstractInstrument):
 
                 # Add an initial wait instruction for the first pulse of the sequence
                 wait_time = pulses[sequencer][0].start
-                extra_wait = wait_time % self.wait_loop_step
+                if extra_wait < 4:
+                    self.wait_loop_step += 1
+                    extra_wait = wait_time % self.wait_loop_step
                 num_wait_loops = (wait_time - extra_wait) // self. wait_loop_step
 
                 if wait_time > 0:
@@ -779,9 +781,6 @@ class QCM(AbstractInstrument):
                     if extra_wait > 0: 
                         initial_wait_instruction += f"""
                     wait {extra_wait}"""
-                    else:
-                        initial_wait_instruction += f"""
-                    # wait 0"""
                 else:
                     initial_wait_instruction = """
                     # wait 0"""
