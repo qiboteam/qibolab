@@ -244,7 +244,9 @@ class QRM(AbstractInstrument):
                 assert time_between_repetitions > 0
 
                 wait_time = time_between_repetitions
-                extra_wait = wait_time % self.wait_loop_step
+                if extra_wait < 4:
+                    self.wait_loop_step += 1
+                    extra_wait = wait_time % self.wait_loop_step
                 num_wait_loops = (wait_time - extra_wait) // self. wait_loop_step
 
                 header = f"""
@@ -277,7 +279,9 @@ class QRM(AbstractInstrument):
 
                 # Add an initial wait instruction for the first pulse of the sequence
                 wait_time = pulses[sequencer][0].start
-                extra_wait = wait_time % self.wait_loop_step
+                if extra_wait < 4:
+                    self.wait_loop_step += 1
+                    extra_wait = wait_time % self.wait_loop_step
                 num_wait_loops = (wait_time - extra_wait) // self. wait_loop_step
 
                 if wait_time > 0:
