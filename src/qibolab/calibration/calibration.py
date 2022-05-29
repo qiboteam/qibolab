@@ -13,9 +13,8 @@ from qibolab import Platform
 from quantify_core.measurement.control import Gettable, Settable
 from quantify_core.data.handling import set_datadir
 from scipy.signal import savgol_filter
-from qibolab.pulses import Pulse, ReadoutPulse
+from qibolab.pulses import Pulse, ReadoutPulse, Rectangular, Gaussian
 from qibolab.circuit import PulseSequence
-from qibolab.pulse_shapes import Rectangular, Gaussian
 
 
 script_folder = pathlib.Path(__file__).parent
@@ -376,31 +375,31 @@ class Calibration():
 
         # run and save cavity spectroscopy calibration
         resonator_freq, avg_min_voltage, max_ro_voltage, smooth_dataset, dataset = self.run_resonator_spectroscopy()
-        utils.save_config_parameter("settings", "", "resonator_freq", float(resonator_freq))
-        utils.save_config_parameter("settings", "", "resonator_spectroscopy_avg_min_ro_voltage", float(avg_min_voltage))
-        utils.save_config_parameter("settings", "", "resonator_spectroscopy_max_ro_voltage", float(max_ro_voltage))
-        utils.save_config_parameter("LO_QRM_settings", "", "frequency", float(resonator_freq - 20_000_000)) #cambiar IF hardcoded
+        self.save_config_parameter("settings", "", "resonator_freq", float(resonator_freq))
+        self.save_config_parameter("settings", "", "resonator_spectroscopy_avg_min_ro_voltage", float(avg_min_voltage))
+        self.save_config_parameter("settings", "", "resonator_spectroscopy_max_ro_voltage", float(max_ro_voltage))
+        self.save_config_parameter("LO_QRM_settings", "", "frequency", float(resonator_freq - 20_000_000)) #cambiar IF hardcoded
 
         # run and save qubit spectroscopy calibration
         qubit_freq, min_ro_voltage, smooth_dataset, dataset = self.run_qubit_spectroscopy()
-        utils.save_config_parameter("settings", "", "qubit_freq", float(qubit_freq))
-        utils.save_config_parameter("LO_QCM_settings", "", "frequency", float(qubit_freq + 200_000_000)) #cambiar IF hardcoded
-        utils.save_config_parameter("settings", "", "qubit_spectroscopy_min_ro_voltage", float(min_ro_voltage))
+        self.save_config_parameter("settings", "", "qubit_freq", float(qubit_freq))
+        self.save_config_parameter("LO_QCM_settings", "", "frequency", float(qubit_freq + 200_000_000)) #cambiar IF hardcoded
+        self.save_config_parameter("settings", "", "qubit_spectroscopy_min_ro_voltage", float(min_ro_voltage))
 
         # run Rabi and save Pi pulse calibration
         dataset, pi_pulse_duration, pi_pulse_amplitude, pi_pulse_gain, rabi_oscillations_pi_pulse_min_voltage, t1 = self.run_rabi_pulse_length()
-        utils.save_config_parameter("settings", "", "pi_pulse_duration", int(pi_pulse_duration))
-        utils.save_config_parameter("settings", "", "pi_pulse_amplitude", float(pi_pulse_amplitude))
-        utils.save_config_parameter("settings", "", "pi_pulse_gain", float(pi_pulse_gain))
-        utils.save_config_parameter("settings", "", "rabi_oscillations_pi_pulse_min_voltage", float(rabi_oscillations_pi_pulse_min_voltage))
+        self.save_config_parameter("settings", "", "pi_pulse_duration", int(pi_pulse_duration))
+        self.save_config_parameter("settings", "", "pi_pulse_amplitude", float(pi_pulse_amplitude))
+        self.save_config_parameter("settings", "", "pi_pulse_gain", float(pi_pulse_gain))
+        self.save_config_parameter("settings", "", "rabi_oscillations_pi_pulse_min_voltage", float(rabi_oscillations_pi_pulse_min_voltage))
 
         # run Ramsey and save T2 calibration
         t2, delta_frequency, smooth_dataset, dataset = self.run_ramsey()
         print(f"\nDelta Frequency = {delta_frequency}")
         print(f"\nT2 = {t2} ns")
-        utils.save_config_parameter("settings", "", "T2", float(t2))
-        utils.save_config_parameter("settings", "", "qubit_freq", float(qubit_freq + delta_frequency)) #AO: Doucle check delta sign
-        utils.save_config_parameter("LO_QCM_settings", "", "frequency", float(qubit_freq + 200_000_000)) #cambiar IF hardcoded
+        self.save_config_parameter("settings", "", "T2", float(t2))
+        self.save_config_parameter("settings", "", "qubit_freq", float(qubit_freq + delta_frequency)) #AO: Doucle check delta sign
+        self.save_config_parameter("LO_QCM_settings", "", "frequency", float(qubit_freq + 200_000_000)) #cambiar IF hardcoded
 
         #run calibration_qubit_states
         all_gnd_states, mean_gnd_states, all_exc_states, mean_exc_states = self.callibrate_qubit_states()
@@ -408,9 +407,39 @@ class Calibration():
         # print(mean_exc_states)
         #TODO: Remove plot qubit states results when tested and save complex in yaml???
         utils.plot_qubit_states(all_gnd_states, all_exc_states)
-        utils.save_config_parameter("settings", "", "mean_gnd_states", str(mean_gnd_states)) #DF: Check complex from str
-        utils.save_config_parameter("settings", "", "mean_exc_states", str(mean_exc_states))
+        self.save_config_parameter("settings", "", "mean_gnd_states", str(mean_gnd_states)) #DF: Check complex from str
+        self.save_config_parameter("settings", "", "mean_exc_states", str(mean_exc_states))
+    
+    def get_config_parameter(self, parameter, *keys):
+        import os
+        calibration_path = self.platform.runcard
+        with open(calibration_path) as file:
+            settings = yaml.safe_load(file)
+        file.close()
 
+        node = settings
+        for key in keys:
+            node = node.get(key)
+        return node[parameter]
+
+    def save_config_parameter(self, parameter, value, *keys):
+        calibration_path = self.platform.runcard
+        with open(calibration_path, "r") as file:
+            settings = yaml.safe_load(file)
+        file.close()
+
+        node = settings
+        for key in keys:
+            node = node.get(key)
+        node[parameter] = value
+
+        # store latest timestamp
+        import datetime
+        settings['timestamp'] = datetime.datetime.utcnow()
+
+        with open(calibration_path, "w") as file:
+            settings = yaml.dump(settings, file, sort_keys=False, indent=4)
+        file.close()
 
 # help classes
 class QCPulseLengthParameter():

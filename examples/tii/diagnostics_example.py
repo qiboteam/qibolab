@@ -18,7 +18,7 @@ ds = diagnostics.Diagnostics(platform)
 #   from qibolab.calibration import utils
 #   utils.backup_config_file(platform)
 #   resonator_freq, avg_min_voltage, max_ro_voltage, smooth_dataset, dataset = ds.run_resonator_spectroscopy()
-#   utils.save_config_parameter("settings", "", "resonator_freq", float(resonator_freq))
+#   ds.save_config_parameter("resonator_freq", float(resonator_freq), "settings")
 
 resonator_freq, avg_min_voltage, max_ro_voltage, smooth_dataset, dataset = ds.run_resonator_spectroscopy()
 qubit_freq, min_ro_voltage, smooth_dataset, dataset = ds.run_qubit_spectroscopy()

@@ -538,12 +538,6 @@ class Diagnostics():
 
 
 
-
-
-
-
-
-
     def callibrate_qubit_states(self):
         platform = self.platform
         platform.reload_settings()
@@ -615,7 +609,37 @@ class Diagnostics():
         platform.stop()
 
         return all_gnd_states, np.mean(all_gnd_states), all_exc_states, np.mean(all_exc_states)
+   
+    def get_config_parameter(self, parameter, *keys):
+        import os
+        calibration_path = self.platform.runcard
+        with open(calibration_path) as file:
+            settings = yaml.safe_load(file)
+        file.close()
 
+        node = settings
+        for key in keys:
+            node = node.get(key)
+        return node[parameter]
+
+    def save_config_parameter(self, parameter, value, *keys):
+        calibration_path = self.platform.runcard
+        with open(calibration_path, "r") as file:
+            settings = yaml.safe_load(file)
+        file.close()
+
+        node = settings
+        for key in keys:
+            node = node.get(key)
+        node[parameter] = value
+
+        # store latest timestamp
+        import datetime
+        settings['timestamp'] = datetime.datetime.utcnow()
+
+        with open(calibration_path, "w") as file:
+            settings = yaml.dump(settings, file, sort_keys=False, indent=4)
+        file.close()
 
     # help classes
 class QCPulseLengthParameter():
