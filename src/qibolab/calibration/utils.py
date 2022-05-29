@@ -38,23 +38,17 @@ def backup_config_file(platform):
     import errno
     from datetime import datetime
     original = str(platform.runcard)
-    now = datetime.now()
-    now = now.strftime("%d%m%Y%H%M%S")
-    destination_file_name = "tiiq_" + now + ".yml"
+    original_file_name = pathlib.Path(original).name
+    timestamp = datetime.now()
+    timestamp = timestamp.strftime("%d%m%Y%H%M%S")
+    destination_file_name = timestamp + '_' + original_file_name
     target = str(settings_backups_folder / destination_file_name)
 
-    try:
-        print("Copying file: " + original)
-        print("Destination file" + target)
-        shutil.copyfile(original, target)
-        print("Platform settings backup done")
-    except IOError as e:
-        # ENOENT(2): file does not exist, raised also on missing dest parent dir
-        if e.errno != errno.ENOENT:
-            raise
-            # try creating parent directories
-        os.makedirs(os.path.dirname(target))
-        shutil.copy(original, target)
+    print("Copying file: " + original)
+    print("Destination file" + target)
+    shutil.copyfile(original, target)
+    print("Platform settings backup done")
+
 
 def get_config_parameter(dictID, dictID1, key):
     import os
