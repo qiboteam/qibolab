@@ -630,8 +630,118 @@ class Diagnostics():
 
         return all_gnd_states, np.mean(all_gnd_states), all_exc_states, np.mean(all_exc_states)
 
+    def fromReadout(self, readout, min_voltage, max_voltage):
+        norm = max_voltage - min_voltage
+        normalized_voltage =  (readout[0] * 1e6 - min_voltage) / norm
+        return normalized_voltage
 
-    # help classes
+    def toSequence(self, gates):   
+        #read settings
+        platform = self.platform
+        platform.reload_settings()
+        ps = platform.settings['settings']
+                
+        sequenceDuration = 0
+        sequence = PulseSequence()
+        
+        start = 0
+        frequency = ps['pi_pulse_frequency']
+        amplitude = ps['pi_pulse_amplitude']
+        duration = ps['pi_pulse_duration']
+        phase = 0
+        shape = eval(ps['pi_pulse_shape'])
+
+        for gate in gates:    
+            if (gate == "I"):
+                print("Transforming to sequence I gate")
+                sequence.add(Pulse(start, duration, 0, frequency, phase, shape))
+            
+            if (gate == "RX(pi)"):
+                print("Transforming to sequence RX(pi) gate")
+                sequence.add(Pulse(start, duration, amplitude, frequency, phase, shape))
+
+            if (gate == "RX(pi/2)"):
+                print("Transforming to sequence RX(pi/2) gate")
+                sequence.add(Pulse(start, int(duration/2), amplitude, frequency, phase, shape))
+
+            if (gate == "RY(pi)"):
+                print("Transforming to sequence RY(pi) gate")
+                sequence.add(Pulse(start, duration, amplitude, frequency, (phase+np.pi), shape))
+
+            if (gate == "RY(pi/2)"):
+                print("Transforming to sequence RY(pi/2) gate")
+                sequence.add(Pulse(start, int(duration/2), amplitude, frequency, (phase+np.pi), shape))
+            
+            sequenceDuration = sequenceDuration + duration
+            start = duration
+
+        #RO pulse starting just after pi pulse
+        ro_start = sequenceDuration + 4
+        ro_pulse_settings = ps['readout_pulse']
+        ro_duration = ro_pulse_settings['duration']
+        ro_amplitude = ro_pulse_settings['amplitude']
+        ro_frequency = ro_pulse_settings['frequency']
+        ro_phase = ro_pulse_settings['phase']
+        ro_pulse = ReadoutPulse(ro_start, ro_duration, ro_amplitude, ro_frequency, ro_phase, Rectangular())  
+        sequence.add(ro_pulse)
+
+        return sequence
+
+
+    def allXY(self):
+        platform = self.platform
+        platform.reload_settings()
+        ps = platform.settings['settings']
+        
+        #allXY rotations
+        gatelist = [
+            ["I","I"], 
+            ["RX(pi)","RX(pi)"],
+            ["RY(pi)","RY(pi)"],    
+            ["RX(pi)","RY(pi)"],        
+            ["RY(pi)","RX(pi)"],
+            ["RX(pi/2)","I"],        
+            ["RY(pi/2)","I"],            
+            ["RX(pi/2)","RY(pi/2)"],            
+            ["RX(pi/2)","RY(pi/2)"],                
+            ["RX(pi/2)","RY(pi)"],                
+            ["RY(pi/2)","RX(pi)"],                
+            ["RX(pi)","RY(pi/2)"],                
+            ["RX(pi)","RX(pi/2)"],                
+            ["RX(pi/2)","RX(pi)"],                            
+            ["RX(pi)","RX(pi/2)"],                
+            ["RY(pi/2)","RY(pi)"],                
+            ["RY(pi)","RY(pi/2)"],                
+            ["RX(pi)","I"],  
+            ["RY(pi)","I"],                
+            ["RX(pi/2)","RX(pi/2)"],                
+            ["RY(pi/2)","RY(pi/2)"]                
+           ]
+
+        results = []
+        gateNumber = []
+        min_voltage = ps['rabi_oscillations_pi_pulse_min_voltage']
+        max_voltage = ps['resonator_spectroscopy_max_ro_voltage']
+        n = 0 
+        for gates in gatelist:
+            #transform gate string to pulseSequence
+            seq = self.toSequence(gates)      
+            #Execute PulseSequence defined by gates
+            platform.start()
+            state = platform.execute(seq, nshots=1024)
+            platform.stop()
+            #transform readout I and Q into probabilities
+            res = self.fromReadout(state, min_voltage, max_voltage)
+            res = (2 * res) - 1
+            results.append(res)
+            gateNumber.append(n)
+            n=n+1
+
+        return results, gateNumber
+
+
+
+# help classes
 class QCPulseLengthParameter():
 
     label = 'Qubit Control Pulse Length'
