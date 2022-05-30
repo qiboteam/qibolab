@@ -49,7 +49,7 @@ ramsey:
 
 ramsey_freq:
   t_start: 4
-  t_end: [2000,2000]
+  t_end: [2000,2000,2000,2000] # [1000, 2000, 4000, 7999] #t_end (optimal) = 3.5 * T2 (limited by HW to 7999ns)
   t_step: 50
   offset_freq: 1_000_000
   N_osc: 4

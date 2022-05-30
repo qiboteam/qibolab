@@ -233,10 +233,10 @@ class Diagnostics():
 
         print(f"\nQubit Frequency = {qubit_freq}")
         utils.plot(smooth_dataset, dataset, "Qubit_Spectroscopy", 1)
-        print("Qubit freq ontained from MC results: ", qubit_freq)
+        print("Qubit freq obtained from MC results: ", qubit_freq)
         f0, BW, Q = fitting.lorentzian_fit("last", min, "Qubit_Spectroscopy")
         qubit_freq = (f0*1e9 - qc_pulse.frequency)
-        print("Qubit freq ontained from fitting: ", qubit_freq)
+        print("Qubit freq obtained from fitting: ", qubit_freq)
         return qubit_freq, min_ro_voltage, smooth_dataset, dataset
 
     def run_rabi_pulse_length(self):
@@ -663,34 +663,59 @@ class Diagnostics():
         t_end = ds['t_end']
         t_step = ds['t_step']
         N_osc=ds['N_osc']
-
-        #t_end (optimo) = 3.5 * T2 (limitado por el hardware a 7999ns)
-        # [1000, 2000, 4000, 7999]
-        # condicionar for a no ver incremento de T2
+        stop = False
+        
+        #TODO: Add condition to stop if T2 is not increasing in each iteration
         for t_max in t_end:
-            offset_freq = (N_osc / t_max) * 1e9 #Hz
-            t_range = np.arange(t_start, t_max, t_step)
-            mc.settables(Settable(RamseyFreqWaitParameter(ro_pulse, qc_pi_half_pulse_2, offset_freq)))
-            mc.setpoints(t_range)
-            mc.gettables(Gettable(ROController(platform, sequence)))
-            platform.start()
-            dataset = mc.run('Ramsey_freq', soft_avg = software_averages)
-            platform.stop()
+            if (stop == False):
+                offset_freq = (N_osc / t_max) * 1e9 #Hz
+                t_range = np.arange(t_start, t_max, t_step)
+                mc.settables(Settable(RamseyFreqWaitParameter(ro_pulse, qc_pi_half_pulse_2, offset_freq)))
+                mc.setpoints(t_range)
+                mc.gettables(Gettable(ROController(platform, sequence)))
+                platform.start()
+                dataset = mc.run('Ramsey_freq', soft_avg = software_averages)
+                platform.stop()
 
-            # Fitting
-            smooth_dataset, delta_fitting, t2 = fitting.ramsey_fit(dataset)
-            utils.plot(smooth_dataset, dataset, "Ramsey", 1)
-            print(f"\nDelta artificial = {offset_freq}")
-            print(f"\nDelta Fitting = {delta_fitting}")
-            delta_phys = (delta_fitting * 1e9) - offset_freq #corregir unidades???
-            print(f"\nDelta Phys = {delta_phys}")
-            print(f"\nT2 = {t2} ns")
-            #actualizar qubit_freq = qubit_freq +/-? delta phys (delta phys ha de tender a 0)
-            #print desplazamiento de la qubit_freq salvado en runcard
-            #corregir qubit freq en runcard
-            #corregir LO_QCM freq en runcard
+                # Fitting
+                smooth_dataset, delta_fitting, new_t2 = fitting.ramsey_fit(dataset)
+                utils.plot(smooth_dataset, dataset, "Ramsey", 1)
+                delta_phys = (delta_fitting * 1e9) - offset_freq
+                                
+                print(f"\nDelta artificial = {offset_freq} Hz")
+                print(f"\nDelta Fitting = {delta_fitting * 1e9} Hz")
+                print(f"\nDelta Phys = {delta_phys} Hz")
+                print(f"\nT2 = {new_t2} ns")
+                
+                T2 = ps['T2']
+                if (new_t2 > T2):
+                    # Updating qubit_freq in runcard
+                    # qubit_freq = qubit_freq - delta_phys (check sign but with minus sign delta phys seems to tend to 0) 
+                    qubit_freq = ps['qubit_freq'] + (delta_phys)
+                    print(
+                        "Updating qubit_freq from: " + str(ps['qubit_freq'])
+                        + " Hz to: " + str(qubit_freq) + "Hz"
+                        )
+                    utils.save_config_parameter("settings", "", "qubit_freq", float(qubit_freq))
 
-        return t2, delta_phys, smooth_dataset, dataset
+                    #Update LO_QCM_freq in runcard
+                    LO_QCM_settings = platform.settings['LO_QCM_settings']
+                    print(
+                        "Updating LO_QCM_freq from: " + str(LO_QCM_settings['frequency'])
+                        + " Hz to: " + str((qubit_freq + 200_000_000)) + "Hz"
+                        )
+                    utils.save_config_parameter("LO_QCM_settings", "", "frequency", float(qubit_freq + 200_000_000))
+
+                    #Update new T2 in runcard
+                    utils.save_config_parameter("settings", "", "T2", float(new_t2))
+                            
+                    platform.reload_settings()
+                    ps = platform.settings['settings']
+
+                else:
+                    stop = True
+
+        return new_t2, delta_phys, smooth_dataset, dataset
 
 # help classes
 class QCPulseLengthParameter():
