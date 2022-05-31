@@ -32,65 +32,52 @@ class RuncardSchema:
         qc_spectroscopy_pulse: PulseSequence
         readout_pulse: PulseSequence
 
-    @nested_dataclass
-    class Instruments:
-        """Instruments dictionary."""
-        @nested_dataclass
-        class QRM:
-            """QRM dictionary."""
-            @dataclass
-            class QRMSetup:
-                """QRM setup dictionary."""
-                ref_clock: str
-                sync_en: bool
-                scope_acq_avg_mode_en: bool
-                scope_acq_trigger_mode: str
-                gain: float
-                acquisition_start: int
-                acquisition_duration: int
-                mode: str
-                channel_port_map: Dict[int, str]
-                lo: str
+    @dataclass
+    class Instrument:
+        """Instrument dictionary."""
+        @dataclass
+        class QRMSetup:
+            """QRM setup dictionary."""
+            ref_clock: str
+            sync_en: bool
+            scope_acq_avg_mode_en: bool
+            scope_acq_trigger_mode: str
+            gain: float
+            acquisition_start: int
+            acquisition_duration: int
+            mode: str
+            channel_port_map: Dict[int, str]
+            lo: str
 
-            lib: str
-            classname: str
-            ip: str
-            setup: QRMSetup
+        @dataclass
+        class QCMSetup:
+            """QCM setup dictionary."""
+            ref_clock: str
+            sync_en: bool
+            gain: float
+            channel_port_map: Dict[int, str]
+            lo: str
 
-        @nested_dataclass
-        class QCM:
-            """QCM dictionary."""
-            @dataclass
-            class QCMSetup:
-                """QCM setup dictionary."""
-                ref_clock: str
-                sync_en: bool
-                gain: float
-                channel_port_map: Dict[int, str]
-                lo: str
-            lib: str
-            classname: str
-            ip: str
-            setup: QCMSetup
+        @dataclass
+        class LOSetup:
+            """LO setup dictionary."""
+            frequency: float
+            power: float
 
-        @nested_dataclass
-        class LO:
-            """LO dictionary."""
-            @dataclass
-            class LOSetup:
-                """LO setup dictionary."""
-                frequency: float
-                power: float
+        name: str
+        lib: str
+        classname: str
+        ip: str
+        setup: QRMSetup | QCMSetup | LOSetup
 
-            lib: str
-            classname: str
-            ip: str
-            setup: LOSetup
+        def __post_init__(self):
+            if self.name == "qcm":
+                self.setup = self.QCMSetup(**self.setup)
+            elif self.name == "qrm":
+                self.setup = self.QRMSetup(**self.setup)
+            elif self.name in ["lo_qcm", "lo_qrm"]:
+                self.setup = self.LOSetup(**self.setup)
 
-        qrm: QRM
-        lo_qrm: LO
-        qcm1: QCM
-        lo_qcm1: LO
 
     @nested_dataclass
     class NativeGates:
@@ -138,9 +125,12 @@ class RuncardSchema:
     nqubits: int
     description: str
     shared_settings: SharedSettings
-    topology: np.ndarray
-    channels: np.ndarray
+    topology: List[List[int]]
+    channels: List[int]
     qubit_channel_map: Dict[int, List[int]]  # dictionary with integer keys and list values
-    instruments: Instruments
+    instruments: List[Instrument]
     native_gates: NativeGates
     characterization: Characterisation
+
+    def __post_init__(self):
+        self.instruments = [self.Instrument(**instrument) for instrument in self.instruments]

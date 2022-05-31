@@ -1,6 +1,9 @@
 from qibo.config import log
 from abc import ABC, abstractmethod
+from dataclasses import asdict
 import yaml
+
+from qibolab.utils import RuncardSchema
 
 
 class AbstractPlatform(ABC):
@@ -10,40 +13,40 @@ class AbstractPlatform(ABC):
         name (str): name of the platform.
         runcard (str): path to the yaml file containing the platform setup.
     """
+
+    settings: RuncardSchema  # we set the type to make sure mypy warns us if we are defining settings with another type
+
     def __init__(self, name, runcard):
         log.info(f"Loading platform {name} from runcard {runcard}")
         self.name = name
         self.runcard = runcard
-        self.is_connected = False        
+        self.is_connected = False
         # Load platform settings
         with open(runcard, "r") as file:
-            self.settings = yaml.safe_load(file)
-            
-        self.instruments = {}
-        self.instrument_settings = self.settings['instruments']
+            self.settings = RuncardSchema(yaml.safe_load(file))
 
-        for name in self.instrument_settings:
-            lib = self.instrument_settings[name]['lib']
-            i_class = self.instrument_settings[name]['class']
-            ip = self.instrument_settings[name]['ip']
+        self.instruments = {}
+        self.instrument_settings = self.settings.instruments
+
+        for instrument in self.settings.instruments:
             from importlib import import_module
-            InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
-            instance = InstrumentClass(name, ip)
+            InstrumentClass = getattr(import_module(f"qibolab.instruments.{instrument.lib}"), instrument.classname)
+            instance = InstrumentClass(instrument.name, instrument.ip)
             # instance.__dict__.update(self.settings['shared_settings'])
-            self.instruments[name] = instance    
+            self.instruments[instrument.name] = instance
 
     def __getstate__(self):
         return {
             "name": self.name,
             "runcard": self.runcard,
-            "settings": self.settings,
+            "settings": asdict(self.settings),
             "is_connected": self.is_connected
         }
 
     def __setstate__(self, data):
         self.name = data.get("name")
         self.runcard = data.get("runcard")
-        self.settings = data.get("settings")
+        self.settings = RuncardSchema(data.get("settings"))
         self.is_connected = data.get("is_connected")
 
     def _check_connected(self):
@@ -53,13 +56,13 @@ class AbstractPlatform(ABC):
 
     def reload_settings(self):
         with open(self.runcard, "r") as file:
-            self.settings = yaml.safe_load(file)
+            self.settings = RuncardSchema(yaml.safe_load(file))
         self.setup()
 
     @abstractmethod
     def run_calibration(self, show_plots=False):  # pragma: no cover
         """Executes calibration routines and updates the settings yml file"""
-        raise NotImplementedError   
+        raise NotImplementedError
 
     def connect(self):
         if not self.is_connected:
@@ -75,20 +78,20 @@ class AbstractPlatform(ABC):
                             f"Error captured: '{exception}'")
 
     def setup(self):
-        self.__dict__.update(self.settings['shared_settings'])
-        self.topology = self.settings['topology']
-        self.channels = self.settings['channels']
-        self.qubit_channel_map = self.settings['qubit_channel_map']
-        
+        self.__dict__.update(asdict(self.settings.shared_settings))
+        self.topology = self.settings.topology
+        self.channels = self.settings.channels
+        self.qubit_channel_map = self.settings.qubit_channel_map
+
         # Generate qubit_instrument_map from qubit_channel_map and the instruments' channel_port_maps
         self.qubit_instrument_map = {}
         for qubit in self.qubit_channel_map:
             self.qubit_instrument_map[qubit] = [None, None, None]
-            for name in self.instruments:
-                if 'channel_port_map' in self.instrument_settings[name]['setup']:
-                    for channel in self.instrument_settings[name]['setup']['channel_port_map']:
+            for instrument in self.settings.instruments:
+                if hasattr(instrument.setup, 'channel_port_map'):
+                    for channel in instrument.setup.channel_port_map:
                         if channel in self.qubit_channel_map[qubit]:
-                             self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
+                             self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = instrument.name
         # Generate ro_channel[qubit], qd_channel[qubit], qf_channel[qubit], qrm[qubit], qcm[qubit], lo_qrm[qubit], lo_qcm[qubit]
         self.ro_channel = {}
         self.qd_channel = {}
@@ -102,13 +105,13 @@ class AbstractPlatform(ABC):
             self.qd_channel[qubit] = self.qubit_channel_map[qubit][1]
             self.qf_channel[qubit] = self.qubit_channel_map[qubit][2]
 
-            if not self.qubit_instrument_map[qubit][0] is None:
+            if self.qubit_instrument_map[qubit][0] is not None:
                 self.qrm[qubit]  = self.instruments[self.qubit_instrument_map[qubit][0]]
                 self.lo_qrm[qubit] = self.instruments[self.instrument_settings[self.qubit_instrument_map[qubit][0]]['setup']['lo']]
-            if not self.qubit_instrument_map[qubit][1] is None:
+            if self.qubit_instrument_map[qubit][1] is not None:
                 self.qcm[qubit]  = self.instruments[self.qubit_instrument_map[qubit][1]]
                 self.lo_qcm[qubit] = self.instruments[self.instrument_settings[self.qubit_instrument_map[qubit][1]]['setup']['lo']]
-            # TODO: implement qf modules
+                # TODO: implement qf modules
 
 
         # Load Native Gates

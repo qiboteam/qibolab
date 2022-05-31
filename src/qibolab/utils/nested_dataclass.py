@@ -20,11 +20,6 @@ def nested_dataclass(*args, **kwargs):
                         raise ValueError("Using a non-dictionary object as argument to a dataclass.")
                     new_obj = field_type(**value)
                     kwargs[name] = new_obj
-                if field_type == np.ndarray:
-                    if not isinstance(value, list):
-                        raise ValueError("Using a non-list object as argument to a numpy array.")
-                    new_obj = np.array(value)
-                    kwargs[name] = new_obj
             original_init(self, *args, **kwargs)
 
         cls.__init__ = __init__

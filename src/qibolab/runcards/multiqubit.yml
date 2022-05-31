@@ -40,7 +40,7 @@ qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
     5: [11, 9, 10]
 
 instruments:
-    qrm:
+    -   name: qrm
         lib: qblox
         classname: ClusterQRM
         ip: 192.168.0.14
@@ -58,7 +58,7 @@ instruments:
                 #12: i1
             lo: lo_qrm
 
-    lo_qrm:
+    -   name: lo_qrm
         lib: rohde_schwarz
         classname: SGS100A
         ip: 192.168.0.7
@@ -66,7 +66,7 @@ instruments:
             frequency: 7_804_715_967
             power: 12
 
-    qcm1:
+    -   name: qcm
         lib: qblox
         classname: ClusterQCM
         ip: 192.168.0.12
@@ -79,7 +79,7 @@ instruments:
                 3: o2 # IQ Port = out2 & out3
             lo: lo_qcm1
 
-    lo_qcm1:
+    -   name: lo_qcm
         lib: rohde_schwarz
         classname: SGS100A
         ip: 192.168.0.8
