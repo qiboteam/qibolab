@@ -23,7 +23,7 @@ class AbstractPlatform(ABC):
         self.is_connected = False
         # Load platform settings
         with open(runcard, "r") as file:
-            self.settings = RuncardSchema(yaml.safe_load(file))
+            self.settings = RuncardSchema(**yaml.safe_load(file))
 
         self.instruments = {}
         self.instrument_settings = self.settings.instruments
@@ -46,7 +46,7 @@ class AbstractPlatform(ABC):
     def __setstate__(self, data):
         self.name = data.get("name")
         self.runcard = data.get("runcard")
-        self.settings = RuncardSchema(data.get("settings"))
+        self.settings = RuncardSchema(**data.get("settings"))
         self.is_connected = data.get("is_connected")
 
     def _check_connected(self):
@@ -56,7 +56,7 @@ class AbstractPlatform(ABC):
 
     def reload_settings(self):
         with open(self.runcard, "r") as file:
-            self.settings = RuncardSchema(yaml.safe_load(file))
+            self.settings = RuncardSchema(**yaml.safe_load(file))
         self.setup()
 
     @abstractmethod
