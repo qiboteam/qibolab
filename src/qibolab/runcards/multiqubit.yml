@@ -7,7 +7,7 @@ shared_settings:
     minimum_delay_between_instructions: 4
     qc_spectroscopy_pulse:
         start: 0
-        duration: 4000        
+        duration: 4000
         amplitude: 0.4
         frequency: 200_000_000
         phase: 0
@@ -32,7 +32,7 @@ topology: # qubit - qubit connections
 
 channels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
-qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux] 
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
     1: [11, 1, 2]
     2: [11, 3, 4]
     3: [11, 5, 6]
@@ -42,7 +42,7 @@ qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
 instruments:
     qrm:
         lib: qblox
-        class: ClusterQRM
+        classname: ClusterQRM
         ip: 192.168.0.14
         setup:
             ref_clock: external
@@ -55,12 +55,12 @@ instruments:
             mode: ssb
             channel_port_map:  # Refrigerator Channel : Instrument port
                 11: o1 # IQ Port = out0 & out1
-                #12: i1 
+                #12: i1
             lo: lo_qrm
 
     lo_qrm:
         lib: rohde_schwarz
-        class: SGS100A
+        classname: SGS100A
         ip: 192.168.0.7
         setup:
             frequency: 7_804_715_967
@@ -68,20 +68,20 @@ instruments:
 
     qcm1:
         lib: qblox
-        class: ClusterQCM
+        classname: ClusterQCM
         ip: 192.168.0.12
         setup:
             ref_clock: external
             sync_en: true
             gain: 0.3
-            channel_port_map:  
+            channel_port_map:
                 1: o1 # IQ Port = out0 & out1
                 3: o2 # IQ Port = out2 & out3
             lo: lo_qcm1
 
     lo_qcm1:
         lib: rohde_schwarz
-        class: SGS100A
+        classname: SGS100A
         ip: 192.168.0.8
         setup:
             frequency: 5_282_221_756
@@ -90,45 +90,45 @@ instruments:
 native_gates:
     single_qubit:
         1: # qubit number
-            RX:
-                pulse_sequence:
-                    -   start: 0
-                        duration: 31
-                        amplitude: 0.4
-                        frequency: 200_000_000
-                        shape: Gaussian(5)
-                        phase: 0
-                        type: qd # qubit drive
-            MZ:
-                pulse_sequence:
-                    -   start: 0
-                        duration: 2000
-                        amplitude: 0.9
-                        frequency: 20_000_000
-                        shape: Rectangular()
-                        phase: 0
-                        type: ro # readout
+            - name: RX
+              pulse_sequence:
+                -   start: 0
+                    duration: 31
+                    amplitude: 0.4
+                    frequency: 200_000_000
+                    shape: Gaussian(5)
+                    phase: 0
+                    type: qd # qubit drive
+            - name: MZ
+              pulse_sequence:
+                -   start: 0
+                    duration: 2000
+                    amplitude: 0.9
+                    frequency: 20_000_000
+                    shape: Rectangular()
+                    phase: 0
+                    type: ro # readout
 
     two_qubit:
         1-3: # qubit numbers
-            CZ:
-                pulse_sequence:
-                    -   start: 0
-                        duration: 20
-                        amplitude: 0.5
-                        frequency: 0
-                        shape: RTZ()
-                        phase: null
-                        channel: 2
-                        type: qf # qubit flux
-                    -   start: 0
-                        duration: 4
-                        amplitude: 0.01
-                        frequency: 0
-                        shape: RTZ()
-                        phase: null
-                        channel: 2
-                        type: qf # qubit flux
+            - name: CZ
+              pulse_sequence:
+                -   start: 0
+                    duration: 20
+                    amplitude: 0.5
+                    frequency: 0
+                    shape: RTZ()
+                    phase: null
+                    channel: 2
+                    type: qf # qubit flux
+                -   start: 0
+                    duration: 4
+                    amplitude: 0.01
+                    frequency: 0
+                    shape: RTZ()
+                    phase: null
+                    channel: 2
+                    type: qf # qubit flux
 
 characterization:
     single_qubit:
