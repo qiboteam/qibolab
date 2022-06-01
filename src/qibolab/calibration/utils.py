@@ -120,6 +120,25 @@ def plot(smooth_dataset, dataset, label, type):
         plt.savefig(data_folder / f"{label}.pdf")
         return
 
+def plot_ramsey(smooth_dataset, dataset, label, type):
+    if (type == 0): #cavity plots
+        fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
+        ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
+        ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
+        ax.title.set_text(label)
+        ax.plot(dataset['x0'].values[smooth_dataset.argmax()], smooth_dataset[smooth_dataset.argmax()], 'o', color='C2')
+        plt.savefig(pathlib.Path("data") / f"{label}.pdf")
+        return
+
+    if (type == 1): #qubit spec, rabi, ramsey, t1 plots
+        fig, ax = plt.subplots(1, 1, figsize=(15, 15/2/1.61))
+        ax.plot(dataset['x0'].values, dataset['y0'].values,'-',color='C0')
+        ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
+        ax.title.set_text(label)
+        ax.plot(dataset['x0'].values[smooth_dataset.argmin()], smooth_dataset[smooth_dataset.argmin()], 'o', color='C2')
+        plt.savefig(data_folder / f"{label}.pdf")
+        return
+
 def plot_qubit_states(gnd_results, exc_results):
     plt.figure(figsize=[4,4])
     # Plot all the results
