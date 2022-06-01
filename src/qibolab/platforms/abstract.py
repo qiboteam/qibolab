@@ -20,12 +20,11 @@ class AbstractPlatform(ABC):
             self.settings = yaml.safe_load(file)
             
         self.instruments = {}
-        self.instrument_settings = self.settings['instruments']
         # Instantiate instruments 
-        for name in self.instrument_settings:
-            lib = self.instrument_settings[name]['lib']
-            i_class = self.instrument_settings[name]['class']
-            address = self.instrument_settings[name]['address']
+        for name in self.settings['instruments']:
+            lib = self.settings['instruments'][name]['lib']
+            i_class = self.settings['instruments'][name]['class']
+            address = self.settings['instruments'][name]['address']
             from importlib import import_module
             InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
             instance = InstrumentClass(name, address)
@@ -87,8 +86,8 @@ class AbstractPlatform(ABC):
         for qubit in self.qubit_channel_map:
             self.qubit_instrument_map[qubit] = [None, None, None]
             for name in self.instruments:
-                if 'channel_port_map' in self.instrument_settings[name]['settings']:
-                    for channel in self.instrument_settings[name]['settings']['channel_port_map']:
+                if 'channel_port_map' in self.settings['instruments'][name]['settings']:
+                    for channel in self.settings['instruments'][name]['settings']['channel_port_map']:
                         if channel in self.qubit_channel_map[qubit]:
                              self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
         # Generate ro_channel[qubit], qd_channel[qubit], qf_channel[qubit], qrm[qubit], qcm[qubit], lo_qrm[qubit], lo_qcm[qubit]
@@ -106,10 +105,10 @@ class AbstractPlatform(ABC):
 
             if not self.qubit_instrument_map[qubit][0] is None:
                 self.qrm[qubit]  = self.instruments[self.qubit_instrument_map[qubit][0]]
-                self.lo_qrm[qubit] = self.instruments[self.instrument_settings[self.qubit_instrument_map[qubit][0]]['settings']['lo']]
+                self.lo_qrm[qubit] = self.instruments[self.settings['instruments'][self.qubit_instrument_map[qubit][0]]['settings']['lo']]
             if not self.qubit_instrument_map[qubit][1] is None:
                 self.qcm[qubit]  = self.instruments[self.qubit_instrument_map[qubit][1]]
-                self.lo_qcm[qubit] = self.instruments[self.instrument_settings[self.qubit_instrument_map[qubit][1]]['settings']['lo']]
+                self.lo_qcm[qubit] = self.instruments[self.settings['instruments'][self.qubit_instrument_map[qubit][1]]['settings']['lo']]
             # TODO: implement qf modules
 
 
@@ -119,7 +118,7 @@ class AbstractPlatform(ABC):
         if self.is_connected:
             for name in self.instruments:
                 # Set up every with the platform settings and the instrument settings 
-                self.instruments[name].setup(**self.settings['settings'], **self.instrument_settings[name]['settings'])
+                self.instruments[name].setup(**self.settings['settings'], **self.settings['instruments'][name]['settings'])
         
         # Load Characterization settings
         self.characterization = self.settings['characterization']
