@@ -1,7 +1,8 @@
 from qibo.config import log
 from abc import ABC, abstractmethod
 import yaml
-
+from qibolab.circuit import PulseSequence
+from qibolab.pulses import Pulse, ReadoutPulse, Rectangular, Gaussian, Drag
 
 class AbstractPlatform(ABC):
     """Abstract platform for controlling quantum devices.
@@ -156,3 +157,52 @@ class AbstractPlatform(ABC):
             Readout results acquired by after execution.
         """
         raise NotImplementedError
+
+
+    def add_u3_to_pulse_sequence(self, pulse_sequence:PulseSequence, theta, phi, lam, qubit=1):
+        """Convert a U3 gate into a sequence of pulses and add them to the PulseSequence object passed as a parameter.
+
+        Args:
+            pulse_sequence (PulseSequence): The PulseSequence object on which the new pulses will be added
+            theta, phi, lam (float): Parameters of the U3 gate.
+            qubit (int): the physical qubit to which the pulses are addressed
+        """
+
+        # Fetch pi/2 pulse from calibration
+        RX = self.native_gates['single_qubit'][qubit]['RX']
+
+        RX90_duration = RX['duration']
+        RX90_amplitude = RX['amplitude']/2
+        RX90_frequency = RX['frequency']
+        RX90_shape = RX['shape']
+        RX90_type = RX['type']
+        RX90_channel = self.qubit_channel_map[qubit][1]
+
+        # apply RZ(lam)
+        pulse_sequence.phase += lam
+        # apply RX(pi/2)
+        pulse_sequence.add(Pulse(pulse_sequence.time, RX90_duration, RX90_amplitude/2, RX90_frequency, pulse_sequence.phase, RX90_shape, RX90_channel, RX90_type))
+        pulse_sequence.time += RX90_duration
+        # apply RZ(theta)
+        pulse_sequence.phase += theta
+        # apply RX(-pi/2)
+        import math
+        pulse_sequence.phase -= math.pi
+        pulse_sequence.add(Pulse(pulse_sequence.time, RX90_duration, RX90_amplitude/2, RX90_frequency, pulse_sequence.phase, RX90_shape, RX90_channel, RX90_type))
+        pulse_sequence.time += RX90_duration
+        # apply RZ(phi)
+        pulse_sequence.phase += phi
+        
+
+    def add_measurement_to_pulse_sequence(self,  pulse_sequence:PulseSequence, qubit=1):
+        """Add measurement gate to the PulseSequence object passed as a parameter.
+        
+        Args:
+            pulse_sequence (PulseSequence): The PulseSequence object on which the new pulse will be added 
+            qubit (int): the physical qubit to which the pulses are addressed
+        """
+        MZ = self.native_gates['single_qubit'][qubit]['MZ']
+        MZ_duration = MZ['duration']
+        MZ_channel = self.qubit_channel_map[qubit][0]
+        pulse_sequence.add(ReadoutPulse(start = pulse_sequence.time, **MZ, phase = pulse_sequence.phase, channel = MZ_channel))
+        pulse_sequence.time += MZ_duration

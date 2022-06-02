@@ -72,56 +72,6 @@ class PulseSequence:
 
         self.pulses.append(pulse)
 
-    def add_u3(self, theta, phi, lam, qubit=0):
-        """Add pulses that implement a U3 gate.
-
-        Args:
-            theta, phi, lam (float): Parameters of the U3 gate.
-        """
-        from qibolab.pulses import Gaussian
-        # Fetch pi/2 pulse from calibration
-        if hasattr(K.platform, "qubits"):
-            kwargs = K.platform.fetch_qubit_pi_pulse(qubit)
-        else:
-            kwargs = {
-                "amplitude": K.platform.pi_pulse_amplitude,
-                "duration": K.platform.pi_pulse_duration,
-                "frequency": K.platform.pi_pulse_frequency
-            }
-        kwargs["duration"] = kwargs["duration"] // 2
-        delay = K.platform.delay_between_pulses
-        duration = kwargs.get("duration")
-        kwargs["shape"] = Gaussian(5)
-
-        # apply RZ(lam)
-        self.phase += lam
-        # apply RX(pi/2)
-        kwargs["start"] = self.time
-        kwargs["phase"] = self.phase
-        self.add(pulses.Pulse(**kwargs))
-        self.time += duration + delay
-        # apply RZ(theta)
-        self.phase += theta
-        # apply RX(-pi/2)
-        kwargs["start"] = self.time
-        kwargs["phase"] = self.phase - math.pi
-        self.add(pulses.Pulse(**kwargs))
-        self.time += duration + delay
-        # apply RZ(phi)
-        self.phase += phi
-
-    def add_measurement(self, qubit=0):
-        """Add measurement pulse."""
-        from qibolab.pulses import Rectangular
-        if hasattr(K.platform, "qubits"):
-            kwargs = K.platform.fetch_qubit_readout_pulse(qubit)
-        else:
-            kwargs = K.platform.readout_pulse
-        kwargs["start"] = self.time + K.platform.delay_before_readout
-        kwargs["phase"] = self.phase
-        kwargs["shape"] = Rectangular()
-        self.add(pulses.ReadoutPulse(**kwargs))
-
 
 class HardwareCircuit(circuit.Circuit):
 
