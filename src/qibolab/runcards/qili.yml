@@ -67,7 +67,7 @@ instruments:
         class: PulsarQCM
         address: 192.168.0.3
         settings:
-            ref_clock: external # internal?
+            ref_clock: internal
             sync_en: true
             gain: 0.5
             channel_port_map:  
