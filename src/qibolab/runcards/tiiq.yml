@@ -85,23 +85,17 @@ native_gates:
     single_qubit:
         1: # qubit number
             RX:
-                pulse_sequence:
-                    -   start: 0
-                        duration: 71
-                        amplitude: 0.4
-                        frequency: 200_000_000
-                        shape: Gaussian(5)
-                        phase: 0
-                        type: qd # qubit drive
+                duration: 71
+                amplitude: 0.4
+                frequency: 200_000_000
+                shape: Gaussian(5)
+                type: qd # qubit drive
             MZ:
-                pulse_sequence:
-                    -   start: 0
-                        duration: 2000
-                        amplitude: 0.9
-                        frequency: 20_000_000
-                        shape: Rectangular()
-                        phase: 0
-                        type: ro # readout
+                duration: 2000
+                amplitude: 0.9
+                frequency: 20_000_000
+                shape: Rectangular()
+                type: ro # readout
 
 characterization:
     single_qubit:
