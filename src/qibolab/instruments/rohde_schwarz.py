@@ -14,13 +14,24 @@ class SGS100A(AbstractInstrument):
     frequency = rw_property_wrapper('frequency')
 
     def connect(self):
+        """
+        Connects to the instrument using the IP address set in the runcard.
+        """
         if not self.is_connected:
             import qcodes.instrument_drivers.rohde_schwarz.SGS100A as LO_SGS100A
-            try:
-                self.device = LO_SGS100A.RohdeSchwarz_SGS100A(self.name, f"TCPIP0::{self.address}::inst0::INSTR")
-            except Exception as exc:
-                raise InstrumentException(self, str(exc))
-            self.is_connected = True
+            from pyvisa.errors import VisaIOError
+            for attempt in range(3):
+                try:
+                    self.device = LO_SGS100A.RohdeSchwarz_SGS100A(self.name, f"TCPIP0::{self.address}::5025::SOCKET")
+                    self.is_connected = True
+                    break
+                except KeyError as exc:
+                    print(f"Unable to connect:\n{str(exc)}\nRetrying...")
+                    self.name += '_' + str(attempt)
+                except Exception as exc:
+                    print(f"Unable to connect:\n{str(exc)}\nRetrying...")
+            if not self.is_connected:
+                raise InstrumentException(self, f'Unable to connect to {self.name}')
         else:
             raise_error(Exception,'There is an open connection to the instrument already')
 
@@ -41,7 +52,6 @@ class SGS100A(AbstractInstrument):
 
     def disconnect(self):
         if self.is_connected:
-            self.device.off()
             self.device.close()
             self.is_connected = False
 
@@ -57,7 +67,6 @@ class SGS100A(AbstractInstrument):
 
     def close(self):
         if self.is_connected:
-            self.off()
             self.device.close()
             self.is_connected = False
 
