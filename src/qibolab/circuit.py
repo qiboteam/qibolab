@@ -23,9 +23,10 @@ class PulseSequence:
     def __len__(self):
         return len(self.pulses)
 
+    @property
     def serial(self):
         """Serial form of the whole sequence using the serial of each pulse."""
-        return ", ".join(pulse.serial() for pulse in self.pulses)
+        return ", ".join(pulse.serial for pulse in self.pulses)
 
     def add(self, pulse):
         """Add a pulse to the sequence.
@@ -76,7 +77,7 @@ class PulseSequence:
 class HardwareCircuit(circuit.Circuit):
 
     def __init__(self, nqubits):
-        if nqubits > 1:
+        if nqubits > 1: # TODO: Fetch platform nqubits
             raise ValueError("Device has only one qubit.")
         super().__init__(nqubits)
 
