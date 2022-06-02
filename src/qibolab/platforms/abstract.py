@@ -169,26 +169,25 @@ class AbstractPlatform(ABC):
         """
 
         # Fetch pi/2 pulse from calibration
-        RX = self.native_gates['single_qubit'][qubit]['RX']
+        RX = self.settings['native_gates']['single_qubit'][qubit]['RX']
 
         RX90_duration = RX['duration']
         RX90_amplitude = RX['amplitude']/2
         RX90_frequency = RX['frequency']
         RX90_shape = RX['shape']
         RX90_type = RX['type']
-        RX90_channel = self.qubit_channel_map[qubit][1]
+        RX90_channel = self.settings['qubit_channel_map'][qubit][1]
 
         # apply RZ(lam)
         pulse_sequence.phase += lam
         # apply RX(pi/2)
-        pulse_sequence.add(Pulse(pulse_sequence.time, RX90_duration, RX90_amplitude/2, RX90_frequency, pulse_sequence.phase, RX90_shape, RX90_channel, RX90_type))
+        pulse_sequence.add(Pulse(pulse_sequence.time, RX90_duration, RX90_amplitude, RX90_frequency, pulse_sequence.phase, RX90_shape, RX90_channel, RX90_type))
         pulse_sequence.time += RX90_duration
         # apply RZ(theta)
         pulse_sequence.phase += theta
         # apply RX(-pi/2)
         import math
-        pulse_sequence.phase -= math.pi
-        pulse_sequence.add(Pulse(pulse_sequence.time, RX90_duration, RX90_amplitude/2, RX90_frequency, pulse_sequence.phase, RX90_shape, RX90_channel, RX90_type))
+        pulse_sequence.add(Pulse(pulse_sequence.time, RX90_duration, RX90_amplitude, RX90_frequency, pulse_sequence.phase - math.pi, RX90_shape, RX90_channel, RX90_type))
         pulse_sequence.time += RX90_duration
         # apply RZ(phi)
         pulse_sequence.phase += phi
@@ -201,8 +200,8 @@ class AbstractPlatform(ABC):
             pulse_sequence (PulseSequence): The PulseSequence object on which the new pulse will be added 
             qubit (int): the physical qubit to which the pulses are addressed
         """
-        MZ = self.native_gates['single_qubit'][qubit]['MZ']
+        MZ = self.settings['native_gates']['single_qubit'][qubit]['MZ']
         MZ_duration = MZ['duration']
-        MZ_channel = self.qubit_channel_map[qubit][0]
+        MZ_channel = self.settings['qubit_channel_map'][qubit][0]
         pulse_sequence.add(ReadoutPulse(start = pulse_sequence.time, **MZ, phase = pulse_sequence.phase, channel = MZ_channel))
         pulse_sequence.time += MZ_duration
