@@ -66,7 +66,7 @@ class AbstractPlatform(ABC):
         if not self.is_connected:
             try:
                 for name in self.instruments:
-                    log.info(f"Connecting to {self.name} instruments {name}.")
+                    log.info(f"Connecting to {self.name} instrument {name}.")
                     self.instruments[name].connect()
                 self.is_connected = True
             except Exception as exception:

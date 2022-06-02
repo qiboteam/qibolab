@@ -29,11 +29,19 @@ class QRM(AbstractInstrument):
         Connects to the instrument using the IP address set in the runcard.
         """
         if not self.is_connected:
-            try:
-                self.device = self.device_class(self.name, self.address)
-            except Exception as exc:
-                raise InstrumentException(self, str(exc))
-            self.is_connected = True
+            from pyvisa.errors import VisaIOError
+            for attempt in range(3):
+                try:
+                    self.device = self.device_class(self.name, self.address)
+                    self.is_connected = True
+                    break
+                except KeyError:
+                    print(f"Unable to connect:\n{str(exc)}\nRetrying...")
+                    self.name += '_' + str(attempt)
+                except Exception as exc:
+                    print(f"Unable to connect:\n{str(exc)}\nRetrying...")
+            if not self.is_connected:
+                raise InstrumentException(self, f'Unable to connect to {self.name}')
         else:
             raise_error(Exception,'There is an open connection to the instrument already')
 
@@ -73,7 +81,8 @@ class QRM(AbstractInstrument):
         # Hardcoded values used to generate sequence program
         self.wait_loop_step = 1000
         self.waveform_max_length = 16384//2 # maximum length of the combination of waveforms, per sequencer, in number of samples (defined by the sequencer memory).
-
+        self.device_num_sequencers = self.device._num_sequencers
+        self.device_num_ports = 1
         if self.is_connected:
             # Reset
             if self.current_pulsesequence_hash != self.last_pulsequence_hash:
@@ -83,24 +92,14 @@ class QRM(AbstractInstrument):
                 # print("QRM reset. Status:")
                 # print(self.device.get_system_status())
             self.set_device_parameter('reference_source', self.ref_clock)
-            for n in range(self.device._num_sequencers):
-                # Configure the sequencers synchronization.
-                self.set_device_parameter(f"sequencer{n}_sync_en", False)
-                # Disable all sequencer - port connections
-                for out in range(0, 4):
-                    if hasattr(self.device, f"sequencer{n}_channel_map_path{out%2}_out{out}_en"):
-                        self.set_device_parameter(f"sequencer{n}_channel_map_path{out%2}_out{out}_en", False)
-                # The mapping of sequencers to ports is done in upload() as the number of sequencers needed 
-                # can only be determined after examining the pulse sequence
-
-            self.device.scope_acq_trigger_mode_path0(self.scope_acq_trigger_mode) # sets scope acquisition trigger mode for input path 0 (‘sequencer’ = triggered by sequencer, ‘level’ = triggered by input level).
-            self.device.scope_acq_trigger_mode_path1(self.scope_acq_trigger_mode)
+            self.set_device_parameter('scope_acq_trigger_mode_path0', self.scope_acq_trigger_mode) # sets scope acquisition trigger mode for input path 0 (‘sequencer’ = triggered by sequencer, ‘level’ = triggered by input level).
+            self.set_device_parameter('scope_acq_trigger_mode_path1', self.scope_acq_trigger_mode)
             sequencer = 0 # TODO: move to yaml?
-            self.device.scope_acq_sequencer_select(sequencer) # specifies which sequencer triggers the scope acquisition when using sequencer trigger mode
-            
-            self.device.scope_acq_avg_mode_en_path0(self.scope_acq_avg_mode_en) # sets scope acquisition averaging mode enable for input path 0
-            self.device.scope_acq_avg_mode_en_path1(self.scope_acq_avg_mode_en)
-
+            self.set_device_parameter('scope_acq_sequencer_select', sequencer) # specifies which sequencer triggers the scope acquisition when using sequencer trigger mode
+            self.set_device_parameter('scope_acq_avg_mode_en_path0', self.scope_acq_avg_mode_en) # sets scope acquisition averaging mode enable for input path 0
+            self.set_device_parameter('scope_acq_avg_mode_en_path1', self.scope_acq_avg_mode_en)
+            # The mapping of sequencers to ports is done in upload() as the number of sequencers needed 
+            # can only be determined after examining the pulse sequence
         else:
             raise_error(Exception,'There is no connection to the instrument')
 
@@ -403,16 +402,23 @@ class QRM(AbstractInstrument):
     def upload(self):
         """Uploads waveforms and programs all sequencers and arms them in preparation for execution."""
         # Setup
-        for sequencer in self.sequencers:
-            # Route sequencers to specific outputs.
-            port = int(self.channel_port_map[self.sequencer_channel_map[sequencer]][1:])-1
-            self.set_device_parameter(f"sequencer{sequencer}_channel_map_path0_out{2*port}_en", True)
-            self.set_device_parameter(f"sequencer{sequencer}_channel_map_path1_out{2*port+1}_en", True)
-            # Enable sequencer syncronisation
-            self.set_device_parameter(f"sequencer{sequencer}_sync_en", self.sync_en)
-            # Set gain
-            self.set_device_parameter(f"sequencer{sequencer}_gain_awg_path0", self.gain)
-            self.set_device_parameter(f"sequencer{sequencer}_gain_awg_path1", self.gain)
+        for sequencer in range(self.device_num_sequencers):
+            if sequencer in self.sequencers:
+                # Route sequencers to specific outputs.
+                port = int(self.channel_port_map[self.sequencer_channel_map[sequencer]][1:])-1
+                self.set_device_parameter(f"sequencer{sequencer}_channel_map_path0_out{2*port}_en", True)
+                self.set_device_parameter(f"sequencer{sequencer}_channel_map_path1_out{2*port+1}_en", True)
+                # Enable sequencer syncronisation
+                self.set_device_parameter(f"sequencer{sequencer}_sync_en", self.sync_en)
+                # Set gain
+                self.set_device_parameter(f"sequencer{sequencer}_gain_awg_path0", self.gain)
+                self.set_device_parameter(f"sequencer{sequencer}_gain_awg_path1", self.gain)
+            else:
+                # Configure the sequencers synchronization.
+                self.set_device_parameter(f"sequencer{sequencer}_sync_en", False)
+                # Disable all sequencer - port connections
+                for out in range(0, 2 * self.device_num_ports):
+                    self.set_device_parameter(f"sequencer{sequencer}_channel_map_path{out%2}_out{out}_en", False)
     
         # Upload
         if self.current_pulsesequence_hash != self.last_pulsequence_hash:
@@ -522,7 +528,6 @@ class QRM(AbstractInstrument):
     def disconnect(self):
         """Disconnects from the instrument."""
         if self.is_connected:
-            self.stop()
             self.device.close()
             self.is_connected = False
     
@@ -553,11 +558,19 @@ class QCM(AbstractInstrument):
         Connects to the instrument using the IP address set in the runcard.
         """
         if not self.is_connected:
-            try:
-                self.device = self.device_class(self.name, self.address)
-            except Exception as exc:
-                raise InstrumentException(self, str(exc))
-            self.is_connected = True
+            from pyvisa.errors import VisaIOError
+            for attempt in range(3):
+                try:
+                    self.device = self.device_class(self.name, self.address)
+                    self.is_connected = True
+                    break
+                except KeyError:
+                    print(f"Unable to connect:\n{str(exc)}\nRetrying...")
+                    self.name += '_' + str(attempt)
+                except Exception as exc:
+                    print(f"Unable to connect:\n{str(exc)}\nRetrying...")
+            if not self.is_connected:
+                raise InstrumentException(self, f'Unable to connect to {self.name}')
         else:
             raise_error(Exception,'There is an open connection to the instrument already')
 
@@ -591,7 +604,8 @@ class QCM(AbstractInstrument):
         # Hardcoded values used to generate sequence program
         self.wait_loop_step = 1000
         self.waveform_max_length = 16384//2 # maximum length of the combination of waveforms, per sequencer, in number of samples (defined by the sequencer memory).
-
+        self.device_num_sequencers = self.device._num_sequencers
+        self.device_num_ports = 2
         if self.is_connected:
             # Reset
             if self.current_pulsesequence_hash != self.last_pulsequence_hash:
@@ -602,14 +616,8 @@ class QCM(AbstractInstrument):
                 # print(self.device.get_system_status())
             # Configure clock source
             self.set_device_parameter('reference_source', self.ref_clock)
-            for n in range(self.device._num_sequencers):
-                # Configure the sequencers synchronization.
-                self.set_device_parameter(f"sequencer{n}_sync_en", False)
-                # Disable all sequencer - port connections
-                for out in range(0, 4):
-                        self.set_device_parameter(f"sequencer{n}_channel_map_path{out%2}_out{out}_en", False)
-                # The mapping of sequencers to ports is done in upload() as the number of sequencers needed 
-                # can only be determined after examining the pulse sequence
+            # The mapping of sequencers to ports is done in upload() as the number of sequencers needed 
+            # can only be determined after examining the pulse sequence
         else:
             raise_error(Exception,'There is no connection to the instrument')
 
@@ -866,16 +874,24 @@ class QCM(AbstractInstrument):
     def upload(self):
         """Uploads waveforms and programs all sequencers and arms them in preparation for execution."""
         # Setup
-        for sequencer in self.sequencers:
-            # Route sequencers to specific outputs.
-            port = int(self.channel_port_map[self.sequencer_channel_map[sequencer]][1:])-1
-            self.set_device_parameter(f"sequencer{sequencer}_channel_map_path0_out{2*port}_en", True)
-            self.set_device_parameter(f"sequencer{sequencer}_channel_map_path1_out{2*port+1}_en", True)
-            # Enable sequencer syncronisation
-            self.set_device_parameter(f"sequencer{sequencer}_sync_en", self.sync_en)
-            # Set gain
-            self.set_device_parameter(f"sequencer{sequencer}_gain_awg_path0", self.gain)
-            self.set_device_parameter(f"sequencer{sequencer}_gain_awg_path1", self.gain)
+        for sequencer in range(self.device_num_sequencers):
+            if sequencer in self.sequencers:
+                # Route sequencers to specific outputs.
+                port = int(self.channel_port_map[self.sequencer_channel_map[sequencer]][1:])-1
+                self.set_device_parameter(f"sequencer{sequencer}_channel_map_path0_out{2*port}_en", True)
+                self.set_device_parameter(f"sequencer{sequencer}_channel_map_path1_out{2*port+1}_en", True)
+                # Enable sequencer syncronisation
+                self.set_device_parameter(f"sequencer{sequencer}_sync_en", self.sync_en)
+                # Set gain
+                self.set_device_parameter(f"sequencer{sequencer}_gain_awg_path0", self.gain)
+                self.set_device_parameter(f"sequencer{sequencer}_gain_awg_path1", self.gain)
+            else:
+                # Configure the sequencers synchronization.
+                self.set_device_parameter(f"sequencer{sequencer}_sync_en", False)
+                # Disable all sequencer - port connections
+                for out in range(0, 2 * self.device_num_ports):
+                    self.set_device_parameter(f"sequencer{sequencer}_channel_map_path{out%2}_out{out}_en", False)
+
             
         # Upload
         if self.current_pulsesequence_hash != self.last_pulsequence_hash:
@@ -927,7 +943,6 @@ class QCM(AbstractInstrument):
     def disconnect(self):
         """Disconnects from the instrument."""
         if self.is_connected:
-            self.stop()
             self.device.close()
             self.is_connected = False
     
