@@ -103,23 +103,31 @@ def test_multiqubitplatform_execute_pulse_sequences(environment_setup):
     if not hardware_available:
         pytest.xfail('Hardware not available')
     else:
-        from qibolab.pulses import Pulse, ReadoutPulse, Gaussian, Rectangular
+        from qibolab.pulses import Pulse, ReadoutPulse, Gaussian, Rectangular, Drag
         from qibolab.circuit import PulseSequence
 
         platform.connect()
         platform.setup()
         platform.start()
 
-        qd_frequency=200_000_000
-        ro_frequency=20_000_000
-        amplitude=0.3
+        qubit = 1 # TODO: Test all qubits
+        
+        qd_frequency = platform.native_gates['single_qubit'][qubit]['RX']['frequency']
+        qd_amplitude = platform.native_gates['single_qubit'][qubit]['RX']['amplitude']
+        qd_shape = platform.native_gates['single_qubit'][qubit]['RX']['shape']
+        qd_channel = platform.qubit_channel_map[qubit][1]
+
+        ro_frequency = platform.native_gates['single_qubit'][qubit]['MZ']['frequency']
+        ro_amplitude = platform.native_gates['single_qubit'][qubit]['MZ']['amplitude']
+        ro_shape = platform.native_gates['single_qubit'][qubit]['MZ']['shape']     
+        ro_channel = platform.qubit_channel_map[qubit][0]
+        
         phase = 0
-        qd_channel = 1
-        ro_channel = 2
+
         nshots = 1024
 
-        qubit_drive_pulse = lambda start, duration: Pulse(start, qd_frequency, amplitude, duration, phase, 'Gaussian(5)', qd_channel)
-        qubit_readout_pulse = lambda start, duration: ReadoutPulse(start, ro_frequency, amplitude, duration, phase, 'Rectangular()', ro_channel)
+        qubit_drive_pulse = lambda start, duration: Pulse(start, qd_frequency, qd_amplitude, duration, phase, qd_shape, qd_channel)
+        qubit_readout_pulse = lambda start, duration: ReadoutPulse(start, ro_frequency, ro_amplitude, duration, phase, ro_shape, ro_channel)
         
         # One drive pulse
         sequence = PulseSequence()
