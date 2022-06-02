@@ -1,10 +1,9 @@
 import numpy as np
-from typing import List, Union
+from typing import List
 from bisect import bisect
 from qibo.config import raise_error
-from qcodes.instrument_drivers.AlazarTech import ATS
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
-from qibolab.pulses import Pulse, ReadoutPulse
+from qibolab.pulses import Pulse
 
 class TektronixAWG5204(AbstractInstrument):
 
@@ -23,7 +22,7 @@ class TektronixAWG5204(AbstractInstrument):
         if not self.is_connected:
             from qcodes.instrument_drivers.tektronix.AWG70000A import AWG70000A
             try:
-                self.device = AWG70000A(self.name, f"TCPIP0::{self.address}::inst0::INSTR", num_channels=4)
+                self.device = AWG70000A(self.name, self.address, num_channels=4)
             except Exception as exc:
                 raise InstrumentException(self, str(exc))
             self.is_connected = True
@@ -45,14 +44,14 @@ class TektronixAWG5204(AbstractInstrument):
             for idx, channel in enumerate(range(1, self.device.num_channels + 1)):
                 awg_ch = getattr(self.device, f"ch{channel}")
                 awg_ch.awg_amplitude(amplitude[idx])
-                awg_ch.resolution(resolution[idx])
+                awg_ch.resolution(resolution)
                 self.device.write(f"SOURCE{channel}:VOLTAGE:LEVEL:IMMEDIATE:OFFSET {offset[idx]}")
 
             self.__dict__.update(kwargs)
         else:
             raise_error(Exception,'There is no connection to the instrument')
 
-    def generate_waveforms_from_pulse(self, pulse: Union[Pulse, ReadoutPulse], time_array: np.ndarray):
+    def generate_waveforms_from_pulse(self, pulse: Pulse, time_array: np.ndarray):
         """Generates a numpy array based on the pulse parameters
         
         Arguments:
@@ -66,7 +65,7 @@ class TektronixAWG5204(AbstractInstrument):
         return i, q
 
 
-    def translate(self, sequence: List[Union[Pulse, ReadoutPulse]], nshots=None):
+    def translate(self, sequence: List[Pulse], nshots=None):
         """
         Translates the pulse sequence into a numpy array.
 
@@ -181,7 +180,7 @@ class QuicSyn(AbstractInstrument):
             import pyvisa as visa
             rm = visa.ResourceManager()
             try:
-                self.device = rm.open_resource(f"{self.address}::INSTR")
+                self.device = rm.open_resource(self.address)
             except Exception as exc:
                 raise InstrumentException(self, str(exc))
             self.is_connected = True
@@ -211,32 +210,26 @@ class QuicSyn(AbstractInstrument):
     def __del__(self):
         self.disconnect()
 
-    def close(self):
+    def disconnect(self):
         if self.is_connected:
             self.stop()
             self.device.close()
             self.is_connected = False
 
-class AlazarADC(ATS.AcquisitionController, AbstractInstrument):
+class AlazarADC(AbstractInstrument):
     """Driver for the AlazarTech ATS9371 ADC.
     """
     def __init__(self, name, address):
-        AbstractInstrument.__init__(self, name, address)
-        self.samples = 0
-        self.acquisitionkwargs = {}
-        self.samples_per_record = None
-        self.records_per_buffer = None
-        self.buffers_per_acquisition = None
-        self.results = None
-        self.number_of_channels = 2
-        self.add_parameter("acquisition", get_cmd=self.do_acquisition)    
+        super().__init__(name, address)
+        self.controller = None
 
     def connect(self):
         if not self.is_connected:
             from qcodes.instrument_drivers.AlazarTech.ATS9371 import AlazarTech_ATS9371
+            from qcodes.instrument_drivers.AlazarTech.AlazarADC import ADCController
             try:
                 self.device = AlazarTech_ATS9371(self.address)
-                ATS.AcquisitionController.__init__(self, self.name, self.address)
+                self.controller = ADCController(self.name, self.address)
             except Exception as exc:
                 raise InstrumentException(self, str(exc))
             self.is_connected = True
@@ -275,83 +268,22 @@ class AlazarADC(ATS.AcquisitionController, AbstractInstrument):
                 self.device.trigger_delay(0)
                 self.device.timeout_ticks(0)
 
+            samples = kwargs.pop("samples")
+            self.controller.samples = samples
             self.__dict__.update(kwargs)
-
-    def update_acquisitionkwargs(self, **kwargs):
-        """
-        This method must be used to update the kwargs used for the acquisition
-        with the alazar_driver.acquire
-        :param kwargs:
-        :return:
-        """
-        self.acquisitionkwargs.update(**kwargs)
-
-    def pre_start_capture(self):
-        self.samples_per_record = self.device.samples_per_record.get()
-        self.records_per_buffer = self.device.records_per_buffer.get()
-        self.buffers_per_acquisition = self.device.buffers_per_acquisition.get()
-        sample_speed = self.device.get_sample_rate()
-        t_final = self.samples_per_record / sample_speed
-        self.time_array = np.arange(0, t_final, 1 / sample_speed)
-        self.buffer = np.zeros(self.samples_per_record *
-                               self.records_per_buffer *
-                               self.number_of_channels)
 
     def arm(self, nshots, readout_start):
         with self.device.syncing():
             self.device.trigger_delay(int(int((readout_start * 1e-9 + 4e-6) / 1e-9 / 8) * 8))
-
-        self.update_acquisitionkwargs(mode='NPT',
-                                      samples_per_record=self.samples,
-                                      records_per_buffer=10,
-                                      buffers_per_acquisition=int(nshots / 10),
-                                      allocated_buffers=100,
-                                      buffer_timeout=10000)
+        self.controller.arm(nshots)
         
-    def handle_buffer(self, data, buffer_number=None):
-        """
-        See AcquisitionController
-        :return:
-        """
-        self.buffer += data
-
-    def post_acquire(self):
-        """
-        See AcquisitionController
-        :return:
-        """
-
-        def signal_to_volt(signal, voltdiv):
-            u12 = signal / 16
-            #bitsPerSample = 12
-            codeZero = 2047.5
-            codeRange = codeZero
-            return voltdiv * (u12 - codeZero) / codeRange
-
-        records_per_acquisition = (1. * self.buffers_per_acquisition * self.records_per_buffer)
-        recordA = np.zeros(self.samples_per_record)
-        recordB = np.zeros(self.samples_per_record)
-
-        # Interleaved samples
-        for i in range(self.records_per_buffer):
-            record_start = i * self.samples_per_record * 2
-            record_stop = record_start + self.samples_per_record * 2
-            record_slice = self.buffer[record_start:record_stop]
-            recordA += record_slice[0::2] / records_per_acquisition
-            recordB += record_slice[1::2] / records_per_acquisition
-
-        recordA = signal_to_volt(recordA, 0.02)
-        recordB = signal_to_volt(recordB, 0.02)
-        self._processed_data = np.array([recordA, recordB])
-        return self.buffer, self.buffers_per_acquisition, self.records_per_buffer, self.samples_per_record, self.time_array
-
     def play_sequence_and_acquire(self):
         """
         this method performs an acquisition, which is the get_cmd for the
         acquisiion parameter of this instrument
         :return:
         """
-        raw = self._get_alazar().acquire(acquisition_controller=self, **self.acquisitionkwargs)
+        raw = self.device.acquire(acquisition_controller=self.controller, **self.controller.acquisitionkwargs)
         return self.process_result(raw)
 
     def process_result(self, readout_frequency=100e6, readout_channels=[0, 1]):
@@ -390,7 +322,7 @@ class AlazarADC(ATS.AcquisitionController, AbstractInstrument):
         """
         pass
 
-    def close(self):
+    def disconnect(self):
         if self.is_connected:
             self.device.close()
-            super().close()
+            self.controller.close()

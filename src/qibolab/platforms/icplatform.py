@@ -51,7 +51,7 @@ class ICPlatform(AbstractPlatform):
         self._last_sequence = None
         super().__init__(name, runcard)
         self.qubits = []
-        qubits = self._settings.get("qubits")
+        qubits = self.settings.get("qubits")
         for qubit_dict in qubits.values():
             self.qubits.append(Qubit(**qubit_dict))
 
@@ -149,7 +149,7 @@ class ICPlatform(AbstractPlatform):
     def start_experiment(self):
         """Starts the instrument to start the experiment sequence.
         """
-        inst = self.fetch_instrument(self._settings.get("settings").get("experiment_start_instrument"))
+        inst = self.fetch_instrument(self.settings.get("settings").get("experiment_start_instrument"))
         inst.start_experiment()
 
     def fetch_qubit_pi_pulse(self, qubit_id=0) -> dict:

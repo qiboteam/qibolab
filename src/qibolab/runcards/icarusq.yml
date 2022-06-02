@@ -53,7 +53,7 @@ instruments:
     lib: icarusq
     class: QuicSyn
     lo: true
-    address: ASRL6::INSTR
+    address: ASRL11::INSTR
     settings:
       frequency: 3414644400
 
@@ -61,7 +61,7 @@ instruments:
     lib: icarusq
     class: QuicSyn
     lo: true
-    address: ASRL3::INSTR
+    address: ASRL6::INSTR
     settings:
       frequency: 5026600000
 
