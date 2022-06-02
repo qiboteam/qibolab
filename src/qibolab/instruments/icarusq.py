@@ -150,7 +150,7 @@ class MCAttenuator(AbstractInstrument):
     def connect(self):
         pass
 
-    def setup(self, attenuation: float):
+    def setup(self, attenuation: float, **kwargs):
         """Assigns the attenuation level on the attenuator.
 
         Arguments:
@@ -186,7 +186,7 @@ class QuicSyn(AbstractInstrument):
             self.is_connected = True
 
 
-    def setup(self, frequency: float):
+    def setup(self, frequency: float, **kwargs):
         """
         Sets the frequency in Hz
         """

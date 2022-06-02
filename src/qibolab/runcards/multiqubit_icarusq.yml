@@ -1,0 +1,172 @@
+nqubits: 1
+description: 1-qubit device controlled with the IcarusQ AWG system.
+
+settings:
+    hardware_avg: 1024
+    sampling_rate: 1_000_000_000
+    repetition_duration: 200_000
+    minimum_delay_between_instructions: 0
+    qd_spectroscopy_pulse:
+        start: 0
+        duration: 4000        
+        amplitude: 0.4
+        frequency: 200_000_000
+        phase: 0
+        shape: Gaussian(5)
+        type: qd # qubit drive
+
+    readout_pulse:
+        start: 4004
+        duration: 2000
+        amplitude: 0.9
+        frequency: 20_000_000
+        phase: 0
+        shape: Rectangular()
+        type: ro # readout
+
+qubits: [1]
+
+topology: # qubit - qubit connections
+-   [ 1 ]
+
+
+channels: [1_ro, 1_qb]
+
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux] 
+    1: [1_ro, 1_qb, 99]
+
+instruments:
+    awg:
+        lib: icarusq
+        class: TektronixAWG5204
+        address: TCPIP0::192.168.0.2::inst0::INSTR
+        settings:
+            offset: [-0.001, 0, -0.002, 0.016]
+            amplitude: [0.75, 0.75, 0.75, 0.75]
+            resolution: 16
+            pulse_buffer: 0.000001
+            sample_rate: 2500000000
+            channel_phase_deg: [-6.2, 0.2, 10.6, -2.2]
+            channel_phase: [-0.10821, 0.00349066, 0.1850049, -0.0383972]
+            channel_port_map:
+                1_ro: [0, 1]
+                1_qb: [2, 3]
+            lo: ro_lo
+
+
+    qb_lo:
+        lib: icarusq
+        class: QuicSyn
+        address: ASRL11::INSTR
+        settings:
+            frequency: 3414644400
+
+    ro_lo:
+        lib: icarusq
+        class: QuicSyn
+        address: ASRL6::INSTR
+        settings:
+            frequency: 5026600000
+
+    qb_att:
+        lib: icarusq
+        class: MCAttenuator
+        address: 192.168.0.9:90
+        settings:
+            attenuation: 10
+
+    ro_att:
+        lib: icarusq
+        class: MCAttenuator
+        address: 192.168.0.10:100
+        settings:
+            attenuation: 24
+
+    alazar_adc:
+        lib: icarusq
+        class: AlazarADC
+        address: Alazar1
+        settings:
+            samples: 4992
+            trigger_volts: 1
+
+native_gates:
+    single_qubit:
+        1: # qubit number
+            RX:
+                pulse_sequence:
+                    -   start: 0
+                        duration: 71
+                        amplitude: 0.4
+                        frequency: 200_000_000
+                        shape: Gaussian(5)
+                        phase: 0
+                        type: qd # qubit drive
+            MZ:
+                pulse_sequence:
+                    -   start: 0
+                        duration: 2000
+                        amplitude: 0.9
+                        frequency: 20_000_000
+                        shape: Rectangular()
+                        phase: 0
+                        type: ro # readout
+
+    two_qubit:
+        1-3: # qubit numbers
+            CZ:
+                pulse_sequence:
+                    -   start: 0
+                        duration: 20
+                        amplitude: 0.5
+                        frequency: 0
+                        shape: RTZ()
+                        phase: null
+                        channel: 2
+                        type: qf # qubit flux
+                    -   start: 0
+                        duration: 4
+                        amplitude: 0.01
+                        frequency: 0
+                        shape: RTZ()
+                        phase: null
+                        channel: 2
+                        type: qf # qubit flux
+
+characterization:
+    single_qubit:
+        1:
+            resonator_freq: 7824715967.361432
+            qubit_freq: 5082221756
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
+        2:
+            resonator_freq: 7824715967.361432
+            qubit_freq: 5082221756
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
+        3:
+            resonator_freq: 7824715967.361432
+            qubit_freq: 5082221756
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
+        4:
+            resonator_freq: 7824715967.361432
+            qubit_freq: 5082221756
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
+        5:
+            resonator_freq: 7824715967.361432
+            qubit_freq: 5082221756
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)

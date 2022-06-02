@@ -17,7 +17,7 @@ class PulseBlaster(AbstractInstrument):
         self.port = port
         self._pins = None
 
-    def setup(self, holdtime_ns, pins=list(range(24))):
+    def setup(self, holdtime_ns, pins=list(range(24)), **kwargs):
         """Setup the PulseBlaster.
         
         Arguments:

@@ -1,0 +1,136 @@
+nqubits: 1
+description: 1-qubit device controlled with the IcarusQ AWG system.
+
+settings:
+    hardware_avg: 1024
+    sampling_rate: 1_000_000_000
+    repetition_duration: 200_000
+    minimum_delay_between_instructions: 0
+    qd_spectroscopy_pulse:
+        start: 0
+        duration: 4000        
+        amplitude: 0.4
+        frequency: 200_000_000
+        phase: 0
+        shape: Gaussian(5)
+        type: qd # qubit drive
+
+    readout_pulse:
+        start: 4004
+        duration: 2000
+        amplitude: 0.9
+        frequency: 20_000_000
+        phase: 0
+        shape: Rectangular()
+        type: ro # readout
+
+qubits: [1]
+
+topology: # qubit - qubit connections
+-   [ 1 ]
+
+
+channels: [1_ro, 1_qb]
+
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux] 
+    1: [1_ro, 1_qb, 99]
+
+instruments:
+    fpga1:
+        lib: icarusqfpga
+        class: IcarusQFPGA
+        address: 192.168.0.130
+        settings:
+            dac_sampling_rate: 5898240000
+            adcs_to_read: [5, 9]
+            channel_port_map:
+                1_ro: 0
+                1_qb: 5
+
+    pb:
+        lib: icarusqfpga
+        class: PulseBlaster
+        address: 192.168.0.101
+        settings:
+            holdtime: 6000000
+
+native_gates:
+    single_qubit:
+        1: # qubit number
+            RX:
+                pulse_sequence:
+                    -   start: 0
+                        duration: 71
+                        amplitude: 0.4
+                        frequency: 200_000_000
+                        shape: Gaussian(5)
+                        phase: 0
+                        type: qd # qubit drive
+            MZ:
+                pulse_sequence:
+                    -   start: 0
+                        duration: 2000
+                        amplitude: 0.9
+                        frequency: 20_000_000
+                        shape: Rectangular()
+                        phase: 0
+                        type: ro # readout
+
+    two_qubit:
+        1-3: # qubit numbers
+            CZ:
+                pulse_sequence:
+                    -   start: 0
+                        duration: 20
+                        amplitude: 0.5
+                        frequency: 0
+                        shape: RTZ()
+                        phase: null
+                        channel: 2
+                        type: qf # qubit flux
+                    -   start: 0
+                        duration: 4
+                        amplitude: 0.01
+                        frequency: 0
+                        shape: RTZ()
+                        phase: null
+                        channel: 2
+                        type: qf # qubit flux
+
+characterization:
+    single_qubit:
+        1:
+            resonator_freq: 7824715967.361432
+            qubit_freq: 5082221756
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
+        2:
+            resonator_freq: 7824715967.361432
+            qubit_freq: 5082221756
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
+        3:
+            resonator_freq: 7824715967.361432
+            qubit_freq: 5082221756
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
+        4:
+            resonator_freq: 7824715967.361432
+            qubit_freq: 5082221756
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
+        5:
+            resonator_freq: 7824715967.361432
+            qubit_freq: 5082221756
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
