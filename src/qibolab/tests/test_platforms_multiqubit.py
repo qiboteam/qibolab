@@ -1,104 +1,155 @@
-import pathlib
+from pathlib import Path
+from qibolab.circuit import PulseSequence
+from qibolab.paths import qibolab_folder
 import yaml
-# import pytest
-from qibolab.platforms.qbloxplatform import QBloxPlatform
-from qibolab.tests.utils import generate_pulse_sequence
+import pytest
+from qibolab.platforms.multiqubit import MultiqubitPlatform
+
+hardware_available = False
+platform_name = 'tiiq'
+platform: MultiqubitPlatform
+test_runcard: Path
 
 
-def test_qbloxplatform_init():
-    runcard = pathlib.Path(__file__).parent.parent / "runcards" / "tiiq.yml"
-    with open(runcard, "r") as file:
+@pytest.fixture()
+def environment_setup():
+        global test_runcard
+        global platform
+        original_runcard = qibolab_folder / "runcards" / f"{platform_name}.yml"
+        test_runcard = qibolab_folder / "tests" / "multiqubit_test_runcard.yml"
+        import shutil
+        shutil.copyfile(str(original_runcard), (test_runcard))
+        platform = MultiqubitPlatform(platform_name, test_runcard)
+
+        yield
+        
+        import os
+        os.remove(test_runcard)
+
+
+def test_abstractplatform_init(environment_setup):
+    with open(test_runcard, "r") as file:
         settings = yaml.safe_load(file)
-    platform = QBloxPlatform("tiiq", runcard)
-    settings = settings.get("settings")
-    platform.data_folder == settings.get("data_folder")
-    platform.hardware_avg == settings.get("hardware_avg")
-    platform.sampling_rate == settings.get("sampling_rate")
-    platform.software_averages == settings.get("software_averages")
-    platform.repetition_duration == settings.get("repetition_duration")
-    platform.resonator_frequency == settings.get("resonator_frequency")
-    platform.qubit_frequency == settings.get("qubit_frequency")
-    platform.pi_pulse_gain == settings.get("pi_pulse_gain")
-    platform.pi_pulse_amplitude == settings.get("pi_pulse_amplitude")
-    platform.pi_pulse_frequency == settings.get("pi_pulse_frequency")
-    platform.max_readout_voltage == settings.get("max_readout_voltage")
-    platform.min_readout_voltage == settings.get("min_readout_voltage")
-    platform.delay_between_pulses == settings.get("delay_between_pulses")
-    platform.delay_before_readout == settings.get("delay_before_readout")
-    # test setter
-    platform.software_averages = 5
-    platform.software_averages == 5
-    with pytest.raises(RuntimeError):
-        platform._check_connected()
-
-
-def test_qbloxplatform_pickle():
-    import pickle
-    runcard = pathlib.Path(__file__).parent.parent / "runcards" / "tiiq.yml"
-    platform = QBloxPlatform("tiiq", runcard)
-    serial = pickle.dumps(platform)
-    new_platform = pickle.loads(serial)
+    assert platform.name == platform_name
+    assert platform.runcard == test_runcard
     assert platform.is_connected == False
+    assert len(platform.instruments) == len(settings['instruments'])
+    for name in settings['instruments']:
+        assert name in platform.instruments
+        assert str(type(platform.instruments[name])) == f"<class 'qibolab.instruments.{settings['instruments'][name]['lib']}.{settings['instruments'][name]['class']}'>"
 
 
-def test_qbloxplatform_reload_settings():
-    runcard = pathlib.Path(__file__).parent.parent / "runcards" / "tiiq.yml"
+def test_abstractplatform_reload_settings(environment_setup):
+    original_sampling_rate = platform.settings['settings']['sampling_rate']
+    new_sampling_rate = 2_000_000_000
+    save_config_parameter(test_runcard, 'sampling_rate', new_sampling_rate, 'settings')
+    platform.reload_settings()
+    assert platform.settings['settings']['sampling_rate'] == new_sampling_rate
+    save_config_parameter(test_runcard, 'sampling_rate', original_sampling_rate, 'settings')
+    platform.reload_settings()
+    
+
+def save_config_parameter(runcard, parameter, value, *keys):
     with open(runcard, "r") as file:
         settings = yaml.safe_load(file)
-    platform = QBloxPlatform("tiiq", runcard)
-    assert platform.settings == settings
-    platform.reload_settings()
-    assert platform.settings == settings
+    file.close()
+
+    node = settings
+    for key in keys:
+        node = node.get(key)
+    node[parameter] = value
+
+    # store latest timestamp
+    import datetime
+    settings['timestamp'] = datetime.datetime.utcnow()
+
+    with open(runcard, "w") as file:
+        settings = yaml.dump(settings, file, sort_keys=False, indent=4)
+    file.close()
 
 
-# TODO: Test ``AbstractPlatform.run_calibration`` method
+def test_abstractplatform_pickle(environment_setup):
+    import pickle
+    serial = pickle.dumps(platform)
+    new_platform: MultiqubitPlatform = pickle.loads(serial)
+    assert new_platform.name == platform.name
+    assert new_platform.runcard == platform.runcard
+    assert new_platform.settings == platform.settings
+    assert new_platform.is_connected == platform.is_connected
 
-def test_qbloxplatform_connect():
-    runcard = pathlib.Path(__file__).parent.parent / "runcards" / "tiiq.yml"
-    platform = QBloxPlatform("tiiq", runcard)
-    try:
+
+@pytest.mark.xfail
+def test_abstractplatform_connect(environment_setup):
+    platform.connect()
+    assert platform.is_connected
+    global hardware_available
+    hardware_available = platform.is_connected
+
+
+def test_abstractplatform_start_stop(environment_setup):
+    if not hardware_available:
+        pytest.xfail('Hardware not available')
+    else:
+        runcard = qibolab_folder / "tests" / "multiqubit_test_runcard.yml"
+        platform = MultiqubitPlatform("multiqubit", runcard)
         platform.connect()
-        from qibolab.instruments.qblox import PulsarQCM, PulsarQRM
-        from qibolab.instruments.rohde_schwarz import SGS100A
-        assert isinstance(platform.qcm, PulsarQCM)
-        assert isinstance(platform.qrm, PulsarQRM)
-        assert isinstance(platform.LO_qcm, SGS100A)
-        assert isinstance(platform.LO_qrm, SGS100A)
+        platform.setup()
+        platform.start()
+        platform.stop()
         platform.disconnect()
-    except RuntimeError:
-        with pytest.raises(RuntimeError):
-            platform.connect()
 
 
-@pytest.mark.xfail
-def test_qbloxplatform_start_stop():
-    runcard = pathlib.Path(__file__).parent.parent / "runcards" / "tiiq.yml"
-    platform = QBloxPlatform("tiiq", runcard)
-    platform.connect()
-    platform.setup()
-    platform.start()
-    platform.stop()
-    platform.disconnect()
+def test_multiqubitplatform_execute_pulse_sequences(environment_setup):
+    if not hardware_available:
+        pytest.xfail('Hardware not available')
+    else:
+        from qibolab.pulses import Pulse, ReadoutPulse, Gaussian, Rectangular
+        from qibolab.circuit import PulseSequence
+
+        platform.connect()
+        platform.setup()
+        platform.start()
+
+        qd_frequency=200_000_000
+        ro_frequency=20_000_000
+        amplitude=0.3
+        phase = 0
+        qd_channel = 1
+        ro_channel = 2
+        nshots = 1024
+
+        qubit_drive_pulse = lambda start, duration: Pulse(start, qd_frequency, amplitude, duration, phase, 'Gaussian(5)', qd_channel)
+        qubit_readout_pulse = lambda start, duration: ReadoutPulse(start, ro_frequency, amplitude, duration, phase, 'Rectangular()', ro_channel)
+        
+        # One drive pulse
+        sequence = PulseSequence()
+        pulse0 = qubit_drive_pulse(start = 0, duration = 200)
+        sequence.add(pulse0)    
+        # Short duration
+        platform.execute_pulse_sequence(sequence, nshots)
+        # Long duration
+        pulse0.duration += 8192 
+        platform.execute_pulse_sequence(sequence, nshots)
+        # Extra Long duration
+        pulse0.duration += 8192 
+        platform.execute_pulse_sequence(sequence, nshots)
+
+        # One drive pulse and one readout pulse
+        sequence = PulseSequence()
+        pulse0 = qubit_drive_pulse(start = 0, duration = 200)
+        pulse1 = qubit_readout_pulse(start = 200, duration = 2000)
+        sequence.add(pulse0, pulse1)  
+        platform.execute_pulse_sequence(sequence, nshots)
+
+        platform.stop()
+        platform.disconnect()
 
 
-def test_qbloxplatform_execute_error():
-    runcard = pathlib.Path(__file__).parent.parent / "runcards" / "tiiq.yml"
-    platform = QBloxPlatform("tiiq", runcard)
-    sequence = generate_pulse_sequence()
-    with pytest.raises(RuntimeError):
-        results = platform(sequence, nshots=100)
-
-
-@pytest.mark.xfail
-@pytest.mark.parametrize("nshots", [None, 100])
-@pytest.mark.parametrize("readout", [False, True])
-def test_qbloxplatform_execute(nshots, readout):
-    runcard = pathlib.Path(__file__).parent.parent / "runcards" / "tiiq.yml"
-    platform = QBloxPlatform("tiiq", runcard)
-    platform.connect()
-    platform.setup()
-    platform.start()
-    sequence = generate_pulse_sequence(readout)
-    results = platform(sequence, nshots=nshots)
-    platform.stop()
-    platform.disconnect()
+@pytest.mark.xfail # not implemented
+def test_multiqubitplatform_run_calibration(environment_setup):
+    if not hardware_available:
+        pytest.xfail('Hardware not available')
+    else:
+        platform.connect()
+        platform.setup()
+        platform.run_calibration()
