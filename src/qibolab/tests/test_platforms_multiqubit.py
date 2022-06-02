@@ -79,19 +79,18 @@ def test_abstractplatform_pickle(environment_setup):
 
 
 @pytest.mark.xfail
-def test_abstractplatform_connect(environment_setup):
+def test_abstractplatform_connect_disconnect(environment_setup):
     platform.connect()
     assert platform.is_connected
     global hardware_available
     hardware_available = platform.is_connected
+    platform.disconnect()
 
 
-def test_abstractplatform_start_stop(environment_setup):
+def test_abstractplatform_setup_start_stop(environment_setup):
     if not hardware_available:
         pytest.xfail('Hardware not available')
     else:
-        runcard = qibolab_folder / "tests" / "multiqubit_test_runcard.yml"
-        platform = MultiqubitPlatform("multiqubit", runcard)
         platform.connect()
         platform.setup()
         platform.start()
@@ -126,9 +125,9 @@ def test_multiqubitplatform_execute_pulse_sequences(environment_setup):
 
         nshots = 1024
 
-        qubit_drive_pulse = lambda start, duration: Pulse(start, qd_frequency, qd_amplitude, duration, phase, qd_shape, qd_channel)
-        qubit_readout_pulse = lambda start, duration: ReadoutPulse(start, ro_frequency, ro_amplitude, duration, phase, ro_shape, ro_channel)
-        
+        qubit_drive_pulse = lambda start, duration: Pulse(start, duration, qd_amplitude, qd_frequency, phase, qd_shape, qd_channel)
+        qubit_readout_pulse = lambda start, duration: ReadoutPulse(start, duration, ro_amplitude, ro_frequency, phase, ro_shape, ro_channel)
+
         # One drive pulse
         sequence = PulseSequence()
         pulse0 = qubit_drive_pulse(start = 0, duration = 200)
@@ -146,7 +145,8 @@ def test_multiqubitplatform_execute_pulse_sequences(environment_setup):
         sequence = PulseSequence()
         pulse0 = qubit_drive_pulse(start = 0, duration = 200)
         pulse1 = qubit_readout_pulse(start = 200, duration = 2000)
-        sequence.add(pulse0, pulse1)  
+        sequence.add(pulse0)
+        sequence.add(pulse1)    
         platform.execute_pulse_sequence(sequence, nshots)
 
         platform.stop()
