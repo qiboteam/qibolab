@@ -212,7 +212,7 @@ class Calibration():
         qd_channel = platform.settings['qubit_channel_map'][1][1]
         ro_channel = platform.settings['qubit_channel_map'][1][0]
         
-        RX_pulse = platform.settings['native_gates']['single_qubit'][qubit]['RX']['pulse_sequence'][0]
+        RX_pulse = platform.settings['native_gates']['single_qubit'][qubit]['RX']
         qc_pi_pulse = Pulse(**RX_pulse, channel = qd_channel)
         ps = platform.settings['settings']
         ro_pulse_settings = ps['readout_pulse']
@@ -249,7 +249,7 @@ class Calibration():
         qd_channel = platform.settings['qubit_channel_map'][1][1]
         ro_channel = platform.settings['qubit_channel_map'][1][0]
         
-        RX_pulse = platform.settings['native_gates']['single_qubit'][qubit]['RX']['pulse_sequence'][0]
+        RX_pulse = platform.settings['native_gates']['single_qubit'][qubit]['RX']
         RX90_pulse = RX_pulse.copy()
         RX90_pulse.update({'amplitude': RX_pulse['amplitude']/2})
         
@@ -367,7 +367,7 @@ class Calibration():
             self.save_config_parameter("resonator_freq", int(resonator_freq), 'characterization', 'single_qubit', qubit)
             self.save_config_parameter("resonator_spectroscopy_avg_min_ro_voltage", float(avg_min_voltage), 'characterization', 'single_qubit', qubit)
             self.save_config_parameter("resonator_spectroscopy_max_ro_voltage", float(max_ro_voltage), 'characterization', 'single_qubit', qubit)
-            lo_qrm_frequency = int(resonator_freq - platform.native_gates['single_qubit'][qubit]['MZ']['pulse_sequence'][0]['frequency'])
+            lo_qrm_frequency = int(resonator_freq - platform.native_gates['single_qubit'][qubit]['MZ']['frequency'])
             self.save_config_parameter("frequency", lo_qrm_frequency, 'instruments', platform.lo_qrm[qubit].name, 'settings') # TODO: cambiar IF hardcoded
 
             # run and save qubit spectroscopy calibration
