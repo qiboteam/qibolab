@@ -665,7 +665,6 @@ class Diagnostics():
         N_osc=ds['N_osc']
         stop = False
         
-        #TODO: Add condition to stop if T2 is not increasing in each iteration
         for t_max in t_end:
             if (stop == False):
                 offset_freq = (N_osc / t_max * 1e9) #Hz
@@ -678,38 +677,31 @@ class Diagnostics():
                 platform.stop()
 
                 # Fitting
-                smooth_dataset, delta_fitting, new_t2 = fitting.ramsey_fit(dataset)
+                smooth_dataset, delta_fitting, new_t2 = fitting.ramsey_freq_fit(dataset)
+
                 utils.plot_ramsey(smooth_dataset, dataset, "Ramsey", 1)
                 delta_phys = (delta_fitting * 1e9) - offset_freq
                 
-                qubit_freq = ps['qubit_freq']
+                actual_qubit_freq = ps['qubit_freq']
                 T2 = ps['T2']
 
-                if ((new_t2 * 3.5) > t_max):
-                    print("entro")
-                    # Updating qubit_freq in runcard
-                    # qubit_freq = qubit_freq - delta_phys (check sign but with minus sign delta phys seems to tend to 0) 
-                    qubit_freq = qubit_freq + delta_phys
+                #if ((new_t2 * 3.5) > t_max):
+                if (new_t2 > T2):
+                    qubit_freq = actual_qubit_freq + delta_phys 
                     utils.save_config_parameter("settings", "", "qubit_freq", float(qubit_freq))
-
-                    #Update LO_QCM_freq in runcard
-                    #LO_QCM_settings = platform.settings['LO_QCM_settings']
                     utils.save_config_parameter("LO_QCM_settings", "", "frequency", float(qubit_freq + 200_000_000))
-
-                    #Update new T2 in runcard
                     utils.save_config_parameter("settings", "", "T2", float(new_t2))
   
                 else:
-                    print("entro2")
                     stop = True
 
                 platform.reload_settings()
                 ps = platform.settings['settings']
               
-                print (f"\n   Delta Artificial   |      Delta Fitting       |   Delta phys    |   T2   |   new T2   |   actual qubit freq   |   new qubit freq  ")
-                print (f"\n---------------------------------------------------------------------------------------------------------------------------------------------------")
-                print (f"\n   {offset_freq} Hz   | {delta_fitting * 1e9} Hz | {delta_phys} Hz |  {T2} ns |  {new_t2} ns |   {ps['qubit_freq']} Hz |   {qubit_freq} Hz ")
-                print (f"\n---------------------------------------------------------------------------------------------------------------------------------------------------")                                              
+                # print (f"\n   Delta Artificial   |      Delta Fitting       |   Delta phys    |   T2   |   new T2   |   actual qubit freq   |   new qubit freq  ")
+                # print (f"\n---------------------------------------------------------------------------------------------------------------------------------------------------")
+                # print (f"\n   {offset_freq} Hz   | {delta_fitting * 1e9} Hz | {delta_phys} Hz |  {T2} ns |  {new_t2} ns |   {actual_qubit_freq} Hz |   {qubit_freq} Hz ")
+                # print (f"\n---------------------------------------------------------------------------------------------------------------------------------------------------")                                              
 
         return new_t2, delta_phys, smooth_dataset, dataset
 
@@ -800,7 +792,7 @@ class RamseyFreqWaitParameter():
         self.ro_pulse.start = self.pi_pulse_length * 2 + value + 4
         self.qc2_pulse.start = self.pi_pulse_length + value
         value_phase = (value * 1e-9) * 2 * np.pi * self.offset_freq
-        self.qc2_pulse.phase = value_phase
+        self.qc2_pulse.phase = value_phase #???
         
 class SpinEchoWaitParameter():
     label = 'Time'
