@@ -35,14 +35,14 @@ for qubit in platform.qubits:
         ds.save_config_parameter("resonator_freq", int(resonator_freq), 'characterization', 'single_qubit', qubit)
         ds.save_config_parameter("resonator_spectroscopy_avg_min_ro_voltage", float(avg_min_voltage), 'characterization', 'single_qubit', qubit)
         ds.save_config_parameter("resonator_spectroscopy_max_ro_voltage", float(max_ro_voltage), 'characterization', 'single_qubit', qubit)
-        lo_qrm_frequency = int(resonator_freq - platform.native_gates['single_qubit'][qubit]['MZ']['frequency'])
+        lo_qrm_frequency = int(resonator_freq - platform.settings['native_gates']['single_qubit'][qubit]['MZ']['frequency'])
         ds.save_config_parameter("frequency", lo_qrm_frequency, 'instruments', platform.lo_qrm[qubit].name, 'settings')
     
     # Qubit spectroscopy
     qubit_freq, min_ro_voltage, smooth_dataset, dataset = ds.run_qubit_spectroscopy(qubit)
     if save_settings:
         ds.save_config_parameter("qubit_freq", int(qubit_freq), 'characterization', 'single_qubit', qubit)
-        RX_pulse_sequence = platform.native_gates['single_qubit'][qubit]['RX']['pulse_sequence']
+        RX_pulse_sequence = platform.settings['native_gates']['single_qubit'][qubit]['RX']['pulse_sequence']
         lo_qcm_frequency = int(qubit_freq + RX_pulse_sequence[0]['frequency'])
         ds.save_config_parameter("frequency", lo_qcm_frequency, 'instruments', platform.lo_qcm[qubit].name, 'settings')
         ds.save_config_parameter("qubit_spectroscopy_min_ro_voltage", float(min_ro_voltage), 'characterization', 'single_qubit', qubit)
@@ -66,7 +66,7 @@ for qubit in platform.qubits:
         adjusted_qubit_freq = int(platform.characterization['single_qubit'][qubit]['qubit_freq'] + delta_frequency)
         ds.save_config_parameter("qubit_freq", adjusted_qubit_freq, 'characterization', 'single_qubit', qubit)
         ds.save_config_parameter("T2", float(t2), 'characterization', 'single_qubit', qubit)
-        RX_pulse_sequence = platform.native_gates['single_qubit'][qubit]['RX']['pulse_sequence']
+        RX_pulse_sequence = platform.settings['native_gates']['single_qubit'][qubit]['RX']['pulse_sequence']
         lo_qcm_frequency = int(adjusted_qubit_freq + RX_pulse_sequence[0]['frequency'])
         ds.save_config_parameter("frequency", lo_qcm_frequency, 'instruments', platform.lo_qcm[qubit].name, 'settings')
 

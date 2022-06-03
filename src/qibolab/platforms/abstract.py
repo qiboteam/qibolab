@@ -205,3 +205,41 @@ class AbstractPlatform(ABC):
         MZ_channel = self.settings['qubit_channel_map'][qubit][0]
         pulse_sequence.add(ReadoutPulse(start = pulse_sequence.time, **MZ, phase = pulse_sequence.phase, channel = MZ_channel))
         pulse_sequence.time += MZ_duration
+
+
+    def RX90_pulse(self, qubit, start, phase = 0):
+        qd_duration = self.settings['native_gates']['single_qubit'][qubit]['RX']['duration'] 
+        qd_frequency = self.settings['native_gates']['single_qubit'][qubit]['RX']['frequency']
+        qd_amplitude = self.settings['native_gates']['single_qubit'][qubit]['RX']['amplitude'] / 2
+        qd_shape = self.settings['native_gates']['single_qubit'][qubit]['RX']['shape']
+        qd_channel = self.settings['qubit_channel_map'][qubit][1]
+        from qibolab.pulses import Pulse
+        return Pulse(start, qd_duration, qd_amplitude, qd_frequency, phase, qd_shape, qd_channel)
+
+    
+    def RX_pulse(self, qubit, start, phase = 0):
+        qd_duration = self.settings['native_gates']['single_qubit'][qubit]['RX']['duration'] 
+        qd_frequency = self.settings['native_gates']['single_qubit'][qubit]['RX']['frequency']
+        qd_amplitude = self.settings['native_gates']['single_qubit'][qubit]['RX']['amplitude']
+        qd_shape = self.settings['native_gates']['single_qubit'][qubit]['RX']['shape']
+        qd_channel = self.settings['qubit_channel_map'][qubit][1]
+        from qibolab.pulses import Pulse
+        return Pulse(start, qd_duration, qd_amplitude, qd_frequency, phase, qd_shape, qd_channel)
+
+    def qubit_drive_pulse(self, qubit, start, duration, phase = 0):
+        qd_frequency = self.settings['native_gates']['single_qubit'][qubit]['RX']['frequency']
+        qd_amplitude = self.settings['native_gates']['single_qubit'][qubit]['RX']['amplitude']
+        qd_shape = self.settings['native_gates']['single_qubit'][qubit]['RX']['shape']
+        qd_channel = self.settings['qubit_channel_map'][qubit][1]
+        from qibolab.pulses import Pulse
+        return Pulse(start, duration, qd_amplitude, qd_frequency, phase, qd_shape, qd_channel)
+
+
+    def qubit_readout_pulse(self, qubit, start, phase = 0):
+        ro_duration = self.settings['native_gates']['single_qubit'][qubit]['MZ']['duration'] 
+        ro_frequency = self.settings['native_gates']['single_qubit'][qubit]['MZ']['frequency']
+        ro_amplitude = self.settings['native_gates']['single_qubit'][qubit]['MZ']['amplitude']
+        ro_shape = self.settings['native_gates']['single_qubit'][qubit]['MZ']['shape']     
+        ro_channel = self.settings['qubit_channel_map'][qubit][0]
+        from qibolab.pulses import ReadoutPulse
+        return ReadoutPulse(start, ro_duration, ro_amplitude, ro_frequency, phase, ro_shape, ro_channel)

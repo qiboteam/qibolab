@@ -74,8 +74,7 @@ def test_gain_setter(device):
 
 
 def test_translate_single_pulse():
-    from qibolab.pulses import Pulse
-    from qibolab.pulse_shapes import Gaussian
+    from qibolab.pulses import Pulse, Gaussian
     pulse = Pulse(start=0,
                   frequency=200000000.0,
                   amplitude=0.3,

@@ -38,21 +38,12 @@ class Diagnostics():
         platform = self.platform
         platform.reload_settings()
         mc = self.mc
-        ro_channel = platform.ro_channel[qubit]
-        qrm = platform.qrm[qubit]
-        lo_qrm = platform.lo_qrm[qubit]
 
-        qd_channel = platform.qd_channel[qubit]
         qcm = platform.qcm[qubit]
-        lo_qcm = platform.lo_qcm[qubit]
 
-        ps = platform.settings['settings']
-        qd_pulse_settings = ps['qd_spectroscopy_pulse']
-        qd_pulse_settings['duration'] = 60 #ns
-        qd_pulse = Pulse(**qd_pulse_settings, channel = qd_channel)
-        ro_pulse_settings = ps['readout_pulse']
-        ro_pulse = ReadoutPulse(**ro_pulse_settings, channel = ro_channel)
         sequence = PulseSequence()
+        qd_pulse = platform.qubit_readout_pulse(qubit, start = 0, duration = 60) # TODO: To diagnostics.yml?
+        ro_pulse = platform.qubit_readout_pulse(qubit, start = qd_pulse.duration)
         sequence.add(qd_pulse)
         sequence.add(ro_pulse)
 
@@ -69,7 +60,7 @@ class Diagnostics():
 
         return dataset
 
-    def run_rabi_pulse_length_and_gain(self, platform, mc, resonator_freq, qubit_freq, sequence, qd_pulse, ro_pulse):
+    def run_rabi_pulse_length_and_gain(self, qubit=1):
         """
         platform.lo_qrm.frequency = (resonator_freq - ro_pulse.frequency)
         platform.lo_qcm.frequency = (qubit_freq + qd_pulse.frequency)
@@ -91,7 +82,7 @@ class Diagnostics():
         """
         raise NotImplementedError
 
-    def run_rabi_pulse_length_and_amplitude(self, platform, mc, resonator_freq, qubit_freq, sequence, qd_pulse, ro_pulse):
+    def run_rabi_pulse_length_and_amplitude(self, qubit=1):
         """
         platform.lo_qrm.frequency = (resonator_freq - ro_pulse.frequency)
         platform.lo_qcm.frequency = (qubit_freq + qd_pulse.frequency)
@@ -114,31 +105,19 @@ class Diagnostics():
         raise NotImplementedError
 
     # Spin Echo: RX(pi/2) - wait t(rotates z) - RX(pi) - wait t(rotates z) - readout
-    def run_spin_echo(self):
+    def run_spin_echo(self, qubit=1):
         platform = self.platform
         platform.reload_settings()
         mc = self.mc
-        qd_channel = platform.settings['qubit_channel_map'][1][1]
-        ro_channel = platform.settings['qubit_channel_map'][1][0]
-        
-        ps = platform.settings['settings']
-        start = 0
-        frequency = ps['pi_pulse_frequency']
-        amplitude = ps['pi_pulse_amplitude']
-        duration = ps['pi_pulse_duration']
-        phase = 0
-        shape =ps['pi_pulse_shape']
-        qc_pi_half_pulse = Pulse(start, duration, amplitude/2, frequency, phase, shape)
-        qc_pi_pulse = Pulse(qc_pi_half_pulse.start + qc_pi_half_pulse.duration, duration, amplitude, frequency, phase, shape)
-        
-        ro_pulse_shape =ps['readout_pulse']['shape']
-        ro_pulse_settings = ps['readout_pulse']
-        ro_pulse = ReadoutPulse(**ro_pulse_settings, channel = ro_channel, shape = ro_pulse_shape)
+
         sequence = PulseSequence()
-        sequence.add(qc_pi_half_pulse)
-        sequence.add(qc_pi_pulse)
+        RX90_pulse = platform.RX90_pulse(qubit, start = 0)
+        RX_pulse = platform.RX_pulse(qubit, start = RX90_pulse.duration)
+        ro_pulse = platform.qubit_readout_pulse(qubit, start = RX_pulse.start + RX_pulse.duration)
+        sequence.add(RX90_pulse)
+        sequence.add(RX_pulse)
         sequence.add(ro_pulse)
-        
+
         ds = self.load_settings()
         self.pl.tuids_max_num(ds['max_num_plots'])
         software_averages = ds['software_averages']
@@ -147,7 +126,7 @@ class Diagnostics():
         delay_between_pulses_end = ds['delay_between_pulses_end']
         delay_between_pulses_step = ds['delay_between_pulses_step']
 
-        mc.settables(Settable(SpinEchoWaitParameter(ro_pulse, qc_pi_pulse, platform.settings['settings']['pi_pulse_duration'])))
+        mc.settables(Settable(SpinEchoWaitParameter(ro_pulse, RX_pulse, platform.settings['settings']['pi_pulse_duration'])))
         mc.setpoints(np.arange(delay_between_pulses_start, delay_between_pulses_end, delay_between_pulses_step))
         mc.gettables(Gettable(ROController(platform, sequence)))
         platform.start()
@@ -159,32 +138,20 @@ class Diagnostics():
         return dataset
 
     # Spin Echo 3 Pulses: RX(pi/2) - wait t(rotates z) - RX(pi) - wait t(rotates z) - RX(pi/2) - readout
-    def run_spin_echo_3pulses(self):
+    def run_spin_echo_3pulses(self, qubit=1):
         
         platform = self.platform
         platform.reload_settings()
         mc = self.mc
-        qd_channel = platform.settings['qubit_channel_map'][1][1]
-        ro_channel = platform.settings['qubit_channel_map'][1][0]
-        
-        ps = platform.settings['settings']
-        start = 0
-        frequency = ps['pi_pulse_frequency']
-        amplitude = ps['pi_pulse_amplitude']
-        duration = ps['pi_pulse_duration']
-        phase = 0
-        shape =ps['pi_pulse_shape']
-        qc_pi_half_pulse_1 = Pulse(start, duration, amplitude/2, frequency, phase, shape)
-        qc_pi_pulse = Pulse(qc_pi_half_pulse_1.start + qc_pi_half_pulse_1.duration, duration, amplitude, frequency, phase, shape)
-        qc_pi_half_pulse_2 = Pulse(qc_pi_pulse.start + qc_pi_pulse.duration, duration, amplitude/2, frequency, phase, shape)
-        
-        ro_pulse_shape =ps['readout_pulse']['shape']
-        ro_pulse_settings = ps['readout_pulse']
-        ro_pulse = ReadoutPulse(**ro_pulse_settings, channel = ro_channel, shape = ro_pulse_shape)
+
         sequence = PulseSequence()
-        sequence.add(qc_pi_half_pulse_1)
-        sequence.add(qc_pi_pulse)
-        sequence.add(qc_pi_half_pulse_2)
+        RX90_pulse1 = platform.RX90_pulse(qubit, start = 0)
+        RX_pulse = platform.RX_pulse(qubit, start = RX90_pulse1.duration)
+        RX90_pulse2 = platform.RX90_pulse(qubit, start = RX_pulse.start + RX_pulse.duration)
+        ro_pulse = platform.qubit_readout_pulse(qubit, start = RX90_pulse2.start + RX90_pulse2.duration)
+        sequence.add(RX90_pulse1)
+        sequence.add(RX_pulse)
+        sequence.add(RX90_pulse2)
         sequence.add(ro_pulse)
         
         ds = self.load_settings()
@@ -196,7 +163,7 @@ class Diagnostics():
         delay_between_pulses_step = ds['delay_between_pulses_step']
 
 
-        mc.settables(SpinEcho3PWaitParameter(ro_pulse, qc_pi_pulse, qc_pi_half_pulse_2, platform.settings['settings']['pi_pulse_duration']))
+        mc.settables(SpinEcho3PWaitParameter(ro_pulse, RX_pulse, RX90_pulse2, platform.settings['settings']['pi_pulse_duration']))
         mc.setpoints(np.arange(delay_between_pulses_start, delay_between_pulses_end, delay_between_pulses_step))
         mc.gettables(Gettable(ROController(platform, sequence)))
         platform.start()
@@ -205,59 +172,15 @@ class Diagnostics():
 
         return dataset
 
-    def run_shifted_resonator_spectroscopy(self, platform, mc, resonator_freq, qubit_freq, sequence, qd_pulse, ro_pulse,
-                                        lowres_width, lowres_step, highres_width, highres_step,
-                                        precision_width, precision_step):
 
-        platform.lo_qrm.frequency = (resonator_freq - ro_pulse.frequency)
-        platform.lo_qcm.frequency = (qubit_freq + qd_pulse.frequency)
-
-        # Fast Sweep
-        platform.software_averages = 1
-        scanrange = utils.variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
-        mc.settables(platform.lo_qrm.device.frequency)
-        mc.setpoints(scanrange + platform.lo_qrm.frequency)
-        mc.gettables(Gettable(ROController(platform, sequence)))
-        platform.start()
-        dataset = mc.run("Resonator Spectroscopy Shifted Fast", soft_avg=platform.software_averages)
-        platform.stop()
-
-        shifted_LO_frequency = dataset['x0'].values[dataset['y0'].argmax().values]
-
-        # Precision Sweep
-        platform.software_averages = 1
-        scanrange = np.arange(-precision_width, precision_width, precision_step)
-        mc.settables(platform.lo_qrm.device.frequency)
-        mc.setpoints(scanrange + shifted_LO_frequency)
-        mc.gettables(Gettable(ROController(platform, sequence)))
-        platform.start()
-        dataset = mc.run("Resonator Spectroscopy Shifted Precision", soft_avg=platform.software_averages)
-        platform.stop()
-
-        smooth_dataset = savgol_filter(dataset['y0'].values, 25, 2)
-        shifted_frequency = dataset['x0'].values[smooth_dataset.argmax()] + ro_pulse.frequency
-        shifted_max_ro_voltage = smooth_dataset.max() * 1e6
-        print('\n')
-        print(f"\nResonator Frequency = {shifted_frequency}")
-        print(f"Maximum Voltage Measured = {shifted_max_ro_voltage} μV")
-
-        return shifted_frequency, shifted_max_ro_voltage, smooth_dataset, dataset
-
-    def run_punchout(self):     
+    def run_punchout(self, qubit=1):    
         platform = self.platform
         platform.reload_settings()
         mc = self.mc
-        qd_channel = platform.settings['qubit_channel_map'][1][1]
-        ro_channel = platform.settings['qubit_channel_map'][1][0]
-        
-        ps = platform.settings['settings']
-        qd_pulse_shape =ps['qd_spectroscopy_pulse']['shape']
-        qd_pulse_settings = ps['qd_spectroscopy_pulse']
-        qd_pulse = Pulse(**qd_pulse_settings, channel = qd_channel, shape = qd_pulse_shape)
-        ro_pulse_shape =ps['readout_pulse']['shape']
-        ro_pulse_settings = ps['readout_pulse']
-        ro_pulse = ReadoutPulse(**ro_pulse_settings, channel = ro_channel, shape = ro_pulse_shape)
+
         sequence = PulseSequence()
+        qd_pulse = platform.qubit_readout_pulse(qubit, start = 0, duration = 5000) 
+        ro_pulse = platform.qubit_readout_pulse(qubit, start = 5000)
         sequence.add(qd_pulse)
         sequence.add(ro_pulse)
 
@@ -267,7 +190,6 @@ class Diagnostics():
         ds = ds['punchout']
         precision_width = ds['precision_width']
         precision_step = ds['precision_step']
-
 
         scanrange = np.arange(-precision_width, precision_width, precision_step)
         scanrange = scanrange + platform.lo_qrm.frequency
@@ -372,13 +294,13 @@ class T1WaitParameter():
 
     def __init__(self, ro_pulse, qd_pulse):
         self.ro_pulse = ro_pulse
-        self.base_duration = qd_pulse.duration
+        self.qd_pulse = qd_pulse
 
     def set(self, value):
         # TODO: implement following condition
         #must be >= 4ns <= 65535
         #platform.delay_before_readout = value
-        self.ro_pulse.start = self.base_duration + value
+        self.ro_pulse.start = self.qd_pulse.duration + value
 
 
 class RamseyWaitParameter():
@@ -387,14 +309,14 @@ class RamseyWaitParameter():
     name = 'ramsey_wait'
     initial_value = 0
 
-    def __init__(self, ro_pulse, qc2_pulse, pi_pulse_length):
+    def __init__(self, ro_pulse, qc2_pulse):
         self.ro_pulse = ro_pulse
         self.qc2_pulse = qc2_pulse
-        self.pi_pulse_length = pi_pulse_length
+        self.pulse_length = qc2_pulse.duration
 
     def set(self, value):
-        self.qc2_pulse.start = self.pi_pulse_length  + value
-        self.ro_pulse.start = self.pi_pulse_length * 2 + value + 4
+        self.qc2_pulse.start = self.pulse_length  + value
+        self.ro_pulse.start = self.pulse_length * 2 + value 
 
 
 class SpinEchoWaitParameter():
@@ -410,7 +332,7 @@ class SpinEchoWaitParameter():
 
     def set(self, value):
         self.qc2_pulse.start = self.pi_pulse_length + value
-        self.ro_pulse.start = 2 * self.pi_pulse_length + 2 * value + 4
+        self.ro_pulse.start = 2 * self.pi_pulse_length + 2 * value
 
 
 class SpinEcho3PWaitParameter():
@@ -428,7 +350,7 @@ class SpinEcho3PWaitParameter():
     def set(self,value):
         self.qc2_pulse.start = self.pi_pulse_length + value
         self.qc3_pulse.start = 2 * self.pi_pulse_length + 2 * value
-        self.ro_pulse.start = 3 * self.pi_pulse_length + 2 * value + 4
+        self.ro_pulse.start = 3 * self.pi_pulse_length + 2 * value
 
 
 class QRPulseGainParameter():
@@ -456,4 +378,4 @@ class ROController():
 
     def get(self):
         results = self.platform.execute_pulse_sequence(self.sequence)
-        return list(list(results.values())[0].values())[0]
+        return list(list(results.values())[0].values())[0] #TODO: Replace with the particular acquisition

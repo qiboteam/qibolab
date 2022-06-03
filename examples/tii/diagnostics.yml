@@ -42,14 +42,6 @@ calibrate_qubit_states:
 
 # Other Experiments
 
-resonator_spectroscopy_shifted:
-  lowres_width: 30.e+6
-  lowres_step: 2.e+6
-  highres_width: 1.e+6
-  highres_step: 0.2e+6
-  precision_width: 0.5e+6
-  precision_step: 0.02e+6
-
 punchout:
   precision_width: 25.e+6
   precision_step: 0.5e+6

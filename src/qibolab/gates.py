@@ -18,7 +18,8 @@ class AbstractHardwareGate(abstract_gates.Gate):
     def to_sequence(self, sequence):
         """Adds the pulses implementing the gate to the given ``PulseSequence``."""
         args = self.to_u3_params() + (self.target_qubits[0],)
-        sequence.add_u3(*args)
+        sequence.add_u3(*args) 
+        # TODO: move gate to pulse sequence logic under AbstractPlatform. add_u3 was moved there 
 
 
 class H(AbstractHardwareGate, gates.H):
