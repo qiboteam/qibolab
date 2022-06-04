@@ -133,7 +133,7 @@ class QRM(AbstractInstrument):
                         if channel_pulses[channel][m].start - channel_pulses[channel][n].start < channel_pulses[channel][n].duration:
                             channel_pulses[channel][m].overlaps.append(n)
                 for m in range(1, len(channel_pulses[channel])):
-                    if len(pulse.overlaps) > 0:
+                    if len(channel_pulses[channel][m].overlaps) > 0:
                         # TODO: Urgently needed in order to implement multiplexed readout
                         raise_error(NotImplementedError, "Overlaping pulses on the same channel are not yet supported.")
 
