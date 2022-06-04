@@ -127,6 +127,14 @@ def test_abstractplatform_setup_start_stop(fx_instantiate_platform):
         platform.stop()
         platform.disconnect()
 
+def test_multiqubitplatform_execute_empty(fx_connect_platform):
+    if not hardware_available:
+        pytest.xfail('Hardware not available')
+    else:
+        # an empty pulse sequence
+        sequence = PulseSequence()   
+        platform.execute_pulse_sequence(sequence, nshots)
+
 
 def test_multiqubitplatform_execute_one_drive_pulse(fx_connect_platform):
     if not hardware_available:
