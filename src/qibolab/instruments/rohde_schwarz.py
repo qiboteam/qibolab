@@ -8,8 +8,9 @@ class SGS100A(AbstractInstrument):
 
     def __init__(self, name, address):
         super().__init__(name, address)
+        self.device_parameters = {}
 
-    rw_property_wrapper = lambda parameter: property(lambda self: self.device.get(parameter), lambda self,x: self.device.set(parameter,x))
+    rw_property_wrapper = lambda parameter: property(lambda self: self.device.get(parameter), lambda self,x: self.set_device_parameter(parameter,x))
     power = rw_property_wrapper('power')
     frequency = rw_property_wrapper('frequency')
 
@@ -34,6 +35,20 @@ class SGS100A(AbstractInstrument):
                 raise InstrumentException(self, f'Unable to connect to {self.name}')
         else:
             raise_error(Exception,'There is an open connection to the instrument already')
+
+
+    def set_device_parameter(self, parameter: str, value):
+        if not(parameter in self.device_parameters and self.device_parameters[parameter] == value):
+            if self.is_connected:
+                if hasattr(self.device, parameter):
+                    self.device.set(parameter, value)
+                    self.device_parameters[parameter] = value
+                    # DEBUG: Parameter Setting Printing
+                    # print(f"Setting {self.name} {parameter} = {value}")
+                else:
+                    raise_error(Exception, f'The instrument {self.name} does not have parameter {parameter}')
+            else:
+                raise_error(Exception,'There is no connection to the instrument  {self.name}')
 
 
     def setup(self, **kwargs):
