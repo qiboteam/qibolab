@@ -1,9 +1,6 @@
-import os
-import py
 import yaml
 import pytest
 import numpy as np
-from pathlib import Path
 from qibolab.paths import qibolab_folder
 from qibolab.pulses import Pulse, ReadoutPulse
 from qibolab.platforms.multiqubit import MultiqubitPlatform
@@ -84,7 +81,6 @@ def test_instruments_qublox_set_device_paramter(name):
             instrument_set_and_test_parameter_values(instruments[name], 'scope_acq_avg_mode_en_path0',  [False, True])
             instrument_set_and_test_parameter_values(instruments[name], 'scope_acq_avg_mode_en_path1',  [False, True])
             instrument_set_and_test_parameter_values(instruments[name], 'scope_acq_sequencer_select', range(instruments[name].device_num_sequencers))
-
        
             """   # TODO: add attitional paramter tests           
             qrm:
