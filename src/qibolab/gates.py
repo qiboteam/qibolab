@@ -15,12 +15,6 @@ class AbstractHardwareGate(abstract_gates.Gate):
         """Returns the angles of a U3 gate which implements the current gate."""
         raise_error(NotImplementedError)
 
-    def to_sequence(self, sequence):
-        """Adds the pulses implementing the gate to the given ``PulseSequence``."""
-        args = self.to_u3_params() + (self.target_qubits[0],)
-        sequence.add_u3(*args) 
-        # TODO: move gate to pulse sequence logic under AbstractPlatform. add_u3 was moved there 
-
 
 class H(AbstractHardwareGate, gates.H):
 
@@ -66,10 +60,6 @@ class M(AbstractHardwareGate, gates.M):
 
     def to_u3_params(self):
         raise_error(NotImplementedError, "Measurement gate is not implemented via U3.")
-
-    def to_sequence(self, sequence):
-        for q in self.target_qubits:
-            sequence.add_measurement(q)
 
 
 class RX(AbstractHardwareGate, gates.RX):

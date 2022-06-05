@@ -40,7 +40,7 @@ class Pulse:
                           channel=1,
                           type='qd')
     """
-    def __init__(self, start, duration, amplitude, frequency, phase, shape, channel, type = 'qd', offset_i=0, offset_q=0, qubit=0):
+    def __init__(self, start, duration, amplitude, frequency, phase, shape, channel, type = 'qd', offset_i=0, offset_q=0, qubit=1):
         self.start = start # absolut pulse start time (does not depend on other pulses of the sequence)
         self.duration = duration
         self.amplitude = amplitude

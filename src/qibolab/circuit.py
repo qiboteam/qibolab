@@ -81,16 +81,12 @@ class HardwareCircuit(circuit.Circuit):
             raise ValueError("Device has only one qubit.")
         super().__init__(nqubits)
 
-    def create_sequence(self):
-        """Creates the :class:`qibolab.circuit.PulseSequence` corresponding to the circuit's gates."""
-        if self.measurement_gate is None:
-            raise_error(RuntimeError, "No measurement register assigned.")
-
-        sequence = PulseSequence()
-        for gate in self.queue:
-            gate.to_sequence(sequence)
-        self.measurement_gate.to_sequence(sequence)
-        return sequence
+    # Note (Alvaro Orgaz): 
+    # In my opinion, this code (compilation code) along with all within gates.to_sequence()
+    # should be moved to AbstractPlatform.
+    # Firstly because an optimised compilation requires knowledge about the platform.
+    # Also, it seems more natural to call platform.execute_circuit(circuit, nshots)
+    # and is consistent with the way we now call platform.execute_pulse_sequence(sequence, nshots)
 
     def execute(self, initial_state=None, nshots=None):
         if initial_state is not None:
@@ -98,8 +94,14 @@ class HardwareCircuit(circuit.Circuit):
                                     "initial state in circuits.")
 
         # Translate gates to pulses and create a ``PulseSequence``
-        sequence = self.create_sequence()
+        if self.measurement_gate is None:
+            raise_error(RuntimeError, "No measurement register assigned.")
 
+        sequence = PulseSequence()
+        for gate in self.queue:
+            K.platform.add_u3_to_pulse_sequence(sequence, *gate.to_u3_params(), gate.target_qubits[0])
+        K.platform.add_measurement_to_pulse_sequence(sequence, self.measurement_gate.target_qubits[0])
+        
         # Execute the pulse sequence on the platform
         K.platform.connect()
         K.platform.setup()
