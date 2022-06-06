@@ -3,70 +3,68 @@ from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 import numpy as np
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
-class Teledyine_scope(AbstractInstrument):
+from lecroydso import LeCroyDSO, ActiveDSO
+from qibo.config import raise_error, log
+
+class Teledyine_scope(AbstractInstrument, LeCroyDSO):
     """
+    Requirements:
+        - Windows
+        - Install activedsoinstaller.exe (currently in the instrument directory)
+
+    Driver for Teledyne Scope. Python driver was already implemented by LeCroy and the list of functions available can be found on:
+    https://lecroydso.readthedocs.io/en/latest/api/lecroydso.html
+
+    All functions are pretty self-explanatory, and they are all inherited. 
+    Two key functions were added here because it was not implemented on their driver. 
+
+    The channels are referred as "C1", "C2" ... and SI units are used. 
     """
 
     def __init__(self, name, address) -> None:
-        super().__init__(name, address)
-        self.scope: win32com.client
+        AbstractInstrument.__init__(self,name, address)
     
+    def connect(self):
+        if not self.is_connected:
+            try:
+                LeCroyDSO.__init__(self, ActiveDSO(f"IP:{self.address}"))
+            except Exception as exc:
+                    raise InstrumentException(self, str(exc))
+            self._is_connected = True
+        else: 
+            raise_error(Exception,'There is an open connection to the instrument already')
+
     def start(self):
         pass
-    def connect(self):
-        try:   
-            self.scope=win32com.client.Dispatch("LeCroy.ActiveDSOCtrl.1")  #creates instance of the ActiveDSO control
-        except:
-            raise SystemError("Need to run on Windows and to install 'activatedsoinstaller.exe'")
-        self.scope.MakeConnection(f"IP:{self.address}") #Connects to the oscilloscope.  Substitute your IP address
 
     def setup(self):
         pass
     
     def disconnect(self):
-        self.scope.Disconnect() #Disconnects from the oscilloscope
+        pass
     def stop(self):
         pass
     
-    def get_LargeUnscaledWaveform(self, chan):
+    def get_timedwaveform(self, chan):
         """
-        Returns an unscaled waveform. This should be used with very large waveforms.
+        Get the waveform with the time axis and correct voltage.
+        Return: Time (s), Voltages (V)
         """
-        buffer = self.scope.GetByteWaveform(f"C{chan}", 5000, 0)
+        self.validate_source(chan)        
+        buffer = self._conn.aDSO.GetScaledWaveformWithTimes(chan, int(self.get_num_points()), 0)
+        return np.array([buffer[0], buffer[1]])
+
+    def get_scaledwaveform(self, chan):
+        """
+        Get the waveform with the correct voltage.
+        Return: Voltages (V)
+        """
+        self.validate_source(chan)        
+        buffer = self._conn.aDSO.GetScaledWaveform(chan, int(self.get_num_points()), 0)
         data = []
         for buf in buffer:
             data += [buf]
         return np.array(data)
-
-    def get_Waveform(self, chan):
-        """
-        """
-        if isinstance(chan, list):
-            arg = str(chan).replace("[", "C").replace("]", "").replace(" ","").replace(",", ", C")
-            print(arg)
-        else:
-            arg = f"C{chan}"
-        buffer = self.scope.GetScaledWaveform(arg, 5000, 0)
-        data = []
-        for buf in buffer:
-            data += [buf]
-        return np.array(data)
-
-    def set_VoltPerDiv(self, chan, value):
-        """
-        Might be useless because the scope always read its full voltage range, and returns it
-        with "get_Waveform". 
-        """
-        self.VoltPerDiv = value
-        self.scope.WriteString(f"C{chan}:VDIV {value}",1) #Remote Command to set C1 volt/div setting to 20 mV.
     
         
 
-scope = Teledyine_scope("Qcomp_scope", "192.168.0.30")
-scope.connect()
-scope.set_VoltPerDiv(2, 1)
-data = scope.get_Waveform([1, 2])
-print(data)
-plt.figure()
-plt.plot(data)
-plt.show()
