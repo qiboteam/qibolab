@@ -40,7 +40,7 @@ class Pulse:
                           channel=1,
                           type='qd')
     """
-    def __init__(self, start, duration, amplitude, frequency, phase, shape, channel, type = 'qd', offset_i=0, offset_q=0, qubit=1):
+    def __init__(self, start, duration, amplitude, frequency, phase, shape, channel, type = 'qd', offset_i=0, offset_q=0, qubit=0):
         self.start = start # absolut pulse start time (does not depend on other pulses of the sequence)
         self.duration = duration
         self.amplitude = amplitude
@@ -59,7 +59,7 @@ class Pulse:
 
     @property
     def serial(self):
-        return f"Pulse({self.start}, {self.duration}, {self.amplitude}, {self.frequency}, {self.phase}, '{self.shape}', {self.channel}, '{self.type}')"
+        return f"Pulse({self.start}, {self.duration}, {format(self.amplitude, '.3f')}, {self.frequency}, {format(self.phase, '.3f')}, '{self.shape}', {self.channel}, '{self.type}')"
 
     @property
     def envelope_i(self):
@@ -84,7 +84,7 @@ class ReadoutPulse(Pulse):
 
     @property
     def serial(self):
-        return f"ReadoutPulse({self.start}, {self.duration}, {self.amplitude}, {self.frequency}, {self.phase}, '{self.shape}', {self.channel}, '{self.type}')"
+        return f"ReadoutPulse({self.start}, {self.duration}, {format(self.amplitude, '.3f')}, {self.frequency}, {format(self.phase, '.3f')}, '{self.shape}', {self.channel}, '{self.type}')"
 
 
 
