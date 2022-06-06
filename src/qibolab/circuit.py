@@ -73,6 +73,34 @@ class PulseSequence:
 
         self.pulses.append(pulse)
 
+    def add_u3(self, theta, phi, lam, qubit=0):
+        """Add pulses that implement a U3 gate.
+        Args:
+            theta, phi, lam (float): Parameters of the U3 gate.
+        """
+        # apply RZ(lam)
+        self.phase += lam
+        # Fetch pi/2 pulse from calibration
+        RX90_pulse_1= K.platform.RX90_pulse(qubit, self.time, self.phase)
+        # apply RX(pi/2)
+        self.add(RX90_pulse_1)
+        self.time += RX90_pulse_1.duration
+        # apply RZ(theta)
+        self.phase += theta
+        # Fetch pi/2 pulse from calibration
+        RX90_pulse_2= K.platform.RX90_pulse(qubit, self.time, self.phase - math.pi)
+        # apply RX(-pi/2)
+        self.add(RX90_pulse_2)
+        self.time += RX90_pulse_2.duration
+        # apply RZ(phi)
+        self.phase += phi
+
+    def add_measurement(self, qubit=0):
+        """Add measurement pulse."""
+        MZ_pulse = K.platform.MZ_pulse(qubit, self.time, self.phase)
+        self.add(MZ_pulse)
+        self.time += MZ_pulse.duration
+
 
 class HardwareCircuit(circuit.Circuit):
 
@@ -80,13 +108,17 @@ class HardwareCircuit(circuit.Circuit):
         if nqubits > 1: # TODO: Fetch platform nqubits
             raise ValueError("Device has only one qubit.")
         super().__init__(nqubits)
+    
+    def create_sequence(self):
+        """Creates the :class:`qibolab.circuit.PulseSequence` corresponding to the circuit's gates."""
+        if self.measurement_gate is None:
+            raise_error(RuntimeError, "No measurement register assigned.")
 
-    # Note (Alvaro Orgaz): 
-    # In my opinion, this code (compilation code) along with all within gates.to_sequence()
-    # should be moved to AbstractPlatform.
-    # Firstly because an optimised compilation requires knowledge about the platform.
-    # Also, it seems more natural to call platform.execute_circuit(circuit, nshots)
-    # and is consistent with the way we now call platform.execute_pulse_sequence(sequence, nshots)
+        sequence = PulseSequence()
+        for gate in self.queue:
+            gate.to_sequence(sequence)
+        self.measurement_gate.to_sequence(sequence)
+        return sequence
 
     def execute(self, initial_state=None, nshots=None):
         if initial_state is not None:
@@ -94,14 +126,8 @@ class HardwareCircuit(circuit.Circuit):
                                     "initial state in circuits.")
 
         # Translate gates to pulses and create a ``PulseSequence``
-        if self.measurement_gate is None:
-            raise_error(RuntimeError, "No measurement register assigned.")
+        sequence = self.create_sequence()
 
-        sequence = PulseSequence()
-        for gate in self.queue:
-            K.platform.add_u3_to_pulse_sequence(sequence, *gate.to_u3_params(), gate.target_qubits[0])
-        K.platform.add_measurement_to_pulse_sequence(sequence, self.measurement_gate.target_qubits[0])
-        
         # Execute the pulse sequence on the platform
         K.platform.connect()
         K.platform.setup()
@@ -109,12 +135,15 @@ class HardwareCircuit(circuit.Circuit):
         readout = K.platform(sequence, nshots)
         K.platform.stop()
 
-        if hasattr(K.platform, "qubits"):
+        # TODO: To be replaced with a proper classification of the states
+        if K.platform.name == 'icarusq':
             q = self.measurement_gate.target_qubits[0]
             qubit = K.platform.fetch_qubit(q)
             min_v = qubit.min_readout_voltage
             max_v = qubit.max_readout_voltage
         else:
-            min_v = K.platform.min_readout_voltage
-            max_v = K.platform.max_readout_voltage
+            qubit = self.measurement_gate.target_qubits[0]
+            readout = list(list(readout.values())[0].values())[0]
+            min_v = K.platform.settings['characterization']['single_qubit'][qubit]['rabi_oscillations_pi_pulse_min_voltage']
+            max_v = K.platform.settings['characterization']['single_qubit'][qubit]['resonator_spectroscopy_max_ro_voltage']
         return states.HardwareState.from_readout(readout, min_v, max_v)

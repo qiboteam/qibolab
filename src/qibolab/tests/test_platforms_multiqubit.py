@@ -9,7 +9,7 @@ hardware_available = False
 platform_name = 'tiiq'
 platform: MultiqubitPlatform
 test_runcard: Path
-qubit = 1
+qubit = 0
 nshots = 1024
 
 

@@ -9,11 +9,17 @@ from qibo.config import raise_error
 
 class AbstractHardwareGate(abstract_gates.Gate):
     module = sys.modules[__name__]
+    platform = None
 
     @abstractmethod
     def to_u3_params(self): # pragma: no cover
         """Returns the angles of a U3 gate which implements the current gate."""
         raise_error(NotImplementedError)
+
+    def to_sequence(self, sequence):
+        """Adds the pulses implementing the gate to the given ``PulseSequence``."""
+        args = self.to_u3_params() + (self.target_qubits[0],)
+        sequence.add_u3(*args)
 
 
 class H(AbstractHardwareGate, gates.H):
@@ -60,7 +66,10 @@ class M(AbstractHardwareGate, gates.M):
 
     def to_u3_params(self):
         raise_error(NotImplementedError, "Measurement gate is not implemented via U3.")
-
+ 
+    def to_sequence(self, sequence):
+        for q in self.target_qubits:
+            sequence.add_measurement(q)
 
 class RX(AbstractHardwareGate, gates.RX):
 

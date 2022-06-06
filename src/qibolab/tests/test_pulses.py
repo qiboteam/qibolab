@@ -77,7 +77,7 @@ def test_pulse():
                     shape=f'Drag({rel_sigma}, {beta})', 
                     channel=1)
 
-    target = f"Pulse(0, {duration}, 1, 200000000, 0, 'Drag({rel_sigma}, {beta})', 1, 'qd')"
+    target = f"Pulse(0, {duration}, 1.000, 200000000, 0.000, 'Drag({rel_sigma}, {beta})', 1, 'qd')"
     assert pulse.serial == target
     assert repr(pulse) == target
 
@@ -93,6 +93,6 @@ def test_readout_pulse():
                         shape=f'Rectangular()', 
                         channel=11)
 
-    target = f"ReadoutPulse(0, {duration}, 1, 200000000, 0, 'Rectangular()', 11, 'ro')"
+    target = f"ReadoutPulse(0, {duration}, 1.000, 200000000, 0.000, 'Rectangular()', 11, 'ro')"
     assert pulse.serial == target
     assert repr(pulse) == target

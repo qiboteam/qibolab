@@ -8,7 +8,7 @@ from qibolab.paths import qibolab_folder
 from qibolab.platforms.multiqubit import MultiqubitPlatform
 
 
-qubit = 1
+qubit = 0
 
 
 def test_pulse_sequence_add():
@@ -63,100 +63,60 @@ def test_pulse_sequence_add_readout():
     assert len(sequence.qf_pulses) == 1
 
 
-class PiPulseRegression:
-
-    def __init__(self, platform_name, qubit):
-        original_runcard = qibolab_folder / "runcards" / f"{platform_name}.yml"
-        test_runcard = qibolab_folder / "tests" / "multiqubit_test_runcard.yml"
-        import shutil
-        shutil.copyfile(str(original_runcard), (test_runcard))
-        platform = MultiqubitPlatform(platform_name, test_runcard)
-
-        self.duration = platform.settings['native_gates']['single_qubit'][qubit]['RX']['duration']
-        self.amplitude = platform.settings['native_gates']['single_qubit'][qubit]['RX']['amplitude']
-        self.frequency = platform.settings['native_gates']['single_qubit'][qubit]['RX']['frequency']
-        self.phase = 0
-        self.shape = platform.settings['native_gates']['single_qubit'][qubit]['RX']['shape']
-        self.channel = platform.settings['qubit_channel_map'][qubit][1]
-
-
-class ReadoutPulseRegression:
-
-    def __init__(self, platform_name, qubit):
-        original_runcard = qibolab_folder / "runcards" / f"{platform_name}.yml"
-        test_runcard = qibolab_folder / "tests" / "multiqubit_test_runcard.yml"
-        import shutil
-        shutil.copyfile(str(original_runcard), (test_runcard))
-        platform = MultiqubitPlatform(platform_name, test_runcard)
-
-        self.duration = platform.settings['native_gates']['single_qubit'][qubit]['MZ']['duration']
-        self.amplitude = platform.settings['native_gates']['single_qubit'][qubit]['MZ']['amplitude']
-        self.frequency = platform.settings['native_gates']['single_qubit'][qubit]['MZ']['frequency']
-        self.phase = 0
-        self.shape = platform.settings['native_gates']['single_qubit'][qubit]['MZ']['shape']
-        self.channel = platform.settings['qubit_channel_map'][qubit][0]
-
-
 @pytest.mark.parametrize("platform_name", ['tiiq', 'qili', 'multiqubit']) #, 'icarusq'])
 def test_pulse_sequence_add_u3(platform_name):
     qibo.set_backend("qibolab", platform=platform_name)
     seq = PulseSequence()
-    K.platform.add_u3_to_pulse_sequence(seq, 0.1, 0.2, 0.3, qubit)
+    seq.add_u3(0.1, 0.2, 0.3, qubit)
     assert len(seq.pulses) == 2
     assert len(seq.qd_pulses) == 2
     
-    cp = PiPulseRegression(platform_name, qubit)
-    duration = cp.duration
-    np.testing.assert_allclose(seq.time, 2 * duration)
+    RX90_pulse1 = K.platform.RX90_pulse(qubit, start = 0, phase = 0.3)
+    RX90_pulse2 = K.platform.RX90_pulse(qubit, start = (RX90_pulse1.start + RX90_pulse1.duration), phase = 0.4 - np.pi)
+
+    np.testing.assert_allclose(seq.time, RX90_pulse1.duration + RX90_pulse2.duration)
     np.testing.assert_allclose(seq.phase, 0.6)
 
-    pulse1 = f"Pulse({0}, {cp.duration}, {cp.amplitude/2}, {cp.frequency}, 0.3, '{cp.shape}', {cp.channel}, 'qd')"
-    pulse2 = f"Pulse({cp.duration}, {cp.duration}, {cp.amplitude/2}, {cp.frequency}, {0.4 - np.pi}, '{cp.shape}', {cp.channel}, 'qd')"
-
-    assert seq.serial == f"{pulse1}, {pulse2}"
+    assert seq.serial == f"{RX90_pulse1.serial}, {RX90_pulse2.serial}"
 
 
 @pytest.mark.parametrize("platform_name", ['tiiq', 'qili', 'multiqubit']) #, 'icarusq'])
 def test_pulse_sequence_add_two_u3(platform_name):
     qibo.set_backend("qibolab", platform=platform_name)
     seq = PulseSequence()
-    K.platform.add_u3_to_pulse_sequence(seq, 0.1, 0.2, 0.3, qubit)
-    K.platform.add_u3_to_pulse_sequence(seq, 0.4, 0.6, 0.5, qubit)
+    seq.add_u3(0.1, 0.2, 0.3, qubit)
+    seq.add_u3(0.4, 0.6, 0.5, qubit)
     assert len(seq.pulses) == 4
     assert len(seq.qd_pulses) == 4
 
-    cp = PiPulseRegression(platform_name, qubit)
-    duration = cp.duration
+    RX90_pulse = K.platform.RX90_pulse(qubit)
     np.testing.assert_allclose(seq.phase, 0.6 + 1.5)
-    np.testing.assert_allclose(seq.time, 2 * 2 * cp.duration)
+    np.testing.assert_allclose(seq.time, 2 * 2 * RX90_pulse.duration)
 
-    pulse1 = f"Pulse({0}, {cp.duration}, {cp.amplitude/2}, {cp.frequency}, 0.3, '{cp.shape}', {cp.channel}, 'qd')"
-    pulse2 = f"Pulse({cp.duration}, {cp.duration}, {cp.amplitude/2}, {cp.frequency}, {0.4 - np.pi}, '{cp.shape}', {cp.channel}, 'qd')"
-    pulse3 = f"Pulse({2 * cp.duration}, {cp.duration}, {cp.amplitude/2}, {cp.frequency}, 1.1, '{cp.shape}', {cp.channel}, 'qd')"
-    pulse4 = f"Pulse({3 * cp.duration}, {cp.duration}, {cp.amplitude/2}, {cp.frequency}, {1.5 - np.pi}, '{cp.shape}', {cp.channel}, 'qd')"
+    RX90_pulse1 = K.platform.RX90_pulse(qubit, start = 0, phase = 0.3)
+    RX90_pulse2 = K.platform.RX90_pulse(qubit, start = (RX90_pulse1.start + RX90_pulse1.duration), phase = 0.4 - np.pi)
+    RX90_pulse3 = K.platform.RX90_pulse(qubit, start = (RX90_pulse2.start + RX90_pulse2.duration), phase = 1.1)
+    RX90_pulse4 = K.platform.RX90_pulse(qubit, start = (RX90_pulse3.start + RX90_pulse3.duration), phase = 1.5 - np.pi)
 
-    assert seq.serial == f"{pulse1}, {pulse2}, {pulse3}, {pulse4}"
+    assert seq.serial == f"{RX90_pulse1.serial}, {RX90_pulse2.serial}, {RX90_pulse3.serial}, {RX90_pulse4.serial}"
 
 
 @pytest.mark.parametrize("platform_name", ['tiiq', 'qili', 'multiqubit']) #, 'icarusq'])
 def test_pulse_sequence_add_measurement(platform_name):
     qibo.set_backend("qibolab", platform=platform_name)
     seq = PulseSequence()
-    K.platform.add_u3_to_pulse_sequence(seq, 0.1, 0.2, 0.3, qubit)
-    K.platform.add_measurement_to_pulse_sequence(seq, qubit)
+    seq.add_u3(0.1, 0.2, 0.3, qubit)
+    seq.add_measurement(qubit)
     assert len(seq.pulses) == 3
     assert len(seq.qd_pulses) == 2
     assert len(seq.ro_pulses) == 1
     
-    cp = PiPulseRegression(platform_name, qubit)
-    ro = ReadoutPulseRegression(platform_name, qubit)
     np.testing.assert_allclose(seq.phase, 0.6)
-
-
-    pulse1 = f"Pulse({0}, {cp.duration}, {cp.amplitude/2}, {cp.frequency}, 0.3, '{cp.shape}', {cp.channel}, 'qd')"
-    pulse2 = f"Pulse({cp.duration}, {cp.duration}, {cp.amplitude/2}, {cp.frequency}, {0.4 - np.pi}, '{cp.shape}', {cp.channel}, 'qd')"
-    pulse3 = f"ReadoutPulse({2 * cp.duration}, {ro.duration}, {ro.amplitude}, {ro.frequency}, {seq.phase}, '{ro.shape}', {ro.channel}, 'ro')"
-    assert seq.serial == f"{pulse1}, {pulse2}, {pulse3}"
+    
+    RX90_pulse1 = K.platform.RX90_pulse(qubit, start = 0, phase = 0.3)
+    RX90_pulse2 = K.platform.RX90_pulse(qubit, start = RX90_pulse1.duration, phase = 0.4 - np.pi)
+    MZ_pulse = K.platform.MZ_pulse(qubit, start = (RX90_pulse2.start + RX90_pulse2.duration), phase = 0.6)
+    assert seq.serial == f"{RX90_pulse1.serial}, {RX90_pulse2.serial}, {MZ_pulse.serial}"
 
 
 @pytest.mark.xfail # to implement fetching the nqubits from the platform
@@ -165,7 +125,7 @@ def test_hardwarecircuit_init():
     with pytest.raises(ValueError):
         circuit = HardwareCircuit(2)
 
-@pytest.mark.xfail # to move circuit.create_sequence logit to AbstractPlatform
+
 @pytest.mark.parametrize("platform_name", ['tiiq', 'qili', 'multiqubit']) #, 'icarusq'])
 def test_hardwarecircuit_create_sequence(platform_name):
     qibo.set_backend("qibolab", platform=platform_name)
@@ -180,24 +140,24 @@ def test_hardwarecircuit_create_sequence(platform_name):
     assert len(seq.qd_pulses) == 4
     assert len(seq.ro_pulses) == 1
 
-    cp = PiPulseRegression(platform_name, qubit)
-    rp = ReadoutPulseRegression(platform_name, qubit)
+    RX_pulse = K.platform.RX_pulse(qubit)
+    MZ_pulse = K.platform.MZ_pulse(qubit, RX_pulse.duration)
     
     phases = [np.pi / 2, 0.1 - np.pi / 2, 0.1, 0.3 - np.pi]
     for i, (pulse, phase) in enumerate(zip(seq.pulses[:-1], phases)):
-        assert pulse.channel == cp.channel
-        np.testing.assert_allclose(pulse.start, i * cp.duration)
-        np.testing.assert_allclose(pulse.duration, cp.duration)
-        np.testing.assert_allclose(pulse.amplitude, cp.amplitude/2)
-        np.testing.assert_allclose(pulse.frequency, cp.frequency)
+        assert pulse.channel == RX_pulse.channel
+        np.testing.assert_allclose(pulse.start, i * RX_pulse.duration)
+        np.testing.assert_allclose(pulse.duration, RX_pulse.duration)
+        np.testing.assert_allclose(pulse.amplitude, RX_pulse.amplitude/2)
+        np.testing.assert_allclose(pulse.frequency, RX_pulse.frequency)
         np.testing.assert_allclose(pulse.phase, phase)
     
     pulse = seq.pulses[-1]
-    start = 4 * cp.duration
+    start = 4 * RX_pulse.duration
     np.testing.assert_allclose(pulse.start, start)
-    np.testing.assert_allclose(pulse.duration, rp.duration)
-    np.testing.assert_allclose(pulse.amplitude, rp.amplitude)
-    np.testing.assert_allclose(pulse.frequency, rp.frequency)
+    np.testing.assert_allclose(pulse.duration, MZ_pulse.duration)
+    np.testing.assert_allclose(pulse.amplitude, MZ_pulse.amplitude)
+    np.testing.assert_allclose(pulse.frequency, MZ_pulse.frequency)
     np.testing.assert_allclose(pulse.phase, 0.3)
 
 
@@ -210,8 +170,7 @@ def test_hardwarecircuit_execute_error(platform):
     with pytest.raises(ValueError):
         result = circuit(initial_state=np.ones(2))
 
-
-@pytest.mark.xfail
+#@pytest.mark.xfail 
 def test_hardwarecircuit_execute():
     # TODO: Test this method on IcarusQ
     qibo.set_backend("qibolab", platform="tiiq")
