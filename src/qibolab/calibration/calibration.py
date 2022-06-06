@@ -32,8 +32,9 @@ class Calibration():
         # Load calibration settings
         with open(self.settings_file, "r") as file:
             self.settings = yaml.safe_load(file)
-        self.__dict__.update(self.settings)
-        return self.settings
+            self.software_averages = self.settings['software_averages']
+            self.software_averages_precision = self.settings['software_averages_precision']
+            self.max_num_plots = self.settings['max_num_plots']
 
     def reload_settings(self):
         self.load_settings()
@@ -55,7 +56,13 @@ class Calibration():
         sequence.add(ro_pulse)
 
         self.reload_settings()
-        self.__dict__.update(self.settings['resonator_spectroscopy'])
+        self.lowres_width = self.settings['resonator_spectroscopy']['lowres_width']
+        self.lowres_step = self.settings['resonator_spectroscopy']['lowres_step']
+        self.highres_width = self.settings['resonator_spectroscopy']['highres_width']
+        self.highres_step = self.settings['resonator_spectroscopy']['highres_step']
+        self.precision_width = self.settings['resonator_spectroscopy']['precision_width']
+        self.precision_step = self.settings['resonator_spectroscopy']['precision_step']
+
         self.pl.tuids_max_num(self.max_num_plots)
 
         #Fast Sweep
@@ -107,7 +114,13 @@ class Calibration():
         sequence.add(ro_pulse)
 
         self.reload_settings()
-        self.__dict__.update(self.settings['qubit_spectroscopy'])
+        self.fast_start = self.settings['qubit_spectroscopy']['fast_start']
+        self.fast_end = self.settings['qubit_spectroscopy']['fast_end']
+        self.fast_step = self.settings['qubit_spectroscopy']['fast_step']
+        self.precision_start = self.settings['qubit_spectroscopy']['precision_start']
+        self.precision_end = self.settings['qubit_spectroscopy']['precision_end']
+        self.precision_step = self.settings['qubit_spectroscopy']['precision_step']
+
         self.pl.tuids_max_num(self.max_num_plots)
         
         # Fast Sweep
@@ -157,7 +170,10 @@ class Calibration():
         sequence.add(ro_pulse)
 
         self.reload_settings()
-        self.__dict__.update(self.settings['rabi_pulse_length'])
+        self.pulse_duration_start = self.settings['rabi_pulse_length']['pulse_duration_start']
+        self.fast_step = self.settings['rabi_pulse_length']['pulse_duration_end']
+        self.pulse_duration_step = self.settings['rabi_pulse_length']['pulse_duration_step']
+
         self.pl.tuids_max_num(self.max_num_plots)
 
         mc.settables(Settable(QCPulseLengthParameter(ro_pulse, qd_pulse)))
@@ -192,7 +208,10 @@ class Calibration():
         sequence.add(ro_pulse)
 
         self.reload_settings()
-        self.__dict__.update(self.settings['t1'])
+        self.delay_before_readout_start = self.settings['t1']['delay_before_readout_start']
+        self.delay_before_readout_end = self.settings['t1']['delay_before_readout_end']
+        self.delay_before_readout_step = self.settings['t1']['delay_before_readout_step']
+
         self.pl.tuids_max_num(self.max_num_plots)
 
         mc.settables(Settable(T1WaitParameter(ro_pulse, RX_pulse)))
@@ -226,7 +245,10 @@ class Calibration():
         sequence.add(ro_pulse)
         
         self.reload_settings()
-        self.__dict__.update(self.settings['ramsey'])
+        self.delay_between_pulses_start = self.settings['ramsey']['delay_between_pulses_start']
+        self.delay_between_pulses_end = self.settings['ramsey']['delay_between_pulses_end']
+        self.delay_between_pulses_step = self.settings['ramsey']['delay_between_pulses_step']
+
         self.pl.tuids_max_num(self.max_num_plots)
 
         mc.settables(Settable(RamseyWaitParameter(ro_pulse, RX90_pulse2)))

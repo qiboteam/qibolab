@@ -42,15 +42,10 @@ calibrate_qubit_states:
 
 # Other Experiments
 
-punchout:
-  precision_width: 25.e+6
-  precision_step: 0.5e+6
-
 rabi_pulse_gain:
   pulse_gain_start: 0
   pulse_gain_end: 100
   pulse_gain_step: 1
-  delay_between_pulses_step: 500
 
 spin_echo:
   delay_between_pulses_start: 4

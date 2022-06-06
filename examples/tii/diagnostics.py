@@ -28,8 +28,9 @@ class Diagnostics():
         script_folder = pathlib.Path(__file__).parent
         with open(script_folder / "diagnostics.yml", "r") as file:
             self.settings = yaml.safe_load(file)
-        self.__dict__.update(self.settings)
-        return self.settings
+            self.software_averages = self.settings['software_averages']
+            self.software_averages_precision = self.settings['software_averages_precision']
+            self.max_num_plots = self.settings['max_num_plots']
 
     def reload_settings(self):
         self.load_settings()
@@ -48,7 +49,10 @@ class Diagnostics():
         sequence.add(ro_pulse)
 
         self.reload_settings()
-        self.__dict__.update(self.settings['rabi_pulse_gain'])
+        self.pulse_gain_start = self.settings['rabi_pulse_gain']['pulse_gain_start']
+        self.pulse_gain_end = self.settings['rabi_pulse_gain']['pulse_gain_end']
+        self.pulse_gain_step = self.settings['rabi_pulse_gain']['pulse_gain_step']
+
         self.pl.tuids_max_num(self.max_num_plots)
 
         mc.settables(Settable(QCPulseGainParameter(qcm)))
@@ -118,19 +122,18 @@ class Diagnostics():
         sequence.add(RX_pulse)
         sequence.add(ro_pulse)
 
-        ds = self.load_settings()
-        self.pl.tuids_max_num(ds['max_num_plots'])
-        software_averages = ds['software_averages']
-        ds = ds['spin_echo']
-        delay_between_pulses_start = ds['delay_between_pulses_start']
-        delay_between_pulses_end = ds['delay_between_pulses_end']
-        delay_between_pulses_step = ds['delay_between_pulses_step']
+        self.reload_settings()
+        self.delay_between_pulses_start = self.settings['spin_echo']['delay_between_pulses_start']
+        self.delay_between_pulses_end = self.settings['spin_echo']['delay_between_pulses_end']
+        self.delay_between_pulses_step = self.settings['spin_echo']['delay_between_pulses_step']
+
+        self.pl.tuids_max_num(self.max_num_plots)
 
         mc.settables(Settable(SpinEchoWaitParameter(ro_pulse, RX_pulse, platform.settings['settings']['pi_pulse_duration'])))
-        mc.setpoints(np.arange(delay_between_pulses_start, delay_between_pulses_end, delay_between_pulses_step))
+        mc.setpoints(np.arange(self.delay_between_pulses_start, self.delay_between_pulses_end, self.delay_between_pulses_step))
         mc.gettables(Gettable(ROController(platform, sequence, qubit)))
         platform.start()
-        dataset = mc.run('Spin Echo', soft_avg = software_averages)
+        dataset = mc.run('Spin Echo', soft_avg = self.software_averages)
         platform.stop()
         
         # Fitting
@@ -154,20 +157,18 @@ class Diagnostics():
         sequence.add(RX90_pulse2)
         sequence.add(ro_pulse)
         
-        ds = self.load_settings()
-        self.pl.tuids_max_num(ds['max_num_plots'])
-        software_averages = ds['software_averages']
-        ds = ds['spin_echo_3pulses']        
-        delay_between_pulses_start = ds['delay_between_pulses_start']
-        delay_between_pulses_end = ds['delay_between_pulses_end']
-        delay_between_pulses_step = ds['delay_between_pulses_step']
+        self.reload_settings()
+        self.delay_between_pulses_start = self.settings['spin_echo_3pulses']['delay_between_pulses_start']
+        self.delay_between_pulses_end = self.settings['spin_echo_3pulses']['delay_between_pulses_end']
+        self.delay_between_pulses_step = self.settings['spin_echo_3pulses']['delay_between_pulses_step']
 
+        self.pl.tuids_max_num(self.max_num_plots)
 
         mc.settables(SpinEcho3PWaitParameter(ro_pulse, RX_pulse, RX90_pulse2, platform.settings['settings']['pi_pulse_duration']))
-        mc.setpoints(np.arange(delay_between_pulses_start, delay_between_pulses_end, delay_between_pulses_step))
+        mc.setpoints(np.arange(self.delay_between_pulses_start, self.delay_between_pulses_end, self.delay_between_pulses_step))
         mc.gettables(Gettable(ROController(platform, sequence, qubit)))
         platform.start()
-        dataset = mc.run('Spin Echo 3 Pulses', soft_avg = software_averages)
+        dataset = mc.run('Spin Echo 3 Pulses', soft_avg = self.software_averages)
         platform.stop()
 
         return dataset

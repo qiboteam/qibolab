@@ -58,7 +58,11 @@ class SGS100A(AbstractInstrument):
         if self.is_connected:
             self.power = kwargs.pop('power')
             self.frequency = kwargs.pop('frequency')
-            self.__dict__.update(kwargs)
+            # self.__dict__.update(kwargs)
+            self.hardware_avg = kwargs['hardware_avg']
+            self.sampling_rate = kwargs['sampling_rate']
+            self.repetition_duration = kwargs['repetition_duration']
+            self.minimum_delay_between_instructions = kwargs['minimum_delay_between_instructions']
         else:
             raise_error(Exception,'There is no connection to the instrument')
 

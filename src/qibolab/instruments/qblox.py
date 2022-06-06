@@ -35,7 +35,7 @@ class QRM(AbstractInstrument):
                     self.device = self.device_class(self.name, self.address)
                     self.is_connected = True
                     break
-                except KeyError:
+                except KeyError as exc:
                     print(f"Unable to connect:\n{str(exc)}\nRetrying...")
                     self.name += '_' + str(attempt)
                 except Exception as exc:
@@ -76,7 +76,22 @@ class QRM(AbstractInstrument):
             channel_port_map (dict): a dictionary of {channel (int): port (str) {'o1', 'o2', ...}}
         """
         # Load settings as class attributes
-        self.__dict__.update(kwargs)
+        # self.__dict__.update(kwargs)
+        self.hardware_avg = kwargs['hardware_avg']
+        self.sampling_rate = kwargs['sampling_rate']
+        self.repetition_duration = kwargs['repetition_duration']
+
+        self.minimum_delay_between_instructions = kwargs['minimum_delay_between_instructions']
+        self.ref_clock = kwargs['ref_clock']
+        self.sync_en = kwargs['sync_en']
+        self.scope_acq_avg_mode_en = kwargs['scope_acq_avg_mode_en']
+        self.scope_acq_trigger_mode = kwargs['scope_acq_trigger_mode']
+        self.gain = kwargs['gain']
+        self.acquisition_start = kwargs['acquisition_start']
+        self.acquisition_duration = kwargs['acquisition_duration']
+        self.mode = kwargs['mode']
+        self.channel_port_map = kwargs['channel_port_map']
+        self.lo = kwargs['lo']
 
         # Hardcoded values used to generate sequence program
         self.wait_loop_step = 1000
@@ -566,7 +581,7 @@ class QCM(AbstractInstrument):
                     self.device = self.device_class(self.name, self.address)
                     self.is_connected = True
                     break
-                except KeyError:
+                except KeyError as exc:
                     print(f"Unable to connect:\n{str(exc)}\nRetrying...")
                     self.name += '_' + str(attempt)
                 except Exception as exc:
@@ -600,8 +615,17 @@ class QCM(AbstractInstrument):
             gain (float): {0 .. 1} the gain applied to all sequencers on their output paths
             channel_port_map (dict): a dictionary of {channel (int): port (str) {'o1', 'o2', ...}}
         """
-        # Load settings as class attributes
-        self.__dict__.update(kwargs)
+        # self.__dict__.update(kwargs)
+        self.hardware_avg = kwargs['hardware_avg']
+        self.sampling_rate = kwargs['sampling_rate']
+        self.repetition_duration = kwargs['repetition_duration']
+        self.minimum_delay_between_instructions = kwargs['minimum_delay_between_instructions']
+
+        self.ref_clock = kwargs['ref_clock']
+        self.sync_en = kwargs['sync_en']
+        self.gain = kwargs['gain']
+        self.channel_port_map = kwargs['channel_port_map']
+        self.lo = kwargs['lo']
 
         # Hardcoded values used to generate sequence program
         self.wait_loop_step = 1000
