@@ -53,7 +53,7 @@ class Diagnostics():
 
         mc.settables(Settable(QCPulseGainParameter(qcm)))
         mc.setpoints(np.arange(self.pulse_gain_start, self.pulse_gain_end, self.pulse_gain_step))
-        mc.gettables(Gettable(ROController(platform, sequence)))
+        mc.gettables(Gettable(ROController(platform, sequence, qubit)))
         platform.start()
         dataset = mc.run('Rabi Pulse Gain', soft_avg = self.software_averages)
         platform.stop()
@@ -70,7 +70,7 @@ class Diagnostics():
         setpoints_length = np.arange(1, 400, 10)
         setpoints_gain = np.arange(0, 20, 1)
         mc.setpoints_grid([setpoints_length, setpoints_gain])
-        mc.gettables(Gettable(ROController(platform, sequence)))
+        mc.gettables(Gettable(ROController(platform, sequence, qubit)))
         platform.start()
         dataset = mc.run('Rabi Pulse Length and Gain', soft_avg = platform.software_averages)
         # Analyse data to look for the smallest qd_pulse length that renders off-resonance amplitude, determine corresponding pi_pulse gain
@@ -92,7 +92,7 @@ class Diagnostics():
         setpoints_length = np.arange(1, 1000, 2)
         setpoints_amplitude = np.arange(0, 100, 2)
         mc.setpoints_grid([setpoints_length, setpoints_amplitude])
-        mc.gettables(Gettable(ROController(platform, sequence)))
+        mc.gettables(Gettable(ROController(platform, sequence, qubit)))
         platform.start()
         dataset = mc.run('Rabi Pulse Length and Gain', soft_avg = platform.software_averages)
         # Analyse data to look for the smallest qd_pulse length that renders off-resonance amplitude, determine corresponding pi_pulse gain
@@ -128,7 +128,7 @@ class Diagnostics():
 
         mc.settables(Settable(SpinEchoWaitParameter(ro_pulse, RX_pulse, platform.settings['settings']['pi_pulse_duration'])))
         mc.setpoints(np.arange(delay_between_pulses_start, delay_between_pulses_end, delay_between_pulses_step))
-        mc.gettables(Gettable(ROController(platform, sequence)))
+        mc.gettables(Gettable(ROController(platform, sequence, qubit)))
         platform.start()
         dataset = mc.run('Spin Echo', soft_avg = software_averages)
         platform.stop()
@@ -165,53 +165,12 @@ class Diagnostics():
 
         mc.settables(SpinEcho3PWaitParameter(ro_pulse, RX_pulse, RX90_pulse2, platform.settings['settings']['pi_pulse_duration']))
         mc.setpoints(np.arange(delay_between_pulses_start, delay_between_pulses_end, delay_between_pulses_step))
-        mc.gettables(Gettable(ROController(platform, sequence)))
+        mc.gettables(Gettable(ROController(platform, sequence, qubit)))
         platform.start()
         dataset = mc.run('Spin Echo 3 Pulses', soft_avg = software_averages)
         platform.stop()
 
         return dataset
-
-
-    def run_punchout(self, qubit=0):    
-        platform = self.platform
-        platform.reload_settings()
-        mc = self.mc
-
-        sequence = PulseSequence()
-        qd_pulse = platform.qubit_readout_pulse(qubit, start = 0, duration = 5000) 
-        ro_pulse = platform.qubit_readout_pulse(qubit, start = 5000)
-        sequence.add(qd_pulse)
-        sequence.add(ro_pulse)
-
-        ds = self.load_settings()['punchout']
-        self.pl.tuids_max_num(ds['max_num_plots'])
-        software_averages = ds['software_averages']
-        ds = ds['punchout']
-        precision_width = ds['precision_width']
-        precision_step = ds['precision_step']
-
-        scanrange = np.arange(-precision_width, precision_width, precision_step)
-        scanrange = scanrange + platform.lo_qrm.frequency
-
-        mc.settables([Settable(platform.lo_qrm.device.frequency), Settable(QRPulseGainParameter(platform.qrm))])
-        setpoints_gain = np.arange(10, 100, 10)
-        mc.setpoints_grid([scanrange, setpoints_gain])
-        mc.gettables(Gettable(ROController(platform, sequence)))
-        platform.start() 
-        platform.lo_qcm.off()
-        dataset = mc.run("Punchout", soft_avg=software_averages)
-        platform.stop()
-
-        # Fitting
-        smooth_dataset = savgol_filter(dataset['y0'].values, 25, 2)
-        #FIXME: Code Lorentzian fitting for cavity spec and punchout
-        resonator_freq = dataset['x0'].values[dataset['y0'].argmax().values]+ro_pulse.frequency 
-        print(f"\nResonator Frequency = {resonator_freq}")
-        print(f"\nResonator LO Frequency  = {resonator_freq - ro_pulse.frequency}")
-
-        return resonator_freq, smooth_dataset, dataset
-
 
     def get_config_parameter(self, parameter, *keys):
         import os
@@ -487,9 +446,10 @@ class ROController():
     unit = ['V', 'Radians','V','V']
     name = ['A', 'Phi','I','Q']
 
-    def __init__(self, platform, sequence):
+    def __init__(self, platform, sequence, qubit):
         self.platform = platform
         self.sequence = sequence
+        self.qubit = qubit
 
     def get(self):
         results = self.platform.execute_pulse_sequence(self.sequence)

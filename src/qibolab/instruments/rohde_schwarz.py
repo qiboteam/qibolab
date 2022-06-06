@@ -4,11 +4,14 @@ Class to interface with the local oscillator RohdeSchwarz SGS100A
 from qibo.config import raise_error
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 
+from quantify_core.measurement.control import Gettable, Settable
+
 class SGS100A(AbstractInstrument):
 
     def __init__(self, name, address):
         super().__init__(name, address)
         self.device_parameters = {}
+        self.settable_frequency = Settable(self.FrequencyParameter(self))
 
     rw_property_wrapper = lambda parameter: property(lambda self: self.device.get(parameter), lambda self,x: self.set_device_parameter(parameter,x))
     power = rw_property_wrapper('power')
@@ -42,7 +45,7 @@ class SGS100A(AbstractInstrument):
             if self.is_connected:
                 if hasattr(self.device, parameter):
                     self.device.set(parameter, value)
-                    self.device_parameters[parameter] = value
+                    self.device_parameters[parameter] = value 
                     # DEBUG: Parameter Setting Printing
                     # print(f"Setting {self.name} {parameter} = {value}")
                 else:
@@ -85,4 +88,13 @@ class SGS100A(AbstractInstrument):
             self.device.close()
             self.is_connected = False
 
+    class FrequencyParameter():
+        label = 'Frequency'
+        unit = 'Hz'
+        name = 'frequency'
+        
+        def __init__(self, outter_class_instance):
+            self.outter_class_instance = outter_class_instance
 
+        def set(self, value):
+            self.outter_class_instance.frequency =  value
