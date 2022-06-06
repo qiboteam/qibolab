@@ -7,7 +7,7 @@ settings:
     repetition_duration: 200_000
     minimum_delay_between_instructions: 4
 
-qubits: [1]
+qubits: [0]
 
 topology: # qubit - qubit connections
 -   [1]
@@ -15,7 +15,7 @@ topology: # qubit - qubit connections
 channels: [1, 2, 3]
 
 qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux] 
-    1: [2, 1, null]
+    0: [2, 1, null]
 
 instruments:
     qrm:
@@ -66,7 +66,7 @@ instruments:
 
 native_gates:
     single_qubit:
-        1: # qubit number
+        0: # qubit number
             RX:
                 duration: 71
                 amplitude: 0.4
@@ -82,7 +82,7 @@ native_gates:
 
 characterization:
     single_qubit:
-        1:
+        0:
             resonator_freq: 7824715967.361432
             qubit_freq: 5082221756
             T1: 2192.895853326451

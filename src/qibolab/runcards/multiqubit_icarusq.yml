@@ -6,25 +6,8 @@ settings:
     sampling_rate: 1_000_000_000
     repetition_duration: 200_000
     minimum_delay_between_instructions: 0
-    qd_spectroscopy_pulse:
-        start: 0
-        duration: 4000        
-        amplitude: 0.4
-        frequency: 200_000_000
-        phase: 0
-        shape: Gaussian(5)
-        type: qd # qubit drive
 
-    readout_pulse:
-        start: 4004
-        duration: 2000
-        amplitude: 0.9
-        frequency: 20_000_000
-        phase: 0
-        shape: Rectangular()
-        type: ro # readout
-
-qubits: [1]
+qubits: [0]
 
 topology: # qubit - qubit connections
 -   [ 1 ]
@@ -33,7 +16,7 @@ topology: # qubit - qubit connections
 channels: [1_ro, 1_qb]
 
 qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux] 
-    1: [1_ro, 1_qb, 99]
+    0: [1_ro, 1_qb, 99]
 
 instruments:
     awg:
@@ -92,7 +75,7 @@ instruments:
 
 native_gates:
     single_qubit:
-        1: # qubit number
+        0: # qubit number
             RX:
                 pulse_sequence:
                     -   start: 0
@@ -113,7 +96,7 @@ native_gates:
                         type: ro # readout
 
     two_qubit:
-        1-3: # qubit numbers
+        0-2: # qubit numbers
             CZ:
                 pulse_sequence:
                     -   start: 0
@@ -135,6 +118,13 @@ native_gates:
 
 characterization:
     single_qubit:
+        0:
+            resonator_freq: 7824715967.361432
+            qubit_freq: 5082221756
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
         1:
             resonator_freq: 7824715967.361432
             qubit_freq: 5082221756
@@ -157,13 +147,6 @@ characterization:
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
             mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
         4:
-            resonator_freq: 7824715967.361432
-            qubit_freq: 5082221756
-            T1: 2192.895853326451
-            T2: 6933.310025260633
-            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
-            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
-        5:
             resonator_freq: 7824715967.361432
             qubit_freq: 5082221756
             T1: 2192.895853326451

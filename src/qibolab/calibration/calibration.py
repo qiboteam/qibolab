@@ -42,7 +42,7 @@ class Calibration():
     # Single qubit experiments #
     #--------------------------#
 
-    def run_resonator_spectroscopy(self, qubit=1):
+    def run_resonator_spectroscopy(self, qubit=0):
         platform = self.platform
         platform.reload_settings()
         mc = self.mc
@@ -93,7 +93,7 @@ class Calibration():
         print(f"\nResonator Frequency = {resonator_freq}")
         return resonator_freq, avg_min_voltage, max_ro_voltage, smooth_dataset, dataset
 
-    def run_qubit_spectroscopy(self, qubit=1):
+    def run_qubit_spectroscopy(self, qubit=0):
         platform = self.platform
         platform.reload_settings()
         mc = self.mc
@@ -145,7 +145,7 @@ class Calibration():
         print("Qubit freq ontained from fitting: ", qubit_freq)
         return qubit_freq, min_ro_voltage, smooth_dataset, dataset
 
-    def run_rabi_pulse_length(self, qubit=1):
+    def run_rabi_pulse_length(self, qubit=0):
         platform = self.platform
         platform.reload_settings()
         mc = self.mc
@@ -180,7 +180,7 @@ class Calibration():
         return dataset, pi_pulse_duration, pi_pulse_amplitude, rabi_oscillations_pi_pulse_min_voltage, t1
 
     # T1: RX(pi) - wait t(rotates z) - readout
-    def run_t1(self, qubit=1):
+    def run_t1(self, qubit=0):
         platform = self.platform
         platform.reload_settings()
         mc = self.mc
@@ -212,7 +212,7 @@ class Calibration():
         return t1, smooth_dataset, dataset
 
     # Ramsey: RX(pi/2) - wait t(rotates z) - RX(pi/2) - readout
-    def run_ramsey(self, qubit=1):
+    def run_ramsey(self, qubit=0):
         platform = self.platform
         platform.reload_settings()
         mc = self.mc
@@ -244,7 +244,7 @@ class Calibration():
 
         return delta_frequency, t2, smooth_dataset, dataset
 
-    def calibrate_qubit_states(self, qubit=1):
+    def calibrate_qubit_states(self, qubit=0):
         platform = self.platform
         platform.reload_settings()
 

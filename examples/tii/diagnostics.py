@@ -34,7 +34,7 @@ class Diagnostics():
     def reload_settings(self):
         self.load_settings()
 
-    def run_rabi_pulse_gain(self, qubit=1):
+    def run_rabi_pulse_gain(self, qubit=0):
         platform = self.platform
         platform.reload_settings()
         mc = self.mc
@@ -60,7 +60,7 @@ class Diagnostics():
 
         return dataset
 
-    def run_rabi_pulse_length_and_gain(self, qubit=1):
+    def run_rabi_pulse_length_and_gain(self, qubit=0):
         """
         platform.lo_qrm.frequency = (resonator_freq - ro_pulse.frequency)
         platform.lo_qcm.frequency = (qubit_freq + qd_pulse.frequency)
@@ -82,7 +82,7 @@ class Diagnostics():
         """
         raise NotImplementedError
 
-    def run_rabi_pulse_length_and_amplitude(self, qubit=1):
+    def run_rabi_pulse_length_and_amplitude(self, qubit=0):
         """
         platform.lo_qrm.frequency = (resonator_freq - ro_pulse.frequency)
         platform.lo_qcm.frequency = (qubit_freq + qd_pulse.frequency)
@@ -105,7 +105,7 @@ class Diagnostics():
         raise NotImplementedError
 
     # Spin Echo: RX(pi/2) - wait t(rotates z) - RX(pi) - wait t(rotates z) - readout
-    def run_spin_echo(self, qubit=1):
+    def run_spin_echo(self, qubit=0):
         platform = self.platform
         platform.reload_settings()
         mc = self.mc
@@ -138,7 +138,7 @@ class Diagnostics():
         return dataset
 
     # Spin Echo 3 Pulses: RX(pi/2) - wait t(rotates z) - RX(pi) - wait t(rotates z) - RX(pi/2) - readout
-    def run_spin_echo_3pulses(self, qubit=1):
+    def run_spin_echo_3pulses(self, qubit=0):
         
         platform = self.platform
         platform.reload_settings()
@@ -173,7 +173,7 @@ class Diagnostics():
         return dataset
 
 
-    def run_punchout(self, qubit=1):    
+    def run_punchout(self, qubit=0):    
         platform = self.platform
         platform.reload_settings()
         mc = self.mc
