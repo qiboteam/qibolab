@@ -484,8 +484,8 @@ class QRM(AbstractInstrument):
                 i, q = self._demodulate_and_integrate(raw_results, acquisition)
                 acquisition_results[sequencer][acquisition] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
                 # DEBUG: QRM Plot Incomming Pulses
-                import qibolab.instruments.data.incomming_pulse_plotting as pp
-                pp.plot(raw_results)
+                # import qibolab.instruments.data.incomming_pulse_plotting as pp
+                # pp.plot(raw_results)
         return acquisition_results
 
     def _demodulate_and_integrate(self, raw_results, acquisition):
