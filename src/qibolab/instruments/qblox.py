@@ -17,7 +17,6 @@ class QRM(AbstractInstrument):
     """
     def __init__(self, name, address):
         super().__init__(name, address)
-        self.device_class = None
         self.sequencers = []
         self.sequencer_channel_map = {} 
         self.last_pulsequence_hash = "uninitialised"
@@ -562,7 +561,6 @@ class QCM(AbstractInstrument):
     """
     def __init__(self, name, address):
         super().__init__(name, address)
-        self.device_class = None
         self.sequencers = []
         self.sequencer_channel_map = {} 
         self.last_pulsequence_hash = "uninitialised"

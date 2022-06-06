@@ -29,7 +29,6 @@ def test_instruments_qublox_init(name):
     assert instance.address == address
     assert instance.is_connected == False
     assert instance.signature == f"{name}@{address}"
-    assert instance.device == None
     assert instance.data_folder == qibolab_folder / "instruments" / "data"
 
 
