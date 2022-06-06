@@ -271,10 +271,10 @@ class Calibration():
         platform.reload_settings()
 
         lo_qcm = platform.lo_qcm[qubit]
-
-        ps = platform.settings['settings']
-        niter=100
-
+        
+        self.reload_settings()
+        self.niter = self.settings['calibrate_qubit_states']['niter']
+        
         #create exc and gnd pulses 
         exc_sequence = PulseSequence()
         RX_pulse = platform.RX_pulse(qubit, start = 0)
@@ -285,7 +285,7 @@ class Calibration():
         platform.start()
         #Exectue niter single exc shots
         all_exc_states = []
-        for i in range(niter):
+        for i in range(self.niter):
             print(f"Starting exc state calibration {i}")
             qubit_state = platform.execute_pulse_sequence(exc_sequence, nshots = 1) # TODO: Improve the speed of this with binning
             qubit_state = list(list(qubit_state.values())[0].values())[0]
@@ -303,7 +303,7 @@ class Calibration():
         platform.start()
         lo_qcm.off()
         all_gnd_states = []
-        for i in range(niter):
+        for i in range(self.niter):
             print(f"Starting gnd state calibration  {i}")
             qubit_state = platform.execute_pulse_sequence(gnd_sequence, 1) # TODO: Improve the speed of this with binning
             qubit_state = list(list(qubit_state.values())[0].values())[0]
@@ -314,6 +314,8 @@ class Calibration():
         platform.stop()
 
         return all_gnd_states, np.mean(all_gnd_states), all_exc_states, np.mean(all_exc_states)
+
+        
    
     def auto_calibrate_plaform(self):
         platform = self.platform
