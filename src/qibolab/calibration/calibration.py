@@ -315,7 +315,112 @@ class Calibration():
 
         return all_gnd_states, np.mean(all_gnd_states), all_exc_states, np.mean(all_exc_states)
 
+    def fromReadout(self, readout, min_voltage, max_voltage):
+        norm = max_voltage - min_voltage
+        normalized_voltage =  (readout[0] * 1e6 - min_voltage) / norm
+        return normalized_voltage
+
+    def toSequence(self, gates, qubit):   
+        #read settings
+        platform = self.platform
+        platform.reload_settings()
+
+        ps = platform.settings['settings']
+                
+        sequenceDuration = 0
+        sequence = PulseSequence()
         
+        start_pulse = 0
+        for gate in gates:    
+            if (gate == "I"):
+                print("Transforming to sequence I gate")
+                duration = 0
+            
+            if (gate == "RX(pi)"):
+                print("Transforming to sequence RX(pi) gate")
+                RX_pulse = platform.RX_pulse(qubit, start = start_pulse)
+                duration = RX_pulse.duration
+                sequence.add(RX_pulse)
+
+            if (gate == "RX(pi/2)"):
+                print("Transforming to sequence RX(pi/2) gate")
+                RX90_pulse = platform.RX90_pulse(qubit, start = start_pulse)
+                duration = RX90_pulse.duration
+                sequence.add(RX90_pulse)
+
+            if (gate == "RY(pi)"):
+                print("Transforming to sequence RY(pi) gate")
+                RY_pulse = platform.RX_pulse(qubit, start = start_pulse, phase = np.pi)
+                duration = RY_pulse.duration
+                sequence.add(RY_pulse)
+
+            if (gate == "RY(pi/2)"):
+                print("Transforming to sequence RY(pi/2) gate")
+                RY90_pulse = platform.RX90_pulse(qubit, start = start_pulse, phase = np.pi)
+                duration = RY90_pulse.duration
+                sequence.add(RY90_pulse)
+            
+            sequenceDuration = sequenceDuration + duration
+            start_pulse = duration
+
+        #RO pulse starting just after pair of gates
+        ro_pulse = platform.qubit_readout_pulse(qubit, start = sequenceDuration + 4)
+        sequence.add(ro_pulse)
+        
+        return sequence
+
+    def allXY(self, qubit):
+        platform = self.platform
+        platform.reload_settings()
+
+        #allXY rotations
+        gatelist = [
+            ["I","I"], 
+            ["RX(pi)","RX(pi)"],
+            ["RY(pi)","RY(pi)"],    
+            ["RX(pi)","RY(pi)"],        
+            ["RY(pi)","RX(pi)"],
+            ["RX(pi/2)","I"],        
+            ["RY(pi/2)","I"],            
+            ["RX(pi/2)","RY(pi/2)"],            
+            ["RX(pi/2)","RY(pi/2)"],                
+            ["RX(pi/2)","RY(pi)"],                
+            ["RY(pi/2)","RX(pi)"],                
+            ["RX(pi)","RY(pi/2)"],                
+            ["RX(pi)","RX(pi/2)"],                
+            ["RX(pi/2)","RX(pi)"],                            
+            ["RX(pi)","RX(pi/2)"],                
+            ["RY(pi/2)","RY(pi)"],                
+            ["RY(pi)","RY(pi/2)"],                
+            ["RX(pi)","I"],  
+            ["RY(pi)","I"],                
+            ["RX(pi/2)","RX(pi/2)"],                
+            ["RY(pi/2)","RY(pi/2)"]                
+           ]
+
+        results = []
+        gateNumber = []
+        min_voltage = platform.settings['characterization']['single_qubit'][qubit]['rabi_oscillations_pi_pulse_min_voltage']
+        max_voltage = platform.settings['characterization']['single_qubit'][qubit]['resonator_spectroscopy_max_ro_voltage']
+        n = 0 
+        for gates in gatelist:
+            #transform gate string to pulseSequence
+            seq = self.toSequence(gates, qubit)      
+            #Execute PulseSequence defined by gates
+            platform.start()
+            state = platform.execute_pulse_sequence(seq, nshots=1024)
+            state = list(list(state.values())[0].values())[0]
+            platform.stop()
+            #transform readout I and Q into probabilities
+            res = self.fromReadout(state, min_voltage, max_voltage)
+            res = (2 * res) - 1
+            results.append(res)
+            gateNumber.append(n)
+            n=n+1
+
+        return results, gateNumber
+
+
    
     def auto_calibrate_plaform(self):
         platform = self.platform
