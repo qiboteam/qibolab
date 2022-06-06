@@ -87,7 +87,8 @@ class QRM(AbstractInstrument):
             # Reset
             if self.current_pulsesequence_hash != self.last_pulsequence_hash:
                 # print(f"Resetting {self.name}")
-                self.device.reset()            # Configure clock source
+                self.device.reset()
+                self.device_parameters = {}
                 # DEBUG: QRM Log device Reset
                 # print("QRM reset. Status:")
                 # print(self.device.get_system_status())
@@ -482,7 +483,9 @@ class QRM(AbstractInstrument):
                 raw_results = self.device.get_acquisitions(sequencer)
                 i, q = self._demodulate_and_integrate(raw_results, acquisition)
                 acquisition_results[sequencer][acquisition] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
-        
+                # DEBUG: QRM Plot Incomming Pulses
+                import qibolab.instruments.data.incomming_pulse_plotting as pp
+                pp.plot(raw_results)
         return acquisition_results
 
     def _demodulate_and_integrate(self, raw_results, acquisition):
@@ -490,7 +493,6 @@ class QRM(AbstractInstrument):
         acquisition_frequency = 20_000_000
         #TODO: obtain from acquisition info
         #DOWN Conversion
-        norm_factor = 1. / (self.acquisition_duration)
         n0 = self.acquisition_start # 0
         n1 = self.acquisition_start + self.acquisition_duration # self.acquisition_duration # 
         input_vec_I = np.array(raw_results[acquisition_name]["acquisition"]["scope"]["path0"]["data"][n0: n1])
@@ -509,7 +511,7 @@ class QRM(AbstractInstrument):
             for it, t, ii, qq in zip(np.arange(modulated_i.shape[0]), time,modulated_i, modulated_q):
                 result.append(demod_matrix[:,:,it] @ np.array([ii, qq]))
             demodulated_signal = np.array(result)
-            integrated_signal = norm_factor*np.sum(demodulated_signal,axis=0)
+            integrated_signal = np.mean(demodulated_signal,axis=0)
 
         elif self.mode == 'optimal':
             raise_error(NotImplementedError, "Optimal Demodulation Mode not coded yet.")
@@ -611,6 +613,7 @@ class QCM(AbstractInstrument):
             if self.current_pulsesequence_hash != self.last_pulsequence_hash:
                 # print(f"Resetting {self.name}")
                 self.device.reset()
+                self.device_parameters = {}
                 # DEBUG: QCM Log device Reset                
                 # print("QCM reset. Status:")
                 # print(self.device.get_system_status())
