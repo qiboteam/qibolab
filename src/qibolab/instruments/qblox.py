@@ -76,7 +76,6 @@ class QRM(AbstractInstrument):
             channel_port_map (dict): a dictionary of {channel (int): port (str) {'o1', 'o2', ...}}
         """
         # Load settings as class attributes
-        # self.__dict__.update(kwargs)
         self.hardware_avg = kwargs['hardware_avg']
         self.sampling_rate = kwargs['sampling_rate']
         self.repetition_duration = kwargs['repetition_duration']
@@ -615,7 +614,6 @@ class QCM(AbstractInstrument):
             gain (float): {0 .. 1} the gain applied to all sequencers on their output paths
             channel_port_map (dict): a dictionary of {channel (int): port (str) {'o1', 'o2', ...}}
         """
-        # self.__dict__.update(kwargs)
         self.hardware_avg = kwargs['hardware_avg']
         self.sampling_rate = kwargs['sampling_rate']
         self.repetition_duration = kwargs['repetition_duration']

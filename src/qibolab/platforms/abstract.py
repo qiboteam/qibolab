@@ -30,7 +30,6 @@ class AbstractPlatform(ABC):
             from importlib import import_module
             InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
             instance = InstrumentClass(name, address)
-            # instance.__dict__.update(self.settings['settings'])
             self.instruments[name] = instance    
 
     def __getstate__(self):
@@ -77,7 +76,10 @@ class AbstractPlatform(ABC):
                             f"Error captured: '{exception}'")
 
     def setup(self):
-        self.__dict__.update(self.settings['settings'])
+        self.hardware_avg = self.settings['settings']['hardware_avg']
+        self.sampling_rate = self.settings['settings']['sampling_rate']
+        self.repetition_duration = self.settings['settings']['repetition_duration']
+        self.minimum_delay_between_instructions = self.settings['settings']['minimum_delay_between_instructions']
         self.qubits = self.settings['qubits']
         self.topology = self.settings['topology']
         self.channels = self.settings['channels']
