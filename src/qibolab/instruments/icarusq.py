@@ -225,8 +225,8 @@ class AlazarADC(AbstractInstrument):
 
     def connect(self):
         if not self.is_connected:
-            from qcodes.instrument_drivers.AlazarTech.ATS9371 import AlazarTech_ATS9371
-            from qcodes.instrument_drivers.AlazarTech.AlazarADC import ADCController
+            from qcodes.instrument_drivers.AlazarTech.ATS9371 import AlazarTech_ATS9371 # pylint: disable=E0401, E0611
+            from qcodes.instrument_drivers.AlazarTech.AlazarADC import ADCController # pylint: disable=E0401, E0611
             try:
                 self.device = AlazarTech_ATS9371(self.address)
                 self.controller = ADCController(self.name, self.address)
@@ -300,13 +300,13 @@ class AlazarADC(AbstractInstrument):
             qt (float): Q component of the processed signal.
         """
 
-        input_vec_I = self._processed_data[readout_channels[0]]
-        input_vec_Q = self._processed_data[readout_channels[1]]
+        input_vec_I = self.device._processed_data[readout_channels[0]]
+        input_vec_Q = self.device._processed_data[readout_channels[1]]
         it = 0
         qt = 0
-        for i in range(self.samples_per_record):
-            it += input_vec_I[i] * np.cos(2 * np.pi * readout_frequency * self.time_array[i])
-            qt += input_vec_Q[i] * np.cos(2 * np.pi * readout_frequency * self.time_array[i])
+        for i in range(self.device.samples_per_record):
+            it += input_vec_I[i] * np.cos(2 * np.pi * readout_frequency * self.device.time_array[i])
+            qt += input_vec_Q[i] * np.cos(2 * np.pi * readout_frequency * self.device.time_array[i])
         phase = np.arctan2(qt, it)
         ampl = np.sqrt(it**2 + qt**2)
         
