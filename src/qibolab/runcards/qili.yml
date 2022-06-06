@@ -89,5 +89,7 @@ characterization:
             qubit_freq: 3564000000.0
             T1: 2192.895853326451
             T2: null
+            resonator_spectroscopy_max_ro_voltage: 900
+            rabi_oscillations_pi_pulse_min_voltage: 20
             mean_gnd_states: null
             mean_exc_states: null
