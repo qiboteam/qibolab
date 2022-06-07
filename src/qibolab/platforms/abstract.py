@@ -59,7 +59,11 @@ class AbstractPlatform(ABC):
     @abstractmethod
     def run_calibration(self, show_plots=False):  # pragma: no cover
         """Executes calibration routines and updates the settings yml file"""
-        raise NotImplementedError   
+        from qibolab.calibration import calibration
+        ac = calibration.Calibration(self)
+        ac.auto_calibrate_plaform()     
+        # update instruments with new calibration settings
+        self.reload_settings()
 
     def connect(self):
         """Connects to lab instruments using the details specified in the calibration settings."""
@@ -80,6 +84,7 @@ class AbstractPlatform(ABC):
         self.sampling_rate = self.settings['settings']['sampling_rate']
         self.repetition_duration = self.settings['settings']['repetition_duration']
         self.minimum_delay_between_instructions = self.settings['settings']['minimum_delay_between_instructions']
+
         self.qubits = self.settings['qubits']
         self.topology = self.settings['topology']
         self.channels = self.settings['channels']
@@ -99,7 +104,7 @@ class AbstractPlatform(ABC):
         self.qd_channel = {}
         self.qf_channel = {}
         self.qrm = {}
-        self.lo_qrm = {}
+        self.lo_qrm = {} # TODO: Not instrument agnostic
         self.qcm = {}
         self.lo_qcm = {}
         for qubit in self.qubit_channel_map:
