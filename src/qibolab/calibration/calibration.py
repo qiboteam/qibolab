@@ -420,7 +420,62 @@ class Calibration():
 
         return results, gateNumber
 
+    # Ramsey: RX(pi/2) - wait t(rotates z) - RX(pi/2) - readout
+    def run_ramsey_freq(self, qubit):
+        platform = self.platform
+        platform.reload_settings()
+        mc = self.mc
 
+        sequence = PulseSequence()
+        RX90_pulse1 = platform.RX90_pulse(qubit, start = 0)
+        RX90_pulse2 = platform.RX90_pulse(qubit, start = RX90_pulse1.duration)
+        ro_pulse = platform.qubit_readout_pulse(qubit, start = RX90_pulse1.duration + RX90_pulse2.duration)
+        sequence.add(RX90_pulse1)
+        sequence.add(RX90_pulse2)
+        sequence.add(ro_pulse)
+        
+        self.reload_settings()
+        self.t_start = self.settings['ramsey_freq']['t_start']
+        self.t_end = self.settings['ramsey_freq']['t_end']
+        self.t_step = self.settings['ramsey_freq']['t_step']
+        self.N_osc = self.settings['ramsey_freq']['N_osc']
+
+        stop = False        
+        self.pl.tuids_max_num(self.max_num_plots)
+        
+
+        for t_max in self.t_end:
+            if (stop == False):
+                offset_freq = (self.N_osc / t_max * 1e9) #Hz
+                t_range = np.arange(self.t_start, t_max, self.t_step)
+                mc.settables(Settable(RamseyFreqWaitParameter(ro_pulse, RX90_pulse2, offset_freq)))
+                mc.setpoints(t_range)
+                mc.gettables(Gettable(ROController(platform, sequence)))
+                platform.start()
+                dataset = mc.run('Ramsey_freq', soft_avg = self.software_averages)
+                platform.stop()
+
+                # Fitting
+                smooth_dataset, delta_fitting, new_t2 = fitting.ramsey_freq_fit(dataset)
+
+                utils.plot_ramsey(smooth_dataset, dataset, "Ramsey", 1)
+                delta_phys = (delta_fitting * 1e9) - offset_freq
+                
+                actual_qubit_freq = platform.settings['characterization']['single_qubit'][qubit]['qubit_freq']
+                T2 = platform.settings['characterization']['single_qubit'][qubit]['T2']
+
+                #if ((new_t2 * 3.5) > t_max):
+                if (new_t2 > T2):
+                    qubit_freq = actual_qubit_freq + delta_phys 
+                    utils.save_config_parameter("settings", "", "qubit_freq", float(qubit_freq))
+                    utils.save_config_parameter("LO_QCM_settings", "", "frequency", float(qubit_freq + 200_000_000))
+                    utils.save_config_parameter("settings", "", "T2", float(new_t2))
+                else:
+                    stop = True
+
+                platform.reload_settings()
+
+        return new_t2, delta_phys, smooth_dataset, dataset
    
     def auto_calibrate_plaform(self):
         platform = self.platform
@@ -563,6 +618,24 @@ class RamseyWaitParameter():
     def set(self, value):
         self.qc2_pulse.start = self.pulse_length  + value
         self.ro_pulse.start = self.pulse_length * 2 + value 
+
+class RamseyFreqWaitParameter():
+    label = 'Time'
+    unit = 'ns'
+    name = 'ramsey_freq'
+    initial_value = 0
+
+    def __init__(self, ro_pulse,  qc2_pulse, offset_freq):
+        self.ro_pulse = ro_pulse
+        self.qc2_pulse = qc2_pulse
+        self.pi_pulse_length = qc2_pulse.duration
+        self.offset_freq = offset_freq
+
+    def set(self, value):
+        self.ro_pulse.start = self.pi_pulse_length * 2 + value + 4
+        self.qc2_pulse.start = self.pi_pulse_length + value
+        value_phase = (value * 1e-9) * 2 * np.pi * self.offset_freq
+        self.qc2_pulse.phase = value_phase
 
 class ROController():
     # Quantify Gettable Interface Implementation
