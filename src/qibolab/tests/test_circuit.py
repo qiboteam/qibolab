@@ -119,7 +119,7 @@ def test_pulse_sequence_add_measurement(platform_name):
     assert seq.serial == f"{RX90_pulse1.serial}, {RX90_pulse2.serial}, {MZ_pulse.serial}"
 
 
-@pytest.mark.xfail # to implement fetching the nqubits from the platform
+@pytest.mark.xfail # to implement fetching the number of qubits from the platform
 def test_hardwarecircuit_init():
     circuit = HardwareCircuit(1)
     with pytest.raises(ValueError):
@@ -170,7 +170,7 @@ def test_hardwarecircuit_execute_error(platform):
     with pytest.raises(ValueError):
         result = circuit(initial_state=np.ones(2))
 
-#@pytest.mark.xfail 
+@pytest.mark.xfail 
 def test_hardwarecircuit_execute():
     # TODO: Test this method on IcarusQ
     qibo.set_backend("qibolab", platform="tiiq")

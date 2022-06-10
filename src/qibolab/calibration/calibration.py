@@ -171,7 +171,7 @@ class Calibration():
 
         self.reload_settings()
         self.pulse_duration_start = self.settings['rabi_pulse_length']['pulse_duration_start']
-        self.fast_step = self.settings['rabi_pulse_length']['pulse_duration_end']
+        self.pulse_duration_end = self.settings['rabi_pulse_length']['pulse_duration_end']
         self.pulse_duration_step = self.settings['rabi_pulse_length']['pulse_duration_step']
 
         self.pl.tuids_max_num(self.max_num_plots)
