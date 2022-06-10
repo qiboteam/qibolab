@@ -72,7 +72,26 @@ instruments:
         settings:
             frequency: 5_282_221_756
             power: 12
-
+    
+    SPI:
+        lib: spi
+        class: SPI
+        address: COM4
+        settings:
+            s4g_modules: 
+                #qubit flux_port: [address@SPI , name, #DAC, sweet_spot voltage] max number of DACs per module = 4
+                2: [2, "s4g_1", 1, 0]
+                4: [2, "s4g_1", 2, 0]
+                6: [2, "s4g_1", 3, 0]
+                8: [2, "s4g_1", 4, 0]
+                10: [3,"s4g_2", 1, 0]
+            d5a_modules:
+                #qubit flux_port: [address@SPI , name, #DAC, sweet_spot voltage] max number of DACs per module = 16 
+                12: [4, "d5a_1", 0, 0]
+                14: [4, "d5a_1", 1, 0]
+                16: [4, "d5a_1", 2, 0]
+                18: [4, "d5a_1", 3, 0]
+                20: [4, "d5a_1", 4, 0]
 native_gates:
     single_qubit:
         0: # qubit number
