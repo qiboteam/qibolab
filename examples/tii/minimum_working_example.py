@@ -1,4 +1,5 @@
 from qibolab import Platform
+from qibolab.paths import qibolab_folder
 from qibolab.pulses import Pulse, ReadoutPulse
 from qibolab.circuit import PulseSequence
 
@@ -22,7 +23,9 @@ sequence.add(ReadoutPulse(start=4004,
                           channel=11)) 
 
 # Define platform and load specific runcard
-platform = Platform("multiqubit")
+runcard = qibolab_folder / 'runcards' / 'qw5q.yml' 
+
+platform = Platform("multiqubit", runcard)
 # Connects to lab instruments using the details specified in the calibration settings.
 platform.connect()
 # Configures instruments using the loaded calibration settings.

@@ -1,9 +1,11 @@
-import pathlib
 from qibolab.paths import qibolab_folder
 import json
 import numpy as np
 from qibo.config import raise_error, log
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
+
+from qblox_instruments import Cluster
+cluster = None
 
 
 class QRM(AbstractInstrument):
@@ -27,29 +29,43 @@ class QRM(AbstractInstrument):
         """
         Connects to the instrument using the IP address set in the runcard.
         """
+        global cluster
         if not self.is_connected:
-            from pyvisa.errors import VisaIOError
-            for attempt in range(3):
-                try:
-                    self.device = self.device_class(self.name, self.address)
-                    self.is_connected = True
-                    break
-                except KeyError as exc:
-                    print(f"Unable to connect:\n{str(exc)}\nRetrying...")
-                    self.name += '_' + str(attempt)
-                except Exception as exc:
-                    print(f"Unable to connect:\n{str(exc)}\nRetrying...")
-            if not self.is_connected:
-                raise InstrumentException(self, f'Unable to connect to {self.name}')
-        else:
-            raise_error(Exception,'There is an open connection to the instrument already')
+            if not cluster:
+                from pyvisa.errors import VisaIOError
+                for attempt in range(3):
+                    try:
+                        cluster = self.device_class('cluster', self.address.split(':')[0])
+                        self.cluster_connected = True
+                        break
+                    except KeyError as exc:
+                        print(f"Unable to connect:\n{str(exc)}\nRetrying...")
+                        self.name += '_' + str(attempt)
+                    except Exception as exc:
+                        print(f"Unable to connect:\n{str(exc)}\nRetrying...")
+                if not self.cluster_connected:
+                    raise InstrumentException(self, f'Unable to connect to {self.name}')
+            self.device = cluster.modules[int(self.address.split(':')[1])-1]
+            self.cluster = cluster
+            self.is_connected = True
+
 
 
     def set_device_parameter(self, parameter: str, value):
         if not(parameter in self.device_parameters and self.device_parameters[parameter] == value):
             if self.is_connected:
-                if hasattr(self.device, parameter):
-                    self.device.set(parameter, value)
+                target = self.device
+                aux_parameter = parameter
+
+                while '.' in aux_parameter:
+                    if hasattr(target, aux_parameter.split('.')[0]):
+                        target = target.__getattr__(aux_parameter.split('.')[0])
+                        aux_parameter = aux_parameter.split('.')[1]
+                    else:
+                        raise_error(Exception, f'The instrument {self.name} does not have parameter {parameter}')
+
+                if hasattr(target, aux_parameter):
+                    target.__setattr__(aux_parameter, value)
                     self.device_parameters[parameter] = value
                     # DEBUG: QRM Parameter Setting Printing
                     # print(f"Setting {self.name} {parameter} = {value}")
@@ -80,7 +96,6 @@ class QRM(AbstractInstrument):
         self.repetition_duration = kwargs['repetition_duration']
 
         self.minimum_delay_between_instructions = kwargs['minimum_delay_between_instructions']
-        self.ref_clock = kwargs['ref_clock']
         self.sync_en = kwargs['sync_en']
         self.scope_acq_avg_mode_en = kwargs['scope_acq_avg_mode_en']
         self.scope_acq_trigger_mode = kwargs['scope_acq_trigger_mode']
@@ -89,23 +104,21 @@ class QRM(AbstractInstrument):
         self.acquisition_duration = kwargs['acquisition_duration']
         self.mode = kwargs['mode']
         self.channel_port_map = kwargs['channel_port_map']
-        self.lo = kwargs['lo']
 
         # Hardcoded values used to generate sequence program
         self.wait_loop_step = 1000
         self.waveform_max_length = 16384//2 # maximum length of the combination of waveforms, per sequencer, in number of samples (defined by the sequencer memory).
-        self.device_num_sequencers = self.device._num_sequencers
+        self.device_num_sequencers = len(self.device.sequencers)
         self.device_num_ports = 1
         if self.is_connected:
             # Reset
             if self.current_pulsesequence_hash != self.last_pulsequence_hash:
                 # print(f"Resetting {self.name}")
-                self.device.reset()
+                self.cluster.reset()
                 self.device_parameters = {}
                 # DEBUG: QRM Log device Reset
                 # print("QRM reset. Status:")
                 # print(self.device.get_system_status())
-            self.set_device_parameter('reference_source', self.ref_clock)
             self.set_device_parameter('scope_acq_trigger_mode_path0', self.scope_acq_trigger_mode) # sets scope acquisition trigger mode for input path 0 (‘sequencer’ = triggered by sequencer, ‘level’ = triggered by input level).
             self.set_device_parameter('scope_acq_trigger_mode_path1', self.scope_acq_trigger_mode)
             sequencer = 0 # TODO: move to yaml?
@@ -163,7 +176,7 @@ class QRM(AbstractInstrument):
                 if len(channel_pulses[channel]) > 0:
                     # Select a sequencer and add it to the sequencer_channel_map
                     sequencer += 1
-                    if sequencer > self.device._num_sequencers:
+                    if sequencer > self.device_num_sequencers:
                         raise_error(Exception, f"The number of sequencers requried to play the sequence exceeds the number available {self.device._num_sequencers}.")
                     # Initialise the corresponding variables 
                     self.sequencers.append(sequencer)
@@ -420,19 +433,19 @@ class QRM(AbstractInstrument):
             if sequencer in self.sequencers:
                 # Route sequencers to specific outputs.
                 port = int(self.channel_port_map[self.sequencer_channel_map[sequencer]][1:])-1
-                self.set_device_parameter(f"sequencer{sequencer}_channel_map_path0_out{2*port}_en", True)
-                self.set_device_parameter(f"sequencer{sequencer}_channel_map_path1_out{2*port+1}_en", True)
+                self.set_device_parameter(f"sequencer{sequencer}.channel_map_path0_out{2*port}_en", True)
+                self.set_device_parameter(f"sequencer{sequencer}.channel_map_path1_out{2*port+1}_en", True)
                 # Enable sequencer syncronisation
-                self.set_device_parameter(f"sequencer{sequencer}_sync_en", self.sync_en)
+                self.set_device_parameter(f"sequencer{sequencer}.sync_en", self.sync_en)
                 # Set gain
-                self.set_device_parameter(f"sequencer{sequencer}_gain_awg_path0", self.gain)
-                self.set_device_parameter(f"sequencer{sequencer}_gain_awg_path1", self.gain)
+                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path0", self.gain)
+                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path1", self.gain)
             else:
                 # Configure the sequencers synchronization.
-                self.set_device_parameter(f"sequencer{sequencer}_sync_en", False)
+                self.set_device_parameter(f"sequencer{sequencer}.sync_en", False)
                 # Disable all sequencer - port connections
                 for out in range(0, 2 * self.device_num_ports):
-                    self.set_device_parameter(f"sequencer{sequencer}_channel_map_path{out%2}_out{out}_en", False)
+                    self.set_device_parameter(f"sequencer{sequencer}.channel_map_path{out%2}_out{out}_en", False)
     
         # Upload
         if self.current_pulsesequence_hash != self.last_pulsequence_hash:
@@ -457,7 +470,7 @@ class QRM(AbstractInstrument):
                     json.dump(qblox_dict[sequencer], file, indent=4)
                     
                 # Upload json file to the device sequencers
-                self.device.set(f"sequencer{sequencer}_waveforms_and_program", str(self.data_folder / filename))
+                self.device.sequencers[sequencer].sequence(str(self.data_folder / filename))
         
         # Arm
         for sequencer in self.sequencers:
@@ -543,7 +556,7 @@ class QRM(AbstractInstrument):
     def disconnect(self):
         """Disconnects from the instrument."""
         if self.is_connected:
-            self.device.close()
+            self.cluster.close()
             self.is_connected = False
     
     def __del__(self):
@@ -571,30 +584,43 @@ class QCM(AbstractInstrument):
         """
         Connects to the instrument using the IP address set in the runcard.
         """
+        global cluster
         if not self.is_connected:
-            from pyvisa.errors import VisaIOError
-            for attempt in range(3):
-                try:
-                    self.device = self.device_class(self.name, self.address)
-                    self.is_connected = True
-                    break
-                except KeyError as exc:
-                    print(f"Unable to connect:\n{str(exc)}\nRetrying...")
-                    self.name += '_' + str(attempt)
-                except Exception as exc:
-                    print(f"Unable to connect:\n{str(exc)}\nRetrying...")
-            if not self.is_connected:
-                raise InstrumentException(self, f'Unable to connect to {self.name}')
-        else:
-            raise_error(Exception,'There is an open connection to the instrument already')
+            if not cluster:
+                from pyvisa.errors import VisaIOError
+                for attempt in range(3):
+                    try:
+                        cluster = self.device_class('cluster', self.address.split(':')[0])
+                        self.cluster_connected = True
+                        break
+                    except KeyError as exc:
+                        print(f"Unable to connect:\n{str(exc)}\nRetrying...")
+                        self.name += '_' + str(attempt)
+                    except Exception as exc:
+                        print(f"Unable to connect:\n{str(exc)}\nRetrying...")
+                if not self.cluster_connected:
+                    raise InstrumentException(self, f'Unable to connect to {self.name}')
+            self.device = cluster.modules[int(self.address.split(':')[1])-1]
+            self.cluster = cluster
+            self.is_connected = True
 
     def set_device_parameter(self, parameter: str, value):
         if not(parameter in self.device_parameters and self.device_parameters[parameter] == value):
             if self.is_connected:
-                if hasattr(self.device, parameter):
-                    self.device.set(parameter, value)
+                target = self.device
+                aux_parameter = parameter
+
+                while '.' in aux_parameter:
+                    if hasattr(target, aux_parameter.split('.')[0]):
+                        target = target.__getattr__(aux_parameter.split('.')[0])
+                        aux_parameter = aux_parameter.split('.')[1]
+                    else:
+                        raise_error(Exception, f'The instrument {self.name} does not have parameter {parameter}')
+
+                if hasattr(target, aux_parameter):
+                    target.__setattr__(aux_parameter, value)
                     self.device_parameters[parameter] = value
-                    # DEBUG: QCM Parameter Setting Printing
+                    # DEBUG: QRM Parameter Setting Printing
                     # print(f"Setting {self.name} {parameter} = {value}")
                 else:
                     raise_error(Exception, f'The instrument {self.name} does not have parameter {parameter}')
@@ -617,28 +643,24 @@ class QCM(AbstractInstrument):
         self.repetition_duration = kwargs['repetition_duration']
         self.minimum_delay_between_instructions = kwargs['minimum_delay_between_instructions']
 
-        self.ref_clock = kwargs['ref_clock']
         self.sync_en = kwargs['sync_en']
         self.gain = kwargs['gain']
         self.channel_port_map = kwargs['channel_port_map']
-        self.lo = kwargs['lo']
 
         # Hardcoded values used to generate sequence program
         self.wait_loop_step = 1000
         self.waveform_max_length = 16384//2 # maximum length of the combination of waveforms, per sequencer, in number of samples (defined by the sequencer memory).
-        self.device_num_sequencers = self.device._num_sequencers
+        self.device_num_sequencers = len(self.device.sequencers)
         self.device_num_ports = 2
         if self.is_connected:
             # Reset
             if self.current_pulsesequence_hash != self.last_pulsequence_hash:
                 # print(f"Resetting {self.name}")
-                self.device.reset()
+                self.cluster.reset()
                 self.device_parameters = {}
                 # DEBUG: QCM Log device Reset                
                 # print("QCM reset. Status:")
                 # print(self.device.get_system_status())
-            # Configure clock source
-            self.set_device_parameter('reference_source', self.ref_clock)
             # The mapping of sequencers to ports is done in upload() as the number of sequencers needed 
             # can only be determined after examining the pulse sequence
         else:
@@ -688,7 +710,7 @@ class QCM(AbstractInstrument):
                 if len(channel_pulses[channel]) > 0:
                     # Select a sequencer and add it to the sequencer_channel_map
                     sequencer += 1
-                    if sequencer > self.device._num_sequencers:
+                    if sequencer > self.device_num_sequencers:
                         raise_error(Exception, f"The number of sequencers requried to play the sequence exceeds the number available {self.device._num_sequencers}.")
                     # Initialise the corresponding variables 
                     self.sequencers.append(sequencer)
@@ -901,19 +923,19 @@ class QCM(AbstractInstrument):
             if sequencer in self.sequencers:
                 # Route sequencers to specific outputs.
                 port = int(self.channel_port_map[self.sequencer_channel_map[sequencer]][1:])-1
-                self.set_device_parameter(f"sequencer{sequencer}_channel_map_path0_out{2*port}_en", True)
-                self.set_device_parameter(f"sequencer{sequencer}_channel_map_path1_out{2*port+1}_en", True)
+                self.set_device_parameter(f"sequencer{sequencer}.channel_map_path0_out{2*port}_en", True)
+                self.set_device_parameter(f"sequencer{sequencer}.channel_map_path1_out{2*port+1}_en", True)
                 # Enable sequencer syncronisation
-                self.set_device_parameter(f"sequencer{sequencer}_sync_en", self.sync_en)
+                self.set_device_parameter(f"sequencer{sequencer}.sync_en", self.sync_en)
                 # Set gain
-                self.set_device_parameter(f"sequencer{sequencer}_gain_awg_path0", self.gain)
-                self.set_device_parameter(f"sequencer{sequencer}_gain_awg_path1", self.gain)
+                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path0", self.gain)
+                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path1", self.gain)
             else:
                 # Configure the sequencers synchronization.
-                self.set_device_parameter(f"sequencer{sequencer}_sync_en", False)
+                self.set_device_parameter(f"sequencer{sequencer}.sync_en", False)
                 # Disable all sequencer - port connections
                 for out in range(0, 2 * self.device_num_ports):
-                    self.set_device_parameter(f"sequencer{sequencer}_channel_map_path{out%2}_out{out}_en", False)
+                    self.set_device_parameter(f"sequencer{sequencer}.channel_map_path{out%2}_out{out}_en", False)
 
             
         # Upload
@@ -939,7 +961,7 @@ class QCM(AbstractInstrument):
                 with open(self.data_folder / filename, "w", encoding="utf-8") as file:
                     json.dump(qblox_dict[sequencer], file, indent=4)
                 # Upload json file to the device sequencers
-                self.device.set(f"sequencer{sequencer}_waveforms_and_program", str(self.data_folder / filename))            
+                self.device.sequencers[sequencer].sequence(str(self.data_folder / filename))
 
         # Arm
         for sequencer in self.sequencers:
@@ -966,40 +988,24 @@ class QCM(AbstractInstrument):
     def disconnect(self):
         """Disconnects from the instrument."""
         if self.is_connected:
-            self.device.close()
+            self.cluster.close()
             self.is_connected = False
     
     def __del__(self):
         self.disconnect()
 
 
-class ClusterQRM(QRM):
+class ClusterQRM_RF(QRM):
     
     def __init__(self, name, address):
         super().__init__(name, address)
-        from cluster.cluster import cluster_qrm
-        self.device_class = cluster_qrm
+        from qblox_instruments import Cluster
+        self.device_class = Cluster
 
 
-class PulsarQRM(QRM):
+class ClusterQCM_RF(QCM):
     
     def __init__(self, name, address):
         super().__init__(name, address)
-        from pulsar_qrm.pulsar_qrm import pulsar_qrm
-        self.device_class = pulsar_qrm
-
-
-class ClusterQCM(QCM):
-    
-    def __init__(self, name, address):
-        super().__init__(name, address)
-        from cluster.cluster import cluster_qcm
-        self.device_class = cluster_qcm
-
-
-class PulsarQCM(QCM):
-    
-    def __init__(self, name, address):
-        super().__init__(name, address)
-        from pulsar_qcm.pulsar_qcm import pulsar_qcm
-        self.device_class = pulsar_qcm
+        from qblox_instruments import Cluster
+        self.device_class = Cluster

@@ -1,0 +1,130 @@
+nqubits: 5
+description: QuantWare 5-qubit device, controlled with Qblox and R&S instruments.
+
+settings:
+    hardware_avg: 1024
+    sampling_rate: 1_000_000_000
+    repetition_duration: 200_000
+    minimum_delay_between_instructions: 4
+
+qubits: [0, 1, 2, 3, 4]
+
+topology: # qubit - qubit connections
+-   [ 1, 0, 1, 0, 0]
+-   [ 0, 1, 1, 0, 0]
+-   [ 1, 1, 1, 1, 1]
+-   [ 0, 0, 1, 1, 0]
+-   [ 0, 0, 1, 0, 1]
+
+channels: [1, 10, 11, 12, 13, 14, 15, 21, 22, 23, 24, 25]
+
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux] 
+    0: [1, 21, 11]
+    1: [1, 22, 12]
+    2: [1, 23, 13]
+    3: [1, 24, 14]
+    4: [1, 25, 15]
+
+instruments:
+    qrm_rf1:
+        lib: qblox
+        class: ClusterQRM_RF
+        address: 192.168.0.2:16
+        settings:
+            sync_en: true
+            scope_acq_avg_mode_en: true
+            scope_acq_trigger_mode: sequencer
+            gain: 0.4
+            acquisition_start: 130 # minimum 4ns
+            acquisition_duration: 1500
+            mode: ssb
+            channel_port_map:  # Refrigerator Channel : Instrument port
+                1: o1 # IQ Port = out0 & out1
+                #10: i1 
+
+    qcm_rf1:
+        lib: qblox
+        class: ClusterQCM_RF
+        address: 192.168.0.2:6
+        settings:
+            sync_en: true
+            gain: 0.3
+            channel_port_map:  
+                21: o1 # IQ Port = out0 & out1
+
+native_gates:
+    single_qubit:
+        0: # qubit number
+            RX:
+                duration: 71
+                amplitude: 0.4
+                frequency: 200_000_000
+                shape: Gaussian(5)
+                type: qd # qubit drive
+            MZ:
+                duration: 2000
+                amplitude: 0.9
+                frequency: 20_000_000
+                shape: Rectangular()
+                type: ro # readout
+
+    two_qubit:
+        0-2: # qubit numbers
+            CZ:
+                pulse_sequence:
+                    -   start: 0
+                        duration: 20
+                        amplitude: 0.5
+                        frequency: 0
+                        shape: RTZ()
+                        phase: null
+                        channel: 2
+                        type: qf # qubit flux
+                    -   start: 0
+                        duration: 4
+                        amplitude: 0.01
+                        frequency: 0
+                        shape: RTZ()
+                        phase: null
+                        channel: 2
+                        type: qf # qubit flux
+
+characterization:
+    single_qubit:
+        0:
+            resonator_freq: 7824715967.361432
+            qubit_freq: 5082221756
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            resonator_spectroscopy_max_ro_voltage: 900
+            rabi_oscillations_pi_pulse_min_voltage: 20
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
+        1:
+            resonator_freq: 7824715967.361432
+            qubit_freq: 5082221756
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
+        2:
+            resonator_freq: 7824715967.361432
+            qubit_freq: 5082221756
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
+        3:
+            resonator_freq: 7824715967.361432
+            qubit_freq: 5082221756
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
+        4:
+            resonator_freq: 7824715967.361432
+            qubit_freq: 5082221756
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
