@@ -42,8 +42,9 @@ setup(
         "Topic :: Scientific/Engineering :: Physics",
     ],
     install_requires=[
-        "qibo",
-        "qcodes",
+        "qibo",     # 0.1.7
+        "qcodes",   # 0.34.1
+        "lmfit",    # 1.0.3
     ],
     extras_require={
         "docs": [
@@ -56,8 +57,8 @@ setup(
             "IPython"],
         # TII system dependencies
         "tiiq": [
-            "qblox-instruments",
-            "quantify-core",
+            "qblox-instruments",    # 0.6.1
+            "quantify-core",        # 0.6.0
         ]
     },
     python_requires=">=3.6.0",
