@@ -5,7 +5,7 @@ from qibo.config import raise_error, log
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 
 from qblox_instruments import Cluster
-cluster = None
+cluster : Cluster = None
 
 
 class QRM(AbstractInstrument):
@@ -24,6 +24,11 @@ class QRM(AbstractInstrument):
         self.last_pulsequence_hash = "uninitialised"
         self.current_pulsesequence_hash = ""
         self.device_parameters = {}
+        self.settable_frequency = SettableFrequency(self)
+        self.lo = self
+
+    rw_property_wrapper = lambda parameter: property(lambda self: self.device.get(parameter), lambda self,x: self.set_device_parameter(parameter,x))
+    frequency = rw_property_wrapper('out0_in0_lo_freq')
 
     def connect(self):
         """
@@ -32,7 +37,6 @@ class QRM(AbstractInstrument):
         global cluster
         if not self.is_connected:
             if not cluster:
-                from pyvisa.errors import VisaIOError
                 for attempt in range(3):
                     try:
                         cluster = self.device_class('cluster', self.address.split(':')[0])
@@ -49,8 +53,6 @@ class QRM(AbstractInstrument):
             self.cluster = cluster
             self.is_connected = True
 
-
-
     def set_device_parameter(self, parameter: str, value):
         if not(parameter in self.device_parameters and self.device_parameters[parameter] == value):
             if self.is_connected:
@@ -65,7 +67,8 @@ class QRM(AbstractInstrument):
                         raise_error(Exception, f'The instrument {self.name} does not have parameter {parameter}')
 
                 if hasattr(target, aux_parameter):
-                    target.__setattr__(aux_parameter, value)
+                    target.set(aux_parameter, value)
+                    # target.__setattr__(aux_parameter, value)
                     self.device_parameters[parameter] = value
                     # DEBUG: QRM Parameter Setting Printing
                     # print(f"Setting {self.name} {parameter} = {value}")
@@ -90,19 +93,47 @@ class QRM(AbstractInstrument):
             mode: ssb
             channel_port_map (dict): a dictionary of {channel (int): port (str) {'o1', 'o2', ...}}
         """
-        # Load settings as class attributes
+        # Load settings
         self.hardware_avg = kwargs['hardware_avg']
         self.sampling_rate = kwargs['sampling_rate']
         self.repetition_duration = kwargs['repetition_duration']
-
         self.minimum_delay_between_instructions = kwargs['minimum_delay_between_instructions']
-        self.sync_en = kwargs['sync_en']
+
+        self.in0_att = kwargs['in0_att']
+        self.out0_att = kwargs['out0_att']
+        self.out0_in0_lo_en = kwargs['out0_in0_lo_en']
+        self.out0_in0_lo_freq = kwargs['out0_in0_lo_freq']
+        self.out0_offset_path0 = kwargs['out0_offset_path0']
+        self.out0_offset_path1 = kwargs['out0_offset_path1']
+        self.present = kwargs['present']
         self.scope_acq_avg_mode_en = kwargs['scope_acq_avg_mode_en']
+        self.scope_acq_sequencer_select = kwargs['scope_acq_sequencer_select']
+        self.scope_acq_trigger_level = kwargs['scope_acq_trigger_level']
         self.scope_acq_trigger_mode = kwargs['scope_acq_trigger_mode']
-        self.gain = kwargs['gain']
+
+        self.channel_map_path0_out0_en = kwargs['channel_map_path0_out0_en']
+        self.channel_map_path1_out1_en = kwargs['channel_map_path1_out1_en']
+        self.cont_mode_en_awg = kwargs['cont_mode_en_awg']
+        self.cont_mode_waveform_idx_awg = kwargs['cont_mode_waveform_idx_awg']
+        self.demod_en_acq = kwargs['demod_en_acq']
+        self.discretization_threshold_acq = kwargs['discretization_threshold_acq']
+        self.gain_awg = kwargs['gain_awg']
+        self.integration_length_acq = kwargs['integration_length_acq']
+        self.marker_ovr_en = kwargs['marker_ovr_en']
+        self.marker_ovr_value = kwargs['marker_ovr_value']
+        self.mixer_corr_gain_ratio = kwargs['mixer_corr_gain_ratio']
+        self.mixer_corr_phase_offset_degree = kwargs['mixer_corr_phase_offset_degree']
+        self.mod_en_awg = kwargs['mod_en_awg']
+        self.nco_freq = kwargs['nco_freq']
+        self.nco_phase_offs = kwargs['nco_phase_offs']
+        self.offset_awg_path0 = kwargs['offset_awg_path0']
+        self.offset_awg_path1 = kwargs['offset_awg_path1']
+        self.phase_rotation_acq = kwargs['phase_rotation_acq']
+        self.sync_en = kwargs['sync_en']
+        self.upsample_rate_awg = kwargs['upsample_rate_awg']
+
         self.acquisition_start = kwargs['acquisition_start']
         self.acquisition_duration = kwargs['acquisition_duration']
-        self.mode = kwargs['mode']
         self.channel_port_map = kwargs['channel_port_map']
 
         # Hardcoded values used to generate sequence program
@@ -114,22 +145,21 @@ class QRM(AbstractInstrument):
             # Reset
             if self.current_pulsesequence_hash != self.last_pulsequence_hash:
                 # print(f"Resetting {self.name}")
-                self.cluster.reset()
+                # self.cluster.reset() # FIXME: this needs to clear the cahes of the rest of the modules
                 self.device_parameters = {}
                 # DEBUG: QRM Log device Reset
                 # print("QRM reset. Status:")
                 # print(self.device.get_system_status())
+            self.frequency = self.out0_in0_lo_freq
             self.set_device_parameter('scope_acq_trigger_mode_path0', self.scope_acq_trigger_mode) # sets scope acquisition trigger mode for input path 0 (‘sequencer’ = triggered by sequencer, ‘level’ = triggered by input level).
             self.set_device_parameter('scope_acq_trigger_mode_path1', self.scope_acq_trigger_mode)
-            sequencer = 0 # TODO: move to yaml?
-            self.set_device_parameter('scope_acq_sequencer_select', sequencer) # specifies which sequencer triggers the scope acquisition when using sequencer trigger mode
+            self.set_device_parameter('scope_acq_sequencer_select', self.scope_acq_sequencer_select) # specifies which sequencer triggers the scope acquisition when using sequencer trigger mode
             self.set_device_parameter('scope_acq_avg_mode_en_path0', self.scope_acq_avg_mode_en) # sets scope acquisition averaging mode enable for input path 0
             self.set_device_parameter('scope_acq_avg_mode_en_path1', self.scope_acq_avg_mode_en)
             # The mapping of sequencers to ports is done in upload() as the number of sequencers needed 
             # can only be determined after examining the pulse sequence
         else:
             raise_error(Exception,'There is no connection to the instrument')
-
 
     def process_pulse_sequence(self, channel_pulses, nshots):
         """
@@ -417,10 +447,10 @@ class QRM(AbstractInstrument):
             mod_signals = np.array(result)
 
             # DEBUG: QRM plot envelopes
-            # import matplotlib.pyplot as plt
-            # plt.plot(mod_signals[:, 0] + pulse.offset_i)
-            # plt.plot(mod_signals[:, 1] + pulse.offset_q)
-            # plt.show()
+            import matplotlib.pyplot as plt
+            plt.plot(mod_signals[:, 0] + pulse.offset_i)
+            plt.plot(mod_signals[:, 1] + pulse.offset_q)
+            plt.show()
 
             return mod_signals[:, 0] + pulse.offset_i, mod_signals[:, 1] + pulse.offset_q
         else:
@@ -438,8 +468,8 @@ class QRM(AbstractInstrument):
                 # Enable sequencer syncronisation
                 self.set_device_parameter(f"sequencer{sequencer}.sync_en", self.sync_en)
                 # Set gain
-                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path0", self.gain)
-                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path1", self.gain)
+                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path0", self.gain_awg)
+                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path1", self.gain_awg)
             else:
                 # Configure the sequencers synchronization.
                 self.set_device_parameter(f"sequencer{sequencer}.sync_en", False)
@@ -510,8 +540,8 @@ class QRM(AbstractInstrument):
                 i, q = self._demodulate_and_integrate(raw_results, acquisition)
                 acquisition_results[sequencer][acquisition] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
                 # DEBUG: QRM Plot Incomming Pulses
-                # import qibolab.instruments.data.incomming_pulse_plotting as pp
-                # pp.plot(raw_results)
+                import qibolab.instruments.debug.incomming_pulse_plotting as pp
+                pp.plot(raw_results)
         return acquisition_results
 
     def _demodulate_and_integrate(self, raw_results, acquisition):
@@ -526,23 +556,18 @@ class QRM(AbstractInstrument):
         input_vec_I -= np.mean(input_vec_I)
         input_vec_Q -= np.mean(input_vec_Q)
 
-        if self.mode == 'ssb':
-            modulated_i = input_vec_I
-            modulated_q = input_vec_Q
-            time = np.arange(modulated_i.shape[0])*1e-9
-            cosalpha = np.cos(2 * np.pi * acquisition_frequency * time)
-            sinalpha = np.sin(2 * np.pi * acquisition_frequency * time)
-            demod_matrix = 2 * np.array([[cosalpha, -sinalpha], [sinalpha, cosalpha]])
-            result = []
-            for it, t, ii, qq in zip(np.arange(modulated_i.shape[0]), time,modulated_i, modulated_q):
-                result.append(demod_matrix[:,:,it] @ np.array([ii, qq]))
-            demodulated_signal = np.array(result)
-            integrated_signal = np.mean(demodulated_signal,axis=0)
+        modulated_i = input_vec_I
+        modulated_q = input_vec_Q
+        time = np.arange(modulated_i.shape[0])*1e-9
+        cosalpha = np.cos(2 * np.pi * acquisition_frequency * time)
+        sinalpha = np.sin(2 * np.pi * acquisition_frequency * time)
+        demod_matrix = 2 * np.array([[cosalpha, -sinalpha], [sinalpha, cosalpha]])
+        result = []
+        for it, t, ii, qq in zip(np.arange(modulated_i.shape[0]), time,modulated_i, modulated_q):
+            result.append(demod_matrix[:,:,it] @ np.array([ii, qq]))
+        demodulated_signal = np.array(result)
+        integrated_signal = np.mean(demodulated_signal,axis=0)
 
-        elif self.mode == 'optimal':
-            raise_error(NotImplementedError, "Optimal Demodulation Mode not coded yet.")
-        else:
-            raise_error(NotImplementedError, "Demodulation mode not understood.")
         return integrated_signal
 
 
@@ -579,6 +604,11 @@ class QCM(AbstractInstrument):
         self.last_pulsequence_hash = "uninitialised"
         self.current_pulsesequence_hash = ""
         self.device_parameters = {}
+        self.settable_frequency = SettableFrequency(self)
+        self.lo = self
+
+    rw_property_wrapper = lambda parameter: property(lambda self: self.device.get(parameter), lambda self,x: self.set_device_parameter(parameter,x))
+    frequency = rw_property_wrapper('out0_lo_freq')
 
     def connect(self):
         """
@@ -618,7 +648,8 @@ class QCM(AbstractInstrument):
                         raise_error(Exception, f'The instrument {self.name} does not have parameter {parameter}')
 
                 if hasattr(target, aux_parameter):
-                    target.__setattr__(aux_parameter, value)
+                    # target.__setattr__(aux_parameter, value)
+                    target.set(aux_parameter, value)
                     self.device_parameters[parameter] = value
                     # DEBUG: QRM Parameter Setting Printing
                     # print(f"Setting {self.name} {parameter} = {value}")
@@ -643,8 +674,37 @@ class QCM(AbstractInstrument):
         self.repetition_duration = kwargs['repetition_duration']
         self.minimum_delay_between_instructions = kwargs['minimum_delay_between_instructions']
 
+        self.out0_att = kwargs['out0_att']
+        self.out0_lo_en = kwargs['out0_lo_en']
+        self.out0_lo_freq = kwargs['out0_lo_freq']
+        self.out0_offset_path0 = kwargs['out0_offset_path0']
+        self.out0_offset_path1 = kwargs['out0_offset_path1']
+        self.out1_att = kwargs['out1_att']
+        self.out1_lo_en = kwargs['out1_lo_en']
+        self.out1_lo_freq = kwargs['out1_lo_freq']
+        self.out1_offset_path0 = kwargs['out1_offset_path0']
+        self.out1_offset_path1 = kwargs['out1_offset_path1']
+        self.present = kwargs['present']
+
+        self.channel_map_path0_out0_en = kwargs['channel_map_path0_out0_en']
+        self.channel_map_path1_out1_en = kwargs['channel_map_path1_out1_en']
+        self.channel_map_path0_out2_en = kwargs['channel_map_path0_out0_en']
+        self.channel_map_path1_out3_en = kwargs['channel_map_path1_out1_en']
+        self.cont_mode_en_awg = kwargs['cont_mode_en_awg']
+        self.cont_mode_waveform_idx_awg = kwargs['cont_mode_waveform_idx_awg']
+        self.gain_awg = kwargs['gain_awg']
+        self.marker_ovr_en = kwargs['marker_ovr_en']
+        self.marker_ovr_value = kwargs['marker_ovr_value']
+        self.mixer_corr_gain_ratio = kwargs['mixer_corr_gain_ratio']
+        self.mixer_corr_phase_offset_degree = kwargs['mixer_corr_phase_offset_degree']
+        self.mod_en_awg = kwargs['mod_en_awg']
+        self.nco_freq = kwargs['nco_freq']
+        self.nco_phase_offs = kwargs['nco_phase_offs']
+        self.offset_awg_path0 = kwargs['offset_awg_path0']
+        self.offset_awg_path1 = kwargs['offset_awg_path1']
         self.sync_en = kwargs['sync_en']
-        self.gain = kwargs['gain']
+        self.upsample_rate_awg = kwargs['upsample_rate_awg']
+
         self.channel_port_map = kwargs['channel_port_map']
 
         # Hardcoded values used to generate sequence program
@@ -656,13 +716,14 @@ class QCM(AbstractInstrument):
             # Reset
             if self.current_pulsesequence_hash != self.last_pulsequence_hash:
                 # print(f"Resetting {self.name}")
-                self.cluster.reset()
+                # self.cluster.reset() # FIXME: this needs to clear the cahes of the rest of the modules
                 self.device_parameters = {}
                 # DEBUG: QCM Log device Reset                
                 # print("QCM reset. Status:")
                 # print(self.device.get_system_status())
             # The mapping of sequencers to ports is done in upload() as the number of sequencers needed 
             # can only be determined after examining the pulse sequence
+            self.frequency = self.out0_lo_freq
         else:
             raise_error(Exception,'There is no connection to the instrument')
 
@@ -907,10 +968,10 @@ class QCM(AbstractInstrument):
             mod_signals = np.array(result)
 
             # DEBUG: QCM plot envelopes
-            # import matplotlib.pyplot as plt
-            # plt.plot(mod_signals[:, 0] + pulse.offset_i)
-            # plt.plot(mod_signals[:, 1] + pulse.offset_q)
-            # plt.show()
+            import matplotlib.pyplot as plt
+            plt.plot(mod_signals[:, 0] + pulse.offset_i)
+            plt.plot(mod_signals[:, 1] + pulse.offset_q)
+            plt.show()
 
             return mod_signals[:, 0] + pulse.offset_i, mod_signals[:, 1] + pulse.offset_q
         else:
@@ -928,8 +989,8 @@ class QCM(AbstractInstrument):
                 # Enable sequencer syncronisation
                 self.set_device_parameter(f"sequencer{sequencer}.sync_en", self.sync_en)
                 # Set gain
-                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path0", self.gain)
-                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path1", self.gain)
+                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path0", self.gain_awg)
+                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path1", self.gain_awg)
             else:
                 # Configure the sequencers synchronization.
                 self.set_device_parameter(f"sequencer{sequencer}.sync_en", False)
@@ -1009,3 +1070,48 @@ class ClusterQCM_RF(QCM):
         super().__init__(name, address)
         from qblox_instruments import Cluster
         self.device_class = Cluster
+
+
+
+class ClusterQRM(QRM):
+    
+    def __init__(self, name, address):
+        super().__init__(name, address)
+        from qblox_instruments import Cluster
+        self.device_class = Cluster
+
+
+class PulsarQRM(QRM):
+    
+    def __init__(self, name, address):
+        super().__init__(name, address)
+        from qblox_instruments import Pulsar
+        self.device_class = Pulsar
+
+
+class ClusterQCM(QCM):
+    
+    def __init__(self, name, address):
+        super().__init__(name, address)
+        from qblox_instruments import Cluster
+        self.device_class = Cluster
+
+
+class PulsarQCM(QCM):
+    
+    def __init__(self, name, address):
+        super().__init__(name, address)
+        from qblox_instruments import Pulsar
+        self.device_class = Pulsar
+
+
+class SettableFrequency():
+        label = 'Frequency'
+        unit = 'Hz'
+        name = 'frequency'
+        
+        def __init__(self, outter_class_instance):
+            self.outter_class_instance = outter_class_instance
+
+        def set(self, value):
+            self.outter_class_instance.frequency =  value
