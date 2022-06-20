@@ -123,10 +123,10 @@ class SPI(AbstractInstrument):
     def start(self):
         #set the dacs to the values stored for each qubit in the runcard
         if self.is_connected:
-            for s4g_module in self.s4g_modules:
+            for s4g_module in self.s4g_modules.values():
                 funtion = "self.device."+s4g_module[1]+".dac"+s4g_module[2]+".current(current_value)"
                 eval(funtion, {"current_value": s4g_module[3]})
-            for d5a_module in self.d5a_modules:
+            for d5a_module in self.d5a_modules.values():
                 funtion = "self.device."+d5a_module[1]+".dac"+d5a_module[2]+".current(current_value)"
                 eval(funtion, {"current_value": d5a_module[3]})
 
