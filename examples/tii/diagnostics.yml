@@ -1,18 +1,18 @@
 name: tiiq_single_qubit_diagnostics
 description: Settings for characterization scripts.
 software_averages: 1
-software_averages_precision: 2
-max_num_plots: 2
+software_averages_precision: 1
+max_num_plots: 10
 
 # Single qubit experiments
 
 resonator_spectroscopy:
-  lowres_width: 30_000_000
-  lowres_step: 2_000_000
+  lowres_width: 20_000_000
+  lowres_step: 400_000
   highres_width: 5_000_000
-  highres_step: 200_000
-  precision_width: 3_000_000
-  precision_step: 100_000
+  highres_step: 100_000
+  precision_width: 1_000_000
+  precision_step: 50_000
 
 qubit_spectroscopy:
   fast_start: -500_000_000
