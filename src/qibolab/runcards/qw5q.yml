@@ -39,7 +39,7 @@ instruments:
             acquisition_duration: 1500
             mode: ssb
             channel_port_map:  # Refrigerator Channel : Instrument port
-                1: o1 # IQ Port = out0 & out1
+                10: o1 # IQ Port = out0 & out1
                 #10: i1 
 
     qcm_rf1:

@@ -12,7 +12,7 @@ sequence.add(Pulse(start=0,
                    frequency=200_000_000,
                    phase=0,
                    shape='Gaussian(5)', # Gaussian shape with std = duration / 5
-                   channel=1)) 
+                   channel=21)) 
 
 sequence.add(ReadoutPulse(start=4004,
                           amplitude=0.9,
@@ -20,7 +20,7 @@ sequence.add(ReadoutPulse(start=4004,
                           frequency=20_000_000,
                           phase=0,
                           shape='Rectangular', 
-                          channel=11)) 
+                          channel=10)) 
 
 # Define platform and load specific runcard
 runcard = qibolab_folder / 'runcards' / 'qw5q.yml' 
