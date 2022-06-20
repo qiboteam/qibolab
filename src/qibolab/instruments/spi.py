@@ -56,43 +56,43 @@ class SPI(AbstractInstrument):
         #TODO: Check access to module info from stored mapping data
         #TODO: Test eval function from string 
         module = self.s4g_modules[flux_port]
-        funtion = "self.device."+module[1]+".dac"+module[2]+".current(current_value)"
+        funtion = "self.device."+module[1]+".dac"+str(module[2])+".current(current_value)"
         eval(funtion, {"current_value": current_value})
         #setattr(self.device, attr, current)
     
     def get_S4g_DAC_current(self, flux_port):
         module = self.s4g_modules[flux_port]
-        funtion = "self.device."+module[1]+".dac"+module[2]+".current()"
+        funtion = "self.device."+module[1]+".dac"+str(module[2])+".current()"
         return eval(funtion)
     
     def set_S4g_span(self, flux_port, span_value):
         module = self.s4g_modules[flux_port]
-        function = "self.device."+module[1]+".dac"+module[2]+".span(span_value)"
+        function = "self.device."+module[1]+".dac"+str(module[2])+".span(span_value)"
         eval(function, {"span_value": span_value})
 
     def get_S4g_span(self, flux_port):
         module = self.s4g_modules[flux_port]
-        function = "self.device."+module[1]+".dac"+module[2]+".span()"
+        function = "self.device."+module[1]+".dac"+str(module[2])+".span()"
         return eval(function)
 
     def set_D5a_DAC_voltage(self, flux_port, voltage_value):
         module = self.d5a_modules[flux_port]
-        function = "self.device."+module[1]+".dac"+module[2]+".voltage(voltage_value)"
+        function = "self.device."+module[1]+".dac"+str(module[2])+".voltage(voltage_value)"
         eval(function, {"volatge_value": voltage_value})
 
     def get_D5a_DAC_voltage(self, flux_port):
         module = self.d5a_modules[flux_port]
-        function = "self.device."+module[1]+".dac"+module[2]+"voltage()"
+        function = "self.device."+module[1]+".dac"+str(module[2])+"voltage()"
         return eval(function)
     
     def set_D5a_span(self, flux_port, span_value):
         module = self.d5a_modules[flux_port]
-        function = "self.device."+module[1]+".dac"+module[2]+".span(span_value)"
+        function = "self.device."+module[1]+".dac"+str(module[2])+".span(span_value)"
         eval(function, {"span_value": span_value})
 
     def get_D5a_span(self, flux_port):
         module = self.d5a_modules[flux_port]
-        function = "self.device."+module[1]+".dac"+module[2]+".span()"
+        function = "self.device."+module[1]+".dac"+str(module[2])+".span()"
         return eval(function)
 
     def set_SPI_DACS_to_cero(self):
@@ -124,10 +124,10 @@ class SPI(AbstractInstrument):
         #set the dacs to the values stored for each qubit in the runcard
         if self.is_connected:
             for s4g_module in self.s4g_modules.values():
-                funtion = "self.device."+s4g_module[1]+".dac"+s4g_module[2]+".current(current_value)"
+                funtion = "self.device."+s4g_module[1]+".dac"+str(s4g_module[2])+".current(current_value)"
                 eval(funtion, {"current_value": s4g_module[3]})
             for d5a_module in self.d5a_modules.values():
-                funtion = "self.device."+d5a_module[1]+".dac"+d5a_module[2]+".current(current_value)"
+                funtion = "self.device."+d5a_module[1]+".dac"+str(d5a_module[2])+".current(current_value)"
                 eval(funtion, {"current_value": d5a_module[3]})
 
     def stop(self):
