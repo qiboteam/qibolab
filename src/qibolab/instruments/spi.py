@@ -40,10 +40,12 @@ class SPI(AbstractInstrument):
             self.sampling_rate = kwargs['sampling_rate']
             self.repetition_duration = kwargs['repetition_duration']
             self.minimum_delay_between_instructions = kwargs['minimum_delay_between_instructions']
-            for s4g_module in self.s4g_modules:
-                self.device.add_spi_module(s4g_module[0], "S4g", d5a_module[1])    
-            for d5a_module in self.d5a_modules:
-                self.device.add_spi_module(d5a_module[0], "D5a", d5a_module[1])
+            for s4g_module in self.s4g_modules.values():
+                if not s4g_module[1] in self.device.instrument_modules:
+                    self.device.add_spi_module(s4g_module[0], "S4g", s4g_module[1])    
+            for d5a_module in self.d5a_modules.values():
+                if not d5a_module[1] in self.device.instrument_modules:
+                    self.device.add_spi_module(d5a_module[0], "D5a", d5a_module[1])
         else:
             raise_error(Exception,'There is no connection to the instrument')
 
