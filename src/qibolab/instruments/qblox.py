@@ -105,7 +105,6 @@ class QRM(AbstractInstrument):
         self.out0_in0_lo_freq = kwargs['out0_in0_lo_freq']
         self.out0_offset_path0 = kwargs['out0_offset_path0']
         self.out0_offset_path1 = kwargs['out0_offset_path1']
-        self.present = kwargs['present']
         self.scope_acq_avg_mode_en = kwargs['scope_acq_avg_mode_en']
         self.scope_acq_sequencer_select = kwargs['scope_acq_sequencer_select']
         self.scope_acq_trigger_level = kwargs['scope_acq_trigger_level']
@@ -150,12 +149,46 @@ class QRM(AbstractInstrument):
                 # DEBUG: QRM Log device Reset
                 # print("QRM reset. Status:")
                 # print(self.device.get_system_status())
-            self.frequency = self.out0_in0_lo_freq
-            self.set_device_parameter('scope_acq_trigger_mode_path0', self.scope_acq_trigger_mode) # sets scope acquisition trigger mode for input path 0 (‘sequencer’ = triggered by sequencer, ‘level’ = triggered by input level).
-            self.set_device_parameter('scope_acq_trigger_mode_path1', self.scope_acq_trigger_mode)
-            self.set_device_parameter('scope_acq_sequencer_select', self.scope_acq_sequencer_select) # specifies which sequencer triggers the scope acquisition when using sequencer trigger mode
-            self.set_device_parameter('scope_acq_avg_mode_en_path0', self.scope_acq_avg_mode_en) # sets scope acquisition averaging mode enable for input path 0
+            self.set_device_parameter('in0_att', self.in0_att) 
+            self.set_device_parameter('out0_att', self.out0_att) 
+            self.set_device_parameter('out0_in0_lo_en', self.out0_in0_lo_en) 
+            self.set_device_parameter('out0_in0_lo_freq', self.out0_in0_lo_freq) 
+            self.set_device_parameter('out0_offset_path0', self.out0_offset_path0) 
+            self.set_device_parameter('out0_offset_path1', self.out0_offset_path1) 
+            self.set_device_parameter('scope_acq_avg_mode_en_path0', self.scope_acq_avg_mode_en)
             self.set_device_parameter('scope_acq_avg_mode_en_path1', self.scope_acq_avg_mode_en)
+            self.set_device_parameter('scope_acq_sequencer_select', self.scope_acq_sequencer_select) 
+            self.set_device_parameter('scope_acq_trigger_level_path0', self.scope_acq_trigger_level) 
+            self.set_device_parameter('scope_acq_trigger_level_path1', self.scope_acq_trigger_level) 
+            self.set_device_parameter('scope_acq_trigger_mode_path0', self.scope_acq_trigger_mode) 
+            self.set_device_parameter('scope_acq_trigger_mode_path1', self.scope_acq_trigger_mode)
+
+            for sequencer in range(self.device_num_sequencers):
+                self.set_device_parameter(f"sequencer{sequencer}.channel_map_path0_out0_en", self.channel_map_path0_out0_en)
+                self.set_device_parameter(f"sequencer{sequencer}.channel_map_path1_out1_en", self.channel_map_path1_out1_en)
+                self.set_device_parameter(f"sequencer{sequencer}.cont_mode_en_awg_path0", self.cont_mode_en_awg)
+                self.set_device_parameter(f"sequencer{sequencer}.cont_mode_en_awg_path1", self.cont_mode_en_awg)
+                self.set_device_parameter(f"sequencer{sequencer}.cont_mode_waveform_idx_awg_path0", self.cont_mode_waveform_idx_awg)
+                self.set_device_parameter(f"sequencer{sequencer}.cont_mode_waveform_idx_awg_path1", self.cont_mode_waveform_idx_awg)
+                self.set_device_parameter(f"sequencer{sequencer}.demod_en_acq", self.demod_en_acq)
+                self.set_device_parameter(f"sequencer{sequencer}.discretization_threshold_acq", self.discretization_threshold_acq)
+                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path0", self.gain_awg)
+                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path1", self.gain_awg)
+                self.set_device_parameter(f"sequencer{sequencer}.integration_length_acq", self.integration_length_acq)
+                self.set_device_parameter(f"sequencer{sequencer}.marker_ovr_en", self.marker_ovr_en)
+                self.set_device_parameter(f"sequencer{sequencer}.marker_ovr_value", self.marker_ovr_value)
+                self.set_device_parameter(f"sequencer{sequencer}.mixer_corr_gain_ratio", self.mixer_corr_gain_ratio)
+                self.set_device_parameter(f"sequencer{sequencer}.mixer_corr_phase_offset_degree", self.mixer_corr_phase_offset_degree)
+                self.set_device_parameter(f"sequencer{sequencer}.mod_en_awg", self.mod_en_awg)
+                self.set_device_parameter(f"sequencer{sequencer}.nco_freq", self.nco_freq)
+                self.set_device_parameter(f"sequencer{sequencer}.nco_phase_offs", self.nco_phase_offs)
+                self.set_device_parameter(f"sequencer{sequencer}.offset_awg_path0", self.offset_awg_path0)
+                self.set_device_parameter(f"sequencer{sequencer}.offset_awg_path1", self.offset_awg_path1)
+                self.set_device_parameter(f"sequencer{sequencer}.phase_rotation_acq", self.phase_rotation_acq)
+                self.set_device_parameter(f"sequencer{sequencer}.sync_en", self.sync_en)
+                self.set_device_parameter(f"sequencer{sequencer}.upsample_rate_awg_path0", self.upsample_rate_awg)
+                self.set_device_parameter(f"sequencer{sequencer}.upsample_rate_awg_path1", self.upsample_rate_awg)
+
             # The mapping of sequencers to ports is done in upload() as the number of sequencers needed 
             # can only be determined after examining the pulse sequence
         else:
@@ -684,7 +717,6 @@ class QCM(AbstractInstrument):
         self.out1_lo_freq = kwargs['out1_lo_freq']
         self.out1_offset_path0 = kwargs['out1_offset_path0']
         self.out1_offset_path1 = kwargs['out1_offset_path1']
-        self.present = kwargs['present']
 
         self.channel_map_path0_out0_en = kwargs['channel_map_path0_out0_en']
         self.channel_map_path1_out1_en = kwargs['channel_map_path1_out1_en']
@@ -721,9 +753,39 @@ class QCM(AbstractInstrument):
                 # DEBUG: QCM Log device Reset                
                 # print("QCM reset. Status:")
                 # print(self.device.get_system_status())
-            # The mapping of sequencers to ports is done in upload() as the number of sequencers needed 
-            # can only be determined after examining the pulse sequence
-            self.frequency = self.out0_lo_freq
+            self.set_device_parameter('out0_att', self.out0_att) 
+            self.set_device_parameter('out0_lo_en', self.out0_lo_en) 
+            self.set_device_parameter('out0_lo_freq', self.out0_lo_freq) 
+            self.set_device_parameter('out0_offset_path0', self.out0_offset_path0) 
+            self.set_device_parameter('out0_offset_path1', self.out0_offset_path1) 
+            self.set_device_parameter('out1_att', self.out1_att) 
+            self.set_device_parameter('out1_lo_en', self.out1_lo_en)
+            self.set_device_parameter('out1_lo_freq', self.out1_lo_freq)
+            self.set_device_parameter('out1_offset_path0', self.out1_offset_path0) 
+            self.set_device_parameter('out1_offset_path1', self.out1_offset_path1) 
+
+            for sequencer in range(self.device_num_sequencers):
+                self.set_device_parameter(f"sequencer{sequencer}.channel_map_path0_out0_en", self.channel_map_path0_out0_en)
+                self.set_device_parameter(f"sequencer{sequencer}.channel_map_path0_out2_en", self.channel_map_path0_out2_en)
+                self.set_device_parameter(f"sequencer{sequencer}.channel_map_path1_out1_en", self.channel_map_path1_out1_en)
+                self.set_device_parameter(f"sequencer{sequencer}.channel_map_path1_out3_en", self.channel_map_path1_out3_en)
+                self.set_device_parameter(f"sequencer{sequencer}.cont_mode_en_awg_path0", self.cont_mode_en_awg)
+                self.set_device_parameter(f"sequencer{sequencer}.cont_mode_en_awg_path1", self.cont_mode_en_awg)
+                self.set_device_parameter(f"sequencer{sequencer}.cont_mode_waveform_idx_awg_path0", self.cont_mode_waveform_idx_awg)
+                self.set_device_parameter(f"sequencer{sequencer}.cont_mode_waveform_idx_awg_path1", self.cont_mode_waveform_idx_awg)
+                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path0", self.gain_awg)
+                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path1", self.gain_awg)
+                self.set_device_parameter(f"sequencer{sequencer}.marker_ovr_en", self.marker_ovr_en)
+                self.set_device_parameter(f"sequencer{sequencer}.marker_ovr_value", self.marker_ovr_value)
+                self.set_device_parameter(f"sequencer{sequencer}.mixer_corr_gain_ratio", self.mixer_corr_gain_ratio)
+                self.set_device_parameter(f"sequencer{sequencer}.mod_en_awg", self.mod_en_awg)
+                self.set_device_parameter(f"sequencer{sequencer}.nco_freq", self.nco_freq)
+                self.set_device_parameter(f"sequencer{sequencer}.nco_phase_offs", self.nco_phase_offs)
+                self.set_device_parameter(f"sequencer{sequencer}.offset_awg_path0", self.offset_awg_path0)
+                self.set_device_parameter(f"sequencer{sequencer}.offset_awg_path1", self.offset_awg_path1)
+                self.set_device_parameter(f"sequencer{sequencer}.sync_en", self.sync_en)
+                self.set_device_parameter(f"sequencer{sequencer}.upsample_rate_awg_path0", self.upsample_rate_awg)
+                self.set_device_parameter(f"sequencer{sequencer}.upsample_rate_awg_path1", self.upsample_rate_awg)
         else:
             raise_error(Exception,'There is no connection to the instrument')
 
