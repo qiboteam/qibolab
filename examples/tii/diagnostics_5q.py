@@ -83,7 +83,7 @@ class Diagnostics():
         self.precision_step = self.settings['resonator_spectroscopy']['precision_step']
 
         self.pl.tuids_max_num(self.max_num_plots)
-
+        platform.qrm[qubit].lo.frequency = platform.characterization['single_qubit'][qubit]['resonator_freq'] - ro_pulse.frequency
         #Fast Sweep
         if (self.software_averages !=0):
             scanrange = utils.variable_resolution_scanrange(self.lowres_width, self.lowres_step, self.highres_width, self.highres_step)
@@ -93,8 +93,8 @@ class Diagnostics():
             platform.start() 
             dataset = mc.run("Resonator Spectroscopy Fast", soft_avg=self.software_averages)
             platform.stop()
-            platform.qrm[qubit].lo.frequency = dataset['x0'].values[dataset['y0'].argmax().values]
-            avg_min_voltage = np.mean(dataset['y0'].values[:(self.lowres_width//self.lowres_step)]) * 1e6
+            platform.qrm[qubit].lo.frequency = dataset['x0'].values[dataset['y0'].argmin().values]
+            avg_max_voltage = np.mean(dataset['y0'].values[:(self.lowres_width//self.lowres_step)]) * 1e6
 
         # Precision Sweep
         if (self.software_averages_precision !=0):
@@ -109,13 +109,13 @@ class Diagnostics():
         # Fitting
         smooth_dataset = savgol_filter(dataset['y0'].values, 25, 2)
         # resonator_freq = dataset['x0'].values[smooth_dataset.argmax()] + ro_pulse.frequency
-        max_ro_voltage = smooth_dataset.max() * 1e6
+        min_ro_voltage = smooth_dataset.min() * 1e6
 
-        f0, BW, Q = fitting.lorentzian_fit("last", max, "Resonator_spectroscopy")
+        f0, BW, Q = fitting.lorentzian_fit("last", min, "Resonator_spectroscopy")
         resonator_freq = (f0*1e9 + ro_pulse.frequency)
 
         print(f"\nResonator Frequency = {resonator_freq}")
-        return resonator_freq, avg_min_voltage, max_ro_voltage, smooth_dataset, dataset
+        return resonator_freq, avg_max_voltage, min_ro_voltage, smooth_dataset, dataset
         
 class ROController():
     # Quantify Gettable Interface Implementation
@@ -138,7 +138,8 @@ ds = Diagnostics(platform, diagnostics_settings)
 
 qubit = 0
 
-resonator_freq, avg_min_voltage, max_ro_voltage, smooth_dataset, dataset = ds.run_resonator_spectroscopy(qubit)
+for qubit in range(5):
+    resonator_freq, avg_min_voltage, max_ro_voltage, smooth_dataset, dataset = ds.run_resonator_spectroscopy(qubit)
 
 
 
