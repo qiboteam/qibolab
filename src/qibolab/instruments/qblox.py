@@ -30,6 +30,19 @@ class QRM(AbstractInstrument):
     rw_property_wrapper = lambda parameter: property(lambda self: self.device.get(parameter), lambda self,x: self.set_device_parameter(parameter,x))
     frequency = rw_property_wrapper('out0_in0_lo_freq')
 
+    in0_att = rw_property_wrapper('in0_att')
+    out0_att = rw_property_wrapper('out0_att')
+    out0_in0_lo_en = rw_property_wrapper('out0_in0_lo_en')
+    out0_in0_lo_freq = rw_property_wrapper('out0_in0_lo_freq')
+    out0_offset_path0 = rw_property_wrapper('out0_offset_path0')
+    out0_offset_path1 = rw_property_wrapper('out0_offset_path1')
+    scope_acq_avg_mode_en = rw_property_wrapper('scope_acq_avg_mode_en')
+    scope_acq_sequencer_select = rw_property_wrapper('scope_acq_sequencer_select')
+    scope_acq_trigger_level = rw_property_wrapper('scope_acq_trigger_level')
+    scope_acq_trigger_mode = rw_property_wrapper('scope_acq_trigger_mode')
+
+
+
     def connect(self):
         """
         Connects to the instrument using the IP address set in the runcard.
@@ -480,10 +493,10 @@ class QRM(AbstractInstrument):
             mod_signals = np.array(result)
 
             # DEBUG: QRM plot envelopes
-            import matplotlib.pyplot as plt
-            plt.plot(mod_signals[:, 0] + pulse.offset_i)
-            plt.plot(mod_signals[:, 1] + pulse.offset_q)
-            plt.show()
+            # import matplotlib.pyplot as plt
+            # plt.plot(mod_signals[:, 0] + pulse.offset_i)
+            # plt.plot(mod_signals[:, 1] + pulse.offset_q)
+            # plt.show()
 
             return mod_signals[:, 0] + pulse.offset_i, mod_signals[:, 1] + pulse.offset_q
         else:
@@ -573,8 +586,8 @@ class QRM(AbstractInstrument):
                 i, q = self._demodulate_and_integrate(raw_results, acquisition)
                 acquisition_results[sequencer][acquisition] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
                 # DEBUG: QRM Plot Incomming Pulses
-                import qibolab.instruments.debug.incomming_pulse_plotting as pp
-                pp.plot(raw_results)
+                # import qibolab.instruments.debug.incomming_pulse_plotting as pp
+                # pp.plot(raw_results)
         return acquisition_results
 
     def _demodulate_and_integrate(self, raw_results, acquisition):
@@ -1030,10 +1043,10 @@ class QCM(AbstractInstrument):
             mod_signals = np.array(result)
 
             # DEBUG: QCM plot envelopes
-            import matplotlib.pyplot as plt
-            plt.plot(mod_signals[:, 0] + pulse.offset_i)
-            plt.plot(mod_signals[:, 1] + pulse.offset_q)
-            plt.show()
+            # import matplotlib.pyplot as plt
+            # plt.plot(mod_signals[:, 0] + pulse.offset_i)
+            # plt.plot(mod_signals[:, 1] + pulse.offset_q)
+            # plt.show()
 
             return mod_signals[:, 0] + pulse.offset_i, mod_signals[:, 1] + pulse.offset_q
         else:
