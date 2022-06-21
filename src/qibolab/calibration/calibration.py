@@ -419,6 +419,66 @@ class Calibration():
             n=n+1
 
         return results, gateNumber
+    
+    #RO Matrix
+    def run_RO_matrix(self):
+        platform = self.platform
+        platform.reload_settings()
+        nqubits = platform.settings['nqubits']
+
+        #Init RO_matrix[2^5][2^5] with 0
+        RO_matrix = [[0 for x in range(2^nqubits)] for y in range(2^nqubits)]
+        #set niter = 1024 to collect good statistics
+        niter = 2 
+        
+        #for all possible states 2^5 --> |00000> ... |11111>
+        for i in range(2**nqubits):
+            #repeat multiqubit state sequence niter times
+            for j in range(niter):
+                #covert the multiqubit state i into binary representation
+                multiqubit_state = bin(i)[2:].zfill(nqubits)
+                #print("Prepared state: " + str(multiqubit_state))
+                
+                #multiqubit_state = |00000>, |00001> ... |11111>
+                for n in multiqubit_state:
+                    #n = qubit_0 value ... qubit_4 value of a given state
+                    seq = PulseSequence()
+                    if(n == "1"):
+                        #Define sequence for qubit for Pipulse state
+                        RX90_pulse = platform.RX90_pulse(qubit, start = 0)
+                        ro_pulse = platform.qubit_readout_pulse(qubit, start = RX90_pulse.duration)
+                        seq.add(RX90_pulse)
+                        seq.add(ro_pulse)
+                        
+                    if(n == "0"):
+                        #Define sequence for qubit Identity state
+                        ro_pulse = platform.qubit_readout_pulse(qubit, start = 0)
+                        seq.add(ro_pulse)
+
+                platform.start()
+                ro_multiqubit_state = platform.execute_pulse_sequence(seq, nshots=1)
+                platform.stop()
+
+                #Iterate over list of RO results 
+                res = ""
+                for qubit in range(nqubits):
+                    globals()['qubit_state_%s' % qubit] = list(ro_multiqubit_state.values())[qubit].values()
+                    globals()['point_%s' % qubit] = complex(globals()[f"qubit_state_{qubit}"][2], globals()[f"qubit_state_{qubit}"][3])
+                    
+                    #classify state of qubit n
+                    mean_gnd_states = platform.settings['characterization']['single_qubit'][qubit]['mean_gnd_states']
+                    mean_exc_states = platform.settings['characterization']['single_qubit'][qubit]['mean_exc_states']
+                    res.append(utils.classify(globals()['point_%s' % qubit], mean_gnd_states, mean_exc_states))
+            
+                #End of processing multiqubit state i
+                #populate state i with RO results obtained
+                RO_matrix[i][int(res, 2)] = RO_matrix[i][int(res,2)] + 1
+
+            #End of repeting RO for a given state i
+            RO_matrix[i] = RO_matrix[i] / niter
+        #end states
+        return RO_matrix
+
 
     # Ramsey: RX(pi/2) - wait t(rotates z) - RX(pi/2) - readout
     def run_ramsey_freq(self, qubit):
