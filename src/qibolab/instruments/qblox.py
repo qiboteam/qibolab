@@ -4,6 +4,13 @@ import numpy as np
 from qibo.config import raise_error, log
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 
+from qpysequence.program import Program
+from qpysequence.library import long_wait
+from qpysequence.block import Block
+from qpysequence.loop import Loop
+from qpysequence.instructions.real_time import Play, Acquire
+from qpysequence.instructions.control import Stop
+
 from qblox_instruments import Cluster
 cluster : Cluster = None
 
@@ -341,74 +348,17 @@ class QRM(AbstractInstrument):
                         ac += 1
 
                 # Program
+                program = Program()
                 sequence_total_duration = pulses[sequencer][-1].start + pulses[sequencer][-1].duration + self.minimum_delay_between_instructions # the minimum delay between instructions is 4ns
                 time_between_repetitions = self.repetition_duration - sequence_total_duration
                 assert time_between_repetitions > 0
+                
+                body = Loop("body", nshots)
 
-                wait_time = time_between_repetitions
-                extra_wait = wait_time % self.wait_loop_step
-                while wait_time > 0 and extra_wait < 4 :
-                    self.wait_loop_step += 1
-                    extra_wait = wait_time % self.wait_loop_step
-                num_wait_loops = (wait_time - extra_wait) // self. wait_loop_step
+                initial_wait_block = long_wait(pulses[sequencer][0].start, "down")
+                body.append_component(initial_wait_block)
 
-                header = f"""
-                move {nshots},R0 # nshots
-                nop
-                wait_sync {self.minimum_delay_between_instructions}
-                loop:"""
-                body = ""
-
-                footer = f"""
-                    # wait {wait_time} ns"""
-                if num_wait_loops > 0:
-                    footer += f"""
-                    move {num_wait_loops},R2
-                    nop
-                    waitloop2:
-                        wait {self.wait_loop_step}
-                        loop R2,@waitloop2"""
-                if extra_wait > 0: 
-                    footer += f"""
-                        wait {extra_wait}"""
-                else:
-                    footer += f"""
-                        # wait 0"""
-
-                footer += f"""
-                loop R0,@loop
-                stop 
-                """
-
-                # Add an initial wait instruction for the first pulse of the sequence
-                wait_time = pulses[sequencer][0].start
-                extra_wait = wait_time % self.wait_loop_step
-                while wait_time > 0 and extra_wait < 4 :
-                    self.wait_loop_step += 1
-                    extra_wait = wait_time % self.wait_loop_step
-                num_wait_loops = (wait_time - extra_wait) // self. wait_loop_step
-
-                if wait_time > 0:
-                    initial_wait_instruction = f"""
-                    # wait {wait_time} ns"""
-                    if num_wait_loops > 0:
-                        initial_wait_instruction += f"""
-                    move {num_wait_loops},R1
-                    nop
-                    waitloop1:
-                        wait {self.wait_loop_step}
-                        loop R1,@waitloop1"""
-                    if extra_wait > 0: 
-                        initial_wait_instruction += f"""
-                        wait {extra_wait}"""
-                    else:
-                        initial_wait_instruction += f"""
-                        # wait 0"""
-                else:
-                    initial_wait_instruction = """
-                    # wait 0"""
-
-                body += initial_wait_instruction
+                footer_wait_block = long_wait(time_between_repetitions, round_type="down")
 
                 for n in range(len(pulses[sequencer])):
                     if pulses[sequencer][n].type == 'ro':
@@ -423,22 +373,14 @@ class QRM(AbstractInstrument):
                         if delay_after_acquire < self.minimum_delay_between_instructions:
                                 raise_error(Exception, f"The minimum delay before starting acquisition is {self.minimum_delay_between_instructions}ns.")
                         
-                        # Prepare play instruction: play arg0, arg1, arg2. 
-                        #   arg0 is the index of the I waveform 
-                        #   arg1 is the index of the Q waveform
-                        #   arg2 is the delay between starting the instruction and the next instruction
-                        play_instruction = f"                    play {pulses[sequencer][n].waveform_indexes[0]},{pulses[sequencer][n].waveform_indexes[1]},{delay_after_play}"
-                        # Add the serial of the pulse as a comment
-                        play_instruction += " "*(34-len(play_instruction)) + f"# play waveforms {pulses[sequencer][n]}" 
-                        body += "\n" + play_instruction
 
-                        # Prepare acquire instruction: acquire arg0, arg1, arg2. 
-                        #   arg0 is the index of the acquisition 
-                        #   arg1 is the index of the data bin
-                        #   arg2 is the delay between starting the instruction and the next instruction
-                        acquire_instruction = f"                    acquire {pulses[sequencer][n].acquisition_index},0,{delay_after_acquire}"
-                        # Add the serial of the pulse as a comment
-                        body += "\n" + acquire_instruction
+                        play_instruction = Play(pulses[sequencer][n].waveform_indexes[0], pulses[sequencer][n].waveform_indexes[1], delay_after_play)
+                        # Add the serial of the pulse as a comment (qpysequence still doesn't support the addition of comments, will be added if necessary)
+                        play_comment = f"play waveforms {pulses[sequencer][n]}" 
+                        body.append_component(play_instruction)
+
+                        acquire_instruction = Acquire(pulses[sequencer][n].acquisition_index, 0, delay_after_acquire)
+                        body.append_component(acquire_instruction)
 
                     else:
                         # Calculate the delay_after_play that is to be used as an argument to the play instruction
@@ -451,16 +393,18 @@ class QRM(AbstractInstrument):
                         if delay_after_play < self.minimum_delay_between_instructions:
                                 raise_error(Exception, f"The minimum delay between pulses is {self.minimum_delay_between_instructions}ns.")
                         
-                        # Prepare play instruction: play arg0, arg1, arg2. 
-                        #   arg0 is the index of the I waveform 
-                        #   arg1 is the index of the Q waveform
-                        #   arg2 is the delay between starting the instruction and the next instruction
-                        play_instruction = f"                    play {pulses[sequencer][n].waveform_indexes[0]},{pulses[sequencer][n].waveform_indexes[1]},{delay_after_play}"
-                        # Add the serial of the pulse as a comment
-                        play_instruction += " "*(34-len(play_instruction)) + f"# play waveforms {pulses[sequencer][n]}" 
-                        body += "\n" + play_instruction
+                        play_instruction = Play(pulses[sequencer][n].waveform_indexes[0], pulses[sequencer][n].waveform_indexes[1], delay_after_play)
+                        # Add the serial of the pulse as a comment (qpysequence still doesn't support the addition of comments, will be added if necessary)
+                        play_comment = f"play waveforms {pulses[sequencer][n]}" 
+                        body.append_component(play_instruction)
 
-                self.program[sequencer] = header + body + footer
+                body.append_component(footer_wait_block)
+
+                cleanup_block = Block("cleanup").append_component(Stop())
+                program.append_block(body)
+                program.append_block(cleanup_block)
+
+                self.program[sequencer] = repr(program)
 
                 # DEBUG: QRM print sequencer program
                 # print(f"{self.name} sequencer {sequencer} program:\n" + self.program[sequencer]) 
@@ -658,7 +602,7 @@ class QCM(AbstractInstrument):
 
     def connect(self):
         """
-        Connects to the instrument using the IP address set in the runcard.
+        Connect to the instrument using the IP address set in the runcard.
         """
         global cluster
         if not self.is_connected:
