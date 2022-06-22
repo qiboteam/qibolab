@@ -4,7 +4,7 @@ description: QuantWare 5-qubit device, controlled with Qblox and R&S instruments
 settings:
     hardware_avg: 1024
     sampling_rate: 1_000_000_000
-    repetition_duration: 200_000
+    repetition_duration: 50_000
     minimum_delay_between_instructions: 4
 
 qubits: [0, 1, 2, 3, 4]
@@ -31,8 +31,8 @@ instruments:
         class: ClusterQRM_RF
         address: 192.168.0.2:16
         settings:
-            in0_att                       : 20
-            out0_att                      : 0
+            in0_att                       : 0
+            out0_att                      : 30
             out0_in0_lo_en                : true 
             out0_in0_lo_freq              : 7_000_000_000 # (Hz) from 2e9 to 18e9
             out0_offset_path0             : 0
@@ -48,7 +48,7 @@ instruments:
             cont_mode_waveform_idx_awg       : 0        # for path0 and path1
             demod_en_acq                     : false 
             discretization_threshold_acq     : false 
-            gain_awg                         : 0.4       # for path0 and path1 -1.0<=v<=1.0
+            gain_awg                         : 0.5       # for path0 and path1 -1.0<=v<=1.0
             integration_length_acq           : 4         # 4<=v<=16777212, Multiples of 4
             marker_ovr_en                    : false 
             marker_ovr_value                 : 0 
@@ -60,7 +60,7 @@ instruments:
             offset_awg_path0                 : 0 
             offset_awg_path1                 : 0 
             phase_rotation_acq               : 0       # (Degrees)
-            sync_en                          : true 
+            sync_en                          : false 
             upsample_rate_awg                : 0 # for path0 and path1
 
             acquisition_start: 130 # minimum 4ns
@@ -72,7 +72,7 @@ instruments:
     qcm_rf1:
         lib: qblox
         class: ClusterQCM_RF
-        address: 192.168.0.2:10
+        address: 192.168.0.2:12
         settings:
             out0_att          : 0 # (dB)
             out0_lo_en        : true 
@@ -105,7 +105,8 @@ instruments:
             upsample_rate_awg                : 0 # for path0 and path1 0<=v<=65535
 
             channel_port_map:  
-                25: o1 # IQ Port = out0 & out1
+                21: o1 # IQ Port = out0 & out1
+                22: o2 # IQ Port = out0 & out1
 
     qcm_rf2:
         lib: qblox
@@ -149,7 +150,7 @@ instruments:
     qcm_rf3:
         lib: qblox
         class: ClusterQCM_RF
-        address: 192.168.0.2:12
+        address: 192.168.0.2:10
         settings:
             out0_att          : 0 # (dB)
             out0_lo_en        : true 
@@ -182,8 +183,10 @@ instruments:
             upsample_rate_awg                : 0 # for path0 and path1 0<=v<=65535
 
             channel_port_map:  
-                21: o1 # IQ Port = out0 & out1
-                22: o2 # IQ Port = out0 & out1
+                25: o1 # IQ Port = out0 & out1
+
+
+ignore:
 
     SPI:
         lib: spi
@@ -210,7 +213,7 @@ native_gates:
                 type: qd # qubit drive
             MZ:
                 duration: 2000
-                amplitude: 0.9
+                amplitude: 1
                 frequency: 20_000_000
                 shape: Rectangular()
                 type: ro # readout

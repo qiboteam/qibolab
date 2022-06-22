@@ -7,9 +7,9 @@ max_num_plots: 10
 # Single qubit experiments
 
 resonator_spectroscopy:
-  lowres_width: 20_000_000
-  lowres_step: 400_000
-  highres_width: 5_000_000
+  lowres_width: 10_000_000
+  lowres_step: 500_000
+  highres_width: 1_000_000
   highres_step: 100_000
   precision_width: 1_000_000
   precision_step: 50_000

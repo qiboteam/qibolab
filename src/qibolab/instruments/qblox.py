@@ -30,19 +30,6 @@ class QRM(AbstractInstrument):
     rw_property_wrapper = lambda parameter: property(lambda self: self.device.get(parameter), lambda self,x: self.set_device_parameter(parameter,x))
     frequency = rw_property_wrapper('out0_in0_lo_freq')
 
-    in0_att = rw_property_wrapper('in0_att')
-    out0_att = rw_property_wrapper('out0_att')
-    out0_in0_lo_en = rw_property_wrapper('out0_in0_lo_en')
-    out0_in0_lo_freq = rw_property_wrapper('out0_in0_lo_freq')
-    out0_offset_path0 = rw_property_wrapper('out0_offset_path0')
-    out0_offset_path1 = rw_property_wrapper('out0_offset_path1')
-    scope_acq_avg_mode_en = rw_property_wrapper('scope_acq_avg_mode_en')
-    scope_acq_sequencer_select = rw_property_wrapper('scope_acq_sequencer_select')
-    scope_acq_trigger_level = rw_property_wrapper('scope_acq_trigger_level')
-    scope_acq_trigger_mode = rw_property_wrapper('scope_acq_trigger_mode')
-
-
-
     def connect(self):
         """
         Connects to the instrument using the IP address set in the runcard.
@@ -157,7 +144,8 @@ class QRM(AbstractInstrument):
             # Reset
             if self.current_pulsesequence_hash != self.last_pulsequence_hash:
                 # print(f"Resetting {self.name}")
-                # self.cluster.reset() # FIXME: this needs to clear the cahes of the rest of the modules
+                self.cluster.reset() # FIXME: this needs to clear the cahes of the rest of the modules
+                self.cluster.reference_source('external')
                 self.device_parameters = {}
                 # DEBUG: QRM Log device Reset
                 # print("QRM reset. Status:")
@@ -556,6 +544,8 @@ class QRM(AbstractInstrument):
         # DEBUG: QRM Print Readable Snapshot
         # print(self.name)
         # self.device.print_readable_snapshot(update=True)
+        # for parameter in self.device.parameters:
+        #     print(f'{parameter} :: {self.device.get(parameter)}')
 
     def play_sequence(self):
         """Executes the sequence of instructions."""
