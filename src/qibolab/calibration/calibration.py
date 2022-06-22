@@ -537,6 +537,62 @@ class Calibration():
                 platform.reload_settings()
 
         return new_t2, delta_phys, smooth_dataset, dataset
+
+    def run_drag_pulse_tunning(self, qubit):
+        platform = self.platform
+        platform.reload_settings()
+        
+        res1 = []
+        res2 = []
+        beta_params = []
+        
+        self.reload_settings()
+        self.beta_start = self.settings['drag_tunning']['beta_start']
+        self.beta_end = self.settings['drag_tunning']['beta_end']
+        self.beta_step = self.settings['drag_tunning']['beta_step']
+        
+
+        for beta_param in range(self.beta_start, self.beta_end, self.beta_step): 
+            #drag pulse RX(pi/2)
+            RX90_drag_pulse = platform.RX90_drag_pulse(qubit, start = 0, beta = beta_param)
+            #drag pulse RY(pi)
+            RY_drag_pulse = platform.RX_pulse(qubit, start = RX90_drag_pulse.duration, phase = np.pi, beta=beta_param)            
+            #RO pulse
+            ro_pulse = platform.qubit_readout_pulse(qubit, start = RX90_drag_pulse.duration + RY_drag_pulse.duration)
+            
+            seq1 = PulseSequence()
+            seq1.add(RX90_drag_pulse)
+            seq1.add(RY_drag_pulse)
+            seq1.add(ro_pulse)
+
+            platform.start()
+            state1 = platform.execute_pulse_sequence(seq1, nshots=1024)
+            state1 = list(list(state1.values())[0].values())[0]
+            platform.stop()
+
+            #drag pulse RY(pi)
+            RY_drag_pulse = platform.RX_pulse(qubit, start = 0, phase = np.pi, beta=beta_param)
+            #drag pulse RX(pi/2)
+            RX90_drag_pulse = platform.RX90_drag_pulse(qubit, start = RY_drag_pulse.duration, beta = beta_param)
+            
+            seq2 = PulseSequence()
+            seq2.add(RY_drag_pulse)
+            seq2.add(RX90_drag_pulse)
+            seq2.add(ro_pulse)
+
+            platform.start()
+            state2 = platform.execute_pulse_sequence(seq2, nshots=1024)
+            state2 = list(list(state2.values())[0].values())[0]
+            platform.stop()
+
+            #save IQ_module and beta param of each iteration 
+            res1.append(state1[0]) 
+            res2.append(state2[0])
+            beta_params.append(beta_param)
+
+        beta_optimal = fitting.fit_drag_tunning(res1, res2, beta_params)
+
+        return beta_optimal
    
     def auto_calibrate_plaform(self):
         platform = self.platform

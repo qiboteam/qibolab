@@ -55,6 +55,10 @@ ramsey_freq:
 
 RO_matrix:
   niter: 1024
+drag_tunning:
+  beta_start: -1.0
+  beta_end: 1.0
+  beta_step: 0.01
 
 calibrate_qubit_states:
   niter: 1024

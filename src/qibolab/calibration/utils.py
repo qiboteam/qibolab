@@ -2,10 +2,8 @@ import pathlib
 from qibolab.paths import qibolab_folder
 from quantify_core.measurement import MeasurementControl
 import numpy as np
-import yaml
 import matplotlib.pyplot as plt
 import pathlib
-import datetime
 
 script_folder = pathlib.Path(__file__).parent
 
@@ -96,3 +94,6 @@ def classify(point: complex, mean_gnd, mean_exc):
             return math.sqrt((np.real(a) - np.real(b))**2 + (np.imag(a) - np.imag(b))**2)
 
         return int(distance(point, mean_exc) < distance(point, mean_gnd))
+
+    
+      

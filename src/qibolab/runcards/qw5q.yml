@@ -211,6 +211,7 @@ native_gates:
                 frequency: 200_000_000
                 shape: Gaussian(5)
                 type: qd # qubit drive
+                drag_shape: Drag(5, 0) #beta param to be modified after drag callibration.
             MZ:
                 duration: 2000
                 amplitude: 0.9
@@ -224,6 +225,7 @@ native_gates:
                 frequency: 200_000_000
                 shape: Gaussian(5)
                 type: qd # qubit drive
+                drag_shape: Drag(5, 0) #Drag pulse shape with sigma and beta optimal parameter
             MZ:
                 duration: 2000
                 amplitude: 0.9
@@ -237,6 +239,7 @@ native_gates:
                 frequency: 200_000_000
                 shape: Gaussian(5)
                 type: qd # qubit drive
+                drag_shape: Drag(5, 0) #Drag pulse shape with sigma and beta optimal parameter
             MZ:
                 duration: 2000
                 amplitude: 0.9
@@ -250,6 +253,7 @@ native_gates:
                 frequency: 200_000_000
                 shape: Gaussian(5)
                 type: qd # qubit drive
+                drag_shape: Drag(5, 0) #Drag pulse shape with sigma and beta optimal parameter
             MZ:
                 duration: 2000
                 amplitude: 0.9
@@ -263,6 +267,7 @@ native_gates:
                 frequency: 200_000_000
                 shape: Gaussian(5)
                 type: qd # qubit drive
+                drag_shape: Drag(5, 0) #Drag pulse shape with sigma and beta optimal parameter
             MZ:
                 duration: 2000
                 amplitude: 0.9
