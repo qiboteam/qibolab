@@ -243,7 +243,7 @@ class QRM(AbstractInstrument):
                     # Select a sequencer and add it to the sequencer_channel_map
                     sequencer += 1
                     if sequencer > self.device_num_sequencers:
-                        raise_error(Exception, f"The number of sequencers requried to play the sequence exceeds the number available {self.device._num_sequencers}.")
+                        raise_error(Exception, f"The number of sequencers requried to play the sequence exceeds the number available {self.device_num_sequencers}.")
                     # Initialise the corresponding variables 
                     self.sequencers.append(sequencer)
                     self.sequencer_channel_map[sequencer]=channel
@@ -286,8 +286,8 @@ class QRM(AbstractInstrument):
 
                                 # Select a new sequencer
                                 sequencer += 1
-                                if sequencer > self.device._num_sequencers:
-                                        raise_error(Exception, f"The number of sequencers requried to play the sequence exceeds the number available {self.device._num_sequencers}.")
+                                if sequencer > self.device_num_sequencers:
+                                        raise_error(Exception, f"The number of sequencers requried to play the sequence exceeds the number available {self.device_num_sequencers}.")
                                 # Initialise the corresponding variables 
                                 self.sequencers.append(sequencer)
                                 self.sequencer_channel_map[sequencer]=channel
@@ -841,7 +841,7 @@ class QCM(AbstractInstrument):
                     # Select a sequencer and add it to the sequencer_channel_map
                     sequencer += 1
                     if sequencer > self.device_num_sequencers:
-                        raise_error(Exception, f"The number of sequencers requried to play the sequence exceeds the number available {self.device._num_sequencers}.")
+                        raise_error(Exception, f"The number of sequencers requried to play the sequence exceeds the number available {self.device_num_sequencers}.")
                     # Initialise the corresponding variables 
                     self.sequencers.append(sequencer)
                     self.sequencer_channel_map[sequencer]=channel
@@ -882,8 +882,8 @@ class QCM(AbstractInstrument):
 
                                 # Select a new sequencer
                                 sequencer += 1
-                                if sequencer > self.device._num_sequencers:
-                                        raise_error(Exception, f"The number of sequencers requried to play the sequence exceeds the number available {self.device._num_sequencers}.")
+                                if sequencer > self.device_num_sequencers:
+                                        raise_error(Exception, f"The number of sequencers requried to play the sequence exceeds the number available {self.device_num_sequencers}.")
                                 # Initialise the corresponding variables 
                                 self.sequencers.append(sequencer)
                                 self.sequencer_channel_map[sequencer]=channel

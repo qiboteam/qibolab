@@ -7,24 +7,26 @@ settings:
     repetition_duration: 200_000
     minimum_delay_between_instructions: 4
 
-qubits: [0, 1, 2, 3, 4]
+qubits: [0, 1, 2, 3, 4, 5]
 
 topology: # qubit - qubit connections
--   [ 1, 0, 1, 0, 0]
--   [ 0, 1, 1, 0, 0]
--   [ 1, 1, 1, 1, 1]
--   [ 0, 0, 1, 1, 0]
--   [ 0, 0, 1, 0, 1]
+-   [ 1, 0, 1, 0, 0, 0]
+-   [ 0, 1, 1, 0, 0, 0]
+-   [ 1, 1, 1, 1, 1, 0]
+-   [ 0, 0, 1, 1, 0, 0]
+-   [ 0, 0, 1, 0, 1, 0]
+-   [ 0, 0, 0, 0, 0, 1]
 
 channels: [10, 1, 25, 21, 22, 23, 24, 4, 11, 12, 13, 14]
 
 
 qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux] 
-    0: [10, 21, 4]
-    1: [10, 24, 11]
-    2: [10, 25, 12]
-    3: [10, 22, 13]
+    0: [10, 21, 4]      # Drive line 21 confirmed, tried all flux lines none moves it, witness qubit # 5?
+    1: [10, 24, 11]     # Drive not found, Flux line 11 confirmed 
+    2: [10, 25, 12]     # Drive not found, tried all flux lines none moves it
+    3: [10, 22, 13]     # Drive not found, Flux line 11 confirmed
     4: [10, 23, 14]
+    5: [10, null, null] # witness qubit
 
 instruments:
     qrm_rf:
@@ -33,7 +35,7 @@ instruments:
         address: 192.168.0.2:16
         settings:
             in0_att                       : 0
-            out0_att                      : 30
+            out0_att                      : 50
             out0_in0_lo_en                : true 
             out0_in0_lo_freq              : 7_000_000_000 # (Hz) from 2e9 to 18e9
             out0_offset_path0             : 0
@@ -270,6 +272,13 @@ native_gates:
                 frequency: 20_000_000
                 shape: Rectangular()
                 type: ro # readout
+        5: # qubit number
+            MZ:
+                duration: 2000
+                amplitude: 0.9
+                frequency: 20_000_000
+                shape: Rectangular()
+                type: ro # readout
 
     two_qubit:
         0-2: # qubit numbers
@@ -311,21 +320,29 @@ characterization:
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
             mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
         2:
-            resonator_freq: 7_490_500_000
+            resonator_freq: 7_491_000_000
             qubit_freq: 5082221756
             T1: 2192.895853326451
             T2: 6933.310025260633
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
             mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
         3:
-            resonator_freq: 7_491_500_000
+            resonator_freq: 7_491_600_000
             qubit_freq: 5082221756
             T1: 2192.895853326451
             T2: 6933.310025260633
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
             mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
         4:
-            resonator_freq: 7_280_000_000
+            resonator_freq: 6__000_000
+            qubit_freq: 5082221756
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
+
+        5:
+            resonator_freq: 6_897_610_000
             qubit_freq: 5082221756
             T1: 2192.895853326451
             T2: 6933.310025260633
