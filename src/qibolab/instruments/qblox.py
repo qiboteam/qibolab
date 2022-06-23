@@ -144,12 +144,14 @@ class QRM(AbstractInstrument):
             # Reset
             if self.current_pulsesequence_hash != self.last_pulsequence_hash:
                 # print(f"Resetting {self.name}")
-                self.cluster.reset() # FIXME: this needs to clear the cahes of the rest of the modules
+                # self.cluster.reset() # FIXME: this needs to clear the cahes of the rest of the modules
                 self.cluster.reference_source('external')
                 self.device_parameters = {}
                 # DEBUG: QRM Log device Reset
                 # print("QRM reset. Status:")
                 # print(self.device.get_system_status())
+            self.frequency = self.out0_in0_lo_freq
+
             self.set_device_parameter('in0_att', self.in0_att) 
             self.set_device_parameter('out0_att', self.out0_att) 
             self.set_device_parameter('out0_in0_lo_en', self.out0_in0_lo_en) 
@@ -544,8 +546,6 @@ class QRM(AbstractInstrument):
         # DEBUG: QRM Print Readable Snapshot
         # print(self.name)
         # self.device.print_readable_snapshot(update=True)
-        # for parameter in self.device.parameters:
-        #     print(f'{parameter} :: {self.device.get(parameter)}')
 
     def play_sequence(self):
         """Executes the sequence of instructions."""
@@ -756,6 +756,10 @@ class QCM(AbstractInstrument):
                 # DEBUG: QCM Log device Reset                
                 # print("QCM reset. Status:")
                 # print(self.device.get_system_status())
+            # The mapping of sequencers to ports is done in upload() as the number of sequencers needed 
+            # can only be determined after examining the pulse sequence
+            self.frequency = self.out0_lo_freq
+
             self.set_device_parameter('out0_att', self.out0_att) 
             self.set_device_parameter('out0_lo_en', self.out0_lo_en) 
             self.set_device_parameter('out0_lo_freq', self.out0_lo_freq) 
@@ -1097,6 +1101,7 @@ class QCM(AbstractInstrument):
         # DEBUG: QCM Print Readable Snapshot
         # print(self.name)
         # self.device.print_readable_snapshot(update=True)
+
 
     def play_sequence(self):
         """Executes the sequence of instructions."""
