@@ -556,10 +556,12 @@ class Calibration():
             #drag pulse RX(pi/2)
             RX90_drag_pulse = platform.RX90_drag_pulse(qubit, start = 0, beta = beta_param)
             #drag pulse RY(pi)
-            RY_drag_pulse = platform.RX_pulse(qubit, start = RX90_drag_pulse.duration, phase = np.pi, beta=beta_param)            
+            #CHECK RY phase!!!!!!!
+            RY_drag_pulse = platform.RX_pulse(qubit, start = RX90_drag_pulse.duration, phase = np.pi/2, beta=beta_param)            
             #RO pulse
             ro_pulse = platform.qubit_readout_pulse(qubit, start = RX90_drag_pulse.duration + RY_drag_pulse.duration)
             
+            # Rx(pi/2) - Ry(pi) - Ro
             seq1 = PulseSequence()
             seq1.add(RX90_drag_pulse)
             seq1.add(RY_drag_pulse)
@@ -571,10 +573,11 @@ class Calibration():
             platform.stop()
 
             #drag pulse RY(pi)
-            RY_drag_pulse = platform.RX_pulse(qubit, start = 0, phase = np.pi, beta=beta_param)
+            RY_drag_pulse = platform.RX_pulse(qubit, start = 0, phase = np.pi/2, beta=beta_param)
             #drag pulse RX(pi/2)
             RX90_drag_pulse = platform.RX90_drag_pulse(qubit, start = RY_drag_pulse.duration, beta = beta_param)
             
+            # Ry(pi) - Rx(pi/2) - Ro
             seq2 = PulseSequence()
             seq2.add(RY_drag_pulse)
             seq2.add(RX90_drag_pulse)
