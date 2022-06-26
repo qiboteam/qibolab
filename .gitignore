@@ -136,3 +136,5 @@ data/
 # Debugging & Testing
 debug/
 examples/tii_single_qubit/settings_backups/*
+
+desktop.ini
