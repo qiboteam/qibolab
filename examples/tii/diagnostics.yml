@@ -14,13 +14,13 @@ resonator_spectroscopy:
   precision_width: 1_000_000
   precision_step: 50_000
 
-qubit_spectroscopy_wide:
-  fast_start: -1_000_000_000
-  fast_end: 1_000_000_000
-  fast_step: 1_500_000
-  precision_start: -600_000
-  precision_end: 600_000
-  precision_step: 10_000
+resonator_spectroscopy_wide:
+  lowres_width: 1_000_000_000
+  lowres_step: 200_000
+  highres_width: 1_000_000
+  highres_step: 200_000
+  precision_width: 2_000_000
+  precision_step: 40_000
 
 qubit_spectroscopy:
   fast_start: -4_000_000

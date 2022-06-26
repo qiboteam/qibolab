@@ -4,7 +4,7 @@ description: QuantWare 5-qubit device, controlled with Qblox and R&S instruments
 settings:
     hardware_avg: 1024
     sampling_rate: 1_000_000_000
-    repetition_duration: 200_000
+    repetition_duration: 50_000
     minimum_delay_between_instructions: 4
 
 qubits: [0, 1, 2, 3, 4, 5]
@@ -51,7 +51,7 @@ instruments:
             cont_mode_waveform_idx_awg       : 0        # for path0 and path1
             demod_en_acq                     : false 
             discretization_threshold_acq     : false 
-            gain_awg                         : 0.4       # for path0 and path1 -1.0<=v<=1.0
+            gain_awg                         : 0.3       # for path0 and path1 -1.0<=v<=1.0
             integration_length_acq           : 4         # 4<=v<=16777212, Multiples of 4
             marker_ovr_en                    : false 
             marker_ovr_value                 : 0 
@@ -188,21 +188,18 @@ instruments:
             channel_port_map:  
                 25: o1 # IQ Port = out0 & out1
 
-
-ignore:
-
     SPI:
         lib: spi
         class: SPI
         address: COM7
         settings:
-            s4g_modules: 
+            s4g_modules:
                 #flux_port: [module# , name, #DAC_port, current] max number of DACs per module = 4
-                11: [2, "s4g_1", 1, 0]
-                12: [2, "s4g_1", 2, 0]
-                13: [2, "s4g_1", 3, 0]
-                14: [2, "s4g_1", 4, 0]
-                4:  [3, "s4g_2", 1, 0]
+                11: [1, "mod1", 1, 0]
+                12: [1, "mod1", 2, 0]
+                13: [1, "mod1", 3, 0]
+                14: [1, "mod1", 4, 0]
+                4:  [2, "mod2", 1, 0]
             d5a_modules: {}
 
 native_gates:
@@ -304,7 +301,7 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            resonator_freq: 6_937_650_000
+            resonator_freq:  7_129_400_000 # 6_937_650_000 7_000_000_000 #
             qubit_freq: 4_616_300_000
             T1: 2192.895853326451
             T2: 6933.310025260633
@@ -313,28 +310,28 @@ characterization:
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
             mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
         1:
-            resonator_freq: 7_129_400_000
+            resonator_freq: 7_491_000_000
             qubit_freq: 4_700_000_000
             T1: 2192.895853326451
             T2: 6933.310025260633
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
             mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
         2:
-            resonator_freq: 7_491_000_000
-            qubit_freq: 5082221756
-            T1: 2192.895853326451
-            T2: 6933.310025260633
-            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
-            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
-        3:
             resonator_freq: 7_491_600_000
             qubit_freq: 5082221756
             T1: 2192.895853326451
             T2: 6933.310025260633
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
             mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
+        3:
+            resonator_freq: 7_613_900_000
+            qubit_freq: 5082221756
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
         4:
-            resonator_freq: 6__000_000
+            resonator_freq: 7_768_100_000
             qubit_freq: 5082221756
             T1: 2192.895853326451
             T2: 6933.310025260633
@@ -342,7 +339,7 @@ characterization:
             mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
 
         5:
-            resonator_freq: 6_897_610_000
+            resonator_freq: 6_937_650_000 # 6_897_610_000
             qubit_freq: 5082221756
             T1: 2192.895853326451
             T2: 6933.310025260633

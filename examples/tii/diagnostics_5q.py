@@ -33,6 +33,7 @@ class Diagnostics():
         self.settings_file = settings_file
         # TODO: Set mc plotting to false when auto calibrates (default = True for diagnostics)
         self.mc, self.pl, self.ins = utils.create_measurement_control('Calibration', show_plots)
+        self.mcs = {}
 
     def load_settings(self):
         # Load calibration settings
@@ -101,6 +102,52 @@ class Diagnostics():
         print(f"\nResonator Frequency = {resonator_freq}")
         return resonator_freq, avg_max_voltage, min_ro_voltage, smooth_dataset, dataset
         
+    
+
+
+
+
+    def run_resonator_spectroscopy_flux(self, qubit=0, fluxline=0):
+        platform = self.platform
+        platform.reload_settings()
+        mc = self.mc
+
+
+        sequence = PulseSequence()
+        ro_pulse = platform.qubit_readout_pulse(qubit, start = 0)
+        sequence.add(ro_pulse)
+
+        self.reload_settings()
+        self.lowres_width = self.settings['resonator_spectroscopy']['lowres_width']
+        self.lowres_step = self.settings['resonator_spectroscopy']['lowres_step']
+        self.highres_width = self.settings['resonator_spectroscopy']['highres_width']
+        self.highres_step = self.settings['resonator_spectroscopy']['highres_step']
+        self.precision_width = self.settings['resonator_spectroscopy']['precision_width']
+        self.precision_step = self.settings['resonator_spectroscopy']['precision_step']
+
+        self.pl.tuids_max_num(self.max_num_plots)
+
+        spi = platform.instruments['SPI'].device
+        spi.set_dacs_zero()
+
+        # freqs = [platform.characterization['single_qubit'][qubit]['resonator_freq'] - ro_pulse.frequency for qubit in range(6)]
+        freq = platform.characterization['single_qubit'][qubit]['resonator_freq'] - ro_pulse.frequency
+        around = 5e6
+        freqs = np.linspace(freq-around, freq+around, 300)
+        dacs = [spi.mod2.dac0, spi.mod1.dac0, spi.mod1.dac1, spi.mod1.dac2, spi.mod1.dac3]
+        flux = np.linspace(-30e-3, 30e-3, 40)
+
+        mc.setpoints_grid([freqs, flux])
+        mc.settables([SettableFrequency(platform.qrm[qubit].lo), dacs[fluxline].current])
+        mc.gettables(ROController(platform, sequence, qubit))
+        platform.start() 
+        data = mc.run(name="matrix3")
+        platform.stop()
+        spi.set_dacs_zero()
+
+    
+    
+    
     def run_qubit_spectroscopy(self, qubit=0):
         platform = self.platform
         platform.reload_settings()
@@ -368,7 +415,7 @@ class ROController():
 
 
 if __name__=='__main__':
-
+    import os
     script_folder = pathlib.Path(os.path.abspath(''))
     diagnostics_settings = script_folder / 'examples' / 'tii' / "diagnostics.yml"
 

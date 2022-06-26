@@ -1,10 +1,10 @@
-from qibolab.paths import qibolab_folder
 import json
 import numpy as np
 from qibo.config import raise_error, log
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
-
 from qblox_instruments import Cluster
+
+
 cluster : Cluster = None
 
 
@@ -40,14 +40,18 @@ class QRM(AbstractInstrument):
                 for attempt in range(3):
                     try:
                         cluster = self.device_class('cluster', self.address.split(':')[0])
-                        self.cluster_connected = True
+                        cluster.reset()
+                        # DEBUG: Cluster Reset                
+                        # print("Cluster reset. Status:")
+                        # print(self.device.get_system_status())
+                        cluster_connected = True
                         break
                     except KeyError as exc:
                         print(f"Unable to connect:\n{str(exc)}\nRetrying...")
                         self.name += '_' + str(attempt)
                     except Exception as exc:
                         print(f"Unable to connect:\n{str(exc)}\nRetrying...")
-                if not self.cluster_connected:
+                if not cluster_connected:
                     raise InstrumentException(self, f'Unable to connect to {self.name}')
             self.device = cluster.modules[int(self.address.split(':')[1])-1]
             self.cluster = cluster
