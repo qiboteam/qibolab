@@ -637,7 +637,8 @@ class Calibration():
             res.append(state[0])
             N.append(i)
 
-            #Saving data for live plotting
+            # Saving data for live plotting
+            # Ask Maxime data format for live plotting 
             np.save(path, np.array([res, N]))
 
         # Fitting results to obtain epsilon
