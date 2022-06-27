@@ -223,3 +223,13 @@ def fit_drag_tunning(res1, res2, beta_params):
     plt.scatter(xi,yi, color='black', s=120)
 
     return xi
+
+def fit_flipping(res, N):
+    print(res)
+    print(N)
+    # fit values of module IQ vs. N iterations in sequence 
+    # sequence RX(pi/2) - [RX(pi) - Rx(pi)] from 0...i times - RO
+    # Ask Ramiro: 
+    # Fit f(N) = sin (2 * N * epsilon) or f(N) = 2 * N * epsilon ????
+    epsilon = 0
+    return epsilon

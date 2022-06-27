@@ -596,6 +596,53 @@ class Calibration():
         beta_optimal = fitting.fit_drag_tunning(res1, res2, beta_params)
 
         return beta_optimal
+    
+    def run_flipping(self, qubit):
+        platform = self.platform
+        platform.reload_settings()
+
+        self.reload_settings()
+        self.niter = self.settings['flipping']['niter']
+        
+        sequence = PulseSequence()
+        RX90_pulse = platform.RX90_pulse(qubit, start = 0)
+        res = []
+        N = []
+
+        #path to file for live plotting
+        path = qibolab_folder / 'calibration' / 'data' / 'buffer.npy'
+
+        #repeat N iter times
+        for i in range(self.niter):
+            #execute sequence RX(pi/2) - [RX(pi) - Rx(pi)] from 0...i times - RO 
+            sequence.add(RX90_pulse)
+            start1= RX90_pulse.duration
+            for j in range(i):
+                RX_pulse1 = platform.RX_pulse(qubit, start = start1)
+                start2 = start1 + RX_pulse1.duration
+                RX_pulse2 = platform.RX_pulse(qubit, start = start2)
+                sequence.add(RX_pulse1)
+                sequence.add(RX_pulse2)
+                start1 = start2 + RX_pulse2.duration
+            
+            #add ro pulse at the end of the sequence
+            ro_pulse = platform.qubit_readout_pulse(qubit, start = start1)
+            sequence.add(ro_pulse)
+
+            #Execute PulseSequence defined by gates
+            platform.start()
+            state = platform.execute_pulse_sequence(sequence, nshots=1024)
+            state = list(list(state.values())[0].values())[0]
+            platform.stop()
+            res.append(state[0])
+            N.append(i)
+
+            #Saving data for live plotting
+            np.save(path, np.array([res, N]))
+
+        # Fitting results to obtain epsilon
+        epsilon = fitting.fit_flipping(res, N)
+        return epsilon
    
     def auto_calibrate_plaform(self):
         platform = self.platform

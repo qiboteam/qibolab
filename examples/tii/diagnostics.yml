@@ -55,6 +55,10 @@ ramsey_freq:
 
 RO_matrix:
   niter: 1024
+
+flipping:
+  niter: 50
+
 drag_tunning:
   beta_start: -1.0
   beta_end: 1.0
