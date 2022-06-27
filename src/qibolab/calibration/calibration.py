@@ -350,13 +350,13 @@ class Calibration():
 
             if (gate == "RY(pi)"):
                 print("Transforming to sequence RY(pi) gate")
-                RY_pulse = platform.RX_pulse(qubit, start = start_pulse, phase = np.pi)
+                RY_pulse = platform.RX_pulse(qubit, start = start_pulse, phase = np.pi/2)
                 duration = RY_pulse.duration
                 sequence.add(RY_pulse)
 
             if (gate == "RY(pi/2)"):
                 print("Transforming to sequence RY(pi/2) gate")
-                RY90_pulse = platform.RX90_pulse(qubit, start = start_pulse, phase = np.pi)
+                RY90_pulse = platform.RX90_pulse(qubit, start = start_pulse, phase = np.pi/2)
                 duration = RY90_pulse.duration
                 sequence.add(RY90_pulse)
             
