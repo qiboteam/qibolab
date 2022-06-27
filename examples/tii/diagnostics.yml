@@ -46,6 +46,13 @@ ramsey:
   delay_between_pulses_end: 400
   delay_between_pulses_step: 1
 
+ramsey_freq:
+  t_start: 4
+  t_end: [1000, 2000, 4000, 7999] #t_end (optimal) = 3.5 * T2 (limited by HW to 7999ns)
+  t_step: 50
+  offset_freq: 1_000_000
+  N_osc: 4
+
 RO_matrix:
   niter: 1024
 
