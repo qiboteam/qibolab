@@ -46,6 +46,9 @@ ramsey:
   delay_between_pulses_end: 400
   delay_between_pulses_step: 1
 
+RO_matrix:
+  niter: 1024
+
 calibrate_qubit_states:
   niter: 1024
 

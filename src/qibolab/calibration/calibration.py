@@ -429,12 +429,13 @@ class Calibration():
         #Init RO_matrix[2^5][2^5] with 0
         RO_matrix = [[0 for x in range(2^nqubits)] for y in range(2^nqubits)]
         #set niter = 1024 to collect good statistics
-        niter = 2 
-        
+        self.reload_settings()
+        self.niter = self.settings['RO_matrix']['niter']
+
         #for all possible states 2^5 --> |00000> ... |11111>
         for i in range(2**nqubits):
             #repeat multiqubit state sequence niter times
-            for j in range(niter):
+            for j in range(self.niter):
                 #covert the multiqubit state i into binary representation
                 multiqubit_state = bin(i)[2:].zfill(nqubits)
                 #print("Prepared state: " + str(multiqubit_state))
@@ -475,7 +476,7 @@ class Calibration():
                 RO_matrix[i][int(res, 2)] = RO_matrix[i][int(res,2)] + 1
 
             #End of repeting RO for a given state i
-            RO_matrix[i] = RO_matrix[i] / niter
+            RO_matrix[i] = RO_matrix[i] / self.niter
         #end states
         return RO_matrix
 
