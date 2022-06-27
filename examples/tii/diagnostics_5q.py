@@ -101,11 +101,6 @@ class Diagnostics():
 
         print(f"\nResonator Frequency = {resonator_freq}")
         return resonator_freq, avg_max_voltage, min_ro_voltage, smooth_dataset, dataset
-        
-    
-
-
-
 
     def run_resonator_spectroscopy_flux(self, qubit=0, fluxline=0):
         platform = self.platform
@@ -144,9 +139,6 @@ class Diagnostics():
         data = mc.run(name="matrix3")
         platform.stop()
         spi.set_dacs_zero()
-
-    
-    
     
     def run_qubit_spectroscopy(self, qubit=0):
         platform = self.platform
