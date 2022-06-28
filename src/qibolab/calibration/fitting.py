@@ -224,12 +224,14 @@ def fit_drag_tunning(res1, res2, beta_params):
 
     return xi
 
-def fit_flipping(res, N):
-    print(res)
-    print(N)
-    # fit values of module IQ vs. N iterations in sequence 
-    # sequence RX(pi/2) - [RX(pi) - Rx(pi)]^N - RO
-    # Ask Ramiro fitting: 
-    # f(N) = sin (2 * N * epsilon) or f(N) = 2 * N * epsilon ????
-    epsilon = 0
-    return epsilon
+def flipping_fit(x_data, y_data):
+    pguess = [
+        0.01 # epsilon guess parameter
+    ]
+    popt, pcov = curve_fit(flipping, x_data, y_data, p0=pguess)
+    return popt[0]
+
+def flipping(x, p0):
+    # A fit to Flipping Qubit oscillation
+    # Epsilon                       : p[0]
+    return  np.sin(2*x + 1/2) * p0

@@ -641,11 +641,10 @@ class Calibration():
             N += [i]
 
             # Saving data for live plotting
-            # Ask Maxime data format for live plotting 
             np.save(path, np.array([res, N]))
 
         # Fitting results to obtain epsilon
-        epsilon = fitting.fit_flipping(res, N)
+        epsilon = fitting.flipping_fit(N, res)
         return epsilon
    
     def auto_calibrate_plaform(self):
