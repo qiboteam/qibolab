@@ -13,9 +13,7 @@ from qibolab import Platform
 from qibolab.paths import qibolab_folder
 from qibolab.calibration import utils
 from qibolab.calibration import fitting
-from qibolab.pulses import Pulse, ReadoutPulse, Rectangular, Gaussian, Drag
 from qibolab.circuit import PulseSequence
-
 
 class Calibration():
 
@@ -597,6 +595,10 @@ class Calibration():
 
         return beta_optimal
     
+    def live_plotting():
+        import live
+        live.app.run_server()
+
     def run_flipping(self, qubit):
         platform = self.platform
         platform.reload_settings()
@@ -609,8 +611,9 @@ class Calibration():
         res = []
         N = []
 
-        #path to file for live plotting
+        #Start live plotting. Args = path where the data is going to be stored
         path = qibolab_folder / 'calibration' / 'data' / 'buffer.npy'
+        utils.start_live_plotting(path)
 
         #repeat N iter times
         for i in range(self.niter):
@@ -634,8 +637,8 @@ class Calibration():
             state = platform.execute_pulse_sequence(sequence, nshots=1024)
             state = list(list(state.values())[0].values())[0]
             platform.stop()
-            res.append(state[0])
-            N.append(i)
+            res += [state[0]]
+            N += [i]
 
             # Saving data for live plotting
             # Ask Maxime data format for live plotting 
