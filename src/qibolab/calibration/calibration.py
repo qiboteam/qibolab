@@ -457,8 +457,7 @@ class Calibration():
 
                 # Fitting
                 smooth_dataset, delta_fitting, new_t2 = fitting.ramsey_freq_fit(dataset)
-
-                utils.plot_ramsey(smooth_dataset, dataset, "Ramsey", 1)
+ 
                 delta_phys = (delta_fitting * 1e9) - offset_freq
                 
                 actual_qubit_freq = platform.settings['characterization']['single_qubit'][qubit]['qubit_freq']
@@ -467,14 +466,14 @@ class Calibration():
                 #if ((new_t2 * 3.5) > t_max):
                 if (new_t2 > T2):
                     qubit_freq = actual_qubit_freq + delta_phys 
-                    utils.save_config_parameter("settings", "", "qubit_freq", float(qubit_freq))
-                    utils.save_config_parameter("LO_QCM_settings", "", "frequency", float(qubit_freq + 200_000_000))
-                    utils.save_config_parameter("settings", "", "T2", float(new_t2))
+                    # self.save_config_parameter("settings", "", "qubit_freq", float(qubit_freq))
+                    # self.save_config_parameter("LO_QCM_settings", "", "frequency", float(qubit_freq + 200_000_000))
+                    # self.save_config_parameter("settings", "", "T2", float(new_t2))
                 else:
                     stop = True
 
                 platform.reload_settings()
-
+                # FIXME: The way this routine is coded the new_T2 and delta_phys returned are not the optimal.
         return new_t2, delta_phys, smooth_dataset, dataset
    
     def auto_calibrate_plaform(self):
