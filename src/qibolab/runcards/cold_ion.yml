@@ -1,0 +1,24 @@
+name: cold_ion
+nqubits: 1
+description: Controls the AD9959 DDS board
+
+settings:
+  pid: 0xee25
+  vid: 0x0456
+  port_numbers: None
+  bus_number: None
+  auto_update: True
+  experiment_start_instrument: dds
+
+
+instruments:
+  dds:
+    init_settings:
+      name: dds
+      channel: 0
+      rfclk: 20e6
+      clkfactor: 1
+
+
+
+
