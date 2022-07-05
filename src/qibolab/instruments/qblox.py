@@ -423,28 +423,34 @@ class QRM(AbstractInstrument):
         envelope_i = pulse.envelope_i
         envelope_q = pulse.envelope_q 
         assert len(envelope_i) == len(envelope_q)
-        envelopes = np.array([envelope_i, envelope_q])
         if modulate:
-            time = np.arange(pulse.duration) / self.sampling_rate
-            cosalpha = np.cos(2 * np.pi * pulse.frequency * time + pulse.phase)
-            sinalpha = np.sin(2 * np.pi * pulse.frequency * time + pulse.phase)
-            mod_matrix = np.array([[ cosalpha, sinalpha], 
-                                   [-sinalpha, cosalpha]])
-            # mod_signals = np.einsum("abt,bt->ta", mod_matrix, envelopes)
-            result = []
-            for it, t, ii, qq in zip(np.arange(pulse.duration), time, envelope_i, envelope_q):
-                result.append(mod_matrix[:, :, it] @ np.array([ii, qq]))
-            mod_signals = np.array(result)
-
-            # DEBUG: QRM plot envelopes
-            # import matplotlib.pyplot as plt
-            # plt.plot(mod_signals[:, 0] + pulse.offset_i)
-            # plt.plot(mod_signals[:, 1] + pulse.offset_q)
-            # plt.show()
-
-            return mod_signals[:, 0] + pulse.offset_i, mod_signals[:, 1] + pulse.offset_q
+            return self.software_modulation(pulse)
         else:
             return envelope_i, envelope_q
+
+    def software_modulation(self, pulse):
+        envelope_i = pulse.envelope_i
+        envelope_q = pulse.envelope_q 
+
+        time = np.arange(pulse.duration) / self.sampling_rate
+        cosalpha = np.cos(2 * np.pi * pulse.frequency * time + pulse.phase)
+        sinalpha = np.sin(2 * np.pi * pulse.frequency * time + pulse.phase)
+        mod_matrix = np.array([[ cosalpha, sinalpha], 
+                                [-sinalpha, cosalpha]])
+
+        # DEBUG: QRM plot envelopes
+        # import matplotlib.pyplot as plt
+        # plt.plot(mod_signals[:, 0] + pulse.offset_i)
+        # plt.plot(mod_signals[:, 1] + pulse.offset_q)
+        # plt.show()
+
+        result = []
+        for it, t, ii, qq in zip(np.arange(pulse.duration), time, envelope_i, envelope_q):
+            result.append(mod_matrix[:, :, it] @ np.array([ii, qq]))
+        mod_signals = np.array(result)
+
+
+        return mod_signals[:, 0] + pulse.offset_i, mod_signals[:, 1] + pulse.offset_q
 
     def upload(self):
         """Uploads waveforms and programs all sequencers and arms them in preparation for execution."""
