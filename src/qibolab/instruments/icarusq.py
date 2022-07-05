@@ -1,536 +1,292 @@
-import pyvisa as visa
 import numpy as np
-from typing import List, Optional, Union
-from qcodes.instrument_drivers.AlazarTech import ATS
+from typing import List
+from bisect import bisect
+from qibo.config import raise_error
+from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
+from qibolab.pulses import Pulse
 
-# Frequency signal generation mode
-MODE_NYQUIST = 0
-MODE_MIXER = 1
+class TektronixAWG5204(AbstractInstrument):
 
-# Waveform functions
-def square(t, start, duration, frequency, amplitude, phase):
-    x = amplitude * (1 * (start < t) & 1 * (start+duration > t))
-    i = x * np.cos(2 * np.pi * frequency * t + phase[0])
-    q = - x * np.sin(2 * np.pi * frequency * t + phase[1])
-    return i, q
-
-def TTL(t, start, duration, amplitude):
-    x = amplitude * (1 * (start < t) & 1 * (start + duration > t))
-    return x
-
-def sine(t, start, duration, frequency, amplitude, phase):
-    x = amplitude * (1 * (start < t) & 1 * (start+duration > t))
-    wfm = x * np.sin(2 * np.pi * frequency * t + phase)
-    return wfm
-
-class Instrument:
-    """Abstract class for instrument methods.
-    """
-    def connect(self):
-        pass
-
-    def start(self):
-        pass
-
-    def stop(self):
-        pass
-
-    def close(self):
-        pass
-
-class VisaInstrument:
-    """Instrument class that uses the VISA I/O standard. Implementation based on qcodes drivers.
-    """
-    def __init__(self) -> None:
-        self._visa_handle = None
-
-    def connect(self, address: str, timeout: int = 10000) -> None:
-        """Connects to the instrument.
-        """
-        rm = visa.ResourceManager()
-        self._visa_handle = rm.open_resource(address, timeout=timeout)
-
-    def write(self, msg: Union[bytes, str]) -> None:
-        """Writes a message to the instrument.
-        """
-        self._visa_handle.write(msg)
-
-    def query(self, msg: Union[bytes, str]) -> str:
-        """Writes a message to the instrument and read the response.
-        """
-        return self._visa_handle.query(msg)
-
-    def read(self) -> str:
-        """Waits for and reads the response from the instrument.
-        """
-        return self._visa_handle.read()
-
-    def close(self) -> None:
-        """Closes the instrument connection.
-        """
-        self._visa_handle.close()
-
-    def ready(self) -> None:
-        """
-        Blocking command
-        """
-        self.query("*OPC?")
-
-class TektronixAWG5204(VisaInstrument):
-    """Driver for the Tektronix AWG5204 instrument.
-    """
     def __init__(self, name, address):
-        VisaInstrument.__init__(self)
-        self.connect(address)
-        self.name = name
-        self._nchannels = 7
-        self._sampling_rate = None
-        self._mode = None
-        self._amplitude = [0.75, 0.75, 0.75, 0.75]
-        self._sequence_delay = None
-        self._pulse_buffer = None
-        self._adc_delay = None
-        self._qb_delay = None
-        self._ro_delay = None
-        self._ip = None
-        self._channel_phase = None
+        super().__init__(name, address)
+        # Phase offset for each channel for IQ sideband optimziation
+        self.channel_phase: "list[float]" = []
+        # Time buffer at the start and end of the pulse sequence to ensure that the minimum samples of the instrument are reached
+        self.pulse_buffer: float = 1e-6
 
-    def setup(self,
-              offset: List[Union[int, float]],
-              amplitude: Optional[List[Union[int, float]]] = [0.75, 0.75, 0.75, 0.75],
-              resolution: Optional[int] = 14,
-              sampling_rate: Optional[Union[int, float]] = 2.5e9,
-              mode: int = MODE_MIXER,
-              sequence_delay: float = 60e-6,
-              pulse_buffer: float = 1e-6,
-              adc_delay: float = 282e-9,
-              qb_delay: float = 292e-9,
-              ro_delay: float = 266e-9,
-              ip: str = "192.168.0.2",
-              channel_phase: List[float] = [-0.10821, 0.00349066, 0.1850049, -0.0383972],
-              **kwargs) -> None:
-        """ 
-        Setup the instrument and assigns constants to be used for later.
+    rw_property_wrapper = lambda parameter: property(lambda self: self.device.get(parameter), lambda self,x: self.device.set(parameter,x))
+    rw_property_wrapper('sample_rate')
 
-        Arguments:
-            offset (float[4]): List of aplitude offset per channel in volts.
-            amplitude (float[4]): List of maximum peak-to-peak amplitude per channel in volts.
-            resolution (float): Bit resolution of the AWG DACs. Normally this is assigned per channel but the driver requires all channels to have the same resolution.
-            sampling_rate (float): Sampling rate of the AWG in S/s.
-            mode (int): Nyquist or mixer frequency generation selection.
-            sequence_delay (float): Time between each pulse sequence in seconds.
-            pulse_buffer (float): Pad time before the start of the pulse sequence and after the end of the pulse sequence in seconds.
-            adc_delay (float): Delay for the start of the ADC trigger signal in seconds.
-            qb_delay (float): Delay for the start of the qubit switch TTL signal in seconds.
-            ro_delay (float): Delay for the start of the readout switch TTL signal in seconds.
-            ip (str):  IP address for the device for waveform transfer.
-            channel_phase (float[4]): Phase in radians for each channel. Used primarily on mixer mode to promote target sideband.
-        """
 
-        # Reset the instrument and assign amplitude, offset and resolution per channel
-        self.reset()
-        for idx in range(4):
-            ch = idx + 1
-            self.write("SOURCe{}:VOLTage {}".format(ch, amplitude[idx]))
-            self._amplitude[idx] = amplitude[idx]
-            self.write("SOURCE{}:VOLTAGE:LEVEL:IMMEDIATE:OFFSET {}".format(ch, offset[ch - 1]))
-            self.write("SOURce{}:DAC:RESolution {}".format(ch, resolution))
-
-        # Set the DAC modes and sampling rate
-        self.write("SOUR1:DMOD NRZ")
-        self.write("SOUR2:DMOD NRZ")
-        self.write("CLOCk:SRATe {}".format(sampling_rate))
-
-        if mode == MODE_NYQUIST:
-            self.write("SOUR3:DMOD MIX")
-            self.write("SOUR4:DMOD MIX")
-
+    def connect(self):
+        if not self.is_connected:
+            from qcodes.instrument_drivers.tektronix.AWG70000A import AWG70000A
+            try:
+                self.device = AWG70000A(self.name, self.address, num_channels=4)
+            except Exception as exc:
+                raise InstrumentException(self, str(exc))
+            self.is_connected = True
         else:
-            self.write("SOUR3:DMOD NRZ")
-            self.write("SOUR4:DMOD NRZ")
+            raise_error(Exception,'There is an open connection to the instrument already')
 
-        # Assigns constants to be used later
-        self._mode = mode
-        self._sampling_rate = sampling_rate
-        self._pulse_buffer = pulse_buffer
-        self._sequence_delay = sequence_delay
-        self._qb_delay = qb_delay
-        self._ro_delay = ro_delay
-        self._adc_delay = adc_delay
-        self._ip = ip
-        self._channel_phase = channel_phase
-        self.ready()
+    def setup(self, **kwargs):
+        if self.is_connected:
+            # Set AWG to external reference, 10 MHz
+            self.device.write("CLOC:SOUR EFIX")
+            # Set external trigger to 1V
+            self.device.write('TRIG:LEV 1')
+            self.sample_rate = kwargs.pop('sample_rate')
 
-    def reset(self) -> None:
-        """Reset the instrument back to AWG mode.
+            resolution = kwargs.pop('resolution')
+            amplitude = kwargs.pop('amplitude')
+            offset = kwargs.pop('offset')
+
+            for idx, channel in enumerate(range(1, self.device.num_channels + 1)):
+                awg_ch = getattr(self.device, f"ch{channel}")
+                awg_ch.awg_amplitude(amplitude[idx])
+                awg_ch.resolution(resolution)
+                self.device.write(f"SOURCE{channel}:VOLTAGE:LEVEL:IMMEDIATE:OFFSET {offset[idx]}")
+
+            self.__dict__.update(kwargs)
+        else:
+            raise_error(Exception,'There is no connection to the instrument')
+
+    def generate_waveforms_from_pulse(self, pulse: Pulse, time_array: np.ndarray):
+        """Generates a numpy array based on the pulse parameters
+        
+        Arguments:
+            pulse (qibolab.pulses.Pulse | qibolab.pulses.ReadoutPulse): Pulse to be compiled
+            time_array (numpy.ndarray): Array corresponding to the global time
         """
-        self.write("INSTrument:MODE AWG")
-        self.write("CLOC:SOUR EFIX") # Set AWG to external reference, 10 MHz
-        self.write("CLOC:OUTP:STAT OFF") # Disable clock output
-        self.clear()
+        i_ch, q_ch = pulse.channel
 
-    def clear(self) -> None:
-        """Clear loaded waveform and sequences.
-        """
-        self.write('SLISt:SEQuence:DELete ALL')
-        self.write('WLISt:WAVeform:DELete ALL')
-        self.ready()
+        i = pulse.envelope_i * np.cos(2 * np.pi * pulse.frequency * time_array + pulse.phase + self.channel_phase[i_ch])
+        q = -1 * pulse.envelope_i * np.sin(2 * np.pi * pulse.frequency * time_array + pulse.phase + self.channel_phase[q_ch])
+        return i, q
 
-    def translate(self, sequence, shots):
+
+    def translate(self, sequence: List[Pulse], nshots=None):
         """
-        Translates the pulse sequence into Tektronix .seqx file
+        Translates the pulse sequence into a numpy array.
 
         Arguments:
             sequence (qibolab.pulses.Pulse[]): Array containing pulses to be fired on this instrument.
-            shots (int): Number of repetitions.
+            nshots (int): Number of repetitions.
         """
-
-        import broadbean as bb
-        from qibolab.pulses import ReadoutPulse
-        from qcodes.instrument_drivers.tektronix.AWG70000A import AWG70000A
 
         # First create np arrays for each channel
         start = min(pulse.start for pulse in sequence)
         end = max(pulse.start + pulse.duration for pulse in sequence)
-        t = np.arange(start * 1e-9 - self._pulse_buffer, end * 1e-9 + self._pulse_buffer, 1 / self._sampling_rate)
-        wfm = np.zeros((self._nchannels, len(t)))
+        time_array = np.arange(start * 1e-9 - self.pulse_buffer, end * 1e-9 + self.pulse_buffer, 1 / self.sample_rate)
+        waveform_arrays = np.zeros((self.device.num_channels, len(time_array)))
 
         for pulse in sequence:
-            # Convert pulse timings from nanoseconds to seconds
-            start = pulse.start * 1e-9
-            duration = pulse.duration * 1e-9
-            if isinstance(pulse, ReadoutPulse):
-                # Readout IQ Signal
-                i_ch = pulse.channel[0]
-                q_ch = pulse.channel[1]
-                phase = (self._channel_phase[i_ch] + pulse.phase, self._channel_phase[q_ch] + pulse.phase)
-                i_wfm, q_wfm = square(t, start, duration, pulse.frequency, pulse.amplitude, phase)
-                wfm[i_ch] += i_wfm
-                wfm[q_ch] += q_wfm
-                # ADC TTL
-                wfm[4] = TTL(t, start + self._adc_delay , 10e-9, 1)
-                # RO SW TTL
-                wfm[5] = TTL(t, start + self._ro_delay, duration, 1)
-                # QB SW TTL
-                wfm[6] = TTL(t, start + self._qb_delay, duration, 1)
+            start_index = bisect(time_array, pulse.start * 1e-9)
+            end_index = bisect(time_array, (pulse.start + pulse.duration) * 1e-9)
+            i_ch, q_ch = pulse.channel
+            i, q = self.generate_waveforms_from_pulse(pulse, time_array[start_index:end_index])
+            waveform_arrays[i_ch, start_index:end_index] += i
+            waveform_arrays[q_ch, start_index:end_index] += q
 
-            else:
-                if self._mode == MODE_MIXER:
-                    # Qubit IQ signal
-                    i_ch = pulse.channel[0]
-                    q_ch = pulse.channel[1]
-                    phase = (self._channel_phase[i_ch] + pulse.phase, self._channel_phase[q_ch] + pulse.phase)
-                    i_wfm, q_wfm = square(t, start, duration, pulse.frequency, pulse.amplitude, phase)
-                    wfm[i_ch] += i_wfm
-                    wfm[q_ch] += q_wfm
-                
-                else:
-                    qb_wfm = sine(t, start, duration, pulse.frequency, pulse.amplitude, pulse.phase)
-                    wfm[pulse.channel] += qb_wfm
+        return waveform_arrays
 
-        # Add waveform arrays to broadbean sequencing
-        main_sequence = bb.Sequence()
-        main_sequence.name = "MainSeq"
-        main_sequence.setSR(self._sampling_rate)
+    def upload(self, waveform: np.ndarray):
+        """Uploads a nchannels X nsamples array to the AWG, load it into memory and assign it to the channels for playback.
+        """
 
-        # Dummy waveform on repeat to create delay between shots
-        dummy = np.zeros(len(t))
-        unit_delay = 1e-6
-        sample_delay = np.zeros(int(unit_delay * self._sampling_rate))
-        delay_wfm = bb.Element()
-        for ch in range(1, 5):
-            delay_wfm.addArray(ch, sample_delay, self._sampling_rate, m1=sample_delay, m2=sample_delay)
+        # TODO: Add additional check to ensure all waveforms are of the same size? Should be caught by qcodes driver anyway.
+        if len(waveform) != self.device.num_channels:
+            raise_error(Exception, "Invalid waveform given")
+
+        # Clear existing waveforms in memory
+        self.device.write("WLIS:WAV:DEL ALL")
         
-        # Add pulses into waveform
-        waveform = bb.Element()
-        waveform.addArray(1, wfm[0], self._sampling_rate, m1=wfm[4], m2=wfm[5])
-        waveform.addArray(2, wfm[1], self._sampling_rate, m1=dummy, m2=wfm[6])
-        waveform.addArray(3, wfm[2], self._sampling_rate, m1=dummy, m2=dummy)
-        waveform.addArray(4, wfm[3], self._sampling_rate, m1=dummy, m2=dummy)
+        # Upload waveform, load into memory and assign to each channel
+        for idx, channel in enumerate(range(1, self.device.num_channels + 1)):
+            awg_ch = getattr(self.device, f"ch{channel}")
+            wfmx = self.device.makeWFMXFile(waveform[idx], awg_ch.awg_amplitude())
+            self.device.sendWFMXFile(wfmx, f"ch{channel}.wfmx")
+            self.device.loadWFMXFile(f"ch{channel}.wfmx")
+            self.device.write(f'SOURce{channel}:CASSet:WAVeform "ch{channel}"')
 
-        # Add subsequence to hold pulse waveforms and delay waveform
-        subseq = bb.Sequence()
-        subseq.name = "SubSeq"
-        subseq.setSR(self._sampling_rate)
-        subseq.addElement(1, waveform)
-        subseq.addElement(2, delay_wfm)
-        subseq.setSequencingNumberOfRepetitions(2, int(self._sequence_delay / unit_delay))
-
-        # Add sequence to play subsequence up to the number of shots.
-        main_sequence.addSubSequence(1, subseq)
-        main_sequence.setSequencingTriggerWait(1, 1)
-        main_sequence.setSequencingNumberOfRepetitions(1, shots)
-        main_sequence.setSequencingGoto(1, 1)
-
-        # Compile waveform into payload
-        # TODO: On fresh installation, fix bug in AWG70000A driver with regards to this method.
-        payload = main_sequence.forge(apply_delays=False, apply_filters=False)
-        payload = AWG70000A.make_SEQX_from_forged_sequence(payload, self._amplitude, "MainSeq")
-
-        return payload
-
-    def upload(self, payload):
-        """
-        Uploads the .seqx file to the AWG and loads it
-        """
-        import time
-        with open("//{}/Users/OEM/Documents/MainSeq.seqx".format(self._ip), "wb+") as w:
-            w.write(payload)
-
-        pathstr = 'C:\\Users\\OEM\\Documents\\MainSeq.seqx'
-        self.write('MMEMory:OPEN:SASSet:SEQuence "{}"'.format(pathstr))
-
-        start = time.time()
-        while True:
-            elapsed = time.time() - start
-            if int(self.query("*OPC?")) == 1:
-                break
-            elif elapsed > self._visa_handle.timeout:
-                raise RuntimeError("AWG took too long to load waveforms")
-
-        for ch in range(1, 5):
-            self.write('SOURCE{}:CASSet:SEQuence "MainSeq", {}'.format(ch, ch))
-        self.ready()
+    def start(self):
+        pass
 
     def play_sequence(self):
-        """
-        Arms the AWG for playback on trigger A
-        """
-        for ch in range(1, 5):
-            self.write("OUTPut{}:STATe 1".format(ch))
-            self.write('SOURce{}:RMODe TRIGgered'.format(ch))
-            self.write('SOURce1{}TINPut ATRIGGER'.format(ch))
-
-        # Arm the trigger
-        self.write('AWGControl:RUN:IMMediate')
-        self.ready()
+        for channel in range(1, self.device.num_channels + 1):
+            awg_ch = getattr(self.device, f"ch{channel}")
+            awg_ch.state(1)
+            self.device.write(f'SOURce{channel}:RMODe TRIGgered')
+            self.device.write(f'SOURce{channel}:TINPut ATR')
+        self.device.play()
+        self.device.wait_for_operation_to_complete()
 
     def stop(self):
-        """
-        Stops the AWG and turns off all channels
-        """
-        self.write('AWGControl:STOP')
-        for ch in range(1, 5):
-            self.write("OUTPut{}:STATe 0".format(ch))
+        self.device.stop()
+        for channel in range(1, self.device.num_channels + 1):
+            awg_ch = getattr(self.device, f"ch{channel}")
+            awg_ch.state(0)
+        self.device.wait_for_operation_to_complete()  
 
-    def start_experiment(self):
-        """
-        Triggers the AWG to start playing
-        """
-        self.write('TRIGger:IMMediate ATRigger')        
+    def disconnect(self):
+        if self.is_connected:
+            self.device.stop()
+            self.device.close()
+            self.is_connected = False
 
+    def __del__(self):
+        self.disconnect()
 
-class MCAttenuator(Instrument):
+    def close(self):
+        if self.is_connected:
+            self.stop()
+            self.device.close()
+            self.is_connected = False
+
+class MCAttenuator(AbstractInstrument):
     """Driver for the MiniCircuit RCDAT-8000-30 variable attenuator.
     """
 
-    def __init__(self, name, address):
-        self.name = name
-        self._address = address
+    def connect(self):
+        pass
 
-    def setup(self, attenuation: float):
+    def setup(self, attenuation: float, **kwargs):
         """Assigns the attenuation level on the attenuator.
 
         Arguments:
-            attenuation(float): Attenuation setting in dB. Ranges from 0 to 35.
+            attenuation(float
+            ): Attenuation setting in dB. Ranges from 0 to 35.
         
         """
         import urllib3
         http = urllib3.PoolManager()
-        http.request('GET', 'http://{}/SETATT={}'.format(self._address, attenuation))
+        http.request('GET', f'http://{self.address}/SETATT={attenuation}')
 
+    def start(self):
+        pass
 
-class QuicSyn(VisaInstrument):
+    def stop(self):
+        pass
+        
+    def disconnect(self):
+        pass
+
+class QuicSyn(AbstractInstrument):
     """Driver for the National Instrument QuicSyn Lite local oscillator.
     """
 
-    def __init__(self, name, address):
-        VisaInstrument.__init__(self)
-        self.name = name
-        self.connect(address)
-        self.write('0601') # EXT REF
+    def connect(self):
+        if not self.is_connected:
+            import pyvisa as visa
+            rm = visa.ResourceManager()
+            try:
+                self.device = rm.open_resource(self.address)
+            except Exception as exc:
+                raise InstrumentException(self, str(exc))
+            self.is_connected = True
 
-    def setup(self, frequency):
+
+    def setup(self, frequency: float, **kwargs):
         """
         Sets the frequency in Hz
         """
-        self.write('FREQ {0:f}Hz'.format(frequency))
+        if self.is_connected:
+            self.device.write('0601')
+            self.frequency(frequency)
+
+    def frequency(self, frequency):
+        self.device.write('FREQ {0:f}Hz'.format(frequency))
 
     def start(self):
         """Starts the instrument.
         """
-        self.write('0F01')
+        self.device.write('0F01')
 
     def stop(self):
         """Stops the instrument.
         """
-        self.write('0F00')
+        self.device.write('0F00')
 
-class AlazarADC(ATS.AcquisitionController, Instrument):
+    def __del__(self):
+        self.disconnect()
+
+    def disconnect(self):
+        if self.is_connected:
+            self.stop()
+            self.device.close()
+            self.is_connected = False
+
+class AlazarADC(AbstractInstrument):
     """Driver for the AlazarTech ATS9371 ADC.
     """
-    def __init__(self, name="alz_cont", address="Alazar1", **kwargs):
-        from qibolab.instruments.ATS9371 import AlazarTech_ATS9371
+    def __init__(self, name, address):
+        super().__init__(name, address)
+        self.controller = None
+
+    def connect(self):
+        if not self.is_connected:
+            from qcodes.instrument_drivers.AlazarTech.ATS9371 import AlazarTech_ATS9371 # pylint: disable=E0401, E0611
+            from qcodes.instrument_drivers.AlazarTech.AlazarADC import ADCController # pylint: disable=E0401, E0611
+            try:
+                self.device = AlazarTech_ATS9371(self.address)
+                self.controller = ADCController(self.name, self.address)
+            except Exception as exc:
+                raise InstrumentException(self, str(exc))
+            self.is_connected = True
+
+    def setup(self, trigger_volts, **kwargs):
+        """
+        Sets the frequency in Hz
+        """
+        if self.is_connected:
+            input_range_volts = 2.5
+            trigger_level_code = int(128 + 127 * trigger_volts / input_range_volts)
+            with self.device.syncing():
+                self.device.clock_source("EXTERNAL_CLOCK_10MHz_REF")
+                self.device.external_sample_rate(1_000_000_000)
+                self.device.clock_edge("CLOCK_EDGE_RISING")
+                self.device.decimation(1)
+                self.device.coupling1('DC')
+                self.device.coupling2('DC')
+                self.device.channel_range1(.02)
+                self.device.channel_range2(.02)
+                self.device.impedance1(50)
+                self.device.impedance2(50)
+                self.device.bwlimit1("DISABLED")
+                self.device.bwlimit2("DISABLED")
+                self.device.trigger_operation('TRIG_ENGINE_OP_J')
+                self.device.trigger_engine1('TRIG_ENGINE_J')
+                self.device.trigger_source1('EXTERNAL')
+                self.device.trigger_slope1('TRIG_SLOPE_POSITIVE')
+                self.device.trigger_level1(trigger_level_code)
+                self.device.trigger_engine2('TRIG_ENGINE_K')
+                self.device.trigger_source2('DISABLE')
+                self.device.trigger_slope2('TRIG_SLOPE_POSITIVE')
+                self.device.trigger_level2(128)
+                self.device.external_trigger_coupling('DC')
+                self.device.external_trigger_range('ETR_2V5')
+                self.device.trigger_delay(0)
+                self.device.timeout_ticks(0)
+
+            samples = kwargs.pop("samples")
+            self.controller.samples = samples
+            self.__dict__.update(kwargs)
+
+    def arm(self, nshots, readout_start):
+        with self.device.syncing():
+            self.device.trigger_delay(int(int((readout_start * 1e-9 + 4e-6) / 1e-9 / 8) * 8))
+        self.controller.arm(nshots)
         
-        self.adc = AlazarTech_ATS9371(address)
-        self.acquisitionkwargs = {}
-        self.samples_per_record = None
-        self.records_per_buffer = None
-        self.buffers_per_acquisition = None
-        self.results = None
-        self.number_of_channels = 2
-        self.buffer = None
-        self._samples = None
-        self._thread = None
-        self._processed_data = None
-        super().__init__(name, address, **kwargs)
-        self.add_parameter("acquisition", get_cmd=self.do_acquisition)
-
-
-    def setup(self, samples):
-        """Setup the ADC.
-        
-        Arguments:
-            samples (int): Number of samples to be acquired.
-
-        TODO: Set trigger voltage as a variable.
-        """
-        trigger_volts = 1
-        input_range_volts = 2.5
-        trigger_level_code = int(128 + 127 * trigger_volts / input_range_volts)
-        with self.adc.syncing():
-            self.adc.clock_source("EXTERNAL_CLOCK_10MHz_REF")
-            #self.adc.clock_source("INTERNAL_CLOCK")
-            self.adc.external_sample_rate(1_000_000_000)
-            #self.adc.sample_rate(1_000_000_000)
-            self.adc.clock_edge("CLOCK_EDGE_RISING")
-            self.adc.decimation(1)
-            self.adc.coupling1('DC')
-            self.adc.coupling2('DC')
-            self.adc.channel_range1(.02)
-            #self.adc.channel_range2(.4)
-            self.adc.channel_range2(.02)
-            self.adc.impedance1(50)
-            self.adc.impedance2(50)
-            self.adc.bwlimit1("DISABLED")
-            self.adc.bwlimit2("DISABLED")
-            self.adc.trigger_operation('TRIG_ENGINE_OP_J')
-            self.adc.trigger_engine1('TRIG_ENGINE_J')
-            self.adc.trigger_source1('EXTERNAL')
-            self.adc.trigger_slope1('TRIG_SLOPE_POSITIVE')
-            self.adc.trigger_level1(trigger_level_code)
-            self.adc.trigger_engine2('TRIG_ENGINE_K')
-            self.adc.trigger_source2('DISABLE')
-            self.adc.trigger_slope2('TRIG_SLOPE_POSITIVE')
-            self.adc.trigger_level2(128)
-            self.adc.external_trigger_coupling('DC')
-            self.adc.external_trigger_range('ETR_2V5')
-            self.adc.trigger_delay(0)
-            #self.aux_io_mode('NONE') # AUX_IN_TRIGGER_ENABLE for seq mode on
-            #self.aux_io_param('NONE') # TRIG_SLOPE_POSITIVE for seq mode on
-            self.adc.timeout_ticks(0)
-
-        self._samples = samples
-
-            
-    def update_acquisitionkwargs(self, **kwargs):
-        """
-        This method must be used to update the kwargs used for the acquisition
-        with the alazar_driver.acquire
-        :param kwargs:
-        :return:
-        """
-        self.acquisitionkwargs.update(**kwargs)
-
-    def arm(self, shots):
-        """Arms the ADC for acqusition.
-
-        Arguments:
-            shots (int): Number of trigger signals to be expected.
-
-        TODO: Wait for ADC to be ready for acquisition instead of fixed time duration.
-        """
-        import threading
-        import time
-        self.update_acquisitionkwargs(mode='NPT',
-                                      samples_per_record=self._samples,
-                                      records_per_buffer=10,
-                                      buffers_per_acquisition=int(shots / 10),
-                                      allocated_buffers=100,
-                                      buffer_timeout=10000)
-        self.pre_start_capture()
-        self._thread = threading.Thread(target=self.do_acquisition, args=())
-        self._thread.start()
-        time.sleep(1)
-
-    def pre_start_capture(self):
-        self.samples_per_record = self.adc.samples_per_record.get()
-        self.records_per_buffer = self.adc.records_per_buffer.get()
-        self.buffers_per_acquisition = self.adc.buffers_per_acquisition.get()
-        sample_speed = self.adc.get_sample_rate()
-        t_final = self.samples_per_record / sample_speed
-        self.time_array = np.arange(0, t_final, 1 / sample_speed)
-        self.buffer = np.zeros(self.samples_per_record *
-                               self.records_per_buffer *
-                               self.number_of_channels)
-
-    def pre_acquire(self):
-        """
-        See AcquisitionController
-        :return:
-        """
-        # this could be used to start an Arbitrary Waveform Generator, etc...
-        # using this method ensures that the contents are executed AFTER the
-        # Alazar card starts listening for a trigger pulse
-        pass
-
-
-    def handle_buffer(self, data, buffer_number=None):
-        """
-        See AcquisitionController
-        :return:
-        """
-        self.buffer += data
-
-    def post_acquire(self):
-        """
-        See AcquisitionController
-        :return:
-        """
-
-        def signal_to_volt(signal, voltdiv):
-            u12 = signal / 16
-            #bitsPerSample = 12
-            codeZero = 2047.5
-            codeRange = codeZero
-            return voltdiv * (u12 - codeZero) / codeRange
-
-        records_per_acquisition = (1. * self.buffers_per_acquisition * self.records_per_buffer)
-        recordA = np.zeros(self.samples_per_record)
-        recordB = np.zeros(self.samples_per_record)
-
-        # Interleaved samples
-        for i in range(self.records_per_buffer):
-            record_start = i * self.samples_per_record * 2
-            record_stop = record_start + self.samples_per_record * 2
-            record_slice = self.buffer[record_start:record_stop]
-            recordA += record_slice[0::2] / records_per_acquisition
-            recordB += record_slice[1::2] / records_per_acquisition
-
-        recordA = signal_to_volt(recordA, 0.02)
-        recordB = signal_to_volt(recordB, 0.02)
-        self._processed_data = np.array([recordA, recordB])
-        return self.buffer, self.buffers_per_acquisition, self.records_per_buffer, self.samples_per_record, self.time_array
-
-    def do_acquisition(self):
+    def play_sequence_and_acquire(self):
         """
         this method performs an acquisition, which is the get_cmd for the
         acquisiion parameter of this instrument
         :return:
         """
-        self._get_alazar().acquire(acquisition_controller=self, **self.acquisitionkwargs)
+        raw = self.device.acquire(acquisition_controller=self.controller, **self.controller.acquisitionkwargs)
+        return self.process_result(raw)
 
-    def result(self, readout_frequency, readout_channels=[0, 1]):
+    def process_result(self, readout_frequency=100e6, readout_channels=[0, 1]):
         """Returns the processed signal result from the ADC.
 
         Arguments:
@@ -543,22 +299,30 @@ class AlazarADC(ATS.AcquisitionController, Instrument):
             it (float): I component of the processed signal.
             qt (float): Q component of the processed signal.
         """
-        self._thread.join()
 
-        input_vec_I = self._processed_data[readout_channels[0]]
-        input_vec_Q = self._processed_data[readout_channels[1]]
+        input_vec_I = self.device._processed_data[readout_channels[0]]
+        input_vec_Q = self.device._processed_data[readout_channels[1]]
         it = 0
         qt = 0
-        for i in range(self.samples_per_record):
-            it += input_vec_I[i] * np.cos(2 * np.pi * readout_frequency * self.time_array[i])
-            qt += input_vec_Q[i] * np.cos(2 * np.pi * readout_frequency * self.time_array[i])
-        phase = np.arctan2(qt, it) * 180 / np.pi
+        for i in range(self.device.samples_per_record):
+            it += input_vec_I[i] * np.cos(2 * np.pi * readout_frequency * self.device.time_array[i])
+            qt += input_vec_Q[i] * np.cos(2 * np.pi * readout_frequency * self.device.time_array[i])
+        phase = np.arctan2(qt, it)
         ampl = np.sqrt(it**2 + qt**2)
         
         return ampl, phase, it, qt
 
-    def close(self):
-        """Closes the instrument.        
+    def start(self):
+        """Starts the instrument.
         """
-        self._alazar.close()
-        super().close()
+        pass
+
+    def stop(self):
+        """Stops the instrument.
+        """
+        pass
+
+    def disconnect(self):
+        if self.is_connected:
+            self.device.close()
+            self.controller.close()

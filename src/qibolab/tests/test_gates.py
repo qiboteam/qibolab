@@ -2,6 +2,7 @@ import pytest
 import numpy as np
 import qibo
 from qibolab import gates
+from qibo import K
 
 
 def test_u3_to_sequence():
@@ -34,8 +35,9 @@ def test_measurement():
     sequence = PulseSequence()
     gate.to_sequence(sequence)
     assert len(sequence) == 1
-    assert len(sequence.qcm_pulses) == 0
-    assert len(sequence.qrm_pulses) == 1
+    assert len(sequence.qd_pulses) == 0
+    assert len(sequence.qf_pulses) == 0
+    assert len(sequence.ro_pulses) == 1
 
 
 @pytest.mark.parametrize("gatename", ["H", "X", "Y", "Z"])
@@ -54,8 +56,6 @@ def test_identity_gate():
     gate = gates.I(0)
     with pytest.raises(NotImplementedError):
         gate.to_u3_params()
-    sequence = PulseSequence()
-    gate.to_sequence(sequence)
 
 
 @pytest.mark.parametrize("gatename", ["RX", "RY", "RZ"])
@@ -70,7 +70,7 @@ def test_rz_to_sequence():
     from qibolab.circuit import PulseSequence
     gate = gates.RZ(0, theta=0.2)
     sequence = PulseSequence()
-    gate.to_sequence(sequence)
+    sequence.phase += gate.parameters
     assert len(sequence) == 0
     assert sequence.phase == 0.2
 

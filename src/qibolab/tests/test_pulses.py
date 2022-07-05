@@ -1,63 +1,98 @@
-"""Tests ``pulses.py`` and ``pulse_shapes.py``."""
+"""Tests ``pulses.py``."""
 import pytest
 import numpy as np
 
 
 def test_rectangular_shape():
-    from qibolab.pulse_shapes import Rectangular
-    rect = Rectangular()
-    assert rect.name == "rectangular"
-    np.testing.assert_allclose(rect.envelope(0.0, 0.2, 10.0, 4.5), 4.5 * np.ones(10))
+    from qibolab.pulses import Pulse, Rectangular
+    pulse = Pulse(start=0,
+                    frequency=200_000_000,
+                    amplitude=1,
+                    duration=50,
+                    phase=0,
+                    shape='Rectangular()', 
+                    channel=1)
+
+    assert pulse.duration == 50
+    assert isinstance(pulse.shape_object, Rectangular)
+    assert pulse.shape_object.name == "Rectangular"
+    assert repr(pulse.shape_object) == "Rectangular()"
+    np.testing.assert_allclose(pulse.envelope_i, np.ones(50))
+    np.testing.assert_allclose(pulse.envelope_q, np.zeros(50))
 
 
 def test_gaussian_shape():
-    from qibolab.pulse_shapes import Gaussian
-    gauss = Gaussian(1.5)
-    assert gauss.name == "gaussian"
-    assert gauss.rel_sigma == 1.5
-    assert repr(gauss) == "(gaussian, 1.5)"
-    envelope = gauss.envelope(0.0, 0.0, 10.0, 4.5)
-    assert envelope.shape == (10,)
+    from qibolab.pulses import Pulse, Gaussian
+    duration = 50
+    rel_sigma = 5
+    pulse = Pulse(start=0,
+                    frequency=200_000_000,
+                    amplitude=1,
+                    duration=duration,
+                    phase=0,
+                    shape=f'Gaussian({rel_sigma})', 
+                    channel=1)
+
+    assert pulse.duration == 50
+    assert isinstance(pulse.shape_object, Gaussian)
+    assert pulse.shape_object.name == "Gaussian"
+    assert repr(pulse.shape_object) == f"Gaussian({float(rel_sigma)})"
+    x = np.arange(0,duration,1)
+    np.testing.assert_allclose(pulse.envelope_i, np.exp(-(1/2)*(((x-(duration-1)/2)**2)/(((duration)/rel_sigma)**2))))
+    np.testing.assert_allclose(pulse.envelope_q, np.zeros(50))
 
 
 def test_drag_shape():
-    from qibolab.pulse_shapes import Drag
-    drag = Drag(1.5, 2.5)
-    assert drag.name == "drag"
-    assert drag.sigma == 1.5
-    assert drag.beta == 2.5
-    assert repr(drag) == "drag(1.5, 2.5)"
-    target_envelop = 4.4108940298803985 + 1.470298009960133j
-    time = np.array([1.0])
-    assert drag.envelope(time, 0.2, 2.2, 4.5) == target_envelop
+    from qibolab.pulses import Pulse, Drag
+    duration = 50
+    rel_sigma = 5
+    beta = 2
+    pulse = Pulse(start=0,
+                    frequency=200_000_000,
+                    amplitude=1,
+                    duration=duration,
+                    phase=0,
+                    shape=f'Drag({rel_sigma}, {beta})', 
+                    channel=1)
 
-
-def test_swipht_shape():
-    from qibolab.pulse_shapes import SWIPHT
-    swipht = SWIPHT(2.2)
-    assert swipht.name == "SWIPHT"
-    assert swipht.g == 2.2
-    assert repr(swipht) == "SWIPHT(2.2)"
-    target_envelop = 4.4108940298803985
-    time = np.array([1.0])
-    assert swipht.envelope(time, 0.2, 2.2, 4.5) == 4.5
+    assert pulse.duration == 50
+    assert isinstance(pulse.shape_object, Drag)
+    assert pulse.shape_object.name == "Drag"
+    assert repr(pulse.shape_object) == f"Drag({float(rel_sigma)}, {float(beta)})"
+    x = np.arange(0,duration,1)
+    np.testing.assert_allclose(pulse.envelope_i, np.exp(-(1/2)*(((x-(duration-1)/2)**2)/(((duration)/rel_sigma)**2))))
+    np.testing.assert_allclose(pulse.envelope_q, beta * (-(x-(duration-1)/2)/((duration/rel_sigma)**2)) * np.exp(-(1/2)*(((x-(duration-1)/2)**2)/(((duration)/rel_sigma)**2))))
 
 
 def test_pulse():
     from qibolab.pulses import Pulse
-    from qibolab.pulse_shapes import Gaussian
-    pulse = Pulse(0.0, 8.0, 0.8, 40.0, 0.7, Gaussian(2))
-    target = "P(qcm, 0.0, 8.0, 0.8, 40.0, 0.7, (gaussian, 2))"
-    assert pulse.serial() == target
+    duration = 50
+    rel_sigma = 5
+    beta = 2
+    pulse = Pulse(start=0,
+                    frequency=200_000_000,
+                    amplitude=1,
+                    duration=duration,
+                    phase=0,
+                    shape=f'Drag({rel_sigma}, {beta})', 
+                    channel=1)
+
+    target = f"Pulse(0, {duration}, 1.000, 200000000, 0.000, 'Drag({rel_sigma}, {beta})', 1, 'qd')"
+    assert pulse.serial == target
     assert repr(pulse) == target
-    assert pulse.compile().shape == (8,)
 
 
 def test_readout_pulse():
     from qibolab.pulses import ReadoutPulse
-    from qibolab.pulse_shapes import Rectangular
-    pulse = ReadoutPulse(0.0, 8.0, 0.8, 40.0, 0.7, Rectangular())
-    target = "P(qrm, 0.0, 8.0, 0.8, 40.0, 0.7, rectangular)"
-    assert pulse.serial() == target
+    duration = 2000
+    pulse = ReadoutPulse(start=0,
+                        frequency=200_000_000,
+                        amplitude=1,
+                        duration=duration,
+                        phase=0,
+                        shape=f'Rectangular()', 
+                        channel=11)
+
+    target = f"ReadoutPulse(0, {duration}, 1.000, 200000000, 0.000, 'Rectangular()', 11, 'ro')"
+    assert pulse.serial == target
     assert repr(pulse) == target
-    np.testing.assert_allclose(pulse.compile(), 0.8 * np.ones(8))

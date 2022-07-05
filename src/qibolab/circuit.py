@@ -13,18 +13,20 @@ class PulseSequence:
 
     def __init__(self):
         super().__init__()
-        self.qcm_pulses = []
-        self.qrm_pulses = []
+        self.ro_pulses = []
+        self.qd_pulses = []
+        self.qf_pulses = []
         self.pulses = []
         self.time = 0
-        self.phase = 0        
+        self.phase = 0
 
     def __len__(self):
         return len(self.pulses)
 
+    @property
     def serial(self):
         """Serial form of the whole sequence using the serial of each pulse."""
-        return ", ".join(pulse.serial() for pulse in self.pulses)
+        return ", ".join(pulse.serial for pulse in self.pulses)
 
     def add(self, pulse):
         """Add a pulse to the sequence.
@@ -35,23 +37,25 @@ class PulseSequence:
         Example:
             .. code-block:: python
 
-                from qibolab.pulses import Pulse, ReadoutPulse
+                from qibolab.pulses import Pulse, ReadoutPulse, Rectangular, Gaussian, Drag
                 from qibolab.circuit import PulseSequence
-                from qibolab.pulse_shapes import Rectangular, Gaussian
-
                 # define two arbitrary pulses
-                pulse1 = Pulse(start=0,
-                               frequency=200000000.0,
-                               amplitude=0.3,
-                               duration=60,
-                               phase=0,
-                               shape=Gaussian(5)))
-                pulse2 = ReadoutPulse(start=70,
-                                      frequency=20000000.0,
-                                      amplitude=0.5,
-                                      duration=3000,
-                                      phase=0,
-                                      shape=Rectangular()))
+                pulse1 = Pulse( start=0,
+                                duration=60,
+                                amplitude=0.3,
+                                frequency=200_000_000.0,
+                                phase=0,
+                                shape=Gaussian(5),
+                                channel=1,
+                                type='qd')
+                pulse2 = Pulse( start=70,
+                                duration=2000,
+                                amplitude=0.5,
+                                frequency=20_000_000.0,
+                                phase=0,
+                                shape=Rectangular(),
+                                channel=2,
+                                type='ro')
 
                 # define the pulse sequence
                 sequence = PulseSequence()
@@ -60,70 +64,51 @@ class PulseSequence:
                 sequence.add(pulse1)
                 sequence.add(pulse2)
         """
-        if pulse.channel == "qrm" or pulse.channel == 1:
-            self.qrm_pulses.append(pulse)
-        else:
-            self.qcm_pulses.append(pulse)
+        if pulse.type == "ro":
+            self.ro_pulses.append(pulse)
+        elif pulse.type == "qd":
+            self.qd_pulses.append(pulse)
+        elif pulse.type == "qf":
+            self.qf_pulses.append(pulse)
+
         self.pulses.append(pulse)
 
     def add_u3(self, theta, phi, lam, qubit=0):
         """Add pulses that implement a U3 gate.
-
         Args:
             theta, phi, lam (float): Parameters of the U3 gate.
         """
-        from qibolab.pulse_shapes import Gaussian
-        # Fetch pi/2 pulse from calibration
-        if hasattr(K.platform, "qubits"):
-            kwargs = K.platform.fetch_qubit_pi_pulse(qubit)
-        else:
-            kwargs = {
-                "amplitude": K.platform.pi_pulse_amplitude,
-                "duration": K.platform.pi_pulse_duration,
-                "frequency": K.platform.pi_pulse_frequency
-            }
-        kwargs["duration"] = kwargs["duration"] // 2
-        delay = K.platform.delay_between_pulses
-        duration = kwargs.get("duration")
-        kwargs["shape"] = Gaussian(5)
-
         # apply RZ(lam)
         self.phase += lam
+        # Fetch pi/2 pulse from calibration
+        RX90_pulse_1= K.platform.RX90_pulse(qubit, self.time, self.phase)
         # apply RX(pi/2)
-        kwargs["start"] = self.time
-        kwargs["phase"] = self.phase
-        self.add(pulses.Pulse(**kwargs))
-        self.time += duration + delay
+        self.add(RX90_pulse_1)
+        self.time += RX90_pulse_1.duration
         # apply RZ(theta)
         self.phase += theta
+        # Fetch pi/2 pulse from calibration
+        RX90_pulse_2= K.platform.RX90_pulse(qubit, self.time, self.phase - math.pi)
         # apply RX(-pi/2)
-        kwargs["start"] = self.time
-        kwargs["phase"] = self.phase - math.pi
-        self.add(pulses.Pulse(**kwargs))
-        self.time += duration + delay
+        self.add(RX90_pulse_2)
+        self.time += RX90_pulse_2.duration
         # apply RZ(phi)
         self.phase += phi
 
     def add_measurement(self, qubit=0):
         """Add measurement pulse."""
-        from qibolab.pulse_shapes import Rectangular
-        if hasattr(K.platform, "qubits"):
-            kwargs = K.platform.fetch_qubit_readout_pulse(qubit)
-        else:
-            kwargs = K.platform.readout_pulse
-        kwargs["start"] = self.time + K.platform.delay_before_readout
-        kwargs["phase"] = self.phase
-        kwargs["shape"] = Rectangular()
-        self.add(pulses.ReadoutPulse(**kwargs))
+        MZ_pulse = K.platform.MZ_pulse(qubit, self.time, self.phase)
+        self.add(MZ_pulse)
+        self.time += MZ_pulse.duration
 
 
 class HardwareCircuit(circuit.Circuit):
 
     def __init__(self, nqubits):
-        if nqubits > 1:
+        if nqubits > 1: # TODO: Fetch platform nqubits
             raise ValueError("Device has only one qubit.")
         super().__init__(nqubits)
-
+    
     def create_sequence(self):
         """Creates the :class:`qibolab.circuit.PulseSequence` corresponding to the circuit's gates."""
         if self.measurement_gate is None:
@@ -150,12 +135,15 @@ class HardwareCircuit(circuit.Circuit):
         readout = K.platform(sequence, nshots)
         K.platform.stop()
 
-        if hasattr(K.platform, "qubits"):
+        # TODO: To be replaced with a proper classification of the states
+        if K.platform.name == 'icarusq':
             q = self.measurement_gate.target_qubits[0]
             qubit = K.platform.fetch_qubit(q)
             min_v = qubit.min_readout_voltage
             max_v = qubit.max_readout_voltage
         else:
-            min_v = K.platform.min_readout_voltage
-            max_v = K.platform.max_readout_voltage
+            qubit = self.measurement_gate.target_qubits[0]
+            readout = list(list(readout.values())[0].values())[0]
+            min_v = K.platform.settings['characterization']['single_qubit'][qubit]['rabi_oscillations_pi_pulse_min_voltage']
+            max_v = K.platform.settings['characterization']['single_qubit'][qubit]['resonator_spectroscopy_max_ro_voltage']
         return states.HardwareState.from_readout(readout, min_v, max_v)

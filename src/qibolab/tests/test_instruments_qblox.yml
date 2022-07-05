@@ -1,0 +1,66 @@
+settings:
+    hardware_avg: 1024
+    sampling_rate: 1_000_000_000
+    repetition_duration: 200_000
+    minimum_delay_between_instructions: 4
+
+instruments:
+    ClusterQRM:
+        lib: qblox
+        class: ClusterQRM
+        address: 192.168.0.14
+        settings:
+            ref_clock: external
+            sync_en: false
+            scope_acq_avg_mode_en: true
+            scope_acq_trigger_mode: sequencer
+            gain: 0.4
+            acquisition_start: 130 # minimum 4ns
+            acquisition_duration: 1500
+            mode: ssb
+            channel_port_map:  # Refrigerator Channel : Instrument port
+                2: o1 # IQ Port = out0 & out1
+                3: i1 
+            lo: lo_qrm
+
+    ClusterQCM:
+        lib: qblox
+        class: ClusterQCM
+        address: 192.168.0.12
+        settings:
+            ref_clock: external
+            sync_en: false
+            gain: 0.3
+            channel_port_map:  
+                1: o1 # IQ Port = out0 & out1
+            lo: lo_qcm
+
+    PulsarQRM:
+        lib: qblox
+        class: PulsarQRM
+        address: 192.168.0.24
+        settings:
+            ref_clock: external
+            sync_en: false
+            scope_acq_avg_mode_en: true
+            scope_acq_trigger_mode: sequencer
+            gain: 0.4
+            acquisition_start: 130 # minimum 4ns
+            acquisition_duration: 1500
+            mode: ssb
+            channel_port_map:  # Refrigerator Channel : Instrument port
+                2: o1 # IQ Port = out0 & out1
+                3: i1 
+            lo: lo_qrm
+
+    PulsarQCM:
+        lib: qblox
+        class: PulsarQCM
+        address: 192.168.0.22
+        settings:
+            ref_clock: external
+            sync_en: false
+            gain: 0.3
+            channel_port_map:  
+                1: o1 # IQ Port = out0 & out1
+            lo: lo_qcm

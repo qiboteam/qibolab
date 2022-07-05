@@ -1,136 +1,199 @@
-import os
-import pathlib
+import yaml
 import pytest
 import numpy as np
-from qibolab.instruments import qblox
-from qibolab.tests.utils import load_runcard, generate_pulse_sequence
+from qibolab.paths import qibolab_folder
+from qibolab.pulses import Pulse, ReadoutPulse
+from qibolab.platforms.multiqubit import MultiqubitPlatform
+from qibolab.instruments.qblox import ClusterQCM, ClusterQRM, PulsarQCM, PulsarQRM
 
-REGRESSION_FOLDER = pathlib.Path(__file__).with_name("regressions")
+
+INSTRUMENTS_LIST = ['ClusterQCM', 'ClusterQRM', 'PulsarQCM', 'PulsarQRM']
+instruments = {}
 
 
-def assert_regression_array(array, filename):
-    """Check array matches data inside filename.
-
-    If filename does not exists, this function
-    creates the missing file otherwise it loads
-    from file and compares.
+@pytest.mark.parametrize('name', INSTRUMENTS_LIST)
+def test_instruments_qublox_init(name):
+    test_runcard = qibolab_folder / "tests" / "test_instruments_qblox.yml"
+    with open(test_runcard, "r") as file:
+        settings = yaml.safe_load(file)
     
-    Args:
-        array: numpy array
-        filename: target array filename
-    """
-    filedir = REGRESSION_FOLDER / filename
-    if os.path.exists(filedir):
-        target = np.loadtxt(filedir)
-        np.testing.assert_allclose(array, target)
-    else:  # pragma: no cover
-        # regression file should be provided in the CI
-        np.savetxt(filedir, array)
+    # Instantiate instrument
+    lib = settings['instruments'][name]['lib']
+    i_class = settings['instruments'][name]['class']
+    address = settings['instruments'][name]['address']
+    from importlib import import_module
+    InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
+    instance = InstrumentClass(name, address)
+    instruments[name] = instance
+    assert instance.name == name
+    assert instance.address == address
+    assert instance.is_connected == False
+    assert instance.signature == f"{name}@{address}"
+    assert instance.data_folder == qibolab_folder / "instruments" / "data"
 
 
-def assert_regression_str(text, filename):
-    """Check string matches data inside filename.
-
-    Same as ``assert_regression_array`` but for string.
-    """
-    filedir = REGRESSION_FOLDER / filename
-    if os.path.exists(filedir):
-        with open(filedir, "r") as file:
-            target = file.read()
-        assert text == target
-    else:  # pragma: no cover
-        # regression file should be provided in the CI
-        with open(filedir, "w") as file:
-            file.write(text)
+@pytest.mark.xfail
+@pytest.mark.parametrize('name', INSTRUMENTS_LIST)
+def test_instruments_qublox_connect(name):
+    instruments[name].connect()
 
 
-def get_pulsar(device):
-    """Initializes and setups a pulsar for testing.
-    
-    Args:
-        device (str): 'QCM' or 'QRM'.
-    """
-    settings = load_runcard("tiiq")
-    pulsar = getattr(qblox, f"Pulsar{device}")(**settings.get(f"{device}_init_settings"))
-    pulsar.setup(**settings.get(f"{device}_settings"))
-    return pulsar
-
-
-@pytest.mark.parametrize("device", ["QCM", "QRM"])
-def test_pulsar_init_and_setup(device):
-    """Tests if Pulsars can be initialized and setup."""
-    pulsar = get_pulsar(device)
-    assert pulsar.name == device.lower()
-    assert f"Pulsar{device}" in pulsar.signature
-    pulsar.close()
-
-
-@pytest.mark.parametrize("device", ["QCM", "QRM"])
-def test_gain_setter(device):
-    pulsar = get_pulsar(device)
-    gain = pulsar.gain
-    pulsar.gain = 0.1
-    pulsar.close()
-
-
-def test_translate_single_pulse():
-    from qibolab.pulses import Pulse
-    from qibolab.pulse_shapes import Gaussian
-    pulse = Pulse(start=0,
-                  frequency=200000000.0,
-                  amplitude=0.3,
-                  duration=60,
-                  phase=0,
-                  shape=Gaussian(5))
-    waveform = qblox.GenericPulsar._translate_single_pulse(pulse)
-    modI, modQ = waveform.get("modI"), waveform.get("modQ")
-    assert modI.get("index") == 0
-    assert modQ.get("index") == 1
-    assert_regression_array(modI.get("data"), "single_pulse_waveform_modI.txt")
-    assert_regression_array(modQ.get("data"), "single_pulse_waveform_modQ.txt")
-
-
-@pytest.mark.parametrize("device", ["QCM", "QRM"])
-def test_generate_waveform_empty(device):
-    pulsar = get_pulsar(device)
-    with pytest.raises(ValueError):
-        pulsar.generate_waveforms([])
-    pulsar.close()
-
-
-@pytest.mark.parametrize("device", ["QCM", "QRM"])
-def test_translate(device):
-    """Tests ``generate_waveforms`` and ``generate_program``."""
-    pulsar = get_pulsar(device)
-    sequence = generate_pulse_sequence()
-    waveforms, program = pulsar.translate(sequence, 4, 100)
-    pulsar.close()
-
-    modI, modQ = waveforms.get(f"modI_{pulsar.name}"), waveforms.get(f"modQ_{pulsar.name}")
-    assert modI.get("index") == 0
-    assert modQ.get("index") == 1
-    assert_regression_array(modI.get("data"), f"{pulsar.name}_waveforms_modI.txt")
-    assert_regression_array(modQ.get("data"), f"{pulsar.name}_waveforms_modQ.txt")
-    assert_regression_str(program, f"{pulsar.name}_program.txt")
-
-
-def test_upload_and_play_sequence():
-    """Tests uploading and executing waveforms in pulsars."""
-    qcm = get_pulsar("QCM")
-    qrm = get_pulsar("QRM")
-    sequence = generate_pulse_sequence()
-    qcm_waveforms, qcm_program = qcm.translate(sequence, 4, 100)
-    qrm_waveforms, qrm_program = qrm.translate(sequence, 4, 100)
-
-    if qcm._connected and qrm._connected:
-        qcm.upload(qcm_waveforms, qcm_program, "data")
-        qrm.upload(qrm_waveforms, qrm_program, "data")
-        qcm.play_sequence()
-        qrm.play_sequence_and_acquire(sequence.qrm_pulses[-1])
+@pytest.mark.parametrize('name', INSTRUMENTS_LIST)
+def test_instruments_qublox_setup(name):
+    if not instruments[name].is_connected:
+        pytest.xfail('Instrument not available')
     else:
-        with pytest.raises(AttributeError):
-            qcm.upload(qcm_waveforms, qcm_program, "data")
-    qcm.close()
-    qrm.close()
+        test_runcard = qibolab_folder / "tests" / "test_instruments_qblox.yml"
+        with open(test_runcard, "r") as file:
+            settings = yaml.safe_load(file)        
+        instruments[name].setup(**settings['settings'], **settings['instruments'][name]['settings'])
 
-# TODO: Test ``PulsarQRM._demodulate_and_integrate`` (requires some output from execution)
+        for parameter in settings['instruments'][name]['settings']:
+            assert getattr(instruments[name], parameter) == settings['instruments'][name]['settings'][parameter]
+
+
+def instrument_set_and_test_parameter_values(instrument, parameter, values):
+    for value in values:
+        instrument.set_device_parameter(parameter, value)
+        assert instrument.device.get(parameter) == value
+
+
+@pytest.mark.parametrize('name', INSTRUMENTS_LIST)
+def test_instruments_qublox_set_device_paramter(name):
+    if not instruments[name].is_connected:
+        pytest.xfail('Instrument not available')
+    else:
+        instrument_set_and_test_parameter_values(instruments[name], 'reference_source', ['external', 'internal'])
+        for sequencer in range(instruments[name].device_num_sequencers):
+            for gain in np.arange(0, 1, 0.1):
+                instruments[name].set_device_parameter(f"sequencer{sequencer}_gain_awg_path0", gain)
+                instruments[name].set_device_parameter(f"sequencer{sequencer}_gain_awg_path1", gain)
+                assert abs(instruments[name].device.get(f"sequencer{sequencer}_gain_awg_path0") - gain) < 0.001
+                assert abs(instruments[name].device.get(f"sequencer{sequencer}_gain_awg_path1") - gain) < 0.001
+            instrument_set_and_test_parameter_values(instruments[name], f"sequencer{sequencer}_sync_en", [False, True])
+            for out in range(0, 2 * instruments[name].device_num_ports):
+                instrument_set_and_test_parameter_values(instruments[name], f"sequencer{sequencer}_channel_map_path{out%2}_out{out}_en",  [False, True])
+
+        if 'QRM' in name:
+            instrument_set_and_test_parameter_values(instruments[name], 'scope_acq_trigger_mode_path0',  ['sequencer', 'level'])
+            instrument_set_and_test_parameter_values(instruments[name], 'scope_acq_trigger_mode_path1',  ['sequencer', 'level'])
+            instrument_set_and_test_parameter_values(instruments[name], 'scope_acq_avg_mode_en_path0',  [False, True])
+            instrument_set_and_test_parameter_values(instruments[name], 'scope_acq_avg_mode_en_path1',  [False, True])
+            instrument_set_and_test_parameter_values(instruments[name], 'scope_acq_sequencer_select', range(instruments[name].device_num_sequencers))
+       
+            """   # TODO: add attitional paramter tests           
+            qrm:
+                parameter                                  value
+            ------------------------------------------------------------------
+            IDN                                         :	None 
+            in0_gain                                    :	None (dB)
+            in1_gain                                    :	None (dB)
+            out0_offset                                 :	None (V)
+            out1_offset                                 :	None (V)
+            reference_source                            :	None 
+            scope_acq_avg_mode_en_path0                 :	None 
+            scope_acq_avg_mode_en_path1                 :	None 
+            scope_acq_sequencer_select                  :	None 
+            scope_acq_trigger_level_path0               :	None 
+            scope_acq_trigger_level_path1               :	None 
+            scope_acq_trigger_mode_path0                :	None 
+            scope_acq_trigger_mode_path1                :	None 
+            sequencer0_channel_map_path0_out0_en        :	None 
+            sequencer0_channel_map_path1_out1_en        :	None 
+            sequencer0_cont_mode_en_awg_path0           :	None 
+            sequencer0_cont_mode_en_awg_path1           :	None 
+            sequencer0_cont_mode_waveform_idx_awg_path0 :	None 
+            sequencer0_cont_mode_waveform_idx_awg_path1 :	None 
+            sequencer0_demod_en_acq                     :	None 
+            sequencer0_discretization_threshold_acq     :	None 
+            sequencer0_gain_awg_path0                   :	None 
+            sequencer0_gain_awg_path1                   :	None 
+            sequencer0_integration_length_acq           :	None 
+            sequencer0_marker_ovr_en                    :	None 
+            sequencer0_marker_ovr_value                 :	None 
+            sequencer0_mixer_corr_gain_ratio            :	None 
+            sequencer0_mixer_corr_phase_offset_degree   :	None 
+            sequencer0_mod_en_awg                       :	None 
+            sequencer0_nco_freq                         :	None (Hz)
+            sequencer0_nco_phase_offs                   :	None (Degrees)
+            sequencer0_offset_awg_path0                 :	None 
+            sequencer0_offset_awg_path1                 :	None 
+            sequencer0_phase_rotation_acq               :	None (Degrees)
+            sequencer0_sync_en                          :	None 
+            sequencer0_upsample_rate_awg_path0          :	None 
+            sequencer0_upsample_rate_awg_path1          :	None 
+            sequencer0_waveforms_and_program            :	None  
+            
+            qcm:
+                parameter                                  value
+            ----------------------------------------------------------------
+            IDN                                         :	None 
+            out0_offset                                 :	None (V)
+            out1_offset                                 :	None (V)
+            out2_offset                                 :	None (V)
+            out3_offset                                 :	None (V)
+            reference_source                            :	None 
+            sequencer0_channel_map_path0_out0_en        :	None 
+            sequencer0_channel_map_path0_out2_en        :	None 
+            sequencer0_channel_map_path1_out1_en        :	None 
+            sequencer0_channel_map_path1_out3_en        :	None 
+            sequencer0_cont_mode_en_awg_path0           :	None 
+            sequencer0_cont_mode_en_awg_path1           :	None 
+            sequencer0_cont_mode_waveform_idx_awg_path0 :	None 
+            sequencer0_cont_mode_waveform_idx_awg_path1 :	None 
+            sequencer0_gain_awg_path0                   :	None 
+            sequencer0_gain_awg_path1                   :	None 
+            sequencer0_marker_ovr_en                    :	None 
+            sequencer0_marker_ovr_value                 :	None 
+            sequencer0_mixer_corr_gain_ratio            :	None 
+            sequencer0_mixer_corr_phase_offset_degree   :	None 
+            sequencer0_mod_en_awg                       :	None 
+            sequencer0_nco_freq                         :	None (Hz)
+            sequencer0_nco_phase_offs                   :	None (Degrees)
+            sequencer0_offset_awg_path0                 :	None 
+            sequencer0_offset_awg_path1                 :	None 
+            sequencer0_sync_en                          :	None 
+            sequencer0_upsample_rate_awg_path0          :	None 
+            sequencer0_upsample_rate_awg_path1          :	None 
+            sequencer0_waveforms_and_program            :	None             
+            """
+
+        instruments[name].device.reset()
+
+
+@pytest.mark.parametrize('name', INSTRUMENTS_LIST)
+def test_instruments_process_pulse_sequence_upload_play(name):
+    if not instruments[name].is_connected:
+        pytest.xfail('Instrument not available')
+    else:
+        test_runcard = qibolab_folder / "tests" / "test_instruments_qblox.yml"
+        with open(test_runcard, "r") as file:
+            settings = yaml.safe_load(file)        
+        instruments[name].setup(**settings['settings'], **settings['instruments'][name]['settings'])
+
+        instrument_pulses = {}
+        instrument_pulses[name] = {}
+        if 'QCM' in name:
+            for channel in instruments[name].channel_port_map:
+                instrument_pulses[name][channel] = [Pulse(0, 200, 1, 10e6, np.pi/2, 'Gaussian(5)', channel)]
+            instruments[name].process_pulse_sequence(instrument_pulses[name], nshots = 5)
+            instruments[name].upload()
+            instruments[name].play_sequence()
+        if 'QRM' in name:
+            for channel in instruments[name].channel_port_map:
+                instrument_pulses[name][channel] = [Pulse(0, 200, 1, 10e6, np.pi/2, 'Gaussian(5)', channel), \
+                                                    ReadoutPulse(200, 2000, 1, 10e6, np.pi/2, 'Rectangular()', channel)]
+            instruments[name].process_pulse_sequence(instrument_pulses[name], nshots = 5)
+            instruments[name].upload()
+            acquisition_results = instruments[name].play_sequence_and_acquire()
+
+
+@pytest.mark.parametrize('name', INSTRUMENTS_LIST)
+def test_instruments_qublox_start_stop_disconnect(name):
+    if not instruments[name].is_connected:
+        pytest.xfail('Instrument not available')
+    else:      
+        instruments[name].start()
+        instruments[name].stop()
+        instruments[name].disconnect()
+        assert instruments[name].is_connected == False
