@@ -1,3 +1,4 @@
+from typing import List
 from qibolab.paths import qibolab_folder
 import json
 import numpy as np
@@ -214,7 +215,7 @@ class QRM(AbstractInstrument):
         else:
             raise_error(Exception,'There is no connection to the instrument')
 
-    def process_pulse_sequence(self, channel_pulses, nshots):
+    def process_pulse_sequence(self, channel_pulses: dict[int, List], nshots):
         """
         Processes a list of pulses, generating the waveforms and sequence program required by the instrument to synthesise them.
         
@@ -409,7 +410,7 @@ class QRM(AbstractInstrument):
                 # DEBUG: QRM print sequencer program
                 # print(f"{self.name} sequencer {sequencer} program:\n" + self.program[sequencer]) 
 
-    def generate_waveforms_from_pulse(self, pulse, modulate = True):
+    def generate_waveforms_from_pulse(self, pulse, software_modulation: bool = False):
         """
         Generates I & Q waveforms for the pulse passed as a parameter.
 
@@ -423,7 +424,7 @@ class QRM(AbstractInstrument):
         envelope_i = pulse.envelope_i
         envelope_q = pulse.envelope_q 
         assert len(envelope_i) == len(envelope_q)
-        if modulate:
+        if software_modulation:
             return self.software_modulation(pulse)
         else:
             return envelope_i, envelope_q
@@ -448,7 +449,6 @@ class QRM(AbstractInstrument):
         for it, t, ii, qq in zip(np.arange(pulse.duration), time, envelope_i, envelope_q):
             result.append(mod_matrix[:, :, it] @ np.array([ii, qq]))
         mod_signals = np.array(result)
-
 
         return mod_signals[:, 0] + pulse.offset_i, mod_signals[:, 1] + pulse.offset_q
 

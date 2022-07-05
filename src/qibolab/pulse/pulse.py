@@ -1,0 +1,80 @@
+"""Pulse abstractions."""
+import numpy as np
+import re
+from abc import ABC, abstractmethod
+from qibo.config import raise_error
+
+
+class Pulse:
+    """Describes a single pulse to be added to waveform array.
+
+    Args:
+        start (float): Start time of pulse in ns.
+        duration (float): Pulse duration in ns.
+        amplitude (float): Pulse digital amplitude (unitless) [0 to 1].
+        frequency (float): Pulse Intermediate Frequency in Hz [10e6 to 300e6].
+        phase (float): To be added.
+        shape: (str): {'Rectangular', 'Gaussian(rel_sigma)', 'DRAG(rel_sigma, beta)'} Pulse shape.
+            See :py:mod:`qibolab.pulses_shapes` for list of available shapes.
+        channel (int/str): Specifies the device that will execute this pulse.
+        type (str): {'ro', 'qd', 'qf'} type of pulse {ReadOut, Qubit Drive, Qubit Flux}   
+        offset_i (float): Optional pulse I offset (unitless).
+            (amplitude + offset) should be between [0 and 1].
+        offset_q (float): Optional pulse Q offset (unitless).
+            (amplitude + offset) should be between [0 and 1].
+        qubit (int): qubit associated with the pulse
+
+    Example:
+        .. code-block:: python
+
+            from qibolab.pulses import Pulse
+            from qibolab.pulse_shapes import Gaussian
+
+            # define pulse with Gaussian shape
+            pulse = Pulse(start=0,
+                          duration=60,
+                          amplitude=0.3,
+                          frequency=200000000.0,
+                          phase=0,
+                          shape=Gaussian(5),
+                          channel=1,
+                          type='qd')
+    """
+
+    amplitude: float
+    phase: float
+    duration: int
+    start_time: int
+    frequency: float | None = None
+
+    def __init__(self, start, duration, amplitude, frequency, phase, shape, channel, type = 'qd', offset_i=0, offset_q=0, qubit=0):
+        self.start = start # absolut pulse start time (does not depend on other pulses of the sequence)
+        self.duration = duration
+        self.amplitude = amplitude
+        self.frequency = frequency
+        self.phase = phase
+        self.shape = shape
+        self.channel = channel
+        self.offset_i = offset_i
+        self.offset_q = offset_q
+        self.qubit = qubit
+        self.type = type
+
+        shape_name = re.findall('(\w+)', shape)[0]
+        shape_parameters = re.findall('(\w+)', shape)[1:]
+        self.shape_object = globals()[shape_name](self, *shape_parameters) # eval(f"{shape_name}(self, {shape_parameters})")
+
+    @property
+    def serial(self):
+        return f"Pulse({self.start}, {self.duration}, {format(self.amplitude, '.3f')}, {self.frequency}, {format(self.phase, '.3f')}, '{self.shape}', {self.channel}, '{self.type}')"
+
+    @property
+    def envelope_i(self):
+        return  self.shape_object.envelope_i
+
+    @property
+    def envelope_q(self):
+        return  self.shape_object.envelope_q
+
+    def __repr__(self):
+        return self.serial
