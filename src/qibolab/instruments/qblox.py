@@ -1,16 +1,20 @@
-from typing import List
+from typing import List, Tuple
 from qibolab.paths import qibolab_folder
 import json
 import numpy as np
 from qibo.config import raise_error, log
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
+from qibolab.pulse import Pulse, PulseSequence, PulseShape
 
 from qpysequence.program import Program
-from qpysequence.library import long_wait
+from qpysequence.library import long_wait, set_phase_rad, set_awg_gain_relative
 from qpysequence.block import Block
 from qpysequence.loop import Loop
-from qpysequence.instructions.real_time import Play, Acquire
+from qpysequence.instructions.real_time import Play, Acquire, Wait
 from qpysequence.instructions.control import Stop
+from qpysequence.waveforms import Waveforms
+from qpysequence.acquisitions import Acquisitions
+from qpysequence.sequence import Sequence
 
 from qblox_instruments import Cluster
 cluster : Cluster = None
@@ -214,6 +218,99 @@ class QRM(AbstractInstrument):
             # can only be determined after examining the pulse sequence
         else:
             raise_error(Exception,'There is no connection to the instrument')
+
+        
+    def _generate_waveforms(self, pulses: List[Pulse]):
+        """Generate I and Q waveforms from a PulseSequence object.
+        Args:
+            pulse_sequence (PulseSequence): PulseSequence object.
+        Returns:
+            Waveforms: Waveforms object containing the generated waveforms.
+        """
+        waveforms = Waveforms()
+
+        unique_pulses: List[Tuple[int, PulseShape]] = []
+
+        for pulse in pulses:
+            if (pulse.duration, pulse.pulse_shape) not in unique_pulses:
+                unique_pulses.append((pulse.duration, pulse.pulse_shape))
+                envelope = pulse.envelope(amplitude=1)
+                real = np.real(envelope) + self.offset_i
+                imag = np.imag(envelope) + self.offset_q
+                waveforms.add_pair((real, imag), name=str(pulse))
+
+        return waveforms
+
+    def _generate_program(self, pulses: List[Pulse], waveforms: Waveforms, nshots: int, repetition_duration: int):
+        """Generate Q1ASM program
+        Args:
+            pulse_sequence (PulseSequence): Pulse sequence.
+            waveforms (Waveforms): Waveforms.
+        Returns:
+            Program: Q1ASM program.
+        """
+        # Define program's blocks
+        program = Program()
+        bin_loop = Loop(name="binning", iterations=int(self.num_bins))
+        avg_loop = Loop(name="average", iterations=nshots)
+        bin_loop.append_block(block=avg_loop, bot_position=1)
+        stop = Block(name="stop")
+        stop.append_component(Stop())
+        program.append_block(block=bin_loop)
+        program.append_block(block=stop)
+        if pulses[0].start != 0:  # TODO: Make sure that start time of Pulse is 0 or bigger than 4
+            avg_loop.append_component(Wait(wait_time=int(pulses[0].start)))
+
+        for i, pulse in enumerate(pulses):
+            waveform_pair = waveforms.find_pair_by_name(str(pulse))
+            wait_time = pulses[i + 1].start - pulse.start if (i < (len(pulses) - 1)) else self.final_wait_time
+            avg_loop.append_component(set_phase_rad(rads=pulse.phase))
+            avg_loop.append_component(set_awg_gain_relative(gain_0=pulse.amplitude, gain_1=pulse.amplitude))
+            avg_loop.append_component(
+                Play(
+                    waveform_0=waveform_pair.waveform_i.index,
+                    waveform_1=waveform_pair.waveform_q.index,
+                    wait_time=int(wait_time),
+                )
+            )
+        self._append_acquire_instruction(loop=avg_loop, register="TR10")
+        avg_loop.append_block(long_wait(wait_time=repetition_duration - avg_loop.duration_iter), bot_position=1)
+        return program
+
+    def _generate_acquisitions(self) -> Acquisitions:
+        """Generate Acquisitions object, currently containing a single acquisition named "single", with num_bins = 1
+        and index = 0.
+        Args:
+            nshots (int): Number of hardware shots.
+        Returns:
+            Acquisitions: Acquisitions object.
+        """
+        acquisitions = Acquisitions()
+        acquisitions.add(name="single", num_bins=1, index=0)
+        acquisitions.add(name="binning", num_bins=int(self.num_bins) + 1, index=1)  # binned acquisition
+        return acquisitions
+
+    def _translate_pulse_sequence(self, pulses: List[Pulse], nshots: int, repetition_duration: int):
+        """Translate a pulse sequence into a Q1ASM program and a waveform dictionary.
+        Args:
+            pulse_sequence (PulseSequence): Pulse sequence to translate.
+        Returns:
+            Sequence: Qblox Sequence object containing the program and waveforms.
+        """
+        waveforms = self._generate_waveforms(pulses=pulses)
+        acquisitions = self._generate_acquisitions()
+        program = self._generate_program(
+            pulses=pulses, waveforms=waveforms, nshots=nshots, repetition_duration=repetition_duration
+        )
+        weights = self._generate_weights()
+        return Sequence(program=program, waveforms=waveforms, acquisitions=acquisitions, weights=weights)
+
+    def _generate_weights(self) -> dict:
+        """Generate acquisition weights.
+        Returns:
+            dict: Acquisition weights.
+        """
+        return {}
 
     def process_pulse_sequence(self, channel_pulses: dict[int, List], nshots):
         """
