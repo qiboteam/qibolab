@@ -1,38 +1,39 @@
+"""Drag pulse shape."""
+from dataclasses import dataclass
+
 import numpy as np
+
 from qibolab.pulse.pulse_shape.pulse_shape import PulseShape
+from qibolab.typings import PulseShapeName
+from qibolab.utils import Factory
 
 
+@Factory.register
+@dataclass
 class Drag(PulseShape):
-    """
-    Derivative Removal by Adiabatic Gate (DRAG) pulse shape.
-    
-    Args:
-        pulse (Pulse): pulse associated with the shape
-        rel_sigma (int): relative sigma so that the pulse standard deviation (sigma) = duration / rel_sigma
-    
-    .. math::
-    
-    
-    """
+    """Derivative Removal by Adiabatic Gate (DRAG) pulse shape."""
 
-    def __init__(self, pulse, rel_sigma, beta):
-        self.name = "Drag"
-        self.pulse = pulse
-        self.rel_sigma = float(rel_sigma)
-        self.beta = float(beta)
+    name = PulseShapeName.DRAG
 
-    @property
-    def envelope_i(self):
-        x = np.arange(0,self.pulse.duration,1)
-        i = self.pulse.amplitude * np.exp(-(1/2)*(((x-(self.pulse.duration-1)/2)**2)/(((self.pulse.duration)/self.rel_sigma)**2)))
-        return i
+    num_sigmas: float
+    beta: float
 
-    @property
-    def envelope_q(self):
-        x = np.arange(0,self.pulse.duration,1)
-        i = self.pulse.amplitude * np.exp(-(1/2)*(((x-(self.pulse.duration-1)/2)**2)/(((self.pulse.duration)/self.rel_sigma)**2)))
-        q = self.beta * (-(x-(self.pulse.duration-1)/2)/((self.pulse.duration/self.rel_sigma)**2)) * i
-        return q
+    def envelope(self, duration: int, amplitude: float, resolution: float = 1.0):
+        """DRAG envelope centered with respect to the pulse.
+
+        Args:
+            duration (int): Duration of the pulse (ns).
+            amplitude (float): Maximum amplitude of the pulse.
+
+        Returns:
+            ndarray: Amplitude of the envelope for each time step.
+        """
+        sigma = duration / self.num_sigmas
+        time = np.arange(duration / resolution) * resolution
+        mu_ = duration / 2
+        gaussian = amplitude * np.exp(-0.5 * (time - mu_) ** 2 / sigma**2)
+        gaussian = (gaussian - gaussian[0]) / (1 - gaussian[0])  # Shift to avoid introducing noise at time 0
+        return gaussian + 1j * self.beta * (-(time - mu_) / sigma**2) * gaussian
 
     def __repr__(self):
         return f"{self.name}({self.rel_sigma}, {self.beta})"

@@ -4,6 +4,10 @@ import re
 from abc import ABC, abstractmethod
 from qibo.config import raise_error
 
+from qibolab.pulse.pulse_shape.pulse_shape import PulseShape
+from qibolab.utils import Waveforms
+from qibolab.constants import PULSE
+
 
 class Pulse:
     """Describes a single pulse to be added to waveform array.
@@ -45,6 +49,7 @@ class Pulse:
     phase: float
     duration: int
     start_time: int
+    pulse_shape: PulseShape
     frequency: float | None = None
 
     def __init__(self, start, duration, amplitude, frequency, phase, shape, channel, type = 'qd', offset_i=0, offset_q=0, qubit=0):
@@ -64,9 +69,49 @@ class Pulse:
         shape_parameters = re.findall('(\w+)', shape)[1:]
         self.shape_object = globals()[shape_name](self, *shape_parameters) # eval(f"{shape_name}(self, {shape_parameters})")
 
+    def modulated_waveforms(self, frequency: float, resolution: float = 1.0) -> Waveforms:
+        """Applies digital quadrature amplitude modulation (QAM) to the pulse envelope.
+
+        Args:
+            resolution (float, optional): The resolution of the pulses in ns. Defaults to 1.0.
+
+        Returns:
+            NDArray: I and Q modulated waveforms.
+        """
+        envelope = self.envelope(resolution=resolution)
+        envelopes = [np.real(envelope), np.imag(envelope)]
+        time = np.arange(self.duration / resolution) * 1e-9 * resolution
+        cosalpha = np.cos(2 * np.pi * frequency * time + self.phase)
+        sinalpha = np.sin(2 * np.pi * frequency * time + self.phase)
+        mod_matrix = np.array([[cosalpha, sinalpha], [-sinalpha, cosalpha]])
+        imod, qmod = np.transpose(np.einsum("abt,bt->ta", mod_matrix, envelopes))
+        return Waveforms(i=imod.tolist(), q=qmod.tolist())
+    
+    @property
+    def start(self):
+        """Pulse 'start' property.
+
+        Raises:
+            ValueError: Is start time is not defined.
+
+        Returns:
+            int: Start time of the pulse.
+        """
+        return self.start_time
+
     @property
     def serial(self):
         return f"Pulse({self.start}, {self.duration}, {format(self.amplitude, '.3f')}, {self.frequency}, {format(self.phase, '.3f')}, '{self.shape}', {self.channel}, '{self.type}')"
+
+    def envelope(self, amplitude: float | None = None, resolution: float = 1.0):
+        """Pulse 'envelope' property.
+
+        Returns:
+            List[float]: Amplitudes of the envelope of the pulse. Max amplitude is fixed to 1.
+        """
+        if amplitude is None:
+            amplitude = self.amplitude
+        return self.pulse_shape.envelope(duration=self.duration, amplitude=amplitude, resolution=resolution)
 
     @property
     def envelope_i(self):
@@ -75,6 +120,22 @@ class Pulse:
     @property
     def envelope_q(self):
         return  self.shape_object.envelope_q
+
+    def to_dict(self):
+        """Return dictionary of pulse.
+
+        Returns:
+            dict: Dictionary describing the pulse.
+        """
+        return {
+            PULSE.NAME: self.name.value,
+            PULSE.AMPLITUDE: self.amplitude,
+            PULSE.FREQUENCY: self.frequency,
+            PULSE.PHASE: self.phase,
+            PULSE.DURATION: self.duration,
+            PULSE.PULSE_SHAPE: self.pulse_shape.to_dict(),
+            PULSE.START_TIME: self.start_time,
+        }
 
     def __repr__(self):
         return self.serial

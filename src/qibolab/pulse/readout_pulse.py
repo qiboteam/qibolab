@@ -1,14 +1,23 @@
+"""Pulse class."""
+from dataclasses import dataclass
+from typing import ClassVar
+
 from qibolab.pulse.pulse import Pulse
+from qibolab.pulse.pulse_shape.pulse_shape import PulseShape
+from qibolab.pulse.pulse_shape.rectangular import Rectangular
+from qibolab.typings import PulseName
 
 
+@dataclass
 class ReadoutPulse(Pulse):
-    """Describes a readout pulse.
+    """Describes a single pulse to be added to waveform array."""
 
-    See :class:`qibolab.pulses.Pulse` for argument desciption.
-    """
+    name: ClassVar[PulseName] = PulseName.READOUT_PULSE
+    pulse_shape: PulseShape = Rectangular()
 
-    def __init__(self, start, duration, amplitude, frequency, phase, shape, channel, type = 'ro', offset_i=0, offset_q=0, qubit=0):
-        super().__init__(start, duration, amplitude, frequency, phase, shape, channel, type , offset_i, offset_q, qubit)
+    def __repr__(self):  # pylint: disable=useless-super-delegation
+        """Redirect __repr__ magic method."""
+        return super().__repr__()
 
     @property
     def serial(self):

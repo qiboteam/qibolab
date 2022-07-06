@@ -1,35 +1,44 @@
+from dataclasses import dataclass
 import numpy as np
 
 from qibolab.pulse.pulse_shape.pulse_shape import PulseShape
+from qibolab.typings.enums import PulseShapeName
+from qibolab.utils.factory import Factory
 
 
+@Factory.register
+@dataclass
 class Gaussian(PulseShape):
     """
     Gaussian pulse shape.
 
     Args:
         pulse (Pulse): pulse associated with the shape
-        rel_sigma (int): relative sigma so that the pulse standard deviation (sigma) = duration / rel_sigma
+        num_sigmas (int): relative sigma so that the pulse standard deviation (sigma) = duration / num_sigmas
     
     .. math::
 
         A\exp^{-\\frac{1}{2}\\frac{(t-\mu)^2}{\sigma^2}}
     """
 
-    def __init__(self, pulse, rel_sigma):
-        self.name = "Gaussian"
-        self.pulse = pulse
-        self.rel_sigma = float(rel_sigma)
+    name = PulseShapeName.GAUSSIAN
+    num_sigmas: float
 
-    @property
-    def envelope_i(self):
-        x = np.arange(0,self.pulse.duration,1)
-        return self.pulse.amplitude * np.exp(-(1/2)*(((x-(self.pulse.duration-1)/2)**2)/(((self.pulse.duration)/self.rel_sigma)**2)))
-        # same as: self.pulse.amplitude * gaussian(int(self.pulse.duration), std=int(self.pulse.duration/self.rel_sigma))
+    def envelope(self, duration: int, amplitude: float, resolution: float = 1.0):
+        """Gaussian envelope centered with respect to the pulse.
 
-    @property
-    def envelope_q(self):
-        return np.zeros(int(self.pulse.duration))
+        Args:
+            duration (int): Duration of the pulse (ns).
+            amplitude (float): Maximum amplitude of the pulse.
+
+        Returns:
+            ndarray: Amplitude of the envelope for each time step.
+        """
+        sigma = duration / self.num_sigmas
+        time = np.arange(duration / resolution) * resolution
+        mu_ = duration / 2
+        gaussian = amplitude * np.exp(-0.5 * (time - mu_) ** 2 / sigma**2)
+        return (gaussian - gaussian[0]) / (1 - gaussian[0])  # Shift to avoid introducing noise at time 0
 
     def __repr__(self):
-        return f"{self.name}({self.rel_sigma})"
+        return f"{self.name}({self.num_sigmas})"
