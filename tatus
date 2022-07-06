@@ -1,0 +1,26 @@
+[1mdiff --git a/src/qibolab/instruments/icarusq.py b/src/qibolab/instruments/icarusq.py[m
+[1mindex d032615..31e19c3 100644[m
+[1m--- a/src/qibolab/instruments/icarusq.py[m
+[1m+++ b/src/qibolab/instruments/icarusq.py[m
+[36m@@ -3,7 +3,7 @@[m [mfrom typing import List[m
+ from bisect import bisect[m
+ from qibo.config import raise_error[m
+ from qibolab.instruments.abstract import AbstractInstrument, InstrumentException[m
+[31m-from qibolab.pulses import Pulse[m
+[32m+[m[32mfrom qibolab.pulse.pulse import Pulse[m
+ [m
+ class TektronixAWG5204(AbstractInstrument):[m
+ [m
+[1mdiff --git a/src/qibolab/tests/test_circuit.py b/src/qibolab/tests/test_circuit.py[m
+[1mindex 314648b..c1b5e82 100644[m
+[1m--- a/src/qibolab/tests/test_circuit.py[m
+[1m+++ b/src/qibolab/tests/test_circuit.py[m
+[36m@@ -2,7 +2,7 @@[m [mimport pytest[m
+ import numpy as np[m
+ import qibo[m
+ from qibo import K, gates[m
+[31m-from qibolab.pulses import Pulse, ReadoutPulse[m
+[32m+[m[32mfrom qibolab.pulse.pulse import Pulse, ReadoutPulse[m
+ from qibolab.circuit import PulseSequence, HardwareCircuit[m
+ from qibolab.paths import qibolab_folder[m
+ from qibolab.platforms.multiqubit import MultiqubitPlatform[m

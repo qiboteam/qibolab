@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import qibo
 from qibo import K, gates
-from qibolab.pulses import Pulse, ReadoutPulse
+from qibolab.pulse.pulse import Pulse, ReadoutPulse
 from qibolab.circuit import PulseSequence, HardwareCircuit
 from qibolab.paths import qibolab_folder
 from qibolab.platforms.multiqubit import MultiqubitPlatform

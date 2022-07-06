@@ -3,7 +3,7 @@ from typing import List
 from bisect import bisect
 from qibo.config import raise_error
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
-from qibolab.pulses import Pulse
+from qibolab.pulse.pulse import Pulse
 
 class TektronixAWG5204(AbstractInstrument):
 
