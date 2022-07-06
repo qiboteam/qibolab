@@ -1,9 +1,10 @@
 from qibo.config import log
 from abc import ABC, abstractmethod
 import yaml
-from qibo.core import circuit
-from qibolab.circuit import PulseSequence
+from qibo import gates
 from qibolab.pulses import Pulse, ReadoutPulse, Rectangular, Gaussian, Drag
+from qibolab.platforms.u3params import U3Params
+
 
 class AbstractPlatform(ABC):
     """Abstract platform for controlling quantum devices.
@@ -16,13 +17,14 @@ class AbstractPlatform(ABC):
         log.info(f"Loading platform {name} from runcard {runcard}")
         self.name = name
         self.runcard = runcard
-        self.is_connected = False        
+        self.is_connected = False
+        self.u3params = U3Params()
         # Load platform settings
         with open(runcard, "r") as file:
             self.settings = yaml.safe_load(file)
-            
+
         self.instruments = {}
-        # Instantiate instruments 
+        # Instantiate instruments
         for name in self.settings['instruments']:
             lib = self.settings['instruments'][name]['lib']
             i_class = self.settings['instruments'][name]['class']
@@ -30,7 +32,10 @@ class AbstractPlatform(ABC):
             from importlib import import_module
             InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
             instance = InstrumentClass(name, address)
-            self.instruments[name] = instance    
+            self.instruments[name] = instance
+
+    def __repr__(self):
+        return self.name
 
     def __getstate__(self):
         return {
@@ -61,7 +66,7 @@ class AbstractPlatform(ABC):
         """Executes calibration routines and updates the settings yml file"""
         from qibolab.calibration import calibration
         ac = calibration.Calibration(self)
-        ac.auto_calibrate_plaform()     
+        ac.auto_calibrate_plaform()
         # update instruments with new calibration settings
         self.reload_settings()
 
@@ -89,7 +94,7 @@ class AbstractPlatform(ABC):
         self.topology = self.settings['topology']
         self.channels = self.settings['channels']
         self.qubit_channel_map = self.settings['qubit_channel_map']
-        
+
         # Generate qubit_instrument_map from qubit_channel_map and the instruments' channel_port_maps
         self.qubit_instrument_map = {}
         for qubit in self.qubit_channel_map:
@@ -126,9 +131,9 @@ class AbstractPlatform(ABC):
 
         if self.is_connected:
             for name in self.instruments:
-                # Set up every with the platform settings and the instrument settings 
+                # Set up every with the platform settings and the instrument settings
                 self.instruments[name].setup(**self.settings['settings'], **self.settings['instruments'][name]['settings'])
-        
+
         # Load Characterization settings
         self.characterization = self.settings['characterization']
 
@@ -148,8 +153,28 @@ class AbstractPlatform(ABC):
                 self.instruments[name].disconnect()
             self.is_connected = False
 
-    def __call__(self, sequence, nshots=None):
-        return self.execute_pulse_sequence(sequence, nshots)
+    def asu3(self, gate):
+        name = gate.__class__.__name__
+        if isinstance(gate, gates.ParametrizedGate):
+            return getattr(self.u3params, name)(*gate.parameters)
+        else:
+            return getattr(self.u3params, name)
+
+    def to_sequence(self, sequence, gate):
+        if isinstance(gate, gates.M):
+            for q in gate.target_qubits:
+                sequence.add_measurement(self, q)
+
+        elif isinstance(gate, gates.I):
+            pass
+
+        elif isinstance(gate, gates.Z):
+            sequence.phase += self.parameters[0]
+
+        else:
+            q = gate.target_qubits[0]
+            u3params = self.asu3(gate)
+            sequence.add_u3(self, *u3params, q)
 
     @abstractmethod
     def execute_pulse_sequence(self, sequence, nshots=None):  # pragma: no cover
@@ -166,31 +191,11 @@ class AbstractPlatform(ABC):
         """
         raise NotImplementedError
 
-
-    def execute_circuit(self, circuit: circuit.Circuit, nshots=None):
-        """Executes a quantum circuit.
-
-        Args:
-            circuit (:class:`qibo.core.circuit.Circuit`): Circuit to execute.
-            nshots (int): Number of shots to sample from the experiment.
-                If ``None`` the default value provided as hardware_avg in the
-                calibration yml will be used.
-
-        Returns:
-            Readout results acquired by after execution.
-        """
-
-        sequence = PulseSequence()
-        sequence.platform = self
-        for gate in circuit.queue:
-            # Cast qibo gate into qibolab hardware gate
-            gate.__class__.replace('qibo.core.gates', 'qibolab.gates')
-            gate.to_sequence(sequence)
-        circuit.measurement_gate.to_sequence(sequence)
-
+    def __call__(self, sequence, nshots=None):
+        return self.execute_pulse_sequence(sequence, nshots)
 
     def RX90_pulse(self, qubit, start = 0, phase = 0):
-        qd_duration = self.settings['native_gates']['single_qubit'][qubit]['RX']['duration'] 
+        qd_duration = self.settings['native_gates']['single_qubit'][qubit]['RX']['duration']
         qd_frequency = self.settings['native_gates']['single_qubit'][qubit]['RX']['frequency']
         qd_amplitude = self.settings['native_gates']['single_qubit'][qubit]['RX']['amplitude'] / 2
         qd_shape = self.settings['native_gates']['single_qubit'][qubit]['RX']['shape']
@@ -198,9 +203,8 @@ class AbstractPlatform(ABC):
         from qibolab.pulses import Pulse
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, phase, qd_shape, qd_channel)
 
-    
     def RX_pulse(self, qubit, start = 0, phase = 0):
-        qd_duration = self.settings['native_gates']['single_qubit'][qubit]['RX']['duration'] 
+        qd_duration = self.settings['native_gates']['single_qubit'][qubit]['RX']['duration']
         qd_frequency = self.settings['native_gates']['single_qubit'][qubit]['RX']['frequency']
         qd_amplitude = self.settings['native_gates']['single_qubit'][qubit]['RX']['amplitude']
         qd_shape = self.settings['native_gates']['single_qubit'][qubit]['RX']['shape']
@@ -209,15 +213,14 @@ class AbstractPlatform(ABC):
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, phase, qd_shape, qd_channel)
 
     def MZ_pulse(self, qubit, start, phase = 0):
-        ro_duration = self.settings['native_gates']['single_qubit'][qubit]['MZ']['duration'] 
+        ro_duration = self.settings['native_gates']['single_qubit'][qubit]['MZ']['duration']
         ro_frequency = self.settings['native_gates']['single_qubit'][qubit]['MZ']['frequency']
         ro_amplitude = self.settings['native_gates']['single_qubit'][qubit]['MZ']['amplitude']
-        ro_shape = self.settings['native_gates']['single_qubit'][qubit]['MZ']['shape']     
+        ro_shape = self.settings['native_gates']['single_qubit'][qubit]['MZ']['shape']
         ro_channel = self.settings['qubit_channel_map'][qubit][0]
         from qibolab.pulses import ReadoutPulse
         return ReadoutPulse(start, ro_duration, ro_amplitude, ro_frequency, phase, ro_shape, ro_channel)
-    
-    
+
     def qubit_drive_pulse(self, qubit, start, duration, phase = 0):
         qd_frequency = self.settings['native_gates']['single_qubit'][qubit]['RX']['frequency']
         qd_amplitude = self.settings['native_gates']['single_qubit'][qubit]['RX']['amplitude']
@@ -226,12 +229,11 @@ class AbstractPlatform(ABC):
         from qibolab.pulses import Pulse
         return Pulse(start, duration, qd_amplitude, qd_frequency, phase, qd_shape, qd_channel)
 
-
     def qubit_readout_pulse(self, qubit, start, phase = 0):
-        ro_duration = self.settings['native_gates']['single_qubit'][qubit]['MZ']['duration'] 
+        ro_duration = self.settings['native_gates']['single_qubit'][qubit]['MZ']['duration']
         ro_frequency = self.settings['native_gates']['single_qubit'][qubit]['MZ']['frequency']
         ro_amplitude = self.settings['native_gates']['single_qubit'][qubit]['MZ']['amplitude']
-        ro_shape = self.settings['native_gates']['single_qubit'][qubit]['MZ']['shape']     
+        ro_shape = self.settings['native_gates']['single_qubit'][qubit]['MZ']['shape']
         ro_channel = self.settings['qubit_channel_map'][qubit][0]
         from qibolab.pulses import ReadoutPulse
         return ReadoutPulse(start, ro_duration, ro_amplitude, ro_frequency, phase, ro_shape, ro_channel)

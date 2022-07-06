@@ -1,45 +1,68 @@
 import os
-from qibolab.platform import Platform
 from qibo.backends.numpy import NumpyBackend
 from qibo.config import raise_error
 
 
-class QibolabBackend(NumpyBackend): # pragma: no cover
+class QibolabBackend(NumpyBackend):
 
-    description = "" # TODO: Write proper description
-
-    def __init__(self):
+    def __init__(self, platform, runcard=None):
+        from qibolab.platform import Platform
         super().__init__()
         self.name = "qibolab"
-        self.custom_gates = True
-        self.is_hardware = True
-        self.platform = None
-        self.set_platform(os.environ.get("QIBOLAB_PLATFORM", "tiiq"))
+        self.platform = Platform(platform, runcard)
 
-    def set_platform(self, platform):
-        self.platform = Platform(platform)
+    def asmatrix(self, gate): # pragma: no cover
+        raise_error(NotImplementedError, "Matrices not available for qibolab backend.")
 
-    def get_platform(self):
-        return self.platform.name
+    def asmatrix_parametrized(self, gate): # pragma: no cover
+        raise_error(NotImplementedError, "Matrices not available for qibolab backend.")
 
-    def circuit_class(self, accelerators=None, density_matrix=False):
-        if accelerators is not None:
-            raise_error(NotImplementedError, "Hardware backend does not support "
-                                             "multi-GPU configuration.")
-        if density_matrix:
-            raise_error(NotImplementedError, "Hardware backend does not support "
-                                             "density matrix simulation.")
-        from qibolab.circuit import HardwareCircuit
-        return HardwareCircuit
+    def asmatrix_fused(self, gate): # pragma: no cover
+        raise_error(NotImplementedError, "Matrices not available for qibolab backend.")
 
-    def create_gate(self, cls, *args, **kwargs):
-        from qibolab import gates
-        return getattr(gates, cls.__name__)(*args, **kwargs)
+    def apply_gate(self, gate, state, nqubits): # pragma: no cover
+        raise_error(NotImplementedError)
 
-    def create_einsum_cache(self, qubits, nqubits, ncontrol=None):  # pragma: no cover
-        raise_error(NotImplementedError, "`create_einsum_cache` method is "
-                                         "not required for hardware backends.")
+    def apply_gate_density_matrix(self, gate, state, nqubits): # pragma: no cover
+        raise_error(NotImplementedError, "Density matrices")
 
-    def einsum_call(self, cache, state, matrix):  # pragma: no cover
-        raise_error(NotImplementedError, "`einsum_call` method is not required "
-                                         "for hardware backends.")
+    def execute_circuit(self, circuit, initial_state=None, nshots=None): # pragma: no cover
+        """Executes a quantum circuit.
+
+        Args:
+            circuit (:class:`qibo.core.circuit.Circuit`): Circuit to execute.
+            nshots (int): Number of shots to sample from the experiment.
+                If ``None`` the default value provided as hardware_avg in the
+                calibration yml will be used.
+
+        Returns:
+            Readout results acquired by after execution.
+        """
+        from qibolab.pulses import PulseSequence
+        if initial_state is not None:
+            raise_error(ValueError, "Hardware backend does not support "
+                                    "initial state in circuits.")
+
+        # Translate gates to pulses and create a ``PulseSequence``
+        if circuit.measurement_gate is None:
+            raise_error(RuntimeError, "No measurement register assigned.")
+
+        sequence = PulseSequence()
+        for gate in circuit.queue:
+            self.platform.to_sequence(sequence, gate)
+        self.platform.to_sequence(sequence, circuit.measurement_gate)
+
+        # Execute the pulse sequence on the platform
+        self.platform.connect()
+        self.platform.setup()
+        self.platform.start()
+        readout = self.platform(sequence, nshots)
+        self.platform.stop()
+
+        return CircuitResult(self, circuit, readout, nshots)
+
+    def get_state_tensor(self):
+        raise_error(NotImplementedError, "Qibolab cannot return state vector.")
+
+    def get_state_repr(self, result): # pragma: no cover
+        return result.execution_result
