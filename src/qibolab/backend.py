@@ -1,6 +1,6 @@
-import os
-from qibo.backends.numpy import NumpyBackend
 from qibo.config import raise_error
+from qibo.states import CircuitResult
+from qibo.backends import NumpyBackend
 
 
 class QibolabBackend(NumpyBackend):
@@ -11,20 +11,11 @@ class QibolabBackend(NumpyBackend):
         self.name = "qibolab"
         self.platform = Platform(platform, runcard)
 
-    def asmatrix(self, gate): # pragma: no cover
-        raise_error(NotImplementedError, "Matrices not available for qibolab backend.")
-
-    def asmatrix_parametrized(self, gate): # pragma: no cover
-        raise_error(NotImplementedError, "Matrices not available for qibolab backend.")
-
-    def asmatrix_fused(self, gate): # pragma: no cover
-        raise_error(NotImplementedError, "Matrices not available for qibolab backend.")
-
     def apply_gate(self, gate, state, nqubits): # pragma: no cover
-        raise_error(NotImplementedError)
+        raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
 
     def apply_gate_density_matrix(self, gate, state, nqubits): # pragma: no cover
-        raise_error(NotImplementedError, "Density matrices")
+        raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
 
     def execute_circuit(self, circuit, initial_state=None, nshots=None): # pragma: no cover
         """Executes a quantum circuit.
