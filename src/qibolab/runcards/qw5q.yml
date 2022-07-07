@@ -26,7 +26,7 @@ qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
     2: [10, 25, 12]     # Drive not found, tried all flux lines none moves it
     3: [10, 22, 13]     # Drive not found, Flux line 11 confirmed
     4: [10, 23, 14]
-    5: [10, null, null] # witness qubit
+    5: [10, null , null] # witness qubit
 
 instruments:
     qrm_rf:
@@ -35,7 +35,7 @@ instruments:
         address: 192.168.0.2:16
         settings:
             in0_att                       : 0
-            out0_att                      : 50
+            out0_att                      : 40
             out0_in0_lo_en                : true 
             out0_in0_lo_freq              : 7_000_000_000 # (Hz) from 2e9 to 18e9
             out0_offset_path0             : 0
@@ -51,10 +51,10 @@ instruments:
             cont_mode_waveform_idx_awg       : 0        # for path0 and path1
             demod_en_acq                     : false 
             discretization_threshold_acq     : false 
-            gain_awg                         : 0.3       # for path0 and path1 -1.0<=v<=1.0
+            gain_awg                         : 1       # for path0 and path1 -1.0<=v<=1.0
             integration_length_acq           : 4         # 4<=v<=16777212, Multiples of 4
-            marker_ovr_en                    : false 
-            marker_ovr_value                 : 0 
+            marker_ovr_en                    : true 
+            marker_ovr_value                 : 15 
             mixer_corr_gain_ratio            : 1       # 0.5<=v<=2.0 
             mixer_corr_phase_offset_degree   : 0 
             mod_en_awg                       : false 
@@ -95,8 +95,8 @@ instruments:
             cont_mode_en_awg                 : false # for path0 and path1
             cont_mode_waveform_idx_awg       : 0 # for path0 and path1 
             gain_awg                         : 1 # for path0 and path1 -1.0<=v<=1.0
-            marker_ovr_en                    : false 
-            marker_ovr_value                 : 0 
+            marker_ovr_en                    : true 
+            marker_ovr_value                 : 15 
             mixer_corr_gain_ratio            : 1       # 0.5<=v<=2.0  
             mixer_corr_phase_offset_degree   : 0 
             mod_en_awg                       : false 
@@ -134,8 +134,8 @@ instruments:
             cont_mode_en_awg                 : false # for path0 and path1
             cont_mode_waveform_idx_awg       : 0 # for path0 and path1 
             gain_awg                         : 1 # for path0 and path1 -1.0<=v<=1.0
-            marker_ovr_en                    : false 
-            marker_ovr_value                 : 0 
+            marker_ovr_en                    : true 
+            marker_ovr_value                 : 15 
             mixer_corr_gain_ratio            : 1       # 0.5<=v<=2.0  
             mixer_corr_phase_offset_degree   : 0 
             mod_en_awg                       : false 
@@ -173,8 +173,8 @@ instruments:
             cont_mode_en_awg                 : false # for path0 and path1
             cont_mode_waveform_idx_awg       : 0 # for path0 and path1 
             gain_awg                         : 1 # for path0 and path1 -1.0<=v<=1.0
-            marker_ovr_en                    : false 
-            marker_ovr_value                 : 0 
+            marker_ovr_en                    : true 
+            marker_ovr_value                 : 15 
             mixer_corr_gain_ratio            : 1       # 0.5<=v<=2.0  
             mixer_corr_phase_offset_degree   : 0 
             mod_en_awg                       : false 
@@ -306,7 +306,7 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            resonator_freq:  7_129_400_000 # 6_937_650_000 7_000_000_000 #
+            resonator_freq:  7_129_900_000 # 7_000_000_000 #
             qubit_freq: 4_616_300_000
             T1: 2192.895853326451
             T2: 6933.310025260633
@@ -345,7 +345,7 @@ characterization:
 
         5:
             resonator_freq: 6_937_650_000 # 6_897_610_000
-            qubit_freq: 4_700_000_000
+            qubit_freq: 4_616_300_000 # 4_700_000_000
             T1: 2192.895853326451
             T2: 6933.310025260633
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
