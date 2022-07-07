@@ -109,9 +109,7 @@ class AbstractPlatform(ABC):
         self.qd_channel = {}
         self.qf_channel = {}
         self.qrm = {}
-        self.lo_qrm = {} # TODO: Not instrument agnostic
         self.qcm = {}
-        self.lo_qcm = {}
         for qubit in self.qubit_channel_map:
             self.ro_channel[qubit] = self.qubit_channel_map[qubit][0]
             self.qd_channel[qubit] = self.qubit_channel_map[qubit][1]
@@ -119,10 +117,8 @@ class AbstractPlatform(ABC):
 
             if not self.qubit_instrument_map[qubit][0] is None:
                 self.qrm[qubit]  = self.instruments[self.qubit_instrument_map[qubit][0]]
-                self.lo_qrm[qubit] = self.instruments[self.settings['instruments'][self.qubit_instrument_map[qubit][0]]['settings']['lo']]
             if not self.qubit_instrument_map[qubit][1] is None:
                 self.qcm[qubit]  = self.instruments[self.qubit_instrument_map[qubit][1]]
-                self.lo_qcm[qubit] = self.instruments[self.settings['instruments'][self.qubit_instrument_map[qubit][1]]['settings']['lo']]
             # TODO: implement qf modules
 
 
