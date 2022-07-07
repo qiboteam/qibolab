@@ -1,8 +1,10 @@
 import math
 from qibo import K
-from qibolab import states, pulses
+from qibolab import states
 from qibo.config import raise_error
 from qibo.core import circuit
+
+from qibolab.pulse import pulse
 
 
 class PulseSequence:

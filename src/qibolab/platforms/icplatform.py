@@ -83,7 +83,7 @@ class ICPlatform(AbstractPlatform):
         if nshots is None:
             nshots = self.hardware_avg
 
-        from qibolab.pulses import ReadoutPulse
+        from qibolab.pulse.pulse import ReadoutPulse
 
         qubits_to_measure = []
         measurement_results = []

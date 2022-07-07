@@ -6,7 +6,7 @@ import time
 from typing import List
 import numpy as np
 from qibolab.instruments.abstract import AbstractInstrument
-from qibolab.pulses import Pulse
+from qibolab.pulse.pulse import Pulse
 
 class PulseBlaster(AbstractInstrument):
     """Driver for the 24-pin PulseBlaster TTL signal generator.

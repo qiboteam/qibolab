@@ -1,6 +1,6 @@
 from qibolab import Platform
 from qibolab.paths import qibolab_folder
-from qibolab.pulses import Pulse, ReadoutPulse
+from qibolab.pulse.pulse import Pulse, ReadoutPulse
 from qibolab.circuit import PulseSequence
 
 # Define PulseSequence

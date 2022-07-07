@@ -1,8 +1,7 @@
 from typing import List, Tuple
-from qibolab.paths import qibolab_folder
 import json
 import numpy as np
-from qibo.config import raise_error, log
+from qibo.config import raise_error
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.pulse import Pulse, PulseSequence, PulseShape
 

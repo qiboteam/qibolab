@@ -2,7 +2,7 @@ import yaml
 import pytest
 import numpy as np
 from qibolab.paths import qibolab_folder
-from qibolab.pulses import Pulse, ReadoutPulse
+from qibolab.pulse.pulse import Pulse, ReadoutPulse
 from qibolab.platforms.multiqubit import MultiqubitPlatform
 from qibolab.instruments.qblox import ClusterQCM, ClusterQRM, PulsarQCM, PulsarQRM
 

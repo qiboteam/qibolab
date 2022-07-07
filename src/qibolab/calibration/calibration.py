@@ -13,7 +13,7 @@ from qibolab import Platform
 from qibolab.paths import qibolab_folder
 from qibolab.calibration import utils
 from qibolab.calibration import fitting
-from qibolab.pulses import Pulse, ReadoutPulse, Rectangular, Gaussian, Drag
+from qibolab.pulse.pulse import Pulse, ReadoutPulse, Rectangular, Gaussian, Drag
 from qibolab.circuit import PulseSequence
 
 

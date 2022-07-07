@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import yaml
 from qibo.core import circuit
 from qibolab.circuit import PulseSequence
-from qibolab.pulses import Pulse, ReadoutPulse, Rectangular, Gaussian, Drag
+from qibolab.pulse.pulse import Pulse, ReadoutPulse, Rectangular, Gaussian, Drag
 
 class AbstractPlatform(ABC):
     """Abstract platform for controlling quantum devices.
@@ -191,7 +191,7 @@ class AbstractPlatform(ABC):
         qd_amplitude = self.settings['native_gates']['single_qubit'][qubit]['RX']['amplitude'] / 2
         qd_shape = self.settings['native_gates']['single_qubit'][qubit]['RX']['shape']
         qd_channel = self.settings['qubit_channel_map'][qubit][1]
-        from qibolab.pulses import Pulse
+        from qibolab.pulse.pulse import Pulse
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, phase, qd_shape, qd_channel)
 
     
@@ -201,7 +201,7 @@ class AbstractPlatform(ABC):
         qd_amplitude = self.settings['native_gates']['single_qubit'][qubit]['RX']['amplitude']
         qd_shape = self.settings['native_gates']['single_qubit'][qubit]['RX']['shape']
         qd_channel = self.settings['qubit_channel_map'][qubit][1]
-        from qibolab.pulses import Pulse
+        from qibolab.pulse.pulse import Pulse
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, phase, qd_shape, qd_channel)
 
     def MZ_pulse(self, qubit, start, phase = 0):
@@ -210,7 +210,7 @@ class AbstractPlatform(ABC):
         ro_amplitude = self.settings['native_gates']['single_qubit'][qubit]['MZ']['amplitude']
         ro_shape = self.settings['native_gates']['single_qubit'][qubit]['MZ']['shape']     
         ro_channel = self.settings['qubit_channel_map'][qubit][0]
-        from qibolab.pulses import ReadoutPulse
+        from qibolab.pulse.pulse import ReadoutPulse
         return ReadoutPulse(start, ro_duration, ro_amplitude, ro_frequency, phase, ro_shape, ro_channel)
     
     
@@ -219,7 +219,7 @@ class AbstractPlatform(ABC):
         qd_amplitude = self.settings['native_gates']['single_qubit'][qubit]['RX']['amplitude']
         qd_shape = self.settings['native_gates']['single_qubit'][qubit]['RX']['shape']
         qd_channel = self.settings['qubit_channel_map'][qubit][1]
-        from qibolab.pulses import Pulse
+        from qibolab.pulse.pulse import Pulse
         return Pulse(start, duration, qd_amplitude, qd_frequency, phase, qd_shape, qd_channel)
 
 
@@ -229,5 +229,5 @@ class AbstractPlatform(ABC):
         ro_amplitude = self.settings['native_gates']['single_qubit'][qubit]['MZ']['amplitude']
         ro_shape = self.settings['native_gates']['single_qubit'][qubit]['MZ']['shape']     
         ro_channel = self.settings['qubit_channel_map'][qubit][0]
-        from qibolab.pulses import ReadoutPulse
+        from qibolab.pulse.pulse import ReadoutPulse
         return ReadoutPulse(start, ro_duration, ro_amplitude, ro_frequency, phase, ro_shape, ro_channel)

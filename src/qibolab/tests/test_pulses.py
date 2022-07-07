@@ -4,7 +4,7 @@ import numpy as np
 
 
 def test_rectangular_shape():
-    from qibolab.pulses import Pulse, Rectangular
+    from qibolab.pulse.pulse import Pulse, Rectangular
     pulse = Pulse(start=0,
                     frequency=200_000_000,
                     amplitude=1,
@@ -22,7 +22,7 @@ def test_rectangular_shape():
 
 
 def test_gaussian_shape():
-    from qibolab.pulses import Pulse, Gaussian
+    from qibolab.pulse.pulse import Pulse, Gaussian
     duration = 50
     rel_sigma = 5
     pulse = Pulse(start=0,
@@ -43,7 +43,7 @@ def test_gaussian_shape():
 
 
 def test_drag_shape():
-    from qibolab.pulses import Pulse, Drag
+    from qibolab.pulse.pulse import Pulse, Drag
     duration = 50
     rel_sigma = 5
     beta = 2
@@ -65,7 +65,7 @@ def test_drag_shape():
 
 
 def test_pulse():
-    from qibolab.pulses import Pulse
+    from qibolab.pulse.pulse import Pulse
     duration = 50
     rel_sigma = 5
     beta = 2
@@ -83,7 +83,7 @@ def test_pulse():
 
 
 def test_readout_pulse():
-    from qibolab.pulses import ReadoutPulse
+    from qibolab.pulse.pulse import ReadoutPulse
     duration = 2000
     pulse = ReadoutPulse(start=0,
                         frequency=200_000_000,
