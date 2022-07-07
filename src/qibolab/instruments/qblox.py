@@ -121,6 +121,7 @@ class QRM(AbstractInstrument):
         # Load settings
         self.hardware_avg = kwargs['hardware_avg']
         self.sampling_rate = kwargs['sampling_rate']
+        self.num_bins = kwargs['num_bins']
         self.repetition_duration = kwargs['repetition_duration']
         self.minimum_delay_between_instructions = kwargs['minimum_delay_between_instructions']
 
@@ -220,7 +221,7 @@ class QRM(AbstractInstrument):
             raise_error(Exception,'There is no connection to the instrument')
 
         
-    def _generate_waveforms(self, pulses: List[Pulse]):
+    def _generate_waveforms(self, pulse_sequence: PulseSequence):
         """Generate I and Q waveforms from a PulseSequence object.
         Args:
             pulse_sequence (PulseSequence): PulseSequence object.
@@ -231,7 +232,7 @@ class QRM(AbstractInstrument):
 
         unique_pulses: List[Tuple[int, PulseShape]] = []
 
-        for pulse in pulses:
+        for pulse in pulse_sequence:
             if (pulse.duration, pulse.pulse_shape) not in unique_pulses:
                 unique_pulses.append((pulse.duration, pulse.pulse_shape))
                 envelope = pulse.envelope(amplitude=1)
@@ -286,8 +287,8 @@ class QRM(AbstractInstrument):
             Acquisitions: Acquisitions object.
         """
         acquisitions = Acquisitions()
-        acquisitions.add(name="single", num_bins=1, index=0)
-        acquisitions.add(name="binning", num_bins=int(self.num_bins) + 1, index=1)  # binned acquisition
+        acquisitions.add(name="single", num_bins=1)
+        acquisitions.add(name="binning", num_bins=int(self.num_bins) + 1)  # binned acquisition
         return acquisitions
 
     def _translate_pulse_sequence(self, pulses: List[Pulse], nshots: int, repetition_duration: int):
@@ -311,6 +312,11 @@ class QRM(AbstractInstrument):
             dict: Acquisition weights.
         """
         return {}
+
+    def _append_acquire_instruction(self, loop: Loop, register: str):
+        """Append an acquire instruction to the loop."""
+        acquisition_idx = 0 if self.hardware_avg else 1  # use binned acquisition if averaging is false
+        loop.append_component(Acquire(acq_index=acquisition_idx, bin_index=register, wait_time=self._MIN_WAIT_TIME))
 
     def process_pulse_sequence(self, channel_pulses: dict[int, List], nshots):
         """
