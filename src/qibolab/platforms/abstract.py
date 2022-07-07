@@ -165,7 +165,7 @@ class AbstractPlatform(ABC):
             pass
 
         elif isinstance(gate, gates.Z):
-            sequence.phase += self.parameters[0]
+            sequence.phase += gate.parameters[0]
 
         else:
             q = gate.target_qubits[0]
