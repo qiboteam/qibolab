@@ -1,3 +1,4 @@
+from typing import List
 from qibo.config import log
 from abc import ABC, abstractmethod
 import yaml
@@ -87,7 +88,7 @@ class AbstractPlatform(ABC):
 
         self.qubits = self.settings['qubits']
         self.topology = self.settings['topology']
-        self.channels = self.settings['channels']
+        self.channels: List[int] = self.settings['channels']
         self.qubit_channel_map = self.settings['qubit_channel_map']
         
         # Generate qubit_instrument_map from qubit_channel_map and the instruments' channel_port_maps

@@ -1,4 +1,6 @@
+from typing import Dict, List
 from qibo.config import raise_error
+from qibolab.circuit import PulseSequence
 from qibolab.platforms.abstract import AbstractPlatform
 
 
@@ -22,7 +24,7 @@ class MultiqubitPlatform(AbstractPlatform):
 
 
         # Process Pulse Sequence. Assign pulses to channels
-        channel_pulses = {}
+        channel_pulses: Dict[int, List[PulseSequence]] = {}
         for channel in self.channels:
             channel_pulses[channel] = []
         for pulse in pulse_sequence:
@@ -32,7 +34,7 @@ class MultiqubitPlatform(AbstractPlatform):
                 raise_error(RuntimeError, f"{self.name} does not have channel {pulse.channel}, only:\n{self.channels}.")
 
         # Process Pulse Sequence. Assign pulses to instruments and generate waveforms & program
-        instrument_pulses = {}
+        instrument_pulses: Dict[str, Dict[int, List[PulseSequence]]] = {}
         for name in self.instruments:
             instrument_pulses[name] = {}
             if 'QCM' in self.settings['instruments'][name]['class'] or 'QRM' in self.settings['instruments'][name]['class']:
