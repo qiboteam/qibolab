@@ -1,5 +1,5 @@
 from pathlib import Path
-from qibolab.circuit import PulseSequence
+from qibolab.pulses import PulseSequence
 from qibolab.paths import qibolab_folder
 import yaml
 import pytest

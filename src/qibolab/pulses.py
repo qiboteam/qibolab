@@ -17,7 +17,7 @@ class Pulse:
         shape: (str): {'Rectangular', 'Gaussian(rel_sigma)', 'DRAG(rel_sigma, beta)'} Pulse shape.
             See :py:mod:`qibolab.pulses_shapes` for list of available shapes.
         channel (int/str): Specifies the device that will execute this pulse.
-        type (str): {'ro', 'qd', 'qf'} type of pulse {ReadOut, Qubit Drive, Qubit Flux}   
+        type (str): {'ro', 'qd', 'qf'} type of pulse {ReadOut, Qubit Drive, Qubit Flux}
         offset_i (float): Optional pulse I offset (unitless).
             (amplitude + offset) should be between [0 and 1].
         offset_q (float): Optional pulse Q offset (unitless).
@@ -71,8 +71,8 @@ class Pulse:
 
     def __repr__(self):
         return self.serial
- 
- 
+
+
 class ReadoutPulse(Pulse):
     """Describes a readout pulse.
 
@@ -91,7 +91,7 @@ class ReadoutPulse(Pulse):
 
 class PulseShape(ABC):
     """Abstract class for pulse shapes"""
-    
+
     @property
     @abstractmethod
     def envelope_i(self): # pragma: no cover
@@ -106,7 +106,7 @@ class PulseShape(ABC):
 class Rectangular(PulseShape):
     """
     Rectangular pulse shape.
-    
+
     Args:
         pulse (Pulse): pulse associated with the shape
     """
@@ -132,7 +132,7 @@ class Gaussian(PulseShape):
     Args:
         pulse (Pulse): pulse associated with the shape
         rel_sigma (int): relative sigma so that the pulse standard deviation (sigma) = duration / rel_sigma
-    
+
     .. math::
 
         A\exp^{-\\frac{1}{2}\\frac{(t-\mu)^2}{\sigma^2}}
@@ -160,14 +160,14 @@ class Gaussian(PulseShape):
 class Drag(PulseShape):
     """
     Derivative Removal by Adiabatic Gate (DRAG) pulse shape.
-    
+
     Args:
         pulse (Pulse): pulse associated with the shape
         rel_sigma (int): relative sigma so that the pulse standard deviation (sigma) = duration / rel_sigma
-    
+
     .. math::
-    
-    
+
+
     """
 
     def __init__(self, pulse, rel_sigma, beta):
@@ -192,3 +192,99 @@ class Drag(PulseShape):
     def __repr__(self):
         return f"{self.name}({self.rel_sigma}, {self.beta})"
 
+
+class PulseSequence:
+    """List of pulses.
+
+    Holds a separate list for each instrument.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.ro_pulses = []
+        self.qd_pulses = []
+        self.qf_pulses = []
+        self.pulses = []
+        self.time = 0
+        self.phase = 0
+
+    def __len__(self):
+        return len(self.pulses)
+
+    @property
+    def serial(self):
+        """Serial form of the whole sequence using the serial of each pulse."""
+        return ", ".join(pulse.serial for pulse in self.pulses)
+
+    def add(self, pulse):
+        """Add a pulse to the sequence.
+
+        Args:
+            pulse (:class:`qibolab.pulses.Pulse`): Pulse object to add.
+
+        Example:
+            .. code-block:: python
+
+                from qibolab.pulses import PulseSequence, Pulse, ReadoutPulse, Rectangular, Gaussian, Drag
+                # define two arbitrary pulses
+                pulse1 = Pulse( start=0,
+                                duration=60,
+                                amplitude=0.3,
+                                frequency=200_000_000.0,
+                                phase=0,
+                                shape=Gaussian(5),
+                                channel=1,
+                                type='qd')
+                pulse2 = Pulse( start=70,
+                                duration=2000,
+                                amplitude=0.5,
+                                frequency=20_000_000.0,
+                                phase=0,
+                                shape=Rectangular(),
+                                channel=2,
+                                type='ro')
+
+                # define the pulse sequence
+                sequence = PulseSequence()
+
+                # add pulses to the pulse sequence
+                sequence.add(pulse1)
+                sequence.add(pulse2)
+        """
+        if pulse.type == "ro":
+            self.ro_pulses.append(pulse)
+        elif pulse.type == "qd":
+            self.qd_pulses.append(pulse)
+        elif pulse.type == "qf":
+            self.qf_pulses.append(pulse)
+
+        self.pulses.append(pulse)
+
+    def add_u3(self, platform, theta, phi, lam, qubit=0):
+        """Add pulses that implement a U3 gate.
+
+        Args:
+            theta, phi, lam (float): Parameters of the U3 gate.
+        """
+        # apply RZ(lam)
+        self.phase += lam
+        # Fetch pi/2 pulse from calibration
+        RX90_pulse_1= platform.RX90_pulse(qubit, self.time, self.phase)
+        # apply RX(pi/2)
+        self.add(RX90_pulse_1)
+        self.time += RX90_pulse_1.duration
+        # apply RZ(theta)
+        self.phase += theta
+        # Fetch pi/2 pulse from calibration
+        RX90_pulse_2= platform.RX90_pulse(qubit, self.time, self.phase - np.pi)
+        # apply RX(-pi/2)
+        self.add(RX90_pulse_2)
+        self.time += RX90_pulse_2.duration
+        # apply RZ(phi)
+        self.phase += phi
+
+    def add_measurement(self, platform, qubit=0):
+        """Add measurement pulse."""
+        MZ_pulse = platform.MZ_pulse(qubit, self.time, self.phase)
+        self.add(MZ_pulse)
+        self.time += MZ_pulse.duration

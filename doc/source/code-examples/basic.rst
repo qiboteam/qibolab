@@ -12,8 +12,7 @@ pulses (:class:`qibolab.pulses.Pulse`) through the ``PulseSequence.add()`` metho
 
 .. code-block::  python
 
-    from qibolab.pulses import Pulse, ReadoutPulse
-    from qibolab.circuit import PulseSequence
+    from qibolab.pulses import Pulse, ReadoutPulse, PulseSequence
     from qibolab.pulse_shapes import Rectangular, Gaussian
 
     # Define PulseSequence
