@@ -30,7 +30,7 @@ class PulseSequence:
         """Serial form of the whole sequence using the serial of each pulse."""
         return ", ".join(pulse.serial for pulse in self.pulses)
 
-    def add(self, pulse):
+    def add(self, pulse: pulse.Pulse):
         """Add a pulse to the sequence.
 
         Args:

@@ -39,6 +39,17 @@ class PulseSequence:
         if pulse.frequency != self.frequency:
             raise ValueError("All Pulse objects inside a BusPulses class should have the same frequency.")
         self.pulses.append(pulse)
+    
+    def add_u3(self, theta: float, phi: float, lam:float, qubit:int = 0):
+        """Add pulses tha implement a U3 gate.
+
+        Args:
+            theta (float): theta parameter of the U3 gate.
+            phi (float): phi parameter of the U3 gate.
+            lam (float): lambda parameter of the U3 gate.
+            qubit (int, optional): qubit number. Defaults to 0.
+        """
+        #TODO: Implement method
 
     def __iter__(self):
         """Redirect __iter__ magic method."""
