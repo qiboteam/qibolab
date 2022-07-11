@@ -6,7 +6,7 @@ from qibo import K
 
 
 def test_u3_to_sequence():
-    from qibolab.circuit import PulseSequence
+    from qibolab.pulses import PulseSequence
     qibo.set_backend("qibolab", platform="tiiq")
     gate = gates.U3(0, theta=0.1, phi=0.2, lam=0.3)
     sequence = PulseSequence()
@@ -27,7 +27,7 @@ def test_u3_sim_agreement():
 
 
 def test_measurement():
-    from qibolab.circuit import PulseSequence
+    from qibolab.pulses import PulseSequence
     qibo.set_backend("qibolab", platform="tiiq")
     gate = gates.M(0)
     with pytest.raises(NotImplementedError):
@@ -52,7 +52,7 @@ def test_pauli_to_u3_params(gatename):
 
 
 def test_identity_gate():
-    from qibolab.circuit import PulseSequence
+    from qibolab.pulses import PulseSequence
     gate = gates.I(0)
     with pytest.raises(NotImplementedError):
         gate.to_u3_params()
@@ -67,7 +67,7 @@ def test_rotations_to_u3_params(gatename):
 
 
 def test_rz_to_sequence():
-    from qibolab.circuit import PulseSequence
+    from qibolab.pulses import PulseSequence
     gate = gates.RZ(0, theta=0.2)
     sequence = PulseSequence()
     sequence.phase += gate.parameters

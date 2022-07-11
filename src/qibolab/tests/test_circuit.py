@@ -2,8 +2,8 @@ import pytest
 import numpy as np
 import qibo
 from qibo import K, gates
-from qibolab.pulses import Pulse, ReadoutPulse
-from qibolab.circuit import PulseSequence, HardwareCircuit
+from qibolab.pulses import PulseSequence, Pulse, ReadoutPulse, Rectangular, Gaussian, Drag
+from qibolab.circuit import HardwareCircuit
 from qibolab.paths import qibolab_folder
 from qibolab.platforms.multiqubit import MultiqubitPlatform
 

@@ -225,8 +225,7 @@ class PulseSequence:
         Example:
             .. code-block:: python
 
-                from qibolab.pulses import Pulse, ReadoutPulse, Rectangular, Gaussian, Drag
-                from qibolab.circuit import PulseSequence
+                from qibolab.pulses import PulseSequence, Pulse, ReadoutPulse, Rectangular, Gaussian, Drag
                 # define two arbitrary pulses
                 pulse1 = Pulse( start=0,
                                 duration=60,
