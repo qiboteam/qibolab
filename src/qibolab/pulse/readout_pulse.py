@@ -18,7 +18,3 @@ class ReadoutPulse(Pulse):
     def __repr__(self):  # pylint: disable=useless-super-delegation
         """Redirect __repr__ magic method."""
         return super().__repr__()
-
-    @property
-    def serial(self):
-        return f"ReadoutPulse({self.start}, {self.duration}, {format(self.amplitude, '.3f')}, {self.frequency}, {format(self.phase, '.3f')}, '{self.shape}', {self.channel}, '{self.type}')"
