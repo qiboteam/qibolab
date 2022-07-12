@@ -1,9 +1,7 @@
 from qibo.config import log
 from abc import ABC, abstractmethod
 import yaml
-from qibo import gates
 from qibolab.pulses import Pulse, ReadoutPulse, Rectangular, Gaussian, Drag
-from qibolab.platforms.u3params import U3Params
 
 
 class AbstractPlatform(ABC):
@@ -18,7 +16,6 @@ class AbstractPlatform(ABC):
         self.name = name
         self.runcard = runcard
         self.is_connected = False
-        self.u3params = U3Params()
         # Load platform settings
         with open(runcard, "r") as file:
             self.settings = yaml.safe_load(file)
@@ -148,29 +145,6 @@ class AbstractPlatform(ABC):
             for name in self.instruments:
                 self.instruments[name].disconnect()
             self.is_connected = False
-
-    def asu3(self, gate):
-        name = gate.__class__.__name__
-        if isinstance(gate, gates.ParametrizedGate):
-            return getattr(self.u3params, name)(*gate.parameters)
-        else:
-            return getattr(self.u3params, name)
-
-    def to_sequence(self, sequence, gate):
-        if isinstance(gate, gates.M):
-            for q in gate.target_qubits:
-                sequence.add_measurement(self, q)
-
-        elif isinstance(gate, gates.I):
-            pass
-
-        elif isinstance(gate, gates.Z):
-            sequence.phase += gate.parameters[0]
-
-        else:
-            q = gate.target_qubits[0]
-            u3params = self.asu3(gate)
-            sequence.add_u3(self, *u3params, q)
 
     @abstractmethod
     def execute_pulse_sequence(self, sequence, nshots=None):  # pragma: no cover
