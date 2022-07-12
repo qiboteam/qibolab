@@ -73,7 +73,7 @@ class QRM(AbstractInstrument):
                         break
                     except KeyError as exc:
                         print(f"Unable to connect:\n{str(exc)}\nRetrying...")
-                        self.name += "_" + str(attempt)
+                        self.name += f"_{str(attempt)}"
                     except Exception as exc:
                         print(f"Unable to connect:\n{str(exc)}\nRetrying...")
                 if not self.cluster_connected:
@@ -83,39 +83,40 @@ class QRM(AbstractInstrument):
             self.is_connected = True
 
     def set_device_parameter(self, parameter: str, value):
-        if not (
+        if (
             parameter in self.device_parameters
             and self.device_parameters[parameter] == value
         ):
-            if self.is_connected:
-                target = self.device
-                aux_parameter = parameter
+            return
+        if self.is_connected:
+            target = self.device
+            aux_parameter = parameter
 
-                while "." in aux_parameter:
-                    if hasattr(target, aux_parameter.split(".")[0]):
-                        target = target.__getattr__(aux_parameter.split(".")[0])
-                        aux_parameter = aux_parameter.split(".")[1]
-                    else:
-                        raise_error(
-                            Exception,
-                            f"The instrument {self.name} does not have parameter {parameter}",
-                        )
-
-                if hasattr(target, aux_parameter):
-                    target.set(aux_parameter, value)
-                    # target.__setattr__(aux_parameter, value)
-                    self.device_parameters[parameter] = value
-                    # DEBUG: QRM Parameter Setting Printing
-                    # print(f"Setting {self.name} {parameter} = {value}")
+            while "." in aux_parameter:
+                if hasattr(target, aux_parameter.split(".")[0]):
+                    target = target.__getattr__(aux_parameter.split(".")[0])
+                    aux_parameter = aux_parameter.split(".")[1]
                 else:
                     raise_error(
                         Exception,
                         f"The instrument {self.name} does not have parameter {parameter}",
                     )
+
+            if hasattr(target, aux_parameter):
+                target.set(aux_parameter, value)
+                # target.__setattr__(aux_parameter, value)
+                self.device_parameters[parameter] = value
+                # DEBUG: QRM Parameter Setting Printing
+                # print(f"Setting {self.name} {parameter} = {value}")
             else:
                 raise_error(
-                    Exception, "There is no connection to the instrument  {self.name}"
+                    Exception,
+                    f"The instrument {self.name} does not have parameter {parameter}",
                 )
+        else:
+            raise_error(
+                Exception, "There is no connection to the instrument  {self.name}"
+            )
 
     def setup(self, **kwargs):
         """
@@ -767,11 +768,13 @@ class QRM(AbstractInstrument):
         # plt.plot(mod_signals[:, 1] + pulse.offset_q)
         # plt.show()
 
-        result = []
-        for it, t, ii, qq in zip(
-            np.arange(pulse.duration), time, envelope_i, envelope_q
-        ):
-            result.append(mod_matrix[:, :, it] @ np.array([ii, qq]))
+        result = [
+            mod_matrix[:, :, it] @ np.array([ii, qq])
+            for it, t, ii, qq in zip(
+                np.arange(pulse.duration), time, envelope_i, envelope_q
+            )
+        ]
+
         mod_signals = np.array(result)
 
         return mod_signals[:, 0] + pulse.offset_i, mod_signals[:, 1] + pulse.offset_q
@@ -807,7 +810,7 @@ class QRM(AbstractInstrument):
                 # Configure the sequencers synchronization.
                 self.set_device_parameter(f"sequencer{sequencer}.sync_en", False)
                 # Disable all sequencer - port connections
-                for out in range(0, 2 * self.device_num_ports):
+                for out in range(2 * self.device_num_ports):
                     self.set_device_parameter(
                         f"sequencer{sequencer}.channel_map_path{out%2}_out{out}_en",
                         False,
@@ -918,15 +921,15 @@ class QRM(AbstractInstrument):
         cosalpha = np.cos(2 * np.pi * acquisition_frequency * time)
         sinalpha = np.sin(2 * np.pi * acquisition_frequency * time)
         demod_matrix = 2 * np.array([[cosalpha, -sinalpha], [sinalpha, cosalpha]])
-        result = []
-        for it, t, ii, qq in zip(
-            np.arange(modulated_i.shape[0]), time, modulated_i, modulated_q
-        ):
-            result.append(demod_matrix[:, :, it] @ np.array([ii, qq]))
-        demodulated_signal = np.array(result)
-        integrated_signal = np.mean(demodulated_signal, axis=0)
+        result = [
+            demod_matrix[:, :, it] @ np.array([ii, qq])
+            for it, t, ii, qq in zip(
+                np.arange(modulated_i.shape[0]), time, modulated_i, modulated_q
+            )
+        ]
 
-        return integrated_signal
+        demodulated_signal = np.array(result)
+        return np.mean(demodulated_signal, axis=0)
 
     def start(self):
         pass
@@ -989,7 +992,7 @@ class QCM(AbstractInstrument):
                         break
                     except KeyError as exc:
                         print(f"Unable to connect:\n{str(exc)}\nRetrying...")
-                        self.name += "_" + str(attempt)
+                        self.name += f"_{str(attempt)}"
                     except Exception as exc:
                         print(f"Unable to connect:\n{str(exc)}\nRetrying...")
                 if not self.cluster_connected:
@@ -999,39 +1002,40 @@ class QCM(AbstractInstrument):
             self.is_connected = True
 
     def set_device_parameter(self, parameter: str, value):
-        if not (
+        if (
             parameter in self.device_parameters
             and self.device_parameters[parameter] == value
         ):
-            if self.is_connected:
-                target = self.device
-                aux_parameter = parameter
+            return
+        if self.is_connected:
+            target = self.device
+            aux_parameter = parameter
 
-                while "." in aux_parameter:
-                    if hasattr(target, aux_parameter.split(".")[0]):
-                        target = target.__getattr__(aux_parameter.split(".")[0])
-                        aux_parameter = aux_parameter.split(".")[1]
-                    else:
-                        raise_error(
-                            Exception,
-                            f"The instrument {self.name} does not have parameter {parameter}",
-                        )
-
-                if hasattr(target, aux_parameter):
-                    # target.__setattr__(aux_parameter, value)
-                    target.set(aux_parameter, value)
-                    self.device_parameters[parameter] = value
-                    # DEBUG: QRM Parameter Setting Printing
-                    # print(f"Setting {self.name} {parameter} = {value}")
+            while "." in aux_parameter:
+                if hasattr(target, aux_parameter.split(".")[0]):
+                    target = target.__getattr__(aux_parameter.split(".")[0])
+                    aux_parameter = aux_parameter.split(".")[1]
                 else:
                     raise_error(
                         Exception,
                         f"The instrument {self.name} does not have parameter {parameter}",
                     )
+
+            if hasattr(target, aux_parameter):
+                # target.__setattr__(aux_parameter, value)
+                target.set(aux_parameter, value)
+                self.device_parameters[parameter] = value
+                # DEBUG: QRM Parameter Setting Printing
+                # print(f"Setting {self.name} {parameter} = {value}")
             else:
                 raise_error(
-                    Exception, "There is no connection to the instrument  {self.name}"
+                    Exception,
+                    f"The instrument {self.name} does not have parameter {parameter}",
                 )
+        else:
+            raise_error(
+                Exception, "There is no connection to the instrument  {self.name}"
+            )
 
     def setup(self, **kwargs):
         """
@@ -1385,10 +1389,10 @@ class QCM(AbstractInstrument):
                     footer += f"""
                         wait {extra_wait}"""
                 else:
-                    footer += f"""
+                    footer += """
                         # wait 0"""
 
-                footer += f"""
+                footer += """
                 loop R0,@loop
                 stop 
                 """
@@ -1415,7 +1419,7 @@ class QCM(AbstractInstrument):
                         initial_wait_instruction += f"""
                     wait {extra_wait}"""
                     else:
-                        initial_wait_instruction += f"""
+                        initial_wait_instruction += """
                     # wait 0"""
                 else:
                     initial_wait_instruction = """
@@ -1473,31 +1477,32 @@ class QCM(AbstractInstrument):
         envelope_q = pulse.envelope_q
         assert len(envelope_i) == len(envelope_q)
         envelopes = np.array([envelope_i, envelope_q])
-        if modulate:
-            time = np.arange(pulse.duration) / self.sampling_rate
-            cosalpha = np.cos(2 * np.pi * pulse.frequency * time + pulse.phase)
-            sinalpha = np.sin(2 * np.pi * pulse.frequency * time + pulse.phase)
-            mod_matrix = np.array([[cosalpha, sinalpha], [-sinalpha, cosalpha]])
-            # mod_signals = np.einsum("abt,bt->ta", mod_matrix, envelopes)
-            result = []
+        if not modulate:
+            return envelope_i, envelope_q
+        time = np.arange(pulse.duration) / self.sampling_rate
+        cosalpha = np.cos(2 * np.pi * pulse.frequency * time + pulse.phase)
+        sinalpha = np.sin(2 * np.pi * pulse.frequency * time + pulse.phase)
+        mod_matrix = np.array([[cosalpha, sinalpha], [-sinalpha, cosalpha]])
+        # mod_signals = np.einsum("abt,bt->ta", mod_matrix, envelopes)
+        result = [
+            mod_matrix[:, :, it] @ np.array([ii, qq])
             for it, t, ii, qq in zip(
                 np.arange(pulse.duration), time, envelope_i, envelope_q
-            ):
-                result.append(mod_matrix[:, :, it] @ np.array([ii, qq]))
-            mod_signals = np.array(result)
-
-            # DEBUG: QCM plot envelopes
-            # import matplotlib.pyplot as plt
-            # plt.plot(mod_signals[:, 0] + pulse.offset_i)
-            # plt.plot(mod_signals[:, 1] + pulse.offset_q)
-            # plt.show()
-
-            return (
-                mod_signals[:, 0] + pulse.offset_i,
-                mod_signals[:, 1] + pulse.offset_q,
             )
-        else:
-            return envelope_i, envelope_q
+        ]
+
+        mod_signals = np.array(result)
+
+        # DEBUG: QCM plot envelopes
+        # import matplotlib.pyplot as plt
+        # plt.plot(mod_signals[:, 0] + pulse.offset_i)
+        # plt.plot(mod_signals[:, 1] + pulse.offset_q)
+        # plt.show()
+
+        return (
+            mod_signals[:, 0] + pulse.offset_i,
+            mod_signals[:, 1] + pulse.offset_q,
+        )
 
     def upload(self):
         """Uploads waveforms and programs all sequencers and arms them in preparation for execution."""
@@ -1530,7 +1535,7 @@ class QCM(AbstractInstrument):
                 # Configure the sequencers synchronization.
                 self.set_device_parameter(f"sequencer{sequencer}.sync_en", False)
                 # Disable all sequencer - port connections
-                for out in range(0, 2 * self.device_num_ports):
+                for out in range(2 * self.device_num_ports):
                     self.set_device_parameter(
                         f"sequencer{sequencer}.channel_map_path{out%2}_out{out}_en",
                         False,
