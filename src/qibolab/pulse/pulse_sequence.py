@@ -1,4 +1,4 @@
-"""BusPulses class."""
+"""PulseSequence class."""
 from dataclasses import dataclass, field
 from typing import List
 
@@ -34,10 +34,10 @@ class PulseSequence:
         """
         if pulse.name != self.name:
             raise ValueError(
-                "All Pulse objects inside a BusPulses class should have the same type (Pulse or ReadoutPulse)."
+                "All Pulse objects inside a PulseSequence should have the same type (Pulse or ReadoutPulse)."
             )
         if pulse.frequency != self.frequency:
-            raise ValueError("All Pulse objects inside a BusPulses class should have the same frequency.")
+            raise ValueError("All Pulse objects inside a PulseSequence should have the same frequency.")
         self.pulses.append(pulse)
     
     def add_u3(self, theta: float, phi: float, lam:float, qubit:int = 0):
