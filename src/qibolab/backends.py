@@ -77,8 +77,11 @@ class QibolabBackend(NumpyBackend):
 
     def to_sequence(self, sequence, gate):
         if isinstance(gate, gates.M):
-            for q in gate.target_qubits:
-                sequence.add_measurement(self.platform, q)
+            # Add measurement pulse
+            for qubit in gate.target_qubits:
+                MZ_pulse = self.platform.MZ_pulse(qubit, sequence.time, sequence.phase)
+                sequence.add(MZ_pulse)
+                sequence.time += MZ_pulse.duration
 
         elif isinstance(gate, gates.I):
             pass
@@ -87,9 +90,28 @@ class QibolabBackend(NumpyBackend):
             sequence.phase += gate.parameters[0]
 
         else:
-            q = gate.target_qubits[0]
-            u3params = self.asu3(gate)
-            sequence.add_u3(self.platform, *u3params, q)
+            if len(gate.qubits) > 1:
+                raise_error(NotImplementedError, "Only one qubit gates are implemented.")
+
+            qubit = gate.target_qubits[0]
+            # Transform gate to U3 and add pi/2-pulses
+            theta, phi, lam = self.asu3(gate)
+            # apply RZ(lam)
+            sequence.phase += lam
+            # Fetch pi/2 pulse from calibration
+            RX90_pulse_1 = self.platform.RX90_pulse(qubit, sequence.time, sequence.phase)
+            # apply RX(pi/2)
+            sequence.add(RX90_pulse_1)
+            sequence.time += RX90_pulse_1.duration
+            # apply RZ(theta)
+            sequence.phase += theta
+            # Fetch pi/2 pulse from calibration
+            RX90_pulse_2 = self.platform.RX90_pulse(qubit, sequence.time, sequence.phase - math.pi)
+            # apply RX(-pi/2)
+            sequence.add(RX90_pulse_2)
+            sequence.time += RX90_pulse_2.duration
+            # apply RZ(phi)
+            sequence.phase += phi
 
     def apply_gate(self, gate, state, nqubits): # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")

@@ -87,8 +87,6 @@ class ReadoutPulse(Pulse):
         return f"ReadoutPulse({self.start}, {self.duration}, {format(self.amplitude, '.3f')}, {self.frequency}, {format(self.phase, '.3f')}, '{self.shape}', {self.channel}, '{self.type}')"
 
 
-
-
 class PulseShape(ABC):
     """Abstract class for pulse shapes"""
 
@@ -124,6 +122,7 @@ class Rectangular(PulseShape):
 
     def __repr__(self):
         return f"{self.name}()"
+
 
 class Gaussian(PulseShape):
     """
@@ -257,34 +256,4 @@ class PulseSequence:
             self.qd_pulses.append(pulse)
         elif pulse.type == "qf":
             self.qf_pulses.append(pulse)
-
         self.pulses.append(pulse)
-
-    def add_u3(self, platform, theta, phi, lam, qubit=0):
-        """Add pulses that implement a U3 gate.
-
-        Args:
-            theta, phi, lam (float): Parameters of the U3 gate.
-        """
-        # apply RZ(lam)
-        self.phase += lam
-        # Fetch pi/2 pulse from calibration
-        RX90_pulse_1= platform.RX90_pulse(qubit, self.time, self.phase)
-        # apply RX(pi/2)
-        self.add(RX90_pulse_1)
-        self.time += RX90_pulse_1.duration
-        # apply RZ(theta)
-        self.phase += theta
-        # Fetch pi/2 pulse from calibration
-        RX90_pulse_2= platform.RX90_pulse(qubit, self.time, self.phase - np.pi)
-        # apply RX(-pi/2)
-        self.add(RX90_pulse_2)
-        self.time += RX90_pulse_2.duration
-        # apply RZ(phi)
-        self.phase += phi
-
-    def add_measurement(self, platform, qubit=0):
-        """Add measurement pulse."""
-        MZ_pulse = platform.MZ_pulse(qubit, self.time, self.phase)
-        self.add(MZ_pulse)
-        self.time += MZ_pulse.duration
