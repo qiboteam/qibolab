@@ -1,4 +1,5 @@
 import numpy as np
+from qibo.config import raise_error
 
 
 class U3Params:
