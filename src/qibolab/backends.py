@@ -49,11 +49,23 @@ class QibolabBackend(NumpyBackend):
         self.platform.start()
         readout = self.platform(sequence, nshots)
         self.platform.stop()
-
         return CircuitResult(self, circuit, readout, nshots)
 
-    def get_state_tensor(self):
-        raise_error(NotImplementedError, "Qibolab cannot return state vector.")
+    def circuit_result_tensor(self, result):
+        raise_error(NotImplementedError, "Qibolab cannot return state vector in tensor representation.")
 
-    def get_state_repr(self, result): # pragma: no cover
-        return result.execution_result
+    def circuit_result_representation(self, result):
+        # TODO: Consider changing this to a more readable format.
+        # this must return a ``str`` because it is used in ``CircuitResult.__repr__``.
+        return str(result.execution_result)
+
+    def circuit_result_probabilities(self, result, qubits=None):
+        if qubits is None:  # pragma: no cover
+            qubits = result.circuit.measurement_gate.qubits
+        # naive normalization
+        qubit = qubits[0]
+        readout = list(list(result.execution_result.values())[0].values())[0]
+        min_v = self.platform.settings['characterization']['single_qubit'][qubit]['rabi_oscillations_pi_pulse_min_voltage']
+        max_v = self.platform.settings['characterization']['single_qubit'][qubit]['resonator_spectroscopy_max_ro_voltage']
+        p = (readout[0] * 1e6 - min_v) / (max_v - min_v)
+        return [p, 1 - p]
