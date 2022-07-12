@@ -304,8 +304,6 @@ class Calibration():
         platform = self.platform
         platform.reload_settings()
 
-        lo_qcm = platform.lo_qcm[qubit]
-        
         self.reload_settings()
         self.niter = self.settings['calibrate_qubit_states']['niter']
         
@@ -335,7 +333,6 @@ class Calibration():
 
         #Exectue niter single gnd shots
         platform.start()
-        lo_qcm.off()
         all_gnd_states = []
         for i in range(self.niter):
             print(f"Starting gnd state calibration  {i}")
