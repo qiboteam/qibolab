@@ -1,14 +1,16 @@
 """Pulse abstractions."""
+from dataclasses import dataclass
+from typing import ClassVar
+
 import numpy as np
-import re
-from abc import ABC, abstractmethod
-from qibo.config import raise_error
 
+from qibolab.constants import PULSE, RUNCARD
 from qibolab.pulse.pulse_shape.pulse_shape import PulseShape
-from qibolab.utils import Waveforms
-from qibolab.constants import PULSE
+from qibolab.typings import PulseName
+from qibolab.utils import Factory, Waveforms
 
 
+@dataclass
 class Pulse:
     """Describes a single pulse to be added to waveform array.
 
@@ -45,6 +47,7 @@ class Pulse:
                           type='qd')
     """
 
+    name: ClassVar[PulseName] = PulseName.PULSE
     amplitude: float
     phase: float
     duration: int
@@ -52,22 +55,12 @@ class Pulse:
     pulse_shape: PulseShape
     frequency: float | None = None
 
-    def __init__(self, start, duration, amplitude, frequency, phase, shape, channel, type = 'qd', offset_i=0, offset_q=0, qubit=0):
-        self.start = start # absolut pulse start time (does not depend on other pulses of the sequence)
-        self.duration = duration
-        self.amplitude = amplitude
-        self.frequency = frequency
-        self.phase = phase
-        self.shape = shape
-        self.channel = channel
-        self.offset_i = offset_i
-        self.offset_q = offset_q
-        self.qubit = qubit
-        self.type = type
-
-        shape_name = re.findall('(\w+)', shape)[0]
-        shape_parameters = re.findall('(\w+)', shape)[1:]
-        self.shape_object = globals()[shape_name](self, *shape_parameters) # eval(f"{shape_name}(self, {shape_parameters})")
+    def __post_init__(self):
+        """Cast qubit_ids to list."""
+        if isinstance(self.pulse_shape, dict):
+            self.pulse_shape = Factory.get(name=self.pulse_shape.pop(RUNCARD.NAME))(
+                **self.pulse_shape  # pylint: disable=not-a-mapping
+            )
 
     def modulated_waveforms(self, frequency: float, resolution: float = 1.0) -> Waveforms:
         """Applies digital quadrature amplitude modulation (QAM) to the pulse envelope.
@@ -101,7 +94,7 @@ class Pulse:
 
     @property
     def serial(self):
-        return f"Pulse({self.start}, {self.duration}, {format(self.amplitude, '.3f')}, {self.frequency}, {format(self.phase, '.3f')}, '{self.shape}', {self.channel}, '{self.type}')"
+        return str(self.to_dict())
 
     def envelope(self, amplitude: float | None = None, resolution: float = 1.0):
         """Pulse 'envelope' property.
@@ -112,14 +105,6 @@ class Pulse:
         if amplitude is None:
             amplitude = self.amplitude
         return self.pulse_shape.envelope(duration=self.duration, amplitude=amplitude, resolution=resolution)
-
-    @property
-    def envelope_i(self):
-        return  self.shape_object.envelope_i
-
-    @property
-    def envelope_q(self):
-        return  self.shape_object.envelope_q
 
     def to_dict(self):
         """Return dictionary of pulse.
