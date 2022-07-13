@@ -156,6 +156,7 @@ class AbstractPlatform(ABC):
             return getattr(self.u3params, name)
 
     def to_sequence(self, sequence, gate):
+        import numpy as np
         if isinstance(gate, gates.M):
             # Add measurement pulse
             for qubit in gate.target_qubits:
@@ -167,13 +168,15 @@ class AbstractPlatform(ABC):
             pass
 
         elif isinstance(gate, gates.Z):
+            sequence.phase += np.pi
+
+        elif isinstance(gate, gates.RZ):
             sequence.phase += gate.parameters[0]
 
         else:
             if len(gate.qubits) > 1:
                 raise_error(NotImplementedError, "Only one qubit gates are implemented.")
 
-            import numpy as np
             qubit = gate.target_qubits[0]
             # Transform gate to U3 and add pi/2-pulses
             theta, phi, lam = self.asu3(gate)
