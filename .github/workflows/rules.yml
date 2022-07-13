@@ -21,7 +21,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install pylint
         pip install pytest-cov
-        pip install qibo --pre
+        pip install git+https://github.com/qiboteam/qibo
         pip install .[tiiq,docs]
     - name: Test with pylint
       run: |
