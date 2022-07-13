@@ -42,7 +42,7 @@ setup(
         "Topic :: Scientific/Engineering :: Physics",
     ],
     install_requires=[
-        "qibo",     # 0.1.7
+        "qibo>=0.1.8",
         "qcodes",   # 0.34.1
         "lmfit",    # 1.0.3
     ],
