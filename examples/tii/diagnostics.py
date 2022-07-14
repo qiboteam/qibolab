@@ -13,9 +13,13 @@ from qibolab import Platform
 from qibolab.paths import qibolab_folder
 from qibolab.calibration import utils
 from qibolab.calibration import fitting
+<<<<<<< HEAD
 from qibolab.pulse import Pulse, ReadoutPulse
 from qibolab.pulse.pulse_shape import Rectangular, Gaussian, Drag
 from qibolab.circuit import PulseSequence
+=======
+from qibolab.pulses import PulseSequence, Pulse, ReadoutPulse, Rectangular, Gaussian, Drag
+>>>>>>> alvaro/qblox_upgrade_0.6.1
 
 
 class Diagnostics():

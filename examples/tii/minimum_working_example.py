@@ -1,7 +1,11 @@
 from qibolab import Platform
 from qibolab.paths import qibolab_folder
+<<<<<<< HEAD
 from qibolab.pulse.pulse import Pulse, ReadoutPulse
 from qibolab.circuit import PulseSequence
+=======
+from qibolab.pulses import Pulse, ReadoutPulse, PulseSequence
+>>>>>>> alvaro/qblox_upgrade_0.6.1
 
 # Define PulseSequence
 sequence = PulseSequence()

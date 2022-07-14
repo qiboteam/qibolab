@@ -24,9 +24,7 @@ A simple example on how to connect to the TIIq platform and use it execute a pul
 
 ```python
 from qibolab import Platform
-from qibolab.pulses import Pulse, ReadoutPulse
-from qibolab.circuit import PulseSequence
-from qibolab.pulse_shapes import Rectangular, Gaussian
+from qibolab.pulses import PulseSequence, Pulse, ReadoutPulse, Rectangular, Gaussian, Drag
 
 # Define PulseSequence
 sequence = PulseSequence()

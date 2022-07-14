@@ -59,6 +59,7 @@ setup(
         "tiiq": [
             "qblox-instruments",    # 0.6.1
             "quantify-core",        # 0.6.0
+            "dash",                 # Live plotting
         ]
     },
     python_requires=">=3.6.0",
