@@ -64,7 +64,7 @@ class QRM(AbstractInstrument):
                         break
                     except KeyError as exc:
                         print(f"Unable to connect:\n{str(exc)}\nRetrying...")
-                        self.name += '_' + str(attempt)
+                        self.name += f'_{str(attempt)}'
                     except Exception as exc:
                         print(f"Unable to connect:\n{str(exc)}\nRetrying...")
                 if not cluster_connected:
@@ -74,7 +74,7 @@ class QRM(AbstractInstrument):
             self.is_connected = True
 
     def set_device_parameter(self, parameter: str, value):
-        if not(parameter in self.device_parameters and self.device_parameters[parameter] == value):
+        if parameter not in self.device_parameters or self.device_parameters[parameter] != value:
             if self.is_connected:
                 target = self.device
                 aux_parameter = parameter
@@ -713,9 +713,9 @@ class QRM(AbstractInstrument):
                 # Configure the sequencers synchronization.
                 self.set_device_parameter(f"sequencer{sequencer}.sync_en", False)
                 # Disable all sequencer - port connections
-                for out in range(0, 2 * self.device_num_ports):
+                for out in range(2 * self.device_num_ports):
                     self.set_device_parameter(f"sequencer{sequencer}.channel_map_path{out%2}_out{out}_en", False)
-    
+
         # Upload
         if self.current_pulsesequence_hash != self.last_pulsequence_hash:
             self.last_pulsequence_hash = self.current_pulsesequence_hash
@@ -744,7 +744,7 @@ class QRM(AbstractInstrument):
 
                 # Upload json file to the device sequencers
                 self.device.sequencers[sequencer].sequence(str(self.data_folder / filename))
-        
+
         # Arm
         for sequencer in self.sequencers:
             # Arm sequencer
@@ -819,16 +819,10 @@ class QRM(AbstractInstrument):
         cosalpha = np.cos(2 * np.pi * acquisition_frequency * time)
         sinalpha = np.sin(2 * np.pi * acquisition_frequency * time)
         demod_matrix = 2 * np.array([[cosalpha, -sinalpha], [sinalpha, cosalpha]])
-        result = []
-        for it, t, ii, qq in zip(np.arange(modulated_i.shape[0]), time,modulated_i, modulated_q):
-            result.append(demod_matrix[:,:,it] @ np.array([ii, qq]))
-        demodulated_signal = np.array(result)
-        integrated_signal = np.mean(demodulated_signal,axis=0)
-
-        return integrated_signal
+        result = [demod_matrix[:, :, it] @ np.array([ii, qq]) for it, t, ii, qq in zip(np.arange(modulated_i.shape[0]), time, modulated_i, modulated_q)]
 
         demodulated_signal = np.array(result)
-        return np.mean(demodulated_signal, axis=0)
+        return np.mean(demodulated_signal,axis=0)
 
     def start(self):
         pass
@@ -885,7 +879,7 @@ class QCM(AbstractInstrument):
                         break
                     except KeyError as exc:
                         print(f"Unable to connect:\n{str(exc)}\nRetrying...")
-                        self.name += '_' + str(attempt)
+                        self.name += f'_{str(attempt)}'
                     except Exception as exc:
                         print(f"Unable to connect:\n{str(exc)}\nRetrying...")
                 if not self.cluster_connected:
@@ -895,7 +889,7 @@ class QCM(AbstractInstrument):
             self.is_connected = True
 
     def set_device_parameter(self, parameter: str, value):
-        if not(parameter in self.device_parameters and self.device_parameters[parameter] == value):
+        if parameter not in self.device_parameters or self.device_parameters[parameter] != value:
             if self.is_connected:
                 target = self.device
                 aux_parameter = parameter
@@ -1365,7 +1359,7 @@ class QCM(AbstractInstrument):
                 # Configure the sequencers synchronization.
                 self.set_device_parameter(f"sequencer{sequencer}.sync_en", False)
                 # Disable all sequencer - port connections
-                for out in range(0, 2 * self.device_num_ports):
+                for out in range(2 * self.device_num_ports):
                     self.set_device_parameter(f"sequencer{sequencer}.channel_map_path{out%2}_out{out}_en", False)
 
         # Upload
