@@ -16,7 +16,7 @@ class MultiqubitPlatform(AbstractPlatform):
         # PreProcess Pulse Sequence
         # Sort by pulse start
         pulse_sequence = sequence.pulses
-        pulse_sequence.sort(key=lambda pulse: pulse.start) 
+        pulse_sequence.sort(key=lambda pulse: pulse.start)
         if len(pulse_sequence) > 0:
             pulse_sequence_duration = pulse_sequence[-1].start + pulse_sequence[-1].duration
 

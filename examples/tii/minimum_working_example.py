@@ -1,6 +1,6 @@
 from qibolab import Platform
-from qibolab.pulses import Pulse, ReadoutPulse
-from qibolab.circuit import PulseSequence
+from qibolab.paths import qibolab_folder
+from qibolab.pulses import Pulse, ReadoutPulse, PulseSequence
 
 # Define PulseSequence
 sequence = PulseSequence()
@@ -11,7 +11,7 @@ sequence.add(Pulse(start=0,
                    frequency=200_000_000,
                    phase=0,
                    shape='Gaussian(5)', # Gaussian shape with std = duration / 5
-                   channel=1)) 
+                   channel=21)) 
 
 sequence.add(ReadoutPulse(start=4004,
                           amplitude=0.9,
@@ -19,10 +19,12 @@ sequence.add(ReadoutPulse(start=4004,
                           frequency=20_000_000,
                           phase=0,
                           shape='Rectangular', 
-                          channel=11)) 
+                          channel=10)) 
 
 # Define platform and load specific runcard
-platform = Platform("multiqubit")
+runcard = qibolab_folder / 'runcards' / 'qw5q.yml' 
+
+platform = Platform("multiqubit", runcard)
 # Connects to lab instruments using the details specified in the calibration settings.
 platform.connect()
 # Configures instruments using the loaded calibration settings.

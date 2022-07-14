@@ -43,9 +43,8 @@ setup(
     ],
     install_requires=[
         "qibo",
-        "visa",
-        "pyvisa-py",
-        "qcodes",
+        "qcodes",   # 0.34.1
+        "lmfit",    # 1.0.3
     ],
     extras_require={
         "docs": [
@@ -58,12 +57,9 @@ setup(
             "IPython"],
         # TII system dependencies
         "tiiq": [
-            "qblox-instruments==0.5.4",
-            "qcodes==0.29.1",
-            "lmfit",
-            "quantify-core==0.5.1",
-            "pyVISA==1.11.3",
-            "pyVISA-py==0.5.2",
+            "qblox-instruments",    # 0.6.1
+            "quantify-core",        # 0.6.0
+            "dash",                 # Live plotting
         ]
     },
     python_requires=">=3.6.0",
