@@ -1,9 +1,8 @@
-from qibo.config import log
-from abc import ABC, abstractmethod
 import yaml
 from qibo import gates
+from qibo.config import log, raise_error
+from abc import ABC, abstractmethod
 from qibolab.pulses import Pulse, ReadoutPulse, Rectangular, Gaussian, Drag
-from qibolab.platforms.u3params import U3Params
 
 
 class AbstractPlatform(ABC):
@@ -18,7 +17,6 @@ class AbstractPlatform(ABC):
         self.name = name
         self.runcard = runcard
         self.is_connected = False
-        self.u3params = U3Params()
         # Load platform settings
         with open(runcard, "r") as file:
             self.settings = yaml.safe_load(file)
@@ -33,6 +31,9 @@ class AbstractPlatform(ABC):
             InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
             instance = InstrumentClass(name, address)
             self.instruments[name] = instance
+
+        from qibolab.u3params import U3Params
+        self.u3params = U3Params()
 
     def __repr__(self):
         return self.name
@@ -53,7 +54,6 @@ class AbstractPlatform(ABC):
 
     def _check_connected(self):
         if not self.is_connected:
-            from qibo.config import raise_error
             raise_error(RuntimeError, "Cannot access instrument because it is not connected.")
 
     def reload_settings(self):
@@ -79,7 +79,6 @@ class AbstractPlatform(ABC):
                     self.instruments[name].connect()
                 self.is_connected = True
             except Exception as exception:
-                from qibo.config import raise_error
                 raise_error(RuntimeError, "Cannot establish connection to "
                             f"{self.name} instruments. "
                             f"Error captured: '{exception}'")
@@ -157,20 +156,46 @@ class AbstractPlatform(ABC):
             return getattr(self.u3params, name)
 
     def to_sequence(self, sequence, gate):
+        import numpy as np
         if isinstance(gate, gates.M):
-            for q in gate.target_qubits:
-                sequence.add_measurement(self, q)
+            # Add measurement pulse
+            for qubit in gate.target_qubits:
+                MZ_pulse = self.MZ_pulse(qubit, sequence.time, sequence.phase)
+                sequence.add(MZ_pulse)
+                sequence.time += MZ_pulse.duration
 
         elif isinstance(gate, gates.I):
             pass
 
         elif isinstance(gate, gates.Z):
+            sequence.phase += np.pi
+
+        elif isinstance(gate, gates.RZ):
             sequence.phase += gate.parameters[0]
 
         else:
-            q = gate.target_qubits[0]
-            u3params = self.asu3(gate)
-            sequence.add_u3(self, *u3params, q)
+            if len(gate.qubits) > 1:
+                raise_error(NotImplementedError, "Only one qubit gates are implemented.")
+
+            qubit = gate.target_qubits[0]
+            # Transform gate to U3 and add pi/2-pulses
+            theta, phi, lam = self.asu3(gate)
+            # apply RZ(lam)
+            sequence.phase += lam
+            # Fetch pi/2 pulse from calibration
+            RX90_pulse_1 = self.RX90_pulse(qubit, sequence.time, sequence.phase)
+            # apply RX(pi/2)
+            sequence.add(RX90_pulse_1)
+            sequence.time += RX90_pulse_1.duration
+            # apply RZ(theta)
+            sequence.phase += theta
+            # Fetch pi/2 pulse from calibration
+            RX90_pulse_2 = self.RX90_pulse(qubit, sequence.time, sequence.phase - np.pi)
+            # apply RX(-pi/2)
+            sequence.add(RX90_pulse_2)
+            sequence.time += RX90_pulse_2.duration
+            # apply RZ(phi)
+            sequence.phase += phi
 
     @abstractmethod
     def execute_pulse_sequence(self, sequence, nshots=None):  # pragma: no cover
