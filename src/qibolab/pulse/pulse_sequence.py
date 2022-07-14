@@ -3,9 +3,11 @@ from dataclasses import dataclass, field
 from typing import List
 
 import numpy as np
+from bisect import insort
 
 from qibolab.constants import PULSESEQUENCE, RUNCARD
 from qibolab.pulse.pulse import Pulse
+from qibolab.pulse.pulse_event import PulseEvent
 from qibolab.pulse.readout_pulse import ReadoutPulse
 from qibolab.typings import PulseName
 from qibolab.utils import Waveforms
@@ -20,17 +22,19 @@ class PulseSequence:
     port: int
     frequency: float = field(init=False)
     _name: PulseName = field(init=False)
+    _timeline: List[PulseEvent] = field(init=False)
 
     def __post_init__(self):
         """Get port and frequency values from pulse."""
         self.frequency = self.pulses[0].frequency
         self._name = self.pulses[0].name
 
-    def add(self, pulse: Pulse):
+    def add(self, pulse: Pulse, start_time: int):
         """Add pulse to sequence.
 
         Args:
             pulse (Pulse): Pulse object.
+            start_time (int): start time of the pulse.
         """
         if pulse.name != self.name:
             raise ValueError(
@@ -38,9 +42,11 @@ class PulseSequence:
             )
         if pulse.frequency != self.frequency:
             raise ValueError("All Pulse objects inside a PulseSequence should have the same frequency.")
-        self.pulses.append(pulse)
+        if pulse in self.pulses:
+            self.pulses.append(pulse)
+        insort(self._timeline, PulseEvent(pulse, start_time))
     
-    def add_u3(self, theta: float, phi: float, lam:float, qubit:int = 0):
+    def add_u3(self, theta: float, phi: float, lam: float, qubit: int = 0):
         """Add pulses tha implement a U3 gate.
 
         Args:
