@@ -187,7 +187,6 @@ instruments:
 
             channel_port_map:  
                 25: o1 # IQ Port = out0 & out1
-ignore:
     SPI:
         lib: spi
         class: SPI

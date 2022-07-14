@@ -23,7 +23,6 @@ from qblox_instruments import Cluster
 cluster : Cluster = None
 
 
-
 class QRM(AbstractInstrument):
     """
     Generic driver for Qblox Readout Modules.

@@ -1,31 +1,47 @@
 name: tiiq_single_qubit_diagnostics
 description: Settings for characterization scripts.
 software_averages: 1
-software_averages_precision: 1
-max_num_plots: 10
+software_averages_precision: 0
+max_num_plots: 2
 
 # Single qubit experiments
 
 resonator_spectroscopy:
-  lowres_width: 20_000_000
-  lowres_step: 400_000
-  highres_width: 5_000_000
+  lowres_width: 3_000_000
+  lowres_step: 500_000
+  highres_width: 1_000_000
   highres_step: 100_000
   precision_width: 1_000_000
   precision_step: 50_000
 
+resonator_spectroscopy_wide:
+  lowres_width: 1_000_000_000
+  lowres_step: 200_000
+  highres_width: 1_000_000
+  highres_step: 200_000
+  precision_width: 2_000_000
+  precision_step: 40_000
+
+qubit_spectroscopy_narrow:
+  fast_start: -4_000_000
+  fast_end: 4_000_000
+  fast_step: 100_000
+  precision_start: -600_000
+  precision_end: 600_000
+  precision_step: 10_000
+
 qubit_spectroscopy:
-  fast_start: -500_000_000
+  fast_start: -100_000_000
   fast_end: 100_000_000
-  fast_step: 10_000_000
-  precision_start: -50_000_000
-  precision_end: 50_000_000
-  precision_step: 1_000_000
+  fast_step: 1_000_000
+  precision_start: -600_000
+  precision_end: 600_000
+  precision_step: 10_000
 
 rabi_pulse_length:
   pulse_duration_start: 4 # minimum 4ns
-  pulse_duration_end: 300
-  pulse_duration_step: 1
+  pulse_duration_end: 40000
+  pulse_duration_step: 400
 
 t1:
   delay_before_readout_start: 4
@@ -36,6 +52,24 @@ ramsey:
   delay_between_pulses_start: 4
   delay_between_pulses_end: 400
   delay_between_pulses_step: 1
+
+ramsey_freq:
+  t_start: 4
+  t_end: [1000, 2000, 4000, 7999] #t_end (optimal) = 3.5 * T2 (limited by HW to 7999ns)
+  t_step: 50
+  offset_freq: 1_000_000
+  N_osc: 4
+
+RO_matrix:
+  niter: 1024
+
+flipping:
+  niter: 50
+
+drag_tunning:
+  beta_start: -1.0
+  beta_end: 1.0
+  beta_step: 0.01
 
 calibrate_qubit_states:
   niter: 1024
