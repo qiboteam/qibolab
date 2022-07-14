@@ -20,9 +20,9 @@ topology: # qubit - qubit connections
 channels: [10, 1, 25, 21, 22, 23, 24, 4, 11, 12, 13, 14]
 
 
-qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux] 
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
     0: [10, 21, 4]      # Drive line 21 confirmed, tried all flux lines none moves it, witness qubit # 5?
-    1: [10, 24, 11]     # Drive not found, Flux line 11 confirmed 
+    1: [10, 24, 11]     # Drive not found, Flux line 11 confirmed
     2: [10, 25, 12]     # Drive not found, tried all flux lines none moves it
     3: [10, 22, 13]     # Drive not found, Flux line 11 confirmed
     4: [10, 23, 14]
@@ -36,41 +36,41 @@ instruments:
         settings:
             in0_att                       : 0
             out0_att                      : 40
-            out0_in0_lo_en                : true 
+            out0_in0_lo_en                : true
             out0_in0_lo_freq              : 7_000_000_000 # (Hz) from 2e9 to 18e9
             out0_offset_path0             : 0
             out0_offset_path1             : 0
             scope_acq_avg_mode_en         : true        # for path0 and path1
-            scope_acq_sequencer_select    : 0 
+            scope_acq_sequencer_select    : 0
             scope_acq_trigger_level       : 0           # for path0 and path1
             scope_acq_trigger_mode        : sequencer   # for path0 and path1
 
-            channel_map_path0_out0_en        : true 
-            channel_map_path1_out1_en        : true 
+            channel_map_path0_out0_en        : true
+            channel_map_path1_out1_en        : true
             cont_mode_en_awg                 : false    # for path0 and path1
             cont_mode_waveform_idx_awg       : 0        # for path0 and path1
-            demod_en_acq                     : false 
-            discretization_threshold_acq     : false 
+            demod_en_acq                     : false
+            discretization_threshold_acq     : false
             gain_awg                         : 1       # for path0 and path1 -1.0<=v<=1.0
             integration_length_acq           : 4         # 4<=v<=16777212, Multiples of 4
-            marker_ovr_en                    : true 
-            marker_ovr_value                 : 15 
-            mixer_corr_gain_ratio            : 1       # 0.5<=v<=2.0 
-            mixer_corr_phase_offset_degree   : 0 
-            mod_en_awg                       : false 
+            marker_ovr_en                    : true
+            marker_ovr_value                 : 15
+            mixer_corr_gain_ratio            : 1       # 0.5<=v<=2.0
+            mixer_corr_phase_offset_degree   : 0
+            mod_en_awg                       : false
             nco_freq                         : 0       # (Hz) from -300e6 to 300e6
             nco_phase_offs                   : 0       # (Degrees)
-            offset_awg_path0                 : 0 
-            offset_awg_path1                 : 0 
+            offset_awg_path0                 : 0
+            offset_awg_path1                 : 0
             phase_rotation_acq               : 0       # (Degrees)
-            sync_en                          : true 
+            sync_en                          : true
             upsample_rate_awg                : 0 # for path0 and path1
 
             acquisition_start: 130 # minimum 4ns
             acquisition_duration: 1500
             channel_port_map:  # Refrigerator Channel : Instrument port
                 10: o1 # IQ Port = out0 & out1
-                1: i1 
+                1: i1
 
     qcm_rf1:
         lib: qblox
@@ -78,36 +78,36 @@ instruments:
         address: 192.168.0.2:6
         settings:
             out0_att          : 0 # (dB)
-            out0_lo_en        : true 
+            out0_lo_en        : true
             out0_lo_freq      : 6_000_000_000 # (Hz) from 2e9 to 18e9
-            out0_offset_path0 : 0 # (mV) 
+            out0_offset_path0 : 0 # (mV)
             out0_offset_path1 : 0 # (mV)
             out1_att          : 0 # (dB)
             out1_lo_en        : true
-            out1_lo_freq      : 6_000_000_000 # (Hz) from 2e9 to 18e9 
+            out1_lo_freq      : 6_000_000_000 # (Hz) from 2e9 to 18e9
             out1_offset_path0 : 0 # (mV)
             out1_offset_path1 : 0 # (mV)
 
-            channel_map_path0_out0_en        : false 
-            channel_map_path0_out2_en        : false 
-            channel_map_path1_out1_en        : false 
-            channel_map_path1_out3_en        : false 
+            channel_map_path0_out0_en        : false
+            channel_map_path0_out2_en        : false
+            channel_map_path1_out1_en        : false
+            channel_map_path1_out3_en        : false
             cont_mode_en_awg                 : false # for path0 and path1
-            cont_mode_waveform_idx_awg       : 0 # for path0 and path1 
+            cont_mode_waveform_idx_awg       : 0 # for path0 and path1
             gain_awg                         : 1 # for path0 and path1 -1.0<=v<=1.0
-            marker_ovr_en                    : true 
-            marker_ovr_value                 : 15 
-            mixer_corr_gain_ratio            : 1       # 0.5<=v<=2.0  
-            mixer_corr_phase_offset_degree   : 0 
-            mod_en_awg                       : false 
+            marker_ovr_en                    : true
+            marker_ovr_value                 : 15
+            mixer_corr_gain_ratio            : 1       # 0.5<=v<=2.0
+            mixer_corr_phase_offset_degree   : 0
+            mod_en_awg                       : false
             nco_freq                         : 0 # (Hz)
             nco_phase_offs                   : 0 # (Degrees)
-            offset_awg_path0                 : 0 
-            offset_awg_path1                 : 0 
-            sync_en                          : true 
+            offset_awg_path0                 : 0
+            offset_awg_path1                 : 0
+            sync_en                          : true
             upsample_rate_awg                : 0 # for path0 and path1 0<=v<=65535
 
-            channel_port_map:  
+            channel_port_map:
                 21: o1 # IQ Port = out0 & out1
                 22: o2 # IQ Port = out0 & out1
 
@@ -117,36 +117,36 @@ instruments:
         address: 192.168.0.2:12
         settings:
             out0_att          : 0 # (dB)
-            out0_lo_en        : true 
+            out0_lo_en        : true
             out0_lo_freq      : 6_000_000_000 # (Hz) from 2e9 to 18e9
-            out0_offset_path0 : 0 # (mV) 
+            out0_offset_path0 : 0 # (mV)
             out0_offset_path1 : 0 # (mV)
             out1_att          : 0 # (dB)
             out1_lo_en        : true
-            out1_lo_freq      : 6_000_000_000 # (Hz) from 2e9 to 18e9 
+            out1_lo_freq      : 6_000_000_000 # (Hz) from 2e9 to 18e9
             out1_offset_path0 : 0 # (mV)
             out1_offset_path1 : 0 # (mV)
 
-            channel_map_path0_out0_en        : false 
-            channel_map_path0_out2_en        : false 
-            channel_map_path1_out1_en        : false 
-            channel_map_path1_out3_en        : false 
+            channel_map_path0_out0_en        : false
+            channel_map_path0_out2_en        : false
+            channel_map_path1_out1_en        : false
+            channel_map_path1_out3_en        : false
             cont_mode_en_awg                 : false # for path0 and path1
-            cont_mode_waveform_idx_awg       : 0 # for path0 and path1 
+            cont_mode_waveform_idx_awg       : 0 # for path0 and path1
             gain_awg                         : 1 # for path0 and path1 -1.0<=v<=1.0
-            marker_ovr_en                    : true 
-            marker_ovr_value                 : 15 
-            mixer_corr_gain_ratio            : 1       # 0.5<=v<=2.0  
-            mixer_corr_phase_offset_degree   : 0 
-            mod_en_awg                       : false 
+            marker_ovr_en                    : true
+            marker_ovr_value                 : 15
+            mixer_corr_gain_ratio            : 1       # 0.5<=v<=2.0
+            mixer_corr_phase_offset_degree   : 0
+            mod_en_awg                       : false
             nco_freq                         : 0 # (Hz)
             nco_phase_offs                   : 0 # (Degrees)
-            offset_awg_path0                 : 0 
-            offset_awg_path1                 : 0 
-            sync_en                          : true 
+            offset_awg_path0                 : 0
+            offset_awg_path1                 : 0
+            sync_en                          : true
             upsample_rate_awg                : 0 # for path0 and path1 0<=v<=65535
 
-            channel_port_map:  
+            channel_port_map:
                 23: o1 # IQ Port = out0 & out1
                 24: o2 # IQ Port = out0 & out1
 
@@ -156,38 +156,39 @@ instruments:
         address: 192.168.0.2:10
         settings:
             out0_att          : 0 # (dB)
-            out0_lo_en        : true 
+            out0_lo_en        : true
             out0_lo_freq      : 6_000_000_000 # (Hz) from 2e9 to 18e9
-            out0_offset_path0 : 0 # (mV) 
+            out0_offset_path0 : 0 # (mV)
             out0_offset_path1 : 0 # (mV)
             out1_att          : 0 # (dB)
             out1_lo_en        : true
-            out1_lo_freq      : 6_000_000_000 # (Hz) from 2e9 to 18e9 
+            out1_lo_freq      : 6_000_000_000 # (Hz) from 2e9 to 18e9
             out1_offset_path0 : 0 # (mV)
             out1_offset_path1 : 0 # (mV)
 
-            channel_map_path0_out0_en        : false 
-            channel_map_path0_out2_en        : false 
-            channel_map_path1_out1_en        : false 
-            channel_map_path1_out3_en        : false 
+            channel_map_path0_out0_en        : false
+            channel_map_path0_out2_en        : false
+            channel_map_path1_out1_en        : false
+            channel_map_path1_out3_en        : false
             cont_mode_en_awg                 : false # for path0 and path1
-            cont_mode_waveform_idx_awg       : 0 # for path0 and path1 
+            cont_mode_waveform_idx_awg       : 0 # for path0 and path1
             gain_awg                         : 1 # for path0 and path1 -1.0<=v<=1.0
-            marker_ovr_en                    : true 
-            marker_ovr_value                 : 15 
-            mixer_corr_gain_ratio            : 1       # 0.5<=v<=2.0  
-            mixer_corr_phase_offset_degree   : 0 
-            mod_en_awg                       : false 
+            marker_ovr_en                    : true
+            marker_ovr_value                 : 15
+            mixer_corr_gain_ratio            : 1       # 0.5<=v<=2.0
+            mixer_corr_phase_offset_degree   : 0
+            mod_en_awg                       : false
             nco_freq                         : 0 # (Hz)
             nco_phase_offs                   : 0 # (Degrees)
-            offset_awg_path0                 : 0 
-            offset_awg_path1                 : 0 
-            sync_en                          : true 
+            offset_awg_path0                 : 0
+            offset_awg_path1                 : 0
+            sync_en                          : true
             upsample_rate_awg                : 0 # for path0 and path1 0<=v<=65535
 
-            channel_port_map:  
+            channel_port_map:
                 25: o1 # IQ Port = out0 & out1
-                
+
+ignore:
     SPI:
         lib: spi
         class: SPI
