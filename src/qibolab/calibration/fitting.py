@@ -200,3 +200,38 @@ def data_post(dir = "last"):
     plt.plot(x_axis,voltage)
     #plt.show()
     return voltage, x_axis, data, d
+
+def fit_drag_tunning(res1, res2, beta_params):
+
+    #find line of best fit
+    a, b = np.polyfit(beta_params, res1, 1)
+    c, d = np.polyfit(beta_params, res2, 1)
+
+    #add points to plot
+    plt.scatter(beta_params, res1, color='purple')
+    plt.scatter(beta_params, res2, color='green')
+
+    #add line of best fit to plot
+    plt.plot(beta_params, a*beta_params+b, color='steelblue', linewidth=2)  
+    plt.plot(beta_params, c*beta_params+d, color='steelblue', linewidth=2)
+
+
+    #find interception point
+    xi = (b-d) / (c-a)
+    yi = a * xi + b
+
+    plt.scatter(xi,yi, color='black', s=120)
+
+    return xi
+
+def flipping_fit(x_data, y_data):
+    pguess = [
+        0.01 # epsilon guess parameter
+    ]
+    popt, pcov = curve_fit(flipping, x_data, y_data, p0=pguess)
+    return popt[0]
+
+def flipping(x, p0):
+    # A fit to Flipping Qubit oscillation
+    # Epsilon                       : p[0]
+    return  np.sin(2*x + 1/2) * p0
