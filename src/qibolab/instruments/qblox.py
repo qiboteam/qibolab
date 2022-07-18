@@ -149,7 +149,7 @@ class QRM(AbstractInstrument):
             if self.current_pulsesequence_hash != self.last_pulsequence_hash:
                 # print(f"Resetting {self.name}")
                 # self.cluster.reset() # FIXME: this needs to clear the cahes of the rest of the modules
-                self.cluster.reference_source('external')
+                self.cluster.reference_source('internal')
                 self.device_parameters = {}
                 # DEBUG: QRM Log device Reset
                 # print("QRM reset. Status:")
@@ -756,6 +756,7 @@ class QCM(AbstractInstrument):
             if self.current_pulsesequence_hash != self.last_pulsequence_hash:
                 # print(f"Resetting {self.name}")
                 # self.cluster.reset() # FIXME: this needs to clear the cahes of the rest of the modules
+                # self.cluster.reference_source('external')
                 self.device_parameters = {}
                 # DEBUG: QCM Log device Reset                
                 # print("QCM reset. Status:")
