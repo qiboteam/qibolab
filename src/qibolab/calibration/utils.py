@@ -76,16 +76,15 @@ def create_measurement_control(name, debug=True):
     from qibo.config import log
     log.info(f"Creating MeasurementControl {name}")
     if os.environ.get("ENABLE_PLOTMON", debug):
-        mc = MeasurementControl(f'MC {name}')
+        mc = MeasurementControl(f'MC_{name}')
         from quantify_core.visualization.pyqt_plotmon import PlotMonitor_pyqt
-        plotmon = PlotMonitor_pyqt(f'Plot Monitor {name}')
+        plotmon = PlotMonitor_pyqt(f'Plot_Monitor_{name}')
         mc.instr_plotmon(plotmon.name)
         from quantify_core.visualization.instrument_monitor import InstrumentMonitor
-        insmon = InstrumentMonitor(f"Instruments Monitor {name}")
-        mc.instrument_monitor(insmon.name)
+        insmon = InstrumentMonitor(f"Instruments_Monitor_{name}")
         return mc, plotmon, insmon
     else:
-        mc = MeasurementControl(f'MC {name}')
+        mc = MeasurementControl(f'MC_{name}')
         return mc, None, None
     # TODO: be able to choose which windows are opened and remember their sizes and dimensions
 
