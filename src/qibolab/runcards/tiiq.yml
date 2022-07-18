@@ -24,9 +24,9 @@ instruments:
         address: 192.168.0.3:5
         settings:
             in0_att                       : 0
-            out0_att                      : 40
+            out0_att                      : 50
             out0_in0_lo_en                : true 
-            out0_in0_lo_freq              : 7_844_812_427 # (Hz) from 2e9 to 18e9
+            out0_in0_lo_freq              : 7_844_799_488 # (Hz) from 2e9 to 18e9
             out0_offset_path0             : 0
             out0_offset_path1             : 0
             scope_acq_avg_mode_en         : true        # for path0 and path1
@@ -40,7 +40,7 @@ instruments:
             cont_mode_waveform_idx_awg       : 0        # for path0 and path1
             demod_en_acq                     : false 
             discretization_threshold_acq     : false 
-            gain_awg                         : 0.8       # for path0 and path1 -1.0<=v<=1.0
+            gain_awg                         : 0.4       # for path0 and path1 -1.0<=v<=1.0
             integration_length_acq           : 4         # 4<=v<=16777212, Multiples of 4
             marker_ovr_en                    : true 
             marker_ovr_value                 : 15 
@@ -83,7 +83,7 @@ instruments:
             channel_map_path1_out3_en        : false 
             cont_mode_en_awg                 : false # for path0 and path1
             cont_mode_waveform_idx_awg       : 0 # for path0 and path1 
-            gain_awg                         : 1 # for path0 and path1 -1.0<=v<=1.0
+            gain_awg                         : 0.30 # for path0 and path1 -1.0<=v<=1.0
             marker_ovr_en                    : true 
             marker_ovr_value                 : 15 
             mixer_corr_gain_ratio            : 1       # 0.5<=v<=2.0  
@@ -119,7 +119,7 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            resonator_freq: 7864812427
+            resonator_freq: 7864799488
             qubit_freq: 5082221756
             T1: 2192.895853326451
             T2: 6933.310025260633
