@@ -17,7 +17,7 @@ app = dash.Dash(__name__)
 def live_plotting(path):
     #path = qibolab_folder / 'calibration' / 'data' / 'buffer.npy'
     print(path)
-    app.layout = html.Div([dcc.Graph(id = 'live-graph', animate = True), dcc.Interval(id = 'graph-update', interval = 1000, n_intervals = 0),])
+    app.layout = html.Div([dcc.Graph(id = 'live-graph', animate = False), dcc.Interval(id = 'graph-update', interval = 1000, n_intervals = 0),])
     @app.callback(Output('live-graph', 'figure'), [Input('graph-update', 'n_intervals')])
 
     def update_graph_scatter(n):
