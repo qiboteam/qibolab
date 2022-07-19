@@ -400,7 +400,7 @@ class Calibration():
         
         return sequence
 
-    def allXY(self, qubit):
+    def allXY(self, qubit=0):
         platform = self.platform
         platform.reload_settings()
 
@@ -513,7 +513,7 @@ class Calibration():
 
 
     # Ramsey: RX(pi/2) - wait t(rotates z) - RX(pi/2) - readout
-    def run_ramsey_freq(self, qubit):
+    def run_ramsey_freq(self, qubit=0):
         platform = self.platform
         platform.reload_settings()
         mc = self.mc
@@ -568,7 +568,7 @@ class Calibration():
                 # FIXME: The way this routine is coded the new_T2 and delta_phys returned are not the optimal.
         return new_t2, delta_phys, smooth_dataset, dataset
 
-    def run_drag_pulse_tunning(self, qubit):
+    def run_drag_pulse_tunning(self, qubit=0):
         platform = self.platform
         platform.reload_settings()
         
@@ -626,11 +626,7 @@ class Calibration():
 
         return beta_optimal
     
-    def live_plotting():
-        from qibolab.calibration import live
-        live.app.run_server()
-
-    def run_flipping(self, qubit):
+    def run_flipping(self, qubit=0):
         platform = self.platform
         platform.reload_settings()
 

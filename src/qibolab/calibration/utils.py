@@ -88,6 +88,13 @@ def create_measurement_control(name, debug=True):
         return mc, None, None
     # TODO: be able to choose which windows are opened and remember their sizes and dimensions
 
+def start_live_plotting(path):
+    import threading
+    import qibolab.calibration.live as lp
+    dash = threading.Thread(target=lp.start_server, args=(path,))
+    dash.setDaemon(True)
+    dash.start()
+
 
 def classify(point: complex, mean_gnd, mean_exc):
         import math
@@ -96,3 +103,4 @@ def classify(point: complex, mean_gnd, mean_exc):
             return math.sqrt((np.real(a) - np.real(b))**2 + (np.imag(a) - np.imag(b))**2)
 
         return int(distance(point, mean_exc) < distance(point, mean_gnd))
+
