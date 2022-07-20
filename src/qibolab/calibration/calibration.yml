@@ -4,6 +4,7 @@ software_averages: 1
 software_averages_precision: 4
 max_num_plots: 3
 
+# Single qubit experiments
 resonator_spectroscopy:
   lowres_width: 30_000_000
   lowres_step: 2_000_000
@@ -35,5 +36,5 @@ ramsey:
   delay_between_pulses_end: 7999
   delay_between_pulses_step: 50
 
-callibrate_qubit_states:
+calibrate_qubit_states:
   niter: 1024

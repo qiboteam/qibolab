@@ -1,57 +1,102 @@
-import pathlib
-import pytest
 import yaml
+import pytest
+import numpy as np
+from qibolab.paths import qibolab_folder
 from qibolab.instruments.rohde_schwarz import SGS100A
 
 
-def load_runcard(name):
-    runcard = pathlib.Path(__file__).parent.parent / "runcards" / f"{name}.yml"
-    with open(runcard, "r") as file:
+INSTRUMENTS_LIST = ['SGS100A']
+instruments = {}
+
+
+@pytest.mark.parametrize('name', INSTRUMENTS_LIST)
+def test_instruments_rohde_schwarz_init(name):
+    test_runcard = qibolab_folder / "tests" / "test_instruments_rohde_schwarz.yml"
+    with open(test_runcard, "r") as file:
         settings = yaml.safe_load(file)
-    return settings
+    
+    # Instantiate instrument
+    lib = settings['instruments'][name]['lib']
+    i_class = settings['instruments'][name]['class']
+    address = settings['instruments'][name]['address']
+    from importlib import import_module
+    InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
+    instance = InstrumentClass(name, address)
+    instruments[name] = instance
+    assert instance.name == name
+    assert instance.address == address
+    assert instance.is_connected == False
+    assert instance.signature == f"{name}@{address}"
+    assert instance.device == None
+    assert instance.data_folder == qibolab_folder / "instruments" / "data"
 
 
 @pytest.mark.xfail
-@pytest.mark.parametrize("device", ["QCM", "QRM"])
-def test_sgs100a_init(device):
-    settings = load_runcard("tiiq")    
-    lo = SGS100A(**settings.get(f"LO_{device}_init_settings"))
-
-    with pytest.raises(RuntimeError):
-        frequency = lo.get_frequency()
-    with pytest.raises(RuntimeError):
-        power = lo.get_power()
-
-    lo.close()
+@pytest.mark.parametrize('name', INSTRUMENTS_LIST)
+def test_instruments_qublox_connect(name):
+    instruments[name].connect()
 
 
-@pytest.mark.xfail
-@pytest.mark.parametrize("device", ["QCM", "QRM"])
-def test_sgs100a_setup(device):
-    settings = load_runcard("tiiq")    
-    lo = SGS100A(**settings.get(f"LO_{device}_init_settings"))
+@pytest.mark.parametrize('name', INSTRUMENTS_LIST)
+def test_instruments_qublox_setup(name):
+    if not instruments[name].is_connected:
+        pytest.xfail('Instrument not available')
+    else:
+        test_runcard = qibolab_folder / "tests" / "test_instruments_rohde_schwarz.yml"
+        with open(test_runcard, "r") as file:
+            settings = yaml.safe_load(file)        
+        instruments[name].setup(**settings['settings'], **settings['instruments'][name]['settings'])
 
-    power = settings.get(f"LO_{device}_settings").get("power")
-    frequency = settings.get(f"LO_{device}_settings").get("frequency")
-    lo.setup(power, frequency)
-
-    assert lo.get_power() == power
-    assert lo.get_frequency() == frequency
-
-    lo.close()
+        for parameter in settings['instruments'][name]['settings']:
+            assert getattr(instruments[name], parameter) == settings['instruments'][name]['settings'][parameter]
 
 
-@pytest.mark.xfail
-@pytest.mark.parametrize("device", ["QCM", "QRM"])
-def test_sgs100a_on_off(device):
-    settings = load_runcard("tiiq")    
-    lo = SGS100A(**settings.get(f"LO_{device}_init_settings"))
+def instrument_set_and_test_parameter_values(instrument, parameter, values):
+    for value in values:
+        instrument.set_device_parameter(parameter, value)
+        assert instrument.device.get(parameter) == value
 
-    power = settings.get(f"LO_{device}_settings").get("power")
-    frequency = settings.get(f"LO_{device}_settings").get("frequency")
-    lo.setup(power, frequency)
 
-    lo.on()
-    lo.off()
+@pytest.mark.parametrize('name', INSTRUMENTS_LIST)
+def test_instruments_qublox_set_device_paramter(name):
+    if not instruments[name].is_connected:
+        pytest.xfail('Instrument not available')
+    else:
+        instrument_set_and_test_parameter_values(instruments[name], f"power", np.arange(-120, 0, 10)) # Max power is 25dBm but to be safe testing only until 0dBm
+        instrument_set_and_test_parameter_values(instruments[name], f"frequency", np.arange(1e6, 12750e6, 1e9))
+        
+        """   # TODO: add attitional paramter tests   
+        SGS100A:
+            parameter            value
+        --------------------------------------------------------------------------------
+        IDN                   :	{'vendor': 'Rohde&Schwarz', 'model': 'SGS100A', 'seri...
+        IQ_angle              :	None 
+        IQ_gain_imbalance     :	None 
+        IQ_impairments        :	None 
+        IQ_state              :	None 
+        I_offset              :	None 
+        LO_source             :	None 
+        Q_offset              :	None 
+        frequency             :	None (Hz)
+        phase                 :	None (deg)
+        power                 :	None (dBm)
+        pulsemod_source       :	None 
+        pulsemod_state        :	None 
+        ref_LO_out            :	None 
+        ref_osc_external_freq :	None 
+        ref_osc_output_freq   :	None 
+        ref_osc_source        :	None 
+        status                :	None 
+        timeout               :	5 (s)
+        """
 
-    lo.close()
+@pytest.mark.parametrize('name', INSTRUMENTS_LIST)
+def test_instruments_qublox_start_stop_disconnect(name):
+    if not instruments[name].is_connected:
+        pytest.xfail('Instrument not available')
+    else:      
+        instruments[name].start()
+        instruments[name].stop()
+        instruments[name].disconnect()
+        assert instruments[name].is_connected == False
+

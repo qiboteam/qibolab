@@ -1,0 +1,387 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="1058px" preserveAspectRatio="none" style="width:2285px;height:1058px;background:#FFFFFF;" version="1.1" viewBox="0 0 2285 1058" width="2285px" zoomAndPan="magnify"><defs><filter height="300%" id="f1iw5tjb1yaeeq" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><text fill="#000000" font-family="sans-serif" font-size="18" lengthAdjust="spacing" textLength="160" x="1056" y="18.6855">Instrument Changes</text><!--MD5=[aa880313a10edba58e8fe353f83a0fa8]
+cluster instrument--><polygon fill="#FFFFFF" filter="url(#f1iw5tjb1yaeeq)" points="16,28.6406,98,28.6406,105,52.25,2268,52.25,2268,1051.6406,16,1051.6406,16,28.6406" style="stroke:#000000;stroke-width:1.5;"/><line style="stroke:#000000;stroke-width:1.5;" x1="16" x2="105" y1="52.25" y2="52.25"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="76" x="20" y="45.1738">instrument</text><!--MD5=[59d78c53901183170be88d2f7bf377b4]
+cluster abstract.py--><polygon fill="#FFFFFF" filter="url(#f1iw5tjb1yaeeq)" points="1597,56.6406,1680,56.6406,1687,80.25,1781,80.25,1781,328.6406,1597,328.6406,1597,56.6406" style="stroke:#000000;stroke-width:1.5;"/><line style="stroke:#000000;stroke-width:1.5;" x1="1597" x2="1687" y1="80.25" y2="80.25"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="77" x="1601" y="73.1738">abstract.py</text><!--MD5=[14bc58b5f8e0fd7d7e06cda156c7e787]
+cluster instrument.py--><polygon fill="#FFFFFF" filter="url(#f1iw5tjb1yaeeq)" points="1036,91.1406,1138,91.1406,1145,114.75,1170,114.75,1170,294.1406,1036,294.1406,1036,91.1406" style="stroke:#000000;stroke-width:1.5;"/><line style="stroke:#000000;stroke-width:1.5;" x1="1036" x2="1145" y1="114.75" y2="114.75"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="96" x="1040" y="107.6738">instrument.py</text><!--MD5=[7c56e1c929152d74d90367d89b22bee4]
+cluster rohde_schwarz.py--><polygon fill="#FFFFFF" filter="url(#f1iw5tjb1yaeeq)" points="1198,426.6406,1331,426.6406,1338,450.25,1491,450.25,1491,731.6406,1198,731.6406,1198,426.6406" style="stroke:#000000;stroke-width:1.5;"/><line style="stroke:#000000;stroke-width:1.5;" x1="1198" x2="1338" y1="450.25" y2="450.25"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="127" x="1202" y="443.1738">rohde_schwarz.py</text><!--MD5=[8fbf9d14e23e55ddb35ee54e5159313b]
+cluster qblox.py_New--><polygon fill="#FFFFFF" filter="url(#f1iw5tjb1yaeeq)" points="1499,357.1406,1602,357.1406,1609,380.75,2260,380.75,2260,801.1406,1499,801.1406,1499,357.1406" style="stroke:#000000;stroke-width:1.5;"/><line style="stroke:#000000;stroke-width:1.5;" x1="1499" x2="1609" y1="380.75" y2="380.75"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="97" x="1503" y="373.6738">qblox.py_New</text><!--MD5=[b0013d17cdc1e4287cc4f070408bd952]
+cluster qblox.py_Old--><polygon fill="#FFFFFF" filter="url(#f1iw5tjb1yaeeq)" points="24,336.6406,121,336.6406,128,360.25,1190,360.25,1190,1043.6406,24,1043.6406,24,336.6406" style="stroke:#000000;stroke-width:1.5;"/><line style="stroke:#000000;stroke-width:1.5;" x1="24" x2="128" y1="360.25" y2="360.25"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="91" x="28" y="353.1738">qblox.py_Old</text><!--MD5=[a0c37fc939cda0716ae8ae14e76b8fd5]
+class AbstractInstrument_New--><rect codeLine="5" fill="#FEFECE" filter="url(#f1iw5tjb1yaeeq)" height="235.8672" id="AbstractInstrument_New" style="stroke:#A80036;stroke-width:1.5;" width="167" x="1605.5" y="84.6406"/><ellipse cx="1620.5" cy="100.6406" fill="#A9DCDF" rx="11" ry="11" style="stroke:#A80036;stroke-width:1.0;"/><path d="M1622.6875,102.4063 L1618.5469,102.4063 L1618.125,103.4375 L1618.5469,103.4375 Q1619.1563,103.4375 1619.4219,103.6719 Q1619.6875,103.9063 1619.6875,104.2969 Q1619.6875,104.6719 1619.4219,104.9063 Q1619.1563,105.1406 1618.5469,105.1406 L1616.25,105.1406 Q1615.6406,105.1406 1615.3828,104.9063 Q1615.125,104.6719 1615.125,104.2813 Q1615.125,103.9063 1615.3984,103.6641 Q1615.6719,103.4219 1616.2969,103.4375 L1618.9688,96.7813 L1617.8594,96.7813 Q1617.25,96.7813 1616.9844,96.5469 Q1616.7188,96.3125 1616.7188,95.9219 Q1616.7188,95.5469 1616.9844,95.3125 Q1617.25,95.0781 1617.8594,95.0781 L1621.5313,95.0781 L1624.9219,103.4375 Q1625.5156,103.4375 1625.7031,103.5781 Q1626.0938,103.8438 1626.0938,104.2969 Q1626.0938,104.6719 1625.8359,104.9063 Q1625.5781,105.1406 1624.9688,105.1406 L1622.6719,105.1406 Q1622.0625,105.1406 1621.7969,104.9063 Q1621.5313,104.6719 1621.5313,104.2813 Q1621.5313,103.9063 1621.7969,103.6719 Q1622.0625,103.4375 1622.6719,103.4375 L1623.0938,103.4375 L1622.6875,102.4063 Z M1621.9688,100.7031 L1620.6094,97.3281 L1619.2344,100.7031 L1621.9688,100.7031 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="12" font-style="italic" lengthAdjust="spacing" textLength="135" x="1634.5" y="105.5508">AbstractInstrument_New</text><line style="stroke:#A80036;stroke-width:1.5;" x1="1606.5" x2="1771.5" y1="116.6406" y2="116.6406"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="26" x="1611.5" y="132.0596">name</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="8" x="1611.5" y="145.8955">ip</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="65" x="1611.5" y="159.7314">is_connected</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="45" x="1611.5" y="173.5674">signature</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="32" x="1611.5" y="187.4033">device</text><line style="stroke:#A80036;stroke-width:1.0;" x1="1606.5" x2="1771.5" y1="193.8203" y2="193.8203"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="0" x="1614.5" y="209.2393"/><line style="stroke:#A80036;stroke-width:1.0;" x1="1606.5" x2="1771.5" y1="215.6563" y2="215.6563"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="85" x="1611.5" y="231.0752">__init__(name, ip)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="46" x="1611.5" y="244.9111">__del__()</text><text fill="#000000" font-family="sans-serif" font-size="11" font-style="italic" lengthAdjust="spacing" textLength="47" x="1611.5" y="258.7471">connect()</text><text fill="#000000" font-family="sans-serif" font-size="11" font-style="italic" lengthAdjust="spacing" textLength="35" x="1611.5" y="272.583">setup()</text><text fill="#000000" font-family="sans-serif" font-size="11" font-style="italic" lengthAdjust="spacing" textLength="30" x="1611.5" y="286.4189">start()</text><text fill="#000000" font-family="sans-serif" font-size="11" font-style="italic" lengthAdjust="spacing" textLength="29" x="1611.5" y="300.2549">stop()</text><text fill="#000000" font-family="sans-serif" font-size="11" font-style="italic" lengthAdjust="spacing" textLength="62" x="1611.5" y="314.0908">disconnect()</text><!--MD5=[26b4f1dcd3d641103bfbfadcb1b58d1d]
+class Instrument_Old--><rect codeLine="24" fill="#FEFECE" filter="url(#f1iw5tjb1yaeeq)" height="166.6875" id="Instrument_Old" style="stroke:#A80036;stroke-width:1.5;" width="117" x="1044.5" y="119.1406"/><ellipse cx="1059.5" cy="135.1406" fill="#A9DCDF" rx="11" ry="11" style="stroke:#A80036;stroke-width:1.0;"/><path d="M1061.6875,136.9063 L1057.5469,136.9063 L1057.125,137.9375 L1057.5469,137.9375 Q1058.1563,137.9375 1058.4219,138.1719 Q1058.6875,138.4063 1058.6875,138.7969 Q1058.6875,139.1719 1058.4219,139.4063 Q1058.1563,139.6406 1057.5469,139.6406 L1055.25,139.6406 Q1054.6406,139.6406 1054.3828,139.4063 Q1054.125,139.1719 1054.125,138.7813 Q1054.125,138.4063 1054.3984,138.1641 Q1054.6719,137.9219 1055.2969,137.9375 L1057.9688,131.2813 L1056.8594,131.2813 Q1056.25,131.2813 1055.9844,131.0469 Q1055.7188,130.8125 1055.7188,130.4219 Q1055.7188,130.0469 1055.9844,129.8125 Q1056.25,129.5781 1056.8594,129.5781 L1060.5313,129.5781 L1063.9219,137.9375 Q1064.5156,137.9375 1064.7031,138.0781 Q1065.0938,138.3438 1065.0938,138.7969 Q1065.0938,139.1719 1064.8359,139.4063 Q1064.5781,139.6406 1063.9688,139.6406 L1061.6719,139.6406 Q1061.0625,139.6406 1060.7969,139.4063 Q1060.5313,139.1719 1060.5313,138.7813 Q1060.5313,138.4063 1060.7969,138.1719 Q1061.0625,137.9375 1061.6719,137.9375 L1062.0938,137.9375 L1061.6875,136.9063 Z M1060.9688,135.2031 L1059.6094,131.8281 L1058.2344,135.2031 L1060.9688,135.2031 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="12" font-style="italic" lengthAdjust="spacing" textLength="85" x="1073.5" y="140.0508">Instrument_Old</text><line style="stroke:#A80036;stroke-width:1.5;" x1="1045.5" x2="1160.5" y1="151.1406" y2="151.1406"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="57" x="1050.5" y="166.5596">_connected</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="8" x="1050.5" y="180.3955">ip</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="51" x="1050.5" y="194.2314">_signature</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="32" x="1050.5" y="208.0674">device</text><line style="stroke:#A80036;stroke-width:1.0;" x1="1045.5" x2="1160.5" y1="214.4844" y2="214.4844"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="45" x="1050.5" y="229.9033">signature</text><line style="stroke:#A80036;stroke-width:1.0;" x1="1045.5" x2="1160.5" y1="236.3203" y2="236.3203"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="53" x="1050.5" y="251.7393">__init__(ip)</text><text fill="#000000" font-family="sans-serif" font-size="11" font-style="italic" lengthAdjust="spacing" textLength="39" x="1050.5" y="265.5752">connect</text><text fill="#000000" font-family="sans-serif" font-size="11" font-style="italic" lengthAdjust="spacing" textLength="27" x="1050.5" y="279.4111">close</text><!--MD5=[7fbcd93e92a924dc30bb9840964dea11]
+class SGS100A_New--><rect codeLine="38" fill="#FEFECE" filter="url(#f1iw5tjb1yaeeq)" height="214.0313" id="SGS100A_New" style="stroke:#A80036;stroke-width:1.5;" width="117" x="1365.5" y="482.1406"/><ellipse cx="1380.5" cy="498.1406" fill="#ADD1B2" rx="11" ry="11" style="stroke:#A80036;stroke-width:1.0;"/><path d="M1383.2656,494.0156 Q1383.4219,493.7969 1383.6094,493.6875 Q1383.7969,493.5781 1384.0156,493.5781 Q1384.3906,493.5781 1384.625,493.8359 Q1384.8594,494.0938 1384.8594,494.7031 L1384.8594,496.1563 Q1384.8594,496.7656 1384.625,497.0313 Q1384.3906,497.2969 1384.0156,497.2969 Q1383.6719,497.2969 1383.4688,497.0938 Q1383.2656,496.9063 1383.1563,496.3906 Q1383.1094,496.0313 1382.9219,495.8438 Q1382.5938,495.4688 1381.9844,495.25 Q1381.375,495.0313 1380.75,495.0313 Q1379.9844,495.0313 1379.3516,495.3594 Q1378.7188,495.6875 1378.2266,496.4375 Q1377.7344,497.1875 1377.7344,498.2188 L1377.7344,499.3125 Q1377.7344,500.5469 1378.625,501.3672 Q1379.5156,502.1875 1381.1094,502.1875 Q1382.0469,502.1875 1382.7031,501.9375 Q1383.0938,501.7813 1383.5156,501.3438 Q1383.7813,501.0781 1383.9297,501 Q1384.0781,500.9219 1384.2813,500.9219 Q1384.6094,500.9219 1384.8672,501.1797 Q1385.125,501.4375 1385.125,501.7813 Q1385.125,502.125 1384.7813,502.5313 Q1384.2813,503.1094 1383.4844,503.4375 Q1382.4063,503.8906 1381.1094,503.8906 Q1379.5938,503.8906 1378.3906,503.2656 Q1377.4063,502.7656 1376.7188,501.6953 Q1376.0313,500.625 1376.0313,499.3438 L1376.0313,498.1875 Q1376.0313,496.8594 1376.6484,495.7109 Q1377.2656,494.5625 1378.3594,493.9453 Q1379.4531,493.3281 1380.6875,493.3281 Q1381.4219,493.3281 1382.0703,493.4922 Q1382.7188,493.6563 1383.2656,494.0156 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="85" x="1394.5" y="503.0508">SGS100A_New</text><line style="stroke:#A80036;stroke-width:1.5;" x1="1366.5" x2="1481.5" y1="514.1406" y2="514.1406"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="32" x="1371.5" y="529.5596">device</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="32" x="1371.5" y="543.3955">power</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="50" x="1371.5" y="557.2314">frequency</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="85" x="1371.5" y="571.0674">__init__(name, ip)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="47" x="1371.5" y="584.9033">connect()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="80" x="1371.5" y="598.7393">setup(**kwargs)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="30" x="1371.5" y="612.5752">start()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="29" x="1371.5" y="626.4111">stop()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="61" x="1371.5" y="640.2471">disconnect()</text><line style="stroke:#A80036;stroke-width:1.0;" x1="1366.5" x2="1481.5" y1="646.6641" y2="646.6641"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="20" x="1371.5" y="662.083">on()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="22" x="1371.5" y="675.9189">off()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="34" x="1371.5" y="689.7549">close()</text><!--MD5=[3a2fdc0adffb15a814e1f3359509982f]
+class SGS100A_Old--><rect codeLine="53" fill="#FEFECE" filter="url(#f1iw5tjb1yaeeq)" height="269.375" id="SGS100A_Old" style="stroke:#A80036;stroke-width:1.5;" width="141" x="1206.5" y="454.6406"/><ellipse cx="1235" cy="470.6406" fill="#ADD1B2" rx="11" ry="11" style="stroke:#A80036;stroke-width:1.0;"/><path d="M1237.7656,466.5156 Q1237.9219,466.2969 1238.1094,466.1875 Q1238.2969,466.0781 1238.5156,466.0781 Q1238.8906,466.0781 1239.125,466.3359 Q1239.3594,466.5938 1239.3594,467.2031 L1239.3594,468.6563 Q1239.3594,469.2656 1239.125,469.5313 Q1238.8906,469.7969 1238.5156,469.7969 Q1238.1719,469.7969 1237.9688,469.5938 Q1237.7656,469.4063 1237.6563,468.8906 Q1237.6094,468.5313 1237.4219,468.3438 Q1237.0938,467.9688 1236.4844,467.75 Q1235.875,467.5313 1235.25,467.5313 Q1234.4844,467.5313 1233.8516,467.8594 Q1233.2188,468.1875 1232.7266,468.9375 Q1232.2344,469.6875 1232.2344,470.7188 L1232.2344,471.8125 Q1232.2344,473.0469 1233.125,473.8672 Q1234.0156,474.6875 1235.6094,474.6875 Q1236.5469,474.6875 1237.2031,474.4375 Q1237.5938,474.2813 1238.0156,473.8438 Q1238.2813,473.5781 1238.4297,473.5 Q1238.5781,473.4219 1238.7813,473.4219 Q1239.1094,473.4219 1239.3672,473.6797 Q1239.625,473.9375 1239.625,474.2813 Q1239.625,474.625 1239.2813,475.0313 Q1238.7813,475.6094 1237.9844,475.9375 Q1236.9063,476.3906 1235.6094,476.3906 Q1234.0938,476.3906 1232.8906,475.7656 Q1231.9063,475.2656 1231.2188,474.1953 Q1230.5313,473.125 1230.5313,471.8438 L1230.5313,470.6875 Q1230.5313,469.3594 1231.1484,468.2109 Q1231.7656,467.0625 1232.8594,466.4453 Q1233.9531,465.8281 1235.1875,465.8281 Q1235.9219,465.8281 1236.5703,465.9922 Q1237.2188,466.1563 1237.7656,466.5156 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="79" x="1252" y="475.5508">SGS100A_Old</text><line style="stroke:#A80036;stroke-width:1.5;" x1="1207.5" x2="1346.5" y1="486.6406" y2="486.6406"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="32" x="1212.5" y="502.0596">device</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="38" x="1212.5" y="515.8955">_power</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="56" x="1212.5" y="529.7314">_frequency</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="57" x="1212.5" y="543.5674">_connected</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="51" x="1212.5" y="557.4033">_signature</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="22" x="1212.5" y="571.2393">label</text><line style="stroke:#A80036;stroke-width:1.5;" x1="1207.5" x2="1346.5" y1="577.6563" y2="577.6563"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="81" x="1212.5" y="593.0752">__init__(label, ip)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="47" x="1212.5" y="606.9111">connect()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="123" x="1212.5" y="620.7471">setup(power, frequency)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="93" x="1212.5" y="634.583">set_power(power)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="129" x="1212.5" y="648.4189">set_frequency(frequency)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="61" x="1212.5" y="662.2549">get_power()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="79" x="1212.5" y="676.0908">get_frequency()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="20" x="1212.5" y="689.9268">on()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="22" x="1212.5" y="703.7627">off()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="34" x="1212.5" y="717.5986">close()</text><!--MD5=[4b42beb2c221b13a5bc3e660e27086c6]
+class ClusterQRM_New--><rect codeLine="73" fill="#FEFECE" filter="url(#f1iw5tjb1yaeeq)" height="407.7344" id="ClusterQRM_New" style="stroke:#A80036;stroke-width:1.5;" width="363" x="1888.5" y="385.1406"/><ellipse cx="2016.25" cy="401.1406" fill="#ADD1B2" rx="11" ry="11" style="stroke:#A80036;stroke-width:1.0;"/><path d="M2019.0156,397.0156 Q2019.1719,396.7969 2019.3594,396.6875 Q2019.5469,396.5781 2019.7656,396.5781 Q2020.1406,396.5781 2020.375,396.8359 Q2020.6094,397.0938 2020.6094,397.7031 L2020.6094,399.1563 Q2020.6094,399.7656 2020.375,400.0313 Q2020.1406,400.2969 2019.7656,400.2969 Q2019.4219,400.2969 2019.2188,400.0938 Q2019.0156,399.9063 2018.9063,399.3906 Q2018.8594,399.0313 2018.6719,398.8438 Q2018.3438,398.4688 2017.7344,398.25 Q2017.125,398.0313 2016.5,398.0313 Q2015.7344,398.0313 2015.1016,398.3594 Q2014.4688,398.6875 2013.9766,399.4375 Q2013.4844,400.1875 2013.4844,401.2188 L2013.4844,402.3125 Q2013.4844,403.5469 2014.375,404.3672 Q2015.2656,405.1875 2016.8594,405.1875 Q2017.7969,405.1875 2018.4531,404.9375 Q2018.8438,404.7813 2019.2656,404.3438 Q2019.5313,404.0781 2019.6797,404 Q2019.8281,403.9219 2020.0313,403.9219 Q2020.3594,403.9219 2020.6172,404.1797 Q2020.875,404.4375 2020.875,404.7813 Q2020.875,405.125 2020.5313,405.5313 Q2020.0313,406.1094 2019.2344,406.4375 Q2018.1563,406.8906 2016.8594,406.8906 Q2015.3438,406.8906 2014.1406,406.2656 Q2013.1563,405.7656 2012.4688,404.6953 Q2011.7813,403.625 2011.7813,402.3438 L2011.7813,401.1875 Q2011.7813,399.8594 2012.3984,398.7109 Q2013.0156,397.5625 2014.1094,396.9453 Q2015.2031,396.3281 2016.4375,396.3281 Q2017.1719,396.3281 2017.8203,396.4922 Q2018.4688,396.6563 2019.0156,397.0156 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="99" x="2036.75" y="406.0508">ClusterQRM_New</text><line style="stroke:#A80036;stroke-width:1.5;" x1="1889.5" x2="2250.5" y1="417.1406" y2="417.1406"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="122" x="1894.5" y="432.5596">sequencer_channel_map</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="115" x="1894.5" y="446.3955">last_pulsequence_hash</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="145" x="1894.5" y="460.2314">current_pulsesequence_hash</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="351" x="1894.5" y="474.0674">kwargs = settings['shared_settings'] &amp; instrument_settings[name]['setup']</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="110" x="1894.5" y="487.9033">wait_loop_step = 1000</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="165" x="1894.5" y="501.7393">waveform_max_length = 16384//2</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="58" x="1894.5" y="515.5752">sequencers</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="122" x="1894.5" y="529.4111">sequencer_channel_map</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="56" x="1894.5" y="543.2471">waveforms</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="57" x="1894.5" y="557.083">acquisitions</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="40" x="1894.5" y="570.9189">program</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="39" x="1894.5" y="584.7549">weights</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="20" x="1894.5" y="598.5908">gain</text><line style="stroke:#A80036;stroke-width:1.5;" x1="1889.5" x2="2250.5" y1="605.0078" y2="605.0078"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="85" x="1894.5" y="620.4268">__init__(name, ip)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="47" x="1894.5" y="634.2627">connect()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="80" x="1894.5" y="648.0986">setup(**kwargs)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="83" x="1894.5" y="661.9346">_get_start(pulse)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="249" x="1894.5" y="675.7705">process_pulse_sequence(channel_pulses, nshots)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="282" x="1894.5" y="689.6064">generate_waveforms_from_pulse(pulse, modulate = True)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="40" x="1894.5" y="703.4424">upload()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="82" x="1894.5" y="717.2783">play_sequence()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="148" x="1894.5" y="731.1143">play_sequence_and_acquire()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="257" x="1894.5" y="744.9502">_demodulate_and_integrate(raw_results, acquisition)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="30" x="1894.5" y="758.7861">start()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="29" x="1894.5" y="772.6221">stop()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="61" x="1894.5" y="786.458">disconnect()</text><!--MD5=[dd2ace5b08bcaed1f292f7618b5516a4]
+class ClusterQCM_New--><rect codeLine="101" fill="#FEFECE" filter="url(#f1iw5tjb1yaeeq)" height="352.3906" id="ClusterQCM_New" style="stroke:#A80036;stroke-width:1.5;" width="363" x="1507.5" y="413.1406"/><ellipse cx="1635.25" cy="429.1406" fill="#ADD1B2" rx="11" ry="11" style="stroke:#A80036;stroke-width:1.0;"/><path d="M1638.0156,425.0156 Q1638.1719,424.7969 1638.3594,424.6875 Q1638.5469,424.5781 1638.7656,424.5781 Q1639.1406,424.5781 1639.375,424.8359 Q1639.6094,425.0938 1639.6094,425.7031 L1639.6094,427.1563 Q1639.6094,427.7656 1639.375,428.0313 Q1639.1406,428.2969 1638.7656,428.2969 Q1638.4219,428.2969 1638.2188,428.0938 Q1638.0156,427.9063 1637.9063,427.3906 Q1637.8594,427.0313 1637.6719,426.8438 Q1637.3438,426.4688 1636.7344,426.25 Q1636.125,426.0313 1635.5,426.0313 Q1634.7344,426.0313 1634.1016,426.3594 Q1633.4688,426.6875 1632.9766,427.4375 Q1632.4844,428.1875 1632.4844,429.2188 L1632.4844,430.3125 Q1632.4844,431.5469 1633.375,432.3672 Q1634.2656,433.1875 1635.8594,433.1875 Q1636.7969,433.1875 1637.4531,432.9375 Q1637.8438,432.7813 1638.2656,432.3438 Q1638.5313,432.0781 1638.6797,432 Q1638.8281,431.9219 1639.0313,431.9219 Q1639.3594,431.9219 1639.6172,432.1797 Q1639.875,432.4375 1639.875,432.7813 Q1639.875,433.125 1639.5313,433.5313 Q1639.0313,434.1094 1638.2344,434.4375 Q1637.1563,434.8906 1635.8594,434.8906 Q1634.3438,434.8906 1633.1406,434.2656 Q1632.1563,433.7656 1631.4688,432.6953 Q1630.7813,431.625 1630.7813,430.3438 L1630.7813,429.1875 Q1630.7813,427.8594 1631.3984,426.7109 Q1632.0156,425.5625 1633.1094,424.9453 Q1634.2031,424.3281 1635.4375,424.3281 Q1636.1719,424.3281 1636.8203,424.4922 Q1637.4688,424.6563 1638.0156,425.0156 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="99" x="1655.75" y="434.0508">ClusterQCM_New</text><line style="stroke:#A80036;stroke-width:1.5;" x1="1508.5" x2="1869.5" y1="445.1406" y2="445.1406"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="122" x="1513.5" y="460.5596">sequencer_channel_map</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="115" x="1513.5" y="474.3955">last_pulsequence_hash</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="145" x="1513.5" y="488.2314">current_pulsesequence_hash</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="351" x="1513.5" y="502.0674">kwargs = settings['shared_settings'] &amp; instrument_settings[name]['setup']</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="110" x="1513.5" y="515.9033">wait_loop_step = 1000</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="165" x="1513.5" y="529.7393">waveform_max_length = 16384//2</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="58" x="1513.5" y="543.5752">sequencers</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="122" x="1513.5" y="557.4111">sequencer_channel_map</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="56" x="1513.5" y="571.2471">waveforms</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="40" x="1513.5" y="585.083">program</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="20" x="1513.5" y="598.9189">gain</text><line style="stroke:#A80036;stroke-width:1.5;" x1="1508.5" x2="1869.5" y1="605.3359" y2="605.3359"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="85" x="1513.5" y="620.7549">__init__(name, ip)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="47" x="1513.5" y="634.5908">connect()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="80" x="1513.5" y="648.4268">setup(**kwargs)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="83" x="1513.5" y="662.2627">_get_start(pulse)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="249" x="1513.5" y="676.0986">process_pulse_sequence(channel_pulses, nshots)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="282" x="1513.5" y="689.9346">generate_waveforms_from_pulse(pulse, modulate = True)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="40" x="1513.5" y="703.7705">upload()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="82" x="1513.5" y="717.6064">play_sequence()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="30" x="1513.5" y="731.4424">start()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="29" x="1513.5" y="745.2783">stop()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="61" x="1513.5" y="759.1143">disconnect()</text><!--MD5=[808a3e94778d57617ec46deeda6df0a8]
+class GenericPulsar_Old--><rect codeLine="127" fill="#FEFECE" filter="url(#f1iw5tjb1yaeeq)" height="449.2422" id="GenericPulsar_Old" style="stroke:#A80036;stroke-width:1.5;" width="505" x="676.5" y="364.6406"/><ellipse cx="872.25" cy="380.6406" fill="#ADD1B2" rx="11" ry="11" style="stroke:#A80036;stroke-width:1.0;"/><path d="M875.0156,376.5156 Q875.1719,376.2969 875.3594,376.1875 Q875.5469,376.0781 875.7656,376.0781 Q876.1406,376.0781 876.375,376.3359 Q876.6094,376.5938 876.6094,377.2031 L876.6094,378.6563 Q876.6094,379.2656 876.375,379.5313 Q876.1406,379.7969 875.7656,379.7969 Q875.4219,379.7969 875.2188,379.5938 Q875.0156,379.4063 874.9063,378.8906 Q874.8594,378.5313 874.6719,378.3438 Q874.3438,377.9688 873.7344,377.75 Q873.125,377.5313 872.5,377.5313 Q871.7344,377.5313 871.1016,377.8594 Q870.4688,378.1875 869.9766,378.9375 Q869.4844,379.6875 869.4844,380.7188 L869.4844,381.8125 Q869.4844,383.0469 870.375,383.8672 Q871.2656,384.6875 872.8594,384.6875 Q873.7969,384.6875 874.4531,384.4375 Q874.8438,384.2813 875.2656,383.8438 Q875.5313,383.5781 875.6797,383.5 Q875.8281,383.4219 876.0313,383.4219 Q876.3594,383.4219 876.6172,383.6797 Q876.875,383.9375 876.875,384.2813 Q876.875,384.625 876.5313,385.0313 Q876.0313,385.6094 875.2344,385.9375 Q874.1563,386.3906 872.8594,386.3906 Q871.3438,386.3906 870.1406,385.7656 Q869.1563,385.2656 868.4688,384.1953 Q867.7813,383.125 867.7813,381.8438 L867.7813,380.6875 Q867.7813,379.3594 868.3984,378.2109 Q869.0156,377.0625 870.1094,376.4453 Q871.2031,375.8281 872.4375,375.8281 Q873.1719,375.8281 873.8203,375.9922 Q874.4688,376.1563 875.0156,376.5156 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="105" x="892.75" y="385.5508">GenericPulsar_Old</text><line style="stroke:#A80036;stroke-width:1.5;" x1="677.5" x2="1180.5" y1="396.6406" y2="396.6406"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="22" x="682.5" y="412.0596">label</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="52" x="682.5" y="425.8955">sequencer</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="45" x="682.5" y="439.7314">ref_clock</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="42" x="682.5" y="453.5674">sync_en</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="47" x="682.5" y="467.4033">is_cluster</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="57" x="682.5" y="481.2393">_connected</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="33" x="682.5" y="495.0752">Device</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="32" x="682.5" y="508.9111">device</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="26" x="682.5" y="522.7471">name</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="72" x="682.5" y="536.583">hardware_avg</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="55" x="682.5" y="550.4189">initial_delay</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="89" x="682.5" y="564.2549">repetition_duration</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="107" x="682.5" y="578.0908">delay_before_readout</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="74" x="682.5" y="591.9268">wait_loop_step</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="69" x="682.5" y="605.7627">duration_base</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="57" x="682.5" y="619.5986">acquisitions</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="39" x="682.5" y="633.4346">weights</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="20" x="682.5" y="647.2705">gain</text><line style="stroke:#A80036;stroke-width:1.5;" x1="677.5" x2="1180.5" y1="653.6875" y2="653.6875"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="291" x="682.5" y="669.1064">__init__(label, ip, sequencer, ref_clock, sync_en, is_cluster)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="47" x="682.5" y="682.9424">connect()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="211" x="682.5" y="696.7783">setup(gain, initial_delay, repetition_duration)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" text-decoration="underline" textLength="148" x="682.5" y="710.6143">_translate_single_pulse(pulse)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="145" x="682.5" y="724.4502">generate_waveforms(pulses)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="493" x="682.5" y="738.2861">generate_program(hardware_avg, initial_delay, delay_before_readout, acquire_instruction, wait_time)</text><text fill="#000000" font-family="sans-serif" font-size="11" font-style="italic" lengthAdjust="spacing" textLength="251" x="682.5" y="752.1221">translate(sequence, delay_before_readout, nshots)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="203" x="682.5" y="765.958">upload(waveforms, program, data_folder)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="82" x="682.5" y="779.7939">play_sequence()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="29" x="682.5" y="793.6299">stop()</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="34" x="682.5" y="807.4658">close()</text><!--MD5=[1b75b67b61f0e0e69aa281d0ff9446b3]
+class PulsarQRM_Old--><rect codeLine="158" fill="#FEFECE" filter="url(#f1iw5tjb1yaeeq)" height="186.3594" id="PulsarQRM_Old" style="stroke:#A80036;stroke-width:1.5;" width="707" x="32.5" y="849.6406"/><ellipse cx="337.25" cy="865.6406" fill="#ADD1B2" rx="11" ry="11" style="stroke:#A80036;stroke-width:1.0;"/><path d="M340.0156,861.5156 Q340.1719,861.2969 340.3594,861.1875 Q340.5469,861.0781 340.7656,861.0781 Q341.1406,861.0781 341.375,861.3359 Q341.6094,861.5938 341.6094,862.2031 L341.6094,863.6563 Q341.6094,864.2656 341.375,864.5313 Q341.1406,864.7969 340.7656,864.7969 Q340.4219,864.7969 340.2188,864.5938 Q340.0156,864.4063 339.9063,863.8906 Q339.8594,863.5313 339.6719,863.3438 Q339.3438,862.9688 338.7344,862.75 Q338.125,862.5313 337.5,862.5313 Q336.7344,862.5313 336.1016,862.8594 Q335.4688,863.1875 334.9766,863.9375 Q334.4844,864.6875 334.4844,865.7188 L334.4844,866.8125 Q334.4844,868.0469 335.375,868.8672 Q336.2656,869.6875 337.8594,869.6875 Q338.7969,869.6875 339.4531,869.4375 Q339.8438,869.2813 340.2656,868.8438 Q340.5313,868.5781 340.6797,868.5 Q340.8281,868.4219 341.0313,868.4219 Q341.3594,868.4219 341.6172,868.6797 Q341.875,868.9375 341.875,869.2813 Q341.875,869.625 341.5313,870.0313 Q341.0313,870.6094 340.2344,870.9375 Q339.1563,871.3906 337.8594,871.3906 Q336.3438,871.3906 335.1406,870.7656 Q334.1563,870.2656 333.4688,869.1953 Q332.7813,868.125 332.7813,866.8438 L332.7813,865.6875 Q332.7813,864.3594 333.3984,863.2109 Q334.0156,862.0625 335.1094,861.4453 Q336.2031,860.8281 337.4375,860.8281 Q338.1719,860.8281 338.8203,860.9922 Q339.4688,861.1563 340.0156,861.5156 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="89" x="357.75" y="870.5508">PulsarQRM_Old</text><line style="stroke:#A80036;stroke-width:1.5;" x1="33.5" x2="738.5" y1="881.6406" y2="881.6406"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="90" x="38.5" y="897.0596">hardware_avg_en</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="62" x="38.5" y="910.8955">start_sample</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="85" x="38.5" y="924.7314">integration_length</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="67" x="38.5" y="938.5674">sampling_rate</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="26" x="38.5" y="952.4033">mode</text><line style="stroke:#A80036;stroke-width:1.5;" x1="33.5" x2="738.5" y1="958.8203" y2="958.8203"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="695" x="38.5" y="974.2393">__init__(label, ip, ref_clock="external", sequencer=0, sync_en=True, hardware_avg_en=True, acq_trigger_mode="sequencer", is_cluster=True)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="475" x="38.5" y="988.0752">setup(gain, initial_delay, repetition_duration, start_sample, integration_length, sampling_rate, mode)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="250" x="38.5" y="1001.9111">translate(sequence, delay_before_readout, nshots)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="190" x="38.5" y="1015.7471">play_sequence_and_acquire(ro_pulse)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="241" x="38.5" y="1029.583">_demodulate_and_integrate(single_acq, ro_pulse)</text><!--MD5=[e0c0abe0917b760e479b47f805cb7804]
+class PulsarQCM_Old--><rect codeLine="170" fill="#FEFECE" filter="url(#f1iw5tjb1yaeeq)" height="75.6719" id="PulsarQCM_Old" style="stroke:#A80036;stroke-width:1.5;" width="424" x="758" y="904.6406"/><ellipse cx="921.25" cy="920.6406" fill="#ADD1B2" rx="11" ry="11" style="stroke:#A80036;stroke-width:1.0;"/><path d="M924.0156,916.5156 Q924.1719,916.2969 924.3594,916.1875 Q924.5469,916.0781 924.7656,916.0781 Q925.1406,916.0781 925.375,916.3359 Q925.6094,916.5938 925.6094,917.2031 L925.6094,918.6563 Q925.6094,919.2656 925.375,919.5313 Q925.1406,919.7969 924.7656,919.7969 Q924.4219,919.7969 924.2188,919.5938 Q924.0156,919.4063 923.9063,918.8906 Q923.8594,918.5313 923.6719,918.3438 Q923.3438,917.9688 922.7344,917.75 Q922.125,917.5313 921.5,917.5313 Q920.7344,917.5313 920.1016,917.8594 Q919.4688,918.1875 918.9766,918.9375 Q918.4844,919.6875 918.4844,920.7188 L918.4844,921.8125 Q918.4844,923.0469 919.375,923.8672 Q920.2656,924.6875 921.8594,924.6875 Q922.7969,924.6875 923.4531,924.4375 Q923.8438,924.2813 924.2656,923.8438 Q924.5313,923.5781 924.6797,923.5 Q924.8281,923.4219 925.0313,923.4219 Q925.3594,923.4219 925.6172,923.6797 Q925.875,923.9375 925.875,924.2813 Q925.875,924.625 925.5313,925.0313 Q925.0313,925.6094 924.2344,925.9375 Q923.1563,926.3906 921.8594,926.3906 Q920.3438,926.3906 919.1406,925.7656 Q918.1563,925.2656 917.4688,924.1953 Q916.7813,923.125 916.7813,921.8438 L916.7813,920.6875 Q916.7813,919.3594 917.3984,918.2109 Q918.0156,917.0625 919.1094,916.4453 Q920.2031,915.8281 921.4375,915.8281 Q922.1719,915.8281 922.8203,915.9922 Q923.4688,916.1563 924.0156,916.5156 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="89" x="941.75" y="925.5508">PulsarQCM_Old</text><line style="stroke:#A80036;stroke-width:1.5;" x1="759" x2="1181" y1="936.6406" y2="936.6406"/><line style="stroke:#A80036;stroke-width:1.5;" x1="759" x2="1181" y1="944.6406" y2="944.6406"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="412" x="764" y="960.0596">__init__(label, ip, sequencer=0, ref_clock="external", sync_en=True, is_cluster=True)</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="287" x="764" y="973.8955">translate(sequence, delay_before_read_out, nshots=None)</text><path d="M1605.1482,243.79 C1566.5079,266.1768 1523.0951,297.4928 1495,336.6406 C1464.579,379.0295 1447.1617,434.0866 1437.204,481.8765 " fill="none" style="stroke:#A80036;stroke-width:1.0;"/><polygon fill="#FFFFFF" points="1605.1482,243.79,1588.2961,246.6193,1594.3117,257.0025,1605.1482,243.79" style="stroke:#A80036;stroke-width:1.0;"/><path d="M1161.6647,281.5883 C1173.343,299.1419 1184.8197,318.0837 1194,336.6406 C1212.2983,373.6285 1227.968,415.5935 1240.603,454.4996 " fill="none" style="stroke:#A80036;stroke-width:1.0;"/><polygon fill="#FFFFFF" points="1161.6647,281.5883,1165.5318,298.233,1175.5227,291.5861,1161.6647,281.5883" style="stroke:#A80036;stroke-width:1.0;"/><path d="M1772.7797,253.695 C1807.8372,276.6739 1847.8224,305.6857 1880,336.6406 C1895.5775,351.6262 1910.8713,367.9749 1925.5981,384.9094 " fill="none" style="stroke:#A80036;stroke-width:1.0;"/><polygon fill="#FFFFFF" points="1772.7797,253.695,1782.8722,267.4843,1789.4505,257.4481,1772.7797,253.695" style="stroke:#A80036;stroke-width:1.0;"/><path d="M1689,320.8309 C1689,349.8786 1689,381.6383 1689,412.8009 " fill="none" style="stroke:#A80036;stroke-width:1.0;"/><polygon fill="#FFFFFF" points="1689,320.8309,1683,336.8309,1695,336.8309,1689,320.8309" style="stroke:#A80036;stroke-width:1.0;"/><path d="M1065.4588,286.598 C1054.819,310.1097 1042.7013,336.887 1030.1809,364.5542 " fill="none" style="stroke:#A80036;stroke-width:1.0;"/><polygon fill="#FFFFFF" points="1065.4588,286.598,1053.3959,298.7012,1064.3286,303.6486,1065.4588,286.598" style="stroke:#A80036;stroke-width:1.0;"/><path d="M676.179,753.7991 C625.4005,786.6696 573.7466,820.1067 528.3672,849.4821 " fill="none" style="stroke:#A80036;stroke-width:1.0;"/><polygon fill="#FFFFFF" points="676.179,753.7991,659.4871,757.4569,666.008,767.5305,676.179,753.7991" style="stroke:#A80036;stroke-width:1.0;"/><path d="M955.0821,813.7467 C959.1725,848.8147 962.942,881.131 965.6685,904.5058 " fill="none" style="stroke:#A80036;stroke-width:1.0;"/><polygon fill="#FFFFFF" points="955.0821,813.7467,950.9762,830.3341,962.8954,828.9438,955.0821,813.7467" style="stroke:#A80036;stroke-width:1.0;"/><!--MD5=[104cb8dab2114045d79476993089ed5b]
+@startuml Instrument_changes
+!pragma layout smetana
+title Instrument Changes
+package instrument {
+    package abstract.py {
+        abstract class AbstractInstrument_New{
+            name
+            ip
+            is_connected
+            signature
+            device
+            - -
+
+            - -
+            __init__(name, ip)
+            __del__()
+            {abstract} connect()
+            {abstract} setup()
+            {abstract} start()
+            {abstract} stop()
+            {abstract} disconnect()
+        }
+    }
+    package instrument.py {
+        abstract class Instrument_Old{
+            _connected
+            ip
+            _signature
+            device
+            - -
+            signature
+            - -
+            __init__(ip)
+            {abstract} connect
+            {abstract} close
+        }
+    }
+    package rohde_schwarz.py {
+        class SGS100A_New extends AbstractInstrument_New{
+            device
+            power
+            frequency
+            __init__(name, ip)
+            connect()
+            setup(**kwargs)
+            start()
+            stop()
+            disconnect()
+            - -
+            on()
+            off()
+            close()
+        }
+        class SGS100A_Old extends Instrument_Old{
+            device
+            _power
+            _frequency
+            _connected
+            _signature
+            label
+            __init__(label, ip)
+            connect()
+            setup(power, frequency)
+            set_power(power)
+            set_frequency(frequency)
+            get_power()
+            get_frequency()
+            on()
+            off()
+            close()
+        }
+    }
+    package qblox.py_New {
+        class ClusterQRM_New extends AbstractInstrument_New{
+            sequencer_channel_map
+            last_pulsequence_hash
+            current_pulsesequence_hash
+            kwargs = settings['shared_settings'] & instrument_settings[name]['setup']
+            wait_loop_step = 1000
+            waveform_max_length = 16384//2
+            sequencers
+            sequencer_channel_map
+            waveforms
+            acquisitions
+            program
+            weights
+            gain
+            __init__(name, ip)
+            connect()
+            setup(**kwargs)
+            _get_start(pulse)
+            process_pulse_sequence(channel_pulses, nshots)
+            generate_waveforms_from_pulse(pulse, modulate = True)
+            upload()
+            play_sequence()
+            play_sequence_and_acquire()
+            _demodulate_and_integrate(raw_results, acquisition)
+            start()
+            stop()
+            disconnect()
+        }
+        class ClusterQCM_New extends AbstractInstrument_New{
+            sequencer_channel_map
+            last_pulsequence_hash
+            current_pulsesequence_hash
+            kwargs = settings['shared_settings'] & instrument_settings[name]['setup']
+            wait_loop_step = 1000
+            waveform_max_length = 16384//2
+            sequencers
+            sequencer_channel_map
+            waveforms
+            program
+            gain
+            __init__(name, ip)
+            connect()
+            setup(**kwargs)
+            _get_start(pulse)
+            process_pulse_sequence(channel_pulses, nshots)
+            generate_waveforms_from_pulse(pulse, modulate = True)
+            upload()
+            play_sequence()
+            start()
+            stop()
+            disconnect()
+        }
+    }
+    package qblox.py_Old {
+        class GenericPulsar_Old extends Instrument_Old{
+            label
+            sequencer
+            ref_clock
+            sync_en
+            is_cluster
+            _connected
+            Device
+            device
+            name
+            hardware_avg
+            initial_delay
+            repetition_duration
+            delay_before_readout
+            wait_loop_step
+            duration_base
+            acquisitions
+            weights
+            gain
+            __init__(label, ip, sequencer, ref_clock, sync_en, is_cluster)
+            connect()
+            setup(gain, initial_delay, repetition_duration)
+            {static} _translate_single_pulse(pulse)
+            generate_waveforms(pulses)
+            generate_program(hardware_avg, initial_delay, delay_before_readout, acquire_instruction, wait_time)
+            {abstract} translate(sequence, delay_before_readout, nshots)
+            upload(waveforms, program, data_folder)
+            play_sequence()
+            stop()
+            close()
+        }
+        class PulsarQRM_Old extends GenericPulsar_Old{
+            hardware_avg_en
+            start_sample
+            integration_length
+            sampling_rate
+            mode
+            __init__(label, ip, ref_clock="external", sequencer=0, sync_en=True, hardware_avg_en=True, acq_trigger_mode="sequencer", is_cluster=True)
+            setup(gain, initial_delay, repetition_duration, start_sample, integration_length, sampling_rate, mode)
+            translate(sequence, delay_before_readout, nshots)
+            play_sequence_and_acquire(ro_pulse)
+            _demodulate_and_integrate(single_acq, ro_pulse)
+        }   
+        class PulsarQCM_Old extends GenericPulsar_Old{
+            __init__(label, ip, sequencer=0, ref_clock="external", sync_en=True, is_cluster=True)
+            translate(sequence, delay_before_read_out, nshots=None)
+        }
+    }
+}
+
+
+'hide members
+
+@enduml
+
+@startuml Instrument_changes
+!pragma layout smetana
+title Instrument Changes
+package instrument {
+    package abstract.py {
+        abstract class AbstractInstrument_New{
+            name
+            ip
+            is_connected
+            signature
+            device
+            - -
+
+            - -
+            __init__(name, ip)
+            __del__()
+            {abstract} connect()
+            {abstract} setup()
+            {abstract} start()
+            {abstract} stop()
+            {abstract} disconnect()
+        }
+    }
+    package instrument.py {
+        abstract class Instrument_Old{
+            _connected
+            ip
+            _signature
+            device
+            - -
+            signature
+            - -
+            __init__(ip)
+            {abstract} connect
+            {abstract} close
+        }
+    }
+    package rohde_schwarz.py {
+        class SGS100A_New extends AbstractInstrument_New{
+            device
+            power
+            frequency
+            __init__(name, ip)
+            connect()
+            setup(**kwargs)
+            start()
+            stop()
+            disconnect()
+            - -
+            on()
+            off()
+            close()
+        }
+        class SGS100A_Old extends Instrument_Old{
+            device
+            _power
+            _frequency
+            _connected
+            _signature
+            label
+            __init__(label, ip)
+            connect()
+            setup(power, frequency)
+            set_power(power)
+            set_frequency(frequency)
+            get_power()
+            get_frequency()
+            on()
+            off()
+            close()
+        }
+    }
+    package qblox.py_New {
+        class ClusterQRM_New extends AbstractInstrument_New{
+            sequencer_channel_map
+            last_pulsequence_hash
+            current_pulsesequence_hash
+            kwargs = settings['shared_settings'] & instrument_settings[name]['setup']
+            wait_loop_step = 1000
+            waveform_max_length = 16384//2
+            sequencers
+            sequencer_channel_map
+            waveforms
+            acquisitions
+            program
+            weights
+            gain
+            __init__(name, ip)
+            connect()
+            setup(**kwargs)
+            _get_start(pulse)
+            process_pulse_sequence(channel_pulses, nshots)
+            generate_waveforms_from_pulse(pulse, modulate = True)
+            upload()
+            play_sequence()
+            play_sequence_and_acquire()
+            _demodulate_and_integrate(raw_results, acquisition)
+            start()
+            stop()
+            disconnect()
+        }
+        class ClusterQCM_New extends AbstractInstrument_New{
+            sequencer_channel_map
+            last_pulsequence_hash
+            current_pulsesequence_hash
+            kwargs = settings['shared_settings'] & instrument_settings[name]['setup']
+            wait_loop_step = 1000
+            waveform_max_length = 16384//2
+            sequencers
+            sequencer_channel_map
+            waveforms
+            program
+            gain
+            __init__(name, ip)
+            connect()
+            setup(**kwargs)
+            _get_start(pulse)
+            process_pulse_sequence(channel_pulses, nshots)
+            generate_waveforms_from_pulse(pulse, modulate = True)
+            upload()
+            play_sequence()
+            start()
+            stop()
+            disconnect()
+        }
+    }
+    package qblox.py_Old {
+        class GenericPulsar_Old extends Instrument_Old{
+            label
+            sequencer
+            ref_clock
+            sync_en
+            is_cluster
+            _connected
+            Device
+            device
+            name
+            hardware_avg
+            initial_delay
+            repetition_duration
+            delay_before_readout
+            wait_loop_step
+            duration_base
+            acquisitions
+            weights
+            gain
+            __init__(label, ip, sequencer, ref_clock, sync_en, is_cluster)
+            connect()
+            setup(gain, initial_delay, repetition_duration)
+            {static} _translate_single_pulse(pulse)
+            generate_waveforms(pulses)
+            generate_program(hardware_avg, initial_delay, delay_before_readout, acquire_instruction, wait_time)
+            {abstract} translate(sequence, delay_before_readout, nshots)
+            upload(waveforms, program, data_folder)
+            play_sequence()
+            stop()
+            close()
+        }
+        class PulsarQRM_Old extends GenericPulsar_Old{
+            hardware_avg_en
+            start_sample
+            integration_length
+            sampling_rate
+            mode
+            __init__(label, ip, ref_clock="external", sequencer=0, sync_en=True, hardware_avg_en=True, acq_trigger_mode="sequencer", is_cluster=True)
+            setup(gain, initial_delay, repetition_duration, start_sample, integration_length, sampling_rate, mode)
+            translate(sequence, delay_before_readout, nshots)
+            play_sequence_and_acquire(ro_pulse)
+            _demodulate_and_integrate(single_acq, ro_pulse)
+        }   
+        class PulsarQCM_Old extends GenericPulsar_Old{
+            __init__(label, ip, sequencer=0, ref_clock="external", sync_en=True, is_cluster=True)
+            translate(sequence, delay_before_read_out, nshots=None)
+        }
+    }
+}
+
+
+
+@enduml
+
+PlantUML version 1.2022.0(Tue Jan 11 20:16:42 GST 2022)
+(GPL source distribution)
+Java Runtime: Java(TM) SE Runtime Environment
+JVM: Java HotSpot(TM) 64-Bit Server VM
+Default Encoding: Cp1252
+Language: en
+Country: GB
+--></g></svg>

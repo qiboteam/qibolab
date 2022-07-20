@@ -1,0 +1,121 @@
+@startuml Pulse_changes
+!pragma layout smetana
+title Pulse Changes
+package platforms {
+    package pulses.py {
+        class Pulse_New {
+            start
+            duration
+            amplitude
+            frequency
+            phase
+            shape
+            channel
+            offset_i
+            offset_q
+            qubit
+            type
+            --
+            serial
+            envelope_i
+            envelope_q
+            --
+            __init__(start, duration, amplitude, frequency, phase, shape, channel, type = 'qd', offset_i=0, offset_q=0, qubit=0)
+            __repr__()
+        }
+        class Pulse_Old {
+            start
+            duration
+            amplitude
+            frequency
+            phase
+            shape
+            channel
+            offset_i
+            offset_q
+            qubit
+            --
+            __init__(start, duration, amplitude, frequency, phase, shape, offset_i=0, offset_q=0, channel="qcm", qubit=0):
+            __repr__()
+            serial()
+            compile()
+        }
+        class ReadoutPulse_New extends Pulse_New {
+            __init__(start, duration, amplitude, frequency, phase, shape, channel, type = 'ro', offset_i=0, offset_q=0, qubit=0)
+        }
+        class ReadoutPulse_Old extends Pulse_Old {
+            __init__(start, duration, amplitude, frequency, phase, shape, offset_i=0, offset_q=0, channel="qrm", qubit=0)
+        }        
+    }
+    package pulse_shapes.py {
+        abstract class PulseShape_Old {
+            name
+            __init__()
+            __repr__()
+            {abstract} envelope(time, start, duration, amplitude))
+        }
+        class Rectangular_Old extends PulseShape_Old{
+            name
+            __init__()
+            __repr__()
+            envelope(time, start, duration, amplitude)
+        }
+        class Gaussian_Old extends PulseShape_Old{
+            name
+            rel_sigma
+            __init__(rel_sigma)
+            __repr__()
+            envelope(time, start, duration, amplitude)
+        }
+        class Drag_Old extends PulseShape_Old{
+            name
+            sigma
+            beta
+            __init__(sigma, beta)
+            __repr__()
+            envelope(time, start, duration, amplitude)
+        }
+        class SWIPHT_Old extends PulseShape_Old{
+            name
+            g
+            __init__(g)
+            __repr__()
+            envelope(time, start, duration, amplitude)
+        }          
+    }
+    package circuit.py {
+        abstract class PulseSequence_New {
+            qcm_pulses
+            qrm_pulses
+            time
+            phase
+            pulses
+            serial
+            __init__()
+            __len__()
+            add(pulse)
+            add_u3(theta, phi, lam, qubit=0)
+            add_measurement(qubit=0)  
+        }
+        abstract class PulseSequence_Old {
+            qcm_pulses
+            qrm_pulses
+            pulses
+            time
+            phase
+            __init__()
+            __len__()
+            serial()
+            add(pulse)
+            add_u3(theta, phi, lam, qubit=0)
+            add_measurement(qubit=0)
+        }
+    }
+
+
+}
+
+
+'hide members
+
+@enduml

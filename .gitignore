@@ -132,3 +132,6 @@ dmypy.json
 
 # Qibolab data generated during benchmarking 
 data/
+
+# Debugging & Testing
+debug/

@@ -130,6 +130,20 @@ def ramsey_fit(dataset):
     ]
     popt, pcov = curve_fit(ramsey, dataset['x0'].values, dataset['y0'].values, p0=pguess)
     smooth_dataset = ramsey(dataset['x0'].values, *popt)
+    delta_frequency = popt[2] * 1e9
+    t2 = 1.0 / popt[4]
+    return smooth_dataset, delta_frequency, t2
+
+def ramsey_freq_fit(dataset):
+    pguess = [
+        np.mean(dataset['y0'].values),
+        np.max(dataset['y0'].values) - np.min(dataset['y0'].values),
+        0.5/dataset['x0'].values[np.argmin(dataset['y0'].values)], 
+        np.pi/2,
+        500e-9
+    ]
+    popt, pcov = curve_fit(ramsey, dataset['x0'].values, dataset['y0'].values, p0=pguess)
+    smooth_dataset = ramsey(dataset['x0'].values, *popt)
     delta_frequency = popt[2]
     t2 = 1.0 / popt[4]
     return smooth_dataset, delta_frequency, t2
