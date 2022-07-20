@@ -2,7 +2,7 @@ import usb
 import time
 import sys
 import numpy as np
-from qibolab.instrument.customhandler import DeviceHandle
+from qibolab.instruments.customhandler import DeviceHandle
 # this code is developed on the exisitng minimalistic driver located on: https://github.com/Schlabonski/evalcontrol by the user @schlabonski
 # the additions include programming for all the functions for the dds ad9959 which was not present intially
 class AD9959(object):

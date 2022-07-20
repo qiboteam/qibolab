@@ -1,5 +1,5 @@
 name: cold_ion
-nqubits: 1
+nqubits: 4
 description: Controls the AD9959 DDS board
 
 settings:
@@ -16,7 +16,7 @@ instruments:
     init_settings:
       name: dds
       channel: 0
-      rfclk: 20e6
+      rfclk: 200e6
       clkfactor: 1
 
 
