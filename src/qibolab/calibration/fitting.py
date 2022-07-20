@@ -8,6 +8,7 @@ from quantify_core.analysis.base_analysis import BaseAnalysis
 from quantify_core.data.handling import set_datadir
 import lmfit
 import numpy as np
+from qibolab.calibration import utils
 
 
 script_folder = pathlib.Path(__file__).parent
@@ -108,7 +109,9 @@ def rabi_fit(dataset):
     pi_pulse_duration = np.abs((1.0 / popt[2]) / 2)
     rabi_oscillations_pi_pulse_min_voltage = smooth_dataset.min() * 1e6
     t1 = 1.0 / popt[4] #double check T1
-    return smooth_dataset, pi_pulse_duration, rabi_oscillations_pi_pulse_min_voltage, t1
+
+    utils.plot(smooth_dataset, dataset, "Rabi Pulse Length", 1)
+    return int(pi_pulse_duration), int(rabi_oscillations_pi_pulse_min_voltage)
 
 def t1_fit(dataset):
     pguess = [
@@ -119,7 +122,9 @@ def t1_fit(dataset):
     popt, pcov = curve_fit(exp, dataset['x0'].values, dataset['y0'].values, p0=pguess)
     smooth_dataset = exp(dataset['x0'].values, *popt)
     t1 = abs(1/popt[2])
-    return smooth_dataset, t1
+
+    utils.plot(smooth_dataset, dataset, "t1", 1)
+    return int(t1)
 
 def ramsey_fit(dataset):
     pguess = [
