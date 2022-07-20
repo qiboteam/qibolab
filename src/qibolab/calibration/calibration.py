@@ -35,6 +35,11 @@ class Calibration():
             self.software_averages_precision = self.settings['software_averages_precision']
             self.max_num_plots = self.settings['max_num_plots']
 
+        if self.platform.settings['nqubits'] == 1:
+            self.resonator_type = '3D'
+        else:
+            self.resonator_type = '2D'    
+
     def reload_settings(self):
         self.load_settings()
 
@@ -47,109 +52,153 @@ class Calibration():
         platform.reload_settings()
         mc = self.mc
 
+        self.reload_settings()
+        lowres_width = self.settings['resonator_spectroscopy']['lowres_width']
+        lowres_step = self.settings['resonator_spectroscopy']['lowres_step']
+        highres_width = self.settings['resonator_spectroscopy']['highres_width']
+        highres_step = self.settings['resonator_spectroscopy']['highres_step']
+        precision_width = self.settings['resonator_spectroscopy']['precision_width']
+        precision_step = self.settings['resonator_spectroscopy']['precision_step']
+        dataset = None
+
         sequence = PulseSequence()
         ro_pulse = platform.qubit_readout_pulse(qubit, start = 0)
         sequence.add(ro_pulse)
 
-        self.reload_settings()
-        self.lowres_width = self.settings['resonator_spectroscopy']['lowres_width']
-        self.lowres_step = self.settings['resonator_spectroscopy']['lowres_step']
-        self.highres_width = self.settings['resonator_spectroscopy']['highres_width']
-        self.highres_step = self.settings['resonator_spectroscopy']['highres_step']
-        self.precision_width = self.settings['resonator_spectroscopy']['precision_width']
-        self.precision_step = self.settings['resonator_spectroscopy']['precision_step']
-
         self.pl.tuids_max_num(self.max_num_plots)
         platform.qrm[qubit].lo.frequency = platform.characterization['single_qubit'][qubit]['resonator_freq'] - ro_pulse.frequency
-       
+        
         #Fast Sweep
         if (self.software_averages !=0):
-            scanrange = utils.variable_resolution_scanrange(self.lowres_width, self.lowres_step, self.highres_width, self.highres_step)
+            scanrange = utils.variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
             mc.settables(SettableFrequency(platform.qrm[qubit].lo))
             mc.setpoints(scanrange + platform.qrm[qubit].lo.frequency)
             mc.gettables(ROController(platform, sequence, qubit))
             platform.start() 
             dataset = mc.run("Resonator Spectroscopy Fast", soft_avg=self.software_averages)
             platform.stop()
-            platform.qrm[qubit].lo.frequency = dataset['x0'].values[dataset['y0'].argmax().values]
-            avg_min_voltage = np.mean(dataset['y0'].values[:(self.lowres_width//self.lowres_step)]) * 1e6
+            
+            if self.resonator_type == '3D':
+                platform.qrm[qubit].lo.frequency = dataset['x0'].values[dataset['y0'].argmax().values]
+                avg_voltage = np.mean(dataset['y0'].values[:(lowres_width//lowres_step)]) * 1e6
+            elif self.resonator_type == '2D':
+                platform.qrm[qubit].lo.frequency = dataset['x0'].values[dataset['y0'].argmin().values]
+                avg_voltage = np.mean(dataset['y0'].values[:(lowres_width//lowres_step)]) * 1e6
 
         # Precision Sweep
         if (self.software_averages_precision !=0):
-            scanrange = np.arange(-self.precision_width, self.precision_width, self.precision_step)
+            scanrange = np.arange(-precision_width, precision_width, precision_step)
             mc.settables(SettableFrequency(platform.qrm[qubit].lo))
             mc.setpoints(scanrange + platform.qrm[qubit].lo.frequency)
             mc.gettables(ROController(platform, sequence, qubit))
             platform.start() 
             dataset = mc.run("Resonator Spectroscopy Precision", soft_avg=self.software_averages_precision)
             platform.stop()
-
+            
         # Fitting
-        smooth_dataset = savgol_filter(dataset['y0'].values, 25, 2)
-        # resonator_freq = dataset['x0'].values[smooth_dataset.argmax()] + ro_pulse.frequency
-        max_ro_voltage = smooth_dataset.max() * 1e6
-
-        f0, BW, Q = fitting.lorentzian_fit("last", max, "Resonator_spectroscopy")
-        resonator_freq = (f0*1e9 + ro_pulse.frequency)
+        if self.resonator_type == '3D':
+            f0, BW, Q, peak_voltage = fitting.lorentzian_fit("last", max, "Resonator_spectroscopy")
+            resonator_freq = int(f0*1e9 + ro_pulse.frequency)
+        elif self.resonator_type == '2D':
+            f0, BW, Q, peak_voltage = fitting.lorentzian_fit("last", min, "Resonator_spectroscopy")
+            resonator_freq = int(f0*1e9 + ro_pulse.frequency)
 
         print(f"\nResonator Frequency = {resonator_freq}")
-        return resonator_freq, avg_min_voltage, max_ro_voltage, smooth_dataset, dataset
+        return resonator_freq, avg_voltage, peak_voltage, dataset
+
+    def run_resonator_punchout(self, qubit=0):
+        platform = self.platform
+        platform.reload_settings()
+        mc = self.mc
+
+        self.reload_settings()
+        freq_width = self.settings['resonator_punchout']['freq_width']
+        freq_step = self.settings['resonator_punchout']['freq_step']
+        att_min = self.settings['resonator_punchout']['att_min']
+        att_max = self.settings['resonator_punchout']['att_max']
+        att_step = self.settings['resonator_punchout']['att_step']
+        dataset = None
+
+        sequence = PulseSequence()
+        ro_pulse = platform.qubit_readout_pulse(qubit, start = 0)
+        sequence.add(ro_pulse)
+
+        self.pl.tuids_max_num(self.max_num_plots)
+        platform.qrm[qubit].lo.frequency = platform.characterization['single_qubit'][qubit]['resonator_freq'] - ro_pulse.frequency
+        
+        scanrange = np.arange(-freq_width, freq_width, freq_step)
+        freqs = scanrange + platform.qrm[qubit].lo.frequency
+        atts = np.flip(np.arange(att_min, att_max, att_step))
+
+        mc.setpoints_grid([freqs, atts])
+        mc.settables([SettableFrequency(platform.qrm[qubit].lo), SettableAttenuation(platform.qrm[qubit])])
+        mc.gettables(ROController(platform, sequence, qubit))
+        platform.start()
+        dataset = mc.run('Resonator Punchout', soft_avg = self.software_averages)
+        platform.stop()
+
+        # TODO: automatically extract the best attenuation setting
+        # TODO: normalise results in power
+        return dataset
 
     def run_resonator_spectroscopy_flux(self, qubit=0, fluxline=0):
         platform = self.platform
         platform.reload_settings()
         mc = self.mc
 
+        self.reload_settings()
+        freq_width = self.settings['resonator_spectroscopy_flux']['freq_width']
+        freq_step = self.settings['resonator_spectroscopy_flux']['freq_step']
+        current_min = self.settings['resonator_spectroscopy_flux']['current_min']
+        current_max = self.settings['resonator_spectroscopy_flux']['current_max']
+        current_step = self.settings['resonator_spectroscopy_flux']['current_step']
+        dataset = None
+
         sequence = PulseSequence()
         ro_pulse = platform.qubit_readout_pulse(qubit, start = 0)
         sequence.add(ro_pulse)
 
-        self.reload_settings()
-        self.lowres_width = self.settings['resonator_spectroscopy']['lowres_width']
-        self.lowres_step = self.settings['resonator_spectroscopy']['lowres_step']
-        self.highres_width = self.settings['resonator_spectroscopy']['highres_width']
-        self.highres_step = self.settings['resonator_spectroscopy']['highres_step']
-        self.precision_width = self.settings['resonator_spectroscopy']['precision_width']
-        self.precision_step = self.settings['resonator_spectroscopy']['precision_step']
-
         self.pl.tuids_max_num(self.max_num_plots)
-
+        platform.qrm[qubit].lo.frequency = platform.characterization['single_qubit'][qubit]['resonator_freq'] - ro_pulse.frequency
         spi = platform.instruments['SPI'].device
+        dacs = [spi.mod2.dac0, spi.mod1.dac0, spi.mod1.dac1, spi.mod1.dac2, spi.mod1.dac3]
         spi.set_dacs_zero()
 
-        # freqs = [platform.characterization['single_qubit'][qubit]['resonator_freq'] - ro_pulse.frequency for qubit in range(6)]
-        freq = platform.characterization['single_qubit'][qubit]['resonator_freq'] - ro_pulse.frequency
-        around = 5e6
-        freqs = np.linspace(freq-around, freq+around, 300)
-        dacs = [spi.mod2.dac0, spi.mod1.dac0, spi.mod1.dac1, spi.mod1.dac2, spi.mod1.dac3]
-        flux = np.linspace(-30e-3, 30e-3, 40)
+        scanrange = np.arange(-freq_width, freq_width, freq_step)
+        freqs = scanrange + platform.qrm[qubit].lo.frequency
+        flux = np.arange(-current_min, current_max, current_step)
 
         mc.setpoints_grid([freqs, flux])
         mc.settables([SettableFrequency(platform.qrm[qubit].lo), dacs[fluxline].current])
         mc.gettables(ROController(platform, sequence, qubit))
         platform.start() 
-        data = mc.run(name="matrix3")
+        dataset = mc.run(name="Resonator Spectroscopy Flux")
         platform.stop()
         spi.set_dacs_zero()
+
+        # TODO: call platform.qfm[fluxline] instead of dacs[fluxline]
+        # TODO: automatically extract the sweet spot current
+        return dataset
 
     def run_qubit_spectroscopy(self, qubit=0):
         platform = self.platform
         platform.reload_settings()
         mc = self.mc
 
+        self.reload_settings()
+        fast_start = self.settings['qubit_spectroscopy']['fast_start']
+        fast_end = self.settings['qubit_spectroscopy']['fast_end']
+        fast_step = self.settings['qubit_spectroscopy']['fast_step']
+        precision_start = self.settings['qubit_spectroscopy']['precision_start']
+        precision_end = self.settings['qubit_spectroscopy']['precision_end']
+        precision_step = self.settings['qubit_spectroscopy']['precision_step']
+        dataset = None
+
         sequence = PulseSequence()
         qd_pulse = platform.qubit_drive_pulse(qubit, start = 0, duration = 5000) 
         ro_pulse = platform.qubit_readout_pulse(qubit, start = 5000)
         sequence.add(qd_pulse)
         sequence.add(ro_pulse)
-
-        self.reload_settings()
-        self.fast_start = self.settings['qubit_spectroscopy']['fast_start']
-        self.fast_end = self.settings['qubit_spectroscopy']['fast_end']
-        self.fast_step = self.settings['qubit_spectroscopy']['fast_step']
-        self.precision_start = self.settings['qubit_spectroscopy']['precision_start']
-        self.precision_end = self.settings['qubit_spectroscopy']['precision_end']
-        self.precision_step = self.settings['qubit_spectroscopy']['precision_step']
 
         self.pl.tuids_max_num(self.max_num_plots)
         platform.qrm[qubit].lo.frequency = platform.characterization['single_qubit'][qubit]['resonator_freq'] - ro_pulse.frequency
@@ -158,20 +207,23 @@ class Calibration():
         if (self.software_averages !=0):
             platform.qcm[qubit].lo.frequency = platform.characterization['single_qubit'][qubit]['qubit_freq'] + qd_pulse.frequency
             lo_qcm_frequency = platform.qcm[qubit].lo.frequency
-            fast_sweep_scan_range = np.arange(self.fast_start, self.fast_end, self.fast_step)
+            fast_sweep_scan_range = np.arange(fast_start, fast_end, fast_step)
             mc.settables(SettableFrequency(platform.qcm[qubit].lo))
             mc.setpoints(fast_sweep_scan_range + lo_qcm_frequency)
             mc.gettables(ROController(platform, sequence, qubit))
             platform.start() 
             dataset = mc.run("Qubit Spectroscopy Fast", soft_avg=self.software_averages)
             platform.stop()
-            platform.qcm[qubit].lo.frequency = dataset['x0'].values[dataset['y0'].argmin().values]
-            avg_max_voltage = np.mean(dataset['y0'].values[:((self.fast_end - self.fast_start)//self.lowres_step)]) * 1e6
+
+            if self.resonator_type == '3D':
+                platform.qcm[qubit].lo.frequency = dataset['x0'].values[dataset['y0'].argmin().values]
+            elif self.resonator_type == '2D':
+                platform.qcm[qubit].lo.frequency = dataset['x0'].values[dataset['y0'].argmax().values]
 
         # Precision Sweep
         if (self.software_averages_precision !=0):
             lo_qcm_frequency = platform.qcm[qubit].lo.frequency
-            precision_sweep_scan_range = np.arange(self.precision_start, self.precision_end, self.precision_step)
+            precision_sweep_scan_range = np.arange(precision_start, precision_end, precision_step)
             mc.settables(SettableFrequency(platform.qcm[qubit].lo))
             mc.setpoints(precision_sweep_scan_range + lo_qcm_frequency)
             mc.gettables(ROController(platform, sequence, qubit))
@@ -180,17 +232,17 @@ class Calibration():
             platform.stop()
 
         # Fitting
-        smooth_dataset = savgol_filter(dataset['y0'].values, 11, 2)
-        qubit_freq = dataset['x0'].values[smooth_dataset.argmin()] - qd_pulse.frequency
-        min_ro_voltage = smooth_dataset.min() * 1e6
+        if self.resonator_type == '3D':
+            f0, BW, Q, peak_voltage = fitting.lorentzian_fit("last", min, "Qubit_spectroscopy")
+            qubit_freq = int(f0*1e9 - qd_pulse.frequency)
+        elif self.resonator_type == '2D':
+            f0, BW, Q, peak_voltage = fitting.lorentzian_fit("last", max, "Qubit_spectroscopy")
+            qubit_freq = int(f0*1e9 - qd_pulse.frequency)
 
+        avg_voltage = 0
+        # TODO: Estimate avg_voltage correctly
         print(f"\nQubit Frequency = {qubit_freq}")
-        utils.plot(smooth_dataset, dataset, "Qubit_Spectroscopy", 1)
-        print("Qubit freq ontained from MC results: ", qubit_freq)
-        f0, BW, Q = fitting.lorentzian_fit("last", min, "Qubit_Spectroscopy")
-        qubit_freq = (f0*1e9 - qd_pulse.frequency)
-        print("Qubit freq ontained from fitting: ", qubit_freq)
-        return qubit_freq, min_ro_voltage, smooth_dataset, dataset
+        return qubit_freq, avg_voltage, peak_voltage, dataset
 
     def run_rabi_pulse_length(self, qubit=0):
         platform = self.platform
@@ -432,7 +484,7 @@ class Calibration():
         results = []
         gateNumber = []
         min_voltage = platform.settings['characterization']['single_qubit'][qubit]['rabi_oscillations_pi_pulse_min_voltage']
-        max_voltage = platform.settings['characterization']['single_qubit'][qubit]['resonator_spectroscopy_max_ro_voltage']
+        max_voltage = platform.settings['characterization']['single_qubit'][qubit]['resonator_spectroscopy_peak_ro_voltage']
         n = 0 
         for gates in gatelist:
             #transform gate string to pulseSequence
@@ -687,8 +739,8 @@ class Calibration():
             # run and save cavity spectroscopy calibration
             resonator_freq, avg_min_voltage, max_ro_voltage, smooth_dataset, dataset = self.run_resonator_spectroscopy(qubit)
             self.save_config_parameter("resonator_freq", int(resonator_freq), 'characterization', 'single_qubit', qubit)
-            self.save_config_parameter("resonator_spectroscopy_avg_min_ro_voltage", float(avg_min_voltage), 'characterization', 'single_qubit', qubit)
-            self.save_config_parameter("resonator_spectroscopy_max_ro_voltage", float(max_ro_voltage), 'characterization', 'single_qubit', qubit)
+            self.save_config_parameter("resonator_spectroscopy_avg_ro_voltage", float(avg_min_voltage), 'characterization', 'single_qubit', qubit)
+            self.save_config_parameter("resonator_spectroscopy_peak_ro_voltage", float(max_ro_voltage), 'characterization', 'single_qubit', qubit)
             lo_qrm_frequency = int(resonator_freq - platform.settings['native_gates']['single_qubit'][qubit]['MZ']['frequency'])
             self.save_config_parameter("frequency", lo_qrm_frequency, 'instruments', platform.lo_qrm[qubit].name, 'settings') # TODO: cambiar IF hardcoded
 
@@ -784,7 +836,17 @@ class SettableFrequency():
 
     def set(self, value):
         self.instance.frequency =  value
-            
+
+class SettableAttenuation():
+    label = 'Attenuation'
+    unit = 'dB'
+    name = 'attenuation'
+        
+    def __init__(self, instance):
+        self.instance = instance
+
+    def set(self, value):
+        self.instance.set_device_parameter("out0_att", value)
 
 class QCPulseLengthParameter():
 

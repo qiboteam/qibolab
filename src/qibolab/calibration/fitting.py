@@ -79,20 +79,21 @@ def lorentzian_fit(label, peak, name):
     f0 = fit_res.best_values['center']/1e9
     BW = (fit_res.best_values['sigma']*2)/1e9
     Q = abs(f0/BW)
+    V = fit_res.best_values['amplitude']/fit_res.best_values['sigma']/np.pi
     
     #plot the fitted curve
     dummy_frequencies = np.linspace(np.amin(frequency),np.amax(frequency),101)
     fit_fine = resonator_peak(dummy_frequencies,**fit_res.best_values)
-    fig,ax = plt.subplots(1,1,figsize=(8,3))
-    ax.plot(data.x0,data.y0*1e3,'o',label='Data')
-    ax.plot(dummy_frequencies,fit_fine*1e3,'r-', label=r"Fit $f_0$ ={:.4f} GHz"            "\n" "     $Q$ ={:.0f}".format(f0,Q))
-    ax.set_ylabel('Integrated Voltage (mV)')
+    fig,ax = plt.subplots(1,1,figsize=(10,4))
+    ax.plot(data.x0,data.y0*1e6,'o',label='Data')
+    ax.plot(dummy_frequencies,fit_fine*1e6,'r-', label=r"Fit $f_lo$ ={:.6f} GHz"            "\n" "     $Q$ ={:.0f}".format(f0,Q))
+    ax.set_ylabel('Integrated Voltage (\u03bcV)')
     ax.set_xlabel('Frequency (GHz)')
     ax.legend()
     plt.show()
     fig.savefig(data_folder / f"{name}.pdf", format='pdf')
     #fit_res.plot_fit(show_init=True)
-    return f0, BW, Q
+    return f0, BW, Q, V
 
 def rabi_fit(dataset):
     pguess = [
@@ -197,7 +198,7 @@ def data_post(dir = "last"):
     x_axis = [None] * len(arr1);       
     for i in range(0, len(arr1)):    
          x_axis[i] = float(arr1[i]); 
-    plt.plot(x_axis,voltage)
+    #plt.plot(x_axis,voltage)
     #plt.show()
     return voltage, x_axis, data, d
 

@@ -95,7 +95,7 @@ class Diagnostics():
         # resonator_freq = dataset['x0'].values[smooth_dataset.argmax()] + ro_pulse.frequency
         min_ro_voltage = smooth_dataset.min() * 1e6
 
-        f0, BW, Q = fitting.lorentzian_fit("last", min, "Resonator_spectroscopy")
+        f0, BW, Q, V = fitting.lorentzian_fit("last", min, "Resonator_spectroscopy")
         resonator_freq = (f0*1e9 + ro_pulse.frequency)
 
         print(f"\nResonator Frequency = {resonator_freq}")
@@ -194,7 +194,7 @@ class Diagnostics():
         print(f"\nQubit Frequency = {qubit_freq}")
         utils.plot(smooth_dataset, dataset, "Qubit_Spectroscopy", 1)
         print("Qubit freq ontained from MC results: ", qubit_freq)
-        f0, BW, Q = fitting.lorentzian_fit("last", max, "Qubit_Spectroscopy")
+        f0, BW, Q, V = fitting.lorentzian_fit("last", max, "Qubit_Spectroscopy")
         qubit_freq = (f0*1e9 - qd_pulse.frequency)
         print("Qubit freq ontained from fitting: ", qubit_freq)
         return qubit_freq, max_ro_voltage, smooth_dataset, dataset

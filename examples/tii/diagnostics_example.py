@@ -33,8 +33,8 @@ for qubit in platform.qubits:
     resonator_freq, avg_min_voltage, max_ro_voltage, smooth_dataset, dataset = ds.run_resonator_spectroscopy(qubit)
     if save_settings:
         ds.save_config_parameter("resonator_freq", int(resonator_freq), 'characterization', 'single_qubit', qubit)
-        ds.save_config_parameter("resonator_spectroscopy_avg_min_ro_voltage", float(avg_min_voltage), 'characterization', 'single_qubit', qubit)
-        ds.save_config_parameter("resonator_spectroscopy_max_ro_voltage", float(max_ro_voltage), 'characterization', 'single_qubit', qubit)
+        ds.save_config_parameter("resonator_spectroscopy_avg_ro_voltage", float(avg_min_voltage), 'characterization', 'single_qubit', qubit)
+        ds.save_config_parameter("resonator_spectroscopy_peak_ro_voltage", float(max_ro_voltage), 'characterization', 'single_qubit', qubit)
         lo_qrm_frequency = int(resonator_freq - platform.settings['native_gates']['single_qubit'][qubit]['MZ']['frequency'])
         ds.save_config_parameter("frequency", lo_qrm_frequency, 'instruments', platform.lo_qrm[qubit].name, 'settings')
     
