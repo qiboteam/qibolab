@@ -111,7 +111,7 @@ def rabi_fit(dataset):
     t1 = 1.0 / popt[4] #double check T1
 
     utils.plot(smooth_dataset, dataset, "Rabi Pulse Length", 1)
-    return int(pi_pulse_duration), int(rabi_oscillations_pi_pulse_min_voltage)
+    return pi_pulse_duration, int(rabi_oscillations_pi_pulse_min_voltage)
 
 def t1_fit(dataset):
     pguess = [
