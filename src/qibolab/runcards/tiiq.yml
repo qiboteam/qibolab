@@ -5,7 +5,7 @@ settings:
     hardware_avg: 1024
     sampling_rate: 1_000_000_000
     repetition_duration: 200_000
-    minimum_delay_between_instructions: 4
+    minimum_delay_between_instructions: 4 # must be a multiple of 4
 
 qubits: [0]
 
@@ -24,9 +24,9 @@ instruments:
         address: 192.168.0.3:5
         settings:
             in0_att                       : 0
-            out0_att                      : 40
+            out0_att                      : 50
             out0_in0_lo_en                : true 
-            out0_in0_lo_freq              : 7844710404 # (Hz) from 2e9 to 18e9
+            out0_in0_lo_freq              : 7844850397 # (Hz) from 2e9 to 18e9
             out0_offset_path0             : 0
             out0_offset_path1             : 0
             scope_acq_avg_mode_en         : true        # for path0 and path1
@@ -66,12 +66,12 @@ instruments:
         class: ClusterQCM_RF
         address: 192.168.0.3:2
         settings:
-            out0_att          : 0 # (dB)
+            out0_att          : 10 # (dB)
             out0_lo_en        : true 
-            out0_lo_freq      : 5_332_191_692 # (Hz) from 2e9 to 18e9
+            out0_lo_freq      : 5282325834 # (Hz) from 2e9 to 18e9
             out0_offset_path0 : 0 # (mV) 
             out0_offset_path1 : 0 # (mV)
-            out1_att          : 0 # (dB)
+            out1_att          : 60 # (dB)
             out1_lo_en        : true
             out1_lo_freq      : 2_000_000_000 # (Hz) from 2e9 to 18e9 
             out1_offset_path0 : 0 # (mV)
@@ -104,8 +104,8 @@ native_gates:
     single_qubit:
         0: # qubit number
             RX:
-                duration: 19
-                amplitude: 0.9
+                duration: 60
+                amplitude: 0.915
                 frequency: 200_000_000
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -119,8 +119,8 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            resonator_freq: 7864710404
-            qubit_freq: 5_132_191_692
+            resonator_freq: 7864850397
+            qubit_freq: 5082325834
             T1: 2192.895853326451
             T2: 6933.310025260633
             resonator_spectroscopy_peak_ro_voltage: 900

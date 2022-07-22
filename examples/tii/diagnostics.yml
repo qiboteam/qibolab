@@ -1,7 +1,7 @@
 name: tiiq_single_qubit_diagnostics
 description: Settings for characterization scripts.
-software_averages: 4
-software_averages_precision: 1
+software_averages: 1
+software_averages_precision: 3
 max_num_plots: 2
 
 # Single qubit experiments
@@ -29,12 +29,12 @@ resonator_spectroscopy_flux:
   current_step: 0.002 
 
 qubit_spectroscopy:
-  fast_start: -30_000_000
-  fast_end: 30_000_000
-  fast_step: 2_000_000
+  fast_start: -10_000_000
+  fast_end: 10_000_000
+  fast_step: 200_000
   precision_start: -3_000_000
   precision_end: 3_000_000
-  precision_step: 200_000
+  precision_step: 100_000
 
 rabi_pulse_length:
   pulse_duration_start: 4 # minimum 4ns
@@ -47,9 +47,14 @@ t1:
   delay_before_readout_step: 500
 
 ramsey:
-  delay_between_pulses_start: 4 
-  delay_between_pulses_end: 400
-  delay_between_pulses_step: 1
+  delay_between_pulses_start: 0 # must be a multiple of 4 incl 0
+  delay_between_pulses_end: 1000
+  delay_between_pulses_step: 4 # must be a multiple of 4
+
+dispersive_shift:
+  freq_width: 5_000_000
+  freq_step: 50_000
+
 
 ramsey_freq:
   t_start: 4

@@ -333,7 +333,7 @@ class Calibration():
 
         sequence = PulseSequence()
         RX90_pulse1 = platform.RX90_pulse(qubit, start = 0)
-        RX90_pulse2 = platform.RX90_pulse(qubit, start = RX90_pulse1.duration)
+        RX90_pulse2 = platform.RX90_pulse(qubit, start = RX90_pulse1.duration, phase = RX90_pulse1.duration * 1e-9 * 2 * np.pi * RX90_pulse1.frequency)
         ro_pulse = platform.qubit_readout_pulse(qubit, start = RX90_pulse1.duration + RX90_pulse2.duration)
         sequence.add(RX90_pulse1)
         sequence.add(RX90_pulse2)
@@ -355,6 +355,69 @@ class Calibration():
         print(f"\nT2 = {t2} ns")
 
         return delta_frequency, t2, smooth_dataset, dataset
+
+    def run_dispersive_shift(self, qubit=0):
+        platform = self.platform
+        platform.reload_settings()
+        mc = self.mc
+
+        self.reload_settings()
+        freq_width = self.settings['dispersive_shift']['freq_width']
+        freq_step = self.settings['dispersive_shift']['freq_step']
+        dataset = None
+
+        sequence = PulseSequence()
+        ro_pulse = platform.qubit_readout_pulse(qubit, start = 0)
+        sequence.add(ro_pulse)
+
+        self.pl.tuids_max_num(self.max_num_plots)
+        
+        lo_qrm_frequency = platform.characterization['single_qubit'][qubit]['resonator_freq'] - ro_pulse.frequency
+        scanrange = np.arange(-freq_width, freq_width, freq_step)
+        frequencies = scanrange + lo_qrm_frequency
+
+        #Resonator Spectroscopy
+        mc.settables(SettableFrequency(platform.qrm[qubit].lo))
+        mc.setpoints(frequencies)
+        mc.gettables(ROController(platform, sequence, qubit))
+        platform.start() 
+        dataset = mc.run("Resonator Spectroscopy", soft_avg=self.software_averages)
+        platform.stop()
+        
+        if self.resonator_type == '3D':
+            f0, BW, Q, pv = fitting.lorentzian_fit("last", max, "Resonator_spectroscopy")
+            resonator_freq = int(f0*1e9 + ro_pulse.frequency)
+        elif self.resonator_type == '2D':
+            f0, BW, Q, pv = fitting.lorentzian_fit("last", min, "Resonator_spectroscopy")
+            resonator_freq = int(f0*1e9 + ro_pulse.frequency)
+
+        # Shifted Spectroscopy
+        sequence = PulseSequence()
+        RX_pulse = platform.RX_pulse(qubit, start = 0)
+        ro_pulse = platform.qubit_readout_pulse(qubit, start = RX_pulse.duration)
+        sequence.add(RX_pulse)
+        sequence.add(ro_pulse)
+
+        mc.settables(SettableFrequency(platform.qrm[qubit].lo))
+        mc.setpoints(scanrange + lo_qrm_frequency)
+        mc.gettables(ROController(platform, sequence, qubit))
+        platform.start() 
+        dataset = mc.run("Dispersive Shifted Resonator Spectroscopy", soft_avg=self.software_averages)
+        platform.stop()
+            
+        # Fitting
+        if self.resonator_type == '3D':
+            f0, BW, Q, peak_voltage = fitting.lorentzian_fit("last", max, "Resonator_spectroscopy")
+            shifted_resonator_freq = int(f0*1e9 + ro_pulse.frequency)
+        elif self.resonator_type == '2D':
+            f0, BW, Q, peak_voltage = fitting.lorentzian_fit("last", min, "Resonator_spectroscopy")
+            shifted_resonator_freq = int(f0*1e9 + ro_pulse.frequency)
+
+        dispersive_shift = shifted_resonator_freq - resonator_freq
+        print(f"\nResonator Frequency = {resonator_freq}")
+        print(f"\nShifted Frequency = {shifted_resonator_freq}")
+        print(f"\nDispersive Shift = {dispersive_shift}")
+        return shifted_resonator_freq, dispersive_shift, peak_voltage, dataset
 
     def calibrate_qubit_states(self, qubit=0):
         platform = self.platform
@@ -896,7 +959,9 @@ class RamseyWaitParameter():
 
     def set(self, value):
         self.qc2_pulse.start = self.pulse_length  + value
+        self.qc2_pulse.phase = self.qc2_pulse.start * 1e-9 * 2 * np.pi * self.qc2_pulse.frequency
         self.ro_pulse.start = self.pulse_length * 2 + value 
+        # print(f"wait: {value}, pulse start: {self.qc2_pulse.start}, pulse phase: {self.qc2_pulse.phase / 2 / np.pi}")        
 
 class RamseyFreqWaitParameter():
     label = 'Time'
