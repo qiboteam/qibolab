@@ -26,7 +26,7 @@ instruments:
             in0_att                       : 0
             out0_att                      : 54
             out0_in0_lo_en                : true 
-            out0_in0_lo_freq              : 7844855425 # (Hz) from 2e9 to 18e9
+            out0_in0_lo_freq              : 7804855425 # (Hz) from 2e9 to 18e9
             out0_offset_path0             : 0
             out0_offset_path1             : 0
             scope_acq_avg_mode_en         : true        # for path0 and path1
@@ -68,7 +68,7 @@ instruments:
         settings:
             out0_att          : 10 # (dB)
             out0_lo_en        : true 
-            out0_lo_freq      : 5278341303 # (Hz) from 2e9 to 18e9
+            out0_lo_freq      : 5282441303 # (Hz) from 2e9 to 18e9
             out0_offset_path0 : 0 # (mV) 
             out0_offset_path1 : 0 # (mV)
             out1_att          : 60 # (dB)
@@ -119,8 +119,8 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            resonator_freq: 7864855425
-            qubit_freq: 5078341303
+            resonator_freq: 7824855425
+            qubit_freq: 5082441303
             T1: 21160
             T2: 17214
             resonator_spectroscopy_peak_ro_voltage: 847
