@@ -2,10 +2,12 @@ import usb
 import time
 import sys
 import numpy as np
-from qibolab.instruments.customhandler import DeviceHandle
+from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
+from qibolab.paths import qibolab_folder
+from customhandler import DeviceHandle
 # this code is developed on the exisitng minimalistic driver located on: https://github.com/Schlabonski/evalcontrol by the user @schlabonski
 # the additions include programming for all the functions for the dds ad9959 which was not present intially
-class AD9959(object):
+class AD9959(AbstractInstrument):
     def __init__(self, vid=0x0456, pid=0xee25, port_numbers=None, bus_number=None, auto_update=True,
             rfclk=20e6, channel=0,clkfactor=1):
    
@@ -2615,23 +2617,3 @@ class AD9959(object):
             print(self._read_from_register(delta_word_registers[i], 32))
         return
    
-        
-
-class AD9959dev(AD9959):
-    def __init__(self, experiment, *args, **kwargs):
-        super(AD9959dev, self).__init__(*args, **kwargs)
-        self.default_frequency = 75e6
-
-    def __set__(self, obj, value):
-        """This sets the frequency of the channels. The method is needed to
-        ensure compatibility with our experimental control.
-        """
-        self.set_frequency(value)
-
-    def __get__(self, obj, value):
-        """This sets the frequency of the channels. The method is needed to
-        ensure compatibility with our experimental control.
-        """
-
-        return self.default_frequency
-    
