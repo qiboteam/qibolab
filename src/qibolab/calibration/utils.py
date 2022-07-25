@@ -68,6 +68,21 @@ def plot_qubit_states(gnd_results, exc_results):
     #plt.show()
     plt.savefig( data_folder / "qubit_states_classification.pdf")
 
+def plot_allXY(results, gateNumber):
+    plt.scatter(results, gateNumber)
+    plt.ylabel('Z projection probability of qubit state |0>')
+    #plt.show
+
+    plt.plot(results)
+    plt.ylabel('Z projection probability of qubit state |0>')
+    #plt.show
+
+    plt.savefig( data_folder / "allXY.pdf")
+
+def saveROMatrix(data, file_name):
+    from numpy import savetxt
+    savetxt( data_folder / file_name, data, delimiter=',')
+
 
 def create_measurement_control(name, debug=True):
     import os

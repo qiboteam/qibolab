@@ -29,6 +29,11 @@ ds.backup_config_file()
 save_settings = False
 
 for qubit in platform.qubits:
+
+    ############################
+    # Single qubit experiments #
+    ############################
+
     # Cavity spectroscopy
     resonator_freq, avg_min_voltage, max_ro_voltage, smooth_dataset, dataset = ds.run_resonator_spectroscopy(qubit)
     if save_settings:
@@ -61,7 +66,7 @@ for qubit in platform.qubits:
         ds.save_config_parameter("T1", float(t2), 'characterization', 'single_qubit', qubit)
 
     # Ramsey
-    delta_frequency, t2, delta_frequency, smooth_dataset, dataset = ds.run_ramsey(qubit)
+    t2, delta_frequency, smooth_dataset, dataset = ds.run_ramsey(qubit)
     if save_settings:
         adjusted_qubit_freq = int(platform.characterization['single_qubit'][qubit]['qubit_freq'] + delta_frequency)
         ds.save_config_parameter("qubit_freq", adjusted_qubit_freq, 'characterization', 'single_qubit', qubit)
@@ -81,6 +86,53 @@ for qubit in platform.qubits:
         ds.save_config_parameter("mean_gnd_states", mean_gnd_states, 'characterization', 'single_qubit', qubit)
         ds.save_config_parameter("mean_exc_states", mean_exc_states, 'characterization', 'single_qubit', qubit)
 
+    # Ramsey auto-detunned frequency
+    t2, delta_frequency, smooth_dataset, dataset = ds.run_ramsey_freq(qubit)
+    if save_settings:
+        adjusted_qubit_freq = int(platform.characterization['single_qubit'][qubit]['qubit_freq'] + delta_frequency)
+        ds.save_config_parameter("qubit_freq", adjusted_qubit_freq, 'characterization', 'single_qubit', qubit)
+        ds.save_config_parameter("T2", float(t2), 'characterization', 'single_qubit', qubit)
+        RX_pulse_sequence = platform.settings['native_gates']['single_qubit'][qubit]['RX']['pulse_sequence']
+        lo_qcm_frequency = int(adjusted_qubit_freq + RX_pulse_sequence[0]['frequency'])
+        ds.save_config_parameter("frequency", lo_qcm_frequency, 'instruments', platform.lo_qcm[qubit].name, 'settings')
     
-    # Other experiments 
+    # Optimal beta parameter for drag pulses
+    beta_optimal = ds.run_drag_pulse_tunning(qubit)
+    if save_settings:
+        print(beta_optimal)
+        # drag_shape = "Drag(" + beta_optimal + ")"
+        # ds.save_config_parameter("shape", drag_shape, 'native_gates', 'single_qubit', qubit, 'RX', 'shape')
+    
+    # Run allXY to test drag shape.
+    # COMMENT: run at least once the "run_drag_pulse_tunning" method to save new shape values and check them with allXY results
+    results, gateNumber = ds.allXY(qubit)
+    if save_settings:
+        utils.plot_allXY(results, gateNumber)
+    
+    # Optimal beta parameter for drag pulses
+    epsilon = ds.run_flipping(qubit)
+    if save_settings:
+        print(epsilon) 
+        # RX_pulse_amplitude = platform.settings['native_gates']['single_qubit'][qubit]['RX']['amplitude']
+        # adjusted_amplitude = RX_pulse_amplitude + epsilon
+        # ds.save_config_parameter("amplitude", adjusted_amplitude, 'native_gates', 'single_qubit', qubit, 'RX', 'amplitude')
+        # ds.save_config_parameter("amplitude", adjusted_amplitude, 'native_gates', 'single_qubit', qubit, 'MZ', 'amplitude')
+
+    ##########################
+    # Multiqubit experiments #
+    ##########################
+
+    # ReadOut Matrix
+    RO_matrix = ds.run_RO_matrix()
+    if save_settings:
+        print(RO_matrix)
+        utils.saveROMatrix(RO_matrix)
+
+    #####################
+    # Other experiments #
+    #####################
+
+    # Rabi pulse and gain
     # dataset = ds.run_rabi_pulse_gain(qubit)
+    
+    

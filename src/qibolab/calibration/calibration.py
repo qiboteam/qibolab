@@ -681,10 +681,6 @@ class Calibration():
         beta_optimal = fitting.fit_drag_tunning(res1, res2, beta_params)
 
         return beta_optimal
-    
-    def live_plotting():
-        from qibolab.calibration import live
-        live.app.run_server()
 
     def run_flipping(self, qubit):
         platform = self.platform
