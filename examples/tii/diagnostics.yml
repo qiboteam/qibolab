@@ -62,7 +62,7 @@ dispersive_shift:
 
 ramsey_freq:
   t_start: 4
-  t_end: [1000, 2000, 4000, 8000] #t_end (optimal) = 3.5 * T2 (limited by HW to 8000ns)
+  t_end: [4000, 2000, 2000, 2000] #t_end (optimal) = 3.5 * T2 (limited by HW to 8000ns)
   t_step: 16
   offset_freq: 1_000_000
   N_osc: 4
