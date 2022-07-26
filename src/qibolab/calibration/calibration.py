@@ -568,29 +568,6 @@ class Calibration():
 
         return dataset
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     def calibrate_qubit_states(self, qubit=0):
         platform = self.platform
         platform.reload_settings()
