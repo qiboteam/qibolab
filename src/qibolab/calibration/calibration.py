@@ -100,6 +100,7 @@ class Calibration():
         elif self.resonator_type == '2D':
             f0, BW, Q, peak_voltage = fitting.lorentzian_fit("last", min, "Resonator_spectroscopy")
             resonator_freq = int(f0*1e9 + ro_pulse.frequency)
+            # TODO: Fix fitting of minimum values
         peak_voltage = peak_voltage * 1e6
 
         print(f"\nResonator Frequency = {resonator_freq}")
@@ -175,6 +176,7 @@ class Calibration():
 
         # TODO: call platform.qfm[fluxline] instead of dacs[fluxline]
         # TODO: automatically extract the sweet spot current
+        # TODO: add a method to generate the matrix
         return dataset
 
     def run_qubit_spectroscopy(self, qubit=0):
@@ -228,6 +230,7 @@ class Calibration():
         if self.resonator_type == '3D':
             f0, BW, Q, peak_voltage = fitting.lorentzian_fit("last", min, "Qubit_spectroscopy")
             qubit_freq = int(f0*1e9 - qd_pulse.frequency)
+            # TODO: Fix fitting of minimum values
         elif self.resonator_type == '2D':
             f0, BW, Q, peak_voltage = fitting.lorentzian_fit("last", max, "Qubit_spectroscopy")
             qubit_freq = int(f0*1e9 - qd_pulse.frequency)
@@ -313,7 +316,7 @@ class Calibration():
         print(f"\nPi pulse amplitude = {pi_pulse_amplitude}") 
         print(f"\nPi pulse duration = {pi_pulse_duration}") 
         print(f"\nrabi oscillation peak voltage = {rabi_oscillations_pi_pulse_peak_voltage}")
-
+        # TODO: calibrate freq for each iteration first
         # TODO: implement some verifications to check if the returned value from fitting is correct.
         return pi_pulse_gain, pi_pulse_amplitude, rabi_oscillations_pi_pulse_peak_voltage, dataset
 

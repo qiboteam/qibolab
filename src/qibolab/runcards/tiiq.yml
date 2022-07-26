@@ -26,7 +26,7 @@ instruments:
             in0_att                       : 0
             out0_att                      : 54
             out0_in0_lo_en                : true 
-            out0_in0_lo_freq              : 7804855425 # (Hz) from 2e9 to 18e9
+            out0_in0_lo_freq              : 7804872660 # (Hz) from 2e9 to 18e9
             out0_offset_path0             : 0
             out0_offset_path1             : 0
             scope_acq_avg_mode_en         : true        # for path0 and path1
@@ -55,8 +55,8 @@ instruments:
             sync_en                          : true 
             upsample_rate_awg                : 0 # for path0 and path1
 
-            acquisition_start: 130 # minimum 4ns
-            acquisition_duration: 1500
+            acquisition_start: 200 # minimum 4ns
+            acquisition_duration: 1600
             channel_port_map:  # Refrigerator Channel : Instrument port
                 2: o1 # IQ Port = out0 & out1
                 3: i1 
@@ -66,9 +66,9 @@ instruments:
         class: ClusterQCM_RF
         address: 192.168.0.3:2
         settings:
-            out0_att          : 10 # (dB)
+            out0_att          : 0 # (dB)
             out0_lo_en        : true 
-            out0_lo_freq      : 5282441303 # (Hz) from 2e9 to 18e9
+            out0_lo_freq      : 5278708297 # (Hz) from 2e9 to 18e9
             out0_offset_path0 : 0 # (mV) 
             out0_offset_path1 : 0 # (mV)
             out1_att          : 60 # (dB)
@@ -83,7 +83,7 @@ instruments:
             channel_map_path1_out3_en        : false 
             cont_mode_en_awg                 : false # for path0 and path1
             cont_mode_waveform_idx_awg       : 0 # for path0 and path1 
-            gain_awg                         : 0.60 # for path0 and path1 -1.0<=v<=1.0
+            gain_awg                         : 0.6 # for path0 and path1 -1.0<=v<=1.0
             marker_ovr_en                    : true 
             marker_ovr_value                 : 15 
             mixer_corr_gain_ratio            : 1       # 0.5<=v<=2.0  
@@ -104,7 +104,7 @@ native_gates:
     single_qubit:
         0: # qubit number
             RX:
-                duration: 30
+                duration: 80
                 amplitude: 0.9
                 frequency: 200_000_000
                 shape: Gaussian(5)
@@ -119,11 +119,11 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            resonator_freq: 7824855425
-            qubit_freq: 5082441303
+            resonator_freq: 7824872660
+            qubit_freq: 5078708297
             T1: 21160
             T2: 17214
-            resonator_spectroscopy_peak_ro_voltage: 847
-            rabi_oscillations_pi_pulse_peak_ro_voltage: 251
+            resonator_spectroscopy_peak_ro_voltage: 781
+            rabi_oscillations_pi_pulse_peak_ro_voltage: 232
             mean_gnd_states: (-0.0008313786783245074+0.00044815319987281076j)
             mean_exc_states: (-0.00022773024569023835+0.0003203066357136082j)
