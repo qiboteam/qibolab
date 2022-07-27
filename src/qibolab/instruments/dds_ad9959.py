@@ -1,5 +1,6 @@
-import time
 import sys
+sys.path.append("/opt/hostedtoolcache/Python/3.8.13/x64/lib")
+import time
 import numpy as np
 import usb
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
@@ -7,7 +8,8 @@ from qibolab.paths import qibolab_folder
 from qibolab.instruments.customhandler import DeviceHandle
 # this code is developed on the exisitng minimalistic driver located on: https://github.com/Schlabonski/evalcontrol by the user @schlabonski
 # the additions include programming for all the functions for the dds ad9959 which was not present intially
-class AD9959(AbstractInstrument):
+# modulation using the pc and the implementation of the abstract class is left
+class AD9959():
     def __init__(self, vid=0x0456, pid=0xee25, port_numbers=None, bus_number=None, auto_update=True,
             rfclk=20e6, channel=0,clkfactor=1):
    

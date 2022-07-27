@@ -1,3 +1,5 @@
+import sys
+sys.path.append("/opt/hostedtoolcache/Python/3.8.13/x64/lib")
 import usb
 
 class DeviceHandle(usb.DeviceHandle):
