@@ -1,10 +1,10 @@
-import usb
 import time
 import sys
 import numpy as np
+import usb
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.paths import qibolab_folder
-from customhandler import DeviceHandle
+from qibolab.instruments.customhandler import DeviceHandle
 # this code is developed on the exisitng minimalistic driver located on: https://github.com/Schlabonski/evalcontrol by the user @schlabonski
 # the additions include programming for all the functions for the dds ad9959 which was not present intially
 class AD9959(AbstractInstrument):
@@ -1498,7 +1498,7 @@ class AD9959(AbstractInstrument):
           enable_bin ='11'
         else:
            assert mode is None, 'invalid input. Value remains as it is='
-        fr1_new_bin = enable_bin + fr1_old_bin[2:]
+        fr1_new_bin = enable_bin + fr2_old_bin[2:]
         fr1_word_new = ''.join(' 0' + b for b in fr1_new_bin) # translate to bytes
         fr1_word_new = fr1_word_new[1:] # crop the first white space
         self._write_to_dds_register(0x01, fr1_word_new)
@@ -2276,7 +2276,7 @@ class AD9959(AbstractInstrument):
                     modulation_type_bin == '11'
             elif modulation_type == 'amplitude':
                     modulation_type_bin = '01'
-            elif modualation_type == 'disable':
+            elif modulation_type == 'disable':
                     modulation_type_bin = '00'
                     print("modulation has been disabled")
             else:
