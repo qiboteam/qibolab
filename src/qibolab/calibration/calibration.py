@@ -213,8 +213,10 @@ class Calibration():
 
             if self.resonator_type == '3D':
                 lo_qcm_frequency = dataset['x0'].values[dataset['y0'].argmin().values]
+                avg_voltage = np.mean(dataset['y0']) * 1e6
             elif self.resonator_type == '2D':
                 lo_qcm_frequency = dataset['x0'].values[dataset['y0'].argmax().values]
+                avg_voltage = np.mean(dataset['y0']) * 1e6
 
         # Precision Sweep
         if (self.software_averages_precision !=0):
@@ -235,7 +237,6 @@ class Calibration():
             f0, BW, Q, peak_voltage = fitting.lorentzian_fit("last", max, "Qubit_spectroscopy")
             qubit_freq = int(f0*1e9 - qd_pulse.frequency)
 
-        avg_voltage = 0
         # TODO: Estimate avg_voltage correctly
         print(f"\nQubit Frequency = {qubit_freq}")
         return qubit_freq, avg_voltage, peak_voltage, dataset
@@ -824,16 +825,18 @@ class Calibration():
 
                 #if ((new_t2 * 3.5) > t_max):
                 if (new_t2 > T2):
-                    qubit_freq = actual_qubit_freq + delta_phys 
-                    # self.save_config_parameter("settings", "", "qubit_freq", float(qubit_freq))
-                    # self.save_config_parameter("LO_QCM_settings", "", "frequency", float(qubit_freq + 200_000_000))
-                    # self.save_config_parameter("settings", "", "T2", float(new_t2))
+                    corrected_qubit_freq = int(platform.settings['characterization']['single_qubit'][qubit]['qubit_freq'] - delta_phys)
+                    # self.save_config_parameter("qubit_freq", corrected_qubit_freq, 'characterization', 'single_qubit', qubit)
+                    # self.save_config_parameter("T2", float(t2), 'characterization', 'single_qubit', qubit)
+                    # RX_pulse_sequence = platform.settings['native_gates']['single_qubit'][qubit]['RX']['pulse_sequence']
+                    # lo_qcm_frequency = int(corrected_qubit_freq + RX_pulse_sequence[0]['frequency'])
+                    # self.save_config_parameter("out0_lo_freq", lo_qcm_frequency, 'instruments', platform.lo_qcm[qubit].name, 'settings')
                 else:
                     stop = True
 
                 platform.reload_settings()
                 # FIXME: The way this routine is coded the new_T2 and delta_phys returned are not the optimal.
-        return new_t2, delta_phys, smooth_dataset, dataset
+        return new_t2, delta_phys, corrected_qubit_freq, smooth_dataset, dataset
 
     def run_drag_pulse_tunning(self, qubit):
         platform = self.platform
@@ -849,7 +852,7 @@ class Calibration():
         self.beta_step = self.settings['drag_tunning']['beta_step']
         
 
-        for beta_param in range(self.beta_start, self.beta_end, self.beta_step): 
+        for beta_param in np.arange(self.beta_start, self.beta_end, self.beta_step): 
             #drag pulse RX(pi/2)
             RX90_drag_pulse = platform.RX90_drag_pulse(qubit, start = 0, beta = beta_param)
             #drag pulse RY(pi)
