@@ -24,28 +24,32 @@ A simple example on how to connect to the TIIq platform and use it execute a pul
 
 ```python
 from qibolab import Platform
-from qibolab.pulses import PulseSequence, Pulse, ReadoutPulse, Rectangular, Gaussian, Drag
+from qibolab.paths import qibolab_folder
+from qibolab.pulses import Pulse, ReadoutPulse, PulseSequence
 
 # Define PulseSequence
 sequence = PulseSequence()
-
 # Add some pulses to the pulse sequence
 sequence.add(Pulse(start=0,
-                   frequency=200000000.0,
                    amplitude=0.3,
-                   duration=60,
+                   duration=4000,
+                   frequency=200_000_000,
                    phase=0,
-                   shape=Gaussian(5))) # Gaussian shape with std = duration / 5
+                   shape='Gaussian(5)', # Gaussian shape with std = duration / 5
+                   channel=1))
 
-sequence.add(ReadoutPulse(start=70,
-                          frequency=20000000.0,
-                          amplitude=0.5,
-                          duration=3000,
+sequence.add(ReadoutPulse(start=4004,
+                          amplitude=0.9,
+                          duration=2000,
+                          frequency=20_000_000,
                           phase=0,
-                          shape=Rectangular()))
+                          shape='Rectangular',
+                          channel=2))
 
 # Define platform and load specific runcard
-platform = Platform("tiiq")
+runcard = qibolab_folder / 'runcards' / 'tiiq.yml'
+platform = Platform("tiiq", runcard)
+
 # Connects to lab instruments using the details specified in the calibration settings.
 platform.connect()
 # Configures instruments using the loaded calibration settings.
@@ -53,11 +57,42 @@ platform.setup()
 # Turns on the local oscillators
 platform.start()
 # Executes a pulse sequence.
-results = platform.execute(sequence, nshots=10)
+results = platform.execute_pulse_sequence(sequence, nshots=3000)
+print(f"results (amplitude, phase, i, q): {results}")
 # Turn off lab instruments
 platform.stop()
 # Disconnect from the instruments
 platform.disconnect()
+```
+
+Here is another example on how to execute circuits:
+
+```python
+import qibo
+from qibo import gates, models
+from qibolab.paths import qibolab_folder
+
+
+# Create circuit and add gates
+c = models.Circuit(1)
+c.add(gates.H(0))
+c.add(gates.RX(0, theta=0.2))
+c.add(gates.X(0))
+c.add(gates.M(0))
+
+
+# Simulate the circuit using numpy
+qibo.set_backend("numpy")
+for _ in range(5):
+    result = c(nshots=1024)
+    print(result.probabilities())
+
+# Execute the circuit on hardware
+qibo.set_backend("qibolab", platform="tiiq")
+
+for _ in range(5):
+    result = c(nshots=1024)
+    print(result.probabilities())
 ```
 
 ## Citation policy
