@@ -26,68 +26,61 @@ def lorentzian_fit(label, peak, name):
     #label=last --> Read most recent hdf5
     #label=/path/to/directory/ --> read the hdf5 data file contained in "label" 
 
-    voltage, x_axis, data, d = data_post(label)
-    frequency = x_axis
+    dataset = load_dataset(label)
+
+    voltages = dataset.y0.to_numpy()
+    frequencies = dataset.x0.to_numpy()
 
     #Create a lmfit model for fitting equation defined in resonator_peak 
-    model_Q = lmfit.Model(resonator_peak)
+    model_Q = lmfit.Model(lorenzian)
 
     #Guess parameters for Lorentzian max or min
-    #to guess center
     if peak == max:
-        guess_center = frequency[np.argmax(voltage)] #Argmax = Returns the indices of the maximum values along an axis.
-    else:
-        guess_center = frequency[np.argmin(voltage)] #Argmin = Returns the indices of the minimum values along an axis.
+        guess_center = frequencies[np.argmax(voltages)] #Argmax = Returns the indices of the maximum values along an axis.
+        guess_offset = np.mean(voltages[np.abs(voltages-np.mean(voltages)<np.std(voltages))])
+        guess_sigma = abs(frequencies[np.argmin(voltages)] - guess_center)
+        guess_amp = (np.max(voltages) - guess_offset) * guess_sigma * np.pi
 
-    #to guess the sigma
-    if peak == max:
-        voltage_min_i = np.argmin(voltage)
-        frequency_voltage_min = frequency[voltage_min_i]
-        guess_sigma = abs(frequency_voltage_min - guess_center) #500KHz*1e-9
-    else: 
-        guess_sigma = 5e-03 #500KHz*1e-9
-    
-    #to guess the amplitude 
-    if peak == max:
-        voltage_max = np.max(voltage)
-        guess_amp = voltage_max*guess_sigma*np.pi
     else:
-        voltage_min = np.min(voltage)
-        guess_amp = -voltage_min*guess_sigma*np.pi
-    
-    #to guess the offset
-    if peak == max: 
-        guess_offset = 0
-    else:
-        guess_offset = voltage[0]*-2.5*1e5   
-    
+        guess_center = frequencies[np.argmin(voltages)] #Argmin = Returns the indices of the minimum values along an axis.
+        guess_offset = np.mean(voltages[np.abs(voltages-np.mean(voltages)<np.std(voltages))])
+        guess_sigma = abs(frequencies[np.argmax(voltages)] - guess_center)
+        guess_amp = (np.min(voltages) - guess_offset) * guess_sigma * np.pi
+
+
+
+    print(guess_center)
+    print(guess_offset)
+    print(guess_sigma)
+    print(guess_amp)
+
+
     #Add guessed parameters to the model
-    if peak == max:
-       model_Q.set_param_hint('center',value=guess_center,vary=True)
-    else:
-        model_Q.set_param_hint('center',value=guess_center,vary=False)
+    model_Q.set_param_hint('center',value=guess_center,vary=True)
     model_Q.set_param_hint('sigma',value=guess_sigma, vary=True)
     model_Q.set_param_hint('amplitude',value=guess_amp, vary=True)
     model_Q.set_param_hint('offset',value=guess_offset, vary=True)
     guess_parameters = model_Q.make_params()
-    guess_parameters
 
     #fit the model with the data and guessed parameters
-    fit_res = model_Q.fit(data=voltage,frequency=frequency,params=guess_parameters)
+    fit_res = model_Q.fit(data=voltages,frequency=frequencies,params=guess_parameters)
     #print(fit_res.fit_report())
     #fit_res.best_values
     #get the values for postprocessing and for legend.
-    f0 = fit_res.best_values['center']/1e9
-    BW = (fit_res.best_values['sigma']*2)/1e9
+    f0 = fit_res.best_values['center']
+    BW = (fit_res.best_values['sigma']*2)
     Q = abs(f0/BW)
-    V = fit_res.best_values['amplitude']/fit_res.best_values['sigma']/np.pi
+    V = fit_res.best_values['amplitude']/(fit_res.best_values['sigma']*np.pi) + fit_res.best_values['offset']
+
     
     #plot the fitted curve
-    dummy_frequencies = np.linspace(np.amin(frequency),np.amax(frequency),101)
-    fit_fine = resonator_peak(dummy_frequencies,**fit_res.best_values)
-    fig,ax = plt.subplots(1,1,figsize=(10,4))
-    ax.plot(data.x0,data.y0*1e6,'o',label='Data')
-    ax.plot(dummy_frequencies,fit_fine*1e6,'r-', label=r"Fit $f_lo$ ={:.6f} GHz"            "\n" "     $Q$ ={:.0f}".format(f0,Q))
+    dummy_frequencies = np.linspace(np.amin(frequencies),np.amax(frequencies),101)
+    fit_fine = lorenzian(dummy_frequencies,**fit_res.best_values)
+    fig,ax = plt.subplots(1,1, figsize=(12,6))
+    ax.plot(dataset.x0, dataset.y0*1e6, 'o', label='Data')
+    ax.plot(dummy_frequencies, fit_fine*1e6, 'r-', label=r"Fit $f_lo$ ={:.6f} GHz"            "\n" "     $Q$ ={:.0f}".format(f0,Q))
+    ax.axvline(f0-BW/2, c='k')
+    ax.axvline(f0+BW/2, c='k')
     ax.set_ylabel('Integrated Voltage (\u03bcV)')
     ax.set_xlabel('Frequency (GHz)')
     ax.legend()
@@ -154,9 +147,9 @@ def ramsey_freq_fit(dataset):
     t2 = 1.0 / popt[4]
     return smooth_dataset, delta_frequency, t2
 
-def resonator_peak(frequency,amplitude,center,sigma,offset):
+def lorenzian(frequency, amplitude, center, sigma, offset):
     #http://openafox.com/science/peak-function-derivations.html
-    return (amplitude/np.pi) * (sigma/((frequency-center)**2 + sigma**2) + offset)
+    return (amplitude/np.pi) * (sigma/((frequency-center)**2 + sigma**2)) + offset
 
 def rabi(x, p0, p1, p2, p3, p4):
     # A fit to Superconducting Qubit Rabi Oscillation
@@ -182,30 +175,18 @@ def exp(x,*p) :
     return p[0] - p[1]*np.exp(-1 * x * p[2])  
 
 #Read last hdf5 file generated by the mc or specify the directory
-def data_post(dir = "last"):
+def load_dataset(dir = "last"):
     if  dir == "last":
         #get last measured file
         directory = max([subdir for subdir, dirs, files in os.walk(quantify_folder)], key=os.path.getmtime)
         label = os.path.basename(os.path.normpath(directory))
     else:
         label = dir
-
     set_datadir(quantify_folder)
-    d = BaseAnalysis(tuid=label)
-    d.run()
-    data = d.dataset
-    # #clean the array 
-    arr1 = data.y0;      
-    voltage = [None] * len(arr1);     
-    for i in range(0, len(arr1)):    
-         voltage[i] = float(arr1[i]);         
-    arr1 = data.x0;        
-    x_axis = [None] * len(arr1);       
-    for i in range(0, len(arr1)):    
-         x_axis[i] = float(arr1[i]); 
-    #plt.plot(x_axis,voltage)
-    #plt.show()
-    return voltage, x_axis, data, d
+    ba = BaseAnalysis(tuid=label)
+    ba.run()
+    return ba.dataset
+
 
 def fit_drag_tunning(res1, res2, beta_params):
 

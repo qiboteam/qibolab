@@ -96,10 +96,10 @@ class Calibration():
         # Fitting
         if self.resonator_type == '3D':
             f0, BW, Q, peak_voltage = fitting.lorentzian_fit("last", max, "Resonator_spectroscopy")
-            resonator_freq = int(f0*1e9 + ro_pulse.frequency)
+            resonator_freq = int(f0 + ro_pulse.frequency)
         elif self.resonator_type == '2D':
             f0, BW, Q, peak_voltage = fitting.lorentzian_fit("last", min, "Resonator_spectroscopy")
-            resonator_freq = int(f0*1e9 + ro_pulse.frequency)
+            resonator_freq = int(f0 + ro_pulse.frequency)
             # TODO: Fix fitting of minimum values
         peak_voltage = peak_voltage * 1e6
 
@@ -231,11 +231,11 @@ class Calibration():
         # Fitting
         if self.resonator_type == '3D':
             f0, BW, Q, peak_voltage = fitting.lorentzian_fit("last", min, "Qubit_spectroscopy")
-            qubit_freq = int(f0*1e9 - qd_pulse.frequency)
+            qubit_freq = int(f0 - qd_pulse.frequency)
             # TODO: Fix fitting of minimum values
         elif self.resonator_type == '2D':
             f0, BW, Q, peak_voltage = fitting.lorentzian_fit("last", max, "Qubit_spectroscopy")
-            qubit_freq = int(f0*1e9 - qd_pulse.frequency)
+            qubit_freq = int(f0 - qd_pulse.frequency)
 
         # TODO: Estimate avg_voltage correctly
         print(f"\nQubit Frequency = {qubit_freq}")
@@ -279,6 +279,33 @@ class Calibration():
 
         # TODO: implement some verifications to check if the returned value from fitting is correct.
         return pi_pulse_duration, pi_pulse_amplitude, rabi_oscillations_pi_pulse_peak_voltage, dataset
+
+    def ro_pulse_phase(self, qubit=0):
+        platform = self.platform
+        platform.reload_settings()
+        mc = self.mc
+
+        self.reload_settings()
+        pulse_phase_start = self.settings['rabi_pulse_phase']['pulse_phase_start']
+        pulse_phase_end = self.settings['rabi_pulse_phase']['pulse_phase_end']
+        pulse_phase_step = self.settings['rabi_pulse_phase']['pulse_phase_step']
+
+        sequence = PulseSequence()
+        qd_pulse = platform.RX_pulse(qubit, start = 0) 
+        ro_pulse = platform.qubit_readout_pulse(qubit, start = qd_pulse.duration)
+        sequence.add(qd_pulse)
+        sequence.add(ro_pulse)
+
+        self.pl.tuids_max_num(self.max_num_plots)
+
+        mc.settables(ROPulsePhaseParameter(ro_pulse))
+        mc.setpoints(np.arange(pulse_phase_start, pulse_phase_end, pulse_phase_step))
+        mc.gettables(ROController(platform, sequence, qubit))
+        platform.start()
+        dataset = mc.run('Rabi Pulse Phase', soft_avg = self.software_averages)
+        platform.stop()
+
+        return dataset
 
     def run_rabi_pulse_gain(self, qubit=0):
         platform = self.platform
@@ -427,10 +454,10 @@ class Calibration():
         
         if self.resonator_type == '3D':
             f0, BW, Q, pv = fitting.lorentzian_fit("last", max, "Resonator_spectroscopy")
-            resonator_freq = int(f0*1e9 + ro_pulse.frequency)
+            resonator_freq = int(f0 + ro_pulse.frequency)
         elif self.resonator_type == '2D':
             f0, BW, Q, pv = fitting.lorentzian_fit("last", min, "Resonator_spectroscopy")
-            resonator_freq = int(f0*1e9 + ro_pulse.frequency)
+            resonator_freq = int(f0 + ro_pulse.frequency)
 
         # Shifted Spectroscopy
         sequence = PulseSequence()
@@ -449,10 +476,10 @@ class Calibration():
         # Fitting
         if self.resonator_type == '3D':
             f0, BW, Q, peak_voltage = fitting.lorentzian_fit("last", max, "Resonator_spectroscopy")
-            shifted_resonator_freq = int(f0*1e9 + ro_pulse.frequency)
+            shifted_resonator_freq = int(f0 + ro_pulse.frequency)
         elif self.resonator_type == '2D':
             f0, BW, Q, peak_voltage = fitting.lorentzian_fit("last", min, "Resonator_spectroscopy")
-            shifted_resonator_freq = int(f0*1e9 + ro_pulse.frequency)
+            shifted_resonator_freq = int(f0 + ro_pulse.frequency)
 
         dispersive_shift = shifted_resonator_freq - resonator_freq
         print(f"\nResonator Frequency = {resonator_freq}")
@@ -803,6 +830,7 @@ class Calibration():
         stop = False        
         self.pl.tuids_max_num(self.max_num_plots)
         
+        #platform.qcm[qubit].lo.frequency = freq
 
         for t_max in self.t_end:
             if (stop == False):
@@ -835,7 +863,9 @@ class Calibration():
                     stop = True
 
                 platform.reload_settings()
-                # FIXME: The way this routine is coded the new_T2 and delta_phys returned are not the optimal.
+                # FIXME: The way this routine is coded the new_T2 and delta_phys returned are not the optimal. 
+                # The optimal values are those obtained in the previous iteration that gave a better T2.
+                # TODO: fix the logic of the loops
         return new_t2, delta_phys, corrected_qubit_freq, smooth_dataset, dataset
 
     def run_drag_pulse_tunning(self, qubit):
@@ -1074,6 +1104,18 @@ class SettableGain():
 
     def set(self, value):
         self.instance.gain_awg =value
+
+class ROPulsePhaseParameter():
+
+    label = 'Readout Pulse Phase'
+    unit = 'rad'
+    name = 'ro_pulse_phase'
+
+    def __init__(self, ro_pulse):
+        self.ro_pulse = ro_pulse
+
+    def set(self, value):
+        self.ro_pulse.phase = value
 
 
 class QCPulseLengthParameter():

@@ -1,7 +1,7 @@
 name: tiiq_single_qubit_diagnostics
 description: Settings for characterization scripts.
 software_averages: 1
-software_averages_precision: 2
+software_averages_precision: 1
 max_num_plots: 2
 
 # Single qubit experiments
@@ -32,19 +32,24 @@ qubit_spectroscopy:
   fast_start: -10_000_000
   fast_end: 10_000_000
   fast_step: 500_000
-  precision_start: -3_000_000
-  precision_end: 3_000_000
-  precision_step: 100_000
+  precision_start: -500_000
+  precision_end: 500_000
+  precision_step: 20_000
 
 rabi_pulse_length:
   pulse_duration_start: 4 # minimum 4ns
-  pulse_duration_end: 300
-  pulse_duration_step: 1
+  pulse_duration_end: 2000
+  pulse_duration_step: 4
+
+rabi_pulse_phase:
+  pulse_phase_start: 0 
+  pulse_phase_end: 6.28318
+  pulse_phase_step: 0.1
 
 rabi_pulse_gain:
   pulse_gain_start: 0 # -1.0<=v<=1.0
   pulse_gain_end: 1
-  pulse_gain_step: 0.01
+  pulse_gain_step: 0.005
 
 t1:
   delay_before_readout_start: 4
@@ -53,8 +58,8 @@ t1:
 
 ramsey:
   delay_between_pulses_start: 0 # must be a multiple of 4 incl 0
-  delay_between_pulses_end: 1000
-  delay_between_pulses_step: 4 # must be a multiple of 4
+  delay_between_pulses_end: 4000
+  delay_between_pulses_step: 16 # must be a multiple of 4
 
 dispersive_shift:
   freq_width: 5_000_000
@@ -62,9 +67,8 @@ dispersive_shift:
 
 ramsey_freq:
   t_start: 4
-  t_end: [2000] #t_end (optimal) = 3.5 * T2 (limited by HW to 8000ns)
+  t_end: [2000, 4000, 8000, 10000] #t_end (optimal) = 3.5 * T2 (limited by HW to 8000ns)
   t_step: 16
-  offset_freq: 1_000_000
   N_osc: 4
 
 RO_matrix:
