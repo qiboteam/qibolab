@@ -74,9 +74,9 @@ flipping:
   niter: 50
 
 drag_tunning:
-  beta_start: -1.0
-  beta_end: 1.0
-  beta_step: 0.01
+  beta_start: -0.6
+  beta_end: 0.6
+  beta_step: 0.4
 
 calibrate_qubit_states:
   niter: 1024

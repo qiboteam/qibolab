@@ -209,6 +209,7 @@ def data_post(dir = "last"):
 
 def fit_drag_tunning(res1, res2, beta_params):
 
+    print(beta_params)
     #find line of best fit
     a, b = np.polyfit(beta_params, res1, 1)
     c, d = np.polyfit(beta_params, res2, 1)
@@ -218,8 +219,8 @@ def fit_drag_tunning(res1, res2, beta_params):
     plt.scatter(beta_params, res2, color='green')
 
     #add line of best fit to plot
-    plt.plot(beta_params, a*beta_params+b, color='steelblue', linewidth=2)  
-    plt.plot(beta_params, c*beta_params+d, color='steelblue', linewidth=2)
+    plt.plot(beta_params, a*np.array(beta_params)+b, color='steelblue', linewidth=2)  
+    plt.plot(beta_params, c*np.array(beta_params)+d, color='steelblue', linewidth=2)
 
 
     #find interception point
