@@ -391,7 +391,7 @@ class Calibration():
         smooth_dataset, delta_frequency, t2 = fitting.ramsey_fit(dataset)
         utils.plot(smooth_dataset, dataset, "Ramsey", 1)
         print(f"\nDelta Frequency = {delta_frequency}")
-        corrected_qubit_frequency = int(platform.settings['characterization']['single_qubit'][qubit]['qubit_freq'] - delta_frequency)
+        corrected_qubit_frequency = int(platform.settings['characterization']['single_qubit'][qubit]['qubit_freq'] + delta_frequency)
         print(f"\nCorrected Qubit Frequency = {corrected_qubit_frequency}")        
         print(f"\nT2 = {t2} ns")
 
