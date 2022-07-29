@@ -125,6 +125,6 @@ characterization:
             T1: 21160
             T2: 4766.689144856866
             resonator_spectroscopy_peak_ro_voltage: 1212
-            rabi_oscillations_pi_pulse_peak_ro_voltage: 505
+            rabi_oscillations_pi_pulse_peak_ro_voltage: 463
             mean_gnd_states: (-6.182064043245226e-05+0.0011944253117085518j)
             mean_exc_states: (0.00015390240207881345+0.000538230934609144j)

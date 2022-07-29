@@ -47,14 +47,6 @@ def lorentzian_fit(label, peak, name):
         guess_sigma = abs(frequencies[np.argmax(voltages)] - guess_center)
         guess_amp = (np.min(voltages) - guess_offset) * guess_sigma * np.pi
 
-
-
-    print(guess_center)
-    print(guess_offset)
-    print(guess_sigma)
-    print(guess_amp)
-
-
     #Add guessed parameters to the model
     model_Q.set_param_hint('center',value=guess_center,vary=True)
     model_Q.set_param_hint('sigma',value=guess_sigma, vary=True)
