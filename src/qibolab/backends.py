@@ -65,7 +65,8 @@ class QibolabBackend(NumpyBackend):
         # naive normalization
         qubit = qubits[0]
         readout = list(list(result.execution_result.values())[0].values())[0]
-        min_v = self.platform.settings['characterization']['single_qubit'][qubit]['rabi_oscillations_pi_pulse_min_voltage']
-        max_v = self.platform.settings['characterization']['single_qubit'][qubit]['resonator_spectroscopy_max_ro_voltage']
-        p = (readout[0] * 1e6 - min_v) / (max_v - min_v)
+        #min_v = self.platform.settings['characterization']['single_qubit'][qubit]['rabi_oscillations_pi_pulse_min_voltage']
+        #max_v = self.platform.settings['characterization']['single_qubit'][qubit]['resonator_spectroscopy_max_ro_voltage']
+        max_v = self.platform.settings['characterization']['single_qubit'][qubit]['rabi_oscillations_pi_pulse_peak_ro_voltage']
+        p = readout[0] * 1e5  / max_v
         return [p, 1 - p]
