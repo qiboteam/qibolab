@@ -882,7 +882,8 @@ class Calibration():
         self.beta_step = self.settings['drag_tunning']['beta_step']
         
 
-        for beta_param in np.arange(self.beta_start, self.beta_end, self.beta_step): 
+        for beta_param in np.arange(self.beta_start, self.beta_end, self.beta_step).round(4): 
+            print(f"Executing sequence for beta parameter: {beta_param}")
             #drag pulse RX(pi/2)
             RX90_drag_pulse = platform.RX90_drag_pulse(qubit, start = 0, beta = beta_param)
             #drag pulse RY(pi)
