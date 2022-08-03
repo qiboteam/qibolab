@@ -24,7 +24,6 @@ class QRM(AbstractInstrument):
         self.last_pulsequence_hash = "uninitialised"
         self.current_pulsesequence_hash = ""
         self.device_parameters = {}
-        self.settable_frequency = SettableFrequency(self)
         self.lo = self
 
     rw_property_wrapper = lambda parameter: property(lambda self: self.device.get(parameter), lambda self,x: self.set_device_parameter(parameter,x))
@@ -644,7 +643,6 @@ class QCM(AbstractInstrument):
         self.last_pulsequence_hash = "uninitialised"
         self.current_pulsesequence_hash = ""
         self.device_parameters = {}
-        self.settable_frequency = SettableFrequency(self)
         self.lo = self
 
     rw_property_wrapper = lambda parameter: property(lambda self: self.device.get(parameter), lambda self,x: self.set_device_parameter(parameter,x))
@@ -1178,15 +1176,3 @@ class PulsarQCM(QCM):
         super().__init__(name, address)
         from qblox_instruments import Pulsar
         self.device_class = Pulsar
-
-
-class SettableFrequency():
-        label = 'Frequency'
-        unit = 'Hz'
-        name = 'frequency'
-        
-        def __init__(self, outter_class_instance):
-            self.outter_class_instance = outter_class_instance
-
-        def set(self, value):
-            self.outter_class_instance.frequency =  value
