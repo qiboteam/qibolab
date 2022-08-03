@@ -2,7 +2,44 @@ import json
 import numpy as np
 from qibo.config import raise_error, log
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
-from qblox_instruments import Cluster
+import qblox_instruments
+
+class Cluster(AbstractInstrument):
+    def __init__(self, name, address):
+        super().__init__(name, address)
+
+    def connect(self):
+        global cluster
+        if not self.is_connected:
+            for attempt in range(3):
+                try:
+                    qblox_instruments.Cluster.close_all()
+                    self.device = qblox_instruments.Cluster(self.name, self.address)
+                    self.device.reset()
+                    cluster = self.device
+                    self.is_connected = True
+                    # DEBUG: Print Cluster Status                
+                    # print(self.device.get_system_status())
+                    break
+                except Exception as exc:
+                    print(f"Unable to connect:\n{str(exc)}\nRetrying...")
+            if not self.is_connected:
+                raise InstrumentException(self, f'Unable to connect to {self.name}')
+            
+    def setup(self, **kwargs):
+        self.reference_clock_source = kwargs['reference_clock_source']
+        self.device.reference_source(self.reference_clock_source)
+
+    def start(self):
+        pass
+
+    def stop(self):
+        pass
+
+    def disconnect(self):
+        qblox_instruments.Cluster.close_all()
+        global cluster
+        cluster = None
 
 
 cluster : Cluster = None
@@ -35,26 +72,10 @@ class QRM(AbstractInstrument):
         """
         global cluster
         if not self.is_connected:
-            if not cluster:
-                for attempt in range(3):
-                    try:
-                        cluster = self.device_class('cluster', self.address.split(':')[0])
-                        cluster.reset()
-                        # DEBUG: Cluster Reset                
-                        # print("Cluster reset. Status:")
-                        # print(self.device.get_system_status())
-                        cluster_connected = True
-                        break
-                    except KeyError as exc:
-                        print(f"Unable to connect:\n{str(exc)}\nRetrying...")
-                        self.name += '_' + str(attempt)
-                    except Exception as exc:
-                        print(f"Unable to connect:\n{str(exc)}\nRetrying...")
-                if not cluster_connected:
-                    raise InstrumentException(self, f'Unable to connect to {self.name}')
-            self.device = cluster.modules[int(self.address.split(':')[1])-1]
-            self.cluster = cluster
-            self.is_connected = True
+            if cluster:
+                self.device = cluster.modules[int(self.address.split(':')[1])-1]
+                self.cluster = cluster
+                self.is_connected = True
 
     def set_device_parameter(self, parameter: str, value):
         if not(parameter in self.device_parameters and self.device_parameters[parameter] == value):
@@ -654,23 +675,10 @@ class QCM(AbstractInstrument):
         """
         global cluster
         if not self.is_connected:
-            if not cluster:
-                from pyvisa.errors import VisaIOError
-                for attempt in range(3):
-                    try:
-                        cluster = self.device_class('cluster', self.address.split(':')[0])
-                        self.cluster_connected = True
-                        break
-                    except KeyError as exc:
-                        print(f"Unable to connect:\n{str(exc)}\nRetrying...")
-                        self.name += '_' + str(attempt)
-                    except Exception as exc:
-                        print(f"Unable to connect:\n{str(exc)}\nRetrying...")
-                if not self.cluster_connected:
-                    raise InstrumentException(self, f'Unable to connect to {self.name}')
-            self.device = cluster.modules[int(self.address.split(':')[1])-1]
-            self.cluster = cluster
-            self.is_connected = True
+            if cluster:
+                self.device = cluster.modules[int(self.address.split(':')[1])-1]
+                self.cluster = cluster
+                self.is_connected = True
 
     def set_device_parameter(self, parameter: str, value):
         if not(parameter in self.device_parameters and self.device_parameters[parameter] == value):

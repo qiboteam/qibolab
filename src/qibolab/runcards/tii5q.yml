@@ -29,6 +29,13 @@ qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
     5: [10, null, null] # witness qubit
 
 instruments:
+    cluster:
+        lib: qblox
+        class: Cluster
+        address: 192.168.0.4
+        settings:
+            reference_clock_source      : external                      # external or internal
+            
     qrm_rf:
         lib: qblox
         class: ClusterQRM_RF
