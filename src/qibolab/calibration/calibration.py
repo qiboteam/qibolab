@@ -923,7 +923,7 @@ class Calibration():
         nqubits = platform.settings['nqubits']
 
         #Init RO_matrix[2^5][2^5] with 0
-        RO_matrix = [[0 for x in range(2^nqubits)] for y in range(2^nqubits)]
+        RO_matrix = [[0 for x in range(2**nqubits)] for y in range(2**nqubits)]
         #set niter = 1024 to collect good statistics
         self.reload_settings()
         self.niter = self.settings['RO_matrix']['niter']
@@ -934,23 +934,25 @@ class Calibration():
             for j in range(self.niter):
                 #covert the multiqubit state i into binary representation
                 multiqubit_state = bin(i)[2:].zfill(nqubits)
-                #print("Prepared state: " + str(multiqubit_state))
+                print(f"Prepared state: {multiqubit_state}")
                 
                 #multiqubit_state = |00000>, |00001> ... |11111>
                 for n in multiqubit_state:
                     #n = qubit_0 value ... qubit_4 value of a given state
                     seq = PulseSequence()
+                    qubit = 0
                     if(n == "1"):
                         #Define sequence for qubit for Pipulse state
-                        RX90_pulse = platform.RX90_pulse(qubit, start = 0)
-                        ro_pulse = platform.qubit_readout_pulse(qubit, start = RX90_pulse.duration)
-                        seq.add(RX90_pulse)
+                        RX_pulse = platform.RX_pulse(qubit, start = 0)
+                        ro_pulse = platform.qubit_readout_pulse(qubit, start = RX_pulse.duration)
+                        seq.add(RX_pulse)
                         seq.add(ro_pulse)
                         
                     if(n == "0"):
                         #Define sequence for qubit Identity state
                         ro_pulse = platform.qubit_readout_pulse(qubit, start = 0)
                         seq.add(ro_pulse)
+                    qubit = qubit + 1
 
                 platform.start()
                 ro_multiqubit_state = platform.execute_pulse_sequence(seq, nshots=1)
@@ -959,22 +961,24 @@ class Calibration():
                 #Iterate over list of RO results 
                 res = ""
                 for qubit in range(nqubits):
-                    globals()['qubit_state_%s' % qubit] = list(ro_multiqubit_state.values())[qubit].values()
-                    globals()['point_%s' % qubit] = complex(globals()[f"qubit_state_{qubit}"][2], globals()[f"qubit_state_{qubit}"][3])
-                    
+                    globals()['qubit_state_%s' % qubit] = list(list(ro_multiqubit_state.values())[qubit].values())[0]
+                    I = (globals()[f"qubit_state_{qubit}"])[2]
+                    Q = (globals()[f"qubit_state_{qubit}"])[3]
+                    point = complex(I, Q)
                     #classify state of qubit n
                     mean_gnd_states = platform.settings['characterization']['single_qubit'][qubit]['mean_gnd_states']
+                    mean_gnd = complex(mean_gnd_states)
                     mean_exc_states = platform.settings['characterization']['single_qubit'][qubit]['mean_exc_states']
-                    res.append(utils.classify(globals()['point_%s' % qubit], mean_gnd_states, mean_exc_states))
+                    mean_exc = complex(mean_exc_states)
+                    res += str(utils.classify(point, mean_gnd, mean_exc))
             
                 #End of processing multiqubit state i
                 #populate state i with RO results obtained
+                print(f"ReadOut classified state: {res}")
                 RO_matrix[i][int(res, 2)] = RO_matrix[i][int(res,2)] + 1
-
             #End of repeting RO for a given state i
-            RO_matrix[i] = RO_matrix[i] / self.niter
         #end states
-        return RO_matrix
+        return np.array(RO_matrix) / self.niter
 
     def run_drag_pulse_tunning(self, qubit):
         platform = self.platform
