@@ -87,7 +87,7 @@ for qubit in platform.qubits:
         ds.save_config_parameter("mean_exc_states", mean_exc_states, 'characterization', 'single_qubit', qubit)
 
     # Ramsey auto-detunned frequency
-    t2, delta_frequency, smooth_dataset, dataset = ds.run_ramsey_freq(qubit)
+    t2, delta_frequency, smooth_dataset, dataset = ds.run_ramsey_frequency_detuned(qubit)
     if save_settings:
         adjusted_qubit_freq = int(platform.characterization['single_qubit'][qubit]['qubit_freq'] + delta_frequency)
         ds.save_config_parameter("qubit_freq", adjusted_qubit_freq, 'characterization', 'single_qubit', qubit)
@@ -105,7 +105,7 @@ for qubit in platform.qubits:
     
     # Run allXY to test drag shape.
     # COMMENT: run at least once the "run_drag_pulse_tunning" method to save new shape values and check them with allXY results
-    results, gateNumber = ds.allXY(qubit)
+    results, gateNumber = ds.run_allXY(qubit)
     if save_settings:
         utils.plot_allXY(results, gateNumber)
     
