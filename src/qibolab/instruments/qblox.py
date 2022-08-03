@@ -1,8 +1,7 @@
 import json
 import numpy as np
-from qibo.config import raise_error, log
-from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 import qblox_instruments
+from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 
 class Cluster(AbstractInstrument):
     def __init__(self, name, address):
@@ -47,13 +46,31 @@ cluster : Cluster = None
 
 class ClusterQRM_RF(AbstractInstrument):
     """
-    Generic driver for Qblox Readout Modules.
+    Qblox Cluster Qubit Readout Module RF driver.
     
     Args:
         name (str): unique name given to the instrument
-        address (str): IP address (IPv4) of the instrument
+        address (str): IP_address:module_number
 
     """
+    DEFAULT_SEQUENCER = 0
+
+    property_wrapper = lambda *parameter: property(lambda self: self.device.get(parameter[0]), lambda self,x: self.set_device_parameter(self.device, *parameter, value = x))
+    sequencer_property_wrapper = lambda sequencer, *parameter: property(lambda self: self.device.sequencers[sequencer].get(parameter[0]), lambda self,x: self.set_device_parameter(self.device.sequencers[sequencer], *parameter, value = x))
+    
+    attenuation = property_wrapper('out0_att')
+    lo_enabled = property_wrapper('out0_in0_lo_en')
+    lo_frequency = property_wrapper('out0_in0_lo_freq')
+
+    gain = sequencer_property_wrapper(DEFAULT_SEQUENCER, 'gain_awg_path0', 'gain_awg_path1')
+    acquisition_duration = sequencer_property_wrapper(DEFAULT_SEQUENCER, 'integration_length_acq')
+    hardware_mod_demod_en = sequencer_property_wrapper(DEFAULT_SEQUENCER, 'mod_en_awg', 'demod_en_acq')
+                      
+    nco_freq = sequencer_property_wrapper(DEFAULT_SEQUENCER, 'nco_freq')
+    nco_phase_offs = sequencer_property_wrapper(DEFAULT_SEQUENCER, 'nco_phase_offs')
+    discretization_threshold_acq = sequencer_property_wrapper(DEFAULT_SEQUENCER, 'discretization_threshold_acq')
+    phase_rotation_acq = sequencer_property_wrapper(DEFAULT_SEQUENCER, 'phase_rotation_acq')
+
     def __init__(self, name, address):
         super().__init__(name, address)
         self.sequencers = []
@@ -62,9 +79,6 @@ class ClusterQRM_RF(AbstractInstrument):
         self.current_pulsesequence_hash = ""
         self.device_parameters = {}
         self.lo = self
-
-    rw_property_wrapper = lambda parameter: property(lambda self: self.device.get(parameter), lambda self,x: self.set_device_parameter(parameter,x))
-    frequency = rw_property_wrapper('out0_in0_lo_freq')
 
     def connect(self):
         """
@@ -76,30 +90,53 @@ class ClusterQRM_RF(AbstractInstrument):
                 self.device = cluster.modules[int(self.address.split(':')[1])-1]
                 self.cluster = cluster
                 self.is_connected = True
+                
+                self.set_device_parameter(self.device, 'in0_att', value = 0) 
+                self.set_device_parameter(self.device, 'out0_offset_path0', 'out0_offset_path1', value = 0) # Default after reboot = 7.625
+                self.set_device_parameter(self.device, 'scope_acq_avg_mode_en_path0', 'scope_acq_avg_mode_en_path1', value = True)
+                self.set_device_parameter(self.device, 'scope_acq_sequencer_select', value = self.DEFAULT_SEQUENCER) 
+                self.set_device_parameter(self.device, 'scope_acq_trigger_level_path0', 'scope_acq_trigger_level_path1', value = 0) 
+                self.set_device_parameter(self.device, 'scope_acq_trigger_mode_path0', 'scope_acq_trigger_mode_path1', value = 'sequencer') 
+                    
+                target  = self.device.sequencers[self.DEFAULT_SEQUENCER]
 
-    def set_device_parameter(self, parameter: str, value):
-        if not(parameter in self.device_parameters and self.device_parameters[parameter] == value):
-            if self.is_connected:
-                target = self.device
-                aux_parameter = parameter
+                self.set_device_parameter(target, 'channel_map_path0_out0_en', value = True)
+                self.set_device_parameter(target, 'channel_map_path1_out1_en', value = True)
+                self.set_device_parameter(target, 'cont_mode_en_awg_path0', 'cont_mode_en_awg_path1', value = False)
+                self.set_device_parameter(target, 'cont_mode_waveform_idx_awg_path0', 'cont_mode_waveform_idx_awg_path1', value = 0)
+                self.set_device_parameter(target, 'marker_ovr_en', value = False)
+                self.set_device_parameter(target, 'marker_ovr_value', value = 0)
+                self.set_device_parameter(target, 'mixer_corr_gain_ratio', value = 1)
+                self.set_device_parameter(target, 'mixer_corr_phase_offset_degree', value = 0)
+                self.set_device_parameter(target, 'offset_awg_path0', value = 0)
+                self.set_device_parameter(target, 'offset_awg_path1', value = 0)
+                self.set_device_parameter(target, 'sync_en', value = True) # Default after reboot = False
+                self.set_device_parameter(target, 'upsample_rate_awg_path0', 'upsample_rate_awg_path1', value = 0)
 
-                while '.' in aux_parameter:
-                    if hasattr(target, aux_parameter.split('.')[0]):
-                        target = target.__getattr__(aux_parameter.split('.')[0])
-                        aux_parameter = aux_parameter.split('.')[1]
-                    else:
-                        raise_error(Exception, f'The instrument {self.name} does not have parameter {parameter}')
+                self.set_device_parameter(target, 'channel_map_path0_out0_en', 'channel_map_path1_out1_en', value = True)
+                
+                self.device_num_sequencers = len(self.device.sequencers)
+                for sequencer in range(1,  self.device_num_sequencers):
+                    self.set_device_parameter(self.device.sequencers[sequencer], 'channel_map_path0_out0_en', 'channel_map_path1_out1_en', value = False) # Default after reboot = True
 
-                if hasattr(target, aux_parameter):
-                    target.set(aux_parameter, value)
-                    # target.__setattr__(aux_parameter, value)
-                    self.device_parameters[parameter] = value
-                    # DEBUG: QRM Parameter Setting Printing
-                    # print(f"Setting {self.name} {parameter} = {value}")
-                else:
-                    raise_error(Exception, f'The instrument {self.name} does not have parameter {parameter}')
-            else:
-                raise_error(Exception,'There is no connection to the instrument  {self.name}')
+    def set_device_parameter(self, target, *parameters, value):
+        if self.is_connected:
+            key = target.name + '.' + parameters[0]
+            if not key in self.device_parameters:
+                for parameter in parameters:
+                    if not hasattr(target, parameter):
+                         raise Exception(f'The instrument {self.name} does not have parameters {parameter}')
+                    target.set(parameter, value)
+                self.device_parameters[key] = value
+            elif self.device_parameters[key] != value:
+                for parameter in parameters:
+                    target.set(parameter, value)
+                self.device_parameters[key] = value
+        else:
+            raise Exception('There is no connection to the instrument  {self.name}')
+    
+    def erase_device_parameters_cache(self):
+        self.device_parameters = {}
 
     def setup(self, **kwargs):
         """
@@ -107,119 +144,43 @@ class ClusterQRM_RF(AbstractInstrument):
         A connection needs to be established before calling this method.
         
         Args:
-            ref_clock (str): {'internal', 'external'} the source of the instrument clock
-            sync_en (bool): {True, False} syncronise with other instruments
-            scope_acq_avg_mode_en (bool): {True, False} average the results of the multiple acquisitions
-            scope_acq_trigger_mode (str): {'sequencer', 'level'} 
-            gain (float): {0 .. 1} the gain applied to all sequencers on their output paths
-            acquisition_start (int): the delay between playing the readout pulse and the start of the acquisition (minimum 4ns)
-            acquisition_duration (int): the duration of the acquisition in ns.
-            mode: ssb
-            channel_port_map (dict): a dictionary of {channel (int): port (str) {'o1', 'o2', ...}}
+
         """
-        # Load settings
-        self.hardware_avg = kwargs['hardware_avg']
-        self.sampling_rate = kwargs['sampling_rate']
-        self.repetition_duration = kwargs['repetition_duration']
-        self.minimum_delay_between_instructions = kwargs['minimum_delay_between_instructions']
-
-        self.in0_att = kwargs['in0_att']
-        self.out0_att = kwargs['out0_att']
-        self.out0_in0_lo_en = kwargs['out0_in0_lo_en']
-        self.out0_in0_lo_freq = kwargs['out0_in0_lo_freq']
-        self.out0_offset_path0 = kwargs['out0_offset_path0']
-        self.out0_offset_path1 = kwargs['out0_offset_path1']
-        self.scope_acq_avg_mode_en = kwargs['scope_acq_avg_mode_en']
-        self.scope_acq_sequencer_select = kwargs['scope_acq_sequencer_select']
-        self.scope_acq_trigger_level = kwargs['scope_acq_trigger_level']
-        self.scope_acq_trigger_mode = kwargs['scope_acq_trigger_mode']
-
-        self.channel_map_path0_out0_en = kwargs['channel_map_path0_out0_en']
-        self.channel_map_path1_out1_en = kwargs['channel_map_path1_out1_en']
-        self.cont_mode_en_awg = kwargs['cont_mode_en_awg']
-        self.cont_mode_waveform_idx_awg = kwargs['cont_mode_waveform_idx_awg']
-        self.demod_en_acq = kwargs['demod_en_acq']
-        self.discretization_threshold_acq = kwargs['discretization_threshold_acq']
-        self.gain_awg = kwargs['gain_awg']
-        self.integration_length_acq = kwargs['integration_length_acq']
-        self.marker_ovr_en = kwargs['marker_ovr_en']
-        self.marker_ovr_value = kwargs['marker_ovr_value']
-        self.mixer_corr_gain_ratio = kwargs['mixer_corr_gain_ratio']
-        self.mixer_corr_phase_offset_degree = kwargs['mixer_corr_phase_offset_degree']
-        self.mod_en_awg = kwargs['mod_en_awg']
-        self.nco_freq = kwargs['nco_freq']
-        self.nco_phase_offs = kwargs['nco_phase_offs']
-        self.offset_awg_path0 = kwargs['offset_awg_path0']
-        self.offset_awg_path1 = kwargs['offset_awg_path1']
-        self.phase_rotation_acq = kwargs['phase_rotation_acq']
-        self.sync_en = kwargs['sync_en']
-        self.upsample_rate_awg = kwargs['upsample_rate_awg']
-
-        self.acquisition_start = kwargs['acquisition_start']
-        self.acquisition_duration = kwargs['acquisition_duration']
-        self.channel_port_map = kwargs['channel_port_map']
 
         # Hardcoded values used to generate sequence program
         self.wait_loop_step = 1000
         self.waveform_max_length = 16384//2 # maximum length of the combination of waveforms, per sequencer, in number of samples (defined by the sequencer memory).
-        self.device_num_sequencers = len(self.device.sequencers)
         self.device_num_ports = 1
         if self.is_connected:
             # Reset
-            if self.current_pulsesequence_hash != self.last_pulsequence_hash:
-                # print(f"Resetting {self.name}")
-                # self.cluster.reset() # FIXME: this needs to clear the cahes of the rest of the modules
-                self.cluster.reference_source('internal')
-                self.device_parameters = {}
-                # DEBUG: QRM Log device Reset
-                # print("QRM reset. Status:")
-                # print(self.device.get_system_status())
-            self.frequency = self.out0_in0_lo_freq
+            # if self.current_pulsesequence_hash != self.last_pulsequence_hash:
+            #     self.device_parameters = {}
+            # TODO: Check when Reset was necessary
 
-            self.set_device_parameter('in0_att', self.in0_att) 
-            self.set_device_parameter('out0_att', self.out0_att) 
-            self.set_device_parameter('out0_in0_lo_en', self.out0_in0_lo_en) 
-            self.set_device_parameter('out0_in0_lo_freq', self.out0_in0_lo_freq) 
-            self.set_device_parameter('out0_offset_path0', self.out0_offset_path0) 
-            self.set_device_parameter('out0_offset_path1', self.out0_offset_path1) 
-            self.set_device_parameter('scope_acq_avg_mode_en_path0', self.scope_acq_avg_mode_en)
-            self.set_device_parameter('scope_acq_avg_mode_en_path1', self.scope_acq_avg_mode_en)
-            self.set_device_parameter('scope_acq_sequencer_select', self.scope_acq_sequencer_select) 
-            self.set_device_parameter('scope_acq_trigger_level_path0', self.scope_acq_trigger_level) 
-            self.set_device_parameter('scope_acq_trigger_level_path1', self.scope_acq_trigger_level) 
-            self.set_device_parameter('scope_acq_trigger_mode_path0', self.scope_acq_trigger_mode) 
-            self.set_device_parameter('scope_acq_trigger_mode_path1', self.scope_acq_trigger_mode)
+            # Load settings
+            self.hardware_avg = kwargs['hardware_avg']
+            self.sampling_rate = kwargs['sampling_rate']
+            self.repetition_duration = kwargs['repetition_duration']
+            self.minimum_delay_between_instructions = kwargs['minimum_delay_between_instructions']
+            # TODO: Remove minimum_delay_between_instructions
 
-            for sequencer in range(self.device_num_sequencers):
-                self.set_device_parameter(f"sequencer{sequencer}.channel_map_path0_out0_en", self.channel_map_path0_out0_en)
-                self.set_device_parameter(f"sequencer{sequencer}.channel_map_path1_out1_en", self.channel_map_path1_out1_en)
-                self.set_device_parameter(f"sequencer{sequencer}.cont_mode_en_awg_path0", self.cont_mode_en_awg)
-                self.set_device_parameter(f"sequencer{sequencer}.cont_mode_en_awg_path1", self.cont_mode_en_awg)
-                self.set_device_parameter(f"sequencer{sequencer}.cont_mode_waveform_idx_awg_path0", self.cont_mode_waveform_idx_awg)
-                self.set_device_parameter(f"sequencer{sequencer}.cont_mode_waveform_idx_awg_path1", self.cont_mode_waveform_idx_awg)
-                self.set_device_parameter(f"sequencer{sequencer}.demod_en_acq", self.demod_en_acq)
-                self.set_device_parameter(f"sequencer{sequencer}.discretization_threshold_acq", self.discretization_threshold_acq)
-                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path0", self.gain_awg)
-                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path1", self.gain_awg)
-                self.set_device_parameter(f"sequencer{sequencer}.integration_length_acq", self.integration_length_acq)
-                self.set_device_parameter(f"sequencer{sequencer}.marker_ovr_en", self.marker_ovr_en)
-                self.set_device_parameter(f"sequencer{sequencer}.marker_ovr_value", self.marker_ovr_value)
-                self.set_device_parameter(f"sequencer{sequencer}.mixer_corr_gain_ratio", self.mixer_corr_gain_ratio)
-                self.set_device_parameter(f"sequencer{sequencer}.mixer_corr_phase_offset_degree", self.mixer_corr_phase_offset_degree)
-                self.set_device_parameter(f"sequencer{sequencer}.mod_en_awg", self.mod_en_awg)
-                self.set_device_parameter(f"sequencer{sequencer}.nco_freq", self.nco_freq)
-                self.set_device_parameter(f"sequencer{sequencer}.nco_phase_offs", self.nco_phase_offs)
-                self.set_device_parameter(f"sequencer{sequencer}.offset_awg_path0", self.offset_awg_path0)
-                self.set_device_parameter(f"sequencer{sequencer}.offset_awg_path1", self.offset_awg_path1)
-                self.set_device_parameter(f"sequencer{sequencer}.phase_rotation_acq", self.phase_rotation_acq)
-                self.set_device_parameter(f"sequencer{sequencer}.sync_en", self.sync_en)
-                self.set_device_parameter(f"sequencer{sequencer}.upsample_rate_awg_path0", self.upsample_rate_awg)
-                self.set_device_parameter(f"sequencer{sequencer}.upsample_rate_awg_path1", self.upsample_rate_awg)
+            self.acquisition_hold_off = kwargs['acquisition_hold_off']
+            self.acquisition_duration = kwargs['acquisition_duration']
+            self.channel_port_map = kwargs['channel_port_map']
 
-            # The mapping of sequencers to ports is done in upload() as the number of sequencers needed 
-            # can only be determined after examining the pulse sequence
+            self.attenuation = kwargs['attenuation']                        # Default after reboot = 7
+            self.lo_enabled = kwargs['lo_enabled']                          # Default after reboot = True
+            self.lo_frequency = kwargs['lo_frequency']                      # Default after reboot = 6_000_000_000
+            self.gain = kwargs['gain']                                      # Default after reboot = 1
+            self.hardware_mod_demod_en = kwargs['hardware_mod_demod_en']    # Default after reboot = False
+            
+            self.nco_freq = 0                                               # Default after reboot = 1
+            self.nco_phase_offs = 0                                         # Default after reboot = 1
+            self.discretization_threshold_acq = 0                           # Default after reboot = 1
+            self.phase_rotation_acq = 0                                     # Default after reboot = 1
+
         else:
-            raise_error(Exception,'There is no connection to the instrument')
+            raise Exception('There is no connection to the instrument')
 
     def process_pulse_sequence(self, channel_pulses, nshots):
         """
@@ -252,7 +213,7 @@ class ClusterQRM_RF(AbstractInstrument):
                 for m in range(1, len(channel_pulses[channel])):
                     if len(channel_pulses[channel][m].overlaps) > 0:
                         # TODO: Urgently needed in order to implement multiplexed readout
-                        raise_error(NotImplementedError, "Overlaping pulses on the same channel are not yet supported.")
+                        raise(NotImplementedError, "Overlaping pulses on the same channel are not yet supported.")
 
             # Allocate channel pulses to sequencers. 
             #   At least one sequencer is needed for each channel
@@ -267,7 +228,7 @@ class ClusterQRM_RF(AbstractInstrument):
                     # Select a sequencer and add it to the sequencer_channel_map
                     sequencer += 1
                     if sequencer > self.device_num_sequencers:
-                        raise_error(Exception, f"The number of sequencers requried to play the sequence exceeds the number available {self.device_num_sequencers}.")
+                        raise Exception(f"The number of sequencers requried to play the sequence exceeds the number available {self.device_num_sequencers}.")
                     # Initialise the corresponding variables 
                     self.sequencers.append(sequencer)
                     self.sequencer_channel_map[sequencer]=channel
@@ -290,7 +251,7 @@ class ClusterQRM_RF(AbstractInstrument):
                             part = 0
                             while waveforms_length + pulse.duration > self.waveform_max_length:
                                 if pulse.type == 'ro':
-                                    raise_error(NotImplementedError, f"Readout pulses longer than the memory available for a sequencer ({self.waveform_max_length}) are not supported.")
+                                    raise(NotImplementedError, f"Readout pulses longer than the memory available for a sequencer ({self.waveform_max_length}) are not supported.")
                                 import copy
                                 first_part = copy.deepcopy(pulse)
                                 first_part.duration = self.waveform_max_length - waveforms_length 
@@ -311,7 +272,7 @@ class ClusterQRM_RF(AbstractInstrument):
                                 # Select a new sequencer
                                 sequencer += 1
                                 if sequencer > self.device_num_sequencers:
-                                        raise_error(Exception, f"The number of sequencers requried to play the sequence exceeds the number available {self.device_num_sequencers}.")
+                                        raise Exception(f"The number of sequencers requried to play the sequence exceeds the number available {self.device_num_sequencers}.")
                                 # Initialise the corresponding variables 
                                 self.sequencers.append(sequencer)
                                 self.sequencer_channel_map[sequencer]=channel
@@ -435,7 +396,7 @@ class ClusterQRM_RF(AbstractInstrument):
                             delay_after_acquire = sequence_total_duration - pulses[sequencer][n].start - self.minimum_delay_between_instructions # self.acquisition_start
                             
                         if delay_after_acquire < self.minimum_delay_between_instructions:
-                                raise_error(Exception, f"The minimum delay before starting acquisition is {self.minimum_delay_between_instructions}ns.")
+                                raise Exception(f"The minimum delay before starting acquisition is {self.minimum_delay_between_instructions}ns.")
                         
                         # Prepare play instruction: play arg0, arg1, arg2. 
                         #   arg0 is the index of the I waveform 
@@ -463,7 +424,7 @@ class ClusterQRM_RF(AbstractInstrument):
                             delay_after_play = sequence_total_duration - pulses[sequencer][n].start
                             
                         if delay_after_play < self.minimum_delay_between_instructions:
-                                raise_error(Exception, f"The minimum delay between pulses is {self.minimum_delay_between_instructions}ns.")
+                                raise Exception(f"The minimum delay between pulses is {self.minimum_delay_between_instructions}ns.")
                         
                         # Prepare play instruction: play arg0, arg1, arg2. 
                         #   arg0 is the index of the I waveform 
@@ -518,24 +479,6 @@ class ClusterQRM_RF(AbstractInstrument):
 
     def upload(self):
         """Uploads waveforms and programs all sequencers and arms them in preparation for execution."""
-        # Setup
-        for sequencer in range(self.device_num_sequencers):
-            if sequencer in self.sequencers:
-                # Route sequencers to specific outputs.
-                port = int(self.channel_port_map[self.sequencer_channel_map[sequencer]][1:])-1
-                self.set_device_parameter(f"sequencer{sequencer}.channel_map_path0_out{2*port}_en", True)
-                self.set_device_parameter(f"sequencer{sequencer}.channel_map_path1_out{2*port+1}_en", True)
-                # Enable sequencer syncronisation
-                self.set_device_parameter(f"sequencer{sequencer}.sync_en", self.sync_en)
-                # Set gain
-                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path0", self.gain_awg)
-                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path1", self.gain_awg)
-            else:
-                # Configure the sequencers synchronization.
-                self.set_device_parameter(f"sequencer{sequencer}.sync_en", False)
-                # Disable all sequencer - port connections
-                for out in range(0, 2 * self.device_num_ports):
-                    self.set_device_parameter(f"sequencer{sequencer}.channel_map_path{out%2}_out{out}_en", False)
     
         # Upload
         if self.current_pulsesequence_hash != self.last_pulsequence_hash:
@@ -609,8 +552,8 @@ class ClusterQRM_RF(AbstractInstrument):
         acquisition_frequency = 20_000_000
         #TODO: obtain from acquisition info
         #DOWN Conversion
-        n0 = self.acquisition_start # 0
-        n1 = self.acquisition_start + self.acquisition_duration # self.acquisition_duration # 
+        n0 = self.acquisition_hold_off # 0
+        n1 = self.acquisition_hold_off + self.acquisition_duration # self.acquisition_duration # 
         input_vec_I = np.array(raw_results[acquisition_name]["acquisition"]["scope"]["path0"]["data"][n0: n1])
         input_vec_Q = np.array(raw_results[acquisition_name]["acquisition"]["scope"]["path1"]["data"][n0: n1])
         input_vec_I -= np.mean(input_vec_I)
@@ -630,7 +573,6 @@ class ClusterQRM_RF(AbstractInstrument):
 
         return integrated_signal
 
-
     def start(self):
         pass
 
@@ -639,24 +581,42 @@ class ClusterQRM_RF(AbstractInstrument):
         self.device.stop_sequencer()
 
     def disconnect(self):
-        """Disconnects from the instrument."""
-        if self.is_connected:
-            self.cluster.close()
-            self.is_connected = False
-    
-    def __del__(self):
-        self.disconnect()
+        pass
 
 
 class ClusterQCM_RF(AbstractInstrument):
     """
-    Generic driver for Qblox Control Modules.
+    Qblox Cluster Qubit Control Module RF driver.
     
     Args:
         name (str): unique name given to the instrument
-        address (str): IP address (IPv4) of the instrument
+        address (str): IP_address:module_number
 
     """
+    O1_DEFAULT_SEQUENCER = 0
+    O2_DEFAULT_SEQUENCER = 1
+
+    property_wrapper = lambda *parameter: property(lambda self: self.device.get(parameter[0]), lambda self,x: self.set_device_parameter(self.device, *parameter, value = x))
+    sequencer_property_wrapper = lambda sequencer, *parameter: property(lambda self: self.device.sequencers[sequencer].get(parameter[0]), lambda self,x: self.set_device_parameter(self.device.sequencers[sequencer], *parameter, value = x))
+    
+    o1_attenuation = property_wrapper('out0_att')
+    o1_lo_enabled = property_wrapper('out0_lo_en')
+    o1_lo_frequency = property_wrapper('out0_lo_freq')
+    o1_gain = sequencer_property_wrapper(O1_DEFAULT_SEQUENCER, 'gain_awg_path0', 'gain_awg_path1')
+
+    o1_hardware_mod_en = sequencer_property_wrapper(O1_DEFAULT_SEQUENCER, 'mod_en_awg')         
+    o1_nco_freq = sequencer_property_wrapper(O1_DEFAULT_SEQUENCER, 'nco_freq')
+    o1_nco_phase_offs = sequencer_property_wrapper(O1_DEFAULT_SEQUENCER, 'nco_phase_offs')
+
+    o2_attenuation = property_wrapper('out1_att')
+    o2_lo_enabled = property_wrapper('out1_lo_en')
+    o2_lo_frequency = property_wrapper('out1_lo_freq')
+    o2_gain = sequencer_property_wrapper(O2_DEFAULT_SEQUENCER, 'gain_awg_path0', 'gain_awg_path1')
+
+    o2_hardware_mod_en = sequencer_property_wrapper(O2_DEFAULT_SEQUENCER, 'mod_en_awg')         
+    o2_nco_freq = sequencer_property_wrapper(O2_DEFAULT_SEQUENCER, 'nco_freq')
+    o2_nco_phase_offs = sequencer_property_wrapper(O2_DEFAULT_SEQUENCER, 'nco_phase_offs')
+
     def __init__(self, name, address):
         super().__init__(name, address)
         self.sequencers = []
@@ -665,9 +625,6 @@ class ClusterQCM_RF(AbstractInstrument):
         self.current_pulsesequence_hash = ""
         self.device_parameters = {}
         self.lo = self
-
-    rw_property_wrapper = lambda parameter: property(lambda self: self.device.get(parameter), lambda self,x: self.set_device_parameter(parameter,x))
-    frequency = rw_property_wrapper('out0_lo_freq')
 
     def connect(self):
         """
@@ -679,30 +636,50 @@ class ClusterQCM_RF(AbstractInstrument):
                 self.device = cluster.modules[int(self.address.split(':')[1])-1]
                 self.cluster = cluster
                 self.is_connected = True
+                self.set_device_parameter(self.device, 'out0_offset_path0', 'out0_offset_path1', value = 0) # Default after reboot = 7.625
+                self.set_device_parameter(self.device, 'out1_offset_path0', 'out1_offset_path1', value = 0) # Default after reboot = 7.625
+                                    
+                for target in [self.device.sequencers[self.O1_DEFAULT_SEQUENCER], self.device.sequencers[self.O2_DEFAULT_SEQUENCER]]:
 
-    def set_device_parameter(self, parameter: str, value):
-        if not(parameter in self.device_parameters and self.device_parameters[parameter] == value):
-            if self.is_connected:
-                target = self.device
-                aux_parameter = parameter
+                    self.set_device_parameter(target, 'cont_mode_en_awg_path0', 'cont_mode_en_awg_path1', value = False)
+                    self.set_device_parameter(target, 'cont_mode_waveform_idx_awg_path0', 'cont_mode_waveform_idx_awg_path1', value = 0)
+                    self.set_device_parameter(target, 'marker_ovr_en', value = False)
+                    self.set_device_parameter(target, 'marker_ovr_value', value = 0)
+                    self.set_device_parameter(target, 'mixer_corr_gain_ratio', value = 1)
+                    self.set_device_parameter(target, 'mixer_corr_phase_offset_degree', value = 0)
+                    self.set_device_parameter(target, 'offset_awg_path0', value = 0)
+                    self.set_device_parameter(target, 'offset_awg_path1', value = 0)
+                    self.set_device_parameter(target, 'sync_en', value = True) # Default after reboot = False
+                    self.set_device_parameter(target, 'upsample_rate_awg_path0', 'upsample_rate_awg_path1', value = 0)
 
-                while '.' in aux_parameter:
-                    if hasattr(target, aux_parameter.split('.')[0]):
-                        target = target.__getattr__(aux_parameter.split('.')[0])
-                        aux_parameter = aux_parameter.split('.')[1]
-                    else:
-                        raise_error(Exception, f'The instrument {self.name} does not have parameter {parameter}')
+                self.set_device_parameter(self.device.sequencers[self.O1_DEFAULT_SEQUENCER], 'channel_map_path0_out0_en', 'channel_map_path1_out1_en', value = True)
+                self.set_device_parameter(self.device.sequencers[self.O1_DEFAULT_SEQUENCER], 'channel_map_path0_out2_en', 'channel_map_path1_out3_en', value = False)
+                self.set_device_parameter(self.device.sequencers[self.O2_DEFAULT_SEQUENCER], 'channel_map_path0_out0_en', 'channel_map_path1_out1_en', value = False)
+                self.set_device_parameter(self.device.sequencers[self.O2_DEFAULT_SEQUENCER], 'channel_map_path0_out2_en', 'channel_map_path1_out3_en', value = True)
+                self.device_num_sequencers = len(self.device.sequencers)
+                for sequencer in range(2,  self.device_num_sequencers):
+                    self.set_device_parameter(self.device.sequencers[sequencer], 'channel_map_path0_out0_en', 'channel_map_path1_out1_en', value = False) # Default after reboot = True
+                    self.set_device_parameter(self.device.sequencers[sequencer], 'channel_map_path0_out2_en', 'channel_map_path1_out3_en', value = False) # Default after reboot = True
 
-                if hasattr(target, aux_parameter):
-                    # target.__setattr__(aux_parameter, value)
-                    target.set(aux_parameter, value)
-                    self.device_parameters[parameter] = value
-                    # DEBUG: QRM Parameter Setting Printing
-                    # print(f"Setting {self.name} {parameter} = {value}")
-                else:
-                    raise_error(Exception, f'The instrument {self.name} does not have parameter {parameter}')
-            else:
-                raise_error(Exception,'There is no connection to the instrument  {self.name}')
+    def set_device_parameter(self, target, *parameters, value):
+        if self.is_connected:
+            key = target.name + '.' + parameters[0]
+            if not key in self.device_parameters:
+                for parameter in parameters:
+                    if not hasattr(target, parameter):
+                         raise Exception(f'The instrument {self.name} does not have parameters {parameter}')
+                    target.set(parameter, value)
+                self.device_parameters[key] = value
+            elif self.device_parameters[key] != value:
+                for parameter in parameters:
+                    target.set(parameter, value)
+                self.device_parameters[key] = value
+        else:
+            raise Exception('There is no connection to the instrument  {self.name}')
+    
+    def erase_device_parameters_cache(self):
+        self.device_parameters = {}
+
 
     def setup(self, **kwargs):
         """
@@ -710,102 +687,47 @@ class ClusterQCM_RF(AbstractInstrument):
         A connection needs to be established before calling this method.
         
         Args:
-            ref_clock (str): {'internal', 'external'} the source of the instrument clock
-            sync_en (bool): {True, False} syncronise with other instruments
-            gain (float): {0 .. 1} the gain applied to all sequencers on their output paths
-            channel_port_map (dict): a dictionary of {channel (int): port (str) {'o1', 'o2', ...}}
+
         """
-        self.hardware_avg = kwargs['hardware_avg']
-        self.sampling_rate = kwargs['sampling_rate']
-        self.repetition_duration = kwargs['repetition_duration']
-        self.minimum_delay_between_instructions = kwargs['minimum_delay_between_instructions']
-
-        self.out0_att = kwargs['out0_att']
-        self.out0_lo_en = kwargs['out0_lo_en']
-        self.out0_lo_freq = kwargs['out0_lo_freq']
-        self.out0_offset_path0 = kwargs['out0_offset_path0']
-        self.out0_offset_path1 = kwargs['out0_offset_path1']
-        self.out1_att = kwargs['out1_att']
-        self.out1_lo_en = kwargs['out1_lo_en']
-        self.out1_lo_freq = kwargs['out1_lo_freq']
-        self.out1_offset_path0 = kwargs['out1_offset_path0']
-        self.out1_offset_path1 = kwargs['out1_offset_path1']
-
-        self.channel_map_path0_out0_en = kwargs['channel_map_path0_out0_en']
-        self.channel_map_path1_out1_en = kwargs['channel_map_path1_out1_en']
-        self.channel_map_path0_out2_en = kwargs['channel_map_path0_out0_en']
-        self.channel_map_path1_out3_en = kwargs['channel_map_path1_out1_en']
-        self.cont_mode_en_awg = kwargs['cont_mode_en_awg']
-        self.cont_mode_waveform_idx_awg = kwargs['cont_mode_waveform_idx_awg']
-        self.gain_awg = kwargs['gain_awg']
-        self.marker_ovr_en = kwargs['marker_ovr_en']
-        self.marker_ovr_value = kwargs['marker_ovr_value']
-        self.mixer_corr_gain_ratio = kwargs['mixer_corr_gain_ratio']
-        self.mixer_corr_phase_offset_degree = kwargs['mixer_corr_phase_offset_degree']
-        self.mod_en_awg = kwargs['mod_en_awg']
-        self.nco_freq = kwargs['nco_freq']
-        self.nco_phase_offs = kwargs['nco_phase_offs']
-        self.offset_awg_path0 = kwargs['offset_awg_path0']
-        self.offset_awg_path1 = kwargs['offset_awg_path1']
-        self.sync_en = kwargs['sync_en']
-        self.upsample_rate_awg = kwargs['upsample_rate_awg']
-
-        self.channel_port_map = kwargs['channel_port_map']
 
         # Hardcoded values used to generate sequence program
         self.wait_loop_step = 1000
         self.waveform_max_length = 16384//2 # maximum length of the combination of waveforms, per sequencer, in number of samples (defined by the sequencer memory).
-        self.device_num_sequencers = len(self.device.sequencers)
         self.device_num_ports = 2
         if self.is_connected:
             # Reset
-            if self.current_pulsesequence_hash != self.last_pulsequence_hash:
-                # print(f"Resetting {self.name}")
-                # self.cluster.reset() # FIXME: this needs to clear the cahes of the rest of the modules
-                # self.cluster.reference_source('external')
-                self.device_parameters = {}
-                # DEBUG: QCM Log device Reset                
-                # print("QCM reset. Status:")
-                # print(self.device.get_system_status())
-            # The mapping of sequencers to ports is done in upload() as the number of sequencers needed 
-            # can only be determined after examining the pulse sequence
-            self.frequency = self.out0_lo_freq
+            # if self.current_pulsesequence_hash != self.last_pulsequence_hash:
+            #     self.device_parameters = {}
+            # TODO: Check when Reset was necessary
 
-            self.set_device_parameter('out0_att', self.out0_att) 
-            self.set_device_parameter('out0_lo_en', self.out0_lo_en) 
-            self.set_device_parameter('out0_lo_freq', self.out0_lo_freq) 
-            self.set_device_parameter('out0_offset_path0', self.out0_offset_path0) 
-            self.set_device_parameter('out0_offset_path1', self.out0_offset_path1) 
-            self.set_device_parameter('out1_att', self.out1_att) 
-            self.set_device_parameter('out1_lo_en', self.out1_lo_en)
-            self.set_device_parameter('out1_lo_freq', self.out1_lo_freq)
-            self.set_device_parameter('out1_offset_path0', self.out1_offset_path0) 
-            self.set_device_parameter('out1_offset_path1', self.out1_offset_path1) 
+            # Load settings
+            self.hardware_avg = kwargs['hardware_avg']
+            self.sampling_rate = kwargs['sampling_rate']
+            self.repetition_duration = kwargs['repetition_duration']
+            self.minimum_delay_between_instructions = kwargs['minimum_delay_between_instructions']
+            # TODO: Remove minimum_delay_between_instructions
 
-            for sequencer in range(self.device_num_sequencers):
-                self.set_device_parameter(f"sequencer{sequencer}.channel_map_path0_out0_en", self.channel_map_path0_out0_en)
-                self.set_device_parameter(f"sequencer{sequencer}.channel_map_path0_out2_en", self.channel_map_path0_out2_en)
-                self.set_device_parameter(f"sequencer{sequencer}.channel_map_path1_out1_en", self.channel_map_path1_out1_en)
-                self.set_device_parameter(f"sequencer{sequencer}.channel_map_path1_out3_en", self.channel_map_path1_out3_en)
-                self.set_device_parameter(f"sequencer{sequencer}.cont_mode_en_awg_path0", self.cont_mode_en_awg)
-                self.set_device_parameter(f"sequencer{sequencer}.cont_mode_en_awg_path1", self.cont_mode_en_awg)
-                self.set_device_parameter(f"sequencer{sequencer}.cont_mode_waveform_idx_awg_path0", self.cont_mode_waveform_idx_awg)
-                self.set_device_parameter(f"sequencer{sequencer}.cont_mode_waveform_idx_awg_path1", self.cont_mode_waveform_idx_awg)
-                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path0", self.gain_awg)
-                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path1", self.gain_awg)
-                self.set_device_parameter(f"sequencer{sequencer}.marker_ovr_en", self.marker_ovr_en)
-                self.set_device_parameter(f"sequencer{sequencer}.marker_ovr_value", self.marker_ovr_value)
-                self.set_device_parameter(f"sequencer{sequencer}.mixer_corr_gain_ratio", self.mixer_corr_gain_ratio)
-                self.set_device_parameter(f"sequencer{sequencer}.mod_en_awg", self.mod_en_awg)
-                self.set_device_parameter(f"sequencer{sequencer}.nco_freq", self.nco_freq)
-                self.set_device_parameter(f"sequencer{sequencer}.nco_phase_offs", self.nco_phase_offs)
-                self.set_device_parameter(f"sequencer{sequencer}.offset_awg_path0", self.offset_awg_path0)
-                self.set_device_parameter(f"sequencer{sequencer}.offset_awg_path1", self.offset_awg_path1)
-                self.set_device_parameter(f"sequencer{sequencer}.sync_en", self.sync_en)
-                self.set_device_parameter(f"sequencer{sequencer}.upsample_rate_awg_path0", self.upsample_rate_awg)
-                self.set_device_parameter(f"sequencer{sequencer}.upsample_rate_awg_path1", self.upsample_rate_awg)
+            self.channel_port_map = kwargs['channel_port_map']
+
+            self.o1_attenuation = kwargs['o1_attenuation']                        # Default after reboot = 7
+            self.o1_lo_enabled = kwargs['o1_lo_enabled']                          # Default after reboot = True
+            self.o1_lo_frequency = kwargs['o1_lo_frequency']                      # Default after reboot = 6_000_000_000
+            self.o1_gain = kwargs['o1_gain']                                      # Default after reboot = 1
+            self.o1_hardware_mod_en = kwargs['o1_hardware_mod_en']                # Default after reboot = False
+            self.o1_nco_freq = 0                                                  # Default after reboot = 1
+            self.o1_nco_phase_offs = 0                                            # Default after reboot = 1
+
+            self.o2_attenuation = kwargs['o2_attenuation']                        # Default after reboot = 7
+            self.o2_lo_enabled = kwargs['o2_lo_enabled']                          # Default after reboot = True
+            self.o2_lo_frequency = kwargs['o2_lo_frequency']                      # Default after reboot = 6_000_000_000
+            self.o2_gain = kwargs['o2_gain']                                      # Default after reboot = 1
+            self.o2_hardware_mod_en = kwargs['o2_hardware_mod_en']                # Default after reboot = False
+            self.o2_nco_freq = 0                                                  # Default after reboot = 1
+            self.o2_nco_phase_offs = 0                                            # Default after reboot = 1
+
+
         else:
-            raise_error(Exception,'There is no connection to the instrument')
+            raise Exception('There is no connection to the instrument')
 
     def process_pulse_sequence(self, channel_pulses, nshots):
         """
@@ -837,7 +759,7 @@ class ClusterQCM_RF(AbstractInstrument):
                             channel_pulses[channel][m].overlaps.append(n)
                 for m in range(1, len(channel_pulses[channel])):
                     if len(channel_pulses[channel][m].overlaps) > 0:
-                        raise_error(NotImplementedError, "Overlaping pulses on the same channel are not yet supported.")
+                        raise(NotImplementedError, "Overlaping pulses on the same channel are not yet supported.")
             
             # Allocate channel pulses to sequencers. 
             #   At least one sequencer is needed for each channel
@@ -852,7 +774,7 @@ class ClusterQCM_RF(AbstractInstrument):
                     # Select a sequencer and add it to the sequencer_channel_map
                     sequencer += 1
                     if sequencer > self.device_num_sequencers:
-                        raise_error(Exception, f"The number of sequencers requried to play the sequence exceeds the number available {self.device_num_sequencers}.")
+                        raise Exception(f"The number of sequencers requried to play the sequence exceeds the number available {self.device_num_sequencers}.")
                     # Initialise the corresponding variables 
                     self.sequencers.append(sequencer)
                     self.sequencer_channel_map[sequencer]=channel
@@ -894,7 +816,7 @@ class ClusterQCM_RF(AbstractInstrument):
                                 # Select a new sequencer
                                 sequencer += 1
                                 if sequencer > self.device_num_sequencers:
-                                        raise_error(Exception, f"The number of sequencers requried to play the sequence exceeds the number available {self.device_num_sequencers}.")
+                                        raise Exception(f"The number of sequencers requried to play the sequence exceeds the number available {self.device_num_sequencers}.")
                                 # Initialise the corresponding variables 
                                 self.sequencers.append(sequencer)
                                 self.sequencer_channel_map[sequencer]=channel
@@ -1003,7 +925,7 @@ class ClusterQCM_RF(AbstractInstrument):
                         delay_after_play = sequence_total_duration - pulses[sequencer][n].start
 
                     if delay_after_play < self.minimum_delay_between_instructions:
-                            raise_error(Exception, f"The minimum delay between pulses is {self.minimum_delay_between_instructions}ns.")
+                            raise Exception(f"The minimum delay between pulses is {self.minimum_delay_between_instructions}ns.")
                     
                     # Prepare play instruction: play arg0, arg1, arg2. 
                     #   arg0 is the index of the I waveform 
@@ -1059,26 +981,7 @@ class ClusterQCM_RF(AbstractInstrument):
 
     def upload(self):
         """Uploads waveforms and programs all sequencers and arms them in preparation for execution."""
-        # Setup
-        for sequencer in range(self.device_num_sequencers):
-            if sequencer in self.sequencers:
-                # Route sequencers to specific outputs.
-                port = int(self.channel_port_map[self.sequencer_channel_map[sequencer]][1:])-1
-                self.set_device_parameter(f"sequencer{sequencer}.channel_map_path0_out{2*port}_en", True)
-                self.set_device_parameter(f"sequencer{sequencer}.channel_map_path1_out{2*port+1}_en", True)
-                # Enable sequencer syncronisation
-                self.set_device_parameter(f"sequencer{sequencer}.sync_en", self.sync_en)
-                # Set gain
-                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path0", self.gain_awg)
-                self.set_device_parameter(f"sequencer{sequencer}.gain_awg_path1", self.gain_awg)
-            else:
-                # Configure the sequencers synchronization.
-                self.set_device_parameter(f"sequencer{sequencer}.sync_en", False)
-                # Disable all sequencer - port connections
-                for out in range(0, 2 * self.device_num_ports):
-                    self.set_device_parameter(f"sequencer{sequencer}.channel_map_path{out%2}_out{out}_en", False)
 
-            
         # Upload
         if self.current_pulsesequence_hash != self.last_pulsequence_hash:
             self.last_pulsequence_hash = self.current_pulsesequence_hash
@@ -1128,11 +1031,6 @@ class ClusterQCM_RF(AbstractInstrument):
         self.device.stop_sequencer()
 
     def disconnect(self):
-        """Disconnects from the instrument."""
-        if self.is_connected:
-            self.cluster.close()
-            self.is_connected = False
+        pass
     
-    def __del__(self):
-        self.disconnect()
 

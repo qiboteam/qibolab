@@ -18,88 +18,51 @@ qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
     0: [2, 1, null]
 
 instruments:
+    cluster:
+        lib: qblox
+        class: Cluster
+        address: 192.168.0.3
+        settings:
+            reference_clock_source      : external                      # external or internal
+
     qrm_rf:
         lib: qblox
         class: ClusterQRM_RF
-        address: 192.168.0.3:5
+        address: 192.168.0.3:5 #:7 for loopback
         settings:
-            in0_att                       : 0
-            out0_att                      : 58
-            out0_in0_lo_en                : true 
-            out0_in0_lo_freq              : 7804838798 # (Hz) from 2e9 to 18e9
-            out0_offset_path0             : 0
-            out0_offset_path1             : 0
-            scope_acq_avg_mode_en         : true        # for path0 and path1
-            scope_acq_sequencer_select    : 0 
-            scope_acq_trigger_level       : 0           # for path0 and path1
-            scope_acq_trigger_mode        : sequencer   # for path0 and path1
+            attenuation                 : 58
+            lo_enabled                  : true
+            lo_frequency                : 7_804_838_798                    # (Hz) from 2e9 to 18e9
+            gain                        : 0.4                           # for path0 and path1 -1.0<=v<=1.0
+            hardware_mod_demod_en       : false
 
-            channel_map_path0_out0_en        : true 
-            channel_map_path1_out1_en        : true 
-            cont_mode_en_awg                 : false    # for path0 and path1
-            cont_mode_waveform_idx_awg       : 0        # for path0 and path1
-            demod_en_acq                     : false 
-            discretization_threshold_acq     : false 
-            gain_awg                         : 0.4       # for path0 and path1 -1.0<=v<=1.0
-            integration_length_acq           : 4         # 4<=v<=16777212, Multiples of 4
-            marker_ovr_en                    : true 
-            marker_ovr_value                 : 15 
-            mixer_corr_gain_ratio            : 1       # 0.5<=v<=2.0 
-            mixer_corr_phase_offset_degree   : 0 
-            mod_en_awg                       : false 
-            nco_freq                         : 0       # (Hz) from -300e6 to 300e6
-            nco_phase_offs                   : 0       # (Degrees)
-            offset_awg_path0                 : 0 
-            offset_awg_path1                 : 0 
-            phase_rotation_acq               : 0       # (Degrees)
-            sync_en                          : true 
-            upsample_rate_awg                : 0 # for path0 and path1
+            acquisition_hold_off        : 200                           # minimum 4ns
+            acquisition_duration        : 2000
 
-            acquisition_start: 200 # minimum 4ns
-            acquisition_duration: 2000
             channel_port_map:  # Refrigerator Channel : Instrument port
                 2: o1 # IQ Port = out0 & out1
                 3: i1 
-
+            
     qcm_rf:
         lib: qblox
         class: ClusterQCM_RF
         address: 192.168.0.3:2
         settings:
-            out0_att          : 8 # (dB)
-            out0_lo_en        : true 
-            out0_lo_freq      : 5282302888 # (Hz) from 2e9 to 18e9
-            out0_offset_path0 : 0 # (mV) 
-            out0_offset_path1 : 0 # (mV)
-            out1_att          : 60 # (dB) should be multiple of 2
-            out1_lo_en        : true
-            out1_lo_freq      : 2_000_000_000 # (Hz) from 2e9 to 18e9 
-            out1_offset_path0 : 0 # (mV)
-            out1_offset_path1 : 0 # (mV)
+            o1_attenuation                  : 8             # (dB)
+            o1_lo_enabled                   : true
+            o1_lo_frequency                 : 5_282_302_888    # (Hz) from 2e9 to 18e9
+            o1_gain                         : 0.17          # for path0 and path1 -1.0<=v<=1.0
+            o1_hardware_mod_en              : false
 
-            channel_map_path0_out0_en        : false 
-            channel_map_path0_out2_en        : false 
-            channel_map_path1_out1_en        : false 
-            channel_map_path1_out3_en        : false 
-            cont_mode_en_awg                 : false # for path0 and path1
-            cont_mode_waveform_idx_awg       : 0 # for path0 and path1 
-            gain_awg                         : 0.40 # for path0 and path1 -1.0<=v<=1.0
-            marker_ovr_en                    : true 
-            marker_ovr_value                 : 15 
-            mixer_corr_gain_ratio            : 1       # 0.5<=v<=2.0  
-            mixer_corr_phase_offset_degree   : 0 
-            mod_en_awg                       : false 
-            nco_freq                         : 0 # (Hz)
-            nco_phase_offs                   : 0 # (Degrees)
-            offset_awg_path0                 : 0 
-            offset_awg_path1                 : 0 
-            sync_en                          : true 
-            upsample_rate_awg                : 0 # for path0 and path1 0<=v<=65535
+            o2_attenuation                  : 60            # (dB)
+            o2_lo_enabled                   : true
+            o2_lo_frequency                 : 6_000_000_000 # (Hz) from 2e9 to 18e9 
+            o2_gain                         : 0             # for path0 and path1 -1.0<=v<=1.0
+            o2_hardware_mod_en              : false
 
             channel_port_map:  
                 1: o1 # IQ Port = out0 & out1
                 
-
 native_gates:
     single_qubit:
         0: # qubit number
