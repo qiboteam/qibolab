@@ -70,7 +70,7 @@ def lorentzian_fit(label, peak, name):
     fit_fine = lorenzian(dummy_frequencies,**fit_res.best_values)
     fig,ax = plt.subplots(1,1, figsize=(12,6))
     ax.plot(dataset.x0, dataset.y0*1e6, 'o', label='Data')
-    ax.plot(dummy_frequencies, fit_fine*1e6, 'r-', label=r"Fit $f_lo$ ={:.6f} GHz"            "\n" "     $Q$ ={:.0f}".format(f0,Q))
+    ax.plot(dummy_frequencies, fit_fine*1e6, 'r-', label=r"Fit $f_lo$ ={:.0f} GHz"            "\n" "     $Q$ ={:.0f}".format(f0,Q))
     ax.axvline(f0-BW/2, c='k')
     ax.axvline(f0+BW/2, c='k')
     ax.set_ylabel('Integrated Voltage (\u03bcV)')
@@ -81,7 +81,7 @@ def lorentzian_fit(label, peak, name):
     #fit_res.plot_fit(show_init=True)
     return f0, BW, Q, V
 
-def rabi_fit(dataset):
+def rabi_fit_3D(dataset):
     pguess = [
         np.mean(dataset['y0'].values),
         np.max(dataset['y0'].values) - np.min(dataset['y0'].values),
@@ -98,9 +98,39 @@ def rabi_fit(dataset):
     utils.plot(smooth_dataset, dataset, "Rabi Pulse Length", 1)
     return pi_pulse_duration, int(rabi_oscillations_pi_pulse_min_voltage)
 
-def t1_fit(dataset):
+def rabi_fit_2D(dataset):
+    pguess = [
+        np.mean(dataset['y0'].values),
+        np.max(dataset['y0'].values) - np.min(dataset['y0'].values),
+        0.5/dataset['x0'].values[np.argmax(dataset['y0'].values)], 
+        np.pi/2,
+        0.1e-6
+    ]
+    popt, pcov = curve_fit(rabi, dataset['x0'].values, dataset['y0'].values, p0=pguess)
+    smooth_dataset = rabi(dataset['x0'].values, *popt)
+    pi_pulse_duration = np.abs((1.0 / popt[2]) / 2)
+    rabi_oscillations_pi_pulse_max_voltage = smooth_dataset.max() * 1e6
+    t1 = 1.0 / popt[4] #double check T1
+
+    utils.plot(smooth_dataset, dataset, "Rabi Pulse Length", 0)
+    return pi_pulse_duration, int(rabi_oscillations_pi_pulse_max_voltage)
+
+def t1_fit_3D(dataset):
     pguess = [
         max(dataset['y0'].values),
+        (max(dataset['y0'].values) - min(dataset['y0'].values)),
+        1/250
+    ]
+    popt, pcov = curve_fit(exp, dataset['x0'].values, dataset['y0'].values, p0=pguess)
+    smooth_dataset = exp(dataset['x0'].values, *popt)
+    t1 = abs(1/popt[2])
+
+    utils.plot(smooth_dataset, dataset, "t1", 1)
+    return int(t1)
+
+def t1_fit_2D(dataset):
+    pguess = [
+        min(dataset['y0'].values),
         (max(dataset['y0'].values) - min(dataset['y0'].values)),
         1/250
     ]
@@ -200,18 +230,34 @@ def fit_drag_tunning(res1, res2, beta_params):
     xi = (b-d) / (c-a)
     yi = a * xi + b
 
-    plt.scatter(xi,yi, color='black', s=120)
+    plt.scatter(xi,yi, color='black', s=10)
 
     return xi
 
-def flipping_fit(x_data, y_data):
+def flipping_fit_3D(x_data, y_data):
     pguess = [
-        0.01 # epsilon guess parameter
+        0.0003, # epsilon guess parameter
+        np.mean(y_data),
+        -18,
+        0
     ]
     popt, pcov = curve_fit(flipping, x_data, y_data, p0=pguess)
-    return popt[0]
+    return popt
 
-def flipping(x, p0):
+def flipping_fit_3D(x_data, y_data):
+    pguess = [
+        0.0003, # epsilon guess parameter
+        np.mean(y_data),
+        18,
+        0
+    ]
+    popt, pcov = curve_fit(flipping, x_data, y_data, p0=pguess)
+    return popt
+
+def flipping(x, p0, p1, p2, p3):
     # A fit to Flipping Qubit oscillation
     # Epsilon                       : p[0]
-    return  np.sin(2*x + 1/2) * p0
+    # Offset                        : p[1]
+    # Period of oscillation         : p[2]
+    # phase for the first point corresponding to pi/2 rotation   : p[3]
+    return  np.sin(x * 2 * np.pi / p2 + p3) * p0 + p1

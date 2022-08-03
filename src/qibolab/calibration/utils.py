@@ -36,7 +36,7 @@ def plot(smooth_dataset, dataset, label, type):
         ax.plot(dataset['x0'].values, smooth_dataset,'-',color='C1')
         ax.title.set_text(label)
         ax.plot(dataset['x0'].values[smooth_dataset.argmax()], smooth_dataset[smooth_dataset.argmax()], 'o', color='C2')
-        plt.savefig(pathlib.Path("data") / f"{label}.pdf")
+        plt.savefig(data_folder / f"{label}.pdf")
         return
 
     if (type == 1): #qubit spec, rabi, ramsey, t1 plots
