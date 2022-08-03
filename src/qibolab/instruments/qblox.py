@@ -45,7 +45,7 @@ class Cluster(AbstractInstrument):
 cluster : Cluster = None
 
 
-class QRM(AbstractInstrument):
+class ClusterQRM_RF(AbstractInstrument):
     """
     Generic driver for Qblox Readout Modules.
     
@@ -648,7 +648,7 @@ class QRM(AbstractInstrument):
         self.disconnect()
 
 
-class QCM(AbstractInstrument):
+class ClusterQCM_RF(AbstractInstrument):
     """
     Generic driver for Qblox Control Modules.
     
@@ -1136,51 +1136,3 @@ class QCM(AbstractInstrument):
     def __del__(self):
         self.disconnect()
 
-
-class ClusterQRM_RF(QRM):
-    
-    def __init__(self, name, address):
-        super().__init__(name, address)
-        from qblox_instruments import Cluster
-        self.device_class = Cluster
-
-
-class ClusterQCM_RF(QCM):
-    
-    def __init__(self, name, address):
-        super().__init__(name, address)
-        from qblox_instruments import Cluster
-        self.device_class = Cluster
-
-
-
-class ClusterQRM(QRM):
-    
-    def __init__(self, name, address):
-        super().__init__(name, address)
-        from qblox_instruments import Cluster
-        self.device_class = Cluster
-
-
-class PulsarQRM(QRM):
-    
-    def __init__(self, name, address):
-        super().__init__(name, address)
-        from qblox_instruments import Pulsar
-        self.device_class = Pulsar
-
-
-class ClusterQCM(QCM):
-    
-    def __init__(self, name, address):
-        super().__init__(name, address)
-        from qblox_instruments import Cluster
-        self.device_class = Cluster
-
-
-class PulsarQCM(QCM):
-    
-    def __init__(self, name, address):
-        super().__init__(name, address)
-        from qblox_instruments import Pulsar
-        self.device_class = Pulsar
