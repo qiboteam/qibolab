@@ -4,14 +4,12 @@ Class to interface with the local oscillator RohdeSchwarz SGS100A
 from qibo.config import raise_error
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 
-from quantify_core.measurement.control import Gettable, Settable
-
 class SGS100A(AbstractInstrument):
 
     def __init__(self, name, address):
         super().__init__(name, address)
         self.device_parameters = {}
-        self.settable_frequency = Settable(self.FrequencyParameter(self))
+        self.settable_frequency = self.FrequencyParameter(self)
 
     rw_property_wrapper = lambda parameter: property(lambda self: self.device.get(parameter), lambda self,x: self.set_device_parameter(parameter,x))
     power = rw_property_wrapper('power')
@@ -23,7 +21,6 @@ class SGS100A(AbstractInstrument):
         """
         if not self.is_connected:
             import qcodes.instrument_drivers.rohde_schwarz.SGS100A as LO_SGS100A
-            from pyvisa.errors import VisaIOError
             for attempt in range(3):
                 try:
                     self.device = LO_SGS100A.RohdeSchwarz_SGS100A(self.name, f"TCPIP0::{self.address}::5025::SOCKET")

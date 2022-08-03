@@ -149,7 +149,7 @@ class QRM(AbstractInstrument):
             if self.current_pulsesequence_hash != self.last_pulsequence_hash:
                 # print(f"Resetting {self.name}")
                 # self.cluster.reset() # FIXME: this needs to clear the cahes of the rest of the modules
-                self.cluster.reference_source('external')
+                self.cluster.reference_source('internal')
                 self.device_parameters = {}
                 # DEBUG: QRM Log device Reset
                 # print("QRM reset. Status:")
@@ -478,8 +478,8 @@ class QRM(AbstractInstrument):
             time = np.arange(pulse.duration) / self.sampling_rate
             cosalpha = np.cos(2 * np.pi * pulse.frequency * time + pulse.phase)
             sinalpha = np.sin(2 * np.pi * pulse.frequency * time + pulse.phase)
-            mod_matrix = np.array([[ cosalpha, sinalpha], 
-                                   [-sinalpha, cosalpha]])
+            mod_matrix = np.array([[ cosalpha, -sinalpha], 
+                                   [sinalpha, cosalpha]])
             # mod_signals = np.einsum("abt,bt->ta", mod_matrix, envelopes)
             result = []
             for it, t, ii, qq in zip(np.arange(pulse.duration), time, envelope_i, envelope_q):
@@ -601,7 +601,7 @@ class QRM(AbstractInstrument):
         time = np.arange(modulated_i.shape[0])*1e-9
         cosalpha = np.cos(2 * np.pi * acquisition_frequency * time)
         sinalpha = np.sin(2 * np.pi * acquisition_frequency * time)
-        demod_matrix = 2 * np.array([[cosalpha, -sinalpha], [sinalpha, cosalpha]])
+        demod_matrix = 2 * np.array([[cosalpha, sinalpha], [-sinalpha, cosalpha]])
         result = []
         for it, t, ii, qq in zip(np.arange(modulated_i.shape[0]), time,modulated_i, modulated_q):
             result.append(demod_matrix[:,:,it] @ np.array([ii, qq]))
@@ -756,6 +756,7 @@ class QCM(AbstractInstrument):
             if self.current_pulsesequence_hash != self.last_pulsequence_hash:
                 # print(f"Resetting {self.name}")
                 # self.cluster.reset() # FIXME: this needs to clear the cahes of the rest of the modules
+                # self.cluster.reference_source('external')
                 self.device_parameters = {}
                 # DEBUG: QCM Log device Reset                
                 # print("QCM reset. Status:")
@@ -1032,8 +1033,8 @@ class QCM(AbstractInstrument):
             time = np.arange(pulse.duration) / self.sampling_rate
             cosalpha = np.cos(2 * np.pi * pulse.frequency * time + pulse.phase)
             sinalpha = np.sin(2 * np.pi * pulse.frequency * time + pulse.phase)
-            mod_matrix = np.array([[ cosalpha, sinalpha], 
-                                   [-sinalpha, cosalpha]])
+            mod_matrix = np.array([[ cosalpha, -sinalpha], 
+                                   [sinalpha, cosalpha]])
             # mod_signals = np.einsum("abt,bt->ta", mod_matrix, envelopes)
             result = []
             for it, t, ii, qq in zip(np.arange(pulse.duration), time, envelope_i, envelope_q):

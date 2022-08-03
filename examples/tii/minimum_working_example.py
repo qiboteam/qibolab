@@ -11,20 +11,20 @@ sequence.add(Pulse(start=0,
                    frequency=200_000_000,
                    phase=0,
                    shape='Gaussian(5)', # Gaussian shape with std = duration / 5
-                   channel=21)) 
+                   channel=1))
 
 sequence.add(ReadoutPulse(start=4004,
                           amplitude=0.9,
                           duration=2000,
                           frequency=20_000_000,
                           phase=0,
-                          shape='Rectangular', 
-                          channel=10)) 
+                          shape='Rectangular',
+                          channel=2))
 
 # Define platform and load specific runcard
-runcard = qibolab_folder / 'runcards' / 'qw5q.yml' 
+runcard = qibolab_folder / 'runcards' / 'tiiq.yml'
+platform = Platform("tiiq", runcard)
 
-platform = Platform("multiqubit", runcard)
 # Connects to lab instruments using the details specified in the calibration settings.
 platform.connect()
 # Configures instruments using the loaded calibration settings.
