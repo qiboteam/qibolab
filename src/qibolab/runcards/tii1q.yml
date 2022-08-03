@@ -26,7 +26,7 @@ instruments:
             in0_att                       : 0
             out0_att                      : 58
             out0_in0_lo_en                : true 
-            out0_in0_lo_freq              : 7804802364 # (Hz) from 2e9 to 18e9
+            out0_in0_lo_freq              : 7804838798 # (Hz) from 2e9 to 18e9
             out0_offset_path0             : 0
             out0_offset_path1             : 0
             scope_acq_avg_mode_en         : true        # for path0 and path1
@@ -61,14 +61,14 @@ instruments:
                 2: o1 # IQ Port = out0 & out1
                 3: i1 
 
-    qcm_rf1:
+    qcm_rf:
         lib: qblox
         class: ClusterQCM_RF
         address: 192.168.0.3:2
         settings:
             out0_att          : 8 # (dB)
             out0_lo_en        : true 
-            out0_lo_freq      : 5282306121 # (Hz) from 2e9 to 18e9
+            out0_lo_freq      : 5282302888 # (Hz) from 2e9 to 18e9
             out0_offset_path0 : 0 # (mV) 
             out0_offset_path1 : 0 # (mV)
             out1_att          : 60 # (dB) should be multiple of 2
@@ -104,10 +104,10 @@ native_gates:
     single_qubit:
         0: # qubit number
             RX:
-                duration: 284
-                amplitude: 0.9
-                frequency: 200_000_000
-                shape: Gaussian(5)
+                duration: 36
+                amplitude: 0.920
+                frequency: -200_000_000
+                shape: Drag(5, 0)
                 type: qd # qubit drive
                 drag_shape: Drag(5, 0)
             MZ:
@@ -120,11 +120,11 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            resonator_freq: 7824802364
-            qubit_freq: 5082306121
-            T1: 14465
-            T2: 4766.689144856866
-            resonator_spectroscopy_peak_ro_voltage: 850
-            rabi_oscillations_pi_pulse_peak_ro_voltage: 371
-            mean_gnd_states: (-6.182064043245226e-05+0.0011944253117085518j)
-            mean_exc_states: (0.00015390240207881345+0.000538230934609144j)
+            resonator_freq: 7824838798
+            qubit_freq: 5082302888
+            T1: 17744
+            T2: 11816
+            resonator_spectroscopy_peak_ro_voltage: 875
+            rabi_oscillations_pi_pulse_peak_ro_voltage: 350
+            mean_gnd_states: (-5.543255134868772e-05+0.0008975930158821524j)
+            mean_exc_states: (0.0001446400604158933+0.0003369969077198778j)
