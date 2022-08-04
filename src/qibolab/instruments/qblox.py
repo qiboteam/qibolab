@@ -104,8 +104,8 @@ class ClusterQRM_RF(AbstractInstrument):
                 self.set_device_parameter(target, 'channel_map_path1_out1_en', value = True)
                 self.set_device_parameter(target, 'cont_mode_en_awg_path0', 'cont_mode_en_awg_path1', value = False)
                 self.set_device_parameter(target, 'cont_mode_waveform_idx_awg_path0', 'cont_mode_waveform_idx_awg_path1', value = 0)
-                self.set_device_parameter(target, 'marker_ovr_en', value = False)
-                self.set_device_parameter(target, 'marker_ovr_value', value = 0)
+                self.set_device_parameter(target, 'marker_ovr_en', value = True) # Default after reboot = False
+                self.set_device_parameter(target, 'marker_ovr_value', value = 15) # Default after reboot = 0
                 self.set_device_parameter(target, 'mixer_corr_gain_ratio', value = 1)
                 self.set_device_parameter(target, 'mixer_corr_phase_offset_degree', value = 0)
                 self.set_device_parameter(target, 'offset_awg_path0', value = 0)
@@ -198,7 +198,7 @@ class ClusterQRM_RF(AbstractInstrument):
         for channel in channels:
             for pulse in channel_pulses[channel]:
                 self.current_pulsesequence_hash += pulse.serial
-        if self.current_pulsesequence_hash != self.last_pulsequence_hash:
+        if True: # self.current_pulsesequence_hash != self.last_pulsequence_hash:
             # Sort pulses by their start time 
             for channel in channels:
                 channel_pulses[channel].sort(key=lambda pulse: pulse.start) 
@@ -245,7 +245,7 @@ class ClusterQRM_RF(AbstractInstrument):
                         pulse_serial = pulse.serial[pulse.serial.find(',',pulse.serial.find(',')+1)+2:-1] # removes the channel and start information from Pulse.serial to compare between pulses
                         if pulse_serial not in unique_pulses.keys():
                             # If the pulse is unique (it hasn't been saved before):
-                            I, Q = self.generate_waveforms_from_pulse(pulse)
+                            I, Q = self.generate_waveforms_from_pulse(pulse, modulate = True)
                             # Check if the overall length of the waveform exceeds memory size (waveform_max_length) and split it if necessary
                             is_split = False
                             part = 0
@@ -480,8 +480,17 @@ class ClusterQRM_RF(AbstractInstrument):
     def upload(self):
         """Uploads waveforms and programs all sequencers and arms them in preparation for execution."""
     
+        # Setup
+        for sequencer in range(self.device_num_sequencers):
+            target  = self.device.sequencers[sequencer]
+            if sequencer in self.sequencers:
+                # Enable sequencer syncronisation
+                self.set_device_parameter(target, 'sync_en', value = True)
+            else:
+                self.set_device_parameter(target, 'sync_en', value = False)
+
         # Upload
-        if self.current_pulsesequence_hash != self.last_pulsequence_hash:
+        if True: # self.current_pulsesequence_hash != self.last_pulsequence_hash:
             self.last_pulsequence_hash = self.current_pulsesequence_hash
             # Upload waveforms and program
             qblox_dict = {}
@@ -540,37 +549,47 @@ class ClusterQRM_RF(AbstractInstrument):
                 self.device.store_scope_acquisition(sequencer, acquisition)
                 #Get acquisitions from instrument.
                 raw_results = self.device.get_acquisitions(sequencer)
-                i, q = self._demodulate_and_integrate(raw_results, acquisition)
+                i, q = self._demodulate_and_integrate(raw_results, acquisition, demodulate = True)
                 acquisition_results[sequencer][acquisition] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
                 # DEBUG: QRM Plot Incomming Pulses
                 # import qibolab.instruments.debug.incomming_pulse_plotting as pp
                 # pp.plot(raw_results)
         return acquisition_results
 
-    def _demodulate_and_integrate(self, raw_results, acquisition):
-        acquisition_name = acquisition
-        acquisition_frequency = 20_000_000
-        #TODO: obtain from acquisition info
-        #DOWN Conversion
-        n0 = self.acquisition_hold_off # 0
-        n1 = self.acquisition_hold_off + self.acquisition_duration # self.acquisition_duration # 
-        input_vec_I = np.array(raw_results[acquisition_name]["acquisition"]["scope"]["path0"]["data"][n0: n1])
-        input_vec_Q = np.array(raw_results[acquisition_name]["acquisition"]["scope"]["path1"]["data"][n0: n1])
-        input_vec_I -= np.mean(input_vec_I)
-        input_vec_Q -= np.mean(input_vec_Q)
+    def _demodulate_and_integrate(self, raw_results, acquisition, demodulate = True):
+        if demodulate:
+            acquisition_name = acquisition
+            acquisition_frequency = 20_000_000
+            #TODO: obtain from acquisition info
+            #DOWN Conversion
+            n0 = self.acquisition_hold_off # 0
+            n1 = self.acquisition_hold_off + self.acquisition_duration # self.acquisition_duration # 
+            input_vec_I = np.array(raw_results[acquisition_name]["acquisition"]["scope"]["path0"]["data"][n0: n1])
+            input_vec_Q = np.array(raw_results[acquisition_name]["acquisition"]["scope"]["path1"]["data"][n0: n1])
+            input_vec_I -= np.mean(input_vec_I)
+            input_vec_Q -= np.mean(input_vec_Q)
 
-        modulated_i = input_vec_I
-        modulated_q = input_vec_Q
-        time = np.arange(modulated_i.shape[0])*1e-9
-        cosalpha = np.cos(2 * np.pi * acquisition_frequency * time)
-        sinalpha = np.sin(2 * np.pi * acquisition_frequency * time)
-        demod_matrix = 2 * np.array([[cosalpha, sinalpha], [-sinalpha, cosalpha]])
-        result = []
-        for it, t, ii, qq in zip(np.arange(modulated_i.shape[0]), time,modulated_i, modulated_q):
-            result.append(demod_matrix[:,:,it] @ np.array([ii, qq]))
-        demodulated_signal = np.array(result)
-        integrated_signal = np.mean(demodulated_signal,axis=0)
+            modulated_i = input_vec_I
+            modulated_q = input_vec_Q
+            time = np.arange(modulated_i.shape[0])*1e-9
+            cosalpha = np.cos(2 * np.pi * acquisition_frequency * time)
+            sinalpha = np.sin(2 * np.pi * acquisition_frequency * time)
+            demod_matrix = 2 * np.array([[cosalpha, sinalpha], [-sinalpha, cosalpha]])
+            result = []
+            for it, t, ii, qq in zip(np.arange(modulated_i.shape[0]), time,modulated_i, modulated_q):
+                result.append(demod_matrix[:,:,it] @ np.array([ii, qq]))
+            demodulated_signal = np.array(result)
+            integrated_signal = np.mean(demodulated_signal,axis=0)
 
+            # import matplotlib.pyplot as plt
+            # plt.plot(input_vec_I[:400])
+            # plt.plot(list(map(list, zip(*demodulated_signal)))[0][:400])
+            # plt.show()
+        else:
+            int_len = self.acquisition_duration
+            i = [(val/int_len) for val in raw_results[acquisition]["acquisition"]["bins"]["integration"]["path0"]][0]
+            q = [(val/int_len) for val in raw_results[acquisition]["acquisition"]["bins"]["integration"]["path1"]][0]
+            integrated_signal = i, q
         return integrated_signal
 
     def start(self):
@@ -643,8 +662,8 @@ class ClusterQCM_RF(AbstractInstrument):
 
                     self.set_device_parameter(target, 'cont_mode_en_awg_path0', 'cont_mode_en_awg_path1', value = False)
                     self.set_device_parameter(target, 'cont_mode_waveform_idx_awg_path0', 'cont_mode_waveform_idx_awg_path1', value = 0)
-                    self.set_device_parameter(target, 'marker_ovr_en', value = False)
-                    self.set_device_parameter(target, 'marker_ovr_value', value = 0)
+                    self.set_device_parameter(target, 'marker_ovr_en', value = True) # Default after reboot = False
+                    self.set_device_parameter(target, 'marker_ovr_value', value = 15) # Default after reboot = 0
                     self.set_device_parameter(target, 'mixer_corr_gain_ratio', value = 1)
                     self.set_device_parameter(target, 'mixer_corr_phase_offset_degree', value = 0)
                     self.set_device_parameter(target, 'offset_awg_path0', value = 0)
@@ -791,7 +810,7 @@ class ClusterQCM_RF(AbstractInstrument):
                         pulse_serial = pulse.serial[pulse.serial.find(',',pulse.serial.find(',')+1)+2:-1] # removes the channel and start information from Pulse.serial to compare between pulses
                         if pulse_serial not in unique_pulses.keys():
                             # If the pulse is unique (it hasn't been saved before):
-                            I, Q = self.generate_waveforms_from_pulse(pulse)
+                            I, Q = self.generate_waveforms_from_pulse(pulse, modulate = True)
                             # Check if the overall length of the waveform exceeds memory size (waveform_max_length) and split it if necessary
                             is_split = False
                             part = 0
@@ -981,7 +1000,15 @@ class ClusterQCM_RF(AbstractInstrument):
 
     def upload(self):
         """Uploads waveforms and programs all sequencers and arms them in preparation for execution."""
-
+        # Setup
+        for sequencer in range(self.device_num_sequencers):
+            target  = self.device.sequencers[sequencer]
+            if sequencer in self.sequencers:
+                # Enable sequencer syncronisation
+                self.set_device_parameter(target, 'sync_en', value = True)
+            else:
+                self.set_device_parameter(target, 'sync_en', value = False)
+                
         # Upload
         if self.current_pulsesequence_hash != self.last_pulsequence_hash:
             self.last_pulsequence_hash = self.current_pulsesequence_hash

@@ -23,7 +23,7 @@ instruments:
         class: Cluster
         address: 192.168.0.3
         settings:
-            reference_clock_source      : external                      # external or internal
+            reference_clock_source      : internal                      # external or internal
 
     qrm_rf:
         lib: qblox
