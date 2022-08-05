@@ -1,12 +1,11 @@
+import time
 import socket
 import struct
-import bisect
-import threading
-import time
-from typing import List
 import numpy as np
+from typing import List
+from bisect import bisect
 from qibolab.instruments.abstract import AbstractInstrument
-from qibolab.pulses import Pulse
+from qibo.config import raise_error, log
 
 class PulseBlaster(AbstractInstrument):
     """Driver for the 24-pin PulseBlaster TTL signal generator.
@@ -15,51 +14,50 @@ class PulseBlaster(AbstractInstrument):
     def __init__(self, name, address, port=5000):
         super().__init__(name, address)
         self.port = port
-        self._pins = None
 
-    def setup(self, holdtime_ns, pins=list(range(24)), **kwargs):
-        """Setup the PulseBlaster.
+    def setup(self, nshots: int, holdtime_ns: int, pins=list(range(24))):
+        """Setup the PulseBlaster for the number of shots and the repetition rate.
         
         Arguments:
-            holdtime_ns (int): TTL pulse length and delay between TTL pulses. The experiment repetition frequency is 1 / (2 * holdtime_ns).
-            pins (int): Pins to trigger in hex, defaults to all pins.
+            nshots (int): Number of shots
+            holdtime_ns (int): Time between TTL pulses
+            pins (int[]): Array of pins to be triggered
         """
-        self._pins = self._hexify(pins)
-        self._holdtime = holdtime_ns
-
-    def arm(self, nshots, readout_start=0):
-        """Arm the PulseBlaster for playback. Sends a signal to the instrument to setup the pulse sequence and repetition.
-
-        Arguments:
-            nshots (int): Number of TTL triggers to repeat.
-        """
-        payload = f"setup,{self._pins},{nshots},{self._holdtime}"
-        return self._send(payload.encode("utf-8"), True)
+        p = self.hexify(pins)
+        payload = f"setup,{p},{int(nshots)},{int(holdtime_ns)}"
+        self.send(payload.encode("utf-8"), True)
 
     def fire(self):
-        """Starts the PulseBlaster.
+        """Starts the programmed pulse sequence.
         """
-        self._send(b"fire")
+        self.send(b"fire")
+
+    def stop(self):
+        """Stops the PulseBlaster.
+        """
+        self.send(b"stop")
+
+    def status(self):
+        """Queries the status of the PulseBlaster.
+        """
+        return self.send(b"status", True)
+
+    def send(self, command: bytes, expect_reply=False):
+        """Sends a command to the PulseBlaster instrument. If a reply is expected, wait for the instrument response.
+
+        Arguments:
+            command (bytes): Command and arguments to be sent to the PulseBlaster
+            expect_reply (bool): Flag if there is to be a response from the instrument for this command
+        """
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((self.address, self.port))
+            s.sendall(command)
+
+            if expect_reply:
+                return s.recv(1024).decode("utf-8")
 
     def start(self):
         pass
-
-    def stop(self):
-        self._send(b"stop")
-
-    def status(self):
-        return self._send(b"status", True)
-
-    def _send(self, payload, retval=False):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((self.address, self.port))
-            s.sendall(payload)
-
-            if retval:
-                return s.recv(1024).decode("utf-8")
-    
-    def play_sequence(self):
-        self.fire()
 
     def connect(self):
         pass
@@ -68,175 +66,260 @@ class PulseBlaster(AbstractInstrument):
         pass
 
     @staticmethod
-    def _hexify(pins):
-        return int(''.join(['1' if i in set(pins) else '0' for i in reversed(range(24))]), 2)
-
-
-class IcarusQFPGA(AbstractInstrument):
-    """Driver for the IcarusQ RFSoC socket-based implementation.
-    """
-    def __init__(self, name, address, port=8080):
-        super().__init__(name, address)
-        self._dac_sample_size = 65536
-        self._adc_sample_size = 65536
-        self._dac_nchannels = 16
-        self._adc_nchannels = 16
-        self._dac_sampling_rate = 5898240000
-        self._adc_sampling_rate = 1966080000
-        self._nshots = 0
-
-        self.port = port
-        self._thread = None
-        self._buffer = None
-        self._adcs_to_read = None
-
-    def setup(self, dac_sampling_rate, adcs_to_read, **kwargs):
-        """Sets the sampling rate of the RFSoC. May need to be repeated several times due to multi-tile sync error.
+    def hexify(pins: List[int]):
+        """Converts a list of pin IDs to hex for the PulseBlaster to trigger
 
         Arguments:
-            dac_sampling_rate_id (int): Sampling rate ID to be set on the RFSoC.
-            dac_sampling_rate_6g_id (int): Optional sampling rate ID for the 6GS/s mode if used.
-        """
-        self._adcs_to_read = adcs_to_read
-        self._dac_sampling_rate = dac_sampling_rate
-
-    def translate(self, sequence: List[Pulse], nshots):
-        """Translates the pulse sequence into a numpy array.
-        """
-
-        # Waveform is 14-bit resolution on the DACs, so we first create 16-bit arrays to store the data.
-        waveform = np.zeros((self._dac_nchannels, self._dac_sample_size), dtype="i2")
-
-        # The global time can first be set as float to handle rounding errors.
-        time_array = 1 / self._dac_sampling_rate * np.arange(0, self._dac_sample_size, 1)
-
-        for pulse in sequence:
-            # Get array indices corresponding to the start and end of the pulse. Note that the pulse time parameters are in ns and require conversion.
-            start = bisect.bisect(time_array, pulse.start * 1e-9)
-            end = bisect.bisect(time_array, (pulse.start + pulse.duration) * 1e-9)
-
-            # Create the pulse waveform and cast it to 16-bit. The ampltiude is max signed 14-bit (+- 8191) and the indices should take care of any overlap of pulses.
-            # 2-byte bit shift for downsampling from 16 bit to 14 bit
-            pulse_waveform = (4 * np.sin(2 * np.pi * pulse.frequency * time_array[start:end] + pulse.phase)).astype("i2")
-            waveform[pulse.channel, start:end] += pulse_waveform
-
-        self.nshots = nshots
-
-        return waveform
-    
-    def upload(self, waveform):
-        """Uploads a numpy array of size DAC_CHANNELS X DAC_SAMPLE_SIZE to the PL memory.
-
-        Arguments:
-            waveform (numpy.ndarray): Numpy array of size DAC_CHANNELS X DAC_SAMPLE_SIZE with type signed short.
-        """
-
-        # TODO: Implement checks for size and dtype of waveform.
-
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((self.address, self.port))
-            # Signal to the RFSoC to start listening for DAC waveforms and load into PL mem.
-            s.sendall(struct.pack("B", 1))
-            s.sendall(waveform.tobytes())
-
-    def play_sequence(self):
-        """DACs are automatically armed for playbacked when waveforms are loaded, no need to signal
-        """
-        self._buffer = np.zeros((self._adc_nchannels, self._adc_sample_size))
-        self._thread = threading.Thread(target=self._play, args=(self.nshots,))
-        self._thread.start()
-
-        time.sleep(0.1) # Use threading lock and socket signals instead of hard sleep?
-        
-
-    def play_sequence_and_acquire(self):
-        """Signal the RFSoC to arm the ADC and start data transfer into PS memory.
-        Starts a thread to listen for ADC data from the RFSoC.
-
-        Arguments:
-            nshots (int): Number of shots.
-        """
-        # Create buffer to hold ADC data.
-        # TODO: Create flag to handle single shot measurement / buffer assignment per shot.
-        pass
-        
-
-    def _play(self, nshots):
-        """Starts ADC data acquisition and transfer on the RFSoC.
-        """
-
-        if len(self._adcs_to_read) == 0:
-            return
-
-        # 2 bytes per ADC data point
-        BUF_SIZE = int(self._adc_sample_size * 2)
-
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((self.address, self.port))
-            # Signal RFSoC to arm ADC and expect `nshots` number of triggers.
-            s.sendall(struct.pack("B", 2))
-            s.sendall(struct.pack("H", nshots))
-            s.sendall(struct.pack("B", len(self._adcs_to_read))) # send number of channels
-        
-            for adc in self._adcs_to_read:
-                s.sendall(struct.pack("B", adc)) # send ADC channel to read
-
-            # Use the same socket to start listening for ADC data transfer.
-            for k in range(nshots):
-                for i in self._adcs_to_read:
-                    # IcarusQ board may send channel/shot data out of order due to threading implementation.
-                    shotnum = struct.unpack("H", s.recv(2))[0]
-                    channel = struct.unpack("H", s.recv(2))[0]
-
-                    # Start listening for ADC_SAMPLE_SIZE * 2 bytes corresponding to data per channel.
-                    r = bytearray()
-                    while len(r) < BUF_SIZE:
-                        # Socket implementation does not return exactly desired amount of bytes, keep querying until bytearray reaches expected amount of bytes.
-                        # TODO: Look for `MSG_WAITALL` flag in socket recv.
-                        packet = s.recv(BUF_SIZE - len(r))
-                        if packet:
-                            r.extend(packet)
-
-                    # Accumulate ADC data in buffer, buffer float dtype should be enough to prevent overflow.
-                    self._buffer[channel] += np.frombuffer(r, dtype="i2")
-
-        # Average buffer at the end of measurement
-        self._buffer = self._buffer / nshots
-
-    def result(self, readout_frequency, readout_channel):
-        """Returns the processed signal result from the ADC.
-
-        Arguments:
-            readout_frequency (float): Frequency to be used for signal processing.
-            readout_channel (int): Channel to be used for signal processing.
+            pins (int[]): Array of pins to be triggered
 
         Returns:
-            ampl (float): Amplitude of the processed signal.
-            phase (float): Phase shift of the processed signal in degrees.
-            it (float): I component of the processed signal.
-            qt (float): Q component of the processed signal.
+            pins_hex (int): Integer in hex corrresponding to the pins that should be triggered
+        """
+        return int(''.join(['1' if i in set(pins) else '0' for i in reversed(range(24))]), 2)
+
+class IcarusQRFSOC(AbstractInstrument):
+    """Driver for the IcarusQ RFSoC socket-based implementation.
+    """
+
+    def __init__(self, name, address, port=8080):
+        
+        super().__init__(name, address)
+        self.port = port
+
+        self.dac_nchannels = 16
+        self.dac_sample_size = 65536
+        self.dac_max_amplitude = 8191
+        self.dac_waveform_buffer: np.ndarray = None
+        self.nshots: int = None
+
+        # Qibolab unique trackers
+        self.last_pulsequence_hash = "uninitialised"
+        self.current_pulsesequence_hash = ""
+        self.channel_port_map = {}
+        self.acquisitons = []
+
+        # Start a connection to check if the board is active
+        self.get_server_version()
+
+    def set_adc_sampling_rate(self, adc_sr=None):
+        """Sets the sampling rate of all 16 ADCs.
+
+        Arguments:
+            adc_sr (float): Sampling rate of the ADC in MHz.
         """
 
-        # Wait for ADC data acquisition to complete
-        self._thread.join()
+        # Start a connection to the RFSoC board
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((self.address, self.port))
 
-        input_vec = self._buffer[readout_channel]
+            # Command 5 tells the RFSoC to set the ADC sampling rate
+            cmd = struct.pack("B", 5)
+            s.sendall(cmd)
 
-        time_vec = 1 / self._adc_sampling_rate * np.arange(0, self._adc_sample_size, 1)
-        vec_I = np.sin(2 * np.pi * readout_frequency * time_vec)
-        vec_Q = np.cos(2 * np.pi * readout_frequency * time_vec)
+            # Send the sampling rate value
+            cmd = struct.pack("d", adc_sr)
+            s.sendall(cmd)
 
-        it = np.sum(vec_I * input_vec)
-        qt = np.sum(vec_Q * input_vec)
-        phase = np.arctan2(qt, it)
-        ampl = np.sqrt(it**2 + qt**2)
+            # Get the ADC multi-tile sync return value
+            return_mts = struct.unpack("i",s.recv(4))[0]
+            if return_mts != 0:
+                log.warn(("Failled to set ADC Sampling rate properly. Return Value : " + str(return_mts)))
 
-        return ampl, phase, it, qt
+    def set_dac_sampling_rate(self, dac_sr=None):
+        """Sets the sampling rate of all 16 DACs.
 
-    def start(self):
+        Arguments:
+            dac_sr (float): Sampling rate of the DAC in MHz.
+        """
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((self.address, self.port))
+            # Command 7 tells the RFSoC to set the DAC sampling rate
+            cmd = struct.pack("B", 7)
+            s.sendall(cmd)
+
+            # Send the DAC sampling rate
+            cmd = struct.pack("d", dac_sr)
+            s.sendall(cmd)
+
+            # Get the DAC multi-tile sync return value
+            return_mts = struct.unpack("i",s.recv(4))[0]
+            if  return_mts != 0:
+                log.warn(("Failled to set DAC Sampling rate properly. Return Value : " + str(return_mts)))
+
+
+    def get_server_version(self):
+        """Fetches the binary version of the board.
+
+        Returns:
+            version (string): binary version. <board>-<Release>.<HW>.<SW>.<Commit>
+        """
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((self.address, self.port))
+
+            # Command 9 tells the RFSoC to return the board version information
+            s.sendall(struct.pack("B", 9))
+            version_str = s.recv(50).decode("utf-8")
+
+        return version_str
+
+    def get_adc_sampling_rate(self):
+        """Fetches the sampling rate for the ADCs in MHz
+
+        Returns:
+            adc_sr (float): Sampling rate of the ADCs in MHz
+        """
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((self.address, self.port))
+
+            # Command 6 tells the RFSoC to return the ADC sampling rate
+            s.sendall(struct.pack("B", 6))
+            adc_sr = struct.unpack("d", s.recv(8))[0]
+
+        return adc_sr
+
+    def get_dac_sampling_rate(self):
+        """Fetches the sampling rate for the DACs in MHz
+
+        Returns:
+            adc_sr (float): Sampling rate of the ADCs in MHz
+        """
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((self.address, self.port))
+
+            # Command 8 tells the RFSoC to return the DAC sampling rate
+            s.sendall(struct.pack("B", 8))
+            dac_sr = struct.unpack("d", s.recv(8))[0]
+
+        return dac_sr
+
+    @property
+    def dac_sampling_rate(self):
+        return self.get_dac_sampling_rate()
+
+    @dac_sampling_rate.setter
+    def dac_sampling_rate(self, sampling_rate):
+        self.set_dac_sampling_rate(dac_sr=sampling_rate)
+
+    @property
+    def adc_sampling_rate(self):
+        return self.get_adc_sampling_rate()
+
+    @adc_sampling_rate.setter
+    def adc_sampling_rate(self, sampling_rate):
+        self.set_adc_sampling_rate(adc_sr=sampling_rate)
+
+    def setup(self,
+              dac_sampling_rate: float,
+              adc_sampling_rate: float,
+              channel_port_map: dict,
+              **kwargs):
+        """Setup the baord by setting the sampling rate of the DACs and ADCs
+
+        Arguments:
+            dac_sampling_rate (float): Sampling rate of the 16 DACs in MHz.
+            adc_sampling_rate (float): Sampling rate of the 16 ADCs in MHz.
+            channel_dac_map (dict): Mapping of fridge channels to RFSoC DACs
+        """
+
+        self.dac_sampling_rate = dac_sampling_rate
+        self.adc_sampling_rate = adc_sampling_rate
+        self.channel_port_map = channel_port_map
+
+    def process_pulse_sequence(self, channel_pulses: dict, nshots: int):
+        """Processes the pulse sequence into np arrays to upload to the board
+
+        Arguments:
+            channel_pulses (dict[str, List[Pulse]]): A dictionary of fridge ports mapped to an array of pulses to be sent.
+            nshots (int): Number of shots
+        """
+
+        # Update number of shots, even if the pulse sequence is the same
+        self.nshots = nshots
+
+        # Check if the new pulse sequence is the same as the currently loaded pulse sequence
+        self.current_pulsesequence_hash = ""
+        for channel_sequence in channel_pulses.values():
+            for pulse in channel_sequence:
+                self.current_pulsesequence_hash += pulse.serial
+
+        # If they are the same, exit
+        if self.current_pulsesequence_hash == self.last_pulsequence_hash:
+            return
+
+        # Initialize the waveform buffer
+        self.dac_waveform_buffer = np.zeros((self.dac_nchannels, self.dac_sample_size))
+
+        # Reset the acquisition store
+        self.acquisitons = []
+
+        # Get the DAC time array
+        time_array = 1 / (self.dac_sampling_rate * 1e6) * np.arange(self.dac_sample_size)
+
+        print(channel_pulses)
+
+        for fridge_port, channel_sequence in channel_pulses.items():
+            # Map fridge port to DAC number
+            dac = self.channel_port_map[fridge_port]
+            
+            # Convert pulse into waveform array and insert it into the buffer
+            for pulse in channel_sequence:
+                start = pulse.start * 1e-9
+                duration = pulse.duration * 1e-9
+                end = start + duration
+                
+                idx_start = bisect(time_array, start)
+                idx_end = bisect(time_array, end)
+                t = time_array[idx_start:idx_end]
+
+                wfm = pulse.amplitude * np.sin(2 * np.pi * pulse.frequency * t)
+                self.dac_waveform_buffer[dac, idx_start:idx_end] += wfm
+
+                # Store the readout pulse 
+                if pulse.type == 'ro':
+                    self.acquisitons.append((pulse.qubit, pulse.frequency))
+
+
+    def upload(self):
+        """Uploads the pulse sequence to the RFSoC
+        """
+
+        # Don't upload if the currently loaded pulses are the same as the previous set
+        if self.current_pulsesequence_hash == self.last_pulsequence_hash:
+            return
+
+        if self.dac_waveform_buffer is None:
+            raise_error(RuntimeError, "No pulse sequences currently configured")
+
+        if self.dac_waveform_buffer.shape != (self.dac_nchannels, self.dac_sample_size):
+            raise_error(ValueError,  "Waveform to be uploaded has invalid size")
+
+        # We shift by the waveform array by 2 bytes as the RFSoC will shift 16 byte data to 14
+        payload = (4 * self.dac_waveform_buffer).astype("i2")
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((self.address, self.port))
+
+            # Command 1 tells the RFSoC to await the waveform data to load into DACs
+            cmd = struct.pack("B", 1)
+            s.sendall(cmd)
+            s.sendall(payload.tobytes())
+
+        self.last_pulsequence_hash = self.current_pulsesequence_hash
+
+    def play_sequence(self):
+        """DACs are armed on waveform upload, so no method is required to arm the DACs for playback
+        """
         pass
 
     def connect(self):
+        """Currently we only connect to the board when we have to send a command.
+        """
+        pass
+
+    def start(self):
         pass
 
     def stop(self):
@@ -244,3 +327,160 @@ class IcarusQFPGA(AbstractInstrument):
 
     def disconnect(self):
         pass
+
+class IcarusQ_RFSOC_QRM(IcarusQRFSOC):
+    """IcarusQ RFSoC attached with readout capability
+    """
+
+    def __init__(self, name, address):
+        super().__init__(name, address)
+
+        self.pb: PulseBlaster = None
+
+        self.adc_nchannels = 16
+        self.adc_sample_size = 65536
+
+        self.qubit_adc_map = {}
+        self.adcs_to_read: List[int] = None
+
+    def setup(self,
+              dac_sampling_rate: float,
+              adc_sampling_rate: float,
+              channel_port_map: dict,
+              qubit_adc_map: dict,
+              pulseblaster_address: str,
+              pulseblaster_port: int,
+              single_shot: bool,
+              **kwargs):
+        """Setup the board and assign ADCs to be read. A PulseBlaster is also assigned to trigger this board.
+
+        Arguments:
+            dac_sampling_rate (float): Sampling rate of the 16 DACs in MHz.
+            adc_sampling_rate (float): Sampling rate of the 16 ADCs in MHz.
+            channel_port_map (dict): Mapping of fridge channels to RFSoC DACs
+            qubit_adc_map (dict): Mapping of qubit IDs to RFSoC ADCs
+            pulseblaster_address (str): IP Address of the attached PulseBlaster.
+            pulseblaster_port (int): IP port of the attached PulseBlaster.
+            single_shot (bool): Flag to return single shot data.
+        """
+        super().setup(dac_sampling_rate, adc_sampling_rate, channel_port_map)
+        self.qubit_adc_map = qubit_adc_map
+        self.adcs_to_read = list(set(list(qubit_adc_map.values())))
+        self.pb = PulseBlaster("pb", pulseblaster_address, pulseblaster_port)
+        self.single_shot_flag = single_shot
+
+    def play_sequence_and_acquire(self):
+        """Starts the experiment sequence and proccesses the results.
+
+        Returns:
+            results (dict[int, np.ndarray]): A dictionary of result data for each qubit.
+            If single shot is enabled, the result data will be 2D array of data of each shot.
+            Else, the result data will be a 1D array of averaged amplitude, phase, I and Q.
+        """
+        adc_data_buffer = self.acquire()
+        results = self.process_adc_data(adc_data_buffer)
+        return results
+
+    def acquire(self):
+        """Arms the ADC for acquisition, starts the PulseBlaster TTL and acquires the ADC data from the board.
+
+        Returns:
+            adc_data_buffer (dict[int, np.ndarray]): A dictionary of ADC data per shot with the ADC channels as the keys.
+        """
+
+        num_adcs = len(self.adcs_to_read)
+        # Setup the PulseBlaster for the acquisition
+        self.pb.setup(self.nshots, holdtime_ns=3e6 * num_adcs)
+
+        adc_data_buffer = {adc: np.zeros((self.nshots, self.adc_sample_size), dtype="i2") for adc in self.adcs_to_read}
+        # Each data point of the ADC sample is 16-bit
+        BUFFER_SIZE = self.adc_sample_size * 2
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((self.address, self.port))
+
+            # Command 2 tells the RFSoC to arm the ADCs
+            s.sendall(struct.pack("B", 2))
+            # Send number of shots as unsigned shot, max 65536, increase in future if needed
+            s.sendall(struct.pack("H", self.nshots))
+            # Send number of channels
+            s.sendall(struct.pack("B", num_adcs))
+
+            for adc in self.adcs_to_read:
+                # Send ADC channel number to use
+                s.sendall(struct.pack("B", adc))
+
+            # Wait 0.1s for the board to set up the ADC
+            time.sleep(0.1)
+            self.pb.fire()
+
+            for j in range(self.nshots):
+                for k in range(num_adcs):
+                    # Each message from the ADC begins with the current shot number and channel number
+                    # These messages can be out-of-order due to PS thread execution
+                    shotnum = struct.unpack("H", s.recv(2))[0]
+                    channel = struct.unpack("H", s.recv(2))[0]
+
+                    r = bytearray()
+                    # We start listening for a packet of max BUFFER_SIZE amount of data
+                    # However, this packet may have less data than the expected amount of data
+                    # Hence, we need to use a while loop to keep iterating until we have received the full amount of data
+                    while len(r) < BUFFER_SIZE:
+                        packet = s.recv(BUFFER_SIZE - len(r))
+                        if packet:
+                            r.extend(packet)
+
+                    # Load the data packet and assign it to the internal buffer
+                    adc_data_buffer[channel][shotnum] = np.frombuffer(r, dtype="i2")
+
+        self.pb.stop()
+        return adc_data_buffer
+
+    def process_adc_data(self, adc_data_buffer: dict):
+        """Processes the ADC data into amplitude, phase, I and Q for the readout signals.
+
+        Arguments:
+            adc_data_buffer (dict[int, np.ndarray]): A dictionary of ADC data per shot with the ADC channels as the keys.
+
+        Returns:
+            results (dict[int, np.ndarray]): A dictionary of result data for each qubit.
+            If single shot is enabled, the result data will be 2D array of data of each shot.
+            Else, the result data will be a 1D array of averaged amplitude, phase, I and Q.
+        """
+
+        result = {}
+        time_array = 1 / (self.adc_sampling_rate * 1e6) * np.arange(self.adc_sample_size)
+
+        for qubit, readout_frequency in self.acquisitons:
+            adc = self.qubit_adc_map[qubit]
+            data = adc_data_buffer[adc]
+
+            cos = np.cos(2 * np.pi * readout_frequency * time_array)
+            sin = np.sin(2 * np.pi * readout_frequency * time_array)
+
+            if self.single_shot_flag:
+                res = np.zeros((self.nshots, 4))
+                
+                for shotnum, signal in data.items():
+                    I = np.sum(signal * sin)
+                    Q = np.sum(signal * cos)
+                    amplitude = np.sqrt(I**2 + Q**2)
+                    phase = np.arctan2(Q, I)
+
+                    res[shotnum] = amplitude, phase, I, Q
+
+                result[qubit] = res
+
+            else:
+                signal = np.average(data, axis=0)
+                I = np.sum(signal * sin)
+                Q = np.sum(signal * cos)
+                amplitude = np.sqrt(I**2 + Q**2)
+                phase = np.arctan2(Q, I)
+
+                result[qubit] = np.array([amplitude, phase, I, Q])
+
+        return result
+
+class IcarusQ_RFSOC_QCM(IcarusQRFSOC):
+    pass

@@ -1,40 +1,42 @@
-nqubits: 1
-description: 1-qubit device controlled with the IcarusQ AWG system.
+nqubits: 2
+description: 2-qubit device controlled with the IcarusQ RFSoC system.
 
 settings:
     hardware_avg: 1024
-    sampling_rate: 1_000_000_000
+    sampling_rate: 5_898_240_000
     repetition_duration: 200_000
     minimum_delay_between_instructions: 0
 
 qubits: [0]
 
 topology: # qubit - qubit connections
--   [ 1 ]
+-   [ 1, 1 ]
+-   [ 1, 1 ]
 
-channels: [1_ro, 1_qb]
+channels: [i8, x3, x4, z3, z4]
 
 qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux] 
-    0: [1_ro, 1_qb, 99]
+    0: [i8, x3, z3]
+    1: [i8, x4, z4]
 
 instruments:
-    fpga1:
+    board0:
         lib: icarusqfpga
-        class: IcarusQFPGA
+        class: IcarusQ_RFSOC_QRM
         address: 192.168.0.130
         settings:
-            dac_sampling_rate: 5898240000
-            adcs_to_read: [5, 9]
+            dac_sampling_rate: 5898.24
+            adc_sampling_rate: 1966.08
             channel_port_map:
-                1_ro: 0
-                1_qb: 5
-
-    pb:
-        lib: icarusqfpga
-        class: PulseBlaster
-        address: 192.168.0.101
-        settings:
-            holdtime: 6000000
+                i8: 0
+                x3: 4
+                x4: 5
+            qubit_adc_map:
+                0: 12
+                1: 13
+            pulseblaster_address: "192.168.0.101"
+            pulseblaster_port: 5000
+            single_shot: false
 
 native_gates:
     single_qubit:
@@ -91,33 +93,6 @@ characterization:
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
             mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
         1:
-            resonator_freq: 7824715967.361432
-            qubit_freq: 5082221756
-            T1: 2192.895853326451
-            T2: 6933.310025260633
-            resonator_spectroscopy_max_ro_voltage: 900
-            rabi_oscillations_pi_pulse_min_voltage: 20
-            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
-            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
-        2:
-            resonator_freq: 7824715967.361432
-            qubit_freq: 5082221756
-            T1: 2192.895853326451
-            T2: 6933.310025260633
-            resonator_spectroscopy_max_ro_voltage: 900
-            rabi_oscillations_pi_pulse_min_voltage: 20
-            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
-            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
-        3:
-            resonator_freq: 7824715967.361432
-            qubit_freq: 5082221756
-            T1: 2192.895853326451
-            T2: 6933.310025260633
-            resonator_spectroscopy_max_ro_voltage: 900
-            rabi_oscillations_pi_pulse_min_voltage: 20
-            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
-            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
-        4:
             resonator_freq: 7824715967.361432
             qubit_freq: 5082221756
             T1: 2192.895853326451
