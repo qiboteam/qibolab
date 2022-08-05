@@ -120,14 +120,14 @@ class SPI(AbstractInstrument):
             for module in self.s4g_modules.values():
                 #Check current voltage of the module and warning
                 actual_voltage = self.device.instrument_modules[module[1]].instrument_modules['dac' + str(module[2]-1)].current()
-                log.info(f"WARNING: {module[1]} - flux port {module[2]}: current voltage: {actual_voltage} new voltage: {module[3]}")
+                #log.info(f"WARNING: {module[1]} - flux port {module[2]}: current voltage: {actual_voltage} new voltage: {module[3]}")
 
                 self.device.instrument_modules[module[1]].instrument_modules['dac' + str(module[2]-1)].current(module[3])
                 self.device.instrument_modules[module[1]].instrument_modules['dac' + str(module[2]-1)].span(module[4])
             for module in self.d5a_modules.values():
                 #Check current voltage of the module and warning
                 actual_voltage = self.device.instrument_modules[module[1]].instrument_modules['dac' + str(module[2]-1)].current()
-                log.info(f"WARNING: {module[1]} - flux port {module[2]}: current voltage: {actual_voltage} new voltage: {module[3]}")
+                #log.info(f"WARNING: {module[1]} - flux port {module[2]}: current voltage: {actual_voltage} new voltage: {module[3]}")
                 
                 self.device.instrument_modules[module[1]].instrument_modules['dac' + str(module[2]-1)].voltage(module[3])
                 self.device.instrument_modules[module[1]].instrument_modules['dac' + str(module[2]-1)].span(module[4])

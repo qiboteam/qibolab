@@ -228,7 +228,7 @@ class Diagnostics():
 
         # Fitting
         pi_pulse_amplitude = qd_pulse.amplitude
-        smooth_dataset, pi_pulse_duration, rabi_oscillations_pi_pulse_min_voltage, t1 = fitting.rabi_fit(dataset)
+        smooth_dataset, pi_pulse_duration, rabi_oscillations_pi_pulse_min_voltage, t1 = fitting.rabi_fit_3D(dataset)
         utils.plot(smooth_dataset, dataset, "Rabi_pulse_length", 1)
 
         print(f"\nPi pulse duration = {pi_pulse_duration}")
