@@ -8,6 +8,7 @@ from qibolab.platforms.abstract import AbstractPlatform
 class DummyInstrument:
     # This object is used to make QCVV methods work until
     # we improve the platform abstractions
+    # TODO: Remove this objects when abstractions are fixed
 
     def set_device_parameter(self, *args, **kwargs):
         pass
@@ -32,6 +33,7 @@ class DummyPlatform(AbstractPlatform):
 
         # create dummy instruments
         nqubits = self.settings.get('nqubits')
+        # TODO: Remove these when platform abstraction is fixed
         self.qcm = {i: DummyInstrument() for i in range(nqubits)}
         self.qrm = {i: DummyInstrument() for i in range(nqubits)}
 
