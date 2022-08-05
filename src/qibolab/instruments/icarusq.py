@@ -1,3 +1,4 @@
+import time
 import numpy as np
 from typing import List
 from bisect import bisect
@@ -277,14 +278,14 @@ class AlazarADC(AbstractInstrument):
             self.device.trigger_delay(int(int((readout_start * 1e-9 + 4e-6) / 1e-9 / 8) * 8))
         self.controller.arm(nshots)
         
-    def play_sequence_and_acquire(self):
+    def acquire(self):
         """
         this method performs an acquisition, which is the get_cmd for the
         acquisiion parameter of this instrument
         :return:
         """
         raw = self.device.acquire(acquisition_controller=self.controller, **self.controller.acquisitionkwargs)
-        return self.process_result(raw)
+        return raw
 
     def process_result(self, readout_frequency=100e6, readout_channels=[0, 1]):
         """Returns the processed signal result from the ADC.
@@ -326,3 +327,150 @@ class AlazarADC(AbstractInstrument):
         if self.is_connected:
             self.device.close()
             self.controller.close()
+
+class IcarusQRack_QRM(AbstractInstrument):
+    """Rack system using the Tektronix AWG5204 and the AlazarTech ATS9371.
+    """
+    def __init__(self, name, address):
+        super().__init__(name, address)
+
+        self.awg = TektronixAWG5204(f"{name}_awg", address)
+        self.adc = AlazarADC(f"{name}_adc", address)
+        
+        self.awg_waveform_buffer = None
+        self.nshots = None
+        self.readout_start = None
+
+        # Qibolab unique trackers
+        self.last_pulsequence_hash = "uninitialised"
+        self.current_pulsesequence_hash = ""
+        self.channel_port_map = {}
+        self.acquisitons = []
+
+    def connect(self):
+        """Connects to the AWG and ADC.
+        """
+        if not self.is_connected:
+            self.awg.connect()
+            self.adc.connect()
+            self.is_connected = True
+        else:
+            raise_error(Exception,'There is an open connection to the instrument already')
+
+    def setup(self,
+              awg_settings: dict,
+              adc_settings: dict,
+              channel_port_map: dict,
+              **kwargs):
+        """Setup the AWG and the ADC and assign the fridge port to AWG channel mapping.
+
+        Arguments:
+            awg_settings (dict): @see TektronixAWG5204.setup for more information
+            adc_settings(dict): @see AlazarADC.setup for more information
+            channel_port_map (dict): Dictionary mapping fridge ports to AWG channels
+        """
+        self.awg.setup(**awg_settings)
+        self.adc.setup(**adc_settings)
+        self.channel_port_map = channel_port_map
+
+    def process_pulse_sequence(self, channel_pulses: "dict[str, List[Pulse]]", nshots: int):
+        """Processes the pulse sequence into np arrays to upload to the AWG
+
+        Arguments:
+            channel_pulses (dict[str, List[Pulse]]): A dictionary of fridge ports mapped to an array of pulses to be sent.
+            nshots (int): Number of shots
+        """
+
+        # Update number of shots, even if the pulse sequence is the same
+        self.nshots = nshots
+
+        # Check if the new pulse sequence is the same as the currently loaded pulse sequence
+        self.current_pulsesequence_hash = ""
+        for channel_sequence in channel_pulses.values():
+            for pulse in channel_sequence:
+                self.current_pulsesequence_hash += pulse.serial
+
+        # If they are the same, exit
+        if self.current_pulsesequence_hash == self.last_pulsequence_hash:
+            return
+
+        sequence_start = 0
+        sequence_end = 0
+        
+        # Find the start and end of the pulse sequence
+        for channel_sequence in channel_pulses.values():
+            for pulse in channel_sequence:
+                sequence_start = min(pulse.start, sequence_start)
+                sequence_end = max(pulse.start + pulse.duration, sequence_end)
+
+        # Pad the start and end with zeros to meet the AWG minimum sample size count
+        sequence_start = sequence_start * 1e-9 - self.awg.pulse_buffer
+        sequence_end = sequence_end * 1e-9 + self.awg.pulse_buffer
+        time_array = np.arange(sequence_start, sequence_end, 1 / self.awg.sample_rate)
+
+        self.awg_waveform_buffer = np.zeros((4, len(time_array)))
+
+        for fridge_port, channel_sequence in channel_pulses.items():
+            # Get the IQ channels for the selected port
+            i_ch, q_ch = self.channel_port_map[fridge_port]
+            
+            for pulse in channel_sequence:
+                
+                start = pulse.start * 1e-9
+                duration = pulse.duration * 1e-9
+                end = start + duration
+                
+                idx_start = bisect(time_array, start)
+                idx_end = bisect(time_array, end)
+                t = time_array[idx_start:idx_end]
+
+                I = pulse.amplitude * np.cos(2 * np.pi * pulse.frequency * t + pulse.phase + self.awg.channel_phase[i_ch])
+                Q = -pulse.amplitude * np.sin(2 * np.pi * pulse.frequency * t + pulse.phase + self.awg.channel_phase[q_ch])
+                
+                self.awg_waveform_buffer[i_ch] += I
+                self.awg_waveform_buffer[q_ch] += Q
+
+                # Store the readout pulse 
+                if pulse.type == 'ro':
+                    self.acquisitons.append((pulse.qubit, pulse.frequency))
+                    self.readout_start = pulse.start
+
+    def upload(self):
+        """Uploads the pulse sequence to the AWG.
+        """
+
+        # Don't upload if the currently loaded pulses are the same as the previous set
+        if self.current_pulsesequence_hash == self.last_pulsequence_hash:
+            return
+
+        if self.awg_waveform_buffer is None:
+            raise_error(RuntimeError, "No pulse sequences currently configured")
+
+        self.awg.upload(self.awg_waveform_buffer)
+        self.last_pulsequence_hash = self.current_pulsesequence_hash
+
+    def play_sequence_and_acquire(self):
+        """Arms the AWG to play and the ADC to start acquisition.
+        """
+
+        self.awg.play_sequence()
+        self.adc.arm(self.nshots, self.readout_start)
+        results = {
+            qubit_id: self.adc.process_result(readout_frequency)
+            for qubit_id, readout_frequency in self.acquisitons
+        }
+        return results
+
+    def stop(self):
+        self.awg.stop()
+
+    def disconnect(self):
+        """Disconnects the AWG and ADC.
+        """
+        if self.is_connected:
+            self.awg.disconnect()
+            self.adc.disconnect()
+            self.is_connected = False
+
+    def start(self):
+        pass

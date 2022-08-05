@@ -1,71 +1,64 @@
+name: icarusqfpga
 nqubits: 1
-description: 1-qubit device controlled with the IcarusQ AWG system.
+description: Controls a IcarusQ FPGA and a PulseBlaster.
 
 settings:
-    hardware_avg: 1024
-    sampling_rate: 1_000_000_000
-    repetition_duration: 200_000
-    minimum_delay_between_instructions: 0
+  delay_before_readout: 0
+  delay_between_pulses: 0
+  resonator_spectroscopy_max_ro_voltage: 5726.62338856
+  rabi_oscillations_pi_pulse_min_voltage: 5291.34802850
+  experiment_start_instrument: pb
+  experiment_arm_instruments: [pb]
+  hardware_avg: 2000
+  sampling_rate: 650000000
+  repetition_duration: 10000
+  minimum_delay_between_instructions: 0
 
-qubits: [0]
+qubits:
+  qubit_0:
+    pi_pulse:
+      amplitude: 0.375
+      duration: 26.18
+      frequency: 251000000
+      channel: 0
+    readout_pulse:
+      amplitude: 0.375
+      duration: 5000
+      frequency: 100000000
+      channel: 1
+    readout_frequency: 5124600000
+    resonator_spectroscopy_max_ro_voltage: 5726.62338856
+    rabi_oscillations_pi_pulse_min_voltage: 5291.34802850
+    playback: fpga
+    playback_readout: fpga
+    readout: fpga
+    readout_channels: 12
 
 topology: # qubit - qubit connections
 -   [ 1 ]
 
-
-channels: [i1_ro, i1_xy]
+channels: [1_ro, 1_qb]
 
 qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux] 
-    0: [i1_ro, i1_xy, null]
+    0: [1_ro, 1_qb, 99]
 
 instruments:
-    rack:
-        lib: icarusq
-        class: IcarusQRack_QRM
-        address: TCPIP0::192.168.0.2::inst0::INSTR
-        settings:
-            awg_settings:
-                offset: [-0.001, 0, -0.002, 0.016]
-                amplitude: [0.75, 0.75, 0.75, 0.75]
-                resolution: 16
-                pulse_buffer: 0.000001
-                sample_rate: 2500000000
-                channel_phase_deg: [-6.2, 0.2, 10.6, -2.2]
-                channel_phase: [-0.10821, 0.00349066, 0.1850049, -0.0383972]
-            adc_settings:
-                samples: 4992
-                trigger_volts: 1
-            channel_port_map:
-                i1_ro: [0, 1]
-                i1_qb: [2, 3]
+  fpga:
+    adc: true
+    lib: icarusqfpga
+    address: 192.168.0.130
+    class: IcarusQFPGA
+    settings:
+      dac_sampling_rate: 5898240000
+      adcs_to_read: [12]
 
-    qb_lo:
-        lib: icarusq
-        class: QuicSyn
-        address: ASRL11::INSTR
-        settings:
-            frequency: 3414644400
-
-    ro_lo:
-        lib: icarusq
-        class: QuicSyn
-        address: ASRL6::INSTR
-        settings:
-            frequency: 5026600000
-
-    qb_att:
-        lib: icarusq
-        class: MCAttenuator
-        address: 192.168.0.9:90
-        settings:
-            attenuation: 10
-
-    ro_att:
-        lib: icarusq
-        class: MCAttenuator
-        address: 192.168.0.10:100
-        settings:
-            attenuation: 24
+  pb:
+    class: PulseBlaster
+    adc: true
+    lib: icarusqfpga
+    address: 192.168.0.101
+    settings:
+      holdtime_ns: 3000000
 
 native_gates:
     single_qubit:
@@ -113,6 +106,7 @@ native_gates:
 characterization:
     single_qubit:
         0:
+
             resonator_freq: 7824715967.361432
             qubit_freq: 5082221756
             T1: 2192.895853326451

@@ -258,8 +258,6 @@ class IcarusQRFSOC(AbstractInstrument):
         # Get the DAC time array
         time_array = 1 / (self.dac_sampling_rate * 1e6) * np.arange(self.dac_sample_size)
 
-        print(channel_pulses)
-
         for fridge_port, channel_sequence in channel_pulses.items():
             # Map fridge port to DAC number
             dac = self.channel_port_map[fridge_port]
@@ -274,7 +272,7 @@ class IcarusQRFSOC(AbstractInstrument):
                 idx_end = bisect(time_array, end)
                 t = time_array[idx_start:idx_end]
 
-                wfm = pulse.amplitude * np.sin(2 * np.pi * pulse.frequency * t)
+                wfm = pulse.amplitude * np.sin(2 * np.pi * pulse.frequency * t + pulse.phase)
                 self.dac_waveform_buffer[dac, idx_start:idx_end] += wfm
 
                 # Store the readout pulse 
