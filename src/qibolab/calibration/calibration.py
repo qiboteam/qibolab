@@ -820,7 +820,7 @@ class Calibration():
         normalized_voltage = (2 * normalized_voltage) - 1
         return normalized_voltage
 
-    def _get_sequence_from_gate_pair(self, gates, qubit):   
+    def _get_sequence_from_gate_pair(self, gates, qubit, beta_param):   
         platform = self.platform
         sampling_rate = platform.sampling_rate
         pulse_frequency = platform.settings['native_gates']['single_qubit'][qubit]['RX']['frequency']
@@ -839,22 +839,34 @@ class Calibration():
             
             if (gate == "RX(pi)"):
                 #print("Transforming to sequence RX(pi) gate")
-                RX_pulse = platform.RX_pulse(qubit, start = pulse_start, phase = (pulse_start / sampling_rate) * 2 * np.pi * pulse_frequency)
+                if (beta_param == None):
+                    RX_pulse = platform.RX_pulse(qubit, start = pulse_start, phase = (pulse_start / sampling_rate) * 2 * np.pi * pulse_frequency)
+                else:
+                    RX_pulse = platform.RX_drag_pulse(qubit, start = pulse_start, phase = (pulse_start / sampling_rate) * 2 * np.pi * pulse_frequency, beta=beta_param)
                 sequence.add(RX_pulse)
 
             if (gate == "RX(pi/2)"):
                 #print("Transforming to sequence RX(pi/2) gate")
-                RX90_pulse = platform.RX90_pulse(qubit, start = pulse_start, phase = (pulse_start / sampling_rate) * 2 * np.pi * pulse_frequency)
+                if (beta_param == None):
+                    RX90_pulse = platform.RX90_pulse(qubit, start = pulse_start, phase = (pulse_start / sampling_rate) * 2 * np.pi * pulse_frequency)
+                else:
+                    RX90_pulse = platform.RX90_drag_pulse(qubit, start = pulse_start, phase = (pulse_start / sampling_rate) * 2 * np.pi * pulse_frequency, beta=beta_param)
                 sequence.add(RX90_pulse)
 
             if (gate == "RY(pi)"):
                 #print("Transforming to sequence RY(pi) gate")
-                RY_pulse = platform.RX_pulse(qubit, start = pulse_start, phase = (pulse_start / sampling_rate) * 2 * np.pi * pulse_frequency + np.pi/2)
+                if (beta_param == None):
+                    RY_pulse = platform.RX_pulse(qubit, start = pulse_start, phase = (pulse_start / sampling_rate) * 2 * np.pi * pulse_frequency + np.pi/2)
+                else:
+                    RY_pulse = platform.RX_drag_pulse(qubit, start = pulse_start, phase = (pulse_start / sampling_rate) * 2 * np.pi * pulse_frequency + np.pi/2, beta=beta_param)
                 sequence.add(RY_pulse)
 
             if (gate == "RY(pi/2)"):
                 #print("Transforming to sequence RY(pi/2) gate")
-                RY90_pulse = platform.RX90_pulse(qubit, start = pulse_start, phase = (pulse_start / sampling_rate) * 2 * np.pi * pulse_frequency + np.pi/2)
+                if (beta_param == None):
+                    RY90_pulse = platform.RX90_pulse(qubit, start = pulse_start, phase = (pulse_start / sampling_rate) * 2 * np.pi * pulse_frequency + np.pi/2)
+                else:
+                    RY90_pulse = platform.RX90_drag_pulse(qubit, start = pulse_start, phase = (pulse_start / sampling_rate) * 2 * np.pi * pulse_frequency + np.pi/2, beta=beta_param)
                 sequence.add(RY90_pulse)
             
             sequenceDuration = sequenceDuration + pulse_duration
@@ -866,7 +878,7 @@ class Calibration():
         
         return sequence
 
-    def run_allXY(self, qubit):
+    def run_allXY(self, qubit, beta_param=None):
         platform = self.platform
         platform.reload_settings()
 
@@ -902,7 +914,7 @@ class Calibration():
         n = 0 
         for gates in gatelist:
             #transform gate string to pulseSequence
-            seq = self._get_sequence_from_gate_pair(gates, qubit)      
+            seq = self._get_sequence_from_gate_pair(gates, qubit, beta_param)      
             #Execute PulseSequence defined by gates
             platform.start()
             state = platform.execute_pulse_sequence(seq)
