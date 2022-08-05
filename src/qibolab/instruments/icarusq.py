@@ -301,13 +301,13 @@ class AlazarADC(AbstractInstrument):
             qt (float): Q component of the processed signal.
         """
 
-        input_vec_I = self.device._processed_data[readout_channels[0]]
-        input_vec_Q = self.device._processed_data[readout_channels[1]]
+        input_vec_I = self.controller._processed_data[readout_channels[0]]
+        input_vec_Q = self.controller._processed_data[readout_channels[1]]
         it = 0
         qt = 0
-        for i in range(self.device.samples_per_record):
-            it += input_vec_I[i] * np.cos(2 * np.pi * readout_frequency * self.device.time_array[i])
-            qt += input_vec_Q[i] * np.cos(2 * np.pi * readout_frequency * self.device.time_array[i])
+        for i in range(self.controller.samples_per_record):
+            it += input_vec_I[i] * np.cos(2 * np.pi * readout_frequency * self.controller.time_array[i])
+            qt += input_vec_Q[i] * np.cos(2 * np.pi * readout_frequency * self.controller.time_array[i])
         phase = np.arctan2(qt, it)
         ampl = np.sqrt(it**2 + qt**2)
         
@@ -427,8 +427,8 @@ class IcarusQRack_QRM(AbstractInstrument):
                 I = pulse.amplitude * np.cos(2 * np.pi * pulse.frequency * t + pulse.phase + self.awg.channel_phase[i_ch])
                 Q = -pulse.amplitude * np.sin(2 * np.pi * pulse.frequency * t + pulse.phase + self.awg.channel_phase[q_ch])
                 
-                self.awg_waveform_buffer[i_ch] += I
-                self.awg_waveform_buffer[q_ch] += Q
+                self.awg_waveform_buffer[i_ch, idx_start:idx_end] += I
+                self.awg_waveform_buffer[q_ch, idx_start:idx_end] += Q
 
                 # Store the readout pulse 
                 if pulse.type == 'ro':
@@ -449,12 +449,18 @@ class IcarusQRack_QRM(AbstractInstrument):
         self.awg.upload(self.awg_waveform_buffer)
         self.last_pulsequence_hash = self.current_pulsesequence_hash
 
+    def play_sequence(self):
+        """Arms the AWG to play.
+        """
+        self.awg.play_sequence()
+
     def play_sequence_and_acquire(self):
         """Arms the AWG to play and the ADC to start acquisition.
         """
 
-        self.awg.play_sequence()
+        self.play_sequence()
         self.adc.arm(self.nshots, self.readout_start)
+        self.adc.acquire()
         results = {
             qubit_id: self.adc.process_result(readout_frequency)
             for qubit_id, readout_frequency in self.acquisitons

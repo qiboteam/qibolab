@@ -37,7 +37,7 @@ instruments:
                 trigger_volts: 1
             channel_port_map:
                 i1_ro: [0, 1]
-                i1_qb: [2, 3]
+                i1_xy: [2, 3]
 
     qb_lo:
         lib: icarusq
