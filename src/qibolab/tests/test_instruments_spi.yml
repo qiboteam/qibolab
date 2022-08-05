@@ -10,7 +10,7 @@ instruments:
         class: SPI
         address: COM7
         settings:
-            s4g_modules: 
+            s4g_modules:
                 #flux_port: [address@SPI , name, #DAC_port, current] max number of DACs per module = 4
                 11: [1, "mod1", 1, "range_min_bi"]
                 12: [1, "mod1", 2, "range_min_bi"]

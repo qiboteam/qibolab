@@ -1,7 +1,10 @@
-import yaml
+# -*- coding: utf-8 -*-
 import time
+
 import numpy as np
+import yaml
 from qibo.config import log, raise_error
+
 from qibolab.platforms.abstract import AbstractPlatform
 
 
@@ -32,12 +35,13 @@ class DummyPlatform(AbstractPlatform):
             self.settings = yaml.safe_load(file)
 
         # create dummy instruments
-        nqubits = self.settings.get('nqubits')
+        nqubits = self.settings.get("nqubits")
         # TODO: Remove these when platform abstraction is fixed
         self.qcm = {i: DummyInstrument() for i in range(nqubits)}
         self.qrm = {i: DummyInstrument() for i in range(nqubits)}
 
         from qibolab.u3params import U3Params
+
         self.u3params = U3Params()
 
     def reload_settings(self):  # pragma: no cover
@@ -65,7 +69,7 @@ class DummyPlatform(AbstractPlatform):
         raise_error(NotImplementedError)
 
     def execute_pulse_sequence(self, sequence, nshots=None):  # pragma: no cover
-        time.sleep(self.settings.get('sleep_time'))
+        time.sleep(self.settings.get("sleep_time"))
         ro_pulses = {pulse.qubit: pulse.serial for pulse in sequence.ro_pulses}
 
         results = {}

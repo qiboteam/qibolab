@@ -1,15 +1,18 @@
-import yaml
+# -*- coding: utf-8 -*-
 import time
-from diagnostics import run_resonator_spectroscopy, \
-                        run_qubit_spectroscopy, \
-                        run_rabi_pulse_length, \
-                        run_rabi_pulse_gain, \
-                        run_rabi_pulse_length_and_gain, \
-                        run_rabi_pulse_length_and_amplitude, \
-                        run_t1, \
-                        run_ramsey, \
-                        run_spin_echo
 
+import yaml
+from diagnostics import (
+    run_qubit_spectroscopy,
+    run_rabi_pulse_gain,
+    run_rabi_pulse_length,
+    run_rabi_pulse_length_and_amplitude,
+    run_rabi_pulse_length_and_gain,
+    run_ramsey,
+    run_resonator_spectroscopy,
+    run_spin_echo,
+    run_t1,
+)
 
 if __name__ == "__main__":
     with open("settings.yaml", "r") as file:
@@ -24,7 +27,9 @@ if __name__ == "__main__":
     print("\nRun resonator spectroscopy.\n")
     resonator_freq, _ = run_resonator_spectroscopy(**settings["resonator_spectroscopy"])
     print("\nRun qubit spectroscopy.\n")
-    qubit_freq, _ = run_qubit_spectroscopy(resonator_freq, **settings["qubit_spectroscopy"])
+    qubit_freq, _ = run_qubit_spectroscopy(
+        resonator_freq, **settings["qubit_spectroscopy"]
+    )
     print("\nRun Rabi pulse length.\n")
     run_rabi_pulse_length(resonator_freq, qubit_freq)
     print("\nRun Rabi pulse gain.\n")
@@ -36,9 +41,23 @@ if __name__ == "__main__":
     print("\nRun t1.\n")
     run_t1(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, **settings["t1"])
     print("\nRun ramsey.\n")
-    run_ramsey(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pulse_amplitude, **settings["ramsey"])
+    run_ramsey(
+        resonator_freq,
+        qubit_freq,
+        pi_pulse_gain,
+        pi_pulse_length,
+        pi_pulse_amplitude,
+        **settings["ramsey"]
+    )
     print("\nRun Spin Echo.\n")
-    run_spin_echo(resonator_freq, qubit_freq, pi_pulse_gain, pi_pulse_length, pi_pulse_amplitude, **settings["spin_echo"])
+    run_spin_echo(
+        resonator_freq,
+        qubit_freq,
+        pi_pulse_gain,
+        pi_pulse_length,
+        pi_pulse_amplitude,
+        **settings["spin_echo"]
+    )
     print("\nDiagnostics completed.\n")
 
     time.sleep(360)
