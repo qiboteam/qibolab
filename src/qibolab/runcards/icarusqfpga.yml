@@ -1,64 +1,42 @@
-name: icarusqfpga
-nqubits: 1
-description: Controls a IcarusQ FPGA and a PulseBlaster.
+nqubits: 2
+description: 2-qubit device controlled with the IcarusQ RFSoC system.
 
 settings:
-  delay_before_readout: 0
-  delay_between_pulses: 0
-  resonator_spectroscopy_max_ro_voltage: 5726.62338856
-  rabi_oscillations_pi_pulse_min_voltage: 5291.34802850
-  experiment_start_instrument: pb
-  experiment_arm_instruments: [pb]
-  hardware_avg: 2000
-  sampling_rate: 650000000
-  repetition_duration: 10000
-  minimum_delay_between_instructions: 0
+    hardware_avg: 1024
+    sampling_rate: 5_898_240_000
+    repetition_duration: 200_000
+    minimum_delay_between_instructions: 0
 
-qubits:
-  qubit_0:
-    pi_pulse:
-      amplitude: 0.375
-      duration: 26.18
-      frequency: 251000000
-      channel: 0
-    readout_pulse:
-      amplitude: 0.375
-      duration: 5000
-      frequency: 100000000
-      channel: 1
-    readout_frequency: 5124600000
-    resonator_spectroscopy_max_ro_voltage: 5726.62338856
-    rabi_oscillations_pi_pulse_min_voltage: 5291.34802850
-    playback: fpga
-    playback_readout: fpga
-    readout: fpga
-    readout_channels: 12
+qubits: [0, 1]
 
 topology: # qubit - qubit connections
--   [ 1 ]
+-   [ 1, 1 ]
+-   [ 1, 1 ]
 
-channels: [1_ro, 1_qb]
+channels: [i8, x3, x4, z3, z4]
 
 qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux] 
-    0: [1_ro, 1_qb, 99]
+    0: [i8, x3, z3]
+    1: [i8, x4, z4]
 
 instruments:
-  fpga:
-    adc: true
-    lib: icarusqfpga
-    address: 192.168.0.130
-    class: IcarusQFPGA
-    settings:
-      dac_sampling_rate: 5898240000
-      adcs_to_read: [12]
-
-  pb:
-    class: PulseBlaster
-    adc: true
-    lib: icarusqfpga
-    address: 192.168.0.101
-    settings:
-      holdtime_ns: 3000000
+    board0:
+        lib: icarusqfpga
+        class: IcarusQ_RFSOC_QRM
+        address: 192.168.0.130
+        settings:
+            dac_sampling_rate: 5898.24
+            adc_sampling_rate: 1966.08
+            channel_port_map:
+                i8: 0
+                x3: 4
+                x4: 5
+            qubit_adc_map:
+                0: 12
+                1: 13
+            pulseblaster_address: "192.168.0.101"
+            pulseblaster_port: 5000
+            single_shot: false
 
 native_gates:
     single_qubit:
@@ -106,11 +84,12 @@ native_gates:
 characterization:
     single_qubit:
         0:
-
             resonator_freq: 7824715967.361432
             qubit_freq: 5082221756
             T1: 2192.895853326451
             T2: 6933.310025260633
+            resonator_spectroscopy_max_ro_voltage: 900
+            rabi_oscillations_pi_pulse_min_voltage: 20
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
             mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
         1:
@@ -118,26 +97,7 @@ characterization:
             qubit_freq: 5082221756
             T1: 2192.895853326451
             T2: 6933.310025260633
-            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
-            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
-        2:
-            resonator_freq: 7824715967.361432
-            qubit_freq: 5082221756
-            T1: 2192.895853326451
-            T2: 6933.310025260633
-            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
-            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
-        3:
-            resonator_freq: 7824715967.361432
-            qubit_freq: 5082221756
-            T1: 2192.895853326451
-            T2: 6933.310025260633
-            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
-            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
-        4:
-            resonator_freq: 7824715967.361432
-            qubit_freq: 5082221756
-            T1: 2192.895853326451
-            T2: 6933.310025260633
+            resonator_spectroscopy_max_ro_voltage: 900
+            rabi_oscillations_pi_pulse_min_voltage: 20
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
             mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
