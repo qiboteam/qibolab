@@ -230,7 +230,7 @@ def fit_drag_tunning(res1, res2, beta_params):
     xi = (b-d) / (c-a)
     yi = a * xi + b
 
-    plt.scatter(xi,yi, color='black', s=10)
+    plt.scatter(xi,yi, color='black', s=40)
 
     return xi
 
@@ -244,7 +244,7 @@ def flipping_fit_3D(x_data, y_data):
     popt, pcov = curve_fit(flipping, x_data, y_data, p0=pguess)
     return popt
 
-def flipping_fit_3D(x_data, y_data):
+def flipping_fit_2D(x_data, y_data):
     pguess = [
         0.0003, # epsilon guess parameter
         np.mean(y_data),

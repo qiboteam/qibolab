@@ -87,7 +87,8 @@ RO_matrix:
   niter: 1024
 
 flipping:
-  niter: 50
+  niter: 100
+  step: 2
 
 drag_tunning:
   beta_start: -2

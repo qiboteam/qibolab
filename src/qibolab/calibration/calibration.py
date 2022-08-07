@@ -1043,6 +1043,7 @@ class Calibration():
 
         self.reload_settings()
         self.niter = self.settings['flipping']['niter']
+        self.step = self.settings['flipping']['step']
         
         sequence = PulseSequence()
         RX90_pulse = platform.RX90_pulse(qubit, start = 0)
@@ -1054,7 +1055,7 @@ class Calibration():
         # utils.start_live_plotting(path)
 
         #repeat N iter times
-        for i in range(self.niter):
+        for i in range(0, self.niter, self.step):
             #execute sequence RX(pi/2) - [RX(pi) - Rx(pi)] from 0...i times - RO 
             sequence.add(RX90_pulse)
             start1= RX90_pulse.duration
@@ -1072,7 +1073,7 @@ class Calibration():
 
             #Execute PulseSequence defined by gates
             platform.start()
-            state = platform.execute_pulse_sequence(sequence, nshots=1024)
+            state = platform.execute_pulse_sequence(sequence)
             state = list(list(state.values())[0].values())[0]
             platform.stop()
             res += [state[0]]
@@ -1083,15 +1084,20 @@ class Calibration():
             #np.save(path, np.array([res, N]))
 
         # Fitting results to obtain epsilon
-        popt = fitting.flipping_fit(N, res)
+        if self.resonator_type == '3D':
+            popt = fitting.flipping_fit_3D(N, res)
+        elif self.resonator_type == '2D':
+            popt = fitting.flipping_fit_2D(N, res)
+
         angle = (self.niter * 2 * np.pi / popt[2] + popt[3]) / (1 + 4 * self.niter)
-        state1_voltage = platform.settings['characterization']['single_qubit'][qubit]['rabi_oscillations_pi_pulse_peak_ro_voltage']
-        state0_voltage = platform.settings['characterization']['single_qubit'][qubit]['resonator_spectroscopy_peak_ro_voltage']
+        state1_voltage = 1e-6 * platform.settings['characterization']['single_qubit'][qubit]['rabi_oscillations_pi_pulse_peak_ro_voltage']
+        state0_voltage = 1e-6 * platform.settings['characterization']['single_qubit'][qubit]['resonator_spectroscopy_peak_ro_voltage']
         pi_pulse_amplitude = platform.settings['native_gates']['single_qubit'][qubit]['RX']['amplitude']
         amplitude_delta = angle * 2 / np.pi * pi_pulse_amplitude
-        plt.plot(res)
-        x = np.arange(0,50)
-        plt.plot(np.sin(x * 2 * np.pi / popt[2] + popt[3]) * popt[0] + popt[1])
+        x = np.arange(0, self.niter, self.step)
+        plt.plot(x, res)
+        plt.plot(x, np.sin(x * 2 * np.pi / popt[2] + popt[3]) * popt[0] + popt[1])
+        plt.ylim([np.minimum(state0_voltage, state1_voltage), np.maximum(state0_voltage, state1_voltage)])
         plt.show()
         return amplitude_delta
    
