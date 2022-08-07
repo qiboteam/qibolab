@@ -173,6 +173,7 @@ class ClusterQRM_RF(AbstractInstrument):
             # TODO: Remove minimum_delay_between_instructions
 
             self.channel_port_map = kwargs['channel_port_map']
+            self.channels = list(self.channel_port_map.keys())
             
             self.ports['o1'].attenuation = kwargs['ports']['o1']['attenuation']                         # Default after reboot = 7
             self.ports['o1'].lo_enabled = kwargs['ports']['o1']['lo_enabled']                           # Default after reboot = True
@@ -202,14 +203,14 @@ class ClusterQRM_RF(AbstractInstrument):
         nshots (int): the number of times the sequence of pulses will be repeated
         """
         # Load the channels to which the instrument is connected
-        channels = self.channel_port_map.keys()
+        channels = self.channels
 
         # Check if the sequence to be processed is the same as the last one. If so, there is no need to generate waveforms and program
         self.current_pulsesequence_hash = ""
         for channel in channels:
             for pulse in channel_pulses[channel]:
                 self.current_pulsesequence_hash += pulse.serial
-        if True: # self.current_pulsesequence_hash != self.last_pulsequence_hash:
+        if self.ports['i1'].hardware_demod_en or self.current_pulsesequence_hash != self.last_pulsequence_hash:
             # Sort pulses by their start time 
             for channel in channels:
                 channel_pulses[channel].sort(key=lambda pulse: pulse.start) 
@@ -501,7 +502,7 @@ class ClusterQRM_RF(AbstractInstrument):
                 self.set_device_parameter(target, 'sync_en', value = False)
 
         # Upload
-        if True: # self.current_pulsesequence_hash != self.last_pulsequence_hash:
+        if self.ports['i1'].hardware_demod_en or self.current_pulsesequence_hash != self.last_pulsequence_hash:
             self.last_pulsequence_hash = self.current_pulsesequence_hash
             # Upload waveforms and program
             qblox_dict = {}
@@ -743,6 +744,7 @@ class ClusterQCM_RF(AbstractInstrument):
             # TODO: Remove minimum_delay_between_instructions
 
             self.channel_port_map = kwargs['channel_port_map']
+            self.channels = list(self.channel_port_map.keys())
 
             self.ports['o1'].attenuation = kwargs['ports']['o1']['attenuation']                        # Default after reboot = 7
             self.ports['o1'].lo_enabled = kwargs['ports']['o1']['lo_enabled']                          # Default after reboot = True
@@ -773,7 +775,7 @@ class ClusterQCM_RF(AbstractInstrument):
         nshots (int): the number of times the sequence of pulses will be repeated
         """
         # Load the channels to which the instrument is connected
-        channels = self.channel_port_map.keys()
+        channels = self.channels
 
         # Check if the sequence to be processed is the same as the last one. If so, there is no need to generate waveforms and program
         self.current_pulsesequence_hash = ""
