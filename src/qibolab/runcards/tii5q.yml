@@ -34,18 +34,22 @@ instruments:
         class: Cluster
         address: 192.168.0.4
         settings:
-            reference_clock_source      : external                      # external or internal
+            reference_clock_source      : internal                      # external or internal
 
     qrm_rf:
         lib: qblox
         class: ClusterQRM_RF
         address: 192.168.0.4:16
         settings:
-            attenuation                 : 34
-            lo_enabled                  : true
-            lo_frequency                : 7_510_000_000                 # 27_724_144 # 23_828_678       # (Hz) from 2e9 to 18e9
-            gain                        : 1                             # for path0 and path1 -1.0<=v<=1.0
-            hardware_mod_demod_en       : false
+            ports:
+                o1:
+                    attenuation                 : 34
+                    lo_enabled                  : true
+                    lo_frequency                : 7_537_724_144 # 7_510_000_000                 # 27_724_144 # 23_828_678       # (Hz) from 2e9 to 18e9
+                    gain                        : 1                             # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en             : false
+                i1:
+                    hardware_demod_en           : false
 
             acquisition_hold_off        : 130                           # minimum 4ns
             acquisition_duration        : 1800
@@ -59,17 +63,19 @@ instruments:
         class: ClusterQCM_RF
         address: 192.168.0.4:6
         settings:
-            o1_attenuation                  : 24 # (dB)
-            o1_lo_enabled                   : true
-            o1_lo_frequency                 : 4_042_590_000 # (Hz) from 2e9 to 18e9
-            o1_gain                         : 0.17 # for path0 and path1 -1.0<=v<=1.0
-            o1_hardware_mod_en        : false
-
-            o2_attenuation                  : 24 # (dB)
-            o2_lo_enabled                   : true
-            o2_lo_frequency                 : 5.0912e+9 # (Hz) from 2e9 to 18e9 
-            o2_gain                         : 0.17 # for path0 and path1 -1.0<=v<=1.0
-            o2_hardware_mod_en        : false
+            ports:
+                o1:
+                    attenuation                  : 24 # (dB)
+                    lo_enabled                   : true
+                    lo_frequency                 : 4_042_590_000 # (Hz) from 2e9 to 18e9
+                    gain                         : 0.17 # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o2:
+                    attenuation                  : 24 # (dB)
+                    lo_enabled                   : true
+                    lo_frequency                 : 5_091_155_529 # (Hz) from 2e9 to 18e9 
+                    gain                         : 0.28 # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en              : false
 
             channel_port_map:  
                 21: o1 # IQ Port = out0 & out1
@@ -80,17 +86,19 @@ instruments:
         class: ClusterQCM_RF
         address: 192.168.0.4:12
         settings:
-            o1_attenuation                  : 0 # (dB)
-            o1_lo_enabled                   : true
-            o1_lo_frequency                 : 5.0e+9 # (Hz) from 2e9 to 18e9
-            o1_gain                         : 1 # for path0 and path1 -1.0<=v<=1.0
-            o1_hardware_mod_en        : false
-
-            o2_attenuation                  : 60 # (dB)
-            o2_lo_enabled                   : true
-            o2_lo_frequency                 : 5.0e+9 # (Hz) from 2e9 to 18e9 
-            o2_gain                         : 1 # for path0 and path1 -1.0<=v<=1.0
-            o2_hardware_mod_en        : false
+            ports:
+                o1:
+                    attenuation                  : 60 # (dB)
+                    lo_enabled                   : true
+                    lo_frequency                 : 5.0e+9 # (Hz) from 2e9 to 18e9
+                    gain                         : 0 # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o2:
+                    attenuation                  : 60 # (dB)
+                    lo_enabled                   : true
+                    lo_frequency                 : 5.0e+9 # (Hz) from 2e9 to 18e9
+                    gain                         : 0 # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en              : false
 
             channel_port_map:  
                 23: o1 # IQ Port = out0 & out1
@@ -101,21 +109,23 @@ instruments:
         class: ClusterQCM_RF
         address: 192.168.0.4:10
         settings:
-            o1_attenuation                  : 0 # (dB)
-            o1_lo_enabled                   : true
-            o1_lo_frequency                 : 5.0e+9 # (Hz) from 2e9 to 18e9
-            o1_gain                         : 1 # for path0 and path1 -1.0<=v<=1.0
-            o1_hardware_mod_en        : false
-
-            o2_attenuation                  : 60 # (dB)
-            o2_lo_enabled                   : true
-            o2_lo_frequency                 : 5.0e+9 # (Hz) from 2e9 to 18e9 
-            o2_gain                         : 1 # for path0 and path1 -1.0<=v<=1.0
-            o2_hardware_mod_en        : false
+            ports:
+                o1:
+                    attenuation                  : 60 # (dB)
+                    lo_enabled                   : true
+                    lo_frequency                 : 5.0e+9 # (Hz) from 2e9 to 18e9
+                    gain                         : 0 # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o2:
+                    attenuation                  : 60 # (dB)
+                    lo_enabled                   : true
+                    lo_frequency                 : 5.0e+9 # (Hz) from 2e9 to 18e9
+                    gain                         : 0 # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en              : false
 
             channel_port_map:  
                 25: o1 # IQ Port = out0 & out1
-    
+
     SPI:
         lib: spi
         class: SPI
@@ -161,15 +171,15 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.9
-                frequency: 23_828_678
+                frequency: 20_000_000 # 23_828_678
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
                 phase: 0
         2: # qubit number
             RX:
-                duration: 20
-                amplitude: 0.9
+                duration: 40
+                amplitude: 0.888
                 frequency: -200_000_000
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -178,7 +188,7 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.9
-                frequency: 27_724_144
+                frequency: 20_000_000 # 27_724_144
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -280,9 +290,11 @@ characterization:
             sweetspot: -0.00370
         2:
             resonator_freq: 7_557_724_144
-            qubit_freq: 4_891_200_000 
-            T1: 2192.895853326451
-            T2: 6933.310025260633
+            qubit_freq: 4_891_155_529 
+            T1: 33875
+            T2: 0
+            resonator_spectroscopy_peak_ro_voltage: 1128
+            rabi_oscillations_pi_pulse_peak_ro_voltage: 2790
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
             mean_exc_states: (0.00011805761369462914+0.00018601039195510947j)
             sweetspot: -0.00082

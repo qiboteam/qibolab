@@ -3,6 +3,7 @@ import numpy as np
 import qblox_instruments
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 
+
 class Cluster(AbstractInstrument):
     def __init__(self, name, address):
         super().__init__(name, address)
@@ -55,21 +56,9 @@ class ClusterQRM_RF(AbstractInstrument):
     """
     DEFAULT_SEQUENCER = 0
 
-    property_wrapper = lambda *parameter: property(lambda self: self.device.get(parameter[0]), lambda self,x: self.set_device_parameter(self.device, *parameter, value = x))
-    sequencer_property_wrapper = lambda sequencer, *parameter: property(lambda self: self.device.sequencers[sequencer].get(parameter[0]), lambda self,x: self.set_device_parameter(self.device.sequencers[sequencer], *parameter, value = x))
+    property_wrapper = lambda parent, *parameter: property(lambda self: parent.device.get(parameter[0]), lambda self,x: parent.set_device_parameter(parent.device, *parameter, value = x))
+    sequencer_property_wrapper = lambda parent, sequencer, *parameter: property(lambda self: parent.device.sequencers[sequencer].get(parameter[0]), lambda self,x: parent.set_device_parameter(parent.device.sequencers[sequencer], *parameter, value = x))
     
-    attenuation = property_wrapper('out0_att')
-    lo_enabled = property_wrapper('out0_in0_lo_en')
-    lo_frequency = property_wrapper('out0_in0_lo_freq')
-
-    gain = sequencer_property_wrapper(DEFAULT_SEQUENCER, 'gain_awg_path0', 'gain_awg_path1')
-    acquisition_duration = sequencer_property_wrapper(DEFAULT_SEQUENCER, 'integration_length_acq')
-    hardware_mod_demod_en = sequencer_property_wrapper(DEFAULT_SEQUENCER, 'mod_en_awg', 'demod_en_acq')
-                      
-    nco_freq = sequencer_property_wrapper(DEFAULT_SEQUENCER, 'nco_freq')
-    nco_phase_offs = sequencer_property_wrapper(DEFAULT_SEQUENCER, 'nco_phase_offs')
-    discretization_threshold_acq = sequencer_property_wrapper(DEFAULT_SEQUENCER, 'discretization_threshold_acq')
-    phase_rotation_acq = sequencer_property_wrapper(DEFAULT_SEQUENCER, 'phase_rotation_acq')
 
     def __init__(self, name, address):
         super().__init__(name, address)
@@ -78,7 +67,7 @@ class ClusterQRM_RF(AbstractInstrument):
         self.last_pulsequence_hash = "uninitialised"
         self.current_pulsesequence_hash = ""
         self.device_parameters = {}
-        self.lo = self
+        self.ports = {}
 
     def connect(self):
         """
@@ -88,6 +77,25 @@ class ClusterQRM_RF(AbstractInstrument):
         if not self.is_connected:
             if cluster:
                 self.device = cluster.modules[int(self.address.split(':')[1])-1]
+
+                self.ports['o1'] = type(f'port_o1', (), 
+                    {'attenuation': self.property_wrapper('out0_att'), 
+                     'lo_enabled': self.property_wrapper('out0_in0_lo_en'), 
+                     'lo_frequency': self.property_wrapper('out0_in0_lo_freq'), 
+                     'gain': self.sequencer_property_wrapper(self.DEFAULT_SEQUENCER, 'gain_awg_path0', 'gain_awg_path1'), 
+                     'hardware_mod_en': self.sequencer_property_wrapper(self.DEFAULT_SEQUENCER, 'mod_en_awg'),
+                     'nco_freq': self.sequencer_property_wrapper(self.DEFAULT_SEQUENCER, 'nco_freq'),
+                     'nco_phase_offs': self.sequencer_property_wrapper(self.DEFAULT_SEQUENCER, 'nco_phase_offs')
+                    })()
+
+                self.ports['i1'] = type(f'port_i1', (), 
+                    {'hardware_demod_en': self.sequencer_property_wrapper(self.DEFAULT_SEQUENCER, 'demod_en_acq')
+                    })()
+
+                setattr(self.__class__, 'acquisition_duration', self.sequencer_property_wrapper(self.DEFAULT_SEQUENCER, 'integration_length_acq'))
+                setattr(self.__class__, 'discretization_threshold_acq', self.sequencer_property_wrapper(self.DEFAULT_SEQUENCER, 'discretization_threshold_acq'))
+                setattr(self.__class__, 'phase_rotation_acq', self.sequencer_property_wrapper(self.DEFAULT_SEQUENCER, 'phase_rotation_acq'))
+
                 self.cluster = cluster
                 self.is_connected = True
                 
@@ -164,20 +172,23 @@ class ClusterQRM_RF(AbstractInstrument):
             self.minimum_delay_between_instructions = kwargs['minimum_delay_between_instructions']
             # TODO: Remove minimum_delay_between_instructions
 
+            self.channel_port_map = kwargs['channel_port_map']
+            
+            self.ports['o1'].attenuation = kwargs['ports']['o1']['attenuation']                         # Default after reboot = 7
+            self.ports['o1'].lo_enabled = kwargs['ports']['o1']['lo_enabled']                           # Default after reboot = True
+            self.ports['o1'].lo_frequency = kwargs['ports']['o1']['lo_frequency']                       # Default after reboot = 6_000_000_000
+            self.ports['o1'].gain = kwargs['ports']['o1']['gain']                                       # Default after reboot = 1
+            self.ports['o1'].hardware_mod_en = kwargs['ports']['o1']['hardware_mod_en']                 # Default after reboot = False
+            
+            self.ports['o1'].nco_freq = 0                                                               # Default after reboot = 1
+            self.ports['o1'].nco_phase_offs = 0                                                         # Default after reboot = 1
+            
+            self.ports['i1'].hardware_demod_en = kwargs['ports']['i1']['hardware_demod_en']             # Default after reboot = False
+            
             self.acquisition_hold_off = kwargs['acquisition_hold_off']
             self.acquisition_duration = kwargs['acquisition_duration']
-            self.channel_port_map = kwargs['channel_port_map']
-
-            self.attenuation = kwargs['attenuation']                        # Default after reboot = 7
-            self.lo_enabled = kwargs['lo_enabled']                          # Default after reboot = True
-            self.lo_frequency = kwargs['lo_frequency']                      # Default after reboot = 6_000_000_000
-            self.gain = kwargs['gain']                                      # Default after reboot = 1
-            self.hardware_mod_demod_en = kwargs['hardware_mod_demod_en']    # Default after reboot = False
-            
-            self.nco_freq = 0                                               # Default after reboot = 1
-            self.nco_phase_offs = 0                                         # Default after reboot = 1
-            self.discretization_threshold_acq = 0                           # Default after reboot = 1
-            self.phase_rotation_acq = 0                                     # Default after reboot = 1
+            self.discretization_threshold_acq = 0                                                       # Default after reboot = 1
+            self.phase_rotation_acq = 0                                                                 # Default after reboot = 1
 
         else:
             raise Exception('There is no connection to the instrument')
@@ -601,7 +612,7 @@ class ClusterQRM_RF(AbstractInstrument):
 
     def disconnect(self):
         pass
-
+        
 
 class ClusterQCM_RF(AbstractInstrument):
     """
@@ -615,26 +626,9 @@ class ClusterQCM_RF(AbstractInstrument):
     O1_DEFAULT_SEQUENCER = 0
     O2_DEFAULT_SEQUENCER = 1
 
-    property_wrapper = lambda *parameter: property(lambda self: self.device.get(parameter[0]), lambda self,x: self.set_device_parameter(self.device, *parameter, value = x))
-    sequencer_property_wrapper = lambda sequencer, *parameter: property(lambda self: self.device.sequencers[sequencer].get(parameter[0]), lambda self,x: self.set_device_parameter(self.device.sequencers[sequencer], *parameter, value = x))
+    property_wrapper = lambda parent, *parameter: property(lambda self: parent.device.get(parameter[0]), lambda self,x: parent.set_device_parameter(parent.device, *parameter, value = x))
+    sequencer_property_wrapper = lambda parent, sequencer, *parameter: property(lambda self: parent.device.sequencers[sequencer].get(parameter[0]), lambda self,x: parent.set_device_parameter(parent.device.sequencers[sequencer], *parameter, value = x))
     
-    o1_attenuation = property_wrapper('out0_att')
-    o1_lo_enabled = property_wrapper('out0_lo_en')
-    o1_lo_frequency = property_wrapper('out0_lo_freq')
-    o1_gain = sequencer_property_wrapper(O1_DEFAULT_SEQUENCER, 'gain_awg_path0', 'gain_awg_path1')
-
-    o1_hardware_mod_en = sequencer_property_wrapper(O1_DEFAULT_SEQUENCER, 'mod_en_awg')         
-    o1_nco_freq = sequencer_property_wrapper(O1_DEFAULT_SEQUENCER, 'nco_freq')
-    o1_nco_phase_offs = sequencer_property_wrapper(O1_DEFAULT_SEQUENCER, 'nco_phase_offs')
-
-    o2_attenuation = property_wrapper('out1_att')
-    o2_lo_enabled = property_wrapper('out1_lo_en')
-    o2_lo_frequency = property_wrapper('out1_lo_freq')
-    o2_gain = sequencer_property_wrapper(O2_DEFAULT_SEQUENCER, 'gain_awg_path0', 'gain_awg_path1')
-
-    o2_hardware_mod_en = sequencer_property_wrapper(O2_DEFAULT_SEQUENCER, 'mod_en_awg')         
-    o2_nco_freq = sequencer_property_wrapper(O2_DEFAULT_SEQUENCER, 'nco_freq')
-    o2_nco_phase_offs = sequencer_property_wrapper(O2_DEFAULT_SEQUENCER, 'nco_phase_offs')
 
     def __init__(self, name, address):
         super().__init__(name, address)
@@ -643,7 +637,7 @@ class ClusterQCM_RF(AbstractInstrument):
         self.last_pulsequence_hash = "uninitialised"
         self.current_pulsesequence_hash = ""
         self.device_parameters = {}
-        self.lo = self
+        self.ports = {}
 
     def connect(self):
         """
@@ -653,6 +647,28 @@ class ClusterQCM_RF(AbstractInstrument):
         if not self.is_connected:
             if cluster:
                 self.device = cluster.modules[int(self.address.split(':')[1])-1]
+
+                self.ports['o1'] = type(f'port_o1', (), 
+                    {'attenuation': self.property_wrapper('out0_att'), 
+                    'lo_enabled': self.property_wrapper('out0_lo_en'), 
+                    'lo_frequency': self.property_wrapper('out0_lo_freq'), 
+                    'gain': self.sequencer_property_wrapper(self.O1_DEFAULT_SEQUENCER, 'gain_awg_path0', 'gain_awg_path1'), 
+                    'hardware_mod_en': self.sequencer_property_wrapper(self.O1_DEFAULT_SEQUENCER, 'mod_en_awg'),
+                    'nco_freq': self.sequencer_property_wrapper(self.O1_DEFAULT_SEQUENCER, 'nco_freq'),
+                    'nco_phase_offs': self.sequencer_property_wrapper(self.O1_DEFAULT_SEQUENCER, 'nco_phase_offs')
+                    })()
+
+                self.ports['o2'] = type(f'port_o1', (), 
+                    {'attenuation': self.property_wrapper('out1_att'), 
+                    'lo_enabled': self.property_wrapper('out1_lo_en'), 
+                    'lo_frequency': self.property_wrapper('out1_lo_freq'), 
+                    'gain': self.sequencer_property_wrapper(self.O2_DEFAULT_SEQUENCER, 'gain_awg_path0', 'gain_awg_path1'), 
+                    'hardware_mod_en': self.sequencer_property_wrapper(self.O2_DEFAULT_SEQUENCER, 'mod_en_awg'),
+                    'nco_freq': self.sequencer_property_wrapper(self.O2_DEFAULT_SEQUENCER, 'nco_freq'),
+                    'nco_phase_offs': self.sequencer_property_wrapper(self.O2_DEFAULT_SEQUENCER, 'nco_phase_offs')
+                    })()
+
+
                 self.cluster = cluster
                 self.is_connected = True
                 self.set_device_parameter(self.device, 'out0_offset_path0', 'out0_offset_path1', value = 0) # Default after reboot = 7.625
@@ -728,21 +744,21 @@ class ClusterQCM_RF(AbstractInstrument):
 
             self.channel_port_map = kwargs['channel_port_map']
 
-            self.o1_attenuation = kwargs['o1_attenuation']                        # Default after reboot = 7
-            self.o1_lo_enabled = kwargs['o1_lo_enabled']                          # Default after reboot = True
-            self.o1_lo_frequency = kwargs['o1_lo_frequency']                      # Default after reboot = 6_000_000_000
-            self.o1_gain = kwargs['o1_gain']                                      # Default after reboot = 1
-            self.o1_hardware_mod_en = kwargs['o1_hardware_mod_en']                # Default after reboot = False
-            self.o1_nco_freq = 0                                                  # Default after reboot = 1
-            self.o1_nco_phase_offs = 0                                            # Default after reboot = 1
+            self.ports['o1'].attenuation = kwargs['ports']['o1']['attenuation']                        # Default after reboot = 7
+            self.ports['o1'].lo_enabled = kwargs['ports']['o1']['lo_enabled']                          # Default after reboot = True
+            self.ports['o1'].lo_frequency = kwargs['ports']['o1']['lo_frequency']                      # Default after reboot = 6_000_000_000
+            self.ports['o1'].gain = kwargs['ports']['o1']['gain']                                      # Default after reboot = 1
+            self.ports['o1'].hardware_mod_en = kwargs['ports']['o1']['hardware_mod_en']                # Default after reboot = False
+            self.ports['o1'].nco_freq = 0                                                              # Default after reboot = 1
+            self.ports['o1'].nco_phase_offs = 0                                                        # Default after reboot = 1
 
-            self.o2_attenuation = kwargs['o2_attenuation']                        # Default after reboot = 7
-            self.o2_lo_enabled = kwargs['o2_lo_enabled']                          # Default after reboot = True
-            self.o2_lo_frequency = kwargs['o2_lo_frequency']                      # Default after reboot = 6_000_000_000
-            self.o2_gain = kwargs['o2_gain']                                      # Default after reboot = 1
-            self.o2_hardware_mod_en = kwargs['o2_hardware_mod_en']                # Default after reboot = False
-            self.o2_nco_freq = 0                                                  # Default after reboot = 1
-            self.o2_nco_phase_offs = 0                                            # Default after reboot = 1
+            self.ports['o2'].attenuation = kwargs['ports']['o2']['attenuation']                        # Default after reboot = 7
+            self.ports['o2'].lo_enabled = kwargs['ports']['o2']['lo_enabled']                          # Default after reboot = True
+            self.ports['o2'].lo_frequency = kwargs['ports']['o2']['lo_frequency']                      # Default after reboot = 6_000_000_000
+            self.ports['o2'].gain = kwargs['ports']['o2']['gain']                                      # Default after reboot = 1
+            self.ports['o2'].hardware_mod_en = kwargs['ports']['o2']['hardware_mod_en']                # Default after reboot = False
+            self.ports['o2'].nco_freq = 0                                                              # Default after reboot = 1
+            self.ports['o2'].nco_phase_offs = 0                                                        # Default after reboot = 1
 
 
         else:
@@ -789,9 +805,9 @@ class ClusterQCM_RF(AbstractInstrument):
             sequencer = -1              # initialised to -1 so that in the first iteration it becomes 0, the first sequencer number
             self.waveforms = {}
             for channel in channels:
+                sequencer += 1
                 if len(channel_pulses[channel]) > 0:
                     # Select a sequencer and add it to the sequencer_channel_map
-                    sequencer += 1
                     if sequencer > self.device_num_sequencers:
                         raise Exception(f"The number of sequencers requried to play the sequence exceeds the number available {self.device_num_sequencers}.")
                     # Initialise the corresponding variables 

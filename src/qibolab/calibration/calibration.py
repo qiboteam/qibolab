@@ -70,7 +70,8 @@ class Calibration():
         #Fast Sweep
         if (self.software_averages !=0):
             scanrange = utils.variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
-            mc.settables(Settable_lo_frequency(platform.qrm[qubit]))
+            
+            mc.settables(settable(platform.ro_port[qubit], 'lo_frequency', 'Frequency', 'Hz'))
             mc.setpoints(scanrange + lo_qrm_frequency)
             mc.gettables(ROController(platform, sequence, qubit))
             platform.start() 
@@ -87,7 +88,7 @@ class Calibration():
         # Precision Sweep
         if (self.software_averages_precision !=0):
             scanrange = np.arange(-precision_width, precision_width, precision_step)
-            mc.settables(Settable_lo_frequency(platform.qrm[qubit]))
+            mc.settables(settable(platform.ro_port[qubit], 'lo_frequency', 'Frequency', 'Hz'))
             mc.setpoints(scanrange + lo_qrm_frequency)
             mc.gettables(ROController(platform, sequence, qubit))
             platform.start() 
@@ -131,7 +132,7 @@ class Calibration():
         atts = np.flip(np.arange(att_min, att_max, att_step))
 
         mc.setpoints_grid([freqs, atts])
-        mc.settables([Settable_lo_frequency(platform.qrm[qubit]), Settable_attenuation(platform.qrm[qubit])])
+        mc.settables([settable(platform.ro_port[qubit], 'lo_frequency', 'Frequency', 'Hz'), settable(platform.qrm[qubit], 'attenuation', 'Attenuation', 'dB')])
         mc.gettables(ROControllerNormalised(platform, sequence, qubit, platform.qrm[qubit]))
         platform.start()
         dataset = mc.run('Resonator Punchout', soft_avg = self.software_averages)
@@ -168,7 +169,7 @@ class Calibration():
         flux = np.arange(current_min, current_max, current_step)
 
         mc.setpoints_grid([freqs, flux])
-        mc.settables([Settable_lo_frequency(platform.qrm[qubit]), dacs[fluxline].current])
+        mc.settables([settable(platform.ro_port[qubit], 'lo_frequency', 'Frequency', 'Hz'), dacs[fluxline].current])
         mc.gettables(ROController(platform, sequence, qubit))
         platform.start() 
         dataset = mc.run(name="Resonator Spectroscopy Flux")
@@ -205,7 +206,7 @@ class Calibration():
         if (self.software_averages !=0):
             lo_qcm_frequency = platform.characterization['single_qubit'][qubit]['qubit_freq'] - qd_pulse.frequency
             fast_sweep_scan_range = np.arange(fast_start, fast_end, fast_step)
-            mc.settables(Settable_o1_lo_frequency(platform.qcm[qubit].lo))
+            mc.settables(settable(platform.qd_port[qubit], 'lo_frequency', 'Frequency', 'Hz'))
             mc.setpoints(fast_sweep_scan_range + lo_qcm_frequency)
             mc.gettables(ROController(platform, sequence, qubit))
             platform.start() 
@@ -222,7 +223,7 @@ class Calibration():
         # Precision Sweep
         if (self.software_averages_precision !=0):
             precision_sweep_scan_range = np.arange(precision_start, precision_end, precision_step)
-            mc.settables(Settable_o1_lo_frequency(platform.qcm[qubit].lo))
+            mc.settables(settable(platform.qd_port[qubit], 'lo_frequency', 'Frequency', 'Hz'))
             mc.setpoints(precision_sweep_scan_range + lo_qcm_frequency)
             mc.gettables(ROController(platform, sequence, qubit))
             platform.start() 
@@ -275,7 +276,7 @@ class Calibration():
         flux = np.arange(current_min, current_max, current_step)
 
         mc.setpoints_grid([freqs, flux])
-        mc.settables([Settable_o1_lo_frequency(platform.qcm[qubit].lo), dacs[fluxline].current])
+        mc.settables([settable(platform.qd_port[qubit], 'lo_frequency', 'Frequency', 'Hz'), dacs[fluxline].current])
         mc.gettables(ROController(platform, sequence, qubit))
         platform.start() 
         dataset = mc.run(name="Qubit Spectroscopy Flux")
@@ -287,7 +288,6 @@ class Calibration():
         # TODO: automatically extract the sweet spot current
         # TODO: add a method to generate the matrix
         return dataset
-
 
     def run_rabi_pulse_length(self, qubit=0):
         platform = self.platform
@@ -373,7 +373,7 @@ class Calibration():
 
         self.pl.tuids_max_num(self.max_num_plots)
 
-        mc.settables(Settable_o1_gain(platform.qcm[qubit]))
+        mc.settables(settable(platform.qd_port[qubit], 'gain', 'Gain', 'dB'))
         mc.setpoints(np.arange(pulse_gain_start, pulse_gain_end, pulse_gain_step))
         mc.gettables(ROController(platform, sequence, qubit))
         platform.start()
@@ -418,11 +418,11 @@ class Calibration():
         mc.setpoints(np.arange(pulse_amplitude_start, pulse_amplitude_end, pulse_amplitude_step))
         mc.gettables(ROController(platform, sequence, qubit))
         platform.start()
-        dataset = mc.run(f'Rabi Pulse Ampitude - for pulse gain {platform.qcm[qubit].gain_awg}', soft_avg = self.software_averages)
+        dataset = mc.run(f'Rabi Pulse Ampitude - for pulse gain {platform.qd_port[qubit].gain}', soft_avg = self.software_averages)
         platform.stop()
 
         # Fitting
-        pi_pulse_gain = platform.qcm[qubit].gain_awg
+        pi_pulse_gain = platform.qd_port[qubit].gain
         pi_pulse_duration = qd_pulse.duration
         if self.resonator_type == '3D':
             pi_pulse_amplitude, rabi_oscillations_pi_pulse_peak_voltage = fitting.rabi_fit_3D(dataset)
@@ -545,7 +545,7 @@ class Calibration():
         current_T2 = runcard_T2
      
         for t_max in t_end:
-            platform.qcm[qubit].lo.frequency = current_qubit_freq - intermediate_freq
+            platform.qd_port[qubit].lo_frequency = current_qubit_freq - intermediate_freq
             
             offset_freq = (n_osc / t_max * sampling_rate) #Hz
             t_range = np.arange(t_start, t_max, t_step)
@@ -594,7 +594,7 @@ class Calibration():
         frequencies = scanrange + lo_qrm_frequency
 
         #Resonator Spectroscopy
-        mc.settables(Settable_lo_frequency(platform.qrm[qubit]))
+        mc.settables(settable(platform.ro_port[qubit], 'lo_frequency', 'Frequency', 'Hz'))
         mc.setpoints(frequencies)
         mc.gettables(ROController(platform, sequence, qubit))
         platform.start() 
@@ -615,7 +615,7 @@ class Calibration():
         sequence.add(RX_pulse)
         sequence.add(ro_pulse)
 
-        mc.settables(Settable_lo_frequency(platform.qrm[qubit]))
+        mc.settables(settable(platform.ro_port[qubit], 'lo_frequency', 'Frequency', 'Hz'))
         mc.setpoints(scanrange + lo_qrm_frequency)
         mc.gettables(ROController(platform, sequence, qubit))
         platform.start() 
@@ -657,7 +657,7 @@ class Calibration():
 
         self.pl.tuids_max_num(self.max_num_plots)
 
-        mc.settables([QCPulseLengthParameter(ro_pulse, qd_pulse), Settable_o1_gain(platform.qcm[qubit])])
+        mc.settables([QCPulseLengthParameter(ro_pulse, qd_pulse), settable(platform.qd_port[qubit], 'gain', 'Gain', 'dB')])
         setpoints_length = np.arange(pulse_duration_start, pulse_duration_end, pulse_duration_step)
         setpoints_gain = np.arange(pulse_gain_start, pulse_gain_end, pulse_gain_step)
         mc.setpoints_grid([setpoints_length, setpoints_gain])
@@ -1197,74 +1197,24 @@ class Calibration():
         file.close()
 
 # help classes
-class Settable_lo_frequency():
-    label = 'Frequency'
-    unit = 'Hz'
-    name = 'frequency'
-        
+
+def settable(instance, attribute_name, label, unit):
+    """
+    This helper class creates (on the fly) a class that wraps around a given instance attribute 
+    and complies with quantify settable interface 
+    """ 
     def __init__(self, instance):
         self.instance = instance
-
     def set(self, value):
-        self.instance.lo_frequency =  value
+        setattr(self.instance, attribute_name, value)
 
-class Settable_attenuation():
-    label = 'Attenuation'
-    unit = 'dB'
-    name = 'attenuation'
-        
-    def __init__(self, instance):
-        self.instance = instance
-
-    def set(self, value):
-        self.instance.attenuation =  value
-
-class Settable_gain():
-    label = 'Gain'
-    unit = '-'
-    name = 'gain'
-        
-    def __init__(self, instance):
-        self.instance = instance
-
-    def set(self, value):
-        self.instance.gain =value
-
-#----------------------------------------------------
-
-class Settable_o1_lo_frequency():
-    label = 'Frequency'
-    unit = 'Hz'
-    name = 'frequency'
-        
-    def __init__(self, instance):
-        self.instance = instance
-
-    def set(self, value):
-        self.instance.o1_lo_frequency =  value
-
-class Settable_o1_attenuation():
-    label = 'Attenuation'
-    unit = 'dB'
-    name = 'attenuation'
-        
-    def __init__(self, instance):
-        self.instance = instance
-
-    def set(self, value):
-        self.instance.o1_attenuation =  value
-
-class Settable_o1_gain():
-    label = 'Gain'
-    unit = '-'
-    name = 'gain'
-        
-    def __init__(self, instance):
-        self.instance = instance
-
-    def set(self, value):
-        self.instance.o1_gain =value
-
+    settable_class_instance = type(f'settable_{attribute_name}', (), 
+                                   {'name': attribute_name, 
+                                    'label': label, 
+                                    'unit': unit, 
+                                    '__init__':__init__, 
+                                    'set': set})(instance)
+    return settable_class_instance
 
 
 class QCPulseAmplitudeParameter():

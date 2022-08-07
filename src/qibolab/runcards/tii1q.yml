@@ -2,7 +2,7 @@ nqubits: 1
 description: 1-qubit device from Qilimanjaro at TII SD fridge, controlled with qblox cluster rf.
 
 settings:
-    hardware_avg: 1024
+    hardware_avg: 20480
     sampling_rate: 1_000_000_000
     repetition_duration: 200_000
     minimum_delay_between_instructions: 4 # must be a multiple of 4
@@ -30,11 +30,15 @@ instruments:
         class: ClusterQRM_RF
         address: 192.168.0.3:5 #:7 for loopback
         settings:
-            attenuation                 : 58
-            lo_enabled                  : true
-            lo_frequency                : 7_804_838_798                    # (Hz) from 2e9 to 18e9
-            gain                        : 0.4                           # for path0 and path1 -1.0<=v<=1.0
-            hardware_mod_demod_en       : false
+            ports:
+                o1:
+                    attenuation                 : 58
+                    lo_enabled                  : true
+                    lo_frequency                : 7804847574                    # (Hz) from 2e9 to 18e9
+                    gain                        : 0.4                           # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en             : false
+                i1:
+                    hardware_demod_en           : false
 
             acquisition_hold_off        : 200                           # minimum 4ns
             acquisition_duration        : 2000
@@ -48,17 +52,19 @@ instruments:
         class: ClusterQCM_RF
         address: 192.168.0.3:2
         settings:
-            o1_attenuation                  : 8             # (dB)
-            o1_lo_enabled                   : true
-            o1_lo_frequency                 : 5_282_302_888    # (Hz) from 2e9 to 18e9
-            o1_gain                         : 0.17          # for path0 and path1 -1.0<=v<=1.0
-            o1_hardware_mod_en              : false
-
-            o2_attenuation                  : 60            # (dB)
-            o2_lo_enabled                   : true
-            o2_lo_frequency                 : 6_000_000_000 # (Hz) from 2e9 to 18e9 
-            o2_gain                         : 0             # for path0 and path1 -1.0<=v<=1.0
-            o2_hardware_mod_en              : false
+            ports:
+                o1:
+                    attenuation                  : 8 # (dB)
+                    lo_enabled                   : true
+                    lo_frequency                 : 5282273989 # (Hz) from 2e9 to 18e9
+                    gain                         : 0.38 # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o2:
+                    attenuation                  : 60 # (dB)
+                    lo_enabled                   : true
+                    lo_frequency                 : 6_000_000_000 # (Hz) from 2e9 to 18e9
+                    gain                         : 0 # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en              : false
 
             channel_port_map:  
                 1: o1 # IQ Port = out0 & out1
@@ -67,10 +73,10 @@ native_gates:
     single_qubit:
         0: # qubit number
             RX:
-                duration: 36
-                amplitude: 0.920
+                duration: 40                    # should be multiple of 4
+                amplitude: 0.8695
                 frequency: -200_000_000
-                shape: Drag(5, 0)
+                shape: Gaussian(5) # , 0.9058)
                 type: qd # qubit drive
                 drag_shape: Drag(5, 0)
             MZ:
@@ -83,8 +89,8 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            resonator_freq: 7824838798
-            qubit_freq: 5082302888
+            resonator_freq: 7824847574
+            qubit_freq: 5082273989
             T1: 17744
             T2: 11816
             resonator_spectroscopy_peak_ro_voltage: 875
