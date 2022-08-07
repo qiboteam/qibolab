@@ -910,8 +910,8 @@ class Calibration():
 
         results = []
         gateNumber = []
-        min_voltage = platform.settings['characterization']['single_qubit'][qubit]['rabi_oscillations_pi_pulse_peak_ro_voltage']
-        max_voltage = platform.settings['characterization']['single_qubit'][qubit]['resonator_spectroscopy_peak_ro_voltage']
+        min_voltage = platform.settings['characterization']['single_qubit'][qubit]['state1_voltage']
+        max_voltage = platform.settings['characterization']['single_qubit'][qubit]['state0_voltage']
         n = 0 
         for gates in gatelist:
             #transform gate string to pulseSequence
@@ -1106,8 +1106,8 @@ class Calibration():
             popt = fitting.flipping_fit_2D(N, res)
 
         angle = (self.niter * 2 * np.pi / popt[2] + popt[3]) / (1 + 4 * self.niter)
-        state1_voltage = 1e-6 * platform.settings['characterization']['single_qubit'][qubit]['rabi_oscillations_pi_pulse_peak_ro_voltage']
-        state0_voltage = 1e-6 * platform.settings['characterization']['single_qubit'][qubit]['resonator_spectroscopy_peak_ro_voltage']
+        state1_voltage = 1e-6 * platform.settings['characterization']['single_qubit'][qubit]['state1_voltage']
+        state0_voltage = 1e-6 * platform.settings['characterization']['single_qubit'][qubit]['state0_voltage']
         pi_pulse_amplitude = platform.settings['native_gates']['single_qubit'][qubit]['RX']['amplitude']
         amplitude_delta = angle * 2 / np.pi * pi_pulse_amplitude
         x = np.arange(0, self.niter, self.step)
@@ -1127,7 +1127,7 @@ class Calibration():
             resonator_freq, avg_min_voltage, max_ro_voltage, smooth_dataset, dataset = self.run_resonator_spectroscopy(qubit)
             self.save_config_parameter("resonator_freq", int(resonator_freq), 'characterization', 'single_qubit', qubit)
             self.save_config_parameter("resonator_spectroscopy_avg_ro_voltage", float(avg_min_voltage), 'characterization', 'single_qubit', qubit)
-            self.save_config_parameter("resonator_spectroscopy_peak_ro_voltage", float(max_ro_voltage), 'characterization', 'single_qubit', qubit)
+            self.save_config_parameter("state0_voltage", float(max_ro_voltage), 'characterization', 'single_qubit', qubit)
             lo_qrm_frequency = int(resonator_freq - platform.settings['native_gates']['single_qubit'][qubit]['MZ']['frequency'])
             self.save_config_parameter("frequency", lo_qrm_frequency, 'instruments', platform.lo_qrm[qubit].name, 'settings') # TODO: cambiar IF hardcoded
 
@@ -1140,11 +1140,11 @@ class Calibration():
             self.save_config_parameter("qubit_spectroscopy_min_ro_voltage", float(min_ro_voltage), 'characterization', 'single_qubit', qubit)
 
             # run Rabi and save Pi pulse calibration
-            dataset, pi_pulse_duration, pi_pulse_amplitude, rabi_oscillations_pi_pulse_peak_ro_voltage, t1 = self.run_rabi_pulse_length(qubit)
+            dataset, pi_pulse_duration, pi_pulse_amplitude, state1_voltage, t1 = self.run_rabi_pulse_length(qubit)
             RX_pulse_sequence[0]['duration'] = int(pi_pulse_duration)
             RX_pulse_sequence[0]['amplitude'] = float(pi_pulse_amplitude)
             self.save_config_parameter("pulse_sequence", RX_pulse_sequence, 'native_gates', 'single_qubit', qubit, 'RX')
-            self.save_config_parameter("rabi_oscillations_pi_pulse_peak_ro_voltage", float(rabi_oscillations_pi_pulse_peak_ro_voltage), 'characterization', 'single_qubit', qubit)
+            self.save_config_parameter("state1_voltage", float(state1_voltage), 'characterization', 'single_qubit', qubit)
 
             # run Ramsey and save T2 calibration
             delta_frequency, t2, smooth_dataset, dataset = self.run_ramsey(qubit)

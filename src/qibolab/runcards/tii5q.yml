@@ -273,8 +273,8 @@ characterization:
             qubit_freq: 4.11e+9 #4.41e+9
             T1: 2192.895853326451
             T2: 6933.310025260633
-            resonator_spectroscopy_peak_ro_voltage: 850
-            rabi_oscillations_pi_pulse_peak_ro_voltage: 371
+            state0_voltage: 850
+            state1_voltage: 371
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
             mean_exc_states: (0.00011805761369462914+0.00018601039195510947j)
             sweetspot: 0.0
@@ -283,8 +283,8 @@ characterization:
             qubit_freq: 3_842_590_000
             T1: 26774
             T2: 0
-            resonator_spectroscopy_peak_ro_voltage: 607
-            rabi_oscillations_pi_pulse_peak_ro_voltage: 371
+            state0_voltage: 607
+            state1_voltage: 371
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
             mean_exc_states: (0.00011805761369462914+0.00018601039195510947j)
             sweetspot: -0.00370
@@ -293,8 +293,8 @@ characterization:
             qubit_freq: 4_891_155_529 
             T1: 33875
             T2: 0
-            resonator_spectroscopy_peak_ro_voltage: 1128
-            rabi_oscillations_pi_pulse_peak_ro_voltage: 2790
+            state0_voltage: 1128
+            state1_voltage: 2790
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
             mean_exc_states: (0.00011805761369462914+0.00018601039195510947j)
             sweetspot: -0.00082
