@@ -1,5 +1,8 @@
+# -*- coding: utf-8 -*-
 import copy
+
 from qibolab.platforms.abstract import AbstractPlatform
+
 
 class Qubit:
     """Describes a single qubit in pulse control and readout extraction.
@@ -18,8 +21,18 @@ class Qubit:
         readout_channels (int, int[]): Channels on the instrument associated to qubit readout.
     """
 
-    def __init__(self, pi_pulse, readout_pulse, readout_frequency, resonator_spectroscopy_max_ro_voltage, rabi_oscillations_pi_pulse_min_voltage,
-             playback, playback_readout, readout, readout_channels):
+    def __init__(
+        self,
+        pi_pulse,
+        readout_pulse,
+        readout_frequency,
+        resonator_spectroscopy_max_ro_voltage,
+        rabi_oscillations_pi_pulse_min_voltage,
+        playback,
+        playback_readout,
+        readout,
+        readout_channels,
+    ):
 
         self.pi_pulse = pi_pulse
         self.readout_pulse = readout_pulse
@@ -57,12 +70,13 @@ class ICPlatform(AbstractPlatform):
 
     def run_calibration(self):  # pragma: no cover
         from qibo.config import raise_error
+
         raise_error(NotImplementedError)
 
     def execute_pulse_sequence(self, sequence, nshots=None):
-        """Executes a pulse sequence. Pulses are being cached so that are not reuploaded 
-            if they are the same as the ones sent previously. This greatly accelerates 
-            some characterization routines that recurrently use the same set of pulses, 
+        """Executes a pulse sequence. Pulses are being cached so that are not reuploaded
+            if they are the same as the ones sent previously. This greatly accelerates
+            some characterization routines that recurrently use the same set of pulses,
             i.e. qubit and resonator spectroscopy, spin echo, and future circuits based on
             fixed gates.
 
@@ -78,8 +92,10 @@ class ICPlatform(AbstractPlatform):
         """
         if not self.is_connected:
             from qibo.config import raise_error
+
             raise_error(
-                RuntimeError, "Execution failed because instruments are not connected.")
+                RuntimeError, "Execution failed because instruments are not connected."
+            )
         if nshots is None:
             nshots = self.hardware_avg
 
@@ -106,18 +122,21 @@ class ICPlatform(AbstractPlatform):
             # Map the pulse to the associated playback instrument.
             pulse_mapping[playback_device].append(pulse)
             seq_serial[playback_device].append(pulse.serial)
-    
+
         # Translate and upload the pulse subsequence for each device if needed
         for device, subsequence in pulse_mapping.items():
             inst = self.fetch_instrument(device)
-            if self._last_sequence is None or seq_serial[device] != self._last_sequence[device]:
+            if (
+                self._last_sequence is None
+                or seq_serial[device] != self._last_sequence[device]
+            ):
                 inst.upload(inst.translate(subsequence, nshots))
             inst.play_sequence()
         self._last_sequence = seq_serial
 
         for adc in self._adc:
             adc.arm(nshots)
-        
+
         # Start the experiment sequence
         self.start_experiment()
 
@@ -125,41 +144,41 @@ class ICPlatform(AbstractPlatform):
         for qubit_id in set(qubits_to_measure):
             qubit = self.fetch_qubit(qubit_id)
             inst = self.fetch_instrument(qubit.readout)
-            measurement_results.append(inst.result(qubit.readout_frequency, qubit.readout_channels))
+            measurement_results.append(
+                inst.result(qubit.readout_frequency, qubit.readout_channels)
+            )
 
         if len(qubits_to_measure) == 1:
             return measurement_results[0]
         return measurement_results
 
     def fetch_instrument(self, name):
-        """Returns a reference to an instrument.
-        """
+        """Returns a reference to an instrument."""
         try:
             res = next(inst for inst in self._instruments if inst.name == name)
             return res
         except StopIteration:
             from qibo.config import raise_error
+
             raise_error(Exception, "Instrument not found")
 
     def fetch_qubit(self, qubit_id=0) -> Qubit:
-        """Fetches the qubit based on the id.
-        """
+        """Fetches the qubit based on the id."""
         return self.qubits[qubit_id]
 
     def start_experiment(self):
-        """Starts the instrument to start the experiment sequence.
-        """
-        inst = self.fetch_instrument(self.settings.get("settings").get("experiment_start_instrument"))
+        """Starts the instrument to start the experiment sequence."""
+        inst = self.fetch_instrument(
+            self.settings.get("settings").get("experiment_start_instrument")
+        )
         inst.start_experiment()
 
     def fetch_qubit_pi_pulse(self, qubit_id=0) -> dict:
-        """Fetches the qubit pi-pulse.
-        """
+        """Fetches the qubit pi-pulse."""
         # Use copy to avoid mutability
-        return copy.copy(self.fetch_qubit(qubit_id).pi_pulse) 
+        return copy.copy(self.fetch_qubit(qubit_id).pi_pulse)
 
     def fetch_qubit_readout_pulse(self, qubit_id=0) -> dict:
-        """Fetches the qubit readout pulse.
-        """
+        """Fetches the qubit readout pulse."""
         # Use copy to avoid mutability
         return copy.copy(self.fetch_qubit(qubit_id).readout_pulse)

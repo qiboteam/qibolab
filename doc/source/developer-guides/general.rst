@@ -20,7 +20,7 @@ methods. In particular the developer should:
     from qibolab import Platform
 
     platform = Platform("<platform_name>", "<path_to_runcard>")
-    
+
 where ``<platform_name>`` is the name of the in the yaml file and
 ``<path_to_runcard>`` is the path to the yaml file.
 
@@ -101,8 +101,8 @@ Here you have an example for the structure of the yaml file:
                 name: alazar_adc
                 address: Alazar1
             settings:
-                samples: 4992 
-                
+                samples: 4992
+
 
 
 When including a new platform, you should include its:
@@ -112,6 +112,3 @@ When including a new platform, you should include its:
 * **description:** A brief description of the platform.
 * **settings:** Platform settings.
 * **instruments:** Dictionary with the instruments used by the platform with their setup parameters.
-
-
-

@@ -1,5 +1,7 @@
-import pytest
+# -*- coding: utf-8 -*-
 import numpy as np
+import pytest
+
 from qibolab.platform import Platform
 from qibolab.pulses import PulseSequence
 

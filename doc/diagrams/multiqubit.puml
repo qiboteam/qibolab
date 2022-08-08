@@ -162,7 +162,7 @@ package circuit.py {
         __len__()
         add(pulse)
         add_u3(theta, phi, lam, qubit)
-        add_measurement(qubit)  
+        add_measurement(qubit)
     }
         class HardwareCircuit extends qibo.Circuit{
     }
@@ -213,11 +213,11 @@ package platforms {
         multiqubit.yml <-- MultiqubitPlatform
     }
     package qbloxplatform.py {
-        class QBloxPlatform extends AbstractPlatform 
+        class QBloxPlatform extends AbstractPlatform
 
     }
     package ictplatform.py {
-        class ICPlatform extends AbstractPlatform 
+        class ICPlatform extends AbstractPlatform
     }
 }
 

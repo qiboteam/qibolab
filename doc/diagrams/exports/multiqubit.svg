@@ -47,7 +47,7 @@ package circuit.py {
 
 
 package runcards {
-    entity multiqubit.yml  <<(y, orchid)>> 
+    entity multiqubit.yml  <<(y, orchid)>>
 }
 package instruments {
     package instruments/abstract.py{
@@ -115,11 +115,11 @@ package platforms {
         multiqubit.yml <- - MultiqubitPlatform
     }
     package qbloxplatform.py {
-        class QBloxPlatform extends AbstractPlatform 
+        class QBloxPlatform extends AbstractPlatform
 
     }
     package ictplatform.py {
-        class ICPlatform extends AbstractPlatform 
+        class ICPlatform extends AbstractPlatform
     }
 }
 
@@ -150,7 +150,7 @@ package circuit.py {
 
 
 package runcards {
-    entity multiqubit.yml  <<(y, orchid)>> 
+    entity multiqubit.yml  <<(y, orchid)>>
 }
 package instruments {
     package instruments/abstract.py{
@@ -218,11 +218,11 @@ package platforms {
         multiqubit.yml <- - MultiqubitPlatform
     }
     package qbloxplatform.py {
-        class QBloxPlatform extends AbstractPlatform 
+        class QBloxPlatform extends AbstractPlatform
 
     }
     package ictplatform.py {
-        class ICPlatform extends AbstractPlatform 
+        class ICPlatform extends AbstractPlatform
     }
 }
 
