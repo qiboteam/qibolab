@@ -44,7 +44,7 @@ spin_echo:
   start_end: 3000
   start_step: 60
 
-spin_echo_3pulses": 
+spin_echo_3pulses":
   start_start: 4
   start_end: 500
   start_step: 10

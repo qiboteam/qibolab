@@ -1,23 +1,26 @@
+# -*- coding: utf-8 -*-
+from qibo.backends import NumpyBackend
 from qibo.config import raise_error
 from qibo.states import CircuitResult
-from qibo.backends import NumpyBackend
 
 
 class QibolabBackend(NumpyBackend):
-
     def __init__(self, platform, runcard=None):
         from qibolab.platform import Platform
+
         super().__init__()
         self.name = "qibolab"
         self.platform = Platform(platform, runcard)
 
-    def apply_gate(self, gate, state, nqubits): # pragma: no cover
+    def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
 
-    def apply_gate_density_matrix(self, gate, state, nqubits): # pragma: no cover
+    def apply_gate_density_matrix(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
 
-    def execute_circuit(self, circuit, initial_state=None, nshots=None): # pragma: no cover
+    def execute_circuit(
+        self, circuit, initial_state=None, nshots=None
+    ):  # pragma: no cover
         """Executes a quantum circuit.
 
         Args:
@@ -30,9 +33,12 @@ class QibolabBackend(NumpyBackend):
             Readout results acquired by after execution.
         """
         from qibolab.pulses import PulseSequence
+
         if initial_state is not None:
-            raise_error(ValueError, "Hardware backend does not support "
-                                    "initial state in circuits.")
+            raise_error(
+                ValueError,
+                "Hardware backend does not support " "initial state in circuits.",
+            )
 
         # Translate gates to pulses and create a ``PulseSequence``
         if circuit.measurement_gate is None:
@@ -52,7 +58,10 @@ class QibolabBackend(NumpyBackend):
         return CircuitResult(self, circuit, readout, nshots)
 
     def circuit_result_tensor(self, result):
-        raise_error(NotImplementedError, "Qibolab cannot return state vector in tensor representation.")
+        raise_error(
+            NotImplementedError,
+            "Qibolab cannot return state vector in tensor representation.",
+        )
 
     def circuit_result_representation(self, result):
         # TODO: Consider changing this to a more readable format.
@@ -65,8 +74,10 @@ class QibolabBackend(NumpyBackend):
         # naive normalization
         qubit = qubits[0]
         readout = list(list(result.execution_result.values())[0].values())[0]
-        #min_v = self.platform.settings['characterization']['single_qubit'][qubit]['rabi_oscillations_pi_pulse_min_voltage']
-        #max_v = self.platform.settings['characterization']['single_qubit'][qubit]['resonator_spectroscopy_max_ro_voltage']
-        max_v = self.platform.settings['characterization']['single_qubit'][qubit]['rabi_oscillations_pi_pulse_peak_ro_voltage']
-        p = readout[0] * 1e5  / max_v
+        # min_v = self.platform.settings['characterization']['single_qubit'][qubit]['rabi_oscillations_pi_pulse_min_voltage']
+        # max_v = self.platform.settings['characterization']['single_qubit'][qubit]['resonator_spectroscopy_max_ro_voltage']
+        max_v = self.platform.settings["characterization"]["single_qubit"][qubit][
+            "rabi_oscillations_pi_pulse_peak_ro_voltage"
+        ]
+        p = readout[0] * 1e5 / max_v
         return [p, 1 - p]
