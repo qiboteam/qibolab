@@ -4,7 +4,7 @@ import numpy as np
 import os
 print('this is the usb version')
 usb_path = np.__file__.replace("numpy", "usb")
-print(os.system(f"ls {usb_path}"))
+assert os.path.isfile(usb_path)
 import usb
 print(usb.__file__)
 print(np.__file__)
