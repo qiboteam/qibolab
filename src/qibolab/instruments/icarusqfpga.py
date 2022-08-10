@@ -1,15 +1,17 @@
+# -*- coding: utf-8 -*-
 import time
 import socket
 import struct
 import numpy as np
 from typing import List
 from bisect import bisect
+
 from qibolab.instruments.abstract import AbstractInstrument
 from qibo.config import raise_error, log
 
+
 class PulseBlaster(AbstractInstrument):
-    """Driver for the 24-pin PulseBlaster TTL signal generator.
-    """
+    """Driver for the 24-pin PulseBlaster TTL signal generator."""
 
     def __init__(self, name, address, port=5000):
         super().__init__(name, address)
@@ -67,7 +69,7 @@ class PulseBlaster(AbstractInstrument):
 
     @staticmethod
     def hexify(pins: List[int]):
-        """Converts a list of pin IDs to hex for the PulseBlaster to trigger
+        """Converts a list of pin IDs to hex for the PulseBlaster to trigger.
 
         Arguments:
             pins (int[]): Array of pins to be triggered
@@ -75,7 +77,9 @@ class PulseBlaster(AbstractInstrument):
         Returns:
             pins_hex (int): Integer in hex corrresponding to the pins that should be triggered
         """
-        return int(''.join(['1' if i in set(pins) else '0' for i in reversed(range(24))]), 2)
+        return int(
+            "".join(["1" if i in set(pins) else "0" for i in reversed(range(24))]), 2
+        )
 
 class IcarusQRFSOC(AbstractInstrument):
     """Driver for the IcarusQ RFSoC socket-based implementation.

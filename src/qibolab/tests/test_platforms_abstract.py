@@ -1,7 +1,9 @@
-import pytest
+# -*- coding: utf-8 -*-
 import numpy as np
+import pytest
 from qibo import gates
 from qibo.backends import NumpyBackend
+
 from qibolab.platform import Platform
 from qibolab.pulses import PulseSequence
 
@@ -88,7 +90,8 @@ def test_u2_to_u3_params():
 
 
 def test_unitary_to_u3_params():
-    from scipy.linalg import expm, det
+    from scipy.linalg import det, expm
+
     backend = NumpyBackend()
     platform = Platform("multiqubit")
     u = np.random.random((2, 2)) + 1j * np.random.random((2, 2))
@@ -102,7 +105,9 @@ def test_unitary_to_u3_params():
     np.testing.assert_allclose(gate.asmatrix(backend), target_matrix)
 
 
-@pytest.mark.parametrize("platform_name", ['tiiq', 'qili', 'multiqubit']) #, 'icarusq'])
+@pytest.mark.parametrize(
+    "platform_name", ["tiiq", "qili", "multiqubit"]
+)  # , 'icarusq'])
 def test_pulse_sequence_add_u3(platform_name):
     platform = Platform(platform_name)
     seq = PulseSequence()
@@ -110,15 +115,19 @@ def test_pulse_sequence_add_u3(platform_name):
     assert len(seq.pulses) == 2
     assert len(seq.qd_pulses) == 2
 
-    RX90_pulse1 = platform.RX90_pulse(0, start = 0, phase = 0.3)
-    RX90_pulse2 = platform.RX90_pulse(0, start = (RX90_pulse1.start + RX90_pulse1.duration), phase = 0.4 - np.pi)
+    RX90_pulse1 = platform.RX90_pulse(0, start=0, phase=0.3)
+    RX90_pulse2 = platform.RX90_pulse(
+        0, start=(RX90_pulse1.start + RX90_pulse1.duration), phase=0.4 - np.pi
+    )
 
     np.testing.assert_allclose(seq.time, RX90_pulse1.duration + RX90_pulse2.duration)
     np.testing.assert_allclose(seq.phase, 0.6)
     assert seq.serial == f"{RX90_pulse1.serial}, {RX90_pulse2.serial}"
 
 
-@pytest.mark.parametrize("platform_name", ['tiiq', 'qili', 'multiqubit']) #, 'icarusq'])
+@pytest.mark.parametrize(
+    "platform_name", ["tiiq", "qili", "multiqubit"]
+)  # , 'icarusq'])
 def test_pulse_sequence_add_two_u3(platform_name):
     platform = Platform(platform_name)
     seq = PulseSequence()
@@ -131,15 +140,26 @@ def test_pulse_sequence_add_two_u3(platform_name):
     np.testing.assert_allclose(seq.phase, 0.6 + 1.5)
     np.testing.assert_allclose(seq.time, 2 * 2 * RX90_pulse.duration)
 
-    RX90_pulse1 = platform.RX90_pulse(0, start = 0, phase = 0.3)
-    RX90_pulse2 = platform.RX90_pulse(0, start = (RX90_pulse1.start + RX90_pulse1.duration), phase = 0.4 - np.pi)
-    RX90_pulse3 = platform.RX90_pulse(0, start = (RX90_pulse2.start + RX90_pulse2.duration), phase = 1.1)
-    RX90_pulse4 = platform.RX90_pulse(0, start = (RX90_pulse3.start + RX90_pulse3.duration), phase = 1.5 - np.pi)
+    RX90_pulse1 = platform.RX90_pulse(0, start=0, phase=0.3)
+    RX90_pulse2 = platform.RX90_pulse(
+        0, start=(RX90_pulse1.start + RX90_pulse1.duration), phase=0.4 - np.pi
+    )
+    RX90_pulse3 = platform.RX90_pulse(
+        0, start=(RX90_pulse2.start + RX90_pulse2.duration), phase=1.1
+    )
+    RX90_pulse4 = platform.RX90_pulse(
+        0, start=(RX90_pulse3.start + RX90_pulse3.duration), phase=1.5 - np.pi
+    )
 
-    assert seq.serial == f"{RX90_pulse1.serial}, {RX90_pulse2.serial}, {RX90_pulse3.serial}, {RX90_pulse4.serial}"
+    assert (
+        seq.serial
+        == f"{RX90_pulse1.serial}, {RX90_pulse2.serial}, {RX90_pulse3.serial}, {RX90_pulse4.serial}"
+    )
 
 
-@pytest.mark.parametrize("platform_name", ['tiiq', 'qili', 'multiqubit']) #, 'icarusq'])
+@pytest.mark.parametrize(
+    "platform_name", ["tiiq", "qili", "multiqubit"]
+)  # , 'icarusq'])
 def test_pulse_sequence_add_measurement(platform_name):
     platform = Platform(platform_name)
     seq = PulseSequence()
@@ -151,7 +171,11 @@ def test_pulse_sequence_add_measurement(platform_name):
 
     np.testing.assert_allclose(seq.phase, 0.6)
 
-    RX90_pulse1 = platform.RX90_pulse(0, start = 0, phase = 0.3)
-    RX90_pulse2 = platform.RX90_pulse(0, start = RX90_pulse1.duration, phase = 0.4 - np.pi)
-    MZ_pulse = platform.MZ_pulse(0, start = (RX90_pulse2.start + RX90_pulse2.duration), phase = 0.6)
-    assert seq.serial == f"{RX90_pulse1.serial}, {RX90_pulse2.serial}, {MZ_pulse.serial}"
+    RX90_pulse1 = platform.RX90_pulse(0, start=0, phase=0.3)
+    RX90_pulse2 = platform.RX90_pulse(0, start=RX90_pulse1.duration, phase=0.4 - np.pi)
+    MZ_pulse = platform.MZ_pulse(
+        0, start=(RX90_pulse2.start + RX90_pulse2.duration), phase=0.6
+    )
+    assert (
+        seq.serial == f"{RX90_pulse1.serial}, {RX90_pulse2.serial}, {MZ_pulse.serial}"
+    )

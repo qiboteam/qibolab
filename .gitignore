@@ -130,7 +130,7 @@ dmypy.json
 .pyre/
 
 
-# Qibolab data generated during benchmarking 
+# Qibolab data generated during benchmarking
 data/
 
 # Debugging & Testing

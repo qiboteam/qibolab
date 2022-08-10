@@ -20,7 +20,7 @@ instruments:
             mode: ssb
             channel_port_map:  # Refrigerator Channel : Instrument port
                 2: o1 # IQ Port = out0 & out1
-                3: i1 
+                3: i1
             lo: lo_qrm
 
     ClusterQCM:
@@ -31,7 +31,7 @@ instruments:
             ref_clock: external
             sync_en: false
             gain: 0.3
-            channel_port_map:  
+            channel_port_map:
                 1: o1 # IQ Port = out0 & out1
             lo: lo_qcm
 
@@ -50,7 +50,7 @@ instruments:
             mode: ssb
             channel_port_map:  # Refrigerator Channel : Instrument port
                 2: o1 # IQ Port = out0 & out1
-                3: i1 
+                3: i1
             lo: lo_qrm
 
     PulsarQCM:
@@ -61,6 +61,6 @@ instruments:
             ref_clock: external
             sync_en: false
             gain: 0.3
-            channel_port_map:  
+            channel_port_map:
                 1: o1 # IQ Port = out0 & out1
             lo: lo_qcm
