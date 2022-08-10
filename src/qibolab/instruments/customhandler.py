@@ -6,7 +6,7 @@ print('this is the usb version')
 usb_path = np.__file__.replace("numpy", "usb")
 assert os.path.isfile(usb_path)
 #init-hook="from usb.config import find_pylintrc; import os, sys; sys.path.append(os.path.dirname(find_pylintrc()))"
-import usb #pyLint: disable=E401
+import usb #pyLint: disable=E0401
 
 print(usb.__file__)
 print(np.__file__)
