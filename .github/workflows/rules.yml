@@ -27,7 +27,7 @@ jobs:
         pip install .[tiiq,docs]
     - name: Test with pylint
       run: |
-        pylint src -E -d E1123,E1120
+        pylint src -E -d E1123,E1120,E0401
     - name: Test with pytest core
       run: |
         pytest --cov=qibolab --cov-report=xml --pyargs qibolab
