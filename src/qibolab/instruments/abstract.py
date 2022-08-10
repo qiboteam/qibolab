@@ -1,14 +1,16 @@
+# -*- coding: utf-8 -*-
 from abc import ABC, abstractmethod
+
 from qibolab.paths import qibolab_folder
 
 
 class AbstractInstrument(ABC):
     """
     Parent class for all the instruments connected via TCPIP.
-    
+
     Args:
         name (str): Instrument name.
-        address (str): Instrument network address.     
+        address (str): Instrument network address.
     """
 
     def __init__(self, name, address):
@@ -35,7 +37,7 @@ class AbstractInstrument(ABC):
     @abstractmethod
     def stop(self):
         raise NotImplementedError
-        
+
     @abstractmethod
     def disconnect(self):
         raise NotImplementedError

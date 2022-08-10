@@ -95,5 +95,3 @@ is the following:
       platform = Platform("icarusq")
 
 For more detailed applications see the :ref:`Code example <examples>` section.
-
-

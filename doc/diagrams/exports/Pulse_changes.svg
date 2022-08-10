@@ -61,7 +61,7 @@ package platforms {
         }
         class ReadoutPulse_Old extends Pulse_Old {
             __init__(start, duration, amplitude, frequency, phase, shape, offset_i=0, offset_q=0, channel="qrm", qubit=0)
-        }        
+        }
     }
     package pulse_shapes.py {
         abstract class PulseShape_Old {
@@ -97,7 +97,7 @@ package platforms {
             __init__(g)
             __repr__()
             envelope(time, start, duration, amplitude)
-        }          
+        }
     }
     package circuit.py {
         abstract class PulseSequence_New {
@@ -111,7 +111,7 @@ package platforms {
             __len__()
             add(pulse)
             add_u3(theta, phi, lam, qubit=0)
-            add_measurement(qubit=0)  
+            add_measurement(qubit=0)
         }
         abstract class PulseSequence_Old {
             qcm_pulses
@@ -183,7 +183,7 @@ package platforms {
         }
         class ReadoutPulse_Old extends Pulse_Old {
             __init__(start, duration, amplitude, frequency, phase, shape, offset_i=0, offset_q=0, channel="qrm", qubit=0)
-        }        
+        }
     }
     package pulse_shapes.py {
         abstract class PulseShape_Old {
@@ -219,7 +219,7 @@ package platforms {
             __init__(g)
             __repr__()
             envelope(time, start, duration, amplitude)
-        }          
+        }
     }
     package circuit.py {
         abstract class PulseSequence_New {
@@ -233,7 +233,7 @@ package platforms {
             __len__()
             add(pulse)
             add_u3(theta, phi, lam, qubit=0)
-            add_measurement(qubit=0)  
+            add_measurement(qubit=0)
         }
         abstract class PulseSequence_Old {
             qcm_pulses

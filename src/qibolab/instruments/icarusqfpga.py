@@ -1,16 +1,19 @@
+# -*- coding: utf-8 -*-
+import bisect
 import socket
 import struct
-import bisect
 import threading
 import time
 from typing import List
+
 import numpy as np
+
 from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.pulses import Pulse
 
+
 class PulseBlaster(AbstractInstrument):
-    """Driver for the 24-pin PulseBlaster TTL signal generator.
-    """
+    """Driver for the 24-pin PulseBlaster TTL signal generator."""
 
     def __init__(self, name, address, port=5000):
         super().__init__(name, address)
@@ -19,7 +22,7 @@ class PulseBlaster(AbstractInstrument):
 
     def setup(self, holdtime_ns, pins=list(range(24)), **kwargs):
         """Setup the PulseBlaster.
-        
+
         Arguments:
             holdtime_ns (int): TTL pulse length and delay between TTL pulses. The experiment repetition frequency is 1 / (2 * holdtime_ns).
             pins (int): Pins to trigger in hex, defaults to all pins.
@@ -37,8 +40,7 @@ class PulseBlaster(AbstractInstrument):
         return self._send(payload.encode("utf-8"), True)
 
     def fire(self):
-        """Starts the PulseBlaster.
-        """
+        """Starts the PulseBlaster."""
         self._send(b"fire")
 
     def start(self):
@@ -57,7 +59,7 @@ class PulseBlaster(AbstractInstrument):
 
             if retval:
                 return s.recv(1024).decode("utf-8")
-    
+
     def play_sequence(self):
         self.fire()
 
@@ -69,12 +71,14 @@ class PulseBlaster(AbstractInstrument):
 
     @staticmethod
     def _hexify(pins):
-        return int(''.join(['1' if i in set(pins) else '0' for i in reversed(range(24))]), 2)
+        return int(
+            "".join(["1" if i in set(pins) else "0" for i in reversed(range(24))]), 2
+        )
 
 
 class IcarusQFPGA(AbstractInstrument):
-    """Driver for the IcarusQ RFSoC socket-based implementation.
-    """
+    """Driver for the IcarusQ RFSoC socket-based implementation."""
+
     def __init__(self, name, address, port=8080):
         super().__init__(name, address)
         self._dac_sample_size = 65536
@@ -101,14 +105,15 @@ class IcarusQFPGA(AbstractInstrument):
         self._dac_sampling_rate = dac_sampling_rate
 
     def translate(self, sequence: List[Pulse], nshots):
-        """Translates the pulse sequence into a numpy array.
-        """
+        """Translates the pulse sequence into a numpy array."""
 
         # Waveform is 14-bit resolution on the DACs, so we first create 16-bit arrays to store the data.
         waveform = np.zeros((self._dac_nchannels, self._dac_sample_size), dtype="i2")
 
         # The global time can first be set as float to handle rounding errors.
-        time_array = 1 / self._dac_sampling_rate * np.arange(0, self._dac_sample_size, 1)
+        time_array = (
+            1 / self._dac_sampling_rate * np.arange(0, self._dac_sample_size, 1)
+        )
 
         for pulse in sequence:
             # Get array indices corresponding to the start and end of the pulse. Note that the pulse time parameters are in ns and require conversion.
@@ -117,13 +122,18 @@ class IcarusQFPGA(AbstractInstrument):
 
             # Create the pulse waveform and cast it to 16-bit. The ampltiude is max signed 14-bit (+- 8191) and the indices should take care of any overlap of pulses.
             # 2-byte bit shift for downsampling from 16 bit to 14 bit
-            pulse_waveform = (4 * np.sin(2 * np.pi * pulse.frequency * time_array[start:end] + pulse.phase)).astype("i2")
+            pulse_waveform = (
+                4
+                * np.sin(
+                    2 * np.pi * pulse.frequency * time_array[start:end] + pulse.phase
+                )
+            ).astype("i2")
             waveform[pulse.channel, start:end] += pulse_waveform
 
         self.nshots = nshots
 
         return waveform
-    
+
     def upload(self, waveform):
         """Uploads a numpy array of size DAC_CHANNELS X DAC_SAMPLE_SIZE to the PL memory.
 
@@ -140,14 +150,12 @@ class IcarusQFPGA(AbstractInstrument):
             s.sendall(waveform.tobytes())
 
     def play_sequence(self):
-        """DACs are automatically armed for playbacked when waveforms are loaded, no need to signal
-        """
+        """DACs are automatically armed for playbacked when waveforms are loaded, no need to signal"""
         self._buffer = np.zeros((self._adc_nchannels, self._adc_sample_size))
         self._thread = threading.Thread(target=self._play, args=(self.nshots,))
         self._thread.start()
 
-        time.sleep(0.1) # Use threading lock and socket signals instead of hard sleep?
-        
+        time.sleep(0.1)  # Use threading lock and socket signals instead of hard sleep?
 
     def play_sequence_and_acquire(self):
         """Signal the RFSoC to arm the ADC and start data transfer into PS memory.
@@ -159,11 +167,9 @@ class IcarusQFPGA(AbstractInstrument):
         # Create buffer to hold ADC data.
         # TODO: Create flag to handle single shot measurement / buffer assignment per shot.
         pass
-        
 
     def _play(self, nshots):
-        """Starts ADC data acquisition and transfer on the RFSoC.
-        """
+        """Starts ADC data acquisition and transfer on the RFSoC."""
 
         if len(self._adcs_to_read) == 0:
             return
@@ -176,10 +182,12 @@ class IcarusQFPGA(AbstractInstrument):
             # Signal RFSoC to arm ADC and expect `nshots` number of triggers.
             s.sendall(struct.pack("B", 2))
             s.sendall(struct.pack("H", nshots))
-            s.sendall(struct.pack("B", len(self._adcs_to_read))) # send number of channels
-        
+            s.sendall(
+                struct.pack("B", len(self._adcs_to_read))
+            )  # send number of channels
+
             for adc in self._adcs_to_read:
-                s.sendall(struct.pack("B", adc)) # send ADC channel to read
+                s.sendall(struct.pack("B", adc))  # send ADC channel to read
 
             # Use the same socket to start listening for ADC data transfer.
             for k in range(nshots):
