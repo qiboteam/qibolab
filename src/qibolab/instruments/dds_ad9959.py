@@ -1,5 +1,5 @@
 import sys
-sys.path.append("/opt/hostedtoolcache/Python/3.8.13/x64/lib")
+#sys.path.append("/opt/hostedtoolcache/Python/3.8.13/x64/lib")
 import time
 import numpy as np
 import usb

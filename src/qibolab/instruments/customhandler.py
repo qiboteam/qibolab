@@ -1,6 +1,13 @@
 import sys
-sys.path.append("/opt/hostedtoolcache/Python/3.8.13/x64/lib")
+#sys.path.append("/opt/hostedtoolcache/Python/3.8.13/x64/lib")
+import numpy as np
+import os
+print('this is the usb version')
+usb_path = np.__file__.replace("numpy", "usb")
+print(os.system(f"ls {usb_path}"))
 import usb
+print(usb.__file__)
+print(np.__file__)
 
 class DeviceHandle(usb.DeviceHandle):
 
