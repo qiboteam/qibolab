@@ -38,7 +38,7 @@ Qibolab already supports the following platforms:
 
 * Tiiq
 * IcarusQ
-
+* ColdIon
 In the following sections we provide the specific installation instructions
 to be ready to use Qibolab on the platform chosen.
 
@@ -93,5 +93,27 @@ is the following:
       from qibolab import Platform
 
       platform = Platform("icarusq")
+
+For more detailed applications see the :ref:`Code example <examples>` section.
+
+ColdIon
+"""""""
+
+In order to install the dependencies for the ``ColdIon`` platform
+use the following command:
+
+
+.. code-block::
+
+      pip install .[cold_ion] # or pip install -e .[cold_ion]
+
+After that all you need to do to start using the ``ColdIon`` platform
+is the following:
+
+.. code-block:: python
+
+      from qibolab import Platform
+
+      platform = Platform("cold_ion")
 
 For more detailed applications see the :ref:`Code example <examples>` section.
