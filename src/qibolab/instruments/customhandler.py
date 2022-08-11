@@ -3,8 +3,6 @@ import numpy as np
 import os
 import usb 
 
-print(usb.__file__)
-print(np.__file__)
 
 class DeviceHandle(usb.DeviceHandle):
 
