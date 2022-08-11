@@ -39,6 +39,7 @@ Qibolab already supports the following platforms:
 * Tiiq
 * IcarusQ
 * ColdIon
+
 In the following sections we provide the specific installation instructions
 to be ready to use Qibolab on the platform chosen.
 
