@@ -34,6 +34,12 @@ ICPlatform
    :members:
    :member-order: bysource
 
+Cold Ion Platform
+""""""""""
+
+.. autoclass:: qibolab.platforms.cold_ion_qubit.cold_ion
+   :members:
+   :member-order: bysource
 _______________________
 
 Pulses
@@ -165,6 +171,15 @@ MiniCircuit RCDAT-8000-30
    :members:
    :member-order: bysource
 
+
+
+
+AD9959
+-------
+
+.. autoclass:: qibolab.instruments.dds_ad9959.AD9959
+   :members:
+   :member-order: bysource
 FPGA
 """"
 
@@ -179,9 +194,4 @@ ATS9371
    :members:
    :member-order: bysource
 
-AD9959
--------
 
-.. autoclass:: qibolab.instruments.dds_ad9959.AD9959
-   :members:
-   :member-order: bysource

@@ -2,5 +2,5 @@ from qibo.config import raise_error
 from qibolab.platforms.abstract import AbstractPlatform
 # additional contents to be added later on
 # abstratc paltform will be implemented later on
-class cold_ion():
+class cold_ion(AbstractPlatform):
         pass

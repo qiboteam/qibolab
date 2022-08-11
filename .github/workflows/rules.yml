@@ -30,7 +30,6 @@ jobs:
         pylint src -E -d E1123,E1120,E0401
     - name: Test with pytest core
       run: |
-        pip install usb
         pytest --cov=qibolab --cov-report=xml --pyargs qibolab
     - name: Upload coverage to Codecov
       if: startsWith(matrix.os, 'ubuntu')
