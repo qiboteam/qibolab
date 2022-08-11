@@ -1,12 +1,7 @@
 import sys
-#sys.path.append("/opt/hostedtoolcache/Python/3.8.13/x64/lib")
 import numpy as np
 import os
-print('this is the usb version')
-usb_path = np.__file__.replace("numpy", "usb")
-assert os.path.isfile(usb_path)
-#init-hook="from usb.config import find_pylintrc; import os, sys; sys.path.append(os.path.dirname(find_pylintrc()))"
-import usb #pyLint: disable=E0401
+import usb 
 
 print(usb.__file__)
 print(np.__file__)
