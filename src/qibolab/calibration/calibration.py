@@ -1216,7 +1216,7 @@ class Calibration():
 
 def settable(instance, attribute_name, label, unit):
     """
-    This helper class creates (on the fly) a class that wraps around a given instance attribute 
+    This helper function creates (on the fly) a class that wraps around a given instance attribute 
     and complies with quantify settable interface 
     """ 
     def __init__(self, instance):
