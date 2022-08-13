@@ -2,6 +2,197 @@ import json
 import numpy as np
 import qblox_instruments
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
+from qibolab.pulses import PulseCollection, Pulse, PulseShape, PulseType
+
+
+class Sequencer():
+
+    MEMORY = 16383
+
+    class NotEnoughMemory(Exception):
+        pass
+
+    def __init__(self, number):
+        self.number = number
+        self.unique_waveforms:list = [] # Waveform
+        self.available_memory:int = Sequencer.MEMORY
+        self.pulses:PulseCollection = PulseCollection()
+
+        self.minimum_delay_between_instructions:int = 4
+        self.repetition_duration:int = 200_000
+        self.wait_loop_step:int = 1000
+        self.nshots:int = 1000
+
+    def add_pulse(self, pulse:Pulse):
+
+        waveform_i, waveform_q = pulse.waveform_i, pulse.waveform_q
+
+        if waveform_i not in self.unique_waveforms and waveform_q not in self.unique_waveforms:
+            memory_needed = 0
+            if not waveform_i in self.unique_waveforms:
+                memory_needed +=  len(waveform_i) 
+            if not waveform_q in self.unique_waveforms:
+                memory_needed +=  len(waveform_q) 
+
+            if self.available_memory >= memory_needed:
+                if not waveform_i in self.unique_waveforms:
+                    self.unique_waveforms.append(waveform_i)
+                if not waveform_q in self.unique_waveforms:
+                    self.unique_waveforms.append(waveform_q)
+            else:
+                raise Sequencer.NotEnoughMemory
+
+        self.pulses.append(pulse)       
+
+    @property
+    def waveforms(self):
+        waveforms={}
+        for index, waveform in enumerate(self.unique_waveforms):
+            waveforms[waveform.serial] = {"data": waveform.data.tolist(), "index": index}
+        return waveforms
+
+    @property
+    def program(self):
+        program = ""
+        if not self.pulses.is_empty:
+            pulses = self.pulses
+            # Program
+            sequence_total_duration = pulses.start + pulses.duration + self.minimum_delay_between_instructions # the minimum delay between instructions is 4ns
+            time_between_repetitions = self.repetition_duration - sequence_total_duration
+            assert time_between_repetitions > 0
+
+            wait_time = time_between_repetitions
+            extra_wait = wait_time % self.wait_loop_step
+            while wait_time > 0 and extra_wait < 4 :
+                self.wait_loop_step += 1
+                extra_wait = wait_time % self.wait_loop_step
+            num_wait_loops = (wait_time - extra_wait) // self. wait_loop_step
+
+            header = f"""
+            move {self.nshots},R0 # nshots
+            nop
+            wait_sync {self.minimum_delay_between_instructions}
+            loop:"""
+            body = ""
+
+            footer = f"""
+                # wait {wait_time} ns"""
+            if num_wait_loops > 0:
+                footer += f"""
+                move {num_wait_loops},R2
+                nop
+                waitloop2:
+                    wait {self.wait_loop_step}
+                    loop R2,@waitloop2"""
+            if extra_wait > 0: 
+                footer += f"""
+                    wait {extra_wait}"""
+            else:
+                footer += f"""
+                    # wait 0"""
+
+            footer += f"""
+            loop R0,@loop
+            stop 
+            """
+
+            # Add an initial wait instruction for the first pulse of the sequence
+            wait_time = pulses[0].start
+            extra_wait = wait_time % self.wait_loop_step
+            while wait_time > 0 and extra_wait < 4 :
+                self.wait_loop_step += 1
+                extra_wait = wait_time % self.wait_loop_step
+            num_wait_loops = (wait_time - extra_wait) // self. wait_loop_step
+
+            if wait_time > 0:
+                initial_wait_instruction = f"""
+                # wait {wait_time} ns"""
+                if num_wait_loops > 0:
+                    initial_wait_instruction += f"""
+                move {num_wait_loops},R1
+                nop
+                waitloop1:
+                    wait {self.wait_loop_step}
+                    loop R1,@waitloop1"""
+                if extra_wait > 0: 
+                    initial_wait_instruction += f"""
+                    wait {extra_wait}"""
+                else:
+                    initial_wait_instruction += f"""
+                    # wait 0"""
+            else:
+                initial_wait_instruction = """
+                # wait 0"""
+
+            body += initial_wait_instruction
+
+            for n in range(pulses.count):
+                if pulses[n].type == PulseType.READOUT:
+                    delay_after_play = self.minimum_delay_between_instructions # self.acquisition_start #FIXME: This would not work for split pulses
+                    
+                    if len(pulses) > n + 1:
+                        # If there are more pulses to be played, the delay is the time between the pulse end and the next pulse start
+                        delay_after_acquire = pulses[n + 1].start - pulses[n].start - self.minimum_delay_between_instructions # self.acquisition_start
+                    else:
+                        delay_after_acquire = sequence_total_duration - pulses[n].start - self.minimum_delay_between_instructions # self.acquisition_start
+                        
+                    if delay_after_acquire < self.minimum_delay_between_instructions:
+                            raise Exception(f"The minimum delay before starting acquisition is {self.minimum_delay_between_instructions}ns.")
+                    
+                    # Prepare play instruction: play arg0, arg1, arg2. 
+                    #   arg0 is the index of the I waveform 
+                    #   arg1 is the index of the Q waveform
+                    #   arg2 is the delay between starting the instruction and the next instruction
+                    play_instruction = f"                    play {self.unique_waveforms.index(pulses[n].waveform_i)},{self.unique_waveforms.index(pulses[n].waveform_q)},{delay_after_play}"
+                    # Add the serial of the pulse as a comment
+                    play_instruction += " "*(34-len(play_instruction)) + f"# play waveforms {pulses[n]}" 
+                    body += "\n" + play_instruction
+
+                    # Prepare acquire instruction: acquire arg0, arg1, arg2. 
+                    #   arg0 is the index of the acquisition 
+                    #   arg1 is the index of the data bin
+                    #   arg2 is the delay between starting the instruction and the next instruction
+                    acquire_instruction = f"                    acquire {self.pulses.ro_pulses.index(pulses[n])},0,{delay_after_acquire}"
+                    # Add the serial of the pulse as a comment
+                    body += "\n" + acquire_instruction
+
+                else:
+                    # Calculate the delay_after_play that is to be used as an argument to the play instruction
+                    if len(pulses) > n + 1:
+                        # If there are more pulses to be played, the delay is the time between the pulse end and the next pulse start
+                        delay_after_play = pulses[n + 1].start - pulses[n].start
+                    else:
+                        delay_after_play = sequence_total_duration - pulses[n].start
+                        
+                    if delay_after_play < self.minimum_delay_between_instructions:
+                            raise Exception(f"The minimum delay between pulses is {self.minimum_delay_between_instructions}ns.")
+                    
+                    # Prepare play instruction: play arg0, arg1, arg2. 
+                    #   arg0 is the index of the I waveform 
+                    #   arg1 is the index of the Q waveform
+                    #   arg2 is the delay between starting the instruction and the next instruction
+                    play_instruction = f"                    play {self.unique_waveforms.index(pulses[n].waveform_i)},{self.unique_waveforms.index(pulses[n].waveform_q)},{delay_after_play}"
+                    # Add the serial of the pulse as a comment
+                    play_instruction += " "*(34-len(play_instruction)) + f"# play waveforms {pulses[n]}" 
+                    body += "\n" + play_instruction
+
+            program = header + body + footer
+
+            # DEBUG: QRM print sequencer program
+            # print(f"{self.name} sequencer {sequencer} program:\n" + self.program[sequencer]) 
+
+        return program
+
+    @property
+    def acquisitions(self):
+        acquisitions={}
+        for acquisition_index, pulse in enumerate(self.pulses.ro_pulses):
+            acquisitions[pulse.serial] = {"num_bins": 1, "index":acquisition_index}
+        return acquisitions
+
+    @property
+    def weights(self):
+        return {}
 
 
 class Cluster(AbstractInstrument):
@@ -41,9 +232,7 @@ class Cluster(AbstractInstrument):
         global cluster
         cluster = None
 
-
 cluster : Cluster = None
-
 
 class ClusterQRM_RF(AbstractInstrument):
     """
@@ -56,18 +245,25 @@ class ClusterQRM_RF(AbstractInstrument):
     """
     DEFAULT_SEQUENCER = 0
 
-    property_wrapper = lambda parent, *parameter: property(lambda self: parent.device.get(parameter[0]), lambda self,x: parent.set_device_parameter(parent.device, *parameter, value = x))
-    sequencer_property_wrapper = lambda parent, sequencer, *parameter: property(lambda self: parent.device.sequencers[sequencer].get(parameter[0]), lambda self,x: parent.set_device_parameter(parent.device.sequencers[sequencer], *parameter, value = x))
-    
+    property_wrapper = lambda parent, *parameter: property(
+        lambda self: parent.device.get(parameter[0]), 
+        lambda self,x: parent.set_device_parameter(parent.device, *parameter, value = x)
+        )
+    sequencer_property_wrapper = lambda parent, sequencer, *parameter: property(
+        lambda self: parent.device.sequencers[sequencer].get(parameter[0]), 
+        lambda self,x: parent.set_device_parameter(parent.device.sequencers[sequencer], *parameter, value = x)
+        )
 
     def __init__(self, name, address):
         super().__init__(name, address)
-        self.sequencers = []
-        self.sequencer_channel_map = {} 
-        self.last_pulsequence_hash = "uninitialised"
-        self.current_pulsesequence_hash = ""
-        self.device_parameters = {}
         self.ports = {}
+        self.input_ports_keys = ['i1']
+        self.output_ports_keys = ['o1']
+        self.sequencers:dict[Sequencer] = {'o1': []}
+        self.last_pulsequence_hash:int = 0
+        self.current_pulsesequence_hash:int
+        self.device_parameters = {}
+        self.free_sequencers = [1,2,3,4,5]
 
     def connect(self):
         """
@@ -98,7 +294,7 @@ class ClusterQRM_RF(AbstractInstrument):
 
                 self.cluster = cluster
                 self.is_connected = True
-                
+
                 self.set_device_parameter(self.device, 'in0_att', value = 0) 
                 self.set_device_parameter(self.device, 'out0_offset_path0', 'out0_offset_path1', value = 0) # Default after reboot = 7.625
                 self.set_device_parameter(self.device, 'scope_acq_avg_mode_en_path0', 'scope_acq_avg_mode_en_path1', value = True)
@@ -120,12 +316,13 @@ class ClusterQRM_RF(AbstractInstrument):
                 self.set_device_parameter(target, 'offset_awg_path1', value = 0)
                 self.set_device_parameter(target, 'sync_en', value = True) # Default after reboot = False
                 self.set_device_parameter(target, 'upsample_rate_awg_path0', 'upsample_rate_awg_path1', value = 0)
-
-                self.set_device_parameter(target, 'channel_map_path0_out0_en', 'channel_map_path1_out1_en', value = True)
                 
+                self.set_device_parameter(target, 'channel_map_path0_out0_en', 'channel_map_path1_out1_en', value = True)
+
                 self.device_num_sequencers = len(self.device.sequencers)
                 for sequencer in range(1,  self.device_num_sequencers):
                     self.set_device_parameter(self.device.sequencers[sequencer], 'channel_map_path0_out0_en', 'channel_map_path1_out1_en', value = False) # Default after reboot = True
+
 
     def set_device_parameter(self, target, *parameters, value):
         if self.is_connected:
@@ -173,6 +370,9 @@ class ClusterQRM_RF(AbstractInstrument):
             # TODO: Remove minimum_delay_between_instructions
 
             self.channel_port_map = kwargs['channel_port_map']
+            self.port_channel_map = {v: k for k, v in self.channel_port_map.items()}
+            # TODO: Replace channel_port_map with port_channel_map in the runcard
+
             self.channels = list(self.channel_port_map.keys())
             
             self.ports['o1'].attenuation = kwargs['ports']['o1']['attenuation']                         # Default after reboot = 7
@@ -194,7 +394,7 @@ class ClusterQRM_RF(AbstractInstrument):
         else:
             raise Exception('There is no connection to the instrument')
 
-    def process_pulse_sequence(self, channel_pulses, nshots):
+    def process_pulse_sequence(self, channels_pulses, nshots):
         """
         Processes a list of pulses, generating the waveforms and sequence program required by the instrument to synthesise them.
         
@@ -202,332 +402,99 @@ class ClusterQRM_RF(AbstractInstrument):
         channel_pulses (dict): a dictionary of {channel (int): pulses (list)}
         nshots (int): the number of times the sequence of pulses will be repeated
         """
-        # Load the channels to which the instrument is connected
-        channels = self.channels
+        # TODO: until the community accepts the use of PulseCollection to replace PulseSequence
+        instrument_pulses = PulseCollection()
+        [instrument_pulses.append(pulse) for channel in channels_pulses for pulse in channels_pulses[channel]]
 
-        # Check if the sequence to be processed is the same as the last one. If so, there is no need to generate waveforms and program
-        self.current_pulsesequence_hash = ""
-        for channel in channels:
-            for pulse in channel_pulses[channel]:
-                self.current_pulsesequence_hash += pulse.serial
+
+        # Save the hash of the current sequence of pulses.
+        self.current_pulsesequence_hash = hash(instrument_pulses)
+        
+        # Check if the sequence to be processed is the same as the last one. 
+        # If so, there is no need to generate new waveforms and program
+        # Except if hardware demodulation is activated (to force a memory reset until qblox fix the issue)
         if self.ports['i1'].hardware_demod_en or self.current_pulsesequence_hash != self.last_pulsequence_hash:
-            # Sort pulses by their start time 
-            for channel in channels:
-                channel_pulses[channel].sort(key=lambda pulse: pulse.start) 
-            
-            # Check if pulses on the same channel overlap
-            for channel in channels:
-                for m in range(1, len(channel_pulses[channel])):
-                    channel_pulses[channel][m].overlaps = []
-                    for n in range(m):
-                        if channel_pulses[channel][m].start - channel_pulses[channel][n].start < channel_pulses[channel][n].duration:
-                            channel_pulses[channel][m].overlaps.append(n)
-                for m in range(1, len(channel_pulses[channel])):
-                    if len(channel_pulses[channel][m].overlaps) > 0:
-                        # TODO: Urgently needed in order to implement multiplexed readout
-                        raise(NotImplementedError, "Overlaping pulses on the same channel are not yet supported.")
 
-            # Allocate channel pulses to sequencers. 
-            #   At least one sequencer is needed for each channel
-            #   If the memory required for the sequence of pulses exceeds 16384/2, 
-            #   additional sequencers are used to synthesise it
-            self.sequencers = []        # a list of sequencers (int) used
-            sequencer_pulses = {}       # a dictionary of {sequencer (int): pulses (list)}     
-            sequencer = -1              # initialised to -1 so that in the first iteration it becomes 0, the first sequencer number
-            self.waveforms = {}
-            for channel in channels:
-                if len(channel_pulses[channel]) > 0:
-                    # Select a sequencer and add it to the sequencer_channel_map
-                    sequencer += 1
-                    if sequencer > self.device_num_sequencers:
-                        raise Exception(f"The number of sequencers requried to play the sequence exceeds the number available {self.device_num_sequencers}.")
-                    # Initialise the corresponding variables 
-                    self.sequencers.append(sequencer)
-                    self.sequencer_channel_map[sequencer]=channel
-                    sequencer_pulses[sequencer]=[]
-                    self.waveforms[sequencer]={}
-                    unique_pulses = {}      # a dictionary of {unique pulse IDs (str): and their I & Q indices (int)}
-                    wc = 0                  # unique waveform counter
-                    waveforms_length = 0        # accumulates the length of unique pulses per sequencer
+            port = 'o1'
+            # split the collection of instruments pulses by port and check if there are overlaps
+            port_pulses:PulseCollection = instrument_pulses.get_channel_pulses(self.port_channel_map[port])
+            if not port_pulses.is_empty:
+                if port_pulses.pulses_overlap:
+                    # TODO: Urgently needed in order to implement multiplexed readout
+                    raise NotImplementedError("Overlaping pulses on the same channel are not yet supported.")
 
-                    # Iterate over the list of pulses to check if they are unique and if the overal length of the waveform exceeds the memory available
-                    n = 0
-                    while n < len(channel_pulses[channel]):
-                        pulse = channel_pulses[channel][n]
-                        pulse_serial = pulse.serial[pulse.serial.find(',',pulse.serial.find(',')+1)+2:-1] # removes the channel and start information from Pulse.serial to compare between pulses
-                        if pulse_serial not in unique_pulses.keys():
-                            # If the pulse is unique (it hasn't been saved before):
-                            I, Q = self.generate_waveforms_from_pulse(pulse, modulate = True)
-                            # Check if the overall length of the waveform exceeds memory size (waveform_max_length) and split it if necessary
-                            is_split = False
-                            part = 0
-                            while waveforms_length + pulse.duration > self.waveform_max_length:
-                                if pulse.type == 'ro':
-                                    raise(NotImplementedError, f"Readout pulses longer than the memory available for a sequencer ({self.waveform_max_length}) are not supported.")
-                                import copy
-                                first_part = copy.deepcopy(pulse)
-                                first_part.duration = self.waveform_max_length - waveforms_length 
-                                channel_pulses[channel].insert(n, first_part)
-                                n += 1
-                                sequencer_pulses[sequencer].append(first_part)
-                                first_part.waveform_indexes = [0 + wc, 1 + wc]
-                                self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_I"] = {"data": I[:first_part.duration], "index": 0 + wc}
-                                self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_Q"] = {"data": Q[:first_part.duration], "index": 1 + wc}
-                                
-                                pulse = copy.deepcopy(pulse)
-                                I, Q = I[first_part.duration:], Q[first_part.duration:]
-                                pulse.start = pulse.start + self.waveform_max_length - waveforms_length
-                                pulse.duration = pulse.duration - (self.waveform_max_length - waveforms_length)
-                                is_split = True
-                                part += 1
+                sequencer = Sequencer(self.DEFAULT_SEQUENCER)
+                self.sequencers[port] = [sequencer]
 
-                                # Select a new sequencer
-                                sequencer += 1
-                                if sequencer > self.device_num_sequencers:
-                                        raise Exception(f"The number of sequencers requried to play the sequence exceeds the number available {self.device_num_sequencers}.")
-                                # Initialise the corresponding variables 
-                                self.sequencers.append(sequencer)
-                                self.sequencer_channel_map[sequencer]=channel
-                                sequencer_pulses[sequencer]=[]
-                                self.waveforms[sequencer]={}
-                                unique_pulses = {} 
-                                wc = 0                 
-                                waveforms_length = 0
-    
-                            # Add the pulse to the list of pulses for the current sequencer and save the waveform indexes
-                            sequencer_pulses[sequencer].append(pulse)
-                            pulse.waveform_indexes = [0 + wc, 1 + wc]
-                            if not is_split:
-                                unique_pulses[pulse_serial] =  [0 + wc, 1 + wc]              
-                            waveforms_length += pulse.duration
-                            self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_I"] = {"data": I, "index": 0 + wc}
-                            self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_Q"] = {"data": Q, "index": 1 + wc}
-                            wc += 2
-
+                port_pulses_to_be_processed = port_pulses.shallow_copy()
+                while not port_pulses_to_be_processed.is_empty:
+                    try:
+                        pulse: Pulse = port_pulses_to_be_processed[0]
+                        pulse.modulate_waveforms = not self.ports[port].hardware_mod_en
+                        sequencer.add_pulse(pulse)
+                        port_pulses_to_be_processed.remove(pulse)
+                    except Sequencer.NotEnoughMemory:
+                        if len(pulse.waveform_i) * 2 > Sequencer.MEMORY:
+                            raise NotImplementedError(f"Pulses with waveforms longer than the memory of a sequencer ({Sequencer.MEMORY // 2}) are not supported.")
+                        if len(self.free_sequencers) > 0:
+                            default_sequencer_number = 0
+                            next_sequencer_number = self.free_sequencers.pop(0)
+                            for parameter in self.device.sequencers[default_sequencer_number]:
+                                if not parameter is None:
+                                    target  = self.device.sequencers[next_sequencer_number]
+                                    self.set_device_parameter(target, parameter, value = self.device.sequencers[default_sequencer_number].get(param_name = parameter))
+                            sequencer = Sequencer(next_sequencer_number)
+                            self.sequencers[port].append(sequencer)
                         else:
-                            sequencer_pulses[sequencer].append(pulse)
-                            pulse.waveform_indexes = unique_pulses[pulse_serial]
-                        n += 1
-
-            # Generate programs for each sequencer
-            pulses = sequencer_pulses
-            self.acquisitions = {}
-            self.program = {}
-            self.weights = {}
-
-            for sequencer in self.sequencers:
-                # Acquisitions & weights
-                self.acquisitions[sequencer] = {}
-                self.weights[sequencer] = {}
-                ac = 0 # Acquisition counter
-                for pulse in pulses[sequencer]:
-                    if pulse.type == 'ro':
-                        pulse.acquisition_index = ac
-                        pulse.num_bins = 1
-                        self.acquisitions[sequencer][pulse.serial] = {"num_bins": pulse.num_bins, "index":pulse.acquisition_index}
-                        ac += 1
-
-                # Program
-                sequence_total_duration = pulses[sequencer][-1].start + pulses[sequencer][-1].duration + self.minimum_delay_between_instructions # the minimum delay between instructions is 4ns
-                time_between_repetitions = self.repetition_duration - sequence_total_duration
-                assert time_between_repetitions > 0
-
-                wait_time = time_between_repetitions
-                extra_wait = wait_time % self.wait_loop_step
-                while wait_time > 0 and extra_wait < 4 :
-                    self.wait_loop_step += 1
-                    extra_wait = wait_time % self.wait_loop_step
-                num_wait_loops = (wait_time - extra_wait) // self. wait_loop_step
-
-                header = f"""
-                move {nshots},R0 # nshots
-                nop
-                wait_sync {self.minimum_delay_between_instructions}
-                loop:"""
-                body = ""
-
-                footer = f"""
-                    # wait {wait_time} ns"""
-                if num_wait_loops > 0:
-                    footer += f"""
-                    move {num_wait_loops},R2
-                    nop
-                    waitloop2:
-                        wait {self.wait_loop_step}
-                        loop R2,@waitloop2"""
-                if extra_wait > 0: 
-                    footer += f"""
-                        wait {extra_wait}"""
-                else:
-                    footer += f"""
-                        # wait 0"""
-
-                footer += f"""
-                loop R0,@loop
-                stop 
-                """
-
-                # Add an initial wait instruction for the first pulse of the sequence
-                wait_time = pulses[sequencer][0].start
-                extra_wait = wait_time % self.wait_loop_step
-                while wait_time > 0 and extra_wait < 4 :
-                    self.wait_loop_step += 1
-                    extra_wait = wait_time % self.wait_loop_step
-                num_wait_loops = (wait_time - extra_wait) // self. wait_loop_step
-
-                if wait_time > 0:
-                    initial_wait_instruction = f"""
-                    # wait {wait_time} ns"""
-                    if num_wait_loops > 0:
-                        initial_wait_instruction += f"""
-                    move {num_wait_loops},R1
-                    nop
-                    waitloop1:
-                        wait {self.wait_loop_step}
-                        loop R1,@waitloop1"""
-                    if extra_wait > 0: 
-                        initial_wait_instruction += f"""
-                        wait {extra_wait}"""
-                    else:
-                        initial_wait_instruction += f"""
-                        # wait 0"""
-                else:
-                    initial_wait_instruction = """
-                    # wait 0"""
-
-                body += initial_wait_instruction
-
-                for n in range(len(pulses[sequencer])):
-                    if pulses[sequencer][n].type == 'ro':
-                        delay_after_play = self.minimum_delay_between_instructions # self.acquisition_start #FIXME: This would not work for split pulses
-                        
-                        if len(pulses[sequencer]) > n + 1:
-                            # If there are more pulses to be played, the delay is the time between the pulse end and the next pulse start
-                            delay_after_acquire = pulses[sequencer][n + 1].start - pulses[sequencer][n].start - self.minimum_delay_between_instructions # self.acquisition_start
-                        else:
-                            delay_after_acquire = sequence_total_duration - pulses[sequencer][n].start - self.minimum_delay_between_instructions # self.acquisition_start
-                            
-                        if delay_after_acquire < self.minimum_delay_between_instructions:
-                                raise Exception(f"The minimum delay before starting acquisition is {self.minimum_delay_between_instructions}ns.")
-                        
-                        # Prepare play instruction: play arg0, arg1, arg2. 
-                        #   arg0 is the index of the I waveform 
-                        #   arg1 is the index of the Q waveform
-                        #   arg2 is the delay between starting the instruction and the next instruction
-                        play_instruction = f"                    play {pulses[sequencer][n].waveform_indexes[0]},{pulses[sequencer][n].waveform_indexes[1]},{delay_after_play}"
-                        # Add the serial of the pulse as a comment
-                        play_instruction += " "*(34-len(play_instruction)) + f"# play waveforms {pulses[sequencer][n]}" 
-                        body += "\n" + play_instruction
-
-                        # Prepare acquire instruction: acquire arg0, arg1, arg2. 
-                        #   arg0 is the index of the acquisition 
-                        #   arg1 is the index of the data bin
-                        #   arg2 is the delay between starting the instruction and the next instruction
-                        acquire_instruction = f"                    acquire {pulses[sequencer][n].acquisition_index},0,{delay_after_acquire}"
-                        # Add the serial of the pulse as a comment
-                        body += "\n" + acquire_instruction
-
-                    else:
-                        # Calculate the delay_after_play that is to be used as an argument to the play instruction
-                        if len(pulses[sequencer]) > n + 1:
-                            # If there are more pulses to be played, the delay is the time between the pulse end and the next pulse start
-                            delay_after_play = pulses[sequencer][n + 1].start - pulses[sequencer][n].start
-                        else:
-                            delay_after_play = sequence_total_duration - pulses[sequencer][n].start
-                            
-                        if delay_after_play < self.minimum_delay_between_instructions:
-                                raise Exception(f"The minimum delay between pulses is {self.minimum_delay_between_instructions}ns.")
-                        
-                        # Prepare play instruction: play arg0, arg1, arg2. 
-                        #   arg0 is the index of the I waveform 
-                        #   arg1 is the index of the Q waveform
-                        #   arg2 is the delay between starting the instruction and the next instruction
-                        play_instruction = f"                    play {pulses[sequencer][n].waveform_indexes[0]},{pulses[sequencer][n].waveform_indexes[1]},{delay_after_play}"
-                        # Add the serial of the pulse as a comment
-                        play_instruction += " "*(34-len(play_instruction)) + f"# play waveforms {pulses[sequencer][n]}" 
-                        body += "\n" + play_instruction
-
-                self.program[sequencer] = header + body + footer
-
-                # DEBUG: QRM print sequencer program
-                # print(f"{self.name} sequencer {sequencer} program:\n" + self.program[sequencer]) 
-
-    def generate_waveforms_from_pulse(self, pulse, modulate = True):
-        """
-        Generates I & Q waveforms for the pulse passed as a parameter.
-
-        Args:
-        pulse (Pulse): a Pulse object
-        modulate (bool): {True, False} module the waveform with the pulse frequency
-
-        Returns:
-        envelope_i (list) of (float), envelope_q (list) of (float): a tuple with I & Q waveform samples
-        """
-        envelope_i = pulse.envelope_i
-        envelope_q = pulse.envelope_q 
-        assert len(envelope_i) == len(envelope_q)
-        envelopes = np.array([envelope_i, envelope_q])
-        if modulate:
-            time = np.arange(pulse.duration) / self.sampling_rate
-            cosalpha = np.cos(2 * np.pi * pulse.frequency * time + pulse.phase)
-            sinalpha = np.sin(2 * np.pi * pulse.frequency * time + pulse.phase)
-            mod_matrix = np.array([[ cosalpha, -sinalpha], 
-                                   [sinalpha, cosalpha]])
-            # mod_signals = np.einsum("abt,bt->ta", mod_matrix, envelopes)
-            result = []
-            for it, t, ii, qq in zip(np.arange(pulse.duration), time, envelope_i, envelope_q):
-                result.append(mod_matrix[:, :, it] @ np.array([ii, qq]))
-            mod_signals = np.array(result)
-
-            # DEBUG: QRM plot envelopes
-            # import matplotlib.pyplot as plt
-            # plt.plot(mod_signals[:, 0] + pulse.offset_i)
-            # plt.plot(mod_signals[:, 1] + pulse.offset_q)
-            # plt.show()
-
-            return mod_signals[:, 0] + pulse.offset_i, mod_signals[:, 1] + pulse.offset_q
-        else:
-            return envelope_i, envelope_q
+                            raise Exception(f"The number of sequencers requried to play the sequence exceeds the number available {self.device_num_sequencers}.")
 
     def upload(self):
         """Uploads waveforms and programs all sequencers and arms them in preparation for execution."""
-    
-        # Setup
-        for sequencer in range(self.device_num_sequencers):
-            target  = self.device.sequencers[sequencer]
-            if sequencer in self.sequencers:
-                # Enable sequencer syncronisation
-                self.set_device_parameter(target, 'sync_en', value = True)
-            else:
-                self.set_device_parameter(target, 'sync_en', value = False)
-
-        # Upload
         if self.ports['i1'].hardware_demod_en or self.current_pulsesequence_hash != self.last_pulsequence_hash:
             self.last_pulsequence_hash = self.current_pulsesequence_hash
+    
+            # Setup
+            self.used_sequencers = []
+            for port in self.output_ports_keys:                
+                for sequencer in self.sequencers[port]:
+                        self.used_sequencers.append(sequencer.number)
+            for sequencer_number in self.used_sequencers:
+                target  = self.device.sequencers[sequencer_number]
+                self.set_device_parameter(target, 'sync_en', value = True)
+                self.set_device_parameter(target, 'marker_ovr_en', value = True) # Default after reboot = False
+                self.set_device_parameter(target, 'marker_ovr_value', value = 15) # Default after reboot = 0
+            
+            self.unused_sequencers = []
+            for n in range(self.device_num_sequencers):
+                if not n in self.used_sequencers:
+                    self.unused_sequencers.append(n)
+            for sequencer_number in self.unused_sequencers:
+                target  = self.device.sequencers[sequencer_number]
+                self.set_device_parameter(target, 'sync_en', value = False)
+                self.set_device_parameter(target, 'marker_ovr_en', value = True) # Default after reboot = False
+                self.set_device_parameter(target, 'marker_ovr_value', value = 0) # Default after reboot = 0
+
             # Upload waveforms and program
             qblox_dict = {}
-            for sequencer in self.sequencers:
-                # Reformat waveforms to lists
-                for name, waveform in self.waveforms[sequencer].items():
-                    if isinstance(waveform["data"], np.ndarray):
-                        self.waveforms[sequencer][name]["data"] = self.waveforms[sequencer][name]["data"].tolist()  # JSON only supports lists
-
-                # Add sequence program and waveforms to single dictionary and write to JSON file
-                filename = f"{self.name}_sequencer{sequencer}_sequence.json"
-                qblox_dict[sequencer] = {
-                    "waveforms": self.waveforms[sequencer],
-                    "weights": {}, #self.weights,
-                    "acquisitions": self.acquisitions[sequencer],
-                    "program": self.program[sequencer]
-                    }
-                with open(self.data_folder / filename, "w", encoding="utf-8") as file:
-                    json.dump(qblox_dict[sequencer], file, indent=4)
-                    
-                # Upload json file to the device sequencers
-                self.device.sequencers[sequencer].sequence(str(self.data_folder / filename))
+            sequencer:Sequencer
+            for port in self.output_ports_keys:                
+                for sequencer in self.sequencers[port]:
+                    # Add sequence program and waveforms to single dictionary and write to JSON file
+                    filename = f"{self.name}_sequencer{sequencer.number}_sequence.json"
+                    qblox_dict[sequencer] = {
+                        "waveforms": sequencer.waveforms,
+                        "weights": sequencer.weights,
+                        "acquisitions": sequencer.acquisitions,
+                        "program": sequencer.program
+                        }
+                    with open(self.data_folder / filename, "w", encoding="utf-8") as file:
+                        json.dump(qblox_dict[sequencer], file, indent=4)
+                        
+                    # Upload json file to the device sequencers
+                    self.device.sequencers[sequencer.number].sequence(str(self.data_folder / filename))
         
         # Arm
-        for sequencer in self.sequencers:
+        for sequencer in self.used_sequencers:
             # Arm sequencer
             self.device.arm_sequencer(sequencer)
 
@@ -538,34 +505,37 @@ class ClusterQRM_RF(AbstractInstrument):
     def play_sequence(self):
         """Executes the sequence of instructions."""
         # Start playing sequences in all sequencers
-        for sequencer in self.sequencers:
+        for sequencer in self.used_sequencers:
             self.device.start_sequencer(sequencer)
 
     def play_sequence_and_acquire(self):
         """Executes the sequence of instructions and retrieves the readout results.
         """
         # Start playing sequences in all sequencers
-        for sequencer in self.sequencers:
-            self.device.start_sequencer(sequencer)
+        for sequencer_number in self.used_sequencers:
+            self.device.start_sequencer(sequencer_number)
         
         acquisition_results = {}
         # Retrieve data
-        for sequencer in self.sequencers:
-            # Wait for the sequencer to stop with a timeout period of one minute.
-            self.device.get_sequencer_state(sequencer, timeout = 1)
-            #Wait for the acquisition to finish with a timeout period of one second.
-            self.device.get_acquisition_state(sequencer, timeout = 1)
-            acquisition_results[sequencer] = {}
-            for acquisition in self.acquisitions[sequencer]:
-                #Move acquisition data from temporary memory to acquisition list.
-                self.device.store_scope_acquisition(sequencer, acquisition)
-                #Get acquisitions from instrument.
-                raw_results = self.device.get_acquisitions(sequencer)
-                i, q = self._demodulate_and_integrate(raw_results, acquisition, demodulate = True)
-                acquisition_results[sequencer][acquisition] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
-                # DEBUG: QRM Plot Incomming Pulses
-                # import qibolab.instruments.debug.incomming_pulse_plotting as pp
-                # pp.plot(raw_results)
+        for port in self.output_ports_keys:                
+            for sequencer in self.sequencers[port]:
+                sequencer_number = sequencer.number
+                # Wait for the sequencer to stop with a timeout period of one minute.
+                self.device.get_sequencer_state(sequencer_number, timeout = 1)
+                #Wait for the acquisition to finish with a timeout period of one second.
+                self.device.get_acquisition_state(sequencer_number, timeout = 1)
+                acquisition_results[sequencer_number] = {}
+                for pulse in sequencer.pulses.ro_pulses:
+                    acquisition_name = pulse.serial
+                    #Move acquisition data from temporary memory to acquisition list.
+                    self.device.store_scope_acquisition(sequencer_number, acquisition_name)
+                    #Get acquisitions from instrument.
+                    raw_results = self.device.get_acquisitions(sequencer_number)
+                    i, q = self._demodulate_and_integrate(raw_results, acquisition_name, demodulate = True)
+                    acquisition_results[sequencer_number][acquisition_name] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
+                    # DEBUG: QRM Plot Incomming Pulses
+                    # import qibolab.instruments.debug.incomming_pulse_plotting as pp
+                    # pp.plot(raw_results)
         return acquisition_results
 
     def _demodulate_and_integrate(self, raw_results, acquisition, demodulate = True):
@@ -624,21 +594,27 @@ class ClusterQCM_RF(AbstractInstrument):
         address (str): IP_address:module_number
 
     """
-    O1_DEFAULT_SEQUENCER = 0
-    O2_DEFAULT_SEQUENCER = 1
 
-    property_wrapper = lambda parent, *parameter: property(lambda self: parent.device.get(parameter[0]), lambda self,x: parent.set_device_parameter(parent.device, *parameter, value = x))
-    sequencer_property_wrapper = lambda parent, sequencer, *parameter: property(lambda self: parent.device.sequencers[sequencer].get(parameter[0]), lambda self,x: parent.set_device_parameter(parent.device.sequencers[sequencer], *parameter, value = x))
-    
+    DEFAULT_SEQUENCERS = {'o1': 0, 'o2': 1}
+
+    property_wrapper = lambda parent, *parameter: property(
+        lambda self: parent.device.get(parameter[0]), 
+        lambda self,x: parent.set_device_parameter(parent.device, *parameter, value = x)
+        )
+    sequencer_property_wrapper = lambda parent, sequencer, *parameter: property(
+        lambda self: parent.device.sequencers[sequencer].get(parameter[0]), 
+        lambda self,x: parent.set_device_parameter(parent.device.sequencers[sequencer], *parameter, value = x)
+        )
 
     def __init__(self, name, address):
         super().__init__(name, address)
-        self.sequencers = []
-        self.sequencer_channel_map = {} 
-        self.last_pulsequence_hash = "uninitialised"
-        self.current_pulsesequence_hash = ""
-        self.device_parameters = {}
         self.ports = {}
+        self.output_ports_keys = ['o1', 'o2']
+        self.sequencers:dict[Sequencer] = {'o1': [], ' o2': []}
+        self.last_pulsequence_hash:int = 0
+        self.current_pulsesequence_hash:int
+        self.device_parameters = {}
+        self.free_sequencers = [2,3,4,5]
 
     def connect(self):
         """
@@ -653,29 +629,29 @@ class ClusterQCM_RF(AbstractInstrument):
                     {'attenuation': self.property_wrapper('out0_att'), 
                     'lo_enabled': self.property_wrapper('out0_lo_en'), 
                     'lo_frequency': self.property_wrapper('out0_lo_freq'), 
-                    'gain': self.sequencer_property_wrapper(self.O1_DEFAULT_SEQUENCER, 'gain_awg_path0', 'gain_awg_path1'), 
-                    'hardware_mod_en': self.sequencer_property_wrapper(self.O1_DEFAULT_SEQUENCER, 'mod_en_awg'),
-                    'nco_freq': self.sequencer_property_wrapper(self.O1_DEFAULT_SEQUENCER, 'nco_freq'),
-                    'nco_phase_offs': self.sequencer_property_wrapper(self.O1_DEFAULT_SEQUENCER, 'nco_phase_offs')
+                    'gain': self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS['o1'], 'gain_awg_path0', 'gain_awg_path1'), 
+                    'hardware_mod_en': self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS['o1'], 'mod_en_awg'),
+                    'nco_freq': self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS['o1'], 'nco_freq'),
+                    'nco_phase_offs': self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS['o1'], 'nco_phase_offs')
                     })()
 
                 self.ports['o2'] = type(f'port_o1', (), 
                     {'attenuation': self.property_wrapper('out1_att'), 
                     'lo_enabled': self.property_wrapper('out1_lo_en'), 
                     'lo_frequency': self.property_wrapper('out1_lo_freq'), 
-                    'gain': self.sequencer_property_wrapper(self.O2_DEFAULT_SEQUENCER, 'gain_awg_path0', 'gain_awg_path1'), 
-                    'hardware_mod_en': self.sequencer_property_wrapper(self.O2_DEFAULT_SEQUENCER, 'mod_en_awg'),
-                    'nco_freq': self.sequencer_property_wrapper(self.O2_DEFAULT_SEQUENCER, 'nco_freq'),
-                    'nco_phase_offs': self.sequencer_property_wrapper(self.O2_DEFAULT_SEQUENCER, 'nco_phase_offs')
+                    'gain': self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS['o2'], 'gain_awg_path0', 'gain_awg_path1'), 
+                    'hardware_mod_en': self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS['o2'], 'mod_en_awg'),
+                    'nco_freq': self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS['o2'], 'nco_freq'),
+                    'nco_phase_offs': self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS['o2'], 'nco_phase_offs')
                     })()
-
 
                 self.cluster = cluster
                 self.is_connected = True
+
                 self.set_device_parameter(self.device, 'out0_offset_path0', 'out0_offset_path1', value = 0) # Default after reboot = 7.625
                 self.set_device_parameter(self.device, 'out1_offset_path0', 'out1_offset_path1', value = 0) # Default after reboot = 7.625
                                     
-                for target in [self.device.sequencers[self.O1_DEFAULT_SEQUENCER], self.device.sequencers[self.O2_DEFAULT_SEQUENCER]]:
+                for target in [self.device.sequencers[self.DEFAULT_SEQUENCERS['o1']], self.device.sequencers[self.DEFAULT_SEQUENCERS['o2']]]:
 
                     self.set_device_parameter(target, 'cont_mode_en_awg_path0', 'cont_mode_en_awg_path1', value = False)
                     self.set_device_parameter(target, 'cont_mode_waveform_idx_awg_path0', 'cont_mode_waveform_idx_awg_path1', value = 0)
@@ -687,15 +663,19 @@ class ClusterQCM_RF(AbstractInstrument):
                     self.set_device_parameter(target, 'offset_awg_path1', value = 0)
                     self.set_device_parameter(target, 'sync_en', value = True) # Default after reboot = False
                     self.set_device_parameter(target, 'upsample_rate_awg_path0', 'upsample_rate_awg_path1', value = 0)
+                
+                self.set_device_parameter(self.device.sequencers[self.DEFAULT_SEQUENCERS['o1']], 'channel_map_path0_out0_en', 'channel_map_path1_out1_en', value = True)
+                self.set_device_parameter(self.device.sequencers[self.DEFAULT_SEQUENCERS['o1']], 'channel_map_path0_out2_en', 'channel_map_path1_out3_en', value = False)
+                self.set_device_parameter(self.device.sequencers[self.DEFAULT_SEQUENCERS['o2']], 'channel_map_path0_out0_en', 'channel_map_path1_out1_en', value = False)
+                self.set_device_parameter(self.device.sequencers[self.DEFAULT_SEQUENCERS['o2']], 'channel_map_path0_out2_en', 'channel_map_path1_out3_en', value = True)
 
-                self.set_device_parameter(self.device.sequencers[self.O1_DEFAULT_SEQUENCER], 'channel_map_path0_out0_en', 'channel_map_path1_out1_en', value = True)
-                self.set_device_parameter(self.device.sequencers[self.O1_DEFAULT_SEQUENCER], 'channel_map_path0_out2_en', 'channel_map_path1_out3_en', value = False)
-                self.set_device_parameter(self.device.sequencers[self.O2_DEFAULT_SEQUENCER], 'channel_map_path0_out0_en', 'channel_map_path1_out1_en', value = False)
-                self.set_device_parameter(self.device.sequencers[self.O2_DEFAULT_SEQUENCER], 'channel_map_path0_out2_en', 'channel_map_path1_out3_en', value = True)
                 self.device_num_sequencers = len(self.device.sequencers)
                 for sequencer in range(2,  self.device_num_sequencers):
                     self.set_device_parameter(self.device.sequencers[sequencer], 'channel_map_path0_out0_en', 'channel_map_path1_out1_en', value = False) # Default after reboot = True
                     self.set_device_parameter(self.device.sequencers[sequencer], 'channel_map_path0_out2_en', 'channel_map_path1_out3_en', value = False) # Default after reboot = True
+
+                self.sequencers['o1'] = [Sequencer(self.DEFAULT_SEQUENCERS['o1'])]
+                self.sequencers['o2'] = [Sequencer(self.DEFAULT_SEQUENCERS['o2'])]
 
     def set_device_parameter(self, target, *parameters, value):
         if self.is_connected:
@@ -715,7 +695,6 @@ class ClusterQCM_RF(AbstractInstrument):
     
     def erase_device_parameters_cache(self):
         self.device_parameters = {}
-
 
     def setup(self, **kwargs):
         """
@@ -744,6 +723,7 @@ class ClusterQCM_RF(AbstractInstrument):
             # TODO: Remove minimum_delay_between_instructions
 
             self.channel_port_map = kwargs['channel_port_map']
+            self.port_channel_map = {v: k for k, v in self.channel_port_map.items()}
             self.channels = list(self.channel_port_map.keys())
 
             self.ports['o1'].attenuation = kwargs['ports']['o1']['attenuation']                        # Default after reboot = 7
@@ -762,11 +742,10 @@ class ClusterQCM_RF(AbstractInstrument):
             self.ports['o2'].nco_freq = 0                                                              # Default after reboot = 1
             self.ports['o2'].nco_phase_offs = 0                                                        # Default after reboot = 1
 
-
         else:
             raise Exception('There is no connection to the instrument')
 
-    def process_pulse_sequence(self, channel_pulses, nshots):
+    def process_pulse_sequence(self, channels_pulses, nshots):
         """
         Processes a list of pulses, generating the waveforms and sequence program required by the instrument to synthesise them.
         
@@ -774,286 +753,100 @@ class ClusterQCM_RF(AbstractInstrument):
         channel_pulses (dict): a dictionary of {channel (int): pulses (list)}
         nshots (int): the number of times the sequence of pulses will be repeated
         """
-        # Load the channels to which the instrument is connected
-        channels = self.channels
+        # TODO: until the community accepts the use of PulseCollection to replace PulseSequence
+        instrument_pulses = PulseCollection()
+        [instrument_pulses.append(pulse) for channel in channels_pulses for pulse in channels_pulses[channel]]
 
-        # Check if the sequence to be processed is the same as the last one. If so, there is no need to generate waveforms and program
-        self.current_pulsesequence_hash = ""
-        for channel in channels:
-            for pulse in channel_pulses[channel]:
-                self.current_pulsesequence_hash += pulse.serial
+
+        # Save the hash of the current sequence of pulses.
+        self.current_pulsesequence_hash = hash(instrument_pulses)
+        
+        # Check if the sequence to be processed is the same as the last one. 
+        # If so, there is no need to generate new waveforms and program
+        # Except if hardware demodulation is activated (to force a memory reset until qblox fix the issue)
         if self.current_pulsesequence_hash != self.last_pulsequence_hash:
-            # Sort pulses by their start time 
-            for channel in channels:
-                channel_pulses[channel].sort(key=lambda pulse: pulse.start) 
-            
-            # Check if pulses on the same channel overlap
-            for channel in channels:
-                for m in range(1, len(channel_pulses[channel])):
-                    channel_pulses[channel][m].overlaps = []
-                    for n in range(m):
-                        if channel_pulses[channel][m].start - channel_pulses[channel][n].start < channel_pulses[channel][n].duration:
-                            channel_pulses[channel][m].overlaps.append(n)
-                for m in range(1, len(channel_pulses[channel])):
-                    if len(channel_pulses[channel][m].overlaps) > 0:
-                        raise(NotImplementedError, "Overlaping pulses on the same channel are not yet supported.")
-            
-            # Allocate channel pulses to sequencers. 
-            #   At least one sequencer is needed for each channel
-            #   If the memory required for the sequence of pulses exceeds 16384/2, 
-            #   additional sequencers are used to synthesise it
-            self.sequencers = []        # a list of sequencers (int) used
-            sequencer_pulses = {}       # a dictionary of {sequencer (int): pulses (list)}     
-            sequencer = -1              # initialised to -1 so that in the first iteration it becomes 0, the first sequencer number
-            self.waveforms = {}
-            for channel in channels:
-                sequencer += 1
-                if len(channel_pulses[channel]) > 0:
-                    # Select a sequencer and add it to the sequencer_channel_map
-                    if sequencer > self.device_num_sequencers:
-                        raise Exception(f"The number of sequencers requried to play the sequence exceeds the number available {self.device_num_sequencers}.")
-                    # Initialise the corresponding variables 
-                    self.sequencers.append(sequencer)
-                    self.sequencer_channel_map[sequencer]=channel
-                    sequencer_pulses[sequencer]=[]
-                    self.waveforms[sequencer]={}
-                    unique_pulses = {}      # a dictionary of {unique pulse IDs (str): and their I & Q indices (int)}
-                    wc = 0                  # unique waveform counter
-                    waveforms_length = 0        # accumulates the length of unique pulses per sequencer
 
-                    # Iterate over the list of pulses to check if they are unique and if the overal length of the waveform exceeds the memory available
-                    n = 0
-                    while n < len(channel_pulses[channel]):
-                        pulse = channel_pulses[channel][n]
-                        pulse_serial = pulse.serial[pulse.serial.find(',',pulse.serial.find(',')+1)+2:-1] # removes the channel and start information from Pulse.serial to compare between pulses
-                        if pulse_serial not in unique_pulses.keys():
-                            # If the pulse is unique (it hasn't been saved before):
-                            I, Q = self.generate_waveforms_from_pulse(pulse, modulate = True)
-                            # Check if the overall length of the waveform exceeds memory size (waveform_max_length) and split it if necessary
-                            is_split = False
-                            part = 0
-                            while waveforms_length + pulse.duration > self.waveform_max_length:
-                                import copy
-                                first_part = copy.deepcopy(pulse)
-                                first_part.duration = self.waveform_max_length - waveforms_length 
-                                channel_pulses[channel].insert(n, first_part)
-                                n += 1
-                                sequencer_pulses[sequencer].append(first_part)
-                                first_part.waveform_indexes = [0 + wc, 1 + wc]
-                                self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_I"] = {"data": I[:first_part.duration], "index": 0 + wc}
-                                self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_Q"] = {"data": Q[:first_part.duration], "index": 1 + wc}
-                                
-                                pulse = copy.deepcopy(pulse)
-                                I, Q = I[first_part.duration:], Q[first_part.duration:]
-                                pulse.start = pulse.start + self.waveform_max_length - waveforms_length
-                                pulse.duration = pulse.duration - (self.waveform_max_length - waveforms_length)
-                                is_split = True
-                                part += 1
+            for port in self.output_ports_keys:
+                # split the collection of instruments pulses by port and check if there are overlaps
+                port_pulses:PulseCollection = instrument_pulses.get_channel_pulses(self.port_channel_map[port])
+                if not port_pulses.is_empty:
+                    if port_pulses.pulses_overlap:
+                        # TODO: Urgently needed in order to implement multiplexed readout
+                        raise NotImplementedError("Overlaping pulses on the same channel are not yet supported.")
 
-                                # Select a new sequencer
-                                sequencer += 1
-                                if sequencer > self.device_num_sequencers:
-                                        raise Exception(f"The number of sequencers requried to play the sequence exceeds the number available {self.device_num_sequencers}.")
-                                # Initialise the corresponding variables 
-                                self.sequencers.append(sequencer)
-                                self.sequencer_channel_map[sequencer]=channel
-                                sequencer_pulses[sequencer]=[]
-                                self.waveforms[sequencer]={}
-                                unique_pulses = {} 
-                                wc = 0                 
-                                waveforms_length = 0
-    
-                            # Add the pulse to the list of pulses for the current sequencer and save the waveform indexes
-                            sequencer_pulses[sequencer].append(pulse)
-                            pulse.waveform_indexes = [0 + wc, 1 + wc]
-                            if not is_split:
-                                unique_pulses[pulse_serial] =  [0 + wc, 1 + wc]                  
-                            waveforms_length += pulse.duration
-                            self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_I"] = {"data": I, "index": 0 + wc}
-                            self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_Q"] = {"data": Q, "index": 1 + wc}
-                            wc += 2    
+                    sequencer = Sequencer(self.DEFAULT_SEQUENCERS[port])
+                    self.sequencers[port] = [sequencer]
 
-                        else:
-                            sequencer_pulses[sequencer].append(pulse)
-                            pulse.waveform_indexes = unique_pulses[pulse_serial]
-                        n += 1
-
-            # Generate programs for each sequencer
-            pulses = sequencer_pulses
-            self.program = {}
-
-            for sequencer in self.sequencers:
-                # Program
-                sequence_total_duration = pulses[sequencer][-1].start + pulses[sequencer][-1].duration + self.minimum_delay_between_instructions # the minimum delay between instructions is 4ns
-                time_between_repetitions = self.repetition_duration - sequence_total_duration
-                assert time_between_repetitions > 0
-
-                wait_time = time_between_repetitions
-                extra_wait = wait_time % self.wait_loop_step
-                while wait_time > 0 and extra_wait < 4 :
-                    self.wait_loop_step += 1
-                    extra_wait = wait_time % self.wait_loop_step
-                num_wait_loops = (wait_time - extra_wait) // self.wait_loop_step
-
-                header = f"""
-                move {nshots},R0 # nshots
-                nop
-                wait_sync {self.minimum_delay_between_instructions}
-                loop:"""
-                body = ""
-
-                footer = f"""
-                    # wait {wait_time} ns"""
-                if num_wait_loops > 0:
-                    footer += f"""
-                    move {num_wait_loops},R2
-                    nop
-                    waitloop2:
-                        wait {self.wait_loop_step}
-                        loop R2,@waitloop2"""
-                if extra_wait > 0: 
-                    footer += f"""
-                        wait {extra_wait}"""
-                else:
-                    footer += f"""
-                        # wait 0"""
-
-                footer += f"""
-                loop R0,@loop
-                stop 
-                """
-
-                # Add an initial wait instruction for the first pulse of the sequence
-                wait_time = pulses[sequencer][0].start
-                extra_wait = wait_time % self.wait_loop_step
-                while wait_time > 0 and extra_wait < 4 :
-                    self.wait_loop_step += 1
-                    extra_wait = wait_time % self.wait_loop_step
-                num_wait_loops = (wait_time - extra_wait) // self. wait_loop_step
-
-                if wait_time > 0:
-                    initial_wait_instruction = f"""
-                    # wait {wait_time} ns"""
-                    if num_wait_loops > 0:
-                        initial_wait_instruction += f"""
-                    move {num_wait_loops},R1
-                    nop
-                    waitloop1:
-                        wait {self.wait_loop_step}
-                        loop R1,@waitloop1"""
-                    if extra_wait > 0: 
-                        initial_wait_instruction += f"""
-                    wait {extra_wait}"""
-                    else:
-                        initial_wait_instruction += f"""
-                    # wait 0"""
-                else:
-                    initial_wait_instruction = """
-                    # wait 0"""
-
-                body += initial_wait_instruction
-
-                for n in range(len(pulses[sequencer])):
-                    # Calculate the delay_after_play that is to be used as an argument to the play instruction
-                    if len(pulses[sequencer]) > n + 1:
-                        # If there are more pulses to be played, the delay is the time between the pulse end and the next pulse start
-                        delay_after_play = pulses[sequencer][n + 1].start - pulses[sequencer][n].start
-                    else:
-                        delay_after_play = sequence_total_duration - pulses[sequencer][n].start
-
-                    if delay_after_play < self.minimum_delay_between_instructions:
-                            raise Exception(f"The minimum delay between pulses is {self.minimum_delay_between_instructions}ns.")
-                    
-                    # Prepare play instruction: play arg0, arg1, arg2. 
-                    #   arg0 is the index of the I waveform 
-                    #   arg1 is the index of the Q waveform
-                    #   arg2 is the delay between starting the instruction and the next instruction
-                    play_instruction = f"                    play {pulses[sequencer][n].waveform_indexes[0]},{pulses[sequencer][n].waveform_indexes[1]},{delay_after_play}"
-                    # Add the serial of the pulse as a comment
-                    play_instruction += " "*(34-len(play_instruction)) + f"# play waveforms {pulses[sequencer][n]}" #TODO: change for split pulses
-                    body += "\n" + play_instruction
-
-                self.program[sequencer] = header + body + footer
-
-                # DEBUG: QCM print sequencer program
-                # print(f"{self.name} sequencer {sequencer} program:\n" + self.program[sequencer]) 
-
-
-    def generate_waveforms_from_pulse(self, pulse, modulate = True):
-        """
-        Generates I & Q waveforms for the pulse passed as a parameter.
-
-        Args:
-        pulse (Pulse): a Pulse object
-        modulate (bool): {True, False} module the waveform with the pulse frequency
-
-        Returns:
-        envelope_i (list) of (float), envelope_q (list) of (float): a tuple with I & Q waveform samples
-        """
-        envelope_i = pulse.envelope_i
-        envelope_q = pulse.envelope_q 
-        assert len(envelope_i) == len(envelope_q)
-        envelopes = np.array([envelope_i, envelope_q])
-        if modulate:
-            time = np.arange(pulse.duration) / self.sampling_rate
-            cosalpha = np.cos(2 * np.pi * pulse.frequency * time + pulse.phase)
-            sinalpha = np.sin(2 * np.pi * pulse.frequency * time + pulse.phase)
-            mod_matrix = np.array([[ cosalpha, -sinalpha], 
-                                   [sinalpha, cosalpha]])
-            # mod_signals = np.einsum("abt,bt->ta", mod_matrix, envelopes)
-            result = []
-            for it, t, ii, qq in zip(np.arange(pulse.duration), time, envelope_i, envelope_q):
-                result.append(mod_matrix[:, :, it] @ np.array([ii, qq]))
-            mod_signals = np.array(result)
-
-            # DEBUG: QCM plot envelopes
-            # import matplotlib.pyplot as plt
-            # plt.plot(mod_signals[:, 0] + pulse.offset_i)
-            # plt.plot(mod_signals[:, 1] + pulse.offset_q)
-            # plt.show()
-
-            return mod_signals[:, 0] + pulse.offset_i, mod_signals[:, 1] + pulse.offset_q
-        else:
-            return envelope_i, envelope_q
+                    port_pulses_to_be_processed = port_pulses.shallow_copy()
+                    while not port_pulses_to_be_processed.is_empty:
+                        try:
+                            pulse: Pulse = port_pulses_to_be_processed[0]
+                            pulse.modulate_waveforms = not self.ports[port].hardware_mod_en
+                            sequencer.add_pulse(pulse)
+                            port_pulses_to_be_processed.remove(pulse)
+                        except Sequencer.NotEnoughMemory:
+                            if len(pulse.waveform_i) * 2 > Sequencer.MEMORY:
+                                raise NotImplementedError(f"Pulses with waveforms longer than the memory of a sequencer ({Sequencer.MEMORY // 2}) are not supported.")
+                            if len(self.free_sequencers) > 0:
+                                default_sequencer_number = 0
+                                next_sequencer_number = self.free_sequencers.pop(0)
+                                for parameter in self.device.sequencers[default_sequencer_number]:
+                                    if not parameter is None:
+                                        target  = self.device.sequencers[next_sequencer_number]
+                                        self.set_device_parameter(target, parameter, value = self.device.sequencers[default_sequencer_number].get(param_name = parameter))
+                                sequencer = Sequencer(next_sequencer_number)
+                                self.sequencers[port].append(sequencer)
+                            else:
+                                raise Exception(f"The number of sequencers requried to play the sequence exceeds the number available {self.device_num_sequencers}.")
 
     def upload(self):
         """Uploads waveforms and programs all sequencers and arms them in preparation for execution."""
-        # Setup
-        for sequencer in range(self.device_num_sequencers):
-            target  = self.device.sequencers[sequencer]
-            if sequencer in self.sequencers:
-                # Enable sequencer syncronisation
-                self.set_device_parameter(target, 'sync_en', value = True)
-            else:
-                self.set_device_parameter(target, 'sync_en', value = False)
-                
-        # Upload
         if self.current_pulsesequence_hash != self.last_pulsequence_hash:
             self.last_pulsequence_hash = self.current_pulsesequence_hash
-            # TODO: dont upload if the same 
+    
+            # Setup
+            self.used_sequencers = []
+            for port in self.output_ports_keys:                
+                for sequencer in self.sequencers[port]:
+                    if not sequencer.pulses.is_empty:
+                        self.used_sequencers.append(sequencer.number)
+            for sequencer_number in self.used_sequencers:
+                target  = self.device.sequencers[sequencer_number]
+                self.set_device_parameter(target, 'sync_en', value = True)
+                self.set_device_parameter(target, 'marker_ovr_en', value = True) # Default after reboot = False
+                self.set_device_parameter(target, 'marker_ovr_value', value = 15) # Default after reboot = 0
+            
+            self.unused_sequencers = []
+            for n in range(self.device_num_sequencers):
+                if not n in self.used_sequencers:
+                    self.unused_sequencers.append(n)
+            for sequencer_number in self.unused_sequencers:
+                target  = self.device.sequencers[sequencer_number]
+                self.set_device_parameter(target, 'sync_en', value = False)
+                self.set_device_parameter(target, 'marker_ovr_en', value = True) # Default after reboot = False
+                self.set_device_parameter(target, 'marker_ovr_value', value = 0) # Default after reboot = 0
+
             # Upload waveforms and program
             qblox_dict = {}
-            for sequencer in self.sequencers:
-                # Reformat waveforms to lists
-                for name, waveform in self.waveforms[sequencer].items():
-                    if isinstance(waveform["data"], np.ndarray):
-                        self.waveforms[sequencer][name]["data"] = self.waveforms[sequencer][name]["data"].tolist()  # JSON only supports lists
-
-                # Add sequence program and waveforms to single dictionary and write to JSON file
-                filename = f"{self.name}_sequencer{sequencer}_sequence.json"
-                qblox_dict[sequencer] = {
-                    "waveforms": self.waveforms[sequencer],
-                    "weights": {}, #self.weights,
-                    "acquisitions": {}, #self.acquisitions,
-                    "program": self.program[sequencer]
-                    }
-                with open(self.data_folder / filename, "w", encoding="utf-8") as file:
-                    json.dump(qblox_dict[sequencer], file, indent=4)
-                # Upload json file to the device sequencers
-                self.device.sequencers[sequencer].sequence(str(self.data_folder / filename))
-
+            sequencer:Sequencer
+            for port in self.output_ports_keys:                
+                for sequencer in self.sequencers[port]:
+                    # Add sequence program and waveforms to single dictionary and write to JSON file
+                    filename = f"{self.name}_sequencer{sequencer.number}_sequence.json"
+                    qblox_dict[sequencer] = {
+                        "waveforms": sequencer.waveforms,
+                        "weights": sequencer.weights,
+                        "acquisitions": sequencer.acquisitions,
+                        "program": sequencer.program
+                        }
+                    with open(self.data_folder / filename, "w", encoding="utf-8") as file:
+                        json.dump(qblox_dict[sequencer], file, indent=4)
+                        
+                    # Upload json file to the device sequencers
+                    self.device.sequencers[sequencer.number].sequence(str(self.data_folder / filename))
+        
         # Arm
-        for sequencer in self.sequencers:
+        for sequencer in self.used_sequencers:
             # Arm sequencer
             self.device.arm_sequencer(sequencer)
 
@@ -1064,7 +857,7 @@ class ClusterQCM_RF(AbstractInstrument):
 
     def play_sequence(self):
         """Executes the sequence of instructions."""
-        for sequencer in self.sequencers:
+        for sequencer in self.used_sequencers:
             # Start sequencer
             self.device.start_sequencer(sequencer)
 
