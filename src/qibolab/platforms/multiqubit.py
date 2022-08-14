@@ -1,6 +1,6 @@
 from qibo.config import raise_error
 from qibolab.platforms.abstract import AbstractPlatform
-from ..pulses import PulseCollection
+from qibolab.pulses import PulseSequence
 
 
 class MultiqubitPlatform(AbstractPlatform):
@@ -8,11 +8,14 @@ class MultiqubitPlatform(AbstractPlatform):
     def run_calibration(self):
         raise_error(NotImplementedError)
 
-    def execute_pulse_sequence(self, sequence, nshots=None):
+    def execute_pulse_sequence(self, sequence: PulseSequence, nshots=None):
         if not self.is_connected:
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
         if nshots is None:
             nshots = self.hardware_avg
+        
+        # DEBUG: Plot Pulse Sequence
+        sequence.plot()
 
         # Process Pulse Sequence. Assign pulses to instruments and generate waveforms & program
         instrument_pulses = {}
@@ -21,7 +24,7 @@ class MultiqubitPlatform(AbstractPlatform):
             roles[name] = self.settings['instruments'][name]['roles']
             if 'readout' in roles[name] or 'control' in roles[name]:
                 instrument_pulses[name] = sequence.get_channel_pulses(* self.instruments[name].channels)
-                self.instruments[name].process_pulse_sequence(instrument_pulses, nshots)
+                self.instruments[name].process_pulse_sequence(instrument_pulses[name], nshots)
                 self.instruments[name].upload()
 
         for name in self.instruments:

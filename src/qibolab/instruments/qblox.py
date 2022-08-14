@@ -2,7 +2,7 @@ import json
 import numpy as np
 import qblox_instruments
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
-from qibolab.pulses import PulseCollection, Pulse, PulseShape, PulseType
+from qibolab.pulses import PulseSequence, Pulse, PulseShape, PulseType
 
 
 class Sequencer():
@@ -16,7 +16,7 @@ class Sequencer():
         self.number = number
         self.unique_waveforms:list = [] # Waveform
         self.available_memory:int = Sequencer.MEMORY
-        self.pulses:PulseCollection = PulseCollection()
+        self.pulses:PulseSequence = PulseSequence()
 
         self.minimum_delay_between_instructions:int = 4
         self.repetition_duration:int = 200_000
@@ -27,7 +27,7 @@ class Sequencer():
 
         waveform_i, waveform_q = pulse.waveform_i, pulse.waveform_q
 
-        if waveform_i not in self.unique_waveforms and waveform_q not in self.unique_waveforms:
+        if waveform_i not in self.unique_waveforms or waveform_q not in self.unique_waveforms:
             memory_needed = 0
             if not waveform_i in self.unique_waveforms:
                 memory_needed +=  len(waveform_i) 
@@ -394,7 +394,7 @@ class ClusterQRM_RF(AbstractInstrument):
         else:
             raise Exception('There is no connection to the instrument')
 
-    def process_pulse_sequence(self, channels_pulses, nshots):
+    def process_pulse_sequence(self, instrument_pulses, nshots):
         """
         Processes a list of pulses, generating the waveforms and sequence program required by the instrument to synthesise them.
         
@@ -402,10 +402,6 @@ class ClusterQRM_RF(AbstractInstrument):
         channel_pulses (dict): a dictionary of {channel (int): pulses (list)}
         nshots (int): the number of times the sequence of pulses will be repeated
         """
-        # TODO: until the community accepts the use of PulseCollection to replace PulseSequence
-        instrument_pulses = PulseCollection()
-        [instrument_pulses.append(pulse) for channel in channels_pulses for pulse in channels_pulses[channel]]
-
 
         # Save the hash of the current sequence of pulses.
         self.current_pulsesequence_hash = hash(instrument_pulses)
@@ -413,11 +409,11 @@ class ClusterQRM_RF(AbstractInstrument):
         # Check if the sequence to be processed is the same as the last one. 
         # If so, there is no need to generate new waveforms and program
         # Except if hardware demodulation is activated (to force a memory reset until qblox fix the issue)
-        if self.ports['i1'].hardware_demod_en or self.current_pulsesequence_hash != self.last_pulsequence_hash:
+        if True: # self.ports['i1'].hardware_demod_en or self.current_pulsesequence_hash != self.last_pulsequence_hash:
 
             port = 'o1'
             # split the collection of instruments pulses by port and check if there are overlaps
-            port_pulses:PulseCollection = instrument_pulses.get_channel_pulses(self.port_channel_map[port])
+            port_pulses:PulseSequence = instrument_pulses.get_channel_pulses(self.port_channel_map[port])
             if not port_pulses.is_empty:
                 if port_pulses.pulses_overlap:
                     # TODO: Urgently needed in order to implement multiplexed readout
@@ -450,14 +446,14 @@ class ClusterQRM_RF(AbstractInstrument):
 
     def upload(self):
         """Uploads waveforms and programs all sequencers and arms them in preparation for execution."""
-        if self.ports['i1'].hardware_demod_en or self.current_pulsesequence_hash != self.last_pulsequence_hash:
+        if True: # self.ports['i1'].hardware_demod_en or self.current_pulsesequence_hash != self.last_pulsequence_hash:
             self.last_pulsequence_hash = self.current_pulsesequence_hash
     
             # Setup
             self.used_sequencers = []
             for port in self.output_ports_keys:                
                 for sequencer in self.sequencers[port]:
-                        self.used_sequencers.append(sequencer.number)
+                    self.used_sequencers.append(sequencer.number)
             for sequencer_number in self.used_sequencers:
                 target  = self.device.sequencers[sequencer_number]
                 self.set_device_parameter(target, 'sync_en', value = True)
@@ -610,7 +606,7 @@ class ClusterQCM_RF(AbstractInstrument):
         super().__init__(name, address)
         self.ports = {}
         self.output_ports_keys = ['o1', 'o2']
-        self.sequencers:dict[Sequencer] = {'o1': [], ' o2': []}
+        self.sequencers:dict[Sequencer] = {'o1': [], 'o2': []}
         self.last_pulsequence_hash:int = 0
         self.current_pulsesequence_hash:int
         self.device_parameters = {}
@@ -673,9 +669,6 @@ class ClusterQCM_RF(AbstractInstrument):
                 for sequencer in range(2,  self.device_num_sequencers):
                     self.set_device_parameter(self.device.sequencers[sequencer], 'channel_map_path0_out0_en', 'channel_map_path1_out1_en', value = False) # Default after reboot = True
                     self.set_device_parameter(self.device.sequencers[sequencer], 'channel_map_path0_out2_en', 'channel_map_path1_out3_en', value = False) # Default after reboot = True
-
-                self.sequencers['o1'] = [Sequencer(self.DEFAULT_SEQUENCERS['o1'])]
-                self.sequencers['o2'] = [Sequencer(self.DEFAULT_SEQUENCERS['o2'])]
 
     def set_device_parameter(self, target, *parameters, value):
         if self.is_connected:
@@ -745,7 +738,7 @@ class ClusterQCM_RF(AbstractInstrument):
         else:
             raise Exception('There is no connection to the instrument')
 
-    def process_pulse_sequence(self, channels_pulses, nshots):
+    def process_pulse_sequence(self, instrument_pulses, nshots):
         """
         Processes a list of pulses, generating the waveforms and sequence program required by the instrument to synthesise them.
         
@@ -753,10 +746,6 @@ class ClusterQCM_RF(AbstractInstrument):
         channel_pulses (dict): a dictionary of {channel (int): pulses (list)}
         nshots (int): the number of times the sequence of pulses will be repeated
         """
-        # TODO: until the community accepts the use of PulseCollection to replace PulseSequence
-        instrument_pulses = PulseCollection()
-        [instrument_pulses.append(pulse) for channel in channels_pulses for pulse in channels_pulses[channel]]
-
 
         # Save the hash of the current sequence of pulses.
         self.current_pulsesequence_hash = hash(instrument_pulses)
@@ -764,11 +753,11 @@ class ClusterQCM_RF(AbstractInstrument):
         # Check if the sequence to be processed is the same as the last one. 
         # If so, there is no need to generate new waveforms and program
         # Except if hardware demodulation is activated (to force a memory reset until qblox fix the issue)
-        if self.current_pulsesequence_hash != self.last_pulsequence_hash:
+        if True: # self.current_pulsesequence_hash != self.last_pulsequence_hash:
 
             for port in self.output_ports_keys:
                 # split the collection of instruments pulses by port and check if there are overlaps
-                port_pulses:PulseCollection = instrument_pulses.get_channel_pulses(self.port_channel_map[port])
+                port_pulses:PulseSequence = instrument_pulses.get_channel_pulses(self.port_channel_map[port])
                 if not port_pulses.is_empty:
                     if port_pulses.pulses_overlap:
                         # TODO: Urgently needed in order to implement multiplexed readout
@@ -801,15 +790,14 @@ class ClusterQCM_RF(AbstractInstrument):
 
     def upload(self):
         """Uploads waveforms and programs all sequencers and arms them in preparation for execution."""
-        if self.current_pulsesequence_hash != self.last_pulsequence_hash:
+        if True: # self.current_pulsesequence_hash != self.last_pulsequence_hash:
             self.last_pulsequence_hash = self.current_pulsesequence_hash
     
             # Setup
             self.used_sequencers = []
             for port in self.output_ports_keys:                
                 for sequencer in self.sequencers[port]:
-                    if not sequencer.pulses.is_empty:
-                        self.used_sequencers.append(sequencer.number)
+                    self.used_sequencers.append(sequencer.number)
             for sequencer_number in self.used_sequencers:
                 target  = self.device.sequencers[sequencer_number]
                 self.set_device_parameter(target, 'sync_en', value = True)

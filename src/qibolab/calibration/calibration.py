@@ -10,6 +10,7 @@ from quantify_core.measurement.control import Gettable, Settable
 from quantify_core.data.handling import set_datadir
 
 from qibolab import Platform
+from qibolab.platforms.abstract import AbstractPlatform
 from qibolab.paths import qibolab_folder
 from qibolab.calibration import utils
 from qibolab.calibration import fitting
@@ -47,7 +48,7 @@ class Calibration():
     #--------------------------#
 
     def run_resonator_spectroscopy(self, qubit=0):
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
         platform.reload_settings()
         mc = self.mc
 
@@ -109,7 +110,7 @@ class Calibration():
         return resonator_freq, avg_voltage, peak_voltage, dataset
 
     def run_resonator_punchout(self, qubit=0):
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
         platform.reload_settings()
         mc = self.mc
 
@@ -143,7 +144,7 @@ class Calibration():
         return dataset
 
     def run_resonator_spectroscopy_flux(self, qubit=0, fluxline=0):
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
         platform.reload_settings()
         mc = self.mc
 
@@ -182,7 +183,7 @@ class Calibration():
         return dataset
 
     def run_qubit_spectroscopy(self, qubit=0):
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
         platform.reload_settings()
         mc = self.mc
 
@@ -196,7 +197,7 @@ class Calibration():
 
         sequence = PulseSequence()
         qd_pulse = platform.qubit_drive_pulse(qubit, start = 0, duration = 5000) 
-        ro_pulse = platform.qubit_readout_pulse(qubit, start = 5000)
+        ro_pulse = platform.qubit_readout_pulse(qubit, start = qd_pulse.finish)
         sequence.add(qd_pulse)
         sequence.add(ro_pulse)
 
@@ -244,7 +245,7 @@ class Calibration():
         return qubit_freq, avg_voltage, peak_voltage, dataset
 
     def run_qubit_spectroscopy_flux(self, qubit=0, fluxline=0):
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
         platform.reload_settings()
         mc = self.mc
 
@@ -257,7 +258,7 @@ class Calibration():
 
         sequence = PulseSequence()
         qd_pulse = platform.qubit_drive_pulse(qubit, start = 0, duration = 5000) 
-        ro_pulse = platform.qubit_readout_pulse(qubit, start = 5000)
+        ro_pulse = platform.qubit_readout_pulse(qubit, start = qd_pulse.finish)
         sequence.add(qd_pulse)
         sequence.add(ro_pulse)
 
@@ -290,7 +291,7 @@ class Calibration():
         return dataset
 
     def run_rabi_pulse_length(self, qubit=0):
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
         platform.reload_settings()
         mc = self.mc
 
@@ -329,7 +330,7 @@ class Calibration():
         return pi_pulse_duration, pi_pulse_amplitude, rabi_oscillations_pi_pulse_peak_voltage, dataset
 
     def ro_pulse_phase(self, qubit=0):
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
         platform.reload_settings()
         mc = self.mc
 
@@ -340,7 +341,7 @@ class Calibration():
 
         sequence = PulseSequence()
         qd_pulse = platform.RX_pulse(qubit, start = 0) 
-        ro_pulse = platform.qubit_readout_pulse(qubit, start = qd_pulse.duration)
+        ro_pulse = platform.qubit_readout_pulse(qubit, start = qd_pulse.finish)
         sequence.add(qd_pulse)
         sequence.add(ro_pulse)
 
@@ -356,7 +357,7 @@ class Calibration():
         return dataset
 
     def run_rabi_pulse_gain(self, qubit=0):
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
         platform.reload_settings()
         mc = self.mc
 
@@ -367,7 +368,7 @@ class Calibration():
 
         sequence = PulseSequence()
         qd_pulse = platform.RX_pulse(qubit, start = 0)  
-        ro_pulse = platform.qubit_readout_pulse(qubit, start = qd_pulse.duration)
+        ro_pulse = platform.qubit_readout_pulse(qubit, start = qd_pulse.finish)
         sequence.add(qd_pulse)
         sequence.add(ro_pulse)
 
@@ -397,7 +398,7 @@ class Calibration():
         return pi_pulse_gain, pi_pulse_amplitude, rabi_oscillations_pi_pulse_peak_voltage, dataset
 
     def run_rabi_pulse_amplitude(self, qubit=0):
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
         platform.reload_settings()
         mc = self.mc
 
@@ -408,7 +409,7 @@ class Calibration():
 
         sequence = PulseSequence()
         qd_pulse = platform.RX_pulse(qubit, start = 0)  
-        ro_pulse = platform.qubit_readout_pulse(qubit, start = qd_pulse.duration)
+        ro_pulse = platform.qubit_readout_pulse(qubit, start = qd_pulse.finish)
         sequence.add(qd_pulse)
         sequence.add(ro_pulse)
 
@@ -438,7 +439,7 @@ class Calibration():
 
     # T1: RX(pi) - wait t(rotates z) - readout
     def run_t1(self, qubit=0):
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
         platform.reload_settings()
         mc = self.mc
 
@@ -449,7 +450,7 @@ class Calibration():
 
         sequence = PulseSequence()
         RX_pulse = platform.RX_pulse(qubit, start = 0)
-        ro_pulse = platform.qubit_readout_pulse(qubit, start = RX_pulse.duration)
+        ro_pulse = platform.qubit_readout_pulse(qubit, start = RX_pulse.finish)
         sequence.add(RX_pulse)
         sequence.add(ro_pulse)
 
@@ -476,7 +477,7 @@ class Calibration():
 
     # Ramsey: RX(pi/2) - wait t(rotates z) - RX(pi/2) - readout
     def run_ramsey(self, qubit=0):
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
         platform.reload_settings()
         sampling_rate = platform.sampling_rate
         mc = self.mc
@@ -488,8 +489,8 @@ class Calibration():
 
         sequence = PulseSequence()
         RX90_pulse1 = platform.RX90_pulse(qubit, start = 0)
-        RX90_pulse2 = platform.RX90_pulse(qubit, start = RX90_pulse1.duration, phase = RX90_pulse1.duration / sampling_rate * 2 * np.pi * RX90_pulse1.frequency)
-        ro_pulse = platform.qubit_readout_pulse(qubit, start = RX90_pulse1.duration + RX90_pulse2.duration)
+        RX90_pulse2 = platform.RX90_pulse(qubit, start = RX90_pulse1.finish)
+        ro_pulse = platform.qubit_readout_pulse(qubit, start = RX90_pulse2.finish)
         sequence.add(RX90_pulse1)
         sequence.add(RX90_pulse2)
         sequence.add(ro_pulse)
@@ -516,7 +517,7 @@ class Calibration():
 
     # Ramsey: RX(pi/2) - wait t(rotates z) - RX(pi/2) - readout
     def run_ramsey_frequency_detuned(self, qubit):
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
         platform.reload_settings()
         sampling_rate = platform.sampling_rate
         mc = self.mc
@@ -529,8 +530,8 @@ class Calibration():
 
         sequence = PulseSequence()
         RX90_pulse1 = platform.RX90_pulse(qubit, start = 0)
-        RX90_pulse2 = platform.RX90_pulse(qubit, start = RX90_pulse1.duration, phase = (RX90_pulse1.duration / sampling_rate) * (2 * np.pi) * (RX90_pulse1.frequency))
-        ro_pulse = platform.qubit_readout_pulse(qubit, start = RX90_pulse1.duration + RX90_pulse2.duration)
+        RX90_pulse2 = platform.RX90_pulse(qubit, start = RX90_pulse1.finish)
+        ro_pulse = platform.qubit_readout_pulse(qubit, start = RX90_pulse2.finish)
         sequence.add(RX90_pulse1)
         sequence.add(RX90_pulse2)
         sequence.add(ro_pulse)
@@ -575,7 +576,7 @@ class Calibration():
         return new_t2, (corrected_qubit_freq - runcard_qubit_freq), corrected_qubit_freq, dataset
 
     def run_dispersive_shift(self, qubit=0):
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
         platform.reload_settings()
         mc = self.mc
 
@@ -611,7 +612,7 @@ class Calibration():
         # Shifted Spectroscopy
         sequence = PulseSequence()
         RX_pulse = platform.RX_pulse(qubit, start = 0)
-        ro_pulse = platform.qubit_readout_pulse(qubit, start = RX_pulse.duration)
+        ro_pulse = platform.qubit_readout_pulse(qubit, start = RX_pulse.finish)
         sequence.add(RX_pulse)
         sequence.add(ro_pulse)
 
@@ -637,7 +638,7 @@ class Calibration():
         return shifted_resonator_freq, dispersive_shift, peak_voltage, dataset
 
     def run_rabi_pulse_length_and_gain(self, qubit=0):
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
         platform.reload_settings()
         mc = self.mc
 
@@ -670,7 +671,7 @@ class Calibration():
         return dataset
 
     def run_rabi_pulse_length_and_amplitude(self, qubit=0):
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
         platform.reload_settings()
         mc = self.mc
 
@@ -704,15 +705,15 @@ class Calibration():
 
     # Spin Echo: RX(pi/2) - wait t(rotates z) - RX(pi) - wait t(rotates z) - readout
     def run_spin_echo(self, qubit=0):
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
         platform.reload_settings()
         sampling_rate = platform.sampling_rate
         mc = self.mc
 
         sequence = PulseSequence()
         RX90_pulse = platform.RX90_pulse(qubit, start = 0)
-        RX_pulse = platform.RX_pulse(qubit, start = RX90_pulse.duration, phase = RX90_pulse.duration / sampling_rate * 2 * np.pi * RX90_pulse.frequency)
-        ro_pulse = platform.qubit_readout_pulse(qubit, start = RX_pulse.start + RX_pulse.duration)
+        RX_pulse = platform.RX_pulse(qubit, start = RX90_pulse.finish)
+        ro_pulse = platform.qubit_readout_pulse(qubit, start = RX_pulse.finish)
         sequence.add(RX90_pulse)
         sequence.add(RX_pulse)
         sequence.add(ro_pulse)
@@ -738,16 +739,16 @@ class Calibration():
     # Spin Echo 3 Pulses: RX(pi/2) - wait t(rotates z) - RX(pi) - wait t(rotates z) - RX(pi/2) - readout
     def run_spin_echo_3pulses(self, qubit=0):
         
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
         platform.reload_settings()
         sampling_rate = platform.sampling_rate
         mc = self.mc
 
         sequence = PulseSequence()
         RX90_pulse1 = platform.RX90_pulse(qubit, start = 0)
-        RX_pulse = platform.RX_pulse(qubit, start = RX90_pulse1.duration)
-        RX90_pulse2 = platform.RX90_pulse(qubit, start = RX_pulse.start + RX_pulse.duration)
-        ro_pulse = platform.qubit_readout_pulse(qubit, start = RX90_pulse2.start + RX90_pulse2.duration)
+        RX_pulse = platform.RX_pulse(qubit, start = RX90_pulse1.finish)
+        RX90_pulse2 = platform.RX90_pulse(qubit, start = RX_pulse.finish)
+        ro_pulse = platform.qubit_readout_pulse(qubit, start = RX90_pulse2.finish)
         sequence.add(RX90_pulse1)
         sequence.add(RX_pulse)
         sequence.add(RX90_pulse2)
@@ -770,7 +771,7 @@ class Calibration():
         return dataset
 
     def calibrate_qubit_states(self, qubit=0):
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
         platform.reload_settings()
 
         self.reload_settings()
@@ -779,7 +780,7 @@ class Calibration():
         #create exc and gnd pulses 
         exc_sequence = PulseSequence()
         RX_pulse = platform.RX_pulse(qubit, start = 0)
-        ro_pulse = platform.qubit_readout_pulse(qubit, start = RX_pulse.duration)
+        ro_pulse = platform.qubit_readout_pulse(qubit, start = RX_pulse.finish)
         exc_sequence.add(RX_pulse)
         exc_sequence.add(ro_pulse)
 
@@ -822,7 +823,7 @@ class Calibration():
         return normalized_voltage
 
     def _get_sequence_from_gate_pair(self, gates, qubit, beta_param):   
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
         sampling_rate = platform.sampling_rate
         pulse_frequency = platform.settings['native_gates']['single_qubit'][qubit]['RX']['frequency']
         pulse_duration = platform.settings['native_gates']['single_qubit'][qubit]['RX']['duration']
@@ -841,33 +842,33 @@ class Calibration():
             if (gate == "RX(pi)"):
                 #print("Transforming to sequence RX(pi) gate")
                 if (beta_param == None):
-                    RX_pulse = platform.RX_pulse(qubit, start = pulse_start, phase = (pulse_start / sampling_rate) * 2 * np.pi * pulse_frequency)
+                    RX_pulse = platform.RX_pulse(qubit, start = pulse_start)
                 else:
-                    RX_pulse = platform.RX_drag_pulse(qubit, start = pulse_start, phase = (pulse_start / sampling_rate) * 2 * np.pi * pulse_frequency, beta=beta_param)
+                    RX_pulse = platform.RX_drag_pulse(qubit, start = pulse_start)
                 sequence.add(RX_pulse)
 
             if (gate == "RX(pi/2)"):
                 #print("Transforming to sequence RX(pi/2) gate")
                 if (beta_param == None):
-                    RX90_pulse = platform.RX90_pulse(qubit, start = pulse_start, phase = (pulse_start / sampling_rate) * 2 * np.pi * pulse_frequency)
+                    RX90_pulse = platform.RX90_pulse(qubit, start = pulse_start)
                 else:
-                    RX90_pulse = platform.RX90_drag_pulse(qubit, start = pulse_start, phase = (pulse_start / sampling_rate) * 2 * np.pi * pulse_frequency, beta=beta_param)
+                    RX90_pulse = platform.RX90_drag_pulse(qubit, start = pulse_start, beta=beta_param)
                 sequence.add(RX90_pulse)
 
             if (gate == "RY(pi)"):
                 #print("Transforming to sequence RY(pi) gate")
                 if (beta_param == None):
-                    RY_pulse = platform.RX_pulse(qubit, start = pulse_start, phase = (pulse_start / sampling_rate) * 2 * np.pi * pulse_frequency + np.pi/2)
+                    RY_pulse = platform.RX_pulse(qubit, start = pulse_start, relative_phase = np.pi/2)
                 else:
-                    RY_pulse = platform.RX_drag_pulse(qubit, start = pulse_start, phase = (pulse_start / sampling_rate) * 2 * np.pi * pulse_frequency + np.pi/2, beta=beta_param)
+                    RY_pulse = platform.RX_drag_pulse(qubit, start = pulse_start, relative_phase = np.pi/2, beta=beta_param)
                 sequence.add(RY_pulse)
 
             if (gate == "RY(pi/2)"):
                 #print("Transforming to sequence RY(pi/2) gate")
                 if (beta_param == None):
-                    RY90_pulse = platform.RX90_pulse(qubit, start = pulse_start, phase = (pulse_start / sampling_rate) * 2 * np.pi * pulse_frequency + np.pi/2)
+                    RY90_pulse = platform.RX90_pulse(qubit, start = pulse_start, relative_phase = np.pi/2)
                 else:
-                    RY90_pulse = platform.RX90_drag_pulse(qubit, start = pulse_start, phase = (pulse_start / sampling_rate) * 2 * np.pi * pulse_frequency + np.pi/2, beta=beta_param)
+                    RY90_pulse = platform.RX90_drag_pulse(qubit, start = pulse_start, relative_phase = np.pi/2, beta=beta_param)
                 sequence.add(RY90_pulse)
             
             sequenceDuration = sequenceDuration + pulse_duration
@@ -880,7 +881,7 @@ class Calibration():
         return sequence
 
     def run_allXY(self, qubit, beta_param=None):
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
         platform.reload_settings()
 
         #allXY rotations
@@ -931,7 +932,7 @@ class Calibration():
     
     #RO Matrix
     def run_RO_matrix(self):
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
         platform.reload_settings()
         nqubits = platform.settings['nqubits']
 
@@ -957,7 +958,7 @@ class Calibration():
                     if(n == "1"):
                         #Define sequence for qubit for Pipulse state
                         RX_pulse = platform.RX_pulse(qubit, start = 0)
-                        ro_pulse = platform.qubit_readout_pulse(qubit, start = RX_pulse.duration)
+                        ro_pulse = platform.qubit_readout_pulse(qubit, start = RX_pulse.finish)
                         seq.add(RX_pulse)
                         seq.add(ro_pulse)
                         
@@ -994,7 +995,7 @@ class Calibration():
         return np.array(RO_matrix) / self.niter
 
     def run_drag_pulse_tunning(self, qubit):
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
         platform.reload_settings()
         sampling_rate = platform.sampling_rate
         
@@ -1013,9 +1014,9 @@ class Calibration():
             #drag pulse RX(pi/2)
             RX90_drag_pulse = platform.RX90_drag_pulse(qubit, start = 0, beta = beta_param)
             #drag pulse RY(pi)
-            RY_drag_pulse = platform.RX_drag_pulse(qubit, start = RX90_drag_pulse.duration, phase = RX90_drag_pulse.duration / sampling_rate * (2 * np.pi) * RX90_drag_pulse.frequency + np.pi/2, beta=beta_param)            
+            RY_drag_pulse = platform.RX_drag_pulse(qubit, start = RX90_drag_pulse.finish, relative_phase = + np.pi/2, beta=beta_param)            
             #RO pulse
-            ro_pulse = platform.qubit_readout_pulse(qubit, start = RX90_drag_pulse.duration + RY_drag_pulse.duration)
+            ro_pulse = platform.qubit_readout_pulse(qubit, start = RY_drag_pulse.finish)
             
             # Rx(pi/2) - Ry(pi) - Ro
             seq1 = PulseSequence()
@@ -1029,9 +1030,9 @@ class Calibration():
             platform.stop()
 
             #drag pulse RY(pi)
-            RY_drag_pulse = platform.RX_drag_pulse(qubit, start = 0, phase = np.pi/2, beta=beta_param)
+            RY_drag_pulse = platform.RX_drag_pulse(qubit, start = 0, relative_phase = np.pi/2, beta=beta_param)
             #drag pulse RX(pi/2)
-            RX90_drag_pulse = platform.RX90_drag_pulse(qubit, start = RY_drag_pulse.duration, phase = RY_drag_pulse.duration / sampling_rate * (2 * np.pi) * RX90_drag_pulse.frequency, beta = beta_param)
+            RX90_drag_pulse = platform.RX90_drag_pulse(qubit, start = RY_drag_pulse.finish, beta = beta_param)
             
             # Ry(pi) - Rx(pi/2) - Ro
             seq2 = PulseSequence()
@@ -1054,7 +1055,7 @@ class Calibration():
         return beta_optimal
 
     def run_flipping(self, qubit):
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
         platform.reload_settings()
 
         self.reload_settings()
@@ -1118,7 +1119,7 @@ class Calibration():
         return amplitude_delta
    
     def auto_calibrate_plaform(self):
-        platform = self.platform
+        platform:AbstractPlatform = self.platform
 
         #backup latest platform runcard
         self.backup_config_file()
@@ -1254,7 +1255,7 @@ class ROPulsePhaseParameter():
         self.ro_pulse = ro_pulse
 
     def set(self, value):
-        self.ro_pulse.phase = value
+        self.ro_pulse.relative_phase = value
 
 
 class QCPulseLengthParameter():
@@ -1286,7 +1287,7 @@ class T1WaitParameter():
         # TODO: implement following condition
         #must be >= 4ns <= 65535
         #platform.delay_before_readout = value
-        self.ro_pulse.start = self.qd_pulse.duration + value
+        self.ro_pulse.start = self.qd_pulse.duration + int(value)
 
 
 class RamseyWaitParameter():
@@ -1302,9 +1303,8 @@ class RamseyWaitParameter():
         self.sampling_rate = sampling_rate
 
     def set(self, value):
-        self.qc2_pulse.start = self.pulse_length  + value
-        self.qc2_pulse.phase = (self.qc2_pulse.start / self.sampling_rate) * (2 * np.pi) * self.qc2_pulse.frequency
-        self.ro_pulse.start = self.pulse_length * 2 + value        
+        self.qc2_pulse.start = self.pulse_length  + int(value)
+        self.ro_pulse.start = self.qc2_pulse.finish       
 
 
 class SpinEchoWaitParameter():
@@ -1320,9 +1320,8 @@ class SpinEchoWaitParameter():
         self.sampling_rate = sampling_rate
 
     def set(self, value):
-        self.qc2_pulse.start = self.pulse_length + value
-        self.qc2_pulse.phase = (self.qc2_pulse.start / self.sampling_rate) * (2 * np.pi) * self.qc2_pulse.frequency
-        self.ro_pulse.start = 2 * self.pulse_length + 2 * value
+        self.qc2_pulse.start = self.pulse_length + int(value)
+        self.ro_pulse.start = 2 * self.pulse_length + 2 * int(value)
 
 
 class SpinEcho3PWaitParameter():
@@ -1339,11 +1338,9 @@ class SpinEcho3PWaitParameter():
         self.sampling_rate = sampling_rate
         
     def set(self,value):
-        self.qc2_pulse.start = self.pulse_length + value
-        self.qc2_pulse.phase = (self.qc2_pulse.start / self.sampling_rate) * (2 * np.pi) * self.qc2_pulse.frequency
-        self.qc3_pulse.start = 2 * self.pulse_length + 2 * value
-        self.qc3_pulse.phase = (self.qc3_pulse.start / self.sampling_rate) * (2 * np.pi) * self.qc3_pulse.frequency
-        self.ro_pulse.start = 3 * self.pulse_length + 2 * value
+        self.qc2_pulse.start = self.pulse_length + int(value)
+        self.qc3_pulse.start = 2 * self.pulse_length + 2 * int(value)
+        self.ro_pulse.start = 3 * self.pulse_length + 2 * int(value)
 
 
 
@@ -1361,9 +1358,9 @@ class RamseyFreqWaitParameter():
         self.sampling_rate = sampling_rate
 
     def set(self, value):
-        self.qc2_pulse.start = self.pulse_length + value
-        self.qc2_pulse.phase = (self.qc2_pulse.start / self.sampling_rate) * (2 * np.pi) * (self.qc2_pulse.frequency - self.offset_freq)
-        self.ro_pulse.start = self.pulse_length * 2 + value
+        self.qc2_pulse.start = self.pulse_length + int(value)
+        self.qc2_pulse.relative_phase = (self.qc2_pulse.start / self.sampling_rate) * (2 * np.pi) * (-self.offset_freq)
+        self.ro_pulse.start = self.pulse_length * 2 + int(value)
 
 
 class ROController():
