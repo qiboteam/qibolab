@@ -130,12 +130,8 @@ class SPI(AbstractInstrument):
     def get_SPI_battery_voltage(self):
         return self.device.battery_voltages()
 
-    def __del__(self):
-        self.disconnect()
-
     def disconnect(self):
         if self.is_connected:
-            self.device.close()
             self.is_connected = False
 
     def close(self):
