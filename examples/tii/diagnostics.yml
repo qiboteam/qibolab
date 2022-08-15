@@ -45,8 +45,8 @@ qubit_spectroscopy_flux:
 
 rabi_pulse_length:
   pulse_duration_start: 4 # minimum 4ns
-  pulse_duration_end: 2000
-  pulse_duration_step: 40
+  pulse_duration_end: 200
+  pulse_duration_step: 4
 
 rabi_pulse_phase:
   pulse_phase_start: 0 

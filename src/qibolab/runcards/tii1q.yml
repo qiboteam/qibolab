@@ -2,7 +2,7 @@ nqubits: 1
 description: 1-qubit device from Qilimanjaro at TII SD fridge, controlled with qblox cluster rf.
 
 settings:
-    hardware_avg: 20480
+    hardware_avg: 1024
     sampling_rate: 1_000_000_000
     repetition_duration: 200_000
     minimum_delay_between_instructions: 4 # must be a multiple of 4
