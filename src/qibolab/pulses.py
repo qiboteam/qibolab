@@ -69,10 +69,12 @@ class Pulse:
         self.qubit = qubit
         self.type = type
 
-        shape_name = re.findall('(\w+)', shape)[0]
-        shape_parameters = re.findall(r'[\w+\d\.\d]+', shape)[1:]
-        #shape_parameters = re.findall('(\w+)', shape)[1:]
-        self.shape_object = globals()[shape_name](self, *shape_parameters) # eval(f"{shape_name}(self, {shape_parameters})")
+        shape_name = re.findall(r"(\w+)", shape)[0]
+        shape_parameters = re.findall(r"[\w+\d\.\d]+", shape)[1:]
+        # shape_parameters = re.findall('(\w+)', shape)[1:]
+        self.shape_object = globals()[shape_name](
+            self, *shape_parameters
+        )  # eval(f"{shape_name}(self, {shape_parameters})")
 
     @property
     def serial(self):
