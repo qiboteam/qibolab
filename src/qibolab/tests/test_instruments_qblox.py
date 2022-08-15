@@ -3,12 +3,12 @@ import numpy as np
 import pytest
 import yaml
 
-from qibolab.instruments.qblox import ClusterQCM, ClusterQRM, PulsarQCM, PulsarQRM
+from qibolab.instruments.qblox import ClusterQRM_RF, ClusterQCM_RF
 from qibolab.paths import qibolab_folder
 from qibolab.platforms.multiqubit import MultiqubitPlatform
 from qibolab.pulses import Pulse, ReadoutPulse
 
-INSTRUMENTS_LIST = ["ClusterQCM", "ClusterQRM", "PulsarQCM", "PulsarQRM"]
+INSTRUMENTS_LIST = ["ClusterQRM_RF", "ClusterQCM_RF"]
 instruments = {}
 
 
