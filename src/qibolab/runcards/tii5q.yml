@@ -129,7 +129,7 @@ instruments:
     SPI:
         lib: spi
         class: SPI
-        address: COM7 #/dev/ttyACM0
+        address: /dev/ttyACM0
         settings:
             s4g_modules:
                 #flux_port: [module# , name, #DAC_port, current] max number of DACs per module = 4
