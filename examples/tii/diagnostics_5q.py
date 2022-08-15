@@ -397,10 +397,10 @@ if __name__=='__main__':
     script_folder = pathlib.Path(os.path.abspath(''))
     diagnostics_settings = script_folder / 'examples' / 'tii' / "diagnostics.yml"
 
-    runcard = qibolab_folder / 'runcards' / 'qw5q.yml' 
+    runcard = qibolab_folder / 'runcards' / 'tii5q.yml' 
 
     # Create a platform; connect and configure it
-    platform = Platform('multiqubit', runcard)
+    platform = Platform('tii5q', runcard)
     platform.connect()
     platform.setup()
 

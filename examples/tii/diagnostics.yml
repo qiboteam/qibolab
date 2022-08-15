@@ -32,9 +32,9 @@ qubit_spectroscopy:
   fast_start: -5_000_000
   fast_end: 5_000_000
   fast_step: 200_000
-  precision_start: -500_000
-  precision_end: 500_000
-  precision_step: 20_000
+  precision_start: -1_500_000
+  precision_end: 1_500_000
+  precision_step: 50_000
 
 qubit_spectroscopy_flux:
   freq_width: 4_000_000
