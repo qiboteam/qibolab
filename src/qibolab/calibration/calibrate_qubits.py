@@ -3,12 +3,16 @@
 Perform autocalibration procedure.
 """
 import argparse
+
 from qibolab import Platform
 
-
 parser = argparse.ArgumentParser()
-parser.add_argument("--platform", default="tiiq", type=str,
-                    help="Platform name for calibration. Default: tiiq.")
+parser.add_argument(
+    "--platform",
+    default="tiiq",
+    type=str,
+    help="Platform name for calibration. Default: tiiq.",
+)
 
 
 def main():

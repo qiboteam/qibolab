@@ -14,7 +14,7 @@ topology: # qubit - qubit connections
 
 channels: [1, 2, 3]
 
-qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux] 
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
     0: [2, 1, null]
 
 instruments:
@@ -33,7 +33,7 @@ instruments:
             mode: ssb
             channel_port_map:  # Refrigerator Channel : Instrument port
                 2: o1 # IQ Port = out0 & out1
-                3: i1 
+                3: i1
             lo: lo_qrm
 
     lo_qrm:
@@ -52,7 +52,7 @@ instruments:
             ref_clock: internal
             sync_en: true
             gain: 0.5
-            channel_port_map:  
+            channel_port_map:
                 1: o1 # IQ Port = out0 & out1
             lo: lo_qcm
 

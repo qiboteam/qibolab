@@ -6,4 +6,3 @@ In this section we present the basic aspects of Qibolab design and provide insta
     :maxdepth: 1
 
     installation
-

@@ -1,7 +1,9 @@
+# -*- coding: utf-8 -*-
 """Pulse abstractions."""
-import numpy as np
 import re
 from abc import ABC, abstractmethod
+
+import numpy as np
 from qibo.config import raise_error
 
 
@@ -40,8 +42,22 @@ class Pulse:
                           channel=1,
                           type='qd')
     """
-    def __init__(self, start, duration, amplitude, frequency, phase, shape, channel, type = 'qd', offset_i=0, offset_q=0, qubit=0):
-        self.start = start # absolut pulse start time (does not depend on other pulses of the sequence)
+
+    def __init__(
+        self,
+        start,
+        duration,
+        amplitude,
+        frequency,
+        phase,
+        shape,
+        channel,
+        type="qd",
+        offset_i=0,
+        offset_q=0,
+        qubit=0,
+    ):
+        self.start = start  # absolut pulse start time (does not depend on other pulses of the sequence)
         self.duration = duration
         self.amplitude = amplitude
         self.frequency = frequency
@@ -64,11 +80,11 @@ class Pulse:
 
     @property
     def envelope_i(self):
-        return  self.shape_object.envelope_i
+        return self.shape_object.envelope_i
 
     @property
     def envelope_q(self):
-        return  self.shape_object.envelope_q
+        return self.shape_object.envelope_q
 
     def __repr__(self):
         return self.serial
@@ -80,8 +96,33 @@ class ReadoutPulse(Pulse):
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
 
-    def __init__(self, start, duration, amplitude, frequency, phase, shape, channel, type = 'ro', offset_i=0, offset_q=0, qubit=0):
-        super().__init__(start, duration, amplitude, frequency, phase, shape, channel, type , offset_i, offset_q, qubit)
+    def __init__(
+        self,
+        start,
+        duration,
+        amplitude,
+        frequency,
+        phase,
+        shape,
+        channel,
+        type="ro",
+        offset_i=0,
+        offset_q=0,
+        qubit=0,
+    ):
+        super().__init__(
+            start,
+            duration,
+            amplitude,
+            frequency,
+            phase,
+            shape,
+            channel,
+            type,
+            offset_i,
+            offset_q,
+            qubit,
+        )
 
     @property
     def serial(self):
@@ -93,12 +134,12 @@ class PulseShape(ABC):
 
     @property
     @abstractmethod
-    def envelope_i(self): # pragma: no cover
+    def envelope_i(self):  # pragma: no cover
         raise_error(NotImplementedError)
 
     @property
     @abstractmethod
-    def envelope_q(self): # pragma: no cover
+    def envelope_q(self):  # pragma: no cover
         raise_error(NotImplementedError)
 
 
@@ -109,6 +150,7 @@ class Rectangular(PulseShape):
     Args:
         pulse (Pulse): pulse associated with the shape
     """
+
     def __init__(self, pulse):
         self.name = "Rectangular"
         self.pulse = pulse
@@ -135,7 +177,7 @@ class Gaussian(PulseShape):
 
     .. math::
 
-        A\exp^{-\\frac{1}{2}\\frac{(t-\mu)^2}{\sigma^2}}
+        A\\exp^{-\\frac{1}{2}\\frac{(t-\\mu)^2}{\\sigma^2}}
     """
 
     def __init__(self, pulse, rel_sigma):
@@ -145,8 +187,14 @@ class Gaussian(PulseShape):
 
     @property
     def envelope_i(self):
-        x = np.arange(0,self.pulse.duration,1)
-        return self.pulse.amplitude * np.exp(-(1/2)*(((x-(self.pulse.duration-1)/2)**2)/(((self.pulse.duration)/self.rel_sigma)**2)))
+        x = np.arange(0, self.pulse.duration, 1)
+        return self.pulse.amplitude * np.exp(
+            -(1 / 2)
+            * (
+                ((x - (self.pulse.duration - 1) / 2) ** 2)
+                / (((self.pulse.duration) / self.rel_sigma) ** 2)
+            )
+        )
         # same as: self.pulse.amplitude * gaussian(int(self.pulse.duration), std=int(self.pulse.duration/self.rel_sigma))
 
     @property
@@ -178,15 +226,34 @@ class Drag(PulseShape):
 
     @property
     def envelope_i(self):
-        x = np.arange(0,self.pulse.duration,1)
-        i = self.pulse.amplitude * np.exp(-(1/2)*(((x-(self.pulse.duration-1)/2)**2)/(((self.pulse.duration)/self.rel_sigma)**2)))
+        x = np.arange(0, self.pulse.duration, 1)
+        i = self.pulse.amplitude * np.exp(
+            -(1 / 2)
+            * (
+                ((x - (self.pulse.duration - 1) / 2) ** 2)
+                / (((self.pulse.duration) / self.rel_sigma) ** 2)
+            )
+        )
         return i
 
     @property
     def envelope_q(self):
-        x = np.arange(0,self.pulse.duration,1)
-        i = self.pulse.amplitude * np.exp(-(1/2)*(((x-(self.pulse.duration-1)/2)**2)/(((self.pulse.duration)/self.rel_sigma)**2)))
-        q = self.beta * (-(x-(self.pulse.duration-1)/2)/((self.pulse.duration/self.rel_sigma)**2)) * i
+        x = np.arange(0, self.pulse.duration, 1)
+        i = self.pulse.amplitude * np.exp(
+            -(1 / 2)
+            * (
+                ((x - (self.pulse.duration - 1) / 2) ** 2)
+                / (((self.pulse.duration) / self.rel_sigma) ** 2)
+            )
+        )
+        q = (
+            self.beta
+            * (
+                -(x - (self.pulse.duration - 1) / 2)
+                / ((self.pulse.duration / self.rel_sigma) ** 2)
+            )
+            * i
+        )
         return q
 
     def __repr__(self):

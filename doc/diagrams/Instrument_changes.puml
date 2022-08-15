@@ -167,7 +167,7 @@ package instrument {
             translate(sequence, delay_before_readout, nshots)
             play_sequence_and_acquire(ro_pulse)
             _demodulate_and_integrate(single_acq, ro_pulse)
-        }   
+        }
         class PulsarQCM_Old extends GenericPulsar_Old{
             __init__(label, ip, sequencer=0, ref_clock="external", sync_en=True, is_cluster=True)
             translate(sequence, delay_before_read_out, nshots=None)
