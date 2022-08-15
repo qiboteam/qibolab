@@ -351,9 +351,8 @@ class ClusterQRM_RF(AbstractInstrument):
                 for m in range(1, len(channel_pulses[channel])):
                     if len(channel_pulses[channel][m].overlaps) > 0:
                         # TODO: Urgently needed in order to implement multiplexed readout
-                        raise (
-                            NotImplementedError,
-                            "Overlaping pulses on the same channel are not yet supported.",
+                        raise NotImplementedError(
+                            "Overlaping pulses on the same channel are not yet supported."
                         )
 
             # Allocate channel pulses to sequencers.
@@ -407,9 +406,8 @@ class ClusterQRM_RF(AbstractInstrument):
                                 > self.waveform_max_length
                             ):
                                 if pulse.type == "ro":
-                                    raise (
-                                        NotImplementedError,
-                                        f"Readout pulses longer than the memory available for a sequencer ({self.waveform_max_length}) are not supported.",
+                                    raise NotImplementedError(
+                                        f"Readout pulses longer than the memory available for a sequencer ({self.waveform_max_length}) are not supported."
                                     )
                                 import copy
 
@@ -1162,9 +1160,8 @@ class ClusterQCM_RF(AbstractInstrument):
                             channel_pulses[channel][m].overlaps.append(n)
                 for m in range(1, len(channel_pulses[channel])):
                     if len(channel_pulses[channel][m].overlaps) > 0:
-                        raise (
-                            NotImplementedError,
-                            "Overlaping pulses on the same channel are not yet supported.",
+                        raise NotImplementedError(
+                            "Overlaping pulses on the same channel are not yet supported."
                         )
 
             # Allocate channel pulses to sequencers.
