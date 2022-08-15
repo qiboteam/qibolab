@@ -42,7 +42,7 @@ class Sequencer():
             else:
                 raise Sequencer.NotEnoughMemory
 
-        self.pulses.append(pulse)       
+        self.pulses.add(pulse)       
 
     @property
     def waveforms(self):

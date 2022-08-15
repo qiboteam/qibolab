@@ -998,7 +998,7 @@ class SplitPulse(Pulse):
 class PulseSequence(): 
     def __init__(self, *pulses):
         self.pulses: list[Pulse] = []
-        self.append(*pulses)
+        self.add(*pulses)
 
     def __len__(self):
         return len(self.pulses)
@@ -1060,9 +1060,9 @@ class PulseSequence():
     
     def __iadd__(self, other):
         if isinstance(other, PulseSequence):
-            self.append(* other.pulses)
+            self.add(* other.pulses)
         elif isinstance(other, Pulse):
-            self.append(other)
+            self.add(other)
         else:
             raise TypeError(f'Expected PulseSequence or Pulse; got {type(other).__name__}')
         return self
@@ -1088,7 +1088,7 @@ class PulseSequence():
             raise TypeError(f'argument n should be >=1, got {n}')
         original_set = self.shallow_copy()
         for x in range(n - 1):
-            self.append(* original_set.pulses)
+            self.add(* original_set.pulses)
         return self
 
     @property
@@ -1096,18 +1096,17 @@ class PulseSequence():
         return len(self.pulses)
 
     def add(self, *pulses):
-        self.append(*pulses)
+        for pulse in pulses:
+            self.pulses.append(pulse)
+        self.pulses.sort(key=lambda item: (item.channel, item.start))
         
     def append(self, *pulses):
         for pulse in pulses:
-            self.pulses.append(pulse)
-        self.sort()
+            pulse.start = self.pulses.get_channel_pulses(pulse.channel).finish
+            self.add(pulse)
 
     def index(self, pulse):
         return self.pulses.index(pulse)
-        
-    def insert(self, index, pulse):
-        self.pulses.insert(index, pulse)
 
     def pop(self, index = -1):
         return self.pulses.pop(index)
@@ -1115,14 +1114,6 @@ class PulseSequence():
     def remove(self, pulse):
         while pulse in self.pulses:
             self.pulses.remove(pulse)
-
-    def reverse(self):
-        self.pulses.reverse()
-        return self
-
-    def sort(self):
-        self.pulses.sort(key=lambda item: (item.channel, item.start))
-        return self
 
     def clear(self):
         self.pulses.clear()
@@ -1138,7 +1129,7 @@ class PulseSequence():
         new_pc = PulseSequence()
         for pulse in self.pulses:
             if pulse.type == PulseType.READOUT:
-                new_pc.append(pulse)
+                new_pc.add(pulse)
         return new_pc
 
     @property
@@ -1146,7 +1137,7 @@ class PulseSequence():
         new_pc = PulseSequence()
         for pulse in self.pulses:
             if pulse.type == PulseType.DRIVE:
-                new_pc.append(pulse)
+                new_pc.add(pulse)
         return new_pc
 
     @property
@@ -1154,7 +1145,7 @@ class PulseSequence():
         new_pc = PulseSequence()
         for pulse in self.pulses:
             if pulse.type == PulseType.FLUX:
-                new_pc.append(pulse)
+                new_pc.add(pulse)
         return new_pc
 
 
@@ -1162,7 +1153,7 @@ class PulseSequence():
         new_pc = PulseSequence()
         for pulse in self.pulses:
             if pulse.channel in channels:
-                new_pc.append(pulse)
+                new_pc.add(pulse)
         return new_pc
 
     @property
