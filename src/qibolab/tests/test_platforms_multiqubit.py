@@ -142,7 +142,7 @@ def test_multiqubitplatform_execute_one_drive_pulse(fx_connect_platform):
     else:
         # One drive pulse
         sequence = PulseSequence()
-        sequence.add(platform.qubit_drive_pulse(qubit, start = 0, duration = 200))    
+        sequence.add(platform.create_qubit_drive_pulse(qubit, start = 0, duration = 200))    
         platform.execute_pulse_sequence(sequence, nshots)
 
 
@@ -152,7 +152,7 @@ def test_multiqubitplatform_execute_one_long_drive_pulse(fx_connect_platform):
     else:
         # Long duration
         sequence = PulseSequence()
-        sequence.add(platform.qubit_drive_pulse(qubit, start = 0, duration = 8192+200))  
+        sequence.add(platform.create_qubit_drive_pulse(qubit, start = 0, duration = 8192+200))  
         platform.execute_pulse_sequence(sequence, nshots)
 
 
@@ -162,7 +162,7 @@ def test_multiqubitplatform_execute_one_extralong_drive_pulse(fx_connect_platfor
     else:
         # Extra Long duration
         sequence = PulseSequence()
-        sequence.add(platform.qubit_drive_pulse(qubit, start = 0, duration = 2*8192+200))  
+        sequence.add(platform.create_qubit_drive_pulse(qubit, start = 0, duration = 2*8192+200))  
         platform.execute_pulse_sequence(sequence, nshots)
 
 
@@ -172,8 +172,8 @@ def test_multiqubitplatform_execute_one_drive_one_readout(fx_connect_platform):
     else:
         # One drive pulse and one readout pulse
         sequence = PulseSequence()
-        sequence.add(platform.qubit_drive_pulse(qubit, start = 0, duration = 200))
-        sequence.add(platform.qubit_readout_pulse(qubit, start = 200))    
+        sequence.add(platform.create_qubit_drive_pulse(qubit, start = 0, duration = 200))
+        sequence.add(platform.create_qubit_readout_pulse(qubit, start = 200))    
         platform.execute_pulse_sequence(sequence, nshots)
 
 def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout(fx_connect_platform):
@@ -182,10 +182,10 @@ def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout(fx_connect
     else:
         # Multiple qubit drive pulses and one readout pulse
         sequence = PulseSequence()
-        sequence.add(platform.qubit_drive_pulse(qubit, start = 0, duration = 200))
-        sequence.add(platform.qubit_drive_pulse(qubit, start = 204, duration = 200)) 
-        sequence.add(platform.qubit_drive_pulse(qubit, start = 408, duration = 400)) 
-        sequence.add(platform.qubit_readout_pulse(qubit, start = 808)) 
+        sequence.add(platform.create_qubit_drive_pulse(qubit, start = 0, duration = 200))
+        sequence.add(platform.create_qubit_drive_pulse(qubit, start = 204, duration = 200)) 
+        sequence.add(platform.create_qubit_drive_pulse(qubit, start = 408, duration = 400)) 
+        sequence.add(platform.create_qubit_readout_pulse(qubit, start = 808)) 
         platform.execute_pulse_sequence(sequence, nshots)
 
 
@@ -195,10 +195,10 @@ def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout_no_spacing
     else:
         # Multiple qubit drive pulses and one readout pulse with no spacing between them
         sequence = PulseSequence()
-        sequence.add(platform.qubit_drive_pulse(qubit, start = 0, duration = 200))
-        sequence.add(platform.qubit_drive_pulse(qubit, start = 200, duration = 200)) 
-        sequence.add(platform.qubit_drive_pulse(qubit, start = 400, duration = 400)) 
-        sequence.add(platform.qubit_readout_pulse(qubit, start = 800)) 
+        sequence.add(platform.create_qubit_drive_pulse(qubit, start = 0, duration = 200))
+        sequence.add(platform.create_qubit_drive_pulse(qubit, start = 200, duration = 200)) 
+        sequence.add(platform.create_qubit_drive_pulse(qubit, start = 400, duration = 400)) 
+        sequence.add(platform.create_qubit_readout_pulse(qubit, start = 800)) 
         platform.execute_pulse_sequence(sequence, nshots)
 
 
@@ -209,10 +209,10 @@ def test_multiqubitplatform_execute_multiple_overlaping_drive_pulses_one_readout
     else:
         # Multiple overlapping qubit drive pulses and one readout pulse
         sequence = PulseSequence()
-        sequence.add(platform.qubit_drive_pulse(qubit, start = 0, duration = 200))
-        sequence.add(platform.qubit_drive_pulse(qubit, start = 200, duration = 200)) 
-        sequence.add(platform.qubit_drive_pulse(qubit, start = 50, duration = 400)) 
-        sequence.add(platform.qubit_readout_pulse(qubit, start = 800)) 
+        sequence.add(platform.create_qubit_drive_pulse(qubit, start = 0, duration = 200))
+        sequence.add(platform.create_qubit_drive_pulse(qubit, start = 200, duration = 200)) 
+        sequence.add(platform.create_qubit_drive_pulse(qubit, start = 50, duration = 400)) 
+        sequence.add(platform.create_qubit_readout_pulse(qubit, start = 800)) 
         platform.execute_pulse_sequence(sequence, nshots)
 
 @pytest.mark.xfail # not implemented yet
@@ -222,10 +222,10 @@ def test_multiqubitplatform_execute_multiple_readout_pulses(fx_connect_platform)
     else:
         # Multiple readout pulses
         sequence = PulseSequence()
-        qd_pulse1 = platform.qubit_drive_pulse(qubit, start = 0, duration = 200)
-        ro_pulse1 = platform.qubit_readout_pulse(qubit, start = 200)
-        qd_pulse2 = platform.qubit_drive_pulse(qubit, start = (ro_pulse1.start + ro_pulse1.duration), duration = 400)
-        ro_pulse2 = platform.qubit_readout_pulse(qubit, start = (ro_pulse1.start + ro_pulse1.duration + 400))
+        qd_pulse1 = platform.create_qubit_drive_pulse(qubit, start = 0, duration = 200)
+        ro_pulse1 = platform.create_qubit_readout_pulse(qubit, start = 200)
+        qd_pulse2 = platform.create_qubit_drive_pulse(qubit, start = (ro_pulse1.start + ro_pulse1.duration), duration = 400)
+        ro_pulse2 = platform.create_qubit_readout_pulse(qubit, start = (ro_pulse1.start + ro_pulse1.duration + 400))
         sequence.add(qd_pulse1)
         sequence.add(ro_pulse1)
         sequence.add(qd_pulse2)

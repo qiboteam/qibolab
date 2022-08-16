@@ -30,8 +30,8 @@ def test_circuit_to_sequence(platform_name):
     assert len(seq.qd_pulses) == 4
     assert len(seq.ro_pulses) == 1
 
-    RX_pulse = backend.platform.RX_pulse(0)
-    MZ_pulse = backend.platform.MZ_pulse(0, RX_pulse.duration)
+    RX_pulse = backend.platform.create_RX_pulse(0)
+    MZ_pulse = backend.platform.create_MZ_pulse(0, RX_pulse.duration)
 
     phases = [np.pi / 2, 0.1 - np.pi / 2, 0.1, 0.3 - np.pi]
     for i, (pulse, phase) in enumerate(zip(seq.pulses[:-1], phases)):

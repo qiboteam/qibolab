@@ -31,7 +31,7 @@ def test_measurement():
     platform = Platform("multiqubit")
     gate = gates.M(0)
     with pytest.raises(NotImplementedError):
-        platform.asu3(gate)
+        platform.get_u3_parameters_from_gate(gate)
     sequence = PulseSequence()
     platform.to_sequence(sequence, gate)
     assert len(sequence) == 1
@@ -44,7 +44,7 @@ def test_measurement():
 def test_pauli_to_u3_params(gatename):
     platform = Platform("multiqubit")
     gate = getattr(gates, gatename)(0)
-    params = platform.asu3(gate)
+    params = platform.get_u3_parameters_from_gate(gate)
     u3 = gates.U3(0, *params)
     if gatename in ("H", "Z"):
         np.testing.assert_allclose(gate.matrix, 1j * u3.matrix, atol=1e-15)
@@ -56,7 +56,7 @@ def test_identity_gate():
     platform = Platform("multiqubit")
     gate = gates.I(0)
     with pytest.raises(NotImplementedError):
-        platform.asu3(gate)
+        platform.get_u3_parameters_from_gate(gate)
 
 
 @pytest.mark.parametrize("gatename", ["RX", "RY", "RZ"])
@@ -64,7 +64,7 @@ def test_rotations_to_u3_params(gatename):
     backend = NumpyBackend()
     platform = Platform("multiqubit")
     gate = getattr(gates, gatename)(0, theta=0.1)
-    params = platform.asu3(gate)
+    params = platform.get_u3_parameters_from_gate(gate)
     target_matrix = gates.U3(0, *params).asmatrix(backend)
     np.testing.assert_allclose(gate.asmatrix(backend), target_matrix)
 
@@ -82,7 +82,7 @@ def test_u2_to_u3_params():
     backend = NumpyBackend()
     platform = Platform("multiqubit")
     gate = gates.U2(0, phi=0.1, lam=0.3)
-    params = platform.asu3(gate)
+    params = platform.get_u3_parameters_from_gate(gate)
     target_matrix = gates.U3(0, *params).asmatrix(backend)
     np.testing.assert_allclose(gate.asmatrix(backend), target_matrix)
 
@@ -97,7 +97,7 @@ def test_unitary_to_u3_params():
     # transform to SU(2) form
     u = u / np.sqrt(det(u))
     gate = gates.Unitary(u, 0)
-    params = platform.asu3(gate)
+    params = platform.get_u3_parameters_from_gate(gate)
     target_matrix = gates.U3(0, *params).asmatrix(backend)
     np.testing.assert_allclose(gate.asmatrix(backend), target_matrix)
 
@@ -110,8 +110,8 @@ def test_pulse_sequence_add_u3(platform_name):
     assert len(seq.pulses) == 2
     assert len(seq.qd_pulses) == 2
 
-    RX90_pulse1 = platform.RX90_pulse(0, start = 0, phase = 0.3)
-    RX90_pulse2 = platform.RX90_pulse(0, start = (RX90_pulse1.start + RX90_pulse1.duration), phase = 0.4 - np.pi)
+    RX90_pulse1 = platform.create_RX90_pulse(0, start = 0, phase = 0.3)
+    RX90_pulse2 = platform.create_RX90_pulse(0, start = (RX90_pulse1.start + RX90_pulse1.duration), phase = 0.4 - np.pi)
 
     np.testing.assert_allclose(seq.time, RX90_pulse1.duration + RX90_pulse2.duration)
     np.testing.assert_allclose(seq.phase, 0.6)
@@ -127,14 +127,14 @@ def test_pulse_sequence_add_two_u3(platform_name):
     assert len(seq.pulses) == 4
     assert len(seq.qd_pulses) == 4
 
-    RX90_pulse = platform.RX90_pulse(0)
+    RX90_pulse = platform.create_RX90_pulse(0)
     np.testing.assert_allclose(seq.phase, 0.6 + 1.5)
     np.testing.assert_allclose(seq.time, 2 * 2 * RX90_pulse.duration)
 
-    RX90_pulse1 = platform.RX90_pulse(0, start = 0, phase = 0.3)
-    RX90_pulse2 = platform.RX90_pulse(0, start = (RX90_pulse1.start + RX90_pulse1.duration), phase = 0.4 - np.pi)
-    RX90_pulse3 = platform.RX90_pulse(0, start = (RX90_pulse2.start + RX90_pulse2.duration), phase = 1.1)
-    RX90_pulse4 = platform.RX90_pulse(0, start = (RX90_pulse3.start + RX90_pulse3.duration), phase = 1.5 - np.pi)
+    RX90_pulse1 = platform.create_RX90_pulse(0, start = 0, phase = 0.3)
+    RX90_pulse2 = platform.create_RX90_pulse(0, start = (RX90_pulse1.start + RX90_pulse1.duration), phase = 0.4 - np.pi)
+    RX90_pulse3 = platform.create_RX90_pulse(0, start = (RX90_pulse2.start + RX90_pulse2.duration), phase = 1.1)
+    RX90_pulse4 = platform.create_RX90_pulse(0, start = (RX90_pulse3.start + RX90_pulse3.duration), phase = 1.5 - np.pi)
 
     assert seq.serial == f"{RX90_pulse1.serial}, {RX90_pulse2.serial}, {RX90_pulse3.serial}, {RX90_pulse4.serial}"
 
@@ -151,7 +151,7 @@ def test_pulse_sequence_add_measurement(platform_name):
 
     np.testing.assert_allclose(seq.phase, 0.6)
 
-    RX90_pulse1 = platform.RX90_pulse(0, start = 0, phase = 0.3)
-    RX90_pulse2 = platform.RX90_pulse(0, start = RX90_pulse1.duration, phase = 0.4 - np.pi)
-    MZ_pulse = platform.MZ_pulse(0, start = (RX90_pulse2.start + RX90_pulse2.duration), phase = 0.6)
+    RX90_pulse1 = platform.create_RX90_pulse(0, start = 0, phase = 0.3)
+    RX90_pulse2 = platform.create_RX90_pulse(0, start = RX90_pulse1.duration, phase = 0.4 - np.pi)
+    MZ_pulse = platform.create_MZ_pulse(0, start = (RX90_pulse2.start + RX90_pulse2.duration), phase = 0.6)
     assert seq.serial == f"{RX90_pulse1.serial}, {RX90_pulse2.serial}, {MZ_pulse.serial}"
