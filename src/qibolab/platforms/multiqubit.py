@@ -15,7 +15,7 @@ class MultiqubitPlatform(AbstractPlatform):
             nshots = self.hardware_avg
         
         # DEBUG: Plot Pulse Sequence
-        sequence.plot()
+        # sequence.plot()
 
         # Process Pulse Sequence. Assign pulses to instruments and generate waveforms & program
         instrument_pulses = {}

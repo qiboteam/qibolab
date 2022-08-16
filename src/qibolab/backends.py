@@ -38,10 +38,7 @@ class QibolabBackend(NumpyBackend):
         if circuit.measurement_gate is None:
             raise_error(RuntimeError, "No measurement register assigned.")
 
-        sequence = PulseSequence()
-        for gate in circuit.queue:
-            self.platform.to_sequence(sequence, gate)
-        self.platform.to_sequence(sequence, circuit.measurement_gate)
+        sequence = self.platform.transpile(circuit)
 
         # Execute the pulse sequence on the platform
         self.platform.connect()
@@ -60,13 +57,14 @@ class QibolabBackend(NumpyBackend):
         return str(result.execution_result)
 
     def circuit_result_probabilities(self, result, qubits=None):
+        # Returns the probability of the qubit being in state 0
         if qubits is None:  # pragma: no cover
             qubits = result.circuit.measurement_gate.qubits
         # naive normalization
         qubit = qubits[0]
         readout = list(list(result.execution_result.values())[0].values())[0]
-        state1_voltage = 1e-6 * self.platform.settings['characterization']['single_qubit'][qubit]['state1_voltage']
-        state0_voltage = 1e-6 * self.platform.settings['characterization']['single_qubit'][qubit]['state0_voltage']
+        state1_voltage = self.platform.settings['characterization']['single_qubit'][qubit]['state1_voltage']
+        state0_voltage = self.platform.settings['characterization']['single_qubit'][qubit]['state0_voltage']
         import numpy as np
-        p = np.abs(readout[0] * 1e6 - state0_voltage) / np.abs(state1_voltage - state0_voltage)
+        p = np.abs(readout[0] * 1e6 - state1_voltage) / np.abs(state1_voltage - state0_voltage)
         return [p, 1 - p]
