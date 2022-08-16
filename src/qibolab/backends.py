@@ -74,17 +74,12 @@ class QibolabBackend(NumpyBackend):
         # naive normalization
         qubit = qubits[0]
         readout = list(list(result.execution_result.values())[0].values())[0]
-        state1_voltage = (
-            self.platform.settings["characterization"]["single_qubit"][qubit][
-                "state1_voltage"
-            ]
-        )
-        state0_voltage = (
-            1e-6
-            * self.platform.settings["characterization"]["single_qubit"][qubit][
-                "state0_voltage"
-            ]
-        )
+        state1_voltage = self.platform.settings["characterization"]["single_qubit"][
+            qubit
+        ]["state1_voltage"]
+        state0_voltage = self.platform.settings["characterization"]["single_qubit"][
+            qubit
+        ]["state0_voltage"]
         import numpy as np
 
         p = np.abs(readout[0] * 1e6 - state1_voltage) / np.abs(

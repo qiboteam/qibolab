@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 import yaml
 
-from qibolab.instruments.qblox import ClusterQRM_RF, ClusterQCM_RF
+from qibolab.instruments.qblox import ClusterQCM_RF, ClusterQRM_RF
 from qibolab.paths import qibolab_folder
 from qibolab.platforms.multiqubit import MultiqubitPlatform
 from qibolab.pulses import Pulse, ReadoutPulse
