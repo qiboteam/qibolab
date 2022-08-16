@@ -1,6 +1,7 @@
 from qibo.config import raise_error
 from qibolab.platforms.abstract import AbstractPlatform
 # additional contents to be added later on
-# abstratc paltform will be implemented later on
+# abstract paltform will be implemented later on
 class cold_ion(AbstractPlatform):
-        pass
+        def run_calibration(self):
+                raise_error(NotImplementedError)
