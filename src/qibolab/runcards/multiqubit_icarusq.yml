@@ -15,7 +15,7 @@ topology: # qubit - qubit connections
 
 channels: [1_ro, 1_qb]
 
-qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux] 
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
     0: [1_ro, 1_qb, 99]
 
 instruments:

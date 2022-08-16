@@ -1,19 +1,33 @@
-import pytest
+# -*- coding: utf-8 -*-
 import numpy as np
+import pytest
 from qibo import gates
 from qibo.models import Circuit
+
 from qibolab.backends import QibolabBackend
-from qibolab.pulses import PulseSequence, Pulse, ReadoutPulse, Rectangular, Gaussian, Drag
+from qibolab.pulses import (
+    Drag,
+    Gaussian,
+    Pulse,
+    PulseSequence,
+    ReadoutPulse,
+    Rectangular,
+)
 
 
-@pytest.mark.parametrize("platform_name", ['tiiq', 'qili', 'multiqubit'])#, 'icarusq'])
+@pytest.mark.parametrize(
+    "platform_name", ["tiiq", "qili", "multiqubit"]
+)  # , 'icarusq'])
 def test_backend_init(platform_name):
     from qibolab.platforms.multiqubit import MultiqubitPlatform
+
     backend = QibolabBackend(platform_name)
     assert isinstance(backend.platform, MultiqubitPlatform)
 
 
-@pytest.mark.parametrize("platform_name", ['tiiq', 'qili', 'multiqubit']) #, 'icarusq'])
+@pytest.mark.parametrize(
+    "platform_name", ["tiiq", "qili", "multiqubit"]
+)  # , 'icarusq'])
 def test_circuit_to_sequence(platform_name):
     backend = QibolabBackend(platform_name)
     circuit = Circuit(1)
@@ -38,7 +52,7 @@ def test_circuit_to_sequence(platform_name):
         assert pulse.channel == RX_pulse.channel
         np.testing.assert_allclose(pulse.start, i * RX_pulse.duration)
         np.testing.assert_allclose(pulse.duration, RX_pulse.duration)
-        np.testing.assert_allclose(pulse.amplitude, RX_pulse.amplitude/2)
+        np.testing.assert_allclose(pulse.amplitude, RX_pulse.amplitude / 2)
         np.testing.assert_allclose(pulse.frequency, RX_pulse.frequency)
         np.testing.assert_allclose(pulse.phase, phase)
 
@@ -51,7 +65,9 @@ def test_circuit_to_sequence(platform_name):
     np.testing.assert_allclose(pulse.phase, 0.3)
 
 
-@pytest.mark.parametrize("platform_name", ['tiiq', 'qili', 'multiqubit']) #, 'icarusq'])
+@pytest.mark.parametrize(
+    "platform_name", ["tiiq", "qili", "multiqubit"]
+)  # , 'icarusq'])
 def test_execute_circuit_errors(platform_name):
     backend = QibolabBackend(platform_name)
     circuit = Circuit(1)
@@ -64,7 +80,9 @@ def test_execute_circuit_errors(platform_name):
 
 
 @pytest.mark.xfail
-@pytest.mark.parametrize("platform_name", ['tiiq', 'qili', 'multiqubit']) #, 'icarusq'])
+@pytest.mark.parametrize(
+    "platform_name", ["tiiq", "qili", "multiqubit"]
+)  # , 'icarusq'])
 def test_execute_circuit(platform_name):
     # TODO: Test this method on IcarusQ
     backend = QibolabBackend(platform_name)
