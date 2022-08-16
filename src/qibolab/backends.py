@@ -75,8 +75,7 @@ class QibolabBackend(NumpyBackend):
         qubit = qubits[0]
         readout = list(list(result.execution_result.values())[0].values())[0]
         state1_voltage = (
-            1e-6
-            * self.platform.settings["characterization"]["single_qubit"][qubit][
+            self.platform.settings["characterization"]["single_qubit"][qubit][
                 "state1_voltage"
             ]
         )
