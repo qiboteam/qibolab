@@ -87,7 +87,7 @@ class QibolabBackend(NumpyBackend):
         )
         import numpy as np
 
-        p = np.abs(readout[0] * 1e6 - state0_voltage) / np.abs(
+        p = np.abs(readout[0] * 1e6 - state1_voltage) / np.abs(
             state1_voltage - state0_voltage
         )
         return [p, 1 - p]
