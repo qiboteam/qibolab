@@ -9,7 +9,7 @@ from qibolab.platforms.multiqubit import MultiqubitPlatform
 from qibolab.pulses import PulseSequence
 
 hardware_available = False
-platform_name = "tiiq"
+platform_name = "tii5q"
 platform: MultiqubitPlatform
 test_runcard: Path
 qubit = 0

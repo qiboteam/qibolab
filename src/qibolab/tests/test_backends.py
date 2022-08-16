@@ -15,9 +15,7 @@ from qibolab.pulses import (
 )
 
 
-@pytest.mark.parametrize(
-    "platform_name", ["tiiq", "qili", "multiqubit"]
-)  # , 'icarusq'])
+@pytest.mark.parametrize("platform_name", ["tii1q", "tii5q"])  # , 'icarusq'])
 def test_backend_init(platform_name):
     from qibolab.platforms.multiqubit import MultiqubitPlatform
 
@@ -25,9 +23,7 @@ def test_backend_init(platform_name):
     assert isinstance(backend.platform, MultiqubitPlatform)
 
 
-@pytest.mark.parametrize(
-    "platform_name", ["tiiq", "qili", "multiqubit"]
-)  # , 'icarusq'])
+@pytest.mark.parametrize("platform_name", ["tii1q", "tii5q"])  # , 'icarusq'])
 def test_circuit_to_sequence(platform_name):
     backend = QibolabBackend(platform_name)
     circuit = Circuit(1)
@@ -65,9 +61,7 @@ def test_circuit_to_sequence(platform_name):
     np.testing.assert_allclose(pulse.phase, 0.3)
 
 
-@pytest.mark.parametrize(
-    "platform_name", ["tiiq", "qili", "multiqubit"]
-)  # , 'icarusq'])
+@pytest.mark.parametrize("platform_name", ["tii1q", "tii5q"])  # , 'icarusq'])
 def test_execute_circuit_errors(platform_name):
     backend = QibolabBackend(platform_name)
     circuit = Circuit(1)
@@ -80,9 +74,7 @@ def test_execute_circuit_errors(platform_name):
 
 
 @pytest.mark.xfail
-@pytest.mark.parametrize(
-    "platform_name", ["tiiq", "qili", "multiqubit"]
-)  # , 'icarusq'])
+@pytest.mark.parametrize("platform_name", ["tii1q", "tii5q"])  # , 'icarusq'])
 def test_execute_circuit(platform_name):
     # TODO: Test this method on IcarusQ
     backend = QibolabBackend(platform_name)

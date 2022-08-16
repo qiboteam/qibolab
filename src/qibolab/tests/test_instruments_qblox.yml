@@ -5,62 +5,53 @@ settings:
     minimum_delay_between_instructions: 4
 
 instruments:
-    ClusterQRM:
+    cluster:
         lib: qblox
-        class: ClusterQRM
-        address: 192.168.0.14
+        class: Cluster
+        address: 192.168.0.3
         settings:
-            ref_clock: external
-            sync_en: false
-            scope_acq_avg_mode_en: true
-            scope_acq_trigger_mode: sequencer
-            gain: 0.4
-            acquisition_start: 130 # minimum 4ns
-            acquisition_duration: 1500
-            mode: ssb
+            reference_clock_source      : internal                      # external or internal
+
+    qrm_rf:
+        lib: qblox
+        class: ClusterQRM_RF
+        address: 192.168.0.3:5 #:7 for loopback
+        settings:
+            ports:
+                o1:
+                    attenuation                 : 58
+                    lo_enabled                  : true
+                    lo_frequency                : 7804847574                    # (Hz) from 2e9 to 18e9
+                    gain                        : 0.4                           # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en             : false
+                i1:
+                    hardware_demod_en           : false
+
+            acquisition_hold_off        : 200                           # minimum 4ns
+            acquisition_duration        : 2000
+
             channel_port_map:  # Refrigerator Channel : Instrument port
                 2: o1 # IQ Port = out0 & out1
                 3: i1
-            lo: lo_qrm
 
-    ClusterQCM:
+    qcm_rf:
         lib: qblox
-        class: ClusterQCM
-        address: 192.168.0.12
+        class: ClusterQCM_RF
+        address: 192.168.0.3:2
         settings:
-            ref_clock: external
-            sync_en: false
-            gain: 0.3
+            ports:
+                o1:
+                    attenuation                  : 8 # (dB)
+                    lo_enabled                   : true
+                    lo_frequency                 : 5282273989 # (Hz) from 2e9 to 18e9
+                    gain                         : 0.38 # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o2:
+                    attenuation                  : 60 # (dB)
+                    lo_enabled                   : true
+                    lo_frequency                 : 6_000_000_000 # (Hz) from 2e9 to 18e9
+                    gain                         : 0 # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en              : false
+
             channel_port_map:
                 1: o1 # IQ Port = out0 & out1
-            lo: lo_qcm
-
-    PulsarQRM:
-        lib: qblox
-        class: PulsarQRM
-        address: 192.168.0.24
-        settings:
-            ref_clock: external
-            sync_en: false
-            scope_acq_avg_mode_en: true
-            scope_acq_trigger_mode: sequencer
-            gain: 0.4
-            acquisition_start: 130 # minimum 4ns
-            acquisition_duration: 1500
-            mode: ssb
-            channel_port_map:  # Refrigerator Channel : Instrument port
-                2: o1 # IQ Port = out0 & out1
-                3: i1
-            lo: lo_qrm
-
-    PulsarQCM:
-        lib: qblox
-        class: PulsarQCM
-        address: 192.168.0.22
-        settings:
-            ref_clock: external
-            sync_en: false
-            gain: 0.3
-            channel_port_map:
-                1: o1 # IQ Port = out0 & out1
-            lo: lo_qcm

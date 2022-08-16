@@ -11,8 +11,6 @@ def test_platform_multiqubit():
     assert isinstance(platform, MultiqubitPlatform)
     platform = Platform("tii1q")
     assert isinstance(platform, MultiqubitPlatform)
-    platform = Platform("qili")
-    assert isinstance(platform, MultiqubitPlatform)
 
 
 @pytest.mark.skip(
