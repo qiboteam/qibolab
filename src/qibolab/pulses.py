@@ -2,331 +2,13 @@
 import numpy as np
 from abc import ABC, abstractmethod
 from enum import Enum
+from qibolab.symbolic import intSymbolicExpression as int_se
 
 
 class PulseType(Enum):
     READOUT = 'ro'
     DRIVE = 'qd'
     FLUX = 'qf'
-
-# class PulseShape(Enum):
-
-
-class TimeVariable:
-    count: int = 0
-    instances: dict = {}
-
-    @classmethod
-    def clear_instances(cls):
-        cls.instances.clear()
-        cls.count = 0
-
-    class CircularReferenceError(Exception):
-        pass
-
-    def __init__(self, expression = 0, name:str = ''): # (self, expression:str|int|TimeVariable = 0, name:str = ''):
-        self._name: str = ''
-        self._formula:str = ''
-
-        if name == '':
-            while True:
-                name = '_tv' + str(TimeVariable.count)
-                TimeVariable.count += 1
-                if name not in TimeVariable.instances.keys():
-                    break
-
-        self.formula = expression
-        self.name = name
-
-        self.label:str = ''
-        self.unit:str = ''
-
-    def set(self, value):
-        self.value = value
-
-
-# TODO 
-# t0, t1 = TimeVariable(0, 't0', 't1') # t0 = 0, t1 = 0
-# t0, t1 = TimeVariable([0, 5], ['t0', 't1']) # t0 = 0, t1 = 5
-# or even better with a dictionary
-# tv_dict = {}
-# tv_dict = TimeVariable({t0: 0, t1: 5}) # t0 = 0, t1 = 5
-
-
-    @property
-    def name(self) -> str:
-        return self._name
-    
-    @name.setter
-    def name(self, name:str):
-        if not isinstance(name, str):
-            raise TypeError(f"name argument type should be str, got {type(name).__name__}")
-        if name in TimeVariable.instances.keys():
-            pass # Allows overwriting
-            # raise KeyError(f"name should be unique, there is already a TimeVariable with name {name}: {TimeVariable.instances[name]}")
-        if self._name == '':
-            # Creation
-            TimeVariable.instances[name] = self
-        else:
-            # Renaming
-            TimeVariable.instances[name] = self                     # Add a new reference with the new name
-            if not  self._name == name:
-                del TimeVariable.instances[self._name]              # Remove the previous reference
-            import re
-            for tv in TimeVariable.instances.values():              # Update all TimeVariable formulas of the name change
-                match_string = rf'\b{re.escape(self._name)}\b'
-                replacement = name
-                tv.formula = re.sub(match_string, replacement, tv.formula)
-        self._name = name
-        # test for CircularReferenceError
-        self.evaluate(self._formula, self._name)
-
-
-    def __getitem__(self, name):
-        self.name = name
-        return self
-
-    @property
-    def formula(self):
-        return self._formula
-    
-    @formula.setter
-    def formula(self, expression): # (self, expression:str|int|TimeVariable):
-        if isinstance(expression, str):
-            self.evaluate(expression)
-            self._formula = expression
-        elif isinstance(expression, int):
-            self._formula = str(expression)
-        elif isinstance(expression, TimeVariable):
-            self._formula = expression._formula
-            #self.name = expression._name #(TODO find a solution so that intermediate operations are not stored in the instances)
-        else:
-            raise TypeError(f"expression argument type should be int or TimeVariable, got {type(expression).__name__}")
-
-    @property
-    def value(self) -> int:
-        return self.evaluate(self._formula, self._name)
-
-    @value.setter
-    def value(self, value:int):
-        if isinstance(value, int):
-            self._formula = str(value) 
-        else:
-            raise TypeError(f"value argument type should be int, got {type(value).__name__}")
-
-
-    @property
-    def is_constant(self) -> bool:
-        try:
-            if str(int(self._formula)) == self._formula:
-                return True
-            else:
-                return False
-        except:
-            return False
-
-    def __repr__(self):
-        try:
-            response =  f"{self._name}: {self._formula} = {self.value}"
-        except TimeVariable.CircularReferenceError:
-            response =  f"{self._name}: {self._formula} = CircularReferenceError"
-        return response
-
-    def evaluate(self, expression:str, * previous_evaluations) -> int:
-        import re
-        for name in TimeVariable.instances.keys():
-            if name in expression:
-                if name in previous_evaluations:
-                    raise TimeVariable.CircularReferenceError(f"Circular Reference evaluating {expression}, variable {name} found in {previous_evaluations}")
-                match_string = rf'\b{re.escape(name)}\b'
-                replacement = str(self.evaluate(TimeVariable.instances[name]._formula, * previous_evaluations, TimeVariable.instances[name]._name))
-                expression = re.sub(match_string, replacement, expression)
-        try:
-            result = eval(expression)
-        except: 
-            raise ValueError(f"The evaluation of the expression: {expression} returned an error")
-
-        if not isinstance(result, int):
-            raise TypeError(f"The evaluation of the expression: {expression} does not return an integer")
-        return result
-
-    def __int__(self):
-        return self.value
-
-    def __float__(self):
-        return float(self.value)
-
-    def __str__(self):
-        return str(self.value)
-
-    def __lt__(self, other):
-        if isinstance(other, TimeVariable):
-            return self.value < other.value
-        elif isinstance(other, int):
-            return self.value < other
-        else:
-            raise TypeError(f"Comparison operators expect TimeVariable or int arguments, got {type(other).__name__}")
-            
-    def __gt__(self, other):
-        if isinstance(other, TimeVariable):
-            return self.value > other.value
-        elif isinstance(other, int):
-            return self.value > other
-        else:
-            raise TypeError(f"Comparison operators expect TimeVariable or int arguments, got {type(other).__name__}")
-
-    def __le__(self, other):
-        if isinstance(other, TimeVariable):
-            return self.value <= other.value
-        elif isinstance(other, int):
-            return self.value <= other
-        else:
-            raise TypeError(f"Comparison operators expect TimeVariable or int arguments, got {type(other).__name__}")
-
-    def __ge__(self, other):
-        if isinstance(other, TimeVariable):
-            return self.value >= other.value
-        elif isinstance(other, int):
-            return self.value >= other
-        else:
-            raise TypeError(f"Comparison operators expect TimeVariable or int arguments, got {type(other).__name__}")
-
-    def __eq__(self, other):
-        if isinstance(other, TimeVariable):
-            return self.value == other.value
-        elif isinstance(other, int):
-            return self.value == other
-        else:
-            raise TypeError(f"Comparison operators expect TimeVariable or int arguments, got {type(other).__name__}")
-
-    def __ne__(self, other):
-        if isinstance(other, TimeVariable):
-            return self.value != other.value
-        elif isinstance(other, int):
-            return self.value != other
-        else:
-            raise TypeError(f"Comparison operators expect TimeVariable or int arguments, got {type(other).__name__}")
-
-    def __add__(self, other): # -> TimeVariable:
-        if isinstance(other, TimeVariable):
-            return TimeVariable(f"({self.name} + {other.name})")
-        elif isinstance(other, int):
-            return TimeVariable(f"({self.name} + {str(other)})")
-
-    def __radd__(self, other): # -> TimeVariable:
-        if isinstance(other, TimeVariable):
-            return TimeVariable(f"({other.formula} + {self.name})")
-        elif isinstance(other, int):
-            return TimeVariable(f"({str(other)} + {self.name})")
-
-    def __sub__(self, other): # -> TimeVariable:
-        if isinstance(other, TimeVariable):
-            return TimeVariable(f"({self.name} - {other.formula})")
-        elif isinstance(other, int):
-            return TimeVariable(f"({self.name} - {str(other)})")
-            
-    def __rsub__(self, other): # -> TimeVariable:
-        if isinstance(other, TimeVariable):
-            return TimeVariable(f"({other.formula} - {self.name})")
-        elif isinstance(other, int):
-            return TimeVariable(f"({str(other)} - {self.name})")
-
-    def __mul__(self, other): # -> TimeVariable:
-        if isinstance(other, TimeVariable):
-            return TimeVariable(f"({self.name} * {other.formula})")
-        elif isinstance(other, int):
-            return TimeVariable(f"({self.name} * {str(other)})")
-            
-    def __rmul__(self, other): # -> TimeVariable:
-        if isinstance(other, TimeVariable):
-            return TimeVariable(f"({other.formula} * {self.name})")
-        elif isinstance(other, int):
-            return TimeVariable(f"({str(other)} * {self.name})")
-
-    def __floordiv__(self, other): # -> TimeVariable:
-        if isinstance(other, TimeVariable):
-            return TimeVariable(f"({self.name} // {other.formula})")
-        elif isinstance(other, int):
-            return TimeVariable(f"({self.name} // {str(other)})")
-            
-    def __rfloordiv__(self, other): # -> TimeVariable:
-        if isinstance(other, TimeVariable):
-            return TimeVariable(f"({other.formula} // {self.name})")
-        elif isinstance(other, int):
-            return TimeVariable(f"({str(other)} // {self.name})")
-
-    def __mod__(self, other): # -> TimeVariable:
-        if isinstance(other, TimeVariable):
-            return TimeVariable(f"({self.name} % {other.formula})")
-        elif isinstance(other, int):
-            return TimeVariable(f"({self.name} % {str(other)})")
-            
-    def __rmod__(self, other): # -> TimeVariable:
-        if isinstance(other, TimeVariable):
-            return TimeVariable(f"({other.formula} % {self.name})")
-        elif isinstance(other, int):
-            return TimeVariable(f"({str(other)} % {self.name})")
-
-    def __iadd__(self, other): # -> TimeVariable:
-        if isinstance(other, TimeVariable):
-            self.formula =  f"({self.formula} + {other.name})"
-            return self
-        elif isinstance(other, int):
-            if self.is_constant:
-                self.formula = str(int(self.formula) + other)
-            else:
-                self.formula = f"({self.formula} + {str(other)})"
-            return self
-
-    def __isub__(self, other): # -> TimeVariable:
-        if isinstance(other, TimeVariable):
-            self.formula =  f"({self.formula} - {other.name})"
-            return self
-        elif isinstance(other, int):
-            if self.is_constant:
-                self.formula = str(int(self.formula) - other)
-            else:
-                self.formula = f"({self.formula} - {str(other)})"
-            return self
-
-    def __imul__(self, other): # -> TimeVariable:
-        if isinstance(other, TimeVariable):
-            self.formula =  f"({self.formula} * {other.name})"
-            return self
-        elif isinstance(other, int):
-            if self.is_constant:
-                self.formula = str(int(self.formula) * other)
-            else:
-                self.formula = f"({self.formula} * {str(other)})"
-            return self
-
-    def __ifloordiv__(self, other): # -> TimeVariable:
-        if isinstance(other, TimeVariable):
-            self.formula =  f"({self.formula} // {other.name})"
-            return self
-        elif isinstance(other, int):
-            if self.is_constant:
-                self.formula = str(int(self.formula) // other)
-            else:
-                self.formula = f"({self.formula} // {str(other)})"
-            return self
-
-    def __imod__(self, other): # -> TimeVariable:
-        if isinstance(other, TimeVariable):
-            self.formula =  f"({self.formula} % {other.name})"
-            return self
-        elif isinstance(other, int):
-            if self.is_constant:
-                self.formula = str(int(self.formula) % other)
-            else:
-                self.formula = f"({self.formula} % {str(other)})"
-            return self
-
-    def __neg__(self): # -> TimeVariable:
-        return TimeVariable(f"-{self.name}")
-
-    def __hash__(self):
-        return hash(self._name)
 
 
 class Waveform:
@@ -540,8 +222,8 @@ class Pulse:
     """A class to represent a pulse to be sent to the QPU.
 
     Args:
-        start (int | TimeVariable): Start time of pulse in ns.
-        duration (int | TimeVariable): Pulse duration in ns.
+        start (int | intSymbolicExpression): Start time of pulse in ns.
+        duration (int | intSymbolicExpression): Pulse duration in ns.
         amplitude (float): Pulse digital amplitude (unitless) [0 to 1].
         frequency (int): Pulse Intermediate Frequency in Hz [10e6 to 300e6].
         relative_phase (float): To be added.
@@ -567,7 +249,7 @@ class Pulse:
                                 type=PulseType.DRIVE)
 
             # define Rectangular readout pulse
-            readout_pulse = Pulse(start=TimeVariable(60),
+            readout_pulse = Pulse(start=intSymbolicExpression(60),
                                   duration=2000,
                                   amplitude=0.3,
                                   frequency=20_000_000,
@@ -576,12 +258,12 @@ class Pulse:
                                   channel=2,
                                   type=PulseType.READOUT)
     """
-    def __init__(self, start:int | TimeVariable, duration:int | TimeVariable, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
+    def __init__(self, start:int | int_se, duration:int | int_se, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
                        channel: int | str, type: PulseType | str  = PulseType.DRIVE, qubit: int | str = 0):
 
-        self._start:TimeVariable = None
-        self._duration: TimeVariable = None
-        self._finish: TimeVariable = None
+        self._start:int_se = None
+        self._duration: int_se = None
+        self._finish: int_se = None
         self._amplitude: float = None
         self._frequency: int = None
         self._relative_phase: float = None
@@ -614,16 +296,16 @@ class Pulse:
     
     @start.setter
     def start(self, value):
-        if not isinstance(value, (TimeVariable, int)):
-            raise TypeError(f"start argument type should be TimeVariable or int, got {type(value).__name__}")
+        if not isinstance(value, (int_se, int)):
+            raise TypeError(f"start argument type should be intSymbolicExpression or int, got {type(value).__name__}")
         elif not value >= 0:
             raise ValueError(f"start argument must be >= 0, got {value}")
-        if isinstance(value, TimeVariable):
+        if isinstance(value, int_se):
             #self._start = value
-            #self._start = TimeVariable(value)
-            self._start = TimeVariable(value.name)
+            #self._start = intSymbolicExpression(value)
+            self._start = int_se(value.symbol)
         elif isinstance(value, int):
-            self._start = TimeVariable(value)
+            self._start = int_se(value)
 
     @property
     def duration(self) -> int:
@@ -631,14 +313,14 @@ class Pulse:
 
     @duration.setter
     def duration(self, value):
-        if not isinstance(value, (TimeVariable, int)):
-            raise TypeError(f"duration argument type should be TimeVariable or int, got {type(value).__name__}")
+        if not isinstance(value, (int_se, int)):
+            raise TypeError(f"duration argument type should be intSymbolicExpression or int, got {type(value).__name__}")
         elif not value > 0:
             raise ValueError(f"duration argument must be >= 0, got {value}")
-        if isinstance(value, TimeVariable):
-            self._duration = TimeVariable(value.name)
+        if isinstance(value, int_se):
+            self._duration = int_se(value.symbol)
         elif isinstance(value, int):
-            self._duration = TimeVariable(value)
+            self._duration = int_se(value)
         self._finish = self._start + self._duration
 
     @property
@@ -646,15 +328,15 @@ class Pulse:
         return self._finish.value
 
     @property
-    def tv_start(self) -> TimeVariable:
+    def tv_start(self) -> int_se:
         return self._start
 
     @property
-    def tv_duration(self) -> TimeVariable:
+    def tv_duration(self) -> int_se:
         return self._duration
 
     @property
-    def tv_finish(self) -> TimeVariable:
+    def tv_finish(self) -> int_se:
         return self._finish
 
     @property
@@ -851,7 +533,7 @@ class ReadoutPulse(Pulse):
 
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
-    def __init__(self, start:int | TimeVariable, duration:int | TimeVariable, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
+    def __init__(self, start:int | int_se, duration:int | int_se, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
                        channel: int | str, qubit: int | str = 0):
         super().__init__(start, duration, amplitude, frequency, relative_phase, shape, channel, type =  PulseType.READOUT, qubit = qubit)
 
@@ -865,7 +547,7 @@ class DrivePulse(Pulse):
 
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
-    def __init__(self, start:int | TimeVariable, duration:int | TimeVariable, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
+    def __init__(self, start:int | int_se, duration:int | int_se, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
                        channel: int | str, qubit: int | str = 0):
         super().__init__(start, duration, amplitude, frequency, relative_phase, shape, channel, type =  PulseType.DRIVE, qubit = qubit)
 
@@ -879,7 +561,7 @@ class FluxPulse(Pulse):
 
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
-    def __init__(self, start:int | TimeVariable, duration:int | TimeVariable, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
+    def __init__(self, start:int | int_se, duration:int | int_se, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
                        channel: int | str, qubit: int | str = 0):
         super().__init__(start, duration, amplitude, frequency, relative_phase, shape, channel, type =  PulseType.FLUX, qubit = qubit)
 
@@ -1017,10 +699,6 @@ class PulseSequence():
 
     def __contains__(self, pulse):
         return pulse in self.pulses
-
-    def __reversed__(self):
-        for pulse in self.pulses[::-1]:
-            yield pulse
     
     def __repr__(self):
         return self.serial
@@ -1100,9 +778,14 @@ class PulseSequence():
             self.pulses.append(pulse)
         self.pulses.sort(key=lambda item: (item.channel, item.start))
         
-    def append(self, *pulses):
+    def append_at_end_of_channel(self, *pulses):
         for pulse in pulses:
             pulse.start = self.pulses.get_channel_pulses(pulse.channel).finish
+            self.add(pulse)
+
+    def append_at_end_of_sequence(self, *pulses):
+        for pulse in pulses:
+            pulse.start = self.pulses.finish
             self.add(pulse)
 
     def index(self, pulse):
