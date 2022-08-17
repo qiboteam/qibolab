@@ -3,7 +3,7 @@ import pytest
 import yaml
 
 from qibolab.instruments.spi import SPI
-from qibolab.paths import qibolab_folder
+from qibolab.paths import qibolab_folder, user_folder
 
 INSTRUMENTS_LIST = ["SPI"]
 instruments = {}
@@ -28,7 +28,7 @@ def test_instruments_spi_init(name):
     assert instance.address == address
     assert instance.is_connected == False
     assert instance.signature == f"{name}@{address}"
-    assert instance.data_folder == qibolab_folder / "instruments" / "data"
+    assert instance.data_folder == user_folder / "instruments" / "data"
 
 
 @pytest.mark.xfail

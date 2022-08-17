@@ -4,7 +4,7 @@ import pytest
 import yaml
 
 from qibolab.instruments.rohde_schwarz import SGS100A
-from qibolab.paths import qibolab_folder
+from qibolab.paths import qibolab_folder, user_folder
 
 INSTRUMENTS_LIST = ["SGS100A"]
 instruments = {}
@@ -30,7 +30,7 @@ def test_instruments_rohde_schwarz_init(name):
     assert instance.is_connected == False
     assert instance.signature == f"{name}@{address}"
     assert instance.device == None
-    assert instance.data_folder == qibolab_folder / "instruments" / "data"
+    assert instance.data_folder == user_folder / "instruments" / "data"
 
 
 @pytest.mark.xfail
