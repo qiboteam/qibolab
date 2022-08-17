@@ -78,15 +78,20 @@ def test_abstractplatform_init(fx_instantiate_platform):
 
 
 def test_abstractplatform_reload_settings(fx_instantiate_platform):
-    original_sampling_rate = platform.settings["settings"]["sampling_rate"]
-    new_sampling_rate = 2_000_000_000
-    save_config_parameter(test_runcard, "sampling_rate", new_sampling_rate, "settings")
-    platform.reload_settings()
-    assert platform.settings["settings"]["sampling_rate"] == new_sampling_rate
-    save_config_parameter(
-        test_runcard, "sampling_rate", original_sampling_rate, "settings"
-    )
-    platform.reload_settings()
+    if not hardware_available:
+        pytest.xfail("Hardware not available")
+    else:
+        original_sampling_rate = platform.settings["settings"]["sampling_rate"]
+        new_sampling_rate = 2_000_000_000
+        save_config_parameter(
+            test_runcard, "sampling_rate", new_sampling_rate, "settings"
+        )
+        platform.reload_settings()
+        assert platform.settings["settings"]["sampling_rate"] == new_sampling_rate
+        save_config_parameter(
+            test_runcard, "sampling_rate", original_sampling_rate, "settings"
+        )
+        platform.reload_settings()
 
 
 def save_config_parameter(runcard, parameter, value, *keys):
