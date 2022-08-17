@@ -98,6 +98,11 @@ class AbstractPlatform(ABC):
                 )
 
     def setup(self):
+        if not self.is_connected:
+            raise_error(
+                    RuntimeError,
+                    "There is no connection to the instruments, the setup cannot be completed",
+                )
         self.hardware_avg = self.settings["settings"]["hardware_avg"]
         self.sampling_rate = self.settings["settings"]["sampling_rate"]
         self.repetition_duration = self.settings["settings"]["repetition_duration"]
@@ -126,13 +131,13 @@ class AbstractPlatform(ABC):
         # Load Native Gates
         self.native_gates = self.settings["native_gates"]
 
-        if self.is_connected:
-            for name in self.instruments:
-                # Set up every with the platform settings and the instrument settings
-                self.instruments[name].setup(
-                    **self.settings["settings"],
-                    **self.settings["instruments"][name]["settings"],
-                )
+        
+        for name in self.instruments:
+            # Set up every with the platform settings and the instrument settings
+            self.instruments[name].setup(
+                **self.settings["settings"],
+                **self.settings["instruments"][name]["settings"],
+            )
 
         # Load Characterization settings
         self.characterization = self.settings["characterization"]
