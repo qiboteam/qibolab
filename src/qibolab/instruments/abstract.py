@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
+import os
 from abc import ABC, abstractmethod
 
-from qibolab.paths import qibolab_folder
+from qibolab.paths import user_folder
 
 
 class AbstractInstrument(ABC):
@@ -19,7 +20,7 @@ class AbstractInstrument(ABC):
         self.is_connected = False
         self.signature = f"{type(self).__name__}@{address}"
         self.device = None
-        self.data_folder = qibolab_folder / "instruments" / "data"
+        self.data_folder = user_folder / "instruments" / "data"
         self.data_folder.mkdir(parents=True, exist_ok=True)
 
     @abstractmethod
