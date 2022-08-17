@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import os
 from abc import ABC, abstractmethod
 
 from qibolab.paths import user_folder
