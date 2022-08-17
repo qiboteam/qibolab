@@ -77,7 +77,7 @@ def test_abstractplatform_init(fx_instantiate_platform):
         )
 
 
-def test_abstractplatform_reload_settings(fx_instantiate_platform):
+def test_abstractplatform_reload_settings(fx_connect_platform):
     if not hardware_available:
         pytest.xfail("Hardware not available")
     else:
