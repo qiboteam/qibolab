@@ -31,7 +31,13 @@ def test_instruments_qublox_init(name):
     assert instance.address == address
     assert instance.is_connected == False
     assert instance.signature == f"{i_class}@{address}"
-    assert instance.data_folder == user_folder / "instruments" / "data"
+    assert (
+        instance.data_folder
+        == user_folder
+        / "instruments"
+        / "data"
+        / instance.tmp_folder.name.split("/")[-1]
+    )
 
 
 @pytest.mark.xfail

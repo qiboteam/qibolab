@@ -30,7 +30,13 @@ def test_instruments_rohde_schwarz_init(name):
     assert instance.is_connected == False
     assert instance.signature == f"{name}@{address}"
     assert instance.device == None
-    assert instance.data_folder == user_folder / "instruments" / "data"
+    assert (
+        instance.data_folder
+        == user_folder
+        / "instruments"
+        / "data"
+        / instance.tmp_folder.name.split("/")[-1]
+    )
 
 
 @pytest.mark.xfail
