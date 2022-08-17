@@ -130,12 +130,8 @@ class SPI(AbstractInstrument):
     def get_SPI_battery_voltage(self):
         return self.device.battery_voltages()
 
-    def __del__(self):
-        self.disconnect()
-
     def disconnect(self):
         if self.is_connected:
-            self.device.close()
             self.is_connected = False
 
     def close(self):
@@ -153,9 +149,9 @@ class SPI(AbstractInstrument):
                     .instrument_modules["dac" + str(module[2] - 1)]
                     .current()
                 )
-                log.info(
-                    f"WARNING: {module[1]} - flux port {module[2]}: current voltage: {actual_voltage} new voltage: {module[3]}"
-                )
+                # log.info(
+                #    f"WARNING: {module[1]} - flux port {module[2]}: current voltage: {actual_voltage} new voltage: {module[3]}"
+                # )
 
                 self.device.instrument_modules[module[1]].instrument_modules[
                     "dac" + str(module[2] - 1)
@@ -170,9 +166,9 @@ class SPI(AbstractInstrument):
                     .instrument_modules["dac" + str(module[2] - 1)]
                     .current()
                 )
-                log.info(
-                    f"WARNING: {module[1]} - flux port {module[2]}: current voltage: {actual_voltage} new voltage: {module[3]}"
-                )
+                # log.info(
+                #    f"WARNING: {module[1]} - flux port {module[2]}: current voltage: {actual_voltage} new voltage: {module[3]}"
+                # )
 
                 self.device.instrument_modules[module[1]].instrument_modules[
                     "dac" + str(module[2] - 1)

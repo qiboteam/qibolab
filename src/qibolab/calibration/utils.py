@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
-import datetime
 import pathlib
 
 import matplotlib.pyplot as plt
 import numpy as np
-import yaml
 from quantify_core.measurement import MeasurementControl
 
 from qibolab.paths import qibolab_folder
@@ -49,7 +47,7 @@ def plot(smooth_dataset, dataset, label, type):
             "o",
             color="C2",
         )
-        plt.savefig(pathlib.Path("data") / f"{label}.pdf")
+        plt.savefig(data_folder / f"{label}.pdf")
         return
 
     if type == 1:  # qubit spec, rabi, ramsey, t1 plots
@@ -120,6 +118,24 @@ def plot_qubit_states(gnd_results, exc_results):
     plt.savefig(data_folder / "qubit_states_classification.pdf")
 
 
+def plot_allXY(results, gateNumber):
+    plt.scatter(results, gateNumber)
+    plt.ylabel("Z projection probability of qubit state |0>")
+    # plt.show
+
+    plt.plot(results)
+    plt.ylabel("Z projection probability of qubit state |0>")
+    # plt.show
+
+    plt.savefig(data_folder / "allXY.pdf")
+
+
+def saveROMatrix(data, file_name):
+    from numpy import savetxt
+
+    savetxt(data_folder / file_name, data, delimiter=",")
+
+
 def create_measurement_control(name, debug=True):
     import os
 
@@ -140,6 +156,16 @@ def create_measurement_control(name, debug=True):
         mc = MeasurementControl(f"MC_{name}")
         return mc, None, None
     # TODO: be able to choose which windows are opened and remember their sizes and dimensions
+
+
+def start_live_plotting(path):
+    import threading
+
+    import qibolab.calibration.live as lp
+
+    dash = threading.Thread(target=lp.start_server, args=(path,))
+    dash.setDaemon(True)
+    dash.start()
 
 
 def classify(point: complex, mean_gnd, mean_exc):

@@ -64,7 +64,7 @@ setup(
         ],
         # TII system dependencies
         "tiiq": [
-            "qblox-instruments",  # 0.6.1
+            "qblox-instruments==0.6.1",  # 0.6.1
             "quantify-core",  # 0.6.0
             "dash",  # Live plotting
         ],

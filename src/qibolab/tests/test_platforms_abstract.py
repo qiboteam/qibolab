@@ -22,7 +22,7 @@ def test_u3_sim_agreement():
 
 
 def test_u3_to_sequence():
-    platform = Platform("multiqubit")
+    platform = Platform("tii5q")
     gate = gates.U3(0, theta=0.1, phi=0.2, lam=0.3)
     sequence = PulseSequence()
     platform.to_sequence(sequence, gate)
@@ -30,7 +30,7 @@ def test_u3_to_sequence():
 
 
 def test_measurement():
-    platform = Platform("multiqubit")
+    platform = Platform("tii5q")
     gate = gates.M(0)
     with pytest.raises(NotImplementedError):
         platform.asu3(gate)
@@ -44,7 +44,7 @@ def test_measurement():
 
 @pytest.mark.parametrize("gatename", ["H", "X", "Y", "Z"])
 def test_pauli_to_u3_params(gatename):
-    platform = Platform("multiqubit")
+    platform = Platform("tii5q")
     gate = getattr(gates, gatename)(0)
     params = platform.asu3(gate)
     u3 = gates.U3(0, *params)
@@ -55,7 +55,7 @@ def test_pauli_to_u3_params(gatename):
 
 
 def test_identity_gate():
-    platform = Platform("multiqubit")
+    platform = Platform("tii5q")
     gate = gates.I(0)
     with pytest.raises(NotImplementedError):
         platform.asu3(gate)
@@ -64,7 +64,7 @@ def test_identity_gate():
 @pytest.mark.parametrize("gatename", ["RX", "RY", "RZ"])
 def test_rotations_to_u3_params(gatename):
     backend = NumpyBackend()
-    platform = Platform("multiqubit")
+    platform = Platform("tii5q")
     gate = getattr(gates, gatename)(0, theta=0.1)
     params = platform.asu3(gate)
     target_matrix = gates.U3(0, *params).asmatrix(backend)
@@ -72,7 +72,7 @@ def test_rotations_to_u3_params(gatename):
 
 
 def test_rz_to_sequence():
-    platform = Platform("multiqubit")
+    platform = Platform("tii5q")
     sequence = PulseSequence()
     platform.to_sequence(sequence, gates.RZ(0, theta=0.2))
     platform.to_sequence(sequence, gates.Z(0))
@@ -82,7 +82,7 @@ def test_rz_to_sequence():
 
 def test_u2_to_u3_params():
     backend = NumpyBackend()
-    platform = Platform("multiqubit")
+    platform = Platform("tii5q")
     gate = gates.U2(0, phi=0.1, lam=0.3)
     params = platform.asu3(gate)
     target_matrix = gates.U3(0, *params).asmatrix(backend)
@@ -93,7 +93,7 @@ def test_unitary_to_u3_params():
     from scipy.linalg import det, expm
 
     backend = NumpyBackend()
-    platform = Platform("multiqubit")
+    platform = Platform("tii5q")
     u = np.random.random((2, 2)) + 1j * np.random.random((2, 2))
     # make random matrix unitary
     u = expm(1j * (u + u.T.conj()))
@@ -105,9 +105,7 @@ def test_unitary_to_u3_params():
     np.testing.assert_allclose(gate.asmatrix(backend), target_matrix)
 
 
-@pytest.mark.parametrize(
-    "platform_name", ["tiiq", "qili", "multiqubit"]
-)  # , 'icarusq'])
+@pytest.mark.parametrize("platform_name", ["tii1q", "tii5q"])  # , 'icarusq'])
 def test_pulse_sequence_add_u3(platform_name):
     platform = Platform(platform_name)
     seq = PulseSequence()
@@ -125,9 +123,7 @@ def test_pulse_sequence_add_u3(platform_name):
     assert seq.serial == f"{RX90_pulse1.serial}, {RX90_pulse2.serial}"
 
 
-@pytest.mark.parametrize(
-    "platform_name", ["tiiq", "qili", "multiqubit"]
-)  # , 'icarusq'])
+@pytest.mark.parametrize("platform_name", ["tii1q", "tii5q"])  # , 'icarusq'])
 def test_pulse_sequence_add_two_u3(platform_name):
     platform = Platform(platform_name)
     seq = PulseSequence()
@@ -157,9 +153,7 @@ def test_pulse_sequence_add_two_u3(platform_name):
     )
 
 
-@pytest.mark.parametrize(
-    "platform_name", ["tiiq", "qili", "multiqubit"]
-)  # , 'icarusq'])
+@pytest.mark.parametrize("platform_name", ["tii1q", "tii5q"])  # , 'icarusq'])
 def test_pulse_sequence_add_measurement(platform_name):
     platform = Platform(platform_name)
     seq = PulseSequence()
