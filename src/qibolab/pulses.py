@@ -120,7 +120,7 @@ class Rectangular(PulseShape):
         if self.pulse:
             num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
             waveform = Waveform(np.zeros(num_samples))
-            waveform.serial = f"Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         else:
             raise Exception("PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms")
@@ -152,7 +152,7 @@ class Gaussian(PulseShape):
             num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
             x = np.arange(0,num_samples,1)
             waveform = Waveform(self.pulse.amplitude * np.exp(-(1/2)*(((x-(num_samples-1)/2)**2)/(((num_samples)/self.rel_sigma)**2))))
-            waveform.serial = f"Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         else:
             raise Exception("PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes")
@@ -162,7 +162,7 @@ class Gaussian(PulseShape):
         if self.pulse:
             num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
             waveform = Waveform(np.zeros(num_samples))
-            waveform.serial = f"Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         else:
             raise Exception("PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes")
@@ -196,7 +196,7 @@ class Drag(PulseShape):
             x = np.arange(0,num_samples,1)
             i = self.pulse.amplitude * np.exp(-(1/2)*(((x-(num_samples-1)/2)**2)/(((num_samples)/self.rel_sigma)**2)))
             waveform = Waveform(i)
-            waveform.serial = f"Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         else:
             raise Exception("PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes")
@@ -209,7 +209,7 @@ class Drag(PulseShape):
             i = self.pulse.amplitude * np.exp(-(1/2)*(((x-(num_samples-1)/2)**2)/(((num_samples)/self.rel_sigma)**2)))
             q = self.beta * (-(x-(num_samples-1)/2)/((num_samples/self.rel_sigma)**2)) * i * PulseShape.SAMPLING_RATE / 1e9
             waveform = Waveform(q)
-            waveform.serial = f"Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         else:
             raise Exception("PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes")
@@ -281,8 +281,6 @@ class Pulse:
         self.channel = channel
         self.type = type
         self.qubit = qubit
-
-        self.modulate_waveforms: bool = False
 
     def __del__(self):
         del self._start
@@ -435,22 +433,28 @@ class Pulse:
         return f"Pulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {format(self.frequency, '_')}, {format(self.relative_phase, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.type})"
 
     @property
-    def waveform_i(self) -> Waveform:
-        if self.modulate_waveforms:
-            return self._shape.modulated_waveform_i
-        else:
-            return self._shape.envelope_waveform_i
+    def envelope_waveform_i(self) -> Waveform:
+        return self._shape.envelope_waveform_i
 
     @property
-    def waveform_q(self) -> Waveform:
-        if self.modulate_waveforms:
-            return self._shape.modulated_waveform_q
-        else:
-            return self._shape.envelope_waveform_q
+    def envelope_waveform_q(self) -> Waveform:
+        return self._shape.envelope_waveform_q
 
     @property
-    def waveforms(self) -> tuple[Waveform, Waveform]:
-        return  (self.waveform_i, self.waveform_q)
+    def envelope_waveforms(self) -> tuple[Waveform, Waveform]:
+        return  (self._shape.envelope_waveform_i, self._shape.envelope_waveform_q)
+
+    @property
+    def modulated_waveform_i(self) -> Waveform:
+        return self._shape.modulated_waveform_i
+
+    @property
+    def modulated_waveform_q(self) -> Waveform:
+        return self._shape.modulated_waveform_q
+
+    @property
+    def modulated_waveforms(self) -> tuple[Waveform, Waveform]:
+        return self._shape.modulated_waveforms
 
     def __repr__(self):
         return self.serial
@@ -615,31 +619,39 @@ class SplitPulse(Pulse):
     def serial(self):
         return f"SequencerPulse({self.window_start}, {self.window_duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {format(self.frequency, '_')}, {format(self.relative_phase, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel})"
 
-    @property
-    def waveform_i(self) -> Waveform:
-        if self.modulate_waveforms:
-            waveform = Waveform(self._shape.modulated_waveform_i.data[self._window_start - self.start : self._window_finish - self.start])
-            waveform.serial = self._shape.modulated_waveform_i.serial + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
-            return  waveform
-        else:
-            waveform = Waveform(self._shape.envelope_waveform_i.data[self._window_start - self.start : self._window_finish - self.start])
-            waveform.serial = self._shape.envelope_waveform_i.serial + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
-            return  waveform
+
 
     @property
-    def waveform_q(self) -> Waveform:
-        if self.modulate_waveforms:
-            waveform = Waveform(self._shape.modulated_waveform_q.data[self._window_start - self.start : self._window_finish - self.start])
-            waveform.serial = self._shape.modulated_waveform_q.serial + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
-            return  waveform
-        else:
-            waveform = Waveform(self._shape.envelope_waveform_q.data[self._window_start - self.start : self._window_finish - self.start])
-            waveform.serial = self._shape.envelope_waveform_q.serial + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
-            return  waveform
+    def envelope_waveform_i(self) -> Waveform:
+        waveform = Waveform(self._shape.envelope_waveform_i.data[self._window_start - self.start : self._window_finish - self.start])
+        waveform.serial = self._shape.envelope_waveform_i.serial + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
+        return  waveform
 
     @property
-    def waveforms(self) -> tuple[Waveform, Waveform]:
-        return  (self.waveform_i, self.waveform_q)
+    def envelope_waveform_q(self) -> Waveform:
+        waveform = Waveform(self._shape.modulated_waveform_i.data[self._window_start - self.start : self._window_finish - self.start])
+        waveform.serial = self._shape.modulated_waveform_i.serial + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
+        return  waveform
+
+    @property
+    def envelope_waveforms(self) -> tuple[Waveform, Waveform]:
+        return  (self.envelope_waveform_i, self.envelope_waveform_q)
+
+    @property
+    def modulated_waveform_i(self) -> Waveform:
+        waveform = Waveform(self._shape.envelope_waveform_q.data[self._window_start - self.start : self._window_finish - self.start])
+        waveform.serial = self._shape.envelope_waveform_q.serial + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
+        return  waveform
+
+    @property
+    def modulated_waveform_q(self) -> Waveform:
+        waveform = Waveform(self._shape.modulated_waveform_q.data[self._window_start - self.start : self._window_finish - self.start])
+        waveform.serial = self._shape.modulated_waveform_q.serial + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
+        return  waveform
+
+    @property
+    def modulated_waveforms(self) -> tuple[Waveform, Waveform]:
+        return  (self.modulated_waveform_i, self.modulated_waveform_q)
 
     def plot(self):
         import matplotlib.pyplot as plt
@@ -888,6 +900,25 @@ class PulseSequence():
                 if (pulse.start <= times[n]) & (pulse.finish >= times[n+1]):
                     overlaps[(times[n], times[n+1])] += pulse
         return overlaps
+
+    def separate_overlapping_pulses(self): # -> dict((int,int): PulseSequence):
+        separated_pulses = []
+        for new_pulse in self.pulses:
+            stored = False
+            for ps in separated_pulses:
+                overlaps = False
+                for existing_pulse in ps:
+                    if (new_pulse.start >= existing_pulse.start and new_pulse.start <= existing_pulse.finish
+                        ) or (
+                        existing_pulse.start >= new_pulse.start and existing_pulse.start <= new_pulse.finish):
+                        overlaps = True
+                        break
+                if not overlaps:
+                    ps.add(new_pulse)
+                    stored = True
+            if not stored:
+                separated_pulses.append(PulseSequence(new_pulse))
+        return separated_pulses
 
     @property
     def pulses_overlap(self) -> bool:

@@ -1057,7 +1057,6 @@ class Calibration:
             qubit_state = platform.execute_pulse_sequence(
                 exc_sequence, nshots=1
             )  # TODO: Improve the speed of this with binning
-            qubit_state = list(list(qubit_state.values())[0].values())[0]
             print(f"Finished exc single shot execution  {i}")
             # Compose complex point from i, q obtained from execution
             point = complex(qubit_state[2], qubit_state[3])
@@ -1076,7 +1075,6 @@ class Calibration:
             qubit_state = platform.execute_pulse_sequence(
                 gnd_sequence, 1
             )  # TODO: Improve the speed of this with binning
-            qubit_state = list(list(qubit_state.values())[0].values())[0]
             print(f"Finished gnd single shot execution  {i}")
             # Compose complex point from i, q obtained from execution
             point = complex(qubit_state[2], qubit_state[3])
@@ -1202,7 +1200,6 @@ class Calibration:
             # Execute PulseSequence defined by gates
             platform.start()
             state = platform.execute_pulse_sequence(seq)
-            state = list(list(state.values())[0].values())[0]
             platform.stop()
             # transform readout I and Q into probabilities
             res = self._get_eigenstate_from_voltage(state, min_voltage, max_voltage)
@@ -1257,9 +1254,7 @@ class Calibration:
                 # Iterate over list of RO results
                 res = ""
                 for qubit in range(nqubits):
-                    globals()["qubit_state_%s" % qubit] = list(
-                        list(ro_multiqubit_state.values())[qubit].values()
-                    )[0]
+                    globals()["qubit_state_%s" % qubit] = ro_multiqubit_state
                     I = (globals()[f"qubit_state_{qubit}"])[2]
                     Q = (globals()[f"qubit_state_{qubit}"])[3]
                     point = complex(I, Q)
@@ -1312,8 +1307,7 @@ class Calibration:
             seq1.add(ro_pulse)
 
             platform.start()
-            state1 = platform.execute_pulse_sequence(seq1, nshots=10240)
-            state1 = list(list(state1.values())[0].values())[0]
+            state1 = platform.execute_pulse_sequence(seq1)
             platform.stop()
 
             #drag pulse RY(pi)
@@ -1328,8 +1322,7 @@ class Calibration:
             seq2.add(ro_pulse)
 
             platform.start()
-            state2 = platform.execute_pulse_sequence(seq2, nshots=10240)
-            state2 = list(list(state2.values())[0].values())[0]
+            state2 = platform.execute_pulse_sequence(seq2)
             platform.stop()
 
             # save IQ_module and beta param of each iteration
@@ -1378,7 +1371,6 @@ class Calibration:
             # Execute PulseSequence defined by gates
             platform.start()
             state = platform.execute_pulse_sequence(sequence)
-            state = list(list(state.values())[0].values())[0]
             platform.stop()
             res += [state[0]]
             N += [i]
@@ -1805,9 +1797,7 @@ class ROController:
 
     def get(self):
         results = self.platform.execute_pulse_sequence(self.sequence)
-        return list(list(results.values())[0].values())[
-            0
-        ]  # TODO: Replace with the particular acquisition
+        return results
 
 
 class ROControllerNormalised:
@@ -1825,6 +1815,4 @@ class ROControllerNormalised:
     def get(self):
         att = self.instance.device.get("out0_att")
         results = self.platform.execute_pulse_sequence(self.sequence)
-        results = list(list(results.values())[0].values())[0][0] * (np.exp(att / 10))
-        return results
-        # TODO: Replace with the particular acquisition
+        return results[0] * (np.exp(att / 10))

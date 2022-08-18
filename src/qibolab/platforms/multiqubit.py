@@ -24,7 +24,7 @@ class MultiqubitPlatform(AbstractPlatform):
             roles[name] = self.settings['instruments'][name]['roles']
             if 'readout' in roles[name] or 'control' in roles[name]:
                 instrument_pulses[name] = sequence.get_channel_pulses(* self.instruments[name].channels)
-                self.instruments[name].process_pulse_sequence(instrument_pulses[name], nshots)
+                self.instruments[name].process_pulse_sequence(instrument_pulses[name], nshots, self.repetition_duration)
                 self.instruments[name].upload()
 
         for name in self.instruments:
@@ -32,12 +32,18 @@ class MultiqubitPlatform(AbstractPlatform):
                 if not instrument_pulses[name].is_empty:
                     self.instruments[name].play_sequence()
 
-        acquisition_results = None
+        acquisition_results = {}
         for name in self.instruments:
             if 'readout' in roles[name]:
                 if not instrument_pulses[name].is_empty:
                     if not instrument_pulses[name].ro_pulses.is_empty:
-                        acquisition_results = self.instruments[name].play_sequence_and_acquire()
+                        acquisition_results.update(self.instruments[name].play_sequence_and_acquire())
                     else:
                         self.instruments[name].play_sequence()
-        return acquisition_results
+        if len(acquisition_results) == 1:
+            return list(acquisition_results.values())[0]
+        else:
+            return acquisition_results
+       
+
+# TODO add logic to set sync_en = False for qrms if pulsesequence only contains RO pulses

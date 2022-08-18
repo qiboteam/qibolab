@@ -516,9 +516,7 @@ class ROController:
 
     def get(self):
         results = self.platform.execute_pulse_sequence(self.sequence)
-        return list(list(results.values())[0].values())[
-            0
-        ]  # TODO: Replace with the particular acquisition
+        return results
 
 
 if __name__ == "__main__":

@@ -84,7 +84,6 @@ class AbstractPlatform(ABC):
         self.hardware_avg = self.settings['settings']['hardware_avg']
         self.sampling_rate = self.settings['settings']['sampling_rate']
         self.repetition_duration = self.settings['settings']['repetition_duration']
-        self.minimum_delay_between_instructions = self.settings['settings']['minimum_delay_between_instructions']
 
         self.qubits = self.settings['qubits']
         self.topology = self.settings['topology']
