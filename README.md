@@ -70,7 +70,6 @@ Here is another example on how to execute circuits:
 ```python
 import qibo
 from qibo import gates, models
-from qibolab.paths import qibolab_folder
 
 
 # Create circuit and add gates
@@ -88,7 +87,7 @@ for _ in range(5):
     print(result.probabilities())
 
 # Execute the circuit on hardware
-qibo.set_backend("qibolab", platform="tiiq")
+qibo.set_backend("qibolab", platform="tii1q")
 
 for _ in range(5):
     result = c(nshots=1024)
