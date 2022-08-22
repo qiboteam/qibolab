@@ -2,7 +2,8 @@
 import numpy as np
 from abc import ABC, abstractmethod
 from enum import Enum
-from qibolab.symbolic import intSymbolicExpression as int_se
+from qibolab.symbolic import intSymbolicExpression as se_int
+from qibolab.symbolic import floatSymbolicExpression as se_float
 
 
 class PulseType(Enum):
@@ -258,12 +259,12 @@ class Pulse:
                                   channel=2,
                                   type=PulseType.READOUT)
     """
-    def __init__(self, start:int | int_se, duration:int | int_se, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
+    def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
                        channel: int | str, type: PulseType | str  = PulseType.DRIVE, qubit: int | str = 0):
 
-        self._start:int_se = None
-        self._duration: int_se = None
-        self._finish: int_se = None
+        self._start:se_int = None
+        self._duration: se_int = None
+        self._finish: se_int = None
         self._amplitude: float = None
         self._frequency: int = None
         self._relative_phase: float = None
@@ -294,16 +295,16 @@ class Pulse:
     
     @start.setter
     def start(self, value):
-        if not isinstance(value, (int_se, int)):
+        if not isinstance(value, (se_int, int)):
             raise TypeError(f"start argument type should be intSymbolicExpression or int, got {type(value).__name__}")
         elif not value >= 0:
             raise ValueError(f"start argument must be >= 0, got {value}")
-        if isinstance(value, int_se):
+        if isinstance(value, se_int):
             #self._start = value
             #self._start = intSymbolicExpression(value)
-            self._start = int_se(value.symbol)
+            self._start = se_int(value.symbol)
         elif isinstance(value, int):
-            self._start = int_se(value)
+            self._start = se_int(value)
 
     @property
     def duration(self) -> int:
@@ -311,14 +312,14 @@ class Pulse:
 
     @duration.setter
     def duration(self, value):
-        if not isinstance(value, (int_se, int)):
+        if not isinstance(value, (se_int, int)):
             raise TypeError(f"duration argument type should be intSymbolicExpression or int, got {type(value).__name__}")
         elif not value > 0:
             raise ValueError(f"duration argument must be >= 0, got {value}")
-        if isinstance(value, int_se):
-            self._duration = int_se(value.symbol)
+        if isinstance(value, se_int):
+            self._duration = se_int(value.symbol)
         elif isinstance(value, int):
-            self._duration = int_se(value)
+            self._duration = se_int(value)
         self._finish = self._start + self._duration
 
     @property
@@ -326,15 +327,15 @@ class Pulse:
         return self._finish.value
 
     @property
-    def tv_start(self) -> int_se:
+    def se_start(self) -> se_int:
         return self._start
 
     @property
-    def tv_duration(self) -> int_se:
+    def se_duration(self) -> se_int:
         return self._duration
 
     @property
-    def tv_finish(self) -> int_se:
+    def se_finish(self) -> se_int:
         return self._finish
 
     @property
@@ -537,7 +538,7 @@ class ReadoutPulse(Pulse):
 
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
-    def __init__(self, start:int | int_se, duration:int | int_se, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
+    def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
                        channel: int | str, qubit: int | str = 0):
         super().__init__(start, duration, amplitude, frequency, relative_phase, shape, channel, type =  PulseType.READOUT, qubit = qubit)
 
@@ -551,7 +552,7 @@ class DrivePulse(Pulse):
 
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
-    def __init__(self, start:int | int_se, duration:int | int_se, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
+    def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
                        channel: int | str, qubit: int | str = 0):
         super().__init__(start, duration, amplitude, frequency, relative_phase, shape, channel, type =  PulseType.DRIVE, qubit = qubit)
 
@@ -565,7 +566,7 @@ class FluxPulse(Pulse):
 
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
-    def __init__(self, start:int | int_se, duration:int | int_se, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
+    def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
                        channel: int | str, qubit: int | str = 0):
         super().__init__(start, duration, amplitude, frequency, relative_phase, shape, channel, type =  PulseType.FLUX, qubit = qubit)
 

@@ -21,6 +21,8 @@ from qibolab.pulses import (
     ReadoutPulse,
     Rectangular,
 )
+from qibolab.symbolic import intSymbolicExpression as se_int
+from qibolab.symbolic import floatSymbolicExpression as se_float
 
 
 class Calibration:
@@ -171,7 +173,7 @@ class Calibration:
         mc.settables(
             [
                 settable(platform.ro_port[qubit], "lo_frequency", "Frequency", "Hz"),
-                settable(platform.qrm[qubit], "attenuation", "Attenuation", "dB"),
+                settable(platform.ro_port[qubit], "attenuation", "Attenuation", "dB"),
             ]
         )
         mc.gettables(
@@ -317,6 +319,11 @@ class Calibration:
         return qubit_freq, avg_voltage, peak_voltage, dataset
 
     def run_qubit_spectroscopy_flux(self, qubit=0, fluxline=0):
+        # Changes in flux move the resonator frequency, so this plot,
+        # as is (witout adjusting the readout frequency) only works in 
+        # the proximity of the sweetspot
+        # It is meant to be executed right after having found an approximate
+        # sweetspot with run_resonator_spectroscopy_flux
         platform:AbstractPlatform = self.platform
         platform.reload_settings()
         mc = self.mc
@@ -336,11 +343,12 @@ class Calibration:
 
         self.pl.tuids_max_num(self.max_num_plots)
         # Normal
-        lo_qcm_frequency = (
-            platform.characterization["single_qubit"][qubit]["qubit_freq"]
-            - qd_pulse.frequency
-        )
+        # lo_qcm_frequency = (
+        #     platform.characterization["single_qubit"][qubit]["qubit_freq"]
+        #     - qd_pulse.frequency
+        # )
         # Seeping with LO
+
         lo_qcm_frequency = platform.characterization["single_qubit"][qubit][
             "qubit_freq"
         ]
@@ -392,7 +400,7 @@ class Calibration:
 
         sequence = PulseSequence()
         qd_pulse = platform.create_qubit_drive_pulse(qubit, start = 0, duration = 4) 
-        ro_pulse = platform.create_qubit_readout_pulse(qubit, start = 4)
+        ro_pulse = platform.create_qubit_readout_pulse(qubit, start = qd_pulse.se_finish)
         sequence.add(qd_pulse)
         sequence.add(ro_pulse)
 
@@ -1113,7 +1121,9 @@ class Calibration:
         for gate in gates:
             if gate == "I":
                 # print("Transforming to sequence I gate")
-                pass
+                qd_pulse = platform.create_qubit_drive_pulse(qubit, start = pulse_start, duration = pulse_duration)
+                qd_pulse.amplitude = 0
+                sequence.add(qd_pulse)
             
             if (gate == "RX(pi)"):
                 #print("Transforming to sequence RX(pi) gate")
@@ -1151,7 +1161,7 @@ class Calibration:
             pulse_start = pulse_duration
 
         #RO pulse starting just after pair of gates
-        ro_pulse = platform.create_qubit_readout_pulse(qubit, start = sequenceDuration + 4)
+        ro_pulse = platform.create_qubit_readout_pulse(qubit, start = 2 * pulse_duration + 4)
         sequence.add(ro_pulse)
 
         return sequence
@@ -1282,6 +1292,7 @@ class Calibration:
         platform.reload_settings()
         sampling_rate = platform.sampling_rate
 
+        self.reload_settings()
         self.beta_start = self.settings["drag_tunning"]["beta_start"]
         self.beta_end = self.settings["drag_tunning"]["beta_end"]
         self.beta_step = self.settings["drag_tunning"]["beta_step"]

@@ -68,11 +68,19 @@ class SymbolicExpression:
         self.expression = expression
         self.symbol = symbol
 
+    ################################ Settable Interface (Quantify)
+
         self.label: str = ''
         self.unit: str = ''
 
     def set(self, value):
         self.value = value
+
+    @property
+    def name(self):
+        return self._symbol
+
+    ################################ Settable Interface (Quantify)
 
     @property
     def symbol(self) -> str:
@@ -389,3 +397,6 @@ SymbolicExpression.initialise()
 
 # TODO
 # add all integer and float operators
+
+# TODO
+# make compatible with numpy types int32, float, etc....

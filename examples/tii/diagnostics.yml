@@ -1,8 +1,8 @@
 name: tiiq_single_qubit_diagnostics
 description: Settings for characterization scripts.
 software_averages: 1
-software_averages_precision: 1
-max_num_plots: 3
+software_averages_precision: 3
+max_num_plots: 2
 
 # Single qubit experiments
 
@@ -12,7 +12,7 @@ resonator_spectroscopy:
   highres_width: 1_500_000
   highres_step: 200_000
   precision_width: 1_500_000
-  precision_step: 100_000
+  precision_step: 50_000
 
 resonator_punchout:
   freq_width: 10_000_000
@@ -45,7 +45,7 @@ qubit_spectroscopy_flux:
 
 rabi_pulse_length:
   pulse_duration_start: 4 # minimum 4ns
-  pulse_duration_end: 200
+  pulse_duration_end: 300
   pulse_duration_step: 4
 
 rabi_pulse_phase:
@@ -75,12 +75,12 @@ ramsey:
 
 dispersive_shift:
   freq_width: 5_000_000
-  freq_step: 50_000
+  freq_step: 200_000
 
 ramsey_freq:
   t_start: 4
-  t_end: [4000, 8000, 10000] #t_end (optimal) = 3.5 * T2 (limited by HW to 8000ns)
-  t_step: 16
+  t_end: [4000, 8000, 12000] #t_end (optimal) = 3.5 * T2 (limited by HW to 8000ns)
+  t_step: 80
   n_osc: 4
 
 RO_matrix:
@@ -88,12 +88,12 @@ RO_matrix:
 
 flipping:
   niter: 100
-  step: 2
+  step: 5
 
 drag_tunning:
-  beta_start: -2
-  beta_end: 2
-  beta_step: 0.1
+  beta_start: 0
+  beta_end: 1
+  beta_step: 0.01
 
 calibrate_qubit_states:
   niter: 1024
