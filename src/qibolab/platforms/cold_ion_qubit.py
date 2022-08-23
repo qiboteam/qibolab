@@ -1,8 +1,6 @@
 from qibo.config import log, raise_error
 from qibolab.platforms.abstract import AbstractPlatform
 
-# additional contents to be added later on
-# abstract paltform will be implemented later on
 import time
 
 import numpy as np
@@ -13,21 +11,17 @@ from qibolab.platforms.abstract import AbstractPlatform
 
 
 class DDSAD9959:
-    # This object is used to make QCVV methods work until
-    # we improve the platform abstractions
-    # TODO: Remove this objects when abstractions are fixed
+    # TODO: modify it for the cold ion part
 
     def set_device_parameter(self, *args, **kwargs):
         pass
 
 
 class cold_ion(AbstractPlatform):
-    """Dummy platform that returns random voltage values.
-
-    Useful for testing code without requiring access to hardware.
+    """cold_ion platform "
 
     Args:
-        name (str): name of the platform.
+        name (str): cold_ion
     """
 
     def __init__(self, name, runcard):
@@ -40,7 +34,7 @@ class cold_ion(AbstractPlatform):
 
         # create dummy instruments
         nqubits = self.settings.get("nqubits")
-        # TODO: Remove these when platform abstraction is fixed
+        # TODO: modify it for the cold ion case
         self.qcm = {i: DDSAD9959() for i in range(nqubits)}
         self.qrm = {i: DDSAD9959() for i in range(nqubits)}
 
