@@ -21,7 +21,7 @@ def generate_random_circuit(nqubits, depth, seed=None):
     for _ in range(depth):
         for i in range(nqubits):
             # generate a random rotation
-            rotation = rotations[np.random.randint(0, 3)]
+            rotation = rotations[int(np.random.randint(0, 3))]
             theta = 2 * np.pi * np.random.random()
             circuit.add(rotation(i, theta=theta))
         # add CZ gates on random qubit pairs
@@ -41,7 +41,7 @@ def transpose_qubits(state, qubits):
 
 
 @pytest.mark.parametrize("run_number", range(50))
-@pytest.mark.parametrize("nqubits", [3, 4, 5])
+@pytest.mark.parametrize("nqubits", [1, 2, 3, 4, 5])
 @pytest.mark.parametrize("depth", [2, 5, 8])
 def test_transpiler(run_number, nqubits, depth):
     """Checks that the transpiled circuit can be executed and is equivalent to original."""

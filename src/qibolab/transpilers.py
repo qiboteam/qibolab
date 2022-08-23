@@ -66,9 +66,8 @@ def transpile(circuit):
                 )
             break
 
-    add_swap = (
-        False  # the first SWAP is not needed as it can be applied via virtual mapping
-    )
+    # the first SWAP is not needed as it can be applied via virtual mapping
+    add_swap = False
     for i, gate in enumerate(circuit.queue):
         # map gate qubits to hardware
         qubits = tuple(hardware_qubits.index(q) for q in gate.qubits)
