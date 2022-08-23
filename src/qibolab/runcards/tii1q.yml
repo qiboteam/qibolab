@@ -1,8 +1,21 @@
+nqubits: 1
+description: 1-qubit device from Qilimanjaro at TII SD fridge, controlled with qblox cluster rf.
+
 settings:
     hardware_avg: 1024
     sampling_rate: 1_000_000_000
     repetition_duration: 200_000
-    minimum_delay_between_instructions: 4
+    minimum_delay_between_instructions: 4 # must be a multiple of 4
+
+qubits: [0]
+
+topology: # qubit - qubit connections
+-   [1]
+
+channels: [1, 2, 3]
+
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
+    0: [2, 1, null]
 
 instruments:
     cluster:
@@ -55,3 +68,32 @@ instruments:
 
             channel_port_map:
                 1: o1 # IQ Port = out0 & out1
+
+native_gates:
+    single_qubit:
+        0: # qubit number
+            RX:
+                duration: 40                    # should be multiple of 4
+                amplitude: 0.8695
+                frequency: -200_000_000
+                shape: Gaussian(5) # , 0.9058)
+                type: qd # qubit drive
+                drag_shape: Drag(5, 0)
+            MZ:
+                duration: 2400
+                amplitude: 0.9
+                frequency: 20_000_000
+                shape: Rectangular()
+                type: ro # readout
+
+characterization:
+    single_qubit:
+        0:
+            resonator_freq: 7824847574
+            qubit_freq: 5082273989
+            T1: 17744
+            T2: 11816
+            state0_voltage: 875
+            state1_voltage: 350
+            mean_gnd_states: (-5.543255134868772e-05+0.0008975930158821524j)
+            mean_exc_states: (0.0001446400604158933+0.0003369969077198778j)

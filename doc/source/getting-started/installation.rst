@@ -71,7 +71,7 @@ is the following:
 
       from qibolab import Platform
 
-      platform = Platform("tiiq")
+      platform = Platform("tii1q")
 
 For more detailed applications see the :ref:`Code example <examples>` section.
 

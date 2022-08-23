@@ -98,6 +98,11 @@ class AbstractPlatform(ABC):
                 )
 
     def setup(self):
+        if not self.is_connected:
+            raise_error(
+                RuntimeError,
+                "There is no connection to the instruments, the setup cannot be completed",
+            )
         self.hardware_avg = self.settings["settings"]["hardware_avg"]
         self.sampling_rate = self.settings["settings"]["sampling_rate"]
         self.repetition_duration = self.settings["settings"]["repetition_duration"]
@@ -123,12 +128,28 @@ class AbstractPlatform(ABC):
                             self.qubit_instrument_map[qubit][
                                 self.qubit_channel_map[qubit].index(channel)
                             ] = name
+        # Load Native Gates
+        self.native_gates = self.settings["native_gates"]
+
+        for name in self.instruments:
+            # Set up every with the platform settings and the instrument settings
+            self.instruments[name].setup(
+                **self.settings["settings"],
+                **self.settings["instruments"][name]["settings"],
+            )
+
+        # Load Characterization settings
+        self.characterization = self.settings["characterization"]
+
         # Generate ro_channel[qubit], qd_channel[qubit], qf_channel[qubit], qrm[qubit], qcm[qubit], lo_qrm[qubit], lo_qcm[qubit]
         self.ro_channel = {}
         self.qd_channel = {}
         self.qf_channel = {}
         self.qrm = {}
         self.qcm = {}
+        self.ro_port = {}
+        self.qd_port = {}
+        self.qf_port = {}
         for qubit in self.qubit_channel_map:
             self.ro_channel[qubit] = self.qubit_channel_map[qubit][0]
             self.qd_channel[qubit] = self.qubit_channel_map[qubit][1]
@@ -136,23 +157,15 @@ class AbstractPlatform(ABC):
 
             if not self.qubit_instrument_map[qubit][0] is None:
                 self.qrm[qubit] = self.instruments[self.qubit_instrument_map[qubit][0]]
+                self.ro_port[qubit] = self.qrm[qubit].ports[
+                    self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]
+                ]
             if not self.qubit_instrument_map[qubit][1] is None:
                 self.qcm[qubit] = self.instruments[self.qubit_instrument_map[qubit][1]]
+                self.qd_port[qubit] = self.qcm[qubit].ports[
+                    self.qcm[qubit].channel_port_map[self.qubit_channel_map[qubit][1]]
+                ]
             # TODO: implement qf modules
-
-        # Load Native Gates
-        self.native_gates = self.settings["native_gates"]
-
-        if self.is_connected:
-            for name in self.instruments:
-                # Set up every with the platform settings and the instrument settings
-                self.instruments[name].setup(
-                    **self.settings["settings"],
-                    **self.settings["instruments"][name]["settings"],
-                )
-
-        # Load Characterization settings
-        self.characterization = self.settings["characterization"]
 
     def start(self):
         if self.is_connected:
@@ -325,4 +338,54 @@ class AbstractPlatform(ABC):
 
         return ReadoutPulse(
             start, ro_duration, ro_amplitude, ro_frequency, phase, ro_shape, ro_channel
+        )
+
+    def RX90_drag_pulse(self, qubit, start, phase=0, beta=None):
+        # create RX pi/2 pulse with drag shape
+        qd_duration = self.settings["native_gates"]["single_qubit"][qubit]["RX"][
+            "duration"
+        ]
+        qd_frequency = self.settings["native_gates"]["single_qubit"][qubit]["RX"][
+            "frequency"
+        ]
+        qd_amplitude = (
+            self.settings["native_gates"]["single_qubit"][qubit]["RX"]["amplitude"] / 2
+        )
+        qd_shape = self.settings["native_gates"]["single_qubit"][qubit]["RX"][
+            "drag_shape"
+        ]
+        # TODO: Replace with drag shape stored in Runcard when c
+        if beta != None:
+            qd_shape = "Drag(5," + str(beta) + ")"
+
+        qd_channel = self.settings["qubit_channel_map"][qubit][1]
+        from qibolab.pulses import Pulse
+
+        return Pulse(
+            start, qd_duration, qd_amplitude, qd_frequency, phase, qd_shape, qd_channel
+        )
+
+    def RX_drag_pulse(self, qubit, start, phase=0, beta=None):
+        # create RX pi pulse with drag shape
+        qd_duration = self.settings["native_gates"]["single_qubit"][qubit]["RX"][
+            "duration"
+        ]
+        qd_frequency = self.settings["native_gates"]["single_qubit"][qubit]["RX"][
+            "frequency"
+        ]
+        qd_amplitude = self.settings["native_gates"]["single_qubit"][qubit]["RX"][
+            "amplitude"
+        ]
+        qd_shape = self.settings["native_gates"]["single_qubit"][qubit]["RX"][
+            "drag_shape"
+        ]
+        # TODO: Replace with drag shape stored in Runcard when c
+        if beta != None:
+            qd_shape = "Drag(5," + str(beta) + ")"
+
+        qd_channel = self.settings["qubit_channel_map"][qubit][1]
+        from qibolab.pulses import Pulse
+
+        return Pulse(
+            start, qd_duration, qd_amplitude, qd_frequency, phase, qd_shape, qd_channel
         )

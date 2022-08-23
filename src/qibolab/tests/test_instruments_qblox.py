@@ -3,12 +3,12 @@ import numpy as np
 import pytest
 import yaml
 
-from qibolab.instruments.qblox import ClusterQCM, ClusterQRM, PulsarQCM, PulsarQRM
-from qibolab.paths import qibolab_folder
+from qibolab.instruments.qblox import ClusterQCM_RF, ClusterQRM_RF
+from qibolab.paths import qibolab_folder, user_folder
 from qibolab.platforms.multiqubit import MultiqubitPlatform
 from qibolab.pulses import Pulse, ReadoutPulse
 
-INSTRUMENTS_LIST = ["ClusterQCM", "ClusterQRM", "PulsarQCM", "PulsarQRM"]
+INSTRUMENTS_LIST = ["qrm_rf", "qcm_rf"]
 instruments = {}
 
 
@@ -30,8 +30,14 @@ def test_instruments_qublox_init(name):
     assert instance.name == name
     assert instance.address == address
     assert instance.is_connected == False
-    assert instance.signature == f"{name}@{address}"
-    assert instance.data_folder == qibolab_folder / "instruments" / "data"
+    assert instance.signature == f"{i_class}@{address}"
+    assert (
+        instance.data_folder
+        == user_folder
+        / "instruments"
+        / "data"
+        / instance.tmp_folder.name.split("/")[-1]
+    )
 
 
 @pytest.mark.xfail

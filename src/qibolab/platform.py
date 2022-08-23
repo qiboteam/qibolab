@@ -16,7 +16,7 @@ def Platform(name, runcard=None):
 
         runcard = qibolab_folder / "runcards" / f"{name}.yml"
 
-    if name == "multiqubit" or name == "tiiq" or name == "qili":
+    if name == "tii1q" or name == "tii5q" or name == "qili":
         from qibolab.platforms.multiqubit import MultiqubitPlatform as Device
 
     elif name == 'cold_ion':
