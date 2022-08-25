@@ -13,11 +13,11 @@ topology: # qubit - qubit connections
 -   [ 1, 1 ]
 -   [ 1, 1 ]
 
-channels: [i8, x3, x4, z3, z4]
+channels: [i6, x3, x4, z3, z4]
 
 qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux] 
-    0: [i8, x3, z3]
-    1: [i8, x4, z4]
+    0: [i6, x3, z3]
+    1: [i6, x4, z4]
 
 instruments:
     board0:
@@ -28,12 +28,12 @@ instruments:
             dac_sampling_rate: 5898.24
             adc_sampling_rate: 1966.08
             channel_port_map:
-                i8: 0
-                x3: 4
-                x4: 5
+                i6: 15
+                x3: 11
+                x4: 4
             qubit_adc_map:
                 0: 12
-                1: 13
+                1: 12
             pulseblaster_address: "192.168.0.101"
             pulseblaster_port: 5000
             single_shot: false

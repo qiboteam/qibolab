@@ -11,8 +11,8 @@ resonator_spectroscopy:
   lowres_step: 2_000_000
   highres_width: 1_500_000
   highres_step: 200_000
-  precision_width: 1_500_000
-  precision_step: 100_000
+  precision_width: 1_000_000
+  precision_step: 50_000
 
 resonator_punchout:
   freq_width: 10_000_000
@@ -32,9 +32,9 @@ qubit_spectroscopy:
   fast_start: -5_000_000
   fast_end: 5_000_000
   fast_step: 200_000
-  precision_start: -1_500_000
-  precision_end: 1_500_000
-  precision_step: 50_000
+  precision_start: -500_000
+  precision_end: 500_000
+  precision_step: 20_000
 
 qubit_spectroscopy_flux:
   freq_width: 4_000_000
@@ -70,12 +70,12 @@ t1:
 
 ramsey:
   delay_between_pulses_start: 0 # must be a multiple of 4 incl 0
-  delay_between_pulses_end: 4000
-  delay_between_pulses_step: 16 # must be a multiple of 4
+  delay_between_pulses_end: 8000
+  delay_between_pulses_step: 80 # must be a multiple of 4
 
 dispersive_shift:
   freq_width: 5_000_000
-  freq_step: 50_000
+  freq_step: 200_000
 
 ramsey_freq:
   t_start: 4
@@ -84,15 +84,15 @@ ramsey_freq:
   n_osc: 4
 
 RO_matrix:
-  niter: 10
+  niter: 1024
 
 flipping:
-  niter: 100
-  step: 2
+  niter: 60
+  step: 4
 
 drag_tunning:
-  beta_start: -1
-  beta_end: 1
+  beta_start: 0
+  beta_end: 2
   beta_step: 0.1
 
 calibrate_qubit_states:

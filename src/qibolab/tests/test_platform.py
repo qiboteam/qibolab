@@ -7,11 +7,9 @@ from qibolab import Platform
 def test_platform_multiqubit():
     from qibolab.platforms.multiqubit import MultiqubitPlatform
 
-    platform = Platform("multiqubit")
+    platform = Platform("tii5q")
     assert isinstance(platform, MultiqubitPlatform)
-    platform = Platform("tiiq")
-    assert isinstance(platform, MultiqubitPlatform)
-    platform = Platform("qili")
+    platform = Platform("tii1q")
     assert isinstance(platform, MultiqubitPlatform)
 
 

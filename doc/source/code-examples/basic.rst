@@ -50,7 +50,7 @@ specified.
     from qibolab import Platform
 
     # Define platform and load specific runcard
-    platform = Platform("tiiq")
+    platform = Platform("tii1q")
     # Connects to lab instruments using the details specified in the calibration settings.
     platform.connect()
     # Configures instruments using the loaded calibration settings.
