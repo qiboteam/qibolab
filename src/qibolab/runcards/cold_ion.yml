@@ -1,6 +1,6 @@
 name: cold_ion
 nqubits: 4
-description: Controls the AD9959 DDS board
+description: Controls the AD9959 DDS board for the cold ion platform 
 
 settings:
   pid: 0xee25
@@ -16,8 +16,9 @@ instruments:
     init_settings:
       name: dds
       channel: 0
-      rfclk: 200e6
-      clkfactor: 1
+      rfclk: 20e6
+      clkfactor: 20 
+      channel_frequency: 100e6
 
 
 

@@ -2,7 +2,6 @@
 import json
 
 import numpy as np
-import qblox_instruments
 
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 

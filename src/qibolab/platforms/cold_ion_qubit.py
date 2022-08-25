@@ -1,27 +1,27 @@
-from qibo.config import log, raise_error
-from qibolab.platforms.abstract import AbstractPlatform
-
 import time
-
 import numpy as np
 import yaml
 from qibo.config import log, raise_error
-
 from qibolab.platforms.abstract import AbstractPlatform
+from qibolab.u3params import U3Params
+
+# TODO: Implement the platform for the initialisation of the qubit using the cold ion platform
 
 
 class DDSAD9959:
-    # TODO: modify it for the cold ion part
-
     def set_device_parameter(self, *args, **kwargs):
         pass
 
-
 class cold_ion(AbstractPlatform):
-    """cold_ion platform "
+    """Platform for controlling quantum devices with cold ion platform.
 
-    Args:
-        name (str): cold_ion
+    Example:
+        .. code-block:: python
+
+            from qibolab import Platform
+
+            platform = Platform("cold_ion")
+
     """
 
     def __init__(self, name, runcard):
@@ -32,46 +32,27 @@ class cold_ion(AbstractPlatform):
         with open(runcard, "r") as file:
             self.settings = yaml.safe_load(file)
 
-        # create dummy instruments
-        nqubits = self.settings.get("nqubits")
-        # TODO: modify it for the cold ion case
-        self.qcm = {i: DDSAD9959() for i in range(nqubits)}
-        self.qrm = {i: DDSAD9959() for i in range(nqubits)}
-
-        from qibolab.u3params import U3Params
-
-        self.u3params = U3Params()
 
     def reload_settings(self):  # pragma: no cover
-        log.info("Dummy platform does not support setting reloading.")
+        log.info("Cold ion platform does not support setting reloading in this version of the software.")
 
     def run_calibration(self, show_plots=False):  # pragma: no cover
         raise_error(NotImplementedError)
 
     def connect(self):
-        log.info("Connecting to dummy platform.")
-
-    def setup(self):
-        log.info("Setting up dummy platform.")
-
-    def start(self):
-        log.info("Starting dummy platform.")
-
-    def stop(self):
-        log.info("Stopping dummy platform.")
-
-    def disconnect(self):
-        log.info("Disconnecting dummy platform.")
-
-    def to_sequence(self, sequence, gate):  # pragma: no cover
+        log.info("Connecting to cold ion platform.")  # pragma: no cover
         raise_error(NotImplementedError)
 
-    def execute_pulse_sequence(self, sequence, nshots=None):  # pragma: no cover
-        time.sleep(self.settings.get("sleep_time"))
-        ro_pulses = {pulse.qubit: pulse.serial for pulse in sequence.ro_pulses}
+    def start(self):
+        log.info("Starting cold ion platform.")  # pragma: no cover
+        raise_error(NotImplementedError)
 
-        results = {}
-        for qubit, pulse in ro_pulses.items():
-            i, q = np.random.random(2)
-            results[qubit] = {pulse: (np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q)}
-        return results
+    def stop(self):
+        log.info("Stopping cold ion platform.")  # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def disconnect(self):
+        log.info("Disconnecting cold ion platform.")  # pragma: no cover
+        raise_error(NotImplementedError)
+
+

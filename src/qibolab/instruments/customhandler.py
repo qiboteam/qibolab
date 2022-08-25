@@ -1,3 +1,4 @@
+
 import sys
 import numpy as np
 import os
@@ -6,7 +7,7 @@ import usb
 
 class DeviceHandle(usb.DeviceHandle):
 
-    """Version of the usb.DeviceHandle that will be used to initialise and exit the board"""
+    """Version of the usb.DeviceHandle that will be used to initialise and exit the boards connected by the USB. Currently it is used for AD9959 only."""
 
     def __init__(self, dev):
         """Inherit everything from the super class."""
