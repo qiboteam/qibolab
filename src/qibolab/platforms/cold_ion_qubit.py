@@ -5,8 +5,6 @@ from qibo.config import log, raise_error
 from qibolab.platforms.abstract import AbstractPlatform
 from qibolab.u3params import U3Params
 
-
-
 class DDSAD9959:
     def set_device_parameter(self, *args, **kwargs):
         pass
@@ -31,7 +29,6 @@ class cold_ion(AbstractPlatform):
         with open(runcard, "r") as file:
             self.settings = yaml.safe_load(file)
         nqubits = self.settings.get("nqubits")
-        # TODO: Remove these later on when the platform is developed
         self.qcm = {i: DDSAD9959() for i in range(nqubits)}
 
 
