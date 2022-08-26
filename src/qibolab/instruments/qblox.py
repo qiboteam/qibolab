@@ -526,7 +526,7 @@ class ClusterQRM_RF(AbstractInstrument):
                     #Get acquisitions from instrument.
                     raw_results = self.device.get_acquisitions(sequencer_number)
                     i, q = self.process_acquisition_results(raw_results[acquisition_name], pulse, demodulate = (not self.ports['i1'].hardware_demod_en))
-                    acquisition_results[pulse] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
+                    acquisition_results[pulse.serial] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
                     # DEBUG: QRM Plot Incomming Pulses
                     # import qibolab.instruments.debug.incomming_pulse_plotting as pp
                     # pp.plot(raw_results)

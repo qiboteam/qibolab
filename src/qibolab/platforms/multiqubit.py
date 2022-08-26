@@ -40,10 +40,4 @@ class MultiqubitPlatform(AbstractPlatform):
                         acquisition_results.update(self.instruments[name].play_sequence_and_acquire())
                     else:
                         self.instruments[name].play_sequence()
-        if len(acquisition_results) == 1:
-            return list(acquisition_results.values())[0]
-        else:
-            return acquisition_results
-       
-
-# TODO add logic to set sync_en = False for qrms if pulsesequence only contains RO pulses
+        return acquisition_results

@@ -259,8 +259,10 @@ class Pulse:
                                   channel=2,
                                   type=PulseType.READOUT)
     """
-    def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
-                       channel: int | str, type: PulseType | str  = PulseType.DRIVE, qubit: int | str = 0):
+    def __init__(self, start, duration, amplitude, frequency, relative_phase, shape,
+                       channel, type = PulseType.DRIVE, qubit = 0):
+    # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
+    #                    channel: int | str, type: PulseType | str  = PulseType.DRIVE, qubit: int | str = 0):
 
         self._start:se_int = None
         self._duration: se_int = None
@@ -269,9 +271,11 @@ class Pulse:
         self._frequency: int = None
         self._relative_phase: float = None
         self._shape: PulseShape = None
-        self._channel: int | str = None
+        self._channel = None
+        # self._channel: int | str = None
         self._type: PulseType  = None
-        self._qubit: int | str = None
+        self._qubit = None
+        # self._qubit: int | str = None
         
         self.start = start 
         self.duration = duration
@@ -358,7 +362,7 @@ class Pulse:
 
     @frequency.setter
     def frequency(self, value):
-        if not isinstance(value, (int|float)):
+        if not isinstance(value, (int, float)):
             raise TypeError(f"frequency argument type should be float, got {type(value).__name__}")
         elif isinstance(value, float):
             value = int(value)
@@ -397,7 +401,8 @@ class Pulse:
         self._shape.pulse = self
 
     @property
-    def channel(self) -> int | str:
+    def channel(self):
+    # def channel(self) -> int | str:
         return self._channel
 
     @channel.setter
@@ -420,7 +425,8 @@ class Pulse:
             raise TypeError(f"type argument should be PulseType or str, got {type(value).__name__}")
 
     @property
-    def qubit(self) -> int | str:
+    def qubit(self):
+    # def qubit(self) -> int | str:
         return self._qubit
 
     @qubit.setter
@@ -538,8 +544,10 @@ class ReadoutPulse(Pulse):
 
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
-    def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
-                       channel: int | str, qubit: int | str = 0):
+    def __init__(self, start, duration, amplitude, frequency, relative_phase, shape,
+                       channel, qubit = 0):
+    # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
+    #                    channel: int | str, qubit: int | str = 0):
         super().__init__(start, duration, amplitude, frequency, relative_phase, shape, channel, type =  PulseType.READOUT, qubit = qubit)
 
     @property
@@ -552,8 +560,10 @@ class DrivePulse(Pulse):
 
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
-    def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
-                       channel: int | str, qubit: int | str = 0):
+    def __init__(self, start, duration, amplitude, frequency, relative_phase, shape,
+                       channel, qubit = 0):
+    # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
+    #                    channel: int | str, qubit: int | str = 0):
         super().__init__(start, duration, amplitude, frequency, relative_phase, shape, channel, type =  PulseType.DRIVE, qubit = qubit)
 
     @property
@@ -566,8 +576,10 @@ class FluxPulse(Pulse):
 
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
-    def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
-                       channel: int | str, qubit: int | str = 0):
+    def __init__(self, start, duration, amplitude, frequency, relative_phase, shape,
+                       channel, qubit = 0):
+    # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
+    #                    channel: int | str, qubit: int | str = 0):
         super().__init__(start, duration, amplitude, frequency, relative_phase, shape, channel, type =  PulseType.FLUX, qubit = qubit)
 
     @property
