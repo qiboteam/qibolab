@@ -88,6 +88,7 @@ class SPI(AbstractInstrument):
                      'device': device
                     })()
                 self.dacs[channel].device.span("range_min_bi")
+                #self.dacs[channel].current = current
 
             for channel, settings in self.d5a_modules_settings.items():
                 module_number = settings[0]
@@ -104,6 +105,7 @@ class SPI(AbstractInstrument):
                      'device': device
                     })()
                 self.dacs[channel].device.span("range_min_bi")
+                #self.dacs[channel].voltage = voltage
         else:
             raise_error(Exception, "There is no connection to the instrument")
         return
@@ -141,12 +143,12 @@ class SPI(AbstractInstrument):
                     log.info(f"WARNING: S4g module {settings[0]} - port {settings[1]} current was: {self.dacs[channel].current}, now setting current to: {current}")
                 self.dacs[channel].current = current
 
-            for module in self.d5a_modules_settings.values():
+            for channel, settings in self.d5a_modules_settings.items():
                 voltage = settings[2]
                 # Check current current of the module and warning
                 if abs(self.dacs[channel].voltage) > 0.010:
                     log.info(f"WARNING: D5a module {settings[0]} - port {settings[1]} voltage was: {self.dacs[channel].voltage}, now setting voltage to: {voltage}")
-                self.dacs[channel].voltage = current
+                self.dacs[channel].voltage = voltage
 
     def stop(self):
         # if self.is_connected:
