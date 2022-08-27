@@ -33,6 +33,7 @@ instruments:
         lib: qblox
         class: Cluster
         address: 192.168.0.4
+        roles: [other]
         settings:
             reference_clock_source      : internal                      # external or internal
 
@@ -40,6 +41,7 @@ instruments:
         lib: qblox
         class: ClusterQRM_RF
         address: 192.168.0.4:16
+        roles: [readout]
         settings:
             ports:
                 o1:
@@ -62,6 +64,7 @@ instruments:
         lib: qblox
         class: ClusterQCM_RF
         address: 192.168.0.4:6
+        roles: [control]
         settings:
             ports:
                 o1:
@@ -85,6 +88,7 @@ instruments:
         lib: qblox
         class: ClusterQCM_RF
         address: 192.168.0.4:12
+        roles: [control]
         settings:
             ports:
                 o1:
@@ -108,6 +112,7 @@ instruments:
         lib: qblox
         class: ClusterQCM_RF
         address: 192.168.0.4:10
+        roles: [control]
         settings:
             ports:
                 o1:
@@ -125,11 +130,13 @@ instruments:
 
             channel_port_map:
                 25: o1 # IQ Port = out0 & out1
+                99: o2 
 
     SPI:
         lib: spi
         class: SPI
         address: /dev/ttyACM0
+        roles: [other]
         settings:
             s4g_modules:
                 #flux_port: [module# , name, #DAC_port, current] max number of DACs per module = 4
