@@ -915,6 +915,7 @@ class PulseSequence():
         return overlaps
 
     def separate_overlapping_pulses(self): # -> dict((int,int): PulseSequence):
+        # TODO: non_overlapping_same_frequency_pulses
         separated_pulses = []
         for new_pulse in self.pulses:
             stored = False
