@@ -61,7 +61,7 @@ class Diagnostics:
         mc = self.mc
 
         sequence = PulseSequence()
-        ro_pulse = platform.qubit_readout_pulse(qubit, start=0)
+        ro_pulse = platform.create_qubit_readout_pulse(qubit, start=0)
         sequence.add(ro_pulse)
 
         self.reload_settings()
@@ -135,7 +135,7 @@ class Diagnostics:
         mc = self.mc
 
         sequence = PulseSequence()
-        ro_pulse = platform.qubit_readout_pulse(qubit, start=0)
+        ro_pulse = platform.create_qubit_readout_pulse(qubit, start=0)
         sequence.add(ro_pulse)
 
         self.reload_settings()
@@ -185,8 +185,8 @@ class Diagnostics:
         mc = self.mc
 
         sequence = PulseSequence()
-        qd_pulse = platform.qubit_drive_pulse(qubit, start=0, duration=5000)
-        ro_pulse = platform.qubit_readout_pulse(qubit, start=5000)
+        qd_pulse = platform.create_qubit_drive_pulse(qubit, start=0, duration=5000)
+        ro_pulse = platform.create_qubit_readout_pulse(qubit, start=5000)
         sequence.add(qd_pulse)
         sequence.add(ro_pulse)
 
@@ -267,8 +267,8 @@ class Diagnostics:
         mc = self.mc
 
         sequence = PulseSequence()
-        qd_pulse = platform.qubit_drive_pulse(qubit, start=0, duration=4)
-        ro_pulse = platform.qubit_readout_pulse(qubit, start=4)
+        qd_pulse = platform.create_qubit_drive_pulse(qubit, start=0, duration=4)
+        ro_pulse = platform.create_qubit_readout_pulse(qubit, start=4)
         sequence.add(qd_pulse)
         sequence.add(ro_pulse)
 
@@ -340,8 +340,8 @@ class Diagnostics:
         mc = self.mc
 
         sequence = PulseSequence()
-        RX_pulse = platform.RX_pulse(qubit, start=0)
-        ro_pulse = platform.qubit_readout_pulse(qubit, start=RX_pulse.duration)
+        RX_pulse = platform.create_RX_pulse(qubit, start=0)
+        ro_pulse = platform.create_qubit_readout_pulse(qubit, start=RX_pulse.duration)
         sequence.add(RX_pulse)
         sequence.add(ro_pulse)
 
@@ -391,9 +391,9 @@ class Diagnostics:
         mc = self.mc
 
         sequence = PulseSequence()
-        RX90_pulse1 = platform.RX90_pulse(qubit, start=0)
-        RX90_pulse2 = platform.RX90_pulse(qubit, start=RX90_pulse1.duration)
-        ro_pulse = platform.qubit_readout_pulse(
+        RX90_pulse1 = platform.create_RX90_pulse(qubit, start=0)
+        RX90_pulse2 = platform.create_RX90_pulse(qubit, start=RX90_pulse1.duration)
+        ro_pulse = platform.create_qubit_readout_pulse(
             qubit, start=RX90_pulse1.duration + RX90_pulse2.duration
         )
         sequence.add(RX90_pulse1)

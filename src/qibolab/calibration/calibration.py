@@ -1130,7 +1130,7 @@ class Calibration:
                 if (beta_param == None):
                     RX_pulse = platform.create_RX_pulse(qubit, start = pulse_start)
                 else:
-                    RX_pulse = platform.RX_drag_pulse(qubit, start = pulse_start)
+                    RX_pulse = platform.create_RX_drag_pulse(qubit, start = pulse_start)
                 sequence.add(RX_pulse)
 
             if (gate == "RX(pi/2)"):
@@ -1138,7 +1138,7 @@ class Calibration:
                 if (beta_param == None):
                     RX90_pulse = platform.create_RX90_pulse(qubit, start = pulse_start)
                 else:
-                    RX90_pulse = platform.RX90_drag_pulse(qubit, start = pulse_start, beta=beta_param)
+                    RX90_pulse = platform.create_RX90_drag_pulse(qubit, start = pulse_start, beta=beta_param)
                 sequence.add(RX90_pulse)
 
             if (gate == "RY(pi)"):
@@ -1146,7 +1146,7 @@ class Calibration:
                 if (beta_param == None):
                     RY_pulse = platform.create_RX_pulse(qubit, start = pulse_start, relative_phase = np.pi/2)
                 else:
-                    RY_pulse = platform.RX_drag_pulse(qubit, start = pulse_start, relative_phase = np.pi/2, beta=beta_param)
+                    RY_pulse = platform.create_RX_drag_pulse(qubit, start = pulse_start, relative_phase = np.pi/2, beta=beta_param)
                 sequence.add(RY_pulse)
 
             if (gate == "RY(pi/2)"):
@@ -1154,7 +1154,7 @@ class Calibration:
                 if (beta_param == None):
                     RY90_pulse = platform.create_RX90_pulse(qubit, start = pulse_start, relative_phase = np.pi/2)
                 else:
-                    RY90_pulse = platform.RX90_drag_pulse(qubit, start = pulse_start, relative_phase = np.pi/2, beta=beta_param)
+                    RY90_pulse = platform.create_RX90_drag_pulse(qubit, start = pulse_start, relative_phase = np.pi/2, beta=beta_param)
                 sequence.add(RY90_pulse)
 
             sequenceDuration = sequenceDuration + pulse_duration
@@ -1304,9 +1304,9 @@ class Calibration:
         for beta_param in np.arange(self.beta_start, self.beta_end, self.beta_step).round(4): 
             #print(f"Executing sequence for beta parameter: {beta_param}")
             #drag pulse RX(pi/2)
-            RX90_drag_pulse = platform.RX90_drag_pulse(qubit, start = 0, beta = beta_param)
+            RX90_drag_pulse = platform.create_RX90_drag_pulse(qubit, start = 0, beta = beta_param)
             #drag pulse RY(pi)
-            RY_drag_pulse = platform.RX_drag_pulse(qubit, start = RX90_drag_pulse.finish, relative_phase = + np.pi/2, beta=beta_param)            
+            RY_drag_pulse = platform.create_RX_drag_pulse(qubit, start = RX90_drag_pulse.finish, relative_phase = + np.pi/2, beta=beta_param)            
             #RO pulse
             ro_pulse = platform.create_qubit_readout_pulse(qubit, start = RY_drag_pulse.finish)
 
@@ -1322,9 +1322,9 @@ class Calibration:
             platform.stop()
 
             #drag pulse RY(pi)
-            RY_drag_pulse = platform.RX_drag_pulse(qubit, start = 0, relative_phase = np.pi/2, beta=beta_param)
+            RY_drag_pulse = platform.create_RX_drag_pulse(qubit, start = 0, relative_phase = np.pi/2, beta=beta_param)
             #drag pulse RX(pi/2)
-            RX90_drag_pulse = platform.RX90_drag_pulse(qubit, start = RY_drag_pulse.finish, beta = beta_param)
+            RX90_drag_pulse = platform.create_RX90_drag_pulse(qubit, start = RY_drag_pulse.finish, beta = beta_param)
             
             # Ry(pi) - Rx(pi/2) - Ro
             seq2 = PulseSequence()

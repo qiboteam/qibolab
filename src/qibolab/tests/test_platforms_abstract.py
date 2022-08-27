@@ -129,7 +129,7 @@ def test_pulse_sequence_add_two_u3(platform_name):
 
     RX90_pulse = platform.create_RX90_pulse(0)
     np.testing.assert_allclose(seq.phase, 0.6 + 1.5)
-    np.testing.assert_allclose(seq.time, 2 * 2 * RX90_pulse.duration)
+    np.testing.assert_allclose(seq.time, 2 * 2 * create_RX90_pulse.duration)
 
     RX90_pulse1 = platform.create_RX90_pulse(0, start = 0, phase = 0.3)
     RX90_pulse2 = platform.create_RX90_pulse(0, start = (RX90_pulse1.start + RX90_pulse1.duration), phase = 0.4 - np.pi)
