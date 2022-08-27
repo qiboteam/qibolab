@@ -81,6 +81,11 @@ class AbstractPlatform(ABC):
                             f"Error captured: '{exception}'")
 
     def setup(self):
+        self.nqubits = self.settings['nqubits']
+        if self.nqubits == 1:
+            self.resonator_type = "3D"
+        else:
+            self.resonator_type = "2D"
         self.hardware_avg = self.settings['settings']['hardware_avg']
         self.sampling_rate = self.settings['settings']['sampling_rate']
         self.repetition_duration = self.settings['settings']['repetition_duration']
