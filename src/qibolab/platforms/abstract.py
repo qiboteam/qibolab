@@ -104,6 +104,10 @@ class AbstractPlatform(ABC):
                     for channel in self.settings['instruments'][name]['settings']['channel_port_map']:
                         if channel in self.qubit_channel_map[qubit]:
                              self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
+                if 's4g_modules' in self.settings['instruments'][name]['settings']:
+                    for channel in self.settings['instruments'][name]['settings']['s4g_modules']:
+                        if channel in self.qubit_channel_map[qubit]:
+                             self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
         # Load Native Gates
         self.native_gates = self.settings['native_gates']
 
@@ -121,6 +125,7 @@ class AbstractPlatform(ABC):
         self.qf_channel = {}
         self.qrm = {}
         self.qcm = {}
+        self.qbm = {}
         self.ro_port = {}
         self.qd_port = {}
         self.qf_port = {}
@@ -130,12 +135,14 @@ class AbstractPlatform(ABC):
             self.qf_channel[qubit] = self.qubit_channel_map[qubit][2]
 
             if not self.qubit_instrument_map[qubit][0] is None:
-                self.qrm[qubit]  = self.instruments[self.qubit_instrument_map[qubit][0]]
+                self.qrm[qubit] = self.instruments[self.qubit_instrument_map[qubit][0]]
                 self.ro_port[qubit] = self.qrm[qubit].ports[self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]]
             if not self.qubit_instrument_map[qubit][1] is None:
-                self.qcm[qubit]  = self.instruments[self.qubit_instrument_map[qubit][1]]
+                self.qcm[qubit] = self.instruments[self.qubit_instrument_map[qubit][1]]
                 self.qd_port[qubit] = self.qcm[qubit].ports[self.qcm[qubit].channel_port_map[self.qubit_channel_map[qubit][1]]]
-            # TODO: implement qf modules
+            if not self.qubit_instrument_map[qubit][2] is None:
+                self.qbm[qubit] = self.instruments[self.qubit_instrument_map[qubit][2]]
+                self.qf_port[qubit] = self.qbm[qubit].dacs[self.qubit_channel_map[qubit][2]]
 
     def start(self):
         if self.is_connected:
