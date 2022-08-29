@@ -37,26 +37,22 @@ class cold_ion(AbstractPlatform):
         self.qcm = {i: DDSAD9959() for i in range(nqubits)}
         self.u3params = U3Params()
 
-    def reload_settings(self):
+    def reload_settings(self):  # pragma: no cover
         log.info(
             "Cold ion platform does not support setting reloading in this version of the software."
         )
 
-    def run_calibration(self, show_plots=False):
+    def run_calibration(self, show_plots=False):  # pragma: no cover
         raise_error(NotImplementedError)
 
     def connect(self):
         log.info("Connecting to cold ion platform.")
-        raise_error(NotImplementedError)
 
     def start(self):
         log.info("Starting cold ion platform.")
-        raise_error(NotImplementedError)
 
     def stop(self):
         log.info("Stopping cold ion platform.")
-        raise_error(NotImplementedError)
 
     def disconnect(self):
         log.info("Disconnecting cold ion platform.")
-        raise_error(NotImplementedError)
