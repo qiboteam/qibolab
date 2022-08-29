@@ -4,6 +4,7 @@ import time
 
 import numpy as np
 import usb
+from qibo.config import log, raise_error
 
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.instruments.customhandler import DeviceHandle
@@ -34,7 +35,8 @@ class AD9959:
         dev_mess = "No devices with matching vID/pID {}/{} found!".format(
             hex(vid), hex(pid)
         )
-        assert len(devs) > 0, dev_mess
+        if len(devs) > 0:
+            log.info(dev_mess)
         # if more than one AD9959 is present, decide by usb port address
         if len(devs) > 1:
             assert (
