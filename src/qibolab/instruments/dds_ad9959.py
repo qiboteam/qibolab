@@ -35,9 +35,14 @@ class AD9959:
         dev_mess = "No devices with matching vID/pID {}/{} found!".format(
             hex(vid), hex(pid)
         )
-        assert len(devs) > 0, dev_mess
+        if len(devs) <= 0:
+            print(dev_mess)
+            print(
+                "Warning: This is a dummy run, there is no actual wave being generated on the hardware"
+            )
+
         # if more than one AD9959 is present, decide by usb port address
-        if len(devs) > 1:
+        elif len(devs) > 1:
             assert (
                 port_numbers is not None and bus_number is not None
             ), "More than one AD9959 present. Specify USB bus and port numbers!"
@@ -52,40 +57,40 @@ class AD9959:
         else:
             dev = devs[0]
 
-        dev.set_configuration()
-        cnf = dev.configurations()[0]
-        intf = cnf[(0, 0)]
-        self.dev = dev
+        if len(devs) >= 1:
+            dev.set_configuration()
+            cnf = dev.configurations()[0]
+            intf = cnf[(0, 0)]
+            self.dev = dev
+            # retrieve important endpoints of usb controller
+            self._ep1 = intf[0]
+            self._ep81 = intf[1]
+            self._ep4 = intf[3]
+            self._ep88 = intf[5]
 
-        # retrieve important endpoints of usb controller
-        self._ep1 = intf[0]
-        self._ep81 = intf[1]
-        self._ep4 = intf[3]
-        self._ep88 = intf[5]
+            # set default values for physical variables
 
-        # set default values for physical variables
+            self.ref_clock_frequency = rfclk
+            self.system_clock_frequency = rfclk
 
-        self.ref_clock_frequency = rfclk
-        self.system_clock_frequency = rfclk
+            # set default value for auto IO update
+            self.auto_update = auto_update
 
-        # set default value for auto IO update
-        self.auto_update = auto_update
-
-        # try to access device, it might still be in use by another handler,
-        # in this case, reset it
-        try:
+            # try to access device, it might still be in use by another handler,
+            # in this case, reset it
+            try:
+                print("this is the initialiser of the board with default values")
+                self.set_clock_multiplier(clkfactor)
+            except usb.USBError:
+                self._reset_usb_handler()
             print("this is the initialiser of the board with default values")
             self.set_clock_multiplier(clkfactor)
-        except usb.USBError:
-            self._reset_usb_handler()
-        print("this is the initialiser of the board with default values")
-        self.set_clock_multiplier(clkfactor)
-        print("resetting the values to the default values")
-        self.__reset_default_values__()
+            print("resetting the values to the default values")
+            self.__reset_default_values__()
 
-    def __del__(self):
-        """disconnects the device assosciated with usb"""
-        usb.util.dispose_resources(self.dev)
+    # def __del__(self):
+    #     """disconnects the device assosciated with usb"""
+    #     usb.util.dispose_resources(self.dev)
 
     def _reset_usb_handler(self):
         """Resets the usb handler via which communication takes place.
