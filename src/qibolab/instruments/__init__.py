@@ -1,7 +1,12 @@
+# -*- coding: utf-8 -*-
 
-from qibolab.instruments.qblox import ClusterQRM_RF, ClusterQCM_RF
-from qibolab.instruments.rohde_schwarz import SGS100A
-from qibolab.instruments.icarusq import TektronixAWG5204, AlazarADC, MCAttenuator, QuicSyn
-from qibolab.instruments.icarusqfpga import IcarusQFPGA, PulseBlaster
 from qibolab.instruments.dds_ad9959 import AD9959
-
+from qibolab.instruments.icarusq import (
+    AlazarADC,
+    MCAttenuator,
+    QuicSyn,
+    TektronixAWG5204,
+)
+from qibolab.instruments.icarusqfpga import IcarusQFPGA, PulseBlaster
+from qibolab.instruments.qblox import ClusterQCM_RF, ClusterQRM_RF
+from qibolab.instruments.rohde_schwarz import SGS100A

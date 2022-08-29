@@ -193,5 +193,3 @@ ATS9371
 .. autoclass:: qibolab.instruments.icarusq.AlazarADC
    :members:
    :member-order: bysource
-
-

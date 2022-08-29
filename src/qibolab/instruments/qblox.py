@@ -15,8 +15,8 @@ class Cluster(AbstractInstrument):
         if not self.is_connected:
             for attempt in range(3):
                 try:
-#                    qblox_instruments.Cluster.close_all()
-#                   self.device = qblox_instruments.Cluster(self.name, self.address)
+                    #                    qblox_instruments.Cluster.close_all()
+                    #                   self.device = qblox_instruments.Cluster(self.name, self.address)
                     self.device.reset()
                     cluster = self.device
                     self.is_connected = True
@@ -39,7 +39,7 @@ class Cluster(AbstractInstrument):
         pass
 
     def disconnect(self):
-#        qblox_instruments.Cluster.close_all()
+        #        qblox_instruments.Cluster.close_all()
         global cluster
         cluster = None
 

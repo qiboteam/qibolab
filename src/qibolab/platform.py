@@ -19,7 +19,7 @@ def Platform(name, runcard=None):
     if name == "tii1q" or name == "tii5q" or name == "qili":
         from qibolab.platforms.multiqubit import MultiqubitPlatform as Device
 
-    elif name == 'cold_ion':
+    elif name == "cold_ion":
         from qibolab.platforms.cold_ion_qubit import cold_ion as Device
 
     elif name == "dummy":
