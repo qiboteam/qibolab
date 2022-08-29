@@ -35,10 +35,10 @@ class AD9959:
         dev_mess = "No devices with matching vID/pID {}/{} found!".format(
             hex(vid), hex(pid)
         )
-        if len(devs) > 0:
-            log.info(dev_mess)
+        if len(devs) <= 0:
+            raise_error(dev_mess)
         # if more than one AD9959 is present, decide by usb port address
-        if len(devs) > 1:
+        elif len(devs) > 1:
             assert (
                 port_numbers is not None and bus_number is not None
             ), "More than one AD9959 present. Specify USB bus and port numbers!"
