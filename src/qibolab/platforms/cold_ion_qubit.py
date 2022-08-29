@@ -10,6 +10,10 @@ from qibolab.u3params import U3Params
 
 
 class DDSAD9959:
+    # This object is used to make QCVV methods work until
+    # we improve the platform abstractions
+    # TODO: Remove this objects when abstractions are fixed
+
     def set_device_parameter(self, *args, **kwargs):
         pass
 
@@ -33,26 +37,47 @@ class cold_ion(AbstractPlatform):
         # Load platform settings
         with open(runcard, "r") as file:
             self.settings = yaml.safe_load(file)
+
+        # create dummy instruments
         nqubits = self.settings.get("nqubits")
+        # TODO: Remove these when platform abstraction is fixed
         self.qcm = {i: DDSAD9959() for i in range(nqubits)}
+        self.qrm = {i: DDSAD9959() for i in range(nqubits)}
+
+        from qibolab.u3params import U3Params
+
         self.u3params = U3Params()
 
     def reload_settings(self):  # pragma: no cover
-        log.info(
-            "Cold ion platform does not support setting reloading in this version of the software."
-        )
+        log.info("Dummy platform does not support setting reloading.")
 
     def run_calibration(self, show_plots=False):  # pragma: no cover
         raise_error(NotImplementedError)
 
     def connect(self):
-        log.info("Connecting to cold ion platform.")
+        log.info("Connecting to dummy platform.")
+
+    def setup(self):
+        log.info("Setting up dummy platform.")
 
     def start(self):
-        log.info("Starting cold ion platform.")
+        log.info("Starting dummy platform.")
 
     def stop(self):
-        log.info("Stopping cold ion platform.")
+        log.info("Stopping dummy platform.")
 
     def disconnect(self):
-        log.info("Disconnecting cold ion platform.")
+        log.info("Disconnecting dummy platform.")
+
+    def to_sequence(self, sequence, gate):  # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def execute_pulse_sequence(self, sequence, nshots=None):  # pragma: no cover
+        time.sleep(self.settings.get("sleep_time"))
+        ro_pulses = {pulse.qubit: pulse.serial for pulse in sequence.ro_pulses}
+
+        results = {}
+        for qubit, pulse in ro_pulses.items():
+            i, q = np.random.random(2)
+            results[qubit] = {pulse: (np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q)}
+        return results
