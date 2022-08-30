@@ -4,6 +4,7 @@ Supports the following Instruments:
     Cluster
     Cluster QRM-RF
     Cluster QCM-RF
+    compatible with qblox-instruments driver 0.6.1 (23/5/2022)
 
 https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/
 """
