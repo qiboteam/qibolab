@@ -49,6 +49,7 @@ class cold_ion(AbstractPlatform):
         log.info("Dummy platform does not support setting reloading.")
 
     def execute_pulse_sequence(self, sequence, nshots=None):  # pragma: no cover
+        log.info("this is a dummy qubit that is there")
         time.sleep(self.settings.get("sleep_time"))
         ro_pulses = {pulse.qubit: pulse.serial for pulse in sequence.ro_pulses}
 
@@ -59,4 +60,4 @@ class cold_ion(AbstractPlatform):
         return results
 
     def run_calibration(self, show_plots=False):  # pragma: no cover
-        raise_error(NotImplementedError)
+        log.info("It is a dummy qubit")
