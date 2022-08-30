@@ -299,8 +299,7 @@ class ClusterQRM_RF(AbstractInstrument):
 
     def __init__(self, name: str, address: str):
         super().__init__(name, address)
-        self.device: QbloxQrmQcm        # Implemented by AbstractInstrument
-        self.is_connected: bool         # Implemented by AbstractInstrument
+        self.device: QbloxQrmQcm
         self.ports: dict = {}
         self.acquisition_hold_off: int
         self.acquisition_duration: int
@@ -970,8 +969,7 @@ class ClusterQCM_RF(AbstractInstrument):
 
     def __init__(self, name: str, address: str):
         super().__init__(name, address)
-        self.device: QbloxQrmQcm        # Implemented by AbstractInstrument
-        self.is_connected: bool         # Implemented by AbstractInstrument
+        self.device: QbloxQrmQcm
         self.ports: dict = {}
         self.channel_port_map: dict = {}
         self.channels: list = []
