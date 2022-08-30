@@ -14,11 +14,9 @@ class AbstractInstrument(ABC):
     """
 
     def __init__(self, name, address):
-        self.name = name
-        self.address = address
-        self.is_connected = False
-        self.signature = f"{type(self).__name__}@{address}"
-        self.device = None
+        self.name: str = name
+        self.address: str = address
+        self.signature: str = f"{type(self).__name__}@{address}"
         self.data_folder = qibolab_folder / "instruments" / "data"
         self.data_folder.mkdir(parents=True, exist_ok=True)
 
