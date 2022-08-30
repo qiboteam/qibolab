@@ -181,7 +181,7 @@ class AD9959:
         return readout
 
     def _update_IO(self):
-        """Updates the IO to the DDS chip (same as GUI function)."""
+        """Updates the IO to the DDS chip"""
         update_message = bytearray.fromhex("0C 10")
         with DeviceHandle(self.dev) as dh:
             dh.bulkWrite(self._ep1, update_message)
@@ -196,49 +196,54 @@ class AD9959:
         csr = "11110000"
         csr_default = "".join(" 0" + b for b in csr)
         csr_default = csr_default[1:]
-        fr1 = "000000000000000000000000"
-        fr1_default = "".join(" 0" + b for b in fr1)
-        fr1_default = fr1_default[1:]
-        fr2 = "0000000000000000"
-        fr2_default = "".join(" 0" + b for b in fr2)
-        fr2_default = fr2_default[1:]
-        cfr = "000000100000001100000000"
-        cfr_default = "".join(" 0" + b for b in cfr)
-        cfr_default = cfr_default[1:]
-        cftw0 = "00000000000000000000000000000000"
-        cftw0_default = "".join(" 0" + b for b in cftw0)
-        cftw0_default = cftw0_default[1:]
-        cpow0 = "0000000000000000"
-        cpow0_default = "".join(" 0" + b for b in cpow0)
-        cpow0_default = cpow0_default[1:]
-        acr = "000000000000000000000000"
-        acr_default = "".join(" 0" + b for b in acr)
-        acr_default = acr_default[1:]
-
         self._write_to_dds_register(0x00, csr_default)
         self._load_IO()
         if self.auto_update:
             self._update_IO()
+
+        fr1 = "000000000000000000000000"
+        fr1_default = "".join(" 0" + b for b in fr1)
+        fr1_default = fr1_default[1:]
         self._write_to_dds_register(0x01, fr1_default)
         self._load_IO()
         if self.auto_update:
             self._update_IO()
+
+        fr2 = "0000000000000000"
+        fr2_default = "".join(" 0" + b for b in fr2)
+        fr2_default = fr2_default[1:]
         self._write_to_dds_register(0x02, fr2_default)
         self._load_IO()
         if self.auto_update:
             self._update_IO()
+
+        cfr = "000000100000001100000000"
+        cfr_default = "".join(" 0" + b for b in cfr)
+        cfr_default = cfr_default[1:]
         self._write_to_dds_register(0x03, cfr_default)
         self._load_IO()
         if self.auto_update:
             self._update_IO()
+
+        cftw0 = "00000000000000000000000000000000"
+        cftw0_default = "".join(" 0" + b for b in cftw0)
+        cftw0_default = cftw0_default[1:]
         self._write_to_dds_register(0x04, cftw0_default)
         self._load_IO()
         if self.auto_update:
             self._update_IO()
+
+        cpow0 = "0000000000000000"
+        cpow0_default = "".join(" 0" + b for b in cpow0)
+        cpow0_default = cpow0_default[1:]
         self._write_to_dds_register(0x05, cpow0_default)
         self._load_IO()
         if self.auto_update:
             self._update_IO()
+
+        acr = "000000000000000000000000"
+        acr_default = "".join(" 0" + b for b in acr)
+        acr_default = acr_default[1:]
         self._write_to_dds_register(0x06, acr_default)
         self._load_IO()
         if self.auto_update:

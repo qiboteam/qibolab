@@ -9,10 +9,9 @@ from qibolab.platforms.abstract import AbstractPlatform
 from qibolab.u3params import U3Params
 
 
-class DDSAD9959:
-    # This object is used to make QCVV methods work until
-    # we improve the platform abstractions
-    # TODO: Remove this objects when abstractions are fixed
+class qubit:
+
+    # TODO: Currently this is a dummy platform.
 
     def set_device_parameter(self, *args, **kwargs):
         pass
@@ -38,18 +37,17 @@ class cold_ion(AbstractPlatform):
         with open(runcard, "r") as file:
             self.settings = yaml.safe_load(file)
 
-        # create dummy instruments
         nqubits = self.settings.get("nqubits")
-        # TODO: Remove these when platform abstraction is fixed
-        self.qcm = {i: DDSAD9959() for i in range(nqubits)}
-        self.qrm = {i: DDSAD9959() for i in range(nqubits)}
+        # TODO: Change this to the actual qubit configuration. Currently its a dummy platform.
+        self.qcm = {i: qubit() for i in range(nqubits)}
+        self.qrm = {i: qubit() for i in range(nqubits)}
         self.u3params = U3Params()
 
     def reload_settings(self):  # pragma: no cover
-        log.info("Dummy platform does not support setting reloading.")
+        log.info("Dummy platform.")
 
     def execute_pulse_sequence(self, sequence, nshots=None):  # pragma: no cover
-        log.info("this is a dummy qubit that is there")
+        log.info("This is a dummy qubit")
         time.sleep(self.settings.get("sleep_time"))
         ro_pulses = {pulse.qubit: pulse.serial for pulse in sequence.ro_pulses}
 
@@ -60,4 +58,4 @@ class cold_ion(AbstractPlatform):
         return results
 
     def run_calibration(self, show_plots=False):  # pragma: no cover
-        log.info("It is a dummy qubit")
+        log.info("It is a dummy calibration")
