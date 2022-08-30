@@ -45,5 +45,18 @@ class cold_ion(AbstractPlatform):
         self.qrm = {i: DDSAD9959() for i in range(nqubits)}
         self.u3params = U3Params()
 
-    def reload_settings(self):
+    def reload_settings(self):  # pragma: no cover
         log.info("Dummy platform does not support setting reloading.")
+
+    def execute_pulse_sequence(self, sequence, nshots=None):  # pragma: no cover
+        time.sleep(self.settings.get("sleep_time"))
+        ro_pulses = {pulse.qubit: pulse.serial for pulse in sequence.ro_pulses}
+
+        results = {}
+        for qubit, pulse in ro_pulses.items():
+            i, q = np.random.random(2)
+            results[qubit] = {pulse: (np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q)}
+        return results
+
+    def run_calibration(self, show_plots=False):  # pragma: no cover
+        raise_error(NotImplementedError)

@@ -10,7 +10,3 @@ def test_cold_ion_initialization():  # pragma: no cover
     platform = Platform("cold_ion")
     platform.reload_settings()
     platform.run_calibration()
-    platform.connect()
-    platform.start()
-    platform.stop()
-    platform.disconnect()
