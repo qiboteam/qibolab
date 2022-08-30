@@ -66,6 +66,7 @@ class AbstractPlatform(ABC):
                 RuntimeError, "Cannot access instrument because it is not connected."
             )
 
+    @abstractmethod
     def reload_settings(self):
         with open(self.runcard, "r") as file:
             self.settings = yaml.safe_load(file)

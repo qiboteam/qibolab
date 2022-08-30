@@ -43,25 +43,7 @@ class cold_ion(AbstractPlatform):
         # TODO: Remove these when platform abstraction is fixed
         self.qcm = {i: DDSAD9959() for i in range(nqubits)}
         self.qrm = {i: DDSAD9959() for i in range(nqubits)}
-
-        from qibolab.u3params import U3Params
-
         self.u3params = U3Params()
 
-    def reload_settings(self):  # pragma: no cover
+    def reload_settings(self):
         log.info("Dummy platform does not support setting reloading.")
-
-    def connect(self):
-        log.info("Connecting to dummy platform.")
-
-    def setup(self):
-        log.info("Setting up dummy platform.")
-
-    def start(self):
-        log.info("Starting dummy platform.")
-
-    def stop(self):
-        log.info("Stopping dummy platform.")
-
-    def disconnect(self):
-        log.info("Disconnecting dummy platform.")
