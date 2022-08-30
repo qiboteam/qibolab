@@ -15,7 +15,7 @@ class SGS100A(AbstractInstrument):
 
     rw_property_wrapper = lambda parameter: property(
         lambda self: self.device.get(parameter),
-        lambda self, x: self.set_device_parameter(parameter, x),
+        lambda self, x: self._set_device_parameter(parameter, x),
     )
     power = rw_property_wrapper("power")
     frequency = rw_property_wrapper("frequency")
@@ -46,7 +46,7 @@ class SGS100A(AbstractInstrument):
                 Exception, "There is an open connection to the instrument already"
             )
 
-    def set_device_parameter(self, parameter: str, value):
+    def _set_device_parameter(self, parameter: str, value):
         if not (
             parameter in self.device_parameters
             and self.device_parameters[parameter] == value

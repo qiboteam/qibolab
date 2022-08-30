@@ -60,7 +60,7 @@ def test_instruments_qublox_setup(name):
 
 def instrument_set_and_test_parameter_values(instrument, parameter, values):
     for value in values:
-        instrument.set_device_parameter(parameter, value)
+        instrument._set_device_parameter(parameter, value)
         assert instrument.device.get(parameter) == value
 
 

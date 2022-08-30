@@ -61,7 +61,7 @@ def test_instruments_qublox_setup(name):
 
 def instrument_set_and_test_parameter_values(instrument, parameter, values):
     for value in values:
-        instrument.set_device_parameter(parameter, value)
+        instrument._set_device_parameter(parameter, value)
         assert instrument.device.get(parameter) == value
 
 
@@ -75,10 +75,10 @@ def test_instruments_qublox_set_device_paramter(name):
         )
         for sequencer in range(instruments[name].device_num_sequencers):
             for gain in np.arange(0, 1, 0.1):
-                instruments[name].set_device_parameter(
+                instruments[name]._set_device_parameter(
                     f"sequencer{sequencer}_gain_awg_path0", gain
                 )
-                instruments[name].set_device_parameter(
+                instruments[name]._set_device_parameter(
                     f"sequencer{sequencer}_gain_awg_path1", gain
                 )
                 assert (

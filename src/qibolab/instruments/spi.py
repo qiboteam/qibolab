@@ -12,7 +12,7 @@ class SPI(AbstractInstrument):
 
     property_wrapper = lambda parent, device, *parameter: property(
         lambda self: device.get(parameter[0]), 
-        lambda self,x: parent.set_device_parameter(device, *parameter, value = x)
+        lambda self,x: parent._set_device_parameter(device, *parameter, value = x)
         )
 
     def __init__(self, name, address):
@@ -44,7 +44,7 @@ class SPI(AbstractInstrument):
                 Exception, "There is an open connection to the instrument already"
             )
 
-    def set_device_parameter(self, target, *parameters, value):
+    def _set_device_parameter(self, target, *parameters, value):
         if self.is_connected:
             key = target.name + '.' + parameters[0]
             if not key in self.device_parameters:
