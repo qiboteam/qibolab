@@ -299,7 +299,7 @@ class Pulse:
     
     @start.setter
     def start(self, value):
-        if not isinstance(value, (se_int, int)):
+        if not isinstance(value, (se_int, int, np.integer)):
             raise TypeError(f"start argument type should be intSymbolicExpression or int, got {type(value).__name__}")
         elif not value >= 0:
             raise ValueError(f"start argument must be >= 0, got {value}")
@@ -307,6 +307,8 @@ class Pulse:
             #self._start = value
             #self._start = intSymbolicExpression(value)
             self._start = se_int(value.symbol)
+        elif isinstance(value, np.integer):
+            self._start = se_int(int(value))
         elif isinstance(value, int):
             self._start = se_int(value)
 
@@ -316,12 +318,14 @@ class Pulse:
 
     @duration.setter
     def duration(self, value):
-        if not isinstance(value, (se_int, int)):
+        if not isinstance(value, (se_int, int, np.integer)):
             raise TypeError(f"duration argument type should be intSymbolicExpression or int, got {type(value).__name__}")
         elif not value > 0:
             raise ValueError(f"duration argument must be >= 0, got {value}")
         if isinstance(value, se_int):
             self._duration = se_int(value.symbol)
+        elif isinstance(value, np.integer):
+            self._duration = se_int(int(value))
         elif isinstance(value, int):
             self._duration = se_int(value)
         self._finish = self._start + self._duration
@@ -350,11 +354,14 @@ class Pulse:
     def amplitude(self, value):
         if isinstance(value, int):
             value = float(value)
-        if not isinstance(value, float):
+        if not isinstance(value, (float, np.floating)):
             raise TypeError(f"amplitude argument type should be float, got {type(value).__name__}")
         elif not ((value >= 0) & (value <= 1)):
             raise ValueError(f"amplitude argument must be >= 0 & <= 1, got {value}")
-        self._amplitude = value
+        if isinstance(value, np.floating):
+            self._amplitude = float(value)
+        elif isinstance(value, float):
+            self._amplitude = value
 
     @property
     def frequency(self)-> int:
@@ -362,11 +369,12 @@ class Pulse:
 
     @frequency.setter
     def frequency(self, value):
-        if not isinstance(value, (int, float)):
+        if not isinstance(value, (int, float, np.integer, np.floating)):
             raise TypeError(f"frequency argument type should be float, got {type(value).__name__}")
-        elif isinstance(value, float):
-            value = int(value)
-        self._frequency = value
+        if isinstance(value, (float, np.integer, np.floating)):
+            self._frequency = int(value)
+        elif isinstance(value, int):
+            self._frequency = value
 
     @property
     def relative_phase(self) -> float:
@@ -374,11 +382,12 @@ class Pulse:
 
     @relative_phase.setter
     def relative_phase(self, value):
-        if isinstance(value, int):
-            value = float(value)
-        if not isinstance(value, float):
-            raise TypeError(f"relative_phase argument type should be float, got {type(value).__name__}")
-        self._relative_phase = value
+        if not isinstance(value, (int, float, np.integer, np.floating)):
+            raise TypeError(f"relative_phase argument type should be int or float, got {type(value).__name__}")
+        if isinstance(value, (int, np.integer, np.floating)):
+            self._relative_phase = float(value)
+        elif isinstance(value, float):
+            self._relative_phase = value
 
     @property
     def shape(self) -> PulseShape:
