@@ -487,7 +487,7 @@ class Calibration:
 
         self.pl.tuids_max_num(self.max_num_plots)
 
-        mc.settables(settable(platform.qd_port[qubit], "gain", "Gain", "dB"))
+        mc.settables(settable(platform.qd_port[qubit], "gain", "Gain", "dimensionless"))
         mc.setpoints(np.arange(pulse_gain_start, pulse_gain_end, pulse_gain_step))
         mc.gettables(ROController(platform, sequence, qubit))
         platform.start()
@@ -882,7 +882,7 @@ class Calibration:
         mc.settables(
             [
                 QCPulseLengthParameter(ro_pulse, qd_pulse),
-                settable(platform.qd_port[qubit], "gain", "Gain", "dB"),
+                settable(platform.qd_port[qubit], "gain", "Gain", "dimensionless"),
             ]
         )
         setpoints_length = np.arange(
