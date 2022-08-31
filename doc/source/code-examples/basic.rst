@@ -23,13 +23,13 @@ pulses (:class:`qibolab.pulses.Pulse`) through the ``PulseSequence.add()`` metho
                         frequency=200000000.0,
                         amplitude=0.3,
                         duration=60,
-                        phase=0,
+                        relative_phase=0,
                         shape=Gaussian(5))) # Gaussian shape with std = duration / 5
     sequence.add(ReadoutPulse(start=70,
                               frequency=20000000.0,
                               amplitude=0.5,
                               duration=3000,
-                              phase=0,
+                              relative_phase=0,
                               shape=Rectangular()))
 
 The next step consists in connecting to a specific lab in which

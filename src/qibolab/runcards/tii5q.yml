@@ -76,7 +76,7 @@ instruments:
                 o2:
                     attenuation                  : 24 # (dB)
                     lo_enabled                   : true
-                    lo_frequency                 : 5_091_155_529 # (Hz) from 2e9 to 18e9
+                    lo_frequency                 : 5_091_061_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.28 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
 
@@ -202,7 +202,7 @@ native_gates:
         3: # qubit number
             RX:
                 duration: 40
-                amplitude: 0.59
+                amplitude: 0.8
                 frequency: -200_000_000
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -219,7 +219,7 @@ native_gates:
         4: # qubit number
             RX:
                 duration: 40
-                amplitude: 0.22
+                amplitude: 0.8
                 frequency: -200_000_000
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -295,7 +295,7 @@ characterization:
             sweetspot: -0.00370
         2:
             resonator_freq: 7_557_724_144
-            qubit_freq: 4_891_155_529
+            qubit_freq: 4_891_061_000 # 4_891_155_529
             T1: 33875
             T2: 0
             state0_voltage: 864

@@ -19,7 +19,7 @@ def test_rectangular_shape():
         frequency=200_000_000,
         amplitude=1,
         duration=50,
-        phase=0,
+        relative_phase=0,
         shape="Rectangular()",
         channel=1,
     )
@@ -40,7 +40,7 @@ def test_gaussian_shape():
         frequency=200_000_000,
         amplitude=1,
         duration=duration,
-        phase=0,
+        relative_phase=0,
         shape=f"Gaussian({rel_sigma})",
         channel=1,
     )
@@ -69,7 +69,7 @@ def test_drag_shape():
         frequency=200_000_000,
         amplitude=1,
         duration=duration,
-        phase=0,
+        relative_phase=0,
         shape=f"Drag({rel_sigma}, {beta})",
         channel=1,
     )
@@ -106,7 +106,7 @@ def test_pulse():
         frequency=200_000_000,
         amplitude=1,
         duration=duration,
-        phase=0,
+        relative_phase=0,
         shape=f"Drag({rel_sigma}, {beta})",
         channel=1,
     )
@@ -123,7 +123,7 @@ def test_readout_pulse():
         frequency=200_000_000,
         amplitude=1,
         duration=duration,
-        phase=0,
+        relative_phase=0,
         shape=f"Rectangular()",
         channel=11,
     )
@@ -141,7 +141,7 @@ def test_pulse_sequence_add():
             frequency=200_000_000,
             amplitude=0.3,
             duration=60,
-            phase=0,
+            relative_phase=0,
             shape="Gaussian(5)",
             channel=1,
         )
@@ -152,7 +152,7 @@ def test_pulse_sequence_add():
             frequency=200_000_000,
             amplitude=0.3,
             duration=30,
-            phase=0,
+            relative_phase=0,
             shape="Gaussian(5)",
             channel=1,
         )
@@ -169,7 +169,7 @@ def test_pulse_sequence_add_readout():
             frequency=200_000_000,
             amplitude=0.3,
             duration=60,
-            phase=0,
+            relative_phase=0,
             shape="Gaussian(5)",
             channel=1,
         )
@@ -181,7 +181,7 @@ def test_pulse_sequence_add_readout():
             frequency=200_000_000,
             amplitude=0.3,
             duration=60,
-            phase=0,
+            relative_phase=0,
             shape="Drag(5, 2)",
             channel=1,
             type="qf",
@@ -194,7 +194,7 @@ def test_pulse_sequence_add_readout():
             frequency=20_000_000,
             amplitude=0.9,
             duration=2000,
-            phase=0,
+            relative_phase=0,
             shape="Rectangular()",
             channel=11,
         )
