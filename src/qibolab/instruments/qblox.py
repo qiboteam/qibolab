@@ -732,8 +732,8 @@ class ClusterQRM_RF(AbstractInstrument):
                 self._set_device_parameter(target, 'sync_en', value = False)
                 self._set_device_parameter(target, 'marker_ovr_en', value = False) # Default after reboot = False
                 self._set_device_parameter(target, 'marker_ovr_value', value = 0) # Default after reboot = 0
-                self._set_device_parameter(target, 'channel_map_path0_out0_en', value = False)
-                self._set_device_parameter(target, 'channel_map_path1_out1_en', value = False)
+                # self._set_device_parameter(target, 'channel_map_path0_out0_en', value = False)
+                # self._set_device_parameter(target, 'channel_map_path1_out1_en', value = False)
 
             # Upload waveforms and program
             qblox_dict = {}
@@ -1161,11 +1161,10 @@ class ClusterQCM_RF(AbstractInstrument):
         # Check if the sequence to be processed is the same as the last one. 
         # If so, there is no need to generate new waveforms and program
         if self._current_pulsesequence_hash != self._last_pulsequence_hash:
+            self._free_sequencers_numbers = [2, 3, 4, 5]
+
             # process the pulses for every port
             for port in self.ports:
-                # initialise the list of free sequencer numbers to include the default for each port {'o1': 0, 'o2': 1}
-                self._free_sequencers_numbers = [self.DEFAULT_SEQUENCERS[port]] + [2, 3, 4, 5]
-                
                 # split the collection of instruments pulses by ports
                 port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(self.port_channel_map[port])
 
@@ -1173,6 +1172,9 @@ class ClusterQCM_RF(AbstractInstrument):
                 self._sequencers[port] = []
 
                 if not port_pulses.is_empty:
+                    # initialise the list of free sequencer numbers to include the default for each port {'o1': 0, 'o2': 1}
+                    self._free_sequencers_numbers = [self.DEFAULT_SEQUENCERS[port]] + self._free_sequencers_numbers
+
                     # split the collection of port pulses in non overlapping pulses
                     non_overlapping_pulses: PulseSequence
                     for non_overlapping_pulses in port_pulses.separate_overlapping_pulses(): 
@@ -1372,12 +1374,12 @@ class ClusterQCM_RF(AbstractInstrument):
             for sequencer_number in self._unused_sequencers_numbers:
                 target  = self.device.sequencers[sequencer_number]
                 self._set_device_parameter(target, 'sync_en', value = False)
-                self._set_device_parameter(target, 'marker_ovr_en', value = False) # Default after reboot = False
+                self._set_device_parameter(target, 'marker_ovr_en', value = True) # Default after reboot = False
                 self._set_device_parameter(target, 'marker_ovr_value', value = 0) # Default after reboot = 0
-                self._set_device_parameter(target, 'channel_map_path0_out0_en', value = False)
-                self._set_device_parameter(target, 'channel_map_path0_out2_en', value = False)
-                self._set_device_parameter(target, 'channel_map_path1_out1_en', value = False)
-                self._set_device_parameter(target, 'channel_map_path1_out3_en', value = False)
+                # self._set_device_parameter(target, 'channel_map_path0_out0_en', value = False)
+                # self._set_device_parameter(target, 'channel_map_path0_out2_en', value = False)
+                # self._set_device_parameter(target, 'channel_map_path1_out1_en', value = False)
+                # self._set_device_parameter(target, 'channel_map_path1_out3_en', value = False)
 
             # Upload waveforms and program
             qblox_dict = {}
