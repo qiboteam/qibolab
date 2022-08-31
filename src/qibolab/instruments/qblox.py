@@ -519,6 +519,7 @@ class ClusterQRM_RF(AbstractInstrument):
                                 target  = self.device.sequencers[next_sequencer_number]
                                 self._set_device_parameter(target, parameter, value = value)
                     self._set_device_parameter(self.device.sequencers[next_sequencer_number], 'nco_freq', value = non_overlapping_pulses[0].frequency)  # TODO: for non_overlapping_same_frequency_pulses[0].frequency 
+                    # TODO: set conditional to haardware modulation or demodulation
                     sequencer = Sequencer(next_sequencer_number)
                     
                     # add the sequencer to the list of sequencers required by the port
@@ -729,8 +730,10 @@ class ClusterQRM_RF(AbstractInstrument):
             for sequencer_number in self._unused_sequencers_numbers:
                 target  = self.device.sequencers[sequencer_number]
                 self._set_device_parameter(target, 'sync_en', value = False)
-                self._set_device_parameter(target, 'marker_ovr_en', value = True) # Default after reboot = False
+                self._set_device_parameter(target, 'marker_ovr_en', value = False) # Default after reboot = False
                 self._set_device_parameter(target, 'marker_ovr_value', value = 0) # Default after reboot = 0
+                self._set_device_parameter(target, 'channel_map_path0_out0_en', value = False)
+                self._set_device_parameter(target, 'channel_map_path1_out1_en', value = False)
 
             # Upload waveforms and program
             qblox_dict = {}
@@ -752,8 +755,8 @@ class ClusterQRM_RF(AbstractInstrument):
                     self.device.sequencers[sequencer.number].sequence(str(self.data_folder / filename))
         
         # Arm sequencers
-        for sequencer in self._used_sequencers_numbers:
-            self.device.arm_sequencer(sequencer)
+        for sequencer_number in self._used_sequencers_numbers:
+            self.device.arm_sequencer(sequencer_number)
 
         # DEBUG: QRM Print Readable Snapshot
         # print(self.name)
@@ -1369,8 +1372,12 @@ class ClusterQCM_RF(AbstractInstrument):
             for sequencer_number in self._unused_sequencers_numbers:
                 target  = self.device.sequencers[sequencer_number]
                 self._set_device_parameter(target, 'sync_en', value = False)
-                self._set_device_parameter(target, 'marker_ovr_en', value = True) # Default after reboot = False
+                self._set_device_parameter(target, 'marker_ovr_en', value = False) # Default after reboot = False
                 self._set_device_parameter(target, 'marker_ovr_value', value = 0) # Default after reboot = 0
+                self._set_device_parameter(target, 'channel_map_path0_out0_en', value = False)
+                self._set_device_parameter(target, 'channel_map_path0_out2_en', value = False)
+                self._set_device_parameter(target, 'channel_map_path1_out1_en', value = False)
+                self._set_device_parameter(target, 'channel_map_path1_out3_en', value = False)
 
             # Upload waveforms and program
             qblox_dict = {}
@@ -1392,8 +1399,8 @@ class ClusterQCM_RF(AbstractInstrument):
                     self.device.sequencers[sequencer.number].sequence(str(self.data_folder / filename))
         
         # Arm sequencers
-        for sequencer in self._used_sequencers_numbers:
-            self.device.arm_sequencer(sequencer)
+        for sequencer_number in self._used_sequencers_numbers:
+            self.device.arm_sequencer(sequencer_number)
 
         # DEBUG: QRM Print Readable Snapshot
         # print(self.name)
