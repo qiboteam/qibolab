@@ -308,8 +308,7 @@ class AbstractPlatform(ABC):
         qd_duration = self.settings['native_gates']['single_qubit'][qubit]['RX']['duration'] 
         qd_frequency = self.settings['native_gates']['single_qubit'][qubit]['RX']['frequency']
         qd_amplitude = self.settings['native_gates']['single_qubit'][qubit]['RX']['amplitude'] / 2
-        qd_shape = self.settings['native_gates']['single_qubit'][qubit]['RX']['drag_shape']
-        #TODO: Replace with drag shape stored in Runcard when c
+        qd_shape = self.settings['native_gates']['single_qubit'][qubit]['RX']['shape']
         if (beta != None):
             qd_shape = 'Drag(5,'+ str(beta)+')'        
         
@@ -322,8 +321,7 @@ class AbstractPlatform(ABC):
         qd_duration = self.settings['native_gates']['single_qubit'][qubit]['RX']['duration'] 
         qd_frequency = self.settings['native_gates']['single_qubit'][qubit]['RX']['frequency']
         qd_amplitude = self.settings['native_gates']['single_qubit'][qubit]['RX']['amplitude']
-        qd_shape = self.settings['native_gates']['single_qubit'][qubit]['RX']['drag_shape']
-        #TODO: Replace with drag shape stored in Runcard when c
+        qd_shape = self.settings['native_gates']['single_qubit'][qubit]['RX']['shape']
         if (beta != None):
             qd_shape = 'Drag(5,'+ str(beta)+')'
 

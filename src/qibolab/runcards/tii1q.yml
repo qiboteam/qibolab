@@ -81,7 +81,6 @@ native_gates:
                 frequency: -200_000_000
                 shape: Drag(5, 0.05096)
                 type: qd # qubit drive
-                drag_shape: Drag(5, 0)
             MZ:
                 duration: 2400
                 amplitude: 0.9
