@@ -101,6 +101,9 @@ def calculate_h_vector(ud):
 
 
 def cnot_decomposition(hx, hy, hz):
+    from qibo import matrices
+    from scipy.linalg import expm
+
     u3 = -1j * (matrices.X + matrices.Z) / np.sqrt(2)
     # use corrected version from PRA paper (not arXiv)
     u2 = -u3 @ expm(-1j * (hx - np.pi / 4) * matrices.X)
