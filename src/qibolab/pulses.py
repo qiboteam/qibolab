@@ -1,20 +1,24 @@
+# -*- coding: utf-8 -*-
 """Pulse and PulseSequence classes."""
-import numpy as np
 from abc import ABC, abstractmethod
 from enum import Enum
-from qibolab.symbolic import intSymbolicExpression as se_int
+
+import numpy as np
+
 from qibolab.symbolic import floatSymbolicExpression as se_float
+from qibolab.symbolic import intSymbolicExpression as se_int
 
 
 class PulseType(Enum):
-    READOUT = 'ro'
-    DRIVE = 'qd'
-    FLUX = 'qf'
+    READOUT = "ro"
+    DRIVE = "qd"
+    FLUX = "qf"
 
 
 class Waveform:
     DECIMALS = 5
-    def __init__(self, data:np.ndarray):
+
+    def __init__(self, data: np.ndarray):
         self.data = data
         self.serial: str = ""
 
@@ -30,14 +34,15 @@ class Waveform:
     def __repr__(self):
         return self.serial
 
-    def plot(self): 
+    def plot(self):
         import matplotlib.pyplot as plt
         import numpy as np
+
         plt.figure(figsize=(14, 5), dpi=120)
-        plt.plot(self.data, c='C0', linestyle='dashed')
-        plt.xlabel('Sample Number')
-        plt.ylabel('Amplitude')
-        plt.grid(b=True, which='both', axis='both', color='#888888', linestyle='-')
+        plt.plot(self.data, c="C0", linestyle="dashed")
+        plt.xlabel("Sample Number")
+        plt.ylabel("Amplitude")
+        plt.grid(b=True, which="both", axis="both", color="#888888", linestyle="-")
         plt.suptitle(self.serial)
         plt.show()
 
@@ -45,26 +50,26 @@ class Waveform:
 class PulseShape(ABC):
     """Abstract class for pulse shapes"""
 
-    SAMPLING_RATE = 1e9 # 1GSaPS
+    SAMPLING_RATE = 1e9  # 1GSaPS
 
     @property
     @abstractmethod
-    def envelope_waveform_i(self) -> Waveform: # pragma: no cover
+    def envelope_waveform_i(self) -> Waveform:  # pragma: no cover
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def envelope_waveform_q(self) -> Waveform: # pragma: no cover
+    def envelope_waveform_q(self) -> Waveform:  # pragma: no cover
         raise NotImplementedError
 
     @property
-    def envelope_waveforms(self) -> tuple[Waveform, Waveform]: # pragma: no cover
+    def envelope_waveforms(self) -> tuple[Waveform, Waveform]:  # pragma: no cover
         return (self.envelope_waveform_i, self.envelope_waveform_q)
-        
+
     @property
     def modulated_waveform_i(self) -> Waveform:
         return self.modulated_waveforms[0]
-        
+
     @property
     def modulated_waveform_q(self) -> Waveform:
         return self.modulated_waveforms[1]
@@ -72,17 +77,18 @@ class PulseShape(ABC):
     @property
     def modulated_waveforms(self):
         if not self.pulse:
-                raise Exception("PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms")
-        
+            raise Exception(
+                "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
+            )
+
         pulse = self.pulse
         num_samples = int(pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
         time = np.arange(num_samples) / PulseShape.SAMPLING_RATE
-        global_phase = 2 * np.pi * pulse.frequency * pulse.start / 1e9 # pulse start, duration and finish are in ns 
+        global_phase = 2 * np.pi * pulse.frequency * pulse.start / 1e9  # pulse start, duration and finish are in ns
         cosalpha = np.cos(2 * np.pi * pulse.frequency * time + global_phase + pulse.relative_phase)
         sinalpha = np.sin(2 * np.pi * pulse.frequency * time + global_phase + pulse.relative_phase)
 
-        mod_matrix = np.array([[ cosalpha, -sinalpha], 
-                                [sinalpha, cosalpha]])
+        mod_matrix = np.array([[cosalpha, -sinalpha], [sinalpha, cosalpha]])
 
         (envelope_waveform_i, envelope_waveform_q) = self.envelope_waveforms
         result = []
@@ -102,6 +108,7 @@ class Rectangular(PulseShape):
     Rectangular pulse shape.
 
     """
+
     def __init__(self):
         self.name = "Rectangular"
         self.pulse: Pulse = None
@@ -112,9 +119,11 @@ class Rectangular(PulseShape):
             num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
             waveform = Waveform(self.pulse.amplitude * np.ones(num_samples))
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
-            return waveform            
+            return waveform
         else:
-            raise Exception("PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms")
+            raise Exception(
+                "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
+            )
 
     @property
     def envelope_waveform_q(self) -> Waveform:
@@ -124,7 +133,9 @@ class Rectangular(PulseShape):
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         else:
-            raise Exception("PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms")
+            raise Exception(
+                "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
+            )
 
     def __repr__(self):
         return f"{self.name}()"
@@ -139,7 +150,7 @@ class Gaussian(PulseShape):
 
     .. math::
 
-        A\exp^{-\\frac{1}{2}\\frac{(t-\mu)^2}{\sigma^2}}
+        A\\exp^{-\\frac{1}{2}\\frac{(t-\\mu)^2}{\\sigma^2}}
     """
 
     def __init__(self, rel_sigma: float):
@@ -151,12 +162,17 @@ class Gaussian(PulseShape):
     def envelope_waveform_i(self) -> Waveform:
         if self.pulse:
             num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
-            x = np.arange(0,num_samples,1)
-            waveform = Waveform(self.pulse.amplitude * np.exp(-(1/2)*(((x-(num_samples-1)/2)**2)/(((num_samples)/self.rel_sigma)**2))))
+            x = np.arange(0, num_samples, 1)
+            waveform = Waveform(
+                self.pulse.amplitude
+                * np.exp(-(1 / 2) * (((x - (num_samples - 1) / 2) ** 2) / (((num_samples) / self.rel_sigma) ** 2)))
+            )
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         else:
-            raise Exception("PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes")
+            raise Exception(
+                "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
+            )
 
     @property
     def envelope_waveform_q(self) -> Waveform:
@@ -166,7 +182,9 @@ class Gaussian(PulseShape):
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         else:
-            raise Exception("PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes")
+            raise Exception(
+                "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
+            )
 
     def __repr__(self):
         return f"{self.name}({format(self.rel_sigma, '.6f').rstrip('0').rstrip('.')})"
@@ -194,26 +212,40 @@ class Drag(PulseShape):
     def envelope_waveform_i(self) -> Waveform:
         if self.pulse:
             num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
-            x = np.arange(0,num_samples,1)
-            i = self.pulse.amplitude * np.exp(-(1/2)*(((x-(num_samples-1)/2)**2)/(((num_samples)/self.rel_sigma)**2)))
+            x = np.arange(0, num_samples, 1)
+            i = self.pulse.amplitude * np.exp(
+                -(1 / 2) * (((x - (num_samples - 1) / 2) ** 2) / (((num_samples) / self.rel_sigma) ** 2))
+            )
             waveform = Waveform(i)
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         else:
-            raise Exception("PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes")
+            raise Exception(
+                "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
+            )
 
     @property
     def envelope_waveform_q(self) -> Waveform:
         if self.pulse:
             num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
-            x = np.arange(0,num_samples,1)
-            i = self.pulse.amplitude * np.exp(-(1/2)*(((x-(num_samples-1)/2)**2)/(((num_samples)/self.rel_sigma)**2)))
-            q = self.beta * (-(x-(num_samples-1)/2)/((num_samples/self.rel_sigma)**2)) * i * PulseShape.SAMPLING_RATE / 1e9
+            x = np.arange(0, num_samples, 1)
+            i = self.pulse.amplitude * np.exp(
+                -(1 / 2) * (((x - (num_samples - 1) / 2) ** 2) / (((num_samples) / self.rel_sigma) ** 2))
+            )
+            q = (
+                self.beta
+                * (-(x - (num_samples - 1) / 2) / ((num_samples / self.rel_sigma) ** 2))
+                * i
+                * PulseShape.SAMPLING_RATE
+                / 1e9
+            )
             waveform = Waveform(q)
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         else:
-            raise Exception("PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes")
+            raise Exception(
+                "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
+            )
 
     def __repr__(self):
         return f"{self.name}({format(self.rel_sigma, '.6f').rstrip('0').rstrip('.')}, {format(self.beta, '.6f').rstrip('0').rstrip('.')})"
@@ -259,12 +291,14 @@ class Pulse:
                                   channel=2,
                                   type=PulseType.READOUT)
     """
-    def __init__(self, start, duration, amplitude, frequency, relative_phase, shape,
-                       channel, type = PulseType.DRIVE, qubit = 0):
-    # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
-    #                    channel: int | str, type: PulseType | str  = PulseType.DRIVE, qubit: int | str = 0):
 
-        self._start:se_int = None
+    def __init__(
+        self, start, duration, amplitude, frequency, relative_phase, shape, channel, type=PulseType.DRIVE, qubit=0
+    ):
+        # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
+        #                    channel: int | str, type: PulseType | str  = PulseType.DRIVE, qubit: int | str = 0):
+
+        self._start: se_int = None
         self._duration: se_int = None
         self._finish: se_int = None
         self._amplitude: float = None
@@ -273,11 +307,11 @@ class Pulse:
         self._shape: PulseShape = None
         self._channel = None
         # self._channel: int | str = None
-        self._type: PulseType  = None
+        self._type: PulseType = None
         self._qubit = None
         # self._qubit: int | str = None
-        
-        self.start = start 
+
+        self.start = start
         self.duration = duration
         self.amplitude = amplitude
         self.frequency = frequency
@@ -296,7 +330,7 @@ class Pulse:
     @property
     def start(self) -> int:
         return self._start.value
-    
+
     @start.setter
     def start(self, value):
         if not isinstance(value, (se_int, int, np.integer)):
@@ -304,8 +338,8 @@ class Pulse:
         elif not value >= 0:
             raise ValueError(f"start argument must be >= 0, got {value}")
         if isinstance(value, se_int):
-            #self._start = value
-            #self._start = intSymbolicExpression(value)
+            # self._start = value
+            # self._start = intSymbolicExpression(value)
             self._start = se_int(value.symbol)
         elif isinstance(value, np.integer):
             self._start = se_int(int(value))
@@ -319,7 +353,9 @@ class Pulse:
     @duration.setter
     def duration(self, value):
         if not isinstance(value, (se_int, int, np.integer)):
-            raise TypeError(f"duration argument type should be intSymbolicExpression or int, got {type(value).__name__}")
+            raise TypeError(
+                f"duration argument type should be intSymbolicExpression or int, got {type(value).__name__}"
+            )
         elif not value > 0:
             raise ValueError(f"duration argument must be >= 0, got {value}")
         if isinstance(value, se_int):
@@ -364,7 +400,7 @@ class Pulse:
             self._amplitude = value
 
     @property
-    def frequency(self)-> int:
+    def frequency(self) -> int:
         return self._frequency
 
     @frequency.setter
@@ -401,17 +437,18 @@ class Pulse:
             self._shape = value
         elif isinstance(value, str):
             import re
-            shape_name = re.findall('(\w+)', value)[0]
+
+            shape_name = re.findall(r"(\w+)", value)[0]
             if shape_name not in globals():
                 raise ValueError(f"shape {value} not found")
-            shape_parameters = re.findall(r'[\w+\d\.\d]+', value)[1:] 
-            #TODO: create multiple tests to prove regex working correctly
+            shape_parameters = re.findall(r"[\w+\d\.\d]+", value)[1:]
+            # TODO: create multiple tests to prove regex working correctly
             self._shape = globals()[shape_name](*shape_parameters)
         self._shape.pulse = self
 
     @property
     def channel(self):
-    # def channel(self) -> int | str:
+        # def channel(self) -> int | str:
         return self._channel
 
     @channel.setter
@@ -435,7 +472,7 @@ class Pulse:
 
     @property
     def qubit(self):
-    # def qubit(self) -> int | str:
+        # def qubit(self) -> int | str:
         return self._qubit
 
     @qubit.setter
@@ -458,7 +495,7 @@ class Pulse:
 
     @property
     def envelope_waveforms(self) -> tuple[Waveform, Waveform]:
-        return  (self._shape.envelope_waveform_i, self._shape.envelope_waveform_q)
+        return (self._shape.envelope_waveform_i, self._shape.envelope_waveform_q)
 
     @property
     def modulated_waveform_i(self) -> Waveform:
@@ -488,58 +525,97 @@ class Pulse:
         if isinstance(other, Pulse):
             return PulseSequence(self, other)
         elif isinstance(other, PulseSequence):
-            return PulseSequence(self, * other.pulses)
+            return PulseSequence(self, *other.pulses)
         else:
-            raise TypeError(f'Expected Pulse or PulseSequence; got {type(other).__name__}')
-            
+            raise TypeError(f"Expected Pulse or PulseSequence; got {type(other).__name__}")
+
     def __mul__(self, n):
         if not isinstance(n, int):
-            raise TypeError(f'Expected int; got {type(n).__name__}')
+            raise TypeError(f"Expected int; got {type(n).__name__}")
         elif n < 0:
-            raise TypeError(f'argument n should be >=0, got {n}')
-        return PulseSequence(* ([self.shallow_copy()] * n))
+            raise TypeError(f"argument n should be >=0, got {n}")
+        return PulseSequence(*([self.shallow_copy()] * n))
 
     def __rmul__(self, n):
         return self.__mul__(n)
 
-    def deep_copy(self): # -> Pulse|ReadoutPulse|DrivePulse|FluxPulse:
+    def deep_copy(self):  # -> Pulse|ReadoutPulse|DrivePulse|FluxPulse:
         # return eval(self.serial)
-        return Pulse(self.start, self.duration, self.amplitude, self.frequency, self.relative_phase, repr(self._shape), self.channel, self.type, self.qubit)
+        return Pulse(
+            self.start,
+            self.duration,
+            self.amplitude,
+            self.frequency,
+            self.relative_phase,
+            repr(self._shape),
+            self.channel,
+            self.type,
+            self.qubit,
+        )
 
-    def shallow_copy(self): # -> Pulse:
-        return Pulse(self._start, self._duration, self._amplitude, self._frequency, self._relative_phase, self._shape, self._channel, self._type, self._qubit)
- 
+    def shallow_copy(self):  # -> Pulse:
+        return Pulse(
+            self._start,
+            self._duration,
+            self._amplitude,
+            self._frequency,
+            self._relative_phase,
+            self._shape,
+            self._channel,
+            self._type,
+            self._qubit,
+        )
+
     def plot(self):
         import matplotlib.pyplot as plt
-        from matplotlib import gridspec
         import numpy as np
+        from matplotlib import gridspec
+
         num_samples = int(self.duration / 1e9 * PulseShape.SAMPLING_RATE)
         time = self.start + np.arange(num_samples) / PulseShape.SAMPLING_RATE * 1e9
         fig = plt.figure(figsize=(14, 5), dpi=120)
-        gs = gridspec.GridSpec(ncols=2, nrows=1,
-                         width_ratios=[2, 1])
+        gs = gridspec.GridSpec(ncols=2, nrows=1, width_ratios=[2, 1])
         ax1 = plt.subplot(gs[0])
-        ax1.plot(time, self.shape.envelope_waveform_i.data, label='envelope i', c='C0', linestyle='dashed')
-        ax1.plot(time, self.shape.envelope_waveform_q.data, label='envelope q', c='C1', linestyle='dashed')
-        ax1.plot(time, self.shape.modulated_waveform_i.data, label='modulated i', c='C0')
-        ax1.plot(time, self.shape.modulated_waveform_q.data, label='modulated q', c='C1')
-        ax1.plot(time, -self.shape.envelope_waveform_i.data, c='silver', linestyle='dashed')
-        ax1.set_xlabel('Time [ns]')
-        ax1.set_ylabel('Amplitude')
+        ax1.plot(time, self.shape.envelope_waveform_i.data, label="envelope i", c="C0", linestyle="dashed")
+        ax1.plot(time, self.shape.envelope_waveform_q.data, label="envelope q", c="C1", linestyle="dashed")
+        ax1.plot(time, self.shape.modulated_waveform_i.data, label="modulated i", c="C0")
+        ax1.plot(time, self.shape.modulated_waveform_q.data, label="modulated q", c="C1")
+        ax1.plot(time, -self.shape.envelope_waveform_i.data, c="silver", linestyle="dashed")
+        ax1.set_xlabel("Time [ns]")
+        ax1.set_ylabel("Amplitude")
 
-        ax1.grid(b=True, which='both', axis='both', color='#888888', linestyle='-')
+        ax1.grid(b=True, which="both", axis="both", color="#888888", linestyle="-")
         ax1.axis([self.start, self.finish, -1, 1])
         ax1.legend()
 
         ax2 = plt.subplot(gs[1])
-        ax2.plot(self.shape.modulated_waveform_i.data, self.shape.modulated_waveform_q.data, label='modulated', c='C3')
-        ax2.plot(self.shape.envelope_waveform_i.data, self.shape.envelope_waveform_q.data, label='envelope', c='C2')
-        ax2.plot(self.shape.modulated_waveform_i.data[0], self.shape.modulated_waveform_q.data[0], marker="o", markersize=5, label='start', c='lightcoral')
-        ax2.plot(self.shape.modulated_waveform_i.data[-1], self.shape.modulated_waveform_q.data[-1], marker="o", markersize=5, label='finish', c='darkred')
+        ax2.plot(self.shape.modulated_waveform_i.data, self.shape.modulated_waveform_q.data, label="modulated", c="C3")
+        ax2.plot(self.shape.envelope_waveform_i.data, self.shape.envelope_waveform_q.data, label="envelope", c="C2")
+        ax2.plot(
+            self.shape.modulated_waveform_i.data[0],
+            self.shape.modulated_waveform_q.data[0],
+            marker="o",
+            markersize=5,
+            label="start",
+            c="lightcoral",
+        )
+        ax2.plot(
+            self.shape.modulated_waveform_i.data[-1],
+            self.shape.modulated_waveform_q.data[-1],
+            marker="o",
+            markersize=5,
+            label="finish",
+            c="darkred",
+        )
 
-        ax2.plot(np.cos(time * 2 * np.pi / self.duration), np.sin(time * 2 * np.pi / self.duration), c='silver', linestyle='dashed')
+        ax2.plot(
+            np.cos(time * 2 * np.pi / self.duration),
+            np.sin(time * 2 * np.pi / self.duration),
+            c="silver",
+            linestyle="dashed",
+        )
 
-        ax2.grid(b=True, which='both', axis='both', color='#888888', linestyle='-')
+        ax2.grid(b=True, which="both", axis="both", color="#888888", linestyle="-")
         ax2.legend()
         # ax2.axis([ -1, 1, -1, 1])
         ax2.axis("equal")
@@ -553,11 +629,13 @@ class ReadoutPulse(Pulse):
 
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
-    def __init__(self, start, duration, amplitude, frequency, relative_phase, shape,
-                       channel, qubit = 0):
-    # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
-    #                    channel: int | str, qubit: int | str = 0):
-        super().__init__(start, duration, amplitude, frequency, relative_phase, shape, channel, type =  PulseType.READOUT, qubit = qubit)
+
+    def __init__(self, start, duration, amplitude, frequency, relative_phase, shape, channel, qubit=0):
+        # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
+        #                    channel: int | str, qubit: int | str = 0):
+        super().__init__(
+            start, duration, amplitude, frequency, relative_phase, shape, channel, type=PulseType.READOUT, qubit=qubit
+        )
 
     @property
     def serial(self):
@@ -569,11 +647,13 @@ class DrivePulse(Pulse):
 
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
-    def __init__(self, start, duration, amplitude, frequency, relative_phase, shape,
-                       channel, qubit = 0):
-    # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
-    #                    channel: int | str, qubit: int | str = 0):
-        super().__init__(start, duration, amplitude, frequency, relative_phase, shape, channel, type =  PulseType.DRIVE, qubit = qubit)
+
+    def __init__(self, start, duration, amplitude, frequency, relative_phase, shape, channel, qubit=0):
+        # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
+        #                    channel: int | str, qubit: int | str = 0):
+        super().__init__(
+            start, duration, amplitude, frequency, relative_phase, shape, channel, type=PulseType.DRIVE, qubit=qubit
+        )
 
     @property
     def serial(self):
@@ -585,11 +665,13 @@ class FluxPulse(Pulse):
 
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
-    def __init__(self, start, duration, amplitude, frequency, relative_phase, shape,
-                       channel, qubit = 0):
-    # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
-    #                    channel: int | str, qubit: int | str = 0):
-        super().__init__(start, duration, amplitude, frequency, relative_phase, shape, channel, type =  PulseType.FLUX, qubit = qubit)
+
+    def __init__(self, start, duration, amplitude, frequency, relative_phase, shape, channel, qubit=0):
+        # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
+        #                    channel: int | str, qubit: int | str = 0):
+        super().__init__(
+            start, duration, amplitude, frequency, relative_phase, shape, channel, type=PulseType.FLUX, qubit=qubit
+        )
 
     @property
     def serial(self):
@@ -597,11 +679,20 @@ class FluxPulse(Pulse):
 
 
 class SplitPulse(Pulse):
-    
-    def __init__(self, pulse: Pulse, window_start:int = None, window_finish:int = None):
-        super().__init__(pulse.start, pulse.duration, pulse.amplitude, pulse.frequency, pulse.relative_phase, eval(str(pulse.shape)), pulse.channel, type =  pulse.type, qubit = pulse.qubit)
-        self._window_start:int = pulse.start
-        self._window_finish:int = pulse.finish
+    def __init__(self, pulse: Pulse, window_start: int = None, window_finish: int = None):
+        super().__init__(
+            pulse.start,
+            pulse.duration,
+            pulse.amplitude,
+            pulse.frequency,
+            pulse.relative_phase,
+            eval(str(pulse.shape)),
+            pulse.channel,
+            type=pulse.type,
+            qubit=pulse.qubit,
+        )
+        self._window_start: int = pulse.start
+        self._window_finish: int = pulse.finish
         if not window_start:
             window_start = pulse.start
         if not window_finish:
@@ -641,69 +732,131 @@ class SplitPulse(Pulse):
     def serial(self):
         return f"SequencerPulse({self.window_start}, {self.window_duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {format(self.frequency, '_')}, {format(self.relative_phase, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel})"
 
-
-
     @property
     def envelope_waveform_i(self) -> Waveform:
-        waveform = Waveform(self._shape.envelope_waveform_i.data[self._window_start - self.start : self._window_finish - self.start])
-        waveform.serial = self._shape.envelope_waveform_i.serial + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
-        return  waveform
+        waveform = Waveform(
+            self._shape.envelope_waveform_i.data[self._window_start - self.start : self._window_finish - self.start]
+        )
+        waveform.serial = (
+            self._shape.envelope_waveform_i.serial
+            + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
+        )
+        return waveform
 
     @property
     def envelope_waveform_q(self) -> Waveform:
-        waveform = Waveform(self._shape.modulated_waveform_i.data[self._window_start - self.start : self._window_finish - self.start])
-        waveform.serial = self._shape.modulated_waveform_i.serial + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
-        return  waveform
+        waveform = Waveform(
+            self._shape.modulated_waveform_i.data[self._window_start - self.start : self._window_finish - self.start]
+        )
+        waveform.serial = (
+            self._shape.modulated_waveform_i.serial
+            + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
+        )
+        return waveform
 
     @property
     def envelope_waveforms(self) -> tuple[Waveform, Waveform]:
-        return  (self.envelope_waveform_i, self.envelope_waveform_q)
+        return (self.envelope_waveform_i, self.envelope_waveform_q)
 
     @property
     def modulated_waveform_i(self) -> Waveform:
-        waveform = Waveform(self._shape.envelope_waveform_q.data[self._window_start - self.start : self._window_finish - self.start])
-        waveform.serial = self._shape.envelope_waveform_q.serial + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
-        return  waveform
+        waveform = Waveform(
+            self._shape.envelope_waveform_q.data[self._window_start - self.start : self._window_finish - self.start]
+        )
+        waveform.serial = (
+            self._shape.envelope_waveform_q.serial
+            + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
+        )
+        return waveform
 
     @property
     def modulated_waveform_q(self) -> Waveform:
-        waveform = Waveform(self._shape.modulated_waveform_q.data[self._window_start - self.start : self._window_finish - self.start])
-        waveform.serial = self._shape.modulated_waveform_q.serial + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
-        return  waveform
+        waveform = Waveform(
+            self._shape.modulated_waveform_q.data[self._window_start - self.start : self._window_finish - self.start]
+        )
+        waveform.serial = (
+            self._shape.modulated_waveform_q.serial
+            + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
+        )
+        return waveform
 
     @property
     def modulated_waveforms(self) -> tuple[Waveform, Waveform]:
-        return  (self.modulated_waveform_i, self.modulated_waveform_q)
+        return (self.modulated_waveform_i, self.modulated_waveform_q)
 
     def plot(self):
         import matplotlib.pyplot as plt
-        from matplotlib import gridspec
         import numpy as np
+        from matplotlib import gridspec
 
-        time = self.window_start + np.arange(int(self.window_duration / 1e9 * PulseShape.SAMPLING_RATE)) / PulseShape.SAMPLING_RATE * 1e9
-        
+        time = (
+            self.window_start
+            + np.arange(int(self.window_duration / 1e9 * PulseShape.SAMPLING_RATE)) / PulseShape.SAMPLING_RATE * 1e9
+        )
+
         fig = plt.figure(figsize=(14, 5), dpi=120)
-        gs = gridspec.GridSpec(ncols=2, nrows=1,
-                         width_ratios=[2, 1])
+        gs = gridspec.GridSpec(ncols=2, nrows=1, width_ratios=[2, 1])
         ax1 = plt.subplot(gs[0])
-        ax1.plot(time, self.shape.envelope_waveform_i.data[self._window_start - self.start : self._window_finish - self.start], label='envelope i', c='C0', linestyle='dashed')
-        ax1.plot(time, self.shape.envelope_waveform_q.data[self._window_start - self.start : self._window_finish - self.start], label='envelope q', c='C1', linestyle='dashed')
-        ax1.plot(time, self.shape.modulated_waveform_i.data[self._window_start - self.start : self._window_finish - self.start], label='modulated i', c='C0')
-        ax1.plot(time, self.shape.modulated_waveform_q.data[self._window_start - self.start : self._window_finish - self.start], label='modulated q', c='C1')
-        ax1.plot(time, -self.shape.envelope_waveform_i.data[self._window_start - self.start : self._window_finish - self.start], c='silver', linestyle='dashed')
-        ax1.set_xlabel('Time [ns]')
-        ax1.set_ylabel('Amplitude')
+        ax1.plot(
+            time,
+            self.shape.envelope_waveform_i.data[self._window_start - self.start : self._window_finish - self.start],
+            label="envelope i",
+            c="C0",
+            linestyle="dashed",
+        )
+        ax1.plot(
+            time,
+            self.shape.envelope_waveform_q.data[self._window_start - self.start : self._window_finish - self.start],
+            label="envelope q",
+            c="C1",
+            linestyle="dashed",
+        )
+        ax1.plot(
+            time,
+            self.shape.modulated_waveform_i.data[self._window_start - self.start : self._window_finish - self.start],
+            label="modulated i",
+            c="C0",
+        )
+        ax1.plot(
+            time,
+            self.shape.modulated_waveform_q.data[self._window_start - self.start : self._window_finish - self.start],
+            label="modulated q",
+            c="C1",
+        )
+        ax1.plot(
+            time,
+            -self.shape.envelope_waveform_i.data[self._window_start - self.start : self._window_finish - self.start],
+            c="silver",
+            linestyle="dashed",
+        )
+        ax1.set_xlabel("Time [ns]")
+        ax1.set_ylabel("Amplitude")
 
-        ax1.grid(b=True, which='both', axis='both', color='#888888', linestyle='-')
+        ax1.grid(b=True, which="both", axis="both", color="#888888", linestyle="-")
         ax1.axis([self.window_start, self._window_finish, -1, 1])
         ax1.legend()
 
         ax2 = plt.subplot(gs[1])
-        ax2.plot(self.shape.modulated_waveform_i.data[self._window_start - self.start : self._window_finish - self.start], self.shape.modulated_waveform_q.data[self._window_start - self.start : self._window_finish - self.start], label='modulated', c='C3')
-        ax2.plot(self.shape.envelope_waveform_i.data[self._window_start - self.start : self._window_finish - self.start], self.shape.envelope_waveform_q.data[self._window_start - self.start : self._window_finish - self.start], label='envelope', c='C2')
-        ax2.plot(np.cos(time * 2 * np.pi / self.window_duration), np.sin(time * 2 * np.pi / self.window_duration), c='silver', linestyle='dashed')
+        ax2.plot(
+            self.shape.modulated_waveform_i.data[self._window_start - self.start : self._window_finish - self.start],
+            self.shape.modulated_waveform_q.data[self._window_start - self.start : self._window_finish - self.start],
+            label="modulated",
+            c="C3",
+        )
+        ax2.plot(
+            self.shape.envelope_waveform_i.data[self._window_start - self.start : self._window_finish - self.start],
+            self.shape.envelope_waveform_q.data[self._window_start - self.start : self._window_finish - self.start],
+            label="envelope",
+            c="C2",
+        )
+        ax2.plot(
+            np.cos(time * 2 * np.pi / self.window_duration),
+            np.sin(time * 2 * np.pi / self.window_duration),
+            c="silver",
+            linestyle="dashed",
+        )
 
-        ax2.grid(b=True, which='both', axis='both', color='#888888', linestyle='-')
+        ax2.grid(b=True, which="both", axis="both", color="#888888", linestyle="-")
         ax2.legend()
         # ax2.axis([ -1, 1, -1, 1])
         ax2.axis("equal")
@@ -711,7 +864,7 @@ class SplitPulse(Pulse):
         return
 
 
-class PulseSequence(): 
+class PulseSequence:
     def __init__(self, *pulses):
         self.pulses: list[Pulse] = []
         self.add(*pulses)
@@ -721,11 +874,11 @@ class PulseSequence():
 
     def __iter__(self):
         return iter(self.pulses)
-    
+
     def __getitem__(self, index):
         return self.pulses[index]
 
-    def __setitem__ (self, index, value):
+    def __setitem__(self, index, value):
         self.pulses[index] = value
 
     def __delitem__(self, index):
@@ -733,74 +886,74 @@ class PulseSequence():
 
     def __contains__(self, pulse):
         return pulse in self.pulses
-    
+
     def __repr__(self):
         return self.serial
 
     @property
     def serial(self):
-        return 'PulseSequence\n' + '\n'.join(f'{pulse.serial}' for pulse in self.pulses)
+        return "PulseSequence\n" + "\n".join(f"{pulse.serial}" for pulse in self.pulses)
 
     def __eq__(self, other):
         if not isinstance(other, PulseSequence):
-            raise TypeError(f'Expected PulseSequence; got {type(other).__name__}')    
-        return (self.serial == other.serial)
+            raise TypeError(f"Expected PulseSequence; got {type(other).__name__}")
+        return self.serial == other.serial
 
     def __ne__(self, other):
         if not isinstance(other, PulseSequence):
-            raise TypeError(f'Expected PulseSequence; got {type(other).__name__}')    
-        return (self.serial != other.serial)
+            raise TypeError(f"Expected PulseSequence; got {type(other).__name__}")
+        return self.serial != other.serial
 
     def __hash__(self):
         return hash(self.serial)
 
     def __add__(self, other):
         if isinstance(other, PulseSequence):
-            return PulseSequence(* self.pulses, * other.pulses)
+            return PulseSequence(*self.pulses, *other.pulses)
         elif isinstance(other, Pulse):
-            return PulseSequence(* self.pulses, other)
+            return PulseSequence(*self.pulses, other)
         else:
-            raise TypeError(f'Expected PulseSequence or Pulse; got {type(other).__name__}')
+            raise TypeError(f"Expected PulseSequence or Pulse; got {type(other).__name__}")
 
     def __radd__(self, other):
         if isinstance(other, PulseSequence):
-            return PulseSequence(* other.pulses, * self.pulses)
+            return PulseSequence(*other.pulses, *self.pulses)
         elif isinstance(other, Pulse):
-            return PulseSequence(other, * self.pulses)
+            return PulseSequence(other, *self.pulses)
         else:
-            raise TypeError(f'Expected PulseSequence or Pulse; got {type(other).__name__}')
-    
+            raise TypeError(f"Expected PulseSequence or Pulse; got {type(other).__name__}")
+
     def __iadd__(self, other):
         if isinstance(other, PulseSequence):
-            self.add(* other.pulses)
+            self.add(*other.pulses)
         elif isinstance(other, Pulse):
             self.add(other)
         else:
-            raise TypeError(f'Expected PulseSequence or Pulse; got {type(other).__name__}')
+            raise TypeError(f"Expected PulseSequence or Pulse; got {type(other).__name__}")
         return self
-        
+
     def __mul__(self, n):
         if not isinstance(n, int):
-            raise TypeError(f'Expected int; got {type(n).__name__}')
+            raise TypeError(f"Expected int; got {type(n).__name__}")
         elif n < 0:
-            raise TypeError(f'argument n should be >=0, got {n}')
-        return PulseSequence(* (self.pulses * n))
-        
+            raise TypeError(f"argument n should be >=0, got {n}")
+        return PulseSequence(*(self.pulses * n))
+
     def __rmul__(self, n):
         if not isinstance(n, int):
-            raise TypeError(f'Expected int; got {type(n).__name__}')
+            raise TypeError(f"Expected int; got {type(n).__name__}")
         elif n < 0:
-            raise TypeError(f'argument n should be >=0, got {n}')
-        return PulseSequence(* (self.pulses * n))
+            raise TypeError(f"argument n should be >=0, got {n}")
+        return PulseSequence(*(self.pulses * n))
 
     def __imul__(self, n):
         if not isinstance(n, int):
-            raise TypeError(f'Expected int; got {type(n).__name__}')
+            raise TypeError(f"Expected int; got {type(n).__name__}")
         elif n < 1:
-            raise TypeError(f'argument n should be >=1, got {n}')
+            raise TypeError(f"argument n should be >=1, got {n}")
         original_set = self.shallow_copy()
         for x in range(n - 1):
-            self.add(* original_set.pulses)
+            self.add(*original_set.pulses)
         return self
 
     @property
@@ -811,7 +964,7 @@ class PulseSequence():
         for pulse in pulses:
             self.pulses.append(pulse)
         self.pulses.sort(key=lambda item: (item.channel, item.start))
-        
+
     def append_at_end_of_channel(self, *pulses):
         for pulse in pulses:
             pulse.start = self.pulses.get_channel_pulses(pulse.channel).finish
@@ -825,7 +978,7 @@ class PulseSequence():
     def index(self, pulse):
         return self.pulses.index(pulse)
 
-    def pop(self, index = -1):
+    def pop(self, index=-1):
         return self.pulses.pop(index)
 
     def remove(self, pulse):
@@ -836,10 +989,10 @@ class PulseSequence():
         self.pulses.clear()
 
     def shallow_copy(self):
-        return PulseSequence(* self.pulses)
+        return PulseSequence(*self.pulses)
 
     def deep_copy(self):
-        return PulseSequence(* [pulse.deep_copy() for pulse in self.pulses])
+        return PulseSequence(*[pulse.deep_copy() for pulse in self.pulses])
 
     @property
     def ro_pulses(self):
@@ -865,8 +1018,7 @@ class PulseSequence():
                 new_pc.add(pulse)
         return new_pc
 
-
-    def get_channel_pulses(self, * channels):
+    def get_channel_pulses(self, *channels):
         new_pc = PulseSequence()
         for pulse in self.pulses:
             if pulse.channel in channels:
@@ -906,7 +1058,7 @@ class PulseSequence():
         channels.sort()
         return channels
 
-    def get_pulse_overlaps(self): # -> dict((int,int): PulseSequence):
+    def get_pulse_overlaps(self):  # -> dict((int,int): PulseSequence):
         times = []
         for pulse in self.pulses:
             if not pulse.start in times:
@@ -916,14 +1068,14 @@ class PulseSequence():
         times.sort()
 
         overlaps = {}
-        for n in range(len(times)-1):
-            overlaps[(times[n], times[n+1])] = PulseSequence()
+        for n in range(len(times) - 1):
+            overlaps[(times[n], times[n + 1])] = PulseSequence()
             for pulse in self.pulses:
-                if (pulse.start <= times[n]) & (pulse.finish >= times[n+1]):
-                    overlaps[(times[n], times[n+1])] += pulse
+                if (pulse.start <= times[n]) & (pulse.finish >= times[n + 1]):
+                    overlaps[(times[n], times[n + 1])] += pulse
         return overlaps
 
-    def separate_overlapping_pulses(self): # -> dict((int,int): PulseSequence):
+    def separate_overlapping_pulses(self):  # -> dict((int,int): PulseSequence):
         # TODO: non_overlapping_same_frequency_pulses
         separated_pulses = []
         for new_pulse in self.pulses:
@@ -931,9 +1083,9 @@ class PulseSequence():
             for ps in separated_pulses:
                 overlaps = False
                 for existing_pulse in ps:
-                    if (new_pulse.start >= existing_pulse.start and new_pulse.start <= existing_pulse.finish
-                        ) or (
-                        existing_pulse.start >= new_pulse.start and existing_pulse.start <= new_pulse.finish):
+                    if (new_pulse.start >= existing_pulse.start and new_pulse.start <= existing_pulse.finish) or (
+                        existing_pulse.start >= new_pulse.start and existing_pulse.start <= new_pulse.finish
+                    ):
                         overlaps = True
                         break
                 if not overlaps:
@@ -954,8 +1106,9 @@ class PulseSequence():
     def plot(self):
         if not self.is_empty:
             import matplotlib.pyplot as plt
-            from matplotlib import gridspec
             import numpy as np
+            from matplotlib import gridspec
+
             fig = plt.figure(figsize=(14, 2 * self.count), dpi=120)
             gs = gridspec.GridSpec(ncols=1, nrows=self.count)
             vertical_lines = []
@@ -970,21 +1123,45 @@ class PulseSequence():
                 for pulse in channel_pulses:
                     if isinstance(pulse, SplitPulse):
                         time = pulse.window_start + np.arange(pulse.window_duration)
-                        ax.plot(time, pulse.shape.modulated_waveform_q.data[pulse.window_start - pulse.start : pulse.window_finish - pulse.start], c='lightgrey')
-                        ax.plot(time, pulse.shape.modulated_waveform_i.data[pulse.window_start - pulse.start : pulse.window_finish - pulse.start], c=f'C{str(n)}')
-                        ax.plot(time, pulse.shape.envelope_waveform_i.data[pulse.window_start - pulse.start : pulse.window_finish - pulse.start], c=f'C{str(n)}')
-                        ax.plot(time, -pulse.shape.envelope_waveform_i.data[pulse.window_start - pulse.start : pulse.window_finish - pulse.start], c=f'C{str(n)}')
+                        ax.plot(
+                            time,
+                            pulse.shape.modulated_waveform_q.data[
+                                pulse.window_start - pulse.start : pulse.window_finish - pulse.start
+                            ],
+                            c="lightgrey",
+                        )
+                        ax.plot(
+                            time,
+                            pulse.shape.modulated_waveform_i.data[
+                                pulse.window_start - pulse.start : pulse.window_finish - pulse.start
+                            ],
+                            c=f"C{str(n)}",
+                        )
+                        ax.plot(
+                            time,
+                            pulse.shape.envelope_waveform_i.data[
+                                pulse.window_start - pulse.start : pulse.window_finish - pulse.start
+                            ],
+                            c=f"C{str(n)}",
+                        )
+                        ax.plot(
+                            time,
+                            -pulse.shape.envelope_waveform_i.data[
+                                pulse.window_start - pulse.start : pulse.window_finish - pulse.start
+                            ],
+                            c=f"C{str(n)}",
+                        )
                     else:
                         time = pulse.start + np.arange(pulse.duration)
-                        ax.plot(time, pulse.shape.modulated_waveform_q.data, c='lightgrey')
-                        ax.plot(time, pulse.shape.modulated_waveform_i.data, c=f'C{str(n)}')
-                        ax.plot(time, pulse.shape.envelope_waveform_i.data, c=f'C{str(n)}')
-                        ax.plot(time, -pulse.shape.envelope_waveform_i.data, c=f'C{str(n)}')
+                        ax.plot(time, pulse.shape.modulated_waveform_q.data, c="lightgrey")
+                        ax.plot(time, pulse.shape.modulated_waveform_i.data, c=f"C{str(n)}")
+                        ax.plot(time, pulse.shape.envelope_waveform_i.data, c=f"C{str(n)}")
+                        ax.plot(time, -pulse.shape.envelope_waveform_i.data, c=f"C{str(n)}")
                     # TODO: if they overlap use different shades
-                    ax.axhline(0, c='dimgrey')
-                    ax.set_ylabel(f'channel {channel}')
+                    ax.axhline(0, c="dimgrey")
+                    ax.set_ylabel(f"channel {channel}")
                     for vl in vertical_lines:
-                        ax.axvline(vl, c='slategrey', linestyle = '--')
+                        ax.axvline(vl, c="slategrey", linestyle="--")
                     ax.axis([0, self.finish, -1, 1])
-                    ax.grid(b=True, which='both', axis='both', color='#CCCCCC', linestyle='-')
+                    ax.grid(b=True, which="both", axis="both", color="#CCCCCC", linestyle="-")
             plt.show()

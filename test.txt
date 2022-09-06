@@ -1,1 +1,0 @@
-                setattr(self.__class__, 'discretization_threshold_acq', self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS['o1'], 'discretization_threshold_acq'))

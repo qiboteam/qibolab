@@ -130,7 +130,7 @@ instruments:
 
             channel_port_map:
                 25: o1 # IQ Port = out0 & out1
-                99: o2 
+                99: o2
 
     SPI:
         lib: spi

@@ -40,9 +40,7 @@ def lorentzian_fit(label, peak, name):
         guess_center = frequencies[
             np.argmax(voltages)
         ]  # Argmax = Returns the indices of the maximum values along an axis.
-        guess_offset = np.mean(
-            voltages[np.abs(voltages - np.mean(voltages) < np.std(voltages))]
-        )
+        guess_offset = np.mean(voltages[np.abs(voltages - np.mean(voltages) < np.std(voltages))])
         guess_sigma = abs(frequencies[np.argmin(voltages)] - guess_center)
         guess_amp = (np.max(voltages) - guess_offset) * guess_sigma * np.pi
 
@@ -50,9 +48,7 @@ def lorentzian_fit(label, peak, name):
         guess_center = frequencies[
             np.argmin(voltages)
         ]  # Argmin = Returns the indices of the minimum values along an axis.
-        guess_offset = np.mean(
-            voltages[np.abs(voltages - np.mean(voltages) < np.std(voltages))]
-        )
+        guess_offset = np.mean(voltages[np.abs(voltages - np.mean(voltages) < np.std(voltages))])
         guess_sigma = abs(frequencies[np.argmax(voltages)] - guess_center)
         guess_amp = (np.min(voltages) - guess_offset) * guess_sigma * np.pi
 
@@ -71,10 +67,7 @@ def lorentzian_fit(label, peak, name):
     f0 = fit_res.best_values["center"]
     BW = fit_res.best_values["sigma"] * 2
     Q = abs(f0 / BW)
-    V = (
-        fit_res.best_values["amplitude"] / (fit_res.best_values["sigma"] * np.pi)
-        + fit_res.best_values["offset"]
-    )
+    V = fit_res.best_values["amplitude"] / (fit_res.best_values["sigma"] * np.pi) + fit_res.best_values["offset"]
 
     # plot the fitted curve
     dummy_frequencies = np.linspace(np.amin(frequencies), np.amax(frequencies), 101)
@@ -170,9 +163,7 @@ def ramsey_fit(dataset):
         np.pi / 2,
         0.1e-6,
     ]
-    popt, pcov = curve_fit(
-        ramsey, dataset["x0"].values, dataset["y0"].values, p0=pguess
-    )
+    popt, pcov = curve_fit(ramsey, dataset["x0"].values, dataset["y0"].values, p0=pguess)
     smooth_dataset = ramsey(dataset["x0"].values, *popt)
     delta_frequency = popt[2] * 1e9
     t2 = 1.0 / popt[4]
@@ -187,9 +178,7 @@ def ramsey_freq_fit(dataset):
         np.pi / 2,
         500e-9,
     ]
-    popt, pcov = curve_fit(
-        ramsey, dataset["x0"].values, dataset["y0"].values, p0=pguess
-    )
+    popt, pcov = curve_fit(ramsey, dataset["x0"].values, dataset["y0"].values, p0=pguess)
     smooth_dataset = ramsey(dataset["x0"].values, *popt)
     delta_frequency = popt[2]
     t2 = 1.0 / popt[4]
@@ -198,9 +187,7 @@ def ramsey_freq_fit(dataset):
 
 def lorenzian(frequency, amplitude, center, sigma, offset):
     # http://openafox.com/science/peak-function-derivations.html
-    return (amplitude / np.pi) * (
-        sigma / ((frequency - center) ** 2 + sigma**2)
-    ) + offset
+    return (amplitude / np.pi) * (sigma / ((frequency - center) ** 2 + sigma**2)) + offset
 
 
 def rabi(x, p0, p1, p2, p3, p4):

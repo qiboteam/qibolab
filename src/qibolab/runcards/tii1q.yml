@@ -13,7 +13,7 @@ topology: # qubit - qubit connections
 
 channels: [1, 2, 3]
 
-qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux] 
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
     0: [2, 1, null]
 
 instruments:
@@ -40,14 +40,14 @@ instruments:
                     hardware_mod_en             : false
                 i1:
                     hardware_demod_en           : false
-                       
+
             acquisition_hold_off        : 200
             acquisition_duration        : 2000
 
             channel_port_map:  # Refrigerator Channel : Instrument port
                 2: o1 # IQ Port = out0 & out1
-                3: i1 
-           
+                3: i1
+
     qcm_rf:
         lib: qblox
         class: ClusterQCM_RF
@@ -68,10 +68,10 @@ instruments:
                     gain                         : 0 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
 
-            channel_port_map:  
+            channel_port_map:
                 1: o1 # IQ Port = out0 & out1
                 99: o2
-                
+
 native_gates:
     single_qubit:
         0: # qubit number

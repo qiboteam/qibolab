@@ -15,9 +15,7 @@ def test_platform_multiqubit():
     assert isinstance(platform, MultiqubitPlatform)
 
 
-@pytest.mark.skip(
-    "Loading the platform requires access to one of the instrument's driver dll"
-)
+@pytest.mark.skip("Loading the platform requires access to one of the instrument's driver dll")
 def test_platform_icarusq():
     from qibolab.platforms.icplatform import ICPlatform
 
