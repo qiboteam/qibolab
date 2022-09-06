@@ -12,7 +12,18 @@ bell_basis = np.array(
 
 
 def calculate_psi(unitary):
-    """Step (1)."""
+    """Solves the eigenvalue problem of UT_U.
+
+    See step (1) of Appendix A in arXiv:quant-ph/0011050.
+
+    Args:
+        unitary (np.ndarray): Unitary matrix of the gate we are
+            decomposing in the computational basis.
+
+    Returns:
+        Eigenvectors (in the computational basis) and eigenvalues
+        of UT_U.
+    """
     # write unitary in magic basis
     u_magic = np.dot(np.dot(magic_basis, unitary), np.conj(magic_basis.T))
     # construct and diagonalize UT_U
@@ -35,7 +46,16 @@ def schmidt_decompose(state):
 
 
 def calculate_single_qubit_unitaries(psi):
-    """Step (2)."""
+    """Calculates local unitaries that maps a maximally entangled basis to the magic basis.
+
+    See Lemma 1 of Appendix A in arXiv:quant-ph/0011050.
+
+    Args:
+        psi (np.ndarray): Maximally entangled two-qubit states that define a basis.
+
+    Returns:
+        Local unitaries UA and UB that map the given basis to the magic basis.
+    """
     # TODO: Handle the case where psi is not real in the magic basis
     psi_magic = np.dot(magic_basis, psi.T)
     if not np.allclose(psi_magic.imag, np.zeros_like(psi_magic)):  # pragma: no cover
@@ -62,8 +82,14 @@ def calculate_single_qubit_unitaries(psi):
 
 
 def calculate_diagonal(unitary, ua, ub, va, vb):
-    """Calculates Ud from (A1)."""
+    """Calculates Ud matrix that can be written as exp(-iH).
+
+    See Eq. (A1) in arXiv:quant-ph/0011050.
+    Ud is diagonal in the magic and Bell basis.
+    """
     # normalize U_A, U_B, V_A, V_B so that detU_d = 1
+    # this is required so that sum(lambdas) = 0
+    # and Ud can be written as exp(-iH)
     det = np.linalg.det(unitary) ** (1 / 16)
     ua *= det
     ub *= det
@@ -76,6 +102,7 @@ def calculate_diagonal(unitary, ua, ub, va, vb):
 
 
 def magic_decomposition(unitary):
+    """Decomposes an arbitrary unitary to (A1) from arXiv:quant-ph/0011050."""
     psi, eigvals = calculate_psi(unitary)
     psi_tilde = np.conj(np.sqrt(eigvals))[:, np.newaxis] * np.dot(unitary, psi.T).T
     va, vb = calculate_single_qubit_unitaries(psi)
@@ -85,6 +112,10 @@ def magic_decomposition(unitary):
 
 
 def calculate_h_vector(ud):
+    """Finds h parameters corresponding to exp(-iH).
+
+    See Eq. (4)-(5) in arXiv:quant-ph/0307177.
+    """
     ud_bell = np.dot(np.dot(bell_basis, ud), np.conj(bell_basis.T))
     ud_diag = np.diag(ud_bell)
     if not np.allclose(np.diag(ud_diag), ud_bell):  # pragma: no cover
@@ -101,6 +132,7 @@ def calculate_h_vector(ud):
 
 
 def cnot_decomposition(hx, hy, hz):
+    """Performs decomposition (6) from arXiv:quant-ph/0307177."""
     from qibo import matrices
     from scipy.linalg import expm
 
