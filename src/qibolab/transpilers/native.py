@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from qibo import gates
+from qibo.backends import NumpyBackend
 from qibo.config import raise_error
 
 from qibolab.transpilers.decompositions import two_qubit_decomposition, u3_decomposition
@@ -9,8 +10,12 @@ from qibolab.transpilers.decompositions import two_qubit_decomposition, u3_decom
 class NativeGates:
     """Maps Qibo gates to a hardware native implementation."""
 
-    def __init__(self, backend):
-        self.backend = backend
+    def __init__(self):
+        self.backend = NumpyBackend()
+
+    def __call__(self, gate):
+        name = gate.__class__.__name__
+        return getattr(self, name)(gate)
 
     def H(self, gate):
         q = gate.target_qubits[0]

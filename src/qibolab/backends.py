@@ -6,13 +6,13 @@ from qibo.states import CircuitResult
 
 class QibolabBackend(NumpyBackend):
     def __init__(self, platform, runcard=None):
-        from qibolab.native import NativeGates
         from qibolab.platform import Platform
+        from qibolab.transpilers.native import NativeGates
 
         super().__init__()
         self.name = "qibolab"
         self.platform = Platform(platform, runcard)
-        self.native_gates = NativeGates(self)
+        self.native_gates = NativeGates()
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
@@ -22,37 +22,7 @@ class QibolabBackend(NumpyBackend):
 
     def asnative(self, gate):
         """Transforms an arbitrary gate to a hardware native gate."""
-        name = gate.__class__.__name__
-        return getattr(self.native_gates, name)(gate)
-
-    def transpile(self, circuit, fuse_one_qubit=True):
-        from qibo import gates
-
-        from qibolab.transpilers.connectivity import fix_connecivity
-
-        circuit1, hardware_qubits = fix_connecivity(circuit)
-        circuit2 = circuit.__class__(circuit.nqubits)
-        # two-qubit gates to native
-        for gate in circuit1.queue:
-            if len(gate.qubits) > 1:
-                circuit2.add(self.asnative(gate))
-            else:
-                circuit2.add(gate)
-
-        # fuse one-qubit gates
-        if fuse_one_qubit:
-            circuit2 = circuit2.fuse(max_qubits=1)
-
-        # one-qubit gates to native
-        circuit3 = circuit.__class__(circuit.nqubits)
-        for gate in circuit2.queue:
-            if isinstance(gate, gates.FusedGate):
-                matrix = gate.asmatrix(self)
-                circuit3.add(self.asnative(gates.Unitary(matrix, *gate.qubits)))
-            else:
-                circuit3.add(self.asnative(gate))
-
-        return circuit3
+        return self.native_gates(gate)
 
     def execute_circuit(
         self, circuit, initial_state=None, nshots=None

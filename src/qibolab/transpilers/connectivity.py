@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from qibo import gates
 from qibo.config import log, raise_error
-from qibo.models import Circuit
 
 
 def find_connected_qubit(qubits, queue, hardware_qubits):
@@ -102,7 +101,7 @@ def fix_connecivity(circuit):
     return new, hardware_qubits
 
 
-def can_execute(circuit):
+def respects_connectivity(circuit):
     """Checks if a circuit respects connectivity constraints.
 
     Args:
@@ -110,7 +109,6 @@ def can_execute(circuit):
 
     Returns ``True`` if the following conditions are satisfied:
         - Circuit does not contain more than two-qubit gates.
-        - All two-qubit gates are CZ or SWAP.
         - All two-qubit gates have qubit 0 as target or control.
     otherwise returns ``False``.
     """
@@ -119,9 +117,6 @@ def can_execute(circuit):
             log.info(f"{gate.name} acts on more than two qubits.")
             return False
         elif len(gate.qubits) == 2:
-            if not isinstance(gate, (gates.CZ, gates.SWAP)):
-                log.info(f"{gate.name} is not native gate.")
-                return False
             if 0 not in gate.qubits:
                 log.info(
                     "Circuit does not respect connectivity. "
