@@ -13,9 +13,19 @@ class NativeGates:
     def __init__(self):
         self.backend = NumpyBackend()
 
-    def __call__(self, gate):
+    def translate_gate(self, gate):
         name = gate.__class__.__name__
         return getattr(self, name)(gate)
+
+    def translate_circuit(self, circuit, translate_single_qubit=False):
+        """Translates a circuit to native gates."""
+        new = circuit.__class__(circuit.nqubits)
+        for gate in circuit.queue:
+            if len(gate.qubits) > 1 or translate_single_qubit:
+                new.add(self.translate_gate(gate))
+            else:
+                new.add(gate)
+        return gate
 
     def H(self, gate):
         q = gate.target_qubits[0]
@@ -202,4 +212,6 @@ class NativeGates:
         raise_error(NotImplementedError)
 
     def FusedGate(self, gate):  # pragma: no cover
-        raise_error(NotImplementedError)
+        matrix = gate.asmatrix(self.backend)
+        fgate = gates.Unitary(matrix, *gate.qubits)
+        return self.Unitary(fgate)

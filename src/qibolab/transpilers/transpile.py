@@ -1,36 +1,22 @@
 # -*- coding: utf-8 -*-
 from qibo import gates
-from qibo.transpilers.connectivity import fix_connecivity
-from qibo.transpilers.native import NativeGates
+
+from qibolab.transpilers.connectivity import fix_connecivity
+from qibolab.transpilers.native import NativeGates
 
 
-def transpile(self, circuit, fuse_one_qubit=True):
+def transpile(circuit, fuse_one_qubit=True):
     """Implements full transpilation pipeline."""
     native_gates = NativeGates()
-    circuit1, hardware_qubits = fix_connecivity(circuit)
-
+    new, hardware_qubits = fix_connecivity(circuit)
     # two-qubit gates to native
-    circuit2 = circuit.__class__(circuit.nqubits)
-    for gate in circuit1.queue:
-        if len(gate.qubits) > 1:
-            circuit2.add(native_gates(gate))
-        else:
-            circuit2.add(gate)
-
+    new = native_gates.translate_circuit(new, translate_single_qubit=False)
     # fuse one-qubit gates
     if fuse_one_qubit:
-        circuit2 = circuit2.fuse(max_qubits=1)
-
+        new = new.fuse(max_qubits=1)
     # one-qubit gates to native
-    circuit3 = circuit.__class__(circuit.nqubits)
-    for gate in circuit2.queue:
-        if isinstance(gate, gates.FusedGate):
-            matrix = gate.asmatrix(self)
-            circuit3.add(native_gates(gates.Unitary(matrix, *gate.qubits)))
-        else:
-            circuit3.add(native_gates(gate))
-
-    return circuit3, hardware_qubits
+    new = native_gates.translate_circuit(new, translate_single_qubit=True)
+    return new, hardware_qubits
 
 
 def can_execute(circuit):

@@ -22,7 +22,7 @@ class QibolabBackend(NumpyBackend):
 
     def asnative(self, gate):
         """Transforms an arbitrary gate to a hardware native gate."""
-        return self.native_gates(gate)
+        return self.native_gates.translate_gate(gate)
 
     def execute_circuit(
         self, circuit, initial_state=None, nshots=None
