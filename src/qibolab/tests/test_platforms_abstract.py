@@ -2,23 +2,9 @@
 import numpy as np
 import pytest
 from qibo import gates
-from qibo.backends import NumpyBackend
 
 from qibolab.platform import Platform
 from qibolab.pulses import PulseSequence
-
-
-def test_u3_sim_agreement():
-    backend = NumpyBackend()
-    theta, phi, lam = 0.1, 0.2, 0.3
-    u3_matrix = gates.U3(0, theta, phi, lam).asmatrix(backend)
-    rz1 = gates.RZ(0, phi).asmatrix(backend)
-    rz2 = gates.RZ(0, theta).asmatrix(backend)
-    rz3 = gates.RZ(0, lam).asmatrix(backend)
-    rx1 = gates.RX(0, -np.pi / 2).asmatrix(backend)
-    rx2 = gates.RX(0, np.pi / 2).asmatrix(backend)
-    target_matrix = rz1 @ rx1 @ rz2 @ rx2 @ rz3
-    np.testing.assert_allclose(u3_matrix, target_matrix)
 
 
 def test_u3_to_sequence():
@@ -32,43 +18,12 @@ def test_u3_to_sequence():
 def test_measurement():
     platform = Platform("tii5q")
     gate = gates.M(0)
-    with pytest.raises(NotImplementedError):
-        platform.asu3(gate)
     sequence = PulseSequence()
     platform.to_sequence(sequence, gate)
     assert len(sequence) == 1
     assert len(sequence.qd_pulses) == 0
     assert len(sequence.qf_pulses) == 0
     assert len(sequence.ro_pulses) == 1
-
-
-@pytest.mark.parametrize("gatename", ["H", "X", "Y", "Z"])
-def test_pauli_to_u3_params(gatename):
-    platform = Platform("tii5q")
-    gate = getattr(gates, gatename)(0)
-    params = platform.asu3(gate)
-    u3 = gates.U3(0, *params)
-    if gatename in ("H", "Z"):
-        np.testing.assert_allclose(gate.matrix, 1j * u3.matrix, atol=1e-15)
-    else:
-        np.testing.assert_allclose(gate.matrix, 1j * u3.matrix, atol=1e-15)
-
-
-def test_identity_gate():
-    platform = Platform("tii5q")
-    gate = gates.I(0)
-    with pytest.raises(NotImplementedError):
-        platform.asu3(gate)
-
-
-@pytest.mark.parametrize("gatename", ["RX", "RY", "RZ"])
-def test_rotations_to_u3_params(gatename):
-    backend = NumpyBackend()
-    platform = Platform("tii5q")
-    gate = getattr(gates, gatename)(0, theta=0.1)
-    params = platform.asu3(gate)
-    target_matrix = gates.U3(0, *params).asmatrix(backend)
-    np.testing.assert_allclose(gate.asmatrix(backend), target_matrix)
 
 
 def test_rz_to_sequence():
@@ -78,31 +33,6 @@ def test_rz_to_sequence():
     platform.to_sequence(sequence, gates.Z(0))
     assert len(sequence) == 0
     assert sequence.phase == 0.2 + np.pi
-
-
-def test_u2_to_u3_params():
-    backend = NumpyBackend()
-    platform = Platform("tii5q")
-    gate = gates.U2(0, phi=0.1, lam=0.3)
-    params = platform.asu3(gate)
-    target_matrix = gates.U3(0, *params).asmatrix(backend)
-    np.testing.assert_allclose(gate.asmatrix(backend), target_matrix)
-
-
-def test_unitary_to_u3_params():
-    from scipy.linalg import det, expm
-
-    backend = NumpyBackend()
-    platform = Platform("tii5q")
-    u = np.random.random((2, 2)) + 1j * np.random.random((2, 2))
-    # make random matrix unitary
-    u = expm(1j * (u + u.T.conj()))
-    # transform to SU(2) form
-    u = u / np.sqrt(det(u))
-    gate = gates.Unitary(u, 0)
-    params = platform.asu3(gate)
-    target_matrix = gates.U3(0, *params).asmatrix(backend)
-    np.testing.assert_allclose(gate.asmatrix(backend), target_matrix)
 
 
 @pytest.mark.parametrize("platform_name", ["tii1q", "tii5q"])  # , 'icarusq'])

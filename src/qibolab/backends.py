@@ -6,17 +6,24 @@ from qibo.states import CircuitResult
 
 class QibolabBackend(NumpyBackend):
     def __init__(self, platform, runcard=None):
+        from qibolab.native import NativeGates
         from qibolab.platform import Platform
 
         super().__init__()
         self.name = "qibolab"
         self.platform = Platform(platform, runcard)
+        self.native_gates = NativeGates()
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
 
     def apply_gate_density_matrix(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
+
+    def asnative(self, gate):
+        """Transforms an arbitrary gate to a hardware native gate."""
+        name = gate.__class__.__name__
+        return getattr(self.native_gates, name)(gate)
 
     def execute_circuit(
         self, circuit, initial_state=None, nshots=None
@@ -46,7 +53,8 @@ class QibolabBackend(NumpyBackend):
 
         sequence = PulseSequence()
         for gate in circuit.queue:
-            self.platform.to_sequence(sequence, gate)
+            native_gate = self.asnative(gate)
+            self.platform.to_sequence(sequence, native_gate)
         self.platform.to_sequence(sequence, circuit.measurement_gate)
 
         # Execute the pulse sequence on the platform

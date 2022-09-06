@@ -39,10 +39,6 @@ class AbstractPlatform(ABC):
             instance = InstrumentClass(name, address)
             self.instruments[name] = instance
 
-        from qibolab.u3params import U3Params
-
-        self.u3params = U3Params()
-
     def __repr__(self):
         return self.name
 
@@ -183,13 +179,6 @@ class AbstractPlatform(ABC):
                 self.instruments[name].disconnect()
             self.is_connected = False
 
-    def asu3(self, gate):
-        name = gate.__class__.__name__
-        if isinstance(gate, gates.ParametrizedGate):
-            return getattr(self.u3params, name)(*gate.parameters)
-        else:
-            return getattr(self.u3params, name)
-
     def to_sequence(self, sequence, gate):
         import numpy as np
 
@@ -209,15 +198,10 @@ class AbstractPlatform(ABC):
         elif isinstance(gate, gates.RZ):
             sequence.phase += gate.parameters[0]
 
-        else:
-            if len(gate.qubits) > 1:
-                raise_error(
-                    NotImplementedError, "Only one qubit gates are implemented."
-                )
-
+        elif isinstance(gate, gates.U3):
             qubit = gate.target_qubits[0]
             # Transform gate to U3 and add pi/2-pulses
-            theta, phi, lam = self.asu3(gate)
+            theta, phi, lam = gate.parameters
             # apply RZ(lam)
             sequence.phase += lam
             # Fetch pi/2 pulse from calibration
@@ -234,6 +218,9 @@ class AbstractPlatform(ABC):
             sequence.time += RX90_pulse_2.duration
             # apply RZ(phi)
             sequence.phase += phi
+
+        else:
+            raise_error(NotImplementedError, f"Gate {gate.name} is not available.")
 
     @abstractmethod
     def execute_pulse_sequence(self, sequence, nshots=None):  # pragma: no cover

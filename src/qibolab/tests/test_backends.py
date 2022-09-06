@@ -33,7 +33,8 @@ def test_circuit_to_sequence(platform_name):
 
     seq = PulseSequence()
     for gate in circuit.queue:
-        backend.platform.to_sequence(seq, gate)
+        native_gate = backend.asnative(gate)
+        backend.platform.to_sequence(seq, native_gate)
     backend.platform.to_sequence(seq, circuit.measurement_gate)
 
     assert len(seq.pulses) == 5
