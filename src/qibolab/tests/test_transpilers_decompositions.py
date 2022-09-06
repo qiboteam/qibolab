@@ -11,6 +11,8 @@ from qibolab.transpilers.decompositions import (
     cnot_decomposition,
     magic_basis,
     magic_decomposition,
+    to_bell_diagonal,
+    two_qubit_decomposition,
 )
 
 NREPS = 10  # number of repetitions to execute random tests
@@ -109,7 +111,9 @@ def test_calculate_h_vector(run_number):
 
     unitary = random_unitary(2)
     ua, ub, ud, va, vb = magic_decomposition(unitary)
-    hx, hy, hz = calculate_h_vector(ud)
+    ud_diag = to_bell_diagonal(ud)
+    assert ud_diag is not None
+    hx, hy, hz = calculate_h_vector(ud_diag)
     target_matrix = bell_unitary(hx, hy, hz)
     np.testing.assert_allclose(ud, target_matrix, atol=ATOL)
 
@@ -129,3 +133,30 @@ def test_cnot_decomposition(run_number):
         @ cnot
     )
     np.testing.assert_allclose(final_matrix, target_matrix, atol=ATOL)
+
+
+@pytest.mark.parametrize("run_number", range(NREPS))
+def test_two_qubit_decomposition(run_number):
+    from qibo.backends import NumpyBackend
+    from qibo.models import Circuit
+
+    backend = NumpyBackend()
+    unitary = random_unitary(2)
+    c = Circuit(2)
+    c.add(two_qubit_decomposition(0, 1, unitary))
+    final_matrix = c.unitary(backend)
+    np.testing.assert_allclose(final_matrix, unitary, atol=ATOL)
+
+
+@pytest.mark.parametrize("run_number", range(NREPS))
+def test_two_qubit_decomposition_bell_unitary(run_number):
+    from qibo.backends import NumpyBackend
+    from qibo.models import Circuit
+
+    backend = NumpyBackend()
+    hx, hy, hz = (2 * np.random.random(3) - 1) * np.pi
+    unitary = bell_unitary(hx, hy, hz)
+    c = Circuit(2)
+    c.add(two_qubit_decomposition(0, 1, unitary))
+    final_matrix = c.unitary(backend)
+    np.testing.assert_allclose(final_matrix, unitary, atol=ATOL)
