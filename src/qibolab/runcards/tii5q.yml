@@ -2,7 +2,7 @@ nqubits: 5
 description: QuantWare 5-qubit device, controlled with Qblox and R&S instruments.
 
 settings:
-    hardware_avg: 10096
+    hardware_avg: 4096
     sampling_rate: 1_000_000_000
     repetition_duration: 200_000
     minimum_delay_between_instructions: 4
@@ -45,10 +45,10 @@ instruments:
         settings:
             ports:
                 o1:
-                    attenuation                 : 34
+                    attenuation                 : 10
                     lo_enabled                  : true
-                    lo_frequency                : 7_537_724_144 # 7_510_000_000                 # 27_724_144 # 23_828_678       # (Hz) from 2e9 to 18e9
-                    gain                        : 1                             # for path0 and path1 -1.0<=v<=1.0
+                    lo_frequency                :  7_712_825_000                 # (Hz) from 2e9 to 18e9
+                    gain                        : 0.3                           # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en             : false
                 i1:
                     hardware_demod_en           : false
@@ -70,13 +70,13 @@ instruments:
                 o1:
                     attenuation                  : 24 # (dB)
                     lo_enabled                   : true
-                    lo_frequency                 : 4_042_590_000 # (Hz) from 2e9 to 18e9
+                    lo_frequency                 : 4_029_195_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.17 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
                 o2:
                     attenuation                  : 24 # (dB)
                     lo_enabled                   : true
-                    lo_frequency                 : 5_091_061_000 # (Hz) from 2e9 to 18e9
+                    lo_frequency                 : 5_091_461_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.28 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
 
@@ -94,7 +94,7 @@ instruments:
                 o1:
                     attenuation                  : 24 # (dB)
                     lo_enabled                   : true
-                    lo_frequency                 : 5_325_473_000 # (Hz) from 2e9 to 18e9
+                    lo_frequency                 : 6_308_500_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.35 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
                 o2:
@@ -118,13 +118,13 @@ instruments:
                 o1:
                     attenuation                  : 14 # (dB)
                     lo_enabled                   : true
-                    lo_frequency                 : 7_115_810_000 # (Hz) from 2e9 to 18e9
+                    lo_frequency                 : 4_129_650_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.2 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
                 o2:
                     attenuation                  : 60 # (dB)
                     lo_enabled                   : true
-                    lo_frequency                 : 5.0e+9 # (Hz) from 2e9 to 18e9
+                    lo_frequency                 : 6.0e+9 # (Hz) from 2e9 to 18e9
                     gain                         : 0 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
 
@@ -141,16 +141,16 @@ instruments:
             s4g_modules:
                 #flux_channel: [module#, name, port#, current] max number of DACs per module = 4
                 4:  [2, 1, +0.00100] # qubit 0 Sweetspot is 0.04 but don't put it because it warms up the fridge
-                11: [1, 1, -0.00340] # qubit 1
-                12: [1, 2, -0.00080] # qubit 2
-                13: [1, 3, -0.00115] # qubit 3
-                14: [1, 4, +0.00790] #
+                11: [1, 1, -0.00384] # qubit 1
+                12: [1, 2, -0.00154] # qubit 2
+                13: [1, 3, -0.01126] # qubit 3
+                14: [1, 4, +0.00742] #
 
 native_gates:
     single_qubit:
         0: # qubit number
             RX:
-                duration: 20
+                duration: 40
                 amplitude: 1
                 frequency: -200_000_000
                 shape: Gaussian(5)
@@ -159,7 +159,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 2000
-                amplitude: 0.9
+                amplitude: 0.1
                 frequency: 20_000_000
                 shape: Rectangular()
                 type: ro # readout
@@ -176,8 +176,8 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 2000
-                amplitude: 0.9
-                frequency: 20_000_000 # 23_828_678
+                amplitude: 0.1
+                frequency: -158_915_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -193,8 +193,8 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 2000
-                amplitude: 0.9
-                frequency: 20_000_000 # 27_724_144
+                amplitude: 0.1
+                frequency: -155_181_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -210,8 +210,8 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 2000
-                amplitude: 0.9
-                frequency: 20_000_000
+                amplitude: 0.1
+                frequency: -34_815_000 
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -227,8 +227,8 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 2000
-                amplitude: 0.9
-                frequency: 20_000_000
+                amplitude: 0.1
+                frequency: 200_000_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -278,51 +278,51 @@ characterization:
             qubit_freq: 3.92965e+9
             T1: 2192.895853326451
             T2: 6933.310025260633
-            state0_voltage: 2661
-            state1_voltage: 4800
+            state0_voltage: 1152
+            state1_voltage: 2500
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
             mean_exc_states: (0.00011805761369462914+0.00018601039195510947j)
-            sweetspot: 0.0
+            sweetspot: 0.001
         1:
-            resonator_freq: 7_553_809_678
-            qubit_freq: 3_843_395_000
+            resonator_freq: 7_553_910_000
+            qubit_freq: 3_833_495_000
             T1: 26774
             T2: 0
-            state0_voltage: 1083
-            state1_voltage: 3769
-            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
-            mean_exc_states: (0.00011805761369462914+0.00018601039195510947j)
-            sweetspot: -0.00370
+            state0_voltage: 2504
+            state1_voltage: 10000
+            mean_gnd_states: (-0.0011398008767364346-0.0007839615237391923j)
+            mean_exc_states: (-0.01143767040340675+0.006593184205517083j)
+            sweetspot: -0.00384
         2:
             resonator_freq: 7_557_724_144
-            qubit_freq: 4_890_461_000 # 4_891_155_529
+            qubit_freq: 4_891_461_000 # 4_891_155_529
             T1: 33875
             T2: 0
-            state0_voltage: 864
-            state1_voltage: 3033
-            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
-            mean_exc_states: (0.00011805761369462914+0.00018601039195510947j)
-            sweetspot: -0.00082
+            state0_voltage: 5175
+            state1_voltage: 15442
+            mean_gnd_states: (-0.003939859338033963-0.00335499560437317j)
+            mean_exc_states: (-0.015165640448602356+0.0029071903433933377j)
+            sweetspot: -0.00154
         3:
-            resonator_freq: 7_676_910_000
-            qubit_freq: 5_124_573_000
+            resonator_freq: 7_678_010_000
+            qubit_freq: 6_108_500_000
             T1: 2192.895853326451
             T2: 6933.310025260633
-            state0_voltage: 2991
-            state1_voltage: 4921
-            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
-            mean_exc_states: (0.00011805761369462914+0.00018601039195510947j)
-            sweetspot: -0.012
+            state0_voltage: 3777
+            state1_voltage: 10000
+            mean_gnd_states: (-0.004780928770772569+0.0008140738029343826j)
+            mean_exc_states: (0.006698623425692657+0.0036857211998776113j)
+            sweetspot: -0.01126
         4:
             resonator_freq: 7_912_835_000
-            qubit_freq: 6_011_286_000
+            qubit_freq: 6_012_286_000
             T1: 2192.895853326451
             T2: 6933.310025260633
-            state0_voltage: 382
-            state1_voltage: 2092
+            state0_voltage: 309
+            state1_voltage: 9000
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
-            mean_exc_states: (0.00011805761369462914+0.00018601039195510947j)
-            sweetspot: 0.0024
+            mean_exc_states: (0.010819636557541997-0.0054404075305439685j)
+            sweetspot: 0.00742
         5:
             resonator_freq: 7_008_300_000
             resonator_freq_off: 7.e+9
@@ -331,5 +331,5 @@ characterization:
             T2: 6933.310025260633
             state0_voltage: 2911
             state1_voltage: 5372
-            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_gnd_states: (0.0035271385849328435+0.006026458509304781j)
             mean_exc_states: (0.00011805761369462914+0.00018601039195510947j)
