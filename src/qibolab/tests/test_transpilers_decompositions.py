@@ -24,6 +24,7 @@ def random_state(nqubits):
 
 
 def random_unitary(nqubits):
+    """Generates a random unitary matrix acting on nqubits."""
     shape = 2 * (2**nqubits,)
     m = np.random.random(shape) + 1j * np.random.random(shape)
     return expm(1j * (m + np.conj(m.T)))
@@ -41,12 +42,14 @@ def bell_unitary(hx, hy, hz):
 
 
 def purity(state):
+    """Calculates the purity of the partial trace of a two-qubit state."""
     mat = np.reshape(state, (2, 2))
     reduced_rho = np.dot(mat, np.conj(mat.T))
     return np.trace(np.dot(reduced_rho, reduced_rho))
 
 
 def assert_single_qubits(psi, ua, ub):
+    """Assert UA, UB map the maximally entangled basis ``psi`` to the magic basis."""
     uaub = np.kron(ua, ub)
     for i, j in zip(range(4), [0, 1, 3, 2]):
         final_state = np.dot(uaub, psi[i])
