@@ -5,7 +5,7 @@ from qibo.models import Circuit
 
 
 def find_connected_qubit(qubits, queue, hardware_qubits):
-    """Helper method for :meth:`qibolab.transpilers.transpile`.
+    """Helper method for :meth:`qibolab.transpilers.fix_connecivity`.
 
     Finds which qubit should be mapped to hardware qubit 0 (middle)
     by looking at the two-qubit gates that follow.
@@ -23,7 +23,7 @@ def find_connected_qubit(qubits, queue, hardware_qubits):
     return qubits[0]
 
 
-def transpile(circuit):
+def fix_connecivity(circuit):
     """Transforms an arbitrary circuit to one that can be executed on hardware.
 
     This method produces a circuit that respects the following connectivity:

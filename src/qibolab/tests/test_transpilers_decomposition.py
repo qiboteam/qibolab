@@ -3,8 +3,6 @@ import numpy as np
 import pytest
 from scipy.linalg import expm
 
-from qibolab import native
-
 NREPS = 10  # number of repetitions to execute random tests
 
 
