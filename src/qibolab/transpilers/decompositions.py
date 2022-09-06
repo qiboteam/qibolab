@@ -11,7 +11,7 @@ bell_basis = np.array(
 ) / np.sqrt(2)
 
 
-def u3_decompose(unitary):
+def u3_decomposition(unitary):
     """Decomposes arbitrary one-qubit gates to U3."""
     # https://github.com/Qiskit/qiskit-terra/blob/d2e3340adb79719f9154b665e8f6d8dc26b3e0aa/qiskit/quantum_info/synthesis/one_qubit_decompose.py#L221
     su2 = unitary / np.sqrt(np.linalg.det(unitary))

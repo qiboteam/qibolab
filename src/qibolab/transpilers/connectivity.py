@@ -46,7 +46,7 @@ def fix_connecivity(circuit):
             Required for transforming final measurements to
     """
     # new circuit object that will be compatible to hardware connectivity
-    new = Circuit(circuit.nqubits)
+    new = circuit.__class__(circuit.nqubits)
     # list to maps logical to hardware qubits
     hardware_qubits = list(range(circuit.nqubits))
 
