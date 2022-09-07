@@ -16,18 +16,41 @@ def generate_random_circuit(nqubits, ngates, seed=None):
     if seed is not None:  # pragma: no cover
         np.random.seed(seed)
 
-    one_qubit = [gates.RX, gates.RY, gates.RZ, gates.X, gates.Y, gates.Z, gates.H]
-    two_qubit = [gates.RX, gates.RY, gates.RZ]
+    one_qubit_gates = [gates.RX, gates.RY, gates.RZ, gates.X, gates.Y, gates.Z, gates.H]
+    two_qubit_gates = [
+        gates.CRX,
+        gates.CRY,
+        gates.CRZ,
+        gates.CNOT,
+        gates.CZ,
+        gates.SWAP,
+    ]
+    n1, n2 = len(one_qubit_gates), len(two_qubit_gates)
     circuit = Circuit(nqubits)
-    for _ in range(depth):
-        for i in range(nqubits):
-            # generate a random rotation
-            rotation = rotations[int(np.random.randint(0, 3))]
+    for _ in range(ngates):
+        igate = np.random.randint(0, n1 + n2)
+        if igate >= n1:
+            q = tuple(np.random.randint(0, nqubits, 2))
+            while q[0] == q[1]:
+                q = tuple(np.random.randint(0, nqubits, 2))
+            gate = two_qubit_gates[igate - n1]
+        else:
+            q = (np.random.randint(0, nqubits),)
+            gate = one_qubit_gates[igate]
+        if issubclass(gate, gates.ParametrizedGate):
             theta = 2 * np.pi * np.random.random()
-            circuit.add(rotation(i, theta=theta))
-        # add CZ gates on random qubit pairs
-        for i in np.random.randint(0, len(pairs), len(pairs)):
-            q1, q2 = pairs[i]
-            circuit.add(gates.CZ(q1, q2))
-
+            circuit.add(gate(*q, theta=theta))
+        else:
+            circuit.add(gate(*q))
     return circuit
+
+
+@pytest.mark.parametrize("nqubits", [3])
+@pytest.mark.parametrize("ngates", [20, 50, 100])
+def test_transpile(nqubits, ngates):
+    backend = NumpyBackend()
+    circuit = generate_random_circuit(nqubits, ngates)
+    transpiled_circuit, _ = transpile(circuit)
+    final_state = backend.execute_circuit(transpiled_circuit)
+    target_circuit = backend.execute_circuit(circuit)
+    np.testing.assert_allclose(final_state, target_circuit)

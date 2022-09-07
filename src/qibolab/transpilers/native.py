@@ -101,32 +101,32 @@ class NativeGates:
 
     def CRX(self, gate):
         q0, q1 = gate.qubits
-        matrix = self.backend.asmatrix(gate)
+        matrix = gate.asmatrix(self.backend)
         return two_qubit_decomposition(q0, q1, matrix)
 
     def CRY(self, gate):
         q0, q1 = gate.qubits
-        matrix = self.backend.asmatrix(gate)
+        matrix = gate.asmatrix(self.backend)
         return two_qubit_decomposition(q0, q1, matrix)
 
     def CRZ(self, gate):
         q0, q1 = gate.qubits
-        matrix = self.backend.asmatrix(gate)
+        matrix = gate.asmatrix(self.backend)
         return two_qubit_decomposition(q0, q1, matrix)
 
     def CU1(self, gate):
         q0, q1 = gate.qubits
-        matrix = self.backend.asmatrix(gate)
+        matrix = gate.asmatrix(self.backend)
         return two_qubit_decomposition(q0, q1, matrix)
 
     def CU2(self, gate):
         q0, q1 = gate.qubits
-        matrix = self.backend.asmatrix(gate)
+        matrix = gate.asmatrix(self.backend)
         return two_qubit_decomposition(q0, q1, matrix)
 
     def CU3(self, gate):
         q0, q1 = gate.qubits
-        matrix = self.backend.asmatrix(gate)
+        matrix = gate.asmatrix(self.backend)
         return two_qubit_decomposition(q0, q1, matrix)
 
     def SWAP(self, gate):
@@ -145,32 +145,33 @@ class NativeGates:
 
     def FSWAP(self, gate):
         q0, q1 = gate.qubits
-        matrix = self.backend.asmatrix(gate)
-        return two_qubit_decomposition(q0, q1, matrix)
+        fswap = self.SWAP(gates.SWAP(q0, q1))
+        fswap.append(gates.CZ(q0, q1))
+        return fswap
 
     def fSim(self, gate):
         q0, q1 = gate.qubits
-        matrix = self.backend.asmatrix(gate)
+        matrix = gate.asmatrix(self.backend)
         return two_qubit_decomposition(q0, q1, matrix)
 
     def GeneralizedfSim(self, gate):
         q0, q1 = gate.qubits
-        matrix = self.backend.asmatrix(gate)
+        matrix = gate.asmatrix(self.backend)
         return two_qubit_decomposition(q0, q1, matrix)
 
     def RXX(self, gate):
         q0, q1 = gate.qubits
-        matrix = self.backend.asmatrix(gate)
+        matrix = gate.asmatrix(self.backend)
         return two_qubit_decomposition(q0, q1, matrix)
 
     def RYY(self, gate):
         q0, q1 = gate.qubits
-        matrix = self.backend.asmatrix(gate)
+        matrix = gate.asmatrix(self.backend)
         return two_qubit_decomposition(q0, q1, matrix)
 
     def RZZ(self, gate):
         q0, q1 = gate.qubits
-        matrix = self.backend.asmatrix(gate)
+        matrix = gate.asmatrix(self.backend)
         return two_qubit_decomposition(q0, q1, matrix)
 
     def TOFFOLI(self, gate):

@@ -61,6 +61,22 @@ def assert_single_qubits(psi, ua, ub):
         # np.testing.assert_allclose(final_state, target_state, atol=1e-12)
 
 
+def test_u3_decomposition():
+    from qibo import gates
+    from qibo.backends import NumpyBackend
+
+    backend = NumpyBackend()
+    theta, phi, lam = 0.1, 0.2, 0.3
+    u3_matrix = gates.U3(0, theta, phi, lam).asmatrix(backend)
+    rz1 = gates.RZ(0, phi).asmatrix(backend)
+    rz2 = gates.RZ(0, theta).asmatrix(backend)
+    rz3 = gates.RZ(0, lam).asmatrix(backend)
+    rx1 = gates.RX(0, -np.pi / 2).asmatrix(backend)
+    rx2 = gates.RX(0, np.pi / 2).asmatrix(backend)
+    target_matrix = rz1 @ rx1 @ rz2 @ rx2 @ rz3
+    np.testing.assert_allclose(u3_matrix, target_matrix)
+
+
 @pytest.mark.parametrize("run_number", range(NREPS))
 def test_eigenbasis_entanglement(run_number):
     """Check that the eigenvectors of UT_U are maximally entangled."""
