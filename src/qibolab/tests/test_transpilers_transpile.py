@@ -28,7 +28,7 @@ def generate_random_circuit(nqubits, ngates, seed=None):
     n1, n2 = len(one_qubit_gates), len(two_qubit_gates)
     circuit = Circuit(nqubits)
     for _ in range(ngates):
-        igate = np.random.randint(0, n1 + n2)
+        igate = int(np.random.randint(0, n1 + n2))
         if igate >= n1:
             q = tuple(np.random.randint(0, nqubits, 2))
             while q[0] == q[1]:

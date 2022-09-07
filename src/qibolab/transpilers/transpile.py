@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from qibo import gates
+from qibo.config import log
 
 from qibolab.transpilers.connectivity import fix_connecivity
 from qibolab.transpilers.native import NativeGates
