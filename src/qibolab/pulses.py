@@ -967,7 +967,7 @@ class PulseSequence:
 
     def append_at_end_of_channel(self, *pulses):
         for pulse in pulses:
-            pulse.start = self.pulses.get_channel_pulses(pulse.channel).finish
+            pulse.start = self.get_channel_pulses(pulse.channel).finish
             self.add(pulse)
 
     def append_at_end_of_sequence(self, *pulses):
