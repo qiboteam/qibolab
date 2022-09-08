@@ -3,8 +3,11 @@ import numpy as np
 import pytest
 from qibo import gates
 from qibo.backends import NumpyBackend
+from qibo.models import Circuit
 
+from qibolab.backends import QibolabBackend
 from qibolab.platform import Platform
+from qibolab.platforms.abstract import AbstractPlatform
 from qibolab.pulses import PulseSequence
 
 
@@ -21,12 +24,86 @@ def test_u3_sim_agreement():
     np.testing.assert_allclose(u3_matrix, target_matrix)
 
 
-def test_u3_to_sequence():
-    platform = Platform("multiqubit")
-    gate = gates.U3(0, theta=0.1, phi=0.2, lam=0.3)
-    sequence = PulseSequence()
-    platform.to_sequence(sequence, gate)
-    assert len(sequence) == 2
+@pytest.mark.parametrize("platform_name", ["tii1q", "tii5q"])
+def test_transpile(platform_name):
+    backend = QibolabBackend(platform_name)
+    platform: AbstractPlatform = backend.platform
+    nqubits = platform.nqubits
+
+    def generate_circuit_with_gate(gate, *params, **kwargs):
+        _circuit = Circuit(nqubits)
+        for qubit in range(nqubits):
+            _circuit.add(gate(qubit, *params, **kwargs))
+        qubits = [qubit for qubit in range(nqubits)]
+        _circuit.add(gates.M(*qubits))
+        return _circuit
+
+    circuit = generate_circuit_with_gate(gates.I)
+    sequence = platform.transpile(circuit)
+    assert len(sequence) == (1 + 1) * nqubits
+
+    circuit = generate_circuit_with_gate(gates.X)
+    sequence = platform.transpile(circuit)
+    assert len(sequence) == (1 + 1) * nqubits
+
+    circuit = generate_circuit_with_gate(gates.Y)
+    sequence = platform.transpile(circuit)
+    assert len(sequence) == (1 + 1) * nqubits
+
+    circuit = generate_circuit_with_gate(gates.Z)
+    sequence = platform.transpile(circuit)
+    assert len(sequence) == (0 + 1) * nqubits
+
+    circuit = generate_circuit_with_gate(gates.RX, np.pi / 8)
+    sequence = platform.transpile(circuit)
+    assert len(sequence) == (1 + 1) * nqubits
+
+    circuit = generate_circuit_with_gate(gates.RY, -np.pi / 8)
+    sequence = platform.transpile(circuit)
+    assert len(sequence) == (1 + 1) * nqubits
+
+    circuit = generate_circuit_with_gate(gates.RZ, np.pi / 4)
+    sequence = platform.transpile(circuit)
+    assert len(sequence) == (0 + 1) * nqubits
+
+    circuit = generate_circuit_with_gate(gates.U3, theta=0.1, phi=0.2, lam=0.3)
+    sequence = platform.transpile(circuit)
+    assert len(sequence) == (2 + 1) * nqubits
+
+    circuit = Circuit(1)
+    circuit.add(gates.RX(0, theta=0.1))
+    circuit.add(gates.RY(0, theta=0.2))
+    circuit.add(gates.M(0))
+
+    sequence = platform.transpile(circuit)
+
+    assert len(sequence.pulses) == 3
+    assert len(sequence.qd_pulses) == 2
+    assert len(sequence.ro_pulses) == 1
+
+    RX_pulse = platform.create_RX_pulse(0)
+    rotation_angle = 0.1
+    RX_pulse.amplitude *= rotation_angle / np.pi
+    RY_pulse = platform.create_RX_pulse(0, start=RX_pulse.finish, relative_phase=np.pi / 2)
+    rotation_angle = 0.2
+    RY_pulse.amplitude *= rotation_angle / np.pi
+    MZ_pulse = platform.create_MZ_pulse(0, RY_pulse.finish)
+
+    np.testing.assert_allclose(sequence.ro_pulses[0].start, MZ_pulse.start)
+    np.testing.assert_allclose(sequence.ro_pulses[0].duration, MZ_pulse.duration)
+    np.testing.assert_allclose(sequence.ro_pulses[0].amplitude, MZ_pulse.amplitude)
+    np.testing.assert_allclose(sequence.ro_pulses[0].frequency, MZ_pulse.frequency)
+    np.testing.assert_allclose(sequence.ro_pulses[0].phase, MZ_pulse.phase)
+    np.testing.assert_allclose(sequence.qd_pulses[0].start, RX_pulse.start)
+    np.testing.assert_allclose(sequence.qd_pulses[0].duration, RX_pulse.duration)
+    np.testing.assert_allclose(sequence.qd_pulses[0].amplitude, RX_pulse.amplitude)
+    np.testing.assert_allclose(sequence.qd_pulses[0].frequency, RX_pulse.frequency)
+    np.testing.assert_allclose(sequence.qd_pulses[0].phase, RX_pulse.phase)
+    np.testing.assert_allclose(sequence.qd_pulses[1].start, RY_pulse.start)
+    np.testing.assert_allclose(sequence.qd_pulses[1].duration, RY_pulse.duration)
+    np.testing.assert_allclose(sequence.qd_pulses[1].amplitude, RY_pulse.amplitude)
+    np.testing.assert_allclose(sequence.qd_pulses[1].frequency, RY_pulse.frequency)
+    np.testing.assert_allclose(sequence.qd_pulses[1].phase, RY_pulse.phase)
 
 
 def test_measurement():
