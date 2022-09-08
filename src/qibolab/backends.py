@@ -11,6 +11,8 @@ class QibolabBackend(NumpyBackend):
         super().__init__()
         self.name = "qibolab"
         self.platform = Platform(platform, runcard)
+        self.platform.connect()
+        self.platform.setup()
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
@@ -28,7 +30,7 @@ class QibolabBackend(NumpyBackend):
                 calibration yml will be used.
 
         Returns:
-            Readout results acquired by after execution.
+            CircuitResult object containing the results acquired from the execution.
         """
         from qibolab.pulses import PulseSequence
 
@@ -45,8 +47,6 @@ class QibolabBackend(NumpyBackend):
         sequence = self.platform.transpile(circuit)
 
         # Execute the pulse sequence on the platform
-        self.platform.connect()
-        self.platform.setup()
         self.platform.start()
         readout = self.platform(sequence, nshots)
         self.platform.stop()
@@ -58,12 +58,12 @@ class QibolabBackend(NumpyBackend):
             "Qibolab cannot return state vector in tensor representation.",
         )
 
-    def circuit_result_representation(self, result):
+    def circuit_result_representation(self, result: CircuitResult):
         # TODO: Consider changing this to a more readable format.
         # this must return a ``str`` because it is used in ``CircuitResult.__repr__``.
         return str(result.execution_result)
 
-    def circuit_result_probabilities(self, result, qubits=None):
+    def circuit_result_probabilities(self, result: CircuitResult, qubits=None):
         # Returns the probability of the qubit being in state 0
         if qubits is None:  # pragma: no cover
             qubits = result.circuit.measurement_gate.qubits
@@ -76,3 +76,4 @@ class QibolabBackend(NumpyBackend):
 
         p = np.abs(readout[0] * 1e6 - state1_voltage) / np.abs(state1_voltage - state0_voltage)
         return [p, 1 - p]
+        # TODO: calculate probabilities based on the euclidean distance to state 0 and state 1 average points
