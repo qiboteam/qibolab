@@ -345,6 +345,8 @@ class Pulse:
             self._start = se_int(int(value))
         elif isinstance(value, int):
             self._start = se_int(value)
+        if self._duration:
+            self._finish = self._start + self._duration
 
     @property
     def duration(self) -> int:
@@ -364,7 +366,8 @@ class Pulse:
             self._duration = se_int(int(value))
         elif isinstance(value, int):
             self._duration = se_int(value)
-        self._finish = self._start + self._duration
+        if self._start:
+            self._finish = self._start + self._duration
 
     @property
     def finish(self) -> int:
@@ -424,6 +427,10 @@ class Pulse:
             self._relative_phase = float(value)
         elif isinstance(value, float):
             self._relative_phase = value
+
+    @property
+    def phase(self) -> float:
+        return 2 * np.pi * self._frequency * self._start.value / 1e9 + self._relative_phase
 
     @property
     def shape(self) -> PulseShape:
@@ -1033,8 +1040,8 @@ class PulseSequence:
     def finish(self) -> int:
         t: int = 0
         for pulse in self.pulses:
-            if pulse.start + pulse.finish > t:
-                t = pulse.start + pulse.finish
+            if pulse.finish > t:
+                t = pulse.finish
         return t
 
     @property
