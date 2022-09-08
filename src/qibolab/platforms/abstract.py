@@ -195,19 +195,25 @@ class AbstractPlatform(ABC):
             if isinstance(gate, gates.I):
                 pass
 
-            # elif isinstance(gate, gates.X):
-            #    sequence.append_at_end_of_channel(self.create_RX_pulse(qubit, relative_phase = virtual_z_phases[qubit]))
+            elif isinstance(gate, gates.X):
+                qubit = gate.target_qubits[0]
+                sequence.append_at_end_of_channel(self.create_RX_pulse(qubit, relative_phase=virtual_z_phases[qubit]))
 
-            # elif isinstance(gate, gates.Y):
-            #    sequence.append_at_end_of_channel(self.create_RX_pulse(qubit, relative_phase = virtual_z_phases[qubit] + np.pi/2))
+            elif isinstance(gate, gates.Y):
+                qubit = gate.target_qubits[0]
+                sequence.append_at_end_of_channel(
+                    self.create_RX_pulse(qubit, relative_phase=virtual_z_phases[qubit] + np.pi / 2)
+                )
 
-            # elif isinstance(gate, gates.RX):
-            #     pulse = self.create_RX_pulse(qubit, relative_phase = virtual_z_phases[qubit])
-            #     pulse.amplitude *= ((gate.parameters[0] % (np.pi)) / np.pi) np.mod
+            elif isinstance(gate, gates.RX):
+                qubit = gate.target_qubits[0]
+                pulse = self.create_RX_pulse(qubit, relative_phase=virtual_z_phases[qubit])
+                pulse.amplitude *= (gate.parameters[0] % (2 * np.pi)) / np.pi
 
-            # elif isinstance(gate, gates.RY):
-            #     pulse = self.create_RX_pulse(qubit, relative_phase = virtual_z_phases[qubit] + np.pi/2)
-            #     pulse.amplitude *= ((gate.parameters[0] % (np.pi)) / np.pi)
+            elif isinstance(gate, gates.RY):
+                qubit = gate.target_qubits[0]
+                pulse = self.create_RX_pulse(qubit, relative_phase=virtual_z_phases[qubit] + np.pi / 2)
+                pulse.amplitude *= (gate.parameters[0] % (2 * np.pi)) / np.pi
 
             elif isinstance(gate, gates.Z):
                 qubit = gate.target_qubits[0]
@@ -217,16 +223,16 @@ class AbstractPlatform(ABC):
                 qubit = gate.target_qubits[0]
                 virtual_z_phases[qubit] += gate.parameters[0]
 
-            elif isinstance(circuit.measurement_gate, gates.M):
+            elif isinstance(gate, gates.M):
                 # Add measurement pulse
                 measurement_start = sequence.finish
                 for qubit in circuit.measurement_gate.target_qubits:
                     MZ_pulse = self.create_MZ_pulse(qubit, measurement_start)
                     sequence.add(MZ_pulse)
 
-            else:
+            elif isinstance(gate, gates.ParametrizedGate):
                 if len(gate.qubits) > 1:
-                    raise_error(NotImplementedError, "Only one qubit gates are implemented.")
+                    raise_error(NotImplementedError, "Multi-qubit gates have not been implemented yet.")
 
                 qubit = gate.target_qubits[0]
                 # Transform gate to U3 and add pi/2-pulses
@@ -245,6 +251,21 @@ class AbstractPlatform(ABC):
                 sequence.add(RX90_pulse_2)
                 # apply RZ(phi)
                 virtual_z_phases[qubit] += phi
+            else:
+                raise_error(
+                    NotImplementedError,
+                    f"Transpilation of {gate.__class__.__name__} gate has not been implemented yet.",
+                )
+
+        # Finally add measurement gates
+        measurement_start = sequence.finish
+        for qubit in circuit.measurement_gate.target_qubits:
+            MZ_pulse = self.create_MZ_pulse(qubit, measurement_start)
+            sequence.add(MZ_pulse)
+        # FIXME: is there any reason not to include measurement gates as part of the circuit queue?
+        # This workaround adds them at the end, but would it not be desirable to be able to insert
+        # measurement gates in the middle of circuits?
+        return sequence
 
     def get_u3_parameters_from_gate(self, gate):
         from qibolab.u3params import U3Params
@@ -252,8 +273,6 @@ class AbstractPlatform(ABC):
         name = gate.__class__.__name__
         if isinstance(gate, gates.ParametrizedGate):
             return getattr(U3Params, name)(*gate.parameters)
-        else:
-            return getattr(U3Params, name)
 
     @abstractmethod
     def execute_pulse_sequence(self, sequence, nshots=None):  # pragma: no cover
