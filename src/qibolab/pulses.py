@@ -541,12 +541,12 @@ class Pulse:
             raise TypeError(f"Expected int; got {type(n).__name__}")
         elif n < 0:
             raise TypeError(f"argument n should be >=0, got {n}")
-        return PulseSequence(*([self.shallow_copy()] * n))
+        return PulseSequence(*([self.copy()] * n))
 
     def __rmul__(self, n):
         return self.__mul__(n)
 
-    def deep_copy(self):  # -> Pulse|ReadoutPulse|DrivePulse|FluxPulse:
+    def copy(self):  # -> Pulse|ReadoutPulse|DrivePulse|FluxPulse:
         # return eval(self.serial)
         return Pulse(
             self.start,
@@ -554,23 +554,10 @@ class Pulse:
             self.amplitude,
             self.frequency,
             self.relative_phase,
-            repr(self._shape),
+            repr(self._shape),  # self._shape,
             self.channel,
             self.type,
             self.qubit,
-        )
-
-    def shallow_copy(self):  # -> Pulse:
-        return Pulse(
-            self._start,
-            self._duration,
-            self._amplitude,
-            self._frequency,
-            self._relative_phase,
-            self._shape,
-            self._channel,
-            self._type,
-            self._qubit,
         )
 
     def plot(self):
