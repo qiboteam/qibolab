@@ -47,15 +47,10 @@ def test_instruments_qublox_setup(name):
         test_runcard = qibolab_folder / "tests" / "test_instruments_rohde_schwarz.yml"
         with open(test_runcard, "r") as file:
             settings = yaml.safe_load(file)
-        instruments[name].setup(
-            **settings["settings"], **settings["instruments"][name]["settings"]
-        )
+        instruments[name].setup(**settings["settings"], **settings["instruments"][name]["settings"])
 
         for parameter in settings["instruments"][name]["settings"]:
-            assert (
-                getattr(instruments[name], parameter)
-                == settings["instruments"][name]["settings"][parameter]
-            )
+            assert getattr(instruments[name], parameter) == settings["instruments"][name]["settings"][parameter]
 
 
 def instrument_set_and_test_parameter_values(instrument, parameter, values):
@@ -72,9 +67,7 @@ def test_instruments_qublox_set_device_paramter(name):
         instrument_set_and_test_parameter_values(
             instruments[name], f"power", np.arange(-120, 0, 10)
         )  # Max power is 25dBm but to be safe testing only until 0dBm
-        instrument_set_and_test_parameter_values(
-            instruments[name], f"frequency", np.arange(1e6, 12750e6, 1e9)
-        )
+        instrument_set_and_test_parameter_values(instruments[name], f"frequency", np.arange(1e6, 12750e6, 1e9))
 
         """   # TODO: add attitional paramter tests
         SGS100A:

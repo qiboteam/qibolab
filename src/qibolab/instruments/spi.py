@@ -11,9 +11,8 @@ from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 class SPI(AbstractInstrument):
 
     property_wrapper = lambda parent, device, *parameter: property(
-        lambda self: device.get(parameter[0]), 
-        lambda self,x: parent._set_device_parameter(device, *parameter, value = x)
-        )
+        lambda self: device.get(parameter[0]), lambda self, x: parent._set_device_parameter(device, *parameter, value=x)
+    )
 
     def __init__(self, name, address):
         super().__init__(name, address)
@@ -40,17 +39,15 @@ class SPI(AbstractInstrument):
             if not self.is_connected:
                 raise InstrumentException(self, f"Unable to connect to {self.name}")
         else:
-            raise_error(
-                Exception, "There is an open connection to the instrument already"
-            )
+            raise_error(Exception, "There is an open connection to the instrument already")
 
     def _set_device_parameter(self, target, *parameters, value):
         if self.is_connected:
-            key = target.name + '.' + parameters[0]
+            key = target.name + "." + parameters[0]
             if not key in self.device_parameters:
                 for parameter in parameters:
                     if not hasattr(target, parameter):
-                         raise Exception(f'The instrument {self.name} does not have parameters {parameter}')
+                        raise Exception(f"The instrument {self.name} does not have parameters {parameter}")
                     target.set(parameter, value)
                 self.device_parameters[key] = value
             elif self.device_parameters[key] != value:
@@ -58,7 +55,7 @@ class SPI(AbstractInstrument):
                     target.set(parameter, value)
                 self.device_parameters[key] = value
         else:
-            raise Exception('There is no connection to the instrument {self.name}')
+            raise Exception("There is no connection to the instrument {self.name}")
 
     def setup(self, **kwargs):
         # Init S4g and D5a modules in SPI mapped on runcard
@@ -68,9 +65,9 @@ class SPI(AbstractInstrument):
             #      Define span values in setup
             #      Implement parameters cache
             #      export current / voltage properties (and make them sweepable)
-            if 's4g_modules' in kwargs:
+            if "s4g_modules" in kwargs:
                 self.s4g_modules_settings = kwargs["s4g_modules"]
-            if 'd5a_modules' in kwargs:
+            if "d5a_modules" in kwargs:
                 self.d5a_modules_settings = kwargs["d5a_modules"]
 
             for channel, settings in self.s4g_modules_settings.items():
@@ -80,15 +77,12 @@ class SPI(AbstractInstrument):
                 current = settings[2]
                 if not module_name in self.device.instrument_modules:
                     self.device.add_spi_module(settings[0], "S4g", module_name)
-                device = self.device.instrument_modules[module_name].instrument_modules[
-                    "dac" + str(port_number - 1)
-                ]
-                self.dacs[channel] = type(f'S4g_dac', (), 
-                    {'current': self.property_wrapper(device, 'current'), 
-                     'device': device
-                    })()
+                device = self.device.instrument_modules[module_name].instrument_modules["dac" + str(port_number - 1)]
+                self.dacs[channel] = type(
+                    f"S4g_dac", (), {"current": self.property_wrapper(device, "current"), "device": device}
+                )()
                 self.dacs[channel].device.span("range_min_bi")
-                #self.dacs[channel].current = current
+                # self.dacs[channel].current = current
 
             for channel, settings in self.d5a_modules_settings.items():
                 module_number = settings[0]
@@ -97,20 +91,15 @@ class SPI(AbstractInstrument):
                 voltage = settings[2]
                 if not module_name in self.device.instrument_modules:
                     self.device.add_spi_module(settings[0], "D5a", module_name)
-                device = self.device.instrument_modules[module_name].instrument_modules[
-                    "dac" + str(port_number - 1)
-                ]
-                self.dacs[channel] = type(f'D5a_dac', (), 
-                    {'voltage': self.property_wrapper(device, 'voltage'), 
-                     'device': device
-                    })()
+                device = self.device.instrument_modules[module_name].instrument_modules["dac" + str(port_number - 1)]
+                self.dacs[channel] = type(
+                    f"D5a_dac", (), {"voltage": self.property_wrapper(device, "voltage"), "device": device}
+                )()
                 self.dacs[channel].device.span("range_min_bi")
-                #self.dacs[channel].voltage = voltage
+                # self.dacs[channel].voltage = voltage
         else:
             raise_error(Exception, "There is no connection to the instrument")
         return
-
-
 
     def set_SPI_DACS_to_cero(self):
         self.device.set_dacs_zero()
@@ -140,14 +129,18 @@ class SPI(AbstractInstrument):
                 current = settings[2]
                 # Check current current of the module and warning
                 if abs(self.dacs[channel].current) > 0.010:
-                    log.info(f"WARNING: S4g module {settings[0]} - port {settings[1]} current was: {self.dacs[channel].current}, now setting current to: {current}")
+                    log.info(
+                        f"WARNING: S4g module {settings[0]} - port {settings[1]} current was: {self.dacs[channel].current}, now setting current to: {current}"
+                    )
                 self.dacs[channel].current = current
 
             for channel, settings in self.d5a_modules_settings.items():
                 voltage = settings[2]
                 # Check current current of the module and warning
                 if abs(self.dacs[channel].voltage) > 0.010:
-                    log.info(f"WARNING: D5a module {settings[0]} - port {settings[1]} voltage was: {self.dacs[channel].voltage}, now setting voltage to: {voltage}")
+                    log.info(
+                        f"WARNING: D5a module {settings[0]} - port {settings[1]} voltage was: {self.dacs[channel].voltage}, now setting voltage to: {voltage}"
+                    )
                 self.dacs[channel].voltage = voltage
 
     def stop(self):

@@ -71,9 +71,7 @@ class PulseBlaster(AbstractInstrument):
 
     @staticmethod
     def _hexify(pins):
-        return int(
-            "".join(["1" if i in set(pins) else "0" for i in reversed(range(24))]), 2
-        )
+        return int("".join(["1" if i in set(pins) else "0" for i in reversed(range(24))]), 2)
 
 
 class IcarusQFPGA(AbstractInstrument):
@@ -111,9 +109,7 @@ class IcarusQFPGA(AbstractInstrument):
         waveform = np.zeros((self._dac_nchannels, self._dac_sample_size), dtype="i2")
 
         # The global time can first be set as float to handle rounding errors.
-        time_array = (
-            1 / self._dac_sampling_rate * np.arange(0, self._dac_sample_size, 1)
-        )
+        time_array = 1 / self._dac_sampling_rate * np.arange(0, self._dac_sample_size, 1)
 
         for pulse in sequence:
             # Get array indices corresponding to the start and end of the pulse. Note that the pulse time parameters are in ns and require conversion.
@@ -122,12 +118,9 @@ class IcarusQFPGA(AbstractInstrument):
 
             # Create the pulse waveform and cast it to 16-bit. The ampltiude is max signed 14-bit (+- 8191) and the indices should take care of any overlap of pulses.
             # 2-byte bit shift for downsampling from 16 bit to 14 bit
-            pulse_waveform = (
-                4
-                * np.sin(
-                    2 * np.pi * pulse.frequency * time_array[start:end] + pulse.phase
-                )
-            ).astype("i2")
+            pulse_waveform = (4 * np.sin(2 * np.pi * pulse.frequency * time_array[start:end] + pulse.phase)).astype(
+                "i2"
+            )
             waveform[pulse.channel, start:end] += pulse_waveform
 
         self.nshots = nshots
@@ -182,9 +175,7 @@ class IcarusQFPGA(AbstractInstrument):
             # Signal RFSoC to arm ADC and expect `nshots` number of triggers.
             s.sendall(struct.pack("B", 2))
             s.sendall(struct.pack("H", nshots))
-            s.sendall(
-                struct.pack("B", len(self._adcs_to_read))
-            )  # send number of channels
+            s.sendall(struct.pack("B", len(self._adcs_to_read)))  # send number of channels
 
             for adc in self._adcs_to_read:
                 s.sendall(struct.pack("B", adc))  # send ADC channel to read

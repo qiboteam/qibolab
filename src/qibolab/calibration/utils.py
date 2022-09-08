@@ -17,9 +17,7 @@ quantify_folder = qibolab_folder / "calibration" / "data" / "quantify"
 quantify_folder.mkdir(parents=True, exist_ok=True)
 
 
-def variable_resolution_scanrange(
-    lowres_width, lowres_step, highres_width, highres_step
-):
+def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step):
     # [.     .     .     .     .     .][...................]0[...................][.     .     .     .     .     .]
     # [-------- lowres_width ---------][-- highres_width --] [-- highres_width --][-------- lowres_width ---------]
     # >.     .< lowres_step
@@ -174,8 +172,6 @@ def classify(point: complex, mean_gnd, mean_exc):
     """Classify the given state as |0> or |1>."""
 
     def distance(a, b):
-        return math.sqrt(
-            (np.real(a) - np.real(b)) ** 2 + (np.imag(a) - np.imag(b)) ** 2
-        )
+        return math.sqrt((np.real(a) - np.real(b)) ** 2 + (np.imag(a) - np.imag(b)) ** 2)
 
     return int(distance(point, mean_exc) < distance(point, mean_gnd))

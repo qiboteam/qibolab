@@ -93,9 +93,7 @@ class ICPlatform(AbstractPlatform):
         if not self.is_connected:
             from qibo.config import raise_error
 
-            raise_error(
-                RuntimeError, "Execution failed because instruments are not connected."
-            )
+            raise_error(RuntimeError, "Execution failed because instruments are not connected.")
         if nshots is None:
             nshots = self.hardware_avg
 
@@ -126,10 +124,7 @@ class ICPlatform(AbstractPlatform):
         # Translate and upload the pulse subsequence for each device if needed
         for device, subsequence in pulse_mapping.items():
             inst = self.fetch_instrument(device)
-            if (
-                self._last_sequence is None
-                or seq_serial[device] != self._last_sequence[device]
-            ):
+            if self._last_sequence is None or seq_serial[device] != self._last_sequence[device]:
                 inst.upload(inst.translate(subsequence, nshots))
             inst.play_sequence()
         self._last_sequence = seq_serial
@@ -144,9 +139,7 @@ class ICPlatform(AbstractPlatform):
         for qubit_id in set(qubits_to_measure):
             qubit = self.fetch_qubit(qubit_id)
             inst = self.fetch_instrument(qubit.readout)
-            measurement_results.append(
-                inst.result(qubit.readout_frequency, qubit.readout_channels)
-            )
+            measurement_results.append(inst.result(qubit.readout_frequency, qubit.readout_channels))
 
         if len(qubits_to_measure) == 1:
             return measurement_results[0]
@@ -168,9 +161,7 @@ class ICPlatform(AbstractPlatform):
 
     def start_experiment(self):
         """Starts the instrument to start the experiment sequence."""
-        inst = self.fetch_instrument(
-            self.settings.get("settings").get("experiment_start_instrument")
-        )
+        inst = self.fetch_instrument(self.settings.get("settings").get("experiment_start_instrument"))
         inst.start_experiment()
 
     def fetch_qubit_pi_pulse(self, qubit_id=0) -> dict:

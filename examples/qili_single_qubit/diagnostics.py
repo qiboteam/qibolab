@@ -35,11 +35,7 @@ def backup_config_file():
     now = datetime.now()
     now = now.strftime("%d%m%Y%H%M%S")
     destination_file_name = "qili_" + now + ".yml"
-    target = os.path.realpath(
-        os.path.join(
-            os.path.dirname(__file__), "data/settings_backups", destination_file_name
-        )
-    )
+    target = os.path.realpath(os.path.join(os.path.dirname(__file__), "data/settings_backups", destination_file_name))
 
     try:
         print("Copying file: " + original)
@@ -174,9 +170,7 @@ class ROController:
         return self.platform.execute(self.sequence)
 
 
-def variable_resolution_scanrange(
-    lowres_width, lowres_step, highres_width, highres_step
-):
+def variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step):
     # [.     .     .     .     .     .][...................]0[...................][.     .     .     .     .     .]
     # [-------- lowres_width ---------][-- highres_width --] [-- highres_width --][-------- lowres_width ---------]
     # >.     .< lowres_step
@@ -206,9 +200,7 @@ def run_resonator_spectroscopy(
 ):
     # Fast Sweep
     platform.software_averages = 1
-    scanrange = variable_resolution_scanrange(
-        lowres_width, lowres_step, highres_width, highres_step
-    )
+    scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
     mc.settables(platform.LO_qrm.device.frequency)
     mc.setpoints(scanrange + platform.LO_qrm.get_frequency())
     mc.gettables(Gettable(ROController(platform, sequence)))
@@ -227,9 +219,7 @@ def run_resonator_spectroscopy(
     mc.gettables(Gettable(ROController(platform, sequence)))
     platform.start()
     platform.LO_qcm.off()
-    dataset = mc.run(
-        "Resonator Spectroscopy Precision", soft_avg=platform.software_averages
-    )
+    dataset = mc.run("Resonator Spectroscopy Precision", soft_avg=platform.software_averages)
     platform.stop()
 
     smooth_dataset = savgol_filter(dataset["y0"].values, 25, 2)
@@ -260,9 +250,7 @@ def run_punchout(platform, mc, sequence, ro_pulse, precision_width, precision_st
 
     smooth_dataset = savgol_filter(dataset["y0"].values, 25, 2)
     # FIXME: Code Lorentzian fitting for cavity spec and punchout
-    resonator_freq = (
-        dataset["x0"].values[dataset["y0"].argmax().values] + ro_pulse.frequency
-    )
+    resonator_freq = dataset["x0"].values[dataset["y0"].argmax().values] + ro_pulse.frequency
     print(f"\nResonator Frequency = {resonator_freq}")
     print(f"\nResonator LO Frequency  = {resonator_freq - ro_pulse.frequency}")
 
@@ -297,16 +285,12 @@ def run_qubit_spectroscopy(
 
     # Precision Sweep
     platform.software_averages = 1
-    precision_sweep_scan_range = np.arange(
-        precision_start, precision_end, precision_step
-    )
+    precision_sweep_scan_range = np.arange(precision_start, precision_end, precision_step)
     mc.settables(platform.LO_qcm.device.frequency)
     mc.setpoints(precision_sweep_scan_range + platform.LO_qcm.get_frequency())
     mc.gettables(Gettable(ROController(platform, sequence)))
     platform.start()
-    dataset = mc.run(
-        "Qubit Spectroscopy Precision", soft_avg=platform.software_averages
-    )
+    dataset = mc.run("Qubit Spectroscopy Precision", soft_avg=platform.software_averages)
     platform.stop()
 
     smooth_dataset = savgol_filter(dataset["y0"].values, 11, 2)
@@ -316,9 +300,7 @@ def run_qubit_spectroscopy(
     return qubit_freq, min_ro_voltage, smooth_dataset, dataset
 
 
-def run_rabi_pulse_length(
-    platform, mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_pulse
-):
+def run_rabi_pulse_length(platform, mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_pulse):
 
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     platform.LO_qcm.set_frequency(qubit_freq - qc_pulse.frequency)
@@ -333,9 +315,7 @@ def run_rabi_pulse_length(
     return dataset, platform.qcm.gain
 
 
-def run_rabi_pulse_gain(
-    platform, mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_pulse
-):
+def run_rabi_pulse_gain(platform, mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_pulse):
 
     # qubit pulse duration=200
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
@@ -351,9 +331,7 @@ def run_rabi_pulse_gain(
     return dataset
 
 
-def run_rabi_pulse_length_and_gain(
-    platform, mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_pulse
-):
+def run_rabi_pulse_length_and_gain(platform, mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_pulse):
 
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
@@ -378,9 +356,7 @@ def run_rabi_pulse_length_and_gain(
     return dataset
 
 
-def run_rabi_pulse_length_and_amplitude(
-    platform, mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_pulse
-):
+def run_rabi_pulse_length_and_amplitude(platform, mc, resonator_freq, qubit_freq, sequence, qc_pulse, ro_pulse):
 
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
@@ -522,9 +498,7 @@ def run_spin_echo_3pulses(
     platform.LO_qrm.set_frequency(resonator_freq - ro_pulse.frequency)
     platform.LO_qcm.set_frequency(qubit_freq + qc_pulse.frequency)
     platform.qcm.gain = pi_pulse_gain
-    mc.settables(
-        SpinEcho3PWaitParameter(ro_pulse, qc2_pulse, qc3_pulse, pi_pulse_length)
-    )
+    mc.settables(SpinEcho3PWaitParameter(ro_pulse, qc2_pulse, qc3_pulse, pi_pulse_length))
     mc.setpoints(np.arange(start_start, start_end, start_step))
     mc.gettables(Gettable(ROController(platform, sequence)))
     platform.start()
@@ -555,16 +529,12 @@ def run_shifted_resonator_spectroscopy(
 
     # Fast Sweep
     platform.software_averages = 1
-    scanrange = variable_resolution_scanrange(
-        lowres_width, lowres_step, highres_width, highres_step
-    )
+    scanrange = variable_resolution_scanrange(lowres_width, lowres_step, highres_width, highres_step)
     mc.settables(platform.LO_qrm.device.frequency)
     mc.setpoints(scanrange + platform.LO_qrm.get_frequency())
     mc.gettables(Gettable(ROController(platform, sequence)))
     platform.start()
-    dataset = mc.run(
-        "Resonator Spectroscopy Shifted Fast", soft_avg=platform.software_averages
-    )
+    dataset = mc.run("Resonator Spectroscopy Shifted Fast", soft_avg=platform.software_averages)
     platform.stop()
 
     shifted_LO_frequency = dataset["x0"].values[dataset["y0"].argmax().values]
@@ -576,15 +546,11 @@ def run_shifted_resonator_spectroscopy(
     mc.setpoints(scanrange + shifted_LO_frequency)
     mc.gettables(Gettable(ROController(platform, sequence)))
     platform.start()
-    dataset = mc.run(
-        "Resonator Spectroscopy Shifted Precision", soft_avg=platform.software_averages
-    )
+    dataset = mc.run("Resonator Spectroscopy Shifted Precision", soft_avg=platform.software_averages)
     platform.stop()
 
     smooth_dataset = savgol_filter(dataset["y0"].values, 25, 2)
-    shifted_frequency = (
-        dataset["x0"].values[smooth_dataset.argmax()] + ro_pulse.frequency
-    )
+    shifted_frequency = dataset["x0"].values[smooth_dataset.argmax()] + ro_pulse.frequency
     shifted_max_ro_voltage = smooth_dataset.max() * 1e6
     print("\n")
     print(f"\nResonator Frequency = {shifted_frequency}")

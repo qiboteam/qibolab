@@ -18,9 +18,7 @@ class QibolabBackend(NumpyBackend):
     def apply_gate_density_matrix(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
 
-    def execute_circuit(
-        self, circuit, initial_state=None, nshots=None
-    ):  # pragma: no cover
+    def execute_circuit(self, circuit, initial_state=None, nshots=None):  # pragma: no cover
         """Executes a quantum circuit.
 
         Args:
@@ -72,8 +70,9 @@ class QibolabBackend(NumpyBackend):
         # naive normalization
         qubit = qubits[0]
         readout = list(list(result.execution_result.values())[0].values())[0]
-        state1_voltage = self.platform.settings['characterization']['single_qubit'][qubit]['state1_voltage']
-        state0_voltage = self.platform.settings['characterization']['single_qubit'][qubit]['state0_voltage']
+        state1_voltage = self.platform.settings["characterization"]["single_qubit"][qubit]["state1_voltage"]
+        state0_voltage = self.platform.settings["characterization"]["single_qubit"][qubit]["state0_voltage"]
         import numpy as np
+
         p = np.abs(readout[0] * 1e6 - state1_voltage) / np.abs(state1_voltage - state0_voltage)
         return [p, 1 - p]

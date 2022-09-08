@@ -1,8 +1,18 @@
+# -*- coding: utf-8 -*-
+from abc import ABC, abstractmethod
+
 import yaml
 from qibo import gates
 from qibo.config import log, raise_error
-from abc import ABC, abstractmethod
-from qibolab.pulses import PulseSequence, Pulse, ReadoutPulse, Rectangular, Gaussian, Drag
+
+from qibolab.pulses import (
+    Drag,
+    Gaussian,
+    Pulse,
+    PulseSequence,
+    ReadoutPulse,
+    Rectangular,
+)
 
 
 class AbstractPlatform(ABC):
@@ -12,6 +22,7 @@ class AbstractPlatform(ABC):
         name (str): name of the platform.
         runcard (str): path to the yaml file containing the platform setup.
     """
+
     def __init__(self, name, runcard):
         log.info(f"Loading platform {name} from runcard {runcard}")
         self.name = name
@@ -23,11 +34,12 @@ class AbstractPlatform(ABC):
 
         self.instruments = {}
         # Instantiate instruments
-        for name in self.settings['instruments']:
-            lib = self.settings['instruments'][name]['lib']
-            i_class = self.settings['instruments'][name]['class']
-            address = self.settings['instruments'][name]['address']
+        for name in self.settings["instruments"]:
+            lib = self.settings["instruments"][name]["lib"]
+            i_class = self.settings["instruments"][name]["class"]
+            address = self.settings["instruments"][name]["address"]
             from importlib import import_module
+
             InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
             instance = InstrumentClass(name, address)
             self.instruments[name] = instance
@@ -40,7 +52,7 @@ class AbstractPlatform(ABC):
             "name": self.name,
             "runcard": self.runcard,
             "settings": self.settings,
-            "is_connected": self.is_connected
+            "is_connected": self.is_connected,
         }
 
     def __setstate__(self, data):
@@ -62,6 +74,7 @@ class AbstractPlatform(ABC):
     def run_calibration(self, show_plots=False):  # pragma: no cover
         """Executes calibration routines and updates the settings yml file"""
         from qibolab.calibration import calibration
+
         ac = calibration.Calibration(self)
         ac.auto_calibrate_plaform()
         # update instruments with new calibration settings
@@ -76,48 +89,51 @@ class AbstractPlatform(ABC):
                     self.instruments[name].connect()
                 self.is_connected = True
             except Exception as exception:
-                raise_error(RuntimeError, "Cannot establish connection to "
-                            f"{self.name} instruments. "
-                            f"Error captured: '{exception}'")
+                raise_error(
+                    RuntimeError,
+                    "Cannot establish connection to " f"{self.name} instruments. " f"Error captured: '{exception}'",
+                )
 
     def setup(self):
-        self.nqubits = self.settings['nqubits']
+        self.nqubits = self.settings["nqubits"]
         if self.nqubits == 1:
             self.resonator_type = "3D"
         else:
             self.resonator_type = "2D"
-        self.hardware_avg = self.settings['settings']['hardware_avg']
-        self.sampling_rate = self.settings['settings']['sampling_rate']
-        self.repetition_duration = self.settings['settings']['repetition_duration']
+        self.hardware_avg = self.settings["settings"]["hardware_avg"]
+        self.sampling_rate = self.settings["settings"]["sampling_rate"]
+        self.repetition_duration = self.settings["settings"]["repetition_duration"]
 
-        self.qubits = self.settings['qubits']
-        self.topology = self.settings['topology']
-        self.channels = self.settings['channels']
-        self.qubit_channel_map = self.settings['qubit_channel_map']
+        self.qubits = self.settings["qubits"]
+        self.topology = self.settings["topology"]
+        self.channels = self.settings["channels"]
+        self.qubit_channel_map = self.settings["qubit_channel_map"]
 
         # Generate qubit_instrument_map from qubit_channel_map and the instruments' channel_port_maps
         self.qubit_instrument_map = {}
         for qubit in self.qubit_channel_map:
             self.qubit_instrument_map[qubit] = [None, None, None]
             for name in self.instruments:
-                if 'channel_port_map' in self.settings['instruments'][name]['settings']:
-                    for channel in self.settings['instruments'][name]['settings']['channel_port_map']:
+                if "channel_port_map" in self.settings["instruments"][name]["settings"]:
+                    for channel in self.settings["instruments"][name]["settings"]["channel_port_map"]:
                         if channel in self.qubit_channel_map[qubit]:
-                             self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
-                if 's4g_modules' in self.settings['instruments'][name]['settings']:
-                    for channel in self.settings['instruments'][name]['settings']['s4g_modules']:
+                            self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
+                if "s4g_modules" in self.settings["instruments"][name]["settings"]:
+                    for channel in self.settings["instruments"][name]["settings"]["s4g_modules"]:
                         if channel in self.qubit_channel_map[qubit]:
-                             self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
+                            self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
         # Load Native Gates
-        self.native_gates = self.settings['native_gates']
+        self.native_gates = self.settings["native_gates"]
 
         if self.is_connected:
             for name in self.instruments:
                 # Set up every with the platform settings and the instrument settings
-                self.instruments[name].setup(**self.settings['settings'], **self.settings['instruments'][name]['settings'])
+                self.instruments[name].setup(
+                    **self.settings["settings"], **self.settings["instruments"][name]["settings"]
+                )
 
         # Load Characterization settings
-        self.characterization = self.settings['characterization']
+        self.characterization = self.settings["characterization"]
 
         # Generate ro_channel[qubit], qd_channel[qubit], qf_channel[qubit], qrm[qubit], qcm[qubit], lo_qrm[qubit], lo_qcm[qubit]
         self.ro_channel = {}
@@ -136,10 +152,14 @@ class AbstractPlatform(ABC):
 
             if not self.qubit_instrument_map[qubit][0] is None:
                 self.qrm[qubit] = self.instruments[self.qubit_instrument_map[qubit][0]]
-                self.ro_port[qubit] = self.qrm[qubit].ports[self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]]
+                self.ro_port[qubit] = self.qrm[qubit].ports[
+                    self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]
+                ]
             if not self.qubit_instrument_map[qubit][1] is None:
                 self.qcm[qubit] = self.instruments[self.qubit_instrument_map[qubit][1]]
-                self.qd_port[qubit] = self.qcm[qubit].ports[self.qcm[qubit].channel_port_map[self.qubit_channel_map[qubit][1]]]
+                self.qd_port[qubit] = self.qcm[qubit].ports[
+                    self.qcm[qubit].channel_port_map[self.qubit_channel_map[qubit][1]]
+                ]
             if not self.qubit_instrument_map[qubit][2] is None:
                 self.qbm[qubit] = self.instruments[self.qubit_instrument_map[qubit][2]]
                 self.qf_port[qubit] = self.qbm[qubit].dacs[self.qubit_channel_map[qubit][2]]
@@ -162,8 +182,10 @@ class AbstractPlatform(ABC):
 
     # TRANSPILATION
     from qibo.models import Circuit
-    def transpile(self, circuit: Circuit): # (self, circuit: qibo.core.circuit.Circuit) -> PulseSequence
+
+    def transpile(self, circuit: Circuit):  # (self, circuit: qibo.core.circuit.Circuit) -> PulseSequence
         import numpy as np
+
         sequence = PulseSequence()
         virtual_z_phases = {}
         for qubit in range(circuit.nqubits):
@@ -189,7 +211,7 @@ class AbstractPlatform(ABC):
 
             elif isinstance(gate, gates.Z):
                 qubit = gate.target_qubits[0]
-                virtual_z_phases[qubit] += np.pi 
+                virtual_z_phases[qubit] += np.pi
 
             elif isinstance(gate, gates.RZ):
                 qubit = gate.target_qubits[0]
@@ -224,18 +246,14 @@ class AbstractPlatform(ABC):
                 # apply RZ(phi)
                 virtual_z_phases[qubit] += phi
 
-        
-
-        
-
     def get_u3_parameters_from_gate(self, gate):
         from qibolab.u3params import U3Params
+
         name = gate.__class__.__name__
         if isinstance(gate, gates.ParametrizedGate):
             return getattr(U3Params, name)(*gate.parameters)
         else:
             return getattr(U3Params, name)
-
 
     @abstractmethod
     def execute_pulse_sequence(self, sequence, nshots=None):  # pragma: no cover
@@ -255,76 +273,82 @@ class AbstractPlatform(ABC):
     def __call__(self, sequence, nshots=None):
         return self.execute_pulse_sequence(sequence, nshots)
 
-    def create_RX90_pulse(self, qubit, start = 0, relative_phase = 0):
-        qd_duration = self.settings['native_gates']['single_qubit'][qubit]['RX']['duration']
-        qd_frequency = self.settings['native_gates']['single_qubit'][qubit]['RX']['frequency']
-        qd_amplitude = self.settings['native_gates']['single_qubit'][qubit]['RX']['amplitude'] / 2
-        qd_shape = self.settings['native_gates']['single_qubit'][qubit]['RX']['shape']
-        qd_channel = self.settings['qubit_channel_map'][qubit][1]
+    def create_RX90_pulse(self, qubit, start=0, relative_phase=0):
+        qd_duration = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["duration"]
+        qd_frequency = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["frequency"]
+        qd_amplitude = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["amplitude"] / 2
+        qd_shape = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["shape"]
+        qd_channel = self.settings["qubit_channel_map"][qubit][1]
         from qibolab.pulses import Pulse
+
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel)
 
-    def create_RX_pulse(self, qubit, start = 0, relative_phase = 0):
-        qd_duration = self.settings['native_gates']['single_qubit'][qubit]['RX']['duration']
-        qd_frequency = self.settings['native_gates']['single_qubit'][qubit]['RX']['frequency']
-        qd_amplitude = self.settings['native_gates']['single_qubit'][qubit]['RX']['amplitude']
-        qd_shape = self.settings['native_gates']['single_qubit'][qubit]['RX']['shape']
-        qd_channel = self.settings['qubit_channel_map'][qubit][1]
+    def create_RX_pulse(self, qubit, start=0, relative_phase=0):
+        qd_duration = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["duration"]
+        qd_frequency = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["frequency"]
+        qd_amplitude = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["amplitude"]
+        qd_shape = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["shape"]
+        qd_channel = self.settings["qubit_channel_map"][qubit][1]
         from qibolab.pulses import Pulse
+
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel)
 
     def create_MZ_pulse(self, qubit, start):
-        ro_duration = self.settings['native_gates']['single_qubit'][qubit]['MZ']['duration']
-        ro_frequency = self.settings['native_gates']['single_qubit'][qubit]['MZ']['frequency']
-        ro_amplitude = self.settings['native_gates']['single_qubit'][qubit]['MZ']['amplitude']
-        ro_shape = self.settings['native_gates']['single_qubit'][qubit]['MZ']['shape']
-        ro_channel = self.settings['qubit_channel_map'][qubit][0]
+        ro_duration = self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["duration"]
+        ro_frequency = self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["frequency"]
+        ro_amplitude = self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["amplitude"]
+        ro_shape = self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["shape"]
+        ro_channel = self.settings["qubit_channel_map"][qubit][0]
         from qibolab.pulses import ReadoutPulse
+
         return ReadoutPulse(start, ro_duration, ro_amplitude, ro_frequency, 0, ro_shape, ro_channel)
 
-    def create_qubit_drive_pulse(self, qubit, start, duration, relative_phase = 0):
-        qd_frequency = self.settings['native_gates']['single_qubit'][qubit]['RX']['frequency']
-        qd_amplitude = self.settings['native_gates']['single_qubit'][qubit]['RX']['amplitude']
-        qd_shape = self.settings['native_gates']['single_qubit'][qubit]['RX']['shape']
-        qd_channel = self.settings['qubit_channel_map'][qubit][1]
+    def create_qubit_drive_pulse(self, qubit, start, duration, relative_phase=0):
+        qd_frequency = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["frequency"]
+        qd_amplitude = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["amplitude"]
+        qd_shape = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["shape"]
+        qd_channel = self.settings["qubit_channel_map"][qubit][1]
         from qibolab.pulses import Pulse
+
         return Pulse(start, duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel)
 
     def create_qubit_readout_pulse(self, qubit, start):
-        ro_duration = self.settings['native_gates']['single_qubit'][qubit]['MZ']['duration']
-        ro_frequency = self.settings['native_gates']['single_qubit'][qubit]['MZ']['frequency']
-        ro_amplitude = self.settings['native_gates']['single_qubit'][qubit]['MZ']['amplitude']
-        ro_shape = self.settings['native_gates']['single_qubit'][qubit]['MZ']['shape']
-        ro_channel = self.settings['qubit_channel_map'][qubit][0]
+        ro_duration = self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["duration"]
+        ro_frequency = self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["frequency"]
+        ro_amplitude = self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["amplitude"]
+        ro_shape = self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["shape"]
+        ro_channel = self.settings["qubit_channel_map"][qubit][0]
         from qibolab.pulses import ReadoutPulse
+
         return ReadoutPulse(start, ro_duration, ro_amplitude, ro_frequency, 0, ro_shape, ro_channel)
 
+    # TODO Remove RX90_drag_pulse and RX_drag_pulse, replace them with create_qubit_drive_pulse
+    # TODO Add RY90 and RY pulses
 
-# TODO Remove RX90_drag_pulse and RX_drag_pulse, replace them with create_qubit_drive_pulse
-# TODO Add RY90 and RY pulses
+    def create_RX90_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
+        # create RX pi/2 pulse with drag shape
+        qd_duration = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["duration"]
+        qd_frequency = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["frequency"]
+        qd_amplitude = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["amplitude"] / 2
+        qd_shape = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["shape"]
+        if beta != None:
+            qd_shape = "Drag(5," + str(beta) + ")"
 
-    def create_RX90_drag_pulse(self, qubit, start, relative_phase = 0, beta=None):
-        #create RX pi/2 pulse with drag shape
-        qd_duration = self.settings['native_gates']['single_qubit'][qubit]['RX']['duration'] 
-        qd_frequency = self.settings['native_gates']['single_qubit'][qubit]['RX']['frequency']
-        qd_amplitude = self.settings['native_gates']['single_qubit'][qubit]['RX']['amplitude'] / 2
-        qd_shape = self.settings['native_gates']['single_qubit'][qubit]['RX']['shape']
-        if (beta != None):
-            qd_shape = 'Drag(5,'+ str(beta)+')'        
-        
-        qd_channel = self.settings['qubit_channel_map'][qubit][1]
+        qd_channel = self.settings["qubit_channel_map"][qubit][1]
         from qibolab.pulses import Pulse
+
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel)
 
-    def create_RX_drag_pulse(self, qubit, start, relative_phase = 0, beta=None):
-        #create RX pi pulse with drag shape
-        qd_duration = self.settings['native_gates']['single_qubit'][qubit]['RX']['duration'] 
-        qd_frequency = self.settings['native_gates']['single_qubit'][qubit]['RX']['frequency']
-        qd_amplitude = self.settings['native_gates']['single_qubit'][qubit]['RX']['amplitude']
-        qd_shape = self.settings['native_gates']['single_qubit'][qubit]['RX']['shape']
-        if (beta != None):
-            qd_shape = 'Drag(5,'+ str(beta)+')'
+    def create_RX_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
+        # create RX pi pulse with drag shape
+        qd_duration = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["duration"]
+        qd_frequency = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["frequency"]
+        qd_amplitude = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["amplitude"]
+        qd_shape = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["shape"]
+        if beta != None:
+            qd_shape = "Drag(5," + str(beta) + ")"
 
-        qd_channel = self.settings['qubit_channel_map'][qubit][1]
+        qd_channel = self.settings["qubit_channel_map"][qubit][1]
         from qibolab.pulses import Pulse
+
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel)
