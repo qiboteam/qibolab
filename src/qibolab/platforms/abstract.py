@@ -192,8 +192,12 @@ class AbstractPlatform(ABC):
             virtual_z_phases[qubit] = 0
 
         for gate in circuit.queue:
+            # TODO: confirm if we want to implement I, X, Y, RX, RY, as 2 half pi pulses long or one
             if isinstance(gate, gates.I):
-                pass
+                qubit = gate.target_qubits[0]
+                zero_pulse = self.create_RX_pulse(qubit)
+                zero_pulse.amplitude = 0
+                sequence.append_at_end_of_channel(zero_pulse)
 
             elif isinstance(gate, gates.X):
                 qubit = gate.target_qubits[0]
@@ -207,13 +211,25 @@ class AbstractPlatform(ABC):
 
             elif isinstance(gate, gates.RX):
                 qubit = gate.target_qubits[0]
-                pulse = self.create_RX_pulse(qubit, relative_phase=virtual_z_phases[qubit])
-                pulse.amplitude *= (gate.parameters[0] % (2 * np.pi)) / np.pi
+                rotation_angle = gate.parameters[0] % (2 * np.pi)
+                relative_phase = virtual_z_phases[qubit]
+                if rotation_angle > np.pi:
+                    rotation_angle = 2 * np.pi - rotation_angle
+                    relative_phase += np.pi
+                pulse = self.create_RX_pulse(qubit, relative_phase=relative_phase)
+                pulse.amplitude *= rotation_angle / np.pi
+                sequence.append_at_end_of_channel(pulse)
 
             elif isinstance(gate, gates.RY):
                 qubit = gate.target_qubits[0]
-                pulse = self.create_RX_pulse(qubit, relative_phase=virtual_z_phases[qubit] + np.pi / 2)
-                pulse.amplitude *= (gate.parameters[0] % (2 * np.pi)) / np.pi
+                rotation_angle = gate.parameters[0] % (2 * np.pi)
+                relative_phase = virtual_z_phases[qubit] + np.pi / 2
+                if rotation_angle > np.pi:
+                    rotation_angle = 2 * np.pi - rotation_angle
+                    relative_phase += np.pi
+                pulse = self.create_RX_pulse(qubit, relative_phase=relative_phase)
+                pulse.amplitude *= rotation_angle / np.pi
+                sequence.append_at_end_of_channel(pulse)
 
             elif isinstance(gate, gates.Z):
                 qubit = gate.target_qubits[0]
@@ -228,7 +244,7 @@ class AbstractPlatform(ABC):
                 measurement_start = sequence.finish
                 for qubit in circuit.measurement_gate.target_qubits:
                     MZ_pulse = self.create_MZ_pulse(qubit, measurement_start)
-                    sequence.add(MZ_pulse)
+                    sequence.add(MZ_pulse)  # append_at_end_of_channel?
 
             elif isinstance(gate, gates.ParametrizedGate):
                 if len(gate.qubits) > 1:
@@ -240,15 +256,17 @@ class AbstractPlatform(ABC):
                 # apply RZ(lam)
                 virtual_z_phases[qubit] += lam
                 # Fetch pi/2 pulse from calibration
-                RX90_pulse_1 = self.create_RX90_pulse(qubit, sequence.finish, virtual_z_phases[qubit])
+                RX90_pulse_1 = self.create_RX90_pulse(qubit, sequence.finish, relative_phase=virtual_z_phases[qubit])
                 # apply RX(pi/2)
-                sequence.add(RX90_pulse_1)
+                sequence.append_at_end_of_channel(RX90_pulse_1)
                 # apply RZ(theta)
                 virtual_z_phases[qubit] += theta
                 # Fetch pi/2 pulse from calibration
-                RX90_pulse_2 = self.create_RX90_pulse(qubit, sequence.finish, virtual_z_phases[qubit] - np.pi)
+                RX90_pulse_2 = self.create_RX90_pulse(
+                    qubit, sequence.finish, relative_phase=virtual_z_phases[qubit] - np.pi
+                )
                 # apply RX(-pi/2)
-                sequence.add(RX90_pulse_2)
+                sequence.append_at_end_of_channel(RX90_pulse_2)
                 # apply RZ(phi)
                 virtual_z_phases[qubit] += phi
             else:
