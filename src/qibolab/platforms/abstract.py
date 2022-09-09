@@ -5,7 +5,14 @@ import yaml
 from qibo import gates
 from qibo.config import log, raise_error
 
-from qibolab.pulses import Drag, Gaussian, Pulse, ReadoutPulse, Rectangular
+from qibolab.pulses import (
+    Drag,
+    Gaussian,
+    Pulse,
+    PulseSequence,
+    ReadoutPulse,
+    Rectangular,
+)
 
 
 class AbstractPlatform(ABC):
@@ -99,6 +106,11 @@ class AbstractPlatform(ABC):
                 RuntimeError,
                 "There is no connection to the instruments, the setup cannot be completed",
             )
+        self.nqubits = self.settings["nqubits"]
+        if self.nqubits == 1:
+            self.resonator_type = "3D"
+        else:
+            self.resonator_type = "2D"
         self.hardware_avg = self.settings["settings"]["hardware_avg"]
         self.sampling_rate = self.settings["settings"]["sampling_rate"]
         self.repetition_duration = self.settings["settings"]["repetition_duration"]
@@ -124,6 +136,14 @@ class AbstractPlatform(ABC):
                             self.qubit_instrument_map[qubit][
                                 self.qubit_channel_map[qubit].index(channel)
                             ] = name
+                if "s4g_modules" in self.settings["instruments"][name]["settings"]:
+                    for channel in self.settings["instruments"][name]["settings"][
+                        "s4g_modules"
+                    ]:
+                        if channel in self.qubit_channel_map[qubit]:
+                            self.qubit_instrument_map[qubit][
+                                self.qubit_channel_map[qubit].index(channel)
+                            ] = name
         # Load Native Gates
         self.native_gates = self.settings["native_gates"]
 
@@ -143,6 +163,7 @@ class AbstractPlatform(ABC):
         self.qf_channel = {}
         self.qrm = {}
         self.qcm = {}
+        self.qbm = {}
         self.ro_port = {}
         self.qd_port = {}
         self.qf_port = {}
@@ -161,7 +182,11 @@ class AbstractPlatform(ABC):
                 self.qd_port[qubit] = self.qcm[qubit].ports[
                     self.qcm[qubit].channel_port_map[self.qubit_channel_map[qubit][1]]
                 ]
-            # TODO: implement qf modules
+            if not self.qubit_instrument_map[qubit][2] is None:
+                self.qbm[qubit] = self.instruments[self.qubit_instrument_map[qubit][2]]
+                self.qf_port[qubit] = self.qbm[qubit].dacs[
+                    self.qubit_channel_map[qubit][2]
+                ]
 
     def start(self):
         if self.is_connected:
@@ -179,48 +204,120 @@ class AbstractPlatform(ABC):
                 self.instruments[name].disconnect()
             self.is_connected = False
 
-    def to_sequence(self, sequence, gate):
+    # TRANSPILATION
+    from qibo.models import Circuit
+
+    def transpile(
+        self, circuit: Circuit
+    ):  # (self, circuit: qibo.core.circuit.Circuit) -> PulseSequence
         import numpy as np
 
-        if isinstance(gate, gates.M):
-            # Add measurement pulse
-            for qubit in gate.target_qubits:
-                MZ_pulse = self.MZ_pulse(qubit, sequence.time, sequence.phase)
-                sequence.add(MZ_pulse)
-                sequence.time += MZ_pulse.duration
+        from qibolab.transpilers.native import NativeGates
 
-        elif isinstance(gate, gates.I):
-            pass
+        native_gates_circuit = NativeGates().translate_circuit(circuit)
+        sequence = PulseSequence()
+        virtual_z_phases = {}
+        for qubit in range(circuit.nqubits):
+            virtual_z_phases[qubit] = 0
 
-        elif isinstance(gate, gates.Z):
-            sequence.phase += np.pi
+        for gate in native_gates_circuit.queue:
 
-        elif isinstance(gate, gates.RZ):
-            sequence.phase += gate.parameters[0]
+            if isinstance(gate, gates.I):
+                pass
 
-        elif isinstance(gate, gates.U3):
-            qubit = gate.target_qubits[0]
-            # Transform gate to U3 and add pi/2-pulses
-            theta, phi, lam = gate.parameters
-            # apply RZ(lam)
-            sequence.phase += lam
-            # Fetch pi/2 pulse from calibration
-            RX90_pulse_1 = self.RX90_pulse(qubit, sequence.time, sequence.phase)
-            # apply RX(pi/2)
-            sequence.add(RX90_pulse_1)
-            sequence.time += RX90_pulse_1.duration
-            # apply RZ(theta)
-            sequence.phase += theta
-            # Fetch pi/2 pulse from calibration
-            RX90_pulse_2 = self.RX90_pulse(qubit, sequence.time, sequence.phase - np.pi)
-            # apply RX(-pi/2)
-            sequence.add(RX90_pulse_2)
-            sequence.time += RX90_pulse_2.duration
-            # apply RZ(phi)
-            sequence.phase += phi
+            # if isinstance(gate, gates.I):
+            #     qubit = gate.target_qubits[0]
+            #     pulse = self.create_RX_pulse(qubit)
+            #     pulse.amplitude = 0
+            #     sequence.append_at_end_of_channel(pulse, pulse.copy())
 
-        else:
-            raise_error(NotImplementedError, f"Gate {gate.name} is not available.")
+            # elif isinstance(gate, gates.X):
+            #     qubit = gate.target_qubits[0]
+            #     pulse = self.create_RX90_pulse(qubit, relative_phase=virtual_z_phases[qubit])
+            #     sequence.append_at_end_of_channel(pulse, pulse.copy())
+
+            # elif isinstance(gate, gates.Y):
+            #     qubit = gate.target_qubits[0]
+            #     pulse = self.create_RX90_pulse(qubit, relative_phase=virtual_z_phases[qubit] + np.pi / 2)
+            #     sequence.append_at_end_of_channel(pulse, pulse.copy())
+
+            # elif isinstance(gate, gates.RX):
+            #     qubit = gate.target_qubits[0]
+            #     rotation_angle = gate.parameters[0] % (2 * np.pi)
+            #     relative_phase = virtual_z_phases[qubit]
+            #     if rotation_angle > np.pi:
+            #         rotation_angle = 2 * np.pi - rotation_angle
+            #         relative_phase += np.pi
+            #     pulse = self.create_RX90_pulse(qubit, relative_phase=relative_phase)
+            #     pulse.amplitude *= rotation_angle / np.pi
+            #     sequence.append_at_end_of_channel(pulse, pulse.copy())
+
+            # elif isinstance(gate, gates.RY):
+            #     qubit = gate.target_qubits[0]
+            #     rotation_angle = gate.parameters[0] % (2 * np.pi)
+            #     relative_phase = virtual_z_phases[qubit] + np.pi / 2
+            #     if rotation_angle > np.pi:
+            #         rotation_angle = 2 * np.pi - rotation_angle
+            #         relative_phase += np.pi
+            #     pulse = self.create_RX90_pulse(qubit, relative_phase=relative_phase)
+            #     pulse.amplitude *= rotation_angle / np.pi
+            #     sequence.append_at_end_of_channel(pulse, pulse.copy())
+
+            elif isinstance(gate, gates.Z):
+                qubit = gate.target_qubits[0]
+                virtual_z_phases[qubit] += np.pi
+
+            elif isinstance(gate, gates.RZ):
+                qubit = gate.target_qubits[0]
+                virtual_z_phases[qubit] += gate.parameters[0]
+
+            elif isinstance(gate, gates.M):
+                # Add measurement pulse
+                measurement_start = sequence.finish
+                for qubit in circuit.measurement_gate.target_qubits:
+                    MZ_pulse = self.create_MZ_pulse(qubit, measurement_start)
+                    sequence.add(MZ_pulse)  # append_at_end_of_channel?
+
+            elif isinstance(gate, gates.U3):
+                qubit = gate.target_qubits[0]
+                # Transform gate to U3 and add pi/2-pulses
+                theta, phi, lam = gate.parameters
+                # apply RZ(lam)
+                virtual_z_phases[qubit] += lam
+                # Fetch pi/2 pulse from calibration
+                RX90_pulse_1 = self.create_RX90_pulse(
+                    qubit, sequence.finish, relative_phase=virtual_z_phases[qubit]
+                )
+                # apply RX(pi/2)
+                sequence.append_at_end_of_channel(RX90_pulse_1)
+                # apply RZ(theta)
+                virtual_z_phases[qubit] += theta
+                # Fetch pi/2 pulse from calibration
+                RX90_pulse_2 = self.create_RX90_pulse(
+                    qubit,
+                    sequence.finish,
+                    relative_phase=virtual_z_phases[qubit] - np.pi,
+                )
+                # apply RX(-pi/2)
+                sequence.append_at_end_of_channel(RX90_pulse_2)
+                # apply RZ(phi)
+                virtual_z_phases[qubit] += phi
+
+            else:
+                raise_error(
+                    NotImplementedError,
+                    f"Transpilation of {gate.__class__.__name__} gate has not been implemented yet.",
+                )
+
+        # Finally add measurement gates
+        measurement_start = sequence.finish
+        for qubit in circuit.measurement_gate.target_qubits:
+            MZ_pulse = self.create_MZ_pulse(qubit, measurement_start)
+            sequence.add(MZ_pulse)
+        # FIXME: is there any reason not to include measurement gates as part of the circuit queue?
+        # This workaround adds them at the end, but would it not be desirable to be able to insert
+        # measurement gates in the middle of circuits? (Alvaro)
+        return sequence
 
     @abstractmethod
     def execute_pulse_sequence(self, sequence, nshots=None):  # pragma: no cover
@@ -255,7 +352,14 @@ class AbstractPlatform(ABC):
         from qibolab.pulses import Pulse
 
         return Pulse(
-            start, qd_duration, qd_amplitude, qd_frequency, phase, qd_shape, qd_channel
+            start,
+            qd_duration,
+            qd_amplitude,
+            qd_frequency,
+            phase,
+            qd_shape,
+            qd_channel,
+            qubit=qubit,
         )
 
     def RX_pulse(self, qubit, start=0, phase=0):
@@ -273,7 +377,14 @@ class AbstractPlatform(ABC):
         from qibolab.pulses import Pulse
 
         return Pulse(
-            start, qd_duration, qd_amplitude, qd_frequency, phase, qd_shape, qd_channel
+            start,
+            qd_duration,
+            qd_amplitude,
+            qd_frequency,
+            phase,
+            qd_shape,
+            qd_channel,
+            qubit=qubit,
         )
 
     def MZ_pulse(self, qubit, start, phase=0):
@@ -291,7 +402,14 @@ class AbstractPlatform(ABC):
         from qibolab.pulses import ReadoutPulse
 
         return ReadoutPulse(
-            start, ro_duration, ro_amplitude, ro_frequency, phase, ro_shape, ro_channel
+            start,
+            ro_duration,
+            ro_amplitude,
+            ro_frequency,
+            0,
+            ro_shape,
+            ro_channel,
+            qubit=qubit,
         )
 
     def qubit_drive_pulse(self, qubit, start, duration, phase=0):
@@ -306,7 +424,14 @@ class AbstractPlatform(ABC):
         from qibolab.pulses import Pulse
 
         return Pulse(
-            start, duration, qd_amplitude, qd_frequency, phase, qd_shape, qd_channel
+            start,
+            duration,
+            qd_amplitude,
+            qd_frequency,
+            phase,
+            qd_shape,
+            qd_channel,
+            qubit=qubit,
         )
 
     def qubit_readout_pulse(self, qubit, start, phase=0):
@@ -324,8 +449,18 @@ class AbstractPlatform(ABC):
         from qibolab.pulses import ReadoutPulse
 
         return ReadoutPulse(
-            start, ro_duration, ro_amplitude, ro_frequency, phase, ro_shape, ro_channel
+            start,
+            ro_duration,
+            ro_amplitude,
+            ro_frequency,
+            0,
+            ro_shape,
+            ro_channel,
+            qubit=qubit,
         )
+
+    # TODO Remove RX90_drag_pulse and RX_drag_pulse, replace them with create_qubit_drive_pulse
+    # TODO Add RY90 and RY pulses
 
     def RX90_drag_pulse(self, qubit, start, phase=0, beta=None):
         # create RX pi/2 pulse with drag shape
@@ -349,7 +484,14 @@ class AbstractPlatform(ABC):
         from qibolab.pulses import Pulse
 
         return Pulse(
-            start, qd_duration, qd_amplitude, qd_frequency, phase, qd_shape, qd_channel
+            start,
+            qd_duration,
+            qd_amplitude,
+            qd_frequency,
+            phase,
+            qd_shape,
+            qd_channel,
+            qubit=qubit,
         )
 
     def RX_drag_pulse(self, qubit, start, phase=0, beta=None):
@@ -374,5 +516,12 @@ class AbstractPlatform(ABC):
         from qibolab.pulses import Pulse
 
         return Pulse(
-            start, qd_duration, qd_amplitude, qd_frequency, phase, qd_shape, qd_channel
+            start,
+            qd_duration,
+            qd_amplitude,
+            qd_frequency,
+            phase,
+            qd_shape,
+            qd_channel,
+            qubit=qubit,
         )

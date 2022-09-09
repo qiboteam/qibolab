@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import numpy as np
 from qibo.backends import NumpyBackend
 from qibo.config import raise_error
 from qibo.states import CircuitResult
@@ -7,22 +8,18 @@ from qibo.states import CircuitResult
 class QibolabBackend(NumpyBackend):
     def __init__(self, platform, runcard=None):
         from qibolab.platform import Platform
-        from qibolab.transpilers.native import NativeGates
 
         super().__init__()
         self.name = "qibolab"
         self.platform = Platform(platform, runcard)
-        self.native_gates = NativeGates()
+        self.platform.connect()
+        self.platform.setup()
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
 
     def apply_gate_density_matrix(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
-
-    def asnative(self, gate):
-        """Transforms an arbitrary gate to a hardware native gate."""
-        return self.native_gates.translate_gate(gate)
 
     def execute_circuit(
         self, circuit, initial_state=None, nshots=None
@@ -36,7 +33,7 @@ class QibolabBackend(NumpyBackend):
                 calibration yml will be used.
 
         Returns:
-            Readout results acquired by after execution.
+            CircuitResult object containing the results acquired from the execution.
         """
         from qibolab.pulses import PulseSequence
 
@@ -46,19 +43,13 @@ class QibolabBackend(NumpyBackend):
                 "Hardware backend does not support " "initial state in circuits.",
             )
 
-        # Translate gates to pulses and create a ``PulseSequence``
         if circuit.measurement_gate is None:
             raise_error(RuntimeError, "No measurement register assigned.")
 
-        sequence = PulseSequence()
-        for gate in circuit.queue:
-            native_gate = self.asnative(gate)
-            self.platform.to_sequence(sequence, native_gate)
-        self.platform.to_sequence(sequence, circuit.measurement_gate)
+        # Transpile a circuit into a sequence of pulses ``PulseSequence``
+        sequence: PulseSequence = self.platform.transpile(circuit)
 
         # Execute the pulse sequence on the platform
-        self.platform.connect()
-        self.platform.setup()
         self.platform.start()
         readout = self.platform(sequence, nshots)
         self.platform.stop()
@@ -70,26 +61,40 @@ class QibolabBackend(NumpyBackend):
             "Qibolab cannot return state vector in tensor representation.",
         )
 
-    def circuit_result_representation(self, result):
+    def circuit_result_representation(self, result: CircuitResult):
         # TODO: Consider changing this to a more readable format.
         # this must return a ``str`` because it is used in ``CircuitResult.__repr__``.
         return str(result.execution_result)
 
-    def circuit_result_probabilities(self, result, qubits=None):
+    def circuit_result_probabilities(self, result: CircuitResult, qubits=None):
+        """Returns the probability of the qubit being in state |0>"""
         if qubits is None:  # pragma: no cover
             qubits = result.circuit.measurement_gate.qubits
-        # naive normalization
-        qubit = qubits[0]
-        readout = list(list(result.execution_result.values())[0].values())[0]
-        state1_voltage = self.platform.settings["characterization"]["single_qubit"][
-            qubit
-        ]["state1_voltage"]
-        state0_voltage = self.platform.settings["characterization"]["single_qubit"][
-            qubit
-        ]["state0_voltage"]
-        import numpy as np
 
-        p = np.abs(readout[0] * 1e6 - state1_voltage) / np.abs(
-            state1_voltage - state0_voltage
-        )
-        return [p, 1 - p]
+        def distance(a, b):
+            return np.sqrt(
+                (np.real(a) - np.real(b)) ** 2 + (np.imag(a) - np.imag(b)) ** 2
+            )
+
+        # basic classification
+        probabilities = []
+        for qubit in qubits:
+            mean_state0: complex = complex(
+                self.platform.characterization["single_qubit"][qubit]["mean_gnd_states"]
+            )
+            mean_state1: complex = complex(
+                self.platform.characterization["single_qubit"][qubit]["mean_exc_states"]
+            )
+            i = result.execution_result[qubit][
+                2
+            ]  # execution_result[qubit] provides the latest
+            q = result.execution_result[qubit][
+                3
+            ]  # acquisition data for the corresponding qubit
+            measurement: complex = complex(i, q)
+            d0 = distance(measurement, mean_state0)
+            d1 = distance(measurement, mean_state1)
+            d01 = distance(mean_state0, mean_state1)
+            p = (d1**2 + d01**2 - d0**2) / 2 / d01**2
+            probabilities.append([p, 1 - p])
+        return probabilities
