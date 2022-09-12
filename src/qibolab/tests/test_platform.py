@@ -24,3 +24,6 @@ def test_platform_icarusq():
 def test_platform():
     with pytest.raises(RuntimeError):
         platform = Platform("nonexistent")
+
+
+# TODO: test dummy platform

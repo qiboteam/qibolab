@@ -28,19 +28,19 @@ def test_instruments_rohde_schwarz_init(name):
     assert instance.name == name
     assert instance.address == address
     assert instance.is_connected == False
-    assert instance.signature == f"{name}@{address}"
     assert instance.device == None
+    assert instance.signature == f"{name}@{address}"
     assert instance.data_folder == user_folder / "instruments" / "data" / instance.tmp_folder.name.split("/")[-1]
 
 
 @pytest.mark.xfail
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
-def test_instruments_qublox_connect(name):
+def test_instruments_rohde_schwarz_connect(name):
     instruments[name].connect()
 
 
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
-def test_instruments_qublox_setup(name):
+def test_instruments_rohde_schwarz_setup(name):
     if not instruments[name].is_connected:
         pytest.xfail("Instrument not available")
     else:
@@ -55,12 +55,12 @@ def test_instruments_qublox_setup(name):
 
 def instrument_set_and_test_parameter_values(instrument, parameter, values):
     for value in values:
-        instrument.set_device_parameter(parameter, value)
+        instrument._set_device_parameter(parameter, value)
         assert instrument.device.get(parameter) == value
 
 
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
-def test_instruments_qublox_set_device_paramter(name):
+def test_instruments_rohde_schwarz_set_device_paramter(name):
     if not instruments[name].is_connected:
         pytest.xfail("Instrument not available")
     else:
@@ -96,7 +96,7 @@ def test_instruments_qublox_set_device_paramter(name):
 
 
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
-def test_instruments_qublox_start_stop_disconnect(name):
+def test_instruments_rohde_schwarz_start_stop_disconnect(name):
     if not instruments[name].is_connected:
         pytest.xfail("Instrument not available")
     else:
