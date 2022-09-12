@@ -44,10 +44,7 @@ def can_execute(circuit):
                 log.info(f"{gate.name} is not native gate.")
                 return False
             if 0 not in gate.qubits:
-                log.info(
-                    "Circuit does not respect connectivity. "
-                    f"{gate.name} acts on {gate.qubits}."
-                )
+                log.info("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
                 return False
 
         else:

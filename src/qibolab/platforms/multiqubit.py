@@ -10,9 +10,7 @@ class MultiqubitPlatform(AbstractPlatform):
 
     def execute_pulse_sequence(self, sequence, nshots=None):
         if not self.is_connected:
-            raise_error(
-                RuntimeError, "Execution failed because instruments are not connected."
-            )
+            raise_error(RuntimeError, "Execution failed because instruments are not connected.")
         if nshots is None:
             nshots = self.hardware_avg
 
@@ -21,9 +19,7 @@ class MultiqubitPlatform(AbstractPlatform):
         pulse_sequence = sequence.pulses
         pulse_sequence.sort(key=lambda pulse: pulse.start)
         if len(pulse_sequence) > 0:
-            pulse_sequence_duration = (
-                pulse_sequence[-1].start + pulse_sequence[-1].duration
-            )
+            pulse_sequence_duration = pulse_sequence[-1].start + pulse_sequence[-1].duration
 
         # Process Pulse Sequence. Assign pulses to channels
         channel_pulses = {}
@@ -49,9 +45,7 @@ class MultiqubitPlatform(AbstractPlatform):
                 for channel in self.instruments[name].channel_port_map:
                     if channel in self.channels:
                         instrument_pulses[name][channel] = channel_pulses[channel]
-                self.instruments[name].process_pulse_sequence(
-                    instrument_pulses[name], nshots
-                )
+                self.instruments[name].process_pulse_sequence(instrument_pulses[name], nshots)
                 self.instruments[name].upload()
 
         for name in self.instruments:
@@ -64,13 +58,9 @@ class MultiqubitPlatform(AbstractPlatform):
             if instrument_pulses[name] is not None:
                 if "QRM" in self.settings["instruments"][name]["class"]:
                     if "ro" in [
-                        p.type
-                        for ch in self.instruments[name].channel_port_map
-                        for p in instrument_pulses[name][ch]
+                        p.type for ch in self.instruments[name].channel_port_map for p in instrument_pulses[name][ch]
                     ]:
-                        acquisition_results = self.instruments[
-                            name
-                        ].play_sequence_and_acquire()
+                        acquisition_results = self.instruments[name].play_sequence_and_acquire()
                     else:
                         self.instruments[name].play_sequence()
 

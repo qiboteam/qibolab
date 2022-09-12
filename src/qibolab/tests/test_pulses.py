@@ -52,10 +52,7 @@ def test_gaussian_shape():
     x = np.arange(0, duration, 1)
     np.testing.assert_allclose(
         pulse.envelope_i,
-        np.exp(
-            -(1 / 2)
-            * (((x - (duration - 1) / 2) ** 2) / (((duration) / rel_sigma) ** 2))
-        ),
+        np.exp(-(1 / 2) * (((x - (duration - 1) / 2) ** 2) / (((duration) / rel_sigma) ** 2))),
     )
     np.testing.assert_allclose(pulse.envelope_q, np.zeros(50))
 
@@ -81,19 +78,13 @@ def test_drag_shape():
     x = np.arange(0, duration, 1)
     np.testing.assert_allclose(
         pulse.envelope_i,
-        np.exp(
-            -(1 / 2)
-            * (((x - (duration - 1) / 2) ** 2) / (((duration) / rel_sigma) ** 2))
-        ),
+        np.exp(-(1 / 2) * (((x - (duration - 1) / 2) ** 2) / (((duration) / rel_sigma) ** 2))),
     )
     np.testing.assert_allclose(
         pulse.envelope_q,
         beta
         * (-(x - (duration - 1) / 2) / ((duration / rel_sigma) ** 2))
-        * np.exp(
-            -(1 / 2)
-            * (((x - (duration - 1) / 2) ** 2) / (((duration) / rel_sigma) ** 2))
-        ),
+        * np.exp(-(1 / 2) * (((x - (duration - 1) / 2) ** 2) / (((duration) / rel_sigma) ** 2))),
     )
 
 

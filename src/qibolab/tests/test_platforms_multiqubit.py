@@ -83,14 +83,10 @@ def test_abstractplatform_reload_settings(fx_connect_platform):
     else:
         original_sampling_rate = platform.settings["settings"]["sampling_rate"]
         new_sampling_rate = 2_000_000_000
-        save_config_parameter(
-            test_runcard, "sampling_rate", new_sampling_rate, "settings"
-        )
+        save_config_parameter(test_runcard, "sampling_rate", new_sampling_rate, "settings")
         platform.reload_settings()
         assert platform.settings["settings"]["sampling_rate"] == new_sampling_rate
-        save_config_parameter(
-            test_runcard, "sampling_rate", original_sampling_rate, "settings"
-        )
+        save_config_parameter(test_runcard, "sampling_rate", original_sampling_rate, "settings")
         platform.reload_settings()
 
 
@@ -180,9 +176,7 @@ def test_multiqubitplatform_execute_one_extralong_drive_pulse(fx_connect_platfor
     else:
         # Extra Long duration
         sequence = PulseSequence()
-        sequence.add(
-            platform.qubit_drive_pulse(qubit, start=0, duration=2 * 8192 + 200)
-        )
+        sequence.add(platform.qubit_drive_pulse(qubit, start=0, duration=2 * 8192 + 200))
         platform.execute_pulse_sequence(sequence, nshots)
 
 
@@ -252,12 +246,8 @@ def test_multiqubitplatform_execute_multiple_readout_pulses(fx_connect_platform)
         sequence = PulseSequence()
         qd_pulse1 = platform.qubit_drive_pulse(qubit, start=0, duration=200)
         ro_pulse1 = platform.qubit_readout_pulse(qubit, start=200)
-        qd_pulse2 = platform.qubit_drive_pulse(
-            qubit, start=(ro_pulse1.start + ro_pulse1.duration), duration=400
-        )
-        ro_pulse2 = platform.qubit_readout_pulse(
-            qubit, start=(ro_pulse1.start + ro_pulse1.duration + 400)
-        )
+        qd_pulse2 = platform.qubit_drive_pulse(qubit, start=(ro_pulse1.start + ro_pulse1.duration), duration=400)
+        ro_pulse2 = platform.qubit_readout_pulse(qubit, start=(ro_pulse1.start + ro_pulse1.duration + 400))
         sequence.add(qd_pulse1)
         sequence.add(ro_pulse1)
         sequence.add(qd_pulse2)

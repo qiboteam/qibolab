@@ -29,9 +29,7 @@ class SGS100A(AbstractInstrument):
 
             for attempt in range(3):
                 try:
-                    self.device = LO_SGS100A.RohdeSchwarz_SGS100A(
-                        self.name, f"TCPIP0::{self.address}::5025::SOCKET"
-                    )
+                    self.device = LO_SGS100A.RohdeSchwarz_SGS100A(self.name, f"TCPIP0::{self.address}::5025::SOCKET")
                     self.is_connected = True
                     break
                 except KeyError as exc:
@@ -42,15 +40,10 @@ class SGS100A(AbstractInstrument):
             if not self.is_connected:
                 raise InstrumentException(self, f"Unable to connect to {self.name}")
         else:
-            raise_error(
-                Exception, "There is an open connection to the instrument already"
-            )
+            raise_error(Exception, "There is an open connection to the instrument already")
 
     def set_device_parameter(self, parameter: str, value):
-        if not (
-            parameter in self.device_parameters
-            and self.device_parameters[parameter] == value
-        ):
+        if not (parameter in self.device_parameters and self.device_parameters[parameter] == value):
             if self.is_connected:
                 if hasattr(self.device, parameter):
                     self.device.set(parameter, value)
@@ -63,9 +56,7 @@ class SGS100A(AbstractInstrument):
                         f"The instrument {self.name} does not have parameter {parameter}",
                     )
             else:
-                raise_error(
-                    Exception, "There is no connection to the instrument  {self.name}"
-                )
+                raise_error(Exception, "There is no connection to the instrument  {self.name}")
 
     def setup(self, **kwargs):
         if self.is_connected:
@@ -74,9 +65,7 @@ class SGS100A(AbstractInstrument):
             self.hardware_avg = kwargs["hardware_avg"]
             self.sampling_rate = kwargs["sampling_rate"]
             self.repetition_duration = kwargs["repetition_duration"]
-            self.minimum_delay_between_instructions = kwargs[
-                "minimum_delay_between_instructions"
-            ]
+            self.minimum_delay_between_instructions = kwargs["minimum_delay_between_instructions"]
         else:
             raise_error(Exception, "There is no connection to the instrument")
 

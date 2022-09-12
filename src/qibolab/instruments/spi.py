@@ -30,9 +30,7 @@ class SPI(AbstractInstrument):
             if not self.is_connected:
                 raise InstrumentException(self, f"Unable to connect to {self.name}")
         else:
-            raise_error(
-                Exception, "There is an open connection to the instrument already"
-            )
+            raise_error(Exception, "There is an open connection to the instrument already")
 
     def setup(self, **kwargs):
         # Init S4g and D5a modules in SPI mapped on runcard
@@ -47,9 +45,7 @@ class SPI(AbstractInstrument):
             self.hardware_avg = kwargs["hardware_avg"]
             self.sampling_rate = kwargs["sampling_rate"]
             self.repetition_duration = kwargs["repetition_duration"]
-            self.minimum_delay_between_instructions = kwargs[
-                "minimum_delay_between_instructions"
-            ]
+            self.minimum_delay_between_instructions = kwargs["minimum_delay_between_instructions"]
             for s4g_module in self.s4g_modules.values():
                 if not s4g_module[1] in self.device.instrument_modules:
                     self.device.add_spi_module(s4g_module[0], "S4g", s4g_module[1])
@@ -64,59 +60,35 @@ class SPI(AbstractInstrument):
 
     def set_S4g_DAC_current(self, flux_port, current_value):
         module = self.s4g_modules[flux_port]
-        self.device.instrument_modules[module[1]].instrument_modules[
-            "dac" + str(module[2] - 1)
-        ].current(current_value)
+        self.device.instrument_modules[module[1]].instrument_modules["dac" + str(module[2] - 1)].current(current_value)
 
     def get_S4g_DAC_current(self, flux_port):
         module = self.s4g_modules[flux_port]
-        return (
-            self.device.instrument_modules[module[1]]
-            .instrument_modules["dac" + str(module[2] - 1)]
-            .current()
-        )
+        return self.device.instrument_modules[module[1]].instrument_modules["dac" + str(module[2] - 1)].current()
 
     def set_S4g_span(self, flux_port, span_value):
         module = self.s4g_modules[flux_port]
-        self.device.instrument_modules[module[1]].instrument_modules[
-            "dac" + str(module[2] - 1)
-        ].span(span_value)
+        self.device.instrument_modules[module[1]].instrument_modules["dac" + str(module[2] - 1)].span(span_value)
 
     def get_S4g_span(self, flux_port):
         module = self.s4g_modules[flux_port]
-        return (
-            self.device.instrument_modules[module[1]]
-            .instrument_modules["dac" + str(module[2] - 1)]
-            .span()
-        )
+        return self.device.instrument_modules[module[1]].instrument_modules["dac" + str(module[2] - 1)].span()
 
     def set_D5a_DAC_voltage(self, flux_port, voltage_value):
         module = self.d5a_modules[flux_port]
-        self.device.instrument_modules[module[1]].instrument_modules[
-            "dac" + str(module[2] - 1)
-        ].voltage(voltage_value)
+        self.device.instrument_modules[module[1]].instrument_modules["dac" + str(module[2] - 1)].voltage(voltage_value)
 
     def get_D5a_DAC_voltage(self, flux_port):
         module = self.d5a_modules[flux_port]
-        return (
-            self.device.instrument_modules[module[1]]
-            .instrument_modules["dac" + str(module[2] - 1)]
-            .voltage()
-        )
+        return self.device.instrument_modules[module[1]].instrument_modules["dac" + str(module[2] - 1)].voltage()
 
     def set_D5a_span(self, flux_port, span_value):
         module = self.d5a_modules[flux_port]
-        self.device.instrument_modules[module[1]].instrument_modules[
-            "dac" + str(module[2] - 1)
-        ].span(span_value)
+        self.device.instrument_modules[module[1]].instrument_modules["dac" + str(module[2] - 1)].span(span_value)
 
     def get_D5a_span(self, flux_port):
         module = self.d5a_modules[flux_port]
-        return (
-            self.device.instrument_modules[module[1]]
-            .instrument_modules["dac" + str(module[2] - 1)]
-            .span()
-        )
+        return self.device.instrument_modules[module[1]].instrument_modules["dac" + str(module[2] - 1)].span()
 
     def set_SPI_DACS_to_cero(self):
         self.device.set_dacs_zero()
@@ -145,37 +117,29 @@ class SPI(AbstractInstrument):
             for module in self.s4g_modules.values():
                 # Check current voltage of the module and warning
                 actual_voltage = (
-                    self.device.instrument_modules[module[1]]
-                    .instrument_modules["dac" + str(module[2] - 1)]
-                    .current()
+                    self.device.instrument_modules[module[1]].instrument_modules["dac" + str(module[2] - 1)].current()
                 )
                 # log.info(
                 #    f"WARNING: {module[1]} - flux port {module[2]}: current voltage: {actual_voltage} new voltage: {module[3]}"
                 # )
 
-                self.device.instrument_modules[module[1]].instrument_modules[
-                    "dac" + str(module[2] - 1)
-                ].current(module[3])
-                self.device.instrument_modules[module[1]].instrument_modules[
-                    "dac" + str(module[2] - 1)
-                ].span(module[4])
+                self.device.instrument_modules[module[1]].instrument_modules["dac" + str(module[2] - 1)].current(
+                    module[3]
+                )
+                self.device.instrument_modules[module[1]].instrument_modules["dac" + str(module[2] - 1)].span(module[4])
             for module in self.d5a_modules.values():
                 # Check current voltage of the module and warning
                 actual_voltage = (
-                    self.device.instrument_modules[module[1]]
-                    .instrument_modules["dac" + str(module[2] - 1)]
-                    .current()
+                    self.device.instrument_modules[module[1]].instrument_modules["dac" + str(module[2] - 1)].current()
                 )
                 # log.info(
                 #    f"WARNING: {module[1]} - flux port {module[2]}: current voltage: {actual_voltage} new voltage: {module[3]}"
                 # )
 
-                self.device.instrument_modules[module[1]].instrument_modules[
-                    "dac" + str(module[2] - 1)
-                ].voltage(module[3])
-                self.device.instrument_modules[module[1]].instrument_modules[
-                    "dac" + str(module[2] - 1)
-                ].span(module[4])
+                self.device.instrument_modules[module[1]].instrument_modules["dac" + str(module[2] - 1)].voltage(
+                    module[3]
+                )
+                self.device.instrument_modules[module[1]].instrument_modules["dac" + str(module[2] - 1)].span(module[4])
 
     def stop(self):
         # if self.is_connected:

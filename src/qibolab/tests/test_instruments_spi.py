@@ -28,13 +28,7 @@ def test_instruments_spi_init(name):
     assert instance.address == address
     assert instance.is_connected == False
     assert instance.signature == f"{name}@{address}"
-    assert (
-        instance.data_folder
-        == user_folder
-        / "instruments"
-        / "data"
-        / instance.tmp_folder.name.split("/")[-1]
-    )
+    assert instance.data_folder == user_folder / "instruments" / "data" / instance.tmp_folder.name.split("/")[-1]
 
 
 @pytest.mark.xfail
@@ -51,15 +45,10 @@ def test_instruments_spi_setup(name):
         test_runcard = qibolab_folder / "tests" / "test_instruments_spi.yml"
         with open(test_runcard, "r") as file:
             settings = yaml.safe_load(file)
-        instruments[name].setup(
-            **settings["settings"], **settings["instruments"][name]["settings"]
-        )
+        instruments[name].setup(**settings["settings"], **settings["instruments"][name]["settings"])
 
         for parameter in settings["instruments"][name]["settings"]:
-            assert (
-                getattr(instruments[name], parameter)
-                == settings["instruments"][name]["settings"][parameter]
-            )
+            assert getattr(instruments[name], parameter) == settings["instruments"][name]["settings"][parameter]
 
 
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)

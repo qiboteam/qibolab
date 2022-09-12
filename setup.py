@@ -37,11 +37,7 @@ setup(
     packages=find_packages("src"),
     package_dir={"": "src"},
     package_data={"": ["runcards/*.yml", "tests/*.yml", "*.txt"]},
-    entry_points={
-        "console_scripts": [
-            "calibrate-qubits = qibolab.calibration.calibrate_qubits:main"
-        ]
-    },
+    entry_points={"console_scripts": ["calibrate-qubits = qibolab.calibration.calibrate_qubits:main"]},
     zip_safe=False,
     classifiers=[
         "Programming Language :: Python :: 3",

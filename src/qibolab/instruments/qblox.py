@@ -66,9 +66,7 @@ class ClusterQRM_RF(AbstractInstrument):
     )
     sequencer_property_wrapper = lambda parent, sequencer, *parameter: property(
         lambda self: parent.device.sequencers[sequencer].get(parameter[0]),
-        lambda self, x: parent.set_device_parameter(
-            parent.device.sequencers[sequencer], *parameter, value=x
-        ),
+        lambda self, x: parent.set_device_parameter(parent.device.sequencers[sequencer], *parameter, value=x),
     )
 
     def __init__(self, name, address):
@@ -99,48 +97,32 @@ class ClusterQRM_RF(AbstractInstrument):
                         "gain": self.sequencer_property_wrapper(
                             self.DEFAULT_SEQUENCER, "gain_awg_path0", "gain_awg_path1"
                         ),
-                        "hardware_mod_en": self.sequencer_property_wrapper(
-                            self.DEFAULT_SEQUENCER, "mod_en_awg"
-                        ),
-                        "nco_freq": self.sequencer_property_wrapper(
-                            self.DEFAULT_SEQUENCER, "nco_freq"
-                        ),
-                        "nco_phase_offs": self.sequencer_property_wrapper(
-                            self.DEFAULT_SEQUENCER, "nco_phase_offs"
-                        ),
+                        "hardware_mod_en": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCER, "mod_en_awg"),
+                        "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCER, "nco_freq"),
+                        "nco_phase_offs": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCER, "nco_phase_offs"),
                     },
                 )()
 
                 self.ports["i1"] = type(
                     f"port_i1",
                     (),
-                    {
-                        "hardware_demod_en": self.sequencer_property_wrapper(
-                            self.DEFAULT_SEQUENCER, "demod_en_acq"
-                        )
-                    },
+                    {"hardware_demod_en": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCER, "demod_en_acq")},
                 )()
 
                 setattr(
                     self.__class__,
                     "acquisition_duration",
-                    self.sequencer_property_wrapper(
-                        self.DEFAULT_SEQUENCER, "integration_length_acq"
-                    ),
+                    self.sequencer_property_wrapper(self.DEFAULT_SEQUENCER, "integration_length_acq"),
                 )
                 setattr(
                     self.__class__,
                     "discretization_threshold_acq",
-                    self.sequencer_property_wrapper(
-                        self.DEFAULT_SEQUENCER, "discretization_threshold_acq"
-                    ),
+                    self.sequencer_property_wrapper(self.DEFAULT_SEQUENCER, "discretization_threshold_acq"),
                 )
                 setattr(
                     self.__class__,
                     "phase_rotation_acq",
-                    self.sequencer_property_wrapper(
-                        self.DEFAULT_SEQUENCER, "phase_rotation_acq"
-                    ),
+                    self.sequencer_property_wrapper(self.DEFAULT_SEQUENCER, "phase_rotation_acq"),
                 )
 
                 self.cluster = cluster
@@ -176,12 +158,8 @@ class ClusterQRM_RF(AbstractInstrument):
 
                 target = self.device.sequencers[self.DEFAULT_SEQUENCER]
 
-                self.set_device_parameter(
-                    target, "channel_map_path0_out0_en", value=True
-                )
-                self.set_device_parameter(
-                    target, "channel_map_path1_out1_en", value=True
-                )
+                self.set_device_parameter(target, "channel_map_path0_out0_en", value=True)
+                self.set_device_parameter(target, "channel_map_path1_out1_en", value=True)
                 self.set_device_parameter(
                     target,
                     "cont_mode_en_awg_path0",
@@ -194,21 +172,13 @@ class ClusterQRM_RF(AbstractInstrument):
                     "cont_mode_waveform_idx_awg_path1",
                     value=0,
                 )
-                self.set_device_parameter(
-                    target, "marker_ovr_en", value=True
-                )  # Default after reboot = False
-                self.set_device_parameter(
-                    target, "marker_ovr_value", value=15
-                )  # Default after reboot = 0
+                self.set_device_parameter(target, "marker_ovr_en", value=True)  # Default after reboot = False
+                self.set_device_parameter(target, "marker_ovr_value", value=15)  # Default after reboot = 0
                 self.set_device_parameter(target, "mixer_corr_gain_ratio", value=1)
-                self.set_device_parameter(
-                    target, "mixer_corr_phase_offset_degree", value=0
-                )
+                self.set_device_parameter(target, "mixer_corr_phase_offset_degree", value=0)
                 self.set_device_parameter(target, "offset_awg_path0", value=0)
                 self.set_device_parameter(target, "offset_awg_path1", value=0)
-                self.set_device_parameter(
-                    target, "sync_en", value=True
-                )  # Default after reboot = False
+                self.set_device_parameter(target, "sync_en", value=True)  # Default after reboot = False
                 self.set_device_parameter(
                     target,
                     "upsample_rate_awg_path0",
@@ -238,9 +208,7 @@ class ClusterQRM_RF(AbstractInstrument):
             if not key in self.device_parameters:
                 for parameter in parameters:
                     if not hasattr(target, parameter):
-                        raise Exception(
-                            f"The instrument {self.name} does not have parameters {parameter}"
-                        )
+                        raise Exception(f"The instrument {self.name} does not have parameters {parameter}")
                     target.set(parameter, value)
                 self.device_parameters[key] = value
             elif self.device_parameters[key] != value:
@@ -278,28 +246,18 @@ class ClusterQRM_RF(AbstractInstrument):
             self.hardware_avg = kwargs["hardware_avg"]
             self.sampling_rate = kwargs["sampling_rate"]
             self.repetition_duration = kwargs["repetition_duration"]
-            self.minimum_delay_between_instructions = kwargs[
-                "minimum_delay_between_instructions"
-            ]
+            self.minimum_delay_between_instructions = kwargs["minimum_delay_between_instructions"]
             # TODO: Remove minimum_delay_between_instructions
 
             self.channel_port_map = kwargs["channel_port_map"]
 
-            self.ports["o1"].attenuation = kwargs["ports"]["o1"][
-                "attenuation"
-            ]  # Default after reboot = 7
-            self.ports["o1"].lo_enabled = kwargs["ports"]["o1"][
-                "lo_enabled"
-            ]  # Default after reboot = True
+            self.ports["o1"].attenuation = kwargs["ports"]["o1"]["attenuation"]  # Default after reboot = 7
+            self.ports["o1"].lo_enabled = kwargs["ports"]["o1"]["lo_enabled"]  # Default after reboot = True
             self.ports["o1"].lo_frequency = kwargs["ports"]["o1"][
                 "lo_frequency"
             ]  # Default after reboot = 6_000_000_000
-            self.ports["o1"].gain = kwargs["ports"]["o1"][
-                "gain"
-            ]  # Default after reboot = 1
-            self.ports["o1"].hardware_mod_en = kwargs["ports"]["o1"][
-                "hardware_mod_en"
-            ]  # Default after reboot = False
+            self.ports["o1"].gain = kwargs["ports"]["o1"]["gain"]  # Default after reboot = 1
+            self.ports["o1"].hardware_mod_en = kwargs["ports"]["o1"]["hardware_mod_en"]  # Default after reboot = False
 
             self.ports["o1"].nco_freq = 0  # Default after reboot = 1
             self.ports["o1"].nco_phase_offs = 0  # Default after reboot = 1
@@ -343,17 +301,14 @@ class ClusterQRM_RF(AbstractInstrument):
                     channel_pulses[channel][m].overlaps = []
                     for n in range(m):
                         if (
-                            channel_pulses[channel][m].start
-                            - channel_pulses[channel][n].start
+                            channel_pulses[channel][m].start - channel_pulses[channel][n].start
                             < channel_pulses[channel][n].duration
                         ):
                             channel_pulses[channel][m].overlaps.append(n)
                 for m in range(1, len(channel_pulses[channel])):
                     if len(channel_pulses[channel][m].overlaps) > 0:
                         # TODO: Urgently needed in order to implement multiplexed readout
-                        raise NotImplementedError(
-                            "Overlaping pulses on the same channel are not yet supported."
-                        )
+                        raise NotImplementedError("Overlaping pulses on the same channel are not yet supported.")
 
             # Allocate channel pulses to sequencers.
             #   At least one sequencer is needed for each channel
@@ -361,9 +316,7 @@ class ClusterQRM_RF(AbstractInstrument):
             #   additional sequencers are used to synthesise it
             self.sequencers = []  # a list of sequencers (int) used
             sequencer_pulses = {}  # a dictionary of {sequencer (int): pulses (list)}
-            sequencer = (
-                -1
-            )  # initialised to -1 so that in the first iteration it becomes 0, the first sequencer number
+            sequencer = -1  # initialised to -1 so that in the first iteration it becomes 0, the first sequencer number
             self.waveforms = {}
             for channel in channels:
                 if len(channel_pulses[channel]) > 0:
@@ -378,13 +331,9 @@ class ClusterQRM_RF(AbstractInstrument):
                     self.sequencer_channel_map[sequencer] = channel
                     sequencer_pulses[sequencer] = []
                     self.waveforms[sequencer] = {}
-                    unique_pulses = (
-                        {}
-                    )  # a dictionary of {unique pulse IDs (str): and their I & Q indices (int)}
+                    unique_pulses = {}  # a dictionary of {unique pulse IDs (str): and their I & Q indices (int)}
                     wc = 0  # unique waveform counter
-                    waveforms_length = (
-                        0  # accumulates the length of unique pulses per sequencer
-                    )
+                    waveforms_length = 0  # accumulates the length of unique pulses per sequencer
 
                     # Iterate over the list of pulses to check if they are unique and if the overal length of the waveform exceeds the memory available
                     n = 0
@@ -395,16 +344,11 @@ class ClusterQRM_RF(AbstractInstrument):
                         ]  # removes the channel and start information from Pulse.serial to compare between pulses
                         if pulse_serial not in unique_pulses.keys():
                             # If the pulse is unique (it hasn't been saved before):
-                            I, Q = self.generate_waveforms_from_pulse(
-                                pulse, modulate=True
-                            )
+                            I, Q = self.generate_waveforms_from_pulse(pulse, modulate=True)
                             # Check if the overall length of the waveform exceeds memory size (waveform_max_length) and split it if necessary
                             is_split = False
                             part = 0
-                            while (
-                                waveforms_length + pulse.duration
-                                > self.waveform_max_length
-                            ):
+                            while waveforms_length + pulse.duration > self.waveform_max_length:
                                 if pulse.type == "ro":
                                     raise NotImplementedError(
                                         f"Readout pulses longer than the memory available for a sequencer ({self.waveform_max_length}) are not supported."
@@ -412,33 +356,27 @@ class ClusterQRM_RF(AbstractInstrument):
                                 import copy
 
                                 first_part = copy.deepcopy(pulse)
-                                first_part.duration = (
-                                    self.waveform_max_length - waveforms_length
-                                )
+                                first_part.duration = self.waveform_max_length - waveforms_length
                                 channel_pulses[channel].insert(n, first_part)
                                 n += 1
                                 sequencer_pulses[sequencer].append(first_part)
                                 first_part.waveform_indexes = [0 + wc, 1 + wc]
-                                self.waveforms[sequencer][
-                                    f"{self.name}_{pulse}_{part}_pulse_I"
-                                ] = {"data": I[: first_part.duration], "index": 0 + wc}
-                                self.waveforms[sequencer][
-                                    f"{self.name}_{pulse}_{part}_pulse_Q"
-                                ] = {"data": Q[: first_part.duration], "index": 1 + wc}
+                                self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_I"] = {
+                                    "data": I[: first_part.duration],
+                                    "index": 0 + wc,
+                                }
+                                self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_Q"] = {
+                                    "data": Q[: first_part.duration],
+                                    "index": 1 + wc,
+                                }
 
                                 pulse = copy.deepcopy(pulse)
                                 I, Q = (
                                     I[first_part.duration :],
                                     Q[first_part.duration :],
                                 )
-                                pulse.start = (
-                                    pulse.start
-                                    + self.waveform_max_length
-                                    - waveforms_length
-                                )
-                                pulse.duration = pulse.duration - (
-                                    self.waveform_max_length - waveforms_length
-                                )
+                                pulse.start = pulse.start + self.waveform_max_length - waveforms_length
+                                pulse.duration = pulse.duration - (self.waveform_max_length - waveforms_length)
                                 is_split = True
                                 part += 1
 
@@ -463,12 +401,14 @@ class ClusterQRM_RF(AbstractInstrument):
                             if not is_split:
                                 unique_pulses[pulse_serial] = [0 + wc, 1 + wc]
                             waveforms_length += pulse.duration
-                            self.waveforms[sequencer][
-                                f"{self.name}_{pulse}_{part}_pulse_I"
-                            ] = {"data": I, "index": 0 + wc}
-                            self.waveforms[sequencer][
-                                f"{self.name}_{pulse}_{part}_pulse_Q"
-                            ] = {"data": Q, "index": 1 + wc}
+                            self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_I"] = {
+                                "data": I,
+                                "index": 0 + wc,
+                            }
+                            self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_Q"] = {
+                                "data": Q,
+                                "index": 1 + wc,
+                            }
                             wc += 2
 
                         else:
@@ -503,9 +443,7 @@ class ClusterQRM_RF(AbstractInstrument):
                     + pulses[sequencer][-1].duration
                     + self.minimum_delay_between_instructions
                 )  # the minimum delay between instructions is 4ns
-                time_between_repetitions = (
-                    self.repetition_duration - sequence_total_duration
-                )
+                time_between_repetitions = self.repetition_duration - sequence_total_duration
                 assert time_between_repetitions > 0
 
                 wait_time = time_between_repetitions
@@ -593,10 +531,7 @@ class ClusterQRM_RF(AbstractInstrument):
                                 - self.minimum_delay_between_instructions
                             )  # self.acquisition_start
 
-                        if (
-                            delay_after_acquire
-                            < self.minimum_delay_between_instructions
-                        ):
+                        if delay_after_acquire < self.minimum_delay_between_instructions:
                             raise Exception(
                                 f"The minimum delay before starting acquisition is {self.minimum_delay_between_instructions}ns."
                             )
@@ -608,8 +543,7 @@ class ClusterQRM_RF(AbstractInstrument):
                         play_instruction = f"                    play {pulses[sequencer][n].waveform_indexes[0]},{pulses[sequencer][n].waveform_indexes[1]},{delay_after_play}"
                         # Add the serial of the pulse as a comment
                         play_instruction += (
-                            " " * (34 - len(play_instruction))
-                            + f"# play waveforms {pulses[sequencer][n]}"
+                            " " * (34 - len(play_instruction)) + f"# play waveforms {pulses[sequencer][n]}"
                         )
                         body += "\n" + play_instruction
 
@@ -625,14 +559,9 @@ class ClusterQRM_RF(AbstractInstrument):
                         # Calculate the delay_after_play that is to be used as an argument to the play instruction
                         if len(pulses[sequencer]) > n + 1:
                             # If there are more pulses to be played, the delay is the time between the pulse end and the next pulse start
-                            delay_after_play = (
-                                pulses[sequencer][n + 1].start
-                                - pulses[sequencer][n].start
-                            )
+                            delay_after_play = pulses[sequencer][n + 1].start - pulses[sequencer][n].start
                         else:
-                            delay_after_play = (
-                                sequence_total_duration - pulses[sequencer][n].start
-                            )
+                            delay_after_play = sequence_total_duration - pulses[sequencer][n].start
 
                         if delay_after_play < self.minimum_delay_between_instructions:
                             raise Exception(
@@ -646,8 +575,7 @@ class ClusterQRM_RF(AbstractInstrument):
                         play_instruction = f"                    play {pulses[sequencer][n].waveform_indexes[0]},{pulses[sequencer][n].waveform_indexes[1]},{delay_after_play}"
                         # Add the serial of the pulse as a comment
                         play_instruction += (
-                            " " * (34 - len(play_instruction))
-                            + f"# play waveforms {pulses[sequencer][n]}"
+                            " " * (34 - len(play_instruction)) + f"# play waveforms {pulses[sequencer][n]}"
                         )
                         body += "\n" + play_instruction
 
@@ -678,9 +606,7 @@ class ClusterQRM_RF(AbstractInstrument):
             mod_matrix = np.array([[cosalpha, -sinalpha], [sinalpha, cosalpha]])
             # mod_signals = np.einsum("abt,bt->ta", mod_matrix, envelopes)
             result = []
-            for it, t, ii, qq in zip(
-                np.arange(pulse.duration), time, envelope_i, envelope_q
-            ):
+            for it, t, ii, qq in zip(np.arange(pulse.duration), time, envelope_i, envelope_q):
                 result.append(mod_matrix[:, :, it] @ np.array([ii, qq]))
             mod_signals = np.array(result)
 
@@ -718,9 +644,7 @@ class ClusterQRM_RF(AbstractInstrument):
                 # Reformat waveforms to lists
                 for name, waveform in self.waveforms[sequencer].items():
                     if isinstance(waveform["data"], np.ndarray):
-                        self.waveforms[sequencer][name]["data"] = self.waveforms[
-                            sequencer
-                        ][name][
+                        self.waveforms[sequencer][name]["data"] = self.waveforms[sequencer][name][
                             "data"
                         ].tolist()  # JSON only supports lists
 
@@ -736,9 +660,7 @@ class ClusterQRM_RF(AbstractInstrument):
                     json.dump(qblox_dict[sequencer], file, indent=4)
 
                 # Upload json file to the device sequencers
-                self.device.sequencers[sequencer].sequence(
-                    str(self.data_folder / filename)
-                )
+                self.device.sequencers[sequencer].sequence(str(self.data_folder / filename))
 
         # Arm
         for sequencer in self.sequencers:
@@ -774,9 +696,7 @@ class ClusterQRM_RF(AbstractInstrument):
                 self.device.store_scope_acquisition(sequencer, acquisition)
                 # Get acquisitions from instrument.
                 raw_results = self.device.get_acquisitions(sequencer)
-                i, q = self._demodulate_and_integrate(
-                    raw_results, acquisition, demodulate=True
-                )
+                i, q = self._demodulate_and_integrate(raw_results, acquisition, demodulate=True)
                 acquisition_results[sequencer][acquisition] = (
                     np.sqrt(i**2 + q**2),
                     np.arctan2(q, i),
@@ -795,19 +715,9 @@ class ClusterQRM_RF(AbstractInstrument):
             # TODO: obtain from acquisition info
             # DOWN Conversion
             n0 = self.acquisition_hold_off  # 0
-            n1 = (
-                self.acquisition_hold_off + self.acquisition_duration
-            )  # self.acquisition_duration #
-            input_vec_I = np.array(
-                raw_results[acquisition_name]["acquisition"]["scope"]["path0"]["data"][
-                    n0:n1
-                ]
-            )
-            input_vec_Q = np.array(
-                raw_results[acquisition_name]["acquisition"]["scope"]["path1"]["data"][
-                    n0:n1
-                ]
-            )
+            n1 = self.acquisition_hold_off + self.acquisition_duration  # self.acquisition_duration #
+            input_vec_I = np.array(raw_results[acquisition_name]["acquisition"]["scope"]["path0"]["data"][n0:n1])
+            input_vec_Q = np.array(raw_results[acquisition_name]["acquisition"]["scope"]["path1"]["data"][n0:n1])
             input_vec_I -= np.mean(input_vec_I)
             input_vec_Q -= np.mean(input_vec_Q)
 
@@ -818,9 +728,7 @@ class ClusterQRM_RF(AbstractInstrument):
             sinalpha = np.sin(2 * np.pi * acquisition_frequency * time)
             demod_matrix = 2 * np.array([[cosalpha, sinalpha], [-sinalpha, cosalpha]])
             result = []
-            for it, t, ii, qq in zip(
-                np.arange(modulated_i.shape[0]), time, modulated_i, modulated_q
-            ):
+            for it, t, ii, qq in zip(np.arange(modulated_i.shape[0]), time, modulated_i, modulated_q):
                 result.append(demod_matrix[:, :, it] @ np.array([ii, qq]))
             demodulated_signal = np.array(result)
             integrated_signal = np.mean(demodulated_signal, axis=0)
@@ -831,18 +739,8 @@ class ClusterQRM_RF(AbstractInstrument):
             # plt.show()
         else:
             int_len = self.acquisition_duration
-            i = [
-                (val / int_len)
-                for val in raw_results[acquisition]["acquisition"]["bins"][
-                    "integration"
-                ]["path0"]
-            ][0]
-            q = [
-                (val / int_len)
-                for val in raw_results[acquisition]["acquisition"]["bins"][
-                    "integration"
-                ]["path1"]
-            ][0]
+            i = [(val / int_len) for val in raw_results[acquisition]["acquisition"]["bins"]["integration"]["path0"]][0]
+            q = [(val / int_len) for val in raw_results[acquisition]["acquisition"]["bins"]["integration"]["path1"]][0]
             integrated_signal = i, q
         return integrated_signal
 
@@ -876,9 +774,7 @@ class ClusterQCM_RF(AbstractInstrument):
     )
     sequencer_property_wrapper = lambda parent, sequencer, *parameter: property(
         lambda self: parent.device.sequencers[sequencer].get(parameter[0]),
-        lambda self, x: parent.set_device_parameter(
-            parent.device.sequencers[sequencer], *parameter, value=x
-        ),
+        lambda self, x: parent.set_device_parameter(parent.device.sequencers[sequencer], *parameter, value=x),
     )
 
     def __init__(self, name, address):
@@ -911,15 +807,9 @@ class ClusterQCM_RF(AbstractInstrument):
                             "gain_awg_path0",
                             "gain_awg_path1",
                         ),
-                        "hardware_mod_en": self.sequencer_property_wrapper(
-                            self.O1_DEFAULT_SEQUENCER, "mod_en_awg"
-                        ),
-                        "nco_freq": self.sequencer_property_wrapper(
-                            self.O1_DEFAULT_SEQUENCER, "nco_freq"
-                        ),
-                        "nco_phase_offs": self.sequencer_property_wrapper(
-                            self.O1_DEFAULT_SEQUENCER, "nco_phase_offs"
-                        ),
+                        "hardware_mod_en": self.sequencer_property_wrapper(self.O1_DEFAULT_SEQUENCER, "mod_en_awg"),
+                        "nco_freq": self.sequencer_property_wrapper(self.O1_DEFAULT_SEQUENCER, "nco_freq"),
+                        "nco_phase_offs": self.sequencer_property_wrapper(self.O1_DEFAULT_SEQUENCER, "nco_phase_offs"),
                     },
                 )()
 
@@ -935,15 +825,9 @@ class ClusterQCM_RF(AbstractInstrument):
                             "gain_awg_path0",
                             "gain_awg_path1",
                         ),
-                        "hardware_mod_en": self.sequencer_property_wrapper(
-                            self.O2_DEFAULT_SEQUENCER, "mod_en_awg"
-                        ),
-                        "nco_freq": self.sequencer_property_wrapper(
-                            self.O2_DEFAULT_SEQUENCER, "nco_freq"
-                        ),
-                        "nco_phase_offs": self.sequencer_property_wrapper(
-                            self.O2_DEFAULT_SEQUENCER, "nco_phase_offs"
-                        ),
+                        "hardware_mod_en": self.sequencer_property_wrapper(self.O2_DEFAULT_SEQUENCER, "mod_en_awg"),
+                        "nco_freq": self.sequencer_property_wrapper(self.O2_DEFAULT_SEQUENCER, "nco_freq"),
+                        "nco_phase_offs": self.sequencer_property_wrapper(self.O2_DEFAULT_SEQUENCER, "nco_phase_offs"),
                     },
                 )()
 
@@ -973,21 +857,13 @@ class ClusterQCM_RF(AbstractInstrument):
                         "cont_mode_waveform_idx_awg_path1",
                         value=0,
                     )
-                    self.set_device_parameter(
-                        target, "marker_ovr_en", value=True
-                    )  # Default after reboot = False
-                    self.set_device_parameter(
-                        target, "marker_ovr_value", value=15
-                    )  # Default after reboot = 0
+                    self.set_device_parameter(target, "marker_ovr_en", value=True)  # Default after reboot = False
+                    self.set_device_parameter(target, "marker_ovr_value", value=15)  # Default after reboot = 0
                     self.set_device_parameter(target, "mixer_corr_gain_ratio", value=1)
-                    self.set_device_parameter(
-                        target, "mixer_corr_phase_offset_degree", value=0
-                    )
+                    self.set_device_parameter(target, "mixer_corr_phase_offset_degree", value=0)
                     self.set_device_parameter(target, "offset_awg_path0", value=0)
                     self.set_device_parameter(target, "offset_awg_path1", value=0)
-                    self.set_device_parameter(
-                        target, "sync_en", value=True
-                    )  # Default after reboot = False
+                    self.set_device_parameter(target, "sync_en", value=True)  # Default after reboot = False
                     self.set_device_parameter(
                         target,
                         "upsample_rate_awg_path0",
@@ -1040,9 +916,7 @@ class ClusterQCM_RF(AbstractInstrument):
             if not key in self.device_parameters:
                 for parameter in parameters:
                     if not hasattr(target, parameter):
-                        raise Exception(
-                            f"The instrument {self.name} does not have parameters {parameter}"
-                        )
+                        raise Exception(f"The instrument {self.name} does not have parameters {parameter}")
                     target.set(parameter, value)
                 self.device_parameters[key] = value
             elif self.device_parameters[key] != value:
@@ -1080,46 +954,28 @@ class ClusterQCM_RF(AbstractInstrument):
             self.hardware_avg = kwargs["hardware_avg"]
             self.sampling_rate = kwargs["sampling_rate"]
             self.repetition_duration = kwargs["repetition_duration"]
-            self.minimum_delay_between_instructions = kwargs[
-                "minimum_delay_between_instructions"
-            ]
+            self.minimum_delay_between_instructions = kwargs["minimum_delay_between_instructions"]
             # TODO: Remove minimum_delay_between_instructions
 
             self.channel_port_map = kwargs["channel_port_map"]
 
-            self.ports["o1"].attenuation = kwargs["ports"]["o1"][
-                "attenuation"
-            ]  # Default after reboot = 7
-            self.ports["o1"].lo_enabled = kwargs["ports"]["o1"][
-                "lo_enabled"
-            ]  # Default after reboot = True
+            self.ports["o1"].attenuation = kwargs["ports"]["o1"]["attenuation"]  # Default after reboot = 7
+            self.ports["o1"].lo_enabled = kwargs["ports"]["o1"]["lo_enabled"]  # Default after reboot = True
             self.ports["o1"].lo_frequency = kwargs["ports"]["o1"][
                 "lo_frequency"
             ]  # Default after reboot = 6_000_000_000
-            self.ports["o1"].gain = kwargs["ports"]["o1"][
-                "gain"
-            ]  # Default after reboot = 1
-            self.ports["o1"].hardware_mod_en = kwargs["ports"]["o1"][
-                "hardware_mod_en"
-            ]  # Default after reboot = False
+            self.ports["o1"].gain = kwargs["ports"]["o1"]["gain"]  # Default after reboot = 1
+            self.ports["o1"].hardware_mod_en = kwargs["ports"]["o1"]["hardware_mod_en"]  # Default after reboot = False
             self.ports["o1"].nco_freq = 0  # Default after reboot = 1
             self.ports["o1"].nco_phase_offs = 0  # Default after reboot = 1
 
-            self.ports["o2"].attenuation = kwargs["ports"]["o2"][
-                "attenuation"
-            ]  # Default after reboot = 7
-            self.ports["o2"].lo_enabled = kwargs["ports"]["o2"][
-                "lo_enabled"
-            ]  # Default after reboot = True
+            self.ports["o2"].attenuation = kwargs["ports"]["o2"]["attenuation"]  # Default after reboot = 7
+            self.ports["o2"].lo_enabled = kwargs["ports"]["o2"]["lo_enabled"]  # Default after reboot = True
             self.ports["o2"].lo_frequency = kwargs["ports"]["o2"][
                 "lo_frequency"
             ]  # Default after reboot = 6_000_000_000
-            self.ports["o2"].gain = kwargs["ports"]["o2"][
-                "gain"
-            ]  # Default after reboot = 1
-            self.ports["o2"].hardware_mod_en = kwargs["ports"]["o2"][
-                "hardware_mod_en"
-            ]  # Default after reboot = False
+            self.ports["o2"].gain = kwargs["ports"]["o2"]["gain"]  # Default after reboot = 1
+            self.ports["o2"].hardware_mod_en = kwargs["ports"]["o2"]["hardware_mod_en"]  # Default after reboot = False
             self.ports["o2"].nco_freq = 0  # Default after reboot = 1
             self.ports["o2"].nco_phase_offs = 0  # Default after reboot = 1
 
@@ -1153,16 +1009,13 @@ class ClusterQCM_RF(AbstractInstrument):
                     channel_pulses[channel][m].overlaps = []
                     for n in range(m):
                         if (
-                            channel_pulses[channel][m].start
-                            - channel_pulses[channel][n].start
+                            channel_pulses[channel][m].start - channel_pulses[channel][n].start
                             < channel_pulses[channel][n].duration
                         ):
                             channel_pulses[channel][m].overlaps.append(n)
                 for m in range(1, len(channel_pulses[channel])):
                     if len(channel_pulses[channel][m].overlaps) > 0:
-                        raise NotImplementedError(
-                            "Overlaping pulses on the same channel are not yet supported."
-                        )
+                        raise NotImplementedError("Overlaping pulses on the same channel are not yet supported.")
 
             # Allocate channel pulses to sequencers.
             #   At least one sequencer is needed for each channel
@@ -1170,9 +1023,7 @@ class ClusterQCM_RF(AbstractInstrument):
             #   additional sequencers are used to synthesise it
             self.sequencers = []  # a list of sequencers (int) used
             sequencer_pulses = {}  # a dictionary of {sequencer (int): pulses (list)}
-            sequencer = (
-                -1
-            )  # initialised to -1 so that in the first iteration it becomes 0, the first sequencer number
+            sequencer = -1  # initialised to -1 so that in the first iteration it becomes 0, the first sequencer number
             self.waveforms = {}
             for channel in channels:
                 sequencer += 1
@@ -1187,13 +1038,9 @@ class ClusterQCM_RF(AbstractInstrument):
                     self.sequencer_channel_map[sequencer] = channel
                     sequencer_pulses[sequencer] = []
                     self.waveforms[sequencer] = {}
-                    unique_pulses = (
-                        {}
-                    )  # a dictionary of {unique pulse IDs (str): and their I & Q indices (int)}
+                    unique_pulses = {}  # a dictionary of {unique pulse IDs (str): and their I & Q indices (int)}
                     wc = 0  # unique waveform counter
-                    waveforms_length = (
-                        0  # accumulates the length of unique pulses per sequencer
-                    )
+                    waveforms_length = 0  # accumulates the length of unique pulses per sequencer
 
                     # Iterate over the list of pulses to check if they are unique and if the overal length of the waveform exceeds the memory available
                     n = 0
@@ -1204,46 +1051,35 @@ class ClusterQCM_RF(AbstractInstrument):
                         ]  # removes the channel and start information from Pulse.serial to compare between pulses
                         if pulse_serial not in unique_pulses.keys():
                             # If the pulse is unique (it hasn't been saved before):
-                            I, Q = self.generate_waveforms_from_pulse(
-                                pulse, modulate=True
-                            )
+                            I, Q = self.generate_waveforms_from_pulse(pulse, modulate=True)
                             # Check if the overall length of the waveform exceeds memory size (waveform_max_length) and split it if necessary
                             is_split = False
                             part = 0
-                            while (
-                                waveforms_length + pulse.duration
-                                > self.waveform_max_length
-                            ):
+                            while waveforms_length + pulse.duration > self.waveform_max_length:
                                 import copy
 
                                 first_part = copy.deepcopy(pulse)
-                                first_part.duration = (
-                                    self.waveform_max_length - waveforms_length
-                                )
+                                first_part.duration = self.waveform_max_length - waveforms_length
                                 channel_pulses[channel].insert(n, first_part)
                                 n += 1
                                 sequencer_pulses[sequencer].append(first_part)
                                 first_part.waveform_indexes = [0 + wc, 1 + wc]
-                                self.waveforms[sequencer][
-                                    f"{self.name}_{pulse}_{part}_pulse_I"
-                                ] = {"data": I[: first_part.duration], "index": 0 + wc}
-                                self.waveforms[sequencer][
-                                    f"{self.name}_{pulse}_{part}_pulse_Q"
-                                ] = {"data": Q[: first_part.duration], "index": 1 + wc}
+                                self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_I"] = {
+                                    "data": I[: first_part.duration],
+                                    "index": 0 + wc,
+                                }
+                                self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_Q"] = {
+                                    "data": Q[: first_part.duration],
+                                    "index": 1 + wc,
+                                }
 
                                 pulse = copy.deepcopy(pulse)
                                 I, Q = (
                                     I[first_part.duration :],
                                     Q[first_part.duration :],
                                 )
-                                pulse.start = (
-                                    pulse.start
-                                    + self.waveform_max_length
-                                    - waveforms_length
-                                )
-                                pulse.duration = pulse.duration - (
-                                    self.waveform_max_length - waveforms_length
-                                )
+                                pulse.start = pulse.start + self.waveform_max_length - waveforms_length
+                                pulse.duration = pulse.duration - (self.waveform_max_length - waveforms_length)
                                 is_split = True
                                 part += 1
 
@@ -1268,12 +1104,14 @@ class ClusterQCM_RF(AbstractInstrument):
                             if not is_split:
                                 unique_pulses[pulse_serial] = [0 + wc, 1 + wc]
                             waveforms_length += pulse.duration
-                            self.waveforms[sequencer][
-                                f"{self.name}_{pulse}_{part}_pulse_I"
-                            ] = {"data": I, "index": 0 + wc}
-                            self.waveforms[sequencer][
-                                f"{self.name}_{pulse}_{part}_pulse_Q"
-                            ] = {"data": Q, "index": 1 + wc}
+                            self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_I"] = {
+                                "data": I,
+                                "index": 0 + wc,
+                            }
+                            self.waveforms[sequencer][f"{self.name}_{pulse}_{part}_pulse_Q"] = {
+                                "data": Q,
+                                "index": 1 + wc,
+                            }
                             wc += 2
 
                         else:
@@ -1292,9 +1130,7 @@ class ClusterQCM_RF(AbstractInstrument):
                     + pulses[sequencer][-1].duration
                     + self.minimum_delay_between_instructions
                 )  # the minimum delay between instructions is 4ns
-                time_between_repetitions = (
-                    self.repetition_duration - sequence_total_duration
-                )
+                time_between_repetitions = self.repetition_duration - sequence_total_duration
                 assert time_between_repetitions > 0
 
                 wait_time = time_between_repetitions
@@ -1366,13 +1202,9 @@ class ClusterQCM_RF(AbstractInstrument):
                     # Calculate the delay_after_play that is to be used as an argument to the play instruction
                     if len(pulses[sequencer]) > n + 1:
                         # If there are more pulses to be played, the delay is the time between the pulse end and the next pulse start
-                        delay_after_play = (
-                            pulses[sequencer][n + 1].start - pulses[sequencer][n].start
-                        )
+                        delay_after_play = pulses[sequencer][n + 1].start - pulses[sequencer][n].start
                     else:
-                        delay_after_play = (
-                            sequence_total_duration - pulses[sequencer][n].start
-                        )
+                        delay_after_play = sequence_total_duration - pulses[sequencer][n].start
 
                     if delay_after_play < self.minimum_delay_between_instructions:
                         raise Exception(
@@ -1386,8 +1218,7 @@ class ClusterQCM_RF(AbstractInstrument):
                     play_instruction = f"                    play {pulses[sequencer][n].waveform_indexes[0]},{pulses[sequencer][n].waveform_indexes[1]},{delay_after_play}"
                     # Add the serial of the pulse as a comment
                     play_instruction += (
-                        " " * (34 - len(play_instruction))
-                        + f"# play waveforms {pulses[sequencer][n]}"
+                        " " * (34 - len(play_instruction)) + f"# play waveforms {pulses[sequencer][n]}"
                     )  # TODO: change for split pulses
                     body += "\n" + play_instruction
 
@@ -1418,9 +1249,7 @@ class ClusterQCM_RF(AbstractInstrument):
             mod_matrix = np.array([[cosalpha, -sinalpha], [sinalpha, cosalpha]])
             # mod_signals = np.einsum("abt,bt->ta", mod_matrix, envelopes)
             result = []
-            for it, t, ii, qq in zip(
-                np.arange(pulse.duration), time, envelope_i, envelope_q
-            ):
+            for it, t, ii, qq in zip(np.arange(pulse.duration), time, envelope_i, envelope_q):
                 result.append(mod_matrix[:, :, it] @ np.array([ii, qq]))
             mod_signals = np.array(result)
 
@@ -1458,9 +1287,7 @@ class ClusterQCM_RF(AbstractInstrument):
                 # Reformat waveforms to lists
                 for name, waveform in self.waveforms[sequencer].items():
                     if isinstance(waveform["data"], np.ndarray):
-                        self.waveforms[sequencer][name]["data"] = self.waveforms[
-                            sequencer
-                        ][name][
+                        self.waveforms[sequencer][name]["data"] = self.waveforms[sequencer][name][
                             "data"
                         ].tolist()  # JSON only supports lists
 
@@ -1475,9 +1302,7 @@ class ClusterQCM_RF(AbstractInstrument):
                 with open(self.data_folder / filename, "w", encoding="utf-8") as file:
                     json.dump(qblox_dict[sequencer], file, indent=4)
                 # Upload json file to the device sequencers
-                self.device.sequencers[sequencer].sequence(
-                    str(self.data_folder / filename)
-                )
+                self.device.sequencers[sequencer].sequence(str(self.data_folder / filename))
 
         # Arm
         for sequencer in self.sequencers:

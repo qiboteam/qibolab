@@ -31,13 +31,7 @@ def test_instruments_qublox_init(name):
     assert instance.address == address
     assert instance.is_connected == False
     assert instance.signature == f"{i_class}@{address}"
-    assert (
-        instance.data_folder
-        == user_folder
-        / "instruments"
-        / "data"
-        / instance.tmp_folder.name.split("/")[-1]
-    )
+    assert instance.data_folder == user_folder / "instruments" / "data" / instance.tmp_folder.name.split("/")[-1]
 
 
 @pytest.mark.xfail
@@ -54,15 +48,10 @@ def test_instruments_qublox_setup(name):
         test_runcard = qibolab_folder / "tests" / "test_instruments_qblox.yml"
         with open(test_runcard, "r") as file:
             settings = yaml.safe_load(file)
-        instruments[name].setup(
-            **settings["settings"], **settings["instruments"][name]["settings"]
-        )
+        instruments[name].setup(**settings["settings"], **settings["instruments"][name]["settings"])
 
         for parameter in settings["instruments"][name]["settings"]:
-            assert (
-                getattr(instruments[name], parameter)
-                == settings["instruments"][name]["settings"][parameter]
-            )
+            assert getattr(instruments[name], parameter) == settings["instruments"][name]["settings"][parameter]
 
 
 def instrument_set_and_test_parameter_values(instrument, parameter, values):
@@ -76,38 +65,14 @@ def test_instruments_qublox_set_device_paramter(name):
     if not instruments[name].is_connected:
         pytest.xfail("Instrument not available")
     else:
-        instrument_set_and_test_parameter_values(
-            instruments[name], "reference_source", ["external", "internal"]
-        )
+        instrument_set_and_test_parameter_values(instruments[name], "reference_source", ["external", "internal"])
         for sequencer in range(instruments[name].device_num_sequencers):
             for gain in np.arange(0, 1, 0.1):
-                instruments[name].set_device_parameter(
-                    f"sequencer{sequencer}_gain_awg_path0", gain
-                )
-                instruments[name].set_device_parameter(
-                    f"sequencer{sequencer}_gain_awg_path1", gain
-                )
-                assert (
-                    abs(
-                        instruments[name].device.get(
-                            f"sequencer{sequencer}_gain_awg_path0"
-                        )
-                        - gain
-                    )
-                    < 0.001
-                )
-                assert (
-                    abs(
-                        instruments[name].device.get(
-                            f"sequencer{sequencer}_gain_awg_path1"
-                        )
-                        - gain
-                    )
-                    < 0.001
-                )
-            instrument_set_and_test_parameter_values(
-                instruments[name], f"sequencer{sequencer}_sync_en", [False, True]
-            )
+                instruments[name].set_device_parameter(f"sequencer{sequencer}_gain_awg_path0", gain)
+                instruments[name].set_device_parameter(f"sequencer{sequencer}_gain_awg_path1", gain)
+                assert abs(instruments[name].device.get(f"sequencer{sequencer}_gain_awg_path0") - gain) < 0.001
+                assert abs(instruments[name].device.get(f"sequencer{sequencer}_gain_awg_path1") - gain) < 0.001
+            instrument_set_and_test_parameter_values(instruments[name], f"sequencer{sequencer}_sync_en", [False, True])
             for out in range(0, 2 * instruments[name].device_num_ports):
                 instrument_set_and_test_parameter_values(
                     instruments[name],
@@ -126,12 +91,8 @@ def test_instruments_qublox_set_device_paramter(name):
                 "scope_acq_trigger_mode_path1",
                 ["sequencer", "level"],
             )
-            instrument_set_and_test_parameter_values(
-                instruments[name], "scope_acq_avg_mode_en_path0", [False, True]
-            )
-            instrument_set_and_test_parameter_values(
-                instruments[name], "scope_acq_avg_mode_en_path1", [False, True]
-            )
+            instrument_set_and_test_parameter_values(instruments[name], "scope_acq_avg_mode_en_path0", [False, True])
+            instrument_set_and_test_parameter_values(instruments[name], "scope_acq_avg_mode_en_path1", [False, True])
             instrument_set_and_test_parameter_values(
                 instruments[name],
                 "scope_acq_sequencer_select",
@@ -226,17 +187,13 @@ def test_instruments_process_pulse_sequence_upload_play(name):
         test_runcard = qibolab_folder / "tests" / "test_instruments_qblox.yml"
         with open(test_runcard, "r") as file:
             settings = yaml.safe_load(file)
-        instruments[name].setup(
-            **settings["settings"], **settings["instruments"][name]["settings"]
-        )
+        instruments[name].setup(**settings["settings"], **settings["instruments"][name]["settings"])
 
         instrument_pulses = {}
         instrument_pulses[name] = {}
         if "QCM" in name:
             for channel in instruments[name].channel_port_map:
-                instrument_pulses[name][channel] = [
-                    Pulse(0, 200, 1, 10e6, np.pi / 2, "Gaussian(5)", channel)
-                ]
+                instrument_pulses[name][channel] = [Pulse(0, 200, 1, 10e6, np.pi / 2, "Gaussian(5)", channel)]
             instruments[name].process_pulse_sequence(instrument_pulses[name], nshots=5)
             instruments[name].upload()
             instruments[name].play_sequence()
@@ -244,9 +201,7 @@ def test_instruments_process_pulse_sequence_upload_play(name):
             for channel in instruments[name].channel_port_map:
                 instrument_pulses[name][channel] = [
                     Pulse(0, 200, 1, 10e6, np.pi / 2, "Gaussian(5)", channel),
-                    ReadoutPulse(
-                        200, 2000, 1, 10e6, np.pi / 2, "Rectangular()", channel
-                    ),
+                    ReadoutPulse(200, 2000, 1, 10e6, np.pi / 2, "Rectangular()", channel),
                 ]
             instruments[name].process_pulse_sequence(instrument_pulses[name], nshots=5)
             instruments[name].upload()
