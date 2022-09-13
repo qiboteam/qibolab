@@ -70,7 +70,7 @@ class QibolabBackend(NumpyBackend):
             qubits = result.circuit.measurement_gate.qubits
 
         def distance(a, b):
-            return np.sqrt((np.real(a) - np.real(b)) ** 2 + (np.imag(a) - np.imag(b)) ** 2)
+            return abs(a - b)
 
         # basic classification
         probabilities = []
