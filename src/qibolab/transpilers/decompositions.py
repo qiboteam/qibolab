@@ -3,11 +3,16 @@ import numpy as np
 from qibo.config import raise_error
 
 magic_basis = np.array(
-    [[1, 0, 0, 1], [-1j, 0, 0, 1j], [0, 1, -1, 0], [0, -1j, -1j, 0]]
+    [
+        [1, -1j, 0, 0],
+        [0, 0, 1, -1j],
+        [0, 0, -1, -1j],
+        [1, 1j, 0, 0],
+    ]
 ) / np.sqrt(2)
 
 bell_basis = np.array(
-    [[1, 0, 0, 1], [1, 0, 0, -1], [0, 1, 1, 0], [0, 1, -1, 0]]
+    [[1, 1, 0, 0], [0, 0, 1, 1], [0, 0, 1, -1], [1, -1, 0, 0]]
 ) / np.sqrt(2)
 
 
@@ -37,12 +42,12 @@ def calculate_psi(unitary):
         of UT_U.
     """
     # write unitary in magic basis
-    u_magic = np.dot(np.dot(magic_basis, unitary), np.conj(magic_basis.T))
+    u_magic = np.dot(np.dot(np.conj(magic_basis.T), unitary), magic_basis)
     # construct and diagonalize UT_U
     ut_u = np.dot(u_magic.T, u_magic)
     eigvals, psi_magic = np.linalg.eig(ut_u)
     # write psi in computational basis
-    psi = np.dot(np.conj(magic_basis.T), psi_magic).T
+    psi = np.dot(magic_basis, psi_magic)
     return psi, eigvals
 
 
@@ -69,10 +74,10 @@ def calculate_single_qubit_unitaries(psi):
         Local unitaries UA and UB that map the given basis to the magic basis.
     """
     # TODO: Handle the case where psi is not real in the magic basis
-    psi_magic = np.dot(magic_basis, psi.T)
+    psi_magic = np.dot(np.conj(magic_basis).T, psi)
     if not np.allclose(psi_magic.imag, np.zeros_like(psi_magic)):  # pragma: no cover
         raise_error(NotImplementedError, "Given state is not real in the magic basis.")
-    psi_bar = np.copy(psi)
+    psi_bar = np.copy(psi).T
 
     # find e and f by inverting (A3), (A4)
     ef = (psi_bar[0] + 1j * psi_bar[1]) / np.sqrt(2)
@@ -116,7 +121,7 @@ def calculate_diagonal(unitary, ua, ub, va, vb):
 def magic_decomposition(unitary):
     """Decomposes an arbitrary unitary to (A1) from arXiv:quant-ph/0011050."""
     psi, eigvals = calculate_psi(unitary)
-    psi_tilde = np.conj(np.sqrt(eigvals))[:, np.newaxis] * np.dot(unitary, psi.T).T
+    psi_tilde = np.conj(np.sqrt(eigvals)) * np.dot(unitary, psi)
     va, vb = calculate_single_qubit_unitaries(psi)
     ua_dagger, ub_dagger = calculate_single_qubit_unitaries(psi_tilde)
     ua, ub = np.conj(ua_dagger.T), np.conj(ub_dagger.T)
@@ -125,7 +130,7 @@ def magic_decomposition(unitary):
 
 def to_bell_diagonal(ud):
     """Transforms a matrix to the Bell basis and checks if it is diagonal."""
-    ud_bell = np.dot(np.dot(bell_basis, ud), np.conj(bell_basis.T))
+    ud_bell = np.dot(np.dot(np.conj(bell_basis).T, ud), bell_basis)
     ud_diag = np.diag(ud_bell)
     if not np.allclose(np.diag(ud_diag), ud_bell):  # pragma: no cover
         return None
