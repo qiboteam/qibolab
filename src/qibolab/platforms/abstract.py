@@ -187,9 +187,9 @@ class AbstractPlatform(ABC):
     def transpile(self, circuit: Circuit):  # (self, circuit: qibo.core.circuit.Circuit) -> PulseSequence
         import numpy as np
 
-        from qibolab.transpilers.native import NativeGates
+        from qibolab.transpilers.transpile import transpile
 
-        native_gates_circuit = NativeGates().translate_circuit(circuit, translate_single_qubit=True)
+        native_gates_circuit = transpile(circuit)
         sequence = PulseSequence()
         sequence.virtual_z_phases = {}
         for qubit in range(circuit.nqubits):
