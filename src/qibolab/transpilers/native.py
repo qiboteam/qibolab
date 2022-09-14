@@ -101,33 +101,79 @@ class NativeGates:
 
     def CRX(self, gate):
         q0, q1 = gate.qubits
-        matrix = gate.asmatrix(self.backend)
-        return two_qubit_decomposition(q0, q1, matrix)
+        theta = gate.parameters[0] / 2.0
+        return [
+            gates.RX(q1, theta=theta),
+            gates.CZ(q0, q1),
+            gates.RX(q1, theta=-theta),
+            gates.CZ(q0, q1),
+        ]
 
     def CRY(self, gate):
         q0, q1 = gate.qubits
-        matrix = gate.asmatrix(self.backend)
-        return two_qubit_decomposition(q0, q1, matrix)
+        theta = gate.parameters[0] / 2.0
+        return [
+            gates.RY(q1, theta=theta),
+            gates.CZ(q0, q1),
+            gates.RY(q1, theta=-theta),
+            gates.CZ(q0, q1),
+        ]
 
     def CRZ(self, gate):
         q0, q1 = gate.qubits
-        matrix = gate.asmatrix(self.backend)
-        return two_qubit_decomposition(q0, q1, matrix)
+        theta = gate.parameters[0] / 2.0
+        return [
+            gates.RZ(q1, theta=theta),
+            gates.H(q1),
+            gates.CZ(q0, q1),
+            gates.RX(q1, theta=-theta),
+            gates.CZ(q0, q1),
+            gates.H(q1),
+        ]
 
     def CU1(self, gate):
         q0, q1 = gate.qubits
-        matrix = gate.asmatrix(self.backend)
-        return two_qubit_decomposition(q0, q1, matrix)
+        theta = gate.parameters[0] / 2.0
+        return [
+            gates.U1(q0, theta=theta),
+            gates.H(q1),
+            gates.CZ(q0, q1),
+            gates.H(q1),
+            gates.U1(q1, theta=-theta),
+            gates.H(q1),
+            # H U1 H can be reduced to
+            # gates.RX(q1, theta=-theta),
+            gates.CZ(q0, q1),
+            gates.H(q1),
+            gates.U1(q1, theta=theta),
+        ]
 
     def CU2(self, gate):
         q0, q1 = gate.qubits
-        matrix = gate.asmatrix(self.backend)
-        return two_qubit_decomposition(q0, q1, matrix)
+        phi, lam = gate.parameters
+        q0, q1 = gate.qubits
+        phi, lam = gate.parameters
+        return [
+            # gates.U1(q0, (lam + phi) / 2.0),
+            gates.U1(q1, (lam - phi) / 2.0),
+            gates.CNOT(q0, q1),
+            gates.U3(q1, np.pi / 2, 0, -(lam + phi) / 2.0),
+            gates.CNOT(q0, q1),
+            gates.U3(q1, np.pi / 2, phi, 0),
+        ]
 
     def CU3(self, gate):
         q0, q1 = gate.qubits
-        matrix = gate.asmatrix(self.backend)
-        return two_qubit_decomposition(q0, q1, matrix)
+        theta, phi, lam = gate.parameters
+        return [
+            # gates.U1(q0, (lam + phi) / 2.0),
+            gates.RZ(q0, (lam + phi) / 2.0),
+            gates.U1(q1, (lam - phi) / 2.0),
+            gates.CNOT(q0, q1),
+            gates.U3(q1, -theta / 2.0, 0, -(lam + phi) / 2.0),
+            gates.CNOT(q0, q1),
+            gates.U3(q1, theta / 2.0, phi, 0),
+        ]
 
     def SWAP(self, gate):
         q0, q1 = gate.qubits
