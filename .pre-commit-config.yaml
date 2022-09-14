@@ -14,7 +14,7 @@ repos:
     hooks:
       - id: black
         args:
-          - --line-length=120 # --------------------------------------------80>| --------------100>| --------------120>|
+          - --line-length=120
   - repo: https://github.com/pycqa/isort
     rev: 5.10.1
     hooks:
