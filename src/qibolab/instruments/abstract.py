@@ -16,11 +16,10 @@ class AbstractInstrument(ABC):
     """
 
     def __init__(self, name, address):
-        self.name = name
-        self.address = address
-        self.is_connected = False
-        self.signature = f"{type(self).__name__}@{address}"
-        self.device = None
+        self.name: str = name
+        self.address: str = address
+        self.is_connected: bool = False
+        self.signature: str = f"{type(self).__name__}@{address}"
         # create local storage folder
         instruments_data_folder = user_folder / "instruments" / "data"
         instruments_data_folder.mkdir(parents=True, exist_ok=True)

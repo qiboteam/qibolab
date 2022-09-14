@@ -140,14 +140,7 @@ def test_cnot_decomposition(run_number):
     hx, hy, hz = np.random.random(3)
     target_matrix = bell_unitary(hx, hy, hz)
     u2, u3, v2, v3, w = cnot_decomposition(hx, hy, hz)
-    final_matrix = (
-        np.kron(w, np.conj(w.T))
-        @ cnot
-        @ np.kron(u3, v3)
-        @ cnot
-        @ np.kron(u2, v2)
-        @ cnot
-    )
+    final_matrix = np.kron(w, np.conj(w.T)) @ cnot @ np.kron(u3, v3) @ cnot @ np.kron(u2, v2) @ cnot
     np.testing.assert_allclose(final_matrix, target_matrix, atol=ATOL)
 
 

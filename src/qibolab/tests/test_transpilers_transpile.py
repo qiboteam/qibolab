@@ -45,6 +45,7 @@ def generate_random_circuit(nqubits, ngates, seed=None):
     return circuit
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize("nqubits", [3])
 @pytest.mark.parametrize("ngates", [20, 50, 100])
 def test_transpile(nqubits, ngates):

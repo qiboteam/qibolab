@@ -56,9 +56,7 @@ def fix_connecivity(circuit):
     for i, gate in enumerate(circuit.queue):
         if len(gate.qubits) == 2:
             if 0 not in gate.qubits:
-                new_zero = find_connected_qubit(
-                    gate.qubits, circuit.queue[i + 1 :], hardware_qubits
-                )
+                new_zero = find_connected_qubit(gate.qubits, circuit.queue[i + 1 :], hardware_qubits)
                 hardware_qubits[0], hardware_qubits[new_zero] = (
                     hardware_qubits[new_zero],
                     hardware_qubits[0],
@@ -78,9 +76,7 @@ def fix_connecivity(circuit):
 
         elif len(qubits) == 2 and 0 not in qubits:
             # find which qubit should be moved to 0
-            new_zero = find_connected_qubit(
-                qubits, circuit.queue[i + 1 :], hardware_qubits
-            )
+            new_zero = find_connected_qubit(qubits, circuit.queue[i + 1 :], hardware_qubits)
             # update hardware qubits according to the swap
             hardware_qubits[0], hardware_qubits[new_zero] = (
                 hardware_qubits[new_zero],
@@ -118,10 +114,7 @@ def respects_connectivity(circuit):
             return False
         elif len(gate.qubits) == 2:
             if 0 not in gate.qubits:
-                log.info(
-                    "Circuit does not respect connectivity. "
-                    f"{gate.name} acts on {gate.qubits}."
-                )
+                log.info("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
                 return False
 
     log.info("Circuit can be executed.")

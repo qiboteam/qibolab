@@ -19,5 +19,5 @@ def test_dummy_initialization():
 def test_dummy_execute_pulse_sequence():
     platform = Platform("dummy")
     sequence = PulseSequence()
-    sequence.add(platform.qubit_readout_pulse(0, 0))
+    sequence.add(platform.create_qubit_readout_pulse(0, 0))
     result = platform.execute_pulse_sequence(sequence, nshots=100)
