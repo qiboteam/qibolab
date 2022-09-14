@@ -11,9 +11,7 @@ magic_basis = np.array(
     ]
 ) / np.sqrt(2)
 
-bell_basis = np.array(
-    [[1, 1, 0, 0], [0, 0, 1, 1], [0, 0, 1, -1], [1, -1, 0, 0]]
-) / np.sqrt(2)
+bell_basis = np.array([[1, 1, 0, 0], [0, 0, 1, 1], [0, 0, 1, -1], [1, -1, 0, 0]]) / np.sqrt(2)
 
 
 def u3_decomposition(unitary):
@@ -89,12 +87,8 @@ def calculate_single_qubit_unitaries(psi):
     phase = 1j * np.sqrt(2) * np.dot(np.conj(ef_), psi_bar[2])
 
     # construct unitaries UA, UB using (A6a), (A6b)
-    ua = np.tensordot([1, 0], np.conj(e), axes=0) + phase * np.tensordot(
-        [0, 1], np.conj(e_), axes=0
-    )
-    ub = np.tensordot([1, 0], np.conj(f), axes=0) + np.conj(phase) * np.tensordot(
-        [0, 1], np.conj(f_), axes=0
-    )
+    ua = np.tensordot([1, 0], np.conj(e), axes=0) + phase * np.tensordot([0, 1], np.conj(e_), axes=0)
+    ub = np.tensordot([1, 0], np.conj(f), axes=0) + np.conj(phase) * np.tensordot([0, 1], np.conj(f_), axes=0)
     return ua, ub
 
 

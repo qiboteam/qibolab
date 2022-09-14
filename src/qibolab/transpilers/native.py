@@ -25,7 +25,7 @@ class NativeGates:
                 new.add(self.translate_gate(gate))
             else:
                 new.add(gate)
-        return gate
+        return new
 
     def H(self, gate):
         q = gate.target_qubits[0]
