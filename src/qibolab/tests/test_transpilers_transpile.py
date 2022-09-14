@@ -7,7 +7,8 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 
-from qibolab.transpilers import transpile
+from qibolab.tests.test_transpilers_connectivity import transpose_qubits
+from qibolab.transpilers.transpile import can_execute, transpile
 
 
 def generate_random_circuit(nqubits, ngates, seed=None):
@@ -26,9 +27,10 @@ def generate_random_circuit(nqubits, ngates, seed=None):
         gates.SWAP,
     ]
     n1, n2 = len(one_qubit_gates), len(two_qubit_gates)
+    n = n1 + n2 if nqubits > 1 else n1
     circuit = Circuit(nqubits)
     for _ in range(ngates):
-        igate = int(np.random.randint(0, n1 + n2))
+        igate = int(np.random.randint(0, n))
         if igate >= n1:
             q = tuple(np.random.randint(0, nqubits, 2))
             while q[0] == q[1]:
@@ -45,13 +47,18 @@ def generate_random_circuit(nqubits, ngates, seed=None):
     return circuit
 
 
-@pytest.mark.skip
-@pytest.mark.parametrize("nqubits", [3])
+@pytest.mark.parametrize("run_number", range(10))
+@pytest.mark.parametrize("nqubits", [1, 2, 3, 4, 5])
 @pytest.mark.parametrize("ngates", [20, 50, 100])
-def test_transpile(nqubits, ngates):
+@pytest.mark.parametrize("fuse_one_qubit", [False, True])
+def test_transpile(run_number, nqubits, ngates, fuse_one_qubit):
     backend = NumpyBackend()
     circuit = generate_random_circuit(nqubits, ngates)
-    transpiled_circuit, _ = transpile(circuit)
-    final_state = backend.execute_circuit(transpiled_circuit)
-    target_circuit = backend.execute_circuit(circuit)
-    np.testing.assert_allclose(final_state, target_circuit)
+    transpiled_circuit, hardware_qubits = transpile(circuit, fuse_one_qubit=fuse_one_qubit)
+    assert can_execute(transpiled_circuit)
+
+    final_state = backend.execute_circuit(transpiled_circuit).state()
+    target_state = backend.execute_circuit(circuit).state()
+    target_state = transpose_qubits(target_state, hardware_qubits)
+    fidelity = np.abs(np.conj(target_state).dot(final_state))
+    np.testing.assert_allclose(fidelity, 1.0)

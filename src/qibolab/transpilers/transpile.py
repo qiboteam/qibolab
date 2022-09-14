@@ -6,7 +6,7 @@ from qibolab.transpilers.connectivity import fix_connecivity
 from qibolab.transpilers.native import NativeGates
 
 
-def transpile(circuit, fuse_one_qubit=True):
+def transpile(circuit, fuse_one_qubit=False):
     """Implements full transpilation pipeline."""
     native_gates = NativeGates()
     new, hardware_qubits = fix_connecivity(circuit)
