@@ -154,7 +154,6 @@ def test_cnot_decomposition_light(run_number):
     from qibo.models import Circuit
 
     hx, hy = np.random.random(2)
-    print(hx, hy)
     target_matrix = bell_unitary(hx, hy, 0)
     c = Circuit(2)
     c.add(cnot_decomposition_light(0, 1, hx, hy))

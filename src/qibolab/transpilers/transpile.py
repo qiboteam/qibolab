@@ -7,16 +7,39 @@ from qibolab.transpilers.native import NativeGates
 
 
 def transpile(circuit, fuse_one_qubit=False):
-    """Implements full transpilation pipeline."""
-    native_gates = NativeGates()
+    """Implements full transpilation pipeline.
+
+    Args:
+        circuit (qibo.models.Circuit): Circuit model to transpile.
+
+    Returns:
+        new (qibo.models.Circuit): New circuit that can be executed on tii5q platform.
+        hardware_qubits (dict): Mapping between logical and physical qubits.
+    """
+    # Re-arrange gates using qibo's fusion algorithm
+    # this may reduce number of SWAPs when fixing for connectivity
+    fcircuit = circuit.fuse(max_qubits=2)
+    new = circuit.__class__(circuit.nqubits)
+    for fgate in fcircuit.queue:
+        if isinstance(fgate, gates.FusedGate):
+            new.add(fgate.gates)
+        else:
+            new.add(fgate)
+
+    # Add SWAPs to satisfy connectivity constraints
     new, hardware_qubits = fix_connecivity(circuit)
+
     # two-qubit gates to native
+    native_gates = NativeGates()
     new = native_gates.translate_circuit(new, translate_single_qubit=False)
-    # fuse one-qubit gates
+
+    # Optional: fuse one-qubit gates to reduce circuit depth
     if fuse_one_qubit:
         new = new.fuse(max_qubits=1)
+
     # one-qubit gates to native
     new = native_gates.translate_circuit(new, translate_single_qubit=True)
+
     return new, hardware_qubits
 
 
