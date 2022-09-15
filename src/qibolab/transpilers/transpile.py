@@ -2,7 +2,7 @@
 from qibo import gates
 from qibo.config import log
 
-from qibolab.transpilers.connectivity import fix_connecivity
+from qibolab.transpilers.connectivity import fix_connectivity
 from qibolab.transpilers.native import NativeGates
 
 
@@ -27,7 +27,7 @@ def transpile(circuit, fuse_one_qubit=False):
             new.add(fgate)
 
     # Add SWAPs to satisfy connectivity constraints
-    new, hardware_qubits = fix_connecivity(circuit)
+    new, hardware_qubits = fix_connectivity(circuit)
 
     # two-qubit gates to native
     native_gates = NativeGates()

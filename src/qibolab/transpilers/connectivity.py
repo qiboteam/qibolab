@@ -22,7 +22,7 @@ def find_connected_qubit(qubits, queue, hardware_qubits):
     return qubits[0]
 
 
-def fix_connecivity(circuit):
+def fix_connectivity(circuit):
     """Transforms an arbitrary circuit to one that can be executed on hardware.
 
     This method produces a circuit that respects the following connectivity:

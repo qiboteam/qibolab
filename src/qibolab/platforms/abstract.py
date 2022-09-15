@@ -196,6 +196,11 @@ class AbstractPlatform(ABC):
         """
         import numpy as np
 
+        from qibolab.transpilers import can_execute, transpile
+
+        if not can_execute(circuit):
+            circuit, hardware_qubits = transpile(circuit)
+
         sequence = PulseSequence()
         sequence.virtual_z_phases = {}
         for qubit in range(circuit.nqubits):
