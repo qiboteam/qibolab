@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-import tempfile
 from abc import ABC, abstractmethod
-from pathlib import Path
 
 from qibolab.paths import user_folder
 
@@ -21,11 +19,8 @@ class AbstractInstrument(ABC):
         self.is_connected: bool = False
         self.signature: str = f"{type(self).__name__}@{address}"
         # create local storage folder
-        instruments_data_folder = user_folder / "instruments" / "data"
-        instruments_data_folder.mkdir(parents=True, exist_ok=True)
-        # create temporary directory
-        self.tmp_folder = tempfile.TemporaryDirectory(dir=instruments_data_folder)
-        self.data_folder = Path(self.tmp_folder.name)
+        self.data_folder = user_folder / "instruments" / "data"
+        self.data_folder.mkdir(parents=True, exist_ok=True)
 
     @abstractmethod
     def connect(self):
