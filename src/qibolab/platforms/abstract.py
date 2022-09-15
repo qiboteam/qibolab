@@ -184,6 +184,16 @@ class AbstractPlatform(ABC):
 
     # TRANSPILATION
     def transpile(self, circuit: Circuit):
+        """Transforms a circuit to pulse sequence.
+
+        Args:
+            circuit (qibo.models.Circuit): Qibo circuit that respects the platform's
+                connectivity and native gates.
+
+        Returns:
+            sequence (qibolab.pulses.PulseSequence): Pulse sequence that implements the
+                circuit on the qubit.
+        """
         import numpy as np
 
         sequence = PulseSequence()
@@ -191,7 +201,7 @@ class AbstractPlatform(ABC):
         for qubit in range(circuit.nqubits):
             sequence.virtual_z_phases[qubit] = 0
 
-        for gate in native_circuit.queue:
+        for gate in circuit.queue:
 
             if isinstance(gate, gates.I):
                 pass

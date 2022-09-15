@@ -40,6 +40,10 @@ def transpile(circuit, fuse_one_qubit=False):
     # one-qubit gates to native
     new = native_gates.translate_circuit(new, translate_single_qubit=True)
 
+    # TODO: Handle measurements similarly to other gates
+    new.measurement_gate = circuit.measurement_gate
+    new.measurement_tuples = circuit.measurement_tuples
+
     return new, hardware_qubits
 
 

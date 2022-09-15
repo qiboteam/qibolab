@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from qibo.backends import NumpyBackend
-from qibo.config import raise_error
+from qibo.config import log, raise_error
 from qibo.states import CircuitResult
 
 from qibolab.transpilers.transpile import transpile
@@ -53,9 +53,12 @@ class QibolabBackend(NumpyBackend):
         # Transform a circuit into proper connectivity and native gates
         native_circuit, hardware_qubits = transpile(circuit, fuse_one_qubit=False)
         if check_transpiled:
-            target_state = super().execute_circuit(circuit).state()
-            final_state = super().execute_circuit(native_circuit).state()
-            np.testing.assert_allclose(final_state, target_state)
+            backend = NumpyBackend()
+            target_state = backend.execute_circuit(circuit).state()
+            final_state = backend.execute_circuit(native_circuit).state()
+            fidelity = np.abs(np.dot(np.conj(target_state), final_state))
+            np.testing.assert_allclose(fidelity, 1.0)
+            log.info("Transpiler test passed.")
 
         # Transpile the native circuit into a sequence of pulses ``PulseSequence``
         sequence = self.platform.transpile(native_circuit)

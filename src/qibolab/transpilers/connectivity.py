@@ -92,8 +92,6 @@ def fix_connecivity(circuit):
         if len(qubits) == 2:
             add_swap = True
 
-    # TODO: Properly handle ``circuit.measurement_gate``
-
     return new, hardware_qubits
 
 
