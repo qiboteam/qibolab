@@ -694,7 +694,7 @@ class ClusterQRM_RF(AbstractInstrument):
 
                     # Acquisitions
                     for acquisition_index, pulse in enumerate(sequencer.pulses.ro_pulses):
-                        sequencer.acquisitions[pulse.serial] = {"num_bins": 1, "index": acquisition_index}
+                        sequencer.acquisitions[pulse.serial] = {"num_bins": nshots, "index": acquisition_index}
 
                     # Program
                     minimum_delay_between_instructions = 4
@@ -803,7 +803,7 @@ class ClusterQRM_RF(AbstractInstrument):
                             #   arg0 is the index of the acquisition
                             #   arg1 is the index of the data bin
                             #   arg2 is the delay between starting the instruction and the next instruction
-                            acquire_instruction = f"                    acquire {pulses.ro_pulses.index(pulses[n])},0,{delay_after_acquire}"
+                            acquire_instruction = f"                    acquire {pulses.ro_pulses.index(pulses[n])},R0,{delay_after_acquire}"
                             # Add the serial of the pulse as a comment
                             body += "\n" + acquire_instruction
 
@@ -906,6 +906,8 @@ class ClusterQRM_RF(AbstractInstrument):
 
         # Retrieve data
         acquisition_results = {}
+        acquisition_results["shots"] = {}
+
         for port in self._output_ports_keys:
             if not self.ports["i1"].hardware_demod_en:
                 sequencer = self._sequencers[port][0]
@@ -940,7 +942,21 @@ class ClusterQRM_RF(AbstractInstrument):
                             raw_results[acquisition_name], pulse, demodulate=(not self.ports["i1"].hardware_demod_en)
                         )
                         acquisition_results[pulse.serial] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
-                        acquisition_results[pulse.qubit] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
+                        acquisition_results[pulse.qubit] = acquisition_results[pulse.serial]
+                        # Save individual shots
+                        int_len = self.acquisition_duration
+                        shots_i = [
+                            np.sqrt(2) * (val / int_len)
+                            for val in acquisition_results["acquisition"]["bins"]["integration"]["path0"]
+                        ]
+                        shots_q = [
+                            np.sqrt(2) * (val / int_len)
+                            for val in acquisition_results["acquisition"]["bins"]["integration"]["path1"]
+                        ]
+
+                        acquisition_results["shots"][pulse.serial] = zip(shots_i, shots_q)
+                        acquisition_results["shots"][pulse.qubit] = acquisition_results["shots"][pulse.serial]
+
                         # DEBUG: QRM Plot Incomming Pulses
                         # import qibolab.instruments.debug.incomming_pulse_plotting as pp
                         # pp.plot(raw_results)
@@ -984,13 +1000,17 @@ class ClusterQRM_RF(AbstractInstrument):
             # plt.show()
         else:
             int_len = self.acquisition_duration
-            i = (
-                np.sqrt(2)
-                * [(val / int_len) for val in acquisition_results["acquisition"]["bins"]["integration"]["path0"]][0]
+            i = np.mean(
+                [
+                    np.sqrt(2) * (val / int_len)
+                    for val in acquisition_results["acquisition"]["bins"]["integration"]["path0"]
+                ]
             )
-            q = (
-                np.sqrt(2)
-                * [(val / int_len) for val in acquisition_results["acquisition"]["bins"]["integration"]["path1"]][0]
+            q = np.mean(
+                [
+                    np.sqrt(2) * (val / int_len)
+                    for val in acquisition_results["acquisition"]["bins"]["integration"]["path1"]
+                ]
             )
             integrated_signal = i, q
         return integrated_signal
