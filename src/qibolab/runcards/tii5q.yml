@@ -47,8 +47,8 @@ instruments:
                 o1:
                     attenuation                 : 42
                     lo_enabled                  : true
-                    lo_frequency                : 7_712_825_000                 # (Hz) from 2e9 to 18e9
-                    gain                        : 0.1                           # for path0 and path1 -1.0<=v<=1.0
+                    lo_frequency                :  7_712_825_000                 # (Hz) from 2e9 to 18e9
+                    gain                        : 0.3                           # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en             : false
                 i1:
                     hardware_demod_en           : false
@@ -74,10 +74,10 @@ instruments:
                     gain                         : 0.233 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
                 o2:
-                    attenuation                  : 16 # (dB) #si bajas la atenuacion ya no se ve nada
+                    attenuation                  : 26 # (dB)
                     lo_enabled                   : true
-                    lo_frequency                 : 5_091_370_569 # (Hz) from 2e9 to 18e9 (QUBIT 2)
-                    gain                         : 0.35 # for path0 and path1 -1.0<=v<=1.0
+                    lo_frequency                 : 5_091_461_000 # (Hz) from 2e9 to 18e9
+                    gain                         : 0.28 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
 
             channel_port_map:
@@ -92,9 +92,9 @@ instruments:
         settings:
             ports:
                 o1:
-                    attenuation                  : 22 # (dB)
+                    attenuation                  : 26 # (dB)
                     lo_enabled                   : true
-                    lo_frequency                 : 6_212_286_000  # (Hz) from 2e9 to 18e9 (QUBIT 3)
+                    lo_frequency                 : 6_308_500_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.35 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
                 o2:
@@ -186,8 +186,8 @@ native_gates:
                 phase: 0
         2: # qubit number
             RX:
-                duration: 36
-                amplitude: 0.43
+                duration: 40
+                amplitude: 0.8
                 frequency: -200_000_000
                 shape: Drag(5, -0.04) #Gaussian(5)
                 type: qd # qubit drive
@@ -296,24 +296,24 @@ characterization:
             mean_exc_states: (-0.0018147265893322573-0.003225323063990513j)
             sweetspot: -0.00384
         2:
-            resonator_freq: 7_557_647_610
-            qubit_freq: 4_891_370_569
+            resonator_freq: 7_557_724_144
+            qubit_freq: 4_891_461_000 # 4_891_155_529
             T1: 33875
-            T2: 8479
-            state0_voltage: 1803
-            state1_voltage: 3808
-            mean_gnd_states: (-0.0013963078303444584-0.0010014455851625904j)
-            mean_exc_states: (-0.002143656599102605-0.0030204793616096215j)
+            T2: 0
+            state0_voltage: 5175
+            state1_voltage: 15442
+            mean_gnd_states: (-0.003939859338033963-0.00335499560437317j)
+            mean_exc_states: (-0.015165640448602356+0.0029071903433933377j)
             sweetspot: -0.00154
         3:
             resonator_freq: 7_678_010_000
             qubit_freq: 6_108_500_000
-            T1: 0
-            T2: 0
-            state0_voltage: 785
-            state1_voltage: 1720
-            mean_gnd_states: (-0.0007211155273345421-0.0002989002051225009j)
-            mean_exc_states: (-0.0007188916050170232-0.0003030798883247468j)
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            state0_voltage: 3777
+            state1_voltage: 10000
+            mean_gnd_states: (-0.004780928770772569+0.0008140738029343826j)
+            mean_exc_states: (0.006698623425692657+0.0036857211998776113j)
             sweetspot: -0.01126
         4:
             resonator_freq: 7_912_807_084
