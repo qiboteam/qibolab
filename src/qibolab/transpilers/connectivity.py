@@ -44,13 +44,13 @@ def fix_connecivity(circuit):
         hardware_qubits (list): List that maps logical to hardware qubits.
             Required for transforming final measurements to
     """
+    # TODO: Change this to a more lightweight form that takes a list of pairs
+    # instead of the whole circuit.
+
     # new circuit object that will be compatible to hardware connectivity
     new = circuit.__class__(circuit.nqubits)
     # list to maps logical to hardware qubits
     hardware_qubits = list(range(circuit.nqubits))
-
-    # TODO: Add a pseudo-fusion step here to reduce the number of SWAPs.
-    # Real fusion may also be used to reduce the total number of gates.
 
     # find initial qubit mapping
     for i, gate in enumerate(circuit.queue):
