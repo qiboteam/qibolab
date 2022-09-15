@@ -714,7 +714,7 @@ class ClusterQRM_RF(AbstractInstrument):
                     num_wait_loops = (wait_time - extra_wait) // wait_loop_step
 
                     header = f"""
-                    move {nshots},R0 # nshots
+                    move 0,R0 # loop iterator (nshots)
                     nop
                     wait_sync {minimum_delay_between_instructions}
                     loop:
@@ -738,7 +738,9 @@ class ClusterQRM_RF(AbstractInstrument):
                             # wait 0"""
 
                     footer += f"""
-                    loop R0,@loop
+                    add R0,1,R0       #increment iterator
+                    nop               #wait a cycle for R0 to be available
+                    jlt R0,{nshots},@loop #nshots
                     stop
                     """
 
@@ -918,11 +920,11 @@ class ClusterQRM_RF(AbstractInstrument):
                 self.device.get_sequencer_state(sequencer_number, timeout=1)
                 self.device.get_acquisition_state(sequencer_number, timeout=1)
                 self.device.store_scope_acquisition(sequencer_number, acquisition_name)
-                raw_results = self.device.get_acquisitions(sequencer_number)[acquisition_name]
+                raw_results = self.device.get_acquisitions(sequencer_number)
                 for sequencer in self._sequencers[port]:
                     for pulse in sequencer.pulses.ro_pulses:
                         acquisition_name = pulse.serial
-                        i, q = self._process_acquisition_results(raw_results, pulse, demodulate=True)
+                        i, q = self._process_acquisition_results(raw_results[acquisition_name], pulse, demodulate=True)
                         acquisition_results[pulse.serial] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
                         acquisition_results[pulse.qubit] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
             else:
@@ -946,16 +948,17 @@ class ClusterQRM_RF(AbstractInstrument):
                         acquisition_results[pulse.qubit] = acquisition_results[pulse.serial]
                         # Save individual shots
                         int_len = self.acquisition_duration
-                        shots_i = [
+                        shots_i = np.array([
                             np.sqrt(2) * (val / int_len)
-                            for val in acquisition_results["acquisition"]["bins"]["integration"]["path0"]
-                        ]
-                        shots_q = [
+                            for val in raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path0"]
+                        ])
+                        shots_q = np.array([
                             np.sqrt(2) * (val / int_len)
-                            for val in acquisition_results["acquisition"]["bins"]["integration"]["path1"]
-                        ]
-
-                        acquisition_results["shots"][pulse.serial] = zip(shots_i, shots_q)
+                            for val in raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path1"]
+                        ])
+                        acquisition_results["shots"][pulse.serial] = [(msr, phase, i, q) for msr, phase, i, q in zip(
+                            np.sqrt(shots_i**2 + shots_q**2), np.arctan2(shots_q, shots_i), shots_i, shots_q
+                        )]
                         acquisition_results["shots"][pulse.qubit] = acquisition_results["shots"][pulse.serial]
 
                         # DEBUG: QRM Plot Incomming Pulses
