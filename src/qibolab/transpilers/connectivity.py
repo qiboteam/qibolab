@@ -42,7 +42,7 @@ def fix_connectivity(circuit):
         new (qibo.models.Circuit): Qibo circuit that performs the same operation
             as the original but respects the hardware connectivity.
         hardware_qubits (list): List that maps logical to hardware qubits.
-            Required for transforming final measurements to
+            This is required for transforming final measurements.
     """
     # TODO: Change this to a more lightweight form that takes a list of pairs
     # instead of the whole circuit.
