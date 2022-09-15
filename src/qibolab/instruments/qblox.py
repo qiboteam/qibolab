@@ -20,6 +20,12 @@ from qblox_instruments.qcodes_drivers.sequencer import Sequencer as QbloxSequenc
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType, Waveform
 
+from qpysequence.program import Program
+from qpysequence.block import Block
+from qpysequence.loop import Loop
+from qpysequence.instructions.real_time import Play, Wait, Acquire
+from qpysequence.library import long_wait
+
 
 class WaveformsBuffer:
     """A class to represent a buffer that holds the unique waveforms used by a sequencer.
@@ -656,8 +662,10 @@ class ClusterQRM_RF(AbstractInstrument):
                         sequencer.acquisitions[pulse.serial] = {"num_bins": 1, "index": acquisition_index}
 
                     # Program
+                    program = Program()
+                    body = Loop(name="body", iterations=nshots)
+                    
                     minimum_delay_between_instructions = 4
-                    wait_loop_step: int = 1000
 
                     pulses = sequencer.pulses
                     sequence_total_duration = (
@@ -666,71 +674,9 @@ class ClusterQRM_RF(AbstractInstrument):
                     time_between_repetitions = repetition_duration - sequence_total_duration
                     assert time_between_repetitions > 0
 
-                    wait_time = time_between_repetitions
-                    extra_wait = wait_time % wait_loop_step
-                    while wait_time > 0 and extra_wait < 4:
-                        wait_loop_step += 1
-                        extra_wait = wait_time % wait_loop_step
-                    num_wait_loops = (wait_time - extra_wait) // wait_loop_step
-
-                    header = f"""
-                    move {nshots},R0 # nshots
-                    nop
-                    wait_sync {minimum_delay_between_instructions}
-                    loop:
-                    reset_ph"""
-                    body = ""
-
-                    footer = f"""
-                        # wait {wait_time} ns"""
-                    if num_wait_loops > 0:
-                        footer += f"""
-                        move {num_wait_loops},R2
-                        nop
-                        waitloop2:
-                            wait {wait_loop_step}
-                            loop R2,@waitloop2"""
-                    if extra_wait > 0:
-                        footer += f"""
-                            wait {extra_wait}"""
-                    else:
-                        footer += f"""
-                            # wait 0"""
-
-                    footer += f"""
-                    loop R0,@loop
-                    stop
-                    """
-
-                    # Add an initial wait instruction for the first pulse of the sequence
-                    wait_time = pulses[0].start
-                    extra_wait = wait_time % wait_loop_step
-                    while wait_time > 0 and extra_wait < 4:
-                        wait_loop_step += 1
-                        extra_wait = wait_time % wait_loop_step
-                    num_wait_loops = (wait_time - extra_wait) // wait_loop_step
-
-                    if wait_time > 0:
-                        initial_wait_instruction = f"""
-                        # wait {wait_time} ns"""
-                        if num_wait_loops > 0:
-                            initial_wait_instruction += f"""
-                        move {num_wait_loops},R1
-                        nop
-                        waitloop1:
-                            wait {wait_loop_step}
-                            loop R1,@waitloop1"""
-                        if extra_wait > 0:
-                            initial_wait_instruction += f"""
-                            wait {extra_wait}"""
-                        else:
-                            initial_wait_instruction += f"""
-                            # wait 0"""
-                    else:
-                        initial_wait_instruction = """
-                        # wait 0"""
-
-                    body += initial_wait_instruction
+                    initial_wait_block = long_wait(pulses[0].start, "down")
+                    program.append_block(initial_wait_block)
+                    footer_wait_block = long_wait(time_between_repetitions, "down")
 
                     for n in range(pulses.count):
                         if pulses[n].type == PulseType.READOUT:
@@ -753,18 +699,18 @@ class ClusterQRM_RF(AbstractInstrument):
                             #   arg0 is the index of the I waveform
                             #   arg1 is the index of the Q waveform
                             #   arg2 is the delay between starting the instruction and the next instruction
-                            play_instruction = f"                    play {sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_i)},{sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_q)},{delay_after_play}"
-                            # Add the serial of the pulse as a comment
-                            play_instruction += " " * (34 - len(play_instruction)) + f"# play waveforms {pulses[n]}"
-                            body += "\n" + play_instruction
+                            play_instruction = Play(sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_i), sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_q), delay_after_play)
+                            # Add the serial of the pulse as a comment (comments still not available in qpysequence)
+                            # play_comment += " " * (34 - len(play_instruction)) + f"# play waveforms {pulses[n]}"
+                            body.append_component(play_instruction)
 
                             # Prepare acquire instruction: acquire arg0, arg1, arg2.
                             #   arg0 is the index of the acquisition
                             #   arg1 is the index of the data bin
                             #   arg2 is the delay between starting the instruction and the next instruction
-                            acquire_instruction = f"                    acquire {pulses.ro_pulses.index(pulses[n])},0,{delay_after_acquire}"
-                            # Add the serial of the pulse as a comment
-                            body += "\n" + acquire_instruction
+                            acquire_instruction = Acquire(pulses.ro_pulses.index(pulses[n]), bin_index=0, wait_time=delay_after_acquire)
+                            body.append_component(acquire_instruction)
+
 
                         else:
                             # Calculate the delay_after_play that is to be used as an argument to the play instruction
@@ -784,11 +730,14 @@ class ClusterQRM_RF(AbstractInstrument):
                             #   arg1 is the index of the Q waveform
                             #   arg2 is the delay between starting the instruction and the next instruction
                             play_instruction = f"                    play {sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_i)},{sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_q)},{delay_after_play}"
+                            play_instruction = Play(sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_i), sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_q), delay_after_play)
                             # Add the serial of the pulse as a comment
-                            play_instruction += " " * (34 - len(play_instruction)) + f"# play waveforms {pulses[n]}"
-                            body += "\n" + play_instruction
+                            play_comment = " " * (34 - len(play_instruction)) + f"# play waveforms {pulses[n]}"
+                            body.append_component(play_instruction)
 
-                    sequencer.program = header + body + footer
+                    program.append_block(body)
+                    program.append_block(footer_wait_block)
+                    sequencer.program = repr(program)
 
     def upload(self):
         """Uploads waveforms and programs of all sequencers and arms them in preparation for execution.
