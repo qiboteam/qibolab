@@ -69,9 +69,6 @@ class QibolabBackend(NumpyBackend):
         if qubits is None:  # pragma: no cover
             qubits = result.circuit.measurement_gate.qubits
 
-        def distance(a, b):
-            return abs(a - b)
-
         # basic classification
         probabilities = []
         for qubit in qubits:
@@ -80,9 +77,9 @@ class QibolabBackend(NumpyBackend):
             i = result.execution_result[qubit][2]  # execution_result[qubit] provides the latest
             q = result.execution_result[qubit][3]  # acquisition data for the corresponding qubit
             measurement: complex = complex(i, q)
-            d0 = distance(measurement, mean_state0)
-            d1 = distance(measurement, mean_state1)
-            d01 = distance(mean_state0, mean_state1)
+            d0 = abs(measurement - mean_state0)
+            d1 = abs(measurement - mean_state1)
+            d01 = abs(mean_state0 - mean_state1)
             p = (d1**2 + d01**2 - d0**2) / 2 / d01**2
             probabilities.append([p, 1 - p])
         return probabilities

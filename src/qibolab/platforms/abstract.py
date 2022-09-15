@@ -189,13 +189,13 @@ class AbstractPlatform(ABC):
 
         from qibolab.transpilers.transpile import transpile
 
-        native_gates_circuit = transpile(circuit)
+        native_circuit, hardware_qubits = transpile(circuit, fuse_one_qubit=False)
         sequence = PulseSequence()
         sequence.virtual_z_phases = {}
         for qubit in range(circuit.nqubits):
             sequence.virtual_z_phases[qubit] = 0
 
-        for gate in native_gates_circuit.queue:
+        for gate in native_circuit.queue:
 
             if isinstance(gate, gates.I):
                 pass
