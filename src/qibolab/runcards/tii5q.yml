@@ -45,10 +45,10 @@ instruments:
         settings:
             ports:
                 o1:
-                    attenuation                 : 10
+                    attenuation                 : 42
                     lo_enabled                  : true
                     lo_frequency                :  7_712_825_000                 # (Hz) from 2e9 to 18e9
-                    gain                        : 0.3                           # for path0 and path1 -1.0<=v<=1.0
+                    gain                        : 0.1                           # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en             : false
                 i1:
                     hardware_demod_en           : false
@@ -74,10 +74,10 @@ instruments:
                     gain                         : 0.17 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
                 o2:
-                    attenuation                  : 26 # (dB)
+                    attenuation                  : 20 # (dB)
                     lo_enabled                   : true
-                    lo_frequency                 : 5_091_461_000 # (Hz) from 2e9 to 18e9
-                    gain                         : 0.28 # for path0 and path1 -1.0<=v<=1.0
+                    lo_frequency                 : 5_091_600_000 # (Hz) from 2e9 to 18e9
+                    gain                         : 0.35 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
 
             channel_port_map:
@@ -92,9 +92,9 @@ instruments:
         settings:
             ports:
                 o1:
-                    attenuation                  : 26 # (dB)
+                    attenuation                  : 34 # (dB)
                     lo_enabled                   : true
-                    lo_frequency                 : 6_308_500_000 # (Hz) from 2e9 to 18e9
+                    lo_frequency                 : 6_309_400_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.35 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
                 o2:
@@ -187,7 +187,7 @@ native_gates:
         2: # qubit number
             RX:
                 duration: 40
-                amplitude: 0.8
+                amplitude: 0.44
                 frequency: -200_000_000
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -196,7 +196,7 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.1
-                frequency: -155_181_000
+                frequency: -155_201_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -213,7 +213,7 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.1
-                frequency: -34_815_000
+                frequency: -34_845_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -296,18 +296,18 @@ characterization:
             mean_exc_states: (-0.01143767040340675+0.006593184205517083j)
             sweetspot: -0.00384
         2:
-            resonator_freq: 7_557_724_144
-            qubit_freq: 4_891_461_000 # 4_891_155_529
+            resonator_freq: 7_557_624_144
+            qubit_freq: 4_891_600_000 # 4_891_155_529
             T1: 33875
             T2: 0
             state0_voltage: 5175
             state1_voltage: 15442
             mean_gnd_states: (-0.003939859338033963-0.00335499560437317j)
-            mean_exc_states: (-0.015165640448602356+0.0029071903433933377j)
+            mean_exc_states: (0.007495619698642739+0.005741169222622128j)
             sweetspot: -0.00154
         3:
-            resonator_freq: 7_678_010_000
-            qubit_freq: 6_108_500_000
+            resonator_freq: 7_677_980_000
+            qubit_freq: 6_109_400_000
             T1: 2192.895853326451
             T2: 6933.310025260633
             state0_voltage: 3777
