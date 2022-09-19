@@ -6,11 +6,13 @@ from qibo.states import CircuitResult
 
 class QibolabBackend(NumpyBackend):
     def __init__(self, platform, runcard=None):
+        from qibolab import __version__
         from qibolab.platform import Platform
 
         super().__init__()
         self.name = "qibolab"
         self.platform = Platform(platform, runcard)
+        self.version = __version__
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
