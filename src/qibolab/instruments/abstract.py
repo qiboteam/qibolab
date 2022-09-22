@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 import tempfile
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -25,7 +26,10 @@ class AbstractInstrument(ABC):
         instruments_data_folder = user_folder / "instruments" / "data"
         instruments_data_folder.mkdir(parents=True, exist_ok=True)
         # create temporary directory
-        self.tmp_folder = tempfile.TemporaryDirectory(dir=instruments_data_folder)
+        if "QIBOLAB_KEEP_DATA" in os.environ:
+            self.tmp_folder = tempfile.mkdtemp(dir=instruments_data_folder)
+        else:
+            self.tmp_folder = tempfile.TemporaryDirectory(dir=instruments_data_folder)
         self.data_folder = Path(self.tmp_folder.name)
 
     @abstractmethod
