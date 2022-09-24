@@ -25,8 +25,10 @@ class Qubit:
         instruments (dict): Dictionary containing the instrument objects created in ``AbstractPlatform``.
 
     Attributes:
-        instruments (list) (length 3)
-        ports (list) (length 3)
+        instruments (list): List of the three instrument names (str) controlling this qubit.
+        channels (list): List of channels (int) associated to the qubit.
+        ro_channel, qd_channel, qf_channel (int)
+        ro_port, qd_port, qf_port
     """
 
     def __init__(self, index, settings):
@@ -44,8 +46,27 @@ class Qubit:
                 if channel in self.channels:
                     self.instruments[self.channels.index(channel)] = name
 
+        self.ro_port, self.qd_port, self.qf_port = None, None, None
+
         self.native_one_qubit = settings["native_gates"]["single_qubit"][index]
         # TODO: Think how to implement two qubit gates
+
+    def set_ports(self, instruments):
+        """Set instrument ports (ro_port, qd_port, qf_port) associated to this qubit.
+
+        Args:
+            instruments (dict): Dictionary mapping instrument name to instrument
+                objects, created in :meth:`AbstractPlatform.__init__`.
+        """
+        if self.instruments[0] is not None:
+            qrm = instruments[self.instruments[0]]
+            self.ro_port = qrm.ports[qrm.channel_port_map[self.channels[0]]]
+        if self.instruments[1] is not None:
+            qcm = instruments[self.instruments[1]]
+            self.qd_port = qcm.ports[qcm.channel_port_map[self.channels[1]]]
+        if self.instruments[2] is not None:
+            qbm = instruments[self.instruments[2]]
+            self.qf_port = qbm.dacs[self.channels[2]]
 
     def get_native_gate(self, name, start, relative_phase):
         kwargs = dict(self.native_one_qubit.get(name))
@@ -170,25 +191,15 @@ class AbstractPlatform(ABC):
             )
 
         # Generate ro_channel[qubit], qd_channel[qubit], qf_channel[qubit], qrm[qubit], qcm[qubit], lo_qrm[qubit], lo_qcm[qubit]
+        for qubit in self.qubits:
+            qubit.set_ports(self.instruments)
+        # TODO: Remove these dictionaries as they are probably not needed
         self.ro_channel = {qubit.ro_channel for qubit in self.qubits}
         self.qd_channel = {qubit.qd_channel for qubit in self.qubits}
         self.qf_channel = {qubit.qf_channel for qubit in self.qubits}
-        self.qrm = {}
-        self.qcm = {}
-        self.qbm = {}
-        self.ro_port = {}
-        self.qd_port = {}
-        self.qf_port = {}
-        for qubit in self.qubits:
-            if not qubit.instruments[0] is None:
-                self.qrm[qubit] = self.instruments[qubit.instruments[0]]
-                self.ro_port[qubit] = self.qrm[qubit].ports[self.qrm[qubit].channel_port_map[qubit.channels[0]]]
-            if not qubit.instruments[1] is None:
-                self.qcm[qubit] = self.instruments[qubit.instruments[1]]
-                self.qd_port[qubit] = self.qcm[qubit].ports[self.qcm[qubit].channel_port_map[qubit.channels[1]]]
-            if not qubit.instruments[2] is None:
-                self.qbm[qubit] = self.instruments[qubit.instruments[2]]
-                self.qf_port[qubit] = self.qbm[qubit].dacs[qubit.channels[2]]
+        self.ro_port = {qubit.ro_port for qubit in self.qubits}
+        self.qd_port = {qubit.qd_port for qubit in self.qubits}
+        self.qf_port = {qubit.qf_port for qubit in self.qubits}
 
     def start(self):
         if self.is_connected:
