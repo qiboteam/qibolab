@@ -21,24 +21,24 @@ class MultiqubitPlatform(AbstractPlatform):
         # Process Pulse Sequence. Assign pulses to instruments and generate waveforms & program
         instrument_pulses = {}
         roles = {}
-        for name in self.instruments:
+        for name, instrument in self.instruments.items():
             roles[name] = self.settings["instruments"][name]["roles"]
             if "readout" in roles[name] or "control" in roles[name]:
-                instrument_pulses[name] = sequence.get_channel_pulses(*self.instruments[name].channels)
-                self.instruments[name].process_pulse_sequence(instrument_pulses[name], nshots, self.repetition_duration)
-                self.instruments[name].upload()
+                instrument_pulses[name] = sequence.get_channel_pulses(*instrument.channels)
+                instrument.process_pulse_sequence(instrument_pulses[name], nshots, self.repetition_duration)
+                instrument.upload()
 
-        for name in self.instruments:
+        for name, instrument in self.instruments.items():
             if "control" in roles[name]:
                 if not instrument_pulses[name].is_empty:
-                    self.instruments[name].play_sequence()
+                    instrument.play_sequence()
 
         acquisition_results = {}
-        for name in self.instruments:
+        for name, instrument in self.instruments.items():
             if "readout" in roles[name]:
                 if not instrument_pulses[name].is_empty:
                     if not instrument_pulses[name].ro_pulses.is_empty:
-                        acquisition_results.update(self.instruments[name].play_sequence_and_acquire())
+                        acquisition_results.update(instrument.play_sequence_and_acquire())
                     else:
-                        self.instruments[name].play_sequence()
+                        instrument.play_sequence()
         return acquisition_results

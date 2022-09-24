@@ -74,10 +74,10 @@ class AbstractPlatform(ABC):
 
         self.instruments = {}
         # Instantiate instruments
-        for name in self.settings["instruments"]:
-            lib = self.settings["instruments"][name]["lib"]
-            i_class = self.settings["instruments"][name]["class"]
-            address = self.settings["instruments"][name]["address"]
+        for name, inst_settings in self.settings["instruments"].items():
+            lib = inst_settings["lib"]
+            i_class = inst_settings["class"]
+            address = inst_settings["address"]
             from importlib import import_module
 
             InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
@@ -153,9 +153,9 @@ class AbstractPlatform(ABC):
                 "There is no connection to the instruments, the setup cannot be completed",
             )
 
-        for name in self.instruments:
+        for name, instrument in self.instruments.items():
             # Set up every with the platform settings and the instrument settings
-            self.instruments[name].setup(
+            instrument.setup(
                 **self.settings["settings"],
                 **self.settings["instruments"][name]["settings"],
             )
@@ -191,18 +191,18 @@ class AbstractPlatform(ABC):
 
     def start(self):
         if self.is_connected:
-            for name in self.instruments:
-                self.instruments[name].start()
+            for instrument in self.instruments.values():
+                instrument.start()
 
     def stop(self):
         if self.is_connected:
-            for name in self.instruments:
-                self.instruments[name].stop()
+            for instrument in self.instruments.values():
+                instrument.stop()
 
     def disconnect(self):
         if self.is_connected:
-            for name in self.instruments:
-                self.instruments[name].disconnect()
+            for instrument in self.instruments.values():
+                instrument.disconnect()
             self.is_connected = False
 
     # TRANSPILATION
