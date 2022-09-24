@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import itertools
 from abc import ABC, abstractmethod
 
 import yaml
@@ -39,10 +40,9 @@ class Qubit:
         # Generate qubit_instrument_map from qubit_channel_map and the instruments' channel_port_maps
         self.instruments = [None, None, None]
         for name, inst_settings in settings["instruments"].items():
-            for channel in inst_settings.get("channel_port_map", []):
-                if channel in self.channels:
-                    self.instruments[self.channels.index(channel)] = name
-            for channel in inst_settings.get("s4g_modules", []):
+            channel_port_map = inst_settings.get("channel_port_map", [])
+            s4g_modules = inst_settings.get("s4g_modules", [])
+            for channel in itertools.chain(channel_port_map, s4g_modules):
                 if channel in self.channels:
                     self.instruments[self.channels.index(channel)] = name
 
@@ -190,13 +190,9 @@ class AbstractPlatform(ABC):
                 **self.settings["instruments"][name]["settings"],
             )
 
-        # Generate ro_channel[qubit], qd_channel[qubit], qf_channel[qubit], qrm[qubit], qcm[qubit], lo_qrm[qubit], lo_qcm[qubit]
         for qubit in self.qubits:
             qubit.set_ports(self.instruments)
-        # TODO: Remove these dictionaries as they are probably not needed
-        self.ro_channel = {qubit.ro_channel for qubit in self.qubits}
-        self.qd_channel = {qubit.qd_channel for qubit in self.qubits}
-        self.qf_channel = {qubit.qf_channel for qubit in self.qubits}
+        # TODO: These dictionaries should be removed but doing so will break compatibility with qcvv
         self.ro_port = {qubit.ro_port for qubit in self.qubits}
         self.qd_port = {qubit.qd_port for qubit in self.qubits}
         self.qf_port = {qubit.qf_port for qubit in self.qubits}
