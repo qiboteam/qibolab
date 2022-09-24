@@ -17,9 +17,33 @@ from qibolab.pulses import (
 
 
 class Qubit:
+    """Data structure that holds information about all instruments controlling a qubit.
+
+    Args:
+        index (int): Qubit index (read from runcard).
+        channels (list): List of channels (int) associated to the qubit (read from runcard).
+        instruments (dict): Dictionary containing the instrument objects created in ``AbstractPlatform``.
+
+    Attributes:
+        instruments (list) (length 3)
+        ports (list) (length 3)
+    """
+
     def __init__(self, index, settings):
         self.index = index
-        self.ro_channel, self.qd_channel, self.qf_channel = settings["qubit_channel_map"][index]
+        self.channels = settings["qubit_channel_map"][index]
+        self.ro_channel, self.qd_channel, self.qf_channel = self.channels
+
+        # Generate qubit_instrument_map from qubit_channel_map and the instruments' channel_port_maps
+        self.instruments = [None, None, None]
+        for name, inst_settings in settings["instruments"].items():
+            for channel in inst_settings.get("channel_port_map", []):
+                if channel in self.channels:
+                    self.instruments[self.channels.index(channel)] = name
+            for channel in inst_settings.get("s4g_modules", []):
+                if channel in self.channels:
+                    self.instruments[self.channels.index(channel)] = name
+
         self.native_one_qubit = settings["native_gates"]["single_qubit"][index]
         # TODO: Think how to implement two qubit gates
 
@@ -65,7 +89,6 @@ class AbstractPlatform(ABC):
 
         self.topology = self.settings["topology"]
         self.channels = self.settings["channels"]
-        self.qubit_channel_map = self.settings["qubit_channel_map"]
 
         # Load Characterization settings
         self.characterization = self.settings["characterization"]
@@ -83,20 +106,6 @@ class AbstractPlatform(ABC):
             InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
             instance = InstrumentClass(name, address)
             self.instruments[name] = instance
-
-        # Generate qubit_instrument_map from qubit_channel_map and the instruments' channel_port_maps
-        self.qubit_instrument_map = {}
-        for qubit in self.qubit_channel_map:
-            self.qubit_instrument_map[qubit] = [None, None, None]
-            for name in self.instruments:
-                if "channel_port_map" in self.settings["instruments"][name]["settings"]:
-                    for channel in self.settings["instruments"][name]["settings"]["channel_port_map"]:
-                        if channel in self.qubit_channel_map[qubit]:
-                            self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
-                if "s4g_modules" in self.settings["instruments"][name]["settings"]:
-                    for channel in self.settings["instruments"][name]["settings"]["s4g_modules"]:
-                        if channel in self.qubit_channel_map[qubit]:
-                            self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
 
         # Instantiate Qubit objects and map them to channels and instruments
         self.qubits = [Qubit(q, self.settings) for q in self.settings["qubits"]]
@@ -161,33 +170,25 @@ class AbstractPlatform(ABC):
             )
 
         # Generate ro_channel[qubit], qd_channel[qubit], qf_channel[qubit], qrm[qubit], qcm[qubit], lo_qrm[qubit], lo_qcm[qubit]
-        self.ro_channel = {}
-        self.qd_channel = {}
-        self.qf_channel = {}
+        self.ro_channel = {qubit.ro_channel for qubit in self.qubits}
+        self.qd_channel = {qubit.qd_channel for qubit in self.qubits}
+        self.qf_channel = {qubit.qf_channel for qubit in self.qubits}
         self.qrm = {}
         self.qcm = {}
         self.qbm = {}
         self.ro_port = {}
         self.qd_port = {}
         self.qf_port = {}
-        for qubit in self.qubit_channel_map:
-            self.ro_channel[qubit] = self.qubit_channel_map[qubit][0]
-            self.qd_channel[qubit] = self.qubit_channel_map[qubit][1]
-            self.qf_channel[qubit] = self.qubit_channel_map[qubit][2]
-
-            if not self.qubit_instrument_map[qubit][0] is None:
-                self.qrm[qubit] = self.instruments[self.qubit_instrument_map[qubit][0]]
-                self.ro_port[qubit] = self.qrm[qubit].ports[
-                    self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]
-                ]
-            if not self.qubit_instrument_map[qubit][1] is None:
-                self.qcm[qubit] = self.instruments[self.qubit_instrument_map[qubit][1]]
-                self.qd_port[qubit] = self.qcm[qubit].ports[
-                    self.qcm[qubit].channel_port_map[self.qubit_channel_map[qubit][1]]
-                ]
-            if not self.qubit_instrument_map[qubit][2] is None:
-                self.qbm[qubit] = self.instruments[self.qubit_instrument_map[qubit][2]]
-                self.qf_port[qubit] = self.qbm[qubit].dacs[self.qubit_channel_map[qubit][2]]
+        for qubit in self.qubits:
+            if not qubit.instruments[0] is None:
+                self.qrm[qubit] = self.instruments[qubit.instruments[0]]
+                self.ro_port[qubit] = self.qrm[qubit].ports[self.qrm[qubit].channel_port_map[qubit.channels[0]]]
+            if not qubit.instruments[1] is None:
+                self.qcm[qubit] = self.instruments[qubit.instruments[1]]
+                self.qd_port[qubit] = self.qcm[qubit].ports[self.qcm[qubit].channel_port_map[qubit.channels[1]]]
+            if not qubit.instruments[2] is None:
+                self.qbm[qubit] = self.instruments[qubit.instruments[2]]
+                self.qf_port[qubit] = self.qbm[qubit].dacs[qubit.channels[2]]
 
     def start(self):
         if self.is_connected:
