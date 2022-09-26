@@ -29,16 +29,14 @@ class MultiqubitPlatform(AbstractPlatform):
                 instrument.upload()
 
         for name, instrument in self.instruments.items():
-            if "control" in roles[name]:
-                if not instrument_pulses[name].is_empty:
-                    instrument.play_sequence()
+            if "control" in roles[name] and not instrument_pulses[name].is_empty:
+                instrument.play_sequence()
 
         acquisition_results = {}
         for name, instrument in self.instruments.items():
-            if "readout" in roles[name]:
-                if not instrument_pulses[name].is_empty:
-                    if not instrument_pulses[name].ro_pulses.is_empty:
-                        acquisition_results.update(instrument.play_sequence_and_acquire())
-                    else:
-                        instrument.play_sequence()
+            if "readout" in roles[name] and not instrument_pulses[name].is_empty:
+                if not instrument_pulses[name].ro_pulses.is_empty:
+                    acquisition_results.update(instrument.play_sequence_and_acquire())
+                else:
+                    instrument.play_sequence()
         return acquisition_results
