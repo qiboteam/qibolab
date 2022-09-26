@@ -35,7 +35,7 @@ instruments:
         address: 192.168.0.4
         roles: [other]
         settings:
-            reference_clock_source      : internal                      # external or internal
+            reference_clock_source      : external                      # external or internal
 
     qrm_rf:
         lib: qblox
@@ -76,7 +76,7 @@ instruments:
                 o2:
                     attenuation                  : 20 # (dB)
                     lo_enabled                   : true
-                    lo_frequency                 : 5_091_600_000 # (Hz) from 2e9 to 18e9
+                    lo_frequency                 : 5_091_350_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.35 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
 
@@ -187,7 +187,7 @@ native_gates:
         2: # qubit number
             RX:
                 duration: 40
-                amplitude: 0.44
+                amplitude: 0.4485
                 frequency: -200_000_000
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -297,11 +297,11 @@ characterization:
             sweetspot: -0.00384
         2:
             resonator_freq: 7_557_624_144
-            qubit_freq: 4_891_600_000 # 4_891_155_529
+            qubit_freq: 4_891_350_000 # 4_891_155_529
             T1: 33875
             T2: 0
-            state0_voltage: 5175
-            state1_voltage: 15442
+            state0_voltage: 9893
+            state1_voltage: 27140
             mean_gnd_states: (-0.003939859338033963-0.00335499560437317j)
             mean_exc_states: (0.007495619698642739+0.005741169222622128j)
             sweetspot: -0.00154
