@@ -26,20 +26,6 @@ class DummyPlatform(AbstractPlatform):
         name (str): name of the platform.
     """
 
-    def __init__(self, name, runcard):
-        self.name = name
-        self.runcard = runcard
-        self.is_connected = False
-        # Load platform settings
-        with open(runcard, "r") as file:
-            self.settings = yaml.safe_load(file)
-
-        # create dummy instruments
-        nqubits = self.settings.get("nqubits")
-        # TODO: Remove these when platform abstraction is fixed
-        self.qcm = {i: DummyInstrument() for i in range(nqubits)}
-        self.qrm = {i: DummyInstrument() for i in range(nqubits)}
-
     def reload_settings(self):  # pragma: no cover
         log.info("Dummy platform does not support setting reloading.")
 

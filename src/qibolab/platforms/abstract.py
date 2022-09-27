@@ -39,7 +39,7 @@ class Qubit:
 
         # Generate qubit_instrument_map from qubit_channel_map and the instruments' channel_port_maps
         self.instruments = [None, None, None]
-        for name, value in settings["instruments"].items():
+        for name, value in settings.get("instruments", {}).items():
             instrument_settings = value.get("settings")
             channel_port_map = instrument_settings.get("channel_port_map", [])
             s4g_modules = instrument_settings.get("s4g_modules", [])
@@ -71,7 +71,7 @@ class Qubit:
 
     def get_native_gate(self, name, start, relative_phase):
         kwargs = dict(self.native_one_qubit.get(name))
-        kwargs.pop("phase")
+        kwargs.pop("phase", None)
         kwargs["start"] = start
         kwargs["relative_phase"] = relative_phase
         kwargs["qubit"] = self.index
@@ -111,7 +111,7 @@ class AbstractPlatform(ABC):
 
         self.instruments = {}
         # Instantiate instruments
-        for name, inst_settings in self.settings["instruments"].items():
+        for name, inst_settings in self.settings.get("instruments", {}).items():
             lib = inst_settings["lib"]
             i_class = inst_settings["class"]
             address = inst_settings["address"]
