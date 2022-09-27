@@ -21,15 +21,14 @@ class Qubit:
     """Data structure that holds information about all instruments controlling a qubit.
 
     Args:
-        index (int): Qubit index (read from runcard).
-        channels (list): List of channels (int) associated to the qubit (read from runcard).
-        instruments (dict): Dictionary containing the instrument objects created in ``AbstractPlatform``.
+        index (int): Qubit index.
+        settings (dict): Settings dictionary as read from the runcard yaml.
 
     Attributes:
         instruments (list): List of the three instrument names (str) controlling this qubit.
-        channels (list): List of channels (int) associated to the qubit.
-        ro_channel, qd_channel, qf_channel (int)
-        ro_port, qd_port, qf_port
+        channels (list): List of the three channels (int) associated to the qubit.
+        ro_channel, qd_channel, qf_channel (int): Explicit references to the channels.
+        ro_port, qd_port, qf_port: Explicit references to the ports.
     """
 
     def __init__(self, index, settings):
@@ -70,6 +69,20 @@ class Qubit:
             self.qf_port = qbm.dacs[self.channels[2]]
 
     def get_native_gate(self, name, start, relative_phase):
+        """Get one-qubit native gate acting on this qubit.
+
+        This maps the gate to a single pulse and works for the native gates
+        provided in the runcard.
+
+        Args:
+            name (str): Name of the native gate (should agree with the runcard).
+            start (float): Start time for the corresponding pulse.
+            relative_phase (float): Relative phase of the corresponding pulse.
+
+        Returns
+            kwargs (dict): Dictionary containing all the arguments required
+                for constructing the single pulse that implements the given gate.
+        """
         kwargs = dict(self.native_one_qubit.get(name))
         kwargs.pop("phase", None)
         kwargs["start"] = start
