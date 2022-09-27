@@ -35,7 +35,7 @@ instruments:
         address: 192.168.0.4
         roles: [other]
         settings:
-            reference_clock_source      : external                      # external or internal
+            reference_clock_source      : internal                      # external or internal
 
     qrm_rf:
         lib: qblox
@@ -45,7 +45,7 @@ instruments:
         settings:
             ports:
                 o1:
-                    attenuation                 : 42
+                    attenuation                 : 10
                     lo_enabled                  : true
                     lo_frequency                :  7_712_825_000                 # (Hz) from 2e9 to 18e9
                     gain                        : 0.3                           # for path0 and path1 -1.0<=v<=1.0
@@ -76,8 +76,8 @@ instruments:
                 o2:
                     attenuation                  : 26 # (dB)
                     lo_enabled                   : true
-                    lo_frequency                 : 5_091_350_000 # (Hz) from 2e9 to 18e9
-                    gain                         : 0.35 # for path0 and path1 -1.0<=v<=1.0
+                    lo_frequency                 : 5_091_461_000 # (Hz) from 2e9 to 18e9
+                    gain                         : 0.28 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
 
             channel_port_map:
@@ -187,7 +187,7 @@ native_gates:
         2: # qubit number
             RX:
                 duration: 40
-                amplitude: 0.4485
+                amplitude: 0.8
                 frequency: -200_000_000
                 shape: Drag(5, -0.04) #Gaussian(5)
                 type: qd # qubit drive
@@ -196,7 +196,7 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.1
-                frequency: -155_201_000
+                frequency: -155_181_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -213,7 +213,7 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.1
-                frequency: -34_845_000
+                frequency: -34_815_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -296,12 +296,12 @@ characterization:
             mean_exc_states: (-0.0018147265893322573-0.003225323063990513j)
             sweetspot: -0.00384
         2:
-            resonator_freq: 7_557_624_144
-            qubit_freq: 4_891_350_000 # 4_891_155_529
+            resonator_freq: 7_557_724_144
+            qubit_freq: 4_891_461_000 # 4_891_155_529
             T1: 33875
             T2: 0
-            state0_voltage: 9921
-            state1_voltage: 26936
+            state0_voltage: 5175
+            state1_voltage: 15442
             mean_gnd_states: (-0.003939859338033963-0.00335499560437317j)
             mean_exc_states: (-0.015165640448602356+0.0029071903433933377j)
             sweetspot: -0.00154

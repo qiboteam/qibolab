@@ -20,8 +20,11 @@ class AbstractInstrument(ABC):
         self.is_connected: bool = False
         self.signature: str = f"{type(self).__name__}@{address}"
         # create local storage folder
-        self.data_folder = user_folder / "instruments" / "data"
-        self.data_folder.mkdir(parents=True, exist_ok=True)
+        instruments_data_folder = user_folder / "instruments" / "data"
+        instruments_data_folder.mkdir(parents=True, exist_ok=True)
+        # create temporary directory
+        self.tmp_folder = tempfile.TemporaryDirectory(dir=instruments_data_folder)
+        self.data_folder = Path(self.tmp_folder.name)
 
     @abstractmethod
     def connect(self):
