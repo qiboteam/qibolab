@@ -39,9 +39,10 @@ class Qubit:
 
         # Generate qubit_instrument_map from qubit_channel_map and the instruments' channel_port_maps
         self.instruments = [None, None, None]
-        for name, inst_settings in settings["instruments"].items():
-            channel_port_map = inst_settings.get("channel_port_map", [])
-            s4g_modules = inst_settings.get("s4g_modules", [])
+        for name, value in settings["instruments"].items():
+            instrument_settings = value.get("settings")
+            channel_port_map = instrument_settings.get("channel_port_map", [])
+            s4g_modules = instrument_settings.get("s4g_modules", [])
             for channel in itertools.chain(channel_port_map, s4g_modules):
                 if channel in self.channels:
                     self.instruments[self.channels.index(channel)] = name
@@ -199,9 +200,9 @@ class AbstractPlatform(ABC):
         for qubit in self.qubits:
             qubit.set_ports(self.instruments)
         # TODO: These dictionaries should be removed but doing so will break compatibility with qcvv
-        self.ro_port = {qubit.ro_port for qubit in self.qubits}
-        self.qd_port = {qubit.qd_port for qubit in self.qubits}
-        self.qf_port = {qubit.qf_port for qubit in self.qubits}
+        self.ro_port = {qubit.index: qubit.ro_port for qubit in self.qubits}
+        self.qd_port = {qubit.index: qubit.qd_port for qubit in self.qubits}
+        self.qf_port = {qubit.index: qubit.qf_port for qubit in self.qubits}
 
         # Load Characterization settings
         self.characterization = self.settings["characterization"]
