@@ -104,17 +104,9 @@ class AbstractPlatform(ABC):
             self.resonator_type = "3D"
         else:
             self.resonator_type = "2D"
-        self.hardware_avg = self.settings["settings"]["hardware_avg"]
-        self.sampling_rate = self.settings["settings"]["sampling_rate"]
-        self.repetition_duration = self.settings["settings"]["repetition_duration"]
 
         self.topology = self.settings["topology"]
         self.channels = self.settings["channels"]
-
-        # Load Characterization settings
-        self.characterization = self.settings["characterization"]
-        # Load Native Gates
-        self.native_gates = self.settings["native_gates"]
 
         self.instruments = {}
         # Instantiate instruments
@@ -130,6 +122,9 @@ class AbstractPlatform(ABC):
 
         # Instantiate Qubit objects and map them to channels and instruments
         self.qubits = [Qubit(q, self.settings) for q in self.settings["qubits"]]
+
+        # Load the rest of settings
+        self.reload_settings()
 
     def __repr__(self):
         return self.name
@@ -155,7 +150,18 @@ class AbstractPlatform(ABC):
     def reload_settings(self):
         with open(self.runcard, "r") as file:
             self.settings = yaml.safe_load(file)
-        self.setup()
+
+        self.hardware_avg = self.settings["settings"]["hardware_avg"]
+        self.sampling_rate = self.settings["settings"]["sampling_rate"]
+        self.repetition_duration = self.settings["settings"]["repetition_duration"]
+
+        # Load Characterization settings
+        self.characterization = self.settings["characterization"]
+        # Load Native Gates
+        self.native_gates = self.settings["native_gates"]
+
+        if self.is_connected:
+            self.setup()
 
     @abstractmethod
     def run_calibration(self, show_plots=False):  # pragma: no cover
@@ -196,6 +202,11 @@ class AbstractPlatform(ABC):
         self.ro_port = {qubit.ro_port for qubit in self.qubits}
         self.qd_port = {qubit.qd_port for qubit in self.qubits}
         self.qf_port = {qubit.qf_port for qubit in self.qubits}
+
+        # Load Characterization settings
+        self.characterization = self.settings["characterization"]
+        # Load Native Gates
+        self.native_gates = self.settings["native_gates"]
 
     def start(self):
         if self.is_connected:
