@@ -9,6 +9,9 @@ from qibolab.transpilers.transpile import transpile
 
 class QibolabBackend(NumpyBackend):
     def __init__(self, platform, runcard=None):
+        from qibo import __version__ as qibo_version
+
+        from qibolab import __version__
         from qibolab.platform import Platform
 
         super().__init__()
@@ -16,6 +19,11 @@ class QibolabBackend(NumpyBackend):
         self.platform = Platform(platform, runcard)
         self.platform.connect()
         self.platform.setup()
+        self.versions = {
+            "qibo": qibo_version,
+            "numpy": self.np.__version__,
+            "qibolab": __version__,
+        }
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
