@@ -20,10 +20,8 @@ from qblox_instruments.qcodes_drivers.sequencer import Sequencer as QbloxSequenc
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType, Waveform
 
-from qpysequence.program import Program
-from qpysequence.block import Block
-from qpysequence.loop import Loop
-from qpysequence.instructions.real_time import Play, Wait, Acquire
+from qpysequence.program import Program, Loop
+from qpysequence.program.instructions import Play, Acquire, ResetPh
 from qpysequence.library import long_wait
 
 
@@ -663,7 +661,8 @@ class ClusterQRM_RF(AbstractInstrument):
 
                     # Program
                     program = Program()
-                    body = Loop(name="body", iterations=nshots)
+                    body = Loop(name="body", begin=0, end=nshots)
+                    body.append_component(ResetPh())
                     
                     minimum_delay_between_instructions = 4
 
