@@ -1,4 +1,4 @@
-# A single CI script with github workflow
+# CI workflow that runs on qpu
 name: Tests on qpu
 
 on: [push]
@@ -23,7 +23,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest
         pip install git+https://github.com/qiboteam/qibo
-        pip install .[tiiq,docs]
+        pip install .[tiiq]
     - name: Test with pytest core
       run: |
-        srun -p qpu5q pytest --pyargs qibolab
+        srun -p qpu5q pytest --pyargs qibolab --skip-no-qpu
