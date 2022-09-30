@@ -1,5 +1,5 @@
 # A single CI script with github workflow
-name: Tests
+name: Tests on saadiyat
 
 on: [push]
 
@@ -7,8 +7,16 @@ jobs:
   build:
     runs-on: self-hosted
     steps:
-    - name: Test
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - name: Install package
       run: |
-        ls
-        pwd
-        sinfo
+        python -m pip install --upgrade pip
+        pip install git+https://github.com/qiboteam/qibo
+        pip install .[tiiq,docs]
+    - name: Test with pytest core
+      run: |
+        srun pytest --pyargs qibolab
