@@ -56,6 +56,26 @@ instruments:
             acquisition_hold_off        : 200                           # minimum 4ns
             acquisition_duration        : 2000
 
+            classification_parameters:
+                0:                      # qubit id
+                    rotation_angle: 0   # in degrees 0.0<=v<=360.0
+                    threshold: 0        # in V
+                1:
+                    rotation_angle: 7.017028323495571
+                    threshold: 0.0004785633686522151
+                2:
+                    rotation_angle: 144.52788754466133
+                    threshold: 0.00019173898529075252
+                3:
+                    rotation_angle: 34.90765465151559
+                    threshold: -0.0004286041063086632
+                4:
+                    rotation_angle: -281.66220634334125
+                    threshold: 0.001886603959709493
+                5:
+                    rotation_angle: 0
+                    threshold: 0
+
             channel_port_map:                                           # Refrigerator Channel : Instrument port
                 10: o1 # IQ Port = out0 & out1
                 1: i1
@@ -98,7 +118,7 @@ instruments:
                     gain                         : 0.35 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
                 o2:
-                    attenuation                  : 26 # (dB)
+                    attenuation                  : 36 # (dB)
                     lo_enabled                   : true
                     lo_frequency                 : 6_212_286_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.35 # for path0 and path1 -1.0<=v<=1.0
