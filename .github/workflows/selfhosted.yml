@@ -1,5 +1,5 @@
 # CI workflow that runs on qpu
-name: Tests on qpu
+name: Tests with qpu
 
 on: [push]
 
@@ -26,4 +26,4 @@ jobs:
         pip install .[tiiq]
     - name: Test tii5q
       run: |
-        srun -p qpu5q pytest --pyargs qibolab --skip-no-qpu --platforms tii5q
+        srun -p qpu5q pytest src/qibolab --pyargs qibolab --skip-no-qpu --platforms tii5q
