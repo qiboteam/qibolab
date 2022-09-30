@@ -16,6 +16,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install package
+      shell: bash -l {0}
       run: |
         conda create -n testenv python=${{ matrix.python-version }}
         conda activate testenv
