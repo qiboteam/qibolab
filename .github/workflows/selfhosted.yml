@@ -19,4 +19,4 @@ jobs:
         pip install .[tiiq,docs]
     - name: Test with pytest core
       run: |
-        srun pytest --pyargs qibolab
+        srun -p qpu5q pytest --pyargs qibolab
