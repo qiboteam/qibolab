@@ -685,16 +685,40 @@ class FluxPulse(Pulse):
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
 
-    def __init__(self, start, duration, amplitude, frequency, relative_phase, shape, channel, qubit=0):
+    def __init__(self, start, duration, amplitude, relative_phase, shape, channel, qubit=0):
         # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
         #                    channel: int | str, qubit: int | str = 0):
         super().__init__(
-            start, duration, amplitude, frequency, relative_phase, shape, channel, type=PulseType.FLUX, qubit=qubit
+            start, duration, amplitude, 0, relative_phase, shape, channel, type=PulseType.FLUX, qubit=qubit
         )
 
     @property
+    def envelope_waveform_i(self) -> Waveform:
+        return self._shape.envelope_waveform_i
+
+    @property
+    def envelope_waveform_q(self) -> Waveform:
+        return self._shape.envelope_waveform_i
+
+    @property
+    def envelope_waveforms(self):  #  -> tuple[Waveform, Waveform]:
+        return (self._shape.envelope_waveform_i, self._shape.envelope_waveform_i)
+
+    @property
+    def modulated_waveform_i(self) -> Waveform:
+        return self._shape.envelope_waveform_i
+
+    @property
+    def modulated_waveform_q(self) -> Waveform:
+        return self._shape.envelope_waveform_i
+
+    @property
+    def modulated_waveforms(self):  #  -> tuple[Waveform, Waveform]:
+        return (self._shape.envelope_waveform_i, self._shape.envelope_waveform_i)
+
+    @property
     def serial(self):
-        return f"FluxPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {format(self.frequency, '_')}, {format(self.relative_phase, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
+        return f"FluxPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {format(self.relative_phase, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
 
 
 class SplitPulse(Pulse):
