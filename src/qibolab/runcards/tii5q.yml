@@ -132,6 +132,57 @@ instruments:
                 25: o1 # IQ Port = out0 & out1
                 99: o2
 
+    qcm_bb1:
+        lib: qblox
+        class: ClusterQCM
+        address: 192.168.0.4:4
+        roles: [control]
+        settings:
+            ports:
+                o1:
+                    gain                         : 1 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o2:
+                    gain                         : 1 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o3:
+                    gain                         : 1 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o4:
+                    gain                         : 1 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+
+            channel_port_map:
+                11: o1 # only plays the i waveform of the pulse
+                12: o2 # only plays the q waveform of the pulse
+                13: o3 # only plays the i waveform of the pulse
+                14: o4 # only plays the q waveform of the pulse
+
+    qcm_bb2:
+        lib: qblox
+        class: ClusterQCM
+        address: 192.168.0.4:14
+        roles: [control]
+        settings:
+            ports:
+                o1:
+                    gain                         : 0.2 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o2:
+                    gain                         : 0 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o3:
+                    gain                         : 0 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o4:
+                    gain                         : 0 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+            channel_port_map:
+                4: o1 # only plays the i waveform of the pulse
+                101: o2 # only plays the q waveform of the pulse
+                102: o3 # only plays the i waveform of the pulse
+                103: o4 # only plays the q waveform of the pulse
+
     SPI:
         lib: qutech
         class: SPI
