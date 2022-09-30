@@ -24,6 +24,6 @@ jobs:
         pip install pytest
         pip install git+https://github.com/qiboteam/qibo
         pip install .[tiiq]
-    - name: Test with pytest core
+    - name: Test tii5q
       run: |
-        srun -p qpu5q pytest --pyargs qibolab --skip-no-qpu
+        srun -p qpu5q pytest --pyargs qibolab --skip-no-qpu --platforms tii5q

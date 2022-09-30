@@ -3,6 +3,7 @@ import pytest
 
 
 def pytest_addoption(parser):
+    parser.addoption("--platforms", type=str, action="store", default="tii5q", help="qpu platforms to test on")
     parser.addoption("--skip-qpu", action="store_true", help="skip tests that require qpu")
     parser.addoption("--skip-no-qpu", action="store_true", help="skip tests that do not require qpu")
 
@@ -17,3 +18,9 @@ def pytest_runtest_setup(item):
         pytest.skip("Skipping test that requires qpu.")
     elif item.config.getoption("--skip-no-qpu") and not marked_qpu:
         pytest.skip("Skipping test that does not require qpu.")
+
+
+def pytest_generate_tests(metafunc):
+    platforms = metafunc.config.option.platforms.split(",")
+    if "platform_name" in metafunc.fixturenames:
+        metafunc.parametrize("platform_name", platforms)
