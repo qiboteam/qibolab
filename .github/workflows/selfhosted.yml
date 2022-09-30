@@ -1,0 +1,14 @@
+# A single CI script with github workflow
+name: Tests
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: self-hosted
+    steps:
+    - name: Test
+      run: |
+        ls
+        pwd
+        sinfo
