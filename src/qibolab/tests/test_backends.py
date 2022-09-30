@@ -10,7 +10,7 @@ from qibolab.platforms.abstract import AbstractPlatform
 platform_names = ["tii1q", "tii5q"]  # 'qili' , 'icarusq']
 
 
-@pytest.mark.xfail
+@pytest.mark.qpu
 @pytest.mark.parametrize("platform_name", platform_names)
 def test_backend_init(platform_name):
     from qibolab.platforms.multiqubit import MultiqubitPlatform
@@ -20,7 +20,7 @@ def test_backend_init(platform_name):
         assert isinstance(backend.platform, MultiqubitPlatform)
 
 
-@pytest.mark.xfail
+@pytest.mark.qpu
 @pytest.mark.parametrize("platform_name", platform_names)
 def test_execute_circuit_errors(platform_name):
     backend = QibolabBackend(platform_name)
@@ -33,7 +33,7 @@ def test_execute_circuit_errors(platform_name):
         result = backend.execute_circuit(circuit, initial_state=np.ones(2))
 
 
-@pytest.mark.xfail
+@pytest.mark.qpu
 @pytest.mark.parametrize("platform_name", platform_names)
 def test_execute_circuit(platform_name):
     backend = QibolabBackend(platform_name)
