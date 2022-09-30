@@ -777,7 +777,9 @@ class ClusterQRM_RF(AbstractInstrument):
                     body += initial_wait_instruction
 
                     for n in range(pulses.count):
-                        if (self.ports["i1"].hardware_demod_en or self.ports["o1"].hardware_mod_en) and pulses[n].relative_phase != 0:
+                        if (self.ports["i1"].hardware_demod_en or self.ports["o1"].hardware_mod_en) and pulses[
+                            n
+                        ].relative_phase != 0:
                             # Set phase
                             p = 10
                             phase = (pulses[n].relative_phase * 360 / (2 * np.pi)) % 360
@@ -786,8 +788,11 @@ class ClusterQRM_RF(AbstractInstrument):
                             ultra_fine = int(round((phase - coarse * 0.9 - fine * 2.25e-3) / 3.6e-7, p))
                             error = abs(phase - coarse * 0.9 - fine * 2.25e-3 - ultra_fine * 3.6e-7)
                             assert error < 3.6e-7
-                            set_ph_instruction  = f"                    set_ph {coarse}, {fine}, {ultra_fine}"
-                            set_ph_instruction  += " " * (45 - len(set_ph_instruction)) + f"# set relative phase {pulses[n].relative_phase} rads"
+                            set_ph_instruction = f"                    set_ph {coarse}, {fine}, {ultra_fine}"
+                            set_ph_instruction += (
+                                " " * (45 - len(set_ph_instruction))
+                                + f"# set relative phase {pulses[n].relative_phase} rads"
+                            )
                             body += "\n" + set_ph_instruction
                         if pulses[n].type == PulseType.READOUT:
                             delay_after_play = self.acquisition_hold_off
@@ -921,10 +926,11 @@ class ClusterQRM_RF(AbstractInstrument):
 
         # Retrieve data
         acquisition_results = {}
-        acquisition_results["shots"] = {}
-
         for port in self._output_ports_keys:
             if not self.ports["i1"].hardware_demod_en:
+                acquisition_results["averaged_integrated"] = {}
+                acquisition_results["averaged_raw"] = {}
+
                 sequencer = self._sequencers[port][0]
                 sequencer_number = sequencer.number
                 assert sequencer_number == self.DEFAULT_SEQUENCERS[port]  #####
@@ -938,8 +944,29 @@ class ClusterQRM_RF(AbstractInstrument):
                         acquisition_name = pulse.serial
                         i, q = self._process_acquisition_results(raw_results[acquisition_name], pulse, demodulate=True)
                         acquisition_results[pulse.serial] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
-                        acquisition_results[pulse.qubit] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
+                        acquisition_results[pulse.qubit] = acquisition_results[pulse.serial]
+
+                        acquisition_results["averaged_integrated"][pulse.serial] = acquisition_results[pulse.serial]
+                        acquisition_results["averaged_integrated"][pulse.qubit] = acquisition_results[pulse.qubit]
+
+                        acquisition_results["averaged_raw"][pulse.serial] = (
+                            raw_results[acquisition_name]["acquisition"]["scope"]["path0"]["data"][
+                                0 : self.acquisition_duration
+                            ],
+                            raw_results[acquisition_name]["acquisition"]["scope"]["path1"]["data"][
+                                0 : self.acquisition_duration
+                            ],
+                        )
+                        acquisition_results["averaged_raw"][pulse.qubit] = acquisition_results["averaged_raw"][
+                            pulse.serial
+                        ]
+
             else:
+                acquisition_results["averaged_integrated"] = {}
+                acquisition_results["binned_integrated"] = {}
+                acquisition_results["binned_classified"] = {}
+                acquisition_results["probability"] = {}
+
                 for sequencer in self._sequencers[port]:
                     sequencer_number = sequencer.number
                     # Wait for the sequencer to stop with a timeout period of one minute.
@@ -953,27 +980,60 @@ class ClusterQRM_RF(AbstractInstrument):
                         self.device.store_scope_acquisition(sequencer_number, acquisition_name)
                         # Get acquisitions from instrument.
                         raw_results = self.device.get_acquisitions(sequencer_number)
-                        i, q = self._process_acquisition_results(
-                            raw_results[acquisition_name], pulse, demodulate=(not self.ports["i1"].hardware_demod_en)
-                        )
+                        i, q = self._process_acquisition_results(raw_results[acquisition_name], pulse, demodulate=False)
                         acquisition_results[pulse.serial] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
                         acquisition_results[pulse.qubit] = acquisition_results[pulse.serial]
-                        
+
+                        acquisition_results["averaged_integrated"][pulse.serial] = (
+                            np.sqrt(i**2 + q**2),
+                            np.arctan2(q, i),
+                            i,
+                            q,
+                        )
+                        acquisition_results["averaged_integrated"][pulse.qubit] = acquisition_results[pulse.qubit]
+
                         if self.ports["i1"].hardware_demod_en:
                             # Save individual shots
                             int_len = self.acquisition_duration
-                            shots_i = np.array([
-                                np.sqrt(2) * (val / int_len)
-                                for val in raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path0"]
-                            ])
-                            shots_q = np.array([
-                                np.sqrt(2) * (val / int_len)
-                                for val in raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path1"]
-                            ])
-                            acquisition_results["shots"][pulse.serial] = [(msr, phase, i, q) for msr, phase, i, q in zip(
-                                np.sqrt(shots_i**2 + shots_q**2), np.arctan2(shots_q, shots_i), shots_i, shots_q
-                            )]
-                            acquisition_results["shots"][pulse.qubit] = acquisition_results["shots"][pulse.serial]
+                            shots_i = np.array(
+                                [
+                                    np.sqrt(2) * (val / int_len)
+                                    for val in raw_results[acquisition_name]["acquisition"]["bins"]["integration"][
+                                        "path0"
+                                    ]
+                                ]
+                            )
+                            shots_q = np.array(
+                                [
+                                    np.sqrt(2) * (val / int_len)
+                                    for val in raw_results[acquisition_name]["acquisition"]["bins"]["integration"][
+                                        "path1"
+                                    ]
+                                ]
+                            )
+                            acquisition_results["binned_integrated"][pulse.serial] = [
+                                (msr, phase, i, q)
+                                for msr, phase, i, q in zip(
+                                    np.sqrt(shots_i**2 + shots_q**2), np.arctan2(shots_q, shots_i), shots_i, shots_q
+                                )
+                            ]
+                            acquisition_results["binned_integrated"][pulse.qubit] = acquisition_results[
+                                "binned_integrated"
+                            ][pulse.serial]
+
+                            acquisition_results["binned_classified"][pulse.serial] = raw_results[acquisition_name][
+                                "acquisition"
+                            ]["bins"]["threshold"]
+                            acquisition_results["binned_classified"][pulse.qubit] = acquisition_results[
+                                "binned_classified"
+                            ][pulse.serial]
+
+                            acquisition_results["probability"][pulse.serial] = np.mean(
+                                acquisition_results["binned_classified"][pulse.serial]
+                            )
+                            acquisition_results["probability"][pulse.qubit] = acquisition_results["probability"][
+                                pulse.serial
+                            ]
 
                         # DEBUG: QRM Plot Incomming Pulses
                         # import qibolab.instruments.debug.incomming_pulse_plotting as pp
@@ -1544,7 +1604,7 @@ class ClusterQCM_RF(AbstractInstrument):
                     nop
                     wait_sync {minimum_delay_between_instructions}
                     loop:"""
-                    if self.ports[port].hardware_mod_en: 
+                    if self.ports[port].hardware_mod_en:
                         header += "\n" + "                    reset_ph"
                     body = ""
 
@@ -1620,8 +1680,11 @@ class ClusterQCM_RF(AbstractInstrument):
                             ultra_fine = int(round((phase - coarse * 0.9 - fine * 2.25e-3) / 3.6e-7, p))
                             error = abs(phase - coarse * 0.9 - fine * 2.25e-3 - ultra_fine * 3.6e-7)
                             assert error < 3.6e-7
-                            set_ph_instruction  = f"                    set_ph {coarse}, {fine}, {ultra_fine}"
-                            set_ph_instruction  += " " * (45 - len(set_ph_instruction)) + f"# set relative phase {pulses[n].relative_phase} rads"
+                            set_ph_instruction = f"                    set_ph {coarse}, {fine}, {ultra_fine}"
+                            set_ph_instruction += (
+                                " " * (45 - len(set_ph_instruction))
+                                + f"# set relative phase {pulses[n].relative_phase} rads"
+                            )
                             body += "\n" + set_ph_instruction
                         # Prepare play instruction: play arg0, arg1, arg2.
                         #   arg0 is the index of the I waveform
