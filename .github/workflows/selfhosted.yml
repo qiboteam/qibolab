@@ -5,16 +5,22 @@ on: [push]
 
 jobs:
   build:
+    strategy:
+      matrix:
+        python-version: [3.8]
     runs-on: self-hosted
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: 3.8
+        python-version: ${{ matrix.python-version }}
     - name: Install package
       run: |
+        conda create -n testenv python=${{ matrix.python-version }}
+        conda activate testenv
         python -m pip install --upgrade pip
+        pip install pytest
         pip install git+https://github.com/qiboteam/qibo
         pip install .[tiiq,docs]
     - name: Test with pytest core
