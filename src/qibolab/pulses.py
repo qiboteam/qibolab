@@ -94,7 +94,7 @@ class PulseShape(ABC):
         cosalpha = np.cos(2 * np.pi * pulse.frequency * time + global_phase + pulse.relative_phase)
         sinalpha = np.sin(2 * np.pi * pulse.frequency * time + global_phase + pulse.relative_phase)
 
-        mod_matrix = np.array([[cosalpha, -sinalpha], [sinalpha, cosalpha]])
+        mod_matrix = np.array([[cosalpha, -sinalpha], [sinalpha, cosalpha]]) / np.sqrt(2)
 
         (envelope_waveform_i, envelope_waveform_q) = self.envelope_waveforms
         result = []
