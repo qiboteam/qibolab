@@ -407,8 +407,8 @@ class Pulse:
             value = float(value)
         if not isinstance(value, (float, np.floating)):
             raise TypeError(f"amplitude argument type should be float, got {type(value).__name__}")
-        elif not ((value >= 0) & (value <= 1)):
-            raise ValueError(f"amplitude argument must be >= 0 & <= 1, got {value}")
+        elif not ((value >= -1) & (value <= 1)):
+            raise ValueError(f"amplitude argument must be >= -1 & <= 1, got {value}")
         if isinstance(value, np.floating):
             self._amplitude = float(value)
         elif isinstance(value, float):
