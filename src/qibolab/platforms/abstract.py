@@ -46,6 +46,12 @@ class AbstractPlatform(ABC):
         self.channels = self.settings["channels"]
         self.qubit_channel_map = self.settings["qubit_channel_map"]
 
+        # Platform specs setup with ifs not to force update on runcard if functionalities added, default is false
+        if "mixer_based" in self.settings:
+            self.mixer_based = self.settings["mixer_based"]
+        else:
+            self.mixer_based = False
+
         # Load Characterization settings
         self.characterization = self.settings["characterization"]
         # Load Native Gates

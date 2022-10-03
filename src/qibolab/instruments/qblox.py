@@ -18,6 +18,7 @@ from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qblox_instruments.qcodes_drivers.sequencer import Sequencer as QbloxSequencer
 
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
+from qibolab.instruments.helpers import if_allocation
 from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType, Waveform
 
 
@@ -576,6 +577,7 @@ class ClusterQRM_RF(AbstractInstrument):
         # Check if the sequence to be processed is the same as the last one.
         # If so, there is no need to generate new waveforms and program
         # Except if hardware demodulation is activated (to force a memory reset until qblox fix the issue)
+
         if self.ports["i1"].hardware_demod_en or self._current_pulsesequence_hash != self._last_pulsequence_hash:
             port = "o1"
             # initialise the list of free sequencer numbers to include the default for each port {'o1': 0}
@@ -590,6 +592,36 @@ class ClusterQRM_RF(AbstractInstrument):
             if not port_pulses.is_empty:
                 # split the collection of port pulses in non overlapping pulses
                 non_overlapping_pulses: PulseSequence
+
+                # IF and LO allocation
+                freqs = []
+                lo_port = None
+                for non_overlapping_pulses in port_pulses.separate_overlapping_pulses():
+                    for pulse in non_overlapping_pulses:
+                        # check if and lo frequency matching
+                        if pulse.lo_frequency is None and pulse.if_frequency is None:
+                            freqs += [pulse.frequency]
+                        elif pulse.if_frequency is None:
+                            pulse.if_frequency = pulse.frequency - pulse.lo_frequency
+                            lo_port = pulse.lo_frequency
+                        elif pulse.lo_frequency is None:
+                            pulse.lo_frequency = pulse.frequency - pulse.if_frequency
+                            lo_port = pulse.lo_frequency
+
+                        if lo_port:
+                            if lo_port != pulse.lo_frequency:
+                                raise ValueError(
+                                    f"Pulse {pulse.serial} share the same port as a previously processed pulse but have a different LO frequency than {lo_port}."
+                                )
+                    if len(freqs) > 0:
+                        lo_port = if_allocation(freqs, bandwidth=600e6, peak_width=30e6)
+                        for non_overlapping_pulses in port_pulses.separate_overlapping_pulses():
+                            for pulse in non_overlapping_pulses:
+                                pulse.lo_frequency = lo_port
+                                pulse.if_frequency = pulse.frequency - pulse.lo_frequency
+                        lo_port = pulse.lo_frequency
+                self.ports[port].lo_frequency = lo_port  # TODO: overwrite yaml? or simply remove?
+
                 for non_overlapping_pulses in port_pulses.separate_overlapping_pulses():
                     # TODO: for non_overlapping_same_frequency_pulses in non_overlapping_pulses.separate_different_frequency_pulses():
 
@@ -612,8 +644,9 @@ class ClusterQRM_RF(AbstractInstrument):
                         self._set_device_parameter(
                             self.device.sequencers[next_sequencer_number],
                             "nco_freq",
-                            value=non_overlapping_pulses[0].frequency,
-                        )  # TODO: for non_overlapping_same_frequency_pulses[0].frequency
+                            value=non_overlapping_pulses[0].if_frequency,
+                        )
+                        # TODO: for non_overlapping_same_frequency_pulses[0].frequency
 
                     if (
                         self.ports["i1"].hardware_demod_en
@@ -670,7 +703,7 @@ class ClusterQRM_RF(AbstractInstrument):
                                     self._set_device_parameter(target, parameter, value=value)
                             if self.ports["i1"].hardware_demod_en or self.ports["o1"].hardware_mod_en:
                                 self._set_device_parameter(
-                                    self.device.sequencers[next_sequencer_number], "nco_freq", value=pulse.frequency
+                                    self.device.sequencers[next_sequencer_number], "nco_freq", value=pulse.if_frequency
                                 )
                             sequencer = Sequencer(next_sequencer_number)
 
@@ -1050,7 +1083,7 @@ class ClusterQRM_RF(AbstractInstrument):
         if processes the results are required by qblox.
         """
         if demodulate:
-            acquisition_frequency = readout_pulse.frequency
+            acquisition_frequency = readout_pulse.if_frequency
 
             # DOWN Conversion
             n0 = 0
@@ -1489,7 +1522,38 @@ class ClusterQCM_RF(AbstractInstrument):
 
                     # split the collection of port pulses in non overlapping pulses
                     non_overlapping_pulses: PulseSequence
+
+                    # IF and LO allocation
+                    freqs = []
+                    lo_port = None
                     for non_overlapping_pulses in port_pulses.separate_overlapping_pulses():
+                        for pulse in non_overlapping_pulses:
+                            # check if and lo frequency matching
+                            if pulse.lo_frequency is None and pulse.if_frequency is None:
+                                freqs += [pulse.frequency]
+                            elif pulse.if_frequency is None:
+                                pulse.if_frequency = pulse.frequency - pulse.lo_frequency
+                                lo_port = pulse.lo_frequency
+                            elif pulse.lo_frequency is None:
+                                pulse.lo_frequency = pulse.frequency - pulse.if_frequency
+                                lo_port = pulse.lo_frequency
+
+                            if lo_port:
+                                if lo_port != pulse.lo_frequency:
+                                    raise ValueError(
+                                        f"Pulse {pulse.serial} share the same port as a previously processed pulse but have a different LO frequency than {lo_port}."
+                                    )
+                        if len(freqs) > 0:
+                            lo_port = if_allocation(freqs, bandwidth=600e6, peak_width=30e6)
+                            for non_overlapping_pulses in port_pulses.separate_overlapping_pulses():
+                                for pulse in non_overlapping_pulses:
+                                    pulse.lo_frequency = lo_port
+                                    pulse.if_frequency = pulse.frequency - pulse.lo_frequency
+                            lo_port = pulse.lo_frequency
+                    self.ports[port].lo_frequency = lo_port  # TODO: overwrite yaml? or simply remove?
+
+                    for non_overlapping_pulses in port_pulses.separate_overlapping_pulses():
+                        non_overlapping_pulses: Pulse
                         # TODO: for non_overlapping_same_frequency_pulses in non_overlapping_pulses.separate_different_frequency_pulses():
 
                         # each set of not overlapping pulses will be played by a separate sequencer
@@ -1511,7 +1575,7 @@ class ClusterQCM_RF(AbstractInstrument):
                             self._set_device_parameter(
                                 self.device.sequencers[next_sequencer_number],
                                 "nco_freq",
-                                value=non_overlapping_pulses[0].frequency,
+                                value=non_overlapping_pulses[0].if_frequency,
                             )  # TODO: for non_overlapping_same_frequency_pulses[0].frequency
                         sequencer = Sequencer(next_sequencer_number)
 
@@ -1555,7 +1619,7 @@ class ClusterQCM_RF(AbstractInstrument):
                                         target = self.device.sequencers[next_sequencer_number]
                                         self._set_device_parameter(target, parameter, value=value)
                                 self._set_device_parameter(
-                                    self.device.sequencers[next_sequencer_number], "nco_freq", value=pulse.frequency
+                                    self.device.sequencers[next_sequencer_number], "nco_freq", value=pulse.if_frequency
                                 )
                                 sequencer = Sequencer(next_sequencer_number)
 

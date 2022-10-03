@@ -82,7 +82,12 @@ class PulseShape(ABC):
                 "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
             )
         pulse = self.pulse
-        if abs(pulse.frequency) * 2 > PulseShape.SAMPLING_RATE:
+
+        # FIXME: modulation should be moved in indivial platforms
+        if not pulse.if_frequency:
+            raise NotImplementedError("IF frequency is not defined, and this is a mixer based function.")
+
+        if abs(pulse.if_frequency) * 2 > PulseShape.SAMPLING_RATE:
             from qibo.config import log
 
             log.info(
@@ -90,9 +95,9 @@ class PulseShape(ABC):
             )
         num_samples = int(pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
         time = np.arange(num_samples) / PulseShape.SAMPLING_RATE
-        global_phase = 2 * np.pi * pulse.frequency * pulse.start / 1e9  # pulse start, duration and finish are in ns
-        cosalpha = np.cos(2 * np.pi * pulse.frequency * time + global_phase + pulse.relative_phase)
-        sinalpha = np.sin(2 * np.pi * pulse.frequency * time + global_phase + pulse.relative_phase)
+        global_phase = 2 * np.pi * pulse.if_frequency * pulse.start / 1e9  # pulse start, duration and finish are in ns
+        cosalpha = np.cos(2 * np.pi * pulse.if_frequency * time + global_phase + pulse.relative_phase)
+        sinalpha = np.sin(2 * np.pi * pulse.if_frequency * time + global_phase + pulse.relative_phase)
 
         mod_matrix = np.array([[cosalpha, -sinalpha], [sinalpha, cosalpha]])
 
@@ -313,6 +318,8 @@ class Pulse:
         self._finish: se_int = None
         self._amplitude: float = None
         self._frequency: int = None
+        self._lo_frequency: int = None
+        self._if_frequency: int = None
         self._relative_phase: float = None
         self._shape: PulseShape = None
         self._channel = None
@@ -426,6 +433,22 @@ class Pulse:
             self._frequency = int(value)
         elif isinstance(value, int):
             self._frequency = value
+
+    @property
+    def lo_frequency(self) -> int:
+        return self._lo_frequency
+
+    @lo_frequency.setter
+    def lo_frequency(self, value):
+        self._lo_frequency = value
+
+    @property
+    def if_frequency(self) -> int:
+        return self._if_frequency
+
+    @if_frequency.setter
+    def if_frequency(self, value):
+        self._if_frequency = value
 
     @property
     def relative_phase(self) -> float:
