@@ -607,6 +607,9 @@ class ClusterQRM_RF(AbstractInstrument):
                         elif pulse.lo_frequency is None:
                             pulse.lo_frequency = pulse.frequency - pulse.if_frequency
                             lo_port = pulse.lo_frequency
+                        else:
+                            if pulse.lo_frequency - pulse.frequency + pulse.if_frequency != 0:
+                                raise ValueError(f"LO, {pulse.lo_frequency}, and IF, {pulse.if_frequency}, not matching qubit's frequency, {pulse.frequency}.")
 
                         if lo_port:
                             if lo_port != pulse.lo_frequency:
@@ -1537,6 +1540,9 @@ class ClusterQCM_RF(AbstractInstrument):
                             elif pulse.lo_frequency is None:
                                 pulse.lo_frequency = pulse.frequency - pulse.if_frequency
                                 lo_port = pulse.lo_frequency
+                            else:
+                                if pulse.lo_frequency - pulse.frequency + pulse.if_frequency != 0:
+                                    raise ValueError(f"LO, {pulse.lo_frequency}, and IF, {pulse.if_frequency}, not matching qubit's frequency, {pulse.frequency}.")
 
                             if lo_port:
                                 if lo_port != pulse.lo_frequency:
