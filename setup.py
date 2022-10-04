@@ -63,7 +63,7 @@ setup(
             "qblox-instruments==0.6.1",  # 0.6.1
             "quantify-core",  # 0.6.0
             "dash",  # Live plotting
-            "qpysequence @ git+https://github.com/qilimanjaro-tech/qpysequence.git",
+            "qpysequence @ git+https://github.com/qilimanjaro-tech/qpysequence.git@0.3.0",
         ],
     },
     python_requires=">=3.6.0",
