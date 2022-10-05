@@ -1,5 +1,5 @@
 # A single CI script with github workflow
-name: Tests
+name: Tests without qpu
 
 on: [push]
 
@@ -28,7 +28,7 @@ jobs:
         pylint src -E -d E1123,E1120
     - name: Test with pytest core
       run: |
-        pytest --cov=qibolab --cov-report=xml --pyargs qibolab
+        pytest src/qibolab --cov=qibolab --cov-report=xml --pyargs qibolab --skip-qpu --platforms tii1q,tii5q
     - name: Upload coverage to Codecov
       if: startsWith(matrix.os, 'ubuntu')
       uses: codecov/codecov-action@v2

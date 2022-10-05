@@ -44,15 +44,19 @@ class NativeGates:
         return gate
 
     def S(self, gate):
+        # TODO: Implement this
         raise_error(NotImplementedError)
 
     def SDG(self, gate):
+        # TODO: Implement this
         raise_error(NotImplementedError)
 
     def T(self, gate):
+        # TODO: Implement this
         raise_error(NotImplementedError)
 
     def TDG(self, gate):
+        # TODO: Implement this
         raise_error(NotImplementedError)
 
     def I(self, gate):
@@ -149,6 +153,7 @@ class NativeGates:
         ]
 
     def CU2(self, gate):
+        # TODO: Fix this
         q0, q1 = gate.qubits
         phi, lam = gate.parameters
         q0, q1 = gate.qubits
@@ -163,6 +168,7 @@ class NativeGates:
         ]
 
     def CU3(self, gate):
+        # TODO: Fix this
         q0, q1 = gate.qubits
         theta, phi, lam = gate.parameters
         return [
