@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import numpy as np
+from qibo import gates, matrices
 from qibo.config import raise_error
+from scipy.linalg import expm
 
 magic_basis = np.array(
     [
@@ -12,6 +14,8 @@ magic_basis = np.array(
 ) / np.sqrt(2)
 
 bell_basis = np.array([[1, 1, 0, 0], [0, 0, 1, 1], [0, 0, 1, -1], [1, -1, 0, 0]]) / np.sqrt(2)
+
+H = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
 
 
 def u3_decomposition(unitary):
@@ -148,11 +152,8 @@ def calculate_h_vector(ud_diag):
     return hx, hy, hz
 
 
-def cnot_decomposition(hx, hy, hz):
+def cnot_decomposition(q0, q1, hx, hy, hz):
     """Performs decomposition (6) from arXiv:quant-ph/0307177."""
-    from qibo import matrices
-    from scipy.linalg import expm
-
     u3 = -1j * (matrices.X + matrices.Z) / np.sqrt(2)
     # use corrected version from PRA paper (not arXiv)
     u2 = -u3 @ expm(-1j * (hx - np.pi / 4) * matrices.X)
@@ -160,45 +161,71 @@ def cnot_decomposition(hx, hy, hz):
     v2 = expm(-1j * hz * matrices.Z) * np.exp(-1j * np.pi / 4)
     v3 = expm(1j * hy * matrices.Z)
     w = (matrices.I - 1j * matrices.X) / np.sqrt(2)
-    return u2, u3, v2, v3, w
+    # change CNOT to CZ using Hadamard gates
+    return [
+        gates.H(q1),
+        gates.CZ(q0, q1),
+        gates.Unitary(u2, q0),
+        gates.Unitary(H @ v2 @ H, q1),
+        gates.CZ(q0, q1),
+        gates.Unitary(u3, q0),
+        gates.Unitary(H @ v3 @ H, q1),
+        gates.CZ(q0, q1),
+        gates.Unitary(w, q0),
+        gates.Unitary(np.conj(w).T @ H, q1),
+    ]
+
+
+def cnot_decomposition_light(q0, q1, hx, hy):
+    """Performs decomposition (24) from arXiv:quant-ph/0307177."""
+    w = (matrices.I - 1j * matrices.X) / np.sqrt(2)
+    u2 = expm(-1j * hx * matrices.X)
+    v2 = expm(1j * hy * matrices.Z)
+    # change CNOT to CZ using Hadamard gates
+    return [
+        gates.Unitary(np.conj(w).T, q0),
+        gates.Unitary(H @ w, q1),
+        gates.CZ(q0, q1),
+        gates.Unitary(u2, q0),
+        gates.Unitary(H @ v2 @ H, q1),
+        gates.CZ(q0, q1),
+        gates.Unitary(w, q0),
+        gates.Unitary(np.conj(w).T @ H, q1),
+    ]
 
 
 def two_qubit_decomposition(q0, q1, unitary):
-    from qibo import gates
-
-    H = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
-
-    gatelist = []
     ud_diag = to_bell_diagonal(unitary)
+    ud = None
     if ud_diag is None:
         u4, v4, ud, u1, v1 = magic_decomposition(unitary)
         ud_diag = to_bell_diagonal(ud)
-        v1 = H @ v1
-        gatelist.extend([gates.Unitary(u1, q0), gates.Unitary(v1, q1)])
-    else:
-        u4 = np.eye(2, dtype=unitary.dtype)
-        v4 = np.eye(2, dtype=unitary.dtype)
-        gatelist.append(gates.H(q1))
 
     hx, hy, hz = calculate_h_vector(ud_diag)
-    # TODO: Implement simplified case for hz = 0
-    u2, u3, v2, v3, w = cnot_decomposition(hx, hy, hz)
-    # change CNOT to CZ using Hadamard gates
-    v2 = H @ v2 @ H
-    v3 = H @ v3 @ H
-    u4 = u4 @ w
-    v4 = v4 @ np.conj(w.T) @ H
-    gatelist.extend(
-        [
-            gates.CZ(q0, q1),
-            gates.Unitary(u2, q0),
-            gates.Unitary(v2, q1),
-            gates.CZ(q0, q1),
-            gates.Unitary(u3, q0),
-            gates.Unitary(v3, q1),
-            gates.CZ(q0, q1),
-            gates.Unitary(u4, q0),
-            gates.Unitary(v4, q1),
+    if hz == 0:
+        gatelist = cnot_decomposition_light(q0, q1, hx, hy)
+        if ud is None:
+            return gatelist
+        g0, g1 = gatelist[:2]
+        gatelist[0] = gates.Unitary(g0.parameters[0] @ u1, q0)
+        gatelist[1] = gates.Unitary(g1.parameters[0] @ v1, q1)
+
+        g0, g1 = gatelist[-2:]
+        gatelist[-2] = gates.Unitary(u4 @ g0.parameters[0], q0)
+        gatelist[-1] = gates.Unitary(v4 @ g1.parameters[0], q1)
+
+    else:
+        cnot_dec = cnot_decomposition(q0, q1, hx, hy, hz)
+        if ud is None:
+            return cnot_dec
+
+        gatelist = [
+            gates.Unitary(u1, q0),
+            gates.Unitary(H @ v1, q1),
         ]
-    )
+        gatelist.extend(cnot_dec[1:])
+        g0, g1 = gatelist[-2:]
+        gatelist[-2] = gates.Unitary(u4 @ g0.parameters[0], q0)
+        gatelist[-1] = gates.Unitary(v4 @ g1.parameters[0], q1)
+
     return gatelist

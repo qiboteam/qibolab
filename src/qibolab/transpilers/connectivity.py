@@ -22,7 +22,7 @@ def find_connected_qubit(qubits, queue, hardware_qubits):
     return qubits[0]
 
 
-def fix_connecivity(circuit):
+def fix_connectivity(circuit):
     """Transforms an arbitrary circuit to one that can be executed on hardware.
 
     This method produces a circuit that respects the following connectivity:
@@ -42,15 +42,15 @@ def fix_connecivity(circuit):
         new (qibo.models.Circuit): Qibo circuit that performs the same operation
             as the original but respects the hardware connectivity.
         hardware_qubits (list): List that maps logical to hardware qubits.
-            Required for transforming final measurements to
+            This is required for transforming final measurements.
     """
+    # TODO: Change this to a more lightweight form that takes a list of pairs
+    # instead of the whole circuit.
+
     # new circuit object that will be compatible to hardware connectivity
     new = circuit.__class__(circuit.nqubits)
     # list to maps logical to hardware qubits
     hardware_qubits = list(range(circuit.nqubits))
-
-    # TODO: Add a pseudo-fusion step here to reduce the number of SWAPs.
-    # Real fusion may also be used to reduce the total number of gates.
 
     # find initial qubit mapping
     for i, gate in enumerate(circuit.queue):
@@ -91,8 +91,6 @@ def fix_connecivity(circuit):
         new.add(gate.__class__(*qubits, **gate.init_kwargs))
         if len(qubits) == 2:
             add_swap = True
-
-    # TODO: Properly handle ``circuit.measurement_gate``
 
     return new, hardware_qubits
 
