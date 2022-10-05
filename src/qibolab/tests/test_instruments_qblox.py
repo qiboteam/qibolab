@@ -12,6 +12,7 @@ INSTRUMENTS_LIST = ["Cluster", "ClusterQRM_RF", "ClusterQCM_RF"]
 instruments = {}
 
 
+@pytest.mark.qpu
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
 def test_instruments_qublox_init(name):
     test_runcard = qibolab_folder / "tests" / "test_instruments_qblox.yml"
@@ -35,34 +36,31 @@ def test_instruments_qublox_init(name):
     assert instance.data_folder == user_folder / "instruments" / "data" / instance.tmp_folder.name.split("/")[-1]
 
 
-@pytest.mark.xfail
+@pytest.mark.qpu
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
 def test_instruments_qublox_connect(name):
     instruments[name].connect()
 
 
+@pytest.mark.qpu
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
 def test_instruments_qublox_setup(name):
-    if not instruments[name].is_connected:
-        pytest.xfail("Instrument not available")
-    else:
-        test_runcard = qibolab_folder / "tests" / "test_instruments_qblox.yml"
-        with open(test_runcard, "r") as file:
-            settings = yaml.safe_load(file)
-        instruments[name].setup(**settings["settings"], **settings["instruments"][name]["settings"])
-
-        for parameter in settings["instruments"][name]["settings"]:
-            if parameter == "ports":
-                for port in settings["instruments"][name]["settings"]["ports"]:
-                    for sub_parameter in settings["instruments"][name]["settings"]["ports"][port]:
-                        # assert getattr(instruments[name].ports[port], sub_parameter) == settings["instruments"][name]["settings"]["ports"][port][sub_parameter]
-                        np.testing.assert_allclose(
-                            getattr(instruments[name].ports[port], sub_parameter),
-                            settings["instruments"][name]["settings"]["ports"][port][sub_parameter],
-                            atol=1e-4,
-                        )
-            else:
-                assert getattr(instruments[name], parameter) == settings["instruments"][name]["settings"][parameter]
+    test_runcard = qibolab_folder / "tests" / "test_instruments_qblox.yml"
+    with open(test_runcard, "r") as file:
+        settings = yaml.safe_load(file)
+    instruments[name].setup(**settings["settings"], **settings["instruments"][name]["settings"])
+    for parameter in settings["instruments"][name]["settings"]:
+        if parameter == "ports":
+            for port in settings["instruments"][name]["settings"]["ports"]:
+                for sub_parameter in settings["instruments"][name]["settings"]["ports"][port]:
+                    # assert getattr(instruments[name].ports[port], sub_parameter) == settings["instruments"][name]["settings"]["ports"][port][sub_parameter]
+                    np.testing.assert_allclose(
+                        getattr(instruments[name].ports[port], sub_parameter),
+                        settings["instruments"][name]["settings"]["ports"][port][sub_parameter],
+                        atol=1e-4,
+                    )
+        else:
+            assert getattr(instruments[name], parameter) == settings["instruments"][name]["settings"][parameter]
 
 
 def instrument_test_property_wrapper(
@@ -76,102 +74,82 @@ def instrument_test_property_wrapper(
             )
 
 
+@pytest.mark.qpu
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
 def test_instruments_qublox_set_property_wrappers(name):
-    if not instruments[name].is_connected:
-        pytest.xfail("Instrument not available")
-    else:
-        instrument = instruments[name]
-        device = instruments[name].device
-
-        if name == "Cluster":
-            instrument_test_property_wrapper(
-                instrument, "reference_clock_source", device, "reference_source", values=["external", "internal"]
-            )
-
-        if name == "ClusterQRM_RF":
-            port = instruments[name].ports["o1"]
-            sequencer = device.sequencers[instrument.DEFAULT_SEQUENCERS["o1"]]
-
-            instrument_test_property_wrapper(port, "attenuation", device, "out0_att", values=np.arange(0, 60 + 2, 2))
-            instrument_test_property_wrapper(port, "lo_enabled", device, "out0_in0_lo_en", values=[True, False])
-            instrument_test_property_wrapper(
-                port, "lo_frequency", device, "out0_in0_lo_freq", values=np.linspace(2e9, 18e9, 20)
-            )
-            instrument_test_property_wrapper(
-                port, "gain", sequencer, "gain_awg_path0", "gain_awg_path1", values=np.linspace(-1, 1, 20)
-            )
-            instrument_test_property_wrapper(port, "hardware_mod_en", sequencer, "mod_en_awg", values=[True, False])
-            instrument_test_property_wrapper(
-                port, "nco_freq", sequencer, "nco_freq", values=np.linspace(-300e6, 300e6, 20)
-            )
-            instrument_test_property_wrapper(
-                port, "nco_phase_offs", sequencer, "nco_phase_offs", values=np.linspace(0, 359, 20)
-            )
-
-            port = instruments[name].ports["i1"]
-            sequencer = device.sequencers[instrument.DEFAULT_SEQUENCERS["i1"]]
-
-            instrument_test_property_wrapper(port, "hardware_demod_en", sequencer, "demod_en_acq", values=[True, False])
-
-            instrument_test_property_wrapper(
-                instrument,
-                "acquisition_duration",
-                sequencer,
-                "integration_length_acq",
-                values=np.arange(4, 16777212 + 4, 729444),
-            )
-
-            instrument_test_property_wrapper(
-                instrument,
-                "discretization_threshold_acq",
-                sequencer,
-                "discretization_threshold_acq",
-                values=np.linspace(-16777212.0, 16777212.0, 20),
-            )
-
-            instrument_test_property_wrapper(
-                instrument, "phase_rotation_acq", sequencer, "phase_rotation_acq", values=np.linspace(0, 359, 20)
-            )
-
-        if name == "ClusterQCM_RF":
-            port = instruments[name].ports["o1"]
-            sequencer = device.sequencers[instrument.DEFAULT_SEQUENCERS["o1"]]
-
-            instrument_test_property_wrapper(port, "attenuation", device, "out0_att", values=np.arange(0, 60 + 2, 2))
-            instrument_test_property_wrapper(port, "lo_enabled", device, "out0_lo_en", values=[True, False])
-            instrument_test_property_wrapper(
-                port, "lo_frequency", device, "out0_lo_freq", values=np.linspace(2e9, 18e9, 20)
-            )
-            instrument_test_property_wrapper(
-                port, "gain", sequencer, "gain_awg_path0", "gain_awg_path1", values=np.linspace(-1, 1, 20)
-            )
-            instrument_test_property_wrapper(port, "hardware_mod_en", sequencer, "mod_en_awg", values=[True, False])
-            instrument_test_property_wrapper(
-                port, "nco_freq", sequencer, "nco_freq", values=np.linspace(-300e6, 300e6, 20)
-            )
-            instrument_test_property_wrapper(
-                port, "nco_phase_offs", sequencer, "nco_phase_offs", values=np.linspace(0, 359, 20)
-            )
-
-            port = instruments[name].ports["o2"]
-            sequencer = device.sequencers[instrument.DEFAULT_SEQUENCERS["o2"]]
-
-            instrument_test_property_wrapper(port, "attenuation", device, "out1_att", values=np.arange(0, 60 + 2, 2))
-            instrument_test_property_wrapper(port, "lo_enabled", device, "out1_lo_en", values=[True, False])
-            instrument_test_property_wrapper(
-                port, "lo_frequency", device, "out1_lo_freq", values=np.linspace(2e9, 18e9, 20)
-            )
-            instrument_test_property_wrapper(
-                port, "gain", sequencer, "gain_awg_path0", "gain_awg_path1", values=np.linspace(-1, 1, 20)
-            )
-            instrument_test_property_wrapper(port, "hardware_mod_en", sequencer, "mod_en_awg", values=[True, False])
-            instrument_test_property_wrapper(
-                port, "nco_freq", sequencer, "nco_freq", values=np.linspace(-300e6, 300e6, 20)
-            )
-            instrument_test_property_wrapper(
-                port, "nco_phase_offs", sequencer, "nco_phase_offs", values=np.linspace(0, 359, 20)
-            )
+    instrument = instruments[name]
+    device = instruments[name].device
+    if name == "Cluster":
+        instrument_test_property_wrapper(
+            instrument, "reference_clock_source", device, "reference_source", values=["external", "internal"]
+        )
+    if name == "ClusterQRM_RF":
+        port = instruments[name].ports["o1"]
+        sequencer = device.sequencers[instrument.DEFAULT_SEQUENCERS["o1"]]
+        instrument_test_property_wrapper(port, "attenuation", device, "out0_att", values=np.arange(0, 60 + 2, 2))
+        instrument_test_property_wrapper(port, "lo_enabled", device, "out0_in0_lo_en", values=[True, False])
+        instrument_test_property_wrapper(
+            port, "lo_frequency", device, "out0_in0_lo_freq", values=np.linspace(2e9, 18e9, 20)
+        )
+        instrument_test_property_wrapper(
+            port, "gain", sequencer, "gain_awg_path0", "gain_awg_path1", values=np.linspace(-1, 1, 20)
+        )
+        instrument_test_property_wrapper(port, "hardware_mod_en", sequencer, "mod_en_awg", values=[True, False])
+        instrument_test_property_wrapper(port, "nco_freq", sequencer, "nco_freq", values=np.linspace(-300e6, 300e6, 20))
+        instrument_test_property_wrapper(
+            port, "nco_phase_offs", sequencer, "nco_phase_offs", values=np.linspace(0, 359, 20)
+        )
+        port = instruments[name].ports["i1"]
+        sequencer = device.sequencers[instrument.DEFAULT_SEQUENCERS["i1"]]
+        instrument_test_property_wrapper(port, "hardware_demod_en", sequencer, "demod_en_acq", values=[True, False])
+        instrument_test_property_wrapper(
+            instrument,
+            "acquisition_duration",
+            sequencer,
+            "integration_length_acq",
+            values=np.arange(4, 16777212 + 4, 729444),
+        )
+        instrument_test_property_wrapper(
+            instrument,
+            "discretization_threshold_acq",
+            sequencer,
+            "discretization_threshold_acq",
+            values=np.linspace(-16777212.0, 16777212.0, 20),
+        )
+        instrument_test_property_wrapper(
+            instrument, "phase_rotation_acq", sequencer, "phase_rotation_acq", values=np.linspace(0, 359, 20)
+        )
+    if name == "ClusterQCM_RF":
+        port = instruments[name].ports["o1"]
+        sequencer = device.sequencers[instrument.DEFAULT_SEQUENCERS["o1"]]
+        instrument_test_property_wrapper(port, "attenuation", device, "out0_att", values=np.arange(0, 60 + 2, 2))
+        instrument_test_property_wrapper(port, "lo_enabled", device, "out0_lo_en", values=[True, False])
+        instrument_test_property_wrapper(
+            port, "lo_frequency", device, "out0_lo_freq", values=np.linspace(2e9, 18e9, 20)
+        )
+        instrument_test_property_wrapper(
+            port, "gain", sequencer, "gain_awg_path0", "gain_awg_path1", values=np.linspace(-1, 1, 20)
+        )
+        instrument_test_property_wrapper(port, "hardware_mod_en", sequencer, "mod_en_awg", values=[True, False])
+        instrument_test_property_wrapper(port, "nco_freq", sequencer, "nco_freq", values=np.linspace(-300e6, 300e6, 20))
+        instrument_test_property_wrapper(
+            port, "nco_phase_offs", sequencer, "nco_phase_offs", values=np.linspace(0, 359, 20)
+        )
+        port = instruments[name].ports["o2"]
+        sequencer = device.sequencers[instrument.DEFAULT_SEQUENCERS["o2"]]
+        instrument_test_property_wrapper(port, "attenuation", device, "out1_att", values=np.arange(0, 60 + 2, 2))
+        instrument_test_property_wrapper(port, "lo_enabled", device, "out1_lo_en", values=[True, False])
+        instrument_test_property_wrapper(
+            port, "lo_frequency", device, "out1_lo_freq", values=np.linspace(2e9, 18e9, 20)
+        )
+        instrument_test_property_wrapper(
+            port, "gain", sequencer, "gain_awg_path0", "gain_awg_path1", values=np.linspace(-1, 1, 20)
+        )
+        instrument_test_property_wrapper(port, "hardware_mod_en", sequencer, "mod_en_awg", values=[True, False])
+        instrument_test_property_wrapper(port, "nco_freq", sequencer, "nco_freq", values=np.linspace(-300e6, 300e6, 20))
+        instrument_test_property_wrapper(
+            port, "nco_phase_offs", sequencer, "nco_phase_offs", values=np.linspace(0, 359, 20)
+        )
 
 
 def instrument_set_and_test_parameter_values(instrument, target, parameter, values):
@@ -277,49 +255,44 @@ def test_instruments_qublox_set_device_paramters(name):
     """
 
 
+@pytest.mark.qpu
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
 def test_instruments_process_pulse_sequence_upload_play(name):
-    if not instruments[name].is_connected:
-        pytest.xfail("Instrument not available")
-    else:
-        test_runcard = qibolab_folder / "tests" / "test_instruments_qblox.yml"
-        with open(test_runcard, "r") as file:
-            settings = yaml.safe_load(file)
-        instruments[name].setup(**settings["settings"], **settings["instruments"][name]["settings"])
-        repetition_duration = settings["settings"]["repetition_duration"]
-
-        instrument_pulses = {}
-        instrument_pulses[name] = PulseSequence()
-        if "QCM" in name:
-            for channel in instruments[name].channel_port_map:
-                instrument_pulses[name].add(Pulse(0, 200, 1, 10e6, np.pi / 2, "Gaussian(5)", channel))
-            instruments[name].process_pulse_sequence(
-                instrument_pulses[name], nshots=5, repetition_duration=repetition_duration
-            )
-            instruments[name].upload()
-            instruments[name].play_sequence()
-        if "QRM" in name:
-            channel = instruments[name]._port_channel_map["o1"]
-            instrument_pulses[name].add(
-                Pulse(0, 200, 1, 10e6, np.pi / 2, "Gaussian(5)", channel),
-                ReadoutPulse(200, 2000, 1, 10e6, np.pi / 2, "Rectangular()", channel),
-            )
-            instruments[name].device.sequencers[0].sync_en(
-                False
-            )  # TODO: Check why this is necessary here and not when playing a PS of only one readout pulse
-            instruments[name].process_pulse_sequence(
-                instrument_pulses[name], nshots=5, repetition_duration=repetition_duration
-            )
-            instruments[name].upload()
-            acquisition_results = instruments[name].play_sequence_and_acquire()
+    test_runcard = qibolab_folder / "tests" / "test_instruments_qblox.yml"
+    with open(test_runcard, "r") as file:
+        settings = yaml.safe_load(file)
+    instruments[name].setup(**settings["settings"], **settings["instruments"][name]["settings"])
+    repetition_duration = settings["settings"]["repetition_duration"]
+    instrument_pulses = {}
+    instrument_pulses[name] = PulseSequence()
+    if "QCM" in name:
+        for channel in instruments[name].channel_port_map:
+            instrument_pulses[name].add(Pulse(0, 200, 1, 10e6, np.pi / 2, "Gaussian(5)", channel))
+        instruments[name].process_pulse_sequence(
+            instrument_pulses[name], nshots=5, repetition_duration=repetition_duration
+        )
+        instruments[name].upload()
+        instruments[name].play_sequence()
+    if "QRM" in name:
+        channel = instruments[name]._port_channel_map["o1"]
+        instrument_pulses[name].add(
+            Pulse(0, 200, 1, 10e6, np.pi / 2, "Gaussian(5)", channel),
+            ReadoutPulse(200, 2000, 1, 10e6, np.pi / 2, "Rectangular()", channel),
+        )
+        instruments[name].device.sequencers[0].sync_en(
+            False
+        )  # TODO: Check why this is necessary here and not when playing a PS of only one readout pulse
+        instruments[name].process_pulse_sequence(
+            instrument_pulses[name], nshots=5, repetition_duration=repetition_duration
+        )
+        instruments[name].upload()
+        acquisition_results = instruments[name].play_sequence_and_acquire()
 
 
+@pytest.mark.qpu
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
 def test_instruments_qublox_start_stop_disconnect(name):
-    if not instruments[name].is_connected:
-        pytest.xfail("Instrument not available")
-    else:
-        instruments[name].start()
-        instruments[name].stop()
-        instruments[name].disconnect()
-        assert instruments[name].is_connected == False
+    instruments[name].start()
+    instruments[name].stop()
+    instruments[name].disconnect()
+    assert instruments[name].is_connected == False

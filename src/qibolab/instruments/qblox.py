@@ -971,7 +971,7 @@ class ClusterQRM_RF(AbstractInstrument):
 
             cosalpha = np.cos(2 * np.pi * acquisition_frequency * time)
             sinalpha = np.sin(2 * np.pi * acquisition_frequency * time)
-            demod_matrix = 2 * np.array([[cosalpha, sinalpha], [-sinalpha, cosalpha]])
+            demod_matrix = np.sqrt(2) * np.array([[cosalpha, sinalpha], [-sinalpha, cosalpha]])
             result = []
             for it, t, ii, qq in zip(np.arange(modulated_i.shape[0]), time, modulated_i, modulated_q):
                 result.append(demod_matrix[:, :, it] @ np.array([ii, qq]))
@@ -984,14 +984,8 @@ class ClusterQRM_RF(AbstractInstrument):
             # plt.show()
         else:
             int_len = self.acquisition_duration
-            i = (
-                np.sqrt(2)
-                * [(val / int_len) for val in acquisition_results["acquisition"]["bins"]["integration"]["path0"]][0]
-            )
-            q = (
-                np.sqrt(2)
-                * [(val / int_len) for val in acquisition_results["acquisition"]["bins"]["integration"]["path1"]][0]
-            )
+            i = np.mean([(val / int_len) for val in acquisition_results["acquisition"]["bins"]["integration"]["path0"]])
+            q = np.mean([(val / int_len) for val in acquisition_results["acquisition"]["bins"]["integration"]["path1"]])
             integrated_signal = i, q
         return integrated_signal
 
