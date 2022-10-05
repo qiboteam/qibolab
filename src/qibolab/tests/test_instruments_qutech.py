@@ -9,6 +9,7 @@ INSTRUMENTS_LIST = ["SPI"]
 instruments = {}
 
 # To test --> name = SpiRack
+@pytest.mark.qpu
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
 def test_instruments_qutech_init(name):
     test_runcard = qibolab_folder / "tests" / "test_instruments_qutech.yml"
@@ -32,39 +33,33 @@ def test_instruments_qutech_init(name):
     assert instance.data_folder == user_folder / "instruments" / "data" / instance.tmp_folder.name.split("/")[-1]
 
 
-@pytest.mark.xfail
+@pytest.mark.qpu
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
 def test_instruments_qutech_connect(name):
     instruments[name].connect()
 
 
+@pytest.mark.qpu
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
 def test_instruments_qutech_setup(name):
-    if not instruments[name].is_connected:
-        pytest.xfail("Instrument not available")
-    else:
-        test_runcard = qibolab_folder / "tests" / "test_instruments_qutech.yml"
-        with open(test_runcard, "r") as file:
-            settings = yaml.safe_load(file)
-        instruments[name].setup(**settings["settings"], **settings["instruments"][name]["settings"])
+    test_runcard = qibolab_folder / "tests" / "test_instruments_qutech.yml"
+    with open(test_runcard, "r") as file:
+        settings = yaml.safe_load(file)
+    instruments[name].setup(**settings["settings"], **settings["instruments"][name]["settings"])
 
-        for parameter in settings["instruments"][name]["settings"]:
-            assert getattr(instruments[name], parameter) == settings["instruments"][name]["settings"][parameter]
+    for parameter in settings["instruments"][name]["settings"]:
+        assert getattr(instruments[name], parameter) == settings["instruments"][name]["settings"][parameter]
 
 
+@pytest.mark.qpu
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
 def test_instruments_qutech_disconnect(name):
-    if not instruments[name].is_connected:
-        pytest.xfail("Instrument not available")
-    else:
-        instruments[name].disconnect()
-        assert instruments[name].is_connected == False
+    instruments[name].disconnect()
+    assert instruments[name].is_connected == False
 
 
+@pytest.mark.qpu
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
 def test_instruments_qutech_close(name):
-    if not instruments[name].is_connected:
-        pytest.xfail("Instrument not available")
-    else:
-        instruments[name].close()
-        assert instruments[name].is_connected == False
+    instruments[name].close()
+    assert instruments[name].is_connected == False

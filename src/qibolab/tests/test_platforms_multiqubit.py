@@ -88,7 +88,7 @@ def test_abstractplatform_pickle(fx_instantiate_platform):
     assert new_platform.is_connected == platform.is_connected
 
 
-@pytest.mark.xfail
+@pytest.mark.qpu
 def test_abstractplatform_connect_disconnect(fx_instantiate_platform):
     platform.connect()
     assert platform.is_connected
@@ -97,123 +97,98 @@ def test_abstractplatform_connect_disconnect(fx_instantiate_platform):
     platform.disconnect()
 
 
+@pytest.mark.qpu
 def test_abstractplatform_setup_start_stop(fx_instantiate_platform):
-    if not hardware_available:
-        pytest.xfail("Hardware not available")
-    else:
-        platform.connect()
-        platform.setup()
-        platform.start()
-        platform.stop()
-        platform.disconnect()
+    platform.connect()
+    platform.setup()
+    platform.start()
+    platform.stop()
+    platform.disconnect()
 
 
+@pytest.mark.qpu
 def test_multiqubitplatform_execute_empty(fx_connect_platform):
-    if not hardware_available:
-        pytest.xfail("Hardware not available")
-    else:
-        # an empty pulse sequence
-        sequence = PulseSequence()
-        platform.execute_pulse_sequence(sequence, nshots)
+    # an empty pulse sequence
+    sequence = PulseSequence()
+    platform.execute_pulse_sequence(sequence, nshots)
 
 
+@pytest.mark.qpu
 def test_multiqubitplatform_execute_one_drive_pulse(fx_connect_platform):
-    if not hardware_available:
-        pytest.xfail("Hardware not available")
-    else:
-        # One drive pulse
-        sequence = PulseSequence()
-        sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
-        platform.execute_pulse_sequence(sequence, nshots)
+    # One drive pulse
+    sequence = PulseSequence()
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
+    platform.execute_pulse_sequence(sequence, nshots)
 
 
-@pytest.mark.xfail  # Feature removed
+@pytest.mark.qpu
 def test_multiqubitplatform_execute_one_long_drive_pulse(fx_connect_platform):
-    if not hardware_available:
-        pytest.xfail("Hardware not available")
-    else:
-        # Long duration
-        sequence = PulseSequence()
-        sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=8192 + 200))
-        platform.execute_pulse_sequence(sequence, nshots)
+    # Long duration
+    sequence = PulseSequence()
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=8192 + 200))
+    platform.execute_pulse_sequence(sequence, nshots)
 
 
-@pytest.mark.xfail  # Feature removed
+@pytest.mark.qpu
 def test_multiqubitplatform_execute_one_extralong_drive_pulse(fx_connect_platform):
-    if not hardware_available:
-        pytest.xfail("Hardware not available")
-    else:
-        # Extra Long duration
-        sequence = PulseSequence()
-        sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=2 * 8192 + 200))
-        platform.execute_pulse_sequence(sequence, nshots)
+    # Extra Long duration
+    sequence = PulseSequence()
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=2 * 8192 + 200))
+    platform.execute_pulse_sequence(sequence, nshots)
 
 
+@pytest.mark.qpu
 def test_multiqubitplatform_execute_one_drive_one_readout(fx_connect_platform):
-    if not hardware_available:
-        pytest.xfail("Hardware not available")
-    else:
-        # One drive pulse and one readout pulse
-        sequence = PulseSequence()
-        sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
-        sequence.add(platform.create_qubit_readout_pulse(qubit, start=200))
-        platform.execute_pulse_sequence(sequence, nshots)
+    # One drive pulse and one readout pulse
+    sequence = PulseSequence()
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
+    sequence.add(platform.create_qubit_readout_pulse(qubit, start=200))
+    platform.execute_pulse_sequence(sequence, nshots)
 
 
+@pytest.mark.qpu
 def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout(fx_connect_platform):
-    if not hardware_available:
-        pytest.xfail("Hardware not available")
-    else:
-        # Multiple qubit drive pulses and one readout pulse
-        sequence = PulseSequence()
-        sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
-        sequence.add(platform.create_qubit_drive_pulse(qubit, start=204, duration=200))
-        sequence.add(platform.create_qubit_drive_pulse(qubit, start=408, duration=400))
-        sequence.add(platform.create_qubit_readout_pulse(qubit, start=808))
-        platform.execute_pulse_sequence(sequence, nshots)
+    # Multiple qubit drive pulses and one readout pulse
+    sequence = PulseSequence()
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=204, duration=200))
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=408, duration=400))
+    sequence.add(platform.create_qubit_readout_pulse(qubit, start=808))
+    platform.execute_pulse_sequence(sequence, nshots)
 
 
+@pytest.mark.qpu
 def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout_no_spacing(fx_connect_platform):
-    if not hardware_available:
-        pytest.xfail("Hardware not available")
-    else:
-        # Multiple qubit drive pulses and one readout pulse with no spacing between them
-        sequence = PulseSequence()
-        sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
-        sequence.add(platform.create_qubit_drive_pulse(qubit, start=200, duration=200))
-        sequence.add(platform.create_qubit_drive_pulse(qubit, start=400, duration=400))
-        sequence.add(platform.create_qubit_readout_pulse(qubit, start=800))
-        platform.execute_pulse_sequence(sequence, nshots)
+    # Multiple qubit drive pulses and one readout pulse with no spacing between them
+    sequence = PulseSequence()
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=200, duration=200))
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=400, duration=400))
+    sequence.add(platform.create_qubit_readout_pulse(qubit, start=800))
+    platform.execute_pulse_sequence(sequence, nshots)
 
 
-@pytest.mark.xfail
+@pytest.mark.qpu
 def test_multiqubitplatform_execute_multiple_overlaping_drive_pulses_one_readout(fx_connect_platform):
-    if not hardware_available:
-        pytest.xfail("Hardware not available")
-    else:
-        # Multiple overlapping qubit drive pulses and one readout pulse
-        sequence = PulseSequence()
-        sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
-        sequence.add(platform.create_qubit_drive_pulse(qubit, start=200, duration=200))
-        sequence.add(platform.create_qubit_drive_pulse(qubit, start=50, duration=400))
-        sequence.add(platform.create_qubit_readout_pulse(qubit, start=800))
-        platform.execute_pulse_sequence(sequence, nshots)
+    # Multiple overlapping qubit drive pulses and one readout pulse
+    sequence = PulseSequence()
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=200, duration=200))
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=50, duration=400))
+    sequence.add(platform.create_qubit_readout_pulse(qubit, start=800))
+    platform.execute_pulse_sequence(sequence, nshots)
 
 
-@pytest.mark.xfail
+@pytest.mark.qpu
 def test_multiqubitplatform_execute_multiple_readout_pulses(fx_connect_platform):
-    if not hardware_available:
-        pytest.xfail("Hardware not available")
-    else:
-        # Multiple readout pulses
-        sequence = PulseSequence()
-        qd_pulse1 = platform.create_qubit_drive_pulse(qubit, start=0, duration=200)
-        ro_pulse1 = platform.create_qubit_readout_pulse(qubit, start=200)
-        qd_pulse2 = platform.create_qubit_drive_pulse(qubit, start=(ro_pulse1.start + ro_pulse1.duration), duration=400)
-        ro_pulse2 = platform.create_qubit_readout_pulse(qubit, start=(ro_pulse1.start + ro_pulse1.duration + 400))
-        sequence.add(qd_pulse1)
-        sequence.add(ro_pulse1)
-        sequence.add(qd_pulse2)
-        sequence.add(ro_pulse2)
-
-        platform.execute_pulse_sequence(sequence, nshots)
+    # Multiple readout pulses
+    sequence = PulseSequence()
+    qd_pulse1 = platform.create_qubit_drive_pulse(qubit, start=0, duration=200)
+    ro_pulse1 = platform.create_qubit_readout_pulse(qubit, start=200)
+    qd_pulse2 = platform.create_qubit_drive_pulse(qubit, start=(ro_pulse1.start + ro_pulse1.duration), duration=400)
+    ro_pulse2 = platform.create_qubit_readout_pulse(qubit, start=(ro_pulse1.start + ro_pulse1.duration + 400))
+    sequence.add(qd_pulse1)
+    sequence.add(ro_pulse1)
+    sequence.add(qd_pulse2)
+    sequence.add(ro_pulse2)
+    platform.execute_pulse_sequence(sequence, nshots)
