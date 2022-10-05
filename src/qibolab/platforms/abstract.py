@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 import yaml
 from qibo import gates
 from qibo.config import log, raise_error
+from qibo.models import Circuit
 
 from qibolab.pulses import (
     Drag,
@@ -182,20 +183,30 @@ class AbstractPlatform(ABC):
             self.is_connected = False
 
     # TRANSPILATION
-    from qibo.models import Circuit
+    def transpile(self, circuit: Circuit):
+        """Transforms a circuit to pulse sequence.
 
-    def transpile(self, circuit: Circuit):  # (self, circuit: qibo.core.circuit.Circuit) -> PulseSequence
+        Args:
+            circuit (qibo.models.Circuit): Qibo circuit that respects the platform's
+                connectivity and native gates.
+
+        Returns:
+            sequence (qibolab.pulses.PulseSequence): Pulse sequence that implements the
+                circuit on the qubit.
+        """
         import numpy as np
 
-        from qibolab.transpilers.transpile import transpile
+        from qibolab.transpilers import can_execute, transpile
 
-        native_circuit, hardware_qubits = transpile(circuit, fuse_one_qubit=False)
+        if not can_execute(circuit):
+            circuit, hardware_qubits = transpile(circuit)
+
         sequence = PulseSequence()
         sequence.virtual_z_phases = {}
         for qubit in range(circuit.nqubits):
             sequence.virtual_z_phases[qubit] = 0
 
-        for gate in native_circuit.queue:
+        for gate in circuit.queue:
 
             if isinstance(gate, gates.I):
                 pass

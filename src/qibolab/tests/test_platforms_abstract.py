@@ -10,8 +10,6 @@ from qibolab.platform import Platform
 from qibolab.platforms.abstract import AbstractPlatform
 from qibolab.pulses import PulseSequence
 
-platform_names = ["tii1q", "tii5q"]  # 'qili' , 'icarusq']
-
 
 def test_u3_sim_agreement():
     backend = NumpyBackend()
@@ -26,7 +24,6 @@ def test_u3_sim_agreement():
     np.testing.assert_allclose(u3_matrix, target_matrix)
 
 
-@pytest.mark.parametrize("platform_name", platform_names)
 def test_transpile(platform_name):
     platform: AbstractPlatform = Platform(platform_name)
     nqubits = platform.nqubits
@@ -83,7 +80,6 @@ def test_transpile(platform_name):
     assert len(sequence.ro_pulses) == 1
 
 
-@pytest.mark.parametrize("platform_name", platform_names)
 def test_measurement(platform_name):
     platform: AbstractPlatform = Platform(platform_name)
     nqubits = platform.nqubits
@@ -98,7 +94,6 @@ def test_measurement(platform_name):
     assert len(sequence.ro_pulses) == 1 * nqubits
 
 
-@pytest.mark.parametrize("platform_name", platform_names)
 def test_rz_to_sequence(platform_name):
     platform = Platform(platform_name)
     circuit = Circuit(1)
@@ -109,7 +104,6 @@ def test_rz_to_sequence(platform_name):
     assert sequence.virtual_z_phases[0] == 0.2 + np.pi
 
 
-@pytest.mark.parametrize("platform_name", platform_names)
 def test_u3_to_sequence(platform_name):
     platform = Platform(platform_name)
     circuit = Circuit(1)
@@ -128,7 +122,6 @@ def test_u3_to_sequence(platform_name):
     assert sequence.serial == s.serial
 
 
-@pytest.mark.parametrize("platform_name", platform_names)
 def test_two_u3_to_sequence(platform_name):
     platform = Platform(platform_name)
     circuit = Circuit(1)
@@ -152,7 +145,6 @@ def test_two_u3_to_sequence(platform_name):
     assert sequence.serial == s.serial
 
 
-@pytest.mark.parametrize("platform_name", platform_names)
 def test_add_measurement_to_sequence(platform_name):
     platform = Platform(platform_name)
     circuit = Circuit(1)

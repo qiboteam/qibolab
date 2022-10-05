@@ -9,6 +9,7 @@ from qibolab.transpilers.decompositions import (
     calculate_psi,
     calculate_single_qubit_unitaries,
     cnot_decomposition,
+    cnot_decomposition_light,
     magic_basis,
     magic_decomposition,
     to_bell_diagonal,
@@ -136,11 +137,27 @@ def test_calculate_h_vector(run_number):
 
 @pytest.mark.parametrize("run_number", range(NREPS))
 def test_cnot_decomposition(run_number):
-    cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
+    from qibo.backends import NumpyBackend
+    from qibo.models import Circuit
+
     hx, hy, hz = np.random.random(3)
     target_matrix = bell_unitary(hx, hy, hz)
-    u2, u3, v2, v3, w = cnot_decomposition(hx, hy, hz)
-    final_matrix = np.kron(w, np.conj(w.T)) @ cnot @ np.kron(u3, v3) @ cnot @ np.kron(u2, v2) @ cnot
+    c = Circuit(2)
+    c.add(cnot_decomposition(0, 1, hx, hy, hz))
+    final_matrix = c.unitary(NumpyBackend())
+    np.testing.assert_allclose(final_matrix, target_matrix, atol=ATOL)
+
+
+@pytest.mark.parametrize("run_number", range(NREPS))
+def test_cnot_decomposition_light(run_number):
+    from qibo.backends import NumpyBackend
+    from qibo.models import Circuit
+
+    hx, hy = np.random.random(2)
+    target_matrix = bell_unitary(hx, hy, 0)
+    c = Circuit(2)
+    c.add(cnot_decomposition_light(0, 1, hx, hy))
+    final_matrix = c.unitary(NumpyBackend())
     np.testing.assert_allclose(final_matrix, target_matrix, atol=ATOL)
 
 
@@ -158,12 +175,15 @@ def test_two_qubit_decomposition(run_number):
 
 
 @pytest.mark.parametrize("run_number", range(NREPS))
-def test_two_qubit_decomposition_bell_unitary(run_number):
+@pytest.mark.parametrize("hz_zero", [False, True])
+def test_two_qubit_decomposition_bell_unitary(run_number, hz_zero):
     from qibo.backends import NumpyBackend
     from qibo.models import Circuit
 
     backend = NumpyBackend()
     hx, hy, hz = (2 * np.random.random(3) - 1) * np.pi
+    if hz_zero:
+        hz = 0
     unitary = bell_unitary(hx, hy, hz)
     c = Circuit(2)
     c.add(two_qubit_decomposition(0, 1, unitary))

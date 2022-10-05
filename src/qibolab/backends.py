@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from qibo.backends import NumpyBackend
-from qibo.config import raise_error
+from qibo.config import log, raise_error
 from qibo.states import CircuitResult
+
+from qibolab.transpilers.transpile import transpile
 
 
 class QibolabBackend(NumpyBackend):
@@ -29,7 +31,9 @@ class QibolabBackend(NumpyBackend):
     def apply_gate_density_matrix(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
 
-    def execute_circuit(self, circuit, initial_state=None, nshots=None):  # pragma: no cover
+    def execute_circuit(
+        self, circuit, initial_state=None, nshots=None, fuse_one_qubit=False, check_transpiled=False
+    ):  # pragma: no cover
         """Executes a quantum circuit.
 
         Args:
@@ -37,23 +41,35 @@ class QibolabBackend(NumpyBackend):
             nshots (int): Number of shots to sample from the experiment.
                 If ``None`` the default value provided as hardware_avg in the
                 calibration yml will be used.
+            fuse_one_qubit (bool): If ``True`` it fuses one qubit gates during
+                transpilation to reduce circuit depth.
+            check_transpiled (bool): If ``True`` it checks that the transpiled
+                circuit is equivalent to the original using simulation.
 
         Returns:
             CircuitResult object containing the results acquired from the execution.
         """
-        from qibolab.pulses import PulseSequence
-
         if initial_state is not None:
             raise_error(
                 ValueError,
-                "Hardware backend does not support " "initial state in circuits.",
+                "Hardware backend does not support initial state in circuits.",
             )
 
         if circuit.measurement_gate is None:
             raise_error(RuntimeError, "No measurement register assigned.")
 
-        # Transpile a circuit into a sequence of pulses ``PulseSequence``
-        sequence: PulseSequence = self.platform.transpile(circuit)
+        # Transform a circuit into proper connectivity and native gates
+        native_circuit, hardware_qubits = transpile(circuit, fuse_one_qubit=False)
+        if check_transpiled:
+            backend = NumpyBackend()
+            target_state = backend.execute_circuit(circuit).state()
+            final_state = backend.execute_circuit(native_circuit).state()
+            fidelity = np.abs(np.dot(np.conj(target_state), final_state))
+            np.testing.assert_allclose(fidelity, 1.0)
+            log.info("Transpiler test passed.")
+
+        # Transpile the native circuit into a sequence of pulses ``PulseSequence``
+        sequence = self.platform.transpile(native_circuit)
 
         # Execute the pulse sequence on the platform
         self.platform.start()
