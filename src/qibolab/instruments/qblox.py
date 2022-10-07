@@ -626,7 +626,7 @@ class ClusterQRM_RF(AbstractInstrument):
                         self._set_device_parameter(
                             self.device.sequencers[next_sequencer_number],
                             "discretization_threshold_acq",
-                            value=self.classification_parameters[non_overlapping_pulses[0].qubit]["threshold"],
+                            value=self.classification_parameters[non_overlapping_pulses[0].qubit]["threshold"] * self.acquisition_duration,
                         )
                     sequencer = Sequencer(next_sequencer_number)
 
