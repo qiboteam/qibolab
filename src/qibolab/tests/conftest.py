@@ -23,7 +23,7 @@ def pytest_runtest_setup(item):
 def pytest_generate_tests(metafunc):
     platforms = metafunc.config.option.platforms.split(",")
 
-    if metafunc.module.__name__ == "test_instruments_rohde_schwarz":
+    if metafunc.module.__name__ == "qibolab.tests.test_instruments_rohde_schwarz":
         pytest.skip("Skipping RS tests because it is not available in qpu5q.")
 
     if "platform_name" in metafunc.fixturenames:
