@@ -182,7 +182,6 @@ class AbstractPlatform(ABC):
                 self.instruments[name].disconnect()
             self.is_connected = False
 
-    # TRANSPILATION
     def transpile(self, circuit: Circuit):
         """Transforms a circuit to pulse sequence.
 
@@ -219,16 +218,6 @@ class AbstractPlatform(ABC):
                 qubit = gate.target_qubits[0]
                 sequence.virtual_z_phases[qubit] += gate.parameters[0]
 
-            elif isinstance(gate, gates.M):
-                # Add measurement pulse
-                measurement_start = sequence.finish
-                mz_pulses = []
-                for qubit in gate.target_qubits:
-                    MZ_pulse = self.create_MZ_pulse(qubit, measurement_start)
-                    sequence.add(MZ_pulse)  # append_at_end_of_channel?
-                    mz_pulses.append(MZ_pulse.serial)
-                gate.pulses = tuple(mz_pulses)
-
             elif isinstance(gate, gates.U3):
                 qubit = gate.target_qubits[0]
                 # Transform gate to U3 and add pi/2-pulses
@@ -251,6 +240,16 @@ class AbstractPlatform(ABC):
                 sequence.append_at_end_of_channel(RX90_pulse_2)
                 # apply RZ(phi)
                 sequence.virtual_z_phases[qubit] += phi
+
+            elif isinstance(gate, gates.M):
+                # Add measurement pulse
+                measurement_start = sequence.finish
+                mz_pulses = []
+                for qubit in gate.target_qubits:
+                    MZ_pulse = self.create_MZ_pulse(qubit, measurement_start)
+                    sequence.add(MZ_pulse)  # append_at_end_of_channel?
+                    mz_pulses.append(MZ_pulse.serial)
+                gate.pulses = tuple(mz_pulses)
 
             else:
                 raise_error(

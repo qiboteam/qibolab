@@ -66,7 +66,7 @@ class NativeGates:
         return gate
 
     def M(self, gate):
-        raise_error(NotImplementedError)
+        return gate
 
     def RX(self, gate):
         q = gate.target_qubits[0]
