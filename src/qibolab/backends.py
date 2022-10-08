@@ -75,7 +75,15 @@ class QibolabBackend(NumpyBackend):
         self.platform.start()
         readout = self.platform(sequence, nshots)
         self.platform.stop()
-        return CircuitResult(self, circuit, readout, nshots)
+        result = CircuitResult(self, circuit, readout, nshots)
+
+        shots = readout.get("binned_classified")
+        # Register measurement outcomes
+        if shots is not None:
+            for gate in circuit.measurements:
+                samples = np.array([shots.get(pulse) for pulse in gate.pulses])
+                gate.result.register_samples(samples.T)
+        return result
 
     def circuit_result_tensor(self, result):
         raise_error(
