@@ -39,14 +39,6 @@ def transpile(circuit, fuse_one_qubit=False):
     # one-qubit gates to native
     new = native_gates.translate_circuit(new, translate_single_qubit=True)
 
-    # TODO: Handle measurements similarly to other gates
-    if circuit.measurement_gate:
-        measured_qubits = tuple(hardware_qubits.index(q) for q in circuit.measurement_gate.qubits)
-        new.measurement_gate = gates.M(*measured_qubits)
-        new.measurement_tuples = {
-            k: tuple(hardware_qubits.index(q) for q in v) for k, v in circuit.measurement_tuples.items()
-        }
-
     return new, hardware_qubits
 
 
@@ -64,6 +56,9 @@ def can_execute(circuit):
     otherwise returns ``False``.
     """
     for gate in circuit.queue:
+        if isinstance(gate, gates.M):
+            continue
+
         if len(gate.qubits) == 1:
             if not isinstance(gate, (gates.I, gates.Z, gates.RZ, gates.U3)):
                 log.info(f"{gate.name} is not native gate.")

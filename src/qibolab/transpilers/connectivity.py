@@ -67,7 +67,7 @@ def fix_connectivity(circuit):
     for i, gate in enumerate(circuit.queue):
         # map gate qubits to hardware
         qubits = tuple(hardware_qubits.index(q) for q in gate.qubits)
-        if len(qubits) > 2:
+        if len(qubits) > 2 and not isinstance(gate, gates.M):
             raise_error(
                 NotImplementedError,
                 "Transpiler does not support gates targeting more than two-qubits.",
@@ -106,7 +106,7 @@ def respects_connectivity(circuit):
     otherwise returns ``False``.
     """
     for gate in circuit.queue:
-        if len(gate.qubits) > 2:
+        if len(gate.qubits) > 2 and not isinstance(gate, gates.M):
             log.info(f"{gate.name} acts on more than two qubits.")
             return False
         elif len(gate.qubits) == 2:
