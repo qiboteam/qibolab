@@ -58,7 +58,7 @@ def test_measurement_samples(platform_name):
     circuit.add(gates.M(*range(nqubits)))
     result = backend.execute_circuit(circuit, nshots=100)
     assert result.samples().shape == (100, nqubits)
-    assert sum(result.frequencies()) == 100
+    assert sum(result.frequencies().values()) == 100
 
 
 # TODO: speed up by instantiating the backend once per platform
