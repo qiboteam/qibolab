@@ -53,6 +53,17 @@ def test_execute_circuit(platform_name, gateargs):
     result = backend.execute_circuit(circuit, nshots=100)
 
 
+@pytest.mark.qpu
+def test_measurement_samples(platform_name):
+    backend = QibolabBackend(platform_name)
+    nqubits = backend.platform.nqubits
+    circuit = Circuit(nqubits)
+    circuit.add(gates.M(*range(nqubits)))
+    result = backend.execute_circuit(circuit, nshots=100)
+    assert result.samples().shape == (100, nqubits)
+    assert sum(result.frequencies()) == 100
+
+
 # TODO: speed up by instantiating the backend once per platform
 # TODO: test other platforms (qili, icarusq)
 # TODO: test_circuit_result_tensor
