@@ -1,6 +1,7 @@
 import itertools
 
 import numpy as np
+from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.config import log, raise_error
 from qibo.states import CircuitResult
@@ -81,9 +82,10 @@ class QibolabBackend(NumpyBackend):
         shots = readout.get("binned_classified")
         # Register measurement outcomes
         if shots is not None:
-            for gate in native_circuit.measurements:
-                samples = np.array([shots.get(pulse) for pulse in gate.pulses])
-                gate.result.register_samples(samples.T)
+            for gate in native_circuit.queue:
+                if isinstance(gate, gates.M):
+                    samples = np.array([shots.get(pulse) for pulse in gate.pulses])
+                    gate.result.register_samples(samples.T)
         return result
 
     def circuit_result_tensor(self, result):
