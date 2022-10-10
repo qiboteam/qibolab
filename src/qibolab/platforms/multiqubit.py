@@ -115,5 +115,5 @@ class MultiqubitPlatform(AbstractPlatform):
             fidelity = cum_distribution_diff[argmax] / nshots
             assignment_fidelity = 1 - (errors_exc + errors_gnd) / nshots / 2
             # assignment_fidelity = 1/2 + (cum_distribution_exc[argmax] - cum_distribution_gnd[argmax])/nshots/2
-            results[qubit] = (rotation_angle * 360 / (2 * np.pi), threshold, fidelity, assignment_fidelity)
+            results[qubit] = ((rotation_angle * 360 / (2 * np.pi)) % 360, threshold, fidelity, assignment_fidelity)
         return results
