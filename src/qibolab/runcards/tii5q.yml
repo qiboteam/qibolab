@@ -300,7 +300,7 @@ characterization:
             qubit_freq: 4_891_370_569
             T1: 33875
             T2: 8479
-            state0_voltage: 1803 
+            state0_voltage: 1803
             state1_voltage: 3808
             mean_gnd_states: (-0.0013829998976628089-0.0011577895538555706j)
             mean_exc_states: (0.0035266558882890505+0.001438625817420428j)
