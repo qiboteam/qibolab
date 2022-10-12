@@ -694,7 +694,7 @@ class ClusterQRM_RF(AbstractInstrument):
 
                     # Acquisitions
                     for acquisition_index, pulse in enumerate(sequencer.pulses.ro_pulses):
-                        sequencer.acquisitions[pulse.serial] = {"num_bins": 1, "index": acquisition_index}
+                        sequencer.acquisitions[pulse.serial] = {"num_bins": nshots, "index": acquisition_index}
 
                     # Program
                     minimum_delay_between_instructions = 4
@@ -715,31 +715,34 @@ class ClusterQRM_RF(AbstractInstrument):
                     num_wait_loops = (wait_time - extra_wait) // wait_loop_step
 
                     header = f"""
-                    move {nshots},R0 # nshots
+                    move 0,R0                # loop iterator (nshots)
                     nop
                     wait_sync {minimum_delay_between_instructions}
-                    loop:
-                    reset_ph"""
+                    loop:"""
+                    if self.ports["i1"].hardware_demod_en or self.ports["o1"].hardware_mod_en:
+                        header += "\n" + "                    reset_ph"
                     body = ""
 
                     footer = f"""
-                        # wait {wait_time} ns"""
+                    # wait {wait_time} ns"""
                     if num_wait_loops > 0:
                         footer += f"""
-                        move {num_wait_loops},R2
-                        nop
-                        waitloop2:
-                            wait {wait_loop_step}
-                            loop R2,@waitloop2"""
+                    move {num_wait_loops},R2
+                    nop
+                    waitloop2:
+                        wait {wait_loop_step}
+                        loop R2,@waitloop2"""
                     if extra_wait > 0:
                         footer += f"""
-                            wait {extra_wait}"""
+                    wait {extra_wait}"""
                     else:
                         footer += f"""
-                            # wait 0"""
+                    # wait 0"""
 
                     footer += f"""
-                    loop R0,@loop
+                    add R0,1,R0              # increment iterator
+                    nop                      # wait a cycle for R0 to be available
+                    jlt R0,{nshots},@loop        # nshots
                     stop
                     """
 
@@ -753,27 +756,44 @@ class ClusterQRM_RF(AbstractInstrument):
 
                     if wait_time > 0:
                         initial_wait_instruction = f"""
-                        # wait {wait_time} ns"""
+                    # wait {wait_time} ns"""
                         if num_wait_loops > 0:
                             initial_wait_instruction += f"""
-                        move {num_wait_loops},R1
-                        nop
-                        waitloop1:
-                            wait {wait_loop_step}
-                            loop R1,@waitloop1"""
+                    move {num_wait_loops},R1
+                    nop
+                    waitloop1:
+                        wait {wait_loop_step}
+                        loop R1,@waitloop1"""
                         if extra_wait > 0:
                             initial_wait_instruction += f"""
-                            wait {extra_wait}"""
+                    wait {extra_wait}"""
                         else:
                             initial_wait_instruction += f"""
-                            # wait 0"""
+                    # wait 0"""
                     else:
                         initial_wait_instruction = """
-                        # wait 0"""
+                    # wait 0"""
 
                     body += initial_wait_instruction
 
                     for n in range(pulses.count):
+                        if (self.ports["i1"].hardware_demod_en or self.ports["o1"].hardware_mod_en) and pulses[
+                            n
+                        ].relative_phase != 0:
+                            # Set phase
+                            p = 10
+                            phase = (pulses[n].relative_phase * 360 / (2 * np.pi)) % 360
+                            coarse = int(round(phase / 0.9, p))
+                            fine = int(round((phase - coarse * 0.9) / 2.25e-3, p))
+                            ultra_fine = int(round((phase - coarse * 0.9 - fine * 2.25e-3) / 3.6e-7, p))
+                            error = abs(phase - coarse * 0.9 - fine * 2.25e-3 - ultra_fine * 3.6e-7)
+                            assert error < 3.6e-7
+                            set_ph_instruction = f"                    set_ph {coarse}, {fine}, {ultra_fine}"
+                            set_ph_instruction += (
+                                " " * (45 - len(set_ph_instruction))
+                                + f"# set relative phase {pulses[n].relative_phase} rads"
+                            )
+                            body += "\n" + set_ph_instruction
                         if pulses[n].type == PulseType.READOUT:
                             delay_after_play = self.acquisition_hold_off
 
@@ -796,14 +816,14 @@ class ClusterQRM_RF(AbstractInstrument):
                             #   arg2 is the delay between starting the instruction and the next instruction
                             play_instruction = f"                    play {sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_i)},{sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_q)},{delay_after_play}"
                             # Add the serial of the pulse as a comment
-                            play_instruction += " " * (34 - len(play_instruction)) + f"# play waveforms {pulses[n]}"
+                            play_instruction += " " * (45 - len(play_instruction)) + f"# play waveforms {pulses[n]}"
                             body += "\n" + play_instruction
 
                             # Prepare acquire instruction: acquire arg0, arg1, arg2.
                             #   arg0 is the index of the acquisition
                             #   arg1 is the index of the data bin
                             #   arg2 is the delay between starting the instruction and the next instruction
-                            acquire_instruction = f"                    acquire {pulses.ro_pulses.index(pulses[n])},0,{delay_after_acquire}"
+                            acquire_instruction = f"                    acquire {pulses.ro_pulses.index(pulses[n])},R0,{delay_after_acquire}"
                             # Add the serial of the pulse as a comment
                             body += "\n" + acquire_instruction
 
@@ -826,7 +846,7 @@ class ClusterQRM_RF(AbstractInstrument):
                             #   arg2 is the delay between starting the instruction and the next instruction
                             play_instruction = f"                    play {sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_i)},{sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_q)},{delay_after_play}"
                             # Add the serial of the pulse as a comment
-                            play_instruction += " " * (34 - len(play_instruction)) + f"# play waveforms {pulses[n]}"
+                            play_instruction += " " * (45 - len(play_instruction)) + f"# play waveforms {pulses[n]}"
                             body += "\n" + play_instruction
 
                     sequencer.program = header + body + footer
@@ -907,40 +927,70 @@ class ClusterQRM_RF(AbstractInstrument):
         # Retrieve data
         acquisition_results = {}
         for port in self._output_ports_keys:
-            if not self.ports["i1"].hardware_demod_en:
-                sequencer = self._sequencers[port][0]
-                sequencer_number = sequencer.number
-                assert sequencer_number == self.DEFAULT_SEQUENCERS[port]  #####
-                acquisition_name = next(iter(sequencer.acquisitions))
+            # wait until sequencers have stopped
+            for sequencer in self._sequencers[port]:
                 self.device.get_sequencer_state(sequencer_number, timeout=1)
                 self.device.get_acquisition_state(sequencer_number, timeout=1)
-                self.device.store_scope_acquisition(sequencer_number, acquisition_name)
-                raw_results = self.device.get_acquisitions(sequencer_number)[acquisition_name]
-                for sequencer in self._sequencers[port]:
+            # store scope acquisition data with the first acquisition 
+            sequencer = self._sequencers[port][0]
+            assert sequencer_number == self.DEFAULT_SEQUENCERS[port]  # The first sequencer should always be the default sequencer
+            sequencer_number = sequencer.number
+            scope_acquisition_name = next(iter(sequencer.acquisitions)) # returns the first item in sequencer.acquisitions dict
+            self.device.store_scope_acquisition(sequencer_number, scope_acquisition_name)
+            # 
+            for sequencer in self._sequencers[port]:
+                raw_results = self.device.get_acquisitions(sequencer_number)
+                if not self.ports["i1"].hardware_demod_en:
+                    acquisition_results["averaged_integrated"] = {}
+                    acquisition_results["averaged_raw"] = {}
                     for pulse in sequencer.pulses.ro_pulses:
-                        acquisition_name = pulse.serial
-                        i, q = self._process_acquisition_results(raw_results, pulse, demodulate=True)
+                        i, q = self._process_acquisition_results(raw_results[scope_acquisition_name], pulse, demodulate=True)
                         acquisition_results[pulse.serial] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
-                        acquisition_results[pulse.qubit] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
-            else:
-                for sequencer in self._sequencers[port]:
-                    sequencer_number = sequencer.number
-                    # Wait for the sequencer to stop with a timeout period of one minute.
-                    self.device.get_sequencer_state(sequencer_number, timeout=1)
-                    # Wait for the acquisition to finish with a timeout period of one second.
-                    self.device.get_acquisition_state(sequencer_number, timeout=1)
+                        acquisition_results[pulse.qubit] = acquisition_results[pulse.serial]
 
+                        acquisition_results["averaged_integrated"][pulse.serial] = acquisition_results[pulse.serial]
+                        acquisition_results["averaged_integrated"][pulse.qubit] = acquisition_results[pulse.qubit]
+
+                        acquisition_results["averaged_raw"][pulse.serial] = (
+                            raw_results[scope_acquisition_name]["acquisition"]["scope"]["path0"]["data"][0 : self.acquisition_duration],
+                            raw_results[scope_acquisition_name]["acquisition"]["scope"]["path1"]["data"][0 : self.acquisition_duration],
+                        )
+                        acquisition_results["averaged_raw"][pulse.qubit] = acquisition_results["averaged_raw"][pulse.serial]
+                else:
+                    acquisition_results["averaged_integrated"] = {}
+                    acquisition_results["binned_integrated"] = {}
+                    acquisition_results["binned_classified"] = {}
+                    acquisition_results["probability"] = {}
                     for pulse in sequencer.pulses.ro_pulses:
                         acquisition_name = pulse.serial
-                        # Move acquisition data from temporary memory to acquisition list.
-                        self.device.store_scope_acquisition(sequencer_number, acquisition_name)
-                        # Get acquisitions from instrument.
-                        raw_results = self.device.get_acquisitions(sequencer_number)
-                        i, q = self._process_acquisition_results(
-                            raw_results[acquisition_name], pulse, demodulate=(not self.ports["i1"].hardware_demod_en)
-                        )
+                        i, q = self._process_acquisition_results(raw_results[acquisition_name], pulse, demodulate=False)
                         acquisition_results[pulse.serial] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
-                        acquisition_results[pulse.qubit] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
+                        acquisition_results[pulse.qubit] = acquisition_results[pulse.serial]
+
+                        acquisition_results["averaged_integrated"][pulse.serial] = acquisition_results[pulse.serial] # integrated_averaged
+                        acquisition_results["averaged_integrated"][pulse.qubit] = acquisition_results[pulse.qubit]
+
+                        # Save individual shots
+                        shots_i = np.array([
+                                np.sqrt(2) * (val / self.acquisition_duration)
+                                for val in raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path0"]
+                            ])
+                        shots_q = np.array([
+                                np.sqrt(2) * (val / self.acquisition_duration)
+                                for val in raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path1"]
+                            ])
+                        acquisition_results["binned_integrated"][pulse.serial] = [
+                            (msr, phase, i, q)
+                            for msr, phase, i, q in zip(np.sqrt(shots_i**2 + shots_q**2), np.arctan2(shots_q, shots_i), shots_i, shots_q)
+                        ]
+                        acquisition_results["binned_integrated"][pulse.qubit] = acquisition_results["binned_integrated"][pulse.serial]
+
+                        acquisition_results["binned_classified"][pulse.serial] = raw_results[acquisition_name]["acquisition"]["bins"]["threshold"]
+                        acquisition_results["binned_classified"][pulse.qubit] = acquisition_results["binned_classified"][pulse.serial]
+
+                        acquisition_results["probability"][pulse.serial] = np.mean(acquisition_results["binned_classified"][pulse.serial])
+                        acquisition_results["probability"][pulse.qubit] = acquisition_results["probability"][pulse.serial]
+
                         # DEBUG: QRM Plot Incomming Pulses
                         # import qibolab.instruments.debug.incomming_pulse_plotting as pp
                         # pp.plot(raw_results)
@@ -960,7 +1010,7 @@ class ClusterQRM_RF(AbstractInstrument):
             n1 = self.acquisition_duration
             input_vec_I = np.array(acquisition_results["acquisition"]["scope"]["path0"]["data"][n0:n1])
             input_vec_Q = np.array(acquisition_results["acquisition"]["scope"]["path1"]["data"][n0:n1])
-            input_vec_I -= np.mean(input_vec_I)
+            input_vec_I -= np.mean(input_vec_I) # qblox does not remove the offsets in hardware
             input_vec_Q -= np.mean(input_vec_Q)
 
             modulated_i = input_vec_I
@@ -983,9 +1033,8 @@ class ClusterQRM_RF(AbstractInstrument):
             # plt.plot(list(map(list, zip(*demodulated_signal)))[0][:400])
             # plt.show()
         else:
-            int_len = self.acquisition_duration
-            i = np.mean([(val / int_len) for val in acquisition_results["acquisition"]["bins"]["integration"]["path0"]])
-            q = np.mean([(val / int_len) for val in acquisition_results["acquisition"]["bins"]["integration"]["path1"]])
+            i = np.mean([(val / self.acquisition_duration) for val in acquisition_results["acquisition"]["bins"]["integration"]["path0"]])
+            q = np.mean([(val / self.acquisition_duration) for val in acquisition_results["acquisition"]["bins"]["integration"]["path1"]])
             integrated_signal = i, q
         return integrated_signal
 
@@ -1496,28 +1545,29 @@ class ClusterQCM_RF(AbstractInstrument):
                     num_wait_loops = (wait_time - extra_wait) // wait_loop_step
 
                     header = f"""
-                    move {nshots},R0 # nshots
+                    move {nshots},R0             # nshots
                     nop
                     wait_sync {minimum_delay_between_instructions}
-                    loop:
-                    reset_ph"""
+                    loop:"""
+                    if self.ports[port].hardware_mod_en:
+                        header += "\n" + "                    reset_ph"
                     body = ""
 
                     footer = f"""
-                        # wait {wait_time} ns"""
+                    # wait {wait_time} ns"""
                     if num_wait_loops > 0:
                         footer += f"""
-                        move {num_wait_loops},R2
-                        nop
-                        waitloop2:
-                            wait {wait_loop_step}
-                            loop R2,@waitloop2"""
+                    move {num_wait_loops},R2
+                    nop
+                    waitloop2:
+                        wait {wait_loop_step}
+                        loop R2,@waitloop2"""
                     if extra_wait > 0:
                         footer += f"""
-                            wait {extra_wait}"""
+                    wait {extra_wait}"""
                     else:
                         footer += f"""
-                            # wait 0"""
+                    # wait 0"""
 
                     footer += f"""
                     loop R0,@loop
@@ -1534,23 +1584,23 @@ class ClusterQCM_RF(AbstractInstrument):
 
                     if wait_time > 0:
                         initial_wait_instruction = f"""
-                        # wait {wait_time} ns"""
+                    # wait {wait_time} ns"""
                         if num_wait_loops > 0:
                             initial_wait_instruction += f"""
-                        move {num_wait_loops},R1
-                        nop
-                        waitloop1:
-                            wait {wait_loop_step}
-                            loop R1,@waitloop1"""
+                    move {num_wait_loops},R1
+                    nop
+                    waitloop1:
+                        wait {wait_loop_step}
+                        loop R1,@waitloop1"""
                         if extra_wait > 0:
                             initial_wait_instruction += f"""
-                            wait {extra_wait}"""
+                    wait {extra_wait}"""
                         else:
                             initial_wait_instruction += f"""
-                            # wait 0"""
+                    # wait 0"""
                     else:
                         initial_wait_instruction = """
-                        # wait 0"""
+                    # wait 0"""
 
                     body += initial_wait_instruction
 
@@ -1566,14 +1616,28 @@ class ClusterQCM_RF(AbstractInstrument):
                             raise Exception(
                                 f"The minimum delay between pulses is {minimum_delay_between_instructions}ns."
                             )
-
+                        if self.ports[port].hardware_mod_en and pulses[n].relative_phase != 0:
+                            # Set phase
+                            p = 10
+                            phase = (pulses[n].relative_phase * 360 / (2 * np.pi)) % 360
+                            coarse = int(round(phase / 0.9, p))
+                            fine = int(round((phase - coarse * 0.9) / 2.25e-3, p))
+                            ultra_fine = int(round((phase - coarse * 0.9 - fine * 2.25e-3) / 3.6e-7, p))
+                            error = abs(phase - coarse * 0.9 - fine * 2.25e-3 - ultra_fine * 3.6e-7)
+                            assert error < 3.6e-7
+                            set_ph_instruction = f"                    set_ph {coarse}, {fine}, {ultra_fine}"
+                            set_ph_instruction += (
+                                " " * (45 - len(set_ph_instruction))
+                                + f"# set relative phase {pulses[n].relative_phase} rads"
+                            )
+                            body += "\n" + set_ph_instruction
                         # Prepare play instruction: play arg0, arg1, arg2.
                         #   arg0 is the index of the I waveform
                         #   arg1 is the index of the Q waveform
                         #   arg2 is the delay between starting the instruction and the next instruction
                         play_instruction = f"                    play {sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_i)},{sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_q)},{delay_after_play}"
                         # Add the serial of the pulse as a comment
-                        play_instruction += " " * (34 - len(play_instruction)) + f"# play waveforms {pulses[n]}"
+                        play_instruction += " " * (45 - len(play_instruction)) + f"# play waveforms {pulses[n]}"
                         body += "\n" + play_instruction
 
                     sequencer.program = header + body + footer
