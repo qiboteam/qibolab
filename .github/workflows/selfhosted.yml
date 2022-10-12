@@ -12,7 +12,7 @@ jobs:
     steps:
     - name: Cleanup workspace manually
       run: |
-        rm -rf "${{ github.workspace }}"
+        rm -rf _work/*
     - uses: actions/checkout@v2
     - name: Set up Python
       uses: actions/setup-python@v2
