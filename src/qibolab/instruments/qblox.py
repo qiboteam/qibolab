@@ -934,8 +934,8 @@ class ClusterQRM_RF(AbstractInstrument):
                 self.device.get_acquisition_state(sequencer_number, timeout=1)
             # store scope acquisition data with the first acquisition 
             sequencer = self._sequencers[port][0]
-            assert sequencer_number == self.DEFAULT_SEQUENCERS[port]  # The first sequencer should always be the default sequencer
             sequencer_number = sequencer.number
+            assert sequencer_number == self.DEFAULT_SEQUENCERS[port]  # The first sequencer should always be the default sequencer
             scope_acquisition_name = next(iter(sequencer.acquisitions)) # returns the first item in sequencer.acquisitions dict
             self.device.store_scope_acquisition(sequencer_number, scope_acquisition_name)
             # 
