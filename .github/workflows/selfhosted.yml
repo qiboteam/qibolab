@@ -10,7 +10,7 @@ jobs:
         python-version: [3.8]
     runs-on: self-hosted
     steps:
-    - name: Cleanup workspace
+    - name: Cleanup workspace manually
       run: |
         rm -rf "${{ github.workspace }}"
     - uses: actions/checkout@v2
