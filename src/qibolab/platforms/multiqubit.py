@@ -42,3 +42,78 @@ class MultiqubitPlatform(AbstractPlatform):
                     else:
                         self.instruments[name].play_sequence()
         return acquisition_results
+
+    def measure_fidelity(self, qubits=None, nshots=None):
+        import numpy as np
+
+        self.reload_settings()
+        if not qubits:
+            qubits = self.qubits
+        results = {}
+        for qubit in qubits:
+            self.qrm[qubit].ports["i1"].hardware_demod_en = True  # required for binning
+            # create exc sequence
+            sequence_exc = PulseSequence()
+            RX_pulse = self.create_RX_pulse(qubit, start=0)
+            ro_pulse = self.create_qubit_readout_pulse(qubit, start=RX_pulse.duration)
+            sequence_exc.add(RX_pulse)
+            sequence_exc.add(ro_pulse)
+            shots_results_exc = self.execute_pulse_sequence(sequence_exc, nshots=nshots)["binned_integrated"][
+                ro_pulse.serial
+            ]
+            iq_exc = []
+            for n in range(nshots):
+                msr, phase, i, q = shots_results_exc[n]
+                iq_exc += [complex(i, q)]
+
+            sequence_gnd = PulseSequence()
+            ro_pulse = self.create_qubit_readout_pulse(qubit, start=0)
+            sequence_gnd.add(ro_pulse)
+
+            shots_results_gnd = self.execute_pulse_sequence(sequence_gnd, nshots=nshots)["binned_integrated"][
+                ro_pulse.serial
+            ]
+            iq_gnd = []
+            for n in range(nshots):
+                msr, phase, i, q = shots_results_gnd[n]
+                iq_gnd += [complex(i, q)]
+
+            iq_mean_exc = np.mean(iq_exc)
+            iq_mean_gnd = np.mean(iq_gnd)
+            origin = iq_mean_gnd
+
+            iq_gnd_translated = iq_gnd - origin
+            iq_exc_translated = iq_exc - origin
+            rotation_angle = np.angle(np.mean(iq_exc_translated))
+            # rotation_angle = np.angle(iq_mean_exc - origin)
+            iq_exc_rotated = iq_exc_translated * np.exp(-1j * rotation_angle) + origin
+            iq_gnd_rotated = iq_gnd_translated * np.exp(-1j * rotation_angle) + origin
+
+            # sort both lists of complex numbers by their real components
+            # combine all real number values into one list
+            # for each item in that list calculate the cumulative distribution
+            # (how many items above that value)
+            # the real value that renders the biggest difference between the two distributions is the threshold
+            # that is the one that maximises fidelity
+
+            real_values_exc = [x.real for x in iq_exc_rotated]
+            real_values_gnd = [x.real for x in iq_gnd_rotated]
+            real_values_combined = real_values_exc + real_values_gnd
+            real_values_combined.sort()
+
+            cum_distribution_exc = [
+                sum(map(lambda x: x.real >= real_value, real_values_exc)) for real_value in real_values_combined
+            ]
+            cum_distribution_gnd = [
+                sum(map(lambda x: x.real >= real_value, real_values_gnd)) for real_value in real_values_combined
+            ]
+            cum_distribution_diff = np.abs(np.array(cum_distribution_exc) - np.array(cum_distribution_gnd))
+            argmax = np.argmax(cum_distribution_diff)
+            threshold = real_values_combined[argmax]
+            errors_exc = nshots - cum_distribution_exc[argmax]
+            errors_gnd = cum_distribution_gnd[argmax]
+            fidelity = cum_distribution_diff[argmax] / nshots
+            assignment_fidelity = 1 - (errors_exc + errors_gnd) / nshots / 2
+            # assignment_fidelity = 1/2 + (cum_distribution_exc[argmax] - cum_distribution_gnd[argmax])/nshots/2
+            results[qubit] = ((rotation_angle * 360 / (2 * np.pi)) % 360, threshold, fidelity, assignment_fidelity)
+        return results
