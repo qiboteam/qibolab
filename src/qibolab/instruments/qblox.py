@@ -1717,3 +1717,665 @@ class ClusterQCM_RF(AbstractInstrument):
         """Empty method to comply with AbstractInstrument interface."""
         self._cluster = None
         self.is_connected = False
+
+
+class ClusterQCM(AbstractInstrument):
+    """Qblox Cluster Qubit Control Module Baseband driver.
+
+    Qubit Control Module (QCM) is an arbitratry wave generator with two DACs connected to
+    four output ports. It can sinthesise either four independent real signals or two
+    complex signals, using ports 0 and 2 to output the i(in-phase) component and
+    ports 1 and 3 the q(quadrature) component. The sampling rate of its DAC is 1 GSPS.
+    https://www.qblox.com/cluster
+
+    The class aims to simplify the configuration of the instrument, exposing only
+    those parameters most frequencly used and hiding other more complex components.
+
+    A reference to the underlying `qblox_instruments.qcodes_drivers.qcm_qrm.QRM_QCM`
+    object is provided via the attribute `device`, allowing the advanced user to gain
+    access to the features that are not exposed directly by the class.
+
+    In order to accelerate the execution, the instrument settings are cached, so that
+    the communication with the instrument only happens when the parameters change.
+    This caching is done with the method `_set_device_parameter(target, *parameters, value)`.
+
+            ports:
+                o1:
+                    gain                         : 0.2 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o2:
+                    gain                         : 0.2 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o3:
+                    gain                         : 0.2 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o4:
+                    gain                         : 0.2 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+
+            channel_port_map:
+                11: o1
+                12: o2
+                11: o3
+                12: o4
+
+    The class inherits from AbstractInstrument and implements its interface methods:
+        __init__()
+        connect()
+        setup()
+        start()
+        stop()
+        disconnect()
+
+    Attributes:
+        name: str = A unique name given to the instrument.
+        address: str = IP_address:module_number (the IP address of the cluster and
+            the module number)
+        ports = A dictionary giving access to the output ports objects.
+            ports['o1']
+            ports['o2']
+            ports['o3']
+            ports['o4']
+
+            ports['oX'].gain: float = (mapped to qrm.sequencers[0].gain_awg_path0 and qrm.sequencers[0].gain_awg_path1)
+                Sets the gain on both paths of the output port.
+            ports['oX'].hardware_mod_en: bool = (mapped to qrm.sequencers[0].mod_en_awg) Enables pulse
+                modulation in hardware. When set to False, pulse modulation is done at the host computer
+                and a modulated pulse waveform should be uploaded to the instrument. When set to True,
+                the envelope of the pulse should be uploaded to the instrument and it modulates it in
+                real time by its FPGA using the sequencer nco (numerically controlled oscillator).
+            ports['oX'].nco_freq: int = (mapped to qrm.sequencers[0].nco_freq)        # TODO mapped, but not configurable from the runcard
+            ports['oX'].nco_phase_offs = (mapped to qrm.sequencers[0].nco_phase_offs) # TODO mapped, but not configurable from the runcard
+
+            channel_port_map:                                           # Refrigerator Channel : Instrument port
+                11: o1
+                12: o2
+                11: o3
+                12: o4
+
+        Sequencer 0 is used always the first sequencer used to synthesise pulses on port o1.
+        Sequencer 1 is used always the first sequencer used to synthesise pulses on port o2.
+        Sequencer 2 is used always the first sequencer used to synthesise pulses on port o3.
+        Sequencer 3 is used always the first sequencer used to synthesise pulses on port o4.
+        Sequencer 4 to 6 are used as needed to sinthesise simultaneous pulses on the same channel
+        or when the memory of the default sequencers rans out.
+
+    """
+
+    DEFAULT_SEQUENCERS = {"o1": 0, "o2": 1, "o3": 2, "o4": 3}
+    SAMPLING_RATE: int = 1e9  # 1 GSPS
+
+    property_wrapper = lambda parent, *parameter: property(
+        lambda self: parent.device.get(parameter[0]),
+        lambda self, x: parent._set_device_parameter(parent.device, *parameter, value=x),
+    )
+    sequencer_property_wrapper = lambda parent, sequencer, *parameter: property(
+        lambda self: parent.device.sequencers[sequencer].get(parameter[0]),
+        lambda self, x: parent._set_device_parameter(parent.device.sequencers[sequencer], *parameter, value=x),
+    )
+
+    def __init__(self, name: str, address: str):
+        super().__init__(name, address)
+        self.device: QbloxQrmQcm = None
+        self.ports: dict = {}
+        self.channel_port_map: dict = {}
+        self.channels: list = []
+
+        self._cluster: QbloxCluster = None
+        self._output_ports_keys = ["o1", "o2", "o3", "o4"]
+        self._sequencers: dict[Sequencer] = {"o1": [], "o2": [], "o3": [], "o4": []}
+        self._port_channel_map: dict = {}
+        self._last_pulsequence_hash: int = 0
+        self._current_pulsesequence_hash: int
+        self._device_parameters = {}
+        self._device_num_output_ports = 2
+        self._device_num_sequencers: int
+        self._free_sequencers_numbers: list[int] = []
+        self._used_sequencers_numbers: list[int] = []
+        self._unused_sequencers_numbers: list[int] = []
+
+    def connect(self):
+        """Connects to the instrument using the instrument settings in the runcard.
+
+        Once connected, it creates port classes with properties mapped to various instrument
+        parameters.
+        """
+        global cluster
+        if not self.is_connected:
+            if cluster:
+                self.device = cluster.modules[int(self.address.split(":")[1]) - 1]
+
+                self.ports["o1"] = type(
+                    f"port_o1",
+                    (),
+                    {
+                        "gain": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o1"], "gain_awg_path0"),
+                        "hardware_mod_en": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o1"], "mod_en_awg"),
+                        "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o1"], "nco_freq"),
+                        "nco_phase_offs": self.sequencer_property_wrapper(
+                            self.DEFAULT_SEQUENCERS["o1"], "nco_phase_offs"
+                        ),
+                    },
+                )()
+
+                self.ports["o2"] = type(
+                    f"port_o2",
+                    (),
+                    {
+                        "gain": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o2"], "gain_awg_path1"),
+                        "hardware_mod_en": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o2"], "mod_en_awg"),
+                        "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o2"], "nco_freq"),
+                        "nco_phase_offs": self.sequencer_property_wrapper(
+                            self.DEFAULT_SEQUENCERS["o2"], "nco_phase_offs"
+                        ),
+                    },
+                )()
+
+                self.ports["o3"] = type(
+                    f"port_o3",
+                    (),
+                    {
+                        "gain": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o3"], "gain_awg_path0"),
+                        "hardware_mod_en": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o3"], "mod_en_awg"),
+                        "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o3"], "nco_freq"),
+                        "nco_phase_offs": self.sequencer_property_wrapper(
+                            self.DEFAULT_SEQUENCERS["o3"], "nco_phase_offs"
+                        ),
+                    },
+                )()
+
+                self.ports["o4"] = type(
+                    f"port_o4",
+                    (),
+                    {
+                        "gain": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o4"], "gain_awg_path1"),
+                        "hardware_mod_en": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o4"], "mod_en_awg"),
+                        "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o4"], "nco_freq"),
+                        "nco_phase_offs": self.sequencer_property_wrapper(
+                            self.DEFAULT_SEQUENCERS["o4"], "nco_phase_offs"
+                        ),
+                    },
+                )()
+
+                self._cluster = cluster
+                self.is_connected = True
+                self._set_device_parameter(self.device, "out0_offset", value=0)  # Default after reboot = 0
+                self._set_device_parameter(self.device, "out1_offset", value=0)  # Default after reboot = 0
+                self._set_device_parameter(self.device, "out2_offset", value=0)  # Default after reboot = 0
+                self._set_device_parameter(self.device, "out3_offset", value=0)  # Default after reboot = 0
+
+                for target in [
+                    self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]],
+                    self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]],
+                    self.device.sequencers[self.DEFAULT_SEQUENCERS["o3"]],
+                    self.device.sequencers[self.DEFAULT_SEQUENCERS["o4"]],
+                ]:
+
+                    self._set_device_parameter(
+                        target, "cont_mode_en_awg_path0", "cont_mode_en_awg_path1", value=False
+                    )  # Default after reboot = False
+                    self._set_device_parameter(
+                        target, "cont_mode_waveform_idx_awg_path0", "cont_mode_waveform_idx_awg_path1", value=0
+                    )  # Default after reboot = 0
+                    self._set_device_parameter(target, "marker_ovr_en", value=True)  # Default after reboot = False
+                    self._set_device_parameter(target, "marker_ovr_value", value=15)  # Default after reboot = 0
+                    self._set_device_parameter(target, "mixer_corr_gain_ratio", value=1)
+                    self._set_device_parameter(target, "mixer_corr_phase_offset_degree", value=0)
+                    self._set_device_parameter(target, "offset_awg_path0", value=0)
+                    self._set_device_parameter(target, "offset_awg_path1", value=0)
+                    self._set_device_parameter(target, "sync_en", value=True)  # Default after reboot = False
+                    self._set_device_parameter(target, "upsample_rate_awg_path0", "upsample_rate_awg_path1", value=0)
+
+                for target in [
+                    self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]],
+                    self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]],
+                    self.device.sequencers[self.DEFAULT_SEQUENCERS["o3"]],
+                    self.device.sequencers[self.DEFAULT_SEQUENCERS["o4"]],
+                ]:
+                    self._set_device_parameter(
+                        target, "channel_map_path0_out0_en", value=False
+                    )  # Default after reboot = True
+                    self._set_device_parameter(
+                        target, "channel_map_path1_out1_en", value=False
+                    )  # Default after reboot = True
+                    self._set_device_parameter(
+                        target, "channel_map_path0_out2_en", value=False
+                    )  # Default after reboot = True
+                    self._set_device_parameter(
+                        target, "channel_map_path1_out3_en", value=False
+                    )  # Default after reboot = True
+
+                self._set_device_parameter(
+                    self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]],
+                    "channel_map_path0_out0_en",
+                    value=True,
+                )
+                self._set_device_parameter(
+                    self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]],
+                    "channel_map_path1_out1_en",
+                    value=True,
+                )
+                self._set_device_parameter(
+                    self.device.sequencers[self.DEFAULT_SEQUENCERS["o3"]],
+                    "channel_map_path0_out2_en",
+                    value=True,
+                )
+                self._set_device_parameter(
+                    self.device.sequencers[self.DEFAULT_SEQUENCERS["o4"]],
+                    "channel_map_path1_out3_en",
+                    value=True,
+                )
+
+                self.device_num_sequencers = len(self.device.sequencers)
+                for sequencer in range(4, self.device_num_sequencers):
+                    target = self.device.sequencers[sequencer]
+                    self._set_device_parameter(target, "channel_map_path0_out0_en", value=False)
+                    self._set_device_parameter(target, "channel_map_path1_out1_en", value=False)
+                    self._set_device_parameter(target, "channel_map_path0_out2_en", value=False)
+                    self._set_device_parameter(target, "channel_map_path1_out3_en", value=False)
+
+    def _set_device_parameter(self, target, *parameters, value):
+        """Sets a parameter of the instrument, if it changed from the last stored in the cache.
+
+        Args:
+            target = an instance of qblox_instruments.qcodes_drivers.qcm_qrm.QcmQrm or
+                                    qblox_instruments.qcodes_drivers.sequencer.Sequencer
+            *parameters: list = A list of parameters to be cached and set.
+            value = The value to set the paramters.
+        Raises:
+            Exception = If attempting to set a parameter without a connection to the instrument.
+        """
+        if self.is_connected:
+            key = target.name + "." + parameters[0]
+            if not key in self._device_parameters:
+                for parameter in parameters:
+                    if not hasattr(target, parameter):
+                        raise Exception(f"The instrument {self.name} does not have parameters {parameter}")
+                    target.set(parameter, value)
+                self._device_parameters[key] = value
+            elif self._device_parameters[key] != value:
+                for parameter in parameters:
+                    target.set(parameter, value)
+                self._device_parameters[key] = value
+        else:
+            raise Exception("There is no connection to the instrument {self.name}")
+
+    def _erase_device_parameters_cache(self):
+        """Erases the cache of instrument parameters."""
+        self._device_parameters = {}
+
+    def setup(self, **kwargs):
+        """Configures the instrument.
+
+        A connection to the instrument needs to be established beforehand.
+        Args:
+            **kwargs: dict = A dictionary of settings loaded from the runcard:
+                kwargs['ports']['o1']['gain']
+                kwargs['ports']['o1']['hardware_mod_en']
+                kwargs['ports']['o2']['gain']
+                kwargs['ports']['o2']['hardware_mod_en']
+                kwargs['ports']['o3']['gain']
+                kwargs['ports']['o3']['hardware_mod_en']
+                kwargs['ports']['o4']['gain']
+                kwargs['ports']['o4']['hardware_mod_en']
+
+                kwargs['channel_port_map']
+        Raises:
+            Exception = If attempting to set a parameter without a connection to the instrument.
+        """
+
+        if self.is_connected:
+            # Load settings
+            self.channel_port_map = kwargs["channel_port_map"]
+            self._port_channel_map = {v: k for k, v in self.channel_port_map.items()}
+            self.channels = list(self.channel_port_map.keys())
+
+            for port in ["o1", "o2", "o3", "o4"]:
+                self.ports[port].gain = kwargs["ports"][port]["gain"]  # Default after reboot = 1
+                self.ports[port].hardware_mod_en = kwargs["ports"][port][
+                    "hardware_mod_en"
+                ]  # Default after reboot = False
+                self.ports[port].nco_freq = 0  # Default after reboot = 1
+                self.ports[port].nco_phase_offs = 0  # Default after reboot = 1
+
+        else:
+            raise Exception("The instrument cannot be set up, there is no connection")
+
+    def process_pulse_sequence(self, instrument_pulses: PulseSequence, nshots: int, repetition_duration: int):
+        """Processes a list of pulses, generating the waveforms and sequence program required by
+        the instrument to synthesise them.
+
+        The output of the process is a list of sequencers used for each port, configured with the information
+        required to play the sequence.
+        The following features are supported:
+            - Hardware modulation and demodulation.
+            - Multiplexed readout.
+            - Sequencer memory optimisation.
+            - Extended waveform memory with the use of multiple sequencers.
+            - Overlapping pulses.
+            - Waveform and Sequence Program cache.
+            - Pulses of up to 8192 pairs of i, q samples
+
+        Args:
+        instrument_pulses: PulseSequence = A collection of Pulse objects to be played by the instrument.
+        nshots: int = The number of times the sequence of pulses should be repeated.
+        repetition_duration: int = The total duration of every pulse sequence execution and reset time.
+        """
+
+        # Save the hash of the current sequence of pulses.
+        self._current_pulsesequence_hash = hash(
+            (
+                instrument_pulses,
+                nshots,
+                repetition_duration,
+                self.ports["o1"].hardware_mod_en,
+                self.ports["o2"].hardware_mod_en,
+                self.ports["o3"].hardware_mod_en,
+                self.ports["o4"].hardware_mod_en,
+            )
+        )
+
+        # Check if the sequence to be processed is the same as the last one.
+        # If so, there is no need to generate new waveforms and program
+        if self._current_pulsesequence_hash != self._last_pulsequence_hash:
+            self._free_sequencers_numbers = [4, 5]
+
+            # process the pulses for every port
+            for port in self.ports:
+                # split the collection of instruments pulses by ports
+                port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(self._port_channel_map[port])
+
+                # initialise the list of sequencers required by the port
+                self._sequencers[port] = []
+
+                if not port_pulses.is_empty:
+                    # initialise the list of free sequencer numbers to include the default for each port {'o1': 0, 'o2': 1, 'o3': 2, 'o4': 3}
+                    self._free_sequencers_numbers = [self.DEFAULT_SEQUENCERS[port]] + self._free_sequencers_numbers
+
+                    # split the collection of port pulses in non overlapping pulses
+                    non_overlapping_pulses: PulseSequence
+                    for non_overlapping_pulses in port_pulses.separate_overlapping_pulses():
+                        # TODO: for non_overlapping_same_frequency_pulses in non_overlapping_pulses.separate_different_frequency_pulses():
+
+                        # each set of not overlapping pulses will be played by a separate sequencer
+                        # check sequencer availability
+                        if len(self._free_sequencers_numbers) == 0:
+                            raise Exception(
+                                f"The number of sequencers requried to play the sequence exceeds the number available {self.device_num_sequencers}."
+                            )
+
+                        # select a new sequencer and configure it as required
+                        next_sequencer_number = self._free_sequencers_numbers.pop(0)
+                        if next_sequencer_number != self.DEFAULT_SEQUENCERS[port]:
+                            for parameter in self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].parameters:
+                                value = self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].get(param_name=parameter)
+                                if not value is None:
+                                    target = self.device.sequencers[next_sequencer_number]
+                                    self._set_device_parameter(target, parameter, value=value)
+                        if self.ports[port].hardware_mod_en:
+                            self._set_device_parameter(
+                                self.device.sequencers[next_sequencer_number],
+                                "nco_freq",
+                                value=non_overlapping_pulses[0].frequency,
+                            )  # TODO: for non_overlapping_same_frequency_pulses[0].frequency
+                        sequencer = Sequencer(next_sequencer_number)
+
+                        # add the sequencer to the list of sequencers required by the port
+                        self._sequencers[port].append(sequencer)
+
+                        # make a temporary copy of the pulses to be processed
+                        pulses_to_be_processed = non_overlapping_pulses.shallow_copy()
+                        while not pulses_to_be_processed.is_empty:
+                            pulse: Pulse = pulses_to_be_processed[0]
+                            # select between envelope or modulated waveforms depending on hardware modulation setting
+                            if self.ports[port].hardware_mod_en:
+                                pulse.waveform_i, pulse.waveform_q = pulse.envelope_waveforms
+                            else:
+                                pulse.waveform_i, pulse.waveform_q = pulse.modulated_waveforms
+
+                            # attempt to save the waveforms to the sequencer waveforms buffer
+                            try:
+                                sequencer.waveforms_buffer.add_waveforms(pulse.waveform_i, pulse.waveform_q)
+                                sequencer.pulses.add(pulse)
+                                pulses_to_be_processed.remove(pulse)
+
+                            # if there is not enough memory in the current sequencer, use another one
+                            except WaveformsBuffer.NotEnoughMemory:
+                                if len(pulse.waveform_i) + len(pulse.waveform_q) > WaveformsBuffer.SIZE:
+                                    raise NotImplementedError(
+                                        f"Pulses with waveforms longer than the memory of a sequencer ({WaveformsBuffer.SIZE // 2}) are not supported."
+                                    )
+                                if len(self._free_sequencers_numbers) == 0:
+                                    raise Exception(
+                                        f"The number of sequencers requried to play the sequence exceeds the number available {self.device_num_sequencers}."
+                                    )
+
+                                # select a new sequencer and configure it as required
+                                next_sequencer_number = self._free_sequencers_numbers.pop(0)
+                                for parameter in self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].parameters:
+                                    value = self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].get(
+                                        param_name=parameter
+                                    )
+                                    if not value is None:
+                                        target = self.device.sequencers[next_sequencer_number]
+                                        self._set_device_parameter(target, parameter, value=value)
+                                self._set_device_parameter(
+                                    self.device.sequencers[next_sequencer_number], "nco_freq", value=pulse.frequency
+                                )
+                                sequencer = Sequencer(next_sequencer_number)
+
+                                # add the sequencer to the list of sequencers required by the port
+                                self._sequencers[port].append(sequencer)
+
+            # update the lists of used and unused sequencers that will be needed later on
+            self._used_sequencers_numbers = []
+            for port in self._output_ports_keys:
+                for sequencer in self._sequencers[port]:
+                    self._used_sequencers_numbers.append(sequencer.number)
+            self._unused_sequencers_numbers = []
+            for n in range(self.device_num_sequencers):
+                if not n in self._used_sequencers_numbers:
+                    self._unused_sequencers_numbers.append(n)
+
+            # generate and store the Waveforms dictionary, the Acquisitions dictionary, the Weights and the Program
+            for port in self._output_ports_keys:
+                for sequencer in self._sequencers[port]:
+
+                    # Waveforms
+                    for index, waveform in enumerate(sequencer.waveforms_buffer.unique_waveforms):
+                        sequencer.waveforms[waveform.serial] = {"data": waveform.data.tolist(), "index": index}
+
+                    # Acquisitions
+                    for acquisition_index, pulse in enumerate(sequencer.pulses.ro_pulses):
+                        sequencer.acquisitions[pulse.serial] = {"num_bins": 1, "index": acquisition_index}
+
+                    # Program
+                    minimum_delay_between_instructions = 4
+                    wait_loop_step: int = 1000
+
+                    pulses = sequencer.pulses
+                    sequence_total_duration = (
+                        pulses.start + pulses.duration + minimum_delay_between_instructions
+                    )  # the minimum delay between instructions is 4ns
+                    time_between_repetitions = repetition_duration - sequence_total_duration
+                    assert time_between_repetitions > 0
+
+                    wait_time = time_between_repetitions
+                    extra_wait = wait_time % wait_loop_step
+                    while wait_time > 0 and extra_wait < 4:
+                        wait_loop_step += 1
+                        extra_wait = wait_time % wait_loop_step
+                    num_wait_loops = (wait_time - extra_wait) // wait_loop_step
+
+                    header = f"""
+                    move {nshots},R0 # nshots
+                    nop
+                    wait_sync {minimum_delay_between_instructions}
+                    loop:
+                    reset_ph"""
+                    body = ""
+
+                    footer = f"""
+                        # wait {wait_time} ns"""
+                    if num_wait_loops > 0:
+                        footer += f"""
+                        move {num_wait_loops},R2
+                        nop
+                        waitloop2:
+                            wait {wait_loop_step}
+                            loop R2,@waitloop2"""
+                    if extra_wait > 0:
+                        footer += f"""
+                            wait {extra_wait}"""
+                    else:
+                        footer += f"""
+                            # wait 0"""
+
+                    footer += f"""
+                    loop R0,@loop
+                    stop
+                    """
+
+                    # Add an initial wait instruction for the first pulse of the sequence
+                    wait_time = pulses[0].start
+                    extra_wait = wait_time % wait_loop_step
+                    while wait_time > 0 and extra_wait < 4:
+                        wait_loop_step += 1
+                        extra_wait = wait_time % wait_loop_step
+                    num_wait_loops = (wait_time - extra_wait) // wait_loop_step
+
+                    if wait_time > 0:
+                        initial_wait_instruction = f"""
+                        # wait {wait_time} ns"""
+                        if num_wait_loops > 0:
+                            initial_wait_instruction += f"""
+                        move {num_wait_loops},R1
+                        nop
+                        waitloop1:
+                            wait {wait_loop_step}
+                            loop R1,@waitloop1"""
+                        if extra_wait > 0:
+                            initial_wait_instruction += f"""
+                            wait {extra_wait}"""
+                        else:
+                            initial_wait_instruction += f"""
+                            # wait 0"""
+                    else:
+                        initial_wait_instruction = """
+                        # wait 0"""
+
+                    body += initial_wait_instruction
+
+                    for n in range(pulses.count):
+                        # Calculate the delay_after_play that is to be used as an argument to the play instruction
+                        if len(pulses) > n + 1:
+                            # If there are more pulses to be played, the delay is the time between the pulse end and the next pulse start
+                            delay_after_play = pulses[n + 1].start - pulses[n].start
+                        else:
+                            delay_after_play = sequence_total_duration - pulses[n].start
+
+                        if delay_after_play < minimum_delay_between_instructions:
+                            raise Exception(
+                                f"The minimum delay between pulses is {minimum_delay_between_instructions}ns."
+                            )
+                        if self.ports[port].hardware_mod_en and pulses[n].relative_phase != 0:
+                            # Set phase
+                            p = 10
+                            phase = (pulses[n].relative_phase * 360 / (2 * np.pi)) % 360
+                            coarse = int(round(phase / 0.9, p))
+                            fine = int(round((phase - coarse * 0.9) / 2.25e-3, p))
+                            ultra_fine = int(round((phase - coarse * 0.9 - fine * 2.25e-3) / 3.6e-7, p))
+                            error = abs(phase - coarse * 0.9 - fine * 2.25e-3 - ultra_fine * 3.6e-7)
+                            assert error < 3.6e-7
+                            set_ph_instruction = f"                    set_ph {coarse}, {fine}, {ultra_fine}"
+                            set_ph_instruction += (
+                                " " * (45 - len(set_ph_instruction))
+                                + f"# set relative phase {pulses[n].relative_phase} rads"
+                            )
+                            body += "\n" + set_ph_instruction
+                        # Prepare play instruction: play arg0, arg1, arg2.
+                        #   arg0 is the index of the I waveform
+                        #   arg1 is the index of the Q waveform
+                        #   arg2 is the delay between starting the instruction and the next instruction
+                        play_instruction = f"                    play {sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_i)},{sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_q)},{delay_after_play}"
+                        # Add the serial of the pulse as a comment
+                        play_instruction += " " * (34 - len(play_instruction)) + f"# play waveforms {pulses[n]}"
+                        body += "\n" + play_instruction
+
+                    sequencer.program = header + body + footer
+
+    def upload(self):
+        """Uploads waveforms and programs of all sequencers and arms them in preparation for execution.
+
+        This method should be called after `process_pulse_sequence()`.
+        It configures certain parameters of the instrument based on the needs of resources determined
+        while processing the pulse sequence.
+        """
+        if self._current_pulsesequence_hash != self._last_pulsequence_hash:
+            self._last_pulsequence_hash = self._current_pulsesequence_hash
+
+            # Setup
+            for sequencer_number in self._used_sequencers_numbers:
+                target = self.device.sequencers[sequencer_number]
+                self._set_device_parameter(target, "sync_en", value=True)
+                self._set_device_parameter(target, "marker_ovr_en", value=True)  # Default after reboot = False
+                self._set_device_parameter(target, "marker_ovr_value", value=15)  # Default after reboot = 0
+
+            for sequencer_number in self._unused_sequencers_numbers:
+                target = self.device.sequencers[sequencer_number]
+                self._set_device_parameter(target, "sync_en", value=False)
+                self._set_device_parameter(target, "marker_ovr_en", value=True)  # Default after reboot = False
+                self._set_device_parameter(target, "marker_ovr_value", value=0)  # Default after reboot = 0
+                # self._set_device_parameter(target, 'channel_map_path0_out0_en', value = False)
+                # self._set_device_parameter(target, 'channel_map_path0_out2_en', value = False)
+                # self._set_device_parameter(target, 'channel_map_path1_out1_en', value = False)
+                # self._set_device_parameter(target, 'channel_map_path1_out3_en', value = False)
+
+            # Upload waveforms and program
+            qblox_dict = {}
+            sequencer: Sequencer
+            for port in self._output_ports_keys:
+                for sequencer in self._sequencers[port]:
+                    # Add sequence program and waveforms to single dictionary and write to JSON file
+                    filename = f"{self.name}_sequencer{sequencer.number}_sequence.json"
+                    qblox_dict[sequencer] = {
+                        "waveforms": sequencer.waveforms,
+                        "weights": sequencer.weights,
+                        "acquisitions": sequencer.acquisitions,
+                        "program": sequencer.program,
+                    }
+                    with open(self.data_folder / filename, "w", encoding="utf-8") as file:
+                        json.dump(qblox_dict[sequencer], file, indent=4)
+
+                    # Upload json file to the device sequencers
+                    self.device.sequencers[sequencer.number].sequence(str(self.data_folder / filename))
+
+        # Arm sequencers
+        for sequencer_number in self._used_sequencers_numbers:
+            self.device.arm_sequencer(sequencer_number)
+
+        # DEBUG: QRM Print Readable Snapshot
+        # print(self.name)
+        # self.device.print_readable_snapshot(update=True)
+
+    def play_sequence(self):
+        """Executes the sequence of instructions."""
+        for sequencer_number in self._used_sequencers_numbers:
+            # Start used sequencers
+            self.device.start_sequencer(sequencer_number)
+
+    def start(self):
+        """Empty method to comply with AbstractInstrument interface."""
+        pass
+
+    def stop(self):
+        """Stops all sequencers"""
+        try:
+            self.device.stop_sequencer()
+        except:
+            pass
+
+    def disconnect(self):
+        """Empty method to comply with AbstractInstrument interface."""
+        self._cluster = None
+        self.is_connected = False
