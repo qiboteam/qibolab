@@ -1,14 +1,33 @@
 # -*- coding: utf-8 -*-
 import numpy as np
+from qibo import gates, matrices
 from qibo.config import raise_error
+from scipy.linalg import expm
 
 magic_basis = np.array(
-    [[1, 0, 0, 1], [-1j, 0, 0, 1j], [0, 1, -1, 0], [0, -1j, -1j, 0]]
+    [
+        [1, -1j, 0, 0],
+        [0, 0, 1, -1j],
+        [0, 0, -1, -1j],
+        [1, 1j, 0, 0],
+    ]
 ) / np.sqrt(2)
 
-bell_basis = np.array(
-    [[1, 0, 0, 1], [1, 0, 0, -1], [0, 1, 1, 0], [0, 1, -1, 0]]
-) / np.sqrt(2)
+bell_basis = np.array([[1, 1, 0, 0], [0, 0, 1, 1], [0, 0, 1, -1], [1, -1, 0, 0]]) / np.sqrt(2)
+
+H = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
+
+
+def u3_decomposition(unitary):
+    """Decomposes arbitrary one-qubit gates to U3."""
+    # https://github.com/Qiskit/qiskit-terra/blob/d2e3340adb79719f9154b665e8f6d8dc26b3e0aa/qiskit/quantum_info/synthesis/one_qubit_decompose.py#L221
+    su2 = unitary / np.sqrt(np.linalg.det(unitary))
+    theta = 2 * np.arctan2(abs(su2[1, 0]), abs(su2[0, 0]))
+    plus = np.angle(su2[1, 1])
+    minus = np.angle(su2[1, 0])
+    phi = plus + minus
+    lam = plus - minus
+    return theta, phi, lam
 
 
 def calculate_psi(unitary):
@@ -25,12 +44,14 @@ def calculate_psi(unitary):
         of UT_U.
     """
     # write unitary in magic basis
-    u_magic = np.dot(np.dot(magic_basis, unitary), np.conj(magic_basis.T))
+    u_magic = np.dot(np.dot(np.conj(magic_basis.T), unitary), magic_basis)
     # construct and diagonalize UT_U
     ut_u = np.dot(u_magic.T, u_magic)
     eigvals, psi_magic = np.linalg.eig(ut_u)
+    # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
+    psi_magic, _ = np.linalg.qr(psi_magic)
     # write psi in computational basis
-    psi = np.dot(np.conj(magic_basis.T), psi_magic).T
+    psi = np.dot(magic_basis, psi_magic)
     return psi, eigvals
 
 
@@ -57,10 +78,10 @@ def calculate_single_qubit_unitaries(psi):
         Local unitaries UA and UB that map the given basis to the magic basis.
     """
     # TODO: Handle the case where psi is not real in the magic basis
-    psi_magic = np.dot(magic_basis, psi.T)
+    psi_magic = np.dot(np.conj(magic_basis).T, psi)
     if not np.allclose(psi_magic.imag, np.zeros_like(psi_magic)):  # pragma: no cover
         raise_error(NotImplementedError, "Given state is not real in the magic basis.")
-    psi_bar = np.copy(psi)
+    psi_bar = np.copy(psi).T
 
     # find e and f by inverting (A3), (A4)
     ef = (psi_bar[0] + 1j * psi_bar[1]) / np.sqrt(2)
@@ -72,12 +93,8 @@ def calculate_single_qubit_unitaries(psi):
     phase = 1j * np.sqrt(2) * np.dot(np.conj(ef_), psi_bar[2])
 
     # construct unitaries UA, UB using (A6a), (A6b)
-    ua = np.tensordot([1, 0], np.conj(e), axes=0) + phase * np.tensordot(
-        [0, 1], np.conj(e_), axes=0
-    )
-    ub = np.tensordot([1, 0], np.conj(f), axes=0) + np.conj(phase) * np.tensordot(
-        [0, 1], np.conj(f_), axes=0
-    )
+    ua = np.tensordot([1, 0], np.conj(e), axes=0) + phase * np.tensordot([0, 1], np.conj(e_), axes=0)
+    ub = np.tensordot([1, 0], np.conj(f), axes=0) + np.conj(phase) * np.tensordot([0, 1], np.conj(f_), axes=0)
     return ua, ub
 
 
@@ -104,26 +121,30 @@ def calculate_diagonal(unitary, ua, ub, va, vb):
 def magic_decomposition(unitary):
     """Decomposes an arbitrary unitary to (A1) from arXiv:quant-ph/0011050."""
     psi, eigvals = calculate_psi(unitary)
-    psi_tilde = np.conj(np.sqrt(eigvals))[:, np.newaxis] * np.dot(unitary, psi.T).T
+    psi_tilde = np.conj(np.sqrt(eigvals)) * np.dot(unitary, psi)
     va, vb = calculate_single_qubit_unitaries(psi)
     ua_dagger, ub_dagger = calculate_single_qubit_unitaries(psi_tilde)
     ua, ub = np.conj(ua_dagger.T), np.conj(ub_dagger.T)
     return calculate_diagonal(unitary, ua, ub, va, vb)
 
 
-def calculate_h_vector(ud):
+def to_bell_diagonal(ud):
+    """Transforms a matrix to the Bell basis and checks if it is diagonal."""
+    ud_bell = np.dot(np.dot(np.conj(bell_basis).T, ud), bell_basis)
+    ud_diag = np.diag(ud_bell)
+    if not np.allclose(np.diag(ud_diag), ud_bell):  # pragma: no cover
+        return None
+    uprod = np.prod(ud_diag)
+    if not np.allclose(uprod, 1):  # pragma: no cover
+        return None
+    return ud_diag
+
+
+def calculate_h_vector(ud_diag):
     """Finds h parameters corresponding to exp(-iH).
 
     See Eq. (4)-(5) in arXiv:quant-ph/0307177.
     """
-    ud_bell = np.dot(np.dot(bell_basis, ud), np.conj(bell_basis.T))
-    ud_diag = np.diag(ud_bell)
-    if not np.allclose(np.diag(ud_diag), ud_bell):  # pragma: no cover
-        raise_error(ValueError, "Ud is not diagonal in the Bell basis.")
-    uprod = np.prod(ud_diag)
-    if not np.allclose(uprod, 1):  # pragma: no cover
-        raise_error(ValueError, f"Product of eigenvalues is {uprod} != 1.")
-
     lambdas = -np.angle(ud_diag)
     hx = (lambdas[0] + lambdas[2]) / 2.0
     hy = (lambdas[1] + lambdas[2]) / 2.0
@@ -131,11 +152,8 @@ def calculate_h_vector(ud):
     return hx, hy, hz
 
 
-def cnot_decomposition(hx, hy, hz):
+def cnot_decomposition(q0, q1, hx, hy, hz):
     """Performs decomposition (6) from arXiv:quant-ph/0307177."""
-    from qibo import matrices
-    from scipy.linalg import expm
-
     u3 = -1j * (matrices.X + matrices.Z) / np.sqrt(2)
     # use corrected version from PRA paper (not arXiv)
     u2 = -u3 @ expm(-1j * (hx - np.pi / 4) * matrices.X)
@@ -143,4 +161,71 @@ def cnot_decomposition(hx, hy, hz):
     v2 = expm(-1j * hz * matrices.Z) * np.exp(-1j * np.pi / 4)
     v3 = expm(1j * hy * matrices.Z)
     w = (matrices.I - 1j * matrices.X) / np.sqrt(2)
-    return u2, u3, v2, v3, w
+    # change CNOT to CZ using Hadamard gates
+    return [
+        gates.H(q1),
+        gates.CZ(q0, q1),
+        gates.Unitary(u2, q0),
+        gates.Unitary(H @ v2 @ H, q1),
+        gates.CZ(q0, q1),
+        gates.Unitary(u3, q0),
+        gates.Unitary(H @ v3 @ H, q1),
+        gates.CZ(q0, q1),
+        gates.Unitary(w, q0),
+        gates.Unitary(np.conj(w).T @ H, q1),
+    ]
+
+
+def cnot_decomposition_light(q0, q1, hx, hy):
+    """Performs decomposition (24) from arXiv:quant-ph/0307177."""
+    w = (matrices.I - 1j * matrices.X) / np.sqrt(2)
+    u2 = expm(-1j * hx * matrices.X)
+    v2 = expm(1j * hy * matrices.Z)
+    # change CNOT to CZ using Hadamard gates
+    return [
+        gates.Unitary(np.conj(w).T, q0),
+        gates.Unitary(H @ w, q1),
+        gates.CZ(q0, q1),
+        gates.Unitary(u2, q0),
+        gates.Unitary(H @ v2 @ H, q1),
+        gates.CZ(q0, q1),
+        gates.Unitary(w, q0),
+        gates.Unitary(np.conj(w).T @ H, q1),
+    ]
+
+
+def two_qubit_decomposition(q0, q1, unitary):
+    ud_diag = to_bell_diagonal(unitary)
+    ud = None
+    if ud_diag is None:
+        u4, v4, ud, u1, v1 = magic_decomposition(unitary)
+        ud_diag = to_bell_diagonal(ud)
+
+    hx, hy, hz = calculate_h_vector(ud_diag)
+    if hz == 0:
+        gatelist = cnot_decomposition_light(q0, q1, hx, hy)
+        if ud is None:
+            return gatelist
+        g0, g1 = gatelist[:2]
+        gatelist[0] = gates.Unitary(g0.parameters[0] @ u1, q0)
+        gatelist[1] = gates.Unitary(g1.parameters[0] @ v1, q1)
+
+        g0, g1 = gatelist[-2:]
+        gatelist[-2] = gates.Unitary(u4 @ g0.parameters[0], q0)
+        gatelist[-1] = gates.Unitary(v4 @ g1.parameters[0], q1)
+
+    else:
+        cnot_dec = cnot_decomposition(q0, q1, hx, hy, hz)
+        if ud is None:
+            return cnot_dec
+
+        gatelist = [
+            gates.Unitary(u1, q0),
+            gates.Unitary(H @ v1, q1),
+        ]
+        gatelist.extend(cnot_dec[1:])
+        g0, g1 = gatelist[-2:]
+        gatelist[-2] = gates.Unitary(u4 @ g0.parameters[0], q0)
+        gatelist[-1] = gates.Unitary(v4 @ g1.parameters[0], q1)
+
+    return gatelist

@@ -35,7 +35,7 @@ sequence.add(Pulse(start=0,
                    amplitude=0.3,
                    duration=4000,
                    frequency=200_000_000,
-                   phase=0,
+                   relative_phase=0,
                    shape='Gaussian(5)', # Gaussian shape with std = duration / 5
                    channel=1))
 
@@ -43,7 +43,7 @@ sequence.add(ReadoutPulse(start=4004,
                           amplitude=0.9,
                           duration=2000,
                           frequency=20_000_000,
-                          phase=0,
+                          relative_phase=0,
                           shape='Rectangular',
                           channel=2))
 

@@ -30,27 +30,20 @@ with open(os.path.join(this_directory, "README.md"), encoding="utf-8") as f:
 setup(
     name=PACKAGE,
     version=get_version(),
-    description="Quantum hardware backend for Qibo",
+    description="Quantum hardware module and drivers for Qibo",
     author="The Qibo team",
     author_email="",
     url="https://github.com/qiboteam/qibolab",
     packages=find_packages("src"),
     package_dir={"": "src"},
-    package_data={"": ["runcards/*.yml", "tests/*.yml", "*.txt"]},
-    entry_points={
-        "console_scripts": [
-            "calibrate-qubits = qibolab.calibration.calibrate_qubits:main"
-        ]
-    },
+    package_data={"": ["runcards/*.yml", "tests/*.yml"]},
     zip_safe=False,
     classifiers=[
         "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering :: Physics",
     ],
     install_requires=[
-        "qibo>=0.1.8rc0",
-        "qcodes",  # 0.34.1
-        "lmfit",  # 1.0.3
+        "qibo>=0.1.8",
     ],
     extras_require={
         "docs": [
@@ -64,12 +57,11 @@ setup(
         ],
         # TII system dependencies
         "tiiq": [
-            "qblox-instruments==0.6.1",  # 0.6.1
-            "quantify-core",  # 0.6.0
-            "dash",  # Live plotting
+            "qblox-instruments==0.6.1",
+            "qcodes",
         ],
     },
-    python_requires=">=3.6.0",
+    python_requires=">=3.8.0",
     long_description=long_description,
     long_description_content_type="text/markdown",
 )

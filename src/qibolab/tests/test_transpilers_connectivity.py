@@ -7,7 +7,7 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 
-from qibolab.transpilers.connectivity import can_execute, fix_connecivity
+from qibolab.transpilers.connectivity import fix_connectivity, respects_connectivity
 
 
 def generate_random_circuit(nqubits, depth, seed=None):
@@ -43,12 +43,12 @@ def transpose_qubits(state, qubits):
 @pytest.mark.parametrize("run_number", range(50))
 @pytest.mark.parametrize("nqubits", [1, 2, 3, 4, 5])
 @pytest.mark.parametrize("depth", [2, 5, 8])
-def test_transpiler(run_number, nqubits, depth):
+def test_fix_connectivity(run_number, nqubits, depth):
     """Checks that the transpiled circuit can be executed and is equivalent to original."""
     original = generate_random_circuit(nqubits, depth)
-    transpiled, hardware_qubits = fix_connecivity(original)
+    transpiled, hardware_qubits = fix_connectivity(original)
     # check that transpiled circuit can be executed
-    assert can_execute(transpiled)
+    assert respects_connectivity(transpiled)
     # check that execution results agree with original (using simulation)
     backend = NumpyBackend()
     final_state = backend.execute_circuit(transpiled).state()
