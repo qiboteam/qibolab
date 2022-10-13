@@ -993,13 +993,13 @@ class ClusterQRM_RF(AbstractInstrument):
                         # Save individual shots
                         shots_i = np.array(
                             [
-                                np.sqrt(2) * (val / self.acquisition_duration)
+                                (val / self.acquisition_duration)
                                 for val in raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path0"]
                             ]
                         )
                         shots_q = np.array(
                             [
-                                np.sqrt(2) * (val / self.acquisition_duration)
+                                (val / self.acquisition_duration)
                                 for val in raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path1"]
                             ]
                         )
