@@ -931,7 +931,6 @@ class ClusterQRM_RF(AbstractInstrument):
             self.device.start_sequencer(sequencer_number)
 
         # Retrieve data
-        acquisition_results = {}
         for port in self._output_ports_keys:
             # wait until sequencers have stopped
             for sequencer in self._sequencers[port]:
@@ -947,7 +946,9 @@ class ClusterQRM_RF(AbstractInstrument):
                 iter(sequencer.acquisitions)
             )  # returns the first item in sequencer.acquisitions dict
             self.device.store_scope_acquisition(sequencer_number, scope_acquisition_name)
-            #
+
+        acquisition_results = {}
+        for port in self._output_ports_keys:
             for sequencer in self._sequencers[port]:
                 raw_results = self.device.get_acquisitions(sequencer_number)
                 if not self.ports["i1"].hardware_demod_en:
@@ -991,18 +992,9 @@ class ClusterQRM_RF(AbstractInstrument):
                         acquisition_results["averaged_integrated"][pulse.qubit] = acquisition_results[pulse.qubit]
 
                         # Save individual shots
-                        shots_i = np.array(
-                            [
-                                (val / self.acquisition_duration)
-                                for val in raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path0"]
-                            ]
-                        )
-                        shots_q = np.array(
-                            [
-                                (val / self.acquisition_duration)
-                                for val in raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path1"]
-                            ]
-                        )
+                        shots_i = np.array(raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path0"])/self.acquisition_duration
+                        shots_q = np.array(raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path1"])/self.acquisition_duration
+
                         acquisition_results["binned_integrated"][pulse.serial] = [
                             (msr, phase, i, q)
                             for msr, phase, i, q in zip(
@@ -1069,18 +1061,8 @@ class ClusterQRM_RF(AbstractInstrument):
             # plt.plot(list(map(list, zip(*demodulated_signal)))[0][:400])
             # plt.show()
         else:
-            i = np.mean(
-                [
-                    (val / self.acquisition_duration)
-                    for val in acquisition_results["acquisition"]["bins"]["integration"]["path0"]
-                ]
-            )
-            q = np.mean(
-                [
-                    (val / self.acquisition_duration)
-                    for val in acquisition_results["acquisition"]["bins"]["integration"]["path1"]
-                ]
-            )
+            i = np.mean(np.array(acquisition_results["acquisition"]["bins"]["integration"]["path0"])/ self.acquisition_duration)
+            q = np.mean(np.array(acquisition_results["acquisition"]["bins"]["integration"]["path1"])/ self.acquisition_duration)
             integrated_signal = i, q
         return integrated_signal
 
