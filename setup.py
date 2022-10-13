@@ -44,6 +44,7 @@ setup(
     ],
     install_requires=[
         "qibo>=0.1.8",
+        "qcodes",
     ],
     extras_require={
         "docs": [
@@ -58,10 +59,9 @@ setup(
         # TII system dependencies
         "tiiq": [
             "qblox-instruments==0.6.1",
-            "qcodes",
         ],
     },
-    python_requires=">=3.6.0",
+    python_requires=">=3.8.0",
     long_description=long_description,
     long_description_content_type="text/markdown",
 )
