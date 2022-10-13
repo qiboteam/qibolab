@@ -292,8 +292,8 @@ characterization:
             T2: 7961
             state0_voltage: 1650
             state1_voltage: 3918
-            mean_gnd_states: (-0.0011652304508024695-0.0011687305335600468j)
-            mean_exc_states: (0.0023305632064592133+0.0031496682663438875j)
+            mean_gnd_states: (-0.0010238346411041346-0.001294845560461652j)
+            mean_exc_states: (-0.0018147265893322573-0.003225323063990513j)
             sweetspot: -0.00384
         2:
             resonator_freq: 7_557_647_610
@@ -302,8 +302,8 @@ characterization:
             T2: 8479
             state0_voltage: 1803
             state1_voltage: 3808
-            mean_gnd_states: (-0.001380117555244612-0.001007037409628658j)
-            mean_exc_states: (-0.0021270638416092127-0.0029602567962559675j)
+            mean_gnd_states: (-0.0013963078303444584-0.0010014455851625904j)
+            mean_exc_states: (-0.002143656599102605-0.0030204793616096215j)
             sweetspot: -0.00154
         3:
             resonator_freq: 7_678_010_000
@@ -312,8 +312,8 @@ characterization:
             T2: 0
             state0_voltage: 785
             state1_voltage: 1720
-            mean_gnd_states: (-0.0006926893519095808-0.00037109446312669436j)
-            mean_exc_states: (-0.0005051428292111461+0.0016449074768286828j)
+            mean_gnd_states: (-0.0007211155273345421-0.0002989002051225009j)
+            mean_exc_states: (-0.0007188916050170232-0.0003030798883247468j)
             sweetspot: -0.01126
         4:
             resonator_freq: 7_912_807_084
@@ -322,8 +322,8 @@ characterization:
             T2: 11930
             state0_voltage: 1232
             state1_voltage: 3502
-            mean_gnd_states: (-0.0005953164040571986-0.0010789600567394527j)
-            mean_exc_states: (-0.0018275428844872423+0.002987563405134988j)
+            mean_gnd_states: (-0.00018772900216007803-0.001083608641993983j)
+            mean_exc_states: (-5.0619544978238784e-05-0.0033399404802163086j)
             sweetspot: 0.00742
         5:
             resonator_freq: 7_008_300_000
