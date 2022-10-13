@@ -302,8 +302,8 @@ characterization:
             T2: 8479
             state0_voltage: 1803
             state1_voltage: 3808
-            mean_gnd_states: (-0.0013829998976628089-0.0011577895538555706j)
-            mean_exc_states: (0.0035266558882890505+0.001438625817420428j)
+            mean_gnd_states: (-0.001380117555244612-0.001007037409628658j)
+            mean_exc_states: (-0.0021270638416092127-0.0029602567962559675j)
             sweetspot: -0.00154
         3:
             resonator_freq: 7_678_010_000
