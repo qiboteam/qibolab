@@ -17,7 +17,7 @@ Some of the key features of Qibolab are:
 
 ## Documentation
 
-The qibolab backend documentation is available at [qibolab.readthedocs.io](http://34.240.99.72/qibolab/) (username:qiboteam, pass:qkdsimulator).
+The qibolab backend documentation is available at https://qibolab.readthedocs.io.
 
 ## Minimum working example
 
