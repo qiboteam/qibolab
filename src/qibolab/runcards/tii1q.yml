@@ -8,10 +8,10 @@ settings:
 
 qubits: [0, 1, 2]
 
-# Qubit 0: need amplification in output/ done / 
+# Qubit 0: need amplification in output/ done /
 # Qubit 1: characterized until AllXY
 # Qubit 2: Need amplification in the input
-# Qubit nb 3 requires more amplification on the Read-out and its qubit is above the cavity's freuqnecy 
+# Qubit nb 3 requires more amplification on the Read-out and its qubit is above the cavity's freuqnecy
 
 
 topology: # qubit - qubit connections
@@ -233,7 +233,7 @@ native_gates:
                 amplitude: 0.9
                 frequency: 20_000_000
                 shape: Rectangular()
-                type: ro # readout                
+                type: ro # readout
 
 characterization:
     single_qubit:
@@ -258,7 +258,7 @@ characterization:
             mean_exc_states: (3.254111797580043e-05+6.381080335860311e-05j)
 
         2:
-            resonator_freq: 7_294_991_000                    
+            resonator_freq: 7_294_991_000
             qubit_freq: 6_795_149_000 # 5_842_749_000
             T1: 8401
             T2: 0
