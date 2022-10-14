@@ -986,14 +986,8 @@ class ClusterQRM_RF(AbstractInstrument):
                         acquisition_results["averaged_integrated"][pulse.qubit] = acquisition_results[pulse.qubit]
 
                         # Save individual shots
-                        shots_i = (
-                            np.array(raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path0"])
-                            / self.acquisition_duration
-                        )
-                        shots_q = (
-                            np.array(raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path1"])
-                            / self.acquisition_duration
-                        )
+                        shots_i = np.array(raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path0"])/self.acquisition_duration
+                        shots_q = np.array(raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path1"])/self.acquisition_duration
 
                         acquisition_results["binned_integrated"][pulse.serial] = [
                             (msr, phase, i, q)
@@ -1061,12 +1055,8 @@ class ClusterQRM_RF(AbstractInstrument):
             # plt.plot(list(map(list, zip(*demodulated_signal)))[0][:400])
             # plt.show()
         else:
-            i = np.mean(
-                np.array(acquisition_results["acquisition"]["bins"]["integration"]["path0"]) / self.acquisition_duration
-            )
-            q = np.mean(
-                np.array(acquisition_results["acquisition"]["bins"]["integration"]["path1"]) / self.acquisition_duration
-            )
+            i = np.mean(np.array(acquisition_results["acquisition"]["bins"]["integration"]["path0"])/ self.acquisition_duration)
+            q = np.mean(np.array(acquisition_results["acquisition"]["bins"]["integration"]["path1"])/ self.acquisition_duration)
             integrated_signal = i, q
         return integrated_signal
 
