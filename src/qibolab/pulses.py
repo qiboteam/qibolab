@@ -92,7 +92,7 @@ class PulseShape(ABC):
             )
         num_samples = int(pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
         time = np.arange(num_samples) / PulseShape.SAMPLING_RATE
-        global_phase = 2 * np.pi * pulse.frequency * pulse.start / 1e9  # pulse start, duration and finish are in ns
+        global_phase = pulse.global_phase
         cosalpha = np.cos(2 * np.pi * pulse.frequency * time + global_phase + pulse.relative_phase)
         sinalpha = np.sin(2 * np.pi * pulse.frequency * time + global_phase + pulse.relative_phase)
 
@@ -430,6 +430,11 @@ class Pulse:
             self._frequency = value
 
     @property
+    def global_phase(self):
+        # pulse start, duration and finish are in ns
+        return 2 * np.pi * self.frequency * self.start / 1e9
+
+    @property
     def relative_phase(self) -> float:
         return self._relative_phase
 
@@ -663,6 +668,12 @@ class ReadoutPulse(Pulse):
     @property
     def serial(self):
         return f"ReadoutPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {format(self.frequency, '_')}, {format(self.relative_phase, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
+
+    @property
+    def global_phase(self):
+        # readout pulses should have zero global phase so that we can
+        # calculate probabilities in the i-q plane
+        return 0
 
 
 class DrivePulse(Pulse):
