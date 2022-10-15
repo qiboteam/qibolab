@@ -34,7 +34,7 @@ class Waveform:
     def __repr__(self):
         return self.serial
 
-    def plot(self):
+    def plot(self, savefig_filename=None):
         import matplotlib.pyplot as plt
         import numpy as np
 
@@ -45,6 +45,8 @@ class Waveform:
         plt.grid(b=True, which="both", axis="both", color="#888888", linestyle="-")
         plt.suptitle(self.serial)
         plt.show()
+        if savefig_filename:
+            plt.savefig(savefig_filename)
 
 
 class PulseShape(ABC):
@@ -585,7 +587,7 @@ class Pulse:
             self._qubit,
         )
 
-    def plot(self):
+    def plot(self, savefig_filename=None):
         import matplotlib.pyplot as plt
         import numpy as np
         from matplotlib import gridspec
@@ -640,6 +642,8 @@ class Pulse:
         ax2.axis("equal")
         plt.suptitle(self.serial)
         plt.show()
+        if savefig_filename:
+            plt.savefig(savefig_filename)
         return
 
 
@@ -827,7 +831,7 @@ class SplitPulse(Pulse):
     def modulated_waveforms(self):  #  -> tuple[Waveform, Waveform]:
         return (self.modulated_waveform_i, self.modulated_waveform_q)
 
-    def plot(self):
+    def plot(self, savefig_filename=None):
         import matplotlib.pyplot as plt
         import numpy as np
         from matplotlib import gridspec
@@ -904,6 +908,8 @@ class SplitPulse(Pulse):
         # ax2.axis([ -1, 1, -1, 1])
         ax2.axis("equal")
         plt.show()
+        if savefig_filename:
+            plt.savefig(savefig_filename)
         return
 
 
@@ -1144,7 +1150,7 @@ class PulseSequence:
                 overlap = True
         return overlap
 
-    def plot(self):
+    def plot(self, savefig_filename=None):
         if not self.is_empty:
             import matplotlib.pyplot as plt
             import numpy as np
@@ -1206,3 +1212,5 @@ class PulseSequence:
                     ax.axis([0, self.finish, -1, 1])
                     ax.grid(b=True, which="both", axis="both", color="#CCCCCC", linestyle="-")
             plt.show()
+            if savefig_filename:
+                plt.savefig(savefig_filename)
