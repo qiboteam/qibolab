@@ -322,8 +322,6 @@ class ClusterQRM_RF(AbstractInstrument):
                 the acquisition, in ns. Must be > 0 and multiple of 4.
             acquisition_duration: int = (mapped to qrm.sequencers[0].integration_length_acq) Duration
                 of the pulse acquisition, in ns. Must be > 0 and multiple of 4.
-            discretization_threshold_acq: float = (mapped to qrm.sequencers[0].discretization_threshold_acq)    # TODO mapped, but not configurable from the runcard
-            phase_rotation_acq: float = (mapped to qrm.sequencers[0].phase_rotation_acq)                        # TODO mapped, but not configurable from the runcard
 
             channel_port_map:                                           # Refrigerator Channel : Instrument port
                 10: o1 # IQ Port = out0 & out1
@@ -353,9 +351,8 @@ class ClusterQRM_RF(AbstractInstrument):
         self.ports: dict = {}
         self.acquisition_hold_off: int
         self.acquisition_duration: int
-        self.discretization_threshold_acq: float
-        self.phase_rotation_acq: float
         self.channel_port_map: dict = {}
+        self.classification_parameters: dict = {}
         self.channels: list = []
 
         self._cluster: QbloxCluster = None
@@ -415,16 +412,6 @@ class ClusterQRM_RF(AbstractInstrument):
                     self.__class__,
                     "acquisition_duration",
                     self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o1"], "integration_length_acq"),
-                )
-                setattr(
-                    self.__class__,
-                    "discretization_threshold_acq",
-                    self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o1"], "discretization_threshold_acq"),
-                )
-                setattr(
-                    self.__class__,
-                    "phase_rotation_acq",
-                    self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o1"], "phase_rotation_acq"),
                 )
 
                 self._cluster = cluster
@@ -512,6 +499,7 @@ class ClusterQRM_RF(AbstractInstrument):
         Args:
             **kwargs: dict = A dictionary of settings loaded from the runcard:
                 kwargs['channel_port_map']
+                kwargs['classification_parameters']
                 kwargs['ports']['o1']['attenuation']
                 kwargs['ports']['o1']['lo_enabled']
                 kwargs['ports']['o1']['lo_frequency']
@@ -529,6 +517,8 @@ class ClusterQRM_RF(AbstractInstrument):
             self.channel_port_map = kwargs["channel_port_map"]
             self._port_channel_map = {v: k for k, v in self.channel_port_map.items()}
             self.channels = list(self.channel_port_map.keys())
+            if "classification_parameters" in kwargs:
+                self.classification_parameters = kwargs["classification_parameters"]
 
             self.ports["o1"].attenuation = kwargs["ports"]["o1"]["attenuation"]  # Default after reboot = 7
             self.ports["o1"].lo_enabled = kwargs["ports"]["o1"]["lo_enabled"]  # Default after reboot = True
@@ -547,8 +537,6 @@ class ClusterQRM_RF(AbstractInstrument):
 
             self.acquisition_hold_off = kwargs["acquisition_hold_off"]
             self.acquisition_duration = kwargs["acquisition_duration"]
-            self.discretization_threshold_acq = 0  # Default after reboot = 1
-            self.phase_rotation_acq = 0  # Default after reboot = 1
 
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
@@ -626,6 +614,22 @@ class ClusterQRM_RF(AbstractInstrument):
                             "nco_freq",
                             value=non_overlapping_pulses[0].frequency,
                         )  # TODO: for non_overlapping_same_frequency_pulses[0].frequency
+
+                    if (
+                        self.ports["i1"].hardware_demod_en
+                        and non_overlapping_pulses[0].qubit in self.classification_parameters
+                    ):
+                        self._set_device_parameter(
+                            self.device.sequencers[next_sequencer_number],
+                            "phase_rotation_acq",
+                            value=self.classification_parameters[non_overlapping_pulses[0].qubit]["rotation_angle"],
+                        )
+                        self._set_device_parameter(
+                            self.device.sequencers[next_sequencer_number],
+                            "discretization_threshold_acq",
+                            value=self.classification_parameters[non_overlapping_pulses[0].qubit]["threshold"]
+                            * self.acquisition_duration,
+                        )
                     sequencer = Sequencer(next_sequencer_number)
 
                     # add the sequencer to the list of sequencers required by the port
