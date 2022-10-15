@@ -881,19 +881,21 @@ class ClusterQRM_RF(AbstractInstrument):
             sequencer: Sequencer
             for port in self._output_ports_keys:
                 for sequencer in self._sequencers[port]:
-                    # Add sequence program and waveforms to single dictionary and write to JSON file
-                    filename = f"{self.name}_sequencer{sequencer.number}_sequence.json"
+                    # Add sequence program and waveforms to single dictionary
                     qblox_dict[sequencer] = {
                         "waveforms": sequencer.waveforms,
                         "weights": sequencer.weights,
                         "acquisitions": sequencer.acquisitions,
                         "program": sequencer.program,
                     }
-                    with open(self.data_folder / filename, "w", encoding="utf-8") as file:
-                        json.dump(qblox_dict[sequencer], file, indent=4)
 
-                    # Upload json file to the device sequencers
-                    self.device.sequencers[sequencer.number].sequence(str(self.data_folder / filename))
+                    # Upload dictionary to the device sequencers
+                    self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
+
+                    # DEBUG: Save sequence to file
+                    # filename = f"{self.name}_sequencer{sequencer.number}_sequence.json"
+                    # with open(self.data_folder / filename, "w", encoding="utf-8") as file:
+                    #     json.dump(qblox_dict[sequencer], file, indent=4)
 
         # Arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
@@ -1706,19 +1708,21 @@ class ClusterQCM_RF(AbstractInstrument):
             sequencer: Sequencer
             for port in self._output_ports_keys:
                 for sequencer in self._sequencers[port]:
-                    # Add sequence program and waveforms to single dictionary and write to JSON file
-                    filename = f"{self.name}_sequencer{sequencer.number}_sequence.json"
+                    # Add sequence program and waveforms to single dictionary
                     qblox_dict[sequencer] = {
                         "waveforms": sequencer.waveforms,
                         "weights": sequencer.weights,
                         "acquisitions": sequencer.acquisitions,
                         "program": sequencer.program,
                     }
-                    with open(self.data_folder / filename, "w", encoding="utf-8") as file:
-                        json.dump(qblox_dict[sequencer], file, indent=4)
 
-                    # Upload json file to the device sequencers
-                    self.device.sequencers[sequencer.number].sequence(str(self.data_folder / filename))
+                    # Upload dictionary to the device sequencers
+                    self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
+
+                    # DEBUG: Save sequence to file
+                    # filename = f"{self.name}_sequencer{sequencer.number}_sequence.json"
+                    # with open(self.data_folder / filename, "w", encoding="utf-8") as file:
+                    #     json.dump(qblox_dict[sequencer], file, indent=4)
 
         # Arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
