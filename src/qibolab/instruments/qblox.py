@@ -957,7 +957,9 @@ class ClusterQRM_RF(AbstractInstrument):
                         acquisition_results[pulse.qubit] = acquisition_results[pulse.serial]
 
                         acquisition_results["averaged_integrated"][pulse.serial] = acquisition_results[pulse.serial]
-                        acquisition_results["averaged_integrated"][pulse.qubit] = acquisition_results[pulse.qubit]
+                        acquisition_results["averaged_integrated"][pulse.qubit] = acquisition_results[
+                            "averaged_integrated"
+                        ][pulse.serial]
 
                         acquisition_results["averaged_raw"][pulse.serial] = (
                             raw_results[scope_acquisition_name]["acquisition"]["scope"]["path0"]["data"][
@@ -971,7 +973,9 @@ class ClusterQRM_RF(AbstractInstrument):
                             pulse.serial
                         ]
                 else:
+                    acquisition_results["integrated_averaged"] = {}
                     acquisition_results["averaged_integrated"] = {}
+                    acquisition_results["averaged_raw"] = {}
                     acquisition_results["binned_integrated"] = {}
                     acquisition_results["binned_classified"] = {}
                     acquisition_results["probability"] = {}
@@ -980,12 +984,33 @@ class ClusterQRM_RF(AbstractInstrument):
                         i, q = self._process_acquisition_results(raw_results[acquisition_name], pulse, demodulate=False)
                         acquisition_results[pulse.serial] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
                         acquisition_results[pulse.qubit] = acquisition_results[pulse.serial]
+                        acquisition_results["integrated_averaged"][pulse.serial] = acquisition_results[pulse.serial]
+                        acquisition_results["integrated_averaged"][pulse.qubit] = acquisition_results[
+                            "integrated_averaged"
+                        ][pulse.serial]
 
-                        acquisition_results["averaged_integrated"][pulse.serial] = acquisition_results[
+                        i, q = self._process_acquisition_results(raw_results[acquisition_name], pulse, demodulate=True)
+                        acquisition_results["averaged_integrated"][pulse.serial] = (
+                            np.sqrt(i**2 + q**2),
+                            np.arctan2(q, i),
+                            i,
+                            q,
+                        )
+                        acquisition_results["averaged_integrated"][pulse.qubit] = acquisition_results[
+                            "averaged_integrated"
+                        ][pulse.serial]
+
+                        acquisition_results["averaged_raw"][pulse.serial] = (
+                            raw_results[scope_acquisition_name]["acquisition"]["scope"]["path0"]["data"][
+                                0 : self.acquisition_duration
+                            ],
+                            raw_results[scope_acquisition_name]["acquisition"]["scope"]["path1"]["data"][
+                                0 : self.acquisition_duration
+                            ],
+                        )
+                        acquisition_results["averaged_raw"][pulse.qubit] = acquisition_results["averaged_raw"][
                             pulse.serial
-                        ]  # integrated_averaged
-                        acquisition_results["averaged_integrated"][pulse.qubit] = acquisition_results[pulse.qubit]
-
+                        ]
                         # Save individual shots
                         shots_i = (
                             np.array(raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path0"])
@@ -996,12 +1021,12 @@ class ClusterQRM_RF(AbstractInstrument):
                             / self.acquisition_duration
                         )
 
-                        acquisition_results["binned_integrated"][pulse.serial] = [
-                            (msr, phase, i, q)
-                            for msr, phase, i, q in zip(
-                                np.sqrt(shots_i**2 + shots_q**2), np.arctan2(shots_q, shots_i), shots_i, shots_q
-                            )
-                        ]
+                        acquisition_results["binned_integrated"][pulse.serial] = (
+                            np.sqrt(shots_i**2 + shots_q**2),
+                            np.arctan2(shots_q, shots_i),
+                            shots_i,
+                            shots_q,
+                        )
                         acquisition_results["binned_integrated"][pulse.qubit] = acquisition_results[
                             "binned_integrated"
                         ][pulse.serial]

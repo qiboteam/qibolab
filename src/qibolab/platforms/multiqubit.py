@@ -57,25 +57,20 @@ class MultiqubitPlatform(AbstractPlatform):
             ro_pulse = self.create_qubit_readout_pulse(qubit, start=RX_pulse.duration)
             sequence_exc.add(RX_pulse)
             sequence_exc.add(ro_pulse)
-            shots_results_exc = self.execute_pulse_sequence(sequence_exc, nshots=nshots)["binned_integrated"][
+            amplitude, phase, i, q = self.execute_pulse_sequence(sequence_exc, nshots=nshots)["binned_integrated"][
                 ro_pulse.serial
             ]
-            iq_exc = []
-            for n in range(nshots):
-                msr, phase, i, q = shots_results_exc[n]
-                iq_exc += [complex(i, q)]
+
+            iq_exc = i + 1j * q
 
             sequence_gnd = PulseSequence()
             ro_pulse = self.create_qubit_readout_pulse(qubit, start=0)
             sequence_gnd.add(ro_pulse)
 
-            shots_results_gnd = self.execute_pulse_sequence(sequence_gnd, nshots=nshots)["binned_integrated"][
+            amplitude, phase, i, q = self.execute_pulse_sequence(sequence_gnd, nshots=nshots)["binned_integrated"][
                 ro_pulse.serial
             ]
-            iq_gnd = []
-            for n in range(nshots):
-                msr, phase, i, q = shots_results_gnd[n]
-                iq_gnd += [complex(i, q)]
+            iq_gnd = i + 1j * q
 
             iq_mean_exc = np.mean(iq_exc)
             iq_mean_gnd = np.mean(iq_gnd)
@@ -95,9 +90,9 @@ class MultiqubitPlatform(AbstractPlatform):
             # the real value that renders the biggest difference between the two distributions is the threshold
             # that is the one that maximises fidelity
 
-            real_values_exc = [x.real for x in iq_exc_rotated]
-            real_values_gnd = [x.real for x in iq_gnd_rotated]
-            real_values_combined = real_values_exc + real_values_gnd
+            real_values_exc = iq_exc_rotated.real
+            real_values_gnd = iq_gnd_rotated.real
+            real_values_combined = np.concatenate((real_values_exc, real_values_gnd))
             real_values_combined.sort()
 
             cum_distribution_exc = [
