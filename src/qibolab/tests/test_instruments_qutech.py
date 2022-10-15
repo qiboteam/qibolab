@@ -47,9 +47,6 @@ def test_instruments_qutech_setup(name):
         settings = yaml.safe_load(file)
     instruments[name].setup(**settings["settings"], **settings["instruments"][name]["settings"])
 
-    for parameter in settings["instruments"][name]["settings"]:
-        assert getattr(instruments[name], parameter) == settings["instruments"][name]["settings"][parameter]
-
 
 @pytest.mark.qpu
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
