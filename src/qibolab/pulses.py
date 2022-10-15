@@ -90,7 +90,7 @@ class PulseShape(ABC):
             )
         num_samples = int(pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
         time = np.arange(num_samples) / PulseShape.SAMPLING_RATE
-        global_phase = 2 * np.pi * pulse.frequency * pulse.start / 1e9  # pulse start, duration and finish are in ns
+        global_phase = pulse.global_phase
         cosalpha = np.cos(2 * np.pi * pulse.frequency * time + global_phase + pulse.relative_phase)
         sinalpha = np.sin(2 * np.pi * pulse.frequency * time + global_phase + pulse.relative_phase)
 
@@ -428,6 +428,11 @@ class Pulse:
             self._frequency = value
 
     @property
+    def global_phase(self):
+        # pulse start, duration and finish are in ns
+        return 2 * np.pi * self.frequency * self.start / 1e9
+
+    @property
     def relative_phase(self) -> float:
         return self._relative_phase
 
@@ -660,6 +665,12 @@ class ReadoutPulse(Pulse):
     def serial(self):
         return f"ReadoutPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {format(self.frequency, '_')}, {format(self.relative_phase, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
 
+    @property
+    def global_phase(self):
+        # readout pulses should have zero global phase so that we can
+        # calculate probabilities in the i-q plane
+        return 0
+
 
 class DrivePulse(Pulse):
     """Describes a qubit drive pulse.
@@ -685,16 +696,40 @@ class FluxPulse(Pulse):
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
 
-    def __init__(self, start, duration, amplitude, frequency, relative_phase, shape, channel, qubit=0):
+    def __init__(self, start, duration, amplitude, relative_phase, shape, channel, qubit=0):
         # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
         #                    channel: int | str, qubit: int | str = 0):
         super().__init__(
-            start, duration, amplitude, frequency, relative_phase, shape, channel, type=PulseType.FLUX, qubit=qubit
+            start, duration, amplitude, 0, relative_phase, shape, channel, type=PulseType.FLUX, qubit=qubit
         )
 
     @property
+    def envelope_waveform_i(self) -> Waveform:
+        return self._shape.envelope_waveform_i
+
+    @property
+    def envelope_waveform_q(self) -> Waveform:
+        return self._shape.envelope_waveform_i
+
+    @property
+    def envelope_waveforms(self):  #  -> tuple[Waveform, Waveform]:
+        return (self._shape.envelope_waveform_i, self._shape.envelope_waveform_i)
+
+    @property
+    def modulated_waveform_i(self) -> Waveform:
+        return self._shape.envelope_waveform_i
+
+    @property
+    def modulated_waveform_q(self) -> Waveform:
+        return self._shape.envelope_waveform_i
+
+    @property
+    def modulated_waveforms(self):  #  -> tuple[Waveform, Waveform]:
+        return (self._shape.envelope_waveform_i, self._shape.envelope_waveform_i)
+
+    @property
     def serial(self):
-        return f"FluxPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {format(self.frequency, '_')}, {format(self.relative_phase, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
+        return f"FluxPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {format(self.relative_phase, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
 
 
 class SplitPulse(Pulse):
