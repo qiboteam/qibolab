@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import itertools
+
 import numpy as np
 from qibo.backends import NumpyBackend
 from qibo.config import log, raise_error
@@ -106,4 +108,11 @@ class QibolabBackend(NumpyBackend):
             d01 = abs(mean_state0 - mean_state1)
             p = (d1**2 + d01**2 - d0**2) / 2 / d01**2
             probabilities.append([p, 1 - p])
-        return probabilities
+
+        # bring probabilities to the format returned by simulation
+        return np.array(
+            [
+                np.prod([p[b] for p, b in zip(probabilities, bitstring)])
+                for bitstring in itertools.product([0, 1], repeat=len(qubits))
+            ]
+        )

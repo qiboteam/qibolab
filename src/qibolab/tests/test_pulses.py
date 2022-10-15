@@ -311,10 +311,8 @@ def test_pulses_pulse_aliases():
     )
     assert repr(dp) == "DrivePulse(0, 2000, 0.9, 200_000_000, 0, Gaussian(5), 0, 0)"
 
-    fp = FluxPulse(
-        start=0, duration=300, amplitude=0.9, frequency=0.0, relative_phase=0.0, shape=Rectangular(), channel=0, qubit=0
-    )
-    assert repr(fp) == "FluxPulse(0, 300, 0.9, 0, 0, Rectangular(), 0, 0)"
+    fp = FluxPulse(start=0, duration=300, amplitude=0.9, relative_phase=0.0, shape=Rectangular(), channel=0, qubit=0)
+    assert repr(fp) == "FluxPulse(0, 300, 0.9, 0, Rectangular(), 0, 0)"
 
 
 def test_pulses_pulse_split_pulse():
@@ -546,7 +544,7 @@ def modulate(
     time = np.arange(num_samples) / PulseShape.SAMPLING_RATE
     cosalpha = np.cos(2 * np.pi * frequency * time + phase)
     sinalpha = np.sin(2 * np.pi * frequency * time + phase)
-    mod_matrix = np.array([[cosalpha, -sinalpha], [sinalpha, cosalpha]])
+    mod_matrix = np.array([[cosalpha, -sinalpha], [sinalpha, cosalpha]]) / np.sqrt(2)
     result = []
     for n, t, ii, qq in zip(np.arange(num_samples), time, i, q):
         result.append(mod_matrix[:, :, n] @ np.array([ii, qq]))
