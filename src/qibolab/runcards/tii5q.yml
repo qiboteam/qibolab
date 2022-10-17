@@ -51,10 +51,30 @@ instruments:
                     gain                        : 0.1                           # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en             : false
                 i1:
-                    hardware_demod_en           : false
+                    hardware_demod_en           : true
 
             acquisition_hold_off        : 200                           # minimum 4ns
             acquisition_duration        : 2000
+
+            classification_parameters:
+                0:                      # qubit id
+                    rotation_angle: 0   # in degrees 0.0<=v<=360.0
+                    threshold: 0        # in V
+                1:
+                    rotation_angle: 194.27260835936184
+                    threshold: 0.011197376636517663
+                2:
+                    rotation_angle: 104.00254811145432
+                    threshold: 0.01274559177683321
+                3:
+                    rotation_angle: 123.581264388717
+                    threshold: 0.0026785020804511767
+                4:
+                    rotation_angle: 83.36096110720929
+                    threshold: 0.008691989968614929
+                5:
+                    rotation_angle: 0
+                    threshold: 0
 
             channel_port_map:                                           # Refrigerator Channel : Instrument port
                 10: o1 # IQ Port = out0 & out1
