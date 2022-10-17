@@ -61,17 +61,17 @@ instruments:
                     rotation_angle: 0   # in degrees 0.0<=v<=360.0
                     threshold: 0        # in V
                 1:
-                    rotation_angle: 7.017028323495571
-                    threshold: 0.0004785633686522151
+                    rotation_angle: 165.4826201399677
+                    threshold: -0.003432940674300798
                 2:
-                    rotation_angle: 144.52788754466133
-                    threshold: 0.00019173898529075252
+                    rotation_angle: 253.46717646892915
+                    threshold: -0.00026828343131103834
                 3:
-                    rotation_angle: 34.90765465151559
-                    threshold: -0.0004286041063086632
+                    rotation_angle: 235.16586386279093
+                    threshold: -0.0011444980723355506
                 4:
-                    rotation_angle: -281.66220634334125
-                    threshold: 0.001886603959709493
+                    rotation_angle: 277.7724584488232
+                    threshold: 0.0034593252588012366
                 5:
                     rotation_angle: 0
                     threshold: 0
