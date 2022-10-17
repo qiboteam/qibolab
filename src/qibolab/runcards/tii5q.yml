@@ -178,7 +178,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 2000
-                amplitude: 0.18
+                amplitude: 0.20
                 frequency: -158_938_000
                 shape: Rectangular()
                 type: ro # readout
@@ -290,40 +290,40 @@ characterization:
             qubit_freq: 3_843_994_000
             T1: 52100
             T2: 0
-            state0_voltage: 5953
-            state1_voltage: 12326
-            mean_gnd_states: (0.00532650916356248+0.0026581470692629058j)
-            mean_exc_states: (0.01045043480169145+0.006535926479680586j)
+            state0_voltage: 7509
+            state1_voltage: 14829
+            mean_gnd_states: (-0.007079697184523083+0.0025027202537249633j)
+            mean_exc_states: (-0.014179777904784441+0.00434122391380679j)
             sweetspot: -0.00384
         2:
             resonator_freq: 7_557_624_000
             qubit_freq: 4_891_370_569
             T1: 20389
             T2: 0
-            state0_voltage: 7410
-            state1_voltage: 14765
-            mean_gnd_states: (-0.0072516816721115785+0.0015239670478138464j)
-            mean_exc_states: (-0.014616399380190472+0.0020916225058774636j)
+            state0_voltage: 8514
+            state1_voltage: 15437
+            mean_gnd_states: (-0.004209928973803127-0.007400828098284074j)
+            mean_exc_states: (-0.006208705766060088-0.014134417602360162j)
             sweetspot: -0.00154
         3:
             resonator_freq: 7_677_960_000
             qubit_freq: 6_108_437_000
             T1: 15883
             T2: 0
-            state0_voltage: 2408
-            state1_voltage: 4533
-            mean_gnd_states: (-0.0023864885636754505-0.00032442102772347486j)
-            mean_exc_states: (-0.0037983532017128226-0.0024744905845444087j)
+            state0_voltage: 2407
+            state1_voltage: 4372
+            mean_gnd_states: (-0.002392175716368466-0.00026743094887335124j)
+            mean_exc_states: (-0.003759717202384587-0.002232565950170982j)
             sweetspot: -0.01122
         4:
             resonator_freq: 7_912_785_000
             qubit_freq: 6_011_895_000
             T1: 16802
             T2: 0
-            state0_voltage: 4354
-            state1_voltage: 11949
-            mean_gnd_states: (-0.00097180634961222-0.0042448994049981235j)
-            mean_exc_states: (-4.093738550317272e-05-0.011949455376770836j)
+            state0_voltage: 4460
+            state1_voltage: 12635
+            mean_gnd_states: (-0.001079891829124939-0.0043282654971452126j)
+            mean_exc_states: (5.395328911211529e-05-0.01263523196102528j)
             sweetspot: 0.00742
         5:
             resonator_freq: 7_008_300_000
