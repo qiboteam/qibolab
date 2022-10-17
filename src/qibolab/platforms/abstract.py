@@ -38,19 +38,11 @@ class AbstractPlatform(ABC):
             self.resonator_type = "3D"
         else:
             self.resonator_type = "2D"
-        self.hardware_avg = self.settings["settings"]["hardware_avg"]
-        self.sampling_rate = self.settings["settings"]["sampling_rate"]
-        self.repetition_duration = self.settings["settings"]["repetition_duration"]
 
         self.qubits = self.settings["qubits"]
         self.topology = self.settings["topology"]
         self.channels = self.settings["channels"]
         self.qubit_channel_map = self.settings["qubit_channel_map"]
-
-        # Load Characterization settings
-        self.characterization = self.settings["characterization"]
-        # Load Native Gates
-        self.native_gates = self.settings["native_gates"]
 
         self.instruments = {}
         # Instantiate instruments
@@ -78,6 +70,8 @@ class AbstractPlatform(ABC):
                         if channel in self.qubit_channel_map[qubit]:
                             self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
 
+        self.reload_settings()
+
     def __repr__(self):
         return self.name
 
@@ -102,7 +96,18 @@ class AbstractPlatform(ABC):
     def reload_settings(self):
         with open(self.runcard, "r") as file:
             self.settings = yaml.safe_load(file)
-        self.setup()
+
+        self.hardware_avg = self.settings["settings"]["hardware_avg"]
+        self.sampling_rate = self.settings["settings"]["sampling_rate"]
+        self.repetition_duration = self.settings["settings"]["repetition_duration"]
+
+        # Load Characterization settings
+        self.characterization = self.settings["characterization"]
+        # Load Native Gates
+        self.native_gates = self.settings["native_gates"]
+
+        if self.is_connected:
+            self.setup()
 
     @abstractmethod
     def run_calibration(self, show_plots=False):  # pragma: no cover

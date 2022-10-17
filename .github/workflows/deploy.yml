@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: [3.8] # TODO update this when going online
+        python-version: [3.8, 3.9, '3.10']
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
@@ -30,19 +30,19 @@ jobs:
       with:
         name: wheels
         path: dist
-  # deploy: # TODO update this when going online
-  #   runs-on: ubuntu-latest
-  #   needs: build
-  #   if: github.event_name == 'release' && github.event.action == 'published'
-  #   steps:
-  #   - name: Download wheels from artifact storage
-  #     uses: actions/download-artifact@v1
-  #     with:
-  #       name: wheels
-  #       path: dist
-  #   - name: Setup Python
-  #     uses: actions/setup-python@v1
-  #   - name: Publish distribution to PyPI
-  #     uses: pypa/gh-action-pypi-publish@master
-  #     with:
-  #       password: ${{ secrets.PYPI_TOKEN }}
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'release' && github.event.action == 'published'
+    steps:
+    - name: Download wheels from artifact storage
+      uses: actions/download-artifact@v1
+      with:
+        name: wheels
+        path: dist
+    - name: Setup Python
+      uses: actions/setup-python@v1
+    - name: Publish distribution to PyPI
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        password: ${{ secrets.PYPI_TOKEN }}
