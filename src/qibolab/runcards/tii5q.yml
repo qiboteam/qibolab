@@ -61,17 +61,17 @@ instruments:
                     rotation_angle: 0   # in degrees 0.0<=v<=360.0
                     threshold: 0        # in V
                 1:
-                    rotation_angle: 7.017028323495571
-                    threshold: 0.0004785633686522151
+                    rotation_angle: 165.4826201399677
+                    threshold: -0.003432940674300798
                 2:
-                    rotation_angle: 144.52788754466133
-                    threshold: 0.00019173898529075252
+                    rotation_angle: 253.46717646892915
+                    threshold: -0.00026828343131103834
                 3:
-                    rotation_angle: 34.90765465151559
-                    threshold: -0.0004286041063086632
+                    rotation_angle: 235.16586386279093
+                    threshold: -0.0011444980723355506
                 4:
-                    rotation_angle: -281.66220634334125
-                    threshold: 0.001886603959709493
+                    rotation_angle: 277.7724584488232
+                    threshold: 0.0034593252588012366
                 5:
                     rotation_angle: 0
                     threshold: 0
@@ -310,40 +310,40 @@ characterization:
             qubit_freq: 3_843_994_000
             T1: 52100
             T2: 0
-            state0_voltage: 7528
-            state1_voltage: 14794
-            mean_gnd_states: (-0.0071384000046752875+0.0023932189494153032j)
-            mean_exc_states: (-0.014001783228409715+0.004777438448415364j)
+            state0_voltage: 7509
+            state1_voltage: 14829
+            mean_gnd_states: (-0.007079697184523083+0.0025027202537249633j)
+            mean_exc_states: (-0.014179777904784441+0.00434122391380679j)
             sweetspot: -0.00384
         2:
             resonator_freq: 7_557_624_000
             qubit_freq: 4_891_370_569
             T1: 20389
             T2: 0
-            state0_voltage: 8424
-            state1_voltage: 13964
-            mean_gnd_states: (-0.00388732170697591-0.007474222292245512j)
-            mean_exc_states: (-0.0056628152002167805-0.012765298385881016j)
+            state0_voltage: 8514
+            state1_voltage: 15437
+            mean_gnd_states: (-0.004209928973803127-0.007400828098284074j)
+            mean_exc_states: (-0.006208705766060088-0.014134417602360162j)
             sweetspot: -0.00154
         3:
             resonator_freq: 7_677_960_000
             qubit_freq: 6_108_437_000
             T1: 15883
             T2: 0
-            state0_voltage: 2369
-            state1_voltage: 4374
-            mean_gnd_states: (-0.002341914114977711-0.0003586839043226368j)
-            mean_exc_states: (-0.0036559663221902476-0.0024015575981046955j)
+            state0_voltage: 2407
+            state1_voltage: 4372
+            mean_gnd_states: (-0.002392175716368466-0.00026743094887335124j)
+            mean_exc_states: (-0.003759717202384587-0.002232565950170982j)
             sweetspot: -0.01122
         4:
             resonator_freq: 7_912_785_000
             qubit_freq: 6_011_895_000
             T1: 16802
             T2: 0
-            state0_voltage: 4407
-            state1_voltage: 12519
-            mean_gnd_states: (-0.0009655312676515938-0.004300361726478535j)
-            mean_exc_states: (0.00036476320863993036-0.012514438407387335j)
+            state0_voltage: 4460
+            state1_voltage: 12635
+            mean_gnd_states: (-0.001079891829124939-0.0043282654971452126j)
+            mean_exc_states: (5.395328911211529e-05-0.01263523196102528j)
             sweetspot: 0.00742
         5:
             resonator_freq: 7_008_300_000
