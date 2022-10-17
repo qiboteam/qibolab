@@ -51,7 +51,7 @@ instruments:
                     gain                        : 0.3                           # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en             : false
                 i1:
-                    hardware_demod_en           : false
+                    hardware_demod_en           : true
 
             acquisition_hold_off        : 200                           # minimum 4ns
             acquisition_duration        : 2000
@@ -61,17 +61,17 @@ instruments:
                     rotation_angle: 0   # in degrees 0.0<=v<=360.0
                     threshold: 0        # in V
                 1:
-                    rotation_angle: 165.4826201399677
-                    threshold: -0.003432940674300798
+                    rotation_angle: 194.27260835936184
+                    threshold: 0.011197376636517663
                 2:
-                    rotation_angle: 253.46717646892915
-                    threshold: -0.00026828343131103834
+                    rotation_angle: 104.00254811145432
+                    threshold: 0.01274559177683321
                 3:
-                    rotation_angle: 235.16586386279093
-                    threshold: -0.0011444980723355506
+                    rotation_angle: 123.581264388717
+                    threshold: 0.0026785020804511767
                 4:
-                    rotation_angle: 277.7724584488232
-                    threshold: 0.0034593252588012366
+                    rotation_angle: 83.36096110720929
+                    threshold: 0.008691989968614929
                 5:
                     rotation_angle: 0
                     threshold: 0
