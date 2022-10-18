@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """RohdeSchwarz driver.
 
 Supports the following Instruments:
