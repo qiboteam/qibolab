@@ -11,6 +11,8 @@ def transpile(circuit, fuse_one_qubit=False):
 
     Args:
         circuit (qibo.models.Circuit): Circuit model to transpile.
+        fuse_one_qubit (bool): If ``True`` it fuses adjacent one-qubit gates to reduce
+            circuit depth.
 
     Returns:
         new (qibo.models.Circuit): New circuit that can be executed on tii5q platform.
@@ -43,11 +45,12 @@ def transpile(circuit, fuse_one_qubit=False):
     return new, hardware_qubits
 
 
-def can_execute(circuit):
+def can_execute(circuit, verbose=True):
     """Checks if a circuit can be executed on tii5q.
 
     Args:
         circuit (qibo.models.Circuit): Circuit model to check.
+        verbose (bool): If ``True`` it prints debugging log messages.
 
     Returns ``True`` if the following conditions are satisfied:
         - Circuit does not contain more than two-qubit gates.
@@ -56,26 +59,29 @@ def can_execute(circuit):
         - All two-qubit gates have qubit 0 as target or control.
     otherwise returns ``False``.
     """
+    # pring messages only if ``verbose == True``
+    vlog = lambda msg: log.info(msg) if verbose else lambda msg: None
     for gate in circuit.queue:
         if isinstance(gate, gates.M):
             continue
 
         if len(gate.qubits) == 1:
             if not isinstance(gate, (gates.I, gates.Z, gates.RZ, gates.U3)):
-                log.info(f"{gate.name} is not native gate.")
+                if verbose:
+                    vlog(f"{gate.name} is not native gate.")
                 return False
 
         elif len(gate.qubits) == 2:
             if not isinstance(gate, gates.CZ):
-                log.info(f"{gate.name} is not native gate.")
+                vlog(f"{gate.name} is not native gate.")
                 return False
             if 0 not in gate.qubits:
-                log.info("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
+                vlog("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
                 return False
 
         else:
-            log.info(f"{gate.name} acts on more than two qubits.")
+            vlog(f"{gate.name} acts on more than two qubits.")
             return False
 
-    log.info("Circuit can be executed.")
+    vlog("Circuit can be executed.")
     return True
