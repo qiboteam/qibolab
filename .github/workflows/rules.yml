@@ -22,7 +22,7 @@ jobs:
         pip install pylint
         pip install pytest-cov
         # TODO: Change this to master before merging
-        pip install git+https://github.com/qiboteam/qibo/measurements
+        pip install git+https://github.com/qiboteam/qibo@measurements
         pip install .[tiiq,docs]
     - name: Test with pylint
       run: |
