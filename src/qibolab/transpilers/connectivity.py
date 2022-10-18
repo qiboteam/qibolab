@@ -100,25 +100,28 @@ def fix_connectivity(circuit):
     return new, hardware_qubits
 
 
-def respects_connectivity(circuit):
+def respects_connectivity(circuit, verbose=True):
     """Checks if a circuit respects connectivity constraints.
 
     Args:
         circuit (qibo.models.Circuit): Circuit model to check.
+        verbose (bool): If ``True`` it prints debugging log messages.
 
     Returns ``True`` if the following conditions are satisfied:
         - Circuit does not contain more than two-qubit gates.
         - All two-qubit gates have qubit 0 as target or control.
     otherwise returns ``False``.
     """
+    # pring messages only if ``verbose == True``
+    vlog = lambda msg: log.info(msg) if verbose else lambda msg: None
     for gate in circuit.queue:
         if len(gate.qubits) > 2 and not isinstance(gate, gates.M):
-            log.info(f"{gate.name} acts on more than two qubits.")
+            vlog(f"{gate.name} acts on more than two qubits.")
             return False
         elif len(gate.qubits) == 2:
             if 0 not in gate.qubits:
-                log.info("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
+                vlog("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
                 return False
 
-    log.info("Circuit can be executed.")
+    vlog("Circuit respects connectivity.")
     return True
