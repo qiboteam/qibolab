@@ -73,6 +73,7 @@ class QibolabBackend(NumpyBackend):
 
         # Transpile the native circuit into a sequence of pulses ``PulseSequence``
         sequence = self.platform.transpile(native_circuit)
+        print(sequence)
 
         # Execute the pulse sequence on the platform
         self.platform.start()
@@ -103,7 +104,7 @@ class QibolabBackend(NumpyBackend):
     def circuit_result_probabilities(self, result: CircuitResult, qubits=None):
         """Returns the probability of the qubit being in state |0>"""
         if qubits is None:  # pragma: no cover
-            qubits = result.circuit.measurement_gate.qubits
+            qubits = result.measurement_gate.qubits
 
         # basic classification
         probabilities = []
