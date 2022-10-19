@@ -94,7 +94,11 @@ def fix_connectivity(circuit):
             qubits = tuple(hardware_qubits.index(q) for q in gate.qubits)
 
         # add gate to the hardware circuit
-        new.add(gate.__class__(*qubits, **gate.init_kwargs))
+        if isinstance(gate, gates.Unitary):
+            # gates.Unitary requires matrix as first argument
+            new.add(gate.__class__(gate.matrix, *qubits, **gate.init_kwargs))
+        else:
+            new.add(gate.__class__(*qubits, **gate.init_kwargs))
         if len(qubits) == 2:
             add_swap = True
 
