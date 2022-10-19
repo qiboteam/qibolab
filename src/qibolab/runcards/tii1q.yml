@@ -8,7 +8,7 @@ settings:
 
 qubits: [0]
 
-# Qubit 0: Good 
+# Qubit 0: Good
 # Qubit 1: characterized until AllXY, currently unplugged and used by Javier
 # Qubit 2: Need amplification in the input
 # Qubit 3: requires more amplification on the Read-out and its qubit is above the cavity's freuqnecy
