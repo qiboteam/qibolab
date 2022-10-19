@@ -1,5 +1,9 @@
 nqubits: 1
-description: 1-qubit device from Qilimanjaro at TII SD fridge, controlled with qblox cluster rf.
+description: 4 x 1-qubit devices fabricated by TII at TII SD fridge, controlled with qblox cluster rf.
+# Qubit 0: need amplification in output/ done /
+# Qubit 1: characterized until AllXY
+# Qubit 2: Need amplification in the input
+# Qubit nb 3 requires more amplification on the Read-out and its qubit is above the cavity's freuqnecy
 
 settings:
     hardware_avg: 1024
@@ -7,12 +11,6 @@ settings:
     sampling_rate: 1_000_000_000
 
 qubits: [0, 1, 2]
-
-# Qubit 0: need amplification in output/ done /
-# Qubit 1: characterized until AllXY
-# Qubit 2: Need amplification in the input
-# Qubit nb 3 requires more amplification on the Read-out and its qubit is above the cavity's freuqnecy
-
 
 topology: # qubit - qubit connections
 -   [ 1, 0, 0, 0]
