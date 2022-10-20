@@ -70,7 +70,7 @@ def test_fix_connectivity_unitaries(run_number, nqubits, unitary_dim, depth):
     original = Circuit(nqubits)
     pairs = list(itertools.combinations(range(nqubits), unitary_dim))
     for _ in range(depth):
-        qubits = pairs[np.random.randint(len(pairs))]
+        qubits = pairs[int(np.random.randint(len(pairs)))]
         original.add(gates.Unitary(random_unitary(unitary_dim), *qubits))
 
     transpiled, hardware_qubits = fix_connectivity(original)
