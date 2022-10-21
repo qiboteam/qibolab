@@ -268,9 +268,8 @@ class eCap(PulseShape):
 
     .. math::
 
-        A\\exp^{-\\frac{1}{2}\\frac{(t-\\mu)^2}{\\sigma^2}}
-
-        e(t,alpha)= K/4*(1+tanh(alpha*t)(1+tanh(alpha*(duration-t)))) / tanh(alpha*duration/2)
+        e_\\cap(t,\\alpha) &=& A[1 + \\tanh(\\alpha t/t_\\theta)][1 + \\tanh(\\alpha (1 - t/t_\\theta))]\\\\
+&\\times& [1 + \\tanh(\\alpha/2)]^{-2}
 
     """
 
