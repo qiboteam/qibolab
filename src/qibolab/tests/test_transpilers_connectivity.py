@@ -55,3 +55,30 @@ def test_fix_connectivity(run_number, nqubits, depth):
     target_state = backend.execute_circuit(original).state()
     target_state = transpose_qubits(target_state, hardware_qubits)
     np.testing.assert_allclose(final_state, target_state)
+
+
+@pytest.mark.parametrize("run_number", range(30))
+@pytest.mark.parametrize("nqubits", [2, 3, 4, 5])
+@pytest.mark.parametrize("unitary_dim", [1, 2])
+@pytest.mark.parametrize("depth", [2, 5, 8])
+def test_fix_connectivity_unitaries(run_number, nqubits, unitary_dim, depth):
+    """Checks that the transpiled circuit can be executed and is equivalent to original
+    when using unitaries."""
+
+    from qibolab.tests.test_transpilers_decompositions import random_unitary
+
+    original = Circuit(nqubits)
+    pairs = list(itertools.combinations(range(nqubits), unitary_dim))
+    for _ in range(depth):
+        qubits = pairs[int(np.random.randint(len(pairs)))]
+        original.add(gates.Unitary(random_unitary(unitary_dim), *qubits))
+
+    transpiled, hardware_qubits = fix_connectivity(original)
+    # check that transpiled circuit can be executed
+    assert respects_connectivity(transpiled)
+    # check that execution results agree with original (using simulation)
+    backend = NumpyBackend()
+    final_state = backend.execute_circuit(transpiled).state()
+    target_state = backend.execute_circuit(original).state()
+    target_state = transpose_qubits(target_state, hardware_qubits)
+    np.testing.assert_allclose(final_state, target_state)
