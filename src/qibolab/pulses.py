@@ -259,6 +259,59 @@ class Drag(PulseShape):
         return f"{self.name}({format(self.rel_sigma, '.6f').rstrip('0').rstrip('.')}, {format(self.beta, '.6f').rstrip('0').rstrip('.')})"
 
 
+class eCap(PulseShape):
+    """
+    eCap pulse shape.
+
+    Args:
+        alpha (float): 
+
+    .. math::
+
+        A\\exp^{-\\frac{1}{2}\\frac{(t-\\mu)^2}{\\sigma^2}}
+
+        e(t,alpha)= K/4*(1+tanh(alpha*t)(1+tanh(alpha*(duration-t)))) / tanh(alpha*duration/2)
+
+    """
+
+    def __init__(self, alpha: float):
+        self.name = "eCap"
+        self.pulse: Pulse = None
+        self.alpha: float = float(alpha)
+
+    @property
+    def envelope_waveform_i(self) -> Waveform:
+        if self.pulse:
+            num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
+            x = np.arange(0, num_samples, 1)
+            waveform = Waveform(
+                self.pulse.amplitude
+                * 
+                (1+np.tanh(self.alpha*x/num_samples))*(1+np.tanh(self.alpha*(1-x/num_samples)))/(1+np.tanh(self.alpha/2))**2
+            )
+            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            return waveform
+        else:
+            raise Exception(
+                "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
+            )
+
+    @property
+    def envelope_waveform_q(self) -> Waveform:
+        if self.pulse:
+            num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
+            waveform = Waveform(np.zeros(num_samples))
+            waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            return waveform
+        else:
+            raise Exception(
+                "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
+            )
+
+    def __repr__(self):
+        return f"{self.name}({format(self.alpha, '.6f').rstrip('0').rstrip('.')})"
+
+
 class Pulse:
     """A class to represent a pulse to be sent to the QPU.
 
@@ -700,11 +753,11 @@ class FluxPulse(Pulse):
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
 
-    def __init__(self, start, duration, amplitude, relative_phase, shape, channel, qubit=0):
+    def __init__(self, start, duration, amplitude, shape, channel, qubit=0):
         # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
         #                    channel: int | str, qubit: int | str = 0):
         super().__init__(
-            start, duration, amplitude, 0, relative_phase, shape, channel, type=PulseType.FLUX, qubit=qubit
+            start, duration, amplitude, 0, 0, shape, channel, type=PulseType.FLUX, qubit=qubit
         )
 
     @property
@@ -733,7 +786,7 @@ class FluxPulse(Pulse):
 
     @property
     def serial(self):
-        return f"FluxPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {format(self.relative_phase, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
+        return f"FluxPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
 
 
 class SplitPulse(Pulse):
