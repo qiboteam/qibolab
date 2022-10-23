@@ -5,6 +5,7 @@ on: [push]
 
 jobs:
   build:
+    if: false # Skip qpu tests until we have a working configuration for zhinst
     strategy:
       matrix:
         python-version: [3.8]
