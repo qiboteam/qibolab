@@ -10,14 +10,13 @@ class ReadoutSequence:
         self.channel = pulses[0].channel
 
         # TODO: Handle more than one pulses here
-        #self.waveforms = Waveforms()
+        self.waveforms = Waveforms()
         pulse = pulses[0]
         wave = pulse.modulated_waveform_i.data + 1j * pulse.modulated_waveform_q.data
-        #self.waveforms.assign_waveform(
-        #    slot=0,
-        #    wave1=wave
-        #)
-        self.waveforms = [(0, wave)]
+        self.waveforms.assign_waveform(
+            slot=0,
+            wave1=wave
+        )
 
         # TODO: Use hardware averages here
         self.program = """
@@ -34,7 +33,6 @@ class SHFQC_QA(AbstractInstrument):
 
     def __init__(self, name, address):
         super().__init__(name, address)
-        self.daq = None
         self.device = None
 
         self.channels = None
@@ -48,10 +46,6 @@ class SHFQC_QA(AbstractInstrument):
     def connect(self):
         session = Session('localhost')
         self.device = session.connect_device(self.address)
-        # initialize ``ziDAQServer`` because some options are not available
-        # in the ``zhinst.toolkit`` API
-        self.daq = ziDAQServer(host="localhost", port=8004, api_level=6)
-        #self.daq.connectDevice(self.address, "1gbe")
 
     def setup(self, **kwargs):
         self.channels = kwargs.get("channels")
@@ -68,7 +62,8 @@ class SHFQC_QA(AbstractInstrument):
         pass
 
     def disconnect(self):
-        self.daq.disconnectDevice(self.address)
+        session = Session('localhost')
+        session.disconnect_device(self.address)
 
     def process_pulse_sequence(self, instrument_pulses, nshots, repetition_duration):
         # configure inputs and outputs
@@ -95,9 +90,7 @@ class SHFQC_QA(AbstractInstrument):
         # upload readout pulses and integration weights to waveform memory
         waveforms = self._latest_sequence.waveforms
         channel.generator.clearwave() # clear all readout waveforms
-        for slot, waveform in waveforms:
-            self.daq.set(f"{channel.generator}/waveforms/{slot}/wave", waveform)
-        #channel.generator.write_to_waveform_memory(waveforms)
+        channel.generator.write_to_waveform_memory(waveforms)
         #channel.readout.integration.clearweight() # clear all integration weights
         #channel.readout.write_integration_weights(
         #    weights=weights,
