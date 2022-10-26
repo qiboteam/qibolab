@@ -8,6 +8,12 @@ jobs:
     strategy:
       matrix:
         python-version: [3.8]
+        qpu-platform: [tii1q, tii5q]
+        include:
+          - qpu-platform: tii1q
+            qpu-queue: qpu1q
+          - qpu-platform: tii5q
+            qpu-queue: qpu5q
     runs-on: self-hosted
     steps:
     - name: Cleanup workspace manually
@@ -27,6 +33,6 @@ jobs:
         pip install pytest
         pip install git+https://github.com/qiboteam/qibo
         pip install .[tiiq]
-    - name: Test tii5q
+    - name: Test qpu
       run: |
-        srun -p qpu5q pytest src/qibolab --pyargs qibolab --skip-no-qpu --platforms tii5q
+        srun -p ${{ matrix.qpu-queue }} pytest src/qibolab --pyargs qibolab --skip-no-qpu --platforms ${{ matrix.qpu-platform }}
