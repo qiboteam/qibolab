@@ -7,6 +7,13 @@ from qibolab.backends import QibolabBackend
 from qibolab.platforms.abstract import AbstractPlatform
 
 
+def generate_circuit_with_gate(nqubits, gate, **kwargs):
+    circuit = Circuit(nqubits)
+    circuit.add(gate(qubit, **kwargs) for qubit in range(nqubits))
+    circuit.add(gates.M(*range(nqubits)))
+    return circuit
+
+
 @pytest.mark.qpu
 def test_backend_init(platform_name):
     from qibolab.platforms.multiqubit import MultiqubitPlatform
@@ -27,41 +34,24 @@ def test_execute_circuit_errors(platform_name):
 
 
 @pytest.mark.qpu
-def test_execute_circuit(platform_name):
+@pytest.mark.parametrize(
+    "gate,kwargs",
+    [
+        (gates.I, {}),
+        (gates.X, {}),
+        (gates.Y, {}),
+        (gates.Z, {}),
+        (gates.RX, {"theta": np.pi / 8}),
+        (gates.RY, {"theta": -np.pi / 8}),
+        (gates.RZ, {"theta": np.pi / 4}),
+        (gates.U3, {"theta": 0.1, "phi": 0.2, "lam": 0.3}),
+    ],
+)
+def test_execute_circuit(platform_name, gate, kwargs):
     backend = QibolabBackend(platform_name)
     platform: AbstractPlatform = backend.platform
     nqubits = platform.nqubits
-
-    def generate_circuit_with_gate(gate, *params, **kwargs):
-        _circuit = Circuit(nqubits)
-        for qubit in range(nqubits):
-            _circuit.add(gate(qubit, *params, **kwargs))
-        qubits = [qubit for qubit in range(nqubits)]
-        _circuit.add(gates.M(*qubits))
-        return _circuit
-
-    circuit = generate_circuit_with_gate(gates.I)
-    result = backend.execute_circuit(circuit, nshots=100)
-
-    circuit = generate_circuit_with_gate(gates.X)
-    result = backend.execute_circuit(circuit, nshots=100)
-
-    circuit = generate_circuit_with_gate(gates.Y)
-    result = backend.execute_circuit(circuit, nshots=100)
-
-    circuit = generate_circuit_with_gate(gates.Z)
-    result = backend.execute_circuit(circuit, nshots=100)
-
-    circuit = generate_circuit_with_gate(gates.RX, np.pi / 8)
-    result = backend.execute_circuit(circuit, nshots=100)
-
-    circuit = generate_circuit_with_gate(gates.RY, -np.pi / 8)
-    result = backend.execute_circuit(circuit, nshots=100)
-
-    circuit = generate_circuit_with_gate(gates.RZ, np.pi / 4)
-    result = backend.execute_circuit(circuit, nshots=100)
-
-    circuit = generate_circuit_with_gate(gates.U3, theta=0.1, phi=0.2, lam=0.3)
+    circuit = generate_circuit_with_gate(nqubits, gate, **kwargs)
     result = backend.execute_circuit(circuit, nshots=100)
 
 
