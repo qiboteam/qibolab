@@ -7,14 +7,7 @@ jobs:
   build:
     strategy:
       matrix:
-        max-parallel: 1 # executing in parallel creates collisions between some circuits
         python-version: [3.8]
-        qpu-platform: [tii1q, tii5q]
-        include:
-          - qpu-platform: tii1q
-            qpu-queue: qpu1q
-          - qpu-platform: tii5q
-            qpu-queue: qpu5q
     runs-on: self-hosted
     steps:
     - name: Cleanup workspace manually
@@ -34,6 +27,9 @@ jobs:
         pip install pytest
         pip install git+https://github.com/qiboteam/qibo
         pip install .[tiiq]
-    - name: Test qpu
+    - name: Test tii5q
       run: |
-        srun -p ${{ matrix.qpu-queue }} pytest src/qibolab --pyargs qibolab --skip-no-qpu --platforms ${{ matrix.qpu-platform }}
+        srun -p qpu5q pytest src/qibolab --pyargs qibolab --skip-no-qpu --platforms tii5q
+    - name: Test tii1q
+      run: |
+        srun -p qpu1q pytest src/qibolab --pyargs qibolab --skip-no-qpu --platforms tii1q
