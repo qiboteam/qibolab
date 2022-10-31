@@ -40,10 +40,6 @@ class DummyPlatform(AbstractPlatform):
         self.qcm = {i: DummyInstrument() for i in range(nqubits)}
         self.qrm = {i: DummyInstrument() for i in range(nqubits)}
 
-        from qibolab.u3params import U3Params
-
-        self.u3params = U3Params()
-
     def reload_settings(self):  # pragma: no cover
         log.info("Dummy platform does not support setting reloading.")
 

@@ -35,9 +35,7 @@ class TektronixAWG5204(AbstractInstrument):
                 raise InstrumentException(self, str(exc))
             self.is_connected = True
         else:
-            raise_error(
-                Exception, "There is an open connection to the instrument already"
-            )
+            raise_error(Exception, "There is an open connection to the instrument already")
 
     def setup(self, **kwargs):
         if self.is_connected:
@@ -55,9 +53,7 @@ class TektronixAWG5204(AbstractInstrument):
                 awg_ch = getattr(self.device, f"ch{channel}")
                 awg_ch.awg_amplitude(amplitude[idx])
                 awg_ch.resolution(resolution)
-                self.device.write(
-                    f"SOURCE{channel}:VOLTAGE:LEVEL:IMMEDIATE:OFFSET {offset[idx]}"
-                )
+                self.device.write(f"SOURCE{channel}:VOLTAGE:LEVEL:IMMEDIATE:OFFSET {offset[idx]}")
 
             self.__dict__.update(kwargs)
         else:
@@ -72,19 +68,11 @@ class TektronixAWG5204(AbstractInstrument):
         """
         i_ch, q_ch = pulse.channel
 
-        i = pulse.envelope_i * np.cos(
-            2 * np.pi * pulse.frequency * time_array
-            + pulse.phase
-            + self.channel_phase[i_ch]
-        )
+        i = pulse.envelope_i * np.cos(2 * np.pi * pulse.frequency * time_array + pulse.phase + self.channel_phase[i_ch])
         q = (
             -1
             * pulse.envelope_i
-            * np.sin(
-                2 * np.pi * pulse.frequency * time_array
-                + pulse.phase
-                + self.channel_phase[q_ch]
-            )
+            * np.sin(2 * np.pi * pulse.frequency * time_array + pulse.phase + self.channel_phase[q_ch])
         )
         return i, q
 
@@ -111,9 +99,7 @@ class TektronixAWG5204(AbstractInstrument):
             start_index = bisect(time_array, pulse.start * 1e-9)
             end_index = bisect(time_array, (pulse.start + pulse.duration) * 1e-9)
             i_ch, q_ch = pulse.channel
-            i, q = self.generate_waveforms_from_pulse(
-                pulse, time_array[start_index:end_index]
-            )
+            i, q = self.generate_waveforms_from_pulse(pulse, time_array[start_index:end_index])
             waveform_arrays[i_ch, start_index:end_index] += i
             waveform_arrays[q_ch, start_index:end_index] += q
 
@@ -307,9 +293,7 @@ class AlazarADC(AbstractInstrument):
 
     def arm(self, nshots, readout_start):
         with self.device.syncing():
-            self.device.trigger_delay(
-                int(int((readout_start * 1e-9 + 4e-6) / 1e-9 / 8) * 8)
-            )
+            self.device.trigger_delay(int(int((readout_start * 1e-9 + 4e-6) / 1e-9 / 8) * 8))
         self.controller.arm(nshots)
         
     def acquire(self):

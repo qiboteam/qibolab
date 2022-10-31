@@ -2,7 +2,8 @@
 
 ![Tests](https://github.com/qiboteam/qibolab/workflows/Tests/badge.svg)
 [![codecov](https://codecov.io/gh/qiboteam/qibolab/branch/main/graph/badge.svg?token=11UENAPBPH)](https://codecov.io/gh/qiboteam/qibolab)
-ZENODO_BADGE
+[![Documentation Status](https://readthedocs.org/projects/qibolab/badge/?version=latest)](https://qibolab.readthedocs.io/en/latest/?badge=latest)
+[![DOI](https://zenodo.org/badge/241307936.svg)](https://zenodo.org/badge/latestdoi/241307936)
 
 Qibolab is the dedicated [Qibo](https://github.com/qiboteam/qibo) backend for
 the automatic deployment of quantum circuits on quantum hardware.
@@ -16,7 +17,7 @@ Some of the key features of Qibolab are:
 
 ## Documentation
 
-The qibolab backend documentation is available at [qibolab.readthedocs.io](http://34.240.99.72/qibolab/) (username:qiboteam, pass:qkdsimulator).
+The qibolab backend documentation is available at https://qibolab.readthedocs.io.
 
 ## Minimum working example
 
@@ -34,7 +35,7 @@ sequence.add(Pulse(start=0,
                    amplitude=0.3,
                    duration=4000,
                    frequency=200_000_000,
-                   phase=0,
+                   relative_phase=0,
                    shape='Gaussian(5)', # Gaussian shape with std = duration / 5
                    channel=1))
 
@@ -42,7 +43,7 @@ sequence.add(ReadoutPulse(start=4004,
                           amplitude=0.9,
                           duration=2000,
                           frequency=20_000_000,
-                          phase=0,
+                          relative_phase=0,
                           shape='Rectangular',
                           channel=2))
 

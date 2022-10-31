@@ -1,5 +1,5 @@
 # A single CI script with github workflow
-name: Tests
+name: Tests without qpu
 
 on: [push]
 
@@ -7,8 +7,8 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest] # TODO update this when going online
-        python-version: [3.8]
+        os: [ubuntu-latest]
+        python-version: [3.8, 3.8, '3.10']
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
@@ -28,7 +28,7 @@ jobs:
         pylint src -E -d E1123,E1120
     - name: Test with pytest core
       run: |
-        pytest --cov=qibolab --cov-report=xml --pyargs qibolab
+        pytest src/qibolab --cov=qibolab --cov-report=xml --pyargs qibolab --skip-qpu --platforms tii1q,tii5q
     - name: Upload coverage to Codecov
       if: startsWith(matrix.os, 'ubuntu')
       uses: codecov/codecov-action@v2
@@ -38,15 +38,3 @@ jobs:
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: true
-    - name: Sphinx compile
-      if: github.ref == 'refs/heads/main'
-      run: |
-        pip install sphinx
-        make -C doc html
-        KEY=$( mktemp )
-        echo "$QIBO_TEAM" | base64 --decode > "$KEY"
-        scp -r -i "$KEY" -o StrictHostKeyChecking=no\
-          doc/build/html/* \
-          ubuntu@34.240.99.72:/var/www/html/qibolab/
-      env:
-        QIBO_TEAM: ${{ secrets.QIBO_TEAM }}
