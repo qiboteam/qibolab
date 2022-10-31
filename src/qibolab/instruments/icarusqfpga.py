@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
-import time
 import socket
 import struct
-import numpy as np
-from typing import List
+import time
 from bisect import bisect
+from typing import List
+
+import numpy as np
+from qibo.config import log, raise_error
 
 from qibolab.instruments.abstract import AbstractInstrument
-from qibo.config import raise_error, log
+from qibolab.pulses import PulseSequence, PulseType
 
 
 class PulseBlaster(AbstractInstrument):
@@ -19,7 +21,7 @@ class PulseBlaster(AbstractInstrument):
 
     def setup(self, nshots: int, holdtime_ns: int, pins=list(range(24))):
         """Setup the PulseBlaster for the number of shots and the repetition rate.
-        
+
         Arguments:
             nshots (int): Number of shots
             holdtime_ns (int): Time between TTL pulses
@@ -30,18 +32,15 @@ class PulseBlaster(AbstractInstrument):
         self.send(payload.encode("utf-8"), True)
 
     def fire(self):
-        """Starts the programmed pulse sequence.
-        """
+        """Starts the programmed pulse sequence."""
         self.send(b"fire")
 
     def stop(self):
-        """Stops the PulseBlaster.
-        """
+        """Stops the PulseBlaster."""
         self.send(b"stop")
 
     def status(self):
-        """Queries the status of the PulseBlaster.
-        """
+        """Queries the status of the PulseBlaster."""
         return self.send(b"status", True)
 
     def send(self, command: bytes, expect_reply=False):
@@ -77,16 +76,14 @@ class PulseBlaster(AbstractInstrument):
         Returns:
             pins_hex (int): Integer in hex corrresponding to the pins that should be triggered
         """
-        return int(
-            "".join(["1" if i in set(pins) else "0" for i in reversed(range(24))]), 2
-        )
+        return int("".join(["1" if i in set(pins) else "0" for i in reversed(range(24))]), 2)
+
 
 class IcarusQRFSOC(AbstractInstrument):
-    """Driver for the IcarusQ RFSoC socket-based implementation.
-    """
+    """Driver for the IcarusQ RFSoC socket-based implementation."""
 
     def __init__(self, name, address, port=8080):
-        
+
         super().__init__(name, address)
         self.port = port
 
@@ -101,9 +98,8 @@ class IcarusQRFSOC(AbstractInstrument):
         self.current_pulsesequence_hash = ""
         self.channel_port_map = {}
         self.acquisitons = []
-
-        # Start a connection to check if the board is active
-        self.get_server_version()
+        self.ports = {ch: None for ch in range(self.dac_nchannels)}
+        self.channels: list = []
 
     def set_adc_sampling_rate(self, adc_sr=None):
         """Sets the sampling rate of all 16 ADCs.
@@ -125,9 +121,9 @@ class IcarusQRFSOC(AbstractInstrument):
             s.sendall(cmd)
 
             # Get the ADC multi-tile sync return value
-            return_mts = struct.unpack("i",s.recv(4))[0]
+            return_mts = struct.unpack("i", s.recv(4))[0]
             if return_mts != 0:
-                log.warn(("Failled to set ADC Sampling rate properly. Return Value : " + str(return_mts)))
+                log.warn("Failled to set ADC Sampling rate properly. Return Value : " + str(return_mts))
 
     def set_dac_sampling_rate(self, dac_sr=None):
         """Sets the sampling rate of all 16 DACs.
@@ -147,10 +143,9 @@ class IcarusQRFSOC(AbstractInstrument):
             s.sendall(cmd)
 
             # Get the DAC multi-tile sync return value
-            return_mts = struct.unpack("i",s.recv(4))[0]
-            if  return_mts != 0:
-                log.warn(("Failled to set DAC Sampling rate properly. Return Value : " + str(return_mts)))
-
+            return_mts = struct.unpack("i", s.recv(4))[0]
+            if return_mts != 0:
+                log.warn("Failled to set DAC Sampling rate properly. Return Value : " + str(return_mts))
 
     def get_server_version(self):
         """Fetches the binary version of the board.
@@ -215,11 +210,7 @@ class IcarusQRFSOC(AbstractInstrument):
     def adc_sampling_rate(self, sampling_rate):
         self.set_adc_sampling_rate(adc_sr=sampling_rate)
 
-    def setup(self,
-              dac_sampling_rate: float,
-              adc_sampling_rate: float,
-              channel_port_map: dict,
-              **kwargs):
+    def setup(self, dac_sampling_rate: float, adc_sampling_rate: float, channel_port_map: dict, **kwargs):
         """Setup the baord by setting the sampling rate of the DACs and ADCs
 
         Arguments:
@@ -231,23 +222,22 @@ class IcarusQRFSOC(AbstractInstrument):
         self.dac_sampling_rate = dac_sampling_rate
         self.adc_sampling_rate = adc_sampling_rate
         self.channel_port_map = channel_port_map
+        self.channels = list(self.channel_port_map.keys())
 
-    def process_pulse_sequence(self, channel_pulses: dict, nshots: int):
+    def process_pulse_sequence(self, instrument_pulses: PulseSequence, nshots: int, repetition_duration: int):
         """Processes the pulse sequence into np arrays to upload to the board
 
         Arguments:
             channel_pulses (dict[str, List[Pulse]]): A dictionary of fridge ports mapped to an array of pulses to be sent.
             nshots (int): Number of shots
+            repetition_duration (int): Unused parameter for compatiability with other instruments.
         """
 
         # Update number of shots, even if the pulse sequence is the same
         self.nshots = nshots
 
         # Check if the new pulse sequence is the same as the currently loaded pulse sequence
-        self.current_pulsesequence_hash = ""
-        for channel_sequence in channel_pulses.values():
-            for pulse in channel_sequence:
-                self.current_pulsesequence_hash += pulse.serial
+        self._current_pulsesequence_hash = hash(instrument_pulses)
 
         # If they are the same, exit
         if self.current_pulsesequence_hash == self.last_pulsequence_hash:
@@ -262,31 +252,28 @@ class IcarusQRFSOC(AbstractInstrument):
         # Get the DAC time array
         time_array = 1 / (self.dac_sampling_rate * 1e6) * np.arange(self.dac_sample_size)
 
-        for fridge_port, channel_sequence in channel_pulses.items():
+        for pulse in instrument_pulses.pulses:
+
             # Map fridge port to DAC number
-            dac = self.channel_port_map[fridge_port]
-            
-            # Convert pulse into waveform array and insert it into the buffer
-            for pulse in channel_sequence:
-                start = pulse.start * 1e-9
-                duration = pulse.duration * 1e-9
-                end = start + duration
-                
-                idx_start = bisect(time_array, start)
-                idx_end = bisect(time_array, end)
-                t = time_array[idx_start:idx_end]
+            dac = self.channel_port_map[pulse.channel]
 
-                wfm = pulse.amplitude * np.sin(2 * np.pi * pulse.frequency * t + pulse.phase)
-                self.dac_waveform_buffer[dac, idx_start:idx_end] += wfm
+            start = pulse.start * 1e-9
+            duration = pulse.duration * 1e-9
+            end = start + duration
 
-                # Store the readout pulse 
-                if pulse.type == 'ro':
-                    self.acquisitons.append((pulse.qubit, pulse.frequency))
+            idx_start = bisect(time_array, start)
+            idx_end = bisect(time_array, end)
+            t = time_array[idx_start:idx_end]
 
+            wfm = pulse.amplitude * np.sin(2 * np.pi * pulse.frequency * t + pulse.phase)
+            self.dac_waveform_buffer[dac, idx_start:idx_end] += wfm
+
+            # Store the readout pulse
+            if pulse.type == PulseType.READOUT:
+                self.acquisitons.append((pulse.qubit, pulse.frequency))
 
     def upload(self):
-        """Uploads the pulse sequence to the RFSoC
-        """
+        """Uploads the pulse sequence to the RFSoC"""
 
         # Don't upload if the currently loaded pulses are the same as the previous set
         if self.current_pulsesequence_hash == self.last_pulsequence_hash:
@@ -296,7 +283,7 @@ class IcarusQRFSOC(AbstractInstrument):
             raise_error(RuntimeError, "No pulse sequences currently configured")
 
         if self.dac_waveform_buffer.shape != (self.dac_nchannels, self.dac_sample_size):
-            raise_error(ValueError,  "Waveform to be uploaded has invalid size")
+            raise_error(ValueError, "Waveform to be uploaded has invalid size")
 
         # We shift by the waveform array by 2 bytes as the RFSoC will shift 16 byte data to 14
         payload = (4 * self.dac_waveform_buffer).astype("i2")
@@ -312,14 +299,14 @@ class IcarusQRFSOC(AbstractInstrument):
         self.last_pulsequence_hash = self.current_pulsesequence_hash
 
     def play_sequence(self):
-        """DACs are armed on waveform upload, so no method is required to arm the DACs for playback
-        """
+        """DACs are armed on waveform upload, so no method is required to arm the DACs for playback"""
         pass
 
     def connect(self):
-        """Currently we only connect to the board when we have to send a command.
-        """
-        pass
+        """Currently we only connect to the board when we have to send a command."""
+        # Request the version from the board
+        ver = self.get_server_version()
+        log.info(f"Connected to {self.name}, version: {ver}")
 
     def start(self):
         pass
@@ -330,9 +317,9 @@ class IcarusQRFSOC(AbstractInstrument):
     def disconnect(self):
         pass
 
+
 class IcarusQ_RFSOC_QRM(IcarusQRFSOC):
-    """IcarusQ RFSoC attached with readout capability
-    """
+    """IcarusQ RFSoC attached with readout capability"""
 
     def __init__(self, name, address):
         super().__init__(name, address)
@@ -345,15 +332,17 @@ class IcarusQ_RFSOC_QRM(IcarusQRFSOC):
         self.qubit_adc_map = {}
         self.adcs_to_read: List[int] = None
 
-    def setup(self,
-              dac_sampling_rate: float,
-              adc_sampling_rate: float,
-              channel_port_map: dict,
-              qubit_adc_map: dict,
-              pulseblaster_address: str,
-              pulseblaster_port: int,
-              single_shot: bool,
-              **kwargs):
+    def setup(
+        self,
+        dac_sampling_rate: float,
+        adc_sampling_rate: float,
+        channel_port_map: dict,
+        qubit_adc_map: dict,
+        pulseblaster_address: str,
+        pulseblaster_port: int,
+        single_shot: bool,
+        **kwargs,
+    ):
         """Setup the board and assign ADCs to be read. A PulseBlaster is also assigned to trigger this board.
 
         Arguments:
@@ -462,7 +451,7 @@ class IcarusQ_RFSOC_QRM(IcarusQRFSOC):
 
             if self.single_shot_flag:
                 res = np.zeros((self.nshots, 4))
-                
+
                 for shotnum, signal in data.items():
                     I = np.sum(signal * sin)
                     Q = np.sum(signal * cos)
@@ -483,6 +472,7 @@ class IcarusQ_RFSOC_QRM(IcarusQRFSOC):
                 result[qubit] = np.array([amplitude, phase, I, Q])
 
         return result
+
 
 class IcarusQ_RFSOC_QCM(IcarusQRFSOC):
     pass

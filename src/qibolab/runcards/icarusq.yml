@@ -15,7 +15,7 @@ topology: # qubit - qubit connections
 
 channels: [i1_ro, i1_xy]
 
-qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux] 
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
     0: [i1_ro, i1_xy, null]
 
 instruments:
@@ -23,6 +23,7 @@ instruments:
         lib: icarusq
         class: IcarusQRack_QRM
         address: TCPIP0::192.168.0.2::inst0::INSTR
+        roles: [readout]
         settings:
             awg_settings:
                 offset: [-0.001, 0, -0.002, 0.016]

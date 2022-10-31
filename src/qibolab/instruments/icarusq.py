@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-import numpy as np
-from typing import List
 from bisect import bisect
 from typing import List
 
@@ -295,16 +293,14 @@ class AlazarADC(AbstractInstrument):
         with self.device.syncing():
             self.device.trigger_delay(int(int((readout_start * 1e-9 + 4e-6) / 1e-9 / 8) * 8))
         self.controller.arm(nshots)
-        
+
     def acquire(self):
         """
         this method performs an acquisition, which is the get_cmd for the
         acquisiion parameter of this instrument
         :return:
         """
-        raw = self.device.acquire(
-            acquisition_controller=self.controller, **self.controller.acquisitionkwargs
-        )
+        raw = self.device.acquire(acquisition_controller=self.controller, **self.controller.acquisitionkwargs)
         return raw
 
     def process_result(self, readout_frequency=100e6, readout_channels=[0, 1]):
@@ -326,12 +322,8 @@ class AlazarADC(AbstractInstrument):
         it = 0
         qt = 0
         for i in range(self.device.samples_per_record):
-            it += input_vec_I[i] * np.cos(
-                2 * np.pi * readout_frequency * self.controller.time_array[i]
-            )
-            qt += input_vec_Q[i] * np.cos(
-                2 * np.pi * readout_frequency * self.controller.time_array[i]
-            )
+            it += input_vec_I[i] * np.cos(2 * np.pi * readout_frequency * self.controller.time_array[i])
+            qt += input_vec_Q[i] * np.cos(2 * np.pi * readout_frequency * self.controller.time_array[i])
         phase = np.arctan2(qt, it)
         ampl = np.sqrt(it**2 + qt**2)
 
@@ -350,15 +342,16 @@ class AlazarADC(AbstractInstrument):
             self.device.close()
             self.controller.close()
 
+
 class IcarusQRack_QRM(AbstractInstrument):
-    """Rack system using the Tektronix AWG5204 and the AlazarTech ATS9371.
-    """
+    """Rack system using the Tektronix AWG5204 and the AlazarTech ATS9371."""
+
     def __init__(self, name, address):
         super().__init__(name, address)
 
         self.awg = TektronixAWG5204(f"{name}_awg", address)
         self.adc = AlazarADC(f"{name}_adc", address)
-        
+
         self.awg_waveform_buffer = None
         self.nshots = None
         self.readout_start = None
@@ -368,22 +361,19 @@ class IcarusQRack_QRM(AbstractInstrument):
         self.current_pulsesequence_hash = ""
         self.channel_port_map = {}
         self.acquisitons = []
+        self.ports = {ch: None for ch in range(self.awg.device.num_channels)}
+        self.channels: list = []
 
     def connect(self):
-        """Connects to the AWG and ADC.
-        """
+        """Connects to the AWG and ADC."""
         if not self.is_connected:
             self.awg.connect()
             self.adc.connect()
             self.is_connected = True
         else:
-            raise_error(Exception,'There is an open connection to the instrument already')
+            raise_error(Exception, "There is an open connection to the instrument already")
 
-    def setup(self,
-              awg_settings: dict,
-              adc_settings: dict,
-              channel_port_map: dict,
-              **kwargs):
+    def setup(self, awg_settings: dict, adc_settings: dict, channel_port_map: dict, **kwargs):
         """Setup the AWG and the ADC and assign the fridge port to AWG channel mapping.
 
         Arguments:
@@ -394,6 +384,7 @@ class IcarusQRack_QRM(AbstractInstrument):
         self.awg.setup(**awg_settings)
         self.adc.setup(**adc_settings)
         self.channel_port_map = channel_port_map
+        self.channels = list(self.channel_port_map.keys())
 
     def process_pulse_sequence(self, channel_pulses: "dict[str, List[Pulse]]", nshots: int):
         """Processes the pulse sequence into np arrays to upload to the AWG
@@ -418,7 +409,7 @@ class IcarusQRack_QRM(AbstractInstrument):
 
         sequence_start = 0
         sequence_end = 0
-        
+
         # Find the start and end of the pulse sequence
         for channel_sequence in channel_pulses.values():
             for pulse in channel_sequence:
@@ -435,31 +426,34 @@ class IcarusQRack_QRM(AbstractInstrument):
         for fridge_port, channel_sequence in channel_pulses.items():
             # Get the IQ channels for the selected port
             i_ch, q_ch = self.channel_port_map[fridge_port]
-            
+
             for pulse in channel_sequence:
-                
+
                 start = pulse.start * 1e-9
                 duration = pulse.duration * 1e-9
                 end = start + duration
-                
+
                 idx_start = bisect(time_array, start)
                 idx_end = bisect(time_array, end)
                 t = time_array[idx_start:idx_end]
 
-                I = pulse.amplitude * np.cos(2 * np.pi * pulse.frequency * t + pulse.phase + self.awg.channel_phase[i_ch])
-                Q = -pulse.amplitude * np.sin(2 * np.pi * pulse.frequency * t + pulse.phase + self.awg.channel_phase[q_ch])
-                
+                I = pulse.amplitude * np.cos(
+                    2 * np.pi * pulse.frequency * t + pulse.phase + self.awg.channel_phase[i_ch]
+                )
+                Q = -pulse.amplitude * np.sin(
+                    2 * np.pi * pulse.frequency * t + pulse.phase + self.awg.channel_phase[q_ch]
+                )
+
                 self.awg_waveform_buffer[i_ch, idx_start:idx_end] += I
                 self.awg_waveform_buffer[q_ch, idx_start:idx_end] += Q
 
-                # Store the readout pulse 
-                if pulse.type == 'ro':
+                # Store the readout pulse
+                if pulse.type == "ro":
                     self.acquisitons.append((pulse.qubit, pulse.frequency))
                     self.readout_start = pulse.start
 
     def upload(self):
-        """Uploads the pulse sequence to the AWG.
-        """
+        """Uploads the pulse sequence to the AWG."""
 
         # Don't upload if the currently loaded pulses are the same as the previous set
         if self.current_pulsesequence_hash == self.last_pulsequence_hash:
@@ -472,20 +466,17 @@ class IcarusQRack_QRM(AbstractInstrument):
         self.last_pulsequence_hash = self.current_pulsesequence_hash
 
     def play_sequence(self):
-        """Arms the AWG to play.
-        """
+        """Arms the AWG to play."""
         self.awg.play_sequence()
 
     def play_sequence_and_acquire(self):
-        """Arms the AWG to play and the ADC to start acquisition.
-        """
+        """Arms the AWG to play and the ADC to start acquisition."""
 
         self.play_sequence()
         self.adc.arm(self.nshots, self.readout_start)
         self.adc.acquire()
         results = {
-            qubit_id: self.adc.process_result(readout_frequency)
-            for qubit_id, readout_frequency in self.acquisitons
+            qubit_id: self.adc.process_result(readout_frequency) for qubit_id, readout_frequency in self.acquisitons
         }
         return results
 
@@ -493,8 +484,7 @@ class IcarusQRack_QRM(AbstractInstrument):
         self.awg.stop()
 
     def disconnect(self):
-        """Disconnects the AWG and ADC.
-        """
+        """Disconnects the AWG and ADC."""
         if self.is_connected:
             self.awg.disconnect()
             self.adc.disconnect()
