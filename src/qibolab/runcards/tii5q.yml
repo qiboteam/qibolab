@@ -51,7 +51,7 @@ instruments:
                     gain                        : 0.1                           # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en             : false
                 i1:
-                    hardware_demod_en           : false
+                    hardware_demod_en           : true
 
             acquisition_hold_off        : 200                           # minimum 4ns
             acquisition_duration        : 2000
