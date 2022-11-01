@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Pulse and PulseSequence classes."""
 from abc import ABC, abstractmethod
 from enum import Enum

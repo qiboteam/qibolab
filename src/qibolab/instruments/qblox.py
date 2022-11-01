@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ Qblox instruments driver.
 
 Supports the following Instruments:
