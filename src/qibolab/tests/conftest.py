@@ -1,5 +1,7 @@
 import pytest
 
+from qibolab.platform import Platform
+
 
 def pytest_addoption(parser):
     parser.addoption("--platforms", type=str, action="store", default="", help="qpu platforms to test on")
@@ -23,7 +25,12 @@ def pytest_generate_tests(metafunc):
     platforms = metafunc.config.option.platforms.split(",")
 
     if metafunc.module.__name__ == "qibolab.tests.test_instruments_rohde_schwarz":
-        pytest.skip("Skipping RS tests because it is not available in qpu5q.")
+        pytest.skip("Skipping Rohde Schwarz tests because it is not available in qpu5q.")
 
     if "platform_name" in metafunc.fixturenames:
-        metafunc.parametrize("platform_name", platforms)
+        if "qubit" in metafunc.fixturenames:
+            # TODO: Do backend initialization here instead of every test (currently does not work)
+            qubits = [(n, q) for n in platforms for q in range(Platform(n).nqubits)]
+            metafunc.parametrize("platform_name,qubit", qubits)
+        else:
+            metafunc.parametrize("platform_name", platforms)
