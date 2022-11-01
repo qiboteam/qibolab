@@ -17,8 +17,6 @@ def generate_circuit_with_gate(nqubits, gate, **kwargs):
 
 @pytest.mark.qpu
 def test_backend_init(platform_name):
-    from qibolab.platforms.multiqubit import MultiqubitPlatform
-
     backend = QibolabBackend(platform_name)
 
 
@@ -50,10 +48,31 @@ def test_execute_circuit_errors(platform_name):
 )
 def test_execute_circuit(platform_name, gate, kwargs):
     backend = QibolabBackend(platform_name)
-    platform: AbstractPlatform = backend.platform
-    nqubits = platform.nqubits
+    nqubits = backend.platform.nqubits
     circuit = generate_circuit_with_gate(nqubits, gate, **kwargs)
     result = backend.execute_circuit(circuit, nshots=100)
+
+
+@pytest.mark.qpu
+@pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
+def test_ground_state_probabilities_circuit(platform_name, qubit):
+    backend = QibolabBackend(platform_name)
+    circuit = Circuit(backend.platform.nqubits)
+    circuit.add(gates.M(qubit))
+    result = backend.execute_circuit(circuit, nshots=5000)
+    probs = result.probabilities()
+    np.testing.assert_allclose(probs, [1, 0], atol=0.05)
+
+
+@pytest.mark.qpu
+@pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
+def test_excited_state_probabilities_circuit(platform_name, qubit):
+    backend = QibolabBackend(platform_name)
+    circuit = Circuit(backend.platform.nqubits)
+    circuit.add(gates.X(qubit))
+    circuit.add(gates.M(qubit))
+    result = backend.execute_circuit(circuit, nshots=5000)
+    np.testing.assert_allclose(result.probabilities(), [1, 0], atol=0.05)
 
 
 # TODO: speed up by instantiating the backend once per platform

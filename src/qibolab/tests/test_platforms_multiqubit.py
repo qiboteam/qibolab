@@ -2,9 +2,13 @@
 import os
 import shutil
 
+import numpy as np
 import pytest
 import yaml
+from qibo.models import Circuit
+from qibo.states import CircuitResult
 
+from qibolab.backends import QibolabBackend
 from qibolab.paths import qibolab_folder
 from qibolab.platform import Platform
 from qibolab.pulses import PulseSequence
@@ -156,3 +160,40 @@ def test_multiqubitplatform_execute_multiple_readout_pulses(platform):
     sequence.add(qd_pulse2)
     sequence.add(ro_pulse2)
     platform.execute_pulse_sequence(sequence, nshots)
+
+
+@pytest.mark.qpu
+@pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
+def test_excited_state_probabilities_pulses(platform_name, qubit):
+    backend = QibolabBackend(platform_name)
+    platform = backend.platform
+    qd_pulse = platform.create_RX_pulse(qubit)
+    ro_pulse = platform.create_MZ_pulse(qubit, start=qd_pulse.duration)
+    sequence = PulseSequence()
+    sequence.add(qd_pulse)
+    sequence.add(ro_pulse)
+    result = platform.execute_pulse_sequence(sequence, nshots=5000)
+
+    cr = CircuitResult(backend, Circuit(platform.nqubits), result)
+    probs = backend.circuit_result_probabilities(cr, qubits=[qubit])
+    np.testing.assert_allclose(probs, [1, 0], atol=0.05)
+
+
+@pytest.mark.qpu
+@pytest.mark.parametrize("start_zero", [False, True])
+@pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
+def test_ground_state_probabilities_pulses(platform_name, qubit, start_zero):
+    backend = QibolabBackend(platform_name)
+    platform = backend.platform
+    if start_zero:
+        ro_pulse = platform.create_MZ_pulse(qubit, start=0)
+    else:
+        qd_pulse = platform.create_RX_pulse(qubit)
+        ro_pulse = platform.create_MZ_pulse(qubit, start=qd_pulse.duration)
+    sequence = PulseSequence()
+    sequence.add(ro_pulse)
+    result = platform.execute_pulse_sequence(sequence, nshots=5000)
+
+    cr = CircuitResult(backend, Circuit(platform.nqubits), result)
+    probs = backend.circuit_result_probabilities(cr, qubits=[qubit])
+    np.testing.assert_allclose(probs, [1, 0], atol=0.05)
