@@ -4,12 +4,11 @@ settings: {hardware_avg: 1024, sampling_rate: 1000000000, repetition_duration: 6
     minimum_delay_between_instructions: 4}
 qubits: [1, 2, 3, 4]
 topology:
-- [1, 0, 1, 0, 0, 0]
-- [0, 1, 1, 0, 0, 0]
-- [1, 1, 1, 1, 1, 0]
-- [0, 0, 1, 1, 0, 0]
-- [0, 0, 1, 0, 1, 0]
-- [0, 0, 0, 0, 0, 1]
+- [1, 1, 0, 0, 0]
+- [1, 1, 1, 1, 0]
+- [0, 1, 1, 0, 0]
+- [0, 1, 0, 1, 0]
+- [0, 0, 0, 0, 1]
 channels: [10, 1, 25, 21, 22, 23, 24, 4, 11, 12, 13, 14]
 qubit_channel_map:
     0: [10, 25, 4]
@@ -116,7 +115,7 @@ native_gates:
         0:
             RX: {duration: 40, amplitude: 1, frequency: -200000000.0, shape: Gaussian(5),
                 type: qd, start: 0, phase: 0}
-            MZ: {duration: 4000, amplitude: 0.6, frequency: -299909999, shape: Rectangular(),
+            MZ: {duration: 4000, amplitude: 0.6, frequency: -199355000, shape: Rectangular(),
                 type: ro, start: 0, phase: 0}
         1:
             RX: {duration: 40, amplitude: 0.8861, frequency: -200000000.0, shape: 'Drag(5,-0.04)',

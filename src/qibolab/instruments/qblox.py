@@ -950,7 +950,7 @@ class ClusterQRM_RF(AbstractInstrument):
         acquisition_results = {}
         for port in self._output_ports_keys:
             for sequencer in self._sequencers[port]:
-                raw_results = self.device.get_acquisitions(sequencer_number)
+                raw_results = self.device.get_acquisitions(sequencer.number)
                 if not self.ports["i1"].hardware_demod_en:
                     acquisition_results["averaged_integrated"] = {}
                     acquisition_results["averaged_raw"] = {}
@@ -994,7 +994,7 @@ class ClusterQRM_RF(AbstractInstrument):
                             "integrated_averaged"
                         ][pulse.serial]
 
-                        i, q = self._process_acquisition_results(raw_results[acquisition_name], pulse, demodulate=True)
+                        i, q = self._process_acquisition_results(raw_results[acquisition_name], pulse, demodulate=False)
                         acquisition_results["averaged_integrated"][pulse.serial] = (
                             np.sqrt(i**2 + q**2),
                             np.arctan2(q, i),
@@ -1006,10 +1006,10 @@ class ClusterQRM_RF(AbstractInstrument):
                         ][pulse.serial]
 
                         acquisition_results["averaged_raw"][pulse.serial] = (
-                            raw_results[scope_acquisition_name]["acquisition"]["scope"]["path0"]["data"][
+                            raw_results[acquisition_name]["acquisition"]["scope"]["path0"]["data"][
                                 0 : self.acquisition_duration
                             ],
-                            raw_results[scope_acquisition_name]["acquisition"]["scope"]["path1"]["data"][
+                            raw_results[acquisition_name]["acquisition"]["scope"]["path1"]["data"][
                                 0 : self.acquisition_duration
                             ],
                         )
