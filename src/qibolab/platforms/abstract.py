@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from abc import ABC, abstractmethod
 
 import yaml
@@ -30,7 +29,7 @@ class AbstractPlatform(ABC):
         self.runcard = runcard
         self.is_connected = False
         # Load platform settings
-        with open(runcard, "r") as file:
+        with open(runcard) as file:
             self.settings = yaml.safe_load(file)
 
         self.nqubits = self.settings["nqubits"]
@@ -94,7 +93,7 @@ class AbstractPlatform(ABC):
             raise_error(RuntimeError, "Cannot access instrument because it is not connected.")
 
     def reload_settings(self):
-        with open(self.runcard, "r") as file:
+        with open(self.runcard) as file:
             self.settings = yaml.safe_load(file)
 
         self.hardware_avg = self.settings["settings"]["hardware_avg"]
