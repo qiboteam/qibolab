@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os
 import shutil
 
@@ -40,7 +39,7 @@ def platform(platform_name):
 
 def test_abstractplatform_init(platform_name):
     test_runcard = copy_runcard(platform_name)
-    with open(test_runcard, "r") as file:
+    with open(test_runcard) as file:
         settings = yaml.safe_load(file)
     platform = Platform(platform_name, test_runcard)
     assert platform.name == platform_name
