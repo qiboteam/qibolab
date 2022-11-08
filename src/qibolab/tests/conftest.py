@@ -11,10 +11,6 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "qpu: mark tests that require qpu")
 
 
-def pytest_runtest_setup(item):
-    marked_qpu = "qpu" in {mark.name for mark in item.iter_markers()}
-
-
 def pytest_generate_tests(metafunc):
     platforms = metafunc.config.option.platforms.split(",")
 
