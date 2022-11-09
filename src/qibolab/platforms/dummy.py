@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import time
 
 import numpy as np
@@ -31,7 +30,7 @@ class DummyPlatform(AbstractPlatform):
         self.runcard = runcard
         self.is_connected = False
         # Load platform settings
-        with open(runcard, "r") as file:
+        with open(runcard) as file:
             self.settings = yaml.safe_load(file)
 
         # create dummy instruments
@@ -39,10 +38,6 @@ class DummyPlatform(AbstractPlatform):
         # TODO: Remove these when platform abstraction is fixed
         self.qcm = {i: DummyInstrument() for i in range(nqubits)}
         self.qrm = {i: DummyInstrument() for i in range(nqubits)}
-
-        from qibolab.u3params import U3Params
-
-        self.u3params = U3Params()
 
     def reload_settings(self):  # pragma: no cover
         log.info("Dummy platform does not support setting reloading.")

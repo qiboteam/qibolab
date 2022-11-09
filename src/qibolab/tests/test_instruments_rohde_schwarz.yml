@@ -9,6 +9,7 @@ instruments:
         lib: rohde_schwarz
         class: SGS100A
         address: 192.168.0.7
+        roles: [other]
         settings:
             frequency: 7_804_715_967
             power: 12

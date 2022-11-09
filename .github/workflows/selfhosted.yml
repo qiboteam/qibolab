@@ -1,0 +1,32 @@
+# CI workflow that runs on qpu
+name: Tests with qpu
+
+on: [push]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        python-version: [3.8]
+    runs-on: self-hosted
+    steps:
+    - name: Cleanup workspace manually
+      run: |
+        rm -rf _work/*
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install package
+      shell: bash -l {0}
+      run: |
+        conda create --prefix=testenv python=${{ matrix.python-version }}
+        conda activate ./testenv
+        python -m pip install --upgrade pip
+        pip install pytest
+        pip install git+https://github.com/qiboteam/qibo
+        pip install .[tiiq]
+    - name: Test tii5q
+      run: |
+        srun -p qpu5q pytest src/qibolab --pyargs qibolab --skip-no-qpu --platforms tii5q

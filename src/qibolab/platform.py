@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 def Platform(name, runcard=None):
     """Platform for controlling quantum devices.
 

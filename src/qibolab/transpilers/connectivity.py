@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
 from qibo import gates
 from qibo.config import log, raise_error
-from qibo.models import Circuit
 
 
 def find_connected_qubit(qubits, queue, hardware_qubits):
@@ -23,7 +21,7 @@ def find_connected_qubit(qubits, queue, hardware_qubits):
     return qubits[0]
 
 
-def fix_connecivity(circuit):
+def fix_connectivity(circuit):
     """Transforms an arbitrary circuit to one that can be executed on hardware.
 
     This method produces a circuit that respects the following connectivity:
@@ -43,23 +41,21 @@ def fix_connecivity(circuit):
         new (qibo.models.Circuit): Qibo circuit that performs the same operation
             as the original but respects the hardware connectivity.
         hardware_qubits (list): List that maps logical to hardware qubits.
-            Required for transforming final measurements to
+            This is required for transforming final measurements.
     """
+    # TODO: Change this to a more lightweight form that takes a list of pairs
+    # instead of the whole circuit.
+
     # new circuit object that will be compatible to hardware connectivity
-    new = Circuit(circuit.nqubits)
+    new = circuit.__class__(circuit.nqubits)
     # list to maps logical to hardware qubits
     hardware_qubits = list(range(circuit.nqubits))
-
-    # TODO: Add a pseudo-fusion step here to reduce the number of SWAPs.
-    # Real fusion may also be used to reduce the total number of gates.
 
     # find initial qubit mapping
     for i, gate in enumerate(circuit.queue):
         if len(gate.qubits) == 2:
             if 0 not in gate.qubits:
-                new_zero = find_connected_qubit(
-                    gate.qubits, circuit.queue[i + 1 :], hardware_qubits
-                )
+                new_zero = find_connected_qubit(gate.qubits, circuit.queue[i + 1 :], hardware_qubits)
                 hardware_qubits[0], hardware_qubits[new_zero] = (
                     hardware_qubits[new_zero],
                     hardware_qubits[0],
@@ -79,9 +75,7 @@ def fix_connecivity(circuit):
 
         elif len(qubits) == 2 and 0 not in qubits:
             # find which qubit should be moved to 0
-            new_zero = find_connected_qubit(
-                qubits, circuit.queue[i + 1 :], hardware_qubits
-            )
+            new_zero = find_connected_qubit(qubits, circuit.queue[i + 1 :], hardware_qubits)
             # update hardware qubits according to the swap
             hardware_qubits[0], hardware_qubits[new_zero] = (
                 hardware_qubits[new_zero],
@@ -97,12 +91,10 @@ def fix_connecivity(circuit):
         if len(qubits) == 2:
             add_swap = True
 
-    # TODO: Properly handle ``circuit.measurement_gate``
-
     return new, hardware_qubits
 
 
-def can_execute(circuit):
+def respects_connectivity(circuit):
     """Checks if a circuit respects connectivity constraints.
 
     Args:
@@ -110,7 +102,6 @@ def can_execute(circuit):
 
     Returns ``True`` if the following conditions are satisfied:
         - Circuit does not contain more than two-qubit gates.
-        - All two-qubit gates are CZ or SWAP.
         - All two-qubit gates have qubit 0 as target or control.
     otherwise returns ``False``.
     """
@@ -119,14 +110,8 @@ def can_execute(circuit):
             log.info(f"{gate.name} acts on more than two qubits.")
             return False
         elif len(gate.qubits) == 2:
-            if not isinstance(gate, (gates.CZ, gates.SWAP)):
-                log.info(f"{gate.name} is not native gate.")
-                return False
             if 0 not in gate.qubits:
-                log.info(
-                    "Circuit does not respect connectivity. "
-                    f"{gate.name} acts on {gate.qubits}."
-                )
+                log.info("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
                 return False
 
     log.info("Circuit can be executed.")
