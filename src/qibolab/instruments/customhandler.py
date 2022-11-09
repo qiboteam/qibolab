@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import os
 import sys
 
@@ -13,7 +11,7 @@ class DeviceHandle(usb.DeviceHandle):
 
     def __init__(self, dev):
         """Inherit everything from the super class."""
-        super(DeviceHandle, self).__init__(dev)
+        super().__init__(dev)
 
     def __enter__(self):
         return self

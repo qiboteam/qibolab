@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import time
 
 import numpy as np
@@ -34,7 +33,7 @@ class cold_ion(AbstractPlatform):
         self.runcard = runcard
         self.is_connected = False
         # Load platform settings
-        with open(runcard, "r") as file:
+        with open(runcard) as file:
             self.settings = yaml.safe_load(file)
 
         nqubits = self.settings.get("nqubits")

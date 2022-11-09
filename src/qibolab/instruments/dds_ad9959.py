@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import sys
 import time
 
@@ -32,14 +31,10 @@ class AD9959:
         # find all usb devices with matching vid/pid
         devs = list(usb.core.find(idVendor=vid, idProduct=pid, find_all=True))
         dev = None
-        dev_mess = "No devices with matching vID/pID {}/{} found!".format(
-            hex(vid), hex(pid)
-        )
+        dev_mess = "No devices with matching vID/pID {}/{} found!".format(hex(vid), hex(pid))
         if len(devs) <= 0:
             print(dev_mess)
-            print(
-                "Warning: This is a dummy run, there is no actual wave being generated on the hardware"
-            )
+            print("Warning: This is a dummy run, there is no actual wave being generated on the hardware")
 
         # if more than one AD9959 is present, decide by usb port address
         elif len(devs) > 1:
@@ -50,9 +45,7 @@ class AD9959:
                 if d.port_numbers == port_numbers and d.bus == bus_number:
                     dev = d
                     break
-            assert (
-                dev is not None
-            ), "No matching device was found. Check bus and port numbers!"
+            assert dev is not None, "No matching device was found. Check bus and port numbers!"
 
         else:
             dev = devs[0]
@@ -384,23 +377,18 @@ class AD9959:
         message_channel_select = bytearray.fromhex(message)
 
         ## Now compute the same message to select the frequency
-        assert frequency <= self.system_clock_frequency, (
-            "Frequency should not"
-            + " exceed system clock frequency! System clock frequency is {}Hz".format(
-                self.system_clock_frequency
-            )
+        assert (
+            frequency <= self.system_clock_frequency
+        ), "Frequency should not" + " exceed system clock frequency! System clock frequency is {}Hz".format(
+            self.system_clock_frequency
         )
 
         # calculate the fraction of the full frequency
         fraction = frequency / self.system_clock_frequency
-        fraction_bin = bin(round(fraction * (2**32 - 1))).lstrip(
-            "0b"
-        )  # full range are 32 bit
+        fraction_bin = bin(round(fraction * (2**32 - 1))).lstrip("0b")  # full range are 32 bit
         if len(fraction_bin) < 32:
             fraction_bin = (32 - len(fraction_bin)) * "0" + fraction_bin
-        closest_possible_value = (
-            int(fraction_bin, base=2) / (2**32 - 1) * self.system_clock_frequency
-        )
+        closest_possible_value = int(fraction_bin, base=2) / (2**32 - 1) * self.system_clock_frequency
         print(
             "Frequency of channel {1} encoded as closest possible value {0}MHz".format(
                 closest_possible_value / 1e6, channel
@@ -1562,9 +1550,7 @@ class AD9959:
         self._channel_select(channel)
         cfr = self._read_from_register(0x03, 24)
         if cfr[9] == 0:
-            assert (
-                cfr[9] is None
-            ), " This mode cannot be activated as linear sweep enable mode is inactive. "
+            assert cfr[9] is None, " This mode cannot be activated as linear sweep enable mode is inactive. "
         if cfr[13] == 1:
             sys.exit("this bit must be 0 and is predetermined in the datasheet")
         cfr[8] = 1
@@ -1679,9 +1665,7 @@ class AD9959:
             channel = self.channel
         self._channel_select(channel)
         acr = self._read_from_register(0x06, 24)
-        assert (
-            value <= 255
-        ), "amplitude shoukd not be greater than system clock frequency"
+        assert value <= 255, "amplitude shoukd not be greater than system clock frequency"
         value_bin = bin(value)[2:]
         if len(value_bin) < 8:
             value_new = (8 - len(value_bin)) * "0" + value_bin
@@ -1815,30 +1799,23 @@ class AD9959:
 
         if channel is None:
             channel = self.channel
-        assert frequency <= self.system_clock_frequency, (
-            "Frequency should not"
-            + " exceed system clock frequency! System clock frequency is {}Hz".format(
-                self.system_clock_frequency
-            )
+        assert (
+            frequency <= self.system_clock_frequency
+        ), "Frequency should not" + " exceed system clock frequency! System clock frequency is {}Hz".format(
+            self.system_clock_frequency
         )
 
-        assert channel_word < 16, "Channel word cannot exceed 15, input was {}".format(
-            channel_word
-        )
+        assert channel_word < 16, "Channel word cannot exceed 15, input was {}".format(channel_word)
 
         # select the chosen channels
         self._channel_select(channel)
 
         # calculate the fraction of the full frequency
         fraction = frequency / self.system_clock_frequency
-        fraction_bin = bin(int(round(fraction * (2**32 - 1)))).lstrip(
-            "0b"
-        )  # full range are 32 bit
+        fraction_bin = bin(int(round(fraction * (2**32 - 1)))).lstrip("0b")  # full range are 32 bit
         if len(fraction_bin) < 32:
             fraction_bin = (32 - len(fraction_bin)) * "0" + fraction_bin
-        closest_possible_value = (
-            int(fraction_bin, base=2) / (2**32 - 1) * self.system_clock_frequency
-        )
+        closest_possible_value = int(fraction_bin, base=2) / (2**32 - 1) * self.system_clock_frequency
         print(
             "Setting frequency of channel {1}:{2} to closest possible value {0}MHz".format(
                 closest_possible_value / 1e6, channel, channel_word
@@ -1879,9 +1856,7 @@ class AD9959:
         phase_fraction = phase / 360
         phase_fraction_bin = bin(round(phase_fraction * 2**14)).lstrip("0b")
         if len(phase_fraction_bin) < 16:
-            phase_fraction_bin = (
-                16 - len(phase_fraction_bin)
-            ) * "0" + phase_fraction_bin
+            phase_fraction_bin = (16 - len(phase_fraction_bin)) * "0" + phase_fraction_bin
 
         # construct the message for cypress chip
         phase_fraction_word = "".join(" 0" + b for b in phase_fraction_bin)
@@ -2343,16 +2318,12 @@ class AD9959:
         if channel is None:
             channel = self.channel
         assert 0 <= phase <= 360, "Phase should be between 0 and 360 degrees"
-        assert channel_word < 16, "Channel word cannot exceed 15, input was {}".format(
-            channel_word
-        )
+        assert channel_word < 16, "Channel word cannot exceed 15, input was {}".format(channel_word)
         self._channel_select(channel)
         phase_fraction = phase / 360
         phase_fraction_bin = bin(round(phase_fraction * 2**14)).lstrip("0b")
         if len(phase_fraction_bin) < 32:
-            phase_fraction_bin = (
-                32 - len(phase_fraction_bin)
-            ) * "0" + phase_fraction_bin
+            phase_fraction_bin = (32 - len(phase_fraction_bin)) * "0" + phase_fraction_bin
         register = channel_word - 1 + 0x0A
         #        register = "0x{:02x}".format(register)
         # self._read_from_register(register, 32)
@@ -2371,25 +2342,18 @@ class AD9959:
         """
         if channel is None:
             channel = self.channel
-        assert frequency <= self.system_clock_frequency, (
-            "Frequency should not"
-            + " exceed system clock frequency! System clock frequency is {}Hz".format(
-                self.system_clock_frequency
-            )
+        assert (
+            frequency <= self.system_clock_frequency
+        ), "Frequency should not" + " exceed system clock frequency! System clock frequency is {}Hz".format(
+            self.system_clock_frequency
         )
-        assert channel_word < 16, "Channel word cannot exceed 15, input was {}".format(
-            channel_word
-        )
+        assert channel_word < 16, "Channel word cannot exceed 15, input was {}".format(channel_word)
         self._channel_select(channel)
         fraction = frequency / self.system_clock_frequency
-        fraction_bin = bin(round(fraction * (2**32 - 1))).lstrip(
-            "0b"
-        )  # full range are 32 bit
+        fraction_bin = bin(round(fraction * (2**32 - 1))).lstrip("0b")  # full range are 32 bit
         if len(fraction_bin) < 32:
             fraction_bin = (32 - len(fraction_bin)) * "0" + fraction_bin
-        closest_possible_value = (
-            int(fraction_bin, base=2) / (2**32 - 1) * self.system_clock_frequency
-        )
+        closest_possible_value = int(fraction_bin, base=2) / (2**32 - 1) * self.system_clock_frequency
         print(
             "Frequency of channel {1} encoded as closest possible value {0}MHz".format(
                 closest_possible_value / 1e6, channel
@@ -2416,9 +2380,7 @@ class AD9959:
         if channel is None:
             channel = self.channel
         assert asf <= 1, "amplitude should be between 0 and 1"
-        assert channel_word < 16, "Channel word cannot exceed 15, input was {}".format(
-            channel_word
-        )
+        assert channel_word < 16, "Channel word cannot exceed 15, input was {}".format(channel_word)
         self._channel_select(channel)
         asf_bin = bin(round(asf * (2**10))).lstrip("0b")
         if len(asf_bin) < 32:
@@ -2436,9 +2398,7 @@ class AD9959:
         if self.auto_update:
             self._update_IO()
 
-    def enable_modulation(
-        self, modulation_type="frequency", level=2, active_channels=None
-    ):
+    def enable_modulation(self, modulation_type="frequency", level=2, active_channels=None):
         """This method chooses the modulation level and type.
 
         :level: int
@@ -2562,9 +2522,7 @@ class AD9959:
 
         return
 
-    def configure_linear_sweep(
-        self, channels=None, rsrr=0, fsrr=0, rdw=0, fdw=0, disable=False
-    ):
+    def configure_linear_sweep(self, channels=None, rsrr=0, fsrr=0, rdw=0, fdw=0, disable=False):
         """Configure the linear frequency sweep parameters for selected channels.
 
         The linear sweep ramp rate (lsrr) specifies the timestep of the rising ramp, falling sweep ramp rate
@@ -2620,11 +2578,7 @@ class AD9959:
                 fraction_bin = 256
 
             # align the fraction_bin with binary representation
-            print(
-                "Setting {} sweep ramp rate to {:1.3e} s".format(
-                    rr_name[i], fraction_bin * rr_time_step
-                )
-            )
+            print("Setting {} sweep ramp rate to {:1.3e} s".format(rr_name[i], fraction_bin * rr_time_step))
             fraction_bin -= 1
             rrw_bin = bin(fraction_bin)[2:]
             if len(rrw_bin) < 8:
@@ -2646,14 +2600,10 @@ class AD9959:
         delta_words = [fdw, rdw]
         for i, dw in enumerate(delta_words):
             fraction = dw / self.system_clock_frequency
-            fraction_bin = bin(int(round(fraction * (2**32 - 1)))).lstrip(
-                "0b"
-            )  # full range are 32 bit
+            fraction_bin = bin(int(round(fraction * (2**32 - 1)))).lstrip("0b")  # full range are 32 bit
             if len(fraction_bin) < 32:
                 fraction_bin = (32 - len(fraction_bin)) * "0" + fraction_bin
-            closest_possible_value = (
-                int(fraction_bin, base=2) / (2**32 - 1) * self.system_clock_frequency
-            )
+            closest_possible_value = int(fraction_bin, base=2) / (2**32 - 1) * self.system_clock_frequency
             print(
                 "Setting {2} delta word of channel {1} to closest possible value {0}MHz".format(
                     closest_possible_value / 1e6, channels, rr_name[i]

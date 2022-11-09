@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from qibolab.instruments.dds_ad9959 import AD9959
 from qibolab.instruments.icarusq import (
     AlazarADC,
