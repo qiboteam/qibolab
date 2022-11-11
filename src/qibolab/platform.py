@@ -19,6 +19,8 @@ def Platform(name, runcard=None):
         from qibolab.platforms.icplatform import ICPlatform as Device
     elif name == "dummy":
         from qibolab.platforms.dummy import DummyPlatform as Device
+    elif name == "rfsoc":
+        from qibolab.platforms.rfsoc import RFSocPlatform as Device
     else:
         from qibo.config import raise_error
 
