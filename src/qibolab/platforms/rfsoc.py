@@ -50,7 +50,7 @@ class Program(AveragerProgram):
             ch=qd_channel,
             style="const",
             freq=qd_frequency,
-            phase=0,
+            phase=int(qd_pulse.phase),
             gain=qd_gain,
             length=qd_length,
         )
@@ -58,7 +58,7 @@ class Program(AveragerProgram):
             ch=ro_channel,
             style="const",
             freq=ro_frequency,
-            phase=3097210280,
+            phase=int(ro_pulse.phase),
             gain=ro_gain,
             length=ro_length,
         )
