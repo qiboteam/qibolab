@@ -6,27 +6,25 @@ qubits: [0]
 topology: # qubit - qubit connections
 -   [1]
 
-reps: 1024
-max_gain: 30000
-delay_before_readout: 50 # [ns]
-
-qubit_channel_map: [0, 1] # [readout, drive]
+qubit_channel_map: [[0, 1]] # [readout, drive]
 # TODO: Remove repetition because these channels are defined here
-# and in configs below
+# and in the config below
 
-hardware_config:
+config:
+    reps: 1024
+    max_gain: 30000
+    delay_before_readout: 50 # [ns]
+    # channel config
     #jpa_channel: 6
     resonator_channel: 0
     qubit_channel: 1
     #storage_channel: 0
-
-readout_config:
+    # resonator config
     f_res: 7271.25 # [MHz] (not used)
     resonator_phase: 3097210280 # (not used)
     adc_trig_offset: 200 # [Clock ticks]
     resonator_gain: 600 # (not used)
-
-qubit_config:
+    # qubit config
     pi_gain: 9000 # (not used)
     #pi2_gain: 9000 // 2
     f_ge: 8014.6 # [MHz] (not used)
@@ -47,15 +45,3 @@ native_gates:
                 frequency: 7_271_250_000
                 shape: Rectangular()
                 type: ro # readout
-
-characterization:
-    single_qubit:
-        0:
-            resonator_freq: 7824847574
-            qubit_freq: 5082293989
-            T1: 17744
-            T2: 8385
-            state0_voltage: 891
-            state1_voltage: 357
-            mean_gnd_states: (-5.543255134868772e-05+0.0008975930158821524j)
-            mean_exc_states: (0.0001446400604158933+0.0003369969077198778j)

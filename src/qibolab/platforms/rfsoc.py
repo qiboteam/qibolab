@@ -1,3 +1,5 @@
+import yaml
+from qibo.config import log
 from qick import AveragerProgram, QickSoc
 
 from qibolab.platforms.abstract import AbstractPlatform
@@ -5,8 +7,9 @@ from qibolab.platforms.abstract import AbstractPlatform
 
 class Program(AveragerProgram):
     def __init__(self, soc, cfg, sequence):
-        super().__init__(soc, cfg)
         self.sequence = sequence
+        self.soc = soc
+        super().__init__(soc, cfg)
         # TODO: Move all cfg declarations in __init__
 
     def initialize(self):
@@ -23,39 +26,41 @@ class Program(AveragerProgram):
         assert ro_pulse.channel == ro_channel
 
         # conver pulse lengths to clock ticks
-        ro_length = self.soc.us2cycles(ro_pulse.duration * 1e-3, gen_ch=ro_channel)
         qd_length = self.soc.us2cycles(qd_pulse.duration * 1e-3, gen_ch=qd_channel)
+        ro_length = self.soc.us2cycles(ro_pulse.duration * 1e-3, gen_ch=ro_channel)
 
-        for ch in [0, 1]:  # configure the readout lengths and downconversion frequencies
+        # configure the readout lengths and downconversion frequencies
+        for ch in [0, 1]:
             self.declare_readout(ch=ch, length=ro_length, freq=ro_pulse.frequency * 1e-6, gen_ch=ro_channel)
 
         # convert frequencies to dac register value
         # TODO: Why are frequencies converted after declaring the readout?
-        ro_frequency = self.freq2reg(ro_pulse.frequency * 1e-6, gen_ch=ro_channel, ro_ch=0)
         qd_frequency = self.freq2reg(qd_pulse.frequency * 1e-6, gen_ch=qd_channel)
+        ro_frequency = self.freq2reg(ro_pulse.frequency * 1e-6, gen_ch=ro_channel, ro_ch=0)
 
         # calculate pulse gain from amplitude
         max_gain = self.cfg["max_gain"]
-        qd_gain = qd_pulse.amplitude * max_gain
-        ro_gain = ro_pulse.amplitude * max_gain
+        qd_gain = int(qd_pulse.amplitude * max_gain)
+        ro_gain = int(ro_pulse.amplitude * max_gain)
 
         # add qubit and readout pulses to respective channels
+        # TODO: Register multiple drive pulses
         # TODO: Register proper shapes and phases to pulses
         self.set_pulse_registers(
             ch=qd_channel,
             style="const",
             freq=qd_frequency,
-            phase=qd_pulse.phase,
+            phase=0,
             gain=qd_gain,
-            length=qd_pulse.duration,
+            length=qd_length,
         )
         self.set_pulse_registers(
             ch=ro_channel,
             style="const",
             freq=ro_frequency,
-            phase=ro_pulse.phase,
+            phase=3097210280,
             gain=ro_gain,
-            length=ro_pulse.duration,
+            length=ro_length,
         )
 
         self.synci(200)
@@ -67,13 +72,14 @@ class Program(AveragerProgram):
         delay_before_readout = self.us2cycles(delay_before_readout * 1e-3)
 
         # play drive pulse
+        # TODO: Play multiple drive pulses
         self.pulse(ch=qd_channel)
         # align channels and wait some time (defined in the runcard)
         self.sync_all(delay_before_readout)
 
         # trigger measurement, play measurement pulse, wait for qubit to relax
         syncdelay = self.us2cycles(self.cfg["relax_delay"] * 1e-3)
-        self.measure(pulse_ch=self.cfg["resonator_channel"], adcs=[0, 1], wait=True, syncdelay=syncdelay)
+        self.measure(pulse_ch=ro_channel, adcs=[0, 1], wait=True, syncdelay=syncdelay)
 
 
 class RFSocPlatform(AbstractPlatform):
@@ -92,14 +98,8 @@ class RFSocPlatform(AbstractPlatform):
         else:
             self.resonator_type = "2D"
 
-        self.resonator_channel = self.settings.get("hardware_config").get("resonator_channel")
-        self.qubit_channel = self.settings.get("hardware_config").get("qubit_channel")
-
         self.soc = QickSoc()
-        self.cfg = {"reps": self.settings.get("reps")}
-        self.cfg.update(self.settings.get("hardware_config"))
-        self.cfg.update(self.settings.get("readout_config"))
-        self.cfg.update(self.settings.get("qubit_config"))
+        self.cfg = dict(self.settings.get("config"))
         # self.cfg["sigma"] = self.soc.us2cycles(0.025, gen_ch=qubit_channel)
 
     def reload_settings(self):
