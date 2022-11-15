@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from pathlib import Path
 
 import pytest
@@ -63,7 +62,7 @@ def fx_connect_platform():
 
 
 def test_abstractplatform_init(fx_instantiate_platform):
-    with open(test_runcard, "r") as file:
+    with open(test_runcard) as file:
         settings = yaml.safe_load(file)
     assert platform.name == platform_name
     assert platform.runcard == test_runcard

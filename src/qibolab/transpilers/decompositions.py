@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import numpy as np
 from qibo import gates, matrices
 from qibo.config import raise_error

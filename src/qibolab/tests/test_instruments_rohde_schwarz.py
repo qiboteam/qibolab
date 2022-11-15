@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import numpy as np
 import pytest
 import yaml
@@ -14,7 +13,7 @@ instruments = {}
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
 def test_instruments_rohde_schwarz_init(name):
     test_runcard = qibolab_folder / "tests" / "test_instruments_rohde_schwarz.yml"
-    with open(test_runcard, "r") as file:
+    with open(test_runcard) as file:
         settings = yaml.safe_load(file)
 
     # Instantiate instrument
@@ -44,7 +43,7 @@ def test_instruments_rohde_schwarz_connect(name):
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
 def test_instruments_rohde_schwarz_setup(name):
     test_runcard = qibolab_folder / "tests" / "test_instruments_rohde_schwarz.yml"
-    with open(test_runcard, "r") as file:
+    with open(test_runcard) as file:
         settings = yaml.safe_load(file)
     instruments[name].setup(**settings["settings"], **settings["instruments"][name]["settings"])
     for parameter in settings["instruments"][name]["settings"]:
