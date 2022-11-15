@@ -22,13 +22,14 @@ class MultiqubitPlatform(AbstractPlatform):
         roles = {}
         for name in self.instruments:
             roles[name] = self.settings["instruments"][name]["roles"]
-            if "readout" in roles[name] or "control" in roles[name]:
+            if "control" in roles[name] or "readout" in roles[name]:
                 instrument_pulses[name] = sequence.get_channel_pulses(*self.instruments[name].channels)
-                self.instruments[name].process_pulse_sequence(instrument_pulses[name], nshots, self.repetition_duration)
-                self.instruments[name].upload()
-
+                if not instrument_pulses[name].is_empty:
+                    self.instruments[name].process_pulse_sequence(instrument_pulses[name], nshots, self.repetition_duration)
+                    self.instruments[name].upload()
+    
         for name in self.instruments:
-            if "control" in roles[name]:
+            if "control" in roles[name] or "readout" in roles[name]:
                 if not instrument_pulses[name].is_empty:
                     self.instruments[name].play_sequence()
 
@@ -37,9 +38,8 @@ class MultiqubitPlatform(AbstractPlatform):
             if "readout" in roles[name]:
                 if not instrument_pulses[name].is_empty:
                     if not instrument_pulses[name].ro_pulses.is_empty:
-                        acquisition_results.update(self.instruments[name].play_sequence_and_acquire())
-                    else:
-                        self.instruments[name].play_sequence()
+                        acquisition_results.update(self.instruments[name].acquire())
+
         return acquisition_results
     
     def measure_fidelity(self, nshots=None):
@@ -54,21 +54,20 @@ class MultiqubitPlatform(AbstractPlatform):
             ro_pulse = self.create_qubit_readout_pulse(qubit, start=RX_pulse.duration)
             sequence_exc.add(RX_pulse)
             sequence_exc.add(ro_pulse)
-            shots_results_exc = self.execute_pulse_sequence(sequence_exc, nshots=nshots)['shots'][ro_pulse.serial]
-            iq_exc = []
-            for n in range(nshots):
-                msr, phase, i, q = shots_results_exc[n]
-                iq_exc += [complex(i, q)]
+            amplitude, phase, i, q = self.execute_pulse_sequence(sequence_exc, nshots=nshots)["demodulated_integrated_binned"][
+                ro_pulse.serial
+            ]
+
+            iq_exc = i + 1j * q
 
             sequence_gnd = PulseSequence()
             ro_pulse = self.create_qubit_readout_pulse(qubit, start=0)
             sequence_gnd.add(ro_pulse)
 
-            shots_results_gnd = self.execute_pulse_sequence(sequence_gnd, nshots=nshots)['shots'][ro_pulse.serial]
-            iq_gnd = []
-            for n in range(nshots):
-                msr, phase, i, q = shots_results_gnd[n]
-                iq_gnd += [complex(i, q)]
+            amplitude, phase, i, q = self.execute_pulse_sequence(sequence_gnd, nshots=nshots)["demodulated_integrated_binned"][
+                ro_pulse.serial
+            ]
+            iq_gnd = i + 1j * q
 
             iq_mean_exc = np.mean(iq_exc)
             iq_mean_gnd = np.mean(iq_gnd)
