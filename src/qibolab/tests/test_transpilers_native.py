@@ -12,13 +12,17 @@ def assert_matrices_allclose(gate, phase=1):
     backend = NumpyBackend()
     native_gates = NativeGates()
     target_matrix = gate.asmatrix(backend)
-    #Remove global phase from target matrix
-    target_unitary = target_matrix / np.power(np.linalg.det(target_matrix), 1/float(target_matrix.shape[0]), dtype=complex)
+    # Remove global phase from target matrix
+    target_unitary = target_matrix / np.power(
+        np.linalg.det(target_matrix), 1 / float(target_matrix.shape[0]), dtype=complex
+    )
     circuit = Circuit(len(gate.qubits))
     circuit.add(native_gates.translate_gate(gate))
     native_matrix = circuit.unitary(backend)
-    #Remove global phase from native matrix
-    native_unitary = native_matrix / np.power(np.linalg.det(native_matrix), 1/float(native_matrix.shape[0]), dtype=complex)
+    # Remove global phase from native matrix
+    native_unitary = native_matrix / np.power(
+        np.linalg.det(native_matrix), 1 / float(native_matrix.shape[0]), dtype=complex
+    )
     np.testing.assert_allclose(native_unitary, target_unitary, atol=1e-12)
 
 
@@ -33,19 +37,19 @@ def test_pauli_to_native(gatename):
 def test_rotations_to_native(gatename):
     gate = getattr(gates, gatename)(0, theta=0.1)
     assert_matrices_allclose(gate)
-    
-    
+
+
 @pytest.mark.parametrize("gatename", ["S", "SDG", "T", "TDG"])
 def test_special_single_qubit_to_native(gatename):
     gate = getattr(gates, gatename)(0)
     assert_matrices_allclose(gate)
 
-    
+
 def test_u1_to_native():
     gate = gates.U1(0, theta=0.5)
     assert_matrices_allclose(gate)
-    
-    
+
+
 def test_u2_to_native():
     gate = gates.U2(0, phi=0.1, lam=0.3)
     assert_matrices_allclose(gate)
@@ -100,8 +104,8 @@ def test_GeneralizedfSim_to_native():
 def test_rnn_to_native(gatename):
     gate = getattr(gates, gatename)(0, 1, theta=0.1)
     assert_matrices_allclose(gate)
-    
-    
+
+
 def test_TOFFOLI_to_native():
     gate = gates.TOFFOLI(0, 1, 2)
     assert_matrices_allclose(gate)
