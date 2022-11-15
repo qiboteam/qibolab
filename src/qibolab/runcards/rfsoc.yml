@@ -1,0 +1,45 @@
+nqubits: 1
+description: TII's 1-qubit device controlled with the RFSoC4x2 (fpga board).
+
+qubits: [0]
+
+topology: # qubit - qubit connections
+-   [1]
+
+qubit_channel_map: [[0, 1]] # [readout, drive]
+# TODO: Remove repetition because these channels are defined here
+# and in the config below
+
+config:
+    reps: 1024
+    max_gain: 30000
+    delay_before_readout: 50 # [ns]
+    # channel config
+    resonator_channel: 0
+    qubit_channel: 1
+    # resonator config
+    f_res: 7271.25 # [MHz] 
+    resonator_phase: 3097210280 # 
+    adc_trig_offset: 200 # [Clock ticks]
+    resonator_gain: 600 # 
+    # qubit config
+    pi_gain: 9000 # 
+    pi2_gain: 9000 // 2
+    f_ge: 8014.6 # [MHz] 
+    relax_delay: 500 #[Clock ticks]
+
+native_gates:
+    single_qubit:
+        0: # qubit number
+            RX:
+                duration: 40
+                amplitude: 0.566
+                frequency: 8_014_600_000
+                shape: Drag(5, 0.05096)
+                type: qd # qubit drive
+            MZ:
+                duration: 3000
+                amplitude: 0.02
+                frequency: 7_271_250_000
+                shape: Rectangular()
+                type: ro # readout
