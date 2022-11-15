@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class to interface with the SPI Rack Qutech Delft
 """
