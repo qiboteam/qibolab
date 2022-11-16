@@ -1,32 +1,39 @@
 nqubits: 5
 description: XXX 5-qubit device, controlled with Zurich Instruments.
 
+# my_descriptor : f"""\
+#     instrument_list:
+#     SHFQC:
+#     - address: DEV12146
+#         uid: device_shfqc 
+#     connections:     
+#     device_shfqc:
+#         - iq_signal: q0/drive_line
+#         ports: SGCHANNELS/0/OUTPUT
+#         - iq_signal: q0/measure_line
+#         ports: [QACHANNELS/0/OUTPUT]
+#         - acquire_signal: q0/acquire_line
+#         ports: [QACHANNELS/0/INPUT] 
+#     """
+
 settings:
     hardware_avg: 1024
     sampling_rate: 2_000_000_000
     repetition_duration: 200_000
     minimum_delay_between_instructions: 4
+    readout_delay: 0.0000001
+    readout_integration_delay: 0.00000004
 
-qubits: [0, 1, 2, 3, 4, 5]
+qubits: [0]
 
 topology: # qubit - qubit connections
--   [ 1, 0, 1, 0, 0, 0]
--   [ 0, 1, 1, 0, 0, 0]
--   [ 1, 1, 1, 1, 1, 0]
--   [ 0, 0, 1, 1, 0, 0]
--   [ 0, 0, 1, 0, 1, 0]
--   [ 0, 0, 0, 0, 0, 1]
+-   [1]
 
-channels: [10, 1, 25, 21, 22, 23, 24, 4, 11, 12, 13, 14]
+channels: [0, 1, 0]
 
 
 qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
-    0: [0, 25, 4]
-    1: [0, 21, 11]
-    2: [0, 22, 12]
-    3: [0, 23, 13]
-    4: [0, 24, 14]
-    5: [0, null, null] # witness qubit
+    0: [0, 0]
 
 instruments:
     shfqc_qa:
@@ -35,9 +42,20 @@ instruments:
         address: DEV12146
         roles: [readout]
         settings:
+            channels: [0,1]
+            input_range: 10 # dBm
+            output_range: 5 # dBm
+            lo_frequency: 8_000_000_000
+            gain: 0.06
+
+    shfqc_qc:
+        lib: zhinst
+        class: SHFQC_QA
+        address: DEV12146
+        roles: [control]
+        settings:
             channels: [0]
-            input_range: -30 # dBm
-            output_range: -30 # dBm
+            drive_range : 5
             lo_frequency: 7733265000.0
             gain: 0.06
 
@@ -46,132 +64,47 @@ native_gates:
         0: # qubit number
             RX:
                 duration: 40
-                amplitude: 1
+                amplitude: 0.4
                 frequency: -200_000_000
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
-                duration: 2000
-                amplitude: 0.1
-                frequency: -577_015_000
-
-                shape: Rectangular()
-                type: ro # readout
-                start: 0
-                phase: 0
-        1: # qubit number
-            RX:
-                duration: 41
-                amplitude: 0.695
-                frequency: -200_000_000
-                shape: Drag(5, -0.02)
-                type: qd # qubit drive
-                start: 0
-                phase: 0
-            MZ:
-                duration: 2000
-                amplitude: 0.1
-                frequency: -158_915_000
-                shape: Rectangular()
-                type: ro # readout
-                start: 0
-                phase: 0
-        2: # qubit number
-            RX:
-                duration: 36
-                amplitude: 0.43
-                frequency: -200_000_000
-                shape: Drag(5, -0.04) #Gaussian(5)
-                type: qd # qubit drive
-                start: 0
-                phase: 0
-            MZ:
-                duration: 2000
-                amplitude: 0.1
-                frequency: -155_201_000
-                shape: Rectangular()
-                type: ro # readout
-                start: 0
-                phase: 0
-        3: # qubit number
-            RX:
-                duration: 37
-                amplitude: 0.8
-                frequency: -200_000_000
-                shape: Drag(5, 0.04) #Gaussian(5)
-                type: qd # qubit drive
-                start: 0
-                phase: 0
-            MZ:
-                duration: 2000
-                amplitude: 0.1
-                frequency: -34_845_000
-                shape: Rectangular()
-                type: ro # readout
-                start: 0
-                phase: 0
-        4: # qubit number
-            RX:
-                duration: 43
-                amplitude: 0.870
-                frequency: -200_000_000
-                shape: Drag(5, 0.0) #Gaussian(5)
-                type: qd # qubit drive
-                start: 0
-                phase: 0
-            MZ:
-                duration: 2000
-                amplitude: 0.1
-                frequency: 200_000_000
-                shape: Rectangular()
-                type: ro # readout
-                start: 0
-                phase: 0
-        5: # qubit number
-            RX:
-                duration: 40
-                amplitude: 0.8
-                frequency: -200_000_000
-                shape: Gaussian(5)
-                type: qd # qubit drive
-                start: 0
-                phase: 0
-            MZ:
-                duration: 2000
+                duration: 500
                 amplitude: 0.1
                 frequency: 20_000_000
+                integration_time : 0.01
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
-                phase: 0
+    #             phase: 0
 
-    two_qubit:
-        0-2: # qubit numbers
-            CZ:
-                pulse_sequence:
-                    -   start: 0
-                        duration: 20
-                        amplitude: 0.5
-                        frequency: 0
-                        shape: RTZ()
-                        phase: null
-                        channel: 2
-                        type: qf # qubit flux
-                    -   start: 0
-                        duration: 4
-                        amplitude: 0.01
-                        frequency: 0
-                        shape: RTZ()
-                        phase: null
-                        channel: 2
-                        type: qf # qubit flux
+    # two_qubit:
+    #     0-2: # qubit numbers
+    #         CZ:
+    #             pulse_sequence:
+    #                 -   start: 0
+    #                     duration: 20
+    #                     amplitude: 0.5
+    #                     frequency: 0
+    #                     shape: RTZ()
+    #                     phase: null
+    #                     channel: 2
+    #                     type: qf # qubit flux
+    #                 -   start: 0
+    #                     duration: 4
+    #                     amplitude: 0.01
+    #                     frequency: 0
+    #                     shape: RTZ()
+    #                     phase: null
+    #                     channel: 2
+    #                     type: qf # qubit flux
 characterization:
     single_qubit:
         0:
-            resonator_freq:  7_135_810_000
-            qubit_freq: 3.92965e+9
+            resonator_freq:  7_800_000_000
+            qubit_freq: 4_253_000_000
             T1: 2192.895853326451
             T2: 6933.310025260633
             state0_voltage: 1152
@@ -179,53 +112,3 @@ characterization:
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
             mean_exc_states: (0.00011805761369462914+0.00018601039195510947j)
             sweetspot: 0.001
-        1:
-            resonator_freq: 7_553_883_008
-            qubit_freq: 3_846_769_603
-            T1: 26774
-            T2: 7961
-            state0_voltage: 1650
-            state1_voltage: 3918
-            mean_gnd_states: (-0.0010238346411041346-0.001294845560461652j)
-            mean_exc_states: (-0.0018147265893322573-0.003225323063990513j)
-            sweetspot: -0.00384
-        2:
-            resonator_freq: 7_557_647_610
-            qubit_freq: 4_891_370_569
-            T1: 33875
-            T2: 8479
-            state0_voltage: 1803
-            state1_voltage: 3808
-            mean_gnd_states: (-0.0013963078303444584-0.0010014455851625904j)
-            mean_exc_states: (-0.002143656599102605-0.0030204793616096215j)
-            sweetspot: -0.00154
-        3:
-            resonator_freq: 7_678_010_000
-            qubit_freq: 6_108_500_000
-            T1: 0
-            T2: 0
-            state0_voltage: 785
-            state1_voltage: 1720
-            mean_gnd_states: (-0.0007211155273345421-0.0002989002051225009j)
-            mean_exc_states: (-0.0007188916050170232-0.0003030798883247468j)
-            sweetspot: -0.01126
-        4:
-            resonator_freq: 7_912_807_084
-            qubit_freq: 6_012_161_626
-            T1: 26948
-            T2: 11930
-            state0_voltage: 1232
-            state1_voltage: 3502
-            mean_gnd_states: (-0.00018772900216007803-0.001083608641993983j)
-            mean_exc_states: (-5.0619544978238784e-05-0.0033399404802163086j)
-            sweetspot: 0.00742
-        5:
-            resonator_freq: 7_008_300_000
-            resonator_freq_off: 7.e+9
-            qubit_freq: 6.3925e+9 #3.e+9
-            T1: 2192.895853326451
-            T2: 6933.310025260633
-            state0_voltage: 2911
-            state1_voltage: 5372
-            mean_gnd_states: (0.0035271385849328435+0.006026458509304781j)
-            mean_exc_states: (0.00011805761369462914+0.00018601039195510947j)
