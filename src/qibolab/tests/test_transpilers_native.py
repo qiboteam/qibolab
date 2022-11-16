@@ -3,12 +3,11 @@ import pytest
 from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
-from scipy.linalg import expm
 
 from qibolab.transpilers.native import NativeGates
 
 
-def assert_matrices_allclose(gate, phase=1):
+def assert_matrices_allclose(gate):
     backend = NumpyBackend()
     native_gates = NativeGates()
     target_matrix = gate.asmatrix(backend)
