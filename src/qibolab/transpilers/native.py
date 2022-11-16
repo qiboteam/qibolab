@@ -43,20 +43,20 @@ class NativeGates:
         return gate
 
     def S(self, gate):
-        # TODO: Implement this
-        raise_error(NotImplementedError)
+        q = gate.target_qubits[0]
+        return gates.RZ(q, np.pi / 2)
 
     def SDG(self, gate):
-        # TODO: Implement this
-        raise_error(NotImplementedError)
+        q = gate.target_qubits[0]
+        return gates.RZ(q, -np.pi / 2)
 
     def T(self, gate):
-        # TODO: Implement this
-        raise_error(NotImplementedError)
+        q = gate.target_qubits[0]
+        return gates.RZ(q, np.pi / 4)
 
     def TDG(self, gate):
-        # TODO: Implement this
-        raise_error(NotImplementedError)
+        q = gate.target_qubits[0]
+        return gates.RZ(q, -np.pi / 4)
 
     def I(self, gate):
         return gate
@@ -138,45 +138,44 @@ class NativeGates:
         q0, q1 = gate.qubits
         theta = gate.parameters[0] / 2.0
         return [
-            gates.U1(q0, theta=theta),
+            gates.RZ(q0, theta=theta),
             gates.H(q1),
             gates.CZ(q0, q1),
-            gates.H(q1),
-            gates.U1(q1, theta=-theta),
-            gates.H(q1),
-            # H U1 H can be reduced to
-            # gates.RX(q1, theta=-theta),
+            gates.RX(q1, theta=-theta),
             gates.CZ(q0, q1),
             gates.H(q1),
-            gates.U1(q1, theta=theta),
+            gates.RZ(q1, theta=theta),
         ]
 
     def CU2(self, gate):
-        # TODO: Fix this
         q0, q1 = gate.qubits
         phi, lam = gate.parameters
         q0, q1 = gate.qubits
         phi, lam = gate.parameters
         return [
-            # gates.U1(q0, (lam + phi) / 2.0),
-            gates.U1(q1, (lam - phi) / 2.0),
-            gates.CNOT(q0, q1),
-            gates.U3(q1, np.pi / 2, 0, -(lam + phi) / 2.0),
-            gates.CNOT(q0, q1),
-            gates.U3(q1, np.pi / 2, phi, 0),
+            gates.RZ(q1, theta=(lam - phi) / 2.0),
+            gates.H(q1),
+            gates.CZ(q0, q1),
+            gates.H(q1),
+            gates.U3(q1, -np.pi / 4, 0, -(lam + phi) / 2.0),
+            gates.H(q1),
+            gates.CZ(q0, q1),
+            gates.H(q1),
+            gates.U3(q1, np.pi / 4, phi, 0),
         ]
 
     def CU3(self, gate):
-        # TODO: Fix this
         q0, q1 = gate.qubits
         theta, phi, lam = gate.parameters
         return [
-            # gates.U1(q0, (lam + phi) / 2.0),
-            gates.RZ(q0, (lam + phi) / 2.0),
-            gates.U1(q1, (lam - phi) / 2.0),
-            gates.CNOT(q0, q1),
+            gates.RZ(q1, theta=(lam - phi) / 2.0),
+            gates.H(q1),
+            gates.CZ(q0, q1),
+            gates.H(q1),
             gates.U3(q1, -theta / 2.0, 0, -(lam + phi) / 2.0),
-            gates.CNOT(q0, q1),
+            gates.H(q1),
+            gates.CZ(q0, q1),
+            gates.H(q1),
             gates.U3(q1, theta / 2.0, phi, 0),
         ]
 
@@ -226,7 +225,24 @@ class NativeGates:
         return two_qubit_decomposition(q0, q1, matrix)
 
     def TOFFOLI(self, gate):
-        raise_error(NotImplementedError)
+        q0, q1, q2 = gate.qubits
+        return [
+            gates.CZ(q1, q2),
+            gates.RX(q2, -np.pi / 4),
+            gates.CZ(q0, q2),
+            gates.RX(q2, np.pi / 4),
+            gates.CZ(q1, q2),
+            gates.RX(q2, -np.pi / 4),
+            gates.CZ(q0, q2),
+            gates.RX(q2, np.pi / 4),
+            gates.RZ(q1, np.pi / 4),
+            gates.H(q1),
+            gates.CZ(q0, q1),
+            gates.RZ(q0, np.pi / 4),
+            gates.RX(q1, -np.pi / 4),
+            gates.CZ(q0, q1),
+            gates.H(q1),
+        ]
 
     def Unitary(self, gate):
         matrix = gate.parameters[0]
