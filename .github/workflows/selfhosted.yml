@@ -7,7 +7,8 @@ on:
 
 jobs:
   build:
-    if: contains(github.event.pull_request.labels.*.name, 'run-on-tii1q')
+    if: contains(github.event.pull_request.labels.*.name, 'run-on-tii1q') ||
+        contains(github.event.pull_request.labels.*.name, 'run-on-tii5q')
     strategy:
       matrix:
         python-version: [3.8]
@@ -30,8 +31,11 @@ jobs:
     #     pip install pytest
     #     pip install git+https://github.com/qiboteam/qibo
     #     pip install .[tiiq]
-    - name: Test on qpu
+    - name: Test on tii1q
+      if: contains(github.event.pull_request.labels.*.name, 'run-on-tii1q')
       run: |
-        echo ${{ github.event.pull_request.labels.*.name }}
-        #PLATFORM=tii5q
-        #srun -p qpu5q pytest src/qibolab --pyargs qibolab -m qpu --platforms $PLATFORM -rx
+        srun -p qpu1q pytest src/qibolab --pyargs qibolab -m qpu --platforms tii1q -rx
+    - name: Test on tii5q
+      if: contains(github.event.pull_request.labels.*.name, 'run-on-tii5q')
+      run: |
+        srun -p qpu5q pytest src/qibolab --pyargs qibolab -m qpu --platforms tii5q -rx
