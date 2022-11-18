@@ -7,8 +7,8 @@ on:
 
 jobs:
   prepare:
-    if: contains(github.event.pull_request.labels.*.name, 'run-on-tii1q') ||
-        contains(github.event.pull_request.labels.*.name, 'run-on-tii5q')
+    # if: contains(github.event.pull_request.labels.*.name, 'run-on-tii1q') ||
+    #     contains(github.event.pull_request.labels.*.name, 'run-on-tii5q')
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
