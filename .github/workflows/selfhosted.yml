@@ -39,10 +39,10 @@ jobs:
         pip install .[tiiq]
     # TODO: replace partition names to match platform
     - name: Test tii5q
-      if: ${{ matrix.platform == tii5q' }}
+      if: ${{ matrix.platform == 'tii5q' }}
       run: |
         srun -p qpu5q pytest src/qibolab --pyargs qibolab -m qpu --platforms tii5q -rx
     - name: Test tii1q
-      if: ${{ matrix.platform == "tii1q" }}
+      if: ${{ matrix.platform == 'tii1q' }}
       run: |
         srun -p qpu1q pytest src/qibolab --pyargs qibolab -m qpu --platforms tii1q -rx
