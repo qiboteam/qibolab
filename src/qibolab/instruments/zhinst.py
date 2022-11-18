@@ -432,6 +432,26 @@ class SHFQC_QA(AbstractInstrument):
 
         return Pulse(start, duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
+    def create_RX_pulse(self, qubit, start=0, relative_phase=0):
+        qd_duration = self.native_gates["single_qubit"][qubit]["RX"]["duration"]
+        qd_frequency = self.native_gates["single_qubit"][qubit]["RX"]["frequency"]
+        qd_amplitude = self.native_gates["single_qubit"][qubit]["RX"]["amplitude"]
+        qd_shape = self.native_gates["single_qubit"][qubit]["RX"]["shape"]
+        qd_channel = self.qubit_channel_map[qubit][1]
+        from qibolab.pulses import Pulse
+
+        return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
+
+    def create_MZ_pulse(self, qubit, start):
+        ro_duration = self.native_gates["single_qubit"][qubit]["MZ"]["duration"]
+        ro_frequency = self.native_gates["single_qubit"][qubit]["MZ"]["frequency"]
+        ro_amplitude = self.native_gates["single_qubit"][qubit]["MZ"]["amplitude"]
+        ro_shape = self.native_gates["single_qubit"][qubit]["MZ"]["shape"]
+        ro_channel = self.qubit_channel_map[qubit][0]
+        from qibolab.pulses import ReadoutPulse
+
+        return ReadoutPulse(start, ro_duration, ro_amplitude, ro_frequency, 0, ro_shape, ro_channel, qubit=qubit)
+
 
 # --------------------------------------------------------------------------------------------------------
 # I wont erase this yet but im not using it
