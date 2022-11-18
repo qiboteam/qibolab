@@ -12,7 +12,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - id: set-matrix
-        run: echo "::set-output name=matrix::{\"python\":[3.8], \"platform\":[tii1q, tii5q]}"
+        run: echo "matrix={\"python\":[3.8], \"platform\":[tii1q, tii5q]}" >> $GITHUB_OUTPUT
   build:
     needs: prepare
     strategy:
