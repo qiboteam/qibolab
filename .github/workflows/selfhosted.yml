@@ -12,7 +12,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - id: set-matrix
-        run: echo matrix="{\"node\":[10, 12, 14]}" >> $GITHUB_OUTPUT
+        run: echo matrix="{\"platform\":[tii1q,tii5q]}" >> $GITHUB_OUTPUT
   build:
     needs: prepare
     strategy:
