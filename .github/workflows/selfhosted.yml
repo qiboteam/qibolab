@@ -1,10 +1,14 @@
 # CI workflow that runs on qpu
 name: Tests with qpu
 
-on: [push]
+on:
+  pull_request:
+    types: [labeled]
 
 jobs:
   build:
+    if: contains(github.event.pull_request.labels.*.name, 'run-on-tii1q') ||
+        contains(github.event.pull_request.labels.*.name, 'run-on-tii5q')
     strategy:
       matrix:
         python-version: [3.8]
@@ -28,8 +32,10 @@ jobs:
         pip install git+https://github.com/qiboteam/qibo
         pip install .[tiiq]
     - name: Test tii5q
+      if: contains(github.event.pull_request.labels.*.name, 'run-on-tii5q')
       run: |
         srun -p qpu5q pytest src/qibolab --pyargs qibolab -m qpu --platforms tii5q -rx
     - name: Test tii1q
+      if: contains(github.event.pull_request.labels.*.name, 'run-on-tii1q')
       run: |
         srun -p qpu1q pytest src/qibolab --pyargs qibolab -m qpu --platforms tii1q -rx
