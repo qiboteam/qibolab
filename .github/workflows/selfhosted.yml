@@ -32,6 +32,6 @@ jobs:
     #     pip install .[tiiq]
     - name: Test on qpu
       run: |
-        echo ${{ (github.event.pull_request.labels.*.name }}
+        echo ${{ github.event.pull_request.labels.*.name }}
         #PLATFORM=tii5q
         #srun -p qpu5q pytest src/qibolab --pyargs qibolab -m qpu --platforms $PLATFORM -rx
