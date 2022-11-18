@@ -6,12 +6,19 @@ on:
     types: [labeled]
 
 jobs:
-  build:
+  prepare:
     if: contains(github.event.pull_request.labels.*.name, 'run-on-tii1q') ||
         contains(github.event.pull_request.labels.*.name, 'run-on-tii5q')
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: echo "::set-output name=matrix::{\"python\":[3.8], \"platform\":[tii1q, tii5q]}"
+  build:
+    needs: prepare
     strategy:
-      matrix:
-        python-version: [3.8]
+      matrix: ${{fromJSON(needs.prepare.outputs.matrix)}}
     runs-on: self-hosted
     steps:
     - name: Cleanup workspace manually
@@ -31,11 +38,11 @@ jobs:
         pip install pytest
         pip install git+https://github.com/qiboteam/qibo
         pip install .[tiiq]
-    - name: Test tii5q
-      if: contains(github.event.pull_request.labels.*.name, 'run-on-tii5q')
-      run: |
-        srun -p qpu5q pytest src/qibolab --pyargs qibolab -m qpu --platforms tii5q -rx
-    - name: Test tii1q
-      if: contains(github.event.pull_request.labels.*.name, 'run-on-tii1q')
-      run: |
-        srun -p qpu1q pytest src/qibolab --pyargs qibolab -m qpu --platforms tii1q -rx
+    # - name: Test tii5q
+    #   if: contains(github.event.pull_request.labels.*.name, 'run-on-tii5q')
+    #   run: |
+    #     srun -p qpu5q pytest src/qibolab --pyargs qibolab -m qpu --platforms tii5q -rx
+    # - name: Test tii1q
+    #   if: contains(github.event.pull_request.labels.*.name, 'run-on-tii1q')
+    #   run: |
+    #     srun -p qpu1q pytest src/qibolab --pyargs qibolab -m qpu --platforms tii1q -rx
