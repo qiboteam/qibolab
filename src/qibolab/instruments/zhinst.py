@@ -7,6 +7,7 @@ from zhinst.toolkit import Session, SHFQAChannelMode
 
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 
+
 class SHFQC_QA(AbstractInstrument):
     def __init__(self, name, address, runcard, use_emulation):
         super().__init__(name, address)
@@ -19,7 +20,7 @@ class SHFQC_QA(AbstractInstrument):
         self.output_range = None  # in units of dBm
 
         self._latest_sequence = None
-        self.descriptor_path = "laboneq/examples/helpers/descriptor_shfqc.yml"
+        self.descriptor_path = "/home/admin/Juan/qibolab/src/qibolab/runcards/descriptor_shfqc.yml"
         self.runcard_file = runcard
         self.emulation = use_emulation
 
@@ -61,8 +62,7 @@ class SHFQC_QA(AbstractInstrument):
             )
             self.calib[f"/logical_signal_groups/q{qubit}/measure_line"] = lo.SignalCalibration(
                 oscillator=lo.Oscillator(
-                    frequency=self.characterization["single_qubit"][qubit]["resonator_freq"]
-                    - self.instruments["shfqc_qa"]["settings"]["lo_frequency"],
+                    frequency=self.instruments["shfqc_qa"]["settings"]["if_frequency"],
                     modulation_type=lo.ModulationType.SOFTWARE,
                 ),
                 local_oscillator=lo.Oscillator(
@@ -73,8 +73,7 @@ class SHFQC_QA(AbstractInstrument):
             )
             self.calib[f"/logical_signal_groups/q{qubit}/acquire_line"] = lo.SignalCalibration(
                 oscillator=lo.Oscillator(
-                    frequency=self.characterization["single_qubit"][qubit]["resonator_freq"]
-                    - self.instruments["shfqc_qa"]["settings"]["lo_frequency"],
+                    frequency=self.instruments["shfqc_qa"]["settings"]["if_frequency"],
                     modulation_type=lo.ModulationType.SOFTWARE,
                 ),
                 local_oscillator=lo.Oscillator(
@@ -116,6 +115,7 @@ class SHFQC_QA(AbstractInstrument):
 
     # TODO: Join setup and Z_setup
     def setup(self, **kwargs):
+        self.resonator_type = kwargs.get("resonator_type")
         self.qubits = kwargs.get("qubits")
         self.channels = kwargs.get("channels")
         self.gain = kwargs.get("gain")
@@ -128,8 +128,16 @@ class SHFQC_QA(AbstractInstrument):
         self.settings = kwargs.get("settings")
         self.descriptor = kwargs.get("descriptor")
         self.qubit_channel_map = kwargs.get("qubit_channel_map")
+        self.descriptor = kwargs.get("instrument_list")
 
     def Z_setup(self):
+        # self.Zsetup = lo.DeviceSetup.from_descriptor(
+        #     yaml_text = self.descriptor,
+        #     server_host="localhost",
+        #     server_port="8004",
+        #     setup_name=self.name,
+        # )
+
         self.Zsetup = lo.DeviceSetup.from_yaml(
             filepath=self.descriptor_path,
             server_host="localhost",
@@ -155,6 +163,10 @@ class SHFQC_QA(AbstractInstrument):
         # self.characterization = self.settings["characterization"]
         # # Load Native Gates
         # self.native_gates = self.settings["native_gates"]
+
+    def apply_settings(self):
+        self.def_calibration()
+        self.Zsetup.set_calibration(self.calib)
 
     # FIXME: What are these for ???
     def start(self):
@@ -240,7 +252,7 @@ class SHFQC_QA(AbstractInstrument):
             # outer loop - real-time, cyclic averaging in standard integration mode
             with exp.acquire_loop_rt(
                 uid="shots",
-                count=1,
+                count=self.settings["hardware_avg"],
                 averaging_mode=lo.AveragingMode.CYCLIC,
                 acquisition_type=lo.AcquisitionType.INTEGRATION,
             ):
@@ -250,12 +262,12 @@ class SHFQC_QA(AbstractInstrument):
                 with exp.section(uid="qubit_excitation", alignment=lo.SectionAlignment.RIGHT):
                     for pulse in self.sequence_drive:
                         exp.play(signal="drive", pulse=pulse)
-                        exp.delay(signal="drive", time=50e-9)
+                        exp.delay(signal="drive", time=self.settings["delay_between_pulses"])
 
                 # qubit readout pulse and data acquisition
                 readout_weighting_function = lo.pulse_library.const(
                     uid="readout_weighting_function",
-                    length=len(self.sequence_readout[0].samples) * 10**-9,
+                    length=len(self.sequence_readout[0].samples) / self.settings["sampling_rate"],
                     amplitude=1.0,
                 )
 
@@ -271,7 +283,7 @@ class SHFQC_QA(AbstractInstrument):
 
                 # relax time after readout - for signal processing and qubit relaxation to ground state
                 with exp.section(uid="relax"):
-                    exp.delay(signal="measure", time=50e-9)
+                    exp.delay(signal="measure", time=self.settings["delay_between_pulses"])
 
         else:
             exp = lo.Experiment(
@@ -285,7 +297,7 @@ class SHFQC_QA(AbstractInstrument):
             # outer loop - real-time, cyclic averaging in standard integration mode
             with exp.acquire_loop_rt(
                 uid="shots",
-                count=1,
+                count=self.settings["hardware_avg"],
                 averaging_mode=lo.AveragingMode.CYCLIC,
                 acquisition_type=lo.AcquisitionType.INTEGRATION,
             ):
@@ -293,7 +305,7 @@ class SHFQC_QA(AbstractInstrument):
                 # qubit readout pulse and data acquisition
                 readout_weighting_function = lo.pulse_library.const(
                     uid="readout_weighting_function",
-                    length=len(self.sequence_readout[0].samples) * 10**-9,
+                    length=len(self.sequence_readout[0].samples) / self.settings["sampling_rate"],
                     amplitude=1.0,
                 )
 
@@ -308,7 +320,7 @@ class SHFQC_QA(AbstractInstrument):
 
                 # relax time after readout - for signal processing and qubit relaxation to ground state
                 with exp.section(uid="relax"):
-                    exp.delay(signal="measure", time=50e-9)
+                    exp.delay(signal="measure", time=self.settings["delay_between_pulses"])
 
         self.set_map()
         exp.set_signal_map(self.map_q0)
@@ -411,6 +423,15 @@ class SHFQC_QA(AbstractInstrument):
 
         return ReadoutPulse(start, ro_duration, ro_amplitude, ro_frequency, 0, ro_shape, ro_channel, qubit=qubit)
 
+    def create_qubit_drive_pulse(self, qubit, start, duration, relative_phase=0):
+        qd_frequency = self.native_gates["single_qubit"][qubit]["RX"]["frequency"]
+        qd_amplitude = self.native_gates["single_qubit"][qubit]["RX"]["amplitude"]
+        qd_shape = self.native_gates["single_qubit"][qubit]["RX"]["shape"]
+        qd_channel = self.qubit_channel_map[qubit][1]
+        from qibolab.pulses import Pulse
+
+        return Pulse(start, duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
+
 
 # --------------------------------------------------------------------------------------------------------
 # I wont erase this yet but im not using it
@@ -431,7 +452,6 @@ class SHFQC_QA(AbstractInstrument):
 #         output_range=self.output_range,
 #         mode=SHFQAChannelMode.READOUT, # READOUT or SPECTROSCOPY
 #     )
-#     # TODO: Perhaps we need to set gain somewhere (?)
 #     #print(daq.getDouble("/dev12146/qachannels/0/oscs/0/gain"))
 #     #print(daq.getDouble("/dev12146/qachannels/0/oscs/0/freq") / 1e9)
 

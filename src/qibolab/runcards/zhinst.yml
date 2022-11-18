@@ -5,26 +5,29 @@ description: XXX 5-qubit device, controlled with Zurich Instruments.
 #     instrument_list:
 #     SHFQC:
 #     - address: DEV12146
-#         uid: device_shfqc 
-#     connections:     
+#         uid: device_shfqc
+#     connections:
 #     device_shfqc:
 #         - iq_signal: q0/drive_line
 #         ports: SGCHANNELS/0/OUTPUT
 #         - iq_signal: q0/measure_line
 #         ports: [QACHANNELS/0/OUTPUT]
 #         - acquire_signal: q0/acquire_line
-#         ports: [QACHANNELS/0/INPUT] 
+#         ports: [QACHANNELS/0/INPUT]
 #     """
 
 settings:
-    hardware_avg: 1024
-    sampling_rate: 2_000_000_000
+    hardware_avg: 10
+    sampling_rate: 2.e+9
     repetition_duration: 200_000
     minimum_delay_between_instructions: 4
     readout_delay: 0.0000001
     readout_integration_delay: 0.00000004
+    delay_between_pulses: 50.e-9
 
 qubits: [0]
+
+resonator_type : "3D"
 
 topology: # qubit - qubit connections
 -   [1]
@@ -45,7 +48,8 @@ instruments:
             channels: [0,1]
             input_range: 10 # dBm
             output_range: 5 # dBm
-            lo_frequency: 8_000_000_000
+            lo_frequency: 7_000_000_000
+            if_frequency: 500_000_000
             gain: 0.06
 
     shfqc_qc:
@@ -64,7 +68,7 @@ native_gates:
         0: # qubit number
             RX:
                 duration: 40
-                amplitude: 0.4
+                amplitude: 0.2
                 frequency: -200_000_000
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -103,7 +107,7 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            resonator_freq:  7_800_000_000
+            resonator_freq:  5_250_000_000
             qubit_freq: 4_253_000_000
             T1: 2192.895853326451
             T2: 6933.310025260633

@@ -1,0 +1,14 @@
+instrument_list:
+  SHFQC:
+  - address: DEV12146
+    uid: device_shfqc
+connections:
+  device_shfqc:
+    - iq_signal: q0/drive_line
+      ports: SGCHANNELS/0/OUTPUT
+    - iq_signal: q0/measure_line
+      ports: [QACHANNELS/0/OUTPUT]
+    - acquire_signal: q0/acquire_line
+      ports: [QACHANNELS/0/INPUT]
+    - iq_signal: q1/drive_line
+      ports: SGCHANNELS/2/OUTPUT
