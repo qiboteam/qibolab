@@ -1,10 +1,13 @@
 # CI workflow that runs on qpu
 name: Tests with qpu
 
-on: [push]
+on:
+  pull_request:
+    types: [labeled]
 
 jobs:
   build:
+    if: contains(github.event.pull_request.labels.*.name, 'run-on')
     strategy:
       matrix:
         python-version: [3.8]
@@ -13,23 +16,22 @@ jobs:
     - name: Cleanup workspace manually
       run: |
         rm -rf _work/*
-    - uses: actions/checkout@v2
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install package
-      shell: bash -l {0}
+    # - uses: actions/checkout@v2
+    # - name: Set up Python
+    #   uses: actions/setup-python@v2
+    #   with:
+    #     python-version: ${{ matrix.python-version }}
+    # - name: Install package
+    #   shell: bash -l {0}
+    #   run: |
+    #     conda create --prefix=testenv python=${{ matrix.python-version }}
+    #     conda activate ./testenv
+    #     python -m pip install --upgrade pip
+    #     pip install pytest
+    #     pip install git+https://github.com/qiboteam/qibo
+    #     pip install .[tiiq]
+    - name: Test on qpu
       run: |
-        conda create --prefix=testenv python=${{ matrix.python-version }}
-        conda activate ./testenv
-        python -m pip install --upgrade pip
-        pip install pytest
-        pip install git+https://github.com/qiboteam/qibo
-        pip install .[tiiq]
-    - name: Test tii5q
-      run: |
-        srun -p qpu5q pytest src/qibolab --pyargs qibolab -m qpu --platforms tii5q -rx
-    - name: Test tii1q
-      run: |
-        srun -p qpu1q pytest src/qibolab --pyargs qibolab -m qpu --platforms tii1q -rx
+        echo ${{ (github.event.pull_request.labels.*.name }}
+        #PLATFORM=tii5q
+        #srun -p qpu5q pytest src/qibolab --pyargs qibolab -m qpu --platforms $PLATFORM -rx
