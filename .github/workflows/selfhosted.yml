@@ -15,6 +15,7 @@ jobs:
     steps:
       - id: set-matrix
         run: |
+          echo ${{ contains(github.event.pull_request.labels.*.name, 'run-on-tii1q') }}
           echo matrix="{\"platform\":[\"tii1q\",\"tii5q\"]}" >> $GITHUB_OUTPUT
   build:
     needs: prepare
