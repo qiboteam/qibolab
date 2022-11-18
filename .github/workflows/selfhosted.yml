@@ -13,7 +13,6 @@ jobs:
     steps:
       - id: set-matrix
         run: |
-          echo ${{ contains(github.event.pull_request.labels.*.name, 'run-on-tii1q') }}
           echo matrix="{\"platform\":[\"tii1q\",\"tii5q\"]}" >> $GITHUB_OUTPUT
   build:
     needs: prepare
@@ -38,11 +37,11 @@ jobs:
         pip install pytest
         pip install git+https://github.com/qiboteam/qibo
         pip install .[tiiq]
-    # - name: Test tii5q
-    #   if: contains(github.event.pull_request.labels.*.name, 'run-on-tii5q')
-    #   run: |
-    #     srun -p qpu5q pytest src/qibolab --pyargs qibolab -m qpu --platforms tii5q -rx
-    # - name: Test tii1q
-    #   if: contains(github.event.pull_request.labels.*.name, 'run-on-tii1q')
-    #   run: |
-    #     srun -p qpu1q pytest src/qibolab --pyargs qibolab -m qpu --platforms tii1q -rx
+    - name: Test ${{ matrix.platform }}
+      if: ${{ matrix.platform }} == "tii5q"
+      run: |
+        srun -p qpu5q pytest src/qibolab --pyargs qibolab -m qpu --platforms tii5q -rx
+    - name: Test tii1q
+      if: ${{ matrix.platform }} == "tii1q"
+      run: |
+        srun -p qpu1q pytest src/qibolab --pyargs qibolab -m qpu --platforms tii1q -rx
