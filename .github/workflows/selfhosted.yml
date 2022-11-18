@@ -1,10 +1,7 @@
 # CI workflow that runs on qpu
 name: Tests with qpu
 
-on:
-  push:
-  pull_request:
-    types: [labeled]
+on: [push]
 
 jobs:
   prepare:
