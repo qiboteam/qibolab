@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    if: contains(github.event.pull_request.labels.*.name, 'run-on')
+    if: contains(github.event.pull_request.labels.*.name, 'run-on-tii1q')
     strategy:
       matrix:
         python-version: [3.8]
