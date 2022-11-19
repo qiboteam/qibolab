@@ -5,13 +5,37 @@ on:
   pull_request:
     types: [labeled]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  prepare:
     if: contains(github.event.pull_request.labels.*.name, 'run-on-tii1q') ||
         contains(github.event.pull_request.labels.*.name, 'run-on-tii5q')
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          platforms="{\"platform\":["
+          combined=""
+          if ${{ contains(github.event.pull_request.labels.*.name, 'run-on-tii1q') }}; then
+            platforms="${platforms}${combined:+,}\"tii1q\""
+            combined=${platforms}
+          fi
+          if ${{ contains(github.event.pull_request.labels.*.name, 'run-on-tii5q') }}; then
+            platforms="${platforms}${combined:+,}\"tii5q\""
+          fi
+          platforms="${platforms}]}"
+          echo ${platforms}
+          echo matrix="${platforms}" >> $GITHUB_OUTPUT
+  build:
+    needs: prepare
     strategy:
-      matrix:
-        python-version: [3.8]
+      matrix: ${{fromJSON(needs.prepare.outputs.matrix)}}
+      fail-fast: false
     runs-on: self-hosted
     steps:
     - name: Cleanup workspace manually
@@ -21,7 +45,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: 3.8
     - name: Install package
       shell: bash -l {0}
       run: |
@@ -31,11 +55,6 @@ jobs:
         pip install pytest
         pip install git+https://github.com/qiboteam/qibo
         pip install .[tiiq]
-    - name: Test tii5q
-      if: contains(github.event.pull_request.labels.*.name, 'run-on-tii5q')
+    - name: Test ${{ matrix.platform }}
       run: |
-        srun -p qpu5q pytest src/qibolab --pyargs qibolab -m qpu --platforms tii5q -rx
-    - name: Test tii1q
-      if: contains(github.event.pull_request.labels.*.name, 'run-on-tii1q')
-      run: |
-        srun -p qpu1q pytest src/qibolab --pyargs qibolab -m qpu --platforms tii1q -rx
+        srun -p ${{ matrix.platform }} pytest src/qibolab --pyargs qibolab -m qpu --platforms ${{ matrix.platform }} -rx
