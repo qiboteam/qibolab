@@ -25,6 +25,7 @@ jobs:
             platforms="${platforms}${combined:+,}\"tii5q\""
           fi
           platforms="${platforms}]}"
+          echo ${platforms}
           echo matrix="${platforms}" >> $GITHUB_OUTPUT
   build:
     needs: prepare
