@@ -17,11 +17,11 @@ jobs:
         run: |
           platforms="{\"platform\":["
           combined=""
-          if [${{ contains(github.event.pull_request.labels.*.name, 'run-on-tii1q') }}]; then
+          if [ ${{ contains(github.event.pull_request.labels.*.name, 'run-on-tii1q') }} ]; then
             platforms="${platforms}${combined:+,}\"tii1q\""
             combined=${platforms}
           fi
-          if [${{ contains(github.event.pull_request.labels.*.name, 'run-on-tii5q') }}]; then
+          if [ ${{ contains(github.event.pull_request.labels.*.name, 'run-on-tii5q') }} ]; then
             platforms="${platforms}${combined:+,}\"tii5q\""
           fi
           platforms="${platforms}]}"
