@@ -17,7 +17,7 @@ description: XXX 5-qubit device, controlled with Zurich Instruments.
 #     """
 
 settings:
-    hardware_avg: 10
+    hardware_avg: 1
     sampling_rate: 2.e+9
     repetition_duration: 200_000
     minimum_delay_between_instructions: 4
@@ -48,7 +48,7 @@ instruments:
             channels: [0,1]
             input_range: 10 # dBm
             output_range: 5 # dBm
-            lo_frequency: 7_000_000_000
+            lo_frequency: 5_000_000_000
             if_frequency: 500_000_000
             gain: 0.06
 
@@ -60,7 +60,8 @@ instruments:
         settings:
             channels: [0]
             drive_range : 5
-            lo_frequency: 7733265000.0
+            lo_frequency: 7_000_000_000
+            if_frequency: 500_000_000
             gain: 0.06
 
 native_gates:
