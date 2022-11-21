@@ -51,10 +51,10 @@ class Waveform:
 
 class PulseShape(ABC):
     """Abstract class for pulse shapes"""
-    
-    SAMPLING_RATE = 2e9 #1e9  # 1GSaPS
+
+    SAMPLING_RATE = 2e9  # 1e9  # 1GSaPS
     pulse = None
-    
+
     @property
     @abstractmethod
     def envelope_waveform_i(self) -> Waveform:  # pragma: no cover
@@ -1212,7 +1212,7 @@ class PulseSequence:
                         )
                     else:
                         num_samples = int(pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
-                        time = pulse.start +  np.arange(num_samples) / PulseShape.SAMPLING_RATE * 1e9
+                        time = pulse.start + np.arange(num_samples) / PulseShape.SAMPLING_RATE * 1e9
                         ax.plot(time, pulse.shape.modulated_waveform_q.data, c="lightgrey")
                         ax.plot(time, pulse.shape.modulated_waveform_i.data, c=f"C{str(n)}")
                         ax.plot(time, pulse.shape.envelope_waveform_i.data, c=f"C{str(n)}")
