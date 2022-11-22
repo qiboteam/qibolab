@@ -2,7 +2,7 @@ nqubits: 1
 description: 1-qubit device from Qilimanjaro at TII SD fridge, controlled with qblox cluster rf Batch 3 & 4.
 
 settings:
-    hardware_avg: 4096
+    hardware_avg: 2048
     repetition_duration: 200_000
     sampling_rate: 1_000_000_000
 
@@ -42,7 +42,7 @@ instruments:
                 o1:
                     attenuation                 : 58
                     lo_enabled                  : true
-                    lo_frequency                : 7_276_346_000                    # (Hz) from 2e9 to 18e9
+                    lo_frequency                : 7_251_396_000                   # (Hz) from 2e9 to 18e9
                     gain                        : 0.4                            # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en             : false
                 i1:
@@ -109,9 +109,9 @@ instruments:
         settings:
             ports:
                 o1:
-                    attenuation                 : 52
+                    attenuation                 : 56
                     lo_enabled                  : true
-                    lo_frequency                : 7_275_952_000                  # (Hz) from 2e9 to 18e9
+                    lo_frequency                : 7_275_460_000                  # (Hz) from 2e9 to 18e9
                     gain                        : 0.5                             # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en             : false
                 i1:
@@ -132,15 +132,15 @@ instruments:
         settings:
             ports:
                 o2:
-                    attenuation                  : 4 # (dB)
-                    lo_enabled                   : false
-                    lo_frequency                 : 5_189_540_000 # (Hz) from 2e9 to 18e9
-                    gain                         : 0.6 # for path0 and path1 -1.0<=v<=1.0
+                    attenuation                  : 12 # (dB)
+                    lo_enabled                   : true
+                    lo_frequency                 : 7_414_600_000 # (Hz) from 2e9 to 18e9
+                    gain                         : 0.4 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
                 o1:
                     attenuation                  : 8 # (dB)
                     lo_enabled                   : true       
-                    lo_frequency                 : 4_969_260_000 # (Hz) from 2e9 to 18e9
+                    lo_frequency                 : 7_415_500_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.7 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
 
@@ -164,7 +164,7 @@ instruments:
                 o2:
                     attenuation                  : 8 # (dB)
                     lo_enabled                   : true
-                    lo_frequency                 : 6_440_000_000 # (Hz) from 2e9 to 18e9
+                    lo_frequency                 : 6_291_100_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.5 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
 
@@ -176,8 +176,8 @@ native_gates:
     single_qubit:
         0: # qubit id
             RX:
-                duration: 32                    # should be multiple of 4
-                amplitude: 0.67
+                duration: 40                    # should be multiple of 4
+                amplitude: 0.655
                 frequency: 200_000_000
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -218,8 +218,8 @@ native_gates:
 
         3: # qubit id
             RX:
-                duration: 40                    # should be multiple of 4
-                amplitude: 0.2
+                duration: 48                    # should be multiple of 4
+                amplitude: 0.5
                 frequency: 200_000_000
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -233,8 +233,8 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            resonator_freq: 7_296_346_000
-            qubit_freq: 5_389_540_000
+            resonator_freq: 7_271_396_000
+            qubit_freq: 8_015_500_000
             T1: 18107
             T2: 0
             state0_voltage: 244.31108877477163
@@ -263,8 +263,8 @@ characterization:
             mean_exc_states: (3.254111797580043e-05+6.381080335860311e-05j)
 
         3:
-            resonator_freq: 7_295_400_000
-            qubit_freq: 6_640_000_000
+            resonator_freq: 7_295_460_000
+            qubit_freq: 6_491_100_000
             T1: 8401
             T2: 0
             state0_voltage: 980.0526149089349
