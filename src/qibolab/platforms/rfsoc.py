@@ -20,9 +20,8 @@ class RFSocPlatform(AbstractPlatform):
         else:
             self.resonator_type = "2D"
 
-#        self.soc = QickSoc()
+
         self.cfg = dict(self.settings.get("config"))
-        # self.cfg["sigma"] = self.soc.us2cycles(0.025, gen_ch=qubit_channel)
         self.host = self.cfg["ip_address"]
         self.port = self.cfg["ip_port"]
     def reload_settings(self):
@@ -46,25 +45,34 @@ class RFSocPlatform(AbstractPlatform):
     def disconnect(self):
         raise NotImplementedError
 
+    def _generate_json_packet(self, var1):
+        # Generate the json packet to send over TCP
+        return {
+            "opcode": 3, 
+            "length": var1
+            }
+        
+
     def execute_pulse_sequence(self, sequence, var1,  nshots=None):
         import socket
-        import struct
-        data = struct.pack('BB', 3, var1)
+        import json
+
+        jsonDic = self._generate_json_packet(int(var1)) 
+
+
     # Create a socket (SOCK_STREAM means a TCP socket)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             # Connect to server and send data
             sock.connect((self.host, self.port))
-            sock.sendall(bytes(data))
-        #    sock.sendall(bytes(data , "utf-8"))
+            sock.sendall(json.dumps(jsonDic).encode())
 
             # Receive data from the server and shut down
             received = sock.recv(1024)
+            avg = json.loads(received.decode('utf-8'))          
+            avgi = np.array([avg["avgiRe"], avg["avgiIm"]])
+            avgq = np.array([avg["avgqRe"], avg["avgqIm"]])
+        sock.close()
 
-            avg = struct.unpack("ffff",received)
-#            avgiRe = struct.unpack("f",sock.recv(4)[0])
-#            avgiIm = struct.unpack("f",sock.recv(4)[0])           
-            avgi = np.array([avg[0], avg[1]])
-            avgq = np.array([avg[2], avg[3]])
         return avgi, avgq
     
 
@@ -74,4 +82,3 @@ class RFSocPlatform(AbstractPlatform):
         avgi, avgq = program.acquire(self.soc, load_pulses=True, progress=False, debug=False)
         return avgi, avgq
         """
-
