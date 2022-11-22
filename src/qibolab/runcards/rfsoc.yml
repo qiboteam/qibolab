@@ -13,29 +13,29 @@ instruments:
     tii_rfsoc4x2:
         lib: tii
         class: tii_rfsoc4x2
-        address: 192.168.2.72
+#        address: 192.168.2.72
         roles: [control, readout]
         settings:
             reference_clock_source      : internal                      # external or internal
-config:
-    ip_address: 192.168.2.72
-    ip_port: 6000
-    reps: 1024
-    max_gain: 30000
-    delay_before_readout: 50 # [ns]
-    # channel config
-    resonator_channel: 0
-    qubit_channel: 1
-    # resonator config
-    f_res: 7271.25 # [MHz] 
-    resonator_phase: 3097210280 # 
-    adc_trig_offset: 200 # [Clock ticks]
-    resonator_gain: 600 # 
-    # qubit config
-    pi_gain: 9000 # 
-    pi2_gain: 9000 // 2
-    f_ge: 8014.6 # [MHz] 
-    relax_delay: 500 #[Clock ticks]
+            ip_address: 192.168.2.72
+            ip_port: 6000
+            reps: 1024
+            max_gain: 30000
+            delay_before_readout: 50 # [ns]
+            rabi_length: 1
+            # channel config
+            resonator_channel: 0
+            qubit_channel: 1
+            # resonator config
+            f_res: 7271.25 # [MHz] 
+            resonator_phase: 3097210280 # 
+            adc_trig_offset: 200 # [Clock ticks]
+            resonator_gain: 600 # 
+            # qubit config
+            pi_gain: 9000 # 
+            pi2_gain: 9000 // 2
+            f_ge: 8014.6 # [MHz] 
+            relax_delay: 500 #[Clock ticks]
 
 native_gates:
     single_qubit:

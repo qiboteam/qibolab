@@ -20,10 +20,11 @@ class RFSocPlatform(AbstractPlatform):
         else:
             self.resonator_type = "2D"
 
-
-        self.cfg = dict(self.settings.get("config"))
-        self.host = self.cfg["ip_address"]
-        self.port = self.cfg["ip_port"]
+#        self.cfg = dict(self.settings.get("config"))
+        self.cfg = dict(self.settings.get("instruments"))
+        self.host = self.cfg["tii_rfsoc4x2"]["settings"]["ip_address"]
+        self.port = self.cfg["tii_rfsoc4x2"]["settings"]["ip_port"]
+        print("Configuracion: ", self.cfg)
     def reload_settings(self):
         raise NotImplementedError
 
@@ -53,19 +54,20 @@ class RFSocPlatform(AbstractPlatform):
             }
         
 
-    def execute_pulse_sequence(self, sequence, var1,  nshots=None):
+    def execute_pulse_sequence(self, sequence, rabi_length,  nshots=None):
         import socket
         import json
 
-        jsonDic = self._generate_json_packet(int(var1)) 
+        self.cfg["tii_rfsoc4x2"]["settings"]["rabi_length"] = rabi_length
 
+        jsonDic = self.cfg 
 
     # Create a socket (SOCK_STREAM means a TCP socket)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             # Connect to server and send data
             sock.connect((self.host, self.port))
             sock.sendall(json.dumps(jsonDic).encode())
-
+            print("datos enviados")
             # Receive data from the server and shut down
             received = sock.recv(1024)
             avg = json.loads(received.decode('utf-8'))          
@@ -76,9 +78,3 @@ class RFSocPlatform(AbstractPlatform):
         return avgi, avgq
     
 
-        """
-        program = Program(self.soc, self.cfg, sequence)
-        # TODO: Pass optional values: ``threshold``
-        avgi, avgq = program.acquire(self.soc, load_pulses=True, progress=False, debug=False)
-        return avgi, avgq
-        """

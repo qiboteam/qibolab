@@ -17,7 +17,7 @@ def Platform(name, runcard=None):
     elif name == "icarusq":
         from qibolab.platforms.icplatform import ICPlatform as Device
     elif name == "rfsoc":
-        from qibolab.src.qibolab.platforms.rfsoc_old import RFSocPlatform as Device        
+        from qibolab.platforms.rfsoc import RFSocPlatform as Device        
     elif name == "dummy":
         from qibolab.platforms.dummy import DummyPlatform as Device
     else:
