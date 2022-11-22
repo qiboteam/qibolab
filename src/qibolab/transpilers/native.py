@@ -196,14 +196,14 @@ class NativeGates:
     def FSWAP(self, gate):
         q0, q1 = gate.qubits
         return [
-            gates.U3(q0, np.pi/2, -np.pi/2, -np.pi),
-            gates.U3(q1, np.pi/2, np.pi/2, np.pi/2),
+            gates.U3(q0, np.pi / 2, -np.pi / 2, -np.pi),
+            gates.U3(q1, np.pi / 2, np.pi / 2, np.pi / 2),
             gates.CZ(q0, q1),
-            gates.U3(q0, np.pi/2, 0, -np.pi/2),
-            gates.U3(q1, np.pi/2, 0, np.pi/2),
+            gates.U3(q0, np.pi / 2, 0, -np.pi / 2),
+            gates.U3(q1, np.pi / 2, 0, np.pi / 2),
             gates.CZ(q0, q1),
-            gates.U3(q0, np.pi/2, np.pi/2, -np.pi),
-            gates.U3(q1, np.pi/2, 0, -np.pi),  
+            gates.U3(q0, np.pi / 2, np.pi / 2, -np.pi),
+            gates.U3(q1, np.pi / 2, 0, -np.pi),
         ]
 
     def fSim(self, gate):
@@ -219,35 +219,35 @@ class NativeGates:
     def RXX(self, gate):
         q0, q1 = gate.qubits
         theta = gate.parameters
-        return [ 
+        return [
             gates.H(q0),
-            gates.CZ(q0,q1),
-            gates.RX(q1,theta),
-            gates.CZ(q0,q1),
+            gates.CZ(q0, q1),
+            gates.RX(q1, theta),
+            gates.CZ(q0, q1),
             gates.H(q0),
         ]
 
     def RYY(self, gate):
         q0, q1 = gate.qubits
         theta = gate.parameters
-        return [ 
-            gates.RX(q0, np.pi/2),
-            gates.U3(q1, np.pi/2, np.pi/2, -np.pi),
-            gates.CZ(q0,q1),
-            gates.RX(q1,theta),
-            gates.CZ(q0,q1),
-            gates.RX(q0, -np.pi/2),
-            gates.U3(q1, np.pi/2, 0, np.pi/2),
+        return [
+            gates.RX(q0, np.pi / 2),
+            gates.U3(q1, np.pi / 2, np.pi / 2, -np.pi),
+            gates.CZ(q0, q1),
+            gates.RX(q1, theta),
+            gates.CZ(q0, q1),
+            gates.RX(q0, -np.pi / 2),
+            gates.U3(q1, np.pi / 2, 0, np.pi / 2),
         ]
 
     def RZZ(self, gate):
         q0, q1 = gate.qubits
         theta = gate.parameters
-        return [ 
+        return [
             gates.H(q1),
-            gates.CZ(q0,q1),
-            gates.RX(q1,theta),
-            gates.CZ(q0,q1),
+            gates.CZ(q0, q1),
+            gates.RX(q1, theta),
+            gates.CZ(q0, q1),
             gates.H(q1),
         ]
 

@@ -22,7 +22,7 @@ def assert_matrices_allclose(gate, phase=1):
     native_unitary = native_matrix / np.power(
         np.linalg.det(native_matrix), 1 / float(native_matrix.shape[0]), dtype=complex
     )
-    np.testing.assert_allclose(phase*native_unitary, target_unitary, atol=1e-12)
+    np.testing.assert_allclose(phase * native_unitary, target_unitary, atol=1e-12)
 
 
 @pytest.mark.parametrize("gatename", ["H", "X", "Y"])
