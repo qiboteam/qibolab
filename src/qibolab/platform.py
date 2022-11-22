@@ -2,7 +2,7 @@ def Platform(name, runcard=None):
     """Platform for controlling quantum devices.
 
     Args:
-        name (str): name of the platform. Options are 'tiiq', 'qili' and 'icarusq'.
+        name (str): name of the platform. Options are 'tiiq', 'qili', 'rfsoc' and 'icarusq'.
         runcard (str): path to the yaml file containing the platform setup.
 
     Returns:
@@ -12,11 +12,12 @@ def Platform(name, runcard=None):
         from qibolab.paths import qibolab_folder
 
         runcard = qibolab_folder / "runcards" / f"{name}.yml"
-
     if name == "tii1q" or name == "tii5q" or name == "qili":
         from qibolab.platforms.multiqubit import MultiqubitPlatform as Device
     elif name == "icarusq":
         from qibolab.platforms.icplatform import ICPlatform as Device
+    elif name == "rfsoc":
+        from qibolab.platforms.rfsoc import RFSocPlatform as Device        
     elif name == "dummy":
         from qibolab.platforms.dummy import DummyPlatform as Device
     else:
