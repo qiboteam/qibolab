@@ -195,9 +195,16 @@ class NativeGates:
 
     def FSWAP(self, gate):
         q0, q1 = gate.qubits
-        fswap = self.SWAP(gates.SWAP(q0, q1))
-        fswap.append(gates.CZ(q0, q1))
-        return fswap
+        return [
+            gates.U3(q0, np.pi/2, -np.pi/2, -np.pi),
+            gates.U3(q1, np.pi/2, np.pi/2, np.pi/2),
+            gates.CZ(q0, q1),
+            gates.U3(q0, np.pi/2, 0, -np.pi/2),
+            gates.U3(q1, np.pi/2, 0, np.pi/2),
+            gates.CZ(q0, q1),
+            gates.U3(q0, np.pi/2, np.pi/2, -np.pi),
+            gates.U3(q1, np.pi/2, 0, -np.pi),  
+        ]
 
     def fSim(self, gate):
         q0, q1 = gate.qubits
@@ -211,18 +218,38 @@ class NativeGates:
 
     def RXX(self, gate):
         q0, q1 = gate.qubits
-        matrix = gate.asmatrix(self.backend)
-        return two_qubit_decomposition(q0, q1, matrix)
+        theta = gate.parameters
+        return [ 
+            gates.H(q0),
+            gates.CZ(q0,q1),
+            gates.RX(q1,theta),
+            gates.CZ(q0,q1),
+            gates.H(q0),
+        ]
 
     def RYY(self, gate):
         q0, q1 = gate.qubits
-        matrix = gate.asmatrix(self.backend)
-        return two_qubit_decomposition(q0, q1, matrix)
+        theta = gate.parameters
+        return [ 
+            gates.RX(q0, np.pi/2),
+            gates.U3(q1, np.pi/2, np.pi/2, -np.pi),
+            gates.CZ(q0,q1),
+            gates.RX(q1,theta),
+            gates.CZ(q0,q1),
+            gates.RX(q0, -np.pi/2),
+            gates.U3(q1, np.pi/2, 0, np.pi/2),
+        ]
 
     def RZZ(self, gate):
         q0, q1 = gate.qubits
-        matrix = gate.asmatrix(self.backend)
-        return two_qubit_decomposition(q0, q1, matrix)
+        theta = gate.parameters
+        return [ 
+            gates.H(q1),
+            gates.CZ(q0,q1),
+            gates.RX(q1,theta),
+            gates.CZ(q0,q1),
+            gates.H(q1),
+        ]
 
     def TOFFOLI(self, gate):
         q0, q1, q2 = gate.qubits
