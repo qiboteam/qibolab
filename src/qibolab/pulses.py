@@ -153,18 +153,19 @@ class SNZ(PulseShape):
     Rectangular pulse of duration tp - Nothing for duration (duration-2*tp) - Rectangular pulse of duration tp
     """
 
-    def __init__(self, tp):
+    def __init__(self, tp, pos_neg_ratio=1):
         self.name = "SNZ"
         self.pulse: Pulse = None
         self.tp: int = int(tp)
+        self.pos_neg_ratio = pos_neg_ratio
 
     @property
     def envelope_waveform_i(self) -> Waveform:
         if self.pulse:
             num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
-            waveform = Waveform(np.concatenate((self.pulse.amplitude * np.ones(self.tp), 
+            waveform = Waveform(np.concatenate((self.pulse.amplitude * self.pos_neg_ratio * np.ones(self.tp), 
                                 np.zeros(self.pulse.duration - 2*self.tp), 
-                                self.pulse.amplitude * np.ones(self.tp))))
+                                self.pulse.amplitude * (1/self.pos_neg_ratio) * np.ones(self.tp))))
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         else:

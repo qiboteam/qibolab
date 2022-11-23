@@ -1,6 +1,6 @@
 nqubits: 5
 description: QuantWare 5-qubit device gold, controlled with Qblox and R&S instruments.
-settings: {hardware_avg: 1024, sampling_rate: 1000000000, repetition_duration: 600000,
+settings: {hardware_avg: 2000, sampling_rate: 1000000000, repetition_duration: 16000,
     minimum_delay_between_instructions: 4}
 qubits: [0, 1, 2, 3, 4, 5]
 topology:
@@ -59,9 +59,9 @@ instruments:
         settings:
             ports:
                 o1: {attenuation: 24, lo_enabled: true, lo_frequency: 4043994000.1,
-                    gain: 0.2330242, hardware_mod_en: false}
+                    gain: 0.3, hardware_mod_en: false}
                 o2: {attenuation: 18, lo_enabled: true, lo_frequency: 5091284403.0,
-                    gain: 0.195, hardware_mod_en: false}
+                    gain: 0.3, hardware_mod_en: false}
             channel_port_map: {L3-11: o1, L3-12: o2}
     qcm_rf2:
         lib: qblox
@@ -70,10 +70,10 @@ instruments:
         roles: [control]
         settings:
             ports:
-                o1: {attenuation: 18, lo_enabled: true, lo_frequency: 6308284099.0,
-                    gain: 0.19, hardware_mod_en: false}
+                o1: {attenuation: 8, lo_enabled: true, lo_frequency: 6.64447035e+9, 
+                    gain: 0.089, hardware_mod_en: false}
                 o2: {attenuation: 18, lo_enabled: true, lo_frequency: 6205090089.0,
-                    gain: 0.18, hardware_mod_en: false}
+                    gain: 0.3, hardware_mod_en: false}
             channel_port_map: {L3-14: o1, L3-13: o2}
     qcm_rf3:
         lib: qblox
@@ -129,27 +129,27 @@ native_gates:
         0:
             RX: {duration: 40, amplitude: 1, frequency: -200000000.0, shape: Gaussian(5),
                 type: qd, start: 0, phase: 0}
-            MZ: {duration: 4000, amplitude: 0.02, frequency: 71834234.23423386, shape: Rectangular(),
+            MZ: {duration: 4000, amplitude: 0.02, frequency: 71834234.0, shape: Rectangular(),
                 type: ro, start: 0, phase: 0}
         1:
-            RX: {duration: 40, amplitude: 0.8861, frequency: -200000000.0, shape: 'Drag(5,-0.04)',
+            RX: {duration: 40, amplitude: 1, frequency: -200000000.0, shape: Gaussian(5),
                 type: qd, start: 0, phase: 0}
-            MZ: {duration: 4000, amplitude: 0.6, frequency: 298527863.86386395, shape: Rectangular(),
+            MZ: {duration: 4000, amplitude: 0.6, frequency: 297928000.0, shape: Rectangular(),
                 type: ro, start: 0, phase: 0}
         2:
-            RX: {duration: 40, amplitude: 0.9, frequency: -200000000.0, shape: 'Drag(5,-0.01)',
+            RX: {duration: 40, amplitude: 1, frequency: -200000000.0, shape: Gaussian(5),
                 type: qd, start: 0, phase: 0}
-            MZ: {duration: 4000, amplitude: 0.6, frequency: -224786478.4784794, shape: Rectangular(),
+            MZ: {duration: 4000, amplitude: 0.6, frequency: -226886000.0, shape: Rectangular(),
                 type: ro, start: 0, phase: 0}
         3:
-            RX: {duration: 40, amplitude: 0.8413, frequency: -200000000.0, shape: 'Drag(5,-0.07)',
+            RX: {duration: 40, amplitude: 1, frequency: -200000000.0, shape: Gaussian(5),
                 type: qd, start: 0, phase: 0}
-            MZ: {duration: 4000, amplitude: 0.6, frequency: -77782228.22822857, shape: Rectangular(),
+            MZ: {duration: 4000, amplitude: 0.6, frequency: -80382000.0, shape: Rectangular(),
                 type: ro, start: 0, phase: 0}
         4:
-            RX: {duration: 40, amplitude: 0.9003, frequency: -200000000.0, shape: 'Drag(5,-0.07)',
+            RX: {duration: 40, amplitude: 1, frequency: -200000000.0, shape: Gaussian(5),
                 type: qd, start: 0, phase: 0}
-            MZ: {duration: 4000, amplitude: 0.6, frequency: 177648383.83838367, shape: Rectangular(),
+            MZ: {duration: 4000, amplitude: 0.6, frequency: 177348000.0, shape: Rectangular(),
                 type: ro, start: 0, phase: 0}
         5:
             RX: {duration: 40, amplitude: 1, frequency: -200000000.0, shape: Gaussian(5),
@@ -167,45 +167,45 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            resonator_freq: 7226834234.234234
+            resonator_freq: 7.226834234e+9
             resonator_polycoef_flux: []
-            qubit_freq: 4.41e+9
+            qubit_freq: 5.e+9 # 4.41e+9
             T1: 0.
             T2: 0.
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
             sweetspot: 0
         1:
-            resonator_freq: 7453527863.863864
+            resonator_freq: 7.452928e+9
             resonator_polycoef_flux: [-4.6451756736087145e+38,3.2293470825015906e+36,1.6081121312171546e+35,-9.444675719520802e+32,-2.211073065553773e+31,1.0918607761302252e+29,1.5325991061334706e+27,-6.404685867261546e+24,-5.632695056029822e+22,2.029551381809233e+20,1.0836214044247741e+18,-3231500467476807.0,-12456863889131.814,-12446644484.78255,214382982.6890961,7453259082.7034855]
-            qubit_freq: 4.55e+9
+            qubit_freq: 5.e+9 # 4.4e+9
             T1: 0.
             T2: 0.
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
             sweetspot: 0.00211
         2:
-            resonator_freq: 7655213521.521521
+            resonator_freq: 7.653114e+9
             resonator_polycoef_flux: [3.057602928381394e+38,1.6354929259301287e+36,-9.805250521464736e+34,-4.54683822001466e+32,1.2702228860646553e+31,4.909653661681372e+28,-8.537328593512273e+26,-2.657058233914408e+24,3.1487808558903325e+22,8.033649954905458e+19,-6.062997997623597e+17,-1447597992617532.2,7783567289764.619,6191874655.19636,-330821269.91567874,7654091680.281223]
-            qubit_freq: 5.53e+9
+            qubit_freq: 5.e+9 # 5.53e+9
             T1: 0.
             T2: 0.
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
             sweetspot: -0.0051256
         3:
-            resonator_freq: 7802217771.771771
+            resonator_freq: 7.799618e+9
             resonator_polycoef_flux: [-6.4013957082333475e+37,-5.544603465800361e+35,1.8083036243549177e+34,1.6444237288265834e+32,-1.9336423602686407e+30,-1.8585628967697584e+28,1.0114118728337038e+26,1.0017301264568281e+24,-3.2721117969917595e+21,-2.9131196573986652e+19,1.1268624436211499e+17,903941645210106.1,-4544899558904.053,-55778968179.37294,133312536.88543282,7802142340.280156]
-            qubit_freq: 6.54e+9
+            qubit_freq: 5.e+9 # 6.54e+9
             T1: 0.
             T2: 0.
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
             sweetspot: 0.00111055
         4:
-            resonator_freq: 8057648383.838384
+            resonator_freq: 8.057348e+9
             resonator_polycoef_flux: [-1.6295650056018441e+38,-2.484683239160295e+37,-1.7187934153776733e+36,-7.140662289959547e+34,-1.987722980285294e+33,-3.9161945249640967e+31,-5.62226314589191e+29,-5.963420286511692e+27,-4.685087050327615e+25,-2.7055040056614286e+23,-1.1270184884253945e+21,-3.2773058618729805e+18,-6309800932863619.0,-7364888703913.622,-4606946522.073189,8054220154.824738]
-            qubit_freq: 6.37e+9
+            qubit_freq: 6.44447035e+9
             T1: 0.
             T2: 0.
             mean_gnd_states: (0+0j)
@@ -213,7 +213,7 @@ characterization:
             sweetspot: -0.0123
         5:
             resonator_freq: 7119252525.252525
-            qubit_freq: 5.34e+9
+            qubit_freq: 5.e+9 # 5.34e+9
             T1: 0.
             T2: 0.
             mean_gnd_states: (0+0j)
