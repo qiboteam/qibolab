@@ -58,9 +58,9 @@ instruments:
         roles: [control]
         settings:
             ports:
-                o1: {attenuation: 24, lo_enabled: true, lo_frequency: 4043994000.1,
+                o1: {attenuation: 60, lo_enabled: true, lo_frequency: 4043994000.1,
                     gain: 0.3, hardware_mod_en: false}
-                o2: {attenuation: 18, lo_enabled: true, lo_frequency: 5091284403.0,
+                o2: {attenuation: 60, lo_enabled: true, lo_frequency: 5091284403.0,
                     gain: 0.3, hardware_mod_en: false}
             channel_port_map: {L3-11: o1, L3-12: o2}
     qcm_rf2:
@@ -72,7 +72,7 @@ instruments:
             ports:
                 o1: {attenuation: 8, lo_enabled: true, lo_frequency: 6.64447035e+9, 
                     gain: 0.089, hardware_mod_en: false}
-                o2: {attenuation: 18, lo_enabled: true, lo_frequency: 6205090089.0,
+                o2: {attenuation: 60, lo_enabled: true, lo_frequency: 6205090089.0,
                     gain: 0.3, hardware_mod_en: false}
             channel_port_map: {L3-14: o1, L3-13: o2}
     qcm_rf3:
@@ -82,9 +82,9 @@ instruments:
         roles: [control]
         settings:
             ports:
-                o1: {attenuation: 18, lo_enabled: true, lo_frequency: 3910000000.0,
+                o1: {attenuation: 60, lo_enabled: true, lo_frequency: 3910000000.0,
                     gain: 0.3, hardware_mod_en: false}
-                o2: {attenuation: 18, lo_enabled: true, lo_frequency: 5000000000.0,
+                o2: {attenuation: 60, lo_enabled: true, lo_frequency: 5000000000.0,
                     gain: 0.3, hardware_mod_en: false}
             channel_port_map: {L3-15: o1, 99: o2}
     qcm_bb1:
@@ -187,7 +187,7 @@ characterization:
         2:
             resonator_freq: 7.653114e+9
             resonator_polycoef_flux: [3.057602928381394e+38,1.6354929259301287e+36,-9.805250521464736e+34,-4.54683822001466e+32,1.2702228860646553e+31,4.909653661681372e+28,-8.537328593512273e+26,-2.657058233914408e+24,3.1487808558903325e+22,8.033649954905458e+19,-6.062997997623597e+17,-1447597992617532.2,7783567289764.619,6191874655.19636,-330821269.91567874,7654091680.281223]
-            qubit_freq: 5.e+9 # 5.53e+9
+            qubit_freq: 5.338e+9 # 5.53e+9
             T1: 0.
             T2: 0.
             mean_gnd_states: (0+0j)
@@ -196,7 +196,7 @@ characterization:
         3:
             resonator_freq: 7.799618e+9
             resonator_polycoef_flux: [-6.4013957082333475e+37,-5.544603465800361e+35,1.8083036243549177e+34,1.6444237288265834e+32,-1.9336423602686407e+30,-1.8585628967697584e+28,1.0114118728337038e+26,1.0017301264568281e+24,-3.2721117969917595e+21,-2.9131196573986652e+19,1.1268624436211499e+17,903941645210106.1,-4544899558904.053,-55778968179.37294,133312536.88543282,7802142340.280156]
-            qubit_freq: 5.e+9 # 6.54e+9
+            qubit_freq: 6.54e+9
             T1: 0.
             T2: 0.
             mean_gnd_states: (0+0j)
