@@ -29,4 +29,4 @@ jobs:
         pip install .[tiiq]
     - name: Test tii5q
       run: |
-        srun -p qpu5q pytest src/qibolab --pyargs qibolab --skip-no-qpu --platforms tii5q
+        srun -p tii5q pytest src/qibolab --pyargs qibolab --skip-no-qpu --platforms tii5q
