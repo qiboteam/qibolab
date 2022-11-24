@@ -1,0 +1,366 @@
+nqubits: 5
+description: IQM 5 flux qubits with couplers
+settings:
+    hardware_avg: 1024
+    sampling_rate: 1000000000
+    repetition_duration: 400000
+    minimum_delay_between_instructions: 4
+qubits:
+- 0
+- 1
+- 2
+- 3
+- 4
+
+topology:
+-   - 1
+    - 0
+    - 1
+    - 0
+    - 0
+    - 0
+-   - 0
+    - 1
+    - 1
+    - 0
+    - 0
+    - 0
+-   - 1
+    - 1
+    - 1
+    - 1
+    - 1
+    - 0
+-   - 0
+    - 0
+    - 1
+    - 1
+    - 0
+    - 0
+-   - 0
+    - 0
+    - 1
+    - 0
+    - 1
+    - 0
+-   - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 1
+channels:
+- F1L1
+- F1L2
+- F1L3
+- F1L4
+- F1L5
+- F2L1
+- F2L3
+
+qubit_channel_map:
+    0:
+    - F2L1
+    - null
+    - F1L1
+    1:
+    - F2L1
+    - null
+    - F1L2
+    2:
+    - F2L1
+    - null
+    - F1L3
+    3:
+    - F2L1
+    - null
+    - F1L4
+    4:
+    - F2L1
+    - null
+    - F1L5
+
+instruments:
+    cluster:
+        lib: qblox
+        class: Cluster
+        address: 192.168.0.3
+        roles:
+        - other
+        settings:
+            reference_clock_source: internal
+    qrm_rf:
+        lib: qblox
+        class: ClusterQRM_RF
+        address: 192.168.0.3:9
+        roles:
+        - readout
+        settings:
+            ports:
+                o1:
+                    attenuation: 40
+                    lo_enabled: true
+                    lo_frequency: 7733265000.0
+                    gain: 0.06
+                    hardware_mod_en: false
+                i1:
+                    hardware_demod_en: false
+            acquisition_hold_off: 130
+            acquisition_duration: 1800
+            channel_port_map:
+                F2L1: o1
+                F2L3: i1
+
+    SPI:
+        lib: qutech
+        class: SPI
+        address: /dev/ttyACM1
+        roles:
+        - flux
+        settings:
+            s4g_modules:       
+                F1L1:
+                - 2
+                - 1
+                - 0
+                F1L2:
+                - 1
+                - 1
+                - 0
+                F1L3:
+                - 1
+                - 2
+                - 0
+                F1L4:
+                - 1
+                - 3
+                - 0
+                F1L5:
+                - 1
+                - 4
+                - 0             
+            d5a_modules: {}
+
+native_gates:
+    single_qubit:
+        0:
+            RX:
+                duration: 40
+                amplitude: 0.24
+                frequency: -200000000.0
+                shape: Gaussian(5)
+                type: qd
+                start: 0
+                phase: 0
+            MZ:
+                duration: 4000
+                amplitude: 0.9
+                frequency: -179385000.0
+                shape: Rectangular()
+                type: ro
+                start: 0
+                phase: 0
+        1:
+            RX:
+                duration: 40
+                amplitude: 0.4
+                frequency: -200000000.0
+                shape: Gaussian(5)
+                type: qd
+                start: 0
+                phase: 0
+            MZ:
+                duration: 4000
+                amplitude: 0.9
+                frequency: -175697000.0
+                shape: Rectangular()
+                type: ro
+                start: 0
+                phase: 0
+        2:
+            RX:
+                duration: 40
+                amplitude: 0.42
+                frequency: -200000000.0
+                shape: Gaussian(5)
+                type: qd
+                start: 0
+                phase: 0
+            MZ:
+                duration: 4000
+                amplitude: 0.8
+                frequency: -56505000.0
+                shape: Rectangular()
+                type: ro
+                start: 0
+                phase: 0
+        3:
+            RX:
+                duration: 40
+                amplitude: 0.42
+                frequency: -200000000.0
+                shape: Gaussian(5)
+                type: qd
+                start: 0
+                phase: 0
+            MZ:
+                duration: 4000
+                amplitude: 0.9
+                frequency: 179385000.0
+                shape: Rectangular()
+                type: ro
+                start: 0
+                phase: 0
+        4:
+            RX:
+                duration: 40
+                amplitude: 1
+                frequency: -200000000.0
+                shape: Gaussian(5)
+                type: qd
+                start: 0
+                phase: 0
+            MZ:
+                duration: 4000
+                amplitude: 0.9
+                frequency: 20000000
+                shape: Rectangular()
+                type: ro
+                start: 0
+                phase: 0
+    two_qubit:
+        0-2:
+            CZ:
+                pulse_sequence:
+                -   start: 0
+                    duration: 40
+                    amplitude: 0.5
+                    frequency: 0
+                    shape: RTZ()
+                    phase: null
+                    channel: 2
+                    type: qf
+                -   start: 0
+                    duration: 4
+                    amplitude: 0.01
+                    frequency: 0
+                    shape: RTZ()
+                    phase: null
+                    channel: 2
+                    type: qf
+characterization:
+    single_qubit:
+        0:
+            resonator_freq: 5.22925e+9  #5.283e+9 
+            resonator_freq_off: 7553610000.0
+            resonator_polycoef_flux:
+            - -7.0981288e+33
+            - 1.001518e+32
+            - 1.14919686e+31
+            - -1.35338314e+29
+            - -7.45908972e+27
+            - 6.92201598e+25
+            - 2.49124972e+24
+            - -1.62356061e+22
+            - -4.55506876e+20
+            - 1.53864099e+18
+            - 4.23396904e+16
+            - 24676044100000.0
+            - -815917059000.0
+            - -14037193500.0
+            - -108545827.0
+            - 7553570450.0
+            qubit_freq: 3841663636.36
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018601039195510947j)
+            sweetspot: 0.
+        1:
+            resonator_freq: 4.93125e+9  #4.998e+9 
+            resonator_freq_off: 7557910000.0
+            resonator_polycoef_flux:
+            - 6.13368504e+33
+            - 5.39550639e+31
+            - -8.36564499e+30
+            - -7.77346087e+28
+            - 4.4257872e+27
+            - 4.27972941e+25
+            - -1.14605657e+24
+            - -1.11321227e+22
+            - 1.51620177e+20
+            - 1.34350763e+18
+            - -9969004960000000.0
+            - -36190863200000.0
+            - 399735456000.0
+            - -12251311100.0
+            - -27545119.8
+            - 7557673330.0
+            qubit_freq: 4886811111.11
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018601039195510947j)
+            sweetspot: 0.
+        2:
+            resonator_freq: 6.09405e+9  #6.117e+9 
+            resonator_freq_off: 7676510000.0
+            resonator_polycoef_flux:
+            - 1.759493e+33
+            - -5.86844799e+31
+            - -2.60071369e+30
+            - 8.98917202e+28
+            - 1.4733612e+27
+            - -5.52587647e+25
+            - -3.85972613e+23
+            - 1.74084449e+22
+            - 4.031658e+19
+            - -2.9589842e+18
+            - 275911375000000.0
+            - 252209315000000.0
+            - 169304634000.0
+            - -6200856310.0
+            - -126782260.0
+            - 7676779720.0
+            qubit_freq: 6104500000.0
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018601039195510947j)
+            sweetspot: 0.
+        3:
+            resonator_freq: 5.78425e+9  #5.839e+9 
+            resonator_freq_off: 7912650000.0
+            resonator_polycoef_flux:
+            - -2.4648247e+33
+            - 1.47510526e+31
+            - 3.70975573e+30
+            - -2.91496933e+28
+            - -2.15577783e+27
+            - 2.19169404e+25
+            - 5.8228371e+23
+            - -8.0337389e+21
+            - -6.28262142e+19
+            - 1.50360757e+18
+            - -311094157000000.0
+            - -131755361000000.0
+            - -206494626000.0
+            - 2733397750.0
+            - 142822410.0
+            - 7911850650.0
+            qubit_freq: 6011000000.0
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018601039195510947j)
+            sweetspot: 0.
+        4:
+            resonator_freq: 5.51725e+9  #5.569e+9 
+            resonator_freq_off: 7000000000.0
+            resonator_polycoef_flux: []
+            qubit_freq: 6392500000.0
+            T1: 2192.895853326451
+            T2: 6933.310025260633
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018601039195510947j)
+            sweetspot: 0.
