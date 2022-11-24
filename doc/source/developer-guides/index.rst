@@ -7,4 +7,5 @@ developers.
 .. toctree::
     :maxdepth: 2
 
+    lab
     general
