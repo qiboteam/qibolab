@@ -82,14 +82,17 @@ class RFSocPlatform(AbstractPlatform):
             ps = pulse.shape
             if type(ps) is Drag:
                 shape = "Drag"
+                style = "arb"
                 rel_sigma = ps.rel_sigma
                 beta = ps.beta
             elif type(ps) is Gaussian:
-                shape = "Gaussian"
+                shape: "Gaussian"
+                style = "arb"
                 rel_sigma = ps.rel_sigma
                 beta = 0
             elif type(ps) is Rectangular:
-                shape = "Rectangular"
+                shape: "Rectangular"
+                style = "const"
                 rel_sigma = 0
                 beta = 0
 
@@ -98,7 +101,8 @@ class RFSocPlatform(AbstractPlatform):
                         "amplitude": pulse.amplitude,
                         "frequency": pulse.frequency,
                         "relative_phase": pulse.relative_phase,
-                        "shape": shape,
+#                        "shape": shape,
+                        "style": style,
                         "rel_sigma": rel_sigma,
                         "beta": beta,
                         "channel": pulse.channel,
