@@ -24,7 +24,7 @@ methods. In particular the developer should:
 where ``<platform_name>`` is the name of the yaml file and
 ``<path_to_runcard>`` is its path.
 
-It follows an example of a yaml file with a brief explanation:
+Here is an example of a yaml file with a brief explanation:
 
 .. code-block:: yaml
 
@@ -44,7 +44,7 @@ and a brief description.
         rabi_oscillations_pi_pulse_min_voltage: 5291.34802850
         experiment_start_instrument: awg
 
-All the information useful to connect and set up the instruments are collected 
+All the information useful to connect and set up the instruments are collected
 under the ``setting`` key.
 
 .. code-block:: yaml
@@ -192,4 +192,3 @@ It follows the entire yaml file.
                 address: Alazar1
             settings:
                 samples: 4992
-
