@@ -13,7 +13,7 @@ topology:
 channels: ["L3-25","L3-15","L4-5","L3-11","L4-1","L3-12","L4-2","L3-13","L4-3","L3-14","L4-4", "L2-5"]
 qubit_channel_map:
     0: ["L3-25_a", "L3-15", "L4-5"]
-    1: ["L3-25_a", "L3-11", "L4-1"]
+    1: ["L3-25_a", "L3-12", "L4-1"] #"L3-11"
     2: ["L3-25_b", "L3-12", "L4-2"]
     3: ["L3-25_b", "L3-13", "L4-3"]
     4: ["L3-25_b", "L3-14", "L4-4"]
@@ -59,9 +59,9 @@ instruments:
         settings:
             ports:
                 o1: {attenuation: 60, lo_enabled: true, lo_frequency: 4043994000.1,
-                    gain: 0.3, hardware_mod_en: false}
-                o2: {attenuation: 60, lo_enabled: true, lo_frequency: 5091284403.0,
-                    gain: 0.3, hardware_mod_en: false}
+                    gain: 0.9, hardware_mod_en: false}
+                o2: {attenuation: 0, lo_enabled: true, lo_frequency: 5091284403.0,
+                    gain: 0.9, hardware_mod_en: false}
             channel_port_map: {L3-11: o1, L3-12: o2}
     qcm_rf2:
         lib: qblox
@@ -73,7 +73,7 @@ instruments:
                 o1: {attenuation: 8, lo_enabled: true, lo_frequency: 6.64447035e+9, 
                     gain: 0.089, hardware_mod_en: false}
                 o2: {attenuation: 12, lo_enabled: true, lo_frequency: 6.9605e+9,
-                    gain: 0.3, hardware_mod_en: false}
+                    gain: 0.9, hardware_mod_en: false}
             channel_port_map: {L3-14: o1, L3-13: o2}
     qcm_rf3:
         lib: qblox
@@ -83,9 +83,9 @@ instruments:
         settings:
             ports:
                 o1: {attenuation: 60, lo_enabled: true, lo_frequency: 3910000000.0,
-                    gain: 0.3, hardware_mod_en: false}
+                    gain: 0.9, hardware_mod_en: false}
                 o2: {attenuation: 60, lo_enabled: true, lo_frequency: 5000000000.0,
-                    gain: 0.3, hardware_mod_en: false}
+                    gain: 0.9, hardware_mod_en: false}
             channel_port_map: {L3-15: o1, 99: o2}
     qcm_bb1:
         lib: qblox
@@ -94,23 +94,23 @@ instruments:
         roles: [control]
         settings:
             ports:
-                o1: {gain: 1, hardware_mod_en: false}
-                o2: {gain: 1, hardware_mod_en: false}
-                o3: {gain: 1, hardware_mod_en: false}
-                o4: {gain: 1, hardware_mod_en: false}
+                o1: {gain: 1, hardware_mod_en: false, offset: 0}
+                o2: {gain: 1, hardware_mod_en: false, offset: 0}
+                o3: {gain: 1, hardware_mod_en: false, offset: 0}
+                o4: {gain: 1, hardware_mod_en: false, offset: 0}
             channel_port_map: {L4-1: o1, L4-2: o2, L4-3: o3, L4-4: o4}
-    qcm_bb2:
-        lib: qblox
-        class: ClusterQCM
-        address: 192.168.0.6:3
-        roles: [control]
-        settings:
-            ports:
-                o1: {gain: 0.2, hardware_mod_en: false}
-                o2: {gain: 0, hardware_mod_en: false}
-                o3: {gain: 0, hardware_mod_en: false}
-                o4: {gain: 0, hardware_mod_en: false}
-            channel_port_map: {L4-5: o1, 101: o2, 102: o3, 103: o4}
+    # qcm_bb2:
+    #     lib: qblox
+    #     class: ClusterQCM
+    #     address: 192.168.0.6:3
+    #     roles: [control]
+    #     settings:
+    #         ports:
+    #             o1: {gain: 0.2, hardware_mod_en: false}
+    #             o2: {gain: 0, hardware_mod_en: false}
+    #             o3: {gain: 0, hardware_mod_en: false}
+    #             o4: {gain: 0, hardware_mod_en: false}
+    #         channel_port_map: {L4-5: o1, 101: o2, 102: o3, 103: o4}
     SPI:
         lib: qutech
         class: SPI
