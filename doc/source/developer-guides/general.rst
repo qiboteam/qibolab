@@ -21,7 +21,7 @@ methods. In particular the developer should:
 
     platform = Platform("<platform_name>", "<path_to_runcard>")
 
-where ``<platform_name>`` is the name of the in the yaml file and
+where ``<platform_name>`` is the name of the yaml file and
 ``<path_to_runcard>`` is the path to the yaml file.
 
 It follows an example of a yaml file with an explanation of its parts:
