@@ -28,6 +28,7 @@ methods. In particular the developer should:
 
 where ``<platform_name>`` is the name of the yaml file and
 ``<path_to_runcard>`` is its path.
+If the name of the runcard is ``<platform_name>.yml``, it is not necessary to also provide the ``<path_to_runcard>`` as input.
 
 Here is an example of a yaml file with a brief explanation:
 
