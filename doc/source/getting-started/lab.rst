@@ -86,7 +86,6 @@ input pulse sequences and return an output pulse sequence.
 
     class DummyPlatform(AbstractPlatform):
         #Dummy platform that returns random voltage values.
-        #Useful for testing code without requiring access to hardware.
         #Args:
         #    name (str): name of the platform.
 
