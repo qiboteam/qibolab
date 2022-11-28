@@ -138,7 +138,7 @@ To start the experiment, simply initialize the platform and launch the desired m
 
 .. code-block:: python
 
-    platform = DummyPlatform("dummy","../runcards/dummy_edo.yml")
+    platform = DummyPlatform("dummy","path/to/dummy.yml")
     sequence = PulseSequence()
 
     # Add some pulses to the pulse sequence
