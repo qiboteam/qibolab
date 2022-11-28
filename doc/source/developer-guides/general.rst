@@ -11,8 +11,13 @@ New platforms can be implemented by inheriting the
 :class:`qibolab.abstract.AbstractPlatform` and implementing its abstract
 methods. In particular the developer should:
 
-* Perform an ``AbstractPlatform`` inheritance.
-* Create a yaml in ``src/qibolab/runcards/`` containing all the instruments and the calibration parameters
+* Perform an ``AbstractPlatform`` inheritance, we suggest saving it in ``src/qibolab/platforms/``, if you want to include it in the ``Qibolab`` library.
+* Create a yaml in ``src/qibolab/runcards/`` containing all the instruments and the calibration parameters.
+* Modify the file `platform.py <https://github.com/qiboteam/qibolab/blob/main/src/qibolab/platform.py>`_, so that the correct platform is imported if the chosen name is given as input. For example, the following lines could be added
+.. code:: python
+
+    elif name == "example":
+        from qibolab.platforms.example import ExamplePlatform as Device
 * Load your platform with:
 
 .. code-block:: python
