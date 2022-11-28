@@ -158,3 +158,7 @@ To start the experiment, simply initialize the platform and launch the desired m
 
     output = platform.execute_pulse_sequence(sequence)
     print(output)
+
+The diagram below summmarises the workflow followed in this example to run an experiment.
+
+.. image:: qibolab_workflow.png
