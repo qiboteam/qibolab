@@ -27,14 +27,14 @@ instruments:
             resonator_channel: 0
             qubit_channel: 1
             # resonator config
-            f_res: 7271.25 # [MHz] 
-            resonator_phase: 3097210280 # 
+            f_res: 7271.25 # [MHz]
+            resonator_phase: 3097210280 #
             adc_trig_offset: 200 # [Clock ticks]
-            resonator_gain: 600 # 
+            resonator_gain: 600 #
             # qubit config
-            pi_gain: 9000 # 
+            pi_gain: 9000 #
             pi2_gain: 9000 // 2
-            f_ge: 8014.6 # [MHz] 
+            f_ge: 8014.6 # [MHz]
             relax_delay: 500 #[Clock ticks]
 
 native_gates:

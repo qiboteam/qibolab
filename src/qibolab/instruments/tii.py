@@ -7,8 +7,8 @@ class tii_rfsoc4x2:
 import socket
 import sys
 import struct
-HOST = "192.168.1.69"  # Serverinterface address 
-PORT = 6000 
+HOST = "192.168.1.69"  # Serverinterface address
+PORT = 6000
 
 #data = " ".join(sys.argv[1:])
 data = struct.pack('BH', 3, 1000)

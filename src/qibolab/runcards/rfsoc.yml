@@ -25,16 +25,16 @@ instruments:
             qubit_ch: 1
             # resonator config
             readout_length: 3.0 # Micro seg.
-            f_res: 7271.25 # [MHz] 
-            resonator_phase: 3097210280 # 
+            f_res: 7271.25 # [MHz]
+            resonator_phase: 3097210280 #
             adc_trig_offset: 200 # [Clock ticks]
-            res_gain: 600 # 
+            res_gain: 600 #
             threshold: 0
             # qubit config
             sigma: 0.04 # Micro seg.
-            pi_gain: 9000 # 
+            pi_gain: 9000 #
             pi2_gain: 9000 // 2
-            f_ge: 8014.6 # [MHz] 
+            f_ge: 8014.6 # [MHz]
             relax_delay: 500 #[Clock ticks]
         experiment:
             reps: 1024
