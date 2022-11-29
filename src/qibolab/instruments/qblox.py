@@ -698,10 +698,10 @@ class ClusterQRM_RF(AbstractInstrument):
                     # Acquisitions
                     for acquisition_index, pulse in enumerate(sequencer.pulses.ro_pulses):
                         sequencer.acquisitions[pulse.serial] = {"num_bins": nshots, "index": acquisition_index}
-                    
+
                     # Add scope_acquisition to default sequencer
                     if sequencer.number == self.DEFAULT_SEQUENCERS[port]:
-                        sequencer.acquisitions['scope_acquisition'] = {"num_bins": 1, "index": acquisition_index + 1}
+                        sequencer.acquisitions["scope_acquisition"] = {"num_bins": 1, "index": acquisition_index + 1}
 
                     # Program
                     minimum_delay_between_instructions = 4
@@ -919,8 +919,10 @@ class ClusterQRM_RF(AbstractInstrument):
         # Start used sequencers
         for sequencer_number in self._used_sequencers_numbers:
             self.device.start_sequencer(sequencer_number)
-            #DEBUG sync_en
-            print(f"device: {self.name}, sequencer: {sequencer_number}, sync_en: {self.device.sequencers[sequencer_number].get('sync_en')}")
+            # DEBUG sync_en
+            print(
+                f"device: {self.name}, sequencer: {sequencer_number}, sync_en: {self.device.sequencers[sequencer_number].get('sync_en')}"
+            )
 
     def acquire(self):
         """Retrieves the readout results.
@@ -944,7 +946,7 @@ class ClusterQRM_RF(AbstractInstrument):
 
         # Qblox qrm modules only have one memory for scope acquisition.
         # Only one sequencer can save data to that memory.
-        # Several acquisitions at different points in the circuit will result in the undesired averaging 
+        # Several acquisitions at different points in the circuit will result in the undesired averaging
         # of the results.
         # Scope Acquisition should only be used with one acquisition per module.
         # Several readout pulses are supported for as long as they take place symultaneously.
@@ -960,40 +962,56 @@ class ClusterQRM_RF(AbstractInstrument):
         for port in self._output_ports_keys:
             for sequencer in self._sequencers[port]:
                 if sequencer.number == self.DEFAULT_SEQUENCERS[port]:
-                    self.device.store_scope_acquisition(sequencer.number, 'scope_acquisition')
-                    scope_acquisition_raw_results = self.device.get_acquisitions(sequencer.number)['scope_acquisition']
+                    self.device.store_scope_acquisition(sequencer.number, "scope_acquisition")
+                    scope_acquisition_raw_results = self.device.get_acquisitions(sequencer.number)["scope_acquisition"]
 
         for port in self._output_ports_keys:
             for sequencer in self._sequencers[port]:
-                
-                if not self.ports["i1"].hardware_demod_en:              # Software Demodulation
+
+                if not self.ports["i1"].hardware_demod_en:  # Software Demodulation
                     acquisition_results["averaged_raw"] = {}
                     acquisition_results["averaged_demodulated_integrated"] = {}
-                    if len(sequencer.pulses.ro_pulses)==1:
+                    if len(sequencer.pulses.ro_pulses) == 1:
                         pulse = sequencer.pulses.ro_pulses[0]
 
                         acquisition_results["averaged_raw"][pulse.serial] = (
-                            scope_acquisition_raw_results["acquisition"]["scope"]["path0"]["data"][0 : self.acquisition_duration],
-                            scope_acquisition_raw_results["acquisition"]["scope"]["path1"]["data"][0 : self.acquisition_duration],
+                            scope_acquisition_raw_results["acquisition"]["scope"]["path0"]["data"][
+                                0 : self.acquisition_duration
+                            ],
+                            scope_acquisition_raw_results["acquisition"]["scope"]["path1"]["data"][
+                                0 : self.acquisition_duration
+                            ],
                         )
-                        acquisition_results["averaged_raw"][pulse.qubit] = acquisition_results["averaged_raw"][pulse.serial]
+                        acquisition_results["averaged_raw"][pulse.qubit] = acquisition_results["averaged_raw"][
+                            pulse.serial
+                        ]
 
-                        i, q = self._process_acquisition_results(
-                            scope_acquisition_raw_results, pulse, demodulate=True
+                        i, q = self._process_acquisition_results(scope_acquisition_raw_results, pulse, demodulate=True)
+                        acquisition_results["averaged_demodulated_integrated"][pulse.serial] = (
+                            np.sqrt(i**2 + q**2),
+                            np.arctan2(q, i),
+                            i,
+                            q,
                         )
-                        acquisition_results["averaged_demodulated_integrated"][pulse.serial] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
-                        acquisition_results["averaged_demodulated_integrated"][pulse.qubit] = acquisition_results["averaged_demodulated_integrated"][pulse.serial]
+                        acquisition_results["averaged_demodulated_integrated"][pulse.qubit] = acquisition_results[
+                            "averaged_demodulated_integrated"
+                        ][pulse.serial]
 
                         # Default Results = Averaged Demodulated Integrated
-                        acquisition_results[pulse.serial] = acquisition_results["averaged_demodulated_integrated"][pulse.serial]
-                        acquisition_results[pulse.qubit] = acquisition_results["averaged_demodulated_integrated"][pulse.qubit]
+                        acquisition_results[pulse.serial] = acquisition_results["averaged_demodulated_integrated"][
+                            pulse.serial
+                        ]
+                        acquisition_results[pulse.qubit] = acquisition_results["averaged_demodulated_integrated"][
+                            pulse.qubit
+                        ]
 
                     else:
-                        raise Exception("""Software Demodulation only supports one acquisition per channel. 
+                        raise Exception(
+                            """Software Demodulation only supports one acquisition per channel.
                         Multiple readout pulses are supported as long as they are symultaneous (requiring one acquisition)"""
                         )
 
-                else:                                                   # Hardware Demodulation
+                else:  # Hardware Demodulation
                     binned_raw_results = self.device.get_acquisitions(sequencer.number)
 
                     acquisition_results["demodulated_integrated_averaged"] = {}
@@ -1004,21 +1022,38 @@ class ClusterQRM_RF(AbstractInstrument):
                     acquisition_results["probability"] = {}
                     for pulse in sequencer.pulses.ro_pulses:
                         acquisition_name = pulse.serial
-                        i, q = self._process_acquisition_results(binned_raw_results[acquisition_name], pulse, demodulate=False)
-                        acquisition_results["demodulated_integrated_averaged"][pulse.serial] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
-                        acquisition_results["demodulated_integrated_averaged"][pulse.qubit] = acquisition_results["demodulated_integrated_averaged"][pulse.serial]
-                        
+                        i, q = self._process_acquisition_results(
+                            binned_raw_results[acquisition_name], pulse, demodulate=False
+                        )
+                        acquisition_results["demodulated_integrated_averaged"][pulse.serial] = (
+                            np.sqrt(i**2 + q**2),
+                            np.arctan2(q, i),
+                            i,
+                            q,
+                        )
+                        acquisition_results["demodulated_integrated_averaged"][pulse.qubit] = acquisition_results[
+                            "demodulated_integrated_averaged"
+                        ][pulse.serial]
+
                         # Default Results = Demodulated Integrated Averaged
-                        acquisition_results[pulse.serial] = acquisition_results["demodulated_integrated_averaged"][pulse.serial]
-                        acquisition_results[pulse.qubit] = acquisition_results["demodulated_integrated_averaged"][pulse.qubit]
+                        acquisition_results[pulse.serial] = acquisition_results["demodulated_integrated_averaged"][
+                            pulse.serial
+                        ]
+                        acquisition_results[pulse.qubit] = acquisition_results["demodulated_integrated_averaged"][
+                            pulse.qubit
+                        ]
 
                         # Save individual shots
                         shots_i = (
-                            np.array(binned_raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path0"])
+                            np.array(
+                                binned_raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path0"]
+                            )
                             / self.acquisition_duration
                         )
                         shots_q = (
-                            np.array(binned_raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path1"])
+                            np.array(
+                                binned_raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path1"]
+                            )
                             / self.acquisition_duration
                         )
 
@@ -1028,29 +1063,52 @@ class ClusterQRM_RF(AbstractInstrument):
                             shots_i,
                             shots_q,
                         )
-                        acquisition_results["demodulated_integrated_binned"][pulse.qubit] = acquisition_results["demodulated_integrated_binned"][pulse.serial]
+                        acquisition_results["demodulated_integrated_binned"][pulse.qubit] = acquisition_results[
+                            "demodulated_integrated_binned"
+                        ][pulse.serial]
 
-                        acquisition_results["demodulated_integrated_classified_binned"][pulse.serial] = binned_raw_results[acquisition_name]["acquisition"]["bins"]["threshold"]
-                        acquisition_results["demodulated_integrated_classified_binned"][pulse.qubit] = acquisition_results["demodulated_integrated_classified_binned"][pulse.serial]
+                        acquisition_results["demodulated_integrated_classified_binned"][
+                            pulse.serial
+                        ] = binned_raw_results[acquisition_name]["acquisition"]["bins"]["threshold"]
+                        acquisition_results["demodulated_integrated_classified_binned"][
+                            pulse.qubit
+                        ] = acquisition_results["demodulated_integrated_classified_binned"][pulse.serial]
 
-                        acquisition_results["probability"][pulse.serial] = np.mean(acquisition_results["demodulated_integrated_classified_binned"][pulse.serial])
-                        acquisition_results["probability"][pulse.qubit] = acquisition_results["probability"][pulse.serial]
-                        
+                        acquisition_results["probability"][pulse.serial] = np.mean(
+                            acquisition_results["demodulated_integrated_classified_binned"][pulse.serial]
+                        )
+                        acquisition_results["probability"][pulse.qubit] = acquisition_results["probability"][
+                            pulse.serial
+                        ]
+
                         # Provide Scope Data for verification (assuming memory reseet is being done)
-                        if len(sequencer.pulses.ro_pulses)==1:
+                        if len(sequencer.pulses.ro_pulses) == 1:
                             pulse = sequencer.pulses.ro_pulses[0]
 
                             acquisition_results["averaged_raw"][pulse.serial] = (
-                                scope_acquisition_raw_results["acquisition"]["scope"]["path0"]["data"][0 : self.acquisition_duration],
-                                scope_acquisition_raw_results["acquisition"]["scope"]["path1"]["data"][0 : self.acquisition_duration],
+                                scope_acquisition_raw_results["acquisition"]["scope"]["path0"]["data"][
+                                    0 : self.acquisition_duration
+                                ],
+                                scope_acquisition_raw_results["acquisition"]["scope"]["path1"]["data"][
+                                    0 : self.acquisition_duration
+                                ],
                             )
-                            acquisition_results["averaged_raw"][pulse.qubit] = acquisition_results["averaged_raw"][pulse.serial]
+                            acquisition_results["averaged_raw"][pulse.qubit] = acquisition_results["averaged_raw"][
+                                pulse.serial
+                            ]
 
                             i, q = self._process_acquisition_results(
                                 scope_acquisition_raw_results, pulse, demodulate=True
                             )
-                            acquisition_results["averaged_demodulated_integrated"][pulse.serial] = np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q
-                            acquisition_results["averaged_demodulated_integrated"][pulse.qubit] = acquisition_results["averaged_demodulated_integrated"][pulse.serial]
+                            acquisition_results["averaged_demodulated_integrated"][pulse.serial] = (
+                                np.sqrt(i**2 + q**2),
+                                np.arctan2(q, i),
+                                i,
+                                q,
+                            )
+                            acquisition_results["averaged_demodulated_integrated"][pulse.qubit] = acquisition_results[
+                                "averaged_demodulated_integrated"
+                            ][pulse.serial]
 
                         # DEBUG: QRM Plot Incomming Pulses
                         # import qibolab.instruments.debug.incomming_pulse_plotting as pp
@@ -1768,9 +1826,10 @@ class ClusterQCM_RF(AbstractInstrument):
         for sequencer_number in self._used_sequencers_numbers:
             # Start used sequencers
             self.device.start_sequencer(sequencer_number)
-            #DEBUG sync_en
-            print(f"device: {self.name}, sequencer: {sequencer_number}, sync_en: {self.device.sequencers[sequencer_number].get('sync_en')}")
-
+            # DEBUG sync_en
+            print(
+                f"device: {self.name}, sequencer: {sequencer_number}, sync_en: {self.device.sequencers[sequencer_number].get('sync_en')}"
+            )
 
     def start(self):
         """Empty method to comply with AbstractInstrument interface."""
