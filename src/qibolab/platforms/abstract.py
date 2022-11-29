@@ -59,7 +59,7 @@ class AbstractPlatform(ABC):
         # Generate qubit_instrument_map from qubit_channel_map and the instruments' channel_port_maps
         self.qubit_instrument_map = {}
         for qubit in self.qubit_channel_map:
-            self.qubit_instrument_map[qubit] = [None, None, None]
+            self.qubit_instrument_map[qubit] = [None, None, None, None]
             for name in self.instruments:
                 if "channel_port_map" in self.settings["instruments"][name]["settings"]:
                     for channel in self.settings["instruments"][name]["settings"]["channel_port_map"]:
@@ -146,16 +146,21 @@ class AbstractPlatform(ABC):
         self.ro_channel = {}
         self.qd_channel = {}
         self.qf_channel = {}
+        self.qb_channel = {}
         self.qrm = {}
         self.qcm = {}
+        self.qfm = {}
         self.qbm = {}
         self.ro_port = {}
         self.qd_port = {}
         self.qf_port = {}
+        self.qb_port = {}
+
         for qubit in self.qubit_channel_map:
             self.ro_channel[qubit] = self.qubit_channel_map[qubit][0]
             self.qd_channel[qubit] = self.qubit_channel_map[qubit][1]
-            self.qf_channel[qubit] = self.qubit_channel_map[qubit][2]
+            self.qb_channel[qubit] = self.qubit_channel_map[qubit][2]
+            self.qf_channel[qubit] = self.qubit_channel_map[qubit][3]
 
             if not self.qubit_instrument_map[qubit][0] is None:
                 self.qrm[qubit] = self.instruments[self.qubit_instrument_map[qubit][0]]
@@ -169,7 +174,12 @@ class AbstractPlatform(ABC):
                 ]
             if not self.qubit_instrument_map[qubit][2] is None:
                 self.qbm[qubit] = self.instruments[self.qubit_instrument_map[qubit][2]]
-                self.qf_port[qubit] = self.qbm[qubit].dacs[self.qubit_channel_map[qubit][2]]
+                self.qb_port[qubit] = self.qbm[qubit].ports[
+                    self.qbm[qubit].channel_port_map[self.qubit_channel_map[qubit][2]]
+                ]
+            if not self.qubit_instrument_map[qubit][3] is None:
+                self.qfm[qubit] = self.instruments[self.qubit_instrument_map[qubit][3]]
+                self.qf_port[qubit] = self.qfm[qubit].dacs[self.qubit_channel_map[qubit][3]]
 
     def start(self):
         if self.is_connected:
