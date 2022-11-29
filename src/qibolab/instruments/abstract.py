@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import tempfile
 from abc import ABC, abstractmethod
 from pathlib import Path

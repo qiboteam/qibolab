@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from qibolab import Platform
 from qibolab.paths import qibolab_folder
 

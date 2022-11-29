@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from qibo.config import raise_error
 
 from qibolab.platforms.abstract import AbstractPlatform
@@ -16,20 +15,28 @@ class MultiqubitPlatform(AbstractPlatform):
             nshots = self.hardware_avg
 
         # DEBUG: Plot Pulse Sequence
-        # sequence.plot()
+        # sequence.plot('plot.png')
+        # DEBUG: sync_en
+        # from qblox_instruments.qcodes_drivers.cluster import Cluster
+        # cluster:Cluster = self.instruments['cluster'].device
+        # for module in cluster.modules:
+        #     if module.get("present"):
+        #         for sequencer in module.sequencers:
+        #             if sequencer.get('sync_en'):
+        #                 print(f"type: {module.module_type}, sequencer: {sequencer.name}, sync_en: True")
 
         # Process Pulse Sequence. Assign pulses to instruments and generate waveforms & program
         instrument_pulses = {}
         roles = {}
         for name in self.instruments:
             roles[name] = self.settings["instruments"][name]["roles"]
-            if "readout" in roles[name] or "control" in roles[name]:
+            if "control" in roles[name] or "readout" in roles[name]:
                 instrument_pulses[name] = sequence.get_channel_pulses(*self.instruments[name].channels)
                 self.instruments[name].process_pulse_sequence(instrument_pulses[name], nshots, self.repetition_duration)
                 self.instruments[name].upload()
 
         for name in self.instruments:
-            if "control" in roles[name]:
+            if "control" in roles[name] or "readout" in roles[name]:
                 if not instrument_pulses[name].is_empty:
                     self.instruments[name].play_sequence()
 
@@ -38,9 +45,13 @@ class MultiqubitPlatform(AbstractPlatform):
             if "readout" in roles[name]:
                 if not instrument_pulses[name].is_empty:
                     if not instrument_pulses[name].ro_pulses.is_empty:
-                        acquisition_results.update(self.instruments[name].play_sequence_and_acquire())
-                    else:
-                        self.instruments[name].play_sequence()
+                        results = self.instruments[name].acquire()
+                        existing_keys = set(acquisition_results.keys()) & set(results.keys())
+                        for key, value in results.items():
+                            if key in existing_keys:
+                                acquisition_results[key].update(value)
+                            else:
+                                acquisition_results[key] = value
         return acquisition_results
 
     def measure_fidelity(self, qubits=None, nshots=None):
@@ -58,9 +69,9 @@ class MultiqubitPlatform(AbstractPlatform):
             ro_pulse = self.create_qubit_readout_pulse(qubit, start=RX_pulse.duration)
             sequence_exc.add(RX_pulse)
             sequence_exc.add(ro_pulse)
-            amplitude, phase, i, q = self.execute_pulse_sequence(sequence_exc, nshots=nshots)["binned_integrated"][
-                ro_pulse.serial
-            ]
+            amplitude, phase, i, q = self.execute_pulse_sequence(sequence_exc, nshots=nshots)[
+                "demodulated_integrated_binned"
+            ][ro_pulse.serial]
 
             iq_exc = i + 1j * q
 
@@ -68,9 +79,9 @@ class MultiqubitPlatform(AbstractPlatform):
             ro_pulse = self.create_qubit_readout_pulse(qubit, start=0)
             sequence_gnd.add(ro_pulse)
 
-            amplitude, phase, i, q = self.execute_pulse_sequence(sequence_gnd, nshots=nshots)["binned_integrated"][
-                ro_pulse.serial
-            ]
+            amplitude, phase, i, q = self.execute_pulse_sequence(sequence_gnd, nshots=nshots)[
+                "demodulated_integrated_binned"
+            ][ro_pulse.serial]
             iq_gnd = i + 1j * q
 
             iq_mean_exc = np.mean(iq_exc)
