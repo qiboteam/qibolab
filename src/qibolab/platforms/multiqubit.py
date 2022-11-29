@@ -45,8 +45,13 @@ class MultiqubitPlatform(AbstractPlatform):
             if "readout" in roles[name]:
                 if not instrument_pulses[name].is_empty:
                     if not instrument_pulses[name].ro_pulses.is_empty:
-                        acquisition_results.update(self.instruments[name].acquire())
-
+                        results = self.instruments[name].acquire()
+                        existing_keys = set(acquisition_results.keys()) & set(results.keys())
+                        for key, value in results.items():
+                            if key in existing_keys:
+                                acquisition_results[key].update(value)
+                            else:
+                                acquisition_results[key] = value
         return acquisition_results
     
     def measure_fidelity(self, nshots=None):
