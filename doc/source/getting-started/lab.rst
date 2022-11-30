@@ -1,7 +1,7 @@
 How to connect Qibolab to your lab
 ==================================
 
-In this section we will see how to let ``Qibolab`` communicate with your lab’s instruments and run an experiment.
+In this section we will show how to let ``Qibolab`` communicate with your lab’s instruments and run an experiment.
 ``Qibolab`` has an abstract class `AbstractInstrument <https://github.com/qiboteam/qibolab/blob/main/src/qibolab/instruments/abstract.py>`_
 with some abstract methods such as ``start``, ``stop``, ``connect``.
 In order to set up one instrument, you have to build a child class and implement the methods you need.
