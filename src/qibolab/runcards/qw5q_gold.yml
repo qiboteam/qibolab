@@ -1,0 +1,220 @@
+nqubits: 5
+description: QuantWare 5-qubit device gold, controlled with Qblox and R&S instruments, with TWPA.
+settings: {hardware_avg: 2000, sampling_rate: 1000000000, repetition_duration: 300000,
+    minimum_delay_between_instructions: 4}
+qubits: [0, 1, 2, 3, 4, 5]
+topology:
+- [1, 0, 1, 0, 0, 0]
+- [0, 1, 1, 0, 0, 0]
+- [1, 1, 1, 1, 1, 0]
+- [0, 0, 1, 1, 0, 0]
+- [0, 0, 1, 0, 1, 0]
+- [0, 0, 0, 0, 0, 1]
+channels: ["L3-25","L3-15","L4-5","L3-11","L4-1","L3-12","L4-2","L3-13","L4-3","L3-14","L4-4", "L2-5"]
+qubit_channel_map:
+    0: ["L3-25_a", "L3-15", "L4-5"]
+    1: ["L3-25_a", "L3-11", "L4-1"]
+    2: ["L3-25_b", "L3-12", "L4-2"]
+    3: ["L3-25_b", "L3-13", "L4-3"]
+    4: ["L3-25_b", "L3-14", "L4-4"]
+    5: ["L3-25_a", null, null]
+instruments:
+    cluster:
+        lib: qblox
+        class: Cluster
+        address: 192.168.0.6
+        roles: [other]
+        settings: {reference_clock_source: internal}
+    qrm_rf:
+        lib: qblox
+        class: ClusterQRM_RF
+        address: 192.168.0.6:10
+        roles: [readout]
+        settings:
+            ports:
+                o1: {attenuation: 30, lo_enabled: true, lo_frequency: 7.155e+9,
+                    gain: 0.1, hardware_mod_en: false}
+                i1: {hardware_demod_en: true}
+            acquisition_hold_off: 130
+            acquisition_duration: 1800
+            channel_port_map: {L3-25_a: o1, L2-5: i1}
+    qrm_rf2:
+        lib: qblox
+        class: ClusterQRM_RF
+        address: 192.168.0.6:12
+        roles: [readout]
+        settings:
+            ports:
+                o1: {attenuation: 30, lo_enabled: true, lo_frequency: 7.88e+9,
+                    gain: 0.1, hardware_mod_en: false}
+                i1: {hardware_demod_en: true}
+            acquisition_hold_off: 130
+            acquisition_duration: 1800
+            channel_port_map: {L3-25_b: o1, L2-5: i1}
+    qcm_rf1:
+        lib: qblox
+        class: ClusterQCM_RF
+        address: 192.168.0.6:4
+        roles: [control]
+        settings:
+            ports:
+                o1: {attenuation: 60, lo_enabled: true, lo_frequency: 4043994000.1,
+                    gain: 0.9, hardware_mod_en: false}
+                o2: {attenuation: 0, lo_enabled: true, lo_frequency: 5091284403.0,
+                    gain: 0.9, hardware_mod_en: false}
+            channel_port_map: {L3-11: o1, L3-12: o2}
+    qcm_rf2:
+        lib: qblox
+        class: ClusterQCM_RF
+        address: 192.168.0.6:6
+        roles: [control]
+        settings:
+            ports:
+                o1: {attenuation: 8, lo_enabled: true, lo_frequency: 6.64447035e+9,
+                    gain: 0.089, hardware_mod_en: false}
+                o2: {attenuation: 12, lo_enabled: true, lo_frequency: 6.9605e+9,
+                    gain: 0.9, hardware_mod_en: false}
+            channel_port_map: {L3-14: o1, L3-13: o2}
+    qcm_rf3:
+        lib: qblox
+        class: ClusterQCM_RF
+        address: 192.168.0.6:8
+        roles: [control]
+        settings:
+            ports:
+                o1: {attenuation: 60, lo_enabled: true, lo_frequency: 3910000000.0,
+                    gain: 0.9, hardware_mod_en: false}
+                o2: {attenuation: 60, lo_enabled: true, lo_frequency: 5000000000.0,
+                    gain: 0.9, hardware_mod_en: false}
+            channel_port_map: {L3-15: o1, 99: o2}
+    qcm_bb1:
+        lib: qblox
+        class: ClusterQCM
+        address: 192.168.0.6:2
+        roles: [control]
+        settings:
+            ports:
+                o1: {gain: 1, hardware_mod_en: false}
+                o2: {gain: 1, hardware_mod_en: false}
+                o3: {gain: 1, hardware_mod_en: false}
+                o4: {gain: 1, hardware_mod_en: false}
+            channel_port_map: {L4-1: o1, L4-2: o2, L4-3: o3, L4-4: o4}
+    # qcm_bb2:
+    #     lib: qblox
+    #     class: ClusterQCM
+    #     address: 192.168.0.6:3
+    #     roles: [control]
+    #     settings:
+    #         ports:
+    #             o1: {gain: 0.2, hardware_mod_en: false}
+    #             o2: {gain: 0, hardware_mod_en: false}
+    #             o3: {gain: 0, hardware_mod_en: false}
+    #             o4: {gain: 0, hardware_mod_en: false}
+    #         channel_port_map: {L4-5: o1, 101: o2, 102: o3, 103: o4}
+    SPI:
+        lib: qutech
+        class: SPI
+        address: /dev/ttyACM0
+        roles: [flux]
+        settings:
+            s4g_modules:
+                L4-1: [1, 1, 0.0058]
+                L4-2: [1, 2, 0.0098]
+                L4-3: [1, 3, 0.012]
+                L4-4: [1, 4, -0.0123]
+                L4-5: [2, 1, 0]
+            d5a_modules: {}
+native_gates:
+    single_qubit:
+        0:
+            RX: {duration: 40, amplitude: 1, frequency: -200000000.0, shape: Gaussian(5),
+                type: qd, start: 0, phase: 0}
+            MZ: {duration: 4000, amplitude: 0.7, frequency: 71834234.0, shape: Rectangular(),
+                type: ro, start: 0, phase: 0}
+        1:
+            RX: {duration: 40, amplitude: 0.7, frequency: -200000000.0, shape: Gaussian(5),
+                type: qd, start: 0, phase: 0}
+            MZ: {duration: 4000, amplitude: 0.6, frequency: 2.98328e+08, shape: Rectangular(),
+                type: ro, start: 0, phase: 0}
+        2:
+            RX: {duration: 40, amplitude: 0.7, frequency: -200000000.0, shape: Gaussian(5),
+                type: qd, start: 0, phase: 0}
+            MZ: {duration: 4000, amplitude: 0.6, frequency: -2.24836e+08, shape: Rectangular(),
+                type: ro, start: 0, phase: 0}
+        3:
+            RX: {duration: 40, amplitude: 0.5, frequency: -200000000.0, shape: Gaussian(5),
+                type: qd, start: 0, phase: 0}
+            MZ: {duration: 4000, amplitude: 0.7, frequency: -7.77820e+07, shape: Rectangular(),
+                type: ro, start: 0, phase: 0}
+        4:
+            RX: {duration: 40, amplitude: 0.7, frequency: -200000000.0, shape: Gaussian(5),
+                type: qd, start: 0, phase: 0}
+            MZ: {duration: 4000, amplitude: 0.6, frequency: 177348000.0, shape: Rectangular(),
+                type: ro, start: 0, phase: 0}
+        5:
+            RX: {duration: 40, amplitude: 0.7, frequency: -200000000.0, shape: Gaussian(5),
+                type: qd, start: 0, phase: 0}
+            MZ: {duration: 4000, amplitude: 0.6, frequency: -35747474.74747467, shape: Rectangular(),
+                type: ro, start: 0, phase: 0}
+    two_qubit:
+        0-2:
+            CZ:
+                pulse_sequence:
+                - {start: 0, duration: 40, amplitude: 0.5, frequency: 0, shape: RTZ(),
+                    phase: null, channel: 2, type: qf}
+                - {start: 0, duration: 4, amplitude: 0.01, frequency: 0, shape: RTZ(),
+                    phase: null, channel: 2, type: qf}
+characterization:
+    single_qubit:
+        0:
+            resonator_freq: 7.226834234e+9
+            resonator_polycoef_flux: []
+            qubit_freq: 5.e+9 # 4.41e+9
+            T1: 0.
+            T2: 0.
+            mean_gnd_states: (0+0j)
+            mean_exc_states: (0+0j)
+            sweetspot: 0
+        1:
+            resonator_freq: 7.453328e+9
+            resonator_polycoef_flux: [-4.6451756736087145e+38,3.2293470825015906e+36,1.6081121312171546e+35,-9.444675719520802e+32,-2.211073065553773e+31,1.0918607761302252e+29,1.5325991061334706e+27,-6.404685867261546e+24,-5.632695056029822e+22,2.029551381809233e+20,1.0836214044247741e+18,-3231500467476807.0,-12456863889131.814,-12446644484.78255,214382982.6890961,7453259082.7034855]
+            qubit_freq: 4.4e+9
+            T1: 0.
+            T2: 0.
+            mean_gnd_states: (0+0j)
+            mean_exc_states: (0+0j)
+            sweetspot: 0.0058
+        2:
+            resonator_freq: 7.655164e+9
+            resonator_polycoef_flux: [3.057602928381394e+38,1.6354929259301287e+36,-9.805250521464736e+34,-4.54683822001466e+32,1.2702228860646553e+31,4.909653661681372e+28,-8.537328593512273e+26,-2.657058233914408e+24,3.1487808558903325e+22,8.033649954905458e+19,-6.062997997623597e+17,-1447597992617532.2,7783567289764.619,6191874655.19636,-330821269.91567874,7654091680.281223]
+            qubit_freq: 6.17e+9 #5.53e+9
+            T1: 0.
+            T2: 0.
+            mean_gnd_states: (0+0j)
+            mean_exc_states: (0+0j)
+            sweetspot:  0.0098
+        3:
+            resonator_freq: 7.802218e+9
+            resonator_polycoef_flux: [-6.4013957082333475e+37,-5.544603465800361e+35,1.8083036243549177e+34,1.6444237288265834e+32,-1.9336423602686407e+30,-1.8585628967697584e+28,1.0114118728337038e+26,1.0017301264568281e+24,-3.2721117969917595e+21,-2.9131196573986652e+19,1.1268624436211499e+17,903941645210106.1,-4544899558904.053,-55778968179.37294,133312536.88543282,7802142340.280156]
+            qubit_freq: 6.7605e+9
+            T1: 0.
+            T2: 0.
+            mean_gnd_states: (0+0j)
+            mean_exc_states: (0+0j)
+            sweetspot: 0.012
+        4:
+            resonator_freq: 8.057348e+9
+            resonator_polycoef_flux: [-1.6295650056018441e+38,-2.484683239160295e+37,-1.7187934153776733e+36,-7.140662289959547e+34,-1.987722980285294e+33,-3.9161945249640967e+31,-5.62226314589191e+29,-5.963420286511692e+27,-4.685087050327615e+25,-2.7055040056614286e+23,-1.1270184884253945e+21,-3.2773058618729805e+18,-6309800932863619.0,-7364888703913.622,-4606946522.073189,8054220154.824738]
+            qubit_freq: 6.44447035e+9
+            T1: 0.
+            T2: 0.
+            mean_gnd_states: (0+0j)
+            mean_exc_states: (0+0j)
+            sweetspot: -0.0123 #-0.0123
+        5:
+            resonator_freq: 7119252525.252525
+            qubit_freq: 5.e+9 # 5.34e+9
+            T1: 0.
+            T2: 0.
+            mean_gnd_states: (0+0j)
+            mean_exc_states: (0+0j)

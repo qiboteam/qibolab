@@ -3,14 +3,7 @@ from qibo import gates, matrices
 from qibo.config import raise_error
 from scipy.linalg import expm
 
-magic_basis = np.array(
-    [
-        [1, -1j, 0, 0],
-        [0, 0, 1, -1j],
-        [0, 0, -1, -1j],
-        [1, 1j, 0, 0],
-    ]
-) / np.sqrt(2)
+magic_basis = np.array([[1, -1j, 0, 0], [0, 0, 1, -1j], [0, 0, -1, -1j], [1, 1j, 0, 0]]) / np.sqrt(2)
 
 bell_basis = np.array([[1, 1, 0, 0], [0, 0, 1, 1], [0, 0, 1, -1], [1, -1, 0, 0]]) / np.sqrt(2)
 
