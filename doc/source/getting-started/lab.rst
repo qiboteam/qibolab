@@ -80,7 +80,7 @@ from ``AbstractPlatform`` and reads the useful information from the runcard belo
                 mean_exc_states: (-0.00022773024569023835+0.0003203066357136082j)
 
 The class ``DummyPlatform`` has a method ``execute_pulse_sequence`` that executes the
-input pulse sequences and return an output pulse sequence.
+input pulse sequences and return the readout results.
 
 .. code-block:: python
 
