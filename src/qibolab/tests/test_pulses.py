@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests ``pulses.py``."""
 import numpy as np
 import pytest

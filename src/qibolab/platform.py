@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 def Platform(name, runcard=None):
     """Platform for controlling quantum devices.
 
@@ -16,7 +13,7 @@ def Platform(name, runcard=None):
 
         runcard = qibolab_folder / "runcards" / f"{name}.yml"
 
-    if name == "tii1q" or name == "tii5q" or name == "qili":
+    if name == "tii1q" or name == "qw5q_gold" or name == "qili":
         from qibolab.platforms.multiqubit import MultiqubitPlatform as Device
     elif name == "icarusq":
         from qibolab.platforms.icplatform import ICPlatform as Device
