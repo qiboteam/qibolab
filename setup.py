@@ -54,6 +54,7 @@ setup(
             "nbsphinx",
             "IPython",
             "sphinx_copybutton",
+            "furo",
         ],
         # TII system dependencies
         "tiiq": [
