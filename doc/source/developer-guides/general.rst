@@ -11,24 +11,30 @@ New platforms can be implemented by inheriting the
 :class:`qibolab.abstract.AbstractPlatform` and implementing its abstract
 methods. In particular the developer should:
 
-* Perform an ``AbstractPlatform`` inheritance, we suggest saving it in ``src/qibolab/platforms/``, if you want to include it in the ``Qibolab`` library.
-* Create a yaml in ``src/qibolab/runcards/`` containing all the instruments and the calibration parameters.
+* Perform an ``AbstractPlatform`` inheritance, we suggest saving it in ``src/qibolab/platforms/``, if you want to include it in the ``Qibolab`` library. For example, we can deploy a class ``ExamplePlatform`` and save it in a file ``src/qibolab/platforms/example.py``.
+* Create a yaml in ``src/qibolab/runcards/`` containing all the instruments and the calibration parameters, we will see about it later.
 * Modify the file `platform.py <https://github.com/qiboteam/qibolab/blob/main/src/qibolab/platform.py>`_, so that the correct platform is imported if the chosen name is given as input. For example, the following lines could be added
-.. code:: python
 
-    elif name == "example":
-        from qibolab.platforms.example import ExamplePlatform as Device
+    .. code:: python
+
+        elif name == "example":
+            from qibolab.platforms.example import ExamplePlatform as Device
+
 * Load your platform with:
 
-.. code-block:: python
+    .. code-block:: python
 
-    from qibolab import Platform
+        from qibolab import Platform
 
-    platform = Platform("<platform_name>", "<path_to_runcard>")
+        platform = Platform("<platform_name>", "<path_to_runcard>")
 
-where ``<platform_name>`` is the name of the yaml file and
-``<path_to_runcard>`` is its path.
-If the name of the runcard is ``<platform_name>.yml``, it is not necessary to also provide the ``<path_to_runcard>`` as input.
+  where ``<platform_name>`` is the name of the yaml file and
+  ``<path_to_runcard>`` is its path.
+  If the name of the runcard is ``<platform_name>.yml``, it is not necessary to also provide the ``<path_to_runcard>`` as input. Following our example the platform can be implemeted with the command
+
+    .. code-block:: python
+
+        platform = Platform("example")
 
 Here is an example of a yaml file with a brief explanation:
 
