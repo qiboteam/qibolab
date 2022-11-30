@@ -39,7 +39,7 @@ def transpose_qubits(state, qubits):
     return np.reshape(state, original_shape)
 
 
-@pytest.mark.parametrize("run_number", range(50))
+@pytest.mark.parametrize("run_number", range(5))
 @pytest.mark.parametrize("nqubits", [1, 2, 3, 4, 5])
 @pytest.mark.parametrize("depth", [2, 5, 8])
 def test_fix_connectivity(run_number, nqubits, depth):

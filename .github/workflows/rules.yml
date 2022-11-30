@@ -28,7 +28,7 @@ jobs:
         pylint src -E -d E1123,E1120
     - name: Test with pytest core
       run: |
-        pytest src/qibolab --cov=qibolab --cov-report=xml --pyargs qibolab --skip-qpu --platforms tii1q,tii5q
+        pytest src/qibolab --cov=qibolab --cov-report=xml --pyargs qibolab -m "not qpu" --platforms tii1q,tii5q
     - name: Upload coverage to Codecov
       if: startsWith(matrix.os, 'ubuntu')
       uses: codecov/codecov-action@v2
