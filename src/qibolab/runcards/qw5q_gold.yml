@@ -13,14 +13,14 @@ topology:
 channels: ["L3-25","L3-15","L4-5","L3-11","L4-1","L3-12","L4-2","L3-13","L4-3","L3-14","L4-4", "L2-5"]
 qubit_channel_map:
     0: ["L3-25_a", "L3-15", "L4-5"]
-    1: ["L3-25_a", "L3-11", "L4-1"] 
+    1: ["L3-25_a", "L3-11", "L4-1"]
     2: ["L3-25_b", "L3-12", "L4-2"]
     3: ["L3-25_b", "L3-13", "L4-3"]
     4: ["L3-25_b", "L3-14", "L4-4"]
     5: ["L3-25_a", null, null]
 instruments:
     cluster:
-        lib: qblox 
+        lib: qblox
         class: Cluster
         address: 192.168.0.6
         roles: [other]
@@ -50,7 +50,7 @@ instruments:
                 i1: {hardware_demod_en: true}
             acquisition_hold_off: 130
             acquisition_duration: 1800
-            channel_port_map: {L3-25_b: o1, L2-5: i1}            
+            channel_port_map: {L3-25_b: o1, L2-5: i1}
     qcm_rf1:
         lib: qblox
         class: ClusterQCM_RF
@@ -70,7 +70,7 @@ instruments:
         roles: [control]
         settings:
             ports:
-                o1: {attenuation: 8, lo_enabled: true, lo_frequency: 6.64447035e+9, 
+                o1: {attenuation: 8, lo_enabled: true, lo_frequency: 6.64447035e+9,
                     gain: 0.089, hardware_mod_en: false}
                 o2: {attenuation: 12, lo_enabled: true, lo_frequency: 6.9605e+9,
                     gain: 0.9, hardware_mod_en: false}
