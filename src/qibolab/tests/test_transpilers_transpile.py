@@ -46,7 +46,7 @@ def generate_random_circuit(nqubits, ngates, seed=None):
     return circuit
 
 
-@pytest.mark.parametrize("run_number", range(10))
+@pytest.mark.parametrize("run_number", range(5))
 @pytest.mark.parametrize("nqubits", [1, 2, 3, 4, 5])
 @pytest.mark.parametrize("ngates", [20, 50, 100])
 @pytest.mark.parametrize("fuse_one_qubit", [False, True])
