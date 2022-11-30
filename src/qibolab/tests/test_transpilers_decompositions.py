@@ -15,7 +15,7 @@ from qibolab.transpilers.decompositions import (
     two_qubit_decomposition,
 )
 
-NREPS = 10  # number of repetitions to execute random tests
+NREPS = 5  # number of repetitions to execute random tests
 ATOL = 1e-12
 
 
