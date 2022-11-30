@@ -56,8 +56,7 @@ and a brief description.
         rabi_oscillations_pi_pulse_min_voltage: 5291.34802850
         experiment_start_instrument: awg
 
-All the information useful to connect and set up the instruments are collected
-under the ``setting`` key.
+All the general information about the instruments and the platform can be found under the ``setting`` key.
 
 .. code-block:: yaml
 
