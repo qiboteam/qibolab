@@ -79,7 +79,7 @@ from ``AbstractPlatform`` and reads the useful information from the runcard belo
                 mean_gnd_states: (-0.0008313786783245074+0.00044815319987281076j)
                 mean_exc_states: (-0.00022773024569023835+0.0003203066357136082j)
 
-The class ``DummyPlatform`` has a method ``execute_pulse_sequence`` that reads the
+The class ``DummyPlatform`` has a method ``execute_pulse_sequence`` that executes the
 input pulse sequences and return an output pulse sequence.
 
 .. code-block:: python
