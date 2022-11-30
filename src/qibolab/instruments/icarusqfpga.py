@@ -89,6 +89,7 @@ class IcarusQRFSOC(AbstractInstrument):
 
         self.dac_nchannels = 16
         self.dac_sample_size = 65536
+        self.dac_max_volts = 0.3
         self.dac_max_amplitude = 8191
         self.dac_waveform_buffer: np.ndarray = None
         self.nshots: int = None
@@ -100,6 +101,7 @@ class IcarusQRFSOC(AbstractInstrument):
         self.acquisitons = []
         self.ports = {ch: None for ch in range(self.dac_nchannels)}
         self.channels: list = []
+        self.dacs = {}
 
     def set_adc_sampling_rate(self, adc_sr=None):
         """Sets the sampling rate of all 16 ADCs.
@@ -223,6 +225,7 @@ class IcarusQRFSOC(AbstractInstrument):
         self.adc_sampling_rate = adc_sampling_rate
         self.channel_port_map = channel_port_map
         self.channels = list(self.channel_port_map.keys())
+        self.dacs = self.channel_port_map
 
     def process_pulse_sequence(self, instrument_pulses: PulseSequence, nshots: int, repetition_duration: int):
         """Processes the pulse sequence into np arrays to upload to the board
@@ -237,7 +240,7 @@ class IcarusQRFSOC(AbstractInstrument):
         self.nshots = nshots
 
         # Check if the new pulse sequence is the same as the currently loaded pulse sequence
-        self._current_pulsesequence_hash = hash(instrument_pulses)
+        self.current_pulsesequence_hash = hash(instrument_pulses)
 
         # If they are the same, exit
         if self.current_pulsesequence_hash == self.last_pulsequence_hash:
@@ -251,7 +254,6 @@ class IcarusQRFSOC(AbstractInstrument):
 
         # Get the DAC time array
         time_array = 1 / (self.dac_sampling_rate * 1e6) * np.arange(self.dac_sample_size)
-
         for pulse in instrument_pulses.pulses:
 
             # Map fridge port to DAC number
@@ -265,7 +267,9 @@ class IcarusQRFSOC(AbstractInstrument):
             idx_end = bisect(time_array, end)
             t = time_array[idx_start:idx_end]
 
-            wfm = pulse.amplitude * np.sin(2 * np.pi * pulse.frequency * t + pulse.phase)
+            # Convert amplitude to DAC bits
+            amplitude = pulse.amplitude / self.dac_max_volts * self.dac_max_amplitude
+            wfm = amplitude * np.sin(2 * np.pi * pulse.frequency * t + pulse.phase)
             self.dac_waveform_buffer[dac, idx_start:idx_end] += wfm
 
             # Store the readout pulse
@@ -422,7 +426,8 @@ class IcarusQ_RFSOC_QRM(IcarusQRFSOC):
                             r.extend(packet)
 
                     # Load the data packet and assign it to the internal buffer
-                    adc_data_buffer[channel][shotnum] = np.frombuffer(r, dtype="i2")
+                    # Shift incoming 12-bit data from 16-bit to 12-bit
+                    adc_data_buffer[channel][shotnum] = np.right_shift(np.frombuffer(r, dtype="i2"), 4)
 
         self.pb.stop()
         return adc_data_buffer
