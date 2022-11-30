@@ -57,7 +57,15 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_rtd_theme"
+html_theme = "furo"
+
+html_theme_options = {
+    "light_css_variables": {
+        "color-brand-primary": "#6400FF",
+        "color-brand-secondary": "#6400FF",
+        "color-brand-content": "#6400FF",
+    }
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -68,3 +76,8 @@ html_static_path = ["_static"]
 def setup(app):
     """Include custom style to change colors"""
     app.add_css_file("css/style.css")
+
+
+# html_logo = "logo.png"
+
+html_show_sourcelink = False
