@@ -1,0 +1,228 @@
+nqubits: 5
+description: 5-qubit device controlled with the IcarusQ RFSoC system.
+
+settings:
+    hardware_avg: 1024
+    sampling_rate: 5_898_240_000
+    repetition_duration: 200_000
+    minimum_delay_between_instructions: 0
+
+qubits: [0, 1, 2, 3, 4]
+
+topology: # qubit - qubit connections
+-   [ 1, 0, 1, 0, 0 ]
+-   [ 0, 1, 1, 0, 0 ]
+-   [ 1, 1, 1, 1, 1 ]
+-   [ 0, 0, 1, 1, 0 ]
+-   [ 0, 0, 1, 0, 1 ]
+
+channels: [r1, x1, x2, x3, x4, x5, z1, z2, z3, z4, z5, z6, z7, z8, z9]
+
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux] 
+    0: [r1, x1, z1]
+    1: [r1, x2, z2]
+    2: [r1, x3, z3]
+    3: [r1, x4, z4]
+    4: [r1, x5, z5]
+
+instruments:
+    board2:
+        lib: icarusqfpga
+        class: IcarusQ_RFSOC_QRM
+        roles: [readout]
+        address: 192.168.0.132
+        settings:
+            dac_sampling_rate: 5898.24
+            adc_sampling_rate: 1966.08
+            channel_port_map:
+                r1: 1
+                x1: 2
+                x2: 6
+                x3: 7
+                x4: 8
+                x5: 11
+                z1: 33
+                z2: 33
+                z3: 33
+                z4: 33
+                z5: 33
+                z6: 12
+                z7: 15
+                z8: 9
+                z9: 14
+            qubit_adc_map:
+                0: 2
+                1: 2
+                2: 2
+                3: 2
+                4: 2
+            pulseblaster_address: "192.168.0.101"
+            pulseblaster_port: 5000
+            single_shot: false
+
+native_gates:
+    single_qubit:
+        0:
+            RX:
+                pulse_sequence:
+                    -   start: 0
+                        duration: 27.065649427590937
+                        amplitude: 0.3
+                        frequency: 4437338623.16
+                        shape: Rectangular()
+                        phase: 0
+                        type: qd # qubit drive
+            MZ:
+                pulse_sequence:
+                    -   start: 0
+                        duration: 5000
+                        amplitude: 0.06
+                        frequency: 5327474747.47
+                        shape: Rectangular()
+                        phase: 0
+                        type: ro # readout
+        1:
+            RX:
+                pulse_sequence:
+                    -   start: 0
+                        duration: 45.665141674316814
+                        amplitude: 0.11
+                        frequency: 4379371177.12
+                        shape: Rectangular()
+                        phase: 0
+                        type: qd # qubit drive
+            MZ:
+                pulse_sequence:
+                    -   start: 0
+                        duration: 5000
+                        amplitude: 0.06
+                        frequency: 5158484848.48
+                        shape: Rectangular()
+                        phase: 0
+                        type: ro # readout
+        2:
+            RX:
+                pulse_sequence:
+                    -   start: 0
+                        duration: 26.053265944738392
+                        amplitude: 0.11
+                        frequency: 4580474536.25
+                        shape: Rectangular()
+                        phase: 0
+                        type: qd # qubit drive
+            MZ:
+                pulse_sequence:
+                    -   start: 0
+                        duration: 5000
+                        amplitude: 0.06
+                        frequency: 5829494949.49
+                        shape: Rectangular()
+                        phase: 0
+                        type: ro # readout
+        3:
+            RX:
+                pulse_sequence:
+                    -   start: 0
+                        duration: 61.93665605725776
+                        amplitude: 0.11
+                        frequency: 4533135067.53
+                        shape: Rectangular()
+                        phase: 0
+                        type: qd # qubit drive
+            MZ:
+                pulse_sequence:
+                    -   start: 0
+                        duration: 5000
+                        amplitude: 0.06
+                        frequency: 5668484848.48
+                        shape: Rectangular()
+                        phase: 0
+                        type: ro # readout
+        4:
+            RX:
+                pulse_sequence:
+                    -   start: 0
+                        duration: 31.156787499153644
+                        amplitude: 0.3
+                        frequency: 4614170200.75
+                        shape: Rectangular()
+                        phase: 0
+                        type: qd # qubit drive
+            MZ:
+                pulse_sequence:
+                    -   start: 0
+                        duration: 5000
+                        amplitude: 0.06
+                        frequency: 5498484848.48
+                        shape: Rectangular()
+                        phase: 0
+                        type: ro # readout
+
+    two_qubit:
+        0-2: # qubit numbers
+            CZ:
+                pulse_sequence:
+                    -   start: 0
+                        duration: 20
+                        amplitude: 0.5
+                        frequency: 0
+                        shape: RTZ()
+                        phase: null
+                        channel: 2
+                        type: qf # qubit flux
+                    -   start: 0
+                        duration: 4
+                        amplitude: 0.01
+                        frequency: 0
+                        shape: RTZ()
+                        phase: null
+                        channel: 2
+                        type: qf # qubit flux
+
+characterization:
+    single_qubit:
+        0:
+            resonator_freq: 5327474747.47
+            qubit_freq: 4437338623.16
+            T1: 1993
+            T2: 530
+            resonator_spectroscopy_max_ro_voltage: 0
+            rabi_oscillations_pi_pulse_min_voltage: 0
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
+        1:
+            resonator_freq: 5158484848.48
+            qubit_freq: 4379371177.12
+            T1: 2787
+            T2: 450
+            resonator_spectroscopy_max_ro_voltage: 0
+            rabi_oscillations_pi_pulse_min_voltage: 0
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
+        2:
+            resonator_freq: 5829494949.49
+            qubit_freq: 4580474536.25
+            T1: 1381
+            T2: 1400
+            resonator_spectroscopy_max_ro_voltage: 0
+            rabi_oscillations_pi_pulse_min_voltage: 0
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
+        3:
+            resonator_freq: 5668484848.48
+            qubit_freq: 4533135067.53
+            T1: 2732
+            T2: 674
+            resonator_spectroscopy_max_ro_voltage: 0
+            rabi_oscillations_pi_pulse_min_voltage: 0
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
+        4:
+            resonator_freq: 5498484848.48
+            qubit_freq: 4614170200.75
+            T1: 2153
+            T2: 650
+            resonator_spectroscopy_max_ro_voltage: 0
+            rabi_oscillations_pi_pulse_min_voltage: 0
+            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
+            mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
