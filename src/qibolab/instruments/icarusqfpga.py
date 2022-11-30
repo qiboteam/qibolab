@@ -7,6 +7,7 @@ from typing import List
 
 import numpy as np
 from qibo.config import log, raise_error
+from scipy.signal.windows import hamming
 
 from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.pulses import PulseSequence, PulseType
@@ -269,7 +270,17 @@ class IcarusQRFSOC(AbstractInstrument):
 
             # Convert amplitude to DAC bits
             amplitude = pulse.amplitude / self.dac_max_volts * self.dac_max_amplitude
-            wfm = amplitude * np.sin(2 * np.pi * pulse.frequency * t + pulse.phase)
+
+            # Prelim flux square pulses
+            if pulse.type == PulseType.FLUX:
+                wfm = amplitude + np.zeros(t.shape[0])
+            else:
+                wfm = amplitude * np.sin(2 * np.pi * pulse.frequency * t + pulse.relative_phase)
+
+            # Add a hamming envelope over the sine wave
+            if pulse.type == PulseType.DRIVE:
+                wfm *= hamming(t.shape[0])
+
             self.dac_waveform_buffer[dac, idx_start:idx_end] += wfm
 
             # Store the readout pulse
