@@ -87,8 +87,8 @@ input pulse sequences and return an output pulse sequence.
     class DummyPlatform(AbstractPlatform):
         #Dummy platform that returns random voltage values.
         #Args:
-        #    name (str): name of the platform.
-
+        #   name (str): name of the platform.
+        #   runcard (str): path to the runcard
         def __init__(self, name, runcard):
             self.name = name
             self.runcard = runcard
