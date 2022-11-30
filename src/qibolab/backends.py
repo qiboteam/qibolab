@@ -80,12 +80,13 @@ class QibolabBackend(NumpyBackend):
         self.platform.stop()
         result = CircuitResult(self, native_circuit, readout, nshots)
 
-        shots = readout.get("binned_classified")
+        shots = readout.get("demodulated_integrated_classified_binned")
         # Register measurement outcomes
         if shots is not None:
             for gate in native_circuit.queue:
                 if isinstance(gate, gates.M):
-                    samples = np.array([shots.get(pulse) for pulse in gate.pulses])
+                    samples = np.array([shots.get(pulse) for pulse in gate.pulses], dtype="int32")
+                    gate.result.backend = self
                     gate.result.register_samples(samples.T)
         return result
 
