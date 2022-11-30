@@ -1,7 +1,7 @@
 How to connect Qibolab to your lab
 ==================================
 
-In this section we will see how to let ``Qibolab`` communicate with your lab’s instruments and run an experiment.
+In this section we will show how to let ``Qibolab`` communicate with your lab’s instruments and run an experiment.
 ``Qibolab`` has an abstract class `AbstractInstrument <https://github.com/qiboteam/qibolab/blob/main/src/qibolab/instruments/abstract.py>`_
 with some abstract methods such as ``start``, ``stop``, ``connect``.
 In order to set up one instrument, you have to build a child class and implement the methods you need.
@@ -79,8 +79,8 @@ from ``AbstractPlatform`` and reads the useful information from the runcard belo
                 mean_gnd_states: (-0.0008313786783245074+0.00044815319987281076j)
                 mean_exc_states: (-0.00022773024569023835+0.0003203066357136082j)
 
-The class ``DummyPlatform`` has a method ``execute_pulse_sequence`` that reads the
-input pulse sequences and return an output pulse sequence.
+The class ``DummyPlatform`` has a method ``execute_pulse_sequence`` that executes the
+input pulse sequences and return the readout results.
 
 .. code-block:: python
 
