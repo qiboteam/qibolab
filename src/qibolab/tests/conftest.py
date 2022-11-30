@@ -2,7 +2,7 @@ import pytest
 
 
 def pytest_addoption(parser):
-    parser.addoption("--platforms", type=str, action="store", default="tii5q", help="qpu platforms to test on")
+    parser.addoption("--platforms", type=str, action="store", default="", help="qpu platforms to test on")
     parser.addoption("--skip-qpu", action="store_true", help="skip tests that require qpu")
     parser.addoption("--skip-no-qpu", action="store_true", help="skip tests that do not require qpu")
 
