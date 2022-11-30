@@ -25,34 +25,34 @@ instruments:
             qubit_ch: 1
             # resonator config
             readout_length: 3.0 # Micro seg.
-            f_res: 7271.25 # [MHz]
+            f_res: 7295.23829 # [MHz]
             resonator_phase: 3097210280 #
             adc_trig_offset: 200 # [Clock ticks]
             res_gain: 600 #
             threshold: 0
             # qubit config
-            sigma: 0.04 # Micro seg.
-            pi_gain: 9000 #
-            pi2_gain: 9000 // 2
-            f_ge: 8014.6 # [MHz]
+            sigma: 0.114 # Micro seg.
+            pi_gain: 17000 #
+            pi2_gain: 17000 // 2
+            f_ge: 5236.3 # [MHz]
             relax_delay: 500 #[Clock ticks]
         experiment:
             reps: 1024
             max_gain: 30000
             delay_before_readout: 50 # [ns]
-            rabi_length: 1
+            rabi_length: 0.01
 native_gates:
     single_qubit:
         0: # qubit number
             RX:
-                duration: 40
+                duration: 114
                 amplitude: 0.566
-                frequency: 8_014_600_000
+                frequency: 5_236_300_000
                 shape: Drag(5, 0.05096)
                 type: qd # qubit drive
             MZ:
                 duration: 3000
                 amplitude: 0.02
-                frequency: 7_271_250_000
+                frequency: 7_295_238_290
                 shape: Rectangular()
                 type: ro # readout
