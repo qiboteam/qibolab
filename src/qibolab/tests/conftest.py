@@ -1,29 +1,26 @@
 import pytest
 
+from qibolab.platform import Platform
+
 
 def pytest_addoption(parser):
     parser.addoption("--platforms", type=str, action="store", default="tii5q", help="qpu platforms to test on")
-    parser.addoption("--skip-qpu", action="store_true", help="skip tests that require qpu")
-    parser.addoption("--skip-no-qpu", action="store_true", help="skip tests that do not require qpu")
 
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "qpu: mark tests that require qpu")
 
 
-def pytest_runtest_setup(item):
-    marked_qpu = "qpu" in {mark.name for mark in item.iter_markers()}
-    if item.config.getoption("--skip-qpu") and marked_qpu:
-        pytest.skip("Skipping test that requires qpu.")
-    elif item.config.getoption("--skip-no-qpu") and not marked_qpu:
-        pytest.skip("Skipping test that does not require qpu.")
-
-
 def pytest_generate_tests(metafunc):
     platforms = metafunc.config.option.platforms.split(",")
 
     if metafunc.module.__name__ == "qibolab.tests.test_instruments_rohde_schwarz":
-        pytest.skip("Skipping RS tests because it is not available in qpu5q.")
+        pytest.skip("Skipping Rohde Schwarz tests because it is not available in qpu5q.")
 
     if "platform_name" in metafunc.fixturenames:
-        metafunc.parametrize("platform_name", platforms)
+        if "qubit" in metafunc.fixturenames:
+            # TODO: Do backend initialization here instead of every test (currently does not work)
+            qubits = [(n, q) for n in platforms for q in range(Platform(n).nqubits)]
+            metafunc.parametrize("platform_name,qubit", qubits)
+        else:
+            metafunc.parametrize("platform_name", platforms)

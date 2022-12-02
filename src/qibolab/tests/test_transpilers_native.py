@@ -7,7 +7,7 @@ from qibo.models import Circuit
 from qibolab.transpilers.native import NativeGates
 
 
-def assert_matrices_allclose(gate):
+def assert_matrices_allclose(gate, phase=1):
     backend = NumpyBackend()
     native_gates = NativeGates()
     target_matrix = gate.asmatrix(backend)
@@ -22,7 +22,7 @@ def assert_matrices_allclose(gate):
     native_unitary = native_matrix / np.power(
         np.linalg.det(native_matrix), 1 / float(native_matrix.shape[0]), dtype=complex
     )
-    np.testing.assert_allclose(native_unitary, target_unitary, atol=1e-12)
+    np.testing.assert_allclose(phase * native_unitary, target_unitary, atol=1e-12)
 
 
 @pytest.mark.parametrize("gatename", ["H", "X", "Y"])
@@ -59,10 +59,15 @@ def test_u3_to_native():
     assert_matrices_allclose(gate)
 
 
-@pytest.mark.parametrize("gatename", ["CNOT", "CZ", "SWAP", "FSWAP"])
+@pytest.mark.parametrize("gatename", ["CNOT", "CZ", "SWAP"])
 def test_two_qubit_to_native(gatename):
     gate = getattr(gates, gatename)(0, 1)
     assert_matrices_allclose(gate)
+
+
+def test_fswap_to_native():
+    gate = gates.FSWAP(0, 1)
+    assert_matrices_allclose(gate, phase=-1)
 
 
 @pytest.mark.parametrize("gatename", ["CRX", "CRY", "CRZ"])
@@ -99,7 +104,7 @@ def test_GeneralizedfSim_to_native():
     assert_matrices_allclose(gate)
 
 
-@pytest.mark.parametrize("gatename", ["RXX", "RYY", "RZZ"])
+@pytest.mark.parametrize("gatename", ["RXX", "RZZ", "RYY"])
 def test_rnn_to_native(gatename):
     gate = getattr(gates, gatename)(0, 1, theta=0.1)
     assert_matrices_allclose(gate)
