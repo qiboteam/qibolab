@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import laboneq.simple as lo
 import matplotlib.pyplot as plt
 import numpy as np
@@ -24,7 +23,7 @@ class SHFQC_QA(AbstractInstrument):
         self.runcard_file = runcard
         self.emulation = use_emulation
 
-        with open(runcard, "r") as file:
+        with open(runcard) as file:
             settings = yaml.safe_load(file)
 
         self.setup(**settings)
@@ -157,7 +156,7 @@ class SHFQC_QA(AbstractInstrument):
 
     # TODO: Check reload settings properly working
     def reload_settings(self):
-        with open(self.runcard_file, "r") as file:
+        with open(self.runcard_file) as file:
             self.settings = yaml.safe_load(file)
 
         if self.is_connected:
