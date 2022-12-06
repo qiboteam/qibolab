@@ -264,7 +264,7 @@ class Pulse:
     Args:
         start (int | intSymbolicExpression): Start time of pulse in ns.
         duration (int | intSymbolicExpression): Pulse duration in ns.
-        amplitude (float): Pulse digital amplitude (unitless) [0 to 1].
+        amplitude (float): Pulse digital amplitude (unitless) [-1 to 1].
         frequency (int): Pulse Intermediate Frequency in Hz [10e6 to 300e6].
         relative_phase (float): To be added.
         shape: (PulseShape | str): {'Rectangular()', 'Gaussian(rel_sigma)', 'DRAG(rel_sigma, beta)'} Pulse shape.
@@ -1135,7 +1135,9 @@ class PulseSequence:
         return overlaps
 
     def separate_overlapping_pulses(self):  # -> dict((int,int): PulseSequence):
-        # TODO: non_overlapping_same_frequency_pulses
+        # This routine separates the pulses of a sequence into non-overlapping sets
+        # but it does not check if the frequencies of the pulses within a set have the same frequency
+
         separated_pulses = []
         for new_pulse in self.pulses:
             stored = False
@@ -1151,6 +1153,8 @@ class PulseSequence:
             if not stored:
                 separated_pulses.append(PulseSequence(new_pulse))
         return separated_pulses
+
+    # TODO: Implement separate_different_frequency_pulses()
 
     @property
     def pulses_overlap(self) -> bool:
