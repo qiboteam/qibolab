@@ -17,13 +17,13 @@ description: XXX 5-qubit device, controlled with Zurich Instruments.
 #     """
 
 settings:
-    hardware_avg: 1
+    hardware_avg: 10000
     sampling_rate: 2.e+9
     repetition_duration: 200_000
     minimum_delay_between_instructions: 4
-    readout_delay: 0.0000001
-    readout_integration_delay: 0.00000004
-    delay_between_pulses: 50.e-9
+    readout_delay: 50.e-6
+    readout_integration_delay: 40.e-9
+    delay_between_pulses: 32.e-9   # 1.e-6
 
 qubits: [0]
 
@@ -38,6 +38,13 @@ channels: [0, 1, 0]
 qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
     0: [0, 0]
 
+parameters:
+    pulse_length_spectroscopy: 1.e-7
+    pulse_amplitude_spectroscopy: 0.003
+    readout_length: 1.e-7
+    readout_amplitude: .002
+
+
 instruments:
     shfqc_qa:
         lib: zhinst
@@ -47,39 +54,40 @@ instruments:
         settings:
             channels: [0,1]
             input_range: 10 # dBm
-            output_range: 5 # dBm
-            lo_frequency: 5_000_000_000
-            if_frequency: 500_000_000
-            gain: 0.06
+            output_range: -10 # 10 ? # dBm
+            lo_frequency: 7_800_000_000 #19.5e+9
+            if_frequency: 25_000_000 #1.68e+9
+            # gain: 0.1
 
     shfqc_qc:
         lib: zhinst
-        class: SHFQC_QA
+        class: SHFQC_QC
         address: DEV12146
         roles: [control]
         settings:
             channels: [0]
-            drive_range : 5
-            lo_frequency: 7_000_000_000
-            if_frequency: 500_000_000
-            gain: 0.06
+            drive_range : 10
+            lo_frequency: 5_100_000_000
+            if_frequency: -19_500_000
+            # gain: 0.06
 
 native_gates:
     single_qubit:
         0: # qubit number
             RX:
-                duration: 40
-                amplitude: 0.2
-                frequency: -200_000_000
+                duration: 78 #80
+                amplitude: 0.745808 #0.8
+                frequency: 100_000_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
+                # shape: Drag(5, 0.04)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
-                duration: 500
-                amplitude: 0.1
-                frequency: 20_000_000
-                integration_time : 0.01
+                duration: 1000
+                amplitude: .1 # 1
+                frequency: 20_000_000 #doesnt do anything requiered for qibolab to work
+                integration_time : 1.e-7
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -108,12 +116,12 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            resonator_freq:  5_250_000_000
-            qubit_freq: 4_253_000_000
-            T1: 2192.895853326451
-            T2: 6933.310025260633
-            state0_voltage: 1152
-            state1_voltage: 2500
+            resonator_freq:  7_825_000_000 #Coupled
+            qubit_freq: 5080386483 #5_080_066_695 #5_080_500_000 Correction from Ramsey detuned with freq
+            T1: 23925
+            T2: 6581 # 12056
+            state0_voltage: 100
+            state1_voltage: 40
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
             mean_exc_states: (0.00011805761369462914+0.00018601039195510947j)
-            sweetspot: 0.001
+            sweetspot: 0.00

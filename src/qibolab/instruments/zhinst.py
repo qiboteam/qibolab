@@ -3,7 +3,6 @@ import laboneq.simple as lo
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
-from zhinst.toolkit import Session, SHFQAChannelMode
 
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.pulses import PulseSequence
@@ -58,14 +57,9 @@ class SHFQC_QA(AbstractInstrument):
 
             self.calib[f"/logical_signal_groups/q{qubit}/drive_line"] = lo.SignalCalibration(
                 oscillator=lo.Oscillator(
-                    frequency=self.instruments["shfqc_qa"]["settings"]["if_frequency"],
+                    frequency=self.instruments["shfqc_qc"]["settings"]["if_frequency"],
                     modulation_type=lo.ModulationType.HARDWARE,
                 ),
-                # oscillator=lo.Oscillator(
-                #     frequency=self.characterization["single_qubit"][qubit]["qubit_freq"]
-                #     - self.instruments["shfqc_qc"]["settings"]["lo_frequency"],
-                #     modulation_type=lo.ModulationType.HARDWARE,
-                # ),
                 local_oscillator=lo.Oscillator(
                     frequency=self.instruments["shfqc_qc"]["settings"]["lo_frequency"],
                 ),
@@ -74,24 +68,25 @@ class SHFQC_QA(AbstractInstrument):
             self.calib[f"/logical_signal_groups/q{qubit}/measure_line"] = lo.SignalCalibration(
                 oscillator=lo.Oscillator(
                     frequency=self.instruments["shfqc_qa"]["settings"]["if_frequency"],
-                    modulation_type=lo.ModulationType.SOFTWARE,
+                    modulation_type=lo.ModulationType.HARDWARE,
                 ),
                 local_oscillator=lo.Oscillator(
                     frequency=self.instruments["shfqc_qa"]["settings"]["lo_frequency"],
                 ),
                 range=self.instruments["shfqc_qa"]["settings"]["output_range"],
-                port_delay=self.settings["readout_delay"],
+                # port_delay=self.settings["readout_delay"],
             )
             self.calib[f"/logical_signal_groups/q{qubit}/acquire_line"] = lo.SignalCalibration(
-                oscillator=lo.Oscillator(
-                    frequency=self.instruments["shfqc_qa"]["settings"]["if_frequency"],
-                    modulation_type=lo.ModulationType.SOFTWARE,
-                ),
+                # oscillator=lo.Oscillator(
+                #     frequency=self.instruments["shfqc_qa"]["settings"]["if_frequency"],
+                #     modulation_type=lo.ModulationType.SOFTWARE,
+                # ),
                 local_oscillator=lo.Oscillator(
                     frequency=self.instruments["shfqc_qa"]["settings"]["lo_frequency"],
                 ),
-                range=self.instruments["shfqc_qa"]["settings"]["output_range"],
-                port_delay=self.settings["readout_integration_delay"],
+                range=self.instruments["shfqc_qa"]["settings"]["input_range"],
+                port_delay=10e-9,  # applied to corresponding instrument node, bound to hardware limits
+                # port_delay=self.settings["readout_delay"],
             )
 
     def set_map(self):
@@ -140,6 +135,7 @@ class SHFQC_QA(AbstractInstrument):
         self.descriptor = kwargs.get("descriptor")
         self.qubit_channel_map = kwargs.get("qubit_channel_map")
         self.descriptor = kwargs.get("instrument_list")
+        self.parameters = kwargs.get("parameters")
         self.sequence = PulseSequence()
 
     def Z_setup(self):
@@ -198,61 +194,21 @@ class SHFQC_QA(AbstractInstrument):
         else:
             print(f"Already disconnected")
 
-    # TODO: Join both and check sampling_rate = 2e9
-    def sequence_to_Zurich_real(self, sequence):
-        sequence_Z_drive = []
-        sequence_Z_readout = []
-        i = 0
-        j = 0
-        for pulse in sequence:
-            if str(pulse.type) == "PulseType.DRIVE":
-                sequence_Z_drive.append(
-                    lo.pulse_library.sampled_pulse_real(uid=("drive" + str(i)), samples=pulse.modulated_waveform_i.data)
-                )
-                i += 1
-            if str(pulse.type) == "PulseType.READOUT":
-                sequence_Z_readout.append(
-                    lo.pulse_library.sampled_pulse_real(
-                        uid=("readout" + str(j)), samples=pulse.modulated_waveform_i.data
-                    )
-                )
-                j += 1
-        self.sequence_drive = sequence_Z_drive
-        self.sequence_readout = sequence_Z_readout
-
-    def sequence_to_Zurich_complex(self, sequence):
-        self.sequence = sequence
-        sequence_Z_drive = []
-        sequence_Z_readout = []
-        i = 0
-        j = 0
-        for pulse in sequence:
-            if str(pulse.type) == "PulseType.DRIVE":
-                sequence_Z_drive.append(
-                    lo.pulse_library.sampled_pulse_complex(
-                        uid=("drive" + str(i)),
-                        samples=pulse.modulated_waveform_i.data + 1j * pulse.modulated_waveform_q.data,
-                    )
-                )
-                i += 1
-            if str(pulse.type) == "PulseType.READOUT":
-                sequence_Z_readout.append(
-                    lo.pulse_library.sampled_pulse_complex(
-                        uid=("readout" + str(j)),
-                        samples=pulse.modulated_waveform_i.data + 1j * pulse.modulated_waveform_q.data,
-                    )
-                )
-                j += 1
-        self.sequence_drive = sequence_Z_drive
-        self.sequence_readout = sequence_Z_readout
-
     def sequence_to_ZurichPulses(self, sequence):
         self.sequence = sequence
         sequence_Z_drive = []
         sequence_Z_readout = []
+        starts = []
+        durations = []
+        self.rel_phases = []
         i = 0
         j = 0
         for pulse in sequence:
+
+            starts.append(pulse.start)
+            durations.append(pulse.duration)
+            self.rel_phases.append(pulse.relative_phase)
+
             if str(pulse.type) == "PulseType.DRIVE":
                 if str(pulse.shape) == "Rectangular()":
                     sequence_Z_drive.append(
@@ -285,16 +241,11 @@ class SHFQC_QA(AbstractInstrument):
                             length=pulse.duration * 1e-9,
                             amplitude=pulse.amplitude,
                             sigma=2 / sigma,
-                            beta=2 / beta,
+                            beta=beta,
+                            # beta=2 / beta,
                         )
                     )
-                else:
-                    sequence_Z_drive.append(
-                        lo.pulse_library.sampled_pulse_complex(
-                            uid=("drive" + str(i)),
-                            samples=pulse.modulated_waveform_i.data + 1j * pulse.modulated_waveform_q.data,
-                        )
-                    )
+
             i += 1
             if str(pulse.type) == "PulseType.READOUT":
                 if str(pulse.shape) == "Rectangular()":
@@ -311,25 +262,121 @@ class SHFQC_QA(AbstractInstrument):
                         length=2 * pulse.duration * 1e-9,
                         amplitude=1.0,
                     )
-
-                else:
-                    sequence_Z_readout.append(
-                        lo.pulse_library.sampled_pulse_complex(
-                            uid=("readout" + str(j)),
-                            samples=pulse.modulated_waveform_i.data + 1j * pulse.modulated_waveform_q.data,
-                        )
-                    )
             j += 1
 
+        delays = []
+        for i in range(len(starts) - 1):
+            delays.append(starts[i + 1] - durations[i])
+
+        self.delays = delays
         self.sequence_drive = sequence_Z_drive
         self.sequence_readout = sequence_Z_readout
 
-    # TODO: Delay times not hardcoded
-    # TODO: What is it the readout_weighting_function for and check it has the same lenght as readout pulse
-    def sequence_to_exp(self):
-        # Create Experiment
+    def sequences_to_ZurichPulses(self, sequences):
 
-        if len(self.sequence_drive) != 0:
+        self.sequences = sequences
+        sequence_Z_drives = []
+        sequence_Z_readouts = []
+        Delays = []
+        rel_phases = []
+        Drive_durations = []
+
+        for k in range(len(sequences)):
+            sequence = sequences[k]
+
+            sequence_Z_drive = []
+            sequence_Z_readout = []
+            starts = []
+            durations = []
+            rel_phase = []
+            i = 0
+            j = 0
+            Drive_duration = 0
+
+            for pulse in sequence:
+
+                starts.append(pulse.start)
+                durations.append(pulse.duration)
+                rel_phase.append(pulse.relative_phase)
+
+                if str(pulse.type) == "PulseType.DRIVE":
+
+                    Drive_duration = (pulse.duration + pulse.start) * 1e-9
+
+                    if str(pulse.shape) == "Rectangular()":
+                        sequence_Z_drive.append(
+                            lo.pulse_library.const(
+                                uid=("drive_" + str(k) + "_" + str(i)),
+                                length=pulse.duration * 1e-9,
+                                amplitude=pulse.amplitude,
+                            )
+                        )
+                    elif "Gaussian" in str(pulse.shape):
+                        sigma = str(pulse.shape).removeprefix("Gaussian(")
+                        sigma = float(sigma.removesuffix(")"))
+                        sequence_Z_drive.append(
+                            lo.pulse_library.gaussian(
+                                uid=("drive" + str(i)),
+                                length=pulse.duration * 1e-9,
+                                amplitude=pulse.amplitude,
+                                sigma=2 / sigma,
+                            )
+                        )
+                    elif "Drag" in str(pulse.shape):
+                        params = str(pulse.shape).removeprefix("Drag(")
+                        params = params.removesuffix(")")
+                        params = params.split(",")
+                        sigma = float(params[0])
+                        beta = float(params[1])
+                        sequence_Z_drive.append(
+                            lo.pulse_library.drag(
+                                uid=("drive" + str(i)),
+                                length=pulse.duration * 1e-9,
+                                amplitude=pulse.amplitude,
+                                sigma=2 / sigma,
+                                beta=beta,
+                                # beta=2 / beta,
+                            )
+                        )
+
+                i += 1
+                if str(pulse.type) == "PulseType.READOUT":
+                    if str(pulse.shape) == "Rectangular()":
+                        sequence_Z_readout.append(
+                            lo.pulse_library.const(
+                                uid=("readout_" + str(k) + "_" + str(j)),
+                                length=pulse.duration * 1e-9,
+                                amplitude=pulse.amplitude,
+                            )
+                        )
+
+                        self.readout_weighting_function = lo.pulse_library.const(
+                            uid="readout_weighting_function",
+                            length=2 * pulse.duration * 1e-9,
+                            amplitude=1.0,
+                        )
+
+                j += 1
+
+                delays = []
+                for i in range(len(starts) - 1):
+                    delays.append(starts[i + 1] - durations[i])
+
+            Drive_durations.append(Drive_duration)
+            sequence_Z_readouts.append(sequence_Z_readout)
+            sequence_Z_drives.append(sequence_Z_drive)
+            Delays.append(delays)
+            rel_phases.append(rel_phase)
+
+        self.delays = Delays
+        self.sequence_drive = sequence_Z_drives
+        self.sequence_readout = sequence_Z_readouts
+        self.rel_phases = rel_phases
+        self.Drive_durations = Drive_durations
+
+    def sequencesPulses_to_exp(self):
+        # Create Experiment
+        if len(self.sequence_drive[0]) != 0:
             exp = lo.Experiment(
                 uid="Sequence",
                 signals=[
@@ -339,43 +386,65 @@ class SHFQC_QA(AbstractInstrument):
                 ],
             )
 
+            self.map_q0 = {
+                "drive": self.Zsetup.logical_signal_groups["q0"].logical_signals["drive_line"],
+                "measure": self.Zsetup.logical_signal_groups["q0"].logical_signals["measure_line"],
+                "acquire": self.Zsetup.logical_signal_groups["q0"].logical_signals["acquire_line"],
+            }
+
             ## experimental pulse sequence
             # outer loop - real-time, cyclic averaging in standard integration mode
             with exp.acquire_loop_rt(
                 uid="shots",
                 count=self.settings["hardware_avg"],
-                averaging_mode=lo.AveragingMode.CYCLIC,
-                acquisition_type=lo.AcquisitionType.INTEGRATION,
+                averaging_mode=lo.AveragingMode.SEQUENTIAL,
+                acquisition_type=lo.AcquisitionType.SPECTROSCOPY,
+                # averaging_mode=lo.AveragingMode.CYCLIC,
+                # acquisition_type=lo.AcquisitionType.INTEGRATION,
             ):
-                # # inner loop - real-time sweep of qubit drive pulse amplitude
-                # with exp.sweep(uid="sweep", parameter=sweep_rel_flat, alignment=SectionAlignment.RIGHT):
-                # qubit excitation - pulse amplitude will be swept
-                with exp.section(uid="qubit_excitation", alignment=lo.SectionAlignment.RIGHT):
-                    for pulse in self.sequence_drive:
-                        exp.play(signal="drive", pulse=pulse)
-                        exp.delay(signal="drive", time=self.settings["delay_between_pulses"])
 
-                # qubit readout pulse and data acquisition
-                readout_weighting_function = lo.pulse_library.const(
-                    uid="readout_weighting_function",
-                    length=2 * len(self.sequence_readout[0].samples) / self.settings["sampling_rate"],
-                    amplitude=1.0,
-                )
+                for j in range(len(self.sequence_readout)):
+                    sequence_d = self.sequence_drive[j]
+                    sequence_r = self.sequence_readout[j]
 
-                with exp.section(uid="qubit_readout"):
-                    for pulse in self.sequence_readout:
+                    # # inner loop - real-time sweep of qubit drive pulse amplitude
+                    # with exp.sweep(uid="sweep", parameter=sweep_rel_flat, alignment=SectionAlignment.RIGHT):
+                    # qubit excitation - pulse amplitude will be swept
+                    with exp.section(
+                        uid="qubit_excitation", length=self.Drive_durations[j] * 10, alignment=lo.SectionAlignment.RIGHT
+                    ):
+                        i = 0
+                        for pulse in sequence_d:
+                            exp.play(signal="drive", pulse=pulse, phase=self.rel_phases[j][i])
+
+                            if self.delays[j][i] > 0:
+                                exp.delay(signal="drive", time=self.delays[j][i] * 1e-9)
+                            i += 1
+
+                    # qubit readout pulse and data acquisition
+                    with exp.section(uid="qubit_readout"):
+                        # for pulse in sequence_r:
+
                         exp.reserve(signal="drive")
-                        exp.play(signal="measure", pulse=pulse)
-                        exp.acquire(
-                            signal="acquire",
-                            handle="Sequence",
-                            kernel=readout_weighting_function,
-                        )
 
-                # relax time after readout - for signal processing and qubit relaxation to ground state
-                with exp.section(uid="relax"):
-                    exp.delay(signal="measure", time=self.settings["delay_between_pulses"])
+                        # exp.play(signal="measure", pulse=pulse, phase =  self.rel_phases[j][i])
+                        exp.play(signal="measure", pulse=sequence_r[0], phase=self.rel_phases[j][i])
 
+                        integration_time = self.native_gates["single_qubit"][0]["MZ"]["integration_time"]
+
+                        exp.acquire(signal="acquire", handle="Sequence" + str(j), length=integration_time)
+
+                        # exp.acquire(
+                        #     signal="acquire",
+                        #     handle="Sequence",
+                        #     kernel=self.readout_weighting_function,
+                        # )
+
+                    # relax time after readout - for signal processing and qubit relaxation to ground state
+                    with exp.section(uid="relax", length=self.Drive_durations[j] * 1000):
+                        exp.delay(signal="measure", time=self.settings["readout_delay"])
+
+        # TODO: Add features of above to else
         else:
             exp = lo.Experiment(
                 uid="Sequence",
@@ -384,38 +453,61 @@ class SHFQC_QA(AbstractInstrument):
                     lo.ExperimentSignal("acquire"),
                 ],
             )
+
+            self.map_q0 = {
+                "measure": self.Zsetup.logical_signal_groups["q0"].logical_signals["measure_line"],
+                "acquire": self.Zsetup.logical_signal_groups["q0"].logical_signals["acquire_line"],
+            }
+
             ## experimental pulse sequence
             # outer loop - real-time, cyclic averaging in standard integration mode
             with exp.acquire_loop_rt(
                 uid="shots",
                 count=self.settings["hardware_avg"],
-                averaging_mode=lo.AveragingMode.CYCLIC,
-                acquisition_type=lo.AcquisitionType.INTEGRATION,
+                # averaging_mode=lo.AveragingMode.CYCLIC,
+                averaging_mode=lo.AveragingMode.SEQUENTIAL,
+                acquisition_type=lo.AcquisitionType.SPECTROSCOPY,
+                # acquisition_type=lo.AcquisitionType.INTEGRATION,
             ):
                 # # inner loop - real-time sweep of qubit drive pulse amplitude
                 # qubit readout pulse and data acquisition
-                readout_weighting_function = lo.pulse_library.const(
-                    uid="readout_weighting_function",
-                    length=2 * len(self.sequence_readout[0].samples) / self.settings["sampling_rate"],
-                    amplitude=1.0,
-                )
 
-                with exp.section(uid="qubit_readout"):
-                    for pulse in self.sequence_readout:
-                        exp.play(signal="measure", pulse=pulse)
+                # readout_weighting_function = lo.pulse_library.const(
+                #     uid="readout_weighting_function",
+                #     length=self.sequence_readout[0].duration * 1e-9,
+                #     amplitude=1.0,
+                # )
+
+                for j in range(len(self.sequence_readout)):
+                    sequence_r = self.sequence_readout[j]
+
+                    with exp.section(length=5e-6, alignment=lo.SectionAlignment.RIGHT, uid="qubit_readout"):
+                        # for pulse in self.sequence_readout:
+                        # exp.play(signal="measure", pulse=pulse)
+                        i = 0
+                        exp.play(signal="measure", pulse=sequence_r[i], phase=self.rel_phases[j][i])
+
+                        integration_time = self.native_gates["single_qubit"][0]["MZ"]["integration_time"]
+
+                        # exp.acquire(
+                        #     signal="acquire",
+                        #     handle=f"sequence{j}",
+                        #     length=integration_time
+                        # )
+
                         exp.acquire(
                             signal="acquire",
-                            handle="Sequence",
-                            kernel=readout_weighting_function,
+                            handle=f"sequence{j}",
+                            kernel=self.readout_weighting_function,
                         )
 
-                # relax time after readout - for signal processing and qubit relaxation to ground state
-                with exp.section(uid="relax"):
-                    exp.delay(signal="measure", time=self.settings["delay_between_pulses"])
+                    # relax time after readout - for signal processing and qubit relaxation to ground state
+                    with exp.section(uid="relax"):
+                        exp.delay(signal="measure", time=self.settings["readout_delay"])
 
-        self.set_map()
+        # self.set_map()
         exp.set_signal_map(self.map_q0)
-
+        print("hola")
         self.experiment = exp
 
     def sequencePulses_to_exp(self):
@@ -436,33 +528,47 @@ class SHFQC_QA(AbstractInstrument):
             with exp.acquire_loop_rt(
                 uid="shots",
                 count=self.settings["hardware_avg"],
-                averaging_mode=lo.AveragingMode.CYCLIC,
-                acquisition_type=lo.AcquisitionType.INTEGRATION,
+                averaging_mode=lo.AveragingMode.SEQUENTIAL,
+                acquisition_type=lo.AcquisitionType.SPECTROSCOPY,
+                # averaging_mode=lo.AveragingMode.CYCLIC,
+                # acquisition_type=lo.AcquisitionType.INTEGRATION,
             ):
                 # # inner loop - real-time sweep of qubit drive pulse amplitude
                 # with exp.sweep(uid="sweep", parameter=sweep_rel_flat, alignment=SectionAlignment.RIGHT):
                 # qubit excitation - pulse amplitude will be swept
                 with exp.section(uid="qubit_excitation", alignment=lo.SectionAlignment.RIGHT):
+                    i = 0
                     for pulse in self.sequence_drive:
-                        exp.play(signal="drive", pulse=pulse)
-                        exp.delay(signal="drive", time=self.settings["delay_between_pulses"])
+                        exp.play(signal="drive", pulse=pulse, phase=self.rel_phases[i])
+
+                        if self.delays[i] > 0:
+                            exp.delay(signal="drive", time=self.delays[i] * 1e-9)
+                        i += 1
 
                 # qubit readout pulse and data acquisition
 
                 with exp.section(uid="qubit_readout"):
                     for pulse in self.sequence_readout:
+
                         exp.reserve(signal="drive")
-                        exp.play(signal="measure", pulse=pulse)
-                        exp.acquire(
-                            signal="acquire",
-                            handle="Sequence",
-                            kernel=self.readout_weighting_function,
-                        )
+
+                        exp.play(signal="measure", pulse=pulse, phase=self.rel_phases[i])
+
+                        integration_time = self.native_gates["single_qubit"][0]["MZ"]["integration_time"]
+
+                        exp.acquire(signal="acquire", handle="Sequence", length=integration_time)
+
+                        # exp.acquire(
+                        #     signal="acquire",
+                        #     handle="Sequence",
+                        #     kernel=self.readout_weighting_function,
+                        # )
 
                 # relax time after readout - for signal processing and qubit relaxation to ground state
                 with exp.section(uid="relax"):
-                    exp.delay(signal="measure", time=self.settings["delay_between_pulses"])
+                    exp.delay(signal="measure", time=self.settings["readout_delay"])
 
+        # TODO: Add features of above to else
         else:
             exp = lo.Experiment(
                 uid="Sequence",
@@ -476,43 +582,55 @@ class SHFQC_QA(AbstractInstrument):
             with exp.acquire_loop_rt(
                 uid="shots",
                 count=self.settings["hardware_avg"],
-                averaging_mode=lo.AveragingMode.CYCLIC,
-                acquisition_type=lo.AcquisitionType.INTEGRATION,
+                # averaging_mode=lo.AveragingMode.CYCLIC,
+                averaging_mode=lo.AveragingMode.SEQUENTIAL,
+                acquisition_type=lo.AcquisitionType.SPECTROSCOPY,
+                # acquisition_type=lo.AcquisitionType.INTEGRATION,
             ):
                 # # inner loop - real-time sweep of qubit drive pulse amplitude
                 # qubit readout pulse and data acquisition
-                readout_weighting_function = lo.pulse_library.const(
-                    uid="readout_weighting_function",
-                    length=self.sequence_readout[0].duration * 1e-9,
-                    amplitude=1.0,
-                )
+
+                # readout_weighting_function = lo.pulse_library.const(
+                #     uid="readout_weighting_function",
+                #     length=self.sequence_readout[0].duration * 1e-9,
+                #     amplitude=1.0,
+                # )
 
                 with exp.section(uid="qubit_readout"):
                     for pulse in self.sequence_readout:
                         exp.play(signal="measure", pulse=pulse)
-                        exp.acquire(
-                            signal="acquire",
-                            handle="Sequence",
-                            kernel=self.readout_weighting_function,
-                        )
+
+                        integration_time = self.native_gates["single_qubit"][0]["MZ"]["integration_time"]
+
+                        exp.acquire(signal="acquire", handle="Sequence", length=integration_time)
+
+                        # exp.acquire(
+                        #     signal="acquire",
+                        #     handle="Sequence",
+                        #     kernel=self.readout_weighting_function,
+                        # )
 
                 # relax time after readout - for signal processing and qubit relaxation to ground state
                 with exp.section(uid="relax"):
-                    exp.delay(signal="measure", time=self.settings["delay_between_pulses"])
+                    exp.delay(signal="measure", time=self.settings["readout_delay"])
 
         self.set_map()
         exp.set_signal_map(self.map_q0)
 
         self.experiment = exp
 
-    def execute_pulse_sequence(self, sequence):
+    def execute_pulse_sequence_NoSamples(self, sequence):
 
-        if self.sequence == sequence:
-            self.repeat_seq()
-        else:
-            self.sequence_to_Zurich_complex(sequence)
-            self.sequence_to_exp()
-            self.run_seq()
+        # if self.sequence == sequence:
+        #     self.repeat_seq()
+        # else:
+        #     self.sequence_to_ZurichPulses(sequence)
+        #     self.sequencePulses_to_exp()
+        #     self.run_seq()
+
+        self.sequence_to_ZurichPulses(sequence)
+        self.sequencePulses_to_exp()
+        self.run_seq()
 
         spec_res = self.results.get_data("Sequence")
 
@@ -524,14 +642,18 @@ class SHFQC_QA(AbstractInstrument):
 
         return msr, phase, i, q
 
-    def execute_pulse_sequence_NoSamples(self, sequence):
+    def execute_pulse_sequences(self, sequences):
 
-        if self.sequence == sequence:
-            self.repeat_seq()
-        else:
-            self.sequence_to_ZurichPulses(sequence)
-            self.sequencePulses_to_exp()
-            self.run_seq()
+        # if self.sequence == sequence:
+        #     self.repeat_seq()
+        # else:
+        #     self.sequence_to_ZurichPulses(sequence)
+        #     self.sequencePulses_to_exp()
+        #     self.run_seq()
+
+        self.sequences_to_ZurichPulses(sequences)
+        self.sequencesPulses_to_exp()
+        self.run_seq()
 
         spec_res = self.results.get_data("Sequence")
 
@@ -656,6 +778,16 @@ class SHFQC_QA(AbstractInstrument):
 
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
+    def create_RX90_pulse(self, qubit, start=0, relative_phase=0):
+        qd_duration = int(self.native_gates["single_qubit"][qubit]["RX"]["duration"] / 2)
+        qd_frequency = self.native_gates["single_qubit"][qubit]["RX"]["frequency"]
+        qd_amplitude = self.native_gates["single_qubit"][qubit]["RX"]["amplitude"]
+        qd_shape = self.native_gates["single_qubit"][qubit]["RX"]["shape"]
+        qd_channel = self.qubit_channel_map[qubit][1]
+        from qibolab.pulses import Pulse
+
+        return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
+
     def create_MZ_pulse(self, qubit, start):
         ro_duration = self.native_gates["single_qubit"][qubit]["MZ"]["duration"]
         ro_frequency = self.native_gates["single_qubit"][qubit]["MZ"]["frequency"]
@@ -666,56 +798,30 @@ class SHFQC_QA(AbstractInstrument):
 
         return ReadoutPulse(start, ro_duration, ro_amplitude, ro_frequency, 0, ro_shape, ro_channel, qubit=qubit)
 
+    def create_RX90_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
+        # create RX pi/2 pulse with drag shape
+        qd_duration = self.native_gates["single_qubit"][qubit]["RX"]["duration"]
+        qd_frequency = self.native_gates["single_qubit"][qubit]["RX"]["frequency"]
+        qd_amplitude = self.native_gates["single_qubit"][qubit]["RX"]["amplitude"] / 2
+        qd_shape = self.native_gates["single_qubit"][qubit]["RX"]["shape"]
+        if beta != None:
+            qd_shape = "Drag(5," + str(beta) + ")"
 
-# --------------------------------------------------------------------------------------------------------
-# I wont erase this yet but im not using it
+        qd_channel = self.qubit_channel_map[qubit][1]
+        from qibolab.pulses import Pulse
 
-# def process_pulse_sequence(self, instrument_pulses, nshots, repetition_duration):
-#     # configure inputs and outputs
-#     #NUM_AVERAGES = 100
-#     #MODE_AVERAGES = 0 # 0: cyclic; 1: sequential;
-#     #INTEGRATION_TIME = PULSE_DURATION # in units of second
-#     self._latest_sequence = ReadoutSequence(instrument_pulses, nshots)
+        return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
+    def create_RX_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
+        # create RX pi pulse with drag shape
+        qd_duration = self.native_gates["single_qubit"][qubit]["RX"]["duration"]
+        qd_frequency = self.native_gates["single_qubit"][qubit]["RX"]["frequency"]
+        qd_amplitude = self.native_gates["single_qubit"][qubit]["RX"]["amplitude"]
+        qd_shape = self.native_gates["single_qubit"][qubit]["RX"]["shape"]
+        if beta != None:
+            qd_shape = "Drag(5," + str(beta) + ")"
 
-# def upload(self):
-#     channel = self.device.qachannels[self._latest_sequence.channel]
-#     channel.configure_channel(
-#         center_frequency=self.lo_frequency,
-#         input_range=self.input_range,
-#         output_range=self.output_range,
-#         mode=SHFQAChannelMode.READOUT, # READOUT or SPECTROSCOPY
-#     )
-#     #print(daq.getDouble("/dev12146/qachannels/0/oscs/0/gain"))
-#     #print(daq.getDouble("/dev12146/qachannels/0/oscs/0/freq") / 1e9)
+        qd_channel = self.qubit_channel_map[qubit][1]
+        from qibolab.pulses import Pulse
 
-#     channel.input.on(1)
-#     channel.output.on(1)
-
-#     # upload readout pulses and integration weights to waveform memory
-#     waveforms = self._latest_sequence.waveforms
-#     channel.generator.clearwave() # clear all readout waveforms
-#     channel.generator.write_to_waveform_memory(waveforms)
-#     #channel.readout.integration.clearweight() # clear all integration weights
-#     #channel.readout.write_integration_weights(
-#     #    weights=weights,
-#         # compensation for the delay between generator output and input of the integration unit
-#     #    integration_delay=220e-9
-#     #)
-
-#     # configure sequencer
-#     channel.generator.configure_sequencer_triggering(
-#         aux_trigger="software_trigger0", # chanNtriginM, chanNseqtrigM, chanNrod
-#         play_pulse_delay=0, # 0s delay between startQA trigger and the readout pulse
-#     )
-
-#     channel.generator.load_sequencer_program(self._latest_sequence.program)
-
-# def play_sequence_and_acquire(self):
-#     channel = self.device.qachannels[self._latest_sequence.channel]
-#     channel.readout.run() # enable QA Result Logger
-#     channel.generator.enable_sequencer(single=True)
-#     self.device.start_continuous_sw_trigger(
-#         num_triggers=self._latest_sequence.nshots, wait_time=2e-3
-#     )
-#     return channel.readout.read()
+        return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
