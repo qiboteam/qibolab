@@ -9,8 +9,9 @@ from qibolab.transpilers.decompositions import two_qubit_decomposition, u3_decom
 class NativeGates:
     """Maps Qibo gates to a hardware native implementation."""
 
-    def __init__(self):
+    def __init__(self, two_qubit_native="optimized"):
         self.backend = NumpyBackend()
+        self.two_qubit_native = two_qubit_native
 
     def translate_gate(self, gate):
         name = gate.__class__.__name__
@@ -97,10 +98,41 @@ class NativeGates:
 
     def CNOT(self, gate):
         q0, q1 = gate.qubits
-        return [gates.H(q1), gates.CZ(q0, q1), gates.H(q1)]
+        if self.two_qubit_native == "iSWAP":
+            return [
+                gates.H(q0),
+                gates.U3(q1, np.pi / 2, -np.pi, -np.pi),
+                gates.iSWAP(q0, q1),
+                gates.U3(q0, np.pi, 0, np.pi),
+                gates.U3(q1, np.pi / 2, -np.pi, -np.pi),
+                gates.iSWAP(q0, q1),
+                gates.U3(q0, np.pi / 2, np.pi / 2, -np.pi),
+                gates.U3(q1, np.pi / 2, -np.pi, -np.pi / 2),
+            ]
+        elif self.two_qubit_native == "CZ" or self.two_qubit_native == "optimized":
+            return [gates.H(q1), gates.CZ(q0, q1), gates.H(q1)]
+        else:
+            raise_error(NotImplementedError, "Two qubit native gate can be only CZ or iSWAP")
 
     def CZ(self, gate):
-        return gate
+        q0, q1 = gate.qubits
+        if self.two_qubit_native == "iSWAP":
+            return [
+                gates.H(q0),
+                gates.H(q1),
+                gates.U3(q1, np.pi / 2, -np.pi, -np.pi),
+                gates.iSWAP(q0, q1),
+                gates.U3(q0, np.pi, 0, np.pi),
+                gates.U3(q1, np.pi / 2, -np.pi, -np.pi),
+                gates.iSWAP(q0, q1),
+                gates.U3(q0, np.pi / 2, np.pi / 2, -np.pi),
+                gates.U3(q1, np.pi / 2, -np.pi, -np.pi / 2),
+                gates.H(q1),
+            ]
+        elif self.two_qubit_native == "CZ" or self.two_qubit_native == "optimized":
+            return gate
+        else:
+            raise_error(NotImplementedError, "Two qubit native gate can be only CZ or iSWAP")
 
     def CRX(self, gate):
         q0, q1 = gate.qubits
@@ -181,17 +213,56 @@ class NativeGates:
 
     def SWAP(self, gate):
         q0, q1 = gate.qubits
-        return [
-            gates.H(q1),
-            gates.CZ(q0, q1),
-            gates.H(q1),
-            gates.H(q0),
-            gates.CZ(q1, q0),
-            gates.H(q0),
-            gates.H(q1),
-            gates.CZ(q0, q1),
-            gates.H(q1),
-        ]
+        if self.two_qubit_native == "iSWAP":
+            return [
+                gates.iSWAP(q0, q1),
+                gates.RX(q1, np.pi / 2),
+                gates.iSWAP(q0, q1),
+                gates.RX(q0, np.pi / 2),
+                gates.iSWAP(q0, q1),
+                gates.RX(q1, np.pi / 2),
+            ]
+        elif self.two_qubit_native == "CZ":
+            return [
+                gates.H(q1),
+                gates.CZ(q0, q1),
+                gates.H(q1),
+                gates.H(q0),
+                gates.CZ(q1, q0),
+                gates.H(q0),
+                gates.H(q1),
+                gates.CZ(q0, q1),
+                gates.H(q1),
+            ]
+        elif self.two_qubit_native == "optimized":
+            return [
+                gates.H(q0),
+                gates.SDG(q0),
+                gates.SDG(q1),
+                gates.iSWAP(q0, q1),
+                gates.CZ(q0, q1),
+                gates.H(q1),
+            ]
+        else:
+            raise_error(NotImplementedError, "Two qubit native gate can be only CZ or iSWAP")
+
+    def iSWAP(self, gate):
+        q0, q1 = gate.qubits
+        if self.two_qubit_native == "iSWAP" or self.two_qubit_native == "optimized":
+            return gate
+        elif self.two_qubit_native == "CZ":
+            return [
+                gates.U3(q0, np.pi / 2.0, 0, -np.pi / 2.0),
+                gates.U3(q1, np.pi / 2.0, 0, -np.pi / 2.0),
+                gates.CZ(q0, q1),
+                gates.H(q0),
+                gates.H(q1),
+                gates.CZ(q0, q1),
+                gates.H(q0),
+                gates.H(q1),
+            ]
+        else:
+            raise_error(NotImplementedError, "Two qubit native gate can be only CZ or iSWAP")
 
     def FSWAP(self, gate):
         q0, q1 = gate.qubits
