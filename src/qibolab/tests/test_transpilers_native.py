@@ -7,9 +7,9 @@ from qibo.models import Circuit
 from qibolab.transpilers.native import NativeGates
 
 
-def assert_matrices_allclose(gate, two_qubit_native="optimized", phase=1):
+def assert_matrices_allclose(gate, two_qubit_natives=["CZ", "iSWAP"], phase=1):
     backend = NumpyBackend()
-    native_gates = NativeGates(two_qubit_native)
+    native_gates = NativeGates(two_qubit_natives=two_qubit_natives)
     target_matrix = gate.asmatrix(backend)
     # Remove global phase from target matrix
     target_unitary = target_matrix / np.power(
@@ -60,16 +60,16 @@ def test_u3_to_native():
 
 
 @pytest.mark.parametrize("gatename", ["CNOT", "CZ", "SWAP"])
-@pytest.mark.parametrize("native", ["CZ", "iSWAP", "optimized"])
-def test_two_qubit_to_native(gatename, native):
+@pytest.mark.parametrize("natives", [["CZ"], ["iSWAP"], ["CZ", "iSWAP"]])
+def test_two_qubit_to_native(gatename, natives):
     gate = getattr(gates, gatename)(0, 1)
-    assert_matrices_allclose(gate, native)
+    assert_matrices_allclose(gate, two_qubit_natives=natives)
 
 
-@pytest.mark.parametrize("native,phase", [("CZ", -1j), ("iSWAP", 1), ("optimized", 1)])
-def test_iswap_to_native(native, phase):
+@pytest.mark.parametrize("natives,phase", [(["CZ"], -1j), (["iSWAP"], 1), (["CZ", "iSWAP"], 1)])
+def test_iswap_to_native(natives, phase):
     gate = gates.iSWAP(0, 1)
-    assert_matrices_allclose(gate, native, phase)
+    assert_matrices_allclose(gate, two_qubit_natives=natives, phase=phase)
 
 
 def test_fswap_to_native():
@@ -104,7 +104,7 @@ def test_fSim_to_native():
 
 
 def test_GeneralizedfSim_to_native():
-    from qibolab.tests.test_transpilers_decompositions import random_unitary
+    from qibolab.tests.test_transpilers_unitary_decompositions import random_unitary
 
     unitary = random_unitary(1)
     gate = gates.GeneralizedfSim(0, 1, unitary, phi=0.1)
@@ -124,7 +124,7 @@ def test_TOFFOLI_to_native():
 
 @pytest.mark.parametrize("nqubits", [1, 2])
 def test_unitary_to_native(nqubits):
-    from qibolab.tests.test_transpilers_decompositions import random_unitary
+    from qibolab.tests.test_transpilers_unitary_decompositions import random_unitary
 
     u = random_unitary(nqubits)
     # transform to SU(2^nqubits) form

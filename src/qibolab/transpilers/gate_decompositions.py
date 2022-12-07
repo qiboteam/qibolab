@@ -1,7 +1,5 @@
 import numpy as np
 from qibo import gates
-from qibo.backends import NumpyBackend
-from qibo.config import raise_error
 
 from qibolab.transpilers.unitary_decompositions import (
     two_qubit_decomposition,
@@ -34,6 +32,64 @@ class GateDecompositions:
         decomposition = self.decompositions[gate.__class__]
         return [g.on_qubits({i: q for i, q in enumerate(gate.qubits)}) for g in decomposition]
 
+
+def translate_gate(gate, native_gates):
+    """Maps Qibo gates to a hardware native implementation.
+
+    Args:
+        gate (qibo.gates.abstract.Gate): gate to be decomposed.
+        two_qubit_natives (list): List of two qubit native gates
+        supported by the quantum hardware ("CZ" and/or "iSWAP").
+
+    Returns:
+        Shortest list of native gates
+    """
+
+    if len(gate.qubits) == 1:
+        return onequbit_dec(gate)
+
+    if "CZ" in native_gates and "iSWAP" in native_gates:
+        # Check for a special optimized decomposition.
+        if gate in opt_dec.decompositions:
+            return opt_dec(gate)
+        # Check the decomposition with less 2 qubit gates.
+        else:
+            if cz_dec.count_2q(gate) < iswap_dec.count_2q(gate):
+                return cz_dec(gate)
+            elif cz_dec.count_2q(gate) > iswap_dec.count_2q(gate):
+                return iswap_dec(gate)
+            # If equal check the decomposition with less 1 qubit gates.
+            elif cz_dec.count_1q(gate) < iswap_dec.count_1q(gate):
+                return cz_dec(gate)
+            else:
+                return iswap_dec(gate)
+    elif "CZ" in native_gates:
+        return cz_dec(gate)
+    elif "iSWAP" in native_gates:
+        return iswap_dec(gate)
+
+
+onequbit_dec = GateDecompositions()
+onequbit_dec.add(gates.H, [gates.U3(0, 7 * np.pi / 2, np.pi, 0)])
+onequbit_dec.add(gates.X, [gates.U3(0, np.pi, 0, np.pi)])
+onequbit_dec.add(gates.Y, [gates.U3(0, np.pi, 0, 0)])
+# apply virtually by changing ``phase`` instead of using pulses
+onequbit_dec.add(gates.Z, [gates.Z(0)])
+onequbit_dec.add(gates.S, [gates.RZ(0, np.pi / 2)])
+onequbit_dec.add(gates.SDG, [gates.RZ(0, -np.pi / 2)])
+onequbit_dec.add(gates.T, [gates.RZ(0, np.pi / 4)])
+onequbit_dec.add(gates.TDG, [gates.RZ(0, -np.pi / 4)])
+onequbit_dec.add(gates.I, [gates.I(0)])
+onequbit_dec.add(gates.Align, [gates.Align(0)])
+# onequbit_dec.add(gates.M, [gates.M(0)])
+# onequbit_dec.add(gates.RX, [gates.U3(0, gate.parameters[0], -np.pi / 2, np.pi / 2)])
+# onequbit_dec.add(gates.RY, [gates.U3(0, gate.parameters[0], 0, 0)])
+# apply virtually by changing ``phase`` instead of using pulses
+# onequbit_dec.add(gates.RZ, [gates.RZ(0, gate.parameters[0])])
+# apply virtually by changing ``phase`` instead of using pulses
+# onequbit_dec.add(gates.U1, [gates.RZ(0, gate.parameters[0])])
+# onequbit_dec.add(gates.U2, [gates.U3(0, np.pi / 2, gate.parameters[0], gate.parameters[1])])
+# onequbit_dec.add(gates.U3, [gates.U3(0, gate.parameters[0], gate.parameters[1], gate.parameters[2])])
 
 # register the iSWAP decompositions
 iswap_dec = GateDecompositions()
@@ -69,11 +125,11 @@ iswap_dec.add(
     gates.SWAP,
     [
         gates.iSWAP(0, 1),
-        gates.RX(1, np.pi / 2),
+        gates.U3(1, np.pi / 2, -np.pi / 2, np.pi / 2),
         gates.iSWAP(0, 1),
-        gates.RX(0, np.pi / 2),
+        gates.U3(0, np.pi / 2, -np.pi / 2, np.pi / 2),
         gates.iSWAP(0, 1),
-        gates.RX(1, np.pi / 2),
+        gates.U3(1, np.pi / 2, -np.pi / 2, np.pi / 2),
     ],
 )
 iswap_dec.add(gates.iSWAP, [gates.iSWAP(0, 1)])
