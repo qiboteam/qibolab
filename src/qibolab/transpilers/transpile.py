@@ -2,15 +2,16 @@ from qibo import gates
 from qibo.config import log, raise_error
 
 from qibolab.transpilers.connectivity import fix_connectivity
-from qibolab.transpilers.native import NativeGates
+from qibolab.transpilers.gate_decompositions import translate_gate
 
 
-def transpile(circuit, two_qubit_native="optimized", fuse_one_qubit=False):
+def transpile(circuit, two_qubit_natives, fuse_one_qubit=False):
     """Implements full transpilation pipeline.
 
     Args:
         circuit (qibo.models.Circuit): Circuit model to transpile.
-        two_qubit_native: two qubit native gate ("CZ", "iSWAP" or "optimized")
+        two_qubit_natives (list): List of two qubit native gates
+        supported by the quantum hardware ("CZ" and/or "iSWAP").
 
     Returns:
         new (qibo.models.Circuit): New circuit that can be executed on tii5q platform.
@@ -30,15 +31,14 @@ def transpile(circuit, two_qubit_native="optimized", fuse_one_qubit=False):
     new, hardware_qubits = fix_connectivity(circuit)
 
     # two-qubit gates to native
-    native_gates = NativeGates(two_qubit_native=two_qubit_native)
-    new = native_gates.translate_circuit(new, translate_single_qubit=False)
+    new = translate_circuit(new, two_qubit_natives, translate_single_qubit=False)
 
     # Optional: fuse one-qubit gates to reduce circuit depth
     if fuse_one_qubit:
         new = new.fuse(max_qubits=1)
 
     # one-qubit gates to native
-    new = native_gates.translate_circuit(new, translate_single_qubit=True)
+    new = translate_circuit(new, two_qubit_natives, translate_single_qubit=True)
 
     # TODO: Handle measurements similarly to other gates
     if circuit.measurement_gate:
@@ -51,12 +51,35 @@ def transpile(circuit, two_qubit_native="optimized", fuse_one_qubit=False):
     return new, hardware_qubits
 
 
-def can_execute(circuit, two_qubit_native="optimized"):
+def translate_circuit(circuit, two_qubit_natives, translate_single_qubit=False):
+    """Translates a circuit to native gates.
+
+    Args:
+        circuit (qibo.models.Circuit): Circuit model to translate into native gates.
+        two_qubit_natives (list): List of two qubit native gates
+        supported by the quantum hardware ("CZ" and/or "iSWAP").
+
+    Returns:
+        new (qibo.models.Circuit): Equivalent circuit with native gates.
+    """
+    new = circuit.__class__(circuit.nqubits)
+    for gate in circuit.queue:
+        # Check
+        # Run more times for 2 qubit gates?
+        if len(gate.qubits) > 1 or translate_single_qubit:
+            new.add(translate_gate(gate, two_qubit_natives))
+        else:
+            new.add(gate)
+    return new
+
+
+def can_execute(circuit, two_qubit_natives):
     """Checks if a circuit can be executed on tii5q.
 
     Args:
         circuit (qibo.models.Circuit): Circuit model to check.
-        two_qubit_native: two qubit native gate ("CZ", "iSWAP" or "optimized")
+        two_qubit_natives (list): List of two qubit native gates
+        supported by the quantum hardware ("CZ" and/or "iSWAP").
 
     Returns ``True`` if the following conditions are satisfied:
         - Circuit does not contain more than two-qubit gates.
@@ -65,6 +88,8 @@ def can_execute(circuit, two_qubit_native="optimized"):
         - All two-qubit gates have qubit 0 as target or control.
     otherwise returns ``False``.
     """
+    CZ_is_native = "CZ" in two_qubit_natives
+    iSWAP_is_native = "iSWAP" in two_qubit_natives
     for gate in circuit.queue:
         if len(gate.qubits) == 1:
             if not isinstance(gate, (gates.I, gates.Z, gates.RZ, gates.U3)):
@@ -72,21 +97,21 @@ def can_execute(circuit, two_qubit_native="optimized"):
                 return False
 
         elif len(gate.qubits) == 2:
-            if two_qubit_native == "CZ":
-                if not isinstance(gate, gates.CZ):
-                    log.info(f"{gate.name} is not a two qubit native gate.")
-                    return False
-            # TODO: all gates mapped to iSWAP
-            elif two_qubit_native == "iSWAP":
+            if CZ_is_native and iSWAP_is_native:
                 if not isinstance(gate, (gates.CZ, gates.iSWAP)):
                     log.info(f"{gate.name} is not a two qubit native gate.")
                     return False
-            elif two_qubit_native == "optimized":
+            elif CZ_is_native:
+                if not isinstance(gate, (gates.CZ)):
+                    log.info(f"{gate.name} is not a two qubit native gate.")
+                    return False
+            elif iSWAP_is_native:
+                # TODO: all gates mapped to iSWAP
                 if not isinstance(gate, (gates.CZ, gates.iSWAP)):
                     log.info(f"{gate.name} is not a two qubit native gate.")
                     return False
             else:
-                raise_error(NotImplementedError, "Use CZ, iSWAP or optimized for two_qubit_native")
+                log.info("Use only CZ and/or iSWAP as native gates")
             if 0 not in gate.qubits:
                 log.info("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
                 return False

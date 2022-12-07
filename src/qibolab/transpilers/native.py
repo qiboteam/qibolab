@@ -108,7 +108,6 @@ class NativeGates:
         return gate
 
     def CNOT(self, gate):
-        q0, q1 = gate.qubits
         if self.CZ_is_native:
             # Optimized decomposition
             return decompose.cz_dec(gate)
@@ -118,17 +117,15 @@ class NativeGates:
             raise_error(self.error)
 
     def CZ(self, gate):
-        q0, q1 = gate.qubits
         if self.CZ_is_native:
             # Optimized decomposition
-            return decompose.cz_dec(gate)
+            return gate
         elif self.iSWAP_is_native:
             return decompose.iswap_dec(gate)
         else:
             raise_error(self.error)
 
     def SWAP(self, gate):
-        q0, q1 = gate.qubits
         if self.CZ_is_native and self.iSWAP_is_native:
             # Optimized decomposition
             return decompose.opt_dec(gate)
@@ -140,10 +137,9 @@ class NativeGates:
             raise_error(self.error)
 
     def iSWAP(self, gate):
-        q0, q1 = gate.qubits
         if self.iSWAP_is_native:
             # Optimized decomposition
-            return decompose.iswap_dec(gate)
+            return gate
         elif self.CZ_is_native:
             return decompose.cz_dec(gate)
         else:

@@ -16,16 +16,15 @@ def generate_random_circuit(nqubits, ngates, seed=None):
     if seed is not None:  # pragma: no cover
         np.random.seed(seed)
 
-    one_qubit_gates = [gates.RX, gates.RY, gates.RZ, gates.X, gates.Y, gates.Z, gates.H]
+    one_qubit_gates = [gates.X, gates.Y, gates.Z, gates.H]
+    # gates.RX, gates.RY, gates.RZ,
     two_qubit_gates = [
-        gates.CRX,
-        gates.CRY,
-        gates.CRZ,
         gates.CNOT,
         gates.CZ,
         gates.SWAP,
         gates.iSWAP,
     ]
+    # gates.CRX, gates.CRY, gates.CRZ,
     n1, n2 = len(one_qubit_gates), len(two_qubit_gates)
     n = n1 + n2 if nqubits > 1 else n1
     circuit = Circuit(nqubits)
@@ -47,18 +46,18 @@ def generate_random_circuit(nqubits, ngates, seed=None):
     return circuit
 
 
-@pytest.mark.parametrize("two_qubit_native", ["CZ", "iSWAP", "optimized"])
+@pytest.mark.parametrize("two_qubit_natives", [["CZ"], ["iSWAP"], ["CZ", "iSWAP"]])
 @pytest.mark.parametrize("run_number", range(3))
 @pytest.mark.parametrize("nqubits", [1, 2, 3, 4, 5])
 @pytest.mark.parametrize("ngates", [20, 50, 100])
 @pytest.mark.parametrize("fuse_one_qubit", [False, True])
-def test_transpile(run_number, nqubits, ngates, fuse_one_qubit, two_qubit_native):
+def test_transpile(run_number, nqubits, ngates, fuse_one_qubit, two_qubit_natives):
     backend = NumpyBackend()
     circuit = generate_random_circuit(nqubits, ngates)
     transpiled_circuit, hardware_qubits = transpile(
-        circuit, two_qubit_native=two_qubit_native, fuse_one_qubit=fuse_one_qubit
+        circuit, two_qubit_natives=two_qubit_natives, fuse_one_qubit=fuse_one_qubit
     )
-    assert can_execute(transpiled_circuit, two_qubit_native=two_qubit_native)
+    assert can_execute(transpiled_circuit, two_qubit_natives=two_qubit_natives)
 
     final_state = backend.execute_circuit(transpiled_circuit).state()
     target_state = backend.execute_circuit(circuit).state()
