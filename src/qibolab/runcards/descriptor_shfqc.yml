@@ -10,5 +10,3 @@ connections:
       ports: [QACHANNELS/0/OUTPUT]
     - acquire_signal: q0/acquire_line
       ports: [QACHANNELS/0/INPUT]
-    - iq_signal: q1/drive_line
-      ports: SGCHANNELS/2/OUTPUT

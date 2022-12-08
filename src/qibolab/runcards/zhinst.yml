@@ -17,11 +17,10 @@ description: XXX 5-qubit device, controlled with Zurich Instruments.
 #     """
 
 settings:
-    hardware_avg: 10000
+    hardware_avg: 1000
     sampling_rate: 2.e+9
-    repetition_duration: 200_000
-    minimum_delay_between_instructions: 4
-    readout_delay: 50.e-6
+    minimum_delay_between_instructions: # ???
+    readout_delay: 500.e-6 #50.e-6
     readout_integration_delay: 40.e-9
     delay_between_pulses: 32.e-9   # 1.e-6
 
@@ -38,13 +37,6 @@ channels: [0, 1, 0]
 qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
     0: [0, 0]
 
-parameters:
-    pulse_length_spectroscopy: 1.e-7
-    pulse_amplitude_spectroscopy: 0.003
-    readout_length: 1.e-7
-    readout_amplitude: .002
-
-
 instruments:
     shfqc_qa:
         lib: zhinst
@@ -55,9 +47,8 @@ instruments:
             channels: [0,1]
             input_range: 10 # dBm
             output_range: -10 # 10 ? # dBm
-            lo_frequency: 7_800_000_000 #19.5e+9
-            if_frequency: 25_000_000 #1.68e+9
-            # gain: 0.1
+            lo_frequency: 7_800_000_000
+            if_frequency: 24_694_000 #25_000_000
 
     shfqc_qc:
         lib: zhinst
@@ -67,16 +58,15 @@ instruments:
         settings:
             channels: [0]
             drive_range : 10
-            lo_frequency: 5_100_000_000
-            if_frequency: -19_500_000
-            # gain: 0.06
+            lo_frequency: 5_100_000_000 #5_100_000_000
+            if_frequency: -20707070.70707035 #-19_500_000
 
 native_gates:
     single_qubit:
         0: # qubit number
             RX:
                 duration: 78 #80
-                amplitude: 0.745808 #0.8
+                amplitude: .8 #0.745808 #0.8
                 frequency: 100_000_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)

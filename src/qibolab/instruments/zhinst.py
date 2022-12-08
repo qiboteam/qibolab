@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import laboneq.simple as lo
 import matplotlib.pyplot as plt
 import numpy as np
@@ -373,6 +374,8 @@ class SHFQC_QA(AbstractInstrument):
         self.rel_phases = rel_phases
         self.Drive_durations = Drive_durations
 
+    # PLAY AFTER
+    # with exp.section(uid="qubit_readout", play_after="qubit_excitation"):
     def sequencesPulses_to_exp(self):
         # Create Experiment
         if len(self.sequence_drive[0]) != 0:
@@ -394,7 +397,6 @@ class SHFQC_QA(AbstractInstrument):
             ## experimental pulse sequence
             # outer loop - real-time, cyclic averaging in standard integration mode
             with exp.acquire_loop_rt(
-                uid="shots",
                 count=self.settings["hardware_avg"],
                 averaging_mode=lo.AveragingMode.SEQUENTIAL,
                 acquisition_type=lo.AcquisitionType.SPECTROSCOPY,
@@ -409,29 +411,21 @@ class SHFQC_QA(AbstractInstrument):
                     # # inner loop - real-time sweep of qubit drive pulse amplitude
                     # with exp.sweep(uid="sweep", parameter=sweep_rel_flat, alignment=SectionAlignment.RIGHT):
                     # qubit excitation - pulse amplitude will be swept
-                    with exp.section(
-                        uid="qubit_excitation", length=self.Drive_durations[j] * 10, alignment=lo.SectionAlignment.RIGHT
-                    ):
+                    with exp.section(alignment=lo.SectionAlignment.RIGHT):
                         i = 0
                         for pulse in sequence_d:
                             exp.play(signal="drive", pulse=pulse, phase=self.rel_phases[j][i])
-
+                            print(pulse)
                             if self.delays[j][i] > 0:
                                 exp.delay(signal="drive", time=self.delays[j][i] * 1e-9)
                             i += 1
 
                     # qubit readout pulse and data acquisition
-                    with exp.section(uid="qubit_readout"):
-                        # for pulse in sequence_r:
-
+                    with exp.section():
                         exp.reserve(signal="drive")
-
-                        # exp.play(signal="measure", pulse=pulse, phase =  self.rel_phases[j][i])
                         exp.play(signal="measure", pulse=sequence_r[0], phase=self.rel_phases[j][i])
-
                         integration_time = self.native_gates["single_qubit"][0]["MZ"]["integration_time"]
-
-                        exp.acquire(signal="acquire", handle="Sequence" + str(j), length=integration_time)
+                        exp.acquire(signal="acquire", handle=f"sequence{j}", length=integration_time)
 
                         # exp.acquire(
                         #     signal="acquire",
@@ -440,7 +434,8 @@ class SHFQC_QA(AbstractInstrument):
                         # )
 
                     # relax time after readout - for signal processing and qubit relaxation to ground state
-                    with exp.section(uid="relax", length=self.Drive_durations[j] * 1000):
+                    with exp.section(length=self.settings["readout_delay"]):
+                        exp.reserve(signal="drive")
                         exp.delay(signal="measure", time=self.settings["readout_delay"])
 
         # TODO: Add features of above to else
@@ -480,7 +475,9 @@ class SHFQC_QA(AbstractInstrument):
                 for j in range(len(self.sequence_readout)):
                     sequence_r = self.sequence_readout[j]
 
-                    with exp.section(length=5e-6, alignment=lo.SectionAlignment.RIGHT, uid="qubit_readout"):
+                    with exp.section(
+                        length=5e-6, alignment=lo.SectionAlignment.RIGHT, uid=f"sequence{j}_qubit_readout"
+                    ):
                         # for pulse in self.sequence_readout:
                         # exp.play(signal="measure", pulse=pulse)
                         i = 0
@@ -488,25 +485,261 @@ class SHFQC_QA(AbstractInstrument):
 
                         integration_time = self.native_gates["single_qubit"][0]["MZ"]["integration_time"]
 
+                        exp.acquire(signal="acquire", handle=f"sequence{j}", length=integration_time)
+
                         # exp.acquire(
                         #     signal="acquire",
                         #     handle=f"sequence{j}",
-                        #     length=integration_time
+                        #     kernel=self.readout_weighting_function,
                         # )
 
-                        exp.acquire(
-                            signal="acquire",
-                            handle=f"sequence{j}",
-                            kernel=self.readout_weighting_function,
-                        )
-
                     # relax time after readout - for signal processing and qubit relaxation to ground state
-                    with exp.section(uid="relax"):
+                    with exp.section(uid=f"sequence{j}_relax"):
                         exp.delay(signal="measure", time=self.settings["readout_delay"])
 
         # self.set_map()
         exp.set_signal_map(self.map_q0)
-        print("hola")
+        self.experiment = exp
+
+    def sequencePulses_to_exp_freqs(self, start, stop, points):
+        # Create Experiment
+
+        frequency_sweep = lo.LinearSweepParameter(uid=f"frequency_sweep", start=start, stop=stop, count=points)
+
+        if len(self.sequence_drive) != 0:
+            exp = lo.Experiment(
+                uid="Sequence",
+                signals=[
+                    lo.ExperimentSignal("drive"),
+                    lo.ExperimentSignal("measure"),
+                    lo.ExperimentSignal("acquire"),
+                ],
+            )
+
+            self.map_q0 = {
+                "drive": self.Zsetup.logical_signal_groups["q0"].logical_signals["drive_line"],
+                "measure": self.Zsetup.logical_signal_groups["q0"].logical_signals["measure_line"],
+                "acquire": self.Zsetup.logical_signal_groups["q0"].logical_signals["acquire_line"],
+            }
+
+            ## experimental pulse sequence
+            # outer loop - real-time, cyclic averaging in standard integration mode
+            with exp.acquire_loop_rt(
+                count=self.settings["hardware_avg"],
+                averaging_mode=lo.AveragingMode.SEQUENTIAL,
+                acquisition_type=lo.AcquisitionType.SPECTROSCOPY,
+                # averaging_mode=lo.AveragingMode.CYCLIC,
+                # acquisition_type=lo.AcquisitionType.INTEGRATION,
+            ):
+
+                with exp.sweep(parameter=frequency_sweep):
+                    j = 0
+                    # # inner loop - real-time sweep of qubit drive pulse amplitude
+                    # with exp.sweep(uid="sweep", parameter=sweep_rel_flat, alignment=SectionAlignment.RIGHT):
+                    # qubit excitation - pulse amplitude will be swept
+                    with exp.section(alignment=lo.SectionAlignment.RIGHT):
+                        i = 0
+                        for pulse in self.sequence_drive:
+                            exp.play(signal="drive", pulse=pulse, phase=self.rel_phases[i])
+
+                            if self.delays[i] > 0:
+                                exp.delay(signal="drive", time=self.delays[i] * 1e-9)
+                            i += 1
+
+                        # exp.delay(signal="drive", time=300e-9)
+
+                    # qubit readout pulse and data acquisition
+                    with exp.section():
+                        for pulse in self.sequence_readout:
+
+                            exp.reserve(signal="drive")
+                            exp.play(signal="measure", pulse=pulse, phase=self.rel_phases[i])
+
+                            integration_time = self.native_gates["single_qubit"][0]["MZ"]["integration_time"]
+
+                            exp.acquire(signal="acquire", handle=f"sequence{j}", length=integration_time)
+
+                            j += 1
+
+                    # relax time after readout - for signal processing and qubit relaxation to ground state
+                    with exp.section():
+                        exp.reserve(signal="drive")
+                        exp.delay(signal="measure", time=self.settings["readout_delay"])
+
+            # define experiment calibration - sweep over qubit drive frequency
+            exp_calib = lo.Calibration()
+            exp_calib["drive"] = lo.SignalCalibration(
+                oscillator=lo.Oscillator(
+                    frequency=frequency_sweep,
+                    modulation_type=lo.ModulationType.HARDWARE,
+                )
+            )
+
+        # TODO: Add features of above to else
+        else:
+            exp = lo.Experiment(
+                uid="Sequence",
+                signals=[
+                    lo.ExperimentSignal("measure"),
+                    lo.ExperimentSignal("acquire"),
+                ],
+            )
+
+            self.map_q0 = {
+                "measure": self.Zsetup.logical_signal_groups["q0"].logical_signals["measure_line"],
+                "acquire": self.Zsetup.logical_signal_groups["q0"].logical_signals["acquire_line"],
+            }
+
+            ## experimental pulse sequence
+            # outer loop - real-time, cyclic averaging in standard integration mode
+            with exp.acquire_loop_rt(
+                count=self.settings["hardware_avg"],
+                # averaging_mode=lo.AveragingMode.CYCLIC,
+                averaging_mode=lo.AveragingMode.SEQUENTIAL,
+                acquisition_type=lo.AcquisitionType.SPECTROSCOPY,
+                # acquisition_type=lo.AcquisitionType.INTEGRATION,
+            ):
+                # # inner loop - real-time sweep of qubit drive pulse amplitude
+                # qubit readout pulse and data acquisition
+                with exp.sweep(parameter=frequency_sweep):
+                    j = 0
+                    with exp.section(alignment=lo.SectionAlignment.RIGHT):
+                        i = 0
+                        for pulse in self.sequence_readout:
+                            exp.play(signal="measure", pulse=pulse, phase=self.rel_phases[i])
+                            integration_time = self.native_gates["single_qubit"][0]["MZ"]["integration_time"]
+                            exp.acquire(
+                                signal="acquire",
+                                handle=f"sequence{j}",
+                                length=integration_time,
+                            )
+                            j += 1
+
+                    # relax time after readout - for signal processing and qubit relaxation to ground state
+                    with exp.section():
+                        exp.delay(signal="measure", time=self.settings["readout_delay"])
+
+            # define experiment calibration - sweep over qubit drive frequency
+            exp_calib = lo.Calibration()
+            exp_calib["measure"] = lo.SignalCalibration(
+                oscillator=lo.Oscillator(
+                    frequency=frequency_sweep,
+                    modulation_type=lo.ModulationType.HARDWARE,
+                )
+            )
+
+        exp.set_calibration(exp_calib)
+
+        # self.set_map()
+        exp.set_signal_map(self.map_q0)
+        self.experiment = exp
+
+    def sequencePulses_to_exp_Int(self):
+        # Create Experiment
+        if len(self.sequence_drive) != 0:
+            exp = lo.Experiment(
+                uid="Sequence",
+                signals=[
+                    lo.ExperimentSignal("drive"),
+                    lo.ExperimentSignal("measure"),
+                    lo.ExperimentSignal("acquire"),
+                ],
+            )
+
+            ## experimental pulse sequence
+            # outer loop - real-time, cyclic averaging in standard integration mode
+            with exp.acquire_loop_rt(
+                uid="shots",
+                count=self.settings["hardware_avg"],
+                # averaging_mode=lo.AveragingMode.SEQUENTIAL,
+                # acquisition_type=lo.AcquisitionType.SPECTROSCOPY,
+                averaging_mode=lo.AveragingMode.CYCLIC,
+                acquisition_type=lo.AcquisitionType.INTEGRATION,
+            ):
+                # # inner loop - real-time sweep of qubit drive pulse amplitude
+                # with exp.sweep(uid="sweep", parameter=sweep_rel_flat, alignment=SectionAlignment.RIGHT):
+                # qubit excitation - pulse amplitude will be swept
+                with exp.section(uid="qubit_excitation", alignment=lo.SectionAlignment.RIGHT):
+                    i = 0
+                    for pulse in self.sequence_drive:
+                        exp.play(signal="drive", pulse=pulse, phase=self.rel_phases[i])
+
+                        if self.delays[i] > 0:
+                            exp.delay(signal="drive", time=self.delays[i] * 1e-9)
+                        i += 1
+
+                # qubit readout pulse and data acquisition
+
+                with exp.section(uid="qubit_readout"):
+                    for pulse in self.sequence_readout:
+
+                        exp.reserve(signal="drive")
+
+                        exp.play(signal="measure", pulse=pulse, phase=self.rel_phases[i])
+
+                        integration_time = self.native_gates["single_qubit"][0]["MZ"]["integration_time"]
+
+                        exp.acquire(signal="acquire", handle="sequence", length=integration_time)
+
+                        # exp.acquire(
+                        #     signal="acquire",
+                        #     handle="Sequence",
+                        #     kernel=self.readout_weighting_function,
+                        # )
+
+                # relax time after readout - for signal processing and qubit relaxation to ground state
+                with exp.section(uid="relax"):
+                    exp.delay(signal="measure", time=self.settings["readout_delay"])
+
+        # TODO: Add features of above to else
+        else:
+            exp = lo.Experiment(
+                uid="Sequence",
+                signals=[
+                    lo.ExperimentSignal("measure"),
+                    lo.ExperimentSignal("acquire"),
+                ],
+            )
+            ## experimental pulse sequence
+            # outer loop - real-time, cyclic averaging in standard integration mode
+            with exp.acquire_loop_rt(
+                uid="shots",
+                count=self.settings["hardware_avg"],
+                averaging_mode=lo.AveragingMode.CYCLIC,
+                # averaging_mode=lo.AveragingMode.SEQUENTIAL,
+                # acquisition_type=lo.AcquisitionType.SPECTROSCOPY,
+                acquisition_type=lo.AcquisitionType.INTEGRATION,
+            ):
+                # # inner loop - real-time sweep of qubit drive pulse amplitude
+                # qubit readout pulse and data acquisition
+
+                # readout_weighting_function = lo.pulse_library.const(
+                #     uid="readout_weighting_function",
+                #     length=self.sequence_readout[0].duration * 1e-9,
+                #     amplitude=1.0,
+                # )
+                i = 0
+                with exp.section(uid="qubit_readout"):
+                    for pulse in self.sequence_readout:
+                        exp.play(signal="measure", pulse=pulse, phase=self.rel_phases[i])
+
+                        integration_time = self.native_gates["single_qubit"][0]["MZ"]["integration_time"]
+
+                        exp.acquire(signal="acquire", handle="sequence", length=integration_time)
+
+                        # exp.acquire(
+                        #     signal="acquire",
+                        #     handle="Sequence",
+                        #     kernel=self.readout_weighting_function,
+                        # )
+
+                # relax time after readout - for signal processing and qubit relaxation to ground state
+                with exp.section(uid="relax"):
+                    exp.delay(signal="measure", time=self.settings["readout_delay"])
+
+        self.set_map()
+        exp.set_signal_map(self.map_q0)
+
         self.experiment = exp
 
     def sequencePulses_to_exp(self):
@@ -555,7 +788,7 @@ class SHFQC_QA(AbstractInstrument):
 
                         integration_time = self.native_gates["single_qubit"][0]["MZ"]["integration_time"]
 
-                        exp.acquire(signal="acquire", handle="Sequence", length=integration_time)
+                        exp.acquire(signal="acquire", handle="sequence", length=integration_time)
 
                         # exp.acquire(
                         #     signal="acquire",
@@ -594,14 +827,14 @@ class SHFQC_QA(AbstractInstrument):
                 #     length=self.sequence_readout[0].duration * 1e-9,
                 #     amplitude=1.0,
                 # )
-
+                i = 0
                 with exp.section(uid="qubit_readout"):
                     for pulse in self.sequence_readout:
-                        exp.play(signal="measure", pulse=pulse)
+                        exp.play(signal="measure", pulse=pulse, phase=self.rel_phases[i])
 
                         integration_time = self.native_gates["single_qubit"][0]["MZ"]["integration_time"]
 
-                        exp.acquire(signal="acquire", handle="Sequence", length=integration_time)
+                        exp.acquire(signal="acquire", handle="sequence", length=integration_time)
 
                         # exp.acquire(
                         #     signal="acquire",
@@ -631,7 +864,30 @@ class SHFQC_QA(AbstractInstrument):
         self.sequencePulses_to_exp()
         self.run_seq()
 
-        spec_res = self.results.get_data("Sequence")
+        spec_res = self.results.get_data("sequence")
+
+        msr = abs(spec_res)
+        # phase = np.unwrap(np.angle(spec_res))
+        phase = np.angle(spec_res)
+        i = spec_res.real
+        q = spec_res.imag
+
+        return msr, phase, i, q
+
+    def execute_pulse_sequence(self, sequence):
+
+        # if self.sequence == sequence:
+        #     self.repeat_seq()
+        # else:
+        #     self.sequence_to_ZurichPulses(sequence)
+        #     self.sequencePulses_to_exp()
+        #     self.run_seq()
+
+        self.sequence_to_ZurichPulses(sequence)
+        self.sequencePulses_to_exp_Int()
+        self.run_seq()
+
+        spec_res = self.results.get_data("sequence")
 
         msr = abs(spec_res)
         # phase = np.unwrap(np.angle(spec_res))
@@ -654,13 +910,44 @@ class SHFQC_QA(AbstractInstrument):
         self.sequencesPulses_to_exp()
         self.run_seq()
 
-        spec_res = self.results.get_data("Sequence")
+        spec_res = []
+        msr = []
+        phase = []
+        i = []
+        q = []
+        for j in range(len(self.sequence_readout)):
+            spec_res.append(self.results.get_data(f"sequence{j}"))
+            msr.append(abs(spec_res[j]))
+            phase.append(np.angle(spec_res[j]))
+            i.append(spec_res[j].real)
+            q.append(spec_res[j].imag)
 
-        msr = abs(spec_res)
-        # phase = np.unwrap(np.angle(spec_res))
-        phase = np.angle(spec_res)
-        i = spec_res.real
-        q = spec_res.imag
+        return msr, phase, i, q
+
+    def execute_pulse_sequence_freq(self, sequence, start, stop, points):
+
+        # if self.sequence == sequence:
+        #     self.repeat_seq()
+        # else:
+        #     self.sequence_to_ZurichPulses(sequence)
+        #     self.sequencePulses_to_exp()
+        #     self.run_seq()
+
+        self.sequence_to_ZurichPulses(sequence)
+        self.sequencePulses_to_exp_freqs(start, stop, points)
+        self.run_seq()
+
+        spec_res = []
+        msr = []
+        phase = []
+        i = []
+        q = []
+        for j in range(len(self.sequence_readout)):
+            spec_res.append(self.results.get_data(f"sequence{j}"))
+            msr.append(abs(spec_res[j]))
+            phase.append(np.angle(spec_res[j]))
+            i.append(spec_res[j].real)
+            q.append(spec_res[j].imag)
 
         return msr, phase, i, q
 
