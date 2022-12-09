@@ -82,7 +82,7 @@ class SPI(AbstractInstrument):
                 self.dacs[channel] = type(
                     f"S4g_dac", (), {"current": self.property_wrapper(device, "current"), "device": device}
                 )()
-                self.dacs[channel].device.span("range_min_bi")
+                self.dacs[channel].device.span(kwargs["s4g_span"])
                 # self.dacs[channel].current = current
 
             for channel, settings in self.d5a_modules_settings.items():
