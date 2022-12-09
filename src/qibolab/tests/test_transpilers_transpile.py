@@ -16,8 +16,7 @@ def generate_random_circuit(nqubits, ngates, seed=None):
     if seed is not None:  # pragma: no cover
         np.random.seed(seed)
 
-    one_qubit_gates = [gates.X, gates.Y, gates.Z, gates.H]
-    # gates.RX, gates.RY, gates.RZ,
+    one_qubit_gates = [gates.RX, gates.RY, gates.RZ, gates.X, gates.Y, gates.Z, gates.H]
     two_qubit_gates = [
         gates.CNOT,
         gates.CZ,

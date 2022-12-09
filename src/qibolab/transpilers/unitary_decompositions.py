@@ -11,7 +11,14 @@ H = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
 
 
 def u3_decomposition(unitary):
-    """Decomposes arbitrary one-qubit gates to U3."""
+    """Decomposes arbitrary one-qubit gates to U3.
+
+    Args:
+        unitary (np.ndarray): Unitary 2x2 matrix we are decomposing.
+
+    Returns:
+        theta, phi, lam: parameters of U3 gate.
+    """
     # https://github.com/Qiskit/qiskit-terra/blob/d2e3340adb79719f9154b665e8f6d8dc26b3e0aa/qiskit/quantum_info/synthesis/one_qubit_decompose.py#L221
     su2 = unitary / np.sqrt(np.linalg.det(unitary))
     theta = 2 * np.arctan2(abs(su2[1, 0]), abs(su2[0, 0]))
@@ -29,7 +36,7 @@ def calculate_psi(unitary):
 
     Args:
         unitary (np.ndarray): Unitary matrix of the gate we are
-            decomposing in the computational basis.
+        decomposing in the computational basis.
 
     Returns:
         Eigenvectors (in the computational basis) and eigenvalues
@@ -69,11 +76,21 @@ def calculate_single_qubit_unitaries(psi):
     Returns:
         Local unitaries UA and UB that map the given basis to the magic basis.
     """
-    # TODO: Handle the case where psi is not real in the magic basis
+
+    # convert to magic basis
     psi_magic = np.dot(np.conj(magic_basis).T, psi)
-    if not np.allclose(psi_magic.imag, np.zeros_like(psi_magic)):  # pragma: no cover
-        raise_error(NotImplementedError, "Given state is not real in the magic basis.")
     psi_bar = np.copy(psi).T
+    print(psi_bar[0])
+    if not np.allclose(psi_magic.imag, np.zeros_like(psi_magic)):
+        # Handle the case where psi is not real in the magic basis
+        print("not real coeff")
+        for i in range(4):
+            for j in range(4):
+                phase = np.angle(np.max(psi_bar[i, j]))
+                print(phase, np.exp(-1.0j * phase))
+                psi_bar[i, j] = psi_bar[i, j] * np.exp(-1.0j * phase)
+        if not np.allclose(psi_bar.imag, np.zeros_like(psi_bar)):
+            print("fail", psi_bar[0])
 
     # find e and f by inverting (A3), (A4)
     ef = (psi_bar[0] + 1j * psi_bar[1]) / np.sqrt(2)
@@ -187,6 +204,15 @@ def cnot_decomposition_light(q0, q1, hx, hy):
 
 
 def two_qubit_decomposition(q0, q1, unitary):
+    """Performs two qubit unitary gate decomposition (24) from arXiv:quant-ph/0307177.
+
+    Args:
+        q0, q1 (int): Target qubits
+        unitary (np.ndarray): Unitary 4x4 matrix we are decomposing.
+
+    Returns:
+        list of gates implementing decomposition (24) from arXiv:quant-ph/0307177
+    """
     ud_diag = to_bell_diagonal(unitary)
     ud = None
     if ud_diag is None:
