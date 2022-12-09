@@ -1,18 +1,19 @@
 from types import SimpleNamespace
 
+import numpy as np
 import yaml
 from qibo.config import log, raise_error
 from qm.QuantumMachinesManager import QuantumMachinesManager
 
 from qibolab.instruments.rohde_schwarz import SGS100A
+from qibolab.platforms.abstract import AbstractPlatform
 
 
-def IQ_imbalance(g, phi):
+def iq_imbalance(g, phi):
     """
     Creates the correction matrix for the mixer imbalance caused by the gain and phase imbalances, more information can
     be seen here:
     https://docs.qualang.io/libs/examples/mixer-calibration/#non-ideal-mixer
-
     :param g: relative gain imbalance between the I & Q ports (unit-less). Set to 0 for no gain imbalance.
     :param phi: relative phase imbalance between the I & Q ports (radians). Set to 0 for no phase imbalance.
     """
@@ -22,314 +23,139 @@ def IQ_imbalance(g, phi):
     return [float(N * x) for x in [(1 - g) * c, (1 + g) * s, (1 - g) * s, (1 + g) * c]]
 
 
-DEFAULT_CONFIG = {
-    "version": 1,
-    "controllers": {},
-    "elements": {
-        "qubit0": {
-            "mixInputs": {
-                "I": ("con1", 1),
-                "Q": ("con1", 2),
-                "lo_frequency": qubit_LO,
-                "mixer": "mixer_qubit",
-            },
-            "intermediate_frequency": qubit_IF,
-            "operations": {
-                "x90": "x90_pulse",
-                "x180": "x180_pulse",
-                "y90": "y90_pulse",
-            },
-        },
-        "qubit1": {
-            "mixInputs": {
-                "I": ("con1", 3),
-                "Q": ("con1", 4),
-                "lo_frequency": qubit_LO,
-                "mixer": "mixer_qubit1",
-            },
-            "intermediate_frequency": qubit1_IF,
-            "operations": {
-                "x90": "x90_pulse1",
-                "x180": "x180_pulse1",
-                "y90": "y90_pulse1",
-            },
-        },
-        "resonator0": {
-            "mixInputs": {
-                "I": ("con1", 5),
-                "Q": ("con1", 6),
-                "lo_frequency": resonator_LO,
-                "mixer": "mixer_resonator",
-            },
-            "intermediate_frequency": resonator_IF,
-            "operations": {
-                "readout": "readout_pulse",
-            },
-            "outputs": {
-                "out1": ("con1", 1),
-                "out2": ("con1", 2),
-            },
-            "time_of_flight": time_of_flight,
-            "smearing": smearing,
-        },
-        "resonator1": {
-            "mixInputs": {
-                "I": ("con1", 5),
-                "Q": ("con1", 6),
-                "lo_frequency": resonator_LO,
-                "mixer": "mixer_resonator1",
-            },
-            "intermediate_frequency": resonator1_IF,
-            "operations": {
-                "readout": "readout_pulse1",
-            },
-            "outputs": {
-                "out1": ("con1", 1),
-                "out2": ("con1", 2),
-            },
-            "time_of_flight": time_of_flight,
-            "smearing": smearing,
-        },
-        "flux_line0": {
-            "singleInput": {
-                "port": ("con1", 7),
-            },
-            "intermediate_frequency": flux_line_IF,
-            "operations": {
-                "cw": "const_flux_pulse",
-            },
-        },
-        "flux_line1": {
-            "singleInput": {
-                "port": ("con1", 8),
-            },
-            "intermediate_frequency": flux_line_IF,
-            "operations": {
-                "cw": "const_flux_pulse1",
-            },
-        },
-    },
-    "pulses": {
-        "const_flux_pulse": {
-            "operation": "control",
-            "length": const_flux_len,
-            "waveforms": {
-                "single": "const_flux_wf",
-            },
-        },
-        "const_flux_pulse1": {
-            "operation": "control",
-            "length": const_flux_len1,
-            "waveforms": {
-                "single": "const_flux_wf1",
-            },
-        },
-        "x90_pulse": {
-            "operation": "control",
-            "length": x90_len,
-            "waveforms": {
-                "I": "x90_wf",
-                "Q": "x90_der_wf",
-            },
-        },
-        "x180_pulse": {
-            "operation": "control",
-            "length": x180_len,
-            "waveforms": {
-                "I": "x180_wf",
-                "Q": "x180_der_wf",
-            },
-        },
-        "y90_pulse": {
-            "operation": "control",
-            "length": y90_len,
-            "waveforms": {
-                "I": "y90_der_wf",
-                "Q": "y90_wf",
-            },
-        },
-        "x90_pulse1": {
-            "operation": "control",
-            "length": x90_len1,
-            "waveforms": {
-                "I": "x90_wf1",
-                "Q": "x90_der_wf1",
-            },
-        },
-        "x180_pulse1": {
-            "operation": "control",
-            "length": x180_len1,
-            "waveforms": {
-                "I": "x180_wf1",
-                "Q": "x180_der_wf1",
-            },
-        },
-        "y90_pulse1": {
-            "operation": "control",
-            "length": y90_len1,
-            "waveforms": {
-                "I": "y90_der_wf1",
-                "Q": "y90_wf1",
-            },
-        },
-        "readout_pulse": {
-            "operation": "measurement",
-            "length": readout_len,
-            "waveforms": {
-                "I": "readout_wf",
-                "Q": "zero_wf",
-            },
-            "integration_weights": {
-                "rotated_cos": "rotated_cosine_weights",
-                "rotated_sin": "rotated_sine_weights",
-                "rotated_minus_sin": "rotated_minus_sine_weights",
-            },
-            "digital_marker": "ON",
-        },
-        "readout_pulse1": {
-            "operation": "measurement",
-            "length": readout_len1,
-            "waveforms": {
-                "I": "readout_wf1",
-                "Q": "zero_wf",
-            },
-            "integration_weights": {
-                "rotated_cos": "rotated_cosine_weights1",
-                "rotated_sin": "rotated_sine_weights1",
-                "rotated_minus_sin": "rotated_minus_sine_weights1",
-            },
-            "digital_marker": "ON",
-        },
-    },
-    "waveforms": {
-        "zero_wf": {"type": "constant", "sample": 0.0},
-        "x90_wf": {"type": "arbitrary", "samples": x90_wf.tolist()},
-        "x90_der_wf": {"type": "arbitrary", "samples": x90_der_wf.tolist()},
-        "x180_wf": {"type": "arbitrary", "samples": x180_wf.tolist()},
-        "x180_der_wf": {"type": "arbitrary", "samples": x180_der_wf.tolist()},
-        "y90_wf": {"type": "arbitrary", "samples": y90_wf.tolist()},
-        "y90_der_wf": {"type": "arbitrary", "samples": y90_der_wf.tolist()},
-        "x90_wf1": {"type": "arbitrary", "samples": x90_wf1.tolist()},
-        "x90_der_wf1": {"type": "arbitrary", "samples": x90_der_wf1.tolist()},
-        "x180_wf1": {"type": "arbitrary", "samples": x180_wf1.tolist()},
-        "x180_der_wf1": {"type": "arbitrary", "samples": x180_der_wf1.tolist()},
-        "y90_wf1": {"type": "arbitrary", "samples": y90_wf1.tolist()},
-        "y90_der_wf1": {"type": "arbitrary", "samples": y90_der_wf1.tolist()},
-        "readout_wf": {"type": "constant", "sample": readout_amp},
-        "readout_wf1": {"type": "constant", "sample": readout_amp1},
-        "const_flux_wf": {"type": "constant", "sample": const_flux_amp},
-        "const_flux_wf1": {"type": "constant", "sample": const_flux_amp1},
-    },
-    "digital_waveforms": {
-        "ON": {"samples": [(1, 0)]},
-    },
-    "integration_weights": {
-        "rotated_cosine_weights": {
-            "cosine": [(np.cos(rotation_angle), readout_len)],
-            "sine": [(-np.sin(rotation_angle), readout_len)],
-        },
-        "rotated_sine_weights": {
-            "cosine": [(np.sin(rotation_angle), readout_len)],
-            "sine": [(np.cos(rotation_angle), readout_len)],
-        },
-        "rotated_minus_sine_weights": {
-            "cosine": [(-np.sin(rotation_angle), readout_len)],
-            "sine": [(-np.cos(rotation_angle), readout_len)],
-        },
-        "rotated_cosine_weights1": {
-            "cosine": [(np.cos(rotation_angle1), readout_len1)],
-            "sine": [(-np.sin(rotation_angle1), readout_len1)],
-        },
-        "rotated_sine_weights1": {
-            "cosine": [(np.sin(rotation_angle1), readout_len1)],
-            "sine": [(np.cos(rotation_angle1), readout_len1)],
-        },
-        "rotated_minus_sine_weights1": {
-            "cosine": [(-np.sin(rotation_angle1), readout_len1)],
-            "sine": [(-np.cos(rotation_angle1), readout_len1)],
-        },
-    },
-    "mixers": {
-        "mixer_qubit": [
-            {
-                "intermediate_frequency": qubit_IF,
-                "lo_frequency": qubit_LO,
-                "correction": IQ_imbalance(mixer_qubit_g, mixer_qubit_phi),
-            }
-        ],
-        "mixer_qubit1": [
-            {
-                "intermediate_frequency": qubit1_IF,
-                "lo_frequency": qubit_LO,
-                "correction": IQ_imbalance(mixer_qubit_g, mixer_qubit_phi),
-            }
-        ],
-        "mixer_resonator": [
-            {
-                "intermediate_frequency": resonator_IF,
-                "lo_frequency": resonator_LO,
-                "correction": IQ_imbalance(mixer_resonator_g, mixer_resonator_phi),
-            }
-        ],
-        "mixer_resonator1": [
-            {
-                "intermediate_frequency": resonator1_IF,
-                "lo_frequency": resonator_LO,
-                "correction": IQ_imbalance(mixer_resonator_g, mixer_resonator_phi),
-            }
-        ],
-    },
-}
-
-
-class Qubit:
-    def __init__(self, number, readout, drive, flux):
-        self.number = number
-        self.readout = readout
-        self.drive = drive
-        self.flux = flux
-
-    def __repr__(self):
-        return f"<Qubit {self.number}>"
-
-
 class Channel:
 
     instances = {}
 
-    def __new__(cls, name, role):
+    def __new__(cls, name):
+        if name is None:
+            return None
+
         if name not in cls.instances:
-            print(name, role)
-            cls.instances[name] = super().__new__(cls)
-        elif role != cls.instances[name].role:
-            raise_error(
-                ValueError, f"Channel {name} already exists for {existing_role}. " f"Cannot recreate for {role}"
-            )
+            new = super().__new__(cls)
+            new.name = name
+            new.ports = []
+            new.local_oscillator = None
+
+            new.time_of_flight = None
+            new.smearing = None
+
+            cls.instances[name] = new
+
         return cls.instances[name]
 
-    def set_ports(cls, name, ports):
-        channel = cls.instances[name]
-        if channel.role == "flux":
-            self.flux_port = ports[0]
-        else:
-            self.i_port, self.q_port = ports
+    def __repr__(self):
+        return f"<Channel {self.name}>"
 
-    def set_local_oscillator(cls, name, local_oscillator):
-        cls.instances[name].local_oscillator = local_oscillator
 
-    def __init__(self, name, role):
+class Qubit:
+    def __init__(self, name, characterization, drive, readout, feedback, flux=None):
         self.name = name
-        self.role = role
-        self.i_port = None
-        self.q_port = None
-        self.flux_port = None
-        self.local_oscillator = None
+        self.characterization = SimpleNamespace(**characterization)
+
+        self.drive = drive
+        self.readout = readout
+        self.feedback = feedback
+        self.flux = flux
+
+        # elements entry for ``QuantumMachinesManager`` config
+        self.elements = {}
+        if drive:
+            self.elements[f"drive{self.name}"] = {
+                "mixInputs": {
+                    "I": self.drive.ports[0],
+                    "Q": self.drive.ports[1],
+                    "lo_frequency": None,
+                    "mixer": f"mixer_drive{self.name}",
+                },
+                "intermediate_frequency": None,
+                "operations": {},
+            }
+        if readout:
+            self.elements[f"readout{self.name}"] = {
+                "mixInputs": {
+                    "I": self.readout.ports[0],
+                    "Q": self.readout.ports[1],
+                    "lo_frequency": None,
+                    "mixer": f"mixer_resonator_{self.name}",
+                },
+                "intermediate_frequency": None,
+                "operations": {},
+                "outputs": {
+                    "out1": self.feedback.ports[0],
+                    "out2": self.feedback.ports[1],
+                },
+                "time_of_flight": self.feedback.time_of_flight,
+                "smearing": self.feedback.smearing,
+            }
+        if flux:
+            self.elements[f"flux{self.name}"] = {
+                "singleInput": {
+                    "port": self.flux.ports[0],
+                },
+                "intermediate_frequency": None,
+                "operations": {},
+            }
+
+        # mixers entry for ``QuantumMachinesManager`` config
+        self.mixers = {}
+        if drive:
+            drive_g = self.characterization.mixer_drive_g
+            drive_phi = self.characterization.mixer_drive_phi
+            self.mixers[f"mixer_drive{self}"] = [
+                {
+                    "intermediate_frequency": None,
+                    "lo_frequency": None,
+                    "correction": iq_imbalance(drive_g, drive_phi),
+                }
+            ]
+        if readout:
+            readout_g = self.characterization.mixer_readout_g
+            readout_phi = self.characterization.mixer_readout_phi
+            self.mixers[f"mixer_readout{self}"] = [
+                {
+                    "intermediate_frequency": None,
+                    "lo_frequency": None,
+                    "correction": iq_imbalance(readout_g, readout_phi),
+                }
+            ]
+
+    def __str__(self):
+        return str(self.name)
 
     def __repr__(self):
-        return f"<Channel {self.name} | {self.role}>"
+        return f"<Qubit {self.name}>"
+
+    def set_drive_lo_frequency(self, frequency):
+        self.elements[f"drive{self}"]["mixInputs"]["lo_frequency"] = frequency
+        self.mixers[f"mixer_drive{self}"][0]["lo_frequency"] = frequency
+
+    def set_readout_lo_frequency(self, frequency):
+        self.elements[f"readout{self}"]["mixInputs"]["lo_frequency"] = frequency
+        self.mixers[f"mixer_readout{self}"][0]["lo_frequency"] = frequency
+
+    def set_drive_if_frequency(self, frequency):
+        self.elements[f"drive{self}"]["intermediate_frequency"] = frequency
+        self.mixers[f"mixer_drive{self}"][0]["intermediate_frequency"] = frequency
+
+    def set_readout_if_frequency(self, frequency):
+        self.elements[f"readout{self}"]["intermediate_frequency"] = frequency
+        self.mixers[f"mixer_readout{self}"][0]["intermediate_frequency"] = frequency
+
+    def set_flux_frequency(self, frequency):
+        self.elements[f"flux{self}"]["intermediate_frequency"] = frequency
+
+    def register_drive_pulse(self, pulse):
+        self.elements[f"drive{self}"]["operations"][pulse.serial] = pulse.serial
+
+    def register_readout_pulse(self, pulse):
+        self.elements[f"readout{self}"]["operations"][pulse.serial] = pulse.serial
+
+    def register_flux_pulse(self, pulse):
+        self.elements[f"flux{self}"]["operations"][pulse.serial] = pulse.serial
 
 
-class QuantumMachinesPlatform:
+class QuantumMachinesPlatform(AbstractPlatform):
     def __init__(self, name, runcard):
         log.info(f"Loading platform {name} from runcard {runcard}")
         self.name = name
@@ -341,34 +167,61 @@ class QuantumMachinesPlatform:
 
         self.nqubits = self.settings["nqubits"]
         self.resonator_type = "3D" if self.nqubits == 1 else "2D"
-
         self.topology = self.settings["topology"]
-        # self.channels = self.settings["channels"]
-        # self.qubit_channel_map = self.settings["qubit_channel_map"]
-        # create channels and qubits
-        self.qubits = []
-        ch_roles = ["readout", "drive", "flux"]
-        for q, ch_names in self.settings["qubit_channel_map"].items():
-            channels = [Channel(name, role) for name, role in zip(ch_names, ch_roles)]
-            self.qubits.append(Qubit(q, *channels))
 
-        instruments = self.settings["instruments"]
-        # Instantiate Quantum Machines manager
+        settings = self.settings["settings"]
+        self.simulation = settings["simulation"]
+        self.simulation_duration = settings["simulation_duration"]
+
+        # Create feedback channel (for readout input to instrument)
+        feedback = Channel(self.settings["feedback_channel"])
+        feedback.time_of_flight = settings["time_of_flight"]
+        feedback.smearing = settings["smearing"]
+
+        # Default configuration for communicating with the ``QuantumMachinesManager``
+        self.config = {
+            "version": 1,
+            "controllers": {},
+            "elements": {},
+            "pulses": {},
+            "waveforms": {},
+            "digital_waveforms": {
+                "ON": {"samples": [(1, 0)]},
+            },
+            "integration_weights": {},
+            "mixers": {},
+        }
+
+        instruments = dict(self.settings["instruments"])
         qm = instruments.pop("qm")
-        self.manager = QuantumMachinesManager(qmm["address"])
-        # Register controllers in config
-        for name, values in qm["controllers"].items():
+        # Register controllers in config and channels
+        for controller, values in qm["controllers"].items():
             self.config["controllers"][controller] = values["ports"]
-            for channel, ports in values["channel_port_map"].items():
-                Channel.set_ports(channel, ports)
+            for channel_name, ports in values["channel_port_map"].items():
+                Channel(channel_name).ports = [(controller, p) for p in ports]
 
         # Instantiate local oscillators
-        self.local_oscillators = {}
+        local_oscillators = {}
         for name, value in instruments.items():
             lo = SGS100A(name, value["address"])
-            lo.setup(**value["settings"])
-            self.local_oscillators[name] = lo
-            Channel.set_local_oscillator(value["channel"])
+            local_oscillators[name] = lo
+            for channel_name in value["channels"]:
+                Channel(channel_name).local_oscillator = lo
+
+        # Create list of qubit objects
+        characterization = self.settings["characterization"]["single_qubit"]
+        self.qubits = []
+        for q, channel_names in self.settings["qubit_channel_map"].items():
+            readout, drive, flux = (Channel(name) for name in channel_names)
+            self.qubits.append(Qubit(q, characterization[q], drive, readout, feedback, flux))
+
+        # Instantiate QuantumMachines manager
+        if self.simulation:
+            from qm.simulate.credentials import create_credentials
+
+            manager = QuantumMachinesManager(qm["address"], qm["port"], credentials=create_credentials())
+        else:
+            manager = QuantumMachinesManager(qm["address"], qm["port"])
 
         self.reload_settings()
 
@@ -397,20 +250,11 @@ class QuantumMachinesPlatform:
         with open(self.runcard) as file:
             self.settings = yaml.safe_load(file)
 
-        self.hardware_avg = self.settings["settings"]["hardware_avg"]
-        self.sampling_rate = self.settings["settings"]["sampling_rate"]
-        self.repetition_duration = self.settings["settings"]["repetition_duration"]
-
-        # Load Characterization settings
-        self.characterization = self.settings["characterization"]
-        # Load Native Gates
-        self.native_gates = self.settings["native_gates"]
-
         if self.is_connected:
             self.setup()
 
     def run_calibration(self, show_plots=False):  # pragma: no cover
-        raise NotImplementedError
+        raise_error(NotImplementedError)
 
     def connect(self):
         """Connects to lab instruments using the details specified in the calibration settings."""
@@ -446,11 +290,118 @@ class QuantumMachinesPlatform:
                 lo.stop()
 
     def disconnect(self):
-        # TODO: Disconnect from self.qmm
+        # TODO: Disconnect from self.manager
         if self.is_connected:
             for lo in self.local_oscillators.values():
                 lo.disconnect()
             self.is_connected = False
 
-    def execute_pulse_sequence(self, sequence, nshots=None):  # pragma: no cover
-        raise NotImplementedError
+    def register_waveform(self, waveform):
+        # example waveforms
+        # "zero_wf": {"type": "constant", "sample": 0.0},
+        # "x90_wf": {"type": "arbitrary", "samples": x90_wf.tolist()},
+        # "x90_der_wf": {"type": "arbitrary", "samples": x90_der_wf.tolist()},
+        # TODO: Fix constant waveforms
+        waveforms = self.config["waveforms"]
+        serial = waveform.serial
+        if serial not in waveforms:
+            waveforms[serial] = {"type": "arbitrary", "samples": waveform.data.tolist()}
+        return serial
+
+    def register_integration_weights(self, qubit, readout_len):
+        rotation_angle = qubit.characterization.rotation_angle
+        self.config["integration_weights"] = {
+            f"rotated_cosine_weights_{qubit}": {
+                "cosine": [(np.cos(rotation_angle), readout_len)],
+                "sine": [(-np.sin(rotation_angle), readout_len)],
+            },
+            f"rotated_sine_weights_{qubit}": {
+                "cosine": [(np.sin(rotation_angle), readout_len)],
+                "sine": [(np.cos(rotation_angle), readout_len)],
+            },
+            f"rotated_minus_sine_weights_{qubit}": {
+                "cosine": [(-np.sin(rotation_angle), readout_len)],
+                "sine": [(-np.cos(rotation_angle), readout_len)],
+            },
+        }
+
+    def register_pulse(self, pulse):
+        pulses = self.config["pulses"]
+        if pulse.serial not in pulses:
+
+            qubit = self.qubits[pulse.qubit]
+            # upload qubit elements and mixers to Quantum Machines config
+            self.config["elements"].update(qubit.elements)
+            self.config["mixers"].update(qubit.mixers)
+
+            if pulse.type.name == "DRIVE":
+                serial_i = self.register_waveform(pulse.envelope_waveform_i)
+                serial_q = self.register_waveform(pulse.envelope_waveform_q)
+                pulses[pulse.serial] = {
+                    "operation": "control",
+                    "length": pulse.duration,
+                    "waveforms": {"I": serial_i, "Q": serial_q},
+                }
+                qubit.set_drive_if_frequency(pulse.frequency)
+                qubit.register_drive_pulse(pulse)
+                return f"drive{qubit}"
+
+            elif pulse.type.name == "FLUX":
+                serial = self.register_waveform(pulse.envelope_waveform_i)
+                self.qubits[pulse.qubit].set_flux_frequency(pulse.frequency)
+                pulses[pulse.serial] = {
+                    "operation": "control",
+                    "length": pulse.duration,
+                    "waveforms": {
+                        "single": serial,
+                    },
+                }
+                qubit.set_flux_frequency(pulse.frequency)
+                qubit.register_flux_pulse(pulse)
+                return f"flux{qubit}"
+
+            elif pulse.type.name == "READOUT":
+                serial_i = self.register_waveform(pulse.envelope_waveform_i)
+                serial_q = self.register_waveform(pulse.envelope_waveform_q)
+                self.register_integration_weights(qubit, pulse.duration)
+                pulses[pulse.serial] = {
+                    "operation": "measurement",
+                    "length": pulse.duration,
+                    "waveforms": {
+                        "I": serial_i,
+                        "Q": serial_q,
+                    },
+                    "integration_weights": {
+                        "rotated_cos": f"rotated_cosine_weights_{pulse.qubit}",
+                        "rotated_sin": f"rotated_sine_weights_{pulse.qubit}",
+                        "rotated_minus_sin": f"rotated_minus_sine_weights_{pulse.qubit}",
+                    },
+                    "digital_marker": "ON",
+                }
+                qubit.set_readout_if_frequency(pulse.frequency)
+                qubit.register_readout_pulse(pulse)
+                return f"readout{qubit}"
+
+            else:
+                raise_error(TypeError, f"Unknown pulse type {pulse.type.name}.")
+
+    def execute_program(self, program):
+        if self.simulation:
+            # controller_connections = create_simulator_controller_connections(3)
+            simulation_config = SimulationConfig(duration=self.simulation_duration)
+            return self.manager.simulate(self.config, program, simulation_config)
+        else:
+            machine = self.manager.open_qm(self.config)
+            return machine.execute(program)
+
+    def execute_pulse_sequence(self, sequence, nshots=None):
+        # from qm.qua import *
+
+        # register pulses in Quantum Machines config
+        targets = [self.register_pulse(pulse) for pulse in sequence]
+        # play pulses using QUA
+        with program() as experiment:
+            for pulse, target in zip(sequence, targets):
+                play(pulse.serial, target)
+
+        return self.execute_program(experiment)

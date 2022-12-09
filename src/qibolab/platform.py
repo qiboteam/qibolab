@@ -17,6 +17,8 @@ def Platform(name, runcard=None):
         from qibolab.platforms.multiqubit import MultiqubitPlatform as Device
     elif name == "icarusq":
         from qibolab.platforms.icplatform import ICPlatform as Device
+    elif name == "qm":
+        from qibolab.platforms.quantum_machines import QuantumMachinesPlatform as Device
     elif name == "dummy":
         from qibolab.platforms.dummy import DummyPlatform as Device
     else:
