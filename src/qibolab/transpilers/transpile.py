@@ -1,5 +1,5 @@
 from qibo import gates
-from qibo.config import log, raise_error
+from qibo.config import log
 
 from qibolab.transpilers.connectivity import fix_connectivity
 from qibolab.transpilers.gate_decompositions import translate_gate

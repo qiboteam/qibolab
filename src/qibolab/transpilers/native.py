@@ -1,15 +1,3 @@
-import numpy as np
-from qibo import gates
-from qibo.backends import NumpyBackend
-from qibo.config import raise_error
-
-import qibolab.transpilers.gate_decompositions as decompose
-from qibolab.transpilers.unitary_decompositions import (
-    two_qubit_decomposition,
-    u3_decomposition,
-)
-
-
 class NativeGates:
     """Maps Qibo gates to a hardware native implementation.
 
