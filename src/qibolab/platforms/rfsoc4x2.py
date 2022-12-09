@@ -1,9 +1,10 @@
+import yaml
 from qibo.config import raise_error
 
+from qibolab.instruments.tii import tii_rfsoc4x2
 from qibolab.platforms.abstract import AbstractPlatform
 from qibolab.pulses import PulseSequence
-import yaml
-from qibolab.instruments.tii import tii_rfsoc4x2
+
 
 class RFSoCPlatform(AbstractPlatform):
     def __init__(self, name, runcard):
@@ -17,7 +18,7 @@ class RFSoCPlatform(AbstractPlatform):
 
         fpga = tii_rfsoc4x2()
 
-    #def run_calibration(self):
+    # def run_calibration(self):
     #    raise_error(NotImplementedError)
 
     def execute_pulse_sequence(self, sequence: PulseSequence, nshots=None):
@@ -57,6 +58,8 @@ class RFSoCPlatform(AbstractPlatform):
 
     def disconnect(self):
         raise NotImplementedError
+
+
 """
     def execute_pulse_sequence(self, sequence, nshots=None):
         ps: PulseShape

@@ -3,11 +3,12 @@
 Supports the following FPGA:
     RFSoC 4x2
 """
-import socket
 import json
+import socket
 
 import numpy as np
 import yaml
+from qibo.config import log
 
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.pulses import (
@@ -15,16 +16,17 @@ from qibolab.pulses import (
     Gaussian,
     Pulse,
     PulseSequence,
+    PulseShape,
     ReadoutPulse,
     Rectangular,
-    PulseShape,
 )
-from qibo.config import log
+
+
 #################################################################
 #
-class tii_rfsoc4x2():
-#
-#################################################################
+class tii_rfsoc4x2:
+    #
+    #################################################################
     def __init__(self, name: str, address: str, setting_parameters: dict):
 
         self.settings = setting_parameters
@@ -54,8 +56,6 @@ class tii_rfsoc4x2():
             sock.sendall(json.dumps(jsonDic).encode())
 
         sock.close()
-        
-
 
     def play_sequence_and_acquire(self, sequence):
         """Executes the sequence of instructions and retrieves the readout results.
@@ -117,7 +117,3 @@ class tii_rfsoc4x2():
             avgq = np.array([avg["avgqRe"], avg["avgqIm"]])
         sock.close()
         return avgi, avgq
-
-
-
-

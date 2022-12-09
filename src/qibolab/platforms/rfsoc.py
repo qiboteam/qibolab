@@ -17,24 +17,23 @@ from qibolab.pulses import (
 
 
 class RFSoc1qPlatform(AbstractPlatform):
-
-
     def __init__(self, name, runcard):
         log.info(f"Loading platform {name} from runcard {runcard}")
         self.name = name
         self.runcard = runcard
-        #self.is_connected = False
+        # self.is_connected = False
         # Load platform settings
         with open(runcard) as file:
             self.settings = yaml.safe_load(file)
-#        address =   self.settings["instruments"]["tii_rfsoc4x2"]["settings"]["ip_address"]    
+        #        address =   self.settings["instruments"]["tii_rfsoc4x2"]["settings"]["ip_address"]
         lib = self.settings["instruments"][name]["lib"]
         i_class = self.settings["instruments"][name]["class"]
         address = self.settings["instruments"][name]["settings"]["ip_address"]
         from importlib import import_module
+
         InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
         self.fpga = InstrumentClass(name, address, self.settings)
-        
+
     def reload_settings(self):
         raise NotImplementedError
 
@@ -46,7 +45,6 @@ class RFSoc1qPlatform(AbstractPlatform):
 
     def setup(self):
         raise NotImplementedError
-
 
     def start(self):
         raise NotImplementedError
@@ -61,4 +59,3 @@ class RFSoc1qPlatform(AbstractPlatform):
         self.fpga.setup()
         avgi, avgq = self.fpga.play_sequence_and_acquire(sequence)
         return avgi, avgq
-
