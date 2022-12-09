@@ -16,8 +16,8 @@ def Platform(name, runcard=None):
         from qibolab.platforms.multiqubit import MultiqubitPlatform as Device
     elif name == "icarusq":
         from qibolab.platforms.icplatform import ICPlatform as Device
-    elif name == "rfsoc":
-        from qibolab.platforms.rfsoc import RFSocPlatform as Device
+    elif name == "tii_rfsoc4x2":
+        from qibolab.platforms.rfsoc import RFSoc1qPlatform as Device
     elif name == "dummy":
         from qibolab.platforms.dummy import DummyPlatform as Device
     else:

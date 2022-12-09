@@ -16,30 +16,25 @@ from qibolab.pulses import (
 )
 
 
-class RFSocPlatform(AbstractPlatform):
+class RFSoc1qPlatform(AbstractPlatform):
+
+
     def __init__(self, name, runcard):
         log.info(f"Loading platform {name} from runcard {runcard}")
         self.name = name
         self.runcard = runcard
-        self.is_connected = False
+        #self.is_connected = False
         # Load platform settings
         with open(runcard) as file:
             self.settings = yaml.safe_load(file)
-
-        self.cfg = self.settings["instruments"]["tii_rfsoc4x2"]["settings"]
-
-        self.host = self.cfg["ip_address"]
-        self.port = self.cfg["ip_port"]
-
-        # Create a socket (SOCK_STREAM means a TCP socket) and send configuration
-        jsonDic = self.cfg
-        jsonDic["opCode"] = "configuration"
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            # Connect to server and send data
-            sock.connect((self.host, self.port))
-            sock.sendall(json.dumps(jsonDic).encode())
-        sock.close()
-
+#        address =   self.settings["instruments"]["tii_rfsoc4x2"]["settings"]["ip_address"]    
+        lib = self.settings["instruments"][name]["lib"]
+        i_class = self.settings["instruments"][name]["class"]
+        address = self.settings["instruments"][name]["settings"]["ip_address"]
+        from importlib import import_module
+        InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
+        self.fpga = InstrumentClass(name, address, self.settings)
+        
     def reload_settings(self):
         raise NotImplementedError
 
@@ -49,20 +44,9 @@ class RFSocPlatform(AbstractPlatform):
     def connect(self):
         raise NotImplementedError
 
-    def setup(self, rabi_length):
-        self.experiment = self.settings["instruments"]["tii_rfsoc4x2"]["experiment"]
-        self.experiment["rabi_length"] = rabi_length
+    def setup(self):
+        raise NotImplementedError
 
-        jsonDic = self.experiment
-        jsonDic["opCode"] = "setup"
-        # Create a socket (SOCK_STREAM means a TCP socket)
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            # Connect to server and send data
-            sock.connect((self.host, self.port))
-            sock.sendall(json.dumps(jsonDic).encode())
-
-        sock.close()
-        return
 
     def start(self):
         raise NotImplementedError
@@ -74,56 +58,7 @@ class RFSocPlatform(AbstractPlatform):
         raise NotImplementedError
 
     def execute_pulse_sequence(self, sequence, nshots=None):
-        ps: PulseShape
-
-        jsonDic = {}
-        i = 0
-        for pulse in sequence:
-            ps = pulse.shape
-            if type(ps) is Drag:
-                shape = "Drag"
-                style = "arb"
-                rel_sigma = ps.rel_sigma
-                beta = ps.beta
-            elif type(ps) is Gaussian:
-                shape: "Gaussian"
-                style = "arb"
-                rel_sigma = ps.rel_sigma
-                beta = 0
-            elif type(ps) is Rectangular:
-                shape: "Rectangular"
-                style = "const"
-                rel_sigma = 0
-                beta = 0
-
-            pulseDic = {
-                "start": pulse.start,
-                "duration": pulse.duration,
-                "amplitude": pulse.amplitude,
-                "frequency": pulse.frequency,
-                "relative_phase": pulse.relative_phase,
-                #                        "shape": shape,
-                "style": style,
-                "rel_sigma": rel_sigma,
-                "beta": beta,
-                "channel": pulse.channel,
-                #                        "type": pulse.type,
-                "qubit": pulse.qubit,
-            }
-            jsonDic["pulse" + str(i)] = pulseDic
-            i = i + 1
-
-        jsonDic["opCode"] = "execute"
-        # Create a socket (SOCK_STREAM means a TCP socket)
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            # Connect to server and send data
-            sock.connect((self.host, self.port))
-            sock.sendall(json.dumps(jsonDic).encode())
-            # Receive data from the server and shut down
-            received = sock.recv(256)
-            avg = json.loads(received.decode("utf-8"))
-            avgi = np.array([avg["avgiRe"], avg["avgiIm"]])
-            avgq = np.array([avg["avgqRe"], avg["avgqIm"]])
-        sock.close()
-
+        self.fpga.setup()
+        avgi, avgq = self.fpga.play_sequence_and_acquire(sequence)
         return avgi, avgq
+
