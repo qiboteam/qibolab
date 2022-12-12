@@ -358,7 +358,6 @@ class AbstractPlatform(ABC):
 
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
-
     def create_CZ_pulse(self, qubits, start=0):
         # Check in the settings if qubits[0]-qubits[1] is a key
         if f"{qubits[0]}-{qubits[1]}" in self.settings["native_gates"]["two_qubit"]:
@@ -376,6 +375,7 @@ class AbstractPlatform(ABC):
             settings = [settings]
 
         from qibolab.pulses import FluxPulse, PulseSequence
+
         sequence = PulseSequence()
         for pulse_setting in settings:
             if pulse_setting["type"] == "qb":
@@ -392,7 +392,7 @@ class AbstractPlatform(ABC):
                     ValueError,
                     f"Calibration for CZ gate between qubits {qubits[0]} and {qubits[1]} not found.",
                 )
-        return 
+        return
 
     def create_MZ_pulse(self, qubit, start):
         ro_duration = self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["duration"]
