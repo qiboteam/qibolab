@@ -1331,6 +1331,15 @@ class PulseSequence:
                 new_pc.add(pulse)
         return new_pc
 
+    def get_qubit_pulses(self, qubit):
+        """Returns a new PulseSequence containing only the pulses on a specific qubit."""
+
+        new_pc = PulseSequence()
+        for pulse in self.pulses:
+            if pulse.qubit == qubit:
+                new_pc.add(pulse)
+        return new_pc
+
     @property
     def is_empty(self):
         """Returns True if the sequence does not contain any pulses."""

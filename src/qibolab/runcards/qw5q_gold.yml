@@ -339,9 +339,9 @@ native_gates:
 
     two_qubit:
         2-3: # qubit numbers
-            CZ_rectangular:
-            - duration: 180
-              amplitude: 0.113
+            CZ:
+            - duration: 160
+              amplitude: 0.1121
               shape: Rectangular()
               qubit: 3
               type: qb
@@ -381,8 +381,8 @@ characterization:
             T2: 3045
             state0_voltage: 1025
             state1_voltage: 1637
-            mean_gnd_states: (0.00010587068156-8.82584460490841e-5j)
-            mean_exc_states: (-1.2360409287979133e-5+0.0003199248805416143j)
+            mean_gnd_states: (0.0009195373564972653-0.00036683733054465963j)
+            mean_exc_states: (0.00129654510602401+0.0007611293298882167j)
             sweetspot: 0.01140
         3:
             resonator_freq: 7_802_111_675
@@ -391,8 +391,8 @@ characterization:
             T2: 1147
             state0_voltage: 2076
             state1_voltage: 2474
-            mean_gnd_states: (-0.0007566224486-0.00075100685645j)
-            mean_exc_states: (-0.00036725428981-0.0011040656868j)
+            mean_gnd_states: (-0.001710519825125132-0.0010738022678003902j)
+            mean_exc_states: (-0.0010454721753632872-0.00215672492328707j)
             sweetspot: 0.01320
         4:
             resonator_freq: 8_057_658_228
