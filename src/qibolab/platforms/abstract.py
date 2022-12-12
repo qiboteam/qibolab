@@ -268,7 +268,7 @@ class AbstractPlatform(ABC):
 
             elif isinstance(gate, gates.CZ):
                 # Get channel pulses for both qubits and get the latest finish time
-                finish = 0 
+                finish = 0
                 for qubit in gate.qubits:
                     if sequence.get_qubit_pulses(qubit).finish > finish:
                         finish = sequence.get_channel_pulses(self.qubit_channel_map).finish
@@ -380,6 +380,7 @@ class AbstractPlatform(ABC):
             settings = [settings]
 
         from qibolab.pulses import FluxPulse, PulseSequence
+
         sequence = PulseSequence()
         for pulse_setting in settings:
             if pulse_setting["type"] == "qb":
@@ -390,7 +391,9 @@ class AbstractPlatform(ABC):
                 qd_channel = self.settings["qubit_channel_map"][qubit][2]
                 sequence.add(FluxPulse(start, qd_duration, qd_amplitude, qd_shape, qd_channel, qubit))
             elif pulse_setting["type"] == "virtual_z" and virtual_z_phase is not None:
-                sequence.virtual_z_phase[pulse_setting["qubit"]] = virtual_z_phase[pulse_setting["qubit"]] + pulse_setting["phase"]
+                sequence.virtual_z_phase[pulse_setting["qubit"]] = (
+                    virtual_z_phase[pulse_setting["qubit"]] + pulse_setting["phase"]
+                )
         return sequence
 
     def create_MZ_pulse(self, qubit, start):
