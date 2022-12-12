@@ -352,9 +352,8 @@ class QuantumMachinesPlatform(AbstractPlatform):
 
     def register_pulse(self, pulse):
         pulses = self.config["pulses"]
+        qubit = self.qubits[pulse.qubit]
         if pulse.serial not in pulses:
-
-            qubit = self.qubits[pulse.qubit]
             # upload qubit elements and mixers to Quantum Machines config
             self.config["elements"].update(qubit.elements)
             self.config["mixers"].update(qubit.mixers)
@@ -369,7 +368,6 @@ class QuantumMachinesPlatform(AbstractPlatform):
                 }
                 qubit.set_drive_if_frequency(pulse.frequency)
                 qubit.register_drive_pulse(pulse)
-                return f"drive{qubit}"
 
             elif pulse.type.name == "FLUX":
                 serial = self.register_waveform(pulse)
@@ -383,7 +381,6 @@ class QuantumMachinesPlatform(AbstractPlatform):
                 }
                 qubit.set_flux_frequency(pulse.frequency)
                 qubit.register_flux_pulse(pulse)
-                return f"flux{qubit}"
 
             elif pulse.type.name == "READOUT":
                 serial_i = self.register_waveform(pulse, "i")
@@ -405,10 +402,11 @@ class QuantumMachinesPlatform(AbstractPlatform):
                 }
                 qubit.set_readout_if_frequency(pulse.frequency)
                 qubit.register_readout_pulse(pulse)
-                return f"readout{qubit}"
 
             else:
                 raise_error(TypeError, f"Unknown pulse type {pulse.type.name}.")
+
+        return f"{pulse.type.name.lower()}{str(qubit)}"
 
     def execute_program(self, program):
         if self.simulation:
@@ -420,13 +418,21 @@ class QuantumMachinesPlatform(AbstractPlatform):
             return machine.execute(program)
 
     def execute_pulse_sequence(self, sequence, nshots=None):
-        from qm.qua import play, program
+        from qm.qua import play, program, wait
 
+        # TODO: Implement readout
+        # TODO: Fix phases
+        # TODO: Handle pulses that run on the same port simultaneously (multiplex?)
         # register pulses in Quantum Machines config
         targets = [self.register_pulse(pulse) for pulse in sequence]
         # play pulses using QUA
+        clock = {target: 0 for target in targets}
         with program() as experiment:
             for pulse, target in zip(sequence, targets):
+                wait_time = pulse.start - clock[target]
+                if wait_time > 0:
+                    wait(wait_time // 4, target)
                 play(pulse.serial, target)
+                clock[target] += pulse.duration
 
         return self.execute_program(experiment)
