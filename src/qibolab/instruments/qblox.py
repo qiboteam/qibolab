@@ -2171,6 +2171,7 @@ class ClusterQCM(AbstractInstrument):
                     (),
                     {
                         "gain": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o1"], "gain_awg_path0"),
+                        "offset": self.property_wrapper("out0_offset"),
                         "hardware_mod_en": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o1"], "mod_en_awg"),
                         "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o1"], "nco_freq"),
                         "nco_phase_offs": self.sequencer_property_wrapper(
@@ -2184,6 +2185,7 @@ class ClusterQCM(AbstractInstrument):
                     (),
                     {
                         "gain": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o2"], "gain_awg_path1"),
+                        "offset": self.property_wrapper("out1_offset"),
                         "hardware_mod_en": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o2"], "mod_en_awg"),
                         "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o2"], "nco_freq"),
                         "nco_phase_offs": self.sequencer_property_wrapper(
@@ -2197,6 +2199,7 @@ class ClusterQCM(AbstractInstrument):
                     (),
                     {
                         "gain": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o3"], "gain_awg_path0"),
+                        "offset": self.property_wrapper("out2_offset"),
                         "hardware_mod_en": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o3"], "mod_en_awg"),
                         "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o3"], "nco_freq"),
                         "nco_phase_offs": self.sequencer_property_wrapper(
@@ -2210,6 +2213,7 @@ class ClusterQCM(AbstractInstrument):
                     (),
                     {
                         "gain": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o4"], "gain_awg_path1"),
+                        "offset": self.property_wrapper("out3_offset"),
                         "hardware_mod_en": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o4"], "mod_en_awg"),
                         "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o4"], "nco_freq"),
                         "nco_phase_offs": self.sequencer_property_wrapper(
@@ -2378,6 +2382,7 @@ class ClusterQCM(AbstractInstrument):
 
             for port in ["o1", "o2", "o3", "o4"]:
                 self.ports[port].gain = kwargs["ports"][port]["gain"]  # Default after reboot = 1
+                self.ports[port].offset = kwargs["ports"][port]["offset"]
                 self.ports[port].hardware_mod_en = kwargs["ports"][port][
                     "hardware_mod_en"
                 ]  # Default after reboot = False
