@@ -222,14 +222,14 @@ instruments:
                 L4-4_f: [1, 4, -0.00800] # qubit 4
                 L4-5_f: [2, 1, +0.00000] # qubit 0
 
-    # twpa_pump:
-    #     lib: rohde_schwarz
-    #     class: SGS100A
-    #     address: 192.168.0.35
-    #     roles: [other]
-    #     settings:
-    #         frequency: 6_558_000_000 # Hz
-    #         power: 4.8 # dBm
+    twpa_pump:
+        lib: rohde_schwarz
+        class: SGS100A
+        address: 192.168.0.35
+        roles: [other]
+        settings:
+            frequency: 6_558_000_000 # Hz
+            power: 4.8 # dBm
 
 
 native_gates:
