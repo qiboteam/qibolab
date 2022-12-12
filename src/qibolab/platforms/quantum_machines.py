@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import numpy as np
 import yaml
 from qibo.config import log, raise_error
+from qm import SimulationConfig
 from qm.QuantumMachinesManager import QuantumMachinesManager
 
 from qibolab.instruments.rohde_schwarz import SGS100A
@@ -25,6 +26,7 @@ def iq_imbalance(g, phi):
 
 class Channel:
 
+    # TODO: Move this dictionary inside the platform
     instances = {}
 
     def __new__(cls, name):
@@ -34,7 +36,9 @@ class Channel:
         if name not in cls.instances:
             new = super().__new__(cls)
             new.name = name
+
             new.ports = []
+            new.qubits = []
             new.local_oscillator = None
 
             new.time_of_flight = None
@@ -46,6 +50,10 @@ class Channel:
 
     def __repr__(self):
         return f"<Channel {self.name}>"
+
+    def set_lo_frequency(self, frequency):
+        for qubit, mode in self.qubits:
+            getattr(qubit, f"set_{mode}_lo_frequency")(frequency)
 
 
 class Qubit:
@@ -61,6 +69,8 @@ class Qubit:
         # elements entry for ``QuantumMachinesManager`` config
         self.elements = {}
         if drive:
+            # update qubits list in the channel
+            drive.qubits.append((self, "drive"))
             self.elements[f"drive{self.name}"] = {
                 "mixInputs": {
                     "I": self.drive.ports[0],
@@ -68,18 +78,20 @@ class Qubit:
                     "lo_frequency": None,
                     "mixer": f"mixer_drive{self.name}",
                 },
-                "intermediate_frequency": None,
+                "intermediate_frequency": 0,
                 "operations": {},
             }
         if readout:
+            # update qubits list in the channel
+            readout.qubits.append((self, "readout"))
             self.elements[f"readout{self.name}"] = {
                 "mixInputs": {
                     "I": self.readout.ports[0],
                     "Q": self.readout.ports[1],
                     "lo_frequency": None,
-                    "mixer": f"mixer_resonator_{self.name}",
+                    "mixer": f"mixer_readout{self}",
                 },
-                "intermediate_frequency": None,
+                "intermediate_frequency": 0,
                 "operations": {},
                 "outputs": {
                     "out1": self.feedback.ports[0],
@@ -89,11 +101,13 @@ class Qubit:
                 "smearing": self.feedback.smearing,
             }
         if flux:
+            # update qubits list in the channel
+            flux.qubits.append((self, "flux"))
             self.elements[f"flux{self.name}"] = {
                 "singleInput": {
                     "port": self.flux.ports[0],
                 },
-                "intermediate_frequency": None,
+                "intermediate_frequency": 0,
                 "operations": {},
             }
 
@@ -104,7 +118,7 @@ class Qubit:
             drive_phi = self.characterization.mixer_drive_phi
             self.mixers[f"mixer_drive{self}"] = [
                 {
-                    "intermediate_frequency": None,
+                    "intermediate_frequency": 0,
                     "lo_frequency": None,
                     "correction": iq_imbalance(drive_g, drive_phi),
                 }
@@ -114,7 +128,7 @@ class Qubit:
             readout_phi = self.characterization.mixer_readout_phi
             self.mixers[f"mixer_readout{self}"] = [
                 {
-                    "intermediate_frequency": None,
+                    "intermediate_frequency": 0,
                     "lo_frequency": None,
                     "correction": iq_imbalance(readout_g, readout_phi),
                 }
@@ -127,10 +141,12 @@ class Qubit:
         return f"<Qubit {self.name}>"
 
     def set_drive_lo_frequency(self, frequency):
+        # TODO: Maybe this can be moved to ``Channel``
         self.elements[f"drive{self}"]["mixInputs"]["lo_frequency"] = frequency
         self.mixers[f"mixer_drive{self}"][0]["lo_frequency"] = frequency
 
     def set_readout_lo_frequency(self, frequency):
+        # TODO: Maybe this can be moved to ``Channel``
         self.elements[f"readout{self}"]["mixInputs"]["lo_frequency"] = frequency
         self.mixers[f"mixer_readout{self}"][0]["lo_frequency"] = frequency
 
@@ -171,7 +187,7 @@ class QuantumMachinesPlatform(AbstractPlatform):
 
         settings = self.settings["settings"]
         self.simulation = settings["simulation"]
-        self.simulation_duration = settings["simulation_duration"]
+        self.simulation_duration = settings["simulation_duration"] // 4  # convert to clock cycles
 
         # Create feedback channel (for readout input to instrument)
         feedback = Channel(self.settings["feedback_channel"])
@@ -201,10 +217,10 @@ class QuantumMachinesPlatform(AbstractPlatform):
                 Channel(channel_name).ports = [(controller, p) for p in ports]
 
         # Instantiate local oscillators
-        local_oscillators = {}
+        self.local_oscillators = {}
         for name, value in instruments.items():
             lo = SGS100A(name, value["address"])
-            local_oscillators[name] = lo
+            self.local_oscillators[name] = lo
             for channel_name in value["channels"]:
                 Channel(channel_name).local_oscillator = lo
 
@@ -219,9 +235,9 @@ class QuantumMachinesPlatform(AbstractPlatform):
         if self.simulation:
             from qm.simulate.credentials import create_credentials
 
-            manager = QuantumMachinesManager(qm["address"], qm["port"], credentials=create_credentials())
+            self.manager = QuantumMachinesManager(qm["address"], qm["port"], credentials=create_credentials())
         else:
-            manager = QuantumMachinesManager(qm["address"], qm["port"])
+            self.manager = QuantumMachinesManager(qm["address"], qm["port"])
 
         self.reload_settings()
 
@@ -271,13 +287,16 @@ class QuantumMachinesPlatform(AbstractPlatform):
                 )
 
     def setup(self):
-        if not self.is_connected:
-            raise_error(
-                RuntimeError,
-                "There is no connection to the instruments, the setup cannot be completed",
-            )
-        for name, lo in self.local_oscillators.items():
-            lo.setup(**self.settings["instruments"][name]["settings"])
+        if self.is_connected:
+            for name, lo in self.local_oscillators.items():
+                lo.setup(**self.settings["instruments"][name]["settings"])
+        else:
+            log.warn("There is no connection to local oscillators. Frequencies were not set.")
+            for name, lo in self.local_oscillators.items():
+                inst = self.settings["instruments"][name]
+                frequency = inst["settings"]["frequency"]
+                for channel_name in inst["channels"]:
+                    Channel(channel_name).set_lo_frequency(frequency)
 
     def start(self):
         if self.is_connected:
@@ -296,16 +315,22 @@ class QuantumMachinesPlatform(AbstractPlatform):
                 lo.disconnect()
             self.is_connected = False
 
-    def register_waveform(self, waveform):
+    def register_waveform(self, pulse, mode="i"):
         # example waveforms
         # "zero_wf": {"type": "constant", "sample": 0.0},
         # "x90_wf": {"type": "arbitrary", "samples": x90_wf.tolist()},
-        # "x90_der_wf": {"type": "arbitrary", "samples": x90_der_wf.tolist()},
-        # TODO: Fix constant waveforms
+        from qibolab.pulses import Rectangular
+
         waveforms = self.config["waveforms"]
-        serial = waveform.serial
-        if serial not in waveforms:
-            waveforms[serial] = {"type": "arbitrary", "samples": waveform.data.tolist()}
+        if isinstance(pulse.shape, Rectangular):
+            serial = f"constant_wf{pulse.amplitude}"
+            if serial not in waveforms:
+                waveforms[serial] = {"type": "constant", "sample": pulse.amplitude}
+        else:
+            waveform = getattr(pulse, f"envelope_waveform_{mode}")
+            serial = waveform.serial
+            if serial not in waveforms:
+                waveforms[serial] = {"type": "arbitrary", "samples": waveform.data.tolist()}
         return serial
 
     def register_integration_weights(self, qubit, readout_len):
@@ -335,8 +360,8 @@ class QuantumMachinesPlatform(AbstractPlatform):
             self.config["mixers"].update(qubit.mixers)
 
             if pulse.type.name == "DRIVE":
-                serial_i = self.register_waveform(pulse.envelope_waveform_i)
-                serial_q = self.register_waveform(pulse.envelope_waveform_q)
+                serial_i = self.register_waveform(pulse, "i")
+                serial_q = self.register_waveform(pulse, "q")
                 pulses[pulse.serial] = {
                     "operation": "control",
                     "length": pulse.duration,
@@ -347,7 +372,7 @@ class QuantumMachinesPlatform(AbstractPlatform):
                 return f"drive{qubit}"
 
             elif pulse.type.name == "FLUX":
-                serial = self.register_waveform(pulse.envelope_waveform_i)
+                serial = self.register_waveform(pulse)
                 self.qubits[pulse.qubit].set_flux_frequency(pulse.frequency)
                 pulses[pulse.serial] = {
                     "operation": "control",
@@ -361,8 +386,8 @@ class QuantumMachinesPlatform(AbstractPlatform):
                 return f"flux{qubit}"
 
             elif pulse.type.name == "READOUT":
-                serial_i = self.register_waveform(pulse.envelope_waveform_i)
-                serial_q = self.register_waveform(pulse.envelope_waveform_q)
+                serial_i = self.register_waveform(pulse, "i")
+                serial_q = self.register_waveform(pulse, "q")
                 self.register_integration_weights(qubit, pulse.duration)
                 pulses[pulse.serial] = {
                     "operation": "measurement",
@@ -395,7 +420,7 @@ class QuantumMachinesPlatform(AbstractPlatform):
             return machine.execute(program)
 
     def execute_pulse_sequence(self, sequence, nshots=None):
-        # from qm.qua import *
+        from qm.qua import play, program
 
         # register pulses in Quantum Machines config
         targets = [self.register_pulse(pulse) for pulse in sequence]
