@@ -279,6 +279,9 @@ class AbstractPlatform(ABC):
                     MZ_pulse = self.create_MZ_pulse(qubit, measurement_start)
                     sequence.add(MZ_pulse)  # append_at_end_of_channel?
 
+            elif isinstance(gate, gates.CZ):
+                sequence += self.create_CZ_pulse(gate.qubits, sequence.finish)
+
             elif isinstance(gate, gates.U3):
                 qubit = gate.target_qubits[0]
                 # Transform gate to U3 and add pi/2-pulses
@@ -346,7 +349,42 @@ class AbstractPlatform(ABC):
         from qibolab.pulses import Pulse
 
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
+    
+    def create_CZ_pulse(self, qubits, start=0):
+        # Check in the settings if qubits[0]-qubits[1] is a key
+        if f"{qubits[0]}-{qubits[1]}" in self.settings["native_gates"]["two_qubit"]:
+            settings = self.settings["native_gates"]["two_qubit"][f"{qubits[0]}-{qubits[1]}"]["CZ"]
+        elif f"{qubits[1]}-{qubits[0]}" in self.settings["native_gates"]["two_qubit"]:
+            settings = self.settings["native_gates"]["two_qubit"][f"{qubits[1]}-{qubits[0]}"]["CZ"]
+        else:
+            raise_error(
+                ValueError,
+                f"Calibration for CZ gate between qubits {qubits[0]} and {qubits[1]} not found.",
+            )
 
+        # Check if more than one pulse in settings
+        if isinstance(settings, dict):
+            settings = [settings]
+
+        from qibolab.pulses import FluxPulse, PulseSequence
+        sequence = PulseSequence()
+        for pulse_setting in settings:
+            if pulse_setting["type"] == "qb":
+                qd_duration = pulse_setting["duration"]
+                qd_amplitude = pulse_setting["amplitude"]
+                qd_shape = pulse_setting["shape"]
+                qubit = pulse_setting["qubit"]
+                qd_channel = self.settings["qubit_channel_map"][qubit][2]
+                sequence.add(FluxPulse(start, qd_duration, qd_amplitude, 0, qd_shape, qd_channel, qubit))
+            elif pulse_setting["type"] == "virtual_z":
+                sequence.virtual_z_phases[pulse_setting["qubit"]] += pulse_setting["phase"]
+            else:
+                raise_error(
+                    ValueError,
+                    f"Calibration for CZ gate between qubits {qubits[0]} and {qubits[1]} not found.",
+                )
+        return sequence
+        
     def create_RX_pulse(self, qubit, start=0, relative_phase=0):
         qd_duration = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["duration"]
         qd_frequency = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["frequency"]
@@ -416,3 +454,4 @@ class AbstractPlatform(ABC):
         from qibolab.pulses import Pulse
 
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
+
