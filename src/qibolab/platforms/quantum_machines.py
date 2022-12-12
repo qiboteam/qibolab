@@ -26,7 +26,7 @@ def iq_imbalance(g, phi):
 
 class Channel:
 
-    # TODO: Move this dictionary inside the platform
+    # TODO: Maybe this dictionary can be moved inside platform
     instances = {}
 
     def __new__(cls, name):
@@ -336,15 +336,15 @@ class QuantumMachinesPlatform(AbstractPlatform):
     def register_integration_weights(self, qubit, readout_len):
         rotation_angle = qubit.characterization.rotation_angle
         self.config["integration_weights"] = {
-            f"rotated_cosine_weights_{qubit}": {
+            f"cosine_weights{qubit}": {
                 "cosine": [(np.cos(rotation_angle), readout_len)],
                 "sine": [(-np.sin(rotation_angle), readout_len)],
             },
-            f"rotated_sine_weights_{qubit}": {
+            f"sine_weights{qubit}": {
                 "cosine": [(np.sin(rotation_angle), readout_len)],
                 "sine": [(np.cos(rotation_angle), readout_len)],
             },
-            f"rotated_minus_sine_weights_{qubit}": {
+            f"minus_sine_weights{qubit}": {
                 "cosine": [(-np.sin(rotation_angle), readout_len)],
                 "sine": [(-np.cos(rotation_angle), readout_len)],
             },
@@ -394,9 +394,9 @@ class QuantumMachinesPlatform(AbstractPlatform):
                         "Q": serial_q,
                     },
                     "integration_weights": {
-                        "rotated_cos": f"rotated_cosine_weights_{pulse.qubit}",
-                        "rotated_sin": f"rotated_sine_weights_{pulse.qubit}",
-                        "rotated_minus_sin": f"rotated_minus_sine_weights_{pulse.qubit}",
+                        "cos": f"cosine_weights{pulse.qubit}",
+                        "sin": f"sine_weights{pulse.qubit}",
+                        "minus_sin": f"minus_sine_weights{pulse.qubit}",
                     },
                     "digital_marker": "ON",
                 }
@@ -418,21 +418,61 @@ class QuantumMachinesPlatform(AbstractPlatform):
             return machine.execute(program)
 
     def execute_pulse_sequence(self, sequence, nshots=None):
-        from qm.qua import play, program, wait
+        from qm.qua import (
+            declare,
+            declare_stream,
+            dual_demod,
+            fixed,
+            for_,
+            measure,
+            play,
+            program,
+            save,
+            stream_processing,
+            wait,
+        )
 
-        # TODO: Implement readout
+        if nshots is None:
+            nshots = self.settings["settings"]["hardware_avg"]
+
         # TODO: Fix phases
-        # TODO: Handle pulses that run on the same port simultaneously (multiplex?)
+        # TODO: Handle pulses that run on the same element simultaneously (multiplex?)
         # register pulses in Quantum Machines config
         targets = [self.register_pulse(pulse) for pulse in sequence]
         # play pulses using QUA
         clock = {target: 0 for target in targets}
         with program() as experiment:
-            for pulse, target in zip(sequence, targets):
-                wait_time = pulse.start - clock[target]
-                if wait_time > 0:
-                    wait(wait_time // 4, target)
-                play(pulse.serial, target)
-                clock[target] += pulse.duration
+            n = declare(int)
+            I = declare(fixed)
+            Q = declare(fixed)
+            I_st = declare_stream()
+            Q_st = declare_stream()
+            with for_(n, 0, n < nshots, n + 1):
+                for pulse, target in zip(sequence, targets):
+                    wait_time = pulse.start - clock[target]
+                    if wait_time > 0:
+                        wait(wait_time // 4, target)
+                    clock[target] += pulse.duration
+                    if pulse.type.name == "READOUT":
+                        # align("qubit", "resonator")
+                        measure(
+                            pulse.serial,
+                            target,
+                            None,
+                            dual_demod.full("cos", "out1", "sin", "out2", I),
+                            dual_demod.full("minus_sin", "out1", "cos", "out2", Q),
+                        )
+                    else:
+                        play(pulse.serial, target)
+                # Save data to the stream processing
+                save(I, I_st)
+                save(Q, Q_st)
+
+            with stream_processing():
+                # I_st.average().save("I")
+                # Q_st.average().save("Q")
+                # n_st.buffer().save_all("n")
+                I_st.buffer(nshots).save("I")
+                Q_st.buffer(nshots).save("Q")
 
         return self.execute_program(experiment)
