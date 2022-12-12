@@ -384,7 +384,7 @@ class AbstractPlatform(ABC):
                 qd_shape = pulse_setting["shape"]
                 qubit = pulse_setting["qubit"]
                 qd_channel = self.settings["qubit_channel_map"][qubit][2]
-                sequence.add(FluxPulse(start, qd_duration, qd_amplitude, 0, qd_shape, qd_channel, qubit))
+                sequence.add(FluxPulse(start, qd_duration, qd_amplitude, qd_shape, qd_channel, qubit))
             elif pulse_setting["type"] == "virtual_z":
                 sequence.virtual_z_phases[pulse_setting["qubit"]] += pulse_setting["phase"]
             else:
