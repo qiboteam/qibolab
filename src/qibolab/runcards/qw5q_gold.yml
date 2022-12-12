@@ -231,32 +231,6 @@ instruments:
     #         frequency: 6_558_000_000 # Hz
     #         power: 4.8 # dBm
 
-ignore:
-
-    # qcm_bb2: # qubit 0
-    #     lib: qblox
-    #     class: ClusterQCM
-    #     address: 192.168.0.6:3
-    #     roles: [control]
-    #     settings:
-    #         ports:
-    #             o1:
-    #                 gain                         : 0.2 # -1.0<=v<=1.0
-    #                 hardware_mod_en              : false
-    #             o2:
-    #                 gain                         : 0 # -1.0<=v<=1.0
-    #                 hardware_mod_en              : false
-    #             o3:
-    #                 gain                         : 0 # -1.0<=v<=1.0
-    #                 hardware_mod_en              : false
-    #             o4:
-    #                 gain                         : 0 # -1.0<=v<=1.0
-    #                 hardware_mod_en              : false
-    #         channel_port_map:
-    #             L4-5: o1 # only plays the i waveform of the pulse
-    #             101: o2 # only plays the q waveform of the pulse
-    #             102: o3 # only plays the i waveform of the pulse
-    #             103: o4 # only plays the q waveform of the pulse
 
 native_gates:
     single_qubit:
@@ -366,17 +340,17 @@ native_gates:
     two_qubit:
         2-3: # qubit numbers
             CZ_rectangular:
-                -   duration: 180
-                    amplitude: 0.113
-                    shape: Rectangular()
-                    qubit: 3
-                    type: qb
-                -  type: virtual_z
-                    phase: 0
-                    qubit: 2
-                -  type: virtual_z
-                    phase: 0
-                    qubit: 3
+            - duration: 180
+              amplitude: 0.113
+              shape: Rectangular()
+              qubit: 3
+              type: qb
+            - type: virtual_z
+              phase: 0
+              qubit: 2
+            - type: virtual_z
+              phase: 0
+              qubit: 3
 
 characterization:
     single_qubit:
