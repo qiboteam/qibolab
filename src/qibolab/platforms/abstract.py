@@ -277,7 +277,6 @@ class AbstractPlatform(ABC):
                     sequence.virtual_z_phases[key] = sequence_cz.virtual_z_phases[key]
                 sequence.append(sequence_cz)
 
-
             elif isinstance(gate, gates.RZ):
                 qubit = gate.target_qubits[0]
                 sequence.virtual_z_phases[qubit] += gate.parameters[0]
