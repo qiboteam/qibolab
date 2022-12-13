@@ -56,8 +56,6 @@ def translate_circuit(circuit, two_qubit_natives, translate_single_qubit=False):
     """
     new = circuit.__class__(circuit.nqubits)
     for gate in circuit.queue:
-        # Check
-        # Run more times for 2 qubit gates?
         if len(gate.qubits) > 1 or translate_single_qubit:
             new.add(translate_gate(gate, two_qubit_natives))
         else:
@@ -101,8 +99,7 @@ def can_execute(circuit, two_qubit_natives):
                     log.info(f"{gate.name} is not a two qubit native gate.")
                     return False
             elif iSWAP_is_native:
-                # TODO: all gates mapped to iSWAP
-                if not isinstance(gate, (gates.CZ, gates.iSWAP)):
+                if not isinstance(gate, (gates.CZ, gates.iSWAP)):  # TODO: all gates transformed to iswap
                     log.info(f"{gate.name} is not a two qubit native gate.")
                     return False
             else:

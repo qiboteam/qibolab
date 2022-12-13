@@ -22,8 +22,10 @@ def generate_random_circuit(nqubits, ngates, seed=None):
         gates.CZ,
         gates.SWAP,
         gates.iSWAP,
+        gates.CRX,
+        gates.CRY,
+        gates.CRZ,
     ]
-    # gates.CRX, gates.CRY, gates.CRZ,
     n1, n2 = len(one_qubit_gates), len(two_qubit_gates)
     n = n1 + n2 if nqubits > 1 else n1
     circuit = Circuit(nqubits)
@@ -48,8 +50,8 @@ def generate_random_circuit(nqubits, ngates, seed=None):
 @pytest.mark.parametrize("two_qubit_natives", [["CZ"], ["iSWAP"], ["CZ", "iSWAP"]])
 @pytest.mark.parametrize("run_number", range(3))
 @pytest.mark.parametrize("nqubits", [1, 2, 3, 4, 5])
-@pytest.mark.parametrize("ngates", [20, 50, 100])
-@pytest.mark.parametrize("fuse_one_qubit", [False, True])
+@pytest.mark.parametrize("ngates", [25, 50])
+@pytest.mark.parametrize("fuse_one_qubit", [False])  # True
 def test_transpile(run_number, nqubits, ngates, fuse_one_qubit, two_qubit_natives):
     backend = NumpyBackend()
     circuit = generate_random_circuit(nqubits, ngates)

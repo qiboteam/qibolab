@@ -65,7 +65,7 @@ def test_two_qubit_to_native(gatename, natives):
     assert_matrices_allclose(gate, two_qubit_natives=natives)
 
 
-@pytest.mark.parametrize("natives,phase", [(["CZ"], -1j), (["iSWAP"], -1j), (["CZ", "iSWAP"], 1)])
+@pytest.mark.parametrize("natives,phase", [(["CZ"], -1j), (["iSWAP"], -1j), (["CZ", "iSWAP"], -1j)])
 def test_iswap_to_native(natives, phase):
     gate = gates.iSWAP(0, 1)
     assert_matrices_allclose(gate, two_qubit_natives=natives, phase=phase)
