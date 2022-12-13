@@ -275,7 +275,7 @@ class AbstractPlatform(ABC):
                 sequence_cz = self.create_CZ_pulse(gate.qubits, finish, sequence.virtual_z_phases)
                 for key in sequence_cz.virtual_z_phases:
                     sequence.virtual_z_phases[key] = sequence_cz.virtual_z_phases[key]
-                sequence.append(sequence_cz)
+                sequence += sequence_cz
 
             elif isinstance(gate, gates.RZ):
                 qubit = gate.target_qubits[0]
