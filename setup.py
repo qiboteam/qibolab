@@ -58,6 +58,8 @@ setup(
         "tiiq": [
             "qblox-instruments==0.6.1",
             "qcodes",
+            "qm-qua",
+            # "qualang-tools",
         ],
     },
     python_requires=">=3.8.0",

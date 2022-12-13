@@ -5,6 +5,7 @@ from qibolab.platform import Platform
 
 def pytest_addoption(parser):
     parser.addoption("--platforms", type=str, action="store", default="tii5q", help="qpu platforms to test on")
+    parser.addoption("--qmsim", type=str, action="store", default=None, help="cloud address for QM simulator")
 
 
 def pytest_configure(config):
@@ -16,6 +17,13 @@ def pytest_generate_tests(metafunc):
 
     if metafunc.module.__name__ == "qibolab.tests.test_instruments_rohde_schwarz":
         pytest.skip("Skipping Rohde Schwarz tests because it is not available in qpu5q.")
+
+    if "qmsim_address" in metafunc.fixturenames:
+        qmsim = metafunc.config.option.qmsim
+        if qmsim is None:
+            pytest.skip("Skipping Quantum Machines tests because simulator was not provided.")
+        else:
+            metafunc.parametrize("qmsim_address", [qmsim])
 
     if "platform_name" in metafunc.fixturenames:
         if "qubit" in metafunc.fixturenames:
