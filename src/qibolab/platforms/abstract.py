@@ -389,11 +389,16 @@ class AbstractPlatform(ABC):
                 qd_duration = pulse_setting["duration"]
                 qd_amplitude = pulse_setting["amplitude"]
                 qd_shape = pulse_setting["shape"]
-                qubit = pulse_setting["qubit"]
-                qd_channel = self.settings["qubit_channel_map"][qubit][2]
+                qubits = pulse_setting["qubit"]
+                # Get the channel for qubit with the highest frequency
+                if self.characterization["qubit_freq"][qubits[0]] > self.characterization["qubit_freq"][qubits[1]]:
+                    qd_channel = self.settings["qubit_channel_map"][qubits[0]][2]
+                else:
+                    qd_channel = self.settings["qubit_channel_map"][qubits[1]][2]
+
                 sequence.add(
                     FluxPulse(
-                        start + pulse_setting["relative_start"], qd_duration, qd_amplitude, qd_shape, qd_channel, qubit
+                        start + pulse_setting["relative_start"], qd_duration, qd_amplitude, qd_shape, qd_channel, qubits
                     )
                 )
             elif pulse_setting["type"] == "virtual_z" and virtual_z_phase is not None:
