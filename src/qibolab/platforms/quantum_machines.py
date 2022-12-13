@@ -10,21 +10,28 @@ from qibolab.instruments.rohde_schwarz import SGS100A
 from qibolab.platforms.abstract import AbstractPlatform
 
 
-def iq_imbalance(g, phi):
-    """
-    Creates the correction matrix for the mixer imbalance caused by the gain and phase imbalances, more information can
-    be seen here:
-    https://docs.qualang.io/libs/examples/mixer-calibration/#non-ideal-mixer
-    :param g: relative gain imbalance between the I & Q ports (unit-less). Set to 0 for no gain imbalance.
-    :param phi: relative phase imbalance between the I & Q ports (radians). Set to 0 for no phase imbalance.
-    """
-    c = np.cos(phi)
-    s = np.sin(phi)
-    N = 1 / ((1 - g**2) * (2 * c**2 - 1))
-    return [float(N * x) for x in [(1 - g) * c, (1 + g) * s, (1 - g) * s, (1 + g) * c]]
-
-
 class Channel:
+    """Representation of physical wire connection (channel).
+
+    Name is used as a unique identifier for channels. If a channel
+    with an existing name is recreated, it will refer to the existing object.
+    Channel objects are created and their attributes are set during
+    the platform instantiation.
+
+    Args:
+        name (str): Name of the channel as given in the platform runcard.
+
+    Attributes:
+        ports (list): List of tuples (controller (`str`), port (`int`))
+            specifying the QM (I, Q) ports that the channel is connected.
+        qubits (list): List of Qubit objects for the qubits connected to this channel.
+        local_oscillator (:class:`qibolab.instruments.rohde_schwarz.SGS100A):
+            Instrument object for the local oscillator connected to this channel.
+        time_of_flight (optional,int): Time of flight associated with the channel.
+            Relevant only for readout and used for hardware signal integration.
+        smearing (optional,int): Time of flight associated with the channel.
+            Relevant only for readout and used for hardware signal integration.
+    """
 
     # TODO: Maybe this dictionary can be moved inside platform
     instances = {}
@@ -52,11 +59,37 @@ class Channel:
         return f"<Channel {self.name}>"
 
     def set_lo_frequency(self, frequency):
+        """Sets the local oscillator frequency for all qubits connected to the channel.
+
+        This updates the LO frequencies in the QM config.
+
+        Args:
+            frequency (int): Frequency of the local oscillator in Hz.
+        """
         for qubit, mode in self.qubits:
             getattr(qubit, f"set_{mode}_lo_frequency")(frequency)
 
 
 class Qubit:
+    """Representation of a physical qubit.
+
+    Qubit objects are instantiated during the platform initialization and
+    are used to register elements in the QM config.
+
+    Args:
+        name (int): Qubit number.
+        characterization (dict): Dictionary with the characterization values
+            for the qubit, loaded from the runcard.
+        drive (:class:`qibolab.platforms.quantum_machines.Channel`): Channel
+            used to send drive pulses to the qubit.
+        readout (:class:`qibolab.platforms.quantum_machines.Channel`): Channel
+            used to send readout pulses to the qubit.
+        feedback (:class:`qibolab.platforms.quantum_machines.Channel`): Channel
+            used to get readout feedback from the qubit.
+        flux (:class:`qibolab.platforms.quantum_machines.Channel`): Channel
+            used to send flux pulses to the qubit.
+    """
+
     def __init__(self, name, characterization, drive, readout, feedback, flux=None):
         self.name = name
         self.characterization = SimpleNamespace(**characterization)
@@ -120,7 +153,7 @@ class Qubit:
                 {
                     "intermediate_frequency": 0,
                     "lo_frequency": None,
-                    "correction": iq_imbalance(drive_g, drive_phi),
+                    "correction": self.iq_imbalance(drive_g, drive_phi),
                 }
             ]
         if readout:
@@ -130,7 +163,7 @@ class Qubit:
                 {
                     "intermediate_frequency": 0,
                     "lo_frequency": None,
-                    "correction": iq_imbalance(readout_g, readout_phi),
+                    "correction": self.iq_imbalance(readout_g, readout_phi),
                 }
             ]
 
@@ -140,38 +173,96 @@ class Qubit:
     def __repr__(self):
         return f"<Qubit {self.name}>"
 
+    @staticmethod
+    def iq_imbalance(g, phi):
+        """Creates the correction matrix for the mixer imbalance caused by the gain and phase imbalances
+
+        More information here:
+        https://docs.qualang.io/libs/examples/mixer-calibration/#non-ideal-mixer
+
+        Args:
+            g (float): relative gain imbalance between the I & Q ports (unit-less).
+                Set to 0 for no gain imbalance.
+            phi (float): relative phase imbalance between the I & Q ports (radians).
+                Set to 0 for no phase imbalance.
+        """
+        c = np.cos(phi)
+        s = np.sin(phi)
+        N = 1 / ((1 - g**2) * (2 * c**2 - 1))
+        return [float(N * x) for x in [(1 - g) * c, (1 + g) * s, (1 - g) * s, (1 + g) * c]]
+
     def set_drive_lo_frequency(self, frequency):
+        """Updates drive local oscillator frequency in the QM config."""
         # TODO: Maybe this can be moved to ``Channel``
         self.elements[f"drive{self}"]["mixInputs"]["lo_frequency"] = frequency
         self.mixers[f"mixer_drive{self}"][0]["lo_frequency"] = frequency
 
     def set_readout_lo_frequency(self, frequency):
+        """Updates readout local oscillator frequency in the QM config."""
         # TODO: Maybe this can be moved to ``Channel``
         self.elements[f"readout{self}"]["mixInputs"]["lo_frequency"] = frequency
         self.mixers[f"mixer_readout{self}"][0]["lo_frequency"] = frequency
 
     def set_drive_if_frequency(self, frequency):
+        """Updates drive intermediate frequency in the QM config."""
         self.elements[f"drive{self}"]["intermediate_frequency"] = frequency
         self.mixers[f"mixer_drive{self}"][0]["intermediate_frequency"] = frequency
 
     def set_readout_if_frequency(self, frequency):
+        """Updates readout local oscillator frequency in the QM config."""
         self.elements[f"readout{self}"]["intermediate_frequency"] = frequency
         self.mixers[f"mixer_readout{self}"][0]["intermediate_frequency"] = frequency
 
     def set_flux_frequency(self, frequency):
+        """Updates flux pulse frequency in the QM config."""
         self.elements[f"flux{self}"]["intermediate_frequency"] = frequency
 
     def register_drive_pulse(self, pulse):
+        """Registers drive pulse as an operation in the QM config."""
         self.elements[f"drive{self}"]["operations"][pulse.serial] = pulse.serial
 
     def register_readout_pulse(self, pulse):
+        """Registers readout pulse as an operation in the QM config."""
         self.elements[f"readout{self}"]["operations"][pulse.serial] = pulse.serial
 
     def register_flux_pulse(self, pulse):
+        """Registers flux pulse as an operation in the QM config."""
         self.elements[f"flux{self}"]["operations"][pulse.serial] = pulse.serial
 
 
 class QuantumMachinesPlatform(AbstractPlatform):
+    """Platform controlling Quantum Machines (QM) OPX controllers and Rohde Schwarz local oscillators.
+
+    Playing pulses on QM controllers requires a ``config`` dictionary and a program
+    written in QUA language. The ``config`` file is generated in parts in the following places:
+        - controllers are registered in ``__init__``,
+        - elements (qubits, resonators and flux) are registered in each ``Qubit`` object,
+        - pulses (including waveforms and integration weights) are registered in the
+          ``register_*`` methods of the platform.
+    The QUA program for executing an arbitrary qibolab ``PulseSequence`` is written in
+    ``execute_pulse_sequence``.
+
+    Args:
+        name (str): Name of the platform.
+        runcard (str): Path to the runcard.
+
+    The platform has multiple attributes that are loaded from the runcard and processed.
+
+    Attributes:
+        is_connected (bool): Boolean that shows whether instruments are connected.
+        nqubits (int): Number of qubits in the chip.
+        resonator_type (str): Type of the resonators (2D or 3D) used for qubit state readout.
+        topology (list): Topology of the chip.
+        settings (dict): Raw runcard loaded in a dictionary.
+        manager (:class:`qm.QuantumMachinesManager.QuantumMachinesManager`): Manager object
+            used for controlling the QM OPXs.
+        config (dict): Configuration dictionary required for pulse execution on the OPXs.
+        local_oscillators (dict): Dictionary mapping LO names to the corresponding
+            instrument objects.
+        qubits (list): List of :class:`qibolab.platforms.quantum_machines.Qubit` objects
+            for each qubit to be controlled.
+    """
+
     def __init__(self, name, runcard):
         log.info(f"Loading platform {name} from runcard {runcard}")
         self.name = name
@@ -210,9 +301,9 @@ class QuantumMachinesPlatform(AbstractPlatform):
         }
 
         instruments = dict(self.settings["instruments"])
-        self.qm_settings = instruments.pop("qm")
+        qm_settings = instruments.pop("qm")
         # Register controllers in config and channels
-        for controller, values in self.qm_settings["controllers"].items():
+        for controller, values in qm_settings["controllers"].items():
             self.config["controllers"][controller] = values["ports"]
             for channel_name, ports in values["channel_port_map"].items():
                 Channel(channel_name).ports = [(controller, p) for p in ports]
@@ -256,6 +347,7 @@ class QuantumMachinesPlatform(AbstractPlatform):
             raise_error(RuntimeError, "Cannot access instrument because it is not connected.")
 
     def reload_settings(self):
+        """Reloads the runcard and re-setups the connected instruments using the new values."""
         with open(self.runcard) as file:
             self.settings = yaml.safe_load(file)
 
@@ -265,45 +357,55 @@ class QuantumMachinesPlatform(AbstractPlatform):
     def run_calibration(self, show_plots=False):  # pragma: no cover
         raise_error(NotImplementedError)
 
-    def connect(self, host=None, port=None):
+    def connect(self, host=None):
+        """Connects to all instruments.
+
+        Args:
+            host (optional, str): Optional can be given to connect to a cloud simulator
+                instead of the actual instruments. If the ``host`` is not given,
+                this will connect to the physical OPXs and LOs using the addresses
+                given in the runcard.
+        """
         if host:
             from qm.simulate.credentials import create_credentials
 
-            self.manager = QuantumMachinesManager(host, port, credentials=create_credentials())
+            host, port = host.split(":")
+            self.manager = QuantumMachinesManager(host, int(port), credentials=create_credentials())
 
         else:
-            qm = self.qm_settings
-            self.manager = QuantumMachinesManager(qm["address"], qm["port"])
+            host, port = self.settings["instruments"]["qm"]["address"].split(":")
+            self.manager = QuantumMachinesManager(host, int(port))
             if not self.is_connected:
                 try:
-                    for name in self.instruments:
+                    for name in self.local_oscillators:
                         log.info(f"Connecting to {self.name} instrument {name}.")
-                        self.instruments[name].connect()
+                        self.local_oscillators[name].connect()
                     self.is_connected = True
                 except Exception as exception:
                     raise_error(
                         RuntimeError,
-                        "Cannot establish connection to " f"{self.name} instruments. " f"Error captured: '{exception}'",
+                        f"Cannot establish connection to {self.name} instruments. Error captured: '{exception}'",
                     )
 
     def setup(self):
-        if self.is_connected:
-            for name, lo in self.local_oscillators.items():
-                lo.setup(**self.settings["instruments"][name]["settings"])
-        else:
-            log.warn("There is no connection to local oscillators. Frequencies were not set.")
-            for name, lo in self.local_oscillators.items():
-                inst = self.settings["instruments"][name]
-                frequency = inst["settings"]["frequency"]
-                for channel_name in inst["channels"]:
-                    Channel(channel_name).set_lo_frequency(frequency)
+        for name, lo in self.local_oscillators.items():
+            inst = self.settings["instruments"][name]
+            if self.is_connected:
+                lo.setup(**inst["settings"])
+            else:
+                log.warn(f"There is no connection to {name}. Frequencies were not set.")
+            frequency = inst["settings"]["frequency"]
+            for channel_name in inst["channels"]:
+                Channel(channel_name).set_lo_frequency(frequency)
 
     def start(self):
+        # TODO: Start the OPX flux offsets?
         if self.is_connected:
             for lo in self.local_oscillators.values():
                 lo.start()
 
     def stop(self):
+        # TODO: Stop the OPX flux offsets?
         if self.is_connected:
             for lo in self.local_oscillators.values():
                 lo.stop()
@@ -316,9 +418,20 @@ class QuantumMachinesPlatform(AbstractPlatform):
             self.is_connected = False
 
     def register_waveform(self, pulse, mode="i"):
-        # example waveforms
-        # "zero_wf": {"type": "constant", "sample": 0.0},
-        # "x90_wf": {"type": "arbitrary", "samples": x90_wf.tolist()},
+        """Registers waveforms in QM config.
+
+        QM supports two kinds of waveforms, examples:
+            "zero_wf": {"type": "constant", "sample": 0.0}
+            "x90_wf": {"type": "arbitrary", "samples": x90_wf.tolist()}
+
+        Args:
+            pulse (:class:`qibolab.pulses.Pulse`): Pulse object to read the waveform from.
+            mode (str): "i" or "q" specifying which channel the waveform will be played.
+
+        Returns:
+            serial (str): String with a serialization of the waveform.
+                Used as key to identify the waveform in the config.
+        """
         from qibolab.pulses import Rectangular
 
         waveforms = self.config["waveforms"]
@@ -334,6 +447,13 @@ class QuantumMachinesPlatform(AbstractPlatform):
         return serial
 
     def register_integration_weights(self, qubit, readout_len):
+        """Registers integration weights in QM config.
+
+        Args:
+            qubit (:class:`qibolab.platforms.quantum_machines.Qubit`): Qubit
+                object that the integration weights will be used for.
+            readout_len (int): Duration of the readout pulse in ns.
+        """
         rotation_angle = qubit.characterization.rotation_angle
         self.config["integration_weights"] = {
             f"cosine_weights{qubit}": {
@@ -351,6 +471,17 @@ class QuantumMachinesPlatform(AbstractPlatform):
         }
 
     def register_pulse(self, pulse):
+        """Registers pulse, waveforms and integration weights in QM config.
+
+        Args:
+            pulse (:class:`qibolab.pulses.Pulse`): Pulse object to register.
+
+        Returns:
+            element (str): Name of the element this pulse will be played on.
+                Elements are a part of the QM config and are generated during
+                instantiation of the Qubit objects. They are named as
+                "drive0", "drive1", "flux0", "readout0", ...
+        """
         pulses = self.config["pulses"]
         qubit = self.qubits[pulse.qubit]
         if pulse.serial not in pulses:
@@ -409,6 +540,16 @@ class QuantumMachinesPlatform(AbstractPlatform):
         return f"{pulse.type.name.lower()}{str(qubit)}"
 
     def execute_program(self, program, simulation_duration=None):
+        """Executes an arbitrary program written in QUA language.
+
+        Args:
+            program: QUA program.
+            simulation_duration (optional, int): Duration for the simulation in ns.
+                If not given the program will be executed using the real instruments.
+
+        Returns:
+            TODO
+        """
         if simulation_duration:
             # controller_connections = create_simulator_controller_connections(3)
             simulation_config = SimulationConfig(duration=simulation_duration // 4)
@@ -418,6 +559,17 @@ class QuantumMachinesPlatform(AbstractPlatform):
             return machine.execute(program)
 
     def execute_pulse_sequence(self, sequence, nshots=None, simulation_duration=None):
+        """Executes an arbitrary pulse sequence.
+
+        Args:
+            sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to play.
+            nshots (int): Number of (hardware) repetitions for the execution.
+            simulation_duration (optional, int): Duration for the simulation in ns.
+                If not given the pulse execution will be played using real instruments.
+
+        Returns:
+            TODO
+        """
         from qm.qua import (
             declare,
             declare_stream,
