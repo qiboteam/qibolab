@@ -20,14 +20,6 @@ topology: # qubit - qubit connections
 -   [ 0, 0, 1, 0, 1, 0]
 -   [ 0, 0, 0, 0, 0, 1]
 
-#temporary_map: # [ReadOut I, ReadOut Q, QubitDrive I, QubitDrive Q, QubitFlux]
-#    0: [["con1", 9], ["con1", 10], ["con3", 1], ["con3", 2], ["con2", 5]],
-#    1: [["con1", 9], ["con1", 10], ["con1", 1], ["con1", 2], ["con2", 1]],
-#    2: [["con2", 9], ["con2", 10], ["con1", 3], ["con1", 4], ["con2", 2]],
-#    3: [["con2", 9], ["con2", 10], ["con1", 5], ["con1", 6], ["con2", 3]],
-#    4: [["con2", 9], ["con2", 10], ["con1", 7], ["con1", 8], ["con2", 4]],
-#    5: [["con1", 9], ["con1", 10], null, null, null],
-
 qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
     0: ["L3-25_a", "L3-15", "L4-5"]
     1: ["L3-25_a", "L3-11", "L4-1"]
