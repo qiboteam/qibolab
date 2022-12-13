@@ -113,7 +113,7 @@ class AbstractPlatform(ABC):
         """Executes calibration routines and updates the settings yml file"""
         raise NotImplementedError
 
-    def connect(self):
+    def connect(self, host=None):
         """Connects to lab instruments using the details specified in the calibration settings."""
         if not self.is_connected:
             try:
