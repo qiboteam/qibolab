@@ -379,7 +379,7 @@ class AbstractPlatform(ABC):
                 f"Calibration for CZ gate between qubits {qubits[0]} and {qubits[1]} not found.",
             )
 
-        # Check if more than one pulse in settings
+        # Check if more than one pulse in settings 
         if isinstance(settings, dict):
             settings = [settings]
 

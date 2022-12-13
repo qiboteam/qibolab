@@ -340,18 +340,12 @@ native_gates:
     two_qubit:
         2-3: # qubit numbers
             CZ_rectangular:
-            - duration: 160
-              amplitude: 0.1121 #Sweep 0.1 to 0.12 in 0.0001 steps
-              shape: Rectangular()
-              qubit: 3
-              relative_start: 0
-              type: qb
-            - type: virtual_z
-              phase: 0
-              qubit: 2
-            - type: virtual_z
-              phase: 0
-              qubit: 3
+                duration: 160
+                amplitude: 0.1121 #Sweep 0.1 to 0.12 in 0.0001 steps
+                shape: Rectangular()
+                qubit: 3
+                relative_start: 0
+                type: qb
 
             CZ:
             - duration: 160
