@@ -378,7 +378,7 @@ class AbstractPlatform(ABC):
                 f"Calibration for CZ gate between qubits {qubits[0]} and {qubits[1]} not found.",
             )
 
-        # Check if more than one pulse in settings 
+        # Check if more than one pulse in settings
         if isinstance(settings, dict):
             settings = [settings]
 
@@ -392,7 +392,11 @@ class AbstractPlatform(ABC):
                 qd_shape = pulse_setting["shape"]
                 qubit = pulse_setting["qubit"]
                 qd_channel = self.settings["qubit_channel_map"][qubit][2]
-                sequence.add(FluxPulse(start + pulse_setting["relative_start"], qd_duration, qd_amplitude, qd_shape, qd_channel, qubit))
+                sequence.add(
+                    FluxPulse(
+                        start + pulse_setting["relative_start"], qd_duration, qd_amplitude, qd_shape, qd_channel, qubit
+                    )
+                )
             elif pulse_setting["type"] == "virtual_z" and virtual_z_phase is not None:
                 sequence.virtual_z_phase[pulse_setting["qubit"]] = (
                     virtual_z_phase[pulse_setting["qubit"]] + pulse_setting["phase"]
