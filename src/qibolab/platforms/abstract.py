@@ -270,8 +270,8 @@ class AbstractPlatform(ABC):
                 # Get channel pulses for both qubits and get the latest finish time
                 finish = 0
                 for qubit in gate.qubits:
-                    if sequence.get_qubit_pulses(qubit).finish > finish:
-                        finish = sequence.get_channel_pulses(self.qubit_channel_map).finish
+                    if sequence.get_qubit_finish_time(qubit) > finish:
+                        finish = sequence.get_qubit_finish_time(qubit)
                 sequence_cz = self.create_CZ_pulse(gate.qubits, finish, sequence.virtual_z_phases)
                 for key in sequence_cz.virtual_z_phases:
                     sequence.virtual_z_phases[key] = sequence_cz.virtual_z_phases[key]
@@ -290,21 +290,20 @@ class AbstractPlatform(ABC):
 
             elif isinstance(gate, gates.U3):
                 qubit = gate.target_qubits[0]
+                finish = sequence.get_qubit_finish_time(qubit)
                 # Transform gate to U3 and add pi/2-pulses
                 theta, phi, lam = gate.parameters
                 # apply RZ(lam)
                 sequence.virtual_z_phases[qubit] += lam
                 # Fetch pi/2 pulse from calibration
-                RX90_pulse_1 = self.create_RX90_pulse(
-                    qubit, sequence.finish, relative_phase=sequence.virtual_z_phases[qubit]
-                )
+                RX90_pulse_1 = self.create_RX90_pulse(qubit, finish, relative_phase=sequence.virtual_z_phases[qubit])
                 # apply RX(pi/2)
                 sequence.append_at_end_of_channel(RX90_pulse_1)
                 # apply RZ(theta)
                 sequence.virtual_z_phases[qubit] += theta
                 # Fetch pi/2 pulse from calibration
                 RX90_pulse_2 = self.create_RX90_pulse(
-                    qubit, sequence.finish, relative_phase=sequence.virtual_z_phases[qubit] - np.pi
+                    qubit, RX90_pulse_1.finish, relative_phase=sequence.virtual_z_phases[qubit] - np.pi
                 )
                 # apply RX(-pi/2)
                 sequence.append_at_end_of_channel(RX90_pulse_2)
@@ -378,7 +377,7 @@ class AbstractPlatform(ABC):
                 f"Calibration for CZ gate between qubits {qubits[0]} and {qubits[1]} not found.",
             )
 
-        # Check if more than one pulse in settings 
+        # Check if more than one pulse in settings
         if isinstance(settings, dict):
             settings = [settings]
 
@@ -392,7 +391,11 @@ class AbstractPlatform(ABC):
                 qd_shape = pulse_setting["shape"]
                 qubit = pulse_setting["qubit"]
                 qd_channel = self.settings["qubit_channel_map"][qubit][2]
-                sequence.add(FluxPulse(start + pulse_setting["relative_start"], qd_duration, qd_amplitude, qd_shape, qd_channel, qubit))
+                sequence.add(
+                    FluxPulse(
+                        start + pulse_setting["relative_start"], qd_duration, qd_amplitude, qd_shape, qd_channel, qubit
+                    )
+                )
             elif pulse_setting["type"] == "virtual_z" and virtual_z_phase is not None:
                 sequence.virtual_z_phase[pulse_setting["qubit"]] = (
                     virtual_z_phase[pulse_setting["qubit"]] + pulse_setting["phase"]

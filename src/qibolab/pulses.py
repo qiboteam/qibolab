@@ -339,7 +339,7 @@ class Pulse:
             See :py:mod:`qibolab.pulses` for list of available shapes.
         channel (int | str): the channel on which the pulse should be synthesised.
         type (PulseType | str): {'ro', 'qd', 'qf'} type of pulse {ReadOut, Qubit Drive, Qubit Flux}
-        qubit (int): qubit associated with the pulse
+        qubit (int) or (list): qubit or qubits associated with the pulse
 
     Example:
         .. code-block:: python
@@ -400,6 +400,8 @@ class Pulse:
         self.shape = shape
         self.channel = channel
         self.type = type
+        if not isinstance(qubit, list):
+            qubit = [qubit]
         self.qubit = qubit
 
     def __del__(self):
@@ -671,9 +673,11 @@ class Pulse:
         Args:
             value (int | str): an integer or a string used to identify the qubit.
         """
-
-        if not isinstance(value, (int, str)):
-            raise TypeError(f"qubit argument type should be int or str, got {type(value).__name__}")
+        if not isinstance(value, list):
+            value = [value]
+        for v in value:
+            if not isinstance(v, (int, str)):
+                raise TypeError(f"qubit argument type should be int or str, got {type(value).__name__}")
         self._qubit = value
 
     @property
@@ -1336,9 +1340,18 @@ class PulseSequence:
 
         new_pc = PulseSequence()
         for pulse in self.pulses:
-            if pulse.qubit == qubit:
+            if qubit in pulse.qubit:
                 new_pc.add(pulse)
         return new_pc
+
+    def get_qubit_finish_time(self, qubit):
+        """Returns the finish time of the last pulse on a specific qubit."""
+
+        t = 0
+        for pulse in self.pulses:
+            if qubit in pulse.qubit and pulse.finish > t:
+                t = pulse.finish
+        return t
 
     @property
     def is_empty(self):

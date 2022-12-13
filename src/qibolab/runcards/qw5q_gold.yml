@@ -343,7 +343,9 @@ native_gates:
                 duration: 160
                 amplitude: 0.1121 #Sweep 0.1 to 0.12 in 0.0001 steps
                 shape: Rectangular()
-                qubit: 3
+                qubit:
+                - 3
+                - 2
                 relative_start: 0
                 type: qb
 
@@ -351,30 +353,34 @@ native_gates:
             - duration: 160
               amplitude: 0.0818
               shape: Rectangular()
-              qubit: 3
+              qubit:
+              - 3
+              - 2
               relative_start: 0
               type: qb
             - duration: 160
               amplitude: -0.0818
               shape: Rectangular()
-              qubit: 3
+              qubit:
+              - 3
+              - 2
               relative_start: 160
-              type: qb   
+              type: qb
             - duration: 320 # Park Qubit 4
               amplitude: 0.02
               shape: Rectangular()
               qubit: 4
               relative_start: 0
-              type: qb           
+              type: qb
             - duration: 20 # Z correction on Qubit 2 (eg)
               amplitude: 0.02
               shape: Rectangular()
               qubit: 2
               relative_start: 320
-              type: qb   
+              type: qb
             - type: virtual_z # Better Z correction
               phase: 0
-              qubit: 3              
+              qubit: 3
 
 characterization:
     single_qubit:
