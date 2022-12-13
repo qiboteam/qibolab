@@ -15,6 +15,7 @@ def pytest_configure(config):
 def pytest_generate_tests(metafunc):
     platforms = metafunc.config.option.platforms.split(",")
 
+    # TODO: Enable tests for R&S as it is used for Quantum Machines
     if metafunc.module.__name__ == "qibolab.tests.test_instruments_rohde_schwarz":
         pytest.skip("Skipping Rohde Schwarz tests because it is not available in qpu5q.")
 
