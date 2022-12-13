@@ -185,9 +185,10 @@ class QuantumMachinesPlatform(AbstractPlatform):
         self.resonator_type = "3D" if self.nqubits == 1 else "2D"
         self.topology = self.settings["topology"]
 
+        # QuantumMachines manager is instantiated in ``platform.connect``
+        self.manager = None
+
         settings = self.settings["settings"]
-        self.simulation = settings["simulation"]
-        self.simulation_duration = settings["simulation_duration"] // 4  # convert to clock cycles
 
         # Create feedback channel (for readout input to instrument)
         feedback = Channel(self.settings["feedback_channel"])
@@ -209,9 +210,9 @@ class QuantumMachinesPlatform(AbstractPlatform):
         }
 
         instruments = dict(self.settings["instruments"])
-        qm = instruments.pop("qm")
+        self.qm_settings = instruments.pop("qm")
         # Register controllers in config and channels
-        for controller, values in qm["controllers"].items():
+        for controller, values in self.qm_settings["controllers"].items():
             self.config["controllers"][controller] = values["ports"]
             for channel_name, ports in values["channel_port_map"].items():
                 Channel(channel_name).ports = [(controller, p) for p in ports]
@@ -230,14 +231,6 @@ class QuantumMachinesPlatform(AbstractPlatform):
         for q, channel_names in self.settings["qubit_channel_map"].items():
             readout, drive, flux = (Channel(name) for name in channel_names)
             self.qubits.append(Qubit(q, characterization[q], drive, readout, feedback, flux))
-
-        # Instantiate QuantumMachines manager
-        if self.simulation:
-            from qm.simulate.credentials import create_credentials
-
-            self.manager = QuantumMachinesManager(qm["address"], qm["port"], credentials=create_credentials())
-        else:
-            self.manager = QuantumMachinesManager(qm["address"], qm["port"])
 
         self.reload_settings()
 
@@ -272,19 +265,26 @@ class QuantumMachinesPlatform(AbstractPlatform):
     def run_calibration(self, show_plots=False):  # pragma: no cover
         raise_error(NotImplementedError)
 
-    def connect(self):
-        """Connects to lab instruments using the details specified in the calibration settings."""
-        if not self.is_connected:
-            try:
-                for name in self.instruments:
-                    log.info(f"Connecting to {self.name} instrument {name}.")
-                    self.instruments[name].connect()
-                self.is_connected = True
-            except Exception as exception:
-                raise_error(
-                    RuntimeError,
-                    "Cannot establish connection to " f"{self.name} instruments. " f"Error captured: '{exception}'",
-                )
+    def connect(self, host=None, port=None):
+        if host:
+            from qm.simulate.credentials import create_credentials
+
+            self.manager = QuantumMachinesManager(host, port, credentials=create_credentials())
+
+        else:
+            qm = self.qm_settings
+            self.manager = QuantumMachinesManager(qm["address"], qm["port"])
+            if not self.is_connected:
+                try:
+                    for name in self.instruments:
+                        log.info(f"Connecting to {self.name} instrument {name}.")
+                        self.instruments[name].connect()
+                    self.is_connected = True
+                except Exception as exception:
+                    raise_error(
+                        RuntimeError,
+                        "Cannot establish connection to " f"{self.name} instruments. " f"Error captured: '{exception}'",
+                    )
 
     def setup(self):
         if self.is_connected:
@@ -408,16 +408,16 @@ class QuantumMachinesPlatform(AbstractPlatform):
 
         return f"{pulse.type.name.lower()}{str(qubit)}"
 
-    def execute_program(self, program):
-        if self.simulation:
+    def execute_program(self, program, simulation_duration=None):
+        if simulation_duration:
             # controller_connections = create_simulator_controller_connections(3)
-            simulation_config = SimulationConfig(duration=self.simulation_duration)
+            simulation_config = SimulationConfig(duration=simulation_duration // 4)
             return self.manager.simulate(self.config, program, simulation_config)
         else:
             machine = self.manager.open_qm(self.config)
             return machine.execute(program)
 
-    def execute_pulse_sequence(self, sequence, nshots=None):
+    def execute_pulse_sequence(self, sequence, nshots=None, simulation_duration=None):
         from qm.qua import (
             declare,
             declare_stream,
@@ -475,4 +475,4 @@ class QuantumMachinesPlatform(AbstractPlatform):
                 I_st.buffer(nshots).save("I")
                 Q_st.buffer(nshots).save("Q")
 
-        return self.execute_program(experiment)
+        return self.execute_program(experiment, simulation_duration)
