@@ -15,15 +15,14 @@ import sys
 
 sys.path.insert(0, os.path.abspath("."))
 
-import qibolab
 
 # -- Project information -----------------------------------------------------
 
-project = "qibolab"
+project = " "
 copyright = "2021, The Qibo team"
 author = "The Qibo team"
 
-release = qibolab.__version__
+release = " "
 
 
 # -- General configuration ---------------------------------------------------
