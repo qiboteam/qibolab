@@ -233,7 +233,6 @@ native_gates:
                 duration: 2000
                 amplitude: 0.1
                 frequency: -200_000_000 # -577_015_000
-
                 shape: Rectangular()
                 type: ro # readout
                 start: 0

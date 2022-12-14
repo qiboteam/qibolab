@@ -1,11 +1,12 @@
 import itertools
 
 import numpy as np
+from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.config import log, raise_error
 from qibo.states import CircuitResult
 
-from qibolab.transpilers.transpile import transpile
+from qibolab.transpilers import can_execute, transpile
 
 
 class QibolabBackend(NumpyBackend):
@@ -56,18 +57,19 @@ class QibolabBackend(NumpyBackend):
                 "Hardware backend does not support initial state in circuits.",
             )
 
-        if circuit.measurement_gate is None:
-            raise_error(RuntimeError, "No measurement register assigned.")
-
-        # Transform a circuit into proper connectivity and native gates
-        native_circuit, hardware_qubits = transpile(circuit, fuse_one_qubit=False)
-        if check_transpiled:
-            backend = NumpyBackend()
-            target_state = backend.execute_circuit(circuit).state()
-            final_state = backend.execute_circuit(native_circuit).state()
-            fidelity = np.abs(np.dot(np.conj(target_state), final_state))
-            np.testing.assert_allclose(fidelity, 1.0)
-            log.info("Transpiler test passed.")
+        if can_execute(circuit, verbose=False):
+            native_circuit = circuit
+        else:
+            # Transform a circuit into proper connectivity and native gates
+            log.info("Transpiling circuit.")
+            native_circuit, hardware_qubits = transpile(circuit)
+            if check_transpiled:
+                backend = NumpyBackend()
+                target_state = backend.execute_circuit(circuit).state()
+                final_state = backend.execute_circuit(native_circuit).state()
+                fidelity = np.abs(np.dot(np.conj(target_state), final_state))
+                np.testing.assert_allclose(fidelity, 1.0)
+                log.info("Transpiler test passed.")
 
         # Transpile the native circuit into a sequence of pulses ``PulseSequence``
         sequence = self.platform.transpile(native_circuit)
@@ -76,7 +78,17 @@ class QibolabBackend(NumpyBackend):
         self.platform.start()
         readout = self.platform(sequence, nshots)
         self.platform.stop()
-        return CircuitResult(self, circuit, readout, nshots)
+        result = CircuitResult(self, native_circuit, readout, nshots)
+
+        shots = readout.get("demodulated_integrated_classified_binned")
+        # Register measurement outcomes
+        if shots is not None:
+            for gate in native_circuit.queue:
+                if isinstance(gate, gates.M):
+                    samples = np.array([shots.get(pulse) for pulse in gate.pulses], dtype="int32")
+                    gate.result.backend = self
+                    gate.result.register_samples(samples.T)
+        return result
 
     def circuit_result_tensor(self, result):
         raise_error(
@@ -92,7 +104,7 @@ class QibolabBackend(NumpyBackend):
     def circuit_result_probabilities(self, result: CircuitResult, qubits=None):
         """Returns the probability of the qubit being in state |0>"""
         if qubits is None:  # pragma: no cover
-            qubits = result.circuit.measurement_gate.qubits
+            qubits = result.measurement_gate.qubits
 
         # basic classification
         probabilities = []
