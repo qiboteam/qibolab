@@ -400,7 +400,7 @@ class Pulse:
         self.shape = shape
         self.channel = channel
         self.type = type
-        if not isinstance(qubit, list):
+        if not isinstance(qubit, list) and not self.type == PulseType.READOUT:
             qubit = [qubit]
         self.qubit = qubit
 
@@ -675,9 +675,6 @@ class Pulse:
         """
         if not isinstance(value, list) and not self.type == PulseType.READOUT:
             value = [value]
-        for v in value:
-            if not isinstance(v, (int, str)):
-                raise TypeError(f"qubit argument type should be int or str, got {type(value).__name__}")
         self._qubit = value
 
     @property
