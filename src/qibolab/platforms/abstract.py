@@ -391,7 +391,7 @@ class AbstractPlatform(ABC):
                 qd_shape = pulse_setting["shape"]
                 qubits = pulse_setting["qubit"]
                 # Get the channel for qubit with the highest frequency
-                if self.characterization["qubit_freq"][qubits[0]] > self.characterization["qubit_freq"][qubits[1]]:
+                if self.characterization["single_qubit"][qubits[0]]["qubit_freq"] > self.characterization["single_qubit"][qubits[1]]["qubit_freq"]:
                     qd_channel = self.settings["qubit_channel_map"][qubits[0]][2]
                 else:
                     qd_channel = self.settings["qubit_channel_map"][qubits[1]][2]

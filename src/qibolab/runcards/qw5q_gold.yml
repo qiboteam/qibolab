@@ -349,7 +349,7 @@ native_gates:
                 relative_start: 0
                 type: qb
 
-            CZ:
+            CZ_NZ:
             - duration: 160
               amplitude: 0.0818
               shape: Rectangular()
@@ -381,6 +381,24 @@ native_gates:
             - type: virtual_z # Better Z correction
               phase: 0
               qubit: 3
+
+            CZ:
+            - duration: 20
+              amplitude: 0.1088
+              shape: Rectangular()
+              qubit:
+              - 3
+              - 2
+              relative_start: 0
+              type: qb
+            - duration: 20
+              amplitude: -0.1088
+              shape: Rectangular()
+              qubit:
+              - 3
+              - 2
+              relative_start: 24
+              type: qb
 
 characterization:
     single_qubit:
