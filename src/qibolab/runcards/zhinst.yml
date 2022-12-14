@@ -20,7 +20,7 @@ settings:
     hardware_avg: 1000
     sampling_rate: 2.e+9
     minimum_delay_between_instructions: # ???
-    readout_delay: 500.e-6 #50.e-6
+    readout_delay: 50.e-6 #50.e-6
     readout_integration_delay: 40.e-9
     delay_between_pulses: 32.e-9   # 1.e-6
 
@@ -48,7 +48,7 @@ instruments:
             input_range: 10 # dBm
             output_range: -10 # 10 ? # dBm
             lo_frequency: 7_800_000_000
-            if_frequency: 24_694_000 #25_000_000
+            if_frequency: 25_000_000 #24_694_000 #25_000_000
 
     shfqc_qc:
         lib: zhinst
@@ -59,14 +59,14 @@ instruments:
             channels: [0]
             drive_range : 10
             lo_frequency: 5_100_000_000 #5_100_000_000
-            if_frequency: -20707070.70707035 #-19_500_000
+            if_frequency: -19_058_000 #-20707070.70707035 #-19_500_000
 
 native_gates:
     single_qubit:
         0: # qubit number
             RX:
-                duration: 78 #80
-                amplitude: .8 #0.745808 #0.8
+                duration: 90 #80
+                amplitude: 0.75 #0.8
                 frequency: 100_000_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
@@ -107,11 +107,11 @@ characterization:
     single_qubit:
         0:
             resonator_freq:  7_825_000_000 #Coupled
-            qubit_freq: 5080386483 #5_080_066_695 #5_080_500_000 Correction from Ramsey detuned with freq
+            qubit_freq: 5_081_200_000 #5080686483 #5_080_066_695 #5_080_500_000 Correction from Ramsey detuned with freq
             T1: 23925
             T2: 6581 # 12056
-            state0_voltage: 100
-            state1_voltage: 40
+            state0_voltage: 300
+            state1_voltage: 100
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
             mean_exc_states: (0.00011805761369462914+0.00018601039195510947j)
             sweetspot: 0.00
