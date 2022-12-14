@@ -717,7 +717,7 @@ class ClusterQRM_RF(AbstractInstrument):
                         )
                     # get next sequencer
                     sequencer = self._get_next_sequencer(
-                        port=port, frequency=non_overlapping_pulses[0].frequency, qubit=non_overlapping_pulses[0].qubit[0]
+                        port=port, frequency=non_overlapping_pulses[0].frequency, qubit=non_overlapping_pulses[0].qubit
                     )
 
                     # make a temporary copy of the pulses to be processed
@@ -750,7 +750,7 @@ class ClusterQRM_RF(AbstractInstrument):
                             sequencer = self._get_next_sequencer(
                                 port=port,
                                 frequency=non_overlapping_pulses[0].frequency,
-                                qubit=non_overlapping_pulses[0].qubit[0],
+                                qubit=non_overlapping_pulses[0].qubit,
                             )
 
             # update the lists of used and unused sequencers that will be needed later on
@@ -878,8 +878,6 @@ class ClusterQRM_RF(AbstractInstrument):
                             )
                             body += "\n" + set_ph_instruction
                         if pulses[n].type == PulseType.READOUT:
-                            if len(pulses[n].qubit) > 1:
-                                raise Exception("Multiple qubits readout not supported for a given pulse.")
                             delay_after_play = self.acquisition_hold_off
 
                             if len(pulses) > n + 1:
@@ -1015,7 +1013,7 @@ class ClusterQRM_RF(AbstractInstrument):
                         ([i samples], [q samples])
                         The data for a specific reaout pulse can be obtained either with:
                             `acquisition_results["averaged_raw"][ro_pulse.serial]`
-                            `acquisition_results["averaged_raw"][ro_pulse.qubit[0]]`
+                            `acquisition_results["averaged_raw"][ro_pulse.qubit]`
 
                     acquisition_results["averaged_demodulated_integrated"] (dict): a dictionary containing tuples
                     with the results of demodulating and integrating (averaging over time) the average of the
@@ -1023,10 +1021,10 @@ class ClusterQRM_RF(AbstractInstrument):
                         `(amplitude[V], phase[rad], i[V], q[V])`
                     The data for a specific readout pulse can be obtained either with:
                         `acquisition_results["averaged_demodulated_integrated"][ro_pulse.serial]`
-                        `acquisition_results["averaged_demodulated_integrated"][ro_pulse.qubit[0]]`
+                        `acquisition_results["averaged_demodulated_integrated"][ro_pulse.qubit]`
                     Or directly with:
                         `acquisition_results[ro_pulse.serial]`
-                        `acquisition_results[ro_pulse.qubit[0]]`
+                        `acquisition_results[ro_pulse.qubit]`
 
             - Hardware Demodulation:
                 With hardware demodulation activated, the FPGA can demodulate, integrate (average over time), and classify
@@ -1064,11 +1062,11 @@ class ClusterQRM_RF(AbstractInstrument):
                     The data within each of the above dictionaries, for a specific readout pulse or for the last readout
                     pulse of a qubit can be retrieved either with:
                         `acquisition_results[dictionary_name][ro_pulse.serial]`
-                        `acquisition_results[dictionary_name][ro_pulse.qubit[0]]`
+                        `acquisition_results[dictionary_name][ro_pulse.qubit]`
 
                     And acquisition_results["averaged_demodulated_integrated"] directly with:
                         `acquisition_results[ro_pulse.serial]`
-                        `acquisition_results[ro_pulse.qubit[0]]`
+                        `acquisition_results[ro_pulse.qubit]`
 
         """
         # # Start playing sequences
@@ -1120,7 +1118,7 @@ class ClusterQRM_RF(AbstractInstrument):
                                 0 : self.acquisition_duration
                             ],
                         )
-                        acquisition_results["averaged_raw"][pulse.qubit[0]] = acquisition_results["averaged_raw"][
+                        acquisition_results["averaged_raw"][pulse.qubit] = acquisition_results["averaged_raw"][
                             pulse.serial
                         ]
 
@@ -1131,7 +1129,7 @@ class ClusterQRM_RF(AbstractInstrument):
                             i,
                             q,
                         )
-                        acquisition_results["averaged_demodulated_integrated"][pulse.qubit[0]] = acquisition_results[
+                        acquisition_results["averaged_demodulated_integrated"][pulse.qubit] = acquisition_results[
                             "averaged_demodulated_integrated"
                         ][pulse.serial]
 
@@ -1139,8 +1137,8 @@ class ClusterQRM_RF(AbstractInstrument):
                         acquisition_results[pulse.serial] = acquisition_results["averaged_demodulated_integrated"][
                             pulse.serial
                         ]
-                        acquisition_results[pulse.qubit[0]] = acquisition_results["averaged_demodulated_integrated"][
-                            pulse.qubit[0]
+                        acquisition_results[pulse.qubit] = acquisition_results["averaged_demodulated_integrated"][
+                            pulse.qubit
                         ]
 
                     else:
@@ -1169,7 +1167,7 @@ class ClusterQRM_RF(AbstractInstrument):
                             i,
                             q,
                         )
-                        acquisition_results["demodulated_integrated_averaged"][pulse.qubit[0]] = acquisition_results[
+                        acquisition_results["demodulated_integrated_averaged"][pulse.qubit] = acquisition_results[
                             "demodulated_integrated_averaged"
                         ][pulse.serial]
 
@@ -1177,8 +1175,8 @@ class ClusterQRM_RF(AbstractInstrument):
                         acquisition_results[pulse.serial] = acquisition_results["demodulated_integrated_averaged"][
                             pulse.serial
                         ]
-                        acquisition_results[pulse.qubit[0]] = acquisition_results["demodulated_integrated_averaged"][
-                            pulse.qubit[0]
+                        acquisition_results[pulse.qubit] = acquisition_results["demodulated_integrated_averaged"][
+                            pulse.qubit
                         ]
 
                         # Save individual shots
@@ -1201,7 +1199,7 @@ class ClusterQRM_RF(AbstractInstrument):
                             shots_i,
                             shots_q,
                         )
-                        acquisition_results["demodulated_integrated_binned"][pulse.qubit[0]] = acquisition_results[
+                        acquisition_results["demodulated_integrated_binned"][pulse.qubit] = acquisition_results[
                             "demodulated_integrated_binned"
                         ][pulse.serial]
 
@@ -1209,13 +1207,13 @@ class ClusterQRM_RF(AbstractInstrument):
                             pulse.serial
                         ] = binned_raw_results[acquisition_name]["acquisition"]["bins"]["threshold"]
                         acquisition_results["demodulated_integrated_classified_binned"][
-                            pulse.qubit[0]
+                            pulse.qubit
                         ] = acquisition_results["demodulated_integrated_classified_binned"][pulse.serial]
 
                         acquisition_results["probability"][pulse.serial] = np.mean(
                             acquisition_results["demodulated_integrated_classified_binned"][pulse.serial]
                         )
-                        acquisition_results["probability"][pulse.qubit[0]] = acquisition_results["probability"][
+                        acquisition_results["probability"][pulse.qubit] = acquisition_results["probability"][
                             pulse.serial
                         ]
 
@@ -1231,7 +1229,7 @@ class ClusterQRM_RF(AbstractInstrument):
                                     0 : self.acquisition_duration
                                 ],
                             )
-                            acquisition_results["averaged_raw"][pulse.qubit[0]] = acquisition_results["averaged_raw"][
+                            acquisition_results["averaged_raw"][pulse.qubit] = acquisition_results["averaged_raw"][
                                 pulse.serial
                             ]
 
@@ -1244,7 +1242,7 @@ class ClusterQRM_RF(AbstractInstrument):
                                 i,
                                 q,
                             )
-                            acquisition_results["averaged_demodulated_integrated"][pulse.qubit[0]] = acquisition_results[
+                            acquisition_results["averaged_demodulated_integrated"][pulse.qubit] = acquisition_results[
                                 "averaged_demodulated_integrated"
                             ][pulse.serial]
 
@@ -1777,7 +1775,7 @@ class ClusterQCM_RF(AbstractInstrument):
                         sequencer = self._get_next_sequencer(
                             port=port,
                             frequency=non_overlapping_pulses[0].frequency,
-                            qubit=non_overlapping_pulses[0].qubit[0],
+                            qubit=non_overlapping_pulses[0].qubit,
                         )
 
                         # make a temporary copy of the pulses to be processed
@@ -1810,7 +1808,7 @@ class ClusterQCM_RF(AbstractInstrument):
                                 sequencer = self._get_next_sequencer(
                                     port=port,
                                     frequency=non_overlapping_pulses[0].frequency,
-                                    qubit=non_overlapping_pulses[0].qubit[0],
+                                    qubit=non_overlapping_pulses[0].qubit,
                                 )
 
             # update the lists of used and unused sequencers that will be needed later on
@@ -2498,7 +2496,7 @@ class ClusterQCM(AbstractInstrument):
                         sequencer = self._get_next_sequencer(
                             port=port,
                             frequency=non_overlapping_pulses[0].frequency,
-                            qubit=non_overlapping_pulses[0].qubit[0],
+                            qubit=non_overlapping_pulses[0].qubit,
                         )
 
                         # make a temporary copy of the pulses to be processed
@@ -2531,7 +2529,7 @@ class ClusterQCM(AbstractInstrument):
                                 sequencer = self._get_next_sequencer(
                                     port=port,
                                     frequency=non_overlapping_pulses[0].frequency,
-                                    qubit=non_overlapping_pulses[0].qubit[0],
+                                    qubit=non_overlapping_pulses[0].qubit,
                                 )
 
             # update the lists of used and unused sequencers that will be needed later on

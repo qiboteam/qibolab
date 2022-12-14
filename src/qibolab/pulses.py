@@ -673,7 +673,7 @@ class Pulse:
         Args:
             value (int | str): an integer or a string used to identify the qubit.
         """
-        if not isinstance(value, list):
+        if not isinstance(value, list) and not self.type == PulseType.READOUT:
             value = [value]
         for v in value:
             if not isinstance(v, (int, str)):
