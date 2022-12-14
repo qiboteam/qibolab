@@ -51,7 +51,7 @@ def generate_random_circuit(nqubits, ngates, seed=None):
 @pytest.mark.parametrize("run_number", range(3))
 @pytest.mark.parametrize("nqubits", [1, 2, 3, 4, 5])
 @pytest.mark.parametrize("ngates", [25, 50])
-@pytest.mark.parametrize("fuse_one_qubit", [False])  # True
+@pytest.mark.parametrize("fuse_one_qubit", [False, True])
 def test_transpile(run_number, nqubits, ngates, fuse_one_qubit, two_qubit_natives):
     backend = NumpyBackend()
     circuit = generate_random_circuit(nqubits, ngates)

@@ -99,7 +99,7 @@ def can_execute(circuit, two_qubit_natives):
                     log.info(f"{gate.name} is not a two qubit native gate.")
                     return False
             elif iSWAP_is_native:
-                if not isinstance(gate, (gates.CZ, gates.iSWAP)):  # TODO: all gates transformed to iswap
+                if not isinstance(gate, (gates.iSWAP)):
                     log.info(f"{gate.name} is not a two qubit native gate.")
                     return False
             else:

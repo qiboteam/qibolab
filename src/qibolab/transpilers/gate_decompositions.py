@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 from qibo import gates
 from qibo.backends import NumpyBackend
@@ -85,12 +87,11 @@ def translate_gate(gate, native_gates):
         if gate in iswap_dec.decompositions:
             return iswap_dec(gate)
         else:
-            # First decompose
+            # First decompose into CZ
             cz_decomposed = cz_dec(gate)
-            return cz_decomposed
-            # Now everithing will be decomposed into iSWAP
-            # iswap_decomposed = [iswap_dec(g) for g in cz_decomposed]
-            # return iswap_decomposed
+            # Then CZ are decomposed into iSWAP
+            iswap_decomposed = [iswap_dec(g) for g in cz_decomposed]
+            return iswap_decomposed
     else:
         raise_error("Use only CZ and/or iSWAP as native gates")
 
@@ -122,15 +123,15 @@ onequbit_dec.add(
 )
 onequbit_dec.add(
     gates.FusedGate,
-    lambda gate: [gates.Unitary(gate.asmatrix(backend), 0)],
+    lambda gate: [gates.U3(0, *u3_decomposition(gate.asmatrix(backend)))],
 )
 
 # register the iSWAP decompositions
-iswap_dec = GateDecompositions()
+iswap_dec = copy.deepcopy(onequbit_dec)
 iswap_dec.add(
     gates.CNOT,
     [
-        gates.H(0),
+        gates.U3(0, 7 * np.pi / 2, np.pi, 0),
         gates.U3(1, np.pi / 2, -np.pi, -np.pi),
         gates.iSWAP(0, 1),
         gates.U3(0, np.pi, 0, np.pi),
@@ -143,8 +144,8 @@ iswap_dec.add(
 iswap_dec.add(
     gates.CZ,
     [
-        gates.H(0),
-        gates.H(1),
+        gates.U3(0, 7 * np.pi / 2, np.pi, 0),
+        gates.U3(1, 7 * np.pi / 2, np.pi, 0),
         gates.U3(1, np.pi / 2, -np.pi, -np.pi),
         gates.iSWAP(0, 1),
         gates.U3(0, np.pi, 0, np.pi),
@@ -152,7 +153,7 @@ iswap_dec.add(
         gates.iSWAP(0, 1),
         gates.U3(0, np.pi / 2, np.pi / 2, -np.pi),
         gates.U3(1, np.pi / 2, -np.pi, -np.pi / 2),
-        gates.H(1),
+        gates.U3(1, 7 * np.pi / 2, np.pi, 0),
     ],
 )
 iswap_dec.add(
@@ -169,7 +170,7 @@ iswap_dec.add(
 iswap_dec.add(gates.iSWAP, [gates.iSWAP(0, 1)])
 
 # register CZ decompositions
-cz_dec = GateDecompositions()
+cz_dec = copy.deepcopy(onequbit_dec)
 cz_dec.add(gates.CNOT, [gates.H(1), gates.CZ(0, 1), gates.H(1)])
 cz_dec.add(gates.CZ, [gates.CZ(0, 1)])
 cz_dec.add(
