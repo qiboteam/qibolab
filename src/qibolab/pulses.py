@@ -9,31 +9,70 @@ from qibolab.symbolic import intSymbolicExpression as se_int
 
 
 class PulseType(Enum):
+    """An enumeration to distinguish different types of pulses.
+
+    READOUT pulses triger acquisitions.
+    DRIVE pulses are used to control qubit states.
+    FLUX pulses are used to shift the frequency of flux tunable qubits and with it implement
+        two-qubit gates.
+    """
+
     READOUT = "ro"
     DRIVE = "qd"
     FLUX = "qf"
 
 
 class Waveform:
+    """A class to save pulse waveforms.
+
+    A waveform is a list of samples, or discrete data points, used by the digital to analogue converters (DACs)
+    to synthesise pulses.
+
+    Attributes:
+        data (np.ndarray): a numpy array containing the samples.
+        serial (str): a string that can be used as a lable to identify the waveform. It is not automatically
+            generated, it must be set by the user.
+    """
+
     DECIMALS = 5
 
-    def __init__(self, data: np.ndarray):
-        self.data = data
+    def __init__(self, data):
+        """Initialises the waveform with a of samples."""
+
+        self.data: np.ndarray = np.array(data)
         self.serial: str = ""
 
     def __len__(self):
+        """Returns the length of the waveform, the number of samples."""
+
         return len(self.data)
 
     def __eq__(self, other):
+        """Compares two waveforms.
+
+        Two waveforms are considered equal if their samples, rounded to `Waveform.DECIMALS` decimal places,
+        are all equal.
+        """
+
         return self.__hash__() == other.__hash__()
 
     def __hash__(self):
+        """Returns a hash of the array of data, after rounding each sample to `Waveform.DECIMALS` decimal places."""
+
         return hash(str(np.around(self.data, Waveform.DECIMALS) + 0))
 
     def __repr__(self):
+        """Returns the waveform serial as its string representation."""
+
         return self.serial
 
     def plot(self, savefig_filename=None):
+        """Plots the waveform.
+
+        Args:
+            savefig_filename (str): a file path. If provided the plot is save to a file.
+        """
+
         import matplotlib.pyplot as plt
         import numpy as np
 
@@ -49,7 +88,16 @@ class Waveform:
 
 
 class PulseShape(ABC):
-    """Abstract class for pulse shapes"""
+    """Abstract class for pulse shapes.
+
+    A PulseShape object is responsible for generating envelope and modulated waveforms from a set
+    of pulse parameters, its type and a predefined `SAMPLING_RATE`. PulsShape generates both i (in-phase)
+    and q (quadrature) components.
+
+    Attributes:
+        SAMPLING_RATE (int): sampling rate in samples per second (SaPS)
+        pulse (Pulse): the pulse associated with it. Its parameters are used to generate pulse waveforms.
+    """
 
     SAMPLING_RATE = 1e9  # 1GSaPS
     pulse = None
@@ -66,18 +114,26 @@ class PulseShape(ABC):
 
     @property
     def envelope_waveforms(self):  #  -> tuple[Waveform, Waveform]:  # pragma: no cover
+        """A tuple with the i and q envelope waveforms of the pulse."""
+
         return (self.envelope_waveform_i, self.envelope_waveform_q)
 
     @property
     def modulated_waveform_i(self) -> Waveform:
+        """The waveform of the i component of the pulse, modulated with its frequency."""
+
         return self.modulated_waveforms[0]
 
     @property
     def modulated_waveform_q(self) -> Waveform:
+        """The waveform of the q component of the pulse, modulated with its frequency."""
+
         return self.modulated_waveforms[1]
 
     @property
     def modulated_waveforms(self):
+        """A tuple with the i and q waveforms of the pulse, modulated with its frequency."""
+
         if not self.pulse:
             raise Exception(
                 "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
@@ -122,6 +178,8 @@ class Rectangular(PulseShape):
 
     @property
     def envelope_waveform_i(self) -> Waveform:
+        """The envelope waveform of the i component of the pulse."""
+
         if self.pulse:
             num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
             waveform = Waveform(self.pulse.amplitude * np.ones(num_samples))
@@ -134,6 +192,8 @@ class Rectangular(PulseShape):
 
     @property
     def envelope_waveform_q(self) -> Waveform:
+        """The envelope waveform of the q component of the pulse."""
+
         if self.pulse:
             num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
             waveform = Waveform(np.zeros(num_samples))
@@ -167,6 +227,8 @@ class Gaussian(PulseShape):
 
     @property
     def envelope_waveform_i(self) -> Waveform:
+        """The envelope waveform of the i component of the pulse."""
+
         if self.pulse:
             num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
             x = np.arange(0, num_samples, 1)
@@ -183,6 +245,8 @@ class Gaussian(PulseShape):
 
     @property
     def envelope_waveform_q(self) -> Waveform:
+        """The envelope waveform of the q component of the pulse."""
+
         if self.pulse:
             num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
             waveform = Waveform(np.zeros(num_samples))
@@ -217,6 +281,8 @@ class Drag(PulseShape):
 
     @property
     def envelope_waveform_i(self) -> Waveform:
+        """The envelope waveform of the i component of the pulse."""
+
         if self.pulse:
             num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
             x = np.arange(0, num_samples, 1)
@@ -233,6 +299,8 @@ class Drag(PulseShape):
 
     @property
     def envelope_waveform_q(self) -> Waveform:
+        """The envelope waveform of the q component of the pulse."""
+
         if self.pulse:
             num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
             x = np.arange(0, num_samples, 1)
@@ -264,7 +332,7 @@ class Pulse:
     Args:
         start (int | intSymbolicExpression): Start time of pulse in ns.
         duration (int | intSymbolicExpression): Pulse duration in ns.
-        amplitude (float): Pulse digital amplitude (unitless) [0 to 1].
+        amplitude (float): Pulse digital amplitude (unitless) [-1 to 1].
         frequency (int): Pulse Intermediate Frequency in Hz [10e6 to 300e6].
         relative_phase (float): To be added.
         shape: (PulseShape | str): {'Rectangular()', 'Gaussian(rel_sigma)', 'DRAG(rel_sigma, beta)'} Pulse shape.
@@ -342,10 +410,18 @@ class Pulse:
 
     @property
     def start(self) -> int:
+        """Returns the time when the pulse is scheduled to be played, in ns."""
+
         return self._start.value
 
     @start.setter
     def start(self, value):
+        """Sets the time when the pulse is scheduled to be played.
+
+        Args:
+            value (se_int | int | np.integer): the time in ns.
+        """
+
         if not isinstance(value, (se_int, int, np.integer)):
             raise TypeError(f"start argument type should be intSymbolicExpression or int, got {type(value).__name__}")
         elif not value >= 0:
@@ -363,10 +439,18 @@ class Pulse:
 
     @property
     def duration(self) -> int:
+        """Returns the duration of the pulse, in ns."""
+
         return self._duration.value
 
     @duration.setter
     def duration(self, value):
+        """Sets the duration of the pulse.
+
+        Args:
+            value (se_int | int | np.integer): the time in ns.
+        """
+
         if not isinstance(value, (se_int, int, np.integer)):
             raise TypeError(
                 f"duration argument type should be intSymbolicExpression or int, got {type(value).__name__}"
@@ -384,26 +468,48 @@ class Pulse:
 
     @property
     def finish(self) -> int:
+        """Returns the time when the pulse is scheduled to finish.
+
+        Calculated as pulse.start - pulse finish.
+        """
+
         return self._finish.value
 
     @property
     def se_start(self) -> se_int:
+        """Returns a symbolic expression for the pulse start."""
+
         return self._start
 
     @property
     def se_duration(self) -> se_int:
+        """Returns a symbolic expression for the pulse duration."""
+
         return self._duration
 
     @property
     def se_finish(self) -> se_int:
+        """Returns a symbolic expression for the pulse finish."""
+
         return self._finish
 
     @property
     def amplitude(self) -> float:
+        """Returns the amplitude of the pulse.
+
+        Pulse amplitudes are normalised between -1 and 1.
+        """
+
         return self._amplitude
 
     @amplitude.setter
     def amplitude(self, value):
+        """Sets the amplitude of the pulse.
+
+        Args:
+            value (int | float | np.floating): a unitless value between -1 and 1.
+        """
+
         if isinstance(value, int):
             value = float(value)
         if not isinstance(value, (float, np.floating)):
@@ -417,12 +523,20 @@ class Pulse:
 
     @property
     def frequency(self) -> int:
+        """Returns the frequency of the pulse, in Hz."""
+
         return self._frequency
 
     @frequency.setter
     def frequency(self, value):
+        """Sets the frequency of the pulse.
+
+        Args:
+            value (int | float | np.integer | np.floating): the frequency in Hz.
+        """
+
         if not isinstance(value, (int, float, np.integer, np.floating)):
-            raise TypeError(f"frequency argument type should be float, got {type(value).__name__}")
+            raise TypeError(f"frequency argument type should be int, got {type(value).__name__}")
         if isinstance(value, (float, np.integer, np.floating)):
             self._frequency = int(value)
         elif isinstance(value, int):
@@ -430,15 +544,28 @@ class Pulse:
 
     @property
     def global_phase(self):
+        """Returns the global phase of the pulse, in radians.
+
+        This phase is calculated from the pulse start time and frequency as `2 * pi * frequency * start`.
+        """
+
         # pulse start, duration and finish are in ns
-        return 2 * np.pi * self.frequency * self.start / 1e9
+        return 2 * np.pi * self._frequency * self._start.value / 1e9
 
     @property
     def relative_phase(self) -> float:
+        """Returns the relative phase of the pulse, in radians."""
+
         return self._relative_phase
 
     @relative_phase.setter
     def relative_phase(self, value):
+        """Sets a relative phase for the pulse.
+
+        Args:
+            value (int | float | np.integer | np.floating): the relative phase in radians.
+        """
+
         if not isinstance(value, (int, float, np.integer, np.floating)):
             raise TypeError(f"relative_phase argument type should be int or float, got {type(value).__name__}")
         if isinstance(value, (int, np.integer, np.floating)):
@@ -448,14 +575,26 @@ class Pulse:
 
     @property
     def phase(self) -> float:
+        """Returns the total phase of the pulse, in radians.
+
+        The total phase is computed as the sum of the global and relative phases.
+        """
         return 2 * np.pi * self._frequency * self._start.value / 1e9 + self._relative_phase
 
     @property
     def shape(self) -> PulseShape:
+        """Returns the shape of the pulse, as a PulseShape object."""
+
         return self._shape
 
     @shape.setter
     def shape(self, value):
+        """Sets the shape of the pulse.
+
+        Args:
+            value (PulseShape | str): a string representing the pulse shape and its main parameters, or a PulseShape object.
+        """
+
         if not isinstance(value, (PulseShape, str)):
             raise TypeError(f"shape argument type should be PulseShape or str, got {type(value).__name__}")
         if isinstance(value, PulseShape):
@@ -469,25 +608,48 @@ class Pulse:
             shape_parameters = re.findall(r"[\w+\d\.\d]+", value)[1:]
             # TODO: create multiple tests to prove regex working correctly
             self._shape = globals()[shape_name](*shape_parameters)
+
+        # link the pulse attribute of the PulseShape object to the pulse.
         self._shape.pulse = self
 
     @property
     def channel(self):
+        """Returns the channel on which the pulse should be played.
+
+        When a sequence of pulses is sent to the platform for execution, each pulse is sent to the instrument
+        responsible for playing pulses the pulse channel. The connection of instruments with channels is defined
+        in the platform runcard.
+        """
+
         # def channel(self) -> int | str:
         return self._channel
 
     @channel.setter
     def channel(self, value):
+        """Sets the channel on which the pulse should be played.
+
+        Args:
+            value (int | str): an integer or a string used to identify the channel.
+        """
+
         if not isinstance(value, (int, str)):
             raise TypeError(f"channel argument type should be int or str, got {type(value).__name__}")
         self._channel = value
 
     @property
     def type(self) -> PulseType:
+        """Returns the pulse type, as an element of PulseType enumeration."""
+
         return self._type
 
     @type.setter
     def type(self, value):
+        """Sets the type of the pulse.
+
+        Args:
+            value (PulseType | str): the type of pulse as an element of PulseType enumeration or as a two-letter string.
+        """
+
         if isinstance(value, PulseType):
             self._type = value
         elif isinstance(value, str):
@@ -497,41 +659,63 @@ class Pulse:
 
     @property
     def qubit(self):
+        """Returns the qubit addressed by the pulse."""
+
         # def qubit(self) -> int | str:
         return self._qubit
 
     @qubit.setter
     def qubit(self, value):
+        """Sets the qubit addressed by the pulse.
+
+        Args:
+            value (int | str): an integer or a string used to identify the qubit.
+        """
+
         if not isinstance(value, (int, str)):
             raise TypeError(f"qubit argument type should be int or str, got {type(value).__name__}")
         self._qubit = value
 
     @property
     def serial(self) -> str:
+        """Returns a string representation of the pulse."""
+
         return f"Pulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {format(self.frequency, '_')}, {format(self.relative_phase, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.type}, {self.qubit})"
 
     @property
     def envelope_waveform_i(self) -> Waveform:
+        """The envelope waveform of the i component of the pulse."""
+
         return self._shape.envelope_waveform_i
 
     @property
     def envelope_waveform_q(self) -> Waveform:
+        """The envelope waveform of the q component of the pulse."""
+
         return self._shape.envelope_waveform_q
 
     @property
     def envelope_waveforms(self):  #  -> tuple[Waveform, Waveform]:
+        """A tuple with the i and q envelope waveforms of the pulse."""
+
         return (self._shape.envelope_waveform_i, self._shape.envelope_waveform_q)
 
     @property
     def modulated_waveform_i(self) -> Waveform:
+        """The waveform of the i component of the pulse, modulated with its frequency."""
+
         return self._shape.modulated_waveform_i
 
     @property
     def modulated_waveform_q(self) -> Waveform:
+        """The waveform of the q component of the pulse, modulated with its frequency."""
+
         return self._shape.modulated_waveform_q
 
     @property
     def modulated_waveforms(self):  #  -> tuple[Waveform, Waveform]:
+        """A tuple with the i and q waveforms of the pulse, modulated with its frequency."""
+
         return self._shape.modulated_waveforms
 
     def __repr__(self):
@@ -565,6 +749,8 @@ class Pulse:
         return self.__mul__(n)
 
     def copy(self):  # -> Pulse|ReadoutPulse|DrivePulse|FluxPulse:
+        """Returns a new Pulse object with the same attributes."""
+
         # return eval(self.serial)
         return Pulse(
             self.start,
@@ -592,6 +778,12 @@ class Pulse:
         )
 
     def plot(self, savefig_filename=None):
+        """Plots the pulse envelope and modulated waveforms.
+
+        Args:
+            savefig_filename (str): a file path. If provided the plot is save to a file.
+        """
+
         import matplotlib.pyplot as plt
         import numpy as np
         from matplotlib import gridspec
@@ -694,17 +886,16 @@ class DrivePulse(Pulse):
 
 
 class FluxPulse(Pulse):
-    """Describes a qubit drive pulse.
+    """Describes a qubit flux pulse.
 
+    Flux pulses have frequency and relative_phase equal to 0. Their i and q components are equal.
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
 
-    def __init__(self, start, duration, amplitude, relative_phase, shape, channel, qubit=0):
+    def __init__(self, start, duration, amplitude, shape, channel, qubit=0):
         # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
         #                    channel: int | str, qubit: int | str = 0):
-        super().__init__(
-            start, duration, amplitude, 0, relative_phase, shape, channel, type=PulseType.FLUX, qubit=qubit
-        )
+        super().__init__(start, duration, amplitude, 0, 0, shape, channel, type=PulseType.FLUX, qubit=qubit)
 
     @property
     def envelope_waveform_i(self) -> Waveform:
@@ -736,6 +927,9 @@ class FluxPulse(Pulse):
 
 
 class SplitPulse(Pulse):
+    """A supporting class to represent sections or slices of a pulse."""
+
+    # TODO: Since this class is only required by qblox drivers, move to qblox.py
     def __init__(self, pulse: Pulse, window_start: int = None, window_finish: int = None):
         super().__init__(
             pulse.start,
@@ -924,6 +1118,17 @@ class SplitPulse(Pulse):
 
 
 class PulseSequence:
+    """A collection of scheduled pulses.
+
+    A quantum circuit can be translated into a set of scheduled pulses that implement the circuit gates.
+    This class contains many supporting fuctions to facilitate the creation and manipulation of
+    these collections of pulses.
+
+    Attributes:
+        pulses (list): a list containing the pulses, ordered by their channel and start times.
+
+    """
+
     def __init__(self, *pulses):
         self.pulses = []  #: list[Pulse] = []
         self.add(*pulses)
@@ -951,6 +1156,8 @@ class PulseSequence:
 
     @property
     def serial(self):
+        """Returns a string representation of the pulse sequence."""
+
         return "PulseSequence\n" + "\n".join(f"{pulse.serial}" for pulse in self.pulses)
 
     def __eq__(self, other):
@@ -1017,44 +1224,78 @@ class PulseSequence:
 
     @property
     def count(self):
+        """Returns the number of pulses in the sequence."""
+
         return len(self.pulses)
 
     def add(self, *pulses):
+        """Adds pulses to the sequence and sorts them by channel and start time."""
+
         for pulse in pulses:
             self.pulses.append(pulse)
         self.pulses.sort(key=lambda item: (item.channel, item.start))
 
     def append_at_end_of_channel(self, *pulses):
+        """Appends pulses to the end of the channel (one at a time), modifying their start time.
+
+        Each pulse start time is calculated as the finish time of the last pulse in the channel.
+        """
+
         for pulse in pulses:
             pulse.start = self.get_channel_pulses(pulse.channel).finish
             self.add(pulse)
 
     def append_at_end_of_sequence(self, *pulses):
+        """Appends pulses to the end of the sequence (one at a time), modifying their start time.
+
+        Each pulse start time is calculated as the finish time of the last pulse in the sequence.
+        """
+
         for pulse in pulses:
             pulse.start = self.finish
             self.add(pulse)
 
     def index(self, pulse):
+        """Returns the index of a pulse in the sequence."""
+
         return self.pulses.index(pulse)
 
     def pop(self, index=-1):
+        """Returns the pulse with the index provided and removes it from the sequence."""
+
         return self.pulses.pop(index)
 
     def remove(self, pulse):
+        """Removes a pulse from the sequence."""
+
         while pulse in self.pulses:
             self.pulses.remove(pulse)
 
     def clear(self):
+        """Removes all pulses from the sequence."""
+
         self.pulses.clear()
 
     def shallow_copy(self):
+        """Returns a shallow copy of the sequence.
+
+        It returns a new PulseSequence object with references to the same Pulse objects.
+        """
+
         return PulseSequence(*self.pulses)
 
     def deep_copy(self):
+        """Returns a deep copy of the sequence.
+
+        It returns a new PulseSequence with replicates of each of the pulses contained in the original sequence.
+        """
+
         return PulseSequence(*[pulse.deep_copy() for pulse in self.pulses])
 
     @property
     def ro_pulses(self):
+        """Returns a new PulseSequence containing only its readout pulses."""
+
         new_pc = PulseSequence()
         for pulse in self.pulses:
             if pulse.type == PulseType.READOUT:
@@ -1063,6 +1304,8 @@ class PulseSequence:
 
     @property
     def qd_pulses(self):
+        """Returns a new PulseSequence containing only its qubit drive pulses."""
+
         new_pc = PulseSequence()
         for pulse in self.pulses:
             if pulse.type == PulseType.DRIVE:
@@ -1071,6 +1314,8 @@ class PulseSequence:
 
     @property
     def qf_pulses(self):
+        """Returns a new PulseSequence containing only its qubit flux pulses."""
+
         new_pc = PulseSequence()
         for pulse in self.pulses:
             if pulse.type == PulseType.FLUX:
@@ -1078,6 +1323,8 @@ class PulseSequence:
         return new_pc
 
     def get_channel_pulses(self, *channels):
+        """Returns a new PulseSequence containing only the pulses on a specific channel."""
+
         new_pc = PulseSequence()
         for pulse in self.pulses:
             if pulse.channel in channels:
@@ -1086,10 +1333,14 @@ class PulseSequence:
 
     @property
     def is_empty(self):
+        """Returns True if the sequence does not contain any pulses."""
+
         return len(self.pulses) == 0
 
     @property
     def finish(self) -> int:
+        """Returns the time when the last pulse of the sequence finishes."""
+
         t: int = 0
         for pulse in self.pulses:
             if pulse.finish > t:
@@ -1098,6 +1349,8 @@ class PulseSequence:
 
     @property
     def start(self) -> int:
+        """Returns the start time of the first pulse of the sequence."""
+
         t = self.finish
         for pulse in self.pulses:
             if pulse.start < t:
@@ -1106,10 +1359,14 @@ class PulseSequence:
 
     @property
     def duration(self) -> int:
+        """Returns duration of the sequence calculated as its finish - start times."""
+
         return self.finish - self.start
 
     @property
     def channels(self) -> list:
+        """Returns list containing the channels used by the pulses in the sequence."""
+
         channels = []
         for pulse in self.pulses:
             if not pulse.channel in channels:
@@ -1118,6 +1375,8 @@ class PulseSequence:
         return channels
 
     def get_pulse_overlaps(self):  # -> dict((int,int): PulseSequence):
+        """Returns a dictionary of slices of time (tuples with start and finish times) where pulses overlap."""
+
         times = []
         for pulse in self.pulses:
             if not pulse.start in times:
@@ -1135,7 +1394,11 @@ class PulseSequence:
         return overlaps
 
     def separate_overlapping_pulses(self):  # -> dict((int,int): PulseSequence):
-        # TODO: non_overlapping_same_frequency_pulses
+        """Separates a sequence of overlapping pulses into a list of non-overlapping sequences."""
+
+        # This routine separates the pulses of a sequence into non-overlapping sets
+        # but it does not check if the frequencies of the pulses within a set have the same frequency
+
         separated_pulses = []
         for new_pulse in self.pulses:
             stored = False
@@ -1152,8 +1415,12 @@ class PulseSequence:
                 separated_pulses.append(PulseSequence(new_pulse))
         return separated_pulses
 
+    # TODO: Implement separate_different_frequency_pulses()
+
     @property
     def pulses_overlap(self) -> bool:
+        """Returns True if any of the pulses in the sequence overlap."""
+
         overlap = False
         for pc in self.get_pulse_overlaps().values():
             if pc.count > 1:
@@ -1161,6 +1428,12 @@ class PulseSequence:
         return overlap
 
     def plot(self, savefig_filename=None):
+        """Plots the sequence of pulses.
+
+        Args:
+            savefig_filename (str): a file path. If provided the plot is save to a file.
+        """
+
         if not self.is_empty:
             import matplotlib.pyplot as plt
             import numpy as np
