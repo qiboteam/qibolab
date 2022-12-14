@@ -55,8 +55,7 @@ jobs:
         conda activate ./testenv
         python -m pip install --upgrade pip
         pip install pytest
-        # TODO: Change this to master before merging
-        pip install git+https://github.com/qiboteam/qibo@measurements
+        pip install git+https://github.com/qiboteam/qibo
         pip install .[tiiq]
     - name: Test ${{ matrix.platform }}
       run: |
