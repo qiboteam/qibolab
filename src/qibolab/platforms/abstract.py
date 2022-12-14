@@ -365,7 +365,7 @@ class AbstractPlatform(ABC):
 
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
-    def create_CZ_pulse(self, qubits, start=0, virtual_z_phase=None):
+    def create_CZ_pulse(self, qubits, start=0, virtual_z_phases=None):
         # Check in the settings if qubits[0]-qubits[1] is a key
         if f"{qubits[0]}-{qubits[1]}" in self.settings["native_gates"]["two_qubit"]:
             settings = self.settings["native_gates"]["two_qubit"][f"{qubits[0]}-{qubits[1]}"]["CZ"]
@@ -384,6 +384,7 @@ class AbstractPlatform(ABC):
         from qibolab.pulses import FluxPulse, PulseSequence
 
         sequence = PulseSequence()
+        sequence.virtual_z_phases = virtual_z_phases
         for pulse_setting in settings:
             if pulse_setting["type"] == "qb":
                 qd_duration = pulse_setting["duration"]
@@ -401,9 +402,9 @@ class AbstractPlatform(ABC):
                         start + pulse_setting["relative_start"], qd_duration, qd_amplitude, qd_shape, qd_channel, qubits
                     )
                 )
-            elif pulse_setting["type"] == "virtual_z" and virtual_z_phase is not None:
-                sequence.virtual_z_phase[pulse_setting["qubit"]] = (
-                    virtual_z_phase[pulse_setting["qubit"]] + pulse_setting["phase"]
+            elif pulse_setting["type"] == "virtual_z" and virtual_z_phases is not None:
+                sequence.virtual_z_phases[pulse_setting["qubit"]] = (
+                    virtual_z_phases[pulse_setting["qubit"]] + pulse_setting["phase"]
                 )
         return sequence
 
