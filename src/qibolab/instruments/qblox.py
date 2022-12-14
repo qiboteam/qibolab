@@ -1101,12 +1101,15 @@ class ClusterQRM_RF(AbstractInstrument):
                     self.device.store_scope_acquisition(sequencer.number, "scope_acquisition")
                     scope_acquisition_raw_results = self.device.get_acquisitions(sequencer.number)["scope_acquisition"]
 
+        acquisition_results["demodulated_integrated_averaged"] = {}
+        acquisition_results["averaged_raw"] = {}
+        acquisition_results["averaged_demodulated_integrated"] = {}
+        acquisition_results["demodulated_integrated_binned"] = {}
+        acquisition_results["demodulated_integrated_classified_binned"] = {}
+        acquisition_results["probability"] = {}
         for port in self._output_ports_keys:
             for sequencer in self._sequencers[port]:
-
                 if not self.ports["i1"].hardware_demod_en:  # Software Demodulation
-                    acquisition_results["averaged_raw"] = {}
-                    acquisition_results["averaged_demodulated_integrated"] = {}
                     if len(sequencer.pulses.ro_pulses) == 1:
                         pulse = sequencer.pulses.ro_pulses[0]
 
@@ -1149,13 +1152,6 @@ class ClusterQRM_RF(AbstractInstrument):
 
                 else:  # Hardware Demodulation
                     binned_raw_results = self.device.get_acquisitions(sequencer.number)
-
-                    acquisition_results["demodulated_integrated_averaged"] = {}
-                    acquisition_results["demodulated_integrated_binned"] = {}
-                    acquisition_results["demodulated_integrated_classified_binned"] = {}
-                    acquisition_results["probability"] = {}
-                    acquisition_results["averaged_raw"] = {}
-                    acquisition_results["averaged_demodulated_integrated"] = {}
                     for pulse in sequencer.pulses.ro_pulses:
                         acquisition_name = pulse.serial
                         i, q = self._process_acquisition_results(
