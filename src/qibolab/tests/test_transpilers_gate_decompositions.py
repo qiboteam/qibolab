@@ -7,7 +7,7 @@ from qibo.models import Circuit
 from qibolab.transpilers.gate_decompositions import translate_gate
 
 
-def assert_matrices_allclose(gate, two_qubit_natives, phase=1):
+def assert_matrices_allclose(gate, two_qubit_natives):
     backend = NumpyBackend()
     native_gates = translate_gate(gate, two_qubit_natives)
     target_matrix = gate.asmatrix(backend)
@@ -22,7 +22,12 @@ def assert_matrices_allclose(gate, two_qubit_natives, phase=1):
     native_unitary = native_matrix / np.power(
         np.linalg.det(native_matrix), 1 / float(native_matrix.shape[0]), dtype=complex
     )
-    np.testing.assert_allclose(phase * native_unitary, target_unitary, atol=1e-12)
+    # There can still be phase differences of -1, -1j, 1j
+    c = 0
+    for phase in [1, -1, 1j, -1j]:
+        if np.allclose(phase * native_unitary, target_unitary, atol=1e-12):
+            c = 1
+    np.testing.assert_allclose(c, 1)
 
 
 @pytest.mark.parametrize("gatename", ["H", "X", "Y"])
@@ -58,23 +63,11 @@ def test_u3_to_native():
     assert_matrices_allclose(gate, two_qubit_natives=["CZ"])
 
 
-@pytest.mark.parametrize("gatename", ["CNOT", "CZ", "SWAP"])
+@pytest.mark.parametrize("gatename", ["CNOT", "CZ", "SWAP", "iSWAP", "FSWAP"])
 @pytest.mark.parametrize("natives", [["CZ"], ["iSWAP"], ["CZ", "iSWAP"]])
 def test_two_qubit_to_native(gatename, natives):
     gate = getattr(gates, gatename)(0, 1)
-    assert_matrices_allclose(gate, two_qubit_natives=natives)
-
-
-@pytest.mark.parametrize("natives,phase", [(["CZ"], -1j), (["iSWAP"], -1j), (["CZ", "iSWAP"], -1j)])
-def test_iswap_to_native(natives, phase):
-    gate = gates.iSWAP(0, 1)
-    assert_matrices_allclose(gate, two_qubit_natives=natives, phase=phase)
-
-
-@pytest.mark.parametrize("natives", [["CZ"], ["iSWAP"], ["CZ", "iSWAP"]])
-def test_fswap_to_native(natives):
-    gate = gates.FSWAP(0, 1)
-    assert_matrices_allclose(gate, natives, phase=-1)
+    assert_matrices_allclose(gate, natives)
 
 
 @pytest.mark.parametrize("natives", [["CZ"], ["iSWAP"], ["CZ", "iSWAP"]])
