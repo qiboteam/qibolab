@@ -24,16 +24,63 @@ from qibolab.pulses import (
 
 #################################################################
 #
-class tii_rfsoc4x2:
+class tii_rfsoc4x2(AbstractInstrument):
     #
     #################################################################
-    def __init__(self, name: str, address: str, setting_parameters: dict):
+    def __init__(self, name: str, address: str): #, setting_parameters: dict):
+        super().__init__(name, address)
+        #self.device: QbloxQrmQcm = None
+        self.cfg: dict = {}
+        self.host: str
+        self.port: str
 
+        self.address = address
+        self.host = self.address
+        self.port = 6000 #self.cfg["ip_port"]
+
+
+        self.ports: dict = {}
+        self.acquisition_hold_off: int
+        self.acquisition_duration: int
+        self.discretization_threshold_acq: float
+        self.phase_rotation_acq: float
+        self.channel_port_map: dict = {}
+        self.channels: list = []
+
+        #self._cluster: QbloxCluster = None
+        self._input_ports_keys = ["i1"]
+        self._output_ports_keys = ["o1"]
+        self._sequencers: dict[Sequencer] = {"o1": []}
+        self._port_channel_map: dict = {}
+        self._last_pulsequence_hash: int = 0
+        self._current_pulsesequence_hash: int
+        self._device_parameters = {}
+        self._device_num_output_ports = 1
+        self._device_num_sequencers: int
+        self._free_sequencers_numbers: list[int] = []
+        self._used_sequencers_numbers: list[int] = []
+        self._unused_sequencers_numbers: list[int] = []
+
+        """        
         self.settings = setting_parameters
         self.is_connected = False
         self.cfg = self.settings["instruments"]["tii_rfsoc4x2"]["settings"]
         self.host = self.cfg["ip_address"]
-        self.port = self.cfg["ip_port"]
+        self.port = 6000 #self.cfg["ip_port"]
+
+        # Create a socket (SOCK_STREAM means a TCP socket) and send configuration
+        jsonDic = self.cfg
+        jsonDic["opCode"] = "configuration"
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            # Connect to server and send data
+            sock.connect((self.host, self.port))
+            sock.sendall(json.dumps(jsonDic).encode())
+        sock.close()
+        """
+
+
+    def connect(self):
+        self.is_connected = True
 
         # Create a socket (SOCK_STREAM means a TCP socket) and send configuration
         jsonDic = self.cfg
@@ -44,7 +91,44 @@ class tii_rfsoc4x2:
             sock.sendall(json.dumps(jsonDic).encode())
         sock.close()
 
-    def setup(self):
+    def setup(self, **kwargs):
+        """Configures the instrument.
+
+        A connection to the instrument needs to be established beforehand.
+        Args:
+            **kwargs: dict = A dictionary of settings loaded from the runcard:
+                kwargs['channel_port_map']
+                kwargs['ports']['o1']['attenuation']
+                kwargs['ports']['o1']['lo_enabled']
+                kwargs['ports']['o1']['lo_frequency']
+                kwargs['ports']['o1']['gain']
+                kwargs['ports']['o1']['hardware_mod_en']
+                kwargs['ports']['i1']['hardware_demod_en']
+                kwargs['acquisition_hold_off']
+                kwargs['acquisition_duration']
+        Raises:
+            Exception = If attempting to set a parameter without a connection to the instrument.
+        """
+
+        if self.is_connected:
+            # Load settings
+            self.cfg = kwargs
+            #self.host = self.cfg["ip_address"]
+            #self.port = self.cfg["ip_port"]   
+            jsonDic = self.cfg
+            jsonDic["opCode"] = "setup"
+            # Create a socket (SOCK_STREAM means a TCP socket)
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                # Connect to server and send data
+                sock.connect((self.host, self.port))
+                sock.sendall(json.dumps(jsonDic).encode())
+
+            sock.close()
+
+        else:
+            raise Exception("The instrument cannot be set up, there is no connection")
+
+        """
         self.experiment = self.settings["instruments"]["tii_rfsoc4x2"]["experiment"]
 
         jsonDic = self.experiment
@@ -56,6 +140,7 @@ class tii_rfsoc4x2:
             sock.sendall(json.dumps(jsonDic).encode())
 
         sock.close()
+        """
 
     def play_sequence_and_acquire(self, sequence):
         """Executes the sequence of instructions and retrieves the readout results.
@@ -117,3 +202,21 @@ class tii_rfsoc4x2:
             avgq = np.array([avg["avgqRe"], avg["avgqIm"]])
         sock.close()
         return avgi, avgq
+
+
+
+
+
+    def start(self):
+        """Empty method to comply with AbstractInstrument interface."""
+        pass
+
+
+
+    def stop(self):
+        """Empty method to comply with AbstractInstrument interface."""
+        pass
+
+    def disconnect(self):
+        """Closes the connection to the instrument."""
+        self.is_connected = False

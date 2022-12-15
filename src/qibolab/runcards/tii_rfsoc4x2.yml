@@ -1,12 +1,20 @@
 nqubits: 1
 description: TII's 1-qubit device controlled with the RFSoC4x2 (fpga board).
 
+settings:
+    hardware_avg: 1024 #reps in QICK
+    repetition_duration: 200_000
+    sampling_rate: 9_830_400_000 # DAC sampling rate
+
 qubits: [0]
 
 topology: # qubit - qubit connections
 -   [1]
 
-qubit_channel_map: [[0, 1]] # [readout, drive]
+channels: [0, 1, 3]
+
+qubit_channel_map:  # [readout, drive, flux]
+    0: [0, 1, null]
 # TODO: Remove repetition because these channels are defined here
 # and in the config below
 instruments:
@@ -18,7 +26,7 @@ instruments:
         settings:
             # Connextion
             ip_address: 192.168.2.72
-            ip_port: 6000
+            ip_port: 6000 # Useless this value. Hardcoded
 
             # channel config
             res_ch: 0       # Repeated at qubit_channel_map: [[0, 1]]
@@ -36,6 +44,8 @@ instruments:
             pi2_gain: 17000 // 2
             f_ge: 5236.3 # [MHz]
             relax_delay: 500 #[Clock ticks]
+            #Experiment
+            reps: 1024
         experiment:
             reps: 1024
             max_gain: 30000
