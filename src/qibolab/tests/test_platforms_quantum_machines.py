@@ -30,18 +30,31 @@ def test_initial_config():
 
 
 def test_register_drive_pulse():
-    from qibolab.pulses import Pulse, Rectangular
+    from qibolab.pulses import Gaussian, Pulse
 
-    pulse = Pulse(0, 20, 0.2, 20000000, 0.0, Rectangular(), channel=0, qubit=0)
+    pulse = Pulse(0, 20, 0.2, 20000000, 0.0, Gaussian(5), channel=0, qubit=0)
     platform = Platform("qm")
     platform.register_pulse(pulse)
 
-    assert platform.config["waveforms"] == {"constant_wf0.2": {"type": "constant", "sample": 0.2}}
+    print(platform.config["waveforms"])
+    assert platform.config["waveforms"] == {
+        "Envelope_Waveform_I(num_samples = 20, amplitude = 0.2, shape = Gaussian(5))": {
+            "type": "arbitrary",
+            "samples": pulse.envelope_waveform_i.data.tolist(),
+        },
+        "Envelope_Waveform_Q(num_samples = 20, amplitude = 0.2, shape = Gaussian(5))": {
+            "type": "arbitrary",
+            "samples": pulse.envelope_waveform_q.data.tolist(),
+        },
+    }
     assert platform.config["pulses"] == {
         pulse.serial: {
             "operation": "control",
             "length": 20,
-            "waveforms": {"I": "constant_wf0.2", "Q": "constant_wf0.2"},
+            "waveforms": {
+                "I": "Envelope_Waveform_I(num_samples = 20, amplitude = 0.2, shape = Gaussian(5))",
+                "Q": "Envelope_Waveform_Q(num_samples = 20, amplitude = 0.2, shape = Gaussian(5))",
+            },
         }
     }
     assert platform.config["elements"]["drive0"]["operations"] == {pulse.serial: pulse.serial}
@@ -86,6 +99,24 @@ def test_register_readout_pulse():
             {"intermediate_frequency": 20000000, "lo_frequency": None, "correction": [1.0, 0.0, 0.0, 1.0]}
         ],
     }
+
+
+def test_register_flux_pulse():
+    from qibolab.pulses import FluxPulse, Rectangular
+
+    pulse = FluxPulse(0, 20, 0.2, 0.0, Rectangular(), channel=0, qubit=2)
+    platform = Platform("qm")
+    platform.register_pulse(pulse)
+
+    assert platform.config["waveforms"] == {"constant_wf0.2": {"type": "constant", "sample": 0.2}}
+    assert platform.config["pulses"] == {
+        pulse.serial: {
+            "operation": "control",
+            "length": 20,
+            "waveforms": {"single": "constant_wf0.2"},
+        }
+    }
+    assert platform.config["elements"]["flux2"]["operations"] == {pulse.serial: pulse.serial}
 
 
 # TODO: Test different configurations of pulse sequence executions
