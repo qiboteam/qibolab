@@ -24,8 +24,6 @@ def test_execute_circuit_errors(platform_name):
     backend = QibolabBackend(platform_name)
     circuit = Circuit(1)
     circuit.add(gates.X(0))
-    with pytest.raises(RuntimeError):
-        result = backend.execute_circuit(circuit)
     circuit.add(gates.M(0))
     with pytest.raises(ValueError):
         result = backend.execute_circuit(circuit, initial_state=np.ones(2))
@@ -53,6 +51,17 @@ def test_execute_circuit(platform_name, gate, kwargs):
 
 
 @pytest.mark.qpu
+def test_measurement_samples(platform_name):
+    backend = QibolabBackend(platform_name)
+    nqubits = backend.platform.nqubits
+    circuit = Circuit(nqubits)
+    circuit.add(gates.M(*range(nqubits)))
+    result = backend.execute_circuit(circuit, nshots=100)
+    assert result.samples().shape == (100, nqubits)
+    assert sum(result.frequencies().values()) == 100
+
+
+@pytest.mark.qpu
 @pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
 def test_ground_state_probabilities_circuit(platform_name, qubit):
     backend = QibolabBackend(platform_name)
@@ -76,8 +85,5 @@ def test_excited_state_probabilities_circuit(platform_name, qubit):
 
 # TODO: speed up by instantiating the backend once per platform
 # TODO: test other platforms (qili, icarusq)
-# TODO: test_apply_gate
-# TODO: test_apply_gate_density_matrix
 # TODO: test_circuit_result_tensor
 # TODO: test_circuit_result_representation
-# TODO: test_circuit_result_probabilities

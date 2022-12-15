@@ -4,7 +4,7 @@ from qibolab.platform import Platform
 
 
 def pytest_addoption(parser):
-    parser.addoption("--platforms", type=str, action="store", default="tii5q", help="qpu platforms to test on")
+    parser.addoption("--platforms", type=str, action="store", default=None, help="qpu platforms to test on")
     parser.addoption("--qmsim", type=str, action="store", default=None, help="cloud address for QM simulator")
 
 
@@ -13,9 +13,10 @@ def pytest_configure(config):
 
 
 def pytest_generate_tests(metafunc):
-    platforms = metafunc.config.option.platforms.split(",")
+    platforms = metafunc.config.option.platforms
+    platforms = [] if platforms is None else platforms.split(",")
     qmsim = metafunc.config.option.qmsim
-    qmsim = [qmsim] if qmsim is not None else []
+    qmsim = [] if qmsim is None else [qmsim]
 
     # TODO: Enable tests for R&S as it is used for Quantum Machines
     if metafunc.module.__name__ == "qibolab.tests.test_instruments_rohde_schwarz":
