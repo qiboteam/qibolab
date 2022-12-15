@@ -350,7 +350,6 @@ class QuantumMachinesPlatform(AbstractPlatform):
 
             host, port = host.split(":")
             self.manager = QuantumMachinesManager(host, int(port), credentials=create_credentials())
-
         else:
             host, port = self.settings["instruments"]["qm"]["address"].split(":")
             self.manager = QuantumMachinesManager(host, int(port))
@@ -384,16 +383,16 @@ class QuantumMachinesPlatform(AbstractPlatform):
                 lo.start()
 
     def stop(self):
-        # TODO: Stop the OPX flux offsets?
         if self.is_connected:
             for lo in self.local_oscillators.values():
                 lo.stop()
+            self.manager.close_all_quantum_machines()
 
     def disconnect(self):
-        # TODO: Disconnect from self.manager
         if self.is_connected:
             for lo in self.local_oscillators.values():
                 lo.disconnect()
+            self.manager.close()
             self.is_connected = False
 
     def register_waveform(self, pulse, mode="i"):

@@ -104,7 +104,7 @@ def test_register_readout_pulse():
 def test_register_flux_pulse():
     from qibolab.pulses import FluxPulse, Rectangular
 
-    pulse = FluxPulse(0, 20, 0.2, 0.0, Rectangular(), channel=0, qubit=2)
+    pulse = FluxPulse(0, 20, 0.2, Rectangular(), channel=0, qubit=2)
     platform = Platform("qm")
     platform.register_pulse(pulse)
 
