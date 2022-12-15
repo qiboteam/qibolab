@@ -14,17 +14,15 @@ def pytest_configure(config):
 
 def pytest_generate_tests(metafunc):
     platforms = metafunc.config.option.platforms.split(",")
+    qmsim = metafunc.config.option.qmsim
+    qmsim = [qmsim] if qmsim is not None else []
 
     # TODO: Enable tests for R&S as it is used for Quantum Machines
     if metafunc.module.__name__ == "qibolab.tests.test_instruments_rohde_schwarz":
         pytest.skip("Skipping Rohde Schwarz tests because it is not available in qpu5q.")
 
     if "qmsim_address" in metafunc.fixturenames:
-        qmsim = metafunc.config.option.qmsim
-        if qmsim is None:
-            pytest.skip("Skipping Quantum Machines tests because simulator was not provided.")
-        else:
-            metafunc.parametrize("qmsim_address", [qmsim])
+        metafunc.parametrize("qmsim_address", qmsim)
 
     if "platform_name" in metafunc.fixturenames:
         if "qubit" in metafunc.fixturenames:

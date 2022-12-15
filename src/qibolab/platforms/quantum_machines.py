@@ -325,27 +325,6 @@ class QuantumMachinesPlatform(AbstractPlatform):
 
         self.reload_settings()
 
-    def __repr__(self):
-        return self.name
-
-    def __getstate__(self):
-        return {
-            "name": self.name,
-            "runcard": self.runcard,
-            "settings": self.settings,
-            "is_connected": self.is_connected,
-        }
-
-    def __setstate__(self, data):
-        self.name = data.get("name")
-        self.runcard = data.get("runcard")
-        self.settings = data.get("settings")
-        self.is_connected = data.get("is_connected")
-
-    def _check_connected(self):
-        if not self.is_connected:
-            raise_error(RuntimeError, "Cannot access instrument because it is not connected.")
-
     def reload_settings(self):
         """Reloads the runcard and re-setups the connected instruments using the new values."""
         with open(self.runcard) as file:
