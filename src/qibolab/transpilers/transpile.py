@@ -12,6 +12,8 @@ def transpile(circuit, two_qubit_natives, fuse_one_qubit=False):
         circuit (qibo.models.Circuit): Circuit model to transpile.
         two_qubit_natives (list): List of two qubit native gates
         supported by the quantum hardware ("CZ" and/or "iSWAP").
+        fuse_one_qubit (bool): If ``True`` it fuses adjacent one-qubit gates to reduce
+            circuit depth.
 
     Returns:
         new (qibo.models.Circuit): New circuit that can be executed on tii5q platform.
@@ -40,14 +42,6 @@ def transpile(circuit, two_qubit_natives, fuse_one_qubit=False):
     # one-qubit gates to native
     new = translate_circuit(new, two_qubit_natives, translate_single_qubit=True)
 
-    # TODO: Handle measurements similarly to other gates
-    if circuit.measurement_gate:
-        measured_qubits = tuple(hardware_qubits.index(q) for q in circuit.measurement_gate.qubits)
-        new.measurement_gate = gates.M(*measured_qubits)
-        new.measurement_tuples = {
-            k: tuple(hardware_qubits.index(q) for q in v) for k, v in circuit.measurement_tuples.items()
-        }
-
     return new, hardware_qubits
 
 
@@ -71,13 +65,14 @@ def translate_circuit(circuit, two_qubit_natives, translate_single_qubit=False):
     return new
 
 
-def can_execute(circuit, two_qubit_natives):
+def can_execute(circuit, two_qubit_natives, verbose=True):
     """Checks if a circuit can be executed on tii5q.
 
     Args:
         circuit (qibo.models.Circuit): Circuit model to check.
         two_qubit_natives (list): List of two qubit native gates
         supported by the quantum hardware ("CZ" and/or "iSWAP").
+        verbose (bool): If ``True`` it prints debugging log messages.
 
     Returns ``True`` if the following conditions are satisfied:
         - Circuit does not contain more than two-qubit gates.
@@ -88,34 +83,36 @@ def can_execute(circuit, two_qubit_natives):
     """
     CZ_is_native = "CZ" in two_qubit_natives
     iSWAP_is_native = "iSWAP" in two_qubit_natives
+    # pring messages only if ``verbose == True``
+    vlog = lambda msg: log.info(msg) if verbose else lambda msg: None
     for gate in circuit.queue:
+        if isinstance(gate, gates.M):
+            continue
+
         if len(gate.qubits) == 1:
             if not isinstance(gate, (gates.I, gates.Z, gates.RZ, gates.U3)):
-                log.info(f"{gate.name} is not a single qubit native gate.")
+                vlog(f"{gate.name} is not a single qubit native gate.")
                 return False
 
         elif len(gate.qubits) == 2:
             if CZ_is_native and iSWAP_is_native:
                 if not isinstance(gate, (gates.CZ, gates.iSWAP)):
-                    log.info(f"{gate.name} is not a two qubit native gate.")
+                    vlog(f"{gate.name} is not a two qubit native gate.")
                     return False
             elif CZ_is_native:
                 if not isinstance(gate, (gates.CZ)):
-                    log.info(f"{gate.name} is not a two qubit native gate.")
+                    vlog(f"{gate.name} is not a two qubit native gate.")
                     return False
             elif iSWAP_is_native:
                 if not isinstance(gate, (gates.iSWAP)):
-                    log.info(f"{gate.name} is not a two qubit native gate.")
+                    vlog(f"{gate.name} is not a two qubit native gate.")
                     return False
             else:
-                log.info("Use only CZ and/or iSWAP as native gates")
-            if 0 not in gate.qubits:
-                log.info("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
+                vlog("Use only CZ and/or iSWAP as native gates")
                 return False
-
         else:
-            log.info(f"{gate.name} acts on more than two qubits.")
+            vlog(f"{gate.name} acts on more than two qubits.")
             return False
 
-    log.info("Circuit can be executed.")
+    vlog("Circuit can be executed.")
     return True

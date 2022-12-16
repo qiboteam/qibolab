@@ -58,6 +58,7 @@ setup(
         "tiiq": [
             "qblox-instruments==0.6.1",
             "qcodes",
+            "pyvisa-py==0.5.3",
         ],
     },
     python_requires=">=3.8.0",
