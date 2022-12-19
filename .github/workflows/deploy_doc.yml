@@ -31,7 +31,7 @@ jobs:
 
   deploy-docs:
     needs: [evaluate-label]
-    uses: qibogang/workflows/.github/workflows/deploy-ghpages-latest-stable.yml@versions
+    uses: qibogang/workflows/.github/workflows/deploy-ghpages-latest-stable.yml@build #TODO: modify the branch 
     with:
       python-version: 3.9
       package-manager: 'pip'
