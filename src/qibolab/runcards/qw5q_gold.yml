@@ -4,7 +4,7 @@ description: QuantWare 5-qubit device gold, controlled with Qblox and R&S instru
 settings:
     hardware_avg: 200
     sampling_rate: 1_000_000_000
-    repetition_duration: 10000 # 200_000 
+    repetition_duration: 10000 # 200_000
     # np.lcm.reduce([np.int64(1e13/6_961_100_000), np.int64(1e13/5_999_550_000), np.int64(1e13/1e9)])*1e9/1e13
     minimum_delay_between_instructions: 4
 
