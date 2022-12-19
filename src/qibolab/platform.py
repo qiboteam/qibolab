@@ -9,11 +9,14 @@ def Platform(name, runcard=None):
         The plaform class.
     """
     if not runcard:
-        from qibolab.paths import qibolab_folder
         from os.path import exists
+
+        from qibolab.paths import qibolab_folder
+
         runcard = qibolab_folder / "runcards" / f"{name}.yml"
         if not exists(runcard):
             from qibo.config import raise_error
+
             raise_error(RuntimeError, f"Runcard {name} does not exist.")
 
     if name == "dummy":
