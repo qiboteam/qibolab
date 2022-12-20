@@ -111,5 +111,5 @@ characterization:
             T2: 5800
             state0_voltage: 0
             state1_voltage: 0
-            mean_gnd_states: (0+0j)
-            mean_exc_states: (0+0j)
+            mean_gnd_states: (-0.0012548976062530532-0.00023722554958475822j)
+            mean_exc_states: (-0.0004659510503175379+6.980508060576453e-06j)
