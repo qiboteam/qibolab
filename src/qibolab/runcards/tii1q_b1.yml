@@ -77,14 +77,14 @@ instruments:
                 'L3-18_qd': o1 # IQ Port = out0 & out1
                 99: o2
 
-    # twpa_pump:
-    #     lib: rohde_schwarz
-    #     class: SGS100A
-    #     address: 192.168.0.37
-    #     roles: [other]
-    #     settings:
-    #         frequency: 6_837_500_000 # Hz
-    #         power: 0 # dBm
+    twpa_pump:
+        lib: rohde_schwarz
+        class: SGS100A
+        address: 192.168.0.37
+        roles: [other]
+        settings:
+            frequency: 6_837_500_000 # Hz
+            power: 0 # dBm
 
 native_gates:
     single_qubit:
