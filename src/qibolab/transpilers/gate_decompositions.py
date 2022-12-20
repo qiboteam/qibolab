@@ -92,7 +92,11 @@ def translate_gate(gate, native_gates):
             # First decompose into CZ
             cz_decomposed = cz_dec(gate)
             # Then CZ are decomposed into iSWAP
-            iswap_decomposed = [iswap_dec(g) for g in cz_decomposed]
+            iswap_decomposed = []
+            for g in cz_decomposed:
+                # Need recursive function as gates.Unitary is not in iswap_dec
+                for g_translated in translate_gate(g, ["iSWAP"]):
+                    iswap_decomposed.append(g_translated)
             return iswap_decomposed
     else:  # pragma: no cover
         raise_error("Use only CZ and/or iSWAP as native gates")
@@ -119,10 +123,6 @@ onequbit_dec.add(gates.RZ, lambda gate: [gates.RZ(0, gate.parameters[0])])
 onequbit_dec.add(gates.U1, lambda gate: [gates.RZ(0, gate.parameters[0])])
 onequbit_dec.add(gates.U2, lambda gate: [gates.U3(0, np.pi / 2, gate.parameters[0], gate.parameters[1])])
 onequbit_dec.add(gates.U3, lambda gate: [gates.U3(0, gate.parameters[0], gate.parameters[1], gate.parameters[2])])
-onequbit_dec.add(
-    gates.Unitary,
-    lambda gate: [gates.U3(0, *u3_decomposition(gate.parameters[0]))],
-)
 onequbit_dec.add(
     gates.FusedGate,
     lambda gate: [gates.U3(0, *u3_decomposition(gate.asmatrix(backend)))],
@@ -353,4 +353,9 @@ opt_dec.add(
         gates.CZ(0, 1),
         gates.H(1),
     ],
+)
+# Single qubit unitary decomposition at last (not deepcopied by two qubit decompositions)
+onequbit_dec.add(
+    gates.Unitary,
+    lambda gate: [gates.U3(0, *u3_decomposition(gate.parameters[0]))],
 )
