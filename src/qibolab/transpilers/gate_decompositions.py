@@ -53,7 +53,7 @@ def translate_gate(gate, native_gates):
 
     Args:
         gate (qibo.gates.abstract.Gate): gate to be decomposed.
-        two_qubit_natives (list): List of two qubit native gates
+        native_gates (list): List of two qubit native gates
         supported by the quantum hardware ("CZ" and/or "iSWAP").
 
     Returns:
@@ -61,15 +61,16 @@ def translate_gate(gate, native_gates):
     """
     if isinstance(gate, gates.M):
         return gate
+
     if len(gate.qubits) == 1:
         return onequbit_dec(gate)
 
     if "CZ" in native_gates and "iSWAP" in native_gates:
         # Check for a special optimized decomposition.
-        if gate in opt_dec.decompositions:
+        if gate.__class__ in opt_dec.decompositions:
             return opt_dec(gate)
         # Check if the gate has a CZ decomposition
-        if not gate in iswap_dec.decompositions:
+        if not gate.__class__ in iswap_dec.decompositions:
             return cz_dec(gate)
         # Check the decomposition with less 2 qubit gates.
         else:
@@ -85,7 +86,7 @@ def translate_gate(gate, native_gates):
     elif "CZ" in native_gates:
         return cz_dec(gate)
     elif "iSWAP" in native_gates:
-        if gate in iswap_dec.decompositions:
+        if gate.__class__ in iswap_dec.decompositions:
             return iswap_dec(gate)
         else:
             # First decompose into CZ
