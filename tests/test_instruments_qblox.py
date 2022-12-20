@@ -5,43 +5,25 @@ from qibolab import Platform
 from qibolab.instruments.qblox import Cluster, ClusterQCM_RF, ClusterQRM_RF
 from qibolab.paths import user_folder
 from qibolab.pulses import Pulse, PulseSequence, ReadoutPulse
+from qibolab.tests.utils import InstrumentsDict, load_from_platform
 
-INSTRUMENTS_LIST = ["cluster", "qrm_rf", "qcm_rf"]
-
-
-class InstrumentsDict(dict):
-    def __getitem__(self, name):
-        if name not in self:
-            pytest.skip(f"Skip {name} test as it is not included in the tested platforms.")
-        else:
-            return super().__getitem__(name)
-
+INSTRUMENTS_LIST = ["Cluster", "ClusterQRM_RF", "ClusterQCM_RF"]
 
 instruments = InstrumentsDict()
+instruments_settings = {}
 
 
 @pytest.mark.qpu
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
 def test_instruments_qublox_init(platform_name, name):
     settings = Platform(platform_name).settings
-
-    if name not in settings["instruments"]:
-        pytest.skip(f"Skip {name} test as it is not included in the tested platforms.")
-
     # Instantiate instrument
-    lib = settings["instruments"][name]["lib"]
-    i_class = settings["instruments"][name]["class"]
-    address = settings["instruments"][name]["address"]
-    from importlib import import_module
-
-    InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
-    instance = InstrumentClass(name, address)
+    instance, instr_settings = load_from_platform(settings, name)
     instruments[name] = instance
+    instruments_settings[name] = instr_settings
     assert instance.name == name
-    assert instance.address == address
     assert instance.is_connected == False
     assert instance.device == None
-    assert instance.signature == f"{i_class}@{address}"
     assert instance.data_folder == user_folder / "instruments" / "data" / instance.tmp_folder.name.split("/")[-1]
 
 
@@ -55,19 +37,19 @@ def test_instruments_qublox_connect(name):
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
 def test_instruments_qublox_setup(platform_name, name):
     settings = Platform(platform_name).settings
-    instruments[name].setup(**settings["settings"], **settings["instruments"][name]["settings"])
-    for parameter in settings["instruments"][name]["settings"]:
+    instruments[name].setup(**settings["settings"], **instruments_settings[name])
+    for parameter in instruments_settings[name]:
         if parameter == "ports":
-            for port in settings["instruments"][name]["settings"]["ports"]:
-                for sub_parameter in settings["instruments"][name]["settings"]["ports"][port]:
+            for port in instruments_settings[name]["ports"]:
+                for sub_parameter in instruments_settings[name]["ports"][port]:
                     # assert getattr(instruments[name].ports[port], sub_parameter) == settings["instruments"][name]["settings"]["ports"][port][sub_parameter]
                     np.testing.assert_allclose(
                         getattr(instruments[name].ports[port], sub_parameter),
-                        settings["instruments"][name]["settings"]["ports"][port][sub_parameter],
+                        instruments_settings[name]["ports"][port][sub_parameter],
                         atol=1e-4,
                     )
         else:
-            assert getattr(instruments[name], parameter) == settings["instruments"][name]["settings"][parameter]
+            assert getattr(instruments[name], parameter) == instruments_settings[name][parameter]
 
 
 def instrument_test_property_wrapper(
@@ -268,7 +250,7 @@ def test_instruments_qublox_set_device_paramters(name):
 def test_instruments_process_pulse_sequence_upload_play(platform_name, name):
     instrument = instruments[name]
     settings = Platform(platform_name).settings
-    instrument.setup(**settings["settings"], **settings["instruments"][name]["settings"])
+    instrument.setup(**settings["settings"], **instruments_settings[name])
     repetition_duration = settings["settings"]["repetition_duration"]
     instrument_pulses = {}
     instrument_pulses[name] = PulseSequence()
