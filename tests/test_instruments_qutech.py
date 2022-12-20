@@ -1,20 +1,31 @@
 import pytest
-import yaml
 
+from qibolab import Platform
 from qibolab.instruments.qutech import SPI
-from qibolab.paths import qibolab_folder, user_folder
+from qibolab.paths import user_folder
 
 INSTRUMENTS_LIST = ["SPI"]
-instruments = {}
+
+
+class InstrumentsDict(dict):
+    def __getitem__(self, name):
+        if name not in self:
+            pytest.skip(f"Skip {name} test as it is not included in the tested platforms.")
+        else:
+            return super().__getitem__(name)
+
+
+instruments = InstrumentsDict()
 
 
 # To test --> name = SpiRack
 @pytest.mark.qpu
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
-def test_instruments_qutech_init(name):
-    test_runcard = qibolab_folder / "tests" / "test_instruments_qutech.yml"
-    with open(test_runcard) as file:
-        settings = yaml.safe_load(file)
+def test_instruments_qutech_init(platform_name, name):
+    settings = Platform(platform_name).settings
+
+    if name not in settings["instruments"]:
+        pytest.skip(f"Skip {name} test as it is not included in the tested platforms.")
 
     # Instantiate instrument
     lib = settings["instruments"][name]["lib"]
@@ -41,10 +52,8 @@ def test_instruments_qutech_connect(name):
 
 @pytest.mark.qpu
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
-def test_instruments_qutech_setup(name):
-    test_runcard = qibolab_folder / "tests" / "test_instruments_qutech.yml"
-    with open(test_runcard) as file:
-        settings = yaml.safe_load(file)
+def test_instruments_qutech_setup(platform_name, name):
+    settings = Platform(platform_name).settings
     instruments[name].setup(**settings["settings"], **settings["instruments"][name]["settings"])
 
 
