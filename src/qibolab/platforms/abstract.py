@@ -102,11 +102,15 @@ class AbstractPlatform(ABC):
 
         # Load Characterization settings
         self.characterization = self.settings["characterization"]
-        # Load Native Gates
+        # Load single qubit Native Gates
         self.native_gates = self.settings["native_gates"]
         self.two_qubit_natives = set()
-        for pairs, gates in self.native_gates["two_qubit"].items():
-            self.two_qubit_natives &= set(gates.keys())
+        # Load two qubit Native Gates, if multiqubit platform
+        if self.native_gates["two_qubit"]:
+            for pairs, gates in self.native_gates["two_qubit"].items():
+                self.two_qubit_natives &= set(gates.keys())
+        else:
+            self.two_qubit_natives = ["CZ"]
 
         if self.is_connected:
             self.setup()
