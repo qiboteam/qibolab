@@ -21,34 +21,32 @@ instruments:
     tii_rfsoc4x2:
         lib: tii
         class: tii_rfsoc4x2
-        address: 192.168.2.72
+        address: 192.168.2.72:6000
         roles: [control, readout]
         settings:
-            # Connextion
-            ip_address: 192.168.2.72
-            ip_port: 6000 # Useless this value. Hardcoded
-
             # channel config
             res_ch: 0       # Repeated at qubit_channel_map: [[0, 1]]
             qubit_ch: 1
             # resonator config
             readout_length: 3000 # ns
-            f_res: 7_295_238_290 # [Hz]
+            resonator_freq: 7_295_238_290 # [Hz]
             resonator_phase: 3097210280 #
             adc_trig_offset: 200 # [Clock ticks]
-            res_gain: 600 #
+            resonator_gain: 0.02 # Gain [0,1]
             threshold: 0
             # qubit config
             sigma: 114 # ns
-            pi_gain: 17000 #
-            pi2_gain: 17000 // 2
-            f_ge: 5236.3 # [MHz]
+            pi_gain: 0.566 #
+            pi2_gain: 0.566 // 2
+            qubit_freq: 5_236_300_000 # [Hz]
             relax_delay: 500 #[Clock ticks]
             #Experiment
             reps: 1024
+            max_gain: 32000
+            expt: 1
         experiment:
             reps: 1024
-            max_gain: 30000
+            max_gain: 32000
             delay_before_readout: 50 # [ns]
             rabi_length: 0.01
 native_gates:
@@ -56,9 +54,9 @@ native_gates:
         0: # qubit number
             RX:
                 duration: 114
-                amplitude: 0.566
+                amplitude: 0.53
                 frequency: 5_236_300_000
-                shape: Drag(5, 0.05096)
+                shape: Drag(30, 0.05096)
                 type: qd # qubit drive
             MZ:
                 duration: 3000
@@ -70,8 +68,8 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            resonator_freq: 7824847574
-            qubit_freq: 5082293989
+            resonator_freq: 7_295_238_290
+            qubit_freq: 5_236_300_000
             T1: 17744
             T2: 8385
             state0_voltage: 891

@@ -142,7 +142,7 @@ class AbstractPlatform(ABC):
             )
 
         # Generate ro_channel[qubit], qd_channel[qubit], qf_channel[qubit], qrm[qubit], qcm[qubit], lo_qrm[qubit], lo_qcm[qubit]
-        self.ro_channel = {}
+        """self.ro_channel = {}
         self.qd_channel = {}
         self.qf_channel = {}
         self.qrm = {}
@@ -169,7 +169,7 @@ class AbstractPlatform(ABC):
             if not self.qubit_instrument_map[qubit][2] is None:
                 self.qbm[qubit] = self.instruments[self.qubit_instrument_map[qubit][2]]
                 self.qf_port[qubit] = self.qbm[qubit].dacs[self.qubit_channel_map[qubit][2]]
-
+        """
     def start(self):
         if self.is_connected:
             for name in self.instruments:

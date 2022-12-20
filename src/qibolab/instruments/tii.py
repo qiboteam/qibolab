@@ -33,12 +33,11 @@ class tii_rfsoc4x2(AbstractInstrument):
         self.cfg: dict = {}
         self.host: str
         self.port: str
-
-        self.address = address
-        self.host = self.address
-        self.port = 6000 #self.cfg["ip_port"]
+        self.host, port = address.split(":")
+        self.port = int(port)
 
 
+        """
         self.ports: dict = {}
         self.acquisition_hold_off: int
         self.acquisition_duration: int
@@ -60,24 +59,7 @@ class tii_rfsoc4x2(AbstractInstrument):
         self._free_sequencers_numbers: list[int] = []
         self._used_sequencers_numbers: list[int] = []
         self._unused_sequencers_numbers: list[int] = []
-
-        """        
-        self.settings = setting_parameters
-        self.is_connected = False
-        self.cfg = self.settings["instruments"]["tii_rfsoc4x2"]["settings"]
-        self.host = self.cfg["ip_address"]
-        self.port = 6000 #self.cfg["ip_port"]
-
-        # Create a socket (SOCK_STREAM means a TCP socket) and send configuration
-        jsonDic = self.cfg
-        jsonDic["opCode"] = "configuration"
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            # Connect to server and send data
-            sock.connect((self.host, self.port))
-            sock.sendall(json.dumps(jsonDic).encode())
-        sock.close()
         """
-
 
     def connect(self):
         self.is_connected = True
@@ -112,9 +94,7 @@ class tii_rfsoc4x2(AbstractInstrument):
 
         if self.is_connected:
             # Load settings
-            self.cfg = kwargs
-            #self.host = self.cfg["ip_address"]
-            #self.port = self.cfg["ip_port"]   
+            self.cfg = kwargs 
             jsonDic = self.cfg
             jsonDic["opCode"] = "setup"
             # Create a socket (SOCK_STREAM means a TCP socket)
@@ -198,8 +178,8 @@ class tii_rfsoc4x2(AbstractInstrument):
             # Receive data from the server and shut down
             received = sock.recv(256)
             avg = json.loads(received.decode("utf-8"))
-            avgi = np.array([avg["avgiRe"], avg["avgiIm"]])
-            avgq = np.array([avg["avgqRe"], avg["avgqIm"]])
+            avgi = avg["avgi"]
+            avgq = avg["avgq"]
         sock.close()
         return avgi, avgq
 
