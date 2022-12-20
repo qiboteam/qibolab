@@ -271,7 +271,6 @@ def test_instruments_process_pulse_sequence_upload_play(platform_name, name):
         )  # TODO: Check why this is necessary here and not when playing a PS of only one readout pulse
         instrument.process_pulse_sequence(instrument_pulses[name], nshots=5, repetition_duration=repetition_duration)
         instrument.upload()
-        # FIXME: Method no longer exists, needs to be updated
         instrument.play_sequence()
         acquisition_results = instrument.acquire()
 
