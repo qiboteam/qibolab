@@ -20,17 +20,9 @@ qubit = 0
 nshots = 1024
 
 
-def copy_runcard(platform_name):
-    test_runcard = qibolab_folder / "tests" / "test_platforms_multiqubit.yml"
-    if not os.path.exists(test_runcard):
-        original_runcard = qibolab_folder / "runcards" / f"{platform_name}.yml"
-        shutil.copyfile(str(original_runcard), test_runcard)
-    return test_runcard
-
-
 @pytest.fixture
 def platform(platform_name):
-    test_runcard = pathlib.Path(__file__).parent / "test_platforms_multiqubit.yml"
+    test_runcard = qibolab_folder / "tests" / "test_platforms_multiqubit.yml"
     original_runcard = qibolab_folder / "runcards" / f"{platform_name}.yml"
     shutil.copyfile(str(original_runcard), test_runcard)
     _platform = Platform(platform_name, test_runcard)
