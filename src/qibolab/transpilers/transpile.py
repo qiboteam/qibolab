@@ -77,7 +77,7 @@ def can_execute(circuit, two_qubit_natives, verbose=True):
     Returns ``True`` if the following conditions are satisfied:
         - Circuit does not contain more than two-qubit gates.
         - All one-qubit gates are I, Z, RZ or U3.
-        - All two-qubit gates are CZ or iSWAP based on two_qubit_native.
+        - All two-qubit gates are CZ or iSWAP based on two_qubit_natives.
         - All two-qubit gates have qubit 0 as target or control.
     otherwise returns ``False``.
     """
