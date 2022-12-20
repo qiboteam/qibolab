@@ -1,14 +1,11 @@
 name: Deploy docs
 
-
-on: 
+on:
   workflow_dispatch:
   push:
-      branches: [main] 
-      tags:
-        - '*'
-
-
+    branches: [main]
+    tags:
+      - "*"
 
 jobs:
   evaluate-label:
@@ -16,8 +13,8 @@ jobs:
     outputs:
       label: ${{ steps.label_step.outputs.main}}
     steps:
-      - name: checks for the label 
-        id: label_step 
+      - name: checks for the label
+        id: label_step
         run: |
           if [[ "${{ github.ref  }}" == "refs/heads/main" ]]; then 
                 echo "version=latest" >> $GITHUB_OUTPUT
@@ -27,14 +24,14 @@ jobs:
           fi
           if [[ "${{ github.ref_type }}" == "tag" ]]; then 
                 echo "version=stable" >> $GITHUB_OUTPUT
-          fi 
+          fi
 
   deploy-docs:
     needs: [evaluate-label]
-    uses: qibogang/workflows/.github/workflows/deploy-ghpages-latest-stable.yml@main
+    uses: qiboteam/workflows/.github/workflows/deploy-ghpages-latest-stable.yml@main
     with:
       python-version: 3.9
-      package-manager: 'pip'
-      dependency-path: '**/setup.py'
-      trigger-label: '${{needs.evaluate-label.outputs.label}}'
-      docs-folder: qibolab 
+      package-manager: "pip"
+      dependency-path: "**/setup.py"
+      trigger-label: "${{needs.evaluate-label.outputs.label}}"
+      docs-folder: qibolab
