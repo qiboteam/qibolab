@@ -104,6 +104,9 @@ class AbstractPlatform(ABC):
         self.characterization = self.settings["characterization"]
         # Load Native Gates
         self.native_gates = self.settings["native_gates"]
+        self.two_qubit_natives = set()
+        for pairs, gates in self.native_gates["two_qubit"].items():
+            self.two_qubit_natives &= set(gates.keys())
 
         if self.is_connected:
             self.setup()
@@ -201,8 +204,8 @@ class AbstractPlatform(ABC):
 
         from qibolab.transpilers import can_execute, transpile
 
-        if not can_execute(circuit):
-            circuit, hardware_qubits = transpile(circuit)
+        if not can_execute(circuit, self.two_qubit_natives):
+            circuit, hardware_qubits = transpile(circuit, self.two_qubit_natives)
 
         sequence = PulseSequence()
         sequence.virtual_z_phases = {}
