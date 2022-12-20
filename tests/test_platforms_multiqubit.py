@@ -39,12 +39,10 @@ def platform(platform_name):
 
 
 def test_abstractplatform_init(platform_name):
-    test_runcard = copy_runcard(platform_name)
-    with open(test_runcard) as file:
+    with open(qibolab_folder / "runcards" / f"{platform_name}.yml") as file:
         settings = yaml.safe_load(file)
-    platform = Platform(platform_name, test_runcard)
+    platform = Platform(platform_name)
     assert platform.name == platform_name
-    assert platform.runcard == test_runcard
     assert platform.is_connected == False
     assert len(platform.instruments) == len(settings["instruments"])
     for name in settings["instruments"]:
