@@ -1,10 +1,10 @@
 import os
 import shutil
+import warnings
 
 import numpy as np
 import pytest
 import yaml
-from qibo.config import log
 from qibo.models import Circuit
 from qibo.states import CircuitResult
 
@@ -174,7 +174,7 @@ def test_excited_state_probabilities_pulses(platform_name, qubit):
 
     cr = CircuitResult(backend, Circuit(platform.nqubits), result)
     probs = backend.circuit_result_probabilities(cr, qubits=[qubit])
-    log.warning(f"Excited state probabilities: {probs}")
+    warnings.warn(f"Excited state probabilities: {probs}")
     np.testing.assert_allclose(probs, [0, 1], atol=0.05)
 
 
@@ -195,5 +195,5 @@ def test_ground_state_probabilities_pulses(platform_name, qubit, start_zero):
 
     cr = CircuitResult(backend, Circuit(platform.nqubits), result)
     probs = backend.circuit_result_probabilities(cr, qubits=[qubit])
-    log.warning(f"Ground state probabilities: {probs}")
+    warnings.warn(f"Ground state probabilities: {probs}")
     np.testing.assert_allclose(probs, [1, 0], atol=0.05)

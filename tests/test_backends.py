@@ -1,7 +1,8 @@
+import warnings
+
 import numpy as np
 import pytest
 from qibo import gates
-from qibo.config import log
 from qibo.models import Circuit
 
 from qibolab.backends import QibolabBackend
@@ -70,7 +71,7 @@ def test_ground_state_probabilities_circuit(platform_name, qubit):
     circuit.add(gates.M(qubit))
     result = backend.execute_circuit(circuit, nshots=5000)
     probs = result.probabilities()
-    log.warning(f"Ground state probabilities: {probs}")
+    warnings.warn(f"Ground state probabilities: {probs}")
     np.testing.assert_allclose(probs, [1, 0], atol=0.05)
 
 
@@ -83,7 +84,7 @@ def test_excited_state_probabilities_circuit(platform_name, qubit):
     circuit.add(gates.M(qubit))
     result = backend.execute_circuit(circuit, nshots=5000)
     probs = result.probabilities()
-    log.warning(f"Excited state probabilities: {probs}")
+    warnings.warn(f"Excited state probabilities: {probs}")
     np.testing.assert_allclose(probs, [0, 1], atol=0.05)
 
 
