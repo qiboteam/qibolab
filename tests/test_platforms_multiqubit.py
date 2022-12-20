@@ -22,7 +22,7 @@ nshots = 1024
 
 @pytest.fixture
 def platform(platform_name):
-    test_runcard = pathlib.Path(__file__).parent / "test_platforms_multiqubit.yml"
+    test_runcard = qibolab_folder / "tests" / "test_platforms_multiqubit.yml"
     original_runcard = qibolab_folder / "runcards" / f"{platform_name}.yml"
     shutil.copyfile(str(original_runcard), test_runcard)
     _platform = Platform(platform_name, test_runcard)
