@@ -34,4 +34,4 @@ jobs:
       package-manager: "pip"
       dependency-path: "**/setup.py"
       trigger-label: "${{needs.evaluate-label.outputs.label}}"
-      docs-folder: qibolab
+      project: qibolab
