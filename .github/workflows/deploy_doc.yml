@@ -14,7 +14,7 @@ jobs:
   evaluate-label:
     runs-on: ubuntu-latest
     outputs:
-      label: ${{ steps.label_step.outputs.version}}
+      label: ${{ steps.label_step.outputs.main}}
     steps:
       - name: checks for the label 
         id: label_step 
