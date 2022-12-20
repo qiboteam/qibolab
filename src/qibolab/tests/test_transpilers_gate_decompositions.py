@@ -133,3 +133,15 @@ def test_unitary_to_native(nqubits, natives):
     u = u / np.sqrt(np.linalg.det(u))
     gate = gates.Unitary(u, *range(nqubits))
     assert_matrices_allclose(gate, natives)
+
+
+def test_count_1q():
+    from qibolab.transpilers.gate_decompositions import cz_dec
+
+    np.testing.assert_allclose(cz_dec.count_1q(gates.CNOT), 2)
+
+
+def test_count_2q():
+    from qibolab.transpilers.gate_decompositions import cz_dec
+
+    np.testing.assert_allclose(cz_dec.count_2q(gates.CNOT), 1)
