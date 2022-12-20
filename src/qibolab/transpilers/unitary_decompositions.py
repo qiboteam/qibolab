@@ -14,7 +14,7 @@ def u3_decomposition(unitary):
     """Decomposes arbitrary one-qubit gates to U3.
 
     Args:
-        unitary (np.ndarray): Unitary 2x2 matrix we are decomposing.
+        unitary (np.ndarray): Unitary 2x2 matrix to be decomposed.
 
     Returns:
         theta, phi, lam: parameters of U3 gate.
@@ -77,20 +77,11 @@ def calculate_single_qubit_unitaries(psi):
         Local unitaries UA and UB that map the given basis to the magic basis.
     """
 
-    # convert to magic basis
+    # TODO: Handle the case where psi is not real in the magic basis
     psi_magic = np.dot(np.conj(magic_basis).T, psi)
+    if not np.allclose(psi_magic.imag, np.zeros_like(psi_magic)):  # pragma: no cover
+        raise_error(NotImplementedError, "Given state is not real in the magic basis.")
     psi_bar = np.copy(psi).T
-    print(psi_bar[0])
-    if not np.allclose(psi_magic.imag, np.zeros_like(psi_magic)):
-        # Handle the case where psi is not real in the magic basis
-        print("not real coeff")
-        for i in range(4):
-            for j in range(4):
-                phase = np.angle(np.max(psi_bar[i, j]))
-                print(phase, np.exp(-1.0j * phase))
-                psi_bar[i, j] = psi_bar[i, j] * np.exp(-1.0j * phase)
-        if not np.allclose(psi_bar.imag, np.zeros_like(psi_bar)):
-            print("fail", psi_bar[0])
 
     # find e and f by inverting (A3), (A4)
     ef = (psi_bar[0] + 1j * psi_bar[1]) / np.sqrt(2)

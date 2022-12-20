@@ -93,7 +93,7 @@ def translate_gate(gate, native_gates):
             # Then CZ are decomposed into iSWAP
             iswap_decomposed = [iswap_dec(g) for g in cz_decomposed]
             return iswap_decomposed
-    else:
+    else:  # pragma: no cover
         raise_error("Use only CZ and/or iSWAP as native gates")
 
 

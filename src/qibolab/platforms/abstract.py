@@ -89,7 +89,7 @@ class AbstractPlatform(ABC):
         self.is_connected = data.get("is_connected")
 
     def _check_connected(self):
-        if not self.is_connected:
+        if not self.is_connected:  # pragma: no cover
             raise_error(RuntimeError, "Cannot access instrument because it is not connected.")
 
     def reload_settings(self):
@@ -262,7 +262,7 @@ class AbstractPlatform(ABC):
                     mz_pulses.append(MZ_pulse.serial)
                 gate.pulses = tuple(mz_pulses)
 
-            else:
+            else:  # pragma: no cover
                 raise_error(
                     NotImplementedError,
                     f"Transpilation of {gate.__class__.__name__} gate has not been implemented yet.",

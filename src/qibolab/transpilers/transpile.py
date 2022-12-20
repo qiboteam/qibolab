@@ -96,21 +96,21 @@ def can_execute(circuit, two_qubit_natives, verbose=True):
 
         elif len(gate.qubits) == 2:
             if CZ_is_native and iSWAP_is_native:
-                if not isinstance(gate, (gates.CZ, gates.iSWAP)):
+                if not isinstance(gate, (gates.CZ, gates.iSWAP)):  # pragma: no cover
                     vlog(f"{gate.name} is not a two qubit native gate.")
                     return False
             elif CZ_is_native:
-                if not isinstance(gate, (gates.CZ)):
+                if not isinstance(gate, (gates.CZ)):  # pragma: no cover
                     vlog(f"{gate.name} is not a two qubit native gate.")
                     return False
             elif iSWAP_is_native:
-                if not isinstance(gate, (gates.iSWAP)):
+                if not isinstance(gate, (gates.iSWAP)):  # pragma: no cover
                     vlog(f"{gate.name} is not a two qubit native gate.")
                     return False
-            else:
+            else:  # pragma: no cover
                 vlog("Use only CZ and/or iSWAP as native gates")
                 return False
-        else:
+        else:  # pragma: no cover
             vlog(f"{gate.name} acts on more than two qubits.")
             return False
 
