@@ -134,41 +134,77 @@ class tii_rfsoc4x2(AbstractInstrument):
 
         jsonDic = {}
         i = 0
+        shape = "const"
         for pulse in sequence:
-            ps = pulse.shape
-            if type(ps) is Drag:
-                shape = "Drag"
-                style = "arb"
-                rel_sigma = ps.rel_sigma
-                beta = ps.beta
-            elif type(ps) is Gaussian:
-                shape: "Gaussian"
-                style = "arb"
-                rel_sigma = ps.rel_sigma
-                beta = 0
-            elif type(ps) is Rectangular:
-                shape: "Rectangular"
-                style = "const"
-                rel_sigma = 0
-                beta = 0
+            if pulse.channel == 1:   
+                ps = pulse.shape
+                if type(ps) is Drag:
+                    shape = "Drag"
+                    style = "arb"
+                    rel_sigma = ps.rel_sigma
+                    beta = ps.beta
+                elif type(ps) is Gaussian:
+                    shape = "Gaussian"
+                    style = "arb"
+                    rel_sigma = ps.rel_sigma
+                    beta = 0
+                elif type(ps) is Rectangular:
+                    shape = "Rectangular"
+                    style = "const"
+                    rel_sigma = 0
+                    beta = 0
 
-            pulseDic = {
-                "start": pulse.start,
-                "duration": pulse.duration,
-                "amplitude": pulse.amplitude,
-                "frequency": pulse.frequency,
-                "relative_phase": pulse.relative_phase,
-                #                        "shape": shape,
-                "style": style,
-                "rel_sigma": rel_sigma,
-                "beta": beta,
-                "channel": pulse.channel,
-                #                        "type": pulse.type,
-                "qubit": pulse.qubit,
-            }
-            jsonDic["pulse" + str(i)] = pulseDic
-            i = i + 1
+                pulseDic = {
+                    "start": pulse.start,
+                    "duration": pulse.duration,
+                    "amplitude": pulse.amplitude,
+                    "frequency": pulse.frequency,
+                    "relative_phase": pulse.relative_phase,
+                    "shape": shape,
+                    "style": style,
+                    "rel_sigma": rel_sigma,
+                    "beta": beta,
+                    "channel": pulse.channel,
+                    #                        "type": pulse.type,
+                    "qubit": pulse.qubit,
+                }
+                jsonDic["pulse" + str(i)] = pulseDic
+                i = i + 1
+        for pulse in sequence:
+            if pulse.channel == 0:    
+                ps = pulse.shape
+                if type(ps) is Drag:
+                    shape = "Drag"
+                    style = "arb"
+                    rel_sigma = ps.rel_sigma
+                    beta = ps.beta
+                elif type(ps) is Gaussian:
+                    shape = "Gaussian"
+                    style = "arb"
+                    rel_sigma = ps.rel_sigma
+                    beta = 0
+                elif type(ps) is Rectangular:
+                    shape = "Rectangular"
+                    style = "const"
+                    rel_sigma = 0
+                    beta = 0
 
+                pulseDic = {
+                    "start": pulse.start,
+                    "duration": pulse.duration,
+                    "amplitude": pulse.amplitude,
+                    "frequency": pulse.frequency,
+                    "relative_phase": pulse.relative_phase,
+                    "shape": shape,
+                    "style": style,
+                    "rel_sigma": rel_sigma,
+                    "beta": beta,
+                    "channel": pulse.channel,
+                    #                        "type": pulse.type,
+                    "qubit": pulse.qubit,
+                }
+                jsonDic["pulse" + str(i)] = pulseDic
+                i = i + 1
         jsonDic["opCode"] = "execute"
         # Create a socket (SOCK_STREAM means a TCP socket)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:

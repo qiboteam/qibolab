@@ -20,7 +20,7 @@ qubit_channel_map:  # [readout, drive, flux]
 instruments:
     tii_rfsoc4x2:
         lib: tii
-        class: tii_rfsoc4x2
+        class: tii_rfsoc4x25236.3
         address: 192.168.2.72:6000
         roles: [control, readout]
         settings:
@@ -42,7 +42,7 @@ instruments:
             relax_delay: 500 #[Clock ticks]
             #Experiment
             reps: 1024
-            max_gain: 32000
+            max_gain: 32728
             expt: 1
         experiment:
             reps: 1024
