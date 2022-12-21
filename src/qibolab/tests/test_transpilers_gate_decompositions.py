@@ -139,9 +139,11 @@ def test_count_1q():
     from qibolab.transpilers.gate_decompositions import cz_dec
 
     np.testing.assert_allclose(cz_dec.count_1q(gates.CNOT(0, 1)), 2)
+    np.testing.assert_allclose(cz_dec.count_1q(gates.CRX(0, 1, 0.1)), 2)
 
 
 def test_count_2q():
     from qibolab.transpilers.gate_decompositions import cz_dec
 
     np.testing.assert_allclose(cz_dec.count_2q(gates.CNOT(0, 1)), 1)
+    np.testing.assert_allclose(cz_dec.count_2q(gates.CRX(0, 1, 0.1)), 2)
