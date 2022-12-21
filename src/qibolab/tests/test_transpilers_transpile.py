@@ -65,3 +65,18 @@ def test_transpile(run_number, nqubits, ngates, fuse_one_qubit, two_qubit_native
     target_state = transpose_qubits(target_state, hardware_qubits)
     fidelity = np.abs(np.conj(target_state).dot(final_state))
     np.testing.assert_allclose(fidelity, 1.0)
+
+
+def test_can_execute_false():
+    circuit1 = Circuit(1)
+    circuit1.add(gates.H(0))
+    assert not can_execute(circuit1, two_qubit_natives=["CZ", "iSWAP"])
+    circuit2 = Circuit(2)
+    circuit2.add(gates.CNOT(0, 1))
+    assert not can_execute(circuit2, two_qubit_natives=["CZ", "iSWAP"])
+    circuit3 = Circuit(3)
+    circuit3.add(gates.CNOT(1, 2))
+    assert not can_execute(circuit3, two_qubit_natives=["CZ", "iSWAP"])
+    circuit4 = Circuit(3)
+    circuit4.add(gates.TOFFOLI(0, 1, 2))
+    assert not can_execute(circuit4, two_qubit_natives=["CZ", "iSWAP"])

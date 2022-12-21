@@ -11,7 +11,7 @@ def transpile(circuit, two_qubit_natives, fuse_one_qubit=False):
     Args:
         circuit (qibo.models.Circuit): Circuit model to transpile.
         two_qubit_natives (list): List of two qubit native gates
-        supported by the quantum hardware ("CZ" and/or "iSWAP").
+            supported by the quantum hardware ("CZ" and/or "iSWAP").
         fuse_one_qubit (bool): If ``True`` it fuses adjacent one-qubit gates to reduce
             circuit depth.
 
@@ -51,7 +51,7 @@ def translate_circuit(circuit, two_qubit_natives, translate_single_qubit=False):
     Args:
         circuit (qibo.models.Circuit): Circuit model to translate into native gates.
         two_qubit_natives (list): List of two qubit native gates
-        supported by the quantum hardware ("CZ" and/or "iSWAP").
+            supported by the quantum hardware ("CZ" and/or "iSWAP").
 
     Returns:
         new (qibo.models.Circuit): Equivalent circuit with native gates.
@@ -71,7 +71,7 @@ def can_execute(circuit, two_qubit_natives, verbose=True):
     Args:
         circuit (qibo.models.Circuit): Circuit model to check.
         two_qubit_natives (list): List of two qubit native gates
-        supported by the quantum hardware ("CZ" and/or "iSWAP").
+            supported by the quantum hardware ("CZ" and/or "iSWAP").
         verbose (bool): If ``True`` it prints debugging log messages.
 
     Returns ``True`` if the following conditions are satisfied:
@@ -89,19 +89,19 @@ def can_execute(circuit, two_qubit_natives, verbose=True):
             continue
 
         if len(gate.qubits) == 1:
-            if not isinstance(gate, (gates.I, gates.Z, gates.RZ, gates.U3)):  # pragma: no cover
+            if not isinstance(gate, (gates.I, gates.Z, gates.RZ, gates.U3)):
                 vlog(f"{gate.name} is not a single qubit native gate.")
                 return False
 
         elif len(gate.qubits) == 2:
-            if gate.__class__.__name__ not in two_qubit_natives:  # pragma: no cover
+            if gate.__class__.__name__ not in two_qubit_natives:
                 vlog(f"{gate.name} is not a two qubit native gate.")
                 return False
-            if 0 not in gate.qubits:  # pragma: no cover
+            if 0 not in gate.qubits:
                 vlog("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
                 return False
 
-        else:  # pragma: no cover
+        else:
             vlog(f"{gate.name} acts on more than two qubits.")
             return False
 
