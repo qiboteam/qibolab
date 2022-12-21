@@ -9,19 +9,21 @@ def Platform(name, runcard=None):
         The plaform class.
     """
     if not runcard:
+        from os.path import exists
+
         from qibolab.paths import qibolab_folder
 
         runcard = qibolab_folder / "runcards" / f"{name}.yml"
+        if not exists(runcard):
+            from qibo.config import raise_error
 
-    if name == "tii1q" or name == "qw5q_gold" or name == "qili":
-        from qibolab.platforms.multiqubit import MultiqubitPlatform as Device
+            raise_error(RuntimeError, f"Runcard {name} does not exist.")
+
+    if name == "dummy":
+        from qibolab.platforms.dummy import DummyPlatform as Device
     elif name == "icarusq":
         from qibolab.platforms.icplatform import ICPlatform as Device
-    elif name == "dummy":
-        from qibolab.platforms.dummy import DummyPlatform as Device
     else:
-        from qibo.config import raise_error
-
-        raise_error(RuntimeError, f"Platform {name} is not supported.")
+        from qibolab.platforms.multiqubit import MultiqubitPlatform as Device
 
     return Device(name, runcard)
