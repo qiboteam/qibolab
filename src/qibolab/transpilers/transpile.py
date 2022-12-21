@@ -65,13 +65,14 @@ def translate_circuit(circuit, two_qubit_natives, translate_single_qubit=False):
     return new
 
 
-def can_execute(circuit, two_qubit_natives):
+def can_execute(circuit, two_qubit_natives, middle_qubit=2, verbose=True):
     """Checks if a circuit can be executed on tii5q.
 
     Args:
         circuit (qibo.models.Circuit): Circuit model to check.
         two_qubit_natives (list): List of two qubit native gates
             supported by the quantum hardware ("CZ" and/or "iSWAP").
+        middle_qubit (int): Hardware middle qubit.
         verbose (bool): If ``True`` it prints debugging log messages.
 
     Returns ``True`` if the following conditions are satisfied:
@@ -97,7 +98,7 @@ def can_execute(circuit, two_qubit_natives):
             if gate.__class__.__name__ not in two_qubit_natives:
                 vlog(f"{gate.name} is not a two qubit native gate.")
                 return False
-            if 0 not in gate.qubits:
+            if middle_qubit not in gate.qubits:  # pragma: no cover
                 vlog("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
                 return False
 
