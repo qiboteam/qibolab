@@ -89,7 +89,7 @@ class AbstractPlatform(ABC):
         self.is_connected = data.get("is_connected")
 
     def _check_connected(self):
-        if not self.is_connected:
+        if not self.is_connected:  # pragma: no cover
             raise_error(RuntimeError, "Cannot access instrument because it is not connected.")
 
     def reload_settings(self):
@@ -102,8 +102,15 @@ class AbstractPlatform(ABC):
 
         # Load Characterization settings
         self.characterization = self.settings["characterization"]
-        # Load Native Gates
+        # Load single qubit Native Gates
         self.native_gates = self.settings["native_gates"]
+        self.two_qubit_natives = set()
+        # Load two qubit Native Gates, if multiqubit platform
+        if "two_qubit" in self.native_gates.keys():
+            for pairs, gates in self.native_gates["two_qubit"].items():
+                self.two_qubit_natives &= set(gates.keys())
+        else:
+            self.two_qubit_natives = ["CZ"]
 
         if self.is_connected:
             self.setup()
@@ -201,8 +208,8 @@ class AbstractPlatform(ABC):
 
         from qibolab.transpilers import can_execute, transpile
 
-        if not can_execute(circuit):
-            circuit, hardware_qubits = transpile(circuit)
+        if not can_execute(circuit, self.two_qubit_natives):
+            circuit, hardware_qubits = transpile(circuit, self.two_qubit_natives)
 
         sequence = PulseSequence()
         sequence.virtual_z_phases = {}
@@ -255,7 +262,7 @@ class AbstractPlatform(ABC):
                     mz_pulses.append(MZ_pulse.serial)
                 gate.pulses = tuple(mz_pulses)
 
-            else:
+            else:  # pragma: no cover
                 raise_error(
                     NotImplementedError,
                     f"Transpilation of {gate.__class__.__name__} gate has not been implemented yet.",
