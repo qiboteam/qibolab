@@ -81,8 +81,7 @@ def can_execute(circuit, two_qubit_natives, verbose=True):
         - All two-qubit gates have qubit 0 as target or control.
     otherwise returns ``False``.
     """
-    CZ_is_native = "CZ" in two_qubit_natives
-    iSWAP_is_native = "iSWAP" in two_qubit_natives
+
     # pring messages only if ``verbose == True``
     vlog = lambda msg: log.info(msg) if verbose else lambda msg: None
     for gate in circuit.queue:
@@ -95,24 +94,12 @@ def can_execute(circuit, two_qubit_natives, verbose=True):
                 return False
 
         elif len(gate.qubits) == 2:
-            if CZ_is_native and iSWAP_is_native:
-                if not isinstance(gate, (gates.CZ, gates.iSWAP)):  # pragma: no cover
-                    vlog(f"{gate.name} is not a two qubit native gate.")
-                    return False
-            elif CZ_is_native:
-                if not isinstance(gate, (gates.CZ)):  # pragma: no cover
-                    vlog(f"{gate.name} is not a two qubit native gate.")
-                    return False
-            elif iSWAP_is_native:
-                if not isinstance(gate, (gates.iSWAP)):  # pragma: no cover
-                    vlog(f"{gate.name} is not a two qubit native gate.")
-                    return False
-            else:  # pragma: no cover
-                vlog("Use only CZ and/or iSWAP as native gates")
+            if gate.__class__.__name__ not in two_qubit_natives:
+                vlog(f"{gate.name} is not a two qubit native gate.")
                 return False
-        else:  # pragma: no cover
-            vlog(f"{gate.name} acts on more than two qubits.")
-            return False
+            if 0 not in gate.qubits:
+                vlog("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
+                return False
 
     vlog("Circuit can be executed.")
     return True

@@ -99,7 +99,7 @@ def translate_gate(gate, native_gates):
                     iswap_decomposed.append(g_translated)
             return iswap_decomposed
     else:  # pragma: no cover
-        raise_error("Use only CZ and/or iSWAP as native gates")
+        raise_error(NotImplementedError, "Use only CZ and/or iSWAP as native gates")
 
 
 onequbit_dec = GateDecompositions()
@@ -123,12 +123,16 @@ onequbit_dec.add(gates.U1, lambda gate: [gates.RZ(0, gate.parameters[0])])
 onequbit_dec.add(gates.U2, lambda gate: [gates.U3(0, np.pi / 2, gate.parameters[0], gate.parameters[1])])
 onequbit_dec.add(gates.U3, lambda gate: [gates.U3(0, gate.parameters[0], gate.parameters[1], gate.parameters[2])])
 onequbit_dec.add(
+    gates.Unitary,
+    lambda gate: [gates.U3(0, *u3_decomposition(gate.parameters[0]))],
+)
+onequbit_dec.add(
     gates.FusedGate,
     lambda gate: [gates.U3(0, *u3_decomposition(gate.asmatrix(backend)))],
 )
 
 # register the iSWAP decompositions
-iswap_dec = copy.deepcopy(onequbit_dec)
+iswap_dec = GateDecompositions()
 iswap_dec.add(
     gates.CNOT,
     [
@@ -171,7 +175,7 @@ iswap_dec.add(
 iswap_dec.add(gates.iSWAP, [gates.iSWAP(0, 1)])
 
 # register CZ decompositions
-cz_dec = copy.deepcopy(onequbit_dec)
+cz_dec = GateDecompositions()
 cz_dec.add(gates.CNOT, [gates.H(1), gates.CZ(0, 1), gates.H(1)])
 cz_dec.add(gates.CZ, [gates.CZ(0, 1)])
 cz_dec.add(
@@ -352,9 +356,4 @@ opt_dec.add(
         gates.CZ(0, 1),
         gates.H(1),
     ],
-)
-# Single qubit unitary decomposition at last (not deepcopied by two qubit decompositions)
-onequbit_dec.add(
-    gates.Unitary,
-    lambda gate: [gates.U3(0, *u3_decomposition(gate.parameters[0]))],
 )
