@@ -25,7 +25,7 @@ class GateDecompositions:
 
     def count_2q(self, gate):
         """Count the number of two-qubit gates in the decomposition of the given gate."""
-        if gate.parameters:
+        if gate.parameters:  # pragma: no cover
             decomposition = self.decompositions[gate.__class__](gate)
         else:
             decomposition = self.decompositions[gate.__class__]
@@ -33,7 +33,7 @@ class GateDecompositions:
 
     def count_1q(self, gate):
         """Count the number of single qubit gates in the decomposition of the given gate."""
-        if gate.parameters:
+        if gate.parameters:  # pragma: no cover
             decomposition = self.decompositions[gate.__class__](gate)
         else:
             decomposition = self.decompositions[gate.__class__]
@@ -79,9 +79,9 @@ def translate_gate(gate, native_gates):
             elif cz_dec.count_2q(gate) > iswap_dec.count_2q(gate):
                 return iswap_dec(gate)
             # If equal check the decomposition with less 1 qubit gates.
-            elif cz_dec.count_1q(gate) < iswap_dec.count_1q(gate):
+            elif cz_dec.count_1q(gate) < iswap_dec.count_1q(gate):  # pragma: no cover
                 return cz_dec(gate)
-            else:
+            else:  # pragma: no cover
                 return iswap_dec(gate)
     elif "CZ" in native_gates:
         return cz_dec(gate)

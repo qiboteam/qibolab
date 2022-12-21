@@ -89,17 +89,21 @@ def can_execute(circuit, two_qubit_natives, verbose=True):
             continue
 
         if len(gate.qubits) == 1:
-            if not isinstance(gate, (gates.I, gates.Z, gates.RZ, gates.U3)):
+            if not isinstance(gate, (gates.I, gates.Z, gates.RZ, gates.U3)):  # pragma: no cover
                 vlog(f"{gate.name} is not a single qubit native gate.")
                 return False
 
         elif len(gate.qubits) == 2:
-            if gate.__class__.__name__ not in two_qubit_natives:
+            if gate.__class__.__name__ not in two_qubit_natives:  # pragma: no cover
                 vlog(f"{gate.name} is not a two qubit native gate.")
                 return False
-            if 0 not in gate.qubits:
+            if 0 not in gate.qubits:  # pragma: no cover
                 vlog("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
                 return False
+
+        else:  # pragma: no cover
+            vlog(f"{gate.name} acts on more than two qubits.")
+            return False
 
     vlog("Circuit can be executed.")
     return True
