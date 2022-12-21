@@ -115,11 +115,6 @@ class AbstractPlatform(ABC):
         if self.is_connected:
             self.setup()
 
-    @abstractmethod
-    def run_calibration(self, show_plots=False):  # pragma: no cover
-        """Executes calibration routines and updates the settings yml file"""
-        raise NotImplementedError
-
     def connect(self):
         """Connects to lab instruments using the details specified in the calibration settings."""
         if not self.is_connected:
@@ -135,56 +130,7 @@ class AbstractPlatform(ABC):
                 )
 
     def setup(self):
-        if not self.is_connected:
-            raise_error(
-                RuntimeError,
-                "There is no connection to the instruments, the setup cannot be completed",
-            )
-
-        for name in self.instruments:
-            # Set up every with the platform settings and the instrument settings
-            self.instruments[name].setup(
-                **self.settings["settings"],
-                **self.settings["instruments"][name]["settings"],
-            )
-
-        # Generate ro_channel[qubit], qd_channel[qubit], qf_channel[qubit], qrm[qubit], qcm[qubit], lo_qrm[qubit], lo_qcm[qubit]
-        self.ro_channel = {}  # readout
-        self.qd_channel = {}  # qubit drive
-        self.qf_channel = {}  # qubit flux
-        self.qb_channel = {}  # qubit flux biassing
-        self.qrm = {}  # qubit readout module
-        self.qdm = {}  # qubit drive module
-        self.qfm = {}  # qubit flux module
-        self.qbm = {}  # qubit flux biassing module
-        self.ro_port = {}
-        self.qd_port = {}
-        self.qf_port = {}
-        self.qb_port = {}
-        for qubit in self.qubit_channel_map:
-            self.ro_channel[qubit] = self.qubit_channel_map[qubit][0]
-            self.qd_channel[qubit] = self.qubit_channel_map[qubit][1]
-            self.qb_channel[qubit] = self.qubit_channel_map[qubit][2]
-            self.qf_channel[qubit] = self.qubit_channel_map[qubit][3]
-
-            if not self.qubit_instrument_map[qubit][0] is None:
-                self.qrm[qubit] = self.instruments[self.qubit_instrument_map[qubit][0]]
-                self.ro_port[qubit] = self.qrm[qubit].ports[
-                    self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]
-                ]
-            if not self.qubit_instrument_map[qubit][1] is None:
-                self.qdm[qubit] = self.instruments[self.qubit_instrument_map[qubit][1]]
-                self.qd_port[qubit] = self.qdm[qubit].ports[
-                    self.qdm[qubit].channel_port_map[self.qubit_channel_map[qubit][1]]
-                ]
-            if not self.qubit_instrument_map[qubit][2] is None:
-                self.qfm[qubit] = self.instruments[self.qubit_instrument_map[qubit][2]]
-                self.qf_port[qubit] = self.qfm[qubit].ports[
-                    self.qfm[qubit].channel_port_map[self.qubit_channel_map[qubit][2]]
-                ]
-            if not self.qubit_instrument_map[qubit][3] is None:
-                self.qbm[qubit] = self.instruments[self.qubit_instrument_map[qubit][3]]
-                self.qb_port[qubit] = self.qbm[qubit].dacs[self.qubit_channel_map[qubit][3]]
+        raise_error(NotImplementedError)
 
     def start(self):
         if self.is_connected:
