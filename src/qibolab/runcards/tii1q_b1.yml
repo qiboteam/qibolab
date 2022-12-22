@@ -45,7 +45,7 @@ instruments:
             acquisition_duration        : 2000
 
             classification_parameters:
-                2:
+                0:
                     rotation_angle: 345.208
                     threshold: -0.000841
 
