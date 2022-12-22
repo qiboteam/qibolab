@@ -5,7 +5,7 @@ from qibolab.transpilers.connectivity import fix_connectivity
 from qibolab.transpilers.gate_decompositions import translate_gate
 
 
-def transpile(circuit, two_qubit_natives, fuse_one_qubit=False):
+def transpile(circuit, two_qubit_natives, fuse_one_qubit=False, middle_qubit=2):
     """Implements full transpilation pipeline.
 
     Args:
@@ -14,6 +14,7 @@ def transpile(circuit, two_qubit_natives, fuse_one_qubit=False):
             supported by the quantum hardware ("CZ" and/or "iSWAP").
         fuse_one_qubit (bool): If ``True`` it fuses adjacent one-qubit gates to reduce
             circuit depth.
+        middle_qubit (int): Hardware middle qubit.
 
     Returns:
         new (qibo.models.Circuit): New circuit that can be executed on tii5q platform.
@@ -30,7 +31,7 @@ def transpile(circuit, two_qubit_natives, fuse_one_qubit=False):
             new.add(fgate)
 
     # Add SWAPs to satisfy connectivity constraints
-    new, hardware_qubits = fix_connectivity(circuit)
+    new, hardware_qubits = fix_connectivity(circuit, middle_qubit=middle_qubit)
 
     # two-qubit gates to native
     new = translate_circuit(new, two_qubit_natives, translate_single_qubit=False)

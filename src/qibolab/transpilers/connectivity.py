@@ -52,7 +52,7 @@ def fix_connectivity(circuit, middle_qubit=2):
         nqubits = 1
     else:
         nqubits = max(circuit.nqubits, middle_qubit + 1)
-    # new circuit object that will be compatible to hardware connectivity
+    # new circuit object that will be compatible with hardware connectivity
     new = circuit.__class__(nqubits)
     # list to maps logical to hardware qubits
     hardware_qubits = list(range(nqubits))
