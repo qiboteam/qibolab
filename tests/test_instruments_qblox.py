@@ -99,16 +99,16 @@ def test_instruments_qublox_set_property_wrappers(name):
             values=np.arange(4, 16777212 + 4, 729444),
         )
         # FIXME: I don't know why this is failing
-        # instrument_test_property_wrapper(
-        #    instrument,
-        #    "discretization_threshold_acq",
-        #    sequencer,
-        #    "discretization_threshold_acq",
-        #    values=np.linspace(-16777212.0, 16777212.0, 20),
-        # )
-        # instrument_test_property_wrapper(
-        #    instrument, "phase_rotation_acq", sequencer, "phase_rotation_acq", values=np.linspace(0, 359, 20)
-        # )
+        instrument_test_property_wrapper(
+            instrument,
+            "discretization_threshold_acq",
+            sequencer,
+            "discretization_threshold_acq",
+            values=np.linspace(-16777212.0, 16777212.0, 20),
+        )
+        instrument_test_property_wrapper(
+            instrument, "phase_rotation_acq", sequencer, "phase_rotation_acq", values=np.linspace(0, 359, 20)
+        )
     if instrument.__class__.__name__ == "ClusterQCM_RF":
         port = instruments[name].ports["o1"]
         sequencer = device.sequencers[instrument.DEFAULT_SEQUENCERS["o1"]]
