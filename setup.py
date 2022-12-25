@@ -59,6 +59,8 @@ setup(
             "qblox-instruments==0.6.1",
             "qcodes",
             "pyvisa-py==0.5.3",
+            "qm-qua",
+            # "qualang-tools",
         ],
     },
     python_requires=">=3.8.0",
