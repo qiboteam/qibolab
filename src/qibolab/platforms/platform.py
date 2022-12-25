@@ -43,11 +43,9 @@ class Platform:
             self.qubits.append(Qubit(q, characterization[q], *channels))
 
     def connect(self):
-        """Connect to all instruments in the design."""
         self.design.connect()
 
     def setup(self):
-        """Setup all instruments in the design."""
         self.design.setup(self.qubits)
 
     def start(self):
@@ -61,14 +59,14 @@ class Platform:
         self.design.disconnect()
 
     def execute_pulse_sequence(self, sequence, nshots=None):
-        """Executes an arbitrary pulse sequence.
+        """Play an arbitrary pulse sequence and retrieve feedback.
 
         Args:
-            sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to play.
-            nshots (int): Number of (hardware) repetitions for the execution.
+            sequence (:class:`qibolab.pulses.PulseSequence`): Sequence of pulses to play.
+            nshots (int): Number of hardware repetitions of the execution.
 
         Returns:
-            TODO
+            TODO: Decide a unified way to return results.
         """
         return self.design.play(self.qubits, sequence, nshots)
 

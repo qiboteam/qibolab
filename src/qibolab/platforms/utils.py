@@ -6,8 +6,8 @@ class Channel:
 
     Name is used as a unique identifier for channels. If a channel
     with an existing name is recreated, it will refer to the existing object.
-    Channel objects are created and their attributes are set during
-    the platform instantiation.
+    Channel objects are instantiated by :class:`qibolab.platforms.platform.Platform`,
+    but their attributes are modified and used by instrument designs.
 
     Args:
         name (str): Name of the channel as given in the platform runcard.
@@ -15,9 +15,10 @@ class Channel:
     Attributes:
         ports (list): List of tuples (controller (`str`), port (`int`))
             specifying the QM (I, Q) ports that the channel is connected.
-        qubits (list): List of Qubit objects for the qubits connected to this channel.
-        local_oscillator (:class:`qibolab.instruments.rohde_schwarz.SGS100A):
-            Instrument object for the local oscillator connected to this channel.
+        qubits (list): List of tuples (:class:`qibolab.platforms.utils.Qubit`, str)
+            for the qubit connected to this channel and the role of the channel.
+        Optional arguments holding local oscillators and related parameters.
+        These are relevant only for mixer-based insturment designs.
     """
 
     instances = {}
@@ -51,21 +52,21 @@ class Channel:
 class Qubit:
     """Representation of a physical qubit.
 
-    Qubit objects are instantiated during the platform initialization and
-    are used to register elements in the QM config.
+    Qubit objects are instantiated by :class:`qibolab.platforms.platform.Platform`
+    but they are passed to instrument designs in order to play pulses.
 
     Args:
-        name (int): Qubit number.
+        name (int, str): Qubit number or name.
         characterization (dict): Dictionary with the characterization values
             for the qubit, loaded from the runcard.
-        readout (:class:`qibolab.platforms.quantum_machines.Channel`): Channel
-            used to send readout pulses to the qubit.
-        feedback (:class:`qibolab.platforms.quantum_machines.Channel`): Channel
-            used to get readout feedback from the qubit.
-        drive (:class:`qibolab.platforms.quantum_machines.Channel`): Channel
-            used to send drive pulses to the qubit.
-        flux (:class:`qibolab.platforms.quantum_machines.Channel`): Channel
-            used to send flux pulses to the qubit.
+        readout (:class:`qibolab.platforms.utils.Channel`): Channel used to
+            readout pulses to the qubit.
+        feedback (:class:`qibolab.platforms.utils.Channel`): Channel used to
+            get readout feedback from the qubit.
+        drive (:class:`qibolab.platforms.utils.Channel`): Channel used to
+            send drive pulses to the qubit.
+        flux (:class:`qibolab.platforms.utils.Channel`): Channel used to
+            send flux pulses to the qubit.
     """
 
     def __init__(self, name, characterization, readout, feedback, drive, flux=None):

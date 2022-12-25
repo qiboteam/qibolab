@@ -5,35 +5,38 @@ import yaml
 from qibo.config import log, raise_error
 from qm.QuantumMachinesManager import QuantumMachinesManager
 
+from qibolab.designs.abstract import AbstractInstrumentDesign
 from qibolab.instruments.rohde_schwarz import SGS100A
 from qibolab.platforms.utils import Channel
 
 
-class QMRSDesign:
+class QMRSDesign(AbstractInstrumentDesign):
     """Instrument design for Quantum Machines (QM) OPXs and Rohde Schwarz local oscillators.
 
     Playing pulses on QM controllers requires a ``config`` dictionary and a program
     written in QUA language. The ``config`` file is generated in parts in the following places:
         - controllers are registered in ``__init__``,
-        - elements (qubits, resonators and flux) are registered in each ``Qubit`` object,
-        - pulses (including waveforms and integration weights) are registered in the
-          ``register_*`` methods of the platform.
+        -  are registered in each ``Qubit`` object,
+        - elements (qubits, resonators and flux), pulses (including waveforms
+          and integration weights) are registered in the ``register_*`` methods.
     The QUA program for executing an arbitrary qibolab ``PulseSequence`` is written in
-    ``execute_pulse_sequence``.
+    ``execute_program`` which is called by ``play``.
+
+    Local oscillator IPs are hardcoded in ``__init__`` along with several other
+    instrument related parameters.
+
+    Args:
+        address (str): IP address and port for connecting to the OPX instruments.
 
     Attributes:
         is_connected (bool): Boolean that shows whether instruments are connected.
-        nqubits (int): Number of qubits in the chip.
-        resonator_type (str): Type of the resonators (2D or 3D) used for qubit state readout.
-        topology (list): Topology of the chip.
-        settings (dict): Raw runcard loaded in a dictionary.
         manager (:class:`qm.QuantumMachinesManager.QuantumMachinesManager`): Manager object
             used for controlling the QM OPXs.
         config (dict): Configuration dictionary required for pulse execution on the OPXs.
-        local_oscillators (dict): Dictionary mapping LO names to the corresponding
+        local_oscillators (list): List of local oscillator objects.
             instrument objects.
-        qubits (list): List of :class:`qibolab.platforms.quantum_machines.Qubit` objects
-            for each qubit to be controlled.
+        time_of_flight (optional,int): Time of flight used for hardware signal integration.
+        smearing (optional,int): Smearing used for hardware signal integration.
     """
 
     def __init__(self, address="192.168.0.1:80"):
@@ -43,10 +46,7 @@ class QMRSDesign:
 
         # Configuration values for QM (HARDCODED)
         self.address = address
-        # relevant only for readout and used for hardware signal integration:
-        # time_of_flight (optional,int): Time of flight associated with the channel.
         self.time_of_flight = 280
-        # smearing (optional,int): Time of flight associated with the channel.
         self.smearing = 0
         # copied from qblox runcard, not used here yet
         # hardware_avg: 1024
@@ -169,14 +169,6 @@ class QMRSDesign:
         Channel("L3-14").lo_power = 16.0
 
     def connect(self):
-        """Connects to all instruments.
-
-        Args:
-            host (optional, str): Optional can be given to connect to a cloud simulator
-                instead of the actual instruments. If the ``host`` is not given,
-                this will connect to the physical OPXs and LOs using the addresses
-                given in the runcard.
-        """
         host, port = self.address.split(":")
         self.manager = QuantumMachinesManager(host, int(port))
         if not self.is_connected:
@@ -250,6 +242,11 @@ class QMRSDesign:
         return [float(N * x) for x in [(1 - g) * c, (1 + g) * s, (1 - g) * s, (1 + g) * c]]
 
     def register_element(self, qubit):
+        """Register qubit, resonator and flux elements in the QM config.
+
+        Args:
+            qubit (:class:`qibolab.platforms.utils.Qubit`): Qubit to add elements for.
+        """
         if qubit.drive:
             self.config["elements"][f"drive{qubit}"] = {
                 "mixInputs": {
@@ -444,6 +441,7 @@ class QMRSDesign:
         return machine.execute(program)
 
     def sweep_frequency(self, frequencies, sequence, nshots=1024):
+        # TODO: Generalize this for sweeping arbitrary parameters (need a Sweeper object?)
         from qm.qua import (
             align,
             declare,
@@ -513,17 +511,6 @@ class QMRSDesign:
         return self.execute_program(experiment)
 
     def play(self, qubits, sequence, nshots=1024):
-        """Plays an arbitrary pulse sequence on the instruments.
-
-        Args:
-            qubits (list): List of :class:`qibo.platforms.utils.Qubit` objects representing
-                the qubits the instruments are acting on.
-            sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to play.
-            nshots (int): Number of (hardware) repetitions for the execution.
-
-        Returns:
-            TODO
-        """
         from qm.qua import (
             declare,
             declare_stream,

@@ -6,11 +6,22 @@ from qibolab.designs.qm import QMRSDesign
 
 
 class QMSimDesign(QMRSDesign):
-    """TODO
+    """Instrument design for the Quantum Machines (QM) OPX simulator.
+
+    host (optional, str): Optional can be given to connect to a cloud simulator
+                instead of the actual instruments. If the ``host`` is not given,
+                this will connect to the physical OPXs and LOs using the addresses
+                given in the runcard.
 
     Args:
-        address (str):
-        simulation_duration (optional, int): Duration for the simulation in ns.
+        address (str): Address and port of the simulator.
+        simulation_duration (int): Duration for the simulation in ns.
+        cloud (bool): If ``True`` the QM cloud simulator is used which does not
+            require access to physical instruments. This assumes that a proper
+            cloud address has been given.
+            If ``False`` the simulator built-in the instruments is used.
+            This requires connection to instruments.
+            Default is ``False``.
     """
 
     def __init__(self, address, simulation_duration, cloud=False):
