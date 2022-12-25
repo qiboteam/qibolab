@@ -32,6 +32,8 @@ class AbstractInstrumentDesign(ABC):
         """Disconnect all instruments."""
         raise_error(NotImplementedError)
 
+    # TODO: Add methods for sweeping
+
     @abstractmethod
     def play(self, qubits, sequence, nshots=1024):
         """Play an arbitrary pulse sequence and retrieve feedback.

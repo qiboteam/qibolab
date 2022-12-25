@@ -49,7 +49,6 @@ class Platform:
         self.design.setup(self.qubits)
 
     def start(self):
-        # TODO: Start the OPX flux offsets?
         self.design.start()
 
     def stop(self):
@@ -57,6 +56,8 @@ class Platform:
 
     def disconnect(self):
         self.design.disconnect()
+
+    # TODO: Add methods for sweeping
 
     def execute_pulse_sequence(self, sequence, nshots=None):
         """Play an arbitrary pulse sequence and retrieve feedback.

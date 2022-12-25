@@ -69,6 +69,8 @@ class Qubit:
             send flux pulses to the qubit.
     """
 
+    # TODO: Add arguments required for interfacing with qibocal
+
     def __init__(self, name, characterization, readout, feedback, drive, flux=None):
         self.name = name
         self.characterization = SimpleNamespace(**characterization)

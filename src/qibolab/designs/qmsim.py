@@ -8,11 +8,6 @@ from qibolab.designs.qm import QMRSDesign
 class QMSimDesign(QMRSDesign):
     """Instrument design for the Quantum Machines (QM) OPX simulator.
 
-    host (optional, str): Optional can be given to connect to a cloud simulator
-                instead of the actual instruments. If the ``host`` is not given,
-                this will connect to the physical OPXs and LOs using the addresses
-                given in the runcard.
-
     Args:
         address (str): Address and port of the simulator.
         simulation_duration (int): Duration for the simulation in ns.

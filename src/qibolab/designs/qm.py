@@ -150,8 +150,8 @@ class QMRSDesign(AbstractInstrumentDesign):
         # Channel("L3-14").local_oscillator = self.local_oscillators[4]
 
         # Set default LO parameters in the channel
-        Channel("L3-25_a").lo_frequency = 7_300_000_000
-        Channel("L3-25_b").lo_frequency = 7_850_000_000
+        Channel("L3-25_a").lo_frequency = 7_850_000_000
+        Channel("L3-25_b").lo_frequency = 7_300_000_000
         Channel("L3-15").lo_frequency = 4_700_000_000
         Channel("L3-11").lo_frequency = 4_700_000_000
         Channel("L3-12").lo_frequency = 5_600_000_000
