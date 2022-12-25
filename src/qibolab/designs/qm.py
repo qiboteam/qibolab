@@ -135,33 +135,31 @@ class QMRSDesign(AbstractInstrumentDesign):
             SGS100A("lo_readout_a", "192.168.0.39"),
             SGS100A("lo_readout_b", "192.168.0.31"),
             # FIXME: Temporarily disable the drive LOs since we are not using them
-            SGS100A("lo_drive_low", "192.168.0.32"),
-            SGS100A("lo_drive_mid", "192.168.0.33"),
-            SGS100A("lo_drive_high", "192.168.0.34"),
+            # SGS100A("lo_drive_low", "192.168.0.32"),
+            # SGS100A("lo_drive_mid", "192.168.0.33"),
+            # SGS100A("lo_drive_high", "192.168.0.34"),
         ]
 
         # Map LOs to channels
         Channel("L3-25_a").local_oscillator = self.local_oscillators[0]
         Channel("L3-25_b").local_oscillator = self.local_oscillators[1]
-        Channel("L3-15").local_oscillator = self.local_oscillators[2]
-        Channel("L3-11").local_oscillator = self.local_oscillators[2]
-        Channel("L3-12").local_oscillator = self.local_oscillators[3]
-        Channel("L3-13").local_oscillator = self.local_oscillators[4]
-        Channel("L3-14").local_oscillator = self.local_oscillators[4]
+        # Channel("L3-15").local_oscillator = self.local_oscillators[2]
+        # Channel("L3-11").local_oscillator = self.local_oscillators[2]
+        # Channel("L3-12").local_oscillator = self.local_oscillators[3]
+        # Channel("L3-13").local_oscillator = self.local_oscillators[4]
+        # Channel("L3-14").local_oscillator = self.local_oscillators[4]
 
         # Set default LO parameters in the channel
         Channel("L3-25_a").lo_frequency = 7_300_000_000
         Channel("L3-25_b").lo_frequency = 7_850_000_000
-        # Channel("L3-25_a").lo_frequency = 7_850_000_000
-        # Channel("L3-25_b").lo_frequency = 7_300_000_000
         Channel("L3-15").lo_frequency = 4_700_000_000
         Channel("L3-11").lo_frequency = 4_700_000_000
         Channel("L3-12").lo_frequency = 5_600_000_000
         Channel("L3-13").lo_frequency = 6_500_000_000
         Channel("L3-14").lo_frequency = 6_500_000_000
 
-        Channel("L3-25_a").lo_power = 15.0
-        Channel("L3-25_b").lo_power = 18.0
+        Channel("L3-25_a").lo_power = 18.0
+        Channel("L3-25_b").lo_power = 15.0
         Channel("L3-15").lo_power = 16.0
         Channel("L3-11").lo_power = 16.0
         Channel("L3-12").lo_power = 16.0
@@ -194,9 +192,8 @@ class QMRSDesign(AbstractInstrumentDesign):
                 # set LO frequency
                 lo = channel.local_oscillator
                 frequency = channel.lo_frequency
-                power = channel.lo_power
                 if lo.is_connected:
-                    lo.setup(frequency=frequency, power=channel.power)
+                    lo.setup(frequency=frequency, power=channel.lo_power)
                 else:
                     log.warn(f"There is no connection to {lo}. Frequencies were not set.")
                 # update LO frequency in the QM config
@@ -440,7 +437,7 @@ class QMRSDesign(AbstractInstrumentDesign):
         machine = self.manager.open_qm(self.config)
         return machine.execute(program)
 
-    def sweep_frequency(self, frequencies, sequence, nshots=1024):
+    def sweep_frequency(self, qubits, frequencies, sequence, nshots=1024):
         # TODO: Generalize this for sweeping arbitrary parameters (need a Sweeper object?)
         from qm.qua import (
             align,
@@ -462,10 +459,10 @@ class QMRSDesign(AbstractInstrumentDesign):
         # TODO: Read qubit from sweeper
         qubit = sequence.pulses[0].qubit
         nfreq = len(frequencies)
-        if_frequencies = frequencies - self.qubits[qubit].readout.lo_frequency
+        if_frequencies = frequencies - qubits[qubit].readout.lo_frequency
         if_frequencies = if_frequencies.astype(int)
 
-        targets = [self.register_pulse(pulse) for pulse in sequence]
+        targets = [self.register_pulse(qubits[pulse.qubit], pulse) for pulse in sequence]
         # play pulses using QUA
         clock = {target: 0 for target in targets}
         with program() as experiment:
