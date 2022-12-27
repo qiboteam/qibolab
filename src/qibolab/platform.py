@@ -1,9 +1,11 @@
-def Platform(name, runcard=None):
+def Platform(name, runcard=None, design=None):
     """Platform for controlling quantum devices.
 
     Args:
         name (str): name of the platform. Options are 'tiiq', 'qili' and 'icarusq'.
         runcard (str): path to the yaml file containing the platform setup.
+        design (:class:`qibolab.designs.abstract.AbstractInstrumentDesign`): Instrument
+            design to use for the platform.
 
     Returns:
         The plaform class.
@@ -23,6 +25,15 @@ def Platform(name, runcard=None):
         from qibolab.platforms.dummy import DummyPlatform as Device
     elif name == "icarusq":
         from qibolab.platforms.icplatform import ICPlatform as Device
+    elif name == "qw5q_gold_poc":
+        from qibolab.platforms.platform import Platform
+
+        if design is None:
+            from qibolab.designs.qmrs import QMRSDesign
+
+            design = QMRSDesign()
+
+        return Platform(design, runcard)
     else:
         from qibolab.platforms.multiqubit import MultiqubitPlatform as Device
 
