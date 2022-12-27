@@ -5,6 +5,24 @@ from qibolab.pulses import PulseSequence
 
 
 class MultiqubitPlatform(AbstractPlatform):
+    def get_resonator_frequency(self, qubit):
+        return self.characterization["single_qubit"][qubit]["resonator_freq"]
+
+    def set_resonator_frequency(self, qubit, freq):
+        self.characterization["single_qubit"][qubit]["resonator_freq"] = freq
+
+    def set_lo_frequency(self, qubit, freq):
+        self.ro_port[qubit].lo_frequency = freq
+
+    def get_lo_frequency(self, qubit):
+        return self.ro_port[qubit].lo_frequency
+
+    def set_attenuation(self, qubit, att):
+        self.ro_port[qubit].attenuation = att
+
+    def get_attenuation(self, qubit):
+        return self.ro_port[qubit].attenuation
+
     def setup(self):
         if not self.is_connected:
             raise_error(
