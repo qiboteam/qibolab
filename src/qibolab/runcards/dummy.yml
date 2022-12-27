@@ -18,7 +18,7 @@ channels: [1, 2, 3]
 qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux, QubitBias]
     0: [2, 1, null, null]
 
-instruments: null
+instruments: []
 
 native_gates:
     single_qubit:

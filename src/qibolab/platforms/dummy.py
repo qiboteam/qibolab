@@ -7,15 +7,6 @@ from qibo.config import log, raise_error
 from qibolab.platforms.abstract import AbstractPlatform
 
 
-class DummyInstrument:
-    # This object is used to make QCVV methods work until
-    # we improve the platform abstractions
-    # TODO: Remove this objects when abstractions are fixed
-
-    def set_device_parameter(self, *args, **kwargs):
-        pass
-
-
 class DummyPlatform(AbstractPlatform):
     """Dummy platform that returns random voltage values.
 
@@ -26,24 +17,7 @@ class DummyPlatform(AbstractPlatform):
     """
 
     def __init__(self, name, runcard):
-        self.name = name
-        self.runcard = runcard
-        self.is_connected = False
-        # Load platform settings
-        with open(runcard) as file:
-            self.settings = yaml.safe_load(file)
-
-        # create dummy instruments
-        nqubits = self.settings.get("nqubits")
-        # TODO: Remove these when platform abstraction is fixed
-        self.qcm = {i: DummyInstrument() for i in range(nqubits)}
-        self.qrm = {i: DummyInstrument() for i in range(nqubits)}
-
-    def reload_settings(self):  # pragma: no cover
-        log.info("Dummy platform does not support setting reloading.")
-
-    def run_calibration(self, show_plots=False):  # pragma: no cover
-        raise_error(NotImplementedError)
+        super().__init__(name, runcard)
 
     def connect(self):
         log.info("Connecting to dummy platform.")
@@ -70,5 +44,18 @@ class DummyPlatform(AbstractPlatform):
         results = {}
         for qubit, pulse in ro_pulses.items():
             i, q = np.random.random(2)
-            results[qubit] = {pulse: (np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q)}
+            results[pulse] = (np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q)
+            # results[qubit] = {pulse: (np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q)}
         return results
+
+    def get_resonator_frequency(self, qubit):
+        return self.characterization["single_qubit"][qubit]["resonator_freq"]
+
+    def set_resonator_frequency(self, qubit, freq):
+        self.characterization["single_qubit"][qubit]["resonator_freq"] = freq
+
+    def set_lo_frequency(self, qubit, freq):
+        pass
+
+    def set_attenuation(self, qubit, att):
+        pass
