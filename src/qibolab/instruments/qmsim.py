@@ -2,11 +2,11 @@ from qm import SimulationConfig
 from qm.QuantumMachinesManager import QuantumMachinesManager
 from qualang_tools.simulator_tools import create_simulator_controller_connections
 
-from qibolab.designs.qm import QMRSDesign
+from qibolab.instruments.qm import QMOPX
 
 
-class QMSimDesign(QMRSDesign):
-    """Instrument design for the Quantum Machines (QM) OPX simulator.
+class QMSim(QMOPX):
+    """Instrument for using the Quantum Machines (QM) OPX simulator.
 
     Args:
         address (str): Address and port of the simulator.
@@ -19,8 +19,8 @@ class QMSimDesign(QMRSDesign):
             Default is ``False``.
     """
 
-    def __init__(self, address, simulation_duration, cloud=False):
-        super().__init__(address)
+    def __init__(self, name, address, simulation_duration, cloud=False):
+        super().__init__(name, address)
         self.cloud = cloud
         # convert simulation duration from ns to clock cycles
         self.simulation_duration = simulation_duration // 4
