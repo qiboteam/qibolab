@@ -28,20 +28,8 @@ class AbstractPlatform(ABC):
         self.name = name
         self.runcard = runcard
         self.is_connected = False
-        # Load platform settings
-        with open(runcard) as file:
-            self.settings = yaml.safe_load(file)
-
-        self.nqubits = self.settings["nqubits"]
-        if self.nqubits == 1:
-            self.resonator_type = "3D"
-        else:
-            self.resonator_type = "2D"
-
-        self.qubits = self.settings["qubits"]
-        self.topology = self.settings["topology"]
-        self.channels = self.settings["channels"]
-        self.qubit_channel_map = self.settings["qubit_channel_map"]
+        self.settings = None
+        self.reload_settings()
 
         self.instruments = {}
         # Instantiate instruments
@@ -69,8 +57,6 @@ class AbstractPlatform(ABC):
                         if channel in self.qubit_channel_map[qubit]:
                             self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
 
-        self.reload_settings()
-
     def __repr__(self):
         return self.name
 
@@ -96,6 +82,12 @@ class AbstractPlatform(ABC):
         with open(self.runcard) as file:
             self.settings = yaml.safe_load(file)
 
+        self.qubits = self.settings["qubits"]
+        self.nqubits = self.settings["nqubits"]
+        self.resonator_type = "3D" if self.nqubits == 1 else "2D"
+        self.topology = self.settings["topology"]
+        self.qubit_channel_map = self.settings["qubit_channel_map"]
+
         self.hardware_avg = self.settings["settings"]["hardware_avg"]
         self.sampling_rate = self.settings["settings"]["sampling_rate"]
         self.repetition_duration = self.settings["settings"]["repetition_duration"]
@@ -105,6 +97,7 @@ class AbstractPlatform(ABC):
         # Load Native Gates
         self.native_gates = self.settings["native_gates"]
 
+        # TODO: remove this
         if self.is_connected:
             self.setup()
 
@@ -315,3 +308,21 @@ class AbstractPlatform(ABC):
         from qibolab.pulses import Pulse
 
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
+
+    def get_resonator_frequency(self, qubit):
+        raise_error(NotImplementedError)
+
+    def set_resonator_frequency(self, qubit):
+        raise_error(NotImplementedError)
+
+    def set_lo_frequency(self, qubit, freq):
+        raise_error(NotImplementedError)
+
+    def get_lo_frequency(self, qubit):
+        raise_error(NotImplementedError)
+
+    def set_attenuation(self, qubit, att):
+        raise_error(NotImplementedError)
+
+    def get_attenuation(self, qubit):
+        raise_error(NotImplementedError)
