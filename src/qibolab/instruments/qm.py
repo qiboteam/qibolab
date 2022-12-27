@@ -1,17 +1,12 @@
-import itertools
-
 import numpy as np
-import yaml
 from qibo.config import log, raise_error
 from qm.QuantumMachinesManager import QuantumMachinesManager
 
-from qibolab.designs.abstract import AbstractInstrumentDesign
-from qibolab.instruments.rohde_schwarz import SGS100A
-from qibolab.platforms.utils import Channel
+from qibolab.instruments.abstract import AbstractInstrument
 
 
-class QMRSDesign(AbstractInstrumentDesign):
-    """Instrument design for Quantum Machines (QM) OPXs and Rohde Schwarz local oscillators.
+class QMOPX(AbstractInstrument):
+    """Instrument object for controlling Quantum Machines (QM) OPX controllers.
 
     Playing pulses on QM controllers requires a ``config`` dictionary and a program
     written in QUA language. The ``config`` file is generated in parts in the following places:
@@ -22,10 +17,8 @@ class QMRSDesign(AbstractInstrumentDesign):
     The QUA program for executing an arbitrary qibolab ``PulseSequence`` is written in
     ``execute_program`` which is called by ``play``.
 
-    Local oscillator IPs are hardcoded in ``__init__`` along with several other
-    instrument related parameters.
-
     Args:
+        name (str): Name of the instrument instance.
         address (str): IP address and port for connecting to the OPX instruments.
 
     Attributes:
@@ -33,20 +26,18 @@ class QMRSDesign(AbstractInstrumentDesign):
         manager (:class:`qm.QuantumMachinesManager.QuantumMachinesManager`): Manager object
             used for controlling the QM OPXs.
         config (dict): Configuration dictionary required for pulse execution on the OPXs.
-        local_oscillators (list): List of local oscillator objects.
-            instrument objects.
         time_of_flight (optional,int): Time of flight used for hardware signal integration.
         smearing (optional,int): Smearing used for hardware signal integration.
     """
 
-    def __init__(self, address="192.168.0.1:80"):
+    def __init__(self, name, address):
         # QuantumMachines manager is instantiated in ``platform.connect``
+        self.name = name
+        self.address = address
         self.manager = None
         self.is_connected = False
 
-        # Configuration values for QM (HARDCODED)
-        self.address = address
-        self.time_of_flight = 280
+        self.time_of_flight = 0
         self.smearing = 0
         # copied from qblox runcard, not used here yet
         # hardware_avg: 1024
@@ -56,6 +47,7 @@ class QMRSDesign(AbstractInstrumentDesign):
 
         # Default configuration for communicating with the ``QuantumMachinesManager``
         # Defines which controllers and ports are used in the lab (HARDCODED)
+        # TODO: Generate ``config`` controllers in ``setup`` by looking at the channels
         self.config = {
             "version": 1,
             "controllers": {
@@ -107,116 +99,36 @@ class QMRSDesign(AbstractInstrumentDesign):
             "integration_weights": {},
             "mixers": {},
         }
-        # Map controllers to qubit channels (HARDCODED)
-        # readout
-        Channel("L3-25_a").ports = [("con1", 9), ("con1", 10)]
-        Channel("L3-25_b").ports = [("con2", 9), ("con2", 10)]
-        self.readout_channels = [Channel("L3-25_a"), Channel("L3-25_b")]
-        # feedback
-        Channel("L2-5").ports = [("con1", 1), ("con1", 2)]
-        self.feedback_channel = Channel("L2-5")
-        # drive
-        Channel("L3-11").ports = [("con1", 1), ("con1", 2)]
-        Channel("L3-12").ports = [("con1", 3), ("con1", 4)]
-        Channel("L3-13").ports = [("con1", 5), ("con1", 6)]
-        Channel("L3-14").ports = [("con1", 7), ("con1", 8)]
-        Channel("L3-15").ports = [("con3", 1), ("con3", 2)]
-        self.drive_channels = [Channel(f"L3-{i}") for i in range(11, 16)]
-        # flux
-        Channel("L4-1").ports = [("con2", 1)]
-        Channel("L4-2").ports = [("con2", 2)]
-        Channel("L4-3").ports = [("con2", 3)]
-        Channel("L4-4").ports = [("con2", 4)]
-        Channel("L4-5").ports = [("con2", 5)]
-        self.flux_channels = [Channel(f"L4-{i}") for i in range(1, 6)]
-
-        # Instantiate local oscillators (HARDCODED)
-        self.local_oscillators = [
-            SGS100A("lo_readout_a", "192.168.0.39"),
-            SGS100A("lo_readout_b", "192.168.0.31"),
-            # FIXME: Temporarily disable the drive LOs since we are not using them
-            # SGS100A("lo_drive_low", "192.168.0.32"),
-            # SGS100A("lo_drive_mid", "192.168.0.33"),
-            # SGS100A("lo_drive_high", "192.168.0.34"),
-        ]
-
-        # Map LOs to channels
-        Channel("L3-25_a").local_oscillator = self.local_oscillators[0]
-        Channel("L3-25_b").local_oscillator = self.local_oscillators[1]
-        # Channel("L3-15").local_oscillator = self.local_oscillators[2]
-        # Channel("L3-11").local_oscillator = self.local_oscillators[2]
-        # Channel("L3-12").local_oscillator = self.local_oscillators[3]
-        # Channel("L3-13").local_oscillator = self.local_oscillators[4]
-        # Channel("L3-14").local_oscillator = self.local_oscillators[4]
-
-        # Set default LO parameters in the channel
-        Channel("L3-25_a").lo_frequency = 7_850_000_000
-        Channel("L3-25_b").lo_frequency = 7_300_000_000
-        Channel("L3-15").lo_frequency = 4_700_000_000
-        Channel("L3-11").lo_frequency = 4_700_000_000
-        Channel("L3-12").lo_frequency = 5_600_000_000
-        Channel("L3-13").lo_frequency = 6_500_000_000
-        Channel("L3-14").lo_frequency = 6_500_000_000
-
-        Channel("L3-25_a").lo_power = 18.0
-        Channel("L3-25_b").lo_power = 15.0
-        Channel("L3-15").lo_power = 16.0
-        Channel("L3-11").lo_power = 16.0
-        Channel("L3-12").lo_power = 16.0
-        Channel("L3-13").lo_power = 16.0
-        Channel("L3-14").lo_power = 16.0
 
     def connect(self):
         host, port = self.address.split(":")
         self.manager = QuantumMachinesManager(host, int(port))
-        if not self.is_connected:
-            for lo in self.local_oscillators:
-                try:
-                    log.info(f"Connecting to instrument {lo}.")
-                    lo.connect()
-                except Exception as exception:
-                    raise_error(
-                        RuntimeError,
-                        f"Cannot establish connection to {lo} instruments. Error captured: '{exception}'",
-                    )
-            self.is_connected = True
 
-    def setup(self, qubits):
+    def setup(self, qubits, time_of_flight=0, smearing=0):
+        self.time_of_flight = time_of_flight
+        self.smearing = smearing
+
         # register qubit elements in the QM config
         for qubit in qubits:
             self.register_element(qubit)
-
-        # set LO frequencies
-        for channel in itertools.chain(self.readout_channels, self.drive_channels):
-            if channel.local_oscillator is not None:
-                # set LO frequency
-                lo = channel.local_oscillator
-                frequency = channel.lo_frequency
-                if lo.is_connected:
-                    lo.setup(frequency=frequency, power=channel.lo_power)
-                else:
-                    log.warn(f"There is no connection to {lo}. Frequencies were not set.")
+            for mode in ["readout", "drive"]:
                 # update LO frequency in the QM config
-                for qubit, mode in channel.qubits:
+                channel = getattr(qubit, mode)
+                if channel is not None and channel.local_oscillator is not None:
+                    frequency = channel.lo_frequency
                     self.config["elements"][f"{mode}{qubit}"]["mixInputs"]["lo_frequency"] = frequency
                     self.config["mixers"][f"mixer_{mode}{qubit}"][0]["lo_frequency"] = frequency
 
     def start(self):
         # TODO: Start the OPX flux offsets?
-        if self.is_connected:
-            for lo in self.local_oscillators:
-                lo.start()
+        pass
 
     def stop(self):
         if self.is_connected:
-            for lo in self.local_oscillators:
-                lo.stop()
             self.manager.close_all_quantum_machines()
 
     def disconnect(self):
         if self.is_connected:
-            for lo in self.local_oscillators:
-                lo.disconnect()
             self.manager.close()
             self.is_connected = False
 
