@@ -437,65 +437,91 @@ class QMRSDesign(AbstractInstrumentDesign):
         machine = self.manager.open_qm(self.config)
         return machine.execute(program)
 
-    def sweep_frequency(self, qubits, frequencies, sequence, nshots=1024):
-        # TODO: Generalize this for sweeping arbitrary parameters (need a Sweeper object?)
+    @staticmethod
+    def play_pulses(sequence, targets, I, Q, I_st, Q_st):
+        from qm.qua import dual_demod, measure, play, save, wait
+
+        clock = {target: 0 for target in targets.values()}
+        for pulse in sequence:
+            target = targets[pulse.serial]
+            wait_time = pulse.start - clock[target]
+            if wait_time > 0:
+                wait(wait_time // 4, target)
+            clock[target] += pulse.duration
+            if pulse.type.name == "READOUT":
+                # align("qubit", "resonator")
+                measure(
+                    pulse.serial,
+                    target,
+                    None,
+                    dual_demod.full("cos", "out1", "sin", "out2", I),
+                    dual_demod.full("minus_sin", "out1", "cos", "out2", Q),
+                )
+            else:
+                play(pulse.serial, target)
+            # Save data to the stream processing
+            save(I, I_st)
+            save(Q, Q_st)
+
+    def sweep_recursion(self, sweepers, qubits, sequence, targets, I, Q, I_st, Q_st):
+        from qm.qua import declare, for_, wait
+        from qualang_tools.loops import from_array
+
+        sweeper = sweepers.pop(0)
+        if sweeper.pulse is not None:
+            if sweeper.parameter == "frequency":
+                from qm.qua import update_frequency
+
+                if sweeper.pulse_type in ("readout", "drive"):
+                    # convert to IF frequency for readout and drive pulses
+                    qubit = qubits[sweeper.pulse.qubit]
+                    values = sweeper.values - getattr(qubit, sweeper.pulse_type).lo_frequency
+
+                else:
+                    values = sweeper.values
+
+                # is it fine to have this declaration inside the ``nshots`` QUA loop?
+                x = declare(int)
+                with for_(*from_array(x, values.astype(int))):
+                    target = targets[sweeper.pulse.serial]
+                    update_frequency(target, x)
+                    if sweepers:
+                        self.sweep_recursion(sweepers, qubits, sequence, targets, I, Q, I_st, Q_st)
+                    else:
+                        self.play_pulses(sequence, targets, I, Q, I_st, Q_st)
+                    # Wait for the resonator to cooldown
+                    wait(2000 // 4, target)
+
+            else:
+                raise_error(NotImplementedError)
+
+        else:
+            raise_error(NotImplementedError)
+
+    def sweep(self, qubits, sequence, *sweepers, nshots=1024):
         from qm.qua import (
             align,
             declare,
             declare_stream,
-            dual_demod,
             fixed,
             for_,
-            measure,
-            play,
             program,
-            save,
             stream_processing,
-            update_frequency,
-            wait,
         )
-        from qualang_tools.loops import from_array
 
         # TODO: Read qubit from sweeper
-        qubit = sequence.pulses[0].qubit
-        nfreq = len(frequencies)
-        if_frequencies = frequencies - qubits[qubit].readout.lo_frequency
-        if_frequencies = if_frequencies.astype(int)
+        nfreq = len(sweepers[0].values)
 
-        targets = [self.register_pulse(qubits[pulse.qubit], pulse) for pulse in sequence]
+        targets = {pulse.serial: self.register_pulse(qubits[pulse.qubit], pulse) for pulse in sequence}
         # play pulses using QUA
-        clock = {target: 0 for target in targets}
         with program() as experiment:
             n = declare(int)
-            freq = declare(int)
             I = declare(fixed)
             Q = declare(fixed)
             I_st = declare_stream()
             Q_st = declare_stream()
             with for_(n, 0, n < nshots, n + 1):
-                with for_(*from_array(freq, if_frequencies)):
-                    update_frequency(f"readout{qubit}", freq)
-                    for pulse, target in zip(sequence, targets):
-                        wait_time = pulse.start - clock[target]
-                        if wait_time > 0:
-                            wait(wait_time // 4, target)
-                        clock[target] += pulse.duration
-                        if pulse.type.name == "READOUT":
-                            # align("qubit", "resonator")
-                            measure(
-                                pulse.serial,
-                                target,
-                                None,
-                                dual_demod.full("cos", "out1", "sin", "out2", I),
-                                dual_demod.full("minus_sin", "out1", "cos", "out2", Q),
-                            )
-                        else:
-                            play(pulse.serial, target)
-                    # Wait for the resonator to cooldown
-                    wait(2000 // 4, f"readout{qubit}")
-                    # Save data to the stream processing
-                    save(I, I_st)
-                    save(Q, Q_st)
+                self.sweep_recursion(list(sweepers), qubits, sequence, targets, I, Q, I_st, Q_st)
             align()
 
             with stream_processing():

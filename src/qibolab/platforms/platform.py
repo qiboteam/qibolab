@@ -57,9 +57,10 @@ class Platform:
     def disconnect(self):
         self.design.disconnect()
 
-    # TODO: Add methods for sweeping
+    def sweep(self, sequence, *sweepers, nshots=1024):
+        return self.design.sweep(self.qubits, sequence, *sweepers, nshots=nshots)
 
-    def execute_pulse_sequence(self, sequence, nshots=None):
+    def execute_pulse_sequence(self, sequence, nshots=1024):
         """Play an arbitrary pulse sequence and retrieve feedback.
 
         Args:
