@@ -15,14 +15,15 @@ import sys
 
 sys.path.insert(0, os.path.abspath("."))
 
+import qibolab
 
 # -- Project information -----------------------------------------------------
 
-project = " "
+project = "qibolab"
 copyright = "2021, The Qibo team"
 author = "The Qibo team"
 
-release = " "
+release = qibolab.__version__
 
 
 # -- General configuration ---------------------------------------------------
@@ -57,6 +58,11 @@ exclude_patterns = []
 # a list of builtin themes.
 #
 html_theme = "furo"
+
+# custom title
+html_title = "Version " + release
+
+# custom html theme options (colors and font)
 
 html_theme_options = {
     "light_css_variables": {
