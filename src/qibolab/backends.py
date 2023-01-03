@@ -57,12 +57,13 @@ class QibolabBackend(NumpyBackend):
                 "Hardware backend does not support initial state in circuits.",
             )
 
-        if can_execute(circuit, verbose=False):
+        two_qubit_natives = self.platform.two_qubit_natives
+        if can_execute(circuit, two_qubit_natives, verbose=False):
             native_circuit = circuit
         else:
             # Transform a circuit into proper connectivity and native gates
             log.info("Transpiling circuit.")
-            native_circuit, hardware_qubits = transpile(circuit)
+            native_circuit, hardware_qubits = transpile(circuit, two_qubit_natives)
             if check_transpiled:
                 backend = NumpyBackend()
                 target_state = backend.execute_circuit(circuit).state()

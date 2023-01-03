@@ -14,6 +14,9 @@ def pytest_configure(config):
 def pytest_generate_tests(metafunc):
     platform_name = metafunc.config.option.platform
 
+    if platform_name is None:  # pragma: no cover
+        raise ValueError("Test platform name was not specified. Please specify it using the --platform option.")
+
     if "platform_name" in metafunc.fixturenames:
         if "qubit" in metafunc.fixturenames:
             # TODO: Do backend initialization here instead of every test (currently does not work)
