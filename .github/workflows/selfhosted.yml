@@ -68,7 +68,7 @@ jobs:
         echo "pytest --cov=qibolab --cov-report=xml --platform $platform -rx" >> ci_tests
         echo "cd -" >> ci_tests
         echo "mv /tmp/qibolab/coverage.xml ." >> ci_tests
-        echo "rm /tmp/qibolab/" >> ci_tests
+        echo "rm -r /tmp/qibolab/" >> ci_tests
         # execute script in the queue
         chmod +x ci_tests
         srun -p ${{ matrix.platform }} ci_tests
