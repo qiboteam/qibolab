@@ -61,7 +61,7 @@ class QibolabBackend(NumpyBackend):
         else:
             # Transform a circuit into proper connectivity and native gates
             log.info("Transpiling circuit.")
-            native_circuit, _ = transpile(circuit, two_qubit_natives)
+            native_circuit, hardware_qubits = transpile(circuit, two_qubit_natives)
             if check_transpiled:
                 backend = NumpyBackend()
                 target_state = backend.execute_circuit(circuit).state()
