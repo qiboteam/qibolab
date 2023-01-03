@@ -4,7 +4,7 @@ Supports the following Instruments:
     Cluster
     Cluster QRM-RF
     Cluster QCM-RF
-Compatible with qblox-instruments driver 0.6.1 (23/5/2022).
+Compatible with qblox-instruments driver 0.7.0 (8/8/2022).
 It does not support the operation of multiple clusters symultaneously.
 https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/
 """
@@ -693,8 +693,7 @@ class ClusterQRM_RF(AbstractInstrument):
 
         # Check if the sequence to be processed is the same as the last one.
         # If so, there is no need to generate new waveforms and program
-        # Except if hardware demodulation is activated (to force a memory reset until qblox fix the issue)
-        if self.ports["i1"].hardware_demod_en or self._current_pulsesequence_hash != self._last_pulsequence_hash:
+        if self._current_pulsesequence_hash != self._last_pulsequence_hash:
             port = "o1"
             # initialise the list of free sequencer numbers to include the default for each port {'o1': 0}
             self._free_sequencers_numbers = [self.DEFAULT_SEQUENCERS[port]] + [1, 2, 3, 4, 5]
@@ -932,7 +931,7 @@ class ClusterQRM_RF(AbstractInstrument):
         It configures certain parameters of the instrument based on the needs of resources determined
         while processing the pulse sequence.
         """
-        if self.ports["i1"].hardware_demod_en or self._current_pulsesequence_hash != self._last_pulsequence_hash:
+        if self._current_pulsesequence_hash != self._last_pulsequence_hash:
             self._last_pulsequence_hash = self._current_pulsesequence_hash
 
             # Setup
@@ -972,8 +971,9 @@ class ClusterQRM_RF(AbstractInstrument):
                     # with open(self.data_folder / filename, "w", encoding="utf-8") as file:
                     #     json.dump(qblox_dict[sequencer], file, indent=4)
 
-        # Arm sequencers
+        # Clear acquisition memory and arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
+            self.device.sequencers[sequencer_number].delete_acquisition_data(all=True)
             self.device.arm_sequencer(sequencer_number)
 
         # DEBUG: QRM Print Readable Snapshot
