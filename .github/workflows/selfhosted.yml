@@ -64,7 +64,7 @@ jobs:
         echo >> spytest
         echo "cd /tmp/" >> spytest
         platform=${{ matrix.platform }}
-        echo "pytest ~/qibolab/src/qibolab --pyargs qibolab --platform $platform --cov=qibolab --cov-report=xml -rx" >> spytest
+        echo "python -m pytest ~/qibolab/src/qibolab --pyargs qibolab --platform $platform --cov=qibolab --cov-report=xml -rx" >> spytest
         echo "mv coverage.xml ~/qibolab" >> spytest
         # execute script in the queue
         chmod +x spytest
