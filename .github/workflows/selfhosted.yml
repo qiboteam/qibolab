@@ -60,10 +60,11 @@ jobs:
     - name: Test ${{ matrix.platform }}
       run: |
         # create script for slurm
+        platform=${{ matrix.platform }}
         echo \#\!/bin/bash >> ci_tests
         echo >> ci_tests
         echo "mkdir /tmp/qibolab" >> ci_tests
-        echo "cp -r src/qibolab/tests /tmp/qibolab" >> ci_tests
+        echo "ln -sr src/qibolab/tests /tmp/qibolab" >> ci_tests
         echo "cd /tmp/qibolab" >> ci_tests
         echo "pytest --cov=qibolab --cov-report=xml --platform $platform -rx" >> ci_tests
         echo "cd -" >> ci_tests
