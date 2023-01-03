@@ -95,7 +95,11 @@ def fix_connectivity(circuit):
         # add gate to the hardware circuit
         if isinstance(gate, gates.Unitary):
             # gates.Unitary requires matrix as first argument
-            new.add(gate.__class__(gate.matrix, *qubits, **gate.init_kwargs))
+            from qibo.backends import NumpyBackend
+
+            backend = NumpyBackend()
+            matrix = gate.asmatrix(backend)
+            new.add(gate.__class__(matrix, *qubits, **gate.init_kwargs))
         else:
             new.add(gate.__class__(*qubits, **gate.init_kwargs))
         if len(qubits) == 2:
