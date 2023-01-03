@@ -20,7 +20,7 @@ def pytest_generate_tests(metafunc):
     if "platform_name" in metafunc.fixturenames:
         if "qubit" in metafunc.fixturenames:
             # TODO: Do backend initialization here instead of every test (currently does not work)
-            qubits = [(platform_name, q) for q in range(Platform(platform_name).nqubits)]
+            qubits = [(platform_name, q) for q in Platform(platform_name).qubits]
             metafunc.parametrize("platform_name,qubit", qubits)
         else:
             metafunc.parametrize("platform_name", [platform_name])
