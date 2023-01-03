@@ -60,17 +60,16 @@ jobs:
     - name: Test ${{ matrix.platform }}
       run: |
         # create slurm script
-        echo \#\!/bin/bash >> job
-        echo >> job
-        echo "cd /tmp/" >> job
+        echo \#\!/bin/bash >> spytest
+        echo >> spytest
+        echo "cd /tmp/" >> spytest
         platform=${{ matrix.platform }}
-        echo "pytest ~/qibolab/src/qibolab --pyargs qibolab --platform $platform --cov=qibolab --cov-report=xml -rx" >> job
-        echo "mv coverage.xml ~/qibolab" >> job
+        echo "pytest ~/qibolab/src/qibolab --pyargs qibolab --platform $platform --cov=qibolab --cov-report=xml -rx" >> spytest
+        echo "mv coverage.xml ~/qibolab" >> spytest
         # execute script in the queue
-        sbatch -p ${{ matrix.platform }} -o tests.out job
-        cat tests.out
+        srun -p ${{ matrix.platform }} spytest
         # cleanup
-        rm job tests.out
+        rm spytest
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2
       with:
