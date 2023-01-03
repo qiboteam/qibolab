@@ -54,24 +54,24 @@ jobs:
         conda create --prefix=testenv python=${{ matrix.python-version }}
         conda activate ./testenv
         python -m pip install --upgrade pip
-        pip install pytest
+        pip install pytest-cov
         pip install git+https://github.com/qiboteam/qibo
         pip install .[tiiq]
     - name: Test ${{ matrix.platform }}
       run: |
-        # create slurm script
-        echo \#\!/bin/bash >> spytest
-        echo >> spytest
-        echo "cd /tmp/" >> spytest
+        # create script for slurm
         platform=${{ matrix.platform }}
-        echo "python -m pytest ~/qibolab/src/qibolab --pyargs qibolab --platform $platform --cov=qibolab --cov-report=xml -rx" >> spytest
-        echo "mv coverage.xml ~/qibolab" >> spytest
+        echo \#\!/bin/bash >> ci_tests
+        echo >> ci_tests
+        echo "cd .." >> ci_tests
+        echo "cp -r qibolab/src/qibolab /tmp" >> ci_tests
+        echo "cd /tmp/qibolab" >> ci_tests
+        echo "pytest --pyargs qibolab --cov=qibolab --cov-report=xml --platform $platform -rx" >> ci_tests
+        echo "cd -" >> ci_tests
+        echo "mv /tmp/qibolab/coverage.xml qibolab/" >> ci_tests
         # execute script in the queue
-        chmod +x spytest
-        cat spytest
-        srun -p ${{ matrix.platform }} spytest
-        # cleanup
-        rm spytest
+        chmod +x ci_tests
+        srun -p ${{ matrix.platform }} ci_tests
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2
       with:
