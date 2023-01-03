@@ -59,4 +59,23 @@ jobs:
         pip install .[tiiq]
     - name: Test ${{ matrix.platform }}
       run: |
-        srun -p ${{ matrix.platform }} pytest src/qibolab --pyargs qibolab -m qpu --platform ${{ matrix.platform }} -rx
+        # create slurm script
+        echo \#\!/bin/bash >> job
+        echo >> job
+        echo "cd /tmp/" >> job
+        platform=${{ matrix.platform }}
+        echo "pytest ~/qibolab/src/qibolab --pyargs qibolab --platform $platform --cov=qibolab --cov-report=xml -rx" >> job
+        echo "mv coverage.xml ~/qibolab" >> job
+        # execute script in the queue
+        sbatch -p ${{ matrix.platform }} -o tests.out job
+        cat tests.out
+        # cleanup
+        rm job tests.out
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v2
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: true
