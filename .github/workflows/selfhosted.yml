@@ -68,6 +68,7 @@ jobs:
         echo "mv coverage.xml ~/qibolab" >> spytest
         # execute script in the queue
         chmod +x spytest
+        cat spytest
         srun -p ${{ matrix.platform }} spytest
         # cleanup
         rm spytest
