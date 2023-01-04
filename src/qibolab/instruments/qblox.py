@@ -607,6 +607,8 @@ class ClusterQRM_RF(AbstractInstrument):
             self.acquisition_hold_off = kwargs["acquisition_hold_off"]
             self.acquisition_duration = kwargs["acquisition_duration"]
 
+            self._last_pulsequence_hash = 0
+
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
 
@@ -987,10 +989,6 @@ class ClusterQRM_RF(AbstractInstrument):
         # Start used sequencers
         for sequencer_number in self._used_sequencers_numbers:
             self.device.start_sequencer(sequencer_number)
-            # DEBUG sync_en
-            # print(
-            #     f"device: {self.name}, sequencer: {sequencer_number}, sync_en: {self.device.sequencers[sequencer_number].get('sync_en')}"
-            # )
 
     def acquire(self):
         """Retrieves the readout results.
@@ -1245,6 +1243,10 @@ class ClusterQRM_RF(AbstractInstrument):
                         # DEBUG: QRM Plot Incomming Pulses
                         # import qibolab.instruments.debug.incomming_pulse_plotting as pp
                         # pp.plot(raw_results)
+                        # DEBUG: QRM Plot Acquisition_results
+                        # from qibolab.debug.debug import plot_acquisition_results
+                        # plot_acquisition_results(acquisition_results, pulse, savefig_filename='acquisition_results.png')
+
         return acquisition_results
 
     def _process_acquisition_results(self, acquisition_results, readout_pulse: Pulse, demodulate=True):
@@ -1486,7 +1488,7 @@ class ClusterQCM_RF(AbstractInstrument):
                 )()
 
                 self.ports["o2"] = type(
-                    f"port_o1",
+                    f"port_o2",
                     (),
                     {
                         "attenuation": self.property_wrapper("out1_att"),
@@ -1653,8 +1655,8 @@ class ClusterQCM_RF(AbstractInstrument):
             ]  # Default after reboot = 6_000_000_000
             self.ports["o1"].gain = kwargs["ports"]["o1"]["gain"]  # Default after reboot = 1
             self.ports["o1"].hardware_mod_en = kwargs["ports"]["o1"]["hardware_mod_en"]  # Default after reboot = False
-            self.ports["o1"].nco_freq = 0  # Default after reboot = 1
-            self.ports["o1"].nco_phase_offs = 0  # Default after reboot = 1
+            self.ports["o1"].nco_freq = 0
+            self.ports["o1"].nco_phase_offs = 0
 
             self.ports["o2"].attenuation = kwargs["ports"]["o2"]["attenuation"]
             self.ports["o2"].lo_enabled = kwargs["ports"]["o2"]["lo_enabled"]  # Default after reboot = True
@@ -1663,9 +1665,10 @@ class ClusterQCM_RF(AbstractInstrument):
             ]  # Default after reboot = 6_000_000_000
             self.ports["o2"].gain = kwargs["ports"]["o2"]["gain"]  # Default after reboot = 1
             self.ports["o2"].hardware_mod_en = kwargs["ports"]["o2"]["hardware_mod_en"]  # Default after reboot = False
-            self.ports["o2"].nco_freq = 0  # Default after reboot = 1
-            self.ports["o2"].nco_phase_offs = 0  # Default after reboot = 1
+            self.ports["o2"].nco_freq = 0
+            self.ports["o2"].nco_phase_offs = 0
 
+            self._last_pulsequence_hash = 0
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
 
@@ -2380,6 +2383,7 @@ class ClusterQCM(AbstractInstrument):
                 self.ports[port].nco_freq = 0  # Default after reboot = 1
                 self.ports[port].nco_phase_offs = 0  # Default after reboot = 1
 
+            self._last_pulsequence_hash = 0
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
 
