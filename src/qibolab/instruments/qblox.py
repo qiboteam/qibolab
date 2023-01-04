@@ -607,7 +607,7 @@ class ClusterQRM_RF(AbstractInstrument):
             self.acquisition_hold_off = kwargs["acquisition_hold_off"]
             self.acquisition_duration = kwargs["acquisition_duration"]
 
-            self._last_pulsequence_hash= 0
+            self._last_pulsequence_hash = 0
 
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
@@ -1246,7 +1246,7 @@ class ClusterQRM_RF(AbstractInstrument):
                         # DEBUG: QRM Plot Acquisition_results
                         # from qibolab.debug.debug import plot_acquisition_results
                         # plot_acquisition_results(acquisition_results, pulse, savefig_filename='acquisition_results.png')
-        
+
         return acquisition_results
 
     def _process_acquisition_results(self, acquisition_results, readout_pulse: Pulse, demodulate=True):
@@ -1667,8 +1667,8 @@ class ClusterQCM_RF(AbstractInstrument):
             self.ports["o2"].hardware_mod_en = kwargs["ports"]["o2"]["hardware_mod_en"]  # Default after reboot = False
             self.ports["o2"].nco_freq = 0
             self.ports["o2"].nco_phase_offs = 0
-            
-            self._last_pulsequence_hash= 0
+
+            self._last_pulsequence_hash = 0
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
 
@@ -2382,8 +2382,8 @@ class ClusterQCM(AbstractInstrument):
                 ]  # Default after reboot = False
                 self.ports[port].nco_freq = 0  # Default after reboot = 1
                 self.ports[port].nco_phase_offs = 0  # Default after reboot = 1
-            
-            self._last_pulsequence_hash= 0
+
+            self._last_pulsequence_hash = 0
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
 
