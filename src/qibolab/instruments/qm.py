@@ -427,9 +427,6 @@ class QMOPX(AbstractInstrument):
             stream_processing,
         )
 
-        # TODO: Read qubit from sweeper
-        nfreq = len(sweepers[0].values)
-
         targets = {pulse.serial: self.register_pulse(qubits[pulse.qubit], pulse) for pulse in sequence}
         # play pulses using QUA
         with program() as experiment:
@@ -442,12 +439,14 @@ class QMOPX(AbstractInstrument):
                 self.sweep_recursion(list(sweepers), qubits, sequence, targets, I, Q, I_st, Q_st)
             align()
 
+            Ist_temp = I_st
+            Qst_temp = Q_st
             with stream_processing():
-                # I_st.average().save("I")
-                # Q_st.average().save("Q")
-                # n_st.buffer().save_all("n")
-                I_st.buffer(nfreq).average().save("I")
-                Q_st.buffer(nfreq).average().save("Q")
+                for sweeper in reversed(sweepers):
+                    Ist_temp = Ist_temp.buffer(len(sweeper.values))
+                    Qst_temp = Qst_temp.buffer(len(sweeper.values))
+                Ist_temp.average().save("I")
+                Qst_temp.average().save("Q")
 
         return self.execute_program(experiment)
 
