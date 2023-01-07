@@ -229,6 +229,11 @@ class QMOPX(AbstractInstrument):
         from qibolab.pulses import Rectangular
 
         waveforms = self.config["waveforms"]
+        # Maybe need to force zero q waveforms
+        #        if pulse.type.name == "READOUT" and mode == "q":
+        #            serial = "zero_wf"
+        #            if serial not in waveforms:
+        #                waveforms[serial] = {"type": "constant", "sample": 0.0}
         if isinstance(pulse.shape, Rectangular):
             serial = f"constant_wf{pulse.amplitude}"
             if serial not in waveforms:
@@ -402,7 +407,8 @@ class QMOPX(AbstractInstrument):
                     else:
                         self.play_pulses(sequence, targets, I, Q, I_st, Q_st)
                     # Wait for the resonator to cooldown
-                    wait(2000 // 4, target)
+                    if sweeper.wait_time > 0:
+                        wait(sweeper.wait_time // 4, target)
 
             else:
                 raise_error(NotImplementedError)

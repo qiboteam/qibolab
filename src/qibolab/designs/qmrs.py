@@ -42,8 +42,14 @@ class QMRSDesign(AbstractInstrumentDesign):
 
         # Map controllers to qubit channels (HARDCODED)
         # readout
-        Channel("L3-25_a").ports = [("con1", 9), ("con1", 10)]
-        Channel("L3-25_b").ports = [("con2", 9), ("con2", 10)]
+        Channel("L3-25_a").ports = [
+            ("con1", 10),
+            ("con1", 9),
+        ]
+        Channel("L3-25_b").ports = [
+            ("con2", 10),
+            ("con2", 9),
+        ]
         # feedback
         Channel("L2-5").ports = [("con1", 1), ("con1", 2)]
         # drive
@@ -79,11 +85,11 @@ class QMRSDesign(AbstractInstrumentDesign):
         # Channel("L3-14").local_oscillator = self.local_oscillators[4]
 
         # Set default LO parameters in the channel
-        Channel("L3-25_a").lo_frequency = 7_850_000_000
-        Channel("L3-25_b").lo_frequency = 7_300_000_000
+        Channel("L3-25_a").lo_frequency = 7_300_000_000
+        Channel("L3-25_b").lo_frequency = 7_900_000_000
         Channel("L3-15").lo_frequency = 4_700_000_000
         Channel("L3-11").lo_frequency = 4_700_000_000
-        Channel("L3-12").lo_frequency = 5_600_000_000
+        Channel("L3-12").lo_frequency = 5_000_000_000
         Channel("L3-13").lo_frequency = 6_500_000_000
         Channel("L3-14").lo_frequency = 6_500_000_000
 
@@ -136,22 +142,21 @@ class QMRSDesign(AbstractInstrumentDesign):
                 lo.start()
 
     def stop(self):
-        if self.is_connected:
-            for lo in self.local_oscillators:
-                lo.stop()
+        # FIXME: Temporarily don't stop the LOs because QM are using them
+        # if self.is_connected:
+        #    for lo in self.local_oscillators:
+        #        lo.stop()
         self.opx.stop()
 
     def disconnect(self):
         if self.is_connected:
+            self.opx.disconnect()
             for lo in self.local_oscillators:
                 lo.disconnect()
-            self.manager.close()
             self.is_connected = False
 
-    def sweep_frequency(self, qubits, frequencies, sequence, nshots=1024):
-        # TODO: This will be generalized to a general ``sweep`` method that will
-        # work with arbitrary ``Sweeper`` objects to perform calibration sweeps on hardware
-        return self.opx.sweep_frequency(qubits, frequencies, sequence, nshots)
+    def sweep(self, qubits, sequence, *sweepers, nshots=1024):
+        return self.opx.sweep(qubits, sequence, *sweepers, nshots=1024)
 
     def play(self, qubits, sequence, nshots=1024):
         return self.opx.play(qubits, sequence, nshots)

@@ -48,9 +48,9 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 2000
+                duration: 1000
                 amplitude: 0.05
-                frequency: 7.453328e+9
+                frequency: 7_453_000_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -67,7 +67,7 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.05
-                frequency: 7.655164e+9
+                frequency: 7_655_000_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -84,7 +84,7 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.05
-                frequency: 7.802218e+9
+                frequency: 7_800_000_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
