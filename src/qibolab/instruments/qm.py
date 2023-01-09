@@ -1,3 +1,5 @@
+import collections
+
 import numpy as np
 from qibo.config import log, raise_error
 from qm.QuantumMachinesManager import QuantumMachinesManager
@@ -389,17 +391,18 @@ class QMOPX(AbstractInstrument):
 
     @staticmethod
     def play_pulses(sequence, targets, operations, I, Q, I_st, Q_st):
-        from qm.qua import dual_demod, measure, play, save, wait
+        from qm.qua import align, dual_demod, measure, play, save, wait
 
-        clock = {target: 0 for target in targets.values()}
+        clock = collections.defaultdict(int)
         for pulse in sequence:
             target = targets[pulse.serial]
-            wait_time = pulse.start - clock[target]
+            wait_time = pulse.start - clock[pulse.qubit]
             if wait_time > 0:
                 wait(wait_time // 4, target)
-            clock[target] += pulse.duration
+            clock[pulse.qubit] += pulse.duration
             if pulse.type.name == "READOUT":
                 # align("qubit", "resonator")
+                align()
                 measure(
                     operations[pulse.serial],
                     target,
@@ -409,9 +412,9 @@ class QMOPX(AbstractInstrument):
                 )
             else:
                 play(operations[pulse.serial], target)
-            # Save data to the stream processing
-            save(I, I_st)
-            save(Q, Q_st)
+        # Save data to the stream processing
+        save(I, I_st)
+        save(Q, Q_st)
 
     def sweep_recursion(self, sweepers, qubits, sequence, targets, operations, I, Q, I_st, Q_st):
         from qm.qua import declare, for_, wait

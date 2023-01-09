@@ -58,7 +58,7 @@ native_gates:
         2: # qubit number
             RX:
                 duration: 36
-                amplitude: 0.43
+                amplitude: 0.005
                 frequency: 5_800_000_000
                 shape: Drag(5, -0.04) #Gaussian(5)
                 type: qd # qubit drive
@@ -66,7 +66,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 2000
-                amplitude: 0.02
+                amplitude: 0.005
                 frequency: 7_655_000_000
                 shape: Rectangular()
                 type: ro # readout
