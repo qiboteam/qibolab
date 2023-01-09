@@ -59,14 +59,14 @@ native_gates:
             RX:
                 duration: 36
                 amplitude: 0.43
-                frequency: 5_600_000_000
+                frequency: 5_800_000_000
                 shape: Drag(5, -0.04) #Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 2000
-                amplitude: 0.05
+                amplitude: 0.02
                 frequency: 7_655_000_000
                 shape: Rectangular()
                 type: ro # readout
@@ -182,8 +182,8 @@ characterization:
             mixer_readout_g: 0.0
             mixer_readout_phi: 0.0
         2:
-            resonator_freq: 7.655164e+9
-            qubit_freq: 4_891_370_569
+            resonator_freq: 7_655_000_000
+            qubit_freq: 5_800_000_000
             T1: 33875
             T2: 8479
             state0_voltage: 1803

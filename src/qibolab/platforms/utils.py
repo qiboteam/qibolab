@@ -35,8 +35,8 @@ class Channel:
             new.qubits = []
 
             new.local_oscillator = None
-            new.lo_frequency = None
-            new.lo_power = None
+            new.lo_frequency = 0.0
+            new.lo_power = 0.0
 
             cls.instances[name] = new
 

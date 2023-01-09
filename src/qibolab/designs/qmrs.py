@@ -69,27 +69,26 @@ class QMRSDesign(AbstractInstrumentDesign):
         self.local_oscillators = [
             SGS100A("lo_readout_a", "192.168.0.39"),
             SGS100A("lo_readout_b", "192.168.0.31"),
-            # FIXME: Temporarily disable the drive LOs since we are not using them
-            # SGS100A("lo_drive_low", "192.168.0.32"),
-            # SGS100A("lo_drive_mid", "192.168.0.33"),
-            # SGS100A("lo_drive_high", "192.168.0.34"),
+            SGS100A("lo_drive_low", "192.168.0.32"),
+            SGS100A("lo_drive_mid", "192.168.0.33"),
+            SGS100A("lo_drive_high", "192.168.0.34"),
         ]
 
         # Map LOs to channels
         Channel("L3-25_a").local_oscillator = self.local_oscillators[0]
         Channel("L3-25_b").local_oscillator = self.local_oscillators[1]
-        # Channel("L3-15").local_oscillator = self.local_oscillators[2]
-        # Channel("L3-11").local_oscillator = self.local_oscillators[2]
-        # Channel("L3-12").local_oscillator = self.local_oscillators[3]
-        # Channel("L3-13").local_oscillator = self.local_oscillators[4]
-        # Channel("L3-14").local_oscillator = self.local_oscillators[4]
+        Channel("L3-15").local_oscillator = self.local_oscillators[2]
+        Channel("L3-11").local_oscillator = self.local_oscillators[2]
+        Channel("L3-12").local_oscillator = self.local_oscillators[3]
+        Channel("L3-13").local_oscillator = self.local_oscillators[4]
+        Channel("L3-14").local_oscillator = self.local_oscillators[4]
 
         # Set default LO parameters in the channel
         Channel("L3-25_a").lo_frequency = 7_300_000_000
         Channel("L3-25_b").lo_frequency = 7_900_000_000
         Channel("L3-15").lo_frequency = 4_700_000_000
         Channel("L3-11").lo_frequency = 4_700_000_000
-        Channel("L3-12").lo_frequency = 5_000_000_000
+        Channel("L3-12").lo_frequency = 5_600_000_000
         Channel("L3-13").lo_frequency = 6_500_000_000
         Channel("L3-14").lo_frequency = 6_500_000_000
 
@@ -156,7 +155,7 @@ class QMRSDesign(AbstractInstrumentDesign):
             self.is_connected = False
 
     def sweep(self, qubits, sequence, *sweepers, nshots=1024):
-        return self.opx.sweep(qubits, sequence, *sweepers, nshots=1024)
+        return self.opx.sweep(qubits, sequence, *sweepers, nshots=nshots)
 
     def play(self, qubits, sequence, nshots=1024):
         return self.opx.play(qubits, sequence, nshots)
