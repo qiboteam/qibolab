@@ -13,13 +13,12 @@ class QMOPX(AbstractInstrument):
     """Instrument object for controlling Quantum Machines (QM) OPX controllers.
 
     Playing pulses on QM controllers requires a ``config`` dictionary and a program
-    written in QUA language. The ``config`` file is generated in parts in the following places:
-        - controllers are registered in ``__init__``,
-        -  are registered in each ``Qubit`` object,
-        - elements (qubits, resonators and flux), pulses (including waveforms
-          and integration weights) are registered in the ``register_*`` methods.
+    written in QUA language. The ``config`` file is generated in parts in the following places
+    in the ``register_*`` methods. The controllers, elements and pulses are all
+    registered after a pulse sequence is given, so that the config contains only
+    elements related to the participating qubits.
     The QUA program for executing an arbitrary qibolab ``PulseSequence`` is written in
-    ``execute_program`` which is called by ``play``.
+    ``play`` and ``play_pulses`` and executed in ``execute_program``.
 
     Args:
         name (str): Name of the instrument instance.
@@ -578,9 +577,8 @@ class QMOPX(AbstractInstrument):
                     Ist_temp = output.I_st
                     Qst_temp = output.Q_st
                     for sweeper in reversed(sweepers):
-                        if sweeper.pulse.serial == serial:
-                            Ist_temp = Ist_temp.buffer(len(sweeper.values))
-                            Qst_temp = Qst_temp.buffer(len(sweeper.values))
+                        Ist_temp = Ist_temp.buffer(len(sweeper.values))
+                        Qst_temp = Qst_temp.buffer(len(sweeper.values))
                     Ist_temp.average().save(f"{serial}_I")
                     Qst_temp.average().save(f"{serial}_Q")
 
