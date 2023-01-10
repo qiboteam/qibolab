@@ -1,4 +1,5 @@
 import collections
+from types import SimpleNamespace
 
 import numpy as np
 from qibo.config import log, raise_error
@@ -391,7 +392,7 @@ class QMOPX(AbstractInstrument):
         return machine.execute(program)
 
     @staticmethod
-    def play_pulses(sequence, targets, operations, I, Q, I_st, Q_st):
+    def play_pulses(sequence, targets, operations, outputs):
         from qm.qua import align, dual_demod, measure, play, save, wait
 
         # TODO: Fix phases
@@ -412,16 +413,65 @@ class QMOPX(AbstractInstrument):
                     operations[pulse.serial],
                     target,
                     None,
-                    dual_demod.full("cos", "out1", "sin", "out2", I),
-                    dual_demod.full("minus_sin", "out1", "cos", "out2", Q),
+                    dual_demod.full("cos", "out1", "sin", "out2", outputs[pulse.serial].I),
+                    dual_demod.full("minus_sin", "out1", "cos", "out2", outputs[pulse.serial].Q),
                 )
             else:
                 play(operations[pulse.serial], target)
         # Save data to the stream processing
-        save(I, I_st)
-        save(Q, Q_st)
+        for output in outputs.values():
+            save(output.I, output.I_st)
+            save(output.Q, output.Q_st)
 
-    def sweep_recursion(self, sweepers, qubits, sequence, targets, operations, I, Q, I_st, Q_st):
+    def play(self, qubits, sequence, nshots=1024):
+        from qm.qua import (
+            declare,
+            declare_stream,
+            fixed,
+            for_,
+            program,
+            stream_processing,
+        )
+
+        targets, operations = {}, {}
+        for pulse in sequence:
+            targets[pulse.serial] = self.register_pulse(qubits[pulse.qubit], pulse)
+            operations[pulse.serial] = pulse.serial
+
+        # play pulses using QUA
+        with program() as experiment:
+            n = declare(int)
+            outputs = {
+                pulse.serial: SimpleNamespace(
+                    I=declare(fixed),
+                    Q=declare(fixed),
+                    I_st=declare_stream(),
+                    Q_st=declare_stream(),
+                )
+                for pulse in sequence.ro_pulses
+            }
+            with for_(n, 0, n < nshots, n + 1):
+                self.play_pulses(sequence, targets, operations, outputs)
+
+            with stream_processing():
+                # I_st.average().save("I")
+                # Q_st.average().save("Q")
+                # n_st.buffer().save_all("n")
+                for serial, output in outputs.items():
+                    output.I_st.buffer(nshots).save(f"{serial}_I")
+                    output.Q_st.buffer(nshots).save(f"{serial}_Q")
+
+        result = self.execute_program(experiment)
+        handles = result.result_handles
+        handles.wait_for_all_values()
+        results = {}
+        for serial in outputs.keys():
+            ires = handles.get(f"{serial}_I").fetch_all()
+            qres = handles.get(f"{serial}_Q").fetch_all()
+            results[serial] = ExecutionResult(ires, qres)
+        return results
+
+    def sweep_recursion(self, sweepers, qubits, sequence, targets, operations, outputs):
         from qm.qua import declare, for_, wait
         from qualang_tools.loops import from_array
 
@@ -443,9 +493,9 @@ class QMOPX(AbstractInstrument):
                     target = targets[sweeper.pulse.serial]
                     update_frequency(target, f)
                     if len(sweepers) > 1:
-                        self.sweep_recursion(sweepers[1:], qubits, sequence, targets, operations, I, Q, I_st, Q_st)
+                        self.sweep_recursion(sweepers[1:], qubits, sequence, targets, operations, outputs)
                     else:
-                        self.play_pulses(sequence, targets, operations, I, Q, I_st, Q_st)
+                        self.play_pulses(sequence, targets, operations, outputs)
                     if sweeper.wait_time > 0:
                         wait(sweeper.wait_time // 4, target)
 
@@ -456,9 +506,9 @@ class QMOPX(AbstractInstrument):
                 with for_(*from_array(a, sweeper.values)):
                     operations[sweeper.pulse.serial] = sweeper.pulse.serial * amp(a)
                     if len(sweepers) > 1:
-                        self.sweep_recursion(sweepers[1:], qubits, sequence, targets, operations, I, Q, I_st, Q_st)
+                        self.sweep_recursion(sweepers[1:], qubits, sequence, targets, operations, outputs)
                     else:
-                        self.play_pulses(sequence, targets, operations, I, Q, I_st, Q_st)
+                        self.play_pulses(sequence, targets, operations, outputs)
                     if sweeper.wait_time > 0:
                         wait(sweeper.wait_time // 4, target)
 
@@ -487,71 +537,41 @@ class QMOPX(AbstractInstrument):
         # play pulses using QUA
         with program() as experiment:
             n = declare(int)
-            I = declare(fixed)
-            Q = declare(fixed)
-            I_st = declare_stream()
-            Q_st = declare_stream()
+            outputs = {
+                pulse.serial: SimpleNamespace(
+                    I=declare(fixed),
+                    Q=declare(fixed),
+                    I_st=declare_stream(),
+                    Q_st=declare_stream(),
+                )
+                for pulse in sequence.ro_pulses
+            }
             with for_(n, 0, n < nshots, n + 1):
-                self.sweep_recursion(list(sweepers), qubits, sequence, targets, operations, I, Q, I_st, Q_st)
+                self.sweep_recursion(list(sweepers), qubits, sequence, targets, operations, outputs)
             align()
 
-            Ist_temp = I_st
-            Qst_temp = Q_st
             with stream_processing():
-                for sweeper in reversed(sweepers):
-                    Ist_temp = Ist_temp.buffer(len(sweeper.values))
-                    Qst_temp = Qst_temp.buffer(len(sweeper.values))
-                Ist_temp.average().save("I")
-                Qst_temp.average().save("Q")
+                for serial, output in outputs.items():
+                    Ist_temp = output.I_st
+                    Qst_temp = output.Q_st
+                    for sweeper in reversed(sweepers):
+                        if sweeper.pulse.serial == serial:
+                            Ist_temp = Ist_temp.buffer(len(sweeper.values))
+                            Qst_temp = Qst_temp.buffer(len(sweeper.values))
+                    Ist_temp.average().save(f"{serial}_I")
+                    Qst_temp.average().save(f"{serial}_Q")
 
-        result = self.execute_program(experiment)
-        handles = result.result_handles
-        handles.wait_for_all_values()
         # TODO: Update result asynchronously instead of waiting for all values
         # import time
         # for _ in range(5):
         #    print(handles.is_processing())
         #    time.sleep(1)
-        ires = handles.get("I").fetch_all()
-        qres = handles.get("Q").fetch_all()
-        return ExecutionResult(ires, qres)
-
-    def play(self, qubits, sequence, nshots=1024):
-        from qm.qua import (
-            declare,
-            declare_stream,
-            fixed,
-            for_,
-            program,
-            stream_processing,
-        )
-
-        targets, operations = {}, {}
-        for pulse in sequence:
-            targets[pulse.serial] = self.register_pulse(qubits[pulse.qubit], pulse)
-            operations[pulse.serial] = pulse.serial
-
-        # play pulses using QUA
-        with program() as experiment:
-            n = declare(int)
-            I = declare(fixed)
-            Q = declare(fixed)
-            I_st = declare_stream()
-            Q_st = declare_stream()
-            with for_(n, 0, n < nshots, n + 1):
-                self.play_pulses(sequence, targets, operations, I, Q, I_st, Q_st)
-
-            with stream_processing():
-                # I_st.average().save("I")
-                # Q_st.average().save("Q")
-                # n_st.buffer().save_all("n")
-                I_st.buffer(nshots).save("I")
-                Q_st.buffer(nshots).save("Q")
-
         result = self.execute_program(experiment)
         handles = result.result_handles
         handles.wait_for_all_values()
-        # TODO: Distinguish between shots and averaged samples when sweeping
-        ires = handles.get("I").fetch_all()
-        qres = handles.get("Q").fetch_all()
-        return ExecutionResult(ires, qres)
+        results = {}
+        for serial in outputs.keys():
+            ires = handles.get(f"{serial}_I").fetch_all()
+            qres = handles.get(f"{serial}_Q").fetch_all()
+            results[serial] = ExecutionResult(ires, qres)
+        return results
