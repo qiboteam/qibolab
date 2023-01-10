@@ -392,7 +392,19 @@ class QMOPX(AbstractInstrument):
         return machine.execute(program)
 
     @staticmethod
-    def play_pulses(sequence, targets, operations, outputs):
+    def play_pulses(qmsequence, outputs):
+        """Part of QUA program that plays an arbitrary pulse sequence.
+
+        Should be used inside a ``program()`` context.
+
+        Args:
+            qmsequence (list): Pulse sequence containing QM specific pulses (``qmpulse``).
+                These pulses are defined in :meth:`qibolab.instruments.qm.QMOPX.play` and
+                hold attributes for the ``target`` and ``operation`` that corresponds to
+                each pulse, as defined in the QM config.
+            outputs (dict): Dictionary with the QUA variables and streams that will
+                save the results for each readout pulse.
+        """
         from qm.qua import align, dual_demod, measure, play, save, wait
 
         # TODO: Fix phases
@@ -400,30 +412,51 @@ class QMOPX(AbstractInstrument):
         # register pulses in Quantum Machines config
 
         clock = collections.defaultdict(int)
-        for pulse in sequence:
-            target = targets[pulse.serial]
+        for qmpulse in qmsequence:
+            pulse = qmpulse.pulse
             wait_time = pulse.start - clock[pulse.qubit]
             if wait_time > 0:
-                wait(wait_time // 4, target)
+                wait(wait_time // 4, qmpulse.target)
             clock[pulse.qubit] += pulse.duration
             if pulse.type.name == "READOUT":
                 # align("qubit", "resonator")
                 align()
                 measure(
-                    operations[pulse.serial],
-                    target,
+                    qmpulse.operation,
+                    qmpulse.target,
                     None,
                     dual_demod.full("cos", "out1", "sin", "out2", outputs[pulse.serial].I),
                     dual_demod.full("minus_sin", "out1", "cos", "out2", outputs[pulse.serial].Q),
                 )
             else:
-                play(operations[pulse.serial], target)
+                play(qmpulse.operation, qmpulse.target)
         # Save data to the stream processing
         for output in outputs.values():
             save(output.I, output.I_st)
             save(output.Q, output.Q_st)
 
+    @staticmethod
+    def fetch_results(result, readout_serials):
+        """Fetches results from an executed experiment."""
+        # TODO: Fetch in real time during sweeping, to allow live plotting
+        handles = result.result_handles
+        handles.wait_for_all_values()
+        results = {}
+        for serial in readout_serials:
+            ires = handles.get(f"{serial}_I").fetch_all()
+            qres = handles.get(f"{serial}_Q").fetch_all()
+            results[serial] = ExecutionResult(ires, qres)
+        return results
+
     def play(self, qubits, sequence, nshots=1024):
+        """Plays an arbitrary pulse sequence using QUA program.
+
+        Args:
+            qubits (list): List of :class:`qibolab.platforms.utils.Qubit` objects
+                passed from the platform.
+            sequence (:class:`qibolab.pulses.PulseSequence`). Pulse sequence to play.
+            nshots (int): Number of repetitions (shots) of the experiment.
+        """
         from qm.qua import (
             declare,
             declare_stream,
@@ -433,10 +466,10 @@ class QMOPX(AbstractInstrument):
             stream_processing,
         )
 
-        targets, operations = {}, {}
-        for pulse in sequence:
-            targets[pulse.serial] = self.register_pulse(qubits[pulse.qubit], pulse)
-            operations[pulse.serial] = pulse.serial
+        qmsequence = [
+            SimpleNamespace(pulse=pulse, target=self.register_pulse(qubits[pulse.qubit], pulse), operation=pulse.serial)
+            for pulse in sequence
+        ]
 
         # play pulses using QUA
         with program() as experiment:
@@ -451,7 +484,7 @@ class QMOPX(AbstractInstrument):
                 for pulse in sequence.ro_pulses
             }
             with for_(n, 0, n < nshots, n + 1):
-                self.play_pulses(sequence, targets, operations, outputs)
+                self.play_pulses(qmsequence, outputs)
 
             with stream_processing():
                 # I_st.average().save("I")
@@ -462,16 +495,9 @@ class QMOPX(AbstractInstrument):
                     output.Q_st.buffer(nshots).save(f"{serial}_Q")
 
         result = self.execute_program(experiment)
-        handles = result.result_handles
-        handles.wait_for_all_values()
-        results = {}
-        for serial in outputs.keys():
-            ires = handles.get(f"{serial}_I").fetch_all()
-            qres = handles.get(f"{serial}_Q").fetch_all()
-            results[serial] = ExecutionResult(ires, qres)
-        return results
+        return self.fetch_results(result, outputs.keys())
 
-    def sweep_recursion(self, sweepers, qubits, sequence, targets, operations, outputs):
+    def sweep_recursion(self, sweepers, qubits, qmpulses, qmsequence, outputs):
         from qm.qua import declare, for_, wait
         from qualang_tools.loops import from_array
 
@@ -489,28 +515,29 @@ class QMOPX(AbstractInstrument):
 
                 # is it fine to have this declaration inside the ``nshots`` QUA loop?
                 f = declare(int)
+                qmpulse = qmpulses[sweeper.pulse.serial]
                 with for_(*from_array(f, values.astype(int))):
-                    target = targets[sweeper.pulse.serial]
-                    update_frequency(target, f)
+                    update_frequency(qmpulse.target, f)
                     if len(sweepers) > 1:
-                        self.sweep_recursion(sweepers[1:], qubits, sequence, targets, operations, outputs)
+                        self.sweep_recursion(sweepers[1:], qubits, qmpulses, qmsequence, outputs)
                     else:
-                        self.play_pulses(sequence, targets, operations, outputs)
+                        self.play_pulses(qmsequence, outputs)
                     if sweeper.wait_time > 0:
-                        wait(sweeper.wait_time // 4, target)
+                        wait(sweeper.wait_time // 4, qmpulse.target)
 
             elif sweeper.parameter == "amplitude":
                 from qm.qua import amp, fixed
 
+                qmpulse = qmpulses[sweeper.pulse.serial]
                 a = declare(fixed)
                 with for_(*from_array(a, sweeper.values)):
-                    operations[sweeper.pulse.serial] = sweeper.pulse.serial * amp(a)
+                    qmpulse.operation = qmpulse.operation * amp(a)
                     if len(sweepers) > 1:
-                        self.sweep_recursion(sweepers[1:], qubits, sequence, targets, operations, outputs)
+                        self.sweep_recursion(sweepers[1:], qubits, qmpulses, qmsequence, outputs)
                     else:
-                        self.play_pulses(sequence, targets, operations, outputs)
+                        self.play_pulses(qmsequence, outputs)
                     if sweeper.wait_time > 0:
-                        wait(sweeper.wait_time // 4, target)
+                        wait(sweeper.wait_time // 4, qmpulse.target)
 
             else:
                 raise_error(NotImplementedError)
@@ -529,10 +556,13 @@ class QMOPX(AbstractInstrument):
             stream_processing,
         )
 
-        targets, operations = {}, {}
+        qmsequence, qmpulses = [], {}
         for pulse in sequence:
-            targets[pulse.serial] = self.register_pulse(qubits[pulse.qubit], pulse)
-            operations[pulse.serial] = pulse.serial
+            qmpulse = SimpleNamespace(
+                pulse=pulse, target=self.register_pulse(qubits[pulse.qubit], pulse), operation=pulse.serial
+            )
+            qmsequence.append(qmpulse)
+            qmpulses[pulse.serial] = qmpulse
 
         # play pulses using QUA
         with program() as experiment:
@@ -547,7 +577,7 @@ class QMOPX(AbstractInstrument):
                 for pulse in sequence.ro_pulses
             }
             with for_(n, 0, n < nshots, n + 1):
-                self.sweep_recursion(list(sweepers), qubits, sequence, targets, operations, outputs)
+                self.sweep_recursion(list(sweepers), qubits, qmpulses, qmsequence, outputs)
             align()
 
             with stream_processing():
@@ -567,11 +597,4 @@ class QMOPX(AbstractInstrument):
         #    print(handles.is_processing())
         #    time.sleep(1)
         result = self.execute_program(experiment)
-        handles = result.result_handles
-        handles.wait_for_all_values()
-        results = {}
-        for serial in outputs.keys():
-            ires = handles.get(f"{serial}_I").fetch_all()
-            qres = handles.get(f"{serial}_Q").fetch_all()
-            results[serial] = ExecutionResult(ires, qres)
-        return results
+        return self.fetch_results(result, outputs.keys())
