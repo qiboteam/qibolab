@@ -50,50 +50,9 @@ class QMOPX(AbstractInstrument):
         # minimum_delay_between_instructions: 4
 
         # Default configuration for communicating with the ``QuantumMachinesManager``
-        # Defines which controllers and ports are used in the lab (HARDCODED)
-        # TODO: Generate ``config`` controllers in ``setup`` by looking at the channels
         self.config = {
             "version": 1,
-            "controllers": {
-                "con1": {
-                    "analog_outputs": {
-                        1: {"offset": 0.0},
-                        2: {"offset": 0.0},
-                        3: {"offset": 0.0},
-                        4: {"offset": 0.0},
-                        5: {"offset": 0.0},
-                        6: {"offset": 0.0},
-                        7: {"offset": 0.0},
-                        8: {"offset": 0.0},
-                        9: {"offset": 0.0},
-                        10: {"offset": 0.0},
-                    },
-                    "digital_outputs": {
-                        1: {},
-                    },
-                    "analog_inputs": {
-                        1: {"offset": 0.0, "gain_db": 0},
-                        2: {"offset": 0.0, "gain_db": 0},
-                    },
-                },
-                "con2": {
-                    "analog_outputs": {
-                        1: {"offset": 0.0, "filter": {"feedforward": [], "feedback": []}},
-                        2: {"offset": 0.0, "filter": {"feedforward": [], "feedback": []}},
-                        3: {"offset": 0.0, "filter": {"feedforward": [], "feedback": []}},
-                        4: {"offset": 0.0, "filter": {"feedforward": [], "feedback": []}},
-                        5: {"offset": 0.0, "filter": {"feedforward": [], "feedback": []}},
-                        9: {"offset": 0.0},
-                        10: {"offset": 0.0},
-                    },
-                },
-                "con3": {
-                    "analog_outputs": {
-                        1: {"offset": 0.0},
-                        2: {"offset": 0.0},
-                    },
-                },
-            },
+            "controllers": {},
             "elements": {},
             "pulses": {},
             "waveforms": {},
@@ -111,7 +70,7 @@ class QMOPX(AbstractInstrument):
     def setup(self, qubits, time_of_flight=0, smearing=0):
         self.time_of_flight = time_of_flight
         self.smearing = smearing
-        # TODO: Use ``qubits`` to define controllers here
+        # controllers are defined when registering pulses
 
     def start(self):
         # TODO: Start the OPX flux offsets?
@@ -144,8 +103,15 @@ class QMOPX(AbstractInstrument):
         N = 1 / ((1 - g**2) * (2 * c**2 - 1))
         return [float(N * x) for x in [(1 - g) * c, (1 + g) * s, (1 - g) * s, (1 + g) * c]]
 
+    def register_analog_output_controllers(self, ports):
+        controllers = self.config["controllers"]
+        for con, port in ports:
+            if con not in controllers:
+                controllers[con] = {"analog_outputs": {}}
+            controllers[con]["analog_outputs"][port] = {"offset": 0.0}
+
     def register_drive_element(self, qubit, intermediate_frequency=0):
-        """Register qubit drive elements in the QM config.
+        """Register qubit drive elements and controllers in the QM config.
 
         Args:
             qubit (:class:`qibolab.platforms.utils.Qubit`): Qubit to add elements for.
@@ -154,6 +120,9 @@ class QMOPX(AbstractInstrument):
                 LO connected to the same channel.
         """
         if f"drive{qubit}" not in self.config["elements"]:
+            # register controllers
+            self.register_analog_output_controllers(qubit.drive.ports)
+            # register element
             lo_frequency = qubit.drive.lo_frequency
             self.config["elements"][f"drive{qubit}"] = {
                 "mixInputs": {
@@ -180,7 +149,7 @@ class QMOPX(AbstractInstrument):
                 raise_error(NotImplementedError, f"Changing intermediate frequency for qubit {qubit}.")
 
     def register_readout_element(self, qubit, intermediate_frequency=0):
-        """Register resonator elements in the QM config.
+        """Register resonator elements and controllers in the QM config.
 
         Args:
             qubit (:class:`qibolab.platforms.utils.Qubit`): Qubit to add elements for.
@@ -189,6 +158,27 @@ class QMOPX(AbstractInstrument):
                 LO connected to the same channel.
         """
         if f"readout{qubit}" not in self.config["elements"]:
+            # register controllers
+            self.register_analog_output_controllers(qubit.readout.ports)
+            controllers = self.config["controllers"]
+            for con, port in qubit.feedback.ports:
+                if con not in controllers:
+                    controllers[con] = {
+                        "analog_outputs": {},
+                        "digital_outputs": {
+                            1: {},
+                        },
+                        "analog_inputs": {},
+                    }
+                if "digital_outputs" not in controllers[con]:
+                    controllers[con]["digital_outputs"] = {
+                        1: {},
+                    }
+                if "analog_inputs" not in controllers[con]:
+                    controllers[con]["analog_inputs"] = {}
+                controllers[con]["analog_inputs"][port] = {"offset": 0.0, "gain_db": 0}
+
+            # register element
             lo_frequency = qubit.readout.lo_frequency
             self.config["elements"][f"readout{qubit}"] = {
                 "mixInputs": {
@@ -221,7 +211,7 @@ class QMOPX(AbstractInstrument):
                 raise_error(NotImplementedError, f"Changing intermediate frequency for qubit {qubit}.")
 
     def register_flux_element(self, qubit, intermediate_frequency=0):
-        """Register qubit flux elements in the QM config.
+        """Register qubit flux elements and controllers in the QM config.
 
         Args:
             qubit (:class:`qibolab.platforms.utils.Qubit`): Qubit to add elements for.
@@ -230,6 +220,9 @@ class QMOPX(AbstractInstrument):
                 LO connected to the same channel.
         """
         if f"flux{qubit}" not in self.config["elements"]:
+            # register controller
+            self.register_analog_output_controllers(qubit.flux.ports)
+            # register element
             self.config["elements"][f"flux{qubit}"] = {
                 "singleInput": {
                     "port": qubit.flux.ports[0],
