@@ -149,14 +149,14 @@ class AbstractPlatform(ABC):
             )
 
         # Generate ro_channel[qubit], qd_channel[qubit], qf_channel[qubit], qrm[qubit], qcm[qubit], lo_qrm[qubit], lo_qcm[qubit]
-        self.ro_channel = {} # readout
-        self.qd_channel = {} # qubit drive
-        self.qf_channel = {} # qubit flux
-        self.qb_channel = {} # qubit flux biassing
-        self.qrm = {} # qubit readout module
-        self.qdm = {} # qubit drive module
-        self.qfm = {} # qubit flux module
-        self.qbm = {} # qubit flux biassing module
+        self.ro_channel = {}  # readout
+        self.qd_channel = {}  # qubit drive
+        self.qf_channel = {}  # qubit flux
+        self.qb_channel = {}  # qubit flux biassing
+        self.qrm = {}  # qubit readout module
+        self.qdm = {}  # qubit drive module
+        self.qfm = {}  # qubit flux module
+        self.qbm = {}  # qubit flux biassing module
         self.ro_port = {}
         self.qd_port = {}
         self.qf_port = {}
