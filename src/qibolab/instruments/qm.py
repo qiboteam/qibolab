@@ -5,6 +5,7 @@ from qibo.config import log, raise_error
 from qm.QuantumMachinesManager import QuantumMachinesManager
 
 from qibolab.instruments.abstract import AbstractInstrument
+from qibolab.result import ExecutionResult
 
 
 class QMOPX(AbstractInstrument):
@@ -393,6 +394,10 @@ class QMOPX(AbstractInstrument):
     def play_pulses(sequence, targets, operations, I, Q, I_st, Q_st):
         from qm.qua import align, dual_demod, measure, play, save, wait
 
+        # TODO: Fix phases
+        # TODO: Handle pulses that run on the same element simultaneously (multiplex?)
+        # register pulses in Quantum Machines config
+
         clock = collections.defaultdict(int)
         for pulse in sequence:
             target = targets[pulse.serial]
@@ -499,29 +504,34 @@ class QMOPX(AbstractInstrument):
                 Ist_temp.average().save("I")
                 Qst_temp.average().save("Q")
 
-        return self.execute_program(experiment)
+        result = self.execute_program(experiment)
+        handles = result.result_handles
+        handles.wait_for_all_values()
+        # TODO: Update result asynchronously instead of waiting for all values
+        # import time
+        # for _ in range(5):
+        #    print(handles.is_processing())
+        #    time.sleep(1)
+        ires = handles.get("I").fetch_all()
+        qres = handles.get("Q").fetch_all()
+        return ExecutionResult(ires, qres)
 
     def play(self, qubits, sequence, nshots=1024):
         from qm.qua import (
             declare,
             declare_stream,
-            dual_demod,
             fixed,
             for_,
-            measure,
-            play,
             program,
-            save,
             stream_processing,
-            wait,
         )
 
-        # TODO: Fix phases
-        # TODO: Handle pulses that run on the same element simultaneously (multiplex?)
-        # register pulses in Quantum Machines config
-        targets = [self.register_pulse(qubits[pulse.qubit], pulse) for pulse in sequence]
+        targets, operations = {}, {}
+        for pulse in sequence:
+            targets[pulse.serial] = self.register_pulse(qubits[pulse.qubit], pulse)
+            operations[pulse.serial] = pulse.serial
+
         # play pulses using QUA
-        clock = {target: 0 for target in targets}
         with program() as experiment:
             n = declare(int)
             I = declare(fixed)
@@ -529,25 +539,7 @@ class QMOPX(AbstractInstrument):
             I_st = declare_stream()
             Q_st = declare_stream()
             with for_(n, 0, n < nshots, n + 1):
-                for pulse, target in zip(sequence, targets):
-                    wait_time = pulse.start - clock[target]
-                    if wait_time > 0:
-                        wait(wait_time // 4, target)
-                    clock[target] += pulse.duration
-                    if pulse.type.name == "READOUT":
-                        # align("qubit", "resonator")
-                        measure(
-                            pulse.serial,
-                            target,
-                            None,
-                            dual_demod.full("cos", "out1", "sin", "out2", I),
-                            dual_demod.full("minus_sin", "out1", "cos", "out2", Q),
-                        )
-                    else:
-                        play(pulse.serial, target)
-                # Save data to the stream processing
-                save(I, I_st)
-                save(Q, Q_st)
+                self.play_pulses(sequence, targets, operations, I, Q, I_st, Q_st)
 
             with stream_processing():
                 # I_st.average().save("I")
@@ -556,4 +548,10 @@ class QMOPX(AbstractInstrument):
                 I_st.buffer(nshots).save("I")
                 Q_st.buffer(nshots).save("Q")
 
-        return self.execute_program(experiment)
+        result = self.execute_program(experiment)
+        handles = result.result_handles
+        handles.wait_for_all_values()
+        # TODO: Distinguish between shots and averaged samples when sweeping
+        ires = handles.get("I").fetch_all()
+        qres = handles.get("Q").fetch_all()
+        return ExecutionResult(ires, qres)
