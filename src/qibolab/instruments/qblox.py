@@ -607,6 +607,8 @@ class ClusterQRM_RF(AbstractInstrument):
             self.acquisition_hold_off = kwargs["acquisition_hold_off"]
             self.acquisition_duration = kwargs["acquisition_duration"]
 
+            self._last_pulsequence_hash = 0
+
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
 
@@ -987,10 +989,6 @@ class ClusterQRM_RF(AbstractInstrument):
         # Start used sequencers
         for sequencer_number in self._used_sequencers_numbers:
             self.device.start_sequencer(sequencer_number)
-            # DEBUG sync_en
-            # print(
-            #     f"device: {self.name}, sequencer: {sequencer_number}, sync_en: {self.device.sequencers[sequencer_number].get('sync_en')}"
-            # )
 
     def acquire(self):
         """Retrieves the readout results.
@@ -1245,6 +1243,10 @@ class ClusterQRM_RF(AbstractInstrument):
                         # DEBUG: QRM Plot Incomming Pulses
                         # import qibolab.instruments.debug.incomming_pulse_plotting as pp
                         # pp.plot(raw_results)
+                        # DEBUG: QRM Plot Acquisition_results
+                        # from qibolab.debug.debug import plot_acquisition_results
+                        # plot_acquisition_results(acquisition_results, pulse, savefig_filename='acquisition_results.png')
+
         return acquisition_results
 
     def _process_acquisition_results(self, acquisition_results, readout_pulse: Pulse, demodulate=True):
@@ -1486,7 +1488,7 @@ class ClusterQCM_RF(AbstractInstrument):
                 )()
 
                 self.ports["o2"] = type(
-                    f"port_o1",
+                    f"port_o2",
                     (),
                     {
                         "attenuation": self.property_wrapper("out1_att"),
@@ -1653,8 +1655,8 @@ class ClusterQCM_RF(AbstractInstrument):
             ]  # Default after reboot = 6_000_000_000
             self.ports["o1"].gain = kwargs["ports"]["o1"]["gain"]  # Default after reboot = 1
             self.ports["o1"].hardware_mod_en = kwargs["ports"]["o1"]["hardware_mod_en"]  # Default after reboot = False
-            self.ports["o1"].nco_freq = 0  # Default after reboot = 1
-            self.ports["o1"].nco_phase_offs = 0  # Default after reboot = 1
+            self.ports["o1"].nco_freq = 0
+            self.ports["o1"].nco_phase_offs = 0
 
             self.ports["o2"].attenuation = kwargs["ports"]["o2"]["attenuation"]
             self.ports["o2"].lo_enabled = kwargs["ports"]["o2"]["lo_enabled"]  # Default after reboot = True
@@ -1663,9 +1665,10 @@ class ClusterQCM_RF(AbstractInstrument):
             ]  # Default after reboot = 6_000_000_000
             self.ports["o2"].gain = kwargs["ports"]["o2"]["gain"]  # Default after reboot = 1
             self.ports["o2"].hardware_mod_en = kwargs["ports"]["o2"]["hardware_mod_en"]  # Default after reboot = False
-            self.ports["o2"].nco_freq = 0  # Default after reboot = 1
-            self.ports["o2"].nco_phase_offs = 0  # Default after reboot = 1
+            self.ports["o2"].nco_freq = 0
+            self.ports["o2"].nco_phase_offs = 0
 
+            self._last_pulsequence_hash = 0
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
 
@@ -2092,6 +2095,8 @@ class ClusterQCM(AbstractInstrument):
 
             ports['oX'].gain (float): (mapped to qrm.sequencers[0].gain_awg_path0 and qrm.sequencers[0].gain_awg_path1)
                 Sets the gain on both paths of the output port.
+            ports['oX'].offset (float): (mapped to qrm.outX_offset)
+                Sets the offset on the output port.
             ports['oX'].hardware_mod_en (bool): (mapped to qrm.sequencers[0].mod_en_awg) Enables pulse
                 modulation in hardware. When set to False, pulse modulation is done at the host computer
                 and a modulated pulse waveform should be uploaded to the instrument. When set to True,
@@ -2167,6 +2172,7 @@ class ClusterQCM(AbstractInstrument):
                     (),
                     {
                         "gain": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o1"], "gain_awg_path0"),
+                        "offset": self.property_wrapper("out0_offset"),
                         "hardware_mod_en": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o1"], "mod_en_awg"),
                         "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o1"], "nco_freq"),
                         "nco_phase_offs": self.sequencer_property_wrapper(
@@ -2180,6 +2186,7 @@ class ClusterQCM(AbstractInstrument):
                     (),
                     {
                         "gain": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o2"], "gain_awg_path1"),
+                        "offset": self.property_wrapper("out1_offset"),
                         "hardware_mod_en": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o2"], "mod_en_awg"),
                         "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o2"], "nco_freq"),
                         "nco_phase_offs": self.sequencer_property_wrapper(
@@ -2193,6 +2200,7 @@ class ClusterQCM(AbstractInstrument):
                     (),
                     {
                         "gain": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o3"], "gain_awg_path0"),
+                        "offset": self.property_wrapper("out2_offset"),
                         "hardware_mod_en": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o3"], "mod_en_awg"),
                         "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o3"], "nco_freq"),
                         "nco_phase_offs": self.sequencer_property_wrapper(
@@ -2206,6 +2214,7 @@ class ClusterQCM(AbstractInstrument):
                     (),
                     {
                         "gain": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o4"], "gain_awg_path1"),
+                        "offset": self.property_wrapper("out3_offset"),
                         "hardware_mod_en": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o4"], "mod_en_awg"),
                         "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o4"], "nco_freq"),
                         "nco_phase_offs": self.sequencer_property_wrapper(
@@ -2330,28 +2339,12 @@ class ClusterQCM(AbstractInstrument):
         A connection to the instrument needs to be established beforehand.
         Args:
             **kwargs: dict = A dictionary of settings loaded from the runcard:
-                kwargs['ports']['o1']['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
+                oX: ['o1', 'o2', 'o3', 'o4']
+                kwargs['ports'][oX]['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
                     `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their linear regime, if necessary, lowering the attenuation
                     applied at the output.
-                kwargs['ports']['o1']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
-                    using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
-
-                kwargs['ports']['o2']['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
-                    `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their linear regime, if necessary, lowering the attenuation
-                    applied at the output.
-                kwargs['ports']['o2']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
-                    using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
-
-                kwargs['ports']['o3']['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
-                    `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their linear regime, if necessary, lowering the attenuation
-                    applied at the output.
-                kwargs['ports']['o3']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
-                    using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
-
-                kwargs['ports']['o4']['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
-                    `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their linear regime, if necessary, lowering the attenuation
-                    applied at the output.
-                kwargs['ports']['o4']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
+                kwargs['ports'][oX]['offset'] (float): [-2.5 - 2.5 V] offset in volts applied to the output port.
+                kwargs['ports'][oX]['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
                     using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
 
                 kwargs['channel_port_map'] (dict): a dictionary of (str: str) containing mappings between channel numbers and device ports:
@@ -2374,12 +2367,14 @@ class ClusterQCM(AbstractInstrument):
 
             for port in ["o1", "o2", "o3", "o4"]:
                 self.ports[port].gain = kwargs["ports"][port]["gain"]  # Default after reboot = 1
+                self.ports[port].offset = kwargs["ports"][port]["offset"]
                 self.ports[port].hardware_mod_en = kwargs["ports"][port][
                     "hardware_mod_en"
                 ]  # Default after reboot = False
                 self.ports[port].nco_freq = 0  # Default after reboot = 1
                 self.ports[port].nco_phase_offs = 0  # Default after reboot = 1
 
+            self._last_pulsequence_hash = 0
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
 
