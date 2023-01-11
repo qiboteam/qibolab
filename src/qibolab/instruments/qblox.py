@@ -2092,6 +2092,8 @@ class ClusterQCM(AbstractInstrument):
 
             ports['oX'].gain (float): (mapped to qrm.sequencers[0].gain_awg_path0 and qrm.sequencers[0].gain_awg_path1)
                 Sets the gain on both paths of the output port.
+            ports['oX'].offset (float): (mapped to qrm.outX_offset)
+                Sets the offset on the output port.
             ports['oX'].hardware_mod_en (bool): (mapped to qrm.sequencers[0].mod_en_awg) Enables pulse
                 modulation in hardware. When set to False, pulse modulation is done at the host computer
                 and a modulated pulse waveform should be uploaded to the instrument. When set to True,
@@ -2334,28 +2336,12 @@ class ClusterQCM(AbstractInstrument):
         A connection to the instrument needs to be established beforehand.
         Args:
             **kwargs: dict = A dictionary of settings loaded from the runcard:
-                kwargs['ports']['o1']['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
+                oX: ['o1', 'o2', 'o3', 'o4']
+                kwargs['ports'][oX]['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
                     `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their linear regime, if necessary, lowering the attenuation
                     applied at the output.
-                kwargs['ports']['o1']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
-                    using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
-
-                kwargs['ports']['o2']['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
-                    `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their linear regime, if necessary, lowering the attenuation
-                    applied at the output.
-                kwargs['ports']['o2']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
-                    using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
-
-                kwargs['ports']['o3']['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
-                    `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their linear regime, if necessary, lowering the attenuation
-                    applied at the output.
-                kwargs['ports']['o3']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
-                    using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
-
-                kwargs['ports']['o4']['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
-                    `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their linear regime, if necessary, lowering the attenuation
-                    applied at the output.
-                kwargs['ports']['o4']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
+                kwargs['ports'][oX]['offset'] (float): [-2.5 - 2.5 V] offset in volts applied to the output port.
+                kwargs['ports'][oX]['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
                     using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
 
                 kwargs['channel_port_map'] (dict): a dictionary of (str: str) containing mappings between channel numbers and device ports:
