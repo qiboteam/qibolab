@@ -268,10 +268,7 @@ class AbstractPlatform(ABC):
 
             elif isinstance(gate, gates.CZ):
                 # Get channel pulses for both qubits and get the latest finish time
-                finish = 0
-                for qubit in gate.qubits:
-                    if sequence.get_qubit_pulses(qubit).finish > finish:
-                        finish = sequence.get_channel_pulses(self.qubit_channel_map).finish
+                finish = sequence.finish
                 sequence_cz = self.create_CZ_pulse(gate.qubits, finish, sequence.virtual_z_phases)
                 for key in sequence_cz.virtual_z_phases:
                     sequence.virtual_z_phases[key] = sequence_cz.virtual_z_phases[key]
