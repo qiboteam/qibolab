@@ -141,10 +141,9 @@ class QMRSDesign(AbstractInstrumentDesign):
                 lo.start()
 
     def stop(self):
-        # FIXME: Temporarily don't stop the LOs because QM are using them
-        # if self.is_connected:
-        #    for lo in self.local_oscillators:
-        #        lo.stop()
+        if self.is_connected:
+            for lo in self.local_oscillators:
+                lo.stop()
         self.opx.stop()
 
     def disconnect(self):

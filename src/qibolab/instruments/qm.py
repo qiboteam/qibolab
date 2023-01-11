@@ -350,20 +350,22 @@ class QMOPX(AbstractInstrument):
             readout_len (int): Duration of the readout pulse in ns.
         """
         rotation_angle = qubit.characterization.rotation_angle
-        self.config["integration_weights"] = {
-            f"cosine_weights{qubit}": {
-                "cosine": [(np.cos(rotation_angle), readout_len)],
-                "sine": [(-np.sin(rotation_angle), readout_len)],
-            },
-            f"sine_weights{qubit}": {
-                "cosine": [(np.sin(rotation_angle), readout_len)],
-                "sine": [(np.cos(rotation_angle), readout_len)],
-            },
-            f"minus_sine_weights{qubit}": {
-                "cosine": [(-np.sin(rotation_angle), readout_len)],
-                "sine": [(-np.cos(rotation_angle), readout_len)],
-            },
-        }
+        self.config["integration_weights"].update(
+            {
+                f"cosine_weights{qubit}": {
+                    "cosine": [(np.cos(rotation_angle), readout_len)],
+                    "sine": [(-np.sin(rotation_angle), readout_len)],
+                },
+                f"sine_weights{qubit}": {
+                    "cosine": [(np.sin(rotation_angle), readout_len)],
+                    "sine": [(np.cos(rotation_angle), readout_len)],
+                },
+                f"minus_sine_weights{qubit}": {
+                    "cosine": [(-np.sin(rotation_angle), readout_len)],
+                    "sine": [(-np.cos(rotation_angle), readout_len)],
+                },
+            }
+        )
 
     def execute_program(self, program):
         """Executes an arbitrary program written in QUA language.
@@ -403,16 +405,20 @@ class QMOPX(AbstractInstrument):
         # TODO: Handle pulses that run on the same element simultaneously (multiplex?)
         # register pulses in Quantum Machines config
 
+        needs_align = False
         clock = collections.defaultdict(int)
         for qmpulse in qmsequence:
             pulse = qmpulse.pulse
             wait_time = pulse.start - clock[pulse.qubit]
             if wait_time > 0:
+                # FIXME: Need to wait for all channels acting on the qubit
                 wait(wait_time // 4, qmpulse.target)
             clock[pulse.qubit] += pulse.duration
             if pulse.type.name == "READOUT":
                 # align("qubit", "resonator")
-                align()
+                if needs_align:
+                    needs_align = False
+                    align()
                 measure(
                     qmpulse.operation,
                     qmpulse.target,
@@ -421,6 +427,7 @@ class QMOPX(AbstractInstrument):
                     dual_demod.full("minus_sin", "out1", "cos", "out2", outputs[pulse.serial].Q),
                 )
             else:
+                needs_align = True
                 play(qmpulse.operation, qmpulse.target)
         # Save data to the stream processing
         for output in outputs.values():
@@ -585,7 +592,7 @@ class QMOPX(AbstractInstrument):
         # TODO: Update result asynchronously instead of waiting for all values
         # import time
         # for _ in range(5):
-        #    print(handles.is_processing())
+        #    handles.is_processing()
         #    time.sleep(1)
         result = self.execute_program(experiment)
         return self.fetch_results(result, outputs.keys())

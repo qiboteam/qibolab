@@ -34,8 +34,19 @@ class QMSim(QMOPX):
         else:
             self.manager = QuantumMachinesManager(host, int(port))
 
+    @staticmethod
+    def fetch_results(result, readout_serials):
+        return result
+
     def execute_program(self, program):
         ncontrollers = len(self.config["controllers"])
+
+        from qm import generate_qua_script
+
+        print()
+        print(generate_qua_script(program, self.config))
+        print()
+
         controller_connections = create_simulator_controller_connections(ncontrollers)
         simulation_config = SimulationConfig(
             duration=self.simulation_duration, controller_connections=controller_connections
