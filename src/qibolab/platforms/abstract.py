@@ -46,7 +46,7 @@ class AbstractPlatform(ABC):
         # Generate qubit_instrument_map from qubit_channel_map and the instruments' channel_port_maps
         self.qubit_instrument_map = {}
         for qubit in self.qubit_channel_map:
-            self.qubit_instrument_map[qubit] = [None, None, None]
+            self.qubit_instrument_map[qubit] = [None, None, None, None]
             for name in self.instruments:
                 if "channel_port_map" in self.settings["instruments"][name]["settings"]:
                     for channel in self.settings["instruments"][name]["settings"]["channel_port_map"]:
