@@ -76,8 +76,7 @@ class QMOPX(AbstractInstrument):
         pass
 
     def stop(self):
-        if self.is_connected:
-            self.manager.close_all_quantum_machines()
+        self.manager.close_all_quantum_machines()
 
     def disconnect(self):
         if self.is_connected:
@@ -102,12 +101,12 @@ class QMOPX(AbstractInstrument):
         N = 1 / ((1 - g**2) * (2 * c**2 - 1))
         return [float(N * x) for x in [(1 - g) * c, (1 + g) * s, (1 - g) * s, (1 + g) * c]]
 
-    def register_analog_output_controllers(self, ports):
+    def register_analog_output_controllers(self, ports, offset=0.0):
         controllers = self.config["controllers"]
         for con, port in ports:
             if con not in controllers:
                 controllers[con] = {"analog_outputs": {}}
-            controllers[con]["analog_outputs"][port] = {"offset": 0.0}
+            controllers[con]["analog_outputs"][port] = {"offset": offset}
 
     def register_drive_element(self, qubit, intermediate_frequency=0):
         """Register qubit drive elements and controllers in the QM config.
@@ -119,7 +118,7 @@ class QMOPX(AbstractInstrument):
                 LO connected to the same channel.
         """
         if f"drive{qubit}" not in self.config["elements"]:
-            # register controllers
+            # register drive controllers
             self.register_analog_output_controllers(qubit.drive.ports)
             # register element
             lo_frequency = qubit.drive.lo_frequency
@@ -145,7 +144,11 @@ class QMOPX(AbstractInstrument):
         else:
             current_if = self.config["elements"][f"drive{qubit}"]["intermediate_frequency"]
             if current_if != intermediate_frequency:
-                raise_error(NotImplementedError, f"Changing intermediate frequency for qubit {qubit}.")
+                raise_error(
+                    NotImplementedError,
+                    f"Changing intermediate frequency for qubit {qubit} "
+                    f"from {current_if} to {intermediate_frequency}.",
+                )
 
     def register_readout_element(self, qubit, intermediate_frequency=0):
         """Register resonator elements and controllers in the QM config.
@@ -157,8 +160,9 @@ class QMOPX(AbstractInstrument):
                 LO connected to the same channel.
         """
         if f"readout{qubit}" not in self.config["elements"]:
-            # register controllers
+            # register readout controllers
             self.register_analog_output_controllers(qubit.readout.ports)
+            # register feedback controllers
             controllers = self.config["controllers"]
             for con, port in qubit.feedback.ports:
                 if con not in controllers:
@@ -207,7 +211,11 @@ class QMOPX(AbstractInstrument):
         else:
             current_if = self.config["elements"][f"readout{qubit}"]["intermediate_frequency"]
             if current_if != intermediate_frequency:
-                raise_error(NotImplementedError, f"Changing intermediate frequency for qubit {qubit}.")
+                raise_error(
+                    NotImplementedError,
+                    f"Changing intermediate frequency for qubit {qubit} "
+                    f"from {current_if} to {intermediate_frequency}.",
+                )
 
     def register_flux_element(self, qubit, intermediate_frequency=0):
         """Register qubit flux elements and controllers in the QM config.
@@ -220,7 +228,7 @@ class QMOPX(AbstractInstrument):
         """
         if f"flux{qubit}" not in self.config["elements"]:
             # register controller
-            self.register_analog_output_controllers(qubit.flux.ports)
+            self.register_analog_output_controllers(qubit.flux.ports, qubit.flux.offset)
             # register element
             self.config["elements"][f"flux{qubit}"] = {
                 "singleInput": {
@@ -230,9 +238,13 @@ class QMOPX(AbstractInstrument):
                 "operations": {},
             }
         else:
-            current_if = self.config["elements"][f"readout{qubit}"]["intermediate_frequency"]
+            current_if = self.config["elements"][f"flux{qubit}"]["intermediate_frequency"]
             if current_if != intermediate_frequency:
-                raise_error(NotImplementedError, f"Changing intermediate frequency for qubit {qubit}.")
+                raise_error(
+                    NotImplementedError,
+                    f"Changing intermediate frequency for qubit {qubit} "
+                    f"from {current_if} to {intermediate_frequency}.",
+                )
 
     def register_pulse(self, qubit, pulse):
         """Registers pulse, waveforms and integration weights in QM config.
@@ -261,6 +273,9 @@ class QMOPX(AbstractInstrument):
                 # register drive element (if it does not already exist)
                 if_frequency = pulse.frequency - qubit.drive.lo_frequency
                 self.register_drive_element(qubit, if_frequency)
+                # register flux element (if available)
+                if qubit.flux:
+                    self.register_flux_element(qubit)
                 # register drive pulse in elements
                 self.config["elements"][f"drive{qubit}"]["operations"][pulse.serial] = pulse.serial
 
@@ -299,6 +314,9 @@ class QMOPX(AbstractInstrument):
                 # register readout element (if it does not already exist)
                 if_frequency = pulse.frequency - qubit.readout.lo_frequency
                 self.register_readout_element(qubit, if_frequency)
+                # register flux element (if available)
+                if qubit.flux:
+                    self.register_flux_element(qubit)
                 # register readout pulse in elements
                 self.config["elements"][f"readout{qubit}"]["operations"][pulse.serial] = pulse.serial
 
@@ -378,11 +396,12 @@ class QMOPX(AbstractInstrument):
         """
         machine = self.manager.open_qm(self.config)
 
+        # for debugging only
         from qm import generate_qua_script
 
-        print()
-        print(generate_qua_script(program, self.config))
-        print()
+        with open("qua_script.txt", "w") as file:
+            file.write(generate_qua_script(program, self.config))
+
         return machine.execute(program)
 
     @staticmethod
@@ -402,23 +421,17 @@ class QMOPX(AbstractInstrument):
         from qm.qua import align, dual_demod, measure, play, save, wait
 
         # TODO: Fix phases
-        # TODO: Handle pulses that run on the same element simultaneously (multiplex?)
-        # register pulses in Quantum Machines config
 
-        needs_align = False
+        align()
         clock = collections.defaultdict(int)
         for qmpulse in qmsequence:
             pulse = qmpulse.pulse
-            wait_time = pulse.start - clock[pulse.qubit]
+            wait_time = pulse.start - clock[qmpulse.target]
             if wait_time > 0:
                 # FIXME: Need to wait for all channels acting on the qubit
                 wait(wait_time // 4, qmpulse.target)
-            clock[pulse.qubit] += pulse.duration
+            clock[qmpulse.target] += pulse.duration
             if pulse.type.name == "READOUT":
-                # align("qubit", "resonator")
-                if needs_align:
-                    needs_align = False
-                    align()
                 measure(
                     qmpulse.operation,
                     qmpulse.target,
@@ -427,8 +440,11 @@ class QMOPX(AbstractInstrument):
                     dual_demod.full("minus_sin", "out1", "cos", "out2", outputs[pulse.serial].Q),
                 )
             else:
-                needs_align = True
                 play(qmpulse.operation, qmpulse.target)
+
+        # TODO: For Rabi
+        # wait(20000, qmpulse.target)
+
         # Save data to the stream processing
         for output in outputs.values():
             save(output.I, output.I_st)
@@ -463,7 +479,18 @@ class QMOPX(AbstractInstrument):
             for_,
             program,
             stream_processing,
+            wait,
         )
+
+        # check if there are overlapping drive or flux pulses
+        # this check has many nested loops - may be slow for long sequences
+        # for overlapping in sequence.get_pulse_overlaps():
+        #    if len(overlapping.qd_pulses) > 1:
+        #        raise_error(NotImplementedError, "Quantum Machines driver cannot play "
+        #                                         "overlapping drive pulses.")
+        #    if len(overlapping.qf_pulses) > 1:
+        #        raise_error(NotImplementedError, "Quantum Machines driver cannot play "
+        #                                         "overlapping flux pulses.")
 
         qmsequence = [
             SimpleNamespace(pulse=pulse, target=self.register_pulse(qubits[pulse.qubit], pulse), operation=pulse.serial)
@@ -496,57 +523,8 @@ class QMOPX(AbstractInstrument):
         result = self.execute_program(experiment)
         return self.fetch_results(result, outputs.keys())
 
-    def sweep_recursion(self, sweepers, qubits, qmpulses, qmsequence, outputs):
-        from qm.qua import declare, for_, wait
-        from qualang_tools.loops import from_array
-
-        sweeper = sweepers[0]
-        if sweeper.pulse is not None:
-            if sweeper.parameter == "frequency":
-                from qm.qua import update_frequency
-
-                if sweeper.pulse_type in ("readout", "drive"):
-                    # convert to IF frequency for readout and drive pulses
-                    qubit = qubits[sweeper.pulse.qubit]
-                    values = sweeper.values - getattr(qubit, sweeper.pulse_type).lo_frequency
-                else:
-                    values = sweeper.values
-
-                # is it fine to have this declaration inside the ``nshots`` QUA loop?
-                f = declare(int)
-                qmpulse = qmpulses[sweeper.pulse.serial]
-                with for_(*from_array(f, values.astype(int))):
-                    update_frequency(qmpulse.target, f)
-                    if len(sweepers) > 1:
-                        self.sweep_recursion(sweepers[1:], qubits, qmpulses, qmsequence, outputs)
-                    else:
-                        self.play_pulses(qmsequence, outputs)
-                    if sweeper.wait_time > 0:
-                        wait(sweeper.wait_time // 4, qmpulse.target)
-
-            elif sweeper.parameter == "amplitude":
-                from qm.qua import amp, fixed
-
-                qmpulse = qmpulses[sweeper.pulse.serial]
-                a = declare(fixed)
-                with for_(*from_array(a, sweeper.values)):
-                    qmpulse.operation = qmpulse.operation * amp(a)
-                    if len(sweepers) > 1:
-                        self.sweep_recursion(sweepers[1:], qubits, qmpulses, qmsequence, outputs)
-                    else:
-                        self.play_pulses(qmsequence, outputs)
-                    if sweeper.wait_time > 0:
-                        wait(sweeper.wait_time // 4, qmpulse.target)
-
-            else:
-                raise_error(NotImplementedError)
-
-        else:
-            raise_error(NotImplementedError)
-
     def sweep(self, qubits, sequence, *sweepers, nshots=1024):
         from qm.qua import (
-            align,
             declare,
             declare_stream,
             fixed,
@@ -577,7 +555,6 @@ class QMOPX(AbstractInstrument):
             }
             with for_(n, 0, n < nshots, n + 1):
                 self.sweep_recursion(list(sweepers), qubits, qmpulses, qmsequence, outputs)
-            align()
 
             with stream_processing():
                 for serial, output in outputs.items():
@@ -596,3 +573,81 @@ class QMOPX(AbstractInstrument):
         #    time.sleep(1)
         result = self.execute_program(experiment)
         return self.fetch_results(result, outputs.keys())
+
+    def sweep_recursion(self, sweepers, qubits, qmpulses, qmsequence, outputs):
+        from qm.qua import declare, for_, wait
+        from qualang_tools.loops import from_array
+
+        sweeper = sweepers[0]
+        if sweeper.pulses is not None:
+            if sweeper.parameter == "frequency":
+                from qm.qua import update_frequency
+
+                freqs0 = []
+                if sweeper.pulse_type in ("readout", "drive"):
+                    for pulse in sweeper.pulses:
+                        # convert to IF frequency for readout and drive pulses
+                        qubit = qubits[pulse.qubit]
+                        lo_frequency = getattr(qubit, sweeper.pulse_type).lo_frequency
+                        freqs0.append(declare(int, value=int(pulse.frequency - lo_frequency)))
+                else:
+                    raise_error(NotImplementedError)
+
+                # is it fine to have this declaration inside the ``nshots`` QUA loop?
+                f = declare(int)
+                with for_(*from_array(f, sweeper.values.astype(int))):
+                    for pulse, f0 in zip(sweeper.pulses, freqs0):
+                        qmpulse = qmpulses[pulse.serial]
+                        update_frequency(qmpulse.target, f + f0)
+                    if len(sweepers) > 1:
+                        self.sweep_recursion(sweepers[1:], qubits, qmpulses, qmsequence, outputs)
+                    else:
+                        self.play_pulses(qmsequence, outputs)
+                    if sweeper.wait_time > 0:
+                        elements = (qmpulses[pulse.serial].target for pulse in sweeper.pulses)
+                        wait(sweeper.wait_time // 4, *elements)
+
+            elif sweeper.parameter == "amplitude":
+                from qm.qua import amp, fixed
+
+                a = declare(fixed)
+                with for_(*from_array(a, sweeper.values)):
+                    for pulse in sweeper.pulses:
+                        qmpulse = qmpulses[pulse.serial]
+                        qmpulse.operation = qmpulse.operation * amp(a)
+                    if len(sweepers) > 1:
+                        self.sweep_recursion(sweepers[1:], qubits, qmpulses, qmsequence, outputs)
+                    else:
+                        self.play_pulses(qmsequence, outputs)
+                    if sweeper.wait_time > 0:
+                        elements = (qmpulses[pulse.serial].target for pulse in sweeper.pulses)
+                        wait(sweeper.wait_time // 4, *elements)
+
+            elif sweeper.parameter == "duration":
+                raise_error(NotImplementedError)
+
+            else:
+                raise_error(NotImplementedError)
+
+        elif sweeper.qubits is not None:
+            if sweeper.parameter == "offset":
+                from qm.qua import amp, fixed, set_dc_offset
+
+                bias0 = [declare(fixed, value=qubits[q].flux.offset) for q in sweeper.qubits]
+                b = declare(fixed)
+                with for_(*from_array(b, sweeper.values)):
+                    for q, b0 in zip(sweeper.qubits, bias0):
+                        set_dc_offset(f"flux{q}", "single", b + b0)
+                    if len(sweepers) > 1:
+                        self.sweep_recursion(sweepers[1:], qubits, qmpulses, qmsequence, outputs)
+                    else:
+                        self.play_pulses(qmsequence, outputs)
+                    if sweeper.wait_time > 0:
+                        elements = (f"flux{q}" for q in sweeper.qubits)
+                        wait(sweeper.wait_time // 4, *elements)
+
+            else:
+                raise_error(NotImplementedError)
+
+        else:
+            raise_error(NotImplementedError)

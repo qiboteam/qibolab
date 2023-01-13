@@ -23,8 +23,8 @@ native_gates:
     single_qubit:
         0: # qubit number
             RX:
-                duration: 40
-                amplitude: 0.3
+                duration: 80
+                amplitude: 0.01
                 frequency: 4_700_000_000
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -32,84 +32,84 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 2000
-                amplitude: 0.05
-                frequency: 7.226834234e+9
+                amplitude: 0.0025
+                frequency: 7_226_500_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
                 phase: 0
         1: # qubit number
             RX:
-                duration: 40
-                amplitude: 0.395
-                frequency: 5_000_000_000
+                duration: 80
+                amplitude: 0.02
+                frequency: 4_855_663_000
                 shape: Drag(5, -0.02)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.05
-                frequency: 7_453_000_000
+                amplitude: 0.0025
+                frequency: 7_453_265_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
                 phase: 0
         2: # qubit number
             RX:
-                duration: 36
-                amplitude: 0.005
-                frequency: 5_800_000_000
+                duration: 80
+                amplitude: 0.02
+                frequency: 5_798_648_000
                 shape: Drag(5, -0.04) #Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
-                duration: 2000
-                amplitude: 0.005
-                frequency: 7_655_000_000
+                duration: 1000
+                amplitude: 0.0025
+                frequency: 7_655_107_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
                 phase: 0
         3: # qubit number
             RX:
-                duration: 37
-                amplitude: 0.8
+                duration: 80
+                amplitude: 0.02
                 frequency: 6_108_500_000
                 shape: Drag(5, 0.04) #Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
-                duration: 2000
-                amplitude: 0.05
-                frequency: 7_800_000_000
+                duration: 1000
+                amplitude: 0.0025
+                frequency: 7_802_391_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
                 phase: 0
         4: # qubit number
             RX:
-                duration: 43
-                amplitude: 0.870
-                frequency: 6_012_161_626
+                duration: 80
+                amplitude: 0.02
+                frequency: 6_585_132_000
                 shape: Drag(5, 0.0) #Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 2000
-                amplitude: 0.05
-                frequency: 8.057348e+9
+                amplitude: 0.0025
+                frequency: 8_057_668_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
                 phase: 0
         5: # qubit number
             RX:
-                duration: 40
-                amplitude: 0.8
+                duration: 80
+                amplitude: 0.01
                 frequency: 6.3925e+9
                 shape: Gaussian(5)
                 type: qd # qubit drive

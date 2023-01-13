@@ -38,6 +38,8 @@ class Channel:
             new.lo_frequency = 0.0
             new.lo_power = 0.0
 
+            new.offset = 0.0
+
             cls.instances[name] = new
 
         return cls.instances[name]

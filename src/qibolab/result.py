@@ -26,3 +26,14 @@ class ExecutionResult:
     def phase(self):
         phase = np.angle(self.I + 1j * self.Q)
         return signal.detrend(np.unwrap(phase))
+
+    def to_dict(self):
+        return {
+            "MSR[V]": self.MSR.ravel(),
+            "i[V]": self.I.ravel(),
+            "q[V]": self.Q.ravel(),
+            "phase[rad]": self.phase.ravel(),
+        }
+
+    def __len__(self):
+        return np.prod(self.I.shape)

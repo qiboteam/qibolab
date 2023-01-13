@@ -51,19 +51,26 @@ class QMRSDesign(AbstractInstrumentDesign):
             ("con2", 9),
         ]
         # feedback
-        Channel("L2-5").ports = [("con1", 1), ("con1", 2)]
+        Channel("L2-5").ports = [("con1", 2), ("con1", 1)]
         # drive
-        Channel("L3-11").ports = [("con1", 1), ("con1", 2)]
-        Channel("L3-12").ports = [("con1", 3), ("con1", 4)]
-        Channel("L3-13").ports = [("con1", 5), ("con1", 6)]
-        Channel("L3-14").ports = [("con1", 7), ("con1", 8)]
-        Channel("L3-15").ports = [("con3", 1), ("con3", 2)]
+        Channel("L3-11").ports = [("con1", 2), ("con1", 1)]
+        Channel("L3-12").ports = [("con1", 4), ("con1", 3)]
+        Channel("L3-13").ports = [("con1", 6), ("con1", 5)]
+        Channel("L3-14").ports = [("con1", 8), ("con1", 7)]
+        Channel("L3-15").ports = [("con3", 2), ("con3", 1)]
         # flux
         Channel("L4-1").ports = [("con2", 1)]
         Channel("L4-2").ports = [("con2", 2)]
         Channel("L4-3").ports = [("con2", 3)]
         Channel("L4-4").ports = [("con2", 4)]
         Channel("L4-5").ports = [("con2", 5)]
+
+        # Set flux offsets
+        Channel("L4-1").offset = -0.058  # -0.022
+        Channel("L4-2").offset = -0.046  # -0.048
+        Channel("L4-3").offset = 0.026  # 0.042 # 0.026
+        Channel("L4-4").offset = -0.066  # -0.066
+        Channel("L4-5").offset = 0.0
 
         # Instantiate local oscillators (HARDCODED)
         self.local_oscillators = [
