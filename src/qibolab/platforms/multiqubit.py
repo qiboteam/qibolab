@@ -90,11 +90,15 @@ class MultiqubitPlatform(AbstractPlatform):
             roles[name] = self.settings["instruments"][name]["roles"]
             if "control" in roles[name] or "readout" in roles[name]:
                 instrument_pulses[name] = sequence.get_channel_pulses(*self.instruments[name].channels)
+                # Change pulses frequency to if and correct lo accordingly (before was done in qibolab)
+                for pulse in instrument_pulses[name]:
+                    # TODO: implement algorithm to find correct LO
+                    if_frequency = self.native_gates["single_qubit"][pulse.qubit]["MZ"]["frequency"]
+                    self.set_lo_frequency(pulse.qubit, pulse.frequency - if_frequency)
+                    pulse.frequency = if_frequency
+
                 self.instruments[name].process_pulse_sequence(instrument_pulses[name], nshots, self.repetition_duration)
                 self.instruments[name].upload()
-
-        for name in self.instruments:
-            if "control" in roles[name] or "readout" in roles[name]:
                 if not instrument_pulses[name].is_empty:
                     self.instruments[name].play_sequence()
 
@@ -103,6 +107,12 @@ class MultiqubitPlatform(AbstractPlatform):
             if "readout" in roles[name]:
                 if not instrument_pulses[name].is_empty:
                     if not instrument_pulses[name].ro_pulses.is_empty:
+                        # change necessary to perform precision sweep
+                        # TODO: move this to instruments (ask Alvaro)
+                        # TODO: check if this will work with multiplex
+                        for sequencers in self.instruments[name]._sequencers.values():
+                            for sequencer in sequencers:
+                                sequencer.pulses = instrument_pulses[name].ro_pulses
                         results = self.instruments[name].acquire()
                         existing_keys = set(acquisition_results.keys()) & set(results.keys())
                         for key, value in results.items():
@@ -110,6 +120,15 @@ class MultiqubitPlatform(AbstractPlatform):
                                 acquisition_results[key].update(value)
                             else:
                                 acquisition_results[key] = value
+
+        # change back the frequency of the pulses
+        for name in self.instruments:
+            roles[name] = self.settings["instruments"][name]["roles"]
+            if "control" in roles[name] or "readout" in roles[name]:
+                instrument_pulses[name] = sequence.get_channel_pulses(*self.instruments[name].channels)
+                for pulse in instrument_pulses[name]:
+                    pulse.frequency += self.get_lo_frequency(pulse.qubit)
+
         return acquisition_results
     
     def measure_fidelity(self, nshots=None):

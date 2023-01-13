@@ -15,6 +15,22 @@ from qibolab.pulses import (
 )
 
 
+class Qubit:
+    def __init__(self, name):
+        self.name = name
+        self.readout_frequency = None
+        self.drive_frequency = None
+        self.attenuation = None
+
+    @property
+    def readout_frequency(self):
+        return self._readout_frequency
+
+    @readout_frequency.setter
+    def readout_frequency(self, frequency):
+        self._readout_frequency = frequency
+
+
 class AbstractPlatform(ABC):
     """Abstract platform for controlling quantum devices.
 
@@ -82,7 +98,7 @@ class AbstractPlatform(ABC):
         with open(self.runcard) as file:
             self.settings = yaml.safe_load(file)
 
-        self.qubits = self.settings["qubits"]
+        self.qubits = {q: Qubit(q) for q in self.settings["qubits"]}
         self.nqubits = self.settings["nqubits"]
         self.resonator_type = "3D" if self.nqubits == 1 else "2D"
         self.topology = self.settings["topology"]
