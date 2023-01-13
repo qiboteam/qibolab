@@ -45,6 +45,7 @@ class DummyPlatform(AbstractPlatform):
         for qubit, pulse in ro_pulses.items():
             i, q = np.random.random(2)
             results[pulse] = (np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q)
+            results[qubit] = (np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q)
             # results[qubit] = {pulse: (np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q)}
         return results
 
