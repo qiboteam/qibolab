@@ -17,6 +17,9 @@ class Platform:
         self.resonator_type = None
         self.topology = None
         self.qubits = []
+        self.sampling_rate = None
+        # time we are waiting between each shot
+        self.relaxation_time = None
 
         # Load platform settings
         self.settings = None
@@ -32,6 +35,9 @@ class Platform:
         self.resonator_type = "3D" if self.nqubits == 1 else "2D"
         self.topology = self.settings["topology"]
 
+        self.sampling_rate = self.settings["options"]["sampling_rate"]
+        self.relaxation_time = self.settings["options"]["relaxation_time"]
+
         self.native_single_qubit_gates = self.settings["native_gates"].get("single_qubit")
         self.native_two_qubit_gates = self.settings["native_gates"].get("two_qubit")
 
@@ -46,7 +52,7 @@ class Platform:
         self.design.connect()
 
     def setup(self):
-        self.design.setup(self.qubits)
+        self.design.setup(self.qubits, self.relaxation_time)
 
     def start(self):
         self.design.start()
@@ -74,11 +80,12 @@ class Platform:
 
     # TODO: Maybe channel should be removed from pulses
     def create_RX90_pulse(self, qubit, start=0, relative_phase=0):
-        kwargs = self.native_single_qubit_gates[qubit]["RX"]
-        kwargs["amplitude"] *= 0.5
-        channel = self.qubits[qubit].drive.name
-        kwargs.update({"start": start, "relative_phase": relative_phase, "channel": channel, "qubit": qubit})
-        return Pulse(**kwargs)
+        qd_duration = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["duration"]
+        qd_frequency = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["frequency"]
+        qd_amplitude = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["amplitude"] / 2
+        qd_shape = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["shape"]
+        qd_channel = self.settings["qubit_channel_map"][qubit][1]
+        return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
     def create_RX_pulse(self, qubit, start=0, relative_phase=0):
         qd_duration = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["duration"]

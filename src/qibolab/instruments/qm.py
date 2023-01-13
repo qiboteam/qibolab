@@ -66,9 +66,10 @@ class QMOPX(AbstractInstrument):
         host, port = self.address.split(":")
         self.manager = QuantumMachinesManager(host, int(port))
 
-    def setup(self, qubits, time_of_flight=0, smearing=0):
+    def setup(self, qubits, relaxation_time=0, time_of_flight=0, smearing=0):
         self.time_of_flight = time_of_flight
         self.smearing = smearing
+        self.relaxation_time = relaxation_time
         # controllers are defined when registering pulses
 
     def start(self):
@@ -405,7 +406,7 @@ class QMOPX(AbstractInstrument):
         return machine.execute(program)
 
     @staticmethod
-    def play_pulses(qmsequence, outputs):
+    def play_pulses(qmsequence, outputs, relaxation_time=0):
         """Part of QUA program that plays an arbitrary pulse sequence.
 
         Should be used inside a ``program()`` context.
@@ -442,8 +443,9 @@ class QMOPX(AbstractInstrument):
             else:
                 play(qmpulse.operation, qmpulse.target)
 
-        # TODO: For Rabi
-        # wait(20000, qmpulse.target)
+        # for Rabi-length?
+        if relaxation_time > 0:
+            wait(relaxation_time // 4, qmpulse.target)
 
         # Save data to the stream processing
         for output in outputs.values():
@@ -510,7 +512,7 @@ class QMOPX(AbstractInstrument):
                 for pulse in sequence.ro_pulses
             }
             with for_(n, 0, n < nshots, n + 1):
-                self.play_pulses(qmsequence, outputs)
+                self.play_pulses(qmsequence, outputs, relaxation_time=self.relaxation_time)
 
             with stream_processing():
                 # I_st.average().save("I")

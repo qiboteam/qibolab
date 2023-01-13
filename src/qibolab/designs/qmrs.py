@@ -66,10 +66,10 @@ class QMRSDesign(AbstractInstrumentDesign):
         Channel("L4-5").ports = [("con2", 5)]
 
         # Set flux offsets
-        Channel("L4-1").offset = -0.058  # -0.022
-        Channel("L4-2").offset = -0.046  # -0.048
-        Channel("L4-3").offset = 0.026  # 0.042 # 0.026
-        Channel("L4-4").offset = -0.066  # -0.066
+        Channel("L4-1").offset = -0.048  # -0.058  # -0.022
+        Channel("L4-2").offset = -0.048  # -0.048
+        Channel("L4-3").offset = 0.034  # 0.042 # 0.026
+        Channel("L4-4").offset = -0.058  # -0.066  # -0.066
         Channel("L4-5").offset = 0.0
 
         # Instantiate local oscillators (HARDCODED)
@@ -125,9 +125,9 @@ class QMRSDesign(AbstractInstrumentDesign):
                     )
             self.is_connected = True
 
-    def setup(self, qubits):
+    def setup(self, qubits, relaxation_time):
         # setup QM (HARDCODED values for configuration)
-        self.opx.setup(qubits, time_of_flight=280, smearing=0)
+        self.opx.setup(qubits, relaxation_time=relaxation_time, time_of_flight=280, smearing=0)
 
         # set LO frequencies
         for qubit in qubits:

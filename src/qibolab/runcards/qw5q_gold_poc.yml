@@ -3,6 +3,10 @@ description: QuantWare 5-qubit device.
 
 qubits: [0, 1, 2, 3, 4, 5]
 
+options:
+    sampling_rate: 1000000000
+    relaxation_time: 300000
+
 topology: # qubit - qubit connections
 -   [ 1, 0, 1, 0, 0, 0]
 -   [ 0, 1, 1, 0, 0, 0]
@@ -40,8 +44,8 @@ native_gates:
                 phase: 0
         1: # qubit number
             RX:
-                duration: 80
-                amplitude: 0.02
+                duration: 40 #100
+                amplitude: 0.05
                 frequency: 4_855_663_000
                 shape: Drag(5, -0.02)
                 type: qd # qubit drive
@@ -57,8 +61,8 @@ native_gates:
                 phase: 0
         2: # qubit number
             RX:
-                duration: 80
-                amplitude: 0.02
+                duration: 40 #116
+                amplitude: 0.06
                 frequency: 5_798_648_000
                 shape: Drag(5, -0.04) #Gaussian(5)
                 type: qd # qubit drive
@@ -74,10 +78,12 @@ native_gates:
                 phase: 0
         3: # qubit number
             RX:
-                duration: 80
-                amplitude: 0.02
-                frequency: 6_108_500_000
-                shape: Drag(5, 0.04) #Gaussian(5)
+                duration: 40 #100
+                amplitude: 0.04
+                #frequency: 6_108_500_000
+                frequency: 6_500_000_000
+                #frequency: 6_062_500_000
+                shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
@@ -91,15 +97,16 @@ native_gates:
                 phase: 0
         4: # qubit number
             RX:
-                duration: 80
-                amplitude: 0.02
-                frequency: 6_585_132_000
+                duration: 40 #124
+                amplitude: 0.06
+                #frequency: 6_585_132_000
+                frequency: 6_584_131_000
                 shape: Drag(5, 0.0) #Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
-                duration: 2000
+                duration: 1000
                 amplitude: 0.0025
                 frequency: 8_057_668_000
                 shape: Rectangular()
