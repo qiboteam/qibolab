@@ -16,8 +16,9 @@ from qibolab.pulses import (
 
 
 class Qubit:
-    def __init__(self, name, settings):
+    def __init__(self, name, settings, platform):
         self.name = name
+        self.platform = platform
         self.readout_frequency = settings[name]["resonator_freq"]
         self.drive_frequency = settings[name]["qubit_freq"]
         self.t1 = settings[name]["T1"]
@@ -58,6 +59,9 @@ class Qubit:
     @t2.setter
     def t2(self, time):
         self._t2 = time
+
+    def set_attenuation(self, att):
+        self.attenuation = self.platform.set_attenuation(self.name, att)
 
 
 class AbstractPlatform(ABC):
@@ -138,7 +142,7 @@ class AbstractPlatform(ABC):
 
         # Load Characterization settings
         self.characterization = self.settings["characterization"]
-        self.qubits = {q: Qubit(q, self.characterization["single_qubit"]) for q in self.settings["qubits"]}
+        self.qubits = {q: Qubit(q, self.characterization["single_qubit"], self) for q in self.settings["qubits"]}
         # Load single qubit Native Gates
         self.native_gates = self.settings["native_gates"]
         self.two_qubit_natives = set()
@@ -360,18 +364,6 @@ class AbstractPlatform(ABC):
         from qibolab.pulses import Pulse
 
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
-
-    def get_resonator_frequency(self, qubit):
-        raise_error(NotImplementedError)
-
-    def set_resonator_frequency(self, qubit):
-        raise_error(NotImplementedError)
-
-    def set_lo_frequency(self, qubit, freq):
-        raise_error(NotImplementedError)
-
-    def get_lo_frequency(self, qubit):
-        raise_error(NotImplementedError)
 
     def set_attenuation(self, qubit, att):
         raise_error(NotImplementedError)
