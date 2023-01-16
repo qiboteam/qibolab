@@ -1,20 +1,5 @@
 nqubits: 5
-description: XXX 5-qubit device, controlled with Zurich Instruments.
-
-# my_descriptor : f"""\
-#     instrument_list:
-#     SHFQC:
-#     - address: DEV12146
-#         uid: device_shfqc
-#     connections:
-#     device_shfqc:
-#         - iq_signal: q0/drive_line
-#         ports: SGCHANNELS/0/OUTPUT
-#         - iq_signal: q0/measure_line
-#         ports: [QACHANNELS/0/OUTPUT]
-#         - acquire_signal: q0/acquire_line
-#         ports: [QACHANNELS/0/INPUT]
-#     """
+description: IQM 5-qubit device, controlled with Zurich Instruments.
 
 settings:
     hardware_avg: 1000
@@ -23,19 +8,28 @@ settings:
     readout_delay: 50.e-6 #50.e-6
     readout_integration_delay: 40.e-9
     delay_between_pulses: 32.e-9   # 1.e-6
+    HDAWG_ramp_up_rate: 0.e-9
 
-qubits: [0]
+qubits: [0, 1, 2, 3, 4]
+topology:
+- [1, 0, 1, 0, 0, 0]
+- [0, 1, 1, 0, 0, 0]
+- [1, 1, 1, 1, 1, 0]
+- [0, 0, 1, 1, 0, 0]
+- [0, 0, 1, 0, 1, 0]
+- [0, 0, 0, 0, 0, 1]
 
-resonator_type : "3D"
 
-topology: # qubit - qubit connections
--   [1]
+channels: ["L3-31_a","L3-31_b","L3-5","L1-16","L3-1","L1-19","L3-4","L1-23","L3-3","L1-25","L3-2","L1-21", "L1-1", "test_flux"]
+qubit_channel_map:
+    0: ["L3-31_a", "L3-5", "L1-16", "L1-16_f"]
+    1: ["L3-31_a", "L3-1", "L1-19", "L1-19_f"]
+    2: ["L3-31_b", "L3-4", "L1-23", "L1-23_f"]
+    3: ["L3-31_b", "L3-3", "L1-25", "L1-25_f"]
+    4: ["L3-31_b", "L3-2", "L1-21", "L1-21_f"]
+    5: [null, null, "test_flux", "test_flux_f"]
 
-channels: [0, 1, 0]
 
-
-qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
-    0: [0, 0]
 
 instruments:
     shfqc_qa:
@@ -46,9 +40,13 @@ instruments:
         settings:
             channels: [0,1]
             input_range: 10 # dBm
-            output_range: -10 # 10 ? # dBm
-            lo_frequency: 7_800_000_000
-            if_frequency: 25_000_000 #24_694_000 #25_000_000
+            output_range: 0 # 10 ? # dBm
+            lo_frequency: 5_200_000_000 #5_500_000_000
+            if_frequency_0: 21_015_000 #22_000_000
+            if_frequency_1: 21_015_000 #22_000_000
+            if_frequency_2: 21_015_000 #22_000_000
+            if_frequency_3: 21_015_000 #22_000_000
+            if_frequency_4: 21_015_000 #22_000_000
 
     shfqc_qc:
         lib: zhinst
@@ -57,9 +55,23 @@ instruments:
         roles: [control]
         settings:
             channels: [0]
-            drive_range : 10
-            lo_frequency: 5_100_000_000 #5_100_000_000
-            if_frequency: -19_058_000 #-20707070.70707035 #-19_500_000
+            drive_range : -10
+            lo_frequency: 4_100_000_000 #5_100_000_000
+            if_frequency_0: -19_058_000
+            if_frequency_1: -19_058_000
+            if_frequency_2: -19_058_000 
+            if_frequency_3: -19_058_000
+            if_frequency_4: -19_058_000
+
+    hdawg:
+        lib: zhinst
+        class: HDAWG
+        address: DEV8660
+        roles: [flux]
+        settings:
+            channels: [0] #[0,1,2,3,4]
+            flux_range : 5
+
 
 native_gates:
     single_qubit:
@@ -76,12 +88,38 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: .1 # 1
-                frequency: 20_000_000 #doesnt do anything requiered for qibolab to work
+                frequency: -28_000_000 #doesnt do anything requiered for qibolab to work
                 integration_time : 1.e-7
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
     #             phase: 0
+            Flux:
+                amplitude: .1 
+                shape: Rectangular()
+
+        1: # qubit number
+            RX:
+                duration: 90 #80
+                amplitude: 0.75 #0.8
+                frequency: 100_000_000 #doesnt do anything requiered for qibolab to work
+                shape: Gaussian(5)
+                # shape: Drag(5, 0.04)
+                type: qd # qubit drive
+                start: 0
+                phase: 0
+            MZ:
+                duration: 1000
+                amplitude: .1 # 1
+                frequency: -28_000_000 #doesnt do anything requiered for qibolab to work
+                integration_time : 1.e-7
+                shape: Rectangular()
+                type: ro # readout
+                start: 0
+    #             phase: 0
+            Flux:
+                amplitude: .1 
+                shape: Rectangular()
 
     # two_qubit:
     #     0-2: # qubit numbers
@@ -106,12 +144,47 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            resonator_freq:  7_825_000_000 #Coupled
-            qubit_freq: 5_081_200_000 #5080686483 #5_080_066_695 #5_080_500_000 Correction from Ramsey detuned with freq
-            T1: 23925
-            T2: 6581 # 12056
-            state0_voltage: 300
-            state1_voltage: 100
-            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
-            mean_exc_states: (0.00011805761369462914+0.00018601039195510947j)
-            sweetspot: 0.00
+            resonator_freq: 5.222836e+9  #5.283e+9 
+            resonator_polycoef_flux: []
+            qubit_freq: 4.0939e+9
+            T1: 0.
+            T2: 0.
+            mean_gnd_states: (0+0j)
+            mean_exc_states: (0+0j)
+            sweetspot: -0.0185
+        1:
+            resonator_freq: 4.923995e+9  #4.998e+9 
+            resonator_polycoef_flux: []
+            qubit_freq: 
+            T1: 0.
+            T2: 0.
+            mean_gnd_states: (0+0j)
+            mean_exc_states: (0+0j)
+            sweetspot: -0.02
+        2:
+            resonator_freq: 6.083717e+9 #6.0785674e+9  #6.117e+9             
+            resonator_polycoef_flux: []
+            qubit_freq: 4.2932e+9
+            T1: 0.
+            T2: 0.
+            mean_gnd_states: (0+0j)
+            mean_exc_states: (0+0j)
+            sweetspot: 0.019
+        3:
+            resonator_freq: 5.777333e+9  #5.839e+9          
+            resonator_polycoef_flux: []
+            qubit_freq: 4.0843e+9
+            T1: 0.
+            T2: 0.
+            mean_gnd_states: (0+0j)
+            mean_exc_states: (0+0j)
+            sweetspot: 0.020
+        4:
+            resonator_freq: 5.506912e+9  #5.569e+9 
+            resonator_polycoef_flux: []
+            qubit_freq: 4.0978e+9
+            T1: 0.
+            T2: 0.
+            mean_gnd_states: (0+0j)
+            mean_exc_states: (0+0j)
+            sweetspot: 0.019

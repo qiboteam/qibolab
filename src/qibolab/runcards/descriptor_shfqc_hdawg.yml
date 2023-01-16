@@ -1,0 +1,69 @@
+instrument_list:
+  SHFQC:
+  - address: DEV12146
+    uid: device_shfqc
+  HDAWG:
+  - address: DEV8660
+    uid: device_hdawg
+  PQSC:
+  - address: DEV10055
+    uid: device_pqsc
+
+
+connections:
+  device_shfqc:
+    - iq_signal: q0/drive_line
+      ports: SGCHANNELS/0/OUTPUT
+    - iq_signal: q1/drive_line
+      ports: SGCHANNELS/1/OUTPUT
+    - iq_signal: q2/drive_line
+      ports: SGCHANNELS/2/OUTPUT
+    - iq_signal: q3/drive_line
+      ports: SGCHANNELS/3/OUTPUT
+    - iq_signal: q4/drive_line
+      ports: SGCHANNELS/4/OUTPUT
+    - iq_signal: q0/measure_line
+      ports: [QACHANNELS/0/OUTPUT]
+    - acquire_signal: q0/acquire_line
+      ports: [QACHANNELS/0/INPUT]
+    - iq_signal: q1/measure_line
+      ports: [QACHANNELS/0/OUTPUT]
+    - acquire_signal: q1/acquire_line
+      ports: [QACHANNELS/0/INPUT]
+    - iq_signal: q2/measure_line
+      ports: [QACHANNELS/0/OUTPUT]
+    - acquire_signal: q2/acquire_line
+      ports: [QACHANNELS/0/INPUT]
+    - iq_signal: q3/measure_line
+      ports: [QACHANNELS/0/OUTPUT]
+    - acquire_signal: q3/acquire_line
+      ports: [QACHANNELS/0/INPUT]
+    - iq_signal: q4/measure_line
+      ports: [QACHANNELS/0/OUTPUT]
+    - acquire_signal: q4/acquire_line
+      ports: [QACHANNELS/0/INPUT]
+
+  device_hdawg:    
+    - rf_signal: q0/flux_line
+      ports: SIGOUTS/0  
+    - rf_signal: q1/flux_line
+      ports: SIGOUTS/1  
+    - rf_signal: q2/flux_line
+      ports: SIGOUTS/2  
+    - rf_signal: q3/flux_line
+      ports: SIGOUTS/3  
+    - rf_signal: q4/flux_line
+      ports: SIGOUTS/4
+    - rf_signal: q03/flux_line
+      ports: SIGOUTS/4
+    - rf_signal: q13/flux_line
+      ports: SIGOUTS/4
+    - rf_signal: q23/flux_line
+      ports: SIGOUTS/4
+
+  device_pqsc:
+    - internal_clock_signal
+    - to: device_hdawg
+      port: ZSYNCS/2
+    - to: device_shfqc
+      port: ZSYNCS/0
