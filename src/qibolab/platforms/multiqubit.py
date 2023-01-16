@@ -113,6 +113,9 @@ class MultiqubitPlatform(AbstractPlatform):
 
                 self.instruments[name].process_pulse_sequence(instrument_pulses[name], nshots, self.repetition_duration)
                 self.instruments[name].upload()
+
+        for name in self.instruments:
+            if "control" in roles[name] or "readout" in roles[name]:
                 if not instrument_pulses[name].is_empty:
                     self.instruments[name].play_sequence()
 
