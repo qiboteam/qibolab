@@ -310,7 +310,7 @@ def test_pulses_pulse_aliases():
     )
     assert repr(dp) == "DrivePulse(0, 2000, 0.9, 200_000_000, 0, Gaussian(5), 0, 0)"
 
-    fp = FluxPulse(start=0, duration=300, amplitude=0.9, relative_phase=0.0, shape=Rectangular(), channel=0, qubit=0)
+    fp = FluxPulse(start=0, duration=300, amplitude=0.9, shape=Rectangular(), channel=0, qubit=0)
     assert repr(fp) == "FluxPulse(0, 300, 0.9, 0, Rectangular(), 0, 0)"
 
 
