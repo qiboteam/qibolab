@@ -342,7 +342,7 @@ class AbstractPlatform(ABC):
         from qibolab.pulses import FluxPulse, PulseSequence
 
         sequence = PulseSequence()
-        sequence.virtual_z_phases={}
+        sequence.virtual_z_phases = {}
 
         for pulse_settings in pulse_sequence_settings:
             if pulse_settings["type"] == "qf":
