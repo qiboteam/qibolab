@@ -122,22 +122,12 @@ instruments:
         roles: [flux]
         settings:
             s4g_modules:
-                #flux_channel: [module#, port#, current] max number of DACs per module = 4
                 L4-1_b: [1, 1, 0.0058]
                 L4-2_b: [1, 2, 0.0098]
                 L4-3_b: [1, 3, 0.012]
                 L4-4_b: [1, 4, -0.0123]
                 L4-5_b: [2, 1, 0]
             d5a_modules: {}
-
-    twpa_pump:
-        lib: rohde_schwarz
-        class: SGS100A
-        address: 192.168.0.35
-        roles: [other]
-        settings:
-            frequency: 6_558_000_000 # Hz
-            power: 4.8 # dBm
 
 
 native_gates:
