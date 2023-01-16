@@ -128,8 +128,6 @@ instruments:
                 L4-4_b: [1, 4, -0.0123]
                 L4-5_b: [2, 1, 0]
             d5a_modules: {}
-
-
 native_gates:
     single_qubit:
         0:
