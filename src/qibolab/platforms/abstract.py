@@ -16,14 +16,12 @@ from qibolab.pulses import (
 
 
 class Qubit:
-    def __init__(self, name, settings, platform):
+    def __init__(self, name, settings):
         self.name = name
-        self.platform = platform
         self.readout_frequency = settings[name]["resonator_freq"]
         self.drive_frequency = settings[name]["qubit_freq"]
         self.t1 = settings[name]["T1"]
         self.t2 = settings[name]["T2"]
-        self.attenuation = None
 
     def __getitem__(self):
         return self.name
@@ -43,25 +41,6 @@ class Qubit:
     @drive_frequency.setter
     def drive_frequency(self, frequency):
         self._drive_frequency = frequency
-
-    @property
-    def t1(self):
-        return self._t1
-
-    @t1.setter
-    def t1(self, time):
-        self._t1 = time
-
-    @property
-    def t2(self):
-        return self._t2
-
-    @t2.setter
-    def t2(self, time):
-        self._t2 = time
-
-    def set_attenuation(self, att):
-        self.attenuation = self.platform.set_attenuation(self.name, att)
 
 
 class AbstractPlatform(ABC):
@@ -142,7 +121,7 @@ class AbstractPlatform(ABC):
 
         # Load Characterization settings
         self.characterization = self.settings["characterization"]
-        self.qubits = {q: Qubit(q, self.characterization["single_qubit"], self) for q in self.settings["qubits"]}
+        self.qubits = {q: Qubit(q, self.characterization["single_qubit"]) for q in self.settings["qubits"]}
         # Load single qubit Native Gates
         self.native_gates = self.settings["native_gates"]
         self.two_qubit_natives = set()
@@ -365,7 +344,7 @@ class AbstractPlatform(ABC):
 
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
-    def set_attenuation(self, qubit, att):
+    def set_attenuation(self, qubit: Qubit, att):
         raise_error(NotImplementedError)
 
     def get_attenuation(self, qubit):
