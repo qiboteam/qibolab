@@ -18,10 +18,10 @@ class MultiqubitPlatform(AbstractPlatform):
         return self.ro_port[qubit].lo_frequency
 
     def set_attenuation(self, qubit, att):
-        self.ro_port[qubit].attenuation = att
+        self.ro_port[qubit.name].attenuation = att
 
     def get_attenuation(self, qubit):
-        return self.ro_port[qubit].attenuation
+        return self.ro_port[qubit.name].attenuation
 
     def setup(self):
         if not self.is_connected:
