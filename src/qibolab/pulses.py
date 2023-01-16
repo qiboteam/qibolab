@@ -76,7 +76,7 @@ class Waveform:
         import matplotlib.pyplot as plt
         import numpy as np
 
-        plt.figure(figsize=(14, 5), dpi=120)
+        plt.figure(figsize=(14, 5), dpi=200)
         plt.plot(self.data, c="C0", linestyle="dashed")
         plt.xlabel("Sample Number")
         plt.ylabel("Amplitude")
@@ -85,6 +85,7 @@ class Waveform:
         plt.show()
         if savefig_filename:
             plt.savefig(savefig_filename)
+        plt.close()
 
 
 class PulseShape(ABC):
@@ -145,7 +146,7 @@ class PulseShape(ABC):
             log.info(
                 f"WARNING: The frequency of pulse {pulse.serial} is higher than the nyqusit frequency ({int(PulseShape.SAMPLING_RATE // 2)}) for the device sampling rate: {int(PulseShape.SAMPLING_RATE)}"
             )
-        num_samples = int(pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
+        num_samples = int(np.rint(pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
         time = np.arange(num_samples) / PulseShape.SAMPLING_RATE
         global_phase = pulse.global_phase
         cosalpha = np.cos(2 * np.pi * pulse.frequency * time + global_phase + pulse.relative_phase)
@@ -181,7 +182,7 @@ class Rectangular(PulseShape):
         """The envelope waveform of the i component of the pulse."""
 
         if self.pulse:
-            num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
+            num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
             waveform = Waveform(self.pulse.amplitude * np.ones(num_samples))
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
@@ -195,7 +196,7 @@ class Rectangular(PulseShape):
         """The envelope waveform of the q component of the pulse."""
 
         if self.pulse:
-            num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
+            num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
             waveform = Waveform(np.zeros(num_samples))
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
@@ -230,7 +231,7 @@ class Gaussian(PulseShape):
         """The envelope waveform of the i component of the pulse."""
 
         if self.pulse:
-            num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
+            num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
             x = np.arange(0, num_samples, 1)
             waveform = Waveform(
                 self.pulse.amplitude
@@ -248,7 +249,7 @@ class Gaussian(PulseShape):
         """The envelope waveform of the q component of the pulse."""
 
         if self.pulse:
-            num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
+            num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
             waveform = Waveform(np.zeros(num_samples))
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
@@ -284,7 +285,7 @@ class Drag(PulseShape):
         """The envelope waveform of the i component of the pulse."""
 
         if self.pulse:
-            num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
+            num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
             x = np.arange(0, num_samples, 1)
             i = self.pulse.amplitude * np.exp(
                 -(1 / 2) * (((x - (num_samples - 1) / 2) ** 2) / (((num_samples) / self.rel_sigma) ** 2))
@@ -302,7 +303,7 @@ class Drag(PulseShape):
         """The envelope waveform of the q component of the pulse."""
 
         if self.pulse:
-            num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
+            num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
             x = np.arange(0, num_samples, 1)
             i = self.pulse.amplitude * np.exp(
                 -(1 / 2) * (((x - (num_samples - 1) / 2) ** 2) / (((num_samples) / self.rel_sigma) ** 2))
@@ -324,6 +325,173 @@ class Drag(PulseShape):
 
     def __repr__(self):
         return f"{self.name}({format(self.rel_sigma, '.6f').rstrip('0').rstrip('.')}, {format(self.beta, '.6f').rstrip('0').rstrip('.')})"
+
+from scipy.signal import lfilter
+class IIR(PulseShape):
+    """
+    IIR Filter using scipy.signal lfilter.
+
+    """
+    # https://arxiv.org/pdf/1907.04818.pdf (page 11 - filter formula S22)
+    # p = [A, tau_iir]
+    # p = [b0 = 1−k +k ·α, b1 = −(1−k)·(1−α),a0 = 1 and a1 = −(1−α)]
+    # p = [b0, b1, a0, a1]
+    
+    def __init__(self, b, a, target:PulseShape):
+        self.name = "IIR"
+        self.target:PulseShape = target
+        self._pulse: Pulse = None
+        self.a:list(float) = a
+        self.b:list(float) = b
+        # Check len(a) = len(b) = 2
+
+    @property
+    def pulse(self):
+        return self._pulse
+
+    @pulse.setter
+    def pulse(self, value):
+        self._pulse = value
+        self.target.pulse = value
+
+    @property
+    def envelope_waveform_i(self) -> Waveform:
+        """The envelope waveform of the i component of the pulse."""
+
+        if self.pulse:
+            num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
+            data = lfilter(b=self.b, a=self.a, x=self.target.envelope_waveform_i.data)
+            waveform = Waveform(np.abs(self.pulse.amplitude) * data / np.max(np.abs(data)))
+            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            return waveform
+        else:
+            raise Exception(
+                "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
+            )
+
+    @property
+    def envelope_waveform_q(self) -> Waveform:
+        """The envelope waveform of the q component of the pulse."""
+
+        if self.pulse:
+            num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
+            data = lfilter(b=self.b, a=self.a, x=self.target.envelope_waveform_q.data)
+            waveform = Waveform(np.abs(self.pulse.amplitude) * data / np.max(np.abs(data)))
+            waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            return waveform
+        else:
+            raise Exception(
+                "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
+            )
+
+    def __repr__(self):
+        return f"{self.name}({self.b}, {self.a}, {self.target})"
+
+class SNZ(PulseShape):
+    """
+    Sudden variant Net Zero.
+    https://arxiv.org/abs/2008.07411
+
+    """
+    
+    def __init__(self, t_half_flux_pulse=None, b_amplitude=1):
+        self.name = "SNZ"
+        self.pulse: Pulse = None
+        self.t_half_flux_pulse:float = t_half_flux_pulse
+        self.b_amplitude:float = b_amplitude
+
+    @property
+    def envelope_waveform_i(self) -> Waveform:
+        """The envelope waveform of the i component of the pulse."""
+
+        if self.pulse:
+            if not self.t_half_flux_pulse:
+                self.t_half_flux_pulse = self.pulse.duration/2
+            elif 2 * self.t_half_flux_pulse > self.pulse.duration:
+                raise Exception(
+                "Pulse shape parameter error: pulse.t_half_flux_pulse <= pulse.duration"
+                )
+            num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
+            half_flux_pulse_samples = int(np.rint(num_samples * self.t_half_flux_pulse / self.pulse.duration))
+            iding_samples = num_samples - 2 * half_flux_pulse_samples
+            waveform = Waveform(np.concatenate((
+                self.pulse.amplitude * np.ones(half_flux_pulse_samples-1), 
+                np.array([self.pulse.amplitude * self.b_amplitude]), 
+                np.zeros(iding_samples), 
+                -1 * np.array([self.pulse.amplitude * self.b_amplitude]),  
+                -1 * self.pulse.amplitude * np.ones(half_flux_pulse_samples-1)
+                )))
+            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            return waveform
+        else:
+            raise Exception(
+                "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
+            )
+
+    @property
+    def envelope_waveform_q(self) -> Waveform:
+        """The envelope waveform of the q component of the pulse."""
+
+        if self.pulse:
+            num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
+            waveform = Waveform(np.zeros(num_samples))
+            waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            return waveform
+        else:
+            raise Exception(
+                "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
+            )
+
+    def __repr__(self):
+        return f"{self.name}({self.t_half_flux_pulse}, {self.b_amplitude})"
+
+class eCap(PulseShape):
+    """
+    eCap pulse shape.
+    Args:
+        alpha (float): 
+    .. math::
+        e_\\cap(t,\\alpha) &=& A[1 + \\tanh(\\alpha t/t_\\theta)][1 + \\tanh(\\alpha (1 - t/t_\\theta))]\\\\
+&\\times& [1 + \\tanh(\\alpha/2)]^{-2}
+    """
+
+    def __init__(self, alpha: float):
+        self.name = "eCap"
+        self.pulse: Pulse = None
+        self.alpha: float = float(alpha)
+
+    @property
+    def envelope_waveform_i(self) -> Waveform:
+        if self.pulse:
+            num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
+            x = np.arange(0, num_samples, 1)
+            waveform = Waveform(
+                self.pulse.amplitude
+                * 
+                (1+np.tanh(self.alpha*x/num_samples))*(1+np.tanh(self.alpha*(1-x/num_samples)))/(1+np.tanh(self.alpha/2))**2
+            )
+            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            return waveform
+        else:
+            raise Exception(
+                "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
+            )
+
+    @property
+    def envelope_waveform_q(self) -> Waveform:
+        if self.pulse:
+            num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
+            waveform = Waveform(np.zeros(num_samples))
+            waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            return waveform
+        else:
+            raise Exception(
+                "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
+            )
+
+    def __repr__(self):
+        return f"{self.name}({format(self.alpha, '.6f').rstrip('0').rstrip('.')})"
+
 
 
 class Pulse:
@@ -788,9 +956,9 @@ class Pulse:
         import numpy as np
         from matplotlib import gridspec
 
-        num_samples = int(self.duration / 1e9 * PulseShape.SAMPLING_RATE)
+        num_samples = int(np.rint(self.duration / 1e9 * PulseShape.SAMPLING_RATE))
         time = self.start + np.arange(num_samples) / PulseShape.SAMPLING_RATE * 1e9
-        fig = plt.figure(figsize=(14, 5), dpi=120)
+        fig = plt.figure(figsize=(14, 5), dpi=200)
         gs = gridspec.GridSpec(ncols=2, nrows=1, width_ratios=[2, 1])
         ax1 = plt.subplot(gs[0])
         ax1.plot(time, self.shape.envelope_waveform_i.data, label="envelope i", c="C0", linestyle="dashed")
@@ -840,6 +1008,7 @@ class Pulse:
         plt.show()
         if savefig_filename:
             plt.savefig(savefig_filename)
+        plt.close()
         return
 
 
@@ -923,7 +1092,7 @@ class FluxPulse(Pulse):
 
     @property
     def serial(self):
-        return f"FluxPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {format(self.relative_phase, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
+        return f"FluxPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
 
 
 class SplitPulse(Pulse):
@@ -1042,10 +1211,10 @@ class SplitPulse(Pulse):
 
         time = (
             self.window_start
-            + np.arange(int(self.window_duration / 1e9 * PulseShape.SAMPLING_RATE)) / PulseShape.SAMPLING_RATE * 1e9
+            + np.arange(int(np.rint(self.window_duration / 1e9 * PulseShape.SAMPLING_RATE))) / PulseShape.SAMPLING_RATE * 1e9
         )
 
-        fig = plt.figure(figsize=(14, 5), dpi=120)
+        fig = plt.figure(figsize=(14, 5), dpi=200)
         gs = gridspec.GridSpec(ncols=2, nrows=1, width_ratios=[2, 1])
         ax1 = plt.subplot(gs[0])
         ax1.plot(
@@ -1114,6 +1283,7 @@ class SplitPulse(Pulse):
         plt.show()
         if savefig_filename:
             plt.savefig(savefig_filename)
+        plt.close()
         return
 
 
@@ -1439,7 +1609,7 @@ class PulseSequence:
             import numpy as np
             from matplotlib import gridspec
 
-            fig = plt.figure(figsize=(14, 2 * self.count), dpi=120)
+            fig = plt.figure(figsize=(14, 2 * self.count), dpi=200)
             gs = gridspec.GridSpec(ncols=1, nrows=self.count)
             vertical_lines = []
             for pulse in self.pulses:
@@ -1451,8 +1621,9 @@ class PulseSequence:
                 ax = plt.subplot(gs[n])
                 ax.axis([0, self.finish, -1, 1])
                 for pulse in channel_pulses:
-                    if isinstance(pulse, SplitPulse):
-                        time = pulse.window_start + np.arange(pulse.window_duration)
+                    if isinstance(pulse, SplitPulse):                       
+                        num_samples = int(pulse.window_duration / 1e9 * PulseShape.SAMPLING_RATE)
+                        time = pulse.window_start + np.arange(num_samples) / PulseShape.SAMPLING_RATE * 1e9
                         ax.plot(
                             time,
                             pulse.shape.modulated_waveform_q.data[
@@ -1482,7 +1653,8 @@ class PulseSequence:
                             c=f"C{str(n)}",
                         )
                     else:
-                        time = pulse.start + np.arange(pulse.duration)
+                        num_samples = int(pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
+                        time = pulse.start + np.arange(num_samples) / PulseShape.SAMPLING_RATE * 1e9
                         ax.plot(time, pulse.shape.modulated_waveform_q.data, c="lightgrey")
                         ax.plot(time, pulse.shape.modulated_waveform_i.data, c=f"C{str(n)}")
                         ax.plot(time, pulse.shape.envelope_waveform_i.data, c=f"C{str(n)}")
@@ -1497,3 +1669,4 @@ class PulseSequence:
             plt.show()
             if savefig_filename:
                 plt.savefig(savefig_filename)
+            plt.close()

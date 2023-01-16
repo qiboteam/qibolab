@@ -9,6 +9,10 @@ class MultiqubitPlatform(AbstractPlatform):
         raise_error(NotImplementedError)
 
     def execute_pulse_sequence(self, sequence: PulseSequence, nshots=None):
+        # DEBUG: Performance
+        # from datetime import datetime
+        # start = datetime.now()
+
         if not self.is_connected:
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
         if nshots is None:
@@ -52,6 +56,10 @@ class MultiqubitPlatform(AbstractPlatform):
                                 acquisition_results[key].update(value)
                             else:
                                 acquisition_results[key] = value
+        # DEBUG: Performance
+        # stop = datetime.now()
+        # print(f"execute_pulse_sequence: Start: {start}, Duration: {(stop - start).total_seconds()}")
+
         return acquisition_results
 
     def measure_fidelity(self, qubits=None, nshots=None):

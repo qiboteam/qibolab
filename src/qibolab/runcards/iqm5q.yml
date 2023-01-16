@@ -1,0 +1,396 @@
+nqubits: 5
+description: IQM 5-qubit device controlled with qblox instruments.
+
+settings:
+    hardware_avg: 1024
+    sampling_rate: 1_000_000_000
+    repetition_duration: 10_000 
+    minimum_delay_between_instructions: 4
+
+qubits: [1, 2, 3, 4, 5]
+topology:
+-   [ 1, 0, 1, 0, 0]
+-   [ 0, 1, 1, 0, 0]
+-   [ 1, 1, 1, 1, 1]
+-   [ 0, 0, 1, 1, 0]
+-   [ 0, 0, 1, 0, 1]
+
+
+channels: ["L3-31_a", "L3-31_b", "L3-5", "L1-16", "L1-16_fdc", "L3-1", "L1-19", "L1-19_fdc", "L3-4", "L1-23", "L1-23_fdc", "L3-3", "L1-25", "L1-25_fdc", "L3-2", "L1-21", "L1-21_fdc", "L1-1", "L1-17", "L1-18", "L1-22", "L1-24"]
+
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
+    1: ["L3-31_a", "L3-5", "L1-16"]
+    2: ["L3-31_a", "L3-1", "L1-19"]
+    3: ["L3-31_b", "L3-4", "L1-23"]
+    4: ["L3-31_b", "L3-3", "L1-25"]
+    5: ["L3-31_b", "L3-2", "L1-21"]
+
+
+instruments:
+    cluster:
+        lib: qblox
+        class: Cluster
+        address: 192.168.0.6
+        roles: [other]
+        settings:
+            reference_clock_source      : internal                      # external or internal
+    qrm_rf_a: # qubits 1, 2
+        lib: qblox
+        class: ClusterQRM_RF
+        address: 192.168.0.6:10
+        roles: [readout]
+        settings:
+            ports:
+                o1:
+                    attenuation                 : 0
+                    lo_enabled                  : true
+                    lo_frequency                : 5_022_045_000                 # (Hz) from 2e9 to 18e9
+                    gain                        : 0.5                           # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en             : false
+                i1:
+                    hardware_demod_en           : true
+
+            acquisition_hold_off        : 200                           # minimum 4ns
+            acquisition_duration        : 2000
+
+            classification_parameters:
+                1:                      # qubit id
+                    rotation_angle: 0   # in degrees 0.0<=v<=360.0
+                    threshold: 0        # in V
+                2:
+                    rotation_angle: 0
+                    threshold: 0
+                3:
+                    rotation_angle: 0
+                    threshold: 0
+
+            channel_port_map:                                           # Refrigerator Channel : Instrument port
+                L3-31_a: o1 # IQ Port = out0 & out1
+                L1-1   : i1
+    qrm_rf_b: # qubits 3, 4, 5
+        lib: qblox
+        class: ClusterQRM_RF
+        address: 192.168.0.6:12
+        roles: [readout]
+        settings:
+            ports:
+                o1:
+                    attenuation                 : 0
+                    lo_enabled                  : true
+                    lo_frequency                : 5_792_412_000                 # (Hz) from 2e9 to 18e9
+                    gain                        : 0.5                           # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en             : false
+                i1:
+                    hardware_demod_en           : true
+
+            acquisition_hold_off        : 200                           # minimum 4ns
+            acquisition_duration        : 2000
+
+            classification_parameters:
+                4:
+                    rotation_angle: 0
+                    threshold: 0
+                5:
+                    rotation_angle: 0
+                    threshold: 0
+
+            channel_port_map:                                           # Refrigerator Channel : Instrument port
+                L3-31_b: o1 # IQ Port = out0 & out1
+                L1-1   : i1
+    qcm_rf1: # qubits 2, 5
+        lib: qblox
+        class: ClusterQCM_RF
+        address: 192.168.0.6:4
+        roles: [control]
+        settings:
+            ports:
+                o1:
+                    attenuation                  : 30 # (dB)
+                    lo_enabled                   : true
+                    lo_frequency                 : 4_043_994_000 # (Hz) from 2e9 to 18e9 (QUBIT 1)
+                    gain                         : 0.233 # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o2:
+                    attenuation                  : 30 # (dB)
+                    lo_enabled                   : true
+                    lo_frequency                 : 5_091_284_403 # 5_999_550_000 # (Hz) from 2e9 to 18e9 (QUBIT 2)
+                    gain                         : 0.195 # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en              : false
+
+            channel_port_map:
+                L3-1 : o1 # IQ Port = out0 & out1
+                L3-2 : o2 # IQ Port = out2 & out3
+    qcm_rf2: # qubits 4, 3
+        lib: qblox
+        class: ClusterQCM_RF
+        address: 192.168.0.6:6
+        roles: [control]
+        settings:
+            ports:
+                o1:
+                    attenuation                  : 16 # (dB)
+                    lo_enabled                   : true
+                    lo_frequency                 : 3_910_000_000 # (Hz) from 2e9 to 18e9
+                    gain                         : 0.2 # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o2:
+                    attenuation                  : 30 # (dB)
+                    lo_enabled                   : true
+                    lo_frequency                 : 6_308_284_099 # 6_961_106_300 # (Hz) from 2e9 to 18e9 (QUBIT 3)
+                    gain                         : 0.19 # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en              : false
+
+            channel_port_map:
+                L3-3: o1 # IQ Port = out0 & out1
+                L3-4: o2 # IQ Port = out0 & out1
+    qcm_rf3: # qubit 1
+        lib: qblox
+        class: ClusterQCM_RF
+        address: 192.168.0.6:8
+        roles: [control]
+        settings:
+            ports:
+                o1:
+                    attenuation                  : 30 # (dB)
+                    lo_enabled                   : true
+                    lo_frequency                 : 6_205_090_089  # (Hz) from 2e9 to 18e9
+                    gain                         : 0.18 # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o2:
+                    attenuation                  : 60 # (dB)
+                    lo_enabled                   : false
+                    lo_frequency                 : 6_000_000_000 # (Hz) from 2e9 to 18e9
+                    gain                         : 0 # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en              : false
+
+            channel_port_map:
+                L3-5: o1 # IQ Port = out0 & out1
+                99: o2
+    qcm_bb1: # qubits 1, 1-3, 2-3, 2
+        lib: qblox
+        class: ClusterQCM
+        address: 192.168.0.6:2
+        roles: [control]
+        settings:
+            ports:
+                o1: # qubit 1
+                    gain                         : 1 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o2: # coupler 1-3
+                    gain                         : 1 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o3: # coupler 2-3
+                    gain                         : 1 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o4: # qubit 2
+                    gain                         : 1 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+            channel_port_map:
+                L1-16: o1 # only plays the i waveform of the pulse
+                L1-17: o2 # only plays the q waveform of the pulse
+                L1-18: o3 # only plays the i waveform of the pulse
+                L1-19: o4 # only plays the q waveform of the pulse
+    qcm_bb2: # qubit 3, 4, 5, 3-5
+        lib: qblox
+        class: ClusterQCM
+        address: 192.168.0.6:5
+        roles: [control]
+        settings:
+            ports:
+                o1: # qubit 3
+                    gain                         : 0.2 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o2: # qubit 4
+                    gain                         : 0 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o3: # qubit 5
+                    gain                         : 0 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o4: # coupler 3-5
+                    gain                         : 0 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+
+            channel_port_map:
+                L1-21: o1 # only plays the i waveform of the pulse
+                L1-22: o2 # only plays the q waveform of the pulse
+                L1-23: o3 # only plays the i waveform of the pulse
+                L1-24: o4 # only plays the q waveform of the pulse
+    SPI: # qubits 0, 1, 2, 3, 4
+        lib: qutech
+        class: SPI
+        address: /dev/ttyACM1
+        roles: [other]
+        settings:
+            s4g_modules:
+                #flux_channel: [module#, port#, current] max number of DACs per module = 4
+                L1-16: [2, 1, 0] # qubit 1
+                L1-17: [2, 2, 0] # coupler 1-3
+                L1-18: [2, 3, 0] # coupler 2-3
+                L1-19: [2, 4, 0] # qubit 2
+                L1-23: [4, 1, 0] # qubit 3
+                L1-25: [4, 2, 0] # qubit 4
+                L1-21: [4, 3, 0] # qubit 5
+                L1-22: [4, 4, 0] # coupler 3-5
+                # L1-24_fdc: [6, 1, 0] # coupler 3-4
+ignore:
+    qcm_bb3: # qubit 3-4
+        lib: qblox
+        class: ClusterQCM
+        address: 192.168.0.6:X
+        roles: [control]
+        settings:
+            ports:
+                o1: # coupler 3-4
+                    gain                         : 0.2 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o2:
+                    gain                         : 0 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o3:
+                    gain                         : 0 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o4:
+                    gain                         : 0 # -1.0<=v<=1.0
+                    hardware_mod_en              : false
+            channel_port_map:
+                L1-25: o1 # only plays the i waveform of the pulse
+                100: o2 # only plays the q waveform of the pulse
+                101: o3 # only plays the i waveform of the pulse
+                102: o4 # only plays the q waveform of the pulse
+
+
+native_gates:
+    single_qubit:
+        1: # qubit number
+            RX:
+                duration: 40
+                amplitude: 0.80
+                frequency: -200_000_000
+                shape: Gaussian(5)
+            MZ:
+                duration: 2000
+                amplitude: 0.20
+                frequency: 197_955_000
+                shape: Rectangular()
+
+        2: # qubit number
+            RX:
+                duration: 40
+                amplitude: 0.80
+                frequency: -200_000_000
+                shape: Gaussian(5)
+            MZ:
+                duration: 2000
+                amplitude: 0.20
+                frequency: -100_000_000
+                shape: Rectangular()
+                
+        3: # qubit number
+            RX:
+                duration: 40
+                amplitude: 0.80
+                frequency: -200_000_000
+                shape: Gaussian(5)
+            MZ:
+                duration: 2000
+                amplitude: 0.20
+                frequency: 283_305_000
+                shape: Rectangular()
+                
+        4: # qubit number
+            RX:
+                duration: 40
+                amplitude: 0.80
+                frequency: -200_000_000
+                shape: Gaussian(5)
+            MZ:
+                duration: 2000
+                amplitude: 0.20
+                frequency: -19_079_000
+                shape: Rectangular()
+                
+        5: # qubit number
+            RX:
+                duration: 40
+                amplitude: 0.80
+                frequency: -200_000_000
+                shape: Gaussian(5)
+            MZ:
+                duration: 2000
+                amplitude: 0.20
+                frequency: -290_000_000
+                shape: Rectangular()
+                
+
+    two_qubit:
+        3-2: # qubit numbers
+            CZ:
+                pulse_sequence:
+                    -   start: 0
+                        duration: 20
+                        amplitude: 0.5
+                        frequency: 0
+                        shape: RTZ()
+                        phase: null
+                        channel: 2
+                        type: qf # qubit flux
+                    -   start: 0
+                        duration: 4
+                        amplitude: 0.01
+                        frequency: 0
+                        shape: RTZ()
+                        phase: null
+                        channel: 2
+                        type: qf # qubit flux
+characterization:
+    single_qubit:
+        1:
+            resonator_freq: 5_220_000_000
+            qubit_freq: 5_000_000_000
+            T1: 0
+            T2: 0
+            state0_voltage: 0
+            state1_voltage: 0
+            mean_gnd_states: (0+0j)
+            mean_exc_states: (0+0j)
+            sweetspot: 0
+        2:
+            resonator_freq: 4_922_045_000
+            qubit_freq: 5_000_000_000
+            T1: 0
+            T2: 0
+            state0_voltage: 0
+            state1_voltage: 0
+            mean_gnd_states: (0+0j)
+            mean_exc_states: (0+0j)
+            sweetspot: 0
+        3:
+            resonator_freq: 6_075_717_000
+            qubit_freq: 5_000_000_000
+            T1: 0
+            T2: 0
+            state0_voltage: 0
+            state1_voltage: 0
+            mean_gnd_states: (0+0j)
+            mean_exc_states: (0+0j)
+            sweetspot: 0
+        4:
+            resonator_freq: 5_773_333_000
+            qubit_freq: 5_000_000_000
+            T1: 0
+            T2: 0
+            state0_voltage: 0
+            state1_voltage: 0
+            mean_gnd_states: (0+0j)
+            mean_exc_states: (0+0j)
+            sweetspot: 0
+        5:
+            resonator_freq: 5_502_412_000
+            qubit_freq: 5_000_000_000
+            T1: 0
+            T2: 0
+            state0_voltage: 0
+            state1_voltage: 0
+            mean_gnd_states: (0+0j)
+            mean_exc_states: (0+0j)
+            sweetspot: 0

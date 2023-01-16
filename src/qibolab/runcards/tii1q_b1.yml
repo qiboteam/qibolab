@@ -6,15 +6,15 @@ settings:
     repetition_duration: 200_000
     sampling_rate: 1_000_000_000
 
-qubits: [0]
+qubits: [q0]
 
 topology: # qubit - qubit connections
 -   [1]
 
-channels: ['L3-18_qd', 'L3-18_ro', 'L2-2']
+channels: [L3-18_qd, L3-18_ro, L2-2]
 
-qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
-    0: ['L3-18_ro', 'L3-18_qd', null]
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux, QubitBias]
+    q0: [L3-18_ro, L3-18_qd, null, null]
 
 instruments:
     cluster:
@@ -45,13 +45,13 @@ instruments:
             acquisition_duration        : 2000
 
             classification_parameters:
-                0:
+                q0:
                     rotation_angle: 345.208
                     threshold: -0.000841
 
             channel_port_map:  # Refrigerator Channel : Instrument port
-                'L3-18_ro': o1 # IQ Port = out0 & out1
-                'L2-2': i1
+                L3-18_ro: o1 # IQ Port = out0 & out1
+                L2-2: i1
 
     qcm_rf:
         lib: qblox
@@ -74,7 +74,7 @@ instruments:
                     hardware_mod_en              : false
 
             channel_port_map:
-                'L3-18_qd': o1 # IQ Port = out0 & out1
+                L3-18_qd: o1 # IQ Port = out0 & out1
                 99: o2
 
     twpa_pump:
@@ -88,7 +88,7 @@ instruments:
 
 native_gates:
     single_qubit:
-        0: # qubit number
+        q0: # qubit number
             RX:
                 duration: 40                    # should be multiple of 4
                 amplitude: 0.8
@@ -104,7 +104,7 @@ native_gates:
 
 characterization:
     single_qubit:
-        0:
+        q0:
             resonator_freq: 7_371_405_000
             qubit_freq: 5_441_445_000
             T1: 22881
