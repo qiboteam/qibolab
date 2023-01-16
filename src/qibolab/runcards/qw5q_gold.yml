@@ -161,35 +161,38 @@ native_gates:
             MZ: {duration: 4000, amplitude: 0.6, frequency: -35747474.74747467, shape: Rectangular(),
                 type: ro, start: 0, phase: 0}
     two_qubit:
-        2-3: # qubit numbers
+        0-1: # qubit numbers
             CZ:
             - duration: 160
-              amplitude: 0.0818
+              amplitude: 0.818
               shape: Rectangular()
-              qubit: 3
+              qubit: 0
               relative_start: 0
               type: qf
             - duration: 160
-              amplitude: -0.0818
+              amplitude: -0.818
               shape: Rectangular()
-              qubit: 3
+              qubit: 0
               relative_start: 160
               type: qf
-            - duration: 320 # Park Qubit 4
-              amplitude: 0.02
+            - duration: 320
+              amplitude: 0.5
               shape: Rectangular()
-              qubit: 4
+              qubit: 1
               relative_start: 0
               type: qf
             - duration: 20 # Z correction on Qubit 2 (eg)
-              amplitude: 0.02
+              amplitude: 0.1
               shape: Rectangular()
-              qubit: 2
+              qubit: 0
               relative_start: 320
               type: qf
             - type: virtual_z # Better Z correction
-              phase: 0
-              qubit: 3
+              phase: 0.015
+              qubit: 0
+            - type: virtual_z # Better Z correction
+              phase: 0.035
+              qubit: 1
 
 characterization:
     single_qubit:
