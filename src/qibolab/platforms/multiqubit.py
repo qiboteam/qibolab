@@ -109,6 +109,7 @@ class MultiqubitPlatform(AbstractPlatform):
                             if_frequency = self.native_gates["single_qubit"][pulse.qubit]["RX"]["frequency"]
                             self.set_lo_drive_frequency(pulse.qubit, pulse.frequency - if_frequency)
                             pulse.frequency = if_frequency
+                            changed[pulse.serial] = True
 
                 self.instruments[name].process_pulse_sequence(instrument_pulses[name], nshots, self.repetition_duration)
                 self.instruments[name].upload()
@@ -148,7 +149,8 @@ class MultiqubitPlatform(AbstractPlatform):
             if "control" in roles[name]:
                 instrument_pulses[name] = sequence.get_channel_pulses(*self.instruments[name].channels)
                 for pulse in instrument_pulses[name]:
-                    pulse.frequency += self.get_lo_drive_frequency(pulse.qubit)
+                    if pulse.serial in changed:
+                        pulse.frequency += self.get_lo_drive_frequency(pulse.qubit)
 
         return acquisition_results
     
