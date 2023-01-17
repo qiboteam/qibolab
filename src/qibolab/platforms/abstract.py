@@ -16,14 +16,16 @@ from qibolab.pulses import (
 
 
 class Qubit:
-    def __init__(self, name, settings):
+    def __init__(self, name, settings, flux_tunable):
         self.name = name
-        self.readout_frequency = settings[name]["resonator_freq"]
-        self.drive_frequency = settings[name]["qubit_freq"]
-        self.pi_pulse_amplitude = settings[name]["pi_pulse_amplitude"]
-        self.sweetspot = settings[name]["sweetspot"]
-        self.t1 = settings[name]["T1"]
-        self.t2 = settings[name]["T2"]
+        self.settings = settings[name]
+        self.readout_frequency = self.settings["resonator_freq"]
+        self.drive_frequency = self.settings["qubit_freq"]
+        self.pi_pulse_amplitude = self.settings["pi_pulse_amplitude"]
+        if flux_tunable:
+            self.sweetspot = self.settings["sweetspot"]
+        self.t1 = self.settings["T1"]
+        self.t2 = self.settings["T2"]
 
     def __getitem__(self):
         return self.name
@@ -111,8 +113,8 @@ class AbstractPlatform(ABC):
     def reload_settings(self):
         with open(self.runcard) as file:
             self.settings = yaml.safe_load(file)
-
         self.nqubits = self.settings["nqubits"]
+        self.flux_tunable = self.settings["flux_tunable"]
         self.resonator_type = "3D" if self.nqubits == 1 else "2D"
         self.topology = self.settings["topology"]
         self.qubit_channel_map = self.settings["qubit_channel_map"]
@@ -123,7 +125,9 @@ class AbstractPlatform(ABC):
 
         # Load Characterization settings
         self.characterization = self.settings["characterization"]
-        self.qubits = {q: Qubit(q, self.characterization["single_qubit"]) for q in self.settings["qubits"]}
+        self.qubits = {
+            q: Qubit(q, self.characterization["single_qubit"], self.flux_tunable) for q in self.settings["qubits"]
+        }
         # Load single qubit Native Gates
         self.native_gates = self.settings["native_gates"]
         self.two_qubit_natives = set()
@@ -346,7 +350,7 @@ class AbstractPlatform(ABC):
 
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
-    def set_attenuation(self, qubit: Qubit, att):
+    def set_attenuation(self, qubit, att):
         raise_error(NotImplementedError)
 
     def get_attenuation(self, qubit):
