@@ -187,12 +187,10 @@ native_gates:
                 - 0
               relative_start: 0
               type: qf
-            - duration: 20 # Z correction on Qubit 2 (eg)
+            - duration: 20 # Z correction on Qubit 1 (eg)
               amplitude: 0.1
               shape: Rectangular()
-              qubit: 
-                - 0
-                - 1
+              qubit: 1
               relative_start: 320
               type: qf
             - type: virtual_z # Better Z correction
