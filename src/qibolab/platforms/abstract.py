@@ -363,7 +363,12 @@ class AbstractPlatform(ABC):
                     qf_channel = self.settings["qubit_channel_map"][qubits][2]
                 sequence.add(
                     FluxPulse(
-                        start + pulse_settings["relative_start"], qf_duration, qf_amplitude, qf_shape, qf_channel, qubits
+                        start + pulse_settings["relative_start"],
+                        qf_duration,
+                        qf_amplitude,
+                        qf_shape,
+                        qf_channel,
+                        qubits,
                     )
                 )
             elif pulse_settings["type"] == "virtual_z":
