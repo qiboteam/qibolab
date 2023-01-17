@@ -20,6 +20,7 @@ class Qubit:
         self.name = name
         self.readout_frequency = settings[name]["resonator_freq"]
         self.drive_frequency = settings[name]["qubit_freq"]
+        self.pi_pulse_amplitude = settings[name]["pi_pulse_amplitude"]
         self.t1 = settings[name]["T1"]
         self.t2 = settings[name]["T2"]
 
