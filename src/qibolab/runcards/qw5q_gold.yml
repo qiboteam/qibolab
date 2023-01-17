@@ -166,7 +166,7 @@ native_gates:
             - duration: 160
               amplitude: 0.818
               shape: Rectangular()
-              qubit: 
+              qubit:
                 - 0
                 - 1
               relative_start: 0
@@ -174,7 +174,7 @@ native_gates:
             - duration: 160
               amplitude: -0.818
               shape: Rectangular()
-              qubit: 
+              qubit:
                 - 0
                 - 1
               relative_start: 160
@@ -182,7 +182,7 @@ native_gates:
             - duration: 320
               amplitude: 0.5
               shape: Rectangular()
-              qubit: 
+              qubit:
                 - 1
                 - 0
               relative_start: 0
