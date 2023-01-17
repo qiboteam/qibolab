@@ -10,6 +10,13 @@ from qibolab.platforms.abstract import AbstractPlatform
 from qibolab.pulses import PulseSequence
 
 
+def generate_circuit_with_gate(nqubits, gate, *params, **kwargs):
+    circuit = Circuit(nqubits)
+    circuit.add(gate(q, *params, **kwargs) for q in range(nqubits))
+    circuit.add(gates.M(*range(nqubits)))
+    return circuit
+
+
 def test_u3_sim_agreement():
     backend = NumpyBackend()
     theta, phi, lam = 0.1, 0.2, 0.3
@@ -23,50 +30,33 @@ def test_u3_sim_agreement():
     np.testing.assert_allclose(u3_matrix, target_matrix)
 
 
-def test_transpile(platform_name):
-    platform: AbstractPlatform = Platform(platform_name)
+@pytest.mark.parametrize(
+    "gateargs",
+    [
+        (gates.I,),
+        (gates.X,),
+        (gates.Y,),
+        (gates.Z,),
+        (gates.RX, np.pi / 8),
+        (gates.RY, -np.pi / 8),
+        (gates.RZ, np.pi / 4),
+        (gates.U3, 0.1, 0.2, 0.3),
+    ],
+)
+def test_transpile(platform_name, gateargs):
+    platform = Platform(platform_name)
     nqubits = platform.nqubits
-
-    def generate_circuit_with_gate(gate, *params, **kwargs):
-        _circuit = Circuit(nqubits)
-        for qubit in range(nqubits):
-            _circuit.add(gate(qubit, *params, **kwargs))
-        qubits = [qubit for qubit in range(nqubits)]
-        _circuit.add(gates.M(*qubits))
-        return _circuit
-
-    circuit = generate_circuit_with_gate(gates.I)
+    if gateargs[0] in (gates.I, gates.Z, gates.RZ):
+        nseq = 0
+    else:
+        nseq = 2
+    circuit = generate_circuit_with_gate(nqubits, *gateargs)
     sequence = platform.transpile(circuit)
-    assert len(sequence) == (0 + 1) * nqubits
+    assert len(sequence) == (nseq + 1) * nqubits
 
-    circuit = generate_circuit_with_gate(gates.X)
-    sequence = platform.transpile(circuit)
-    assert len(sequence) == (2 + 1) * nqubits
 
-    circuit = generate_circuit_with_gate(gates.Y)
-    sequence = platform.transpile(circuit)
-    assert len(sequence) == (2 + 1) * nqubits
-
-    circuit = generate_circuit_with_gate(gates.Z)
-    sequence = platform.transpile(circuit)
-    assert len(sequence) == (0 + 1) * nqubits
-
-    circuit = generate_circuit_with_gate(gates.RX, np.pi / 8)
-    sequence = platform.transpile(circuit)
-    assert len(sequence) == (2 + 1) * nqubits
-
-    circuit = generate_circuit_with_gate(gates.RY, -np.pi / 8)
-    sequence = platform.transpile(circuit)
-    assert len(sequence) == (2 + 1) * nqubits
-
-    circuit = generate_circuit_with_gate(gates.RZ, np.pi / 4)
-    sequence = platform.transpile(circuit)
-    assert len(sequence) == (0 + 1) * nqubits
-
-    circuit = generate_circuit_with_gate(gates.U3, theta=0.1, phi=0.2, lam=0.3)
-    sequence = platform.transpile(circuit)
-    assert len(sequence) == (2 + 1) * nqubits
-
+def test_transpile_two_gates(platform_name):
+    platform = Platform(platform_name)
     circuit = Circuit(1)
     circuit.add(gates.RX(0, theta=0.1))
     circuit.add(gates.RY(0, theta=0.2))

@@ -67,6 +67,12 @@ def fix_connectivity(circuit):
     for i, gate in enumerate(circuit.queue):
         # map gate qubits to hardware
         qubits = tuple(hardware_qubits.index(q) for q in gate.qubits)
+        if isinstance(gate, gates.M):
+            new_gate = gates.M(*qubits, **gate.init_kwargs)
+            new_gate.result = gate.result
+            new.add(new_gate)
+            continue
+
         if len(qubits) > 2:
             raise_error(
                 NotImplementedError,
@@ -87,32 +93,39 @@ def fix_connectivity(circuit):
             qubits = tuple(hardware_qubits.index(q) for q in gate.qubits)
 
         # add gate to the hardware circuit
-        new.add(gate.__class__(*qubits, **gate.init_kwargs))
+        if isinstance(gate, gates.Unitary):
+            # gates.Unitary requires matrix as first argument
+            new.add(gate.__class__(gate.matrix, *qubits, **gate.init_kwargs))
+        else:
+            new.add(gate.__class__(*qubits, **gate.init_kwargs))
         if len(qubits) == 2:
             add_swap = True
 
     return new, hardware_qubits
 
 
-def respects_connectivity(circuit):
+def respects_connectivity(circuit, verbose=True):
     """Checks if a circuit respects connectivity constraints.
 
     Args:
         circuit (qibo.models.Circuit): Circuit model to check.
+        verbose (bool): If ``True`` it prints debugging log messages.
 
     Returns ``True`` if the following conditions are satisfied:
         - Circuit does not contain more than two-qubit gates.
         - All two-qubit gates have qubit 0 as target or control.
     otherwise returns ``False``.
     """
+    # pring messages only if ``verbose == True``
+    vlog = lambda msg: log.info(msg) if verbose else lambda msg: None
     for gate in circuit.queue:
-        if len(gate.qubits) > 2:
-            log.info(f"{gate.name} acts on more than two qubits.")
+        if len(gate.qubits) > 2 and not isinstance(gate, gates.M):
+            vlog(f"{gate.name} acts on more than two qubits.")
             return False
         elif len(gate.qubits) == 2:
             if 0 not in gate.qubits:
-                log.info("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
+                vlog("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
                 return False
 
-    log.info("Circuit can be executed.")
+    vlog("Circuit respects connectivity.")
     return True
