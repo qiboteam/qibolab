@@ -21,6 +21,7 @@ class Qubit:
         self.readout_frequency = settings[name]["resonator_freq"]
         self.drive_frequency = settings[name]["qubit_freq"]
         self.pi_pulse_amplitude = settings[name]["pi_pulse_amplitude"]
+        self.sweetspot = settings[name]["sweetspot"]
         self.t1 = settings[name]["T1"]
         self.t2 = settings[name]["T2"]
 
@@ -349,4 +350,10 @@ class AbstractPlatform(ABC):
         raise_error(NotImplementedError)
 
     def get_attenuation(self, qubit):
+        raise_error(NotImplementedError)
+
+    def set_current(self, qubit, curr):
+        raise_error(NotImplementedError)
+
+    def get_current(self, qubit):
         raise_error(NotImplementedError)
