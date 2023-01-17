@@ -248,7 +248,7 @@ class AbstractPlatform(ABC):
                 # Fetch pi/2 pulse from calibration
                 RX90_pulse_1 = self.create_RX90_pulse(qubit, finish, relative_phase=sequence.virtual_z_phases[qubit])
                 # apply RX(pi/2)
-                sequence.append_at_end_of_channel(RX90_pulse_1)
+                sequence.add(RX90_pulse_1)
                 # apply RZ(theta)
                 sequence.virtual_z_phases[qubit] += theta
                 # Fetch pi/2 pulse from calibration
@@ -256,7 +256,7 @@ class AbstractPlatform(ABC):
                     qubit, RX90_pulse_1.finish, relative_phase=sequence.virtual_z_phases[qubit] - np.pi
                 )
                 # apply RX(-pi/2)
-                sequence.append_at_end_of_channel(RX90_pulse_2)
+                sequence.add(RX90_pulse_2)
                 # apply RZ(phi)
                 sequence.virtual_z_phases[qubit] += phi
 
@@ -276,10 +276,10 @@ class AbstractPlatform(ABC):
                 for qubit in gate.qubits:
                     if sequence.get_qubit_finish_time(qubit) > finish:
                         finish = sequence.get_qubit_finish_time(qubit)
-                sequence_cz = self.create_CZ_pulse(gate.qubits, finish)
+                cz_sequence = self.create_CZ_pulse(gate.qubits, finish)
                 sequence.add(*cz_sequence.pulses)
-                for key in sequence_cz.virtual_z_phases:
-                    sequence.virtual_z_phases[key] += sequence_cz.virtual_z_phases[key]
+                for key in cz_sequence.virtual_z_phases:
+                    sequence.virtual_z_phases[key] += cz_sequence.virtual_z_phases[key]
 
             else:  # pragma: no cover
                 raise_error(
@@ -327,7 +327,7 @@ class AbstractPlatform(ABC):
 
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
-    def create_CZ_pulse_sequence(self, qubits, start=0):
+    def create_CZ_pulse(self, qubits, start=0):
         # Check in the settings if qubits[0]-qubits[1] is a key
         if f"{qubits[0]}-{qubits[1]}" in self.settings["native_gates"]["two_qubit"]:
             pulse_sequence_settings = self.settings["native_gates"]["two_qubit"][f"{qubits[0]}-{qubits[1]}"]["CZ"]
@@ -353,11 +353,14 @@ class AbstractPlatform(ABC):
                 qf_duration = pulse_settings["duration"]
                 qf_amplitude = pulse_settings["amplitude"]
                 qf_shape = pulse_settings["shape"]
-                qubit = pulse_settings["qubit"]
-                qf_channel = self.settings["qubit_channel_map"][qubit][2]
+                qubits = pulse_settings["qubit"]
+                if self.characterization["single_qubit"][qubits[0]]["qubit_freq"] > self.characterization["single_qubit"][qubits[1]]["qubit_freq"]:
+                    qf_channel = self.settings["qubit_channel_map"][qubits[0]][2]
+                else:
+                    qf_channel = self.settings["qubit_channel_map"][qubits[1]][2]
                 sequence.add(
                     FluxPulse(
-                        start + pulse_settings["relative_start"], qf_duration, qf_amplitude, qf_shape, qf_channel, qubit
+                        start + pulse_settings["relative_start"], qf_duration, qf_amplitude, qf_shape, qf_channel, qubits
                     )
                 )
             elif pulse_settings["type"] == "virtual_z":
