@@ -370,3 +370,6 @@ class AbstractPlatform(ABC):
 
     def get_attenuation(self, qubit):
         raise_error(NotImplementedError)
+
+    def set_gain(self,qubit,gain):
+        raise_error(NotImplementedError)
