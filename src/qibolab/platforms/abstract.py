@@ -269,7 +269,7 @@ class AbstractPlatform(ABC):
                     sequence.add(MZ_pulse)  # append_at_end_of_channel?
                     mz_pulses.append(MZ_pulse.serial)
                 gate.pulses = tuple(mz_pulses)
-                
+
             elif isinstance(gate, gates.CZ):
                 # Get channel pulses for both qubits and get the latest finish time
                 finish = 0
