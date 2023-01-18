@@ -19,7 +19,7 @@ class MultiqubitPlatform(AbstractPlatform):
 
     def set_attenuation(self, qubit, att):
         self.ro_port[qubit].attenuation = att
-    
+
     def set_gain(self, qubit, gain):
         self.qd_port[qubit].gain = gain
 
