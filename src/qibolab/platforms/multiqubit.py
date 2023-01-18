@@ -26,6 +26,12 @@ class MultiqubitPlatform(AbstractPlatform):
     def get_attenuation(self, qubit):
         return self.ro_port[qubit].attenuation
 
+    def get_current(self, qubit):
+        return self.qb_port[qubit].current
+
+    def set_current(self, qubit, current):
+        self.qb_port[qubit].current = current
+
     def setup(self):
         if not self.is_connected:
             raise_error(

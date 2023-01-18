@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
 import yaml
 from qibo import gates
@@ -15,53 +16,20 @@ from qibolab.pulses import (
 )
 
 
+@dataclass
 class Qubit:
-    def __init__(self, name, settings, platform):
-        self.name = name
-        self.platform = platform
-        self.readout_frequency = settings[name]["resonator_freq"]
-        self.drive_frequency = settings[name]["qubit_freq"]
-        self.t1 = settings[name]["T1"]
-        self.t2 = settings[name]["T2"]
-        self.attenuation = None
-
-    def __getitem__(self):
-        return self.name
-
-    @property
-    def readout_frequency(self):
-        return self._readout_frequency
-
-    @readout_frequency.setter
-    def readout_frequency(self, frequency):
-        self._readout_frequency = frequency
-
-    @property
-    def drive_frequency(self):
-        return self._drive_frequency
-
-    @drive_frequency.setter
-    def drive_frequency(self, frequency):
-        self._drive_frequency = frequency
-
-    @property
-    def t1(self):
-        return self._t1
-
-    @t1.setter
-    def t1(self, time):
-        self._t1 = time
-
-    @property
-    def t2(self):
-        return self._t2
-
-    @t2.setter
-    def t2(self, time):
-        self._t2 = time
-
-    def set_attenuation(self, att):
-        self.attenuation = self.platform.set_attenuation(self.name, att)
+    name: str
+    readout_frequency: int = 0
+    drive_frequency: int = 0
+    sweetspot: float = 0
+    peak_voltage: float = 0
+    pi_pulse_amplitude: float = 0
+    T1: int = 0
+    T2: int = 0
+    state0_voltage: int = 0
+    state1_voltage: int = 0
+    mean_gnd_states: complex = 0 + 0.0j
+    mean_exc_states: complex = 0 + 0.0j
 
 
 class AbstractPlatform(ABC):
@@ -130,7 +98,6 @@ class AbstractPlatform(ABC):
     def reload_settings(self):
         with open(self.runcard) as file:
             self.settings = yaml.safe_load(file)
-
         self.nqubits = self.settings["nqubits"]
         self.resonator_type = "3D" if self.nqubits == 1 else "2D"
         self.topology = self.settings["topology"]
@@ -142,7 +109,7 @@ class AbstractPlatform(ABC):
 
         # Load Characterization settings
         self.characterization = self.settings["characterization"]
-        self.qubits = {q: Qubit(q, self.characterization["single_qubit"], self) for q in self.settings["qubits"]}
+        self.qubits = {q: Qubit(q, **self.characterization["single_qubit"][q]) for q in self.settings["qubits"]}
         # Load single qubit Native Gates
         self.native_gates = self.settings["native_gates"]
         self.two_qubit_natives = set()
@@ -372,4 +339,10 @@ class AbstractPlatform(ABC):
         raise_error(NotImplementedError)
 
     def set_gain(self,qubit,gain):
+        raise_error(NotImplementedError)
+        
+    def set_current(self, qubit, curr):
+        raise_error(NotImplementedError)
+
+    def get_current(self, qubit):
         raise_error(NotImplementedError)
