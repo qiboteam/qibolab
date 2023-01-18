@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
 import yaml
 from qibo import gates
@@ -15,36 +16,20 @@ from qibolab.pulses import (
 )
 
 
+@dataclass
 class Qubit:
-    def __init__(self, name, settings, flux_tunable):
-        self.name = name
-        self.settings = settings[name]
-        self.readout_frequency = self.settings["resonator_freq"]
-        self.drive_frequency = self.settings["qubit_freq"]
-        self.pi_pulse_amplitude = self.settings["pi_pulse_amplitude"]
-        if flux_tunable:
-            self.sweetspot = self.settings["sweetspot"]
-        self.t1 = self.settings["T1"]
-        self.t2 = self.settings["T2"]
-
-    def __getitem__(self):
-        return self.name
-
-    @property
-    def readout_frequency(self):
-        return self._readout_frequency
-
-    @readout_frequency.setter
-    def readout_frequency(self, frequency):
-        self._readout_frequency = frequency
-
-    @property
-    def drive_frequency(self):
-        return self._drive_frequency
-
-    @drive_frequency.setter
-    def drive_frequency(self, frequency):
-        self._drive_frequency = frequency
+    name: str
+    readout_frequency: int = 0
+    drive_frequency: int = 0
+    sweetspot: float = 0
+    peak_voltage: float = 0
+    pi_pulse_amplitude: float = 0
+    T1: int = 0
+    T2: int = 0
+    state0_voltage: int = 0
+    state1_voltage: int = 0
+    mean_gnd_states: complex = 0 + 0.0j
+    mean_exc_states: complex = 0 + 0.0j
 
 
 class AbstractPlatform(ABC):
@@ -114,7 +99,6 @@ class AbstractPlatform(ABC):
         with open(self.runcard) as file:
             self.settings = yaml.safe_load(file)
         self.nqubits = self.settings["nqubits"]
-        self.flux_tunable = self.settings["flux_tunable"]
         self.resonator_type = "3D" if self.nqubits == 1 else "2D"
         self.topology = self.settings["topology"]
         self.qubit_channel_map = self.settings["qubit_channel_map"]
@@ -125,9 +109,7 @@ class AbstractPlatform(ABC):
 
         # Load Characterization settings
         self.characterization = self.settings["characterization"]
-        self.qubits = {
-            q: Qubit(q, self.characterization["single_qubit"], self.flux_tunable) for q in self.settings["qubits"]
-        }
+        self.qubits = {q: Qubit(q, **self.characterization["single_qubit"][q]) for q in self.settings["qubits"]}
         # Load single qubit Native Gates
         self.native_gates = self.settings["native_gates"]
         self.two_qubit_natives = set()
