@@ -39,8 +39,8 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            resonator_freq: 7824855425
-            qubit_freq: 5082441303
+            readout_frequency: 7824855425
+            drive_frequency: 5082441303
             T1: 21160
             T2: 17214
             state0_voltage: 847
