@@ -60,3 +60,9 @@ class DummyPlatform(AbstractPlatform):
 
     def set_attenuation(self, qubit, att):
         pass
+
+    def get_current(self, qubit):
+        pass
+
+    def set_current(self, qubit, current):
+        pass
