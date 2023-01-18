@@ -76,6 +76,8 @@ class MultiqubitPlatform(AbstractPlatform):
                 self.qf_port[qubit] = self.qbm[qubit].dacs[self.qubit_channel_map[qubit][2]]
 
     def execute_pulse_sequence(self, sequence: PulseSequence, nshots=None):
+
+        result = ExecutionResults(sequence, nshots)
         if not self.is_connected:
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
         if nshots is None:
@@ -163,6 +165,9 @@ class MultiqubitPlatform(AbstractPlatform):
                 for pulse in instrument_pulses[name]:
                     if pulse.serial in changed:
                         pulse.frequency += self.get_lo_drive_frequency(pulse.qubit)
+
+        result = ExecutionResult(..., ...)
+        ...
 
         return acquisition_results
     
