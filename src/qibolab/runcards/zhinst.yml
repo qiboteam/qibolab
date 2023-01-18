@@ -3,14 +3,19 @@ description: IQM 5-qubit device, controlled with Zurich Instruments.
 
 settings:
     hardware_avg: 1000
-    sampling_rate: 2.e+9
-    minimum_delay_between_instructions: # ???
-    readout_delay: 50.e-6 #50.e-6
+    sampling_rate: 2.4e+9
+
+    readout_delay: 50.e-6
     readout_integration_delay: 40.e-9
-    delay_between_pulses: 32.e-9   # 1.e-6
+    AcquisitionType: SPECTROSCOPY
+    AveragingMode: CYCLIC #
     HDAWG_ramp_up_rate: 0.e-9
+    External_clock: False
+    Fast_reset: False
+    Fast_reset_time: 500.e-9
 
 qubits: [0, 1, 2, 3, 4]
+
 topology:
 - [1, 0, 1, 0, 0, 0]
 - [0, 1, 1, 0, 0, 0]
@@ -18,7 +23,7 @@ topology:
 - [0, 0, 1, 1, 0, 0]
 - [0, 0, 1, 0, 1, 0]
 - [0, 0, 0, 0, 0, 1]
-
+    
 
 channels: ["L3-31_a","L3-31_b","L3-5","L1-16","L3-1","L1-19","L3-4","L1-23","L3-3","L1-25","L3-2","L1-21", "L1-1", "test_flux"]
 qubit_channel_map:
@@ -30,23 +35,22 @@ qubit_channel_map:
     5: [null, null, "test_flux", "test_flux_f"]
 
 
-
 instruments:
     shfqc_qa:
         lib: zhinst
-        class: SHFQC_QA
+        class: SHFQC
         address: DEV12146
         roles: [readout]
         settings:
             channels: [0,1]
             input_range: 10 # dBm
-            output_range: 0 # 10 ? # dBm
-            lo_frequency: 5_200_000_000 #5_500_000_000
-            if_frequency_0: 21_015_000 #22_000_000
-            if_frequency_1: 21_015_000 #22_000_000
-            if_frequency_2: 21_015_000 #22_000_000
-            if_frequency_3: 21_015_000 #22_000_000
-            if_frequency_4: 21_015_000 #22_000_000
+            output_range: -10 # 10 ? # dBm
+            lo_frequency: 5_500_000_000 #5_500_000_000
+            if_frequency_0: -280_000_000 #22_000_000
+            if_frequency_1: -500_000_000 #22_000_000
+            if_frequency_2: 500_000_000 #22_000_000
+            if_frequency_3: 250_000_000 #22_000_000
+            if_frequency_4: 0_000_000 #22_000_000
 
     shfqc_qc:
         lib: zhinst
@@ -54,7 +58,7 @@ instruments:
         address: DEV12146
         roles: [control]
         settings:
-            channels: [0]
+            channels: [0,1,2,3,4]
             drive_range : -10
             lo_frequency: 4_100_000_000 #5_100_000_000
             if_frequency_0: -19_058_000
@@ -69,9 +73,17 @@ instruments:
         address: DEV8660
         roles: [flux]
         settings:
-            channels: [0] #[0,1,2,3,4]
+            channels: [0,1,2,3,4,5,6,7,8]
             flux_range : 5
 
+    device_pqsc:
+        lib: zhinst
+        class: PQSC
+        address: DEV10055
+        roles: [flux]
+        settings:
+            ports: [0,2]
+                    
 
 native_gates:
     single_qubit:
@@ -87,9 +99,9 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: .1 # 1
+                amplitude: 1 # 1
                 frequency: -28_000_000 #doesnt do anything requiered for qibolab to work
-                integration_time : 1.e-7
+                integration_time : 5.e-7
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -120,9 +132,76 @@ native_gates:
             Flux:
                 amplitude: .1 
                 shape: Rectangular()
+            
+        2: # qubit number
+            RX:
+                duration: 90 #80
+                amplitude: 0.75 #0.8
+                frequency: 100_000_000 #doesnt do anything requiered for qibolab to work
+                shape: Gaussian(5)
+                # shape: Drag(5, 0.04)
+                type: qd # qubit drive
+                start: 0
+                phase: 0
+            MZ:
+                duration: 1000
+                amplitude: .1 # 1
+                frequency: -28_000_000 #doesnt do anything requiered for qibolab to work
+                integration_time : 1.e-7
+                shape: Rectangular()
+                type: ro # readout
+                start: 0
+    #             phase: 0
+            Flux:
+                amplitude: .1 
+                shape: Rectangular()
+        3: # qubit number
+            RX:
+                duration: 90 #80
+                amplitude: 0.75 #0.8
+                frequency: 100_000_000 #doesnt do anything requiered for qibolab to work
+                shape: Gaussian(5)
+                # shape: Drag(5, 0.04)
+                type: qd # qubit drive
+                start: 0
+                phase: 0
+            MZ:
+                duration: 1000
+                amplitude: .1 # 1
+                frequency: -28_000_000 #doesnt do anything requiered for qibolab to work
+                integration_time : 1.e-7
+                shape: Rectangular()
+                type: ro # readout
+                start: 0
+    #             phase: 0
+            Flux:
+                amplitude: .1 
+                shape: Rectangular()
+        4: # qubit number
+            RX:
+                duration: 90 #80
+                amplitude: 0.75 #0.8
+                frequency: 100_000_000 #doesnt do anything requiered for qibolab to work
+                shape: Gaussian(5)
+                # shape: Drag(5, 0.04)
+                type: qd # qubit drive
+                start: 0
+                phase: 0
+            MZ:
+                duration: 1000
+                amplitude: .1 # 1
+                frequency: -28_000_000 #doesnt do anything requiered for qibolab to work
+                integration_time : 1.e-7
+                shape: Rectangular()
+                type: ro # readout
+                start: 0
+    #             phase: 0
+            Flux:
+                amplitude: .1 
+                shape: Rectangular()
 
     # two_qubit:
-    #     0-2: # qubit numbers
+    #     0-3: # qubit numbers
     #         CZ:
     #             pulse_sequence:
     #                 -   start: 0
