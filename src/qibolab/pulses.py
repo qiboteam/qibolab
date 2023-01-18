@@ -1501,6 +1501,15 @@ class PulseSequence:
                 new_pc.add(pulse)
         return new_pc
 
+    def get_qubit_pulses(self, qubit):
+        """Returns a new PulseSequence containing only the pulses on a specific qubit."""
+
+        new_pc = PulseSequence()
+        for pulse in self.pulses:
+            if pulse.qubit == qubit:
+                new_pc.add(pulse)
+        return new_pc
+
     @property
     def is_empty(self):
         """Returns True if the sequence does not contain any pulses."""
@@ -1543,6 +1552,17 @@ class PulseSequence:
                 channels.append(pulse.channel)
         channels.sort()
         return channels
+
+    @property
+    def qubits(self) -> list:
+        """Returns list containing the qubits associated with the pulses in the sequence."""
+
+        qubits = []
+        for pulse in self.pulses:
+            if not pulse.qubit in qubits:
+                qubits.append(pulse.qubit)
+        qubits.sort()
+        return qubits
 
     def get_pulse_overlaps(self):  # -> dict((int,int): PulseSequence):
         """Returns a dictionary of slices of time (tuples with start and finish times) where pulses overlap."""
@@ -1616,56 +1636,60 @@ class PulseSequence:
                 vertical_lines.append(pulse.start)
                 vertical_lines.append(pulse.finish)
 
-            for n, channel in enumerate(self.channels):
-                channel_pulses = self.get_channel_pulses(channel)
-                ax = plt.subplot(gs[n])
-                ax.axis([0, self.finish, -1, 1])
-                for pulse in channel_pulses:
-                    if isinstance(pulse, SplitPulse):                       
-                        num_samples = int(pulse.window_duration / 1e9 * PulseShape.SAMPLING_RATE)
-                        time = pulse.window_start + np.arange(num_samples) / PulseShape.SAMPLING_RATE * 1e9
-                        ax.plot(
-                            time,
-                            pulse.shape.modulated_waveform_q.data[
-                                pulse.window_start - pulse.start : pulse.window_finish - pulse.start
-                            ],
-                            c="lightgrey",
-                        )
-                        ax.plot(
-                            time,
-                            pulse.shape.modulated_waveform_i.data[
-                                pulse.window_start - pulse.start : pulse.window_finish - pulse.start
-                            ],
-                            c=f"C{str(n)}",
-                        )
-                        ax.plot(
-                            time,
-                            pulse.shape.envelope_waveform_i.data[
-                                pulse.window_start - pulse.start : pulse.window_finish - pulse.start
-                            ],
-                            c=f"C{str(n)}",
-                        )
-                        ax.plot(
-                            time,
-                            -pulse.shape.envelope_waveform_i.data[
-                                pulse.window_start - pulse.start : pulse.window_finish - pulse.start
-                            ],
-                            c=f"C{str(n)}",
-                        )
-                    else:
-                        num_samples = int(pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
-                        time = pulse.start + np.arange(num_samples) / PulseShape.SAMPLING_RATE * 1e9
-                        ax.plot(time, pulse.shape.modulated_waveform_q.data, c="lightgrey")
-                        ax.plot(time, pulse.shape.modulated_waveform_i.data, c=f"C{str(n)}")
-                        ax.plot(time, pulse.shape.envelope_waveform_i.data, c=f"C{str(n)}")
-                        ax.plot(time, -pulse.shape.envelope_waveform_i.data, c=f"C{str(n)}")
-                    # TODO: if they overlap use different shades
-                    ax.axhline(0, c="dimgrey")
-                    ax.set_ylabel(f"channel {channel}")
-                    for vl in vertical_lines:
-                        ax.axvline(vl, c="slategrey", linestyle="--")
+            n = -1
+            for qubit in self.qubits:
+                qubit_pulses = self.get_qubit_pulses(qubit)
+                for channel in qubit_pulses.channels:
+                    n += 1
+                    channel_pulses = qubit_pulses.get_channel_pulses(channel)
+                    ax = plt.subplot(gs[n])
                     ax.axis([0, self.finish, -1, 1])
-                    ax.grid(b=True, which="both", axis="both", color="#CCCCCC", linestyle="-")
+                    for pulse in channel_pulses:
+                        if isinstance(pulse, SplitPulse):
+                            num_samples = int(pulse.window_duration / 1e9 * PulseShape.SAMPLING_RATE)
+                            time = pulse.window_start + np.arange(num_samples) / PulseShape.SAMPLING_RATE * 1e9
+                            ax.plot(
+                                time,
+                                pulse.shape.modulated_waveform_q.data[
+                                    pulse.window_start - pulse.start : pulse.window_finish - pulse.start
+                                ],
+                                c="lightgrey",
+                            )
+                            ax.plot(
+                                time,
+                                pulse.shape.modulated_waveform_i.data[
+                                    pulse.window_start - pulse.start : pulse.window_finish - pulse.start
+                                ],
+                                c=f"C{str(n)}",
+                            )
+                            ax.plot(
+                                time,
+                                pulse.shape.envelope_waveform_i.data[
+                                    pulse.window_start - pulse.start : pulse.window_finish - pulse.start
+                                ],
+                                c=f"C{str(n)}",
+                            )
+                            ax.plot(
+                                time,
+                                -pulse.shape.envelope_waveform_i.data[
+                                    pulse.window_start - pulse.start : pulse.window_finish - pulse.start
+                                ],
+                                c=f"C{str(n)}",
+                            )
+                        else:
+                            num_samples = int(pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
+                            time = pulse.start + np.arange(num_samples) / PulseShape.SAMPLING_RATE * 1e9
+                            ax.plot(time, pulse.shape.modulated_waveform_q.data, c="lightgrey")
+                            ax.plot(time, pulse.shape.modulated_waveform_i.data, c=f"C{str(n)}")
+                            ax.plot(time, pulse.shape.envelope_waveform_i.data, c=f"C{str(n)}")
+                            ax.plot(time, -pulse.shape.envelope_waveform_i.data, c=f"C{str(n)}")
+                        # TODO: if they overlap use different shades
+                        ax.axhline(0, c="dimgrey")
+                        ax.set_ylabel(f"channel {channel}")
+                        for vl in vertical_lines:
+                            ax.axvline(vl, c="slategrey", linestyle="--")
+                        ax.axis([0, self.finish, -1, 1])
+                        ax.grid(b=True, which="both", axis="both", color="#CCCCCC", linestyle="-")
             plt.show()
             if savefig_filename:
                 plt.savefig(savefig_filename)
