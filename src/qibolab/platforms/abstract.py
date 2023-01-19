@@ -117,7 +117,7 @@ class AbstractPlatform(ABC):
         # Load two qubit Native Gates, if multiqubit platform
         if "two_qubit" in self.native_gates.keys():
             for pairs, gates in self.native_gates["two_qubit"].items():
-                self.two_qubit_natives &= set(gates.keys())
+                self.two_qubit_natives |= set(gates.keys())
         else:
             self.two_qubit_natives = ["CZ"]
 

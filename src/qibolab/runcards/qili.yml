@@ -13,8 +13,8 @@ topology: # qubit - qubit connections
 
 channels: [1, 2, 3]
 
-qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
-    0: [2, 1, null]
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux, QubitBias]
+    0: [2, 1, null, null]
 
 instruments:
     cluster:
