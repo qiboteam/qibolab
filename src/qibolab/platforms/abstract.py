@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import yaml
 from qibo import gates
@@ -30,6 +30,7 @@ class Qubit:
     state1_voltage: int = 0
     mean_gnd_states: complex = 0 + 0.0j
     mean_exc_states: complex = 0 + 0.0j
+    resonator_polycoef_flux: list = field(default_factory=list)
 
 
 class AbstractPlatform(ABC):
@@ -335,14 +336,8 @@ class AbstractPlatform(ABC):
     def set_attenuation(self, qubit, att):
         raise_error(NotImplementedError)
 
-    def get_attenuation(self, qubit):
-        raise_error(NotImplementedError)
-
     def set_gain(self, qubit, gain):
         raise_error(NotImplementedError)
 
     def set_current(self, qubit, curr):
-        raise_error(NotImplementedError)
-
-    def get_current(self, qubit):
         raise_error(NotImplementedError)

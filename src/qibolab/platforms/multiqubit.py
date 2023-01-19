@@ -23,12 +23,6 @@ class MultiqubitPlatform(AbstractPlatform):
     def set_gain(self, qubit, gain):
         self.qd_port[qubit].gain = gain
 
-    def get_attenuation(self, qubit):
-        return self.ro_port[qubit].attenuation
-
-    def get_current(self, qubit):
-        return self.qb_port[qubit].current
-
     def set_current(self, qubit, current):
         self.qb_port[qubit].current = current
 
@@ -47,19 +41,23 @@ class MultiqubitPlatform(AbstractPlatform):
             )
 
         # Generate ro_channel[qubit], qd_channel[qubit], qf_channel[qubit], qrm[qubit], qcm[qubit], lo_qrm[qubit], lo_qcm[qubit]
-        self.ro_channel = {}
-        self.qd_channel = {}
-        self.qf_channel = {}
-        self.qrm = {}
-        self.qcm = {}
-        self.qbm = {}
+        self.ro_channel = {}  # readout
+        self.qd_channel = {}  # qubit drive
+        self.qf_channel = {}  # qubit flux
+        self.qb_channel = {}  # qubit flux biassing
+        self.qrm = {}  # qubit readout module
+        self.qdm = {}  # qubit drive module
+        self.qfm = {}  # qubit flux module
+        self.qbm = {}  # qubit flux biassing module
         self.ro_port = {}
         self.qd_port = {}
         self.qf_port = {}
+        self.qb_port = {}
         for qubit in self.qubit_channel_map:
             self.ro_channel[qubit] = self.qubit_channel_map[qubit][0]
             self.qd_channel[qubit] = self.qubit_channel_map[qubit][1]
-            self.qf_channel[qubit] = self.qubit_channel_map[qubit][2]
+            self.qb_channel[qubit] = self.qubit_channel_map[qubit][2]
+            self.qf_channel[qubit] = self.qubit_channel_map[qubit][3]
 
             if not self.qubit_instrument_map[qubit][0] is None:
                 self.qrm[qubit] = self.instruments[self.qubit_instrument_map[qubit][0]]
@@ -67,17 +65,21 @@ class MultiqubitPlatform(AbstractPlatform):
                     self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]
                 ]
             if not self.qubit_instrument_map[qubit][1] is None:
-                self.qcm[qubit] = self.instruments[self.qubit_instrument_map[qubit][1]]
-                self.qd_port[qubit] = self.qcm[qubit].ports[
-                    self.qcm[qubit].channel_port_map[self.qubit_channel_map[qubit][1]]
+                self.qdm[qubit] = self.instruments[self.qubit_instrument_map[qubit][1]]
+                self.qd_port[qubit] = self.qdm[qubit].ports[
+                    self.qdm[qubit].channel_port_map[self.qubit_channel_map[qubit][1]]
                 ]
             if not self.qubit_instrument_map[qubit][2] is None:
-                self.qbm[qubit] = self.instruments[self.qubit_instrument_map[qubit][2]]
-                self.qf_port[qubit] = self.qbm[qubit].dacs[self.qubit_channel_map[qubit][2]]
+                self.qfm[qubit] = self.instruments[self.qubit_instrument_map[qubit][2]]
+                self.qf_port[qubit] = self.qfm[qubit].ports[
+                    self.qfm[qubit].channel_port_map[self.qubit_channel_map[qubit][2]]
+                ]
+            if not self.qubit_instrument_map[qubit][3] is None:
+                self.qbm[qubit] = self.instruments[self.qubit_instrument_map[qubit][3]]
+                self.qb_port[qubit] = self.qbm[qubit].dacs[self.qubit_channel_map[qubit][3]]
 
     def execute_pulse_sequence(self, sequence: PulseSequence, nshots=None):
 
-        result = ExecutionResults(sequence, nshots)
         if not self.is_connected:
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
         if nshots is None:
@@ -165,9 +167,6 @@ class MultiqubitPlatform(AbstractPlatform):
                 for pulse in instrument_pulses[name]:
                     if pulse.serial in changed:
                         pulse.frequency += self.get_lo_drive_frequency(pulse.qubit)
-
-        result = ExecutionResult(..., ...)
-        ...
 
         return acquisition_results
 
