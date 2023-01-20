@@ -4,8 +4,8 @@ description: IQM 5-qubit device, controlled with Zurich Instruments.
 settings:
     hardware_avg: 1000
     sampling_rate: 2.4e+9
-
-    readout_delay: 50.e-6
+    Flux_Tunable:
+    readout_delay: 10.e-6 # 50.e-6
     readout_integration_delay: 40.e-9
     AcquisitionType: SPECTROSCOPY
     AveragingMode: CYCLIC #
@@ -23,7 +23,7 @@ topology:
 - [0, 0, 1, 1, 0, 0]
 - [0, 0, 1, 0, 1, 0]
 - [0, 0, 0, 0, 0, 1]
-    
+
 
 channels: ["L3-31_a","L3-31_b","L3-5","L1-16","L3-1","L1-19","L3-4","L1-23","L3-3","L1-25","L3-2","L1-21", "L1-1", "test_flux"]
 qubit_channel_map:
@@ -47,10 +47,10 @@ instruments:
             output_range: -10 # 10 ? # dBm
             lo_frequency: 5_500_000_000 #5_500_000_000
             if_frequency_0: -280_000_000 #22_000_000
-            if_frequency_1: -500_000_000 #22_000_000
-            if_frequency_2: 500_000_000 #22_000_000
-            if_frequency_3: 250_000_000 #22_000_000
-            if_frequency_4: 0_000_000 #22_000_000
+            if_frequency_1: -505_000_000 #22_000_000
+            if_frequency_2: 508_000_000 #22_000_000
+            if_frequency_3: 276_000_000 #22_000_000
+            if_frequency_4: 6_000_000 #22_000_000
 
     shfqc_qc:
         lib: zhinst
@@ -62,10 +62,10 @@ instruments:
             drive_range : -10
             lo_frequency: 4_100_000_000 #5_100_000_000
             if_frequency_0: -19_058_000
-            if_frequency_1: -19_058_000
-            if_frequency_2: -19_058_000 
-            if_frequency_3: -19_058_000
-            if_frequency_4: -19_058_000
+            if_frequency_1: 50_058_000
+            if_frequency_2: 100_058_000
+            if_frequency_3: 250_058_000
+            if_frequency_4: -200_058_000
 
     hdawg:
         lib: zhinst
@@ -83,7 +83,7 @@ instruments:
         roles: [flux]
         settings:
             ports: [0,2]
-                    
+
 
 native_gates:
     single_qubit:
@@ -107,7 +107,7 @@ native_gates:
                 start: 0
     #             phase: 0
             Flux:
-                amplitude: .1 
+                amplitude: .1
                 shape: Rectangular()
 
         1: # qubit number
@@ -130,9 +130,9 @@ native_gates:
                 start: 0
     #             phase: 0
             Flux:
-                amplitude: .1 
+                amplitude: .1
                 shape: Rectangular()
-            
+
         2: # qubit number
             RX:
                 duration: 90 #80
@@ -153,7 +153,7 @@ native_gates:
                 start: 0
     #             phase: 0
             Flux:
-                amplitude: .1 
+                amplitude: .1
                 shape: Rectangular()
         3: # qubit number
             RX:
@@ -175,7 +175,7 @@ native_gates:
                 start: 0
     #             phase: 0
             Flux:
-                amplitude: .1 
+                amplitude: .1
                 shape: Rectangular()
         4: # qubit number
             RX:
@@ -197,7 +197,7 @@ native_gates:
                 start: 0
     #             phase: 0
             Flux:
-                amplitude: .1 
+                amplitude: .1
                 shape: Rectangular()
 
     # two_qubit:
@@ -223,7 +223,7 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            resonator_freq: 5.222836e+9  #5.283e+9 
+            resonator_freq: 5.222836e+9  #5.283e+9
             resonator_polycoef_flux: []
             qubit_freq: 4.0939e+9
             T1: 0.
@@ -232,16 +232,16 @@ characterization:
             mean_exc_states: (0+0j)
             sweetspot: -0.0185
         1:
-            resonator_freq: 4.923995e+9  #4.998e+9 
+            resonator_freq: 4.923995e+9  #4.998e+9
             resonator_polycoef_flux: []
-            qubit_freq: 
+            qubit_freq:
             T1: 0.
             T2: 0.
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
             sweetspot: -0.02
         2:
-            resonator_freq: 6.083717e+9 #6.0785674e+9  #6.117e+9             
+            resonator_freq: 6.083717e+9 #6.0785674e+9  #6.117e+9
             resonator_polycoef_flux: []
             qubit_freq: 4.2932e+9
             T1: 0.
@@ -250,7 +250,7 @@ characterization:
             mean_exc_states: (0+0j)
             sweetspot: 0.019
         3:
-            resonator_freq: 5.777333e+9  #5.839e+9          
+            resonator_freq: 5.777333e+9  #5.839e+9
             resonator_polycoef_flux: []
             qubit_freq: 4.0843e+9
             T1: 0.
@@ -259,7 +259,7 @@ characterization:
             mean_exc_states: (0+0j)
             sweetspot: 0.020
         4:
-            resonator_freq: 5.506912e+9  #5.569e+9 
+            resonator_freq: 5.506912e+9  #5.569e+9
             resonator_polycoef_flux: []
             qubit_freq: 4.0978e+9
             T1: 0.

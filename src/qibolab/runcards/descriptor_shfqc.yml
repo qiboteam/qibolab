@@ -14,7 +14,23 @@ connections:
       ports: SGCHANNELS/3/OUTPUT
     - iq_signal: q4/drive_line
       ports: SGCHANNELS/4/OUTPUT
-    - iq_signal: q/measure_line
+    - iq_signal: q0/measure_line
       ports: [QACHANNELS/0/OUTPUT]
-    - acquire_signal: q/acquire_line
+    - acquire_signal: q0/acquire_line
+      ports: [QACHANNELS/0/INPUT]
+    - iq_signal: q1/measure_line
+      ports: [QACHANNELS/0/OUTPUT]
+    - acquire_signal: q1/acquire_line
+      ports: [QACHANNELS/0/INPUT]
+    - iq_signal: q2/measure_line
+      ports: [QACHANNELS/0/OUTPUT]
+    - acquire_signal: q2/acquire_line
+      ports: [QACHANNELS/0/INPUT]
+    - iq_signal: q3/measure_line
+      ports: [QACHANNELS/0/OUTPUT]
+    - acquire_signal: q3/acquire_line
+      ports: [QACHANNELS/0/INPUT]
+    - iq_signal: q4/measure_line
+      ports: [QACHANNELS/0/OUTPUT]
+    - acquire_signal: q4/acquire_line
       ports: [QACHANNELS/0/INPUT]
