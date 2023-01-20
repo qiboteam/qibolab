@@ -126,7 +126,6 @@ class MultiqubitPlatform(AbstractPlatform):
 
                 self.instruments[name].process_pulse_sequence(instrument_pulses[name], nshots, self.repetition_duration)
                 self.instruments[name].upload()
-
         for name in self.instruments:
             if "control" in roles[name] or "readout" in roles[name]:
                 if not instrument_pulses[name].is_empty:
@@ -160,8 +159,10 @@ class MultiqubitPlatform(AbstractPlatform):
                 instrument_pulses[name] = sequence.get_channel_pulses(*self.instruments[name].channels)
                 for pulse in instrument_pulses[name]:
                     if pulse.serial in changed:
+                        pippo = acquisition_results[pulse.serial]
                         # if abs(pulse.frequency) > 300e6:
                         pulse.frequency += self.get_lo_readout_frequency(pulse.qubit)
+                        acquisition_results[pulse.serial] = pippo
             if "control" in roles[name]:
                 instrument_pulses[name] = sequence.get_channel_pulses(*self.instruments[name].channels)
                 for pulse in instrument_pulses[name]:
