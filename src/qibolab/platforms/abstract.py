@@ -139,7 +139,7 @@ class AbstractPlatform(ABC):
                     "Cannot establish connection to " f"{self.name} instruments. " f"Error captured: '{exception}'",
                 )
 
-    def setup(self):
+    def setup(self):  # pragma: no cover
         raise_error(NotImplementedError)
 
     def start(self):
@@ -333,11 +333,11 @@ class AbstractPlatform(ABC):
 
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
-    def set_attenuation(self, qubit, att):
+    def set_attenuation(self, qubit, att):  # pragma: no cover
         raise_error(NotImplementedError)
 
-    def set_gain(self, qubit, gain):
+    def set_gain(self, qubit, gain):  # pragma: no cover
         raise_error(NotImplementedError)
 
-    def set_current(self, qubit, curr):
+    def set_current(self, qubit, curr):  # pragma: no cover
         raise_error(NotImplementedError)

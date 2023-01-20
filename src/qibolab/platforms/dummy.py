@@ -49,20 +49,11 @@ class DummyPlatform(AbstractPlatform):
             # results[qubit] = {pulse: (np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q)}
         return results
 
-    def get_resonator_frequency(self, qubit):
-        return self.characterization["single_qubit"][qubit]["resonator_freq"]
-
-    def set_resonator_frequency(self, qubit, freq):
-        self.characterization["single_qubit"][qubit]["resonator_freq"] = freq
-
-    def set_lo_frequency(self, qubit, freq):
+    def set_attenuation(self, qubit, att):  # pragma: no cover
         pass
 
-    def set_attenuation(self, qubit, att):
+    def set_current(self, qubit, current):  # pragma: no cover
         pass
 
-    def get_current(self, qubit):
-        pass
-
-    def set_current(self, qubit, current):
+    def set_gain(self, qubit, gain):  # pragma: no cover
         pass
