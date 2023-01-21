@@ -4,7 +4,7 @@ import numpy as np
 import yaml
 from qibo.config import log, raise_error
 
-from qibolab.platforms.abstract import AbstractPlatform
+from qibolab.platforms.abstract import AbstractPlatform, ExecutionResults
 
 
 class DummyPlatform(AbstractPlatform):
@@ -42,11 +42,12 @@ class DummyPlatform(AbstractPlatform):
         ro_pulses = {pulse.qubit: pulse.serial for pulse in sequence.ro_pulses}
 
         results = {}
-        for qubit, pulse in ro_pulses.items():
-            i, q = np.random.random(2)
-            results[pulse] = (np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q)
-            results[qubit] = (np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q)
-            # results[qubit] = {pulse: (np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q)}
+        for pulse in ro_pulses.values():
+            if nshots is not None:
+                i, q, sample = np.random.rand(3, nshots)
+            else:
+                i, q, sample = np.random.random(3)
+            results[pulse] = ExecutionResults(i, q, sample)
         return results
 
     def set_attenuation(self, qubit, att):  # pragma: no cover

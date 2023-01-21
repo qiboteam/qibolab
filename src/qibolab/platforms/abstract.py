@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from typing import List
 
+import numpy as np
 import yaml
 from qibo import gates
 from qibo.config import log, raise_error
@@ -30,7 +32,38 @@ class Qubit:
     state1_voltage: int = 0
     mean_gnd_states: complex = 0 + 0.0j
     mean_exc_states: complex = 0 + 0.0j
-    resonator_polycoef_flux: list = field(default_factory=list)
+    resonator_polycoef_flux: List[float] = field(default_factory=list)
+
+
+@dataclass
+class ExecutionResults:
+    i: np.ndarray
+    q: np.ndarray
+    sample: np.ndarray
+
+    def msr(self):
+        return np.sqrt(self.i**2 + self.q**2)
+
+    def phase(self):
+        return np.angle(self.i + 1j * self.q)
+
+    def to_dict(self, average=True, probability=False):
+        if probability:
+            return {"probability": 1 - 2 * self.sample.mean()}
+        if average:
+            return {
+                "MSR[V]": self.msr().mean(),
+                "i[V]": self.i.mean(),
+                "q[V]": self.q.mean(),
+                "phase[rad]": self.phase().mean(),
+            }
+        else:
+            return {
+                "MSR[V]": self.msr().ravel(),
+                "i[V]": self.i.ravel(),
+                "q[V]": self.q.ravel(),
+                "phase[rad]": self.phase().ravel(),
+            }
 
 
 class AbstractPlatform(ABC):

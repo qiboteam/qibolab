@@ -1,6 +1,7 @@
+import numpy as np
 from qibo.config import raise_error
 
-from qibolab.platforms.abstract import AbstractPlatform
+from qibolab.platforms.abstract import AbstractPlatform, ExecutionResults
 from qibolab.pulses import PulseSequence
 
 
@@ -99,8 +100,9 @@ class MultiqubitPlatform(AbstractPlatform):
         # Process Pulse Sequence. Assign pulses to instruments and generate waveforms & program
         instrument_pulses = {}
         roles = {}
-
+        ro_pulses = {}
         changed = {}
+        data = {}
         for name in self.instruments:
             roles[name] = self.settings["instruments"][name]["roles"]
             if "control" in roles[name] or "readout" in roles[name]:
@@ -109,7 +111,8 @@ class MultiqubitPlatform(AbstractPlatform):
 
                 if "readout" in roles[name]:
                     for pulse in instrument_pulses[name]:
-                        if abs(pulse.frequency) > 300e6:
+                        ro_pulses[pulse.serial] = pulse
+                        if abs(pulse.frequency) > self.instruments[name].FREQUENCY_LIMIT:
                             # TODO: implement algorithm to find correct LO
                             if_frequency = self.native_gates["single_qubit"][pulse.qubit]["MZ"]["frequency"]
                             self.set_lo_readout_frequency(pulse.qubit, pulse.frequency - if_frequency)
@@ -117,7 +120,7 @@ class MultiqubitPlatform(AbstractPlatform):
                             changed[pulse.serial] = True
                 elif "control" in roles[name]:
                     for pulse in instrument_pulses[name]:
-                        if abs(pulse.frequency) > 500e6:
+                        if abs(pulse.frequency) > self.instruments[name].FREQUENCY_LIMIT:
                             # TODO: implement algorithm to find correct LO
                             if_frequency = self.native_gates["single_qubit"][pulse.qubit]["RX"]["frequency"]
                             self.set_lo_drive_frequency(pulse.qubit, pulse.frequency - if_frequency)
@@ -169,9 +172,13 @@ class MultiqubitPlatform(AbstractPlatform):
                     if pulse.serial in changed:
                         pulse.frequency += self.get_lo_drive_frequency(pulse.qubit)
 
-        return acquisition_results
-    
-    def measure_fidelity(self, nshots=None):
+        for key in ro_pulses:
+            data[key] = ExecutionResults(
+                acquisition_results[key][0], acquisition_results[key][1], np.array(acquisition_results[key][2])
+            )
+        return data
+
+    def measure_fidelity(self, qubits=None, nshots=None):
         import numpy as np
         self.reload_settings()
         results = {}
