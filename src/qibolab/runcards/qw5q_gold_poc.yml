@@ -5,7 +5,9 @@ qubits: [0, 1, 2, 3, 4, 5]
 
 options:
     sampling_rate: 1000000000
-    relaxation_time: 300000
+    relaxation_time: 50000
+    time_of_flight: 280
+    smearing: 0
 
 topology: # qubit - qubit connections
 -   [ 1, 0, 1, 0, 0, 0]
@@ -24,11 +26,20 @@ qubit_channel_map: # [ReadOut, Feedback, QubitDrive, QubitFlux]
     5: ["L3-25_a", "L2-5", null, null]
 
 native_gates:
+    two_qubit:
+        2-1: # qubit pair
+            CZ:
+                duration: 30
+                amplitude: 0.05477
+                shape: Rectangular()
+                phase_control: -1.5707963267948966
+                phase_target: -1.5707963267948966
+
     single_qubit:
         0: # qubit number
             RX:
-                duration: 80
-                amplitude: 0.01
+                duration: 40
+                amplitude: 0.005
                 frequency: 4_700_000_000
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -44,9 +55,11 @@ native_gates:
                 phase: 0
         1: # qubit number
             RX:
-                duration: 40 #100
-                amplitude: 0.05
+                duration: 40
+                amplitude: 0.0484
                 frequency: 4_855_663_000
+                #frequency: 4_718_515_000 # 02 transition (more likely)
+                #frequency: 4_709_500_000 # 02 transition (wrong?)
                 shape: Drag(5, -0.02)
                 type: qd # qubit drive
                 start: 0
@@ -61,9 +74,11 @@ native_gates:
                 phase: 0
         2: # qubit number
             RX:
-                duration: 40 #116
-                amplitude: 0.06
-                frequency: 5_798_648_000
+                duration: 40
+                amplitude: 0.05682
+                #frequency: 5_798_648_000
+                frequency: 5_799_876_000
+                #frequency: 5_661_400_000 # 02 transition
                 shape: Drag(5, -0.04) #Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -78,11 +93,9 @@ native_gates:
                 phase: 0
         3: # qubit number
             RX:
-                duration: 40 #100
-                amplitude: 0.04
-                #frequency: 6_108_500_000
-                frequency: 6_500_000_000
-                #frequency: 6_062_500_000
+                duration: 40
+                amplitude: 0.145
+                frequency: 6_760_700_000
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -97,10 +110,9 @@ native_gates:
                 phase: 0
         4: # qubit number
             RX:
-                duration: 40 #124
-                amplitude: 0.06
-                #frequency: 6_585_132_000
-                frequency: 6_584_131_000
+                duration: 40
+                amplitude: 0.0617
+                frequency: 6_585_053_000
                 shape: Drag(5, 0.0) #Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -115,8 +127,8 @@ native_gates:
                 phase: 0
         5: # qubit number
             RX:
-                duration: 80
-                amplitude: 0.01
+                duration: 40
+                amplitude: 0.001
                 frequency: 6.3925e+9
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -124,135 +136,120 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 2000
-                amplitude: 0.1
+                amplitude: 0.0025
                 frequency: 7_008_300_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
                 phase: 0
 
-    two_qubit:
-        0-2: # qubit numbers
-            CZ:
-                pulse_sequence:
-                    -   start: 0
-                        duration: 20
-                        amplitude: 0.5
-                        frequency: 0
-                        shape: RTZ()
-                        phase: null
-                        channel: 2
-                        type: qf # qubit flux
-                    -   start: 0
-                        duration: 4
-                        amplitude: 0.01
-                        frequency: 0
-                        shape: RTZ()
-                        phase: null
-                        channel: 2
-                        type: qf # qubit flux
 
 characterization:
-    single_qubit:
-        0:
-            resonator_freq:  7.226834234e+9
-            qubit_freq: 3.92965e+9
-            T1: 2192.895853326451
-            T2: 6933.310025260633
-            state0_voltage: 1152
-            state1_voltage: 2500
-            mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
-            mean_exc_states: (0.00011805761369462914+0.00018601039195510947j)
-            sweetspot: 0.001
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
-            # required for mixers (not sure if it should be here)
-            mixer_drive_g: 0.0
-            mixer_drive_phi: 0.0
-            mixer_readout_g: 0.0
-            mixer_readout_phi: 0.0
-        1:
-            resonator_freq: 7.453328e+9
-            qubit_freq: 3_846_769_603
-            T1: 26774
-            T2: 7961
-            state0_voltage: 1650
-            state1_voltage: 3918
-            mean_gnd_states: (-0.0010238346411041346-0.001294845560461652j)
-            mean_exc_states: (-0.0018147265893322573-0.003225323063990513j)
-            sweetspot: -0.00384
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
-            # required for mixers (not sure if it should be here)
-            mixer_drive_g: 0.0
-            mixer_drive_phi: 0.0
-            mixer_readout_g: 0.0
-            mixer_readout_phi: 0.0
-        2:
-            resonator_freq: 7_655_000_000
-            qubit_freq: 5_800_000_000
-            T1: 33875
-            T2: 8479
-            state0_voltage: 1803
-            state1_voltage: 3808
-            mean_gnd_states: (-0.0013963078303444584-0.0010014455851625904j)
-            mean_exc_states: (-0.002143656599102605-0.0030204793616096215j)
-            sweetspot: -0.00154
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
-            # required for mixers (not sure if it should be here)
-            mixer_drive_g: 0.0
-            mixer_drive_phi: 0.0
-            mixer_readout_g: 0.0
-            mixer_readout_phi: 0.0
-        3:
-            resonator_freq: 7.802218e+9
-            qubit_freq: 6_108_500_000
-            T1: 0
-            T2: 0
-            state0_voltage: 785
-            state1_voltage: 1720
-            mean_gnd_states: (-0.0007211155273345421-0.0002989002051225009j)
-            mean_exc_states: (-0.0007188916050170232-0.0003030798883247468j)
-            sweetspot: -0.01126
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
-            # required for mixers (not sure if it should be here)
-            mixer_drive_g: 0.0
-            mixer_drive_phi: 0.0
-            mixer_readout_g: 0.0
-            mixer_readout_phi: 0.0
-        4:
-            resonator_freq: 8.057348e+9
-            qubit_freq: 6_012_161_626
-            T1: 26948
-            T2: 11930
-            state0_voltage: 1232
-            state1_voltage: 3502
-            mean_gnd_states: (-0.00018772900216007803-0.001083608641993983j)
-            mean_exc_states: (-5.0619544978238784e-05-0.0033399404802163086j)
-            sweetspot: 0.00742
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
-            # required for mixers (not sure if it should be here)
-            mixer_drive_g: 0.0
-            mixer_drive_phi: 0.0
-            mixer_readout_g: 0.0
-            mixer_readout_phi: 0.0
-        5:
-            resonator_freq: 7_008_300_000
-            resonator_freq_off: 7.e+9
-            qubit_freq: 6.3925e+9 #3.e+9
-            T1: 2192.895853326451
-            T2: 6933.310025260633
-            state0_voltage: 2911
-            state1_voltage: 5372
-            mean_gnd_states: (0.0035271385849328435+0.006026458509304781j)
-            mean_exc_states: (0.00011805761369462914+0.00018601039195510947j)
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
-            # required for mixers (not sure if it should be here)
-            mixer_drive_g: 0.0
-            mixer_drive_phi: 0.0
-            mixer_readout_g: 0.0
-            mixer_readout_phi: 0.0
+    0:
+        resonator_frequency: null
+        qubit_frequency: null
+        T1: null
+        T2: null
+        sweetspot: 0.0
+        ff_filter: []
+        fb_filter: []
+        # parameters for single shot classification
+        threshold: null
+        iq_angle: null
+        # required for integration weights (not sure if it should be here)
+        rotation_angle: 0.0
+        # required for mixers (not sure if it should be here)
+        mixer_drive_g: 0.0
+        mixer_drive_phi: 0.0
+        mixer_readout_g: 0.0
+        mixer_readout_phi: 0.0
+    1:
+        resonator_frequency: null
+        qubit_frequency: null
+        T1: null
+        T2: null
+        sweetspot: -0.048  # -0.058  # -0.022
+        ff_filter: []
+        fb_filter: []
+        # parameters for single shot classification
+        threshold: 0.0003781194559355205
+        iq_angle: 1.649635973527094
+        # required for integration weights (not sure if it should be here)
+        rotation_angle: 0.0
+        # required for mixers (not sure if it should be here)
+        mixer_drive_g: 0.0
+        mixer_drive_phi: 0.0
+        mixer_readout_g: 0.0
+        mixer_readout_phi: 0.0
+    2:
+        resonator_frequency: null
+        qubit_frequency: null
+        T1: null
+        T2: null
+        sweetspot: -0.046
+        ff_filter: [1.0684635881381783, -1.0163217174522334]
+        fb_filter: [0.947858129314055]
+        # parameters for single shot classification
+        threshold: 0.0015386201320889113
+        iq_angle: 5.262511148434912
+        # required for integration weights (not sure if it should be here)
+        rotation_angle: 0.0
+        # required for mixers (not sure if it should be here)
+        mixer_drive_g: 0.0
+        mixer_drive_phi: 0.0
+        mixer_readout_g: 0.0
+        mixer_readout_phi: 0.0
+    3:
+        resonator_frequency: null
+        qubit_frequency: null
+        T1: null
+        T2: null
+        sweetspot: 0.032  # 0.042 # 0.026
+        ff_filter: []
+        fb_filter: []
+        # parameters for single shot classification
+        threshold: 0.0023266787732580106
+        iq_angle: 2.782366501012283
+        # required for integration weights (not sure if it should be here)
+        rotation_angle: 0.0
+        # required for mixers (not sure if it should be here)
+        mixer_drive_g: 0.0
+        mixer_drive_phi: 0.0
+        mixer_readout_g: 0.0
+        mixer_readout_phi: 0.0
+    4:
+        resonator_frequency: null
+        qubit_frequency: null
+        T1: null
+        T2: null
+        sweetspot: -0.058  # -0.066
+        ff_filter: []
+        fb_filter: []
+        # parameters for single shot classification
+        threshold: 0.0012714813260028832
+        iq_angle: 6.189017097900692
+        # required for integration weights (not sure if it should be here)
+        rotation_angle: 0.0
+        # required for mixers (not sure if it should be here)
+        mixer_drive_g: 0.0
+        mixer_drive_phi: 0.0
+        mixer_readout_g: 0.0
+        mixer_readout_phi: 0.0
+    5:
+        resonator_frequency: null
+        qubit_frequency: null
+        T1: null
+        T2: null
+        sweetspot: 0.0
+        ff_filter: []
+        fb_filter: []
+        # parameters for single shot classification
+        threshold: null
+        iq_angle: null
+        # required for integration weights (not sure if it should be here)
+        rotation_angle: 0.0
+        # required for mixers (not sure if it should be here)
+        mixer_drive_g: 0.0
+        mixer_drive_phi: 0.0
+        mixer_readout_g: 0.0
+        mixer_readout_phi: 0.0

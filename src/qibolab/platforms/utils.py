@@ -39,6 +39,7 @@ class Channel:
             new.lo_power = 0.0
 
             new.offset = 0.0
+            new.filter = None
 
             cls.instances[name] = new
 

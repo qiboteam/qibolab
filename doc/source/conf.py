@@ -59,6 +59,11 @@ exclude_patterns = []
 #
 html_theme = "furo"
 
+# custom title
+html_title = "Version " + release
+
+# custom html theme options (colors and font)
+
 html_theme_options = {
     "light_css_variables": {
         "color-brand-primary": "#6400FF",

@@ -1,8 +1,8 @@
 nqubits: 1
-description: 1-qubit device from Qilimanjaro at TII SD fridge, controlled with qblox cluster rf.
+description: 1-qubit device TII0 in XLD fridge, controlled with qblox cluster rf.
 
 settings:
-    hardware_avg: 1024
+    hardware_avg: 4096
     repetition_duration: 200_000
     sampling_rate: 1_000_000_000
 
@@ -11,10 +11,10 @@ qubits: [0]
 topology: # qubit - qubit connections
 -   [1]
 
-channels: [1, 2, 3]
+channels: ['W4_qd', 'W4_ro', 'V2']
 
-qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
-    0: [2, 1, null]
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux, QubitBias]
+    0: ['W4_ro', 'W4_qd', null, null]
 
 instruments:
     cluster:
@@ -33,10 +33,10 @@ instruments:
         settings:
             ports:
                 o1:
-                    attenuation                 : 58
+                    attenuation                 : 44
                     lo_enabled                  : true
-                    lo_frequency                : 7804847574                    # (Hz) from 2e9 to 18e9
-                    gain                        : 0.4                           # for path0 and path1 -1.0<=v<=1.0
+                    lo_frequency                : 7_275_166_285                    # (Hz) from 2e9 to 18e9
+                    gain                        : 0.45                           # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en             : false
                 i1:
                     hardware_demod_en           : false
@@ -45,21 +45,21 @@ instruments:
             acquisition_duration        : 2000
 
             channel_port_map:  # Refrigerator Channel : Instrument port
-                2: o1 # IQ Port = out0 & out1
-                3: i1
+                'W4_ro': o1 # IQ Port = out0 & out1
+                'V2': i1
 
     qcm_rf:
         lib: qblox
         class: ClusterQCM_RF
-        address: 192.168.0.3:2
+        address: 192.168.0.3:13
         roles: [control]
         settings:
             ports:
                 o1:
-                    attenuation                  : 8 # (dB)
+                    attenuation                  : 0 # (dB)
                     lo_enabled                   : true
-                    lo_frequency                 : 5282293989 # (Hz) from 2e9 to 18e9
-                    gain                         : 0.38 # for path0 and path1 -1.0<=v<=1.0
+                    lo_frequency                 : 5_385_141_908 # (Hz) from 2e9 to 18e9
+                    gain                         : 0.51 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
                 o2:
                     attenuation                  : 60 # (dB)
@@ -69,33 +69,41 @@ instruments:
                     hardware_mod_en              : false
 
             channel_port_map:
-                1: o1 # IQ Port = out0 & out1
+                'W4_qd': o1 # IQ Port = out0 & out1
                 99: o2
+    # twpa_pump:
+    #     lib: rohde_schwarz
+    #     class: SGS100A
+    #     address: 192.168.0.37
+    #     roles: [other]
+    #     settings:
+    #         frequency: 6_837_500_000 # Hz
+    #         power: 0 # dBm
 
 native_gates:
     single_qubit:
         0: # qubit number
             RX:
                 duration: 40                    # should be multiple of 4
-                amplitude: 0.8695
-                frequency: -200_000_000
-                shape: Drag(5, 0.05096)
+                amplitude: 0.455
+                frequency: -150_000_000          # difference in qubit frequency
+                shape: Gaussian(5)
                 type: qd # qubit drive
             MZ:
-                duration: 2400
-                amplitude: 0.9
-                frequency: 20_000_000
+                duration: 2000
+                amplitude: 0.3
+                frequency: 20_000_000           # Difference in resonator frequency
                 shape: Rectangular()
                 type: ro # readout
 
 characterization:
     single_qubit:
         0:
-            resonator_freq: 7824847574
-            qubit_freq: 5082293989
-            T1: 17744
+            resonator_freq: 7_295_166_285
+            qubit_freq: 5_235_141_908
+            T1: 21785
             T2: 8385
-            state0_voltage: 891
-            state1_voltage: 357
-            mean_gnd_states: (-5.543255134868772e-05+0.0008975930158821524j)
-            mean_exc_states: (0.0001446400604158933+0.0003369969077198778j)
+            state0_voltage: 1000
+            state1_voltage: 200
+            mean_gnd_states: (0+0j)
+            mean_exc_states: (0+0j)

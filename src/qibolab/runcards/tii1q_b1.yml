@@ -1,0 +1,115 @@
+nqubits: 1
+description: TII 1-qubit device (batch1) at XLD fridge, controlled with qblox cluster rf.
+
+settings:
+    hardware_avg: 1024
+    repetition_duration: 200_000
+    sampling_rate: 1_000_000_000
+
+qubits: [0]
+
+topology: # qubit - qubit connections
+-   [1]
+
+channels: [L3-18_qd, L3-18_ro, L2-2]
+
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux, QubitBias]
+    0: [L3-18_ro, L3-18_qd, null, null]
+
+instruments:
+    cluster:
+        lib: qblox
+        class: Cluster
+        address: 192.168.0.20
+        roles: [other]
+        settings:
+            reference_clock_source      : internal                      # external or internal
+
+    qrm_rf:
+        lib: qblox
+        class: ClusterQRM_RF
+        address: 192.168.0.20:16
+        roles: [readout]
+        settings:
+            ports:
+                o1:
+                    attenuation                 : 48
+                    lo_enabled                  : true
+                    lo_frequency                : 7_351_405_000                    # (Hz) from 2e9 to 18e9
+                    gain                        : 0.3                           # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en             : false
+                i1:
+                    hardware_demod_en           : true
+
+            acquisition_hold_off        : 200
+            acquisition_duration        : 2000
+
+            classification_parameters:
+                0:
+                    rotation_angle: 345.208
+                    threshold: -0.000841
+
+            channel_port_map:  # Refrigerator Channel : Instrument port
+                L3-18_ro: o1 # IQ Port = out0 & out1
+                L2-2: i1
+
+    qcm_rf:
+        lib: qblox
+        class: ClusterQCM_RF
+        address: 192.168.0.20:12
+        roles: [control]
+        settings:
+            ports:
+                o1:
+                    attenuation                  : 0 # (dB)
+                    lo_enabled                   : true
+                    lo_frequency                 : 5_641_445_000 # (Hz) from 2e9 to 18e9
+                    gain                         : 0.266 # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o2:
+                    attenuation                  : 60 # (dB)
+                    lo_enabled                   : false
+                    lo_frequency                 : 6_000_000_000 # (Hz) from 2e9 to 18e9
+                    gain                         : 0 # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en              : false
+
+            channel_port_map:
+                L3-18_qd: o1 # IQ Port = out0 & out1
+                99: o2
+
+    twpa_pump:
+        lib: rohde_schwarz
+        class: SGS100A
+        address: 192.168.0.37
+        roles: [other]
+        settings:
+            frequency: 6_837_500_000 # Hz
+            power: 0 # dBm
+
+native_gates:
+    single_qubit:
+        0: # qubit number
+            RX:
+                duration: 40                    # should be multiple of 4
+                amplitude: 0.8
+                frequency: -200_000_000          # difference in qubit frequency
+                shape: Drag(5,-1.5)
+                type: qd # qubit drive
+            MZ:
+                duration: 2000
+                amplitude: 0.7
+                frequency: 20_000_000           # Difference in resonator frequency
+                shape: Rectangular()
+                type: ro # readout
+
+characterization:
+    single_qubit:
+        0:
+            resonator_freq: 7_371_405_000
+            qubit_freq: 5_441_445_000
+            T1: 22881
+            T2: 5800
+            state0_voltage: 0
+            state1_voltage: 0
+            mean_gnd_states: (-0.0012548976062530532-0.00023722554958475822j)
+            mean_exc_states: (-0.0004659510503175379+6.980508060576453e-06j)

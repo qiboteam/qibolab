@@ -455,7 +455,7 @@ class Pulse:
             raise TypeError(
                 f"duration argument type should be intSymbolicExpression or int, got {type(value).__name__}"
             )
-        elif not value > 0:
+        elif not value >= 0:
             raise ValueError(f"duration argument must be >= 0, got {value}")
         if isinstance(value, se_int):
             self._duration = se_int(value.symbol)["_p" + str(self._id) + "_duration"]
@@ -1233,7 +1233,7 @@ class PulseSequence:
 
         for pulse in pulses:
             self.pulses.append(pulse)
-        self.pulses.sort(key=lambda item: (item.channel, item.start))
+        self.pulses.sort(key=lambda item: (item.start, item.channel))
 
     def append_at_end_of_channel(self, *pulses):
         """Appends pulses to the end of the channel (one at a time), modifying their start time.

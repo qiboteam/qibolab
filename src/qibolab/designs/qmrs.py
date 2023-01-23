@@ -65,13 +65,6 @@ class QMRSDesign(AbstractInstrumentDesign):
         Channel("L4-4").ports = [("con2", 4)]
         Channel("L4-5").ports = [("con2", 5)]
 
-        # Set flux offsets
-        Channel("L4-1").offset = -0.048  # -0.058  # -0.022
-        Channel("L4-2").offset = -0.048  # -0.048
-        Channel("L4-3").offset = 0.034  # 0.042 # 0.026
-        Channel("L4-4").offset = -0.058  # -0.066  # -0.066
-        Channel("L4-5").offset = 0.0
-
         # Instantiate local oscillators (HARDCODED)
         self.local_oscillators = [
             SGS100A("lo_readout_a", "192.168.0.39"),
@@ -125,12 +118,21 @@ class QMRSDesign(AbstractInstrumentDesign):
                     )
             self.is_connected = True
 
-    def setup(self, qubits, relaxation_time):
-        # setup QM (HARDCODED values for configuration)
-        self.opx.setup(qubits, relaxation_time=relaxation_time, time_of_flight=280, smearing=0)
+    def setup(self, qubits, **kwargs):
+        relaxation_time = kwargs["relaxation_time"]
+        time_of_flight = kwargs["time_of_flight"]
+        smearing = kwargs["smearing"]
 
-        # set LO frequencies
         for qubit in qubits:
+            if qubit.flux is not None:
+                # set flux offset
+                qubit.flux.offset = qubit.characterization.sweetspot
+                # Set flux filters (useful for CZ gates)
+                qubit.flux.filter = {
+                    "feedforward": qubit.characterization.ff_filter,
+                    "feedback": qubit.characterization.fb_filter,
+                }
+            # set LO frequencies
             for channel in [qubit.readout, qubit.drive]:
                 if channel is not None and channel.local_oscillator is not None:
                     # set LO frequency
@@ -140,6 +142,9 @@ class QMRSDesign(AbstractInstrumentDesign):
                         lo.setup(frequency=frequency, power=channel.lo_power)
                     else:
                         log.warn(f"There is no connection to {lo}. Frequencies were not set.")
+
+        # setup QM
+        self.opx.setup(qubits, relaxation_time, time_of_flight, smearing)
 
     def start(self):
         self.opx.start()
@@ -160,8 +165,8 @@ class QMRSDesign(AbstractInstrumentDesign):
                 lo.disconnect()
             self.is_connected = False
 
-    def sweep(self, qubits, sequence, *sweepers, nshots=1024):
-        return self.opx.sweep(qubits, sequence, *sweepers, nshots=nshots)
+    def sweep(self, qubits, sequence, *sweepers, nshots=1024, average=True):
+        return self.opx.sweep(qubits, sequence, *sweepers, nshots=nshots, average=average)
 
     def play(self, qubits, sequence, nshots=1024):
         return self.opx.play(qubits, sequence, nshots)

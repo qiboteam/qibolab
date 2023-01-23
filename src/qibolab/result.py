@@ -11,11 +11,11 @@ class ExecutionResult:
     """
 
     # TODO: Distinguish cases where we have single shots vs averaged values
-    # TODO: Implement methods to return classified shots
 
-    def __init__(self, i_values, q_values):
+    def __init__(self, i_values, q_values, shots=None):
         self.I = i_values
         self.Q = q_values
+        self.shots = shots
         self.in_progress = False
 
     @property
@@ -26,6 +26,10 @@ class ExecutionResult:
     def phase(self):
         phase = np.angle(self.I + 1j * self.Q)
         return signal.detrend(np.unwrap(phase))
+
+    @property
+    def probability(self):
+        return np.sum(self.shots) / len(self.shots)
 
     def to_dict(self):
         return {

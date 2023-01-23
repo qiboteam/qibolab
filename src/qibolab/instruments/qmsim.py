@@ -35,7 +35,7 @@ class QMSim(QMOPX):
             self.manager = QuantumMachinesManager(host, int(port))
 
     @staticmethod
-    def fetch_results(result, readout_serials):
+    def fetch_results(result, ro_pulses):
         return result
 
     def execute_program(self, program):
