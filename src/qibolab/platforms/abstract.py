@@ -37,17 +37,31 @@ class Qubit:
 
 @dataclass
 class ExecutionResults:
+    """Data strucutre to store output from `execute_pulse_sequence`."""
+
     i: np.ndarray
     q: np.ndarray
     sample: np.ndarray
 
     def msr(self):
+        """Computes MSR value."""
         return np.sqrt(self.i**2 + self.q**2)
 
     def phase(self):
+        """Computes phase value."""
         return np.angle(self.i + 1j * self.q)
 
     def to_dict(self, average=True, probability=False):
+        """Serialize output in dict.
+        Args:
+            probability (bool): If `True` returns a dictionary of the form
+                                {'probability: [p1, p2, ...] where p_i are
+                                the probability of every shot.
+            average (bool): If `True` returns a dictionary of the form
+                            {'MSR[V]' : v, 'i[V]' : i, 'q[V]' : q, 'phase[rad]' : phase}.
+                            Where each value is averaged over the number shots. If `False`
+                            all the values for each shot are saved.
+        """
         if probability:
             return {"probability": 1 - 2 * self.sample.mean()}
         if average:
@@ -367,10 +381,34 @@ class AbstractPlatform(ABC):
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
     def set_attenuation(self, qubit, att):  # pragma: no cover
+        """Set attenuation value. Usefeul for calibration routines such as punchout.
+
+        Args:
+            qubit (int): qubit whose attenuation will be modified.
+            att (int): new value of the attenuation (dB).
+        Returns:
+            None
+        """
         raise_error(NotImplementedError)
 
     def set_gain(self, qubit, gain):  # pragma: no cover
+        """Set gain value. Usefeul for calibration routines such as Rabis.
+
+        Args:
+            qubit (int): qubit whose attenuation will be modified.
+            gain (int): new value of the gain (dimensionless).
+        Returns:
+            None
+        """
         raise_error(NotImplementedError)
 
     def set_current(self, qubit, curr):  # pragma: no cover
+        """Set current value. Usefeul for calibration routines involving flux.
+
+        Args:
+            qubit (int): qubit whose attenuation will be modified.
+            curr (int): new value of the current (A).
+        Returns:
+            None
+        """
         raise_error(NotImplementedError)
