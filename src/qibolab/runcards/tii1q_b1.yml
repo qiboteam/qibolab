@@ -11,10 +11,10 @@ qubits: [0]
 topology: # qubit - qubit connections
 -   [1]
 
-channels: ['L3-18_qd', 'L3-18_ro', 'L2-2']
+channels: [L3-18_qd, L3-18_ro, L2-2]
 
-qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
-    0: ['L3-18_ro', 'L3-18_qd', null]
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux, QubitBias]
+    0: [L3-18_ro, L3-18_qd, null, null]
 
 instruments:
     cluster:
@@ -50,8 +50,8 @@ instruments:
                     threshold: -0.000841
 
             channel_port_map:  # Refrigerator Channel : Instrument port
-                'L3-18_ro': o1 # IQ Port = out0 & out1
-                'L2-2': i1
+                L3-18_ro: o1 # IQ Port = out0 & out1
+                L2-2: i1
 
     qcm_rf:
         lib: qblox
@@ -74,7 +74,7 @@ instruments:
                     hardware_mod_en              : false
 
             channel_port_map:
-                'L3-18_qd': o1 # IQ Port = out0 & out1
+                L3-18_qd: o1 # IQ Port = out0 & out1
                 99: o2
 
     twpa_pump:
