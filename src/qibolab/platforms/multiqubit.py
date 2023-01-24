@@ -1,3 +1,5 @@
+from copy import copy
+
 import numpy as np
 from qibo.config import raise_error
 
@@ -175,7 +177,7 @@ class MultiqubitPlatform(AbstractPlatform):
 
         for ro_pulse in ro_pulses.values():
             data[ro_pulse.serial] = ExecutionResults.from_components(*acquisition_results[key])
-            data[ro_pulse.qubit] = data[ro_pulse.serial]
+            data[ro_pulse.qubit] = copy(data[ro_pulse.serial])
         return data
 
     def measure_fidelity(self, qubits=None, nshots=None):
