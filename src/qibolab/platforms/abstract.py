@@ -174,7 +174,7 @@ class AbstractPlatform(ABC):
                 readout, drive, flux = settings["qubit_channel_map"][q]
                 feedback = None
             else:
-                readout, feedback, drive, flux = settings["qubit_channel_map"][q]
+                readout, drive, flux, feedback = settings["qubit_channel_map"][q]
             self.qubits[q] = qubit = Qubit(
                 q,
                 readout=self.get_channel(readout),
