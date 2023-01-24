@@ -1,4 +1,5 @@
 import time
+from copy import copy
 
 import numpy as np
 from qibo.config import log, raise_error
@@ -51,7 +52,7 @@ class DummyPlatform(AbstractPlatform):
             q = np.random.rand(nshots)
             shots = np.random.rand(nshots)
             results[qubit] = ExecutionResults.from_components(i, q, shots)
-            results[serial] = results[qubit]
+            results[serial] = copy(results[qubit])
         return results
 
     def set_attenuation(self, qubit, att):  # pragma: no cover
