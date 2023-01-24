@@ -344,7 +344,7 @@ class AbstractPlatform(ABC):
         qd_frequency = pulse_kwargs["frequency"]
         qd_amplitude = pulse_kwargs["amplitude"] / 2.0
         qd_shape = pulse_kwargs["shape"]
-        qd_channel = str(self.qubits[qubit].drive)
+        qd_channel = self.qubits[qubit].drive.name
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
     def create_RX_pulse(self, qubit, start=0, relative_phase=0):
@@ -353,7 +353,7 @@ class AbstractPlatform(ABC):
         qd_frequency = pulse_kwargs["frequency"]
         qd_amplitude = pulse_kwargs["amplitude"]
         qd_shape = pulse_kwargs["shape"]
-        qd_channel = str(self.qubits[qubit].drive)
+        qd_channel = self.qubits[qubit].drive.name
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
     def create_MZ_pulse(self, qubit, start):
@@ -362,7 +362,7 @@ class AbstractPlatform(ABC):
         ro_frequency = pulse_kwargs["frequency"]
         ro_amplitude = pulse_kwargs["amplitude"]
         ro_shape = pulse_kwargs["shape"]
-        ro_channel = str(self.qubits[qubit].readout)
+        ro_channel = self.qubits[qubit].readout.name
         return ReadoutPulse(start, ro_duration, ro_amplitude, ro_frequency, 0, ro_shape, ro_channel, qubit=qubit)
 
     def create_qubit_drive_pulse(self, qubit, start, duration, relative_phase=0):
@@ -370,7 +370,7 @@ class AbstractPlatform(ABC):
         qd_frequency = pulse_kwargs["frequency"]
         qd_amplitude = pulse_kwargs["amplitude"]
         qd_shape = pulse_kwargs["shape"]
-        qd_channel = str(self.qubits[qubit].drive)
+        qd_channel = self.qubits[qubit].drive.name
         return Pulse(start, duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
     def create_qubit_readout_pulse(self, qubit, start):
@@ -389,7 +389,7 @@ class AbstractPlatform(ABC):
         if beta != None:
             qd_shape = "Drag(5," + str(beta) + ")"
 
-        qd_channel = str(self.qubits[qubit].drive)
+        qd_channel = self.qubits[qubit].drive.name
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
     def create_RX_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
@@ -402,7 +402,7 @@ class AbstractPlatform(ABC):
         if beta != None:
             qd_shape = "Drag(5," + str(beta) + ")"
 
-        qd_channel = str(self.qubits[qubit].drive)
+        qd_channel = self.qubits[qubit].drive.name
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
     def create_CZ_pulse(self, control, target, start):
@@ -412,7 +412,7 @@ class AbstractPlatform(ABC):
             duration=pulse_kwargs["duration"],
             amplitude=pulse_kwargs["amplitude"],
             shape=pulse_kwargs["shape"],
-            channel=str(self.qubits[control].flux),
+            channel=self.qubits[control].flux.name,
             qubit=control,
         )
 
