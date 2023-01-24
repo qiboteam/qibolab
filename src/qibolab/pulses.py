@@ -1695,7 +1695,7 @@ class PulseSequence:
                             ax.plot(time, -pulse.shape.envelope_waveform_i.data, c=f"C{str(n)}")
                         # TODO: if they overlap use different shades
                         ax.axhline(0, c="dimgrey")
-                        ax.set_ylabel(f"channel {channel}")
+                        ax.set_ylabel(f"qubit {qubit} \n channel {channel}")
                         for vl in vertical_lines:
                             ax.axvline(vl, c="slategrey", linestyle="--")
                         ax.axis([0, self.finish, -1, 1])
