@@ -42,13 +42,13 @@ class DummyPlatform(AbstractPlatform):
         ro_pulses = {pulse.qubit: pulse.serial for pulse in sequence.ro_pulses}
 
         results = {}
-        for pulse in ro_pulses.values():
+        for qubit, serial in ro_pulses.items():
             if nshots is not None:
-                i, q, shot = np.random.rand(3, nshots)
+                i, q, shots = np.random.rand(3, nshots)
             else:
-                i, q, sample = np.random.random(3)
-            results[pulse.serial] = ExecutionResults.from_components(i, q, sample)
-            results[pulse.qubit] = ExecutionResults.from_components(i, q, sample)
+                i, q, shots = np.random.random(3)
+            results[qubit] = ExecutionResults.from_components(i, q, shots)
+            results[serial] = ExecutionResults.from_components(i, q, shots)
         return results
 
     def set_attenuation(self, qubit, att):  # pragma: no cover
