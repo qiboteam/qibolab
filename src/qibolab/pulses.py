@@ -326,23 +326,27 @@ class Drag(PulseShape):
     def __repr__(self):
         return f"{self.name}({format(self.rel_sigma, '.6f').rstrip('0').rstrip('.')}, {format(self.beta, '.6f').rstrip('0').rstrip('.')})"
 
+
 from scipy.signal import lfilter
+
+
 class IIR(PulseShape):
     """
     IIR Filter using scipy.signal lfilter.
 
     """
+
     # https://arxiv.org/pdf/1907.04818.pdf (page 11 - filter formula S22)
     # p = [A, tau_iir]
     # p = [b0 = 1−k +k ·α, b1 = −(1−k)·(1−α),a0 = 1 and a1 = −(1−α)]
     # p = [b0, b1, a0, a1]
-    
-    def __init__(self, b, a, target:PulseShape):
+
+    def __init__(self, b, a, target: PulseShape):
         self.name = "IIR"
-        self.target:PulseShape = target
+        self.target: PulseShape = target
         self._pulse: Pulse = None
-        self.a:list(float) = a
-        self.b:list(float) = b
+        self.a: list(float) = a
+        self.b: list(float) = b
         # Check len(a) = len(b) = 2
 
     @property
@@ -387,18 +391,19 @@ class IIR(PulseShape):
     def __repr__(self):
         return f"{self.name}({self.b}, {self.a}, {self.target})"
 
+
 class SNZ(PulseShape):
     """
     Sudden variant Net Zero.
     https://arxiv.org/abs/2008.07411
 
     """
-    
+
     def __init__(self, t_half_flux_pulse=None, b_amplitude=1):
         self.name = "SNZ"
         self.pulse: Pulse = None
-        self.t_half_flux_pulse:float = t_half_flux_pulse
-        self.b_amplitude:float = b_amplitude
+        self.t_half_flux_pulse: float = t_half_flux_pulse
+        self.b_amplitude: float = b_amplitude
 
     @property
     def envelope_waveform_i(self) -> Waveform:
@@ -406,21 +411,23 @@ class SNZ(PulseShape):
 
         if self.pulse:
             if not self.t_half_flux_pulse:
-                self.t_half_flux_pulse = self.pulse.duration/2
+                self.t_half_flux_pulse = self.pulse.duration / 2
             elif 2 * self.t_half_flux_pulse > self.pulse.duration:
-                raise Exception(
-                "Pulse shape parameter error: pulse.t_half_flux_pulse <= pulse.duration"
-                )
+                raise Exception("Pulse shape parameter error: pulse.t_half_flux_pulse <= pulse.duration")
             num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
             half_flux_pulse_samples = int(np.rint(num_samples * self.t_half_flux_pulse / self.pulse.duration))
             iding_samples = num_samples - 2 * half_flux_pulse_samples
-            waveform = Waveform(np.concatenate((
-                self.pulse.amplitude * np.ones(half_flux_pulse_samples-1), 
-                np.array([self.pulse.amplitude * self.b_amplitude]), 
-                np.zeros(iding_samples), 
-                -1 * np.array([self.pulse.amplitude * self.b_amplitude]),  
-                -1 * self.pulse.amplitude * np.ones(half_flux_pulse_samples-1)
-                )))
+            waveform = Waveform(
+                np.concatenate(
+                    (
+                        self.pulse.amplitude * np.ones(half_flux_pulse_samples - 1),
+                        np.array([self.pulse.amplitude * self.b_amplitude]),
+                        np.zeros(iding_samples),
+                        -1 * np.array([self.pulse.amplitude * self.b_amplitude]),
+                        -1 * self.pulse.amplitude * np.ones(half_flux_pulse_samples - 1),
+                    )
+                )
+            )
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         else:
@@ -445,11 +452,12 @@ class SNZ(PulseShape):
     def __repr__(self):
         return f"{self.name}({self.t_half_flux_pulse}, {self.b_amplitude})"
 
+
 class eCap(PulseShape):
     """
     eCap pulse shape.
     Args:
-        alpha (float): 
+        alpha (float):
     .. math::
         e_\\cap(t,\\alpha) &=& A[1 + \\tanh(\\alpha t/t_\\theta)][1 + \\tanh(\\alpha (1 - t/t_\\theta))]\\\\
 &\\times& [1 + \\tanh(\\alpha/2)]^{-2}
@@ -467,8 +475,9 @@ class eCap(PulseShape):
             x = np.arange(0, num_samples, 1)
             waveform = Waveform(
                 self.pulse.amplitude
-                * 
-                (1+np.tanh(self.alpha*x/num_samples))*(1+np.tanh(self.alpha*(1-x/num_samples)))/(1+np.tanh(self.alpha/2))**2
+                * (1 + np.tanh(self.alpha * x / num_samples))
+                * (1 + np.tanh(self.alpha * (1 - x / num_samples)))
+                / (1 + np.tanh(self.alpha / 2)) ** 2
             )
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
@@ -491,7 +500,6 @@ class eCap(PulseShape):
 
     def __repr__(self):
         return f"{self.name}({format(self.alpha, '.6f').rstrip('0').rstrip('.')})"
-
 
 
 class Pulse:
@@ -1211,7 +1219,9 @@ class SplitPulse(Pulse):
 
         time = (
             self.window_start
-            + np.arange(int(np.rint(self.window_duration / 1e9 * PulseShape.SAMPLING_RATE))) / PulseShape.SAMPLING_RATE * 1e9
+            + np.arange(int(np.rint(self.window_duration / 1e9 * PulseShape.SAMPLING_RATE)))
+            / PulseShape.SAMPLING_RATE
+            * 1e9
         )
 
         fig = plt.figure(figsize=(14, 5), dpi=200)
@@ -1685,7 +1695,7 @@ class PulseSequence:
                             ax.plot(time, -pulse.shape.envelope_waveform_i.data, c=f"C{str(n)}")
                         # TODO: if they overlap use different shades
                         ax.axhline(0, c="dimgrey")
-                        ax.set_ylabel(f"channel {channel}")
+                        ax.set_ylabel(f"qubit {qubit} \n channel {channel}")
                         for vl in vertical_lines:
                             ax.axvline(vl, c="slategrey", linestyle="--")
                         ax.axis([0, self.finish, -1, 1])
