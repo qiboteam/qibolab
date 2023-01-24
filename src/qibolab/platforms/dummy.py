@@ -39,14 +39,17 @@ class DummyPlatform(AbstractPlatform):
 
     def execute_pulse_sequence(self, sequence, nshots=None):  # pragma: no cover
         time.sleep(self.settings.get("sleep_time"))
+
+        if nshots is None:
+            nshots = self.settings["settings"]["hardware_avg"]
+
         ro_pulses = {pulse.qubit: pulse.serial for pulse in sequence.ro_pulses}
 
         results = {}
         for qubit, serial in ro_pulses.items():
-            if nshots is not None:
-                i, q, shots = np.random.rand(3, nshots)
-            else:
-                i, q, shots = np.random.random(3)
+            i = np.random.rand(nshots)
+            q = np.random.rand(nshots)
+            shots = np.random.rand(nshots)
             results[qubit] = ExecutionResults.from_components(i, q, shots)
             results[serial] = ExecutionResults.from_components(i, q, shots)
         return results
