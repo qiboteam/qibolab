@@ -49,7 +49,7 @@ class ExecutionResults:
         """Computes ground state probability"""
         return 1 - self.array.shots.mean()
 
-    def to_dict_probability(self, state=0):
+    def to_dict_probability(self, state=1):
         """Serialize probabilities in dict.
         Args:
             state (int): if 0 stores the probabilities of finding

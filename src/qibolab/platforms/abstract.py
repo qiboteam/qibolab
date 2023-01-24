@@ -2,20 +2,12 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import List
 
-import numpy as np
 import yaml
 from qibo import gates
 from qibo.config import log, raise_error
 from qibo.models import Circuit
 
-from qibolab.pulses import (
-    Drag,
-    Gaussian,
-    Pulse,
-    PulseSequence,
-    ReadoutPulse,
-    Rectangular,
-)
+from qibolab.pulses import PulseSequence
 
 
 @dataclass

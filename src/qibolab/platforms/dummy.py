@@ -51,7 +51,7 @@ class DummyPlatform(AbstractPlatform):
             q = np.random.rand(nshots)
             shots = np.random.rand(nshots)
             results[qubit] = ExecutionResults.from_components(i, q, shots)
-            results[serial] = ExecutionResults.from_components(i, q, shots)
+            results[serial] = results[qubit]
         return results
 
     def set_attenuation(self, qubit, att):  # pragma: no cover
