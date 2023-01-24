@@ -1,8 +1,9 @@
 import numpy as np
 from qibo.config import raise_error
 
-from qibolab.platforms.abstract import AbstractPlatform, ExecutionResults
+from qibolab.platforms.abstract import AbstractPlatform
 from qibolab.pulses import PulseSequence
+from qibolab.result import ExecutionResults
 
 
 class MultiqubitPlatform(AbstractPlatform):
@@ -172,14 +173,12 @@ class MultiqubitPlatform(AbstractPlatform):
                     if pulse.serial in changed:
                         pulse.frequency += self.get_lo_drive_frequency(pulse.qubit)
 
-        for key in ro_pulses:
-            data[key] = ExecutionResults(
-                acquisition_results[key][0], acquisition_results[key][1], np.array(acquisition_results[key][2])
-            )
+        for ro_pulse in ro_pulses.values():
+            data[ro_pulse.serial] = ExecutionResults.from_components(*acquisition_results[key])
+            data[ro_pulse.qubit] = ExecutionResults.from_components(*acquisition_results[key])
         return data
 
     def measure_fidelity(self, qubits=None, nshots=None):
-        import numpy as np
 
         self.reload_settings()
         if not qubits:

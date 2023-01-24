@@ -35,51 +35,6 @@ class Qubit:
     resonator_polycoef_flux: List[float] = field(default_factory=list)
 
 
-@dataclass
-class ExecutionResults:
-    """Data strucutre to store output from `execute_pulse_sequence`."""
-
-    i: np.ndarray
-    q: np.ndarray
-    sample: np.ndarray
-
-    def msr(self):
-        """Computes MSR value."""
-        return np.sqrt(self.i**2 + self.q**2)
-
-    def phase(self):
-        """Computes phase value."""
-        return np.angle(self.i + 1j * self.q)
-
-    def to_dict(self, average=True, probability=False):
-        """Serialize output in dict.
-        Args:
-            probability (bool): If `True` returns a dictionary of the form
-                                {'probability: [p1, p2, ...] where p_i are
-                                the probability of every shot.
-            average (bool): If `True` returns a dictionary of the form
-                            {'MSR[V]' : v, 'i[V]' : i, 'q[V]' : q, 'phase[rad]' : phase}.
-                            Where each value is averaged over the number shots. If `False`
-                            all the values for each shot are saved.
-        """
-        if probability:
-            return {"probability": 1 - 2 * self.sample.mean()}
-        if average:
-            return {
-                "MSR[V]": self.msr().mean(),
-                "i[V]": self.i.mean(),
-                "q[V]": self.q.mean(),
-                "phase[rad]": self.phase().mean(),
-            }
-        else:
-            return {
-                "MSR[V]": self.msr().ravel(),
-                "i[V]": self.i.ravel(),
-                "q[V]": self.q.ravel(),
-                "phase[rad]": self.phase().ravel(),
-            }
-
-
 class AbstractPlatform(ABC):
     """Abstract platform for controlling quantum devices.
 

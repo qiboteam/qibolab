@@ -1,10 +1,10 @@
 import time
 
 import numpy as np
-import yaml
 from qibo.config import log, raise_error
 
-from qibolab.platforms.abstract import AbstractPlatform, ExecutionResults
+from qibolab.platforms.abstract import AbstractPlatform
+from qibolab.result import ExecutionResults
 
 
 class DummyPlatform(AbstractPlatform):
@@ -44,10 +44,11 @@ class DummyPlatform(AbstractPlatform):
         results = {}
         for pulse in ro_pulses.values():
             if nshots is not None:
-                i, q, sample = np.random.rand(3, nshots)
+                i, q, shot = np.random.rand(3, nshots)
             else:
                 i, q, sample = np.random.random(3)
-            results[pulse] = ExecutionResults(i, q, sample)
+            results[pulse.serial] = ExecutionResults.from_components(i, q, sample)
+            results[pulse.qubit] = ExecutionResults.from_components(i, q, sample)
         return results
 
     def set_attenuation(self, qubit, att):  # pragma: no cover
