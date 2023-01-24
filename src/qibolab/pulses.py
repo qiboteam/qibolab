@@ -230,7 +230,7 @@ class Gaussian(PulseShape):
         """The envelope waveform of the i component of the pulse."""
 
         if self.pulse:
-            num_samples = int(self.pulse.duration)  # / 1e9 * PulseShape.SAMPLING_RATE)
+            num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
             x = np.arange(0, num_samples, 1)
             waveform = Waveform(
                 self.pulse.amplitude
@@ -248,7 +248,7 @@ class Gaussian(PulseShape):
         """The envelope waveform of the q component of the pulse."""
 
         if self.pulse:
-            num_samples = int(self.pulse.duration)  # / 1e9 * PulseShape.SAMPLING_RATE)
+            num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
             waveform = Waveform(np.zeros(num_samples))
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
@@ -284,7 +284,7 @@ class Drag(PulseShape):
         """The envelope waveform of the i component of the pulse."""
 
         if self.pulse:
-            num_samples = int(self.pulse.duration)  # / 1e9 * PulseShape.SAMPLING_RATE)
+            num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
             x = np.arange(0, num_samples, 1)
             i = self.pulse.amplitude * np.exp(
                 -(1 / 2) * (((x - (num_samples - 1) / 2) ** 2) / (((num_samples) / self.rel_sigma) ** 2))
@@ -302,7 +302,7 @@ class Drag(PulseShape):
         """The envelope waveform of the q component of the pulse."""
 
         if self.pulse:
-            num_samples = int(self.pulse.duration)  # / 1e9 * PulseShape.SAMPLING_RATE)
+            num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
             x = np.arange(0, num_samples, 1)
             i = self.pulse.amplitude * np.exp(
                 -(1 / 2) * (((x - (num_samples - 1) / 2) ** 2) / (((num_samples) / self.rel_sigma) ** 2))

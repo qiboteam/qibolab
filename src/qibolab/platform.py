@@ -25,15 +25,15 @@ def Platform(name, runcard=None, design=None):
         from qibolab.platforms.dummy import DummyPlatform as Device
     elif name == "icarusq":
         from qibolab.platforms.icplatform import ICPlatform as Device
-    elif name == "qw5q_gold_poc":
-        from qibolab.platforms.platform import Platform
+    elif name == "qw5q_gold":
+        from qibolab.platforms.platform import DesignPlatform
 
         if design is None:
             from qibolab.designs.qmrs import QMRSDesign
 
             design = QMRSDesign()
 
-        return Platform(design, runcard)
+        return DesignPlatform(name, design, runcard)
     else:
         from qibolab.platforms.multiqubit import MultiqubitPlatform as Device
 

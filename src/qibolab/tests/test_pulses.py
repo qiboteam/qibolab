@@ -164,7 +164,7 @@ def test_pulses_pulse_attributes():
     try:
         p10 = Pulse(
             start=0,
-            duration=0,  # duration should be > 0
+            duration=-1,  # duration should be > 0
             amplitude=0.9,
             frequency=20_000_000,
             relative_phase=0.0,

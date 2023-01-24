@@ -1,43 +1,87 @@
+from dataclasses import dataclass
+from functools import cached_property
+from typing import Optional
+
 import numpy as np
-from scipy import signal
+import numpy.typing as npt
+
+ExecRes = np.dtype([("i", np.float64), ("q", np.float64), ("shots", np.uint32)])
 
 
-class ExecutionResult:
-    """Container returned by :meth:`qibolab.platforms.platform.Platform.execute_pulse_sequence`.
+@dataclass
+class ExecutionResults:
+    """Data structure to deal with the output of execute_pulse_sequence"""
 
-    Args:
-        i_values (np.ndarray): Measured I values obtained from the experiment.
-        q_values (np.ndarray): Measured Q values obtained from the experiment.
-    """
+    array: npt.NDArray[ExecRes]
+    shots: Optional[npt.NDArray[np.uint32]] = None
 
-    # TODO: Distinguish cases where we have single shots vs averaged values
-
-    def __init__(self, i_values, q_values, shots=None):
-        self.I = i_values
-        self.Q = q_values
-        self.shots = shots
-        self.in_progress = False
-
-    @property
-    def MSR(self):
-        return np.sqrt(self.I**2 + self.Q**2)
+    @classmethod
+    def from_components(cls, is_, qs_, shots=None):
+        ar = np.empty(len(is_), dtype=ExecRes)
+        ar["i"] = is_
+        ar["q"] = qs_
+        ar = np.rec.array(ar)
+        return cls(ar, shots)
 
     @property
+    def in_progress(self):
+        """Placeholder for when we implement live fetching of data from instruments."""
+        return False
+
+    @property
+    def i(self):
+        return self.array.i
+
+    @property
+    def q(self):
+        return self.array.q
+
+    @cached_property
+    def msr(self):
+        """Computes msr value."""
+        return np.sqrt(self.array.i**2 + self.array.q**2)
+
+    @cached_property
     def phase(self):
-        phase = np.angle(self.I + 1j * self.Q)
-        return signal.detrend(np.unwrap(phase))
+        """Computes phase value."""
+        return np.angle(self.array.i + 1.0j * self.array.q)
 
-    @property
-    def probability(self):
-        return np.sum(self.shots) / len(self.shots)
+    @cached_property
+    def ground_state_probability(self):
+        """Computes ground state probability"""
+        return 1 - np.mean(self.shots)
 
-    def to_dict(self):
-        return {
-            "MSR[V]": self.MSR.ravel(),
-            "i[V]": self.I.ravel(),
-            "q[V]": self.Q.ravel(),
-            "phase[rad]": self.phase.ravel(),
-        }
+    def to_dict_probability(self, state=1):
+        """Serialize probabilities in dict.
+        Args:
+            state (int): if 0 stores the probabilities of finding
+                        the ground state. If 1 stores the
+                        probabilities of finding the excited state.
+        """
+        if state == 1:
+            return {"probability": 1 - self.ground_state_probability}
+        elif state == 0:
+            return {"probability": self.ground_state_probability}
 
-    def __len__(self):
-        return np.prod(self.I.shape)
+    def to_dict(self, average=True):
+        """Serialize output in dict.
+        Args:
+            average (bool): If `True` returns a dictionary of the form
+                            {'MSR[V]' : v, 'i[V]' : i, 'q[V]' : q, 'phase[rad]' : phase}.
+                            Where each value is averaged over the number shots. If `False`
+                            all the values for each shot are saved.
+        """
+        if average:
+            return {
+                "MSR[V]": self.msr.mean(),
+                "i[V]": self.i.mean(),
+                "q[V]": self.q.mean(),
+                "phase[rad]": self.phase.mean(),
+            }
+        else:
+            return {
+                "MSR[V]": self.msr.ravel(),
+                "i[V]": self.i.ravel(),
+                "q[V]": self.q.ravel(),
+                "phase[rad]": self.phase.ravel(),
+            }

@@ -26,9 +26,6 @@ class AbstractInstrument(ABC):
         self.tmp_folder = tempfile.TemporaryDirectory(dir=instruments_data_folder)
         self.data_folder = Path(self.tmp_folder.name)
 
-    def __repr__(self):
-        return self.name
-
     @abstractmethod
     def connect(self):
         raise NotImplementedError
