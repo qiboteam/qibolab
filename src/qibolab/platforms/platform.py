@@ -13,9 +13,6 @@ class DesignPlatform(AbstractPlatform):
         super().__init__(name, runcard)
         self.design = design
 
-    def is_connected(self):
-        return self.design.is_connected
-
     def connect(self):
         self.design.connect()
         self.is_connected = True

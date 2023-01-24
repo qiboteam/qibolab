@@ -1233,7 +1233,7 @@ class PulseSequence:
 
         for pulse in pulses:
             self.pulses.append(pulse)
-        self.pulses.sort(key=lambda item: (item.start, item.channel))
+        self.pulses.sort(key=lambda item: (item.channel, item.start))
 
     def append_at_end_of_channel(self, *pulses):
         """Appends pulses to the end of the channel (one at a time), modifying their start time.
