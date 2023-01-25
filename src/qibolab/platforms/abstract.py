@@ -225,64 +225,73 @@ class AbstractPlatform(ABC):
         for qubit in range(circuit.nqubits):
             sequence.virtual_z_phases[qubit] = 0
 
-        for gate in circuit.queue:
+        # keep track of gates that were already added to avoid adding them twice
+        already_processed = set()
+        # process circuit gates
+        for moment in circuit.queue.moments:
+            moment_start = sequence.finish
+            for gate in moment:
+                if isinstance(gate, gates.I) or gate is None or gate in already_processed:
+                    pass
 
-            if isinstance(gate, gates.I):
-                pass
+                elif isinstance(gate, gates.Z):
+                    qubit = gate.target_qubits[0]
+                    sequence.virtual_z_phases[qubit] += np.pi
 
-            elif isinstance(gate, gates.Z):
-                qubit = gate.target_qubits[0]
-                sequence.virtual_z_phases[qubit] += np.pi
+                elif isinstance(gate, gates.RZ):
+                    qubit = gate.target_qubits[0]
+                    sequence.virtual_z_phases[qubit] += gate.parameters[0]
 
-            elif isinstance(gate, gates.RZ):
-                qubit = gate.target_qubits[0]
-                sequence.virtual_z_phases[qubit] += gate.parameters[0]
+                elif isinstance(gate, gates.U3):
+                    qubit = gate.target_qubits[0]
+                    # Transform gate to U3 and add pi/2-pulses
+                    theta, phi, lam = gate.parameters
+                    # apply RZ(lam)
+                    sequence.virtual_z_phases[qubit] += lam
+                    # Fetch pi/2 pulse from calibration
+                    RX90_pulse_1 = self.create_RX90_pulse(
+                        qubit,
+                        start=max(sequence.get_qubit_pulses(qubit).finish, moment_start),
+                        relative_phase=sequence.virtual_z_phases[qubit]
+                    )
+                    # apply RX(pi/2)
+                    sequence.add(RX90_pulse_1)
+                    # apply RZ(theta)
+                    sequence.virtual_z_phases[qubit] += theta
+                    # Fetch pi/2 pulse from calibration
+                    RX90_pulse_2 = self.create_RX90_pulse(
+                        qubit,
+                        start=max(sequence.get_qubit_pulses(qubit).finish, moment_start),
+                        relative_phase=sequence.virtual_z_phases[qubit] - np.pi
+                    )
+                    # apply RX(-pi/2)
+                    sequence.add(RX90_pulse_2)
+                    # apply RZ(phi)
+                    sequence.virtual_z_phases[qubit] += phi
 
-            elif isinstance(gate, gates.U3):
-                qubit = gate.target_qubits[0]
-                # Transform gate to U3 and add pi/2-pulses
-                theta, phi, lam = gate.parameters
-                # apply RZ(lam)
-                sequence.virtual_z_phases[qubit] += lam
-                # Fetch pi/2 pulse from calibration
-                RX90_pulse_1 = self.create_RX90_pulse(
-                    qubit, sequence.finish, relative_phase=sequence.virtual_z_phases[qubit]
-                )
-                # apply RX(pi/2)
-                sequence.append_at_end_of_channel(RX90_pulse_1)
-                # apply RZ(theta)
-                sequence.virtual_z_phases[qubit] += theta
-                # Fetch pi/2 pulse from calibration
-                RX90_pulse_2 = self.create_RX90_pulse(
-                    qubit, sequence.finish, relative_phase=sequence.virtual_z_phases[qubit] - np.pi
-                )
-                # apply RX(-pi/2)
-                sequence.append_at_end_of_channel(RX90_pulse_2)
-                # apply RZ(phi)
-                sequence.virtual_z_phases[qubit] += phi
+                elif isinstance(gate, gates.M):
+                    # Add measurement pulse
+                    measurement_start = max(sequence.get_qubit_pulses(*gate.target_qubits).finish, moment_start)
+                    gate.pulses = ()
+                    for qubit in gate.target_qubits:
+                        MZ_pulse = self.create_MZ_pulse(qubit, start=measurement_start)
+                        sequence.add(MZ_pulse)
+                        gate.pulses = (*gate.pulses, MZ_pulse.serial)
 
-            elif isinstance(gate, gates.M):
-                # Add measurement pulse
-                measurement_start = sequence.finish
-                mz_pulses = []
-                for qubit in gate.target_qubits:
-                    MZ_pulse = self.create_MZ_pulse(qubit, measurement_start)
-                    sequence.add(MZ_pulse)  # append_at_end_of_channel?
-                    mz_pulses.append(MZ_pulse.serial)
-                gate.pulses = tuple(mz_pulses)
+                elif isinstance(gate, gates.CZ):
+                    cz_start = max(sequence.get_qubit_pulses(*gate.target_qubits).finish, moment_start)
+                    cz_sequence = self.create_CZ_pulse_sequence(gate.qubits, start=cz_start)
+                    sequence.add(cz_sequence)
+                    for qubit in cz_sequence.virtual_z_phases:
+                        sequence.virtual_z_phases[qubit] += cz_sequence.virtual_z_phases[qubit]
 
-            elif isinstance(gate, gates.CZ):
-                cz_sequence = self.create_CZ_pulse_sequence(gate.qubits, sequence.finish)
-                sequence.add(*cz_sequence.pulses)
-                for key in cz_sequence.virtual_z_phases:
-                    sequence.virtual_z_phases[key] += cz_sequence.virtual_z_phases[key]
+                else:  # pragma: no cover
+                    raise_error(
+                        NotImplementedError,
+                        f"Transpilation of {gate.__class__.__name__} gate has not been implemented yet.",
+                    )
 
-            else:  # pragma: no cover
-                raise_error(
-                    NotImplementedError,
-                    f"Transpilation of {gate.__class__.__name__} gate has not been implemented yet.",
-                )
-
+                already_processed.add(gate)
         return sequence
 
     @abstractmethod
@@ -363,7 +372,7 @@ class AbstractPlatform(ABC):
                     sequence.virtual_z_phases[pulse_settings["qubit"]] += pulse_settings["phase"]
         return sequence
 
-    def create_MZ_pulse(self, qubit, start):
+    def create_MZ_pulse(self, qubit, start=0):
         ro_duration = self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["duration"]
         ro_frequency = self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["frequency"]
         ro_amplitude = self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["amplitude"]
@@ -395,7 +404,7 @@ class AbstractPlatform(ABC):
     # TODO Remove RX90_drag_pulse and RX_drag_pulse, replace them with create_qubit_drive_pulse
     # TODO Add RY90 and RY pulses
 
-    def create_RX90_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
+    def create_RX90_drag_pulse(self, qubit, start=0, relative_phase=0, beta=None):
         # create RX pi/2 pulse with drag shape
         qd_duration = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["duration"]
         qd_frequency = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["frequency"]
@@ -409,7 +418,7 @@ class AbstractPlatform(ABC):
 
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
-    def create_RX_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
+    def create_RX_drag_pulse(self, qubit, start=0, relative_phase=0, beta=None):
         # create RX pi pulse with drag shape
         qd_duration = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["duration"]
         qd_frequency = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["frequency"]
