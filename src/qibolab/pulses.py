@@ -1303,6 +1303,7 @@ class PulseSequence:
     A quantum circuit can be translated into a set of scheduled pulses that implement the circuit gates.
     This class contains many supporting fuctions to facilitate the creation and manipulation of
     these collections of pulses.
+    None of the methods of PulseSequence modify any of the properties of its pulses.
 
     Attributes:
         pulses (list): a list containing the pulses, ordered by their channel and start times.
@@ -1408,32 +1409,18 @@ class PulseSequence:
 
         return len(self.pulses)
 
-    def add(self, *pulses):
+    def add(self, *items):
         """Adds pulses to the sequence and sorts them by channel and start time."""
 
-        for pulse in pulses:
-            self.pulses.append(pulse)
+        for item in items:
+            if isinstance(item, Pulse):
+                pulse = item
+                self.pulses.append(pulse)
+            elif isinstance(item, PulseSequence):
+                ps = item
+                for pulse in ps.pulses:
+                    self.pulses.append(pulse)
         self.pulses.sort(key=lambda item: (item.channel, item.start))
-
-    def append_at_end_of_channel(self, *pulses):
-        """Appends pulses to the end of the channel (one at a time), modifying their start time.
-
-        Each pulse start time is calculated as the finish time of the last pulse in the channel.
-        """
-
-        for pulse in pulses:
-            pulse.start = self.get_channel_pulses(pulse.channel).finish
-            self.add(pulse)
-
-    def append_at_end_of_sequence(self, *pulses):
-        """Appends pulses to the end of the sequence (one at a time), modifying their start time.
-
-        Each pulse start time is calculated as the finish time of the last pulse in the sequence.
-        """
-
-        for pulse in pulses:
-            pulse.start = self.finish
-            self.add(pulse)
 
     def index(self, pulse):
         """Returns the index of a pulse in the sequence."""
@@ -1503,7 +1490,7 @@ class PulseSequence:
         return new_pc
 
     def get_channel_pulses(self, *channels):
-        """Returns a new PulseSequence containing only the pulses on a specific channel."""
+        """Returns a new PulseSequence containing only the pulses on a specific set of channels."""
 
         new_pc = PulseSequence()
         for pulse in self.pulses:
@@ -1511,12 +1498,12 @@ class PulseSequence:
                 new_pc.add(pulse)
         return new_pc
 
-    def get_qubit_pulses(self, qubit):
-        """Returns a new PulseSequence containing only the pulses on a specific qubit."""
+    def get_qubit_pulses(self, *qubits):
+        """Returns a new PulseSequence containing only the pulses on a specific set of qubits."""
 
         new_pc = PulseSequence()
         for pulse in self.pulses:
-            if pulse.qubit == qubit:
+            if pulse.qubit in qubits:
                 new_pc.add(pulse)
         return new_pc
 
