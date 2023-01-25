@@ -1235,25 +1235,35 @@ class PulseSequence:
             self.pulses.append(pulse)
         self.pulses.sort(key=lambda item: (item.channel, item.start))
 
-    def append_at_end_of_channel(self, *pulses):
-        """Appends pulses to the end of the channel (one at a time), modifying their start time.
-
-        Each pulse start time is calculated as the finish time of the last pulse in the channel.
+    def append(self, *pulses_or_pulsequences):
+        """Appends pulses to the end of the channel (one at a time), modifying their start time, 
+        or sequences of pulses, at the end of the last pulse of the channels of the sequence appended.
         """
 
-        for pulse in pulses:
-            pulse.start = self.get_channel_pulses(pulse.channel).finish
-            self.add(pulse)
+        for pulse_or_pulsesequence in pulses_or_pulsequences:
+            if isinstance(pulse_or_pulsesequence, Pulse):
+                pulse = pulse_or_pulsesequence
+                pulse.start = self.get_channel_pulses(pulse.channel).finish
+                self.add(pulse)
+            elif isinstance(pulse_or_pulsesequence, PulseSequence):
+                pulsesequence = pulse_or_pulsesequence
+                pulsesequence.start = self.get_channel_pulses(*pulsesequence.channels).finish
+                self.add(*pulsesequence.pulses)
 
-    def append_at_end_of_sequence(self, *pulses):
-        """Appends pulses to the end of the sequence (one at a time), modifying their start time.
-
-        Each pulse start time is calculated as the finish time of the last pulse in the sequence.
+    def append_at_end_of_sequence(self, *pulses_or_pulsequences):
+        """Appends pulses to the end of the sequence (one at a time), modifying their start time, 
+        or sequences of pulses.
         """
 
-        for pulse in pulses:
-            pulse.start = self.finish
-            self.add(pulse)
+        for pulse_or_pulsesequence in pulses_or_pulsequences:
+            if isinstance(pulse_or_pulsesequence, Pulse):
+                pulse = pulse_or_pulsesequence
+                pulse.start = self.finish
+                self.add(pulse)
+            elif isinstance(pulse_or_pulsesequence, PulseSequence):
+                pulsesequence = pulse_or_pulsesequence
+                pulsesequence.start = self.finish
+                self.add(*pulsesequence.pulses)
 
     def index(self, pulse):
         """Returns the index of a pulse in the sequence."""
@@ -1365,6 +1375,19 @@ class PulseSequence:
             if pulse.start < t:
                 t = pulse.start
         return t
+
+    @start.setter
+    def start(self, value: int):
+        """Shifts the start times of all pulses in the sequence."""
+        
+        if not isinstance(value, int):
+            raise TypeError(f"Expected int, got {type(value).__name__}")
+        time_shift = value - self.start
+        for pulse in self.pulses:
+            if pulse.se_start.is_constant and pulse.se_duration.is_constant:
+                pulse.start += time_shift
+            else:
+                raise NotImplementedError(f"Shifting start times of pulses using symbolic expressions is not supported yet")                
 
     @property
     def duration(self) -> int:
