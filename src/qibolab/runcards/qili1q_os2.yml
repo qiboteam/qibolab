@@ -86,20 +86,20 @@ native_gates:
             RX:
                 duration: 76                    # should be multiple of 4
                 amplitude: 0.745
-                frequency: -200_000_000          # difference in qubit frequency 
+                frequency: -200_000_000          # difference in qubit frequency
                 shape: Gaussian(5)
                 type: qd # qubit drive
             MZ:
                 duration: 2000
                 amplitude: 0.5
-                frequency: 20_000_000           # Difference in resonator frequency 
+                frequency: 20_000_000           # Difference in resonator frequency
                 shape: Rectangular()
                 type: ro # readout
 
 characterization:
     single_qubit:
         0:
-            resonator_freq: 7_825_100_000 
+            resonator_freq: 7_825_100_000
             qubit_freq: 5_080_200_000
             T1: 10800
             T2: 460

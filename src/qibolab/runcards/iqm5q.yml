@@ -4,7 +4,7 @@ description: IQM 5-qubit device controlled with qblox instruments.
 settings:
     hardware_avg: 1024
     sampling_rate: 1_000_000_000
-    repetition_duration: 10_000 
+    repetition_duration: 10_000
     minimum_delay_between_instructions: 4
 
 qubits: [1, 2, 3, 4, 5]
@@ -284,7 +284,7 @@ native_gates:
                 amplitude: 0.20
                 frequency: -100_000_000
                 shape: Rectangular()
-                
+
         3: # qubit number
             RX:
                 duration: 40
@@ -296,7 +296,7 @@ native_gates:
                 amplitude: 0.20
                 frequency: 283_305_000
                 shape: Rectangular()
-                
+
         4: # qubit number
             RX:
                 duration: 40
@@ -308,7 +308,7 @@ native_gates:
                 amplitude: 0.20
                 frequency: -19_079_000
                 shape: Rectangular()
-                
+
         5: # qubit number
             RX:
                 duration: 40
@@ -320,7 +320,7 @@ native_gates:
                 amplitude: 0.20
                 frequency: -290_000_000
                 shape: Rectangular()
-                
+
 
     two_qubit:
         3-2: # qubit numbers
