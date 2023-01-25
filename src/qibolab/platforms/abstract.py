@@ -231,15 +231,19 @@ class AbstractPlatform(ABC):
                     cz_sequence = self.create_CZ_pulse_sequence(gate.qubits)
 
                     # determine the right start time based on the availability of the qubits involved
-                    cz_start = max(sequence.get_qubit_pulses(*set((*cz_sequence.qubits, *gate.qubits))).finish, moment_start)
+                    cz_start = max(
+                        sequence.get_qubit_pulses(*{*cz_sequence.qubits, *gate.qubits}).finish, moment_start
+                    )
 
                     # shift the pulses
                     for pulse in cz_sequence.pulses:
                         if pulse.se_start.is_constant and pulse.se_duration.is_constant:
                             pulse.start += cz_start
                         else:
-                            raise NotImplementedError(f"Shifting start times of pulses using symbolic expressions is not supported yet")                
-                    
+                            raise NotImplementedError(
+                                f"Shifting start times of pulses using symbolic expressions is not supported yet"
+                            )
+
                     # add pulses to the sequence
                     sequence.add(cz_sequence)
 
