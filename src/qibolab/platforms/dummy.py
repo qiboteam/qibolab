@@ -1,19 +1,11 @@
 import time
+from copy import copy
 
 import numpy as np
-import yaml
 from qibo.config import log, raise_error
 
 from qibolab.platforms.abstract import AbstractPlatform
-
-
-class DummyInstrument:
-    # This object is used to make QCVV methods work until
-    # we improve the platform abstractions
-    # TODO: Remove this objects when abstractions are fixed
-
-    def set_device_parameter(self, *args, **kwargs):
-        pass
+from qibolab.result import ExecutionResults
 
 
 class DummyPlatform(AbstractPlatform):
@@ -26,24 +18,7 @@ class DummyPlatform(AbstractPlatform):
     """
 
     def __init__(self, name, runcard):
-        self.name = name
-        self.runcard = runcard
-        self.is_connected = False
-        # Load platform settings
-        with open(runcard) as file:
-            self.settings = yaml.safe_load(file)
-
-        # create dummy instruments
-        nqubits = self.settings.get("nqubits")
-        # TODO: Remove these when platform abstraction is fixed
-        self.qcm = {i: DummyInstrument() for i in range(nqubits)}
-        self.qrm = {i: DummyInstrument() for i in range(nqubits)}
-
-    def reload_settings(self):  # pragma: no cover
-        log.info("Dummy platform does not support setting reloading.")
-
-    def run_calibration(self, show_plots=False):  # pragma: no cover
-        raise_error(NotImplementedError)
+        super().__init__(name, runcard)
 
     def connect(self):
         log.info("Connecting to dummy platform.")
@@ -65,10 +40,26 @@ class DummyPlatform(AbstractPlatform):
 
     def execute_pulse_sequence(self, sequence, nshots=None):  # pragma: no cover
         time.sleep(self.settings.get("sleep_time"))
+
+        if nshots is None:
+            nshots = self.settings["settings"]["hardware_avg"]
+
         ro_pulses = {pulse.qubit: pulse.serial for pulse in sequence.ro_pulses}
 
         results = {}
-        for qubit, pulse in ro_pulses.items():
-            i, q = np.random.random(2)
-            results[qubit] = {pulse: (np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q)}
+        for qubit, serial in ro_pulses.items():
+            i = np.random.rand(nshots)
+            q = np.random.rand(nshots)
+            shots = np.random.rand(nshots)
+            results[qubit] = ExecutionResults.from_components(i, q, shots)
+            results[serial] = copy(results[qubit])
         return results
+
+    def set_attenuation(self, qubit, att):  # pragma: no cover
+        pass
+
+    def set_current(self, qubit, current):  # pragma: no cover
+        pass
+
+    def set_gain(self, qubit, gain):  # pragma: no cover
+        pass

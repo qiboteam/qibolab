@@ -81,14 +81,12 @@ class QibolabBackend(NumpyBackend):
         self.platform.stop()
         result = CircuitResult(self, native_circuit, readout, nshots)
 
-        shots = readout.get("demodulated_integrated_classified_binned")
         # Register measurement outcomes
-        if shots is not None:
-            for gate in native_circuit.queue:
-                if isinstance(gate, gates.M):
-                    samples = np.array([shots.get(pulse) for pulse in gate.pulses], dtype="int32")
-                    gate.result.backend = self
-                    gate.result.register_samples(samples.T)
+        for gate in native_circuit.queue:
+            if isinstance(gate, gates.M):
+                samples = np.array([readout[pulse].shots for pulse in gate.pulses], dtype="int32")
+                gate.result.backend = self
+                gate.result.register_samples(samples.T)
         return result
 
     def circuit_result_tensor(self, result):
@@ -112,8 +110,8 @@ class QibolabBackend(NumpyBackend):
         for qubit in qubits:
             mean_state0: complex = complex(self.platform.characterization["single_qubit"][qubit]["mean_gnd_states"])
             mean_state1: complex = complex(self.platform.characterization["single_qubit"][qubit]["mean_exc_states"])
-            i = result.execution_result[qubit][2]  # execution_result[qubit] provides the latest
-            q = result.execution_result[qubit][3]  # acquisition data for the corresponding qubit
+            i = np.mean(result.execution_result[qubit].i)  # execution_result[qubit] provides the latest
+            q = np.mean(result.execution_result[qubit].q)  # acquisition data for the corresponding qubit
             measurement: complex = complex(i, q)
             d0 = abs(measurement - mean_state0)
             d1 = abs(measurement - mean_state1)
