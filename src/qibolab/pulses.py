@@ -1380,7 +1380,7 @@ class PulseSequence:
                 qubits.append(pulse.qubit)
         qubits.sort()
         return qubits
-        
+
     def get_pulse_overlaps(self):  # -> dict((int,int): PulseSequence):
         """Returns a dictionary of slices of time (tuples with start and finish times) where pulses overlap."""
 

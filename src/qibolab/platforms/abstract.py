@@ -202,7 +202,7 @@ class AbstractPlatform(ABC):
                     RX90_pulse_1 = self.create_RX90_pulse(
                         qubit,
                         start=max(sequence.get_qubit_pulses(qubit).finish, moment_start),
-                        relative_phase=sequence.virtual_z_phases[qubit]
+                        relative_phase=sequence.virtual_z_phases[qubit],
                     )
                     # apply RX(pi/2)
                     sequence.add(RX90_pulse_1)
