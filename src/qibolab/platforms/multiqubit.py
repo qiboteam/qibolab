@@ -1,17 +1,88 @@
+from copy import copy
+
+import numpy as np
 from qibo.config import raise_error
 
 from qibolab.platforms.abstract import AbstractPlatform
 from qibolab.pulses import PulseSequence
+from qibolab.result import ExecutionResults
 
 
 class MultiqubitPlatform(AbstractPlatform):
-    def run_calibration(self):
-        raise_error(NotImplementedError)
+    def set_lo_drive_frequency(self, qubit, freq):
+        self.qd_port[qubit].lo_frequency = freq
+
+    def get_lo_drive_frequency(self, qubit):
+        return self.qd_port[qubit].lo_frequency
+
+    def set_lo_readout_frequency(self, qubit, freq):
+        self.ro_port[qubit].lo_frequency = freq
+
+    def get_lo_readout_frequency(self, qubit):
+        return self.ro_port[qubit].lo_frequency
+
+    def set_attenuation(self, qubit, att):
+        self.ro_port[qubit].attenuation = att
+
+    def set_gain(self, qubit, gain):
+        self.qd_port[qubit].gain = gain
+
+    def set_current(self, qubit, current):
+        self.qb_port[qubit].current = current
+
+    def setup(self):
+        if not self.is_connected:
+            raise_error(
+                RuntimeError,
+                "There is no connection to the instruments, the setup cannot be completed",
+            )
+
+        for name in self.instruments:
+            # Set up every with the platform settings and the instrument settings
+            self.instruments[name].setup(
+                **self.settings["settings"],
+                **self.settings["instruments"][name]["settings"],
+            )
+
+        # Generate ro_channel[qubit], qd_channel[qubit], qf_channel[qubit], qrm[qubit], qcm[qubit], lo_qrm[qubit], lo_qcm[qubit]
+        self.ro_channel = {}  # readout
+        self.qd_channel = {}  # qubit drive
+        self.qf_channel = {}  # qubit flux
+        self.qb_channel = {}  # qubit flux biassing
+        self.qrm = {}  # qubit readout module
+        self.qdm = {}  # qubit drive module
+        self.qfm = {}  # qubit flux module
+        self.qbm = {}  # qubit flux biassing module
+        self.ro_port = {}
+        self.qd_port = {}
+        self.qf_port = {}
+        self.qb_port = {}
+        for qubit in self.qubit_channel_map:
+            self.ro_channel[qubit] = self.qubit_channel_map[qubit][0]
+            self.qd_channel[qubit] = self.qubit_channel_map[qubit][1]
+            self.qb_channel[qubit] = self.qubit_channel_map[qubit][2]
+            self.qf_channel[qubit] = self.qubit_channel_map[qubit][3]
+
+            if not self.qubit_instrument_map[qubit][0] is None:
+                self.qrm[qubit] = self.instruments[self.qubit_instrument_map[qubit][0]]
+                self.ro_port[qubit] = self.qrm[qubit].ports[
+                    self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]
+                ]
+            if not self.qubit_instrument_map[qubit][1] is None:
+                self.qdm[qubit] = self.instruments[self.qubit_instrument_map[qubit][1]]
+                self.qd_port[qubit] = self.qdm[qubit].ports[
+                    self.qdm[qubit].channel_port_map[self.qubit_channel_map[qubit][1]]
+                ]
+            if not self.qubit_instrument_map[qubit][2] is None:
+                self.qfm[qubit] = self.instruments[self.qubit_instrument_map[qubit][2]]
+                self.qf_port[qubit] = self.qfm[qubit].ports[
+                    self.qfm[qubit].channel_port_map[self.qubit_channel_map[qubit][2]]
+                ]
+            if not self.qubit_instrument_map[qubit][3] is None:
+                self.qbm[qubit] = self.instruments[self.qubit_instrument_map[qubit][3]]
+                self.qb_port[qubit] = self.qbm[qubit].dacs[self.qubit_channel_map[qubit][3]]
 
     def execute_pulse_sequence(self, sequence: PulseSequence, nshots=None):
-        # DEBUG: Performance
-        # from datetime import datetime
-        # start = datetime.now()
 
         if not self.is_connected:
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
@@ -32,13 +103,35 @@ class MultiqubitPlatform(AbstractPlatform):
         # Process Pulse Sequence. Assign pulses to instruments and generate waveforms & program
         instrument_pulses = {}
         roles = {}
+        ro_pulses = {}
+        changed = {}
+        data = {}
         for name in self.instruments:
             roles[name] = self.settings["instruments"][name]["roles"]
             if "control" in roles[name] or "readout" in roles[name]:
                 instrument_pulses[name] = sequence.get_channel_pulses(*self.instruments[name].channels)
+                # Change pulses frequency to if and correct lo accordingly (before was done in qibolab)
+
+                if "readout" in roles[name]:
+                    for pulse in instrument_pulses[name]:
+                        ro_pulses[pulse.serial] = pulse
+                        if abs(pulse.frequency) > self.instruments[name].FREQUENCY_LIMIT:
+                            # TODO: implement algorithm to find correct LO
+                            if_frequency = self.native_gates["single_qubit"][pulse.qubit]["MZ"]["frequency"]
+                            self.set_lo_readout_frequency(pulse.qubit, pulse.frequency - if_frequency)
+                            pulse.frequency = if_frequency
+                            changed[pulse.serial] = True
+                elif "control" in roles[name]:
+                    for pulse in instrument_pulses[name]:
+                        if abs(pulse.frequency) > self.instruments[name].FREQUENCY_LIMIT:
+                            # TODO: implement algorithm to find correct LO
+                            if_frequency = self.native_gates["single_qubit"][pulse.qubit]["RX"]["frequency"]
+                            self.set_lo_drive_frequency(pulse.qubit, pulse.frequency - if_frequency)
+                            pulse.frequency = if_frequency
+                            changed[pulse.serial] = True
+
                 self.instruments[name].process_pulse_sequence(instrument_pulses[name], nshots, self.repetition_duration)
                 self.instruments[name].upload()
-
         for name in self.instruments:
             if "control" in roles[name] or "readout" in roles[name]:
                 if not instrument_pulses[name].is_empty:
@@ -49,6 +142,14 @@ class MultiqubitPlatform(AbstractPlatform):
             if "readout" in roles[name]:
                 if not instrument_pulses[name].is_empty:
                     if not instrument_pulses[name].ro_pulses.is_empty:
+                        if all([pulse.serial in changed for pulse in instrument_pulses[name].ro_pulses]):
+                            # FIXME: for precision sweep in resonator spectroscopy
+                            # change necessary to perform precision sweep
+                            # TODO: move this to instruments (ask Alvaro)
+                            # TODO: check if this will work with multiplex
+                            for sequencers in self.instruments[name]._sequencers.values():
+                                for sequencer in sequencers:
+                                    sequencer.pulses = instrument_pulses[name].ro_pulses
                         results = self.instruments[name].acquire()
                         existing_keys = set(acquisition_results.keys()) & set(results.keys())
                         for key, value in results.items():
@@ -56,14 +157,30 @@ class MultiqubitPlatform(AbstractPlatform):
                                 acquisition_results[key].update(value)
                             else:
                                 acquisition_results[key] = value
-        # DEBUG: Performance
-        # stop = datetime.now()
-        # print(f"execute_pulse_sequence: Start: {start}, Duration: {(stop - start).total_seconds()}")
 
-        return acquisition_results
+        # change back the frequency of the pulses
+        for name in self.instruments:
+            roles[name] = self.settings["instruments"][name]["roles"]
+            if "readout" in roles[name]:
+                instrument_pulses[name] = sequence.get_channel_pulses(*self.instruments[name].channels)
+                for pulse in instrument_pulses[name]:
+                    if pulse.serial in changed:
+                        pippo = acquisition_results[pulse.serial]
+                        # if abs(pulse.frequency) > 300e6:
+                        pulse.frequency += self.get_lo_readout_frequency(pulse.qubit)
+                        acquisition_results[pulse.serial] = pippo
+            if "control" in roles[name]:
+                instrument_pulses[name] = sequence.get_channel_pulses(*self.instruments[name].channels)
+                for pulse in instrument_pulses[name]:
+                    if pulse.serial in changed:
+                        pulse.frequency += self.get_lo_drive_frequency(pulse.qubit)
+
+        for ro_pulse in ro_pulses.values():
+            data[ro_pulse.serial] = ExecutionResults.from_components(*acquisition_results[key])
+            data[ro_pulse.qubit] = copy(data[ro_pulse.serial])
+        return data
 
     def measure_fidelity(self, qubits=None, nshots=None):
-        import numpy as np
 
         self.reload_settings()
         if not qubits:

@@ -6,7 +6,8 @@ settings:
     repetition_duration: 200_000
     sampling_rate: 1_000_000_000
 
-qubits: [q0]
+
+qubits: [0]
 
 topology: # qubit - qubit connections
 -   [1]
@@ -14,7 +15,7 @@ topology: # qubit - qubit connections
 channels: [L3-18_qd, L3-18_ro, L2-2]
 
 qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux, QubitBias]
-    q0: [L3-18_ro, L3-18_qd, L99, null]
+    0: [L3-18_ro, L3-18_qd, null, null]
 
 instruments:
     cluster:
@@ -45,7 +46,7 @@ instruments:
             acquisition_duration        : 2000
 
             classification_parameters:
-                q0:
+                0:
                     rotation_angle: 345.208
                     threshold: -0.000841
 
@@ -75,7 +76,7 @@ instruments:
 
             channel_port_map:
                 L3-18_qd: o1 # IQ Port = out0 & out1
-                L99: o2
+                99: o2
 
     twpa_pump:
         lib: rohde_schwarz
@@ -88,7 +89,7 @@ instruments:
 
 native_gates:
     single_qubit:
-        q0: # qubit number
+        0: # qubit number
             RX:
                 duration: 40                    # should be multiple of 4
                 amplitude: 0.8
@@ -104,9 +105,10 @@ native_gates:
 
 characterization:
     single_qubit:
-        q0:
-            resonator_freq: 7_371_405_000
-            qubit_freq: 5_441_445_000
+        0:
+            readout_frequency: 7_371_405_000
+            drive_frequency: 5_441_445_000
+            pi_pulse_amplitude: 0.8
             T1: 22881
             T2: 5800
             state0_voltage: 0

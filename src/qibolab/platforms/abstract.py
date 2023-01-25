@@ -1,18 +1,30 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from typing import List
 
 import yaml
 from qibo import gates
 from qibo.config import log, raise_error
 from qibo.models import Circuit
 
-from qibolab.pulses import (
-    Drag,
-    Gaussian,
-    Pulse,
-    PulseSequence,
-    ReadoutPulse,
-    Rectangular,
-)
+from qibolab.pulses import PulseSequence
+
+
+@dataclass
+class Qubit:
+    name: str
+    readout_frequency: int = 0
+    drive_frequency: int = 0
+    sweetspot: float = 0
+    peak_voltage: float = 0
+    pi_pulse_amplitude: float = 0
+    T1: int = 0
+    T2: int = 0
+    state0_voltage: int = 0
+    state1_voltage: int = 0
+    mean_gnd_states: complex = 0 + 0.0j
+    mean_exc_states: complex = 0 + 0.0j
+    resonator_polycoef_flux: List[float] = field(default_factory=list)
 
 
 class AbstractPlatform(ABC):
@@ -28,20 +40,8 @@ class AbstractPlatform(ABC):
         self.name = name
         self.runcard = runcard
         self.is_connected = False
-        # Load platform settings
-        with open(runcard) as file:
-            self.settings = yaml.safe_load(file)
-
-        self.nqubits = self.settings["nqubits"]
-        if self.nqubits == 1:
-            self.resonator_type = "3D"
-        else:
-            self.resonator_type = "2D"
-
-        self.qubits = self.settings["qubits"]
-        self.topology = self.settings["topology"]
-        self.channels = self.settings["channels"]
-        self.qubit_channel_map = self.settings["qubit_channel_map"]
+        self.settings = None
+        self.reload_settings()
 
         self.instruments = {}
         # Instantiate instruments
@@ -69,8 +69,6 @@ class AbstractPlatform(ABC):
                         if channel in self.qubit_channel_map[qubit]:
                             self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
 
-        self.reload_settings()
-
     def __repr__(self):
         return self.name
 
@@ -95,6 +93,10 @@ class AbstractPlatform(ABC):
     def reload_settings(self):
         with open(self.runcard) as file:
             self.settings = yaml.safe_load(file)
+        self.nqubits = self.settings["nqubits"]
+        self.resonator_type = "3D" if self.nqubits == 1 else "2D"
+        self.topology = self.settings["topology"]
+        self.qubit_channel_map = self.settings["qubit_channel_map"]
 
         self.hardware_avg = self.settings["settings"]["hardware_avg"]
         self.sampling_rate = self.settings["settings"]["sampling_rate"]
@@ -102,6 +104,7 @@ class AbstractPlatform(ABC):
 
         # Load Characterization settings
         self.characterization = self.settings["characterization"]
+        self.qubits = {q: Qubit(q, **self.characterization["single_qubit"][q]) for q in self.settings["qubits"]}
         # Load single qubit Native Gates
         self.native_gates = self.settings["native_gates"]
         self.two_qubit_natives = set()
@@ -112,13 +115,9 @@ class AbstractPlatform(ABC):
         else:
             self.two_qubit_natives = ["CZ"]
 
+        # TODO: remove this
         if self.is_connected:
             self.setup()
-
-    @abstractmethod
-    def run_calibration(self, show_plots=False):  # pragma: no cover
-        """Executes calibration routines and updates the settings yml file"""
-        raise NotImplementedError
 
     def connect(self):
         """Connects to lab instruments using the details specified in the calibration settings."""
@@ -134,57 +133,8 @@ class AbstractPlatform(ABC):
                     "Cannot establish connection to " f"{self.name} instruments. " f"Error captured: '{exception}'",
                 )
 
-    def setup(self):
-        if not self.is_connected:
-            raise_error(
-                RuntimeError,
-                "There is no connection to the instruments, the setup cannot be completed",
-            )
-
-        for name in self.instruments:
-            # Set up every with the platform settings and the instrument settings
-            self.instruments[name].setup(
-                **self.settings["settings"],
-                **self.settings["instruments"][name]["settings"],
-            )
-
-        # Generate ro_channel[qubit], qd_channel[qubit], qf_channel[qubit], qrm[qubit], qcm[qubit], lo_qrm[qubit], lo_qcm[qubit]
-        self.ro_channel = {}  # readout
-        self.qd_channel = {}  # qubit drive
-        self.qf_channel = {}  # qubit flux
-        self.qb_channel = {}  # qubit flux biassing
-        self.qrm = {}  # qubit readout module
-        self.qdm = {}  # qubit drive module
-        self.qfm = {}  # qubit flux module
-        self.qbm = {}  # qubit flux biassing module
-        self.ro_port = {}
-        self.qd_port = {}
-        self.qf_port = {}
-        self.qb_port = {}
-        for qubit in self.qubit_channel_map:
-            self.ro_channel[qubit] = self.qubit_channel_map[qubit][0]
-            self.qd_channel[qubit] = self.qubit_channel_map[qubit][1]
-            self.qb_channel[qubit] = self.qubit_channel_map[qubit][2]
-            self.qf_channel[qubit] = self.qubit_channel_map[qubit][3]
-
-            if not self.qubit_instrument_map[qubit][0] is None:
-                self.qrm[qubit] = self.instruments[self.qubit_instrument_map[qubit][0]]
-                self.ro_port[qubit] = self.qrm[qubit].ports[
-                    self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]
-                ]
-            if not self.qubit_instrument_map[qubit][1] is None:
-                self.qdm[qubit] = self.instruments[self.qubit_instrument_map[qubit][1]]
-                self.qd_port[qubit] = self.qdm[qubit].ports[
-                    self.qdm[qubit].channel_port_map[self.qubit_channel_map[qubit][1]]
-                ]
-            if not self.qubit_instrument_map[qubit][2] is None:
-                self.qfm[qubit] = self.instruments[self.qubit_instrument_map[qubit][2]]
-                self.qf_port[qubit] = self.qfm[qubit].ports[
-                    self.qfm[qubit].channel_port_map[self.qubit_channel_map[qubit][2]]
-                ]
-            if not self.qubit_instrument_map[qubit][3] is None:
-                self.qbm[qubit] = self.instruments[self.qubit_instrument_map[qubit][3]]
-                self.qb_port[qubit] = self.qbm[qubit].dacs[self.qubit_channel_map[qubit][3]]
+    def setup(self):  # pragma: no cover
+        raise_error(NotImplementedError)
 
     def start(self):
         if self.is_connected:
@@ -376,3 +326,36 @@ class AbstractPlatform(ABC):
         from qibolab.pulses import Pulse
 
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
+
+    def set_attenuation(self, qubit, att):  # pragma: no cover
+        """Set attenuation value. Usefeul for calibration routines such as punchout.
+
+        Args:
+            qubit (int): qubit whose attenuation will be modified.
+            att (int): new value of the attenuation (dB).
+        Returns:
+            None
+        """
+        raise_error(NotImplementedError)
+
+    def set_gain(self, qubit, gain):  # pragma: no cover
+        """Set gain value. Usefeul for calibration routines such as Rabis.
+
+        Args:
+            qubit (int): qubit whose attenuation will be modified.
+            gain (int): new value of the gain (dimensionless).
+        Returns:
+            None
+        """
+        raise_error(NotImplementedError)
+
+    def set_current(self, qubit, curr):  # pragma: no cover
+        """Set current value. Usefeul for calibration routines involving flux.
+
+        Args:
+            qubit (int): qubit whose attenuation will be modified.
+            curr (int): new value of the current (A).
+        Returns:
+            None
+        """
+        raise_error(NotImplementedError)

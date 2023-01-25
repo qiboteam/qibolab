@@ -373,6 +373,7 @@ class ClusterQRM_RF(AbstractInstrument):
 
     DEFAULT_SEQUENCERS: dict = {"o1": 0, "i1": 0}
     SAMPLING_RATE: int = 1e9  # 1 GSPS
+    FREQUENCY_LIMIT = 300e6
 
     property_wrapper = lambda parent, *parameter: property(
         lambda self: parent.device.get(parameter[0]),
@@ -1105,6 +1106,7 @@ class ClusterQRM_RF(AbstractInstrument):
         acquisition_results["demodulated_integrated_binned"] = {}
         acquisition_results["demodulated_integrated_classified_binned"] = {}
         acquisition_results["probability"] = {}
+        data = {}
         for port in self._output_ports_keys:
             for sequencer in self._sequencers[port]:
                 if not self.ports["i1"].hardware_demod_en:  # Software Demodulation
@@ -1204,6 +1206,12 @@ class ClusterQRM_RF(AbstractInstrument):
                             pulse.qubit
                         ] = acquisition_results["demodulated_integrated_classified_binned"][pulse.serial]
 
+                        data[acquisition_name] = (
+                            shots_i,
+                            shots_q,
+                            acquisition_results["demodulated_integrated_classified_binned"][acquisition_name],
+                        )
+
                         acquisition_results["probability"][pulse.serial] = np.mean(
                             acquisition_results["demodulated_integrated_classified_binned"][pulse.serial]
                         )
@@ -1230,6 +1238,7 @@ class ClusterQRM_RF(AbstractInstrument):
                             i, q = self._process_acquisition_results(
                                 scope_acquisition_raw_results, pulse, demodulate=True
                             )
+
                             acquisition_results["averaged_demodulated_integrated"][pulse.serial] = (
                                 np.sqrt(i**2 + q**2),
                                 np.arctan2(q, i),
@@ -1246,7 +1255,7 @@ class ClusterQRM_RF(AbstractInstrument):
                         # DEBUG: QRM Plot Acquisition_results
                         # from qibolab.debug.debug import plot_acquisition_results
                         # plot_acquisition_results(acquisition_results, pulse, savefig_filename='acquisition_results.png')
-        return acquisition_results
+        return data
 
     def _process_acquisition_results(self, acquisition_results, readout_pulse: Pulse, demodulate=True):
         """Processes the results of the acquisition.
@@ -1417,6 +1426,7 @@ class ClusterQCM_RF(AbstractInstrument):
 
     DEFAULT_SEQUENCERS = {"o1": 0, "o2": 1}
     SAMPLING_RATE: int = 1e9  # 1 GSPS
+    FREQUENCY_LIMIT = 500e6
 
     property_wrapper = lambda parent, *parameter: property(
         lambda self: parent.device.get(parameter[0]),
