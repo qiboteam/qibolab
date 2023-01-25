@@ -161,38 +161,50 @@ native_gates:
             MZ: {duration: 4000, amplitude: 0.6, frequency: -35747474.74747467, shape: Rectangular(),
                 type: ro, start: 0, phase: 0}
     two_qubit:
-        0-1: # qubit numbers
+        2-1: # qubit numbers
             CZ:
             - duration: 160
               amplitude: 0.818
               shape: Rectangular()
-              qubit: 0
-              relative_start: 0
+              qubit: 2
+              relative_start: 40
               type: qf
             - duration: 160
               amplitude: -0.818
               shape: Rectangular()
-              qubit: 0
-              relative_start: 160
+              qubit: 2
+              relative_start: 200
               type: qf
             - duration: 320
               amplitude: 0.5
               shape: Rectangular()
               qubit: 1
-              relative_start: 0
+              relative_start: 40
               type: qf
-            - duration: 20 # Z correction on Qubit 2 (eg)
+            - duration: 20 # Example of Z correction on control qubit
               amplitude: 0.1
               shape: Rectangular()
-              qubit: 0
-              relative_start: 320
+              qubit: 2
+              relative_start: 360
+              type: qf
+            - duration: 20 # Example of Z correction on control qubit
+              amplitude: -0.1
+              shape: Rectangular()
+              qubit: 2
+              relative_start: 380
               type: qf
             - type: virtual_z # Better Z correction
               phase: 0.015
-              qubit: 0
+              qubit: 2
             - type: virtual_z # Better Z correction
               phase: 0.035
               qubit: 1
+            - duration: 420 # Example of parking pulse
+              amplitude: 0.1
+              shape: Rectangular()
+              qubit: 0
+              relative_start: 0
+              type: qf
 
 characterization:
     single_qubit:
