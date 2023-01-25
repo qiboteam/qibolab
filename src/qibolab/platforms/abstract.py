@@ -320,7 +320,7 @@ class AbstractPlatform(ABC):
                     sequence.virtual_z_phases[pulse_settings["qubit"]] += pulse_settings["phase"]
         return sequence
 
-    def create_MZ_pulse(self, qubit, start=0):
+    def create_MZ_pulse(self, qubit, start):
         ro_duration = self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["duration"]
         ro_frequency = self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["frequency"]
         ro_amplitude = self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["amplitude"]
@@ -352,7 +352,7 @@ class AbstractPlatform(ABC):
     # TODO Remove RX90_drag_pulse and RX_drag_pulse, replace them with create_qubit_drive_pulse
     # TODO Add RY90 and RY pulses
 
-    def create_RX90_drag_pulse(self, qubit, start=0, relative_phase=0, beta=None):
+    def create_RX90_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
         # create RX pi/2 pulse with drag shape
         qd_duration = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["duration"]
         qd_frequency = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["frequency"]
@@ -366,7 +366,7 @@ class AbstractPlatform(ABC):
 
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
-    def create_RX_drag_pulse(self, qubit, start=0, relative_phase=0, beta=None):
+    def create_RX_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
         # create RX pi pulse with drag shape
         qd_duration = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["duration"]
         qd_frequency = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["frequency"]
