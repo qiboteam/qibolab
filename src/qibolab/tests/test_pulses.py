@@ -422,6 +422,7 @@ def test_pulses_pulsesequence_operators():
     and_yet_another_ps = 2 * p9 + p8 * 3
     assert and_yet_another_ps.count == 5
 
+
 def test_pulses_pulsesequence_add():
 
     p0 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(5), 10, PulseType.DRIVE, 1)
@@ -441,13 +442,6 @@ def test_pulses_pulsesequence_add():
     assert ps.channels == [10, 20, 30, 40]
     assert ps.start == 0
     assert ps.finish == 440
-
-    
-
-
-
-
-
 
 
 def test_pulses_pulsesequence_clear():
@@ -482,6 +476,7 @@ def test_pulses_pulsesequence_get_channel_pulses():
     assert ps.get_channel_pulses(20).count == 2
     assert ps.get_channel_pulses(30).count == 3
     assert ps.get_channel_pulses(20, 30).count == 5
+
 
 def test_pulses_pulsesequence_get_qubit_pulses():
     p1 = DrivePulse(0, 400, 0.9, 20e6, 0, Gaussian(5), 10, 0)
