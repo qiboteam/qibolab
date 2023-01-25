@@ -923,8 +923,7 @@ class FluxPulse(Pulse):
 
     @property
     def serial(self):
-        return f"FluxPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
-
+                return f"FluxPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {format(self.relative_phase, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
 
 class SplitPulse(Pulse):
     """A supporting class to represent sections or slices of a pulse."""
@@ -1123,7 +1122,6 @@ class PulseSequence:
     A quantum circuit can be translated into a set of scheduled pulses that implement the circuit gates.
     This class contains many supporting fuctions to facilitate the creation and manipulation of
     these collections of pulses.
-    None of the methods of PulseSequence modify any of the properties of its pulses.
 
     Attributes:
         pulses (list): a list containing the pulses, ordered by their channel and start times.
@@ -1241,6 +1239,24 @@ class PulseSequence:
                 for pulse in ps.pulses:
                     self.pulses.append(pulse)
         self.pulses.sort(key=lambda item: (item.channel, item.start))
+
+    def append_at_end_of_channel(self, *pulses):
+        """Appends pulses to the end of the channel (one at a time), modifying their start time.
+        Each pulse start time is calculated as the finish time of the last pulse in the channel.
+        """
+
+        for pulse in pulses:
+            pulse.start = self.get_channel_pulses(pulse.channel).finish
+            self.add(pulse)
+
+    def append_at_end_of_sequence(self, *pulses):
+        """Appends pulses to the end of the sequence (one at a time), modifying their start time.
+        Each pulse start time is calculated as the finish time of the last pulse in the sequence.
+        """
+
+        for pulse in pulses:
+            pulse.start = self.finish
+            self.add(pulse)
 
     def index(self, pulse):
         """Returns the index of a pulse in the sequence."""
@@ -1446,68 +1462,61 @@ class PulseSequence:
             import numpy as np
             from matplotlib import gridspec
 
-            fig = plt.figure(figsize=(14, 2 * self.count), dpi=200)
+            fig = plt.figure(figsize=(14, 2 * self.count), dpi=120)
             gs = gridspec.GridSpec(ncols=1, nrows=self.count)
             vertical_lines = []
             for pulse in self.pulses:
                 vertical_lines.append(pulse.start)
                 vertical_lines.append(pulse.finish)
 
-            n = -1
-            for qubit in self.qubits:
-                qubit_pulses = self.get_qubit_pulses(qubit)
-                for channel in qubit_pulses.channels:
-                    n += 1
-                    channel_pulses = qubit_pulses.get_channel_pulses(channel)
-                    ax = plt.subplot(gs[n])
+            for n, channel in enumerate(self.channels):
+                channel_pulses = self.get_channel_pulses(channel)
+                ax = plt.subplot(gs[n])
+                ax.axis([0, self.finish, -1, 1])
+                for pulse in channel_pulses:
+                    if isinstance(pulse, SplitPulse):
+                        time = pulse.window_start + np.arange(pulse.window_duration)
+                        ax.plot(
+                            time,
+                            pulse.shape.modulated_waveform_q.data[
+                                pulse.window_start - pulse.start : pulse.window_finish - pulse.start
+                            ],
+                            c="lightgrey",
+                        )
+                        ax.plot(
+                            time,
+                            pulse.shape.modulated_waveform_i.data[
+                                pulse.window_start - pulse.start : pulse.window_finish - pulse.start
+                            ],
+                            c=f"C{str(n)}",
+                        )
+                        ax.plot(
+                            time,
+                            pulse.shape.envelope_waveform_i.data[
+                                pulse.window_start - pulse.start : pulse.window_finish - pulse.start
+                            ],
+                            c=f"C{str(n)}",
+                        )
+                        ax.plot(
+                            time,
+                            -pulse.shape.envelope_waveform_i.data[
+                                pulse.window_start - pulse.start : pulse.window_finish - pulse.start
+                            ],
+                            c=f"C{str(n)}",
+                        )
+                    else:
+                        time = pulse.start + np.arange(pulse.duration)
+                        ax.plot(time, pulse.shape.modulated_waveform_q.data, c="lightgrey")
+                        ax.plot(time, pulse.shape.modulated_waveform_i.data, c=f"C{str(n)}")
+                        ax.plot(time, pulse.shape.envelope_waveform_i.data, c=f"C{str(n)}")
+                        ax.plot(time, -pulse.shape.envelope_waveform_i.data, c=f"C{str(n)}")
+                    # TODO: if they overlap use different shades
+                    ax.axhline(0, c="dimgrey")
+                    ax.set_ylabel(f"channel {channel}")
+                    for vl in vertical_lines:
+                        ax.axvline(vl, c="slategrey", linestyle="--")
                     ax.axis([0, self.finish, -1, 1])
-                    for pulse in channel_pulses:
-                        if isinstance(pulse, SplitPulse):
-                            num_samples = int(pulse.window_duration / 1e9 * PulseShape.SAMPLING_RATE)
-                            time = pulse.window_start + np.arange(num_samples) / PulseShape.SAMPLING_RATE * 1e9
-                            ax.plot(
-                                time,
-                                pulse.shape.modulated_waveform_q.data[
-                                    pulse.window_start - pulse.start : pulse.window_finish - pulse.start
-                                ],
-                                c="lightgrey",
-                            )
-                            ax.plot(
-                                time,
-                                pulse.shape.modulated_waveform_i.data[
-                                    pulse.window_start - pulse.start : pulse.window_finish - pulse.start
-                                ],
-                                c=f"C{str(n)}",
-                            )
-                            ax.plot(
-                                time,
-                                pulse.shape.envelope_waveform_i.data[
-                                    pulse.window_start - pulse.start : pulse.window_finish - pulse.start
-                                ],
-                                c=f"C{str(n)}",
-                            )
-                            ax.plot(
-                                time,
-                                -pulse.shape.envelope_waveform_i.data[
-                                    pulse.window_start - pulse.start : pulse.window_finish - pulse.start
-                                ],
-                                c=f"C{str(n)}",
-                            )
-                        else:
-                            num_samples = int(pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
-                            time = pulse.start + np.arange(num_samples) / PulseShape.SAMPLING_RATE * 1e9
-                            ax.plot(time, pulse.shape.modulated_waveform_q.data, c="lightgrey")
-                            ax.plot(time, pulse.shape.modulated_waveform_i.data, c=f"C{str(n)}")
-                            ax.plot(time, pulse.shape.envelope_waveform_i.data, c=f"C{str(n)}")
-                            ax.plot(time, -pulse.shape.envelope_waveform_i.data, c=f"C{str(n)}")
-                        # TODO: if they overlap use different shades
-                        ax.axhline(0, c="dimgrey")
-                        ax.set_ylabel(f"qubit {qubit} \n channel {channel}")
-                        for vl in vertical_lines:
-                            ax.axvline(vl, c="slategrey", linestyle="--")
-                        ax.axis([0, self.finish, -1, 1])
-                        ax.grid(b=True, which="both", axis="both", color="#CCCCCC", linestyle="-")
+                    ax.grid(b=True, which="both", axis="both", color="#CCCCCC", linestyle="-")
             plt.show()
             if savefig_filename:
                 plt.savefig(savefig_filename)
-            plt.close()
