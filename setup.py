@@ -53,6 +53,8 @@ setup(
             "sphinx_markdown_tables",
             "nbsphinx",
             "IPython",
+            "sphinx_copybutton",
+            "furo",
         ],
         # TII system dependencies
         "tiiq": [

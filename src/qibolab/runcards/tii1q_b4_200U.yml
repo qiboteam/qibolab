@@ -13,8 +13,8 @@ topology: # qubit - qubit connections
 
 channels: ['W4_qd', 'W4_ro', 'V2']
 
-qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
-    0: ['W4_ro', 'W4_qd', null]
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux, QubitBias]
+    0: ['W4_ro', 'W4_qd', null, null]
 
 instruments:
     cluster:
@@ -99,8 +99,8 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            resonator_freq: 7_295_166_285
-            qubit_freq: 5_235_141_908
+            readout_frequency: 7_295_166_285
+            drive_frequency: 5_235_141_908
             T1: 21785
             T2: 8385
             state0_voltage: 1000
