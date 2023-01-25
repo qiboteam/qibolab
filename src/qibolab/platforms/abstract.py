@@ -211,7 +211,7 @@ class AbstractPlatform(ABC):
                     # Fetch pi/2 pulse from calibration
                     RX90_pulse_2 = self.create_RX90_pulse(
                         qubit,
-                        start=max(sequence.get_qubit_pulses(qubit).finish, moment_start),
+                        start=RX90_pulse_1.finish,
                         relative_phase=sequence.virtual_z_phases[qubit] - np.pi
                     )
                     # apply RX(-pi/2)
