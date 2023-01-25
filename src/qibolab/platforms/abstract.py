@@ -231,7 +231,7 @@ class AbstractPlatform(ABC):
                     cz_sequence = self.create_CZ_pulse_sequence(gate.qubits)
 
                     # determine the right start time based on the availability of the qubits involved
-                    cz_qubits = set((*cz_sequence.qubits, *gate.qubits))
+                    cz_qubits = {*cz_sequence.qubits, *gate.qubits}
                     cz_start = max(sequence.get_qubit_pulses(*cz_qubits).finish, moment_start)
 
                     # shift the pulses
