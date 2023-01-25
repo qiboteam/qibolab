@@ -30,7 +30,14 @@ native_gates:
         2-1: # qubit pair
             CZ:
                 duration: 30
-                amplitude: 0.05477
+                amplitude: 0.0553
+                shape: Rectangular()
+                phase_control: -1.5707963267948966
+                phase_target: -1.5707963267948966
+        3-2: # qubit pair
+            CZ:
+                duration: 32
+                amplitude: -0.05145
                 shape: Rectangular()
                 phase_control: -1.5707963267948966
                 phase_target: -1.5707963267948966
@@ -59,7 +66,6 @@ native_gates:
                 amplitude: 0.0484
                 frequency: 4_855_663_000
                 #frequency: 4_718_515_000 # 02 transition (more likely)
-                #frequency: 4_709_500_000 # 02 transition (wrong?)
                 shape: Drag(5, -0.02)
                 type: qd # qubit drive
                 start: 0
@@ -76,7 +82,7 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.05682
-                frequency: 5_799_876_000
+                frequency: 5_800_563_000
                 #frequency: 5_661_400_000 # 02 transition
                 shape: Drag(5, -0.04) #Gaussian(5)
                 type: qd # qubit drive
@@ -93,8 +99,9 @@ native_gates:
         3: # qubit number
             RX:
                 duration: 40
-                amplitude: 0.145
-                frequency: 6_759_804_000
+                amplitude: 0.112
+                frequency: 6_760_922_000
+                #frequency: 6_628_822_000 # 02 transition
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -168,7 +175,7 @@ characterization:
             drive_frequency: 4_855_663_000
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.048  # -0.058  # -0.022
+            sweetspot: -0.047
             ff_filter: []
             fb_filter: []
             # parameters for single shot classification
@@ -186,7 +193,7 @@ characterization:
             drive_frequency: 5_799_876_000
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.046
+            sweetspot: -0.045
             ff_filter: [1.0684635881381783, -1.0163217174522334]
             fb_filter: [0.947858129314055]
             # parameters for single shot classification
@@ -204,7 +211,7 @@ characterization:
             drive_frequency: 6_760_700_000
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.032  # 0.042 # 0.026
+            sweetspot: 0.034
             ff_filter: []
             fb_filter: []
             # parameters for single shot classification
@@ -222,7 +229,7 @@ characterization:
             drive_frequency: 6_585_053_000
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.058  # -0.066
+            sweetspot: -0.057
             ff_filter: []
             fb_filter: []
             # parameters for single shot classification

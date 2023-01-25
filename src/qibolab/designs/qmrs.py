@@ -98,8 +98,10 @@ class QMRSDesign(AbstractInstrumentDesign):
         channels["L3-15"].lo_frequency = 4_700_000_000
         channels["L3-11"].lo_frequency = 4_700_000_000
         channels["L3-12"].lo_frequency = 5_600_000_000
-        channels["L3-13"].lo_frequency = 6_500_000_000
-        channels["L3-14"].lo_frequency = 6_500_000_000
+        # channels["L3-13"].lo_frequency = 6_500_000_000
+        # channels["L3-14"].lo_frequency = 6_500_000_000
+        channels["L3-13"].lo_frequency = 6_600_000_000
+        channels["L3-14"].lo_frequency = 6_600_000_000
 
         channels["L3-25_a"].lo_power = 18.0
         channels["L3-25_b"].lo_power = 15.0
