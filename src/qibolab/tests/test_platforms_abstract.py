@@ -134,6 +134,16 @@ def test_two_u3_to_sequence(platform_name):
     assert sequence.serial == s.serial
 
 
+def test_CZ_to_sequence(platform_name):
+    platform = Platform(platform_name)
+    circuit = Circuit(2)
+    circuit.add(gates.X(0))
+    circuit.add(gates.CZ(0, 1))
+
+    sequence: PulseSequence = platform.transpile(circuit)
+    assert len(sequence.pulses) == len(platform.create_CZ_pulse_sequence((2, 1))) + 2
+
+
 def test_add_measurement_to_sequence(platform_name):
     platform = Platform(platform_name)
     circuit = Circuit(1)
