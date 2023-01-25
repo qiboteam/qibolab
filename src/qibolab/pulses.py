@@ -1229,11 +1229,17 @@ class PulseSequence:
 
         return len(self.pulses)
 
-    def add(self, *pulses):
+    def add(self, *items):
         """Adds pulses to the sequence and sorts them by channel and start time."""
 
-        for pulse in pulses:
-            self.pulses.append(pulse)
+        for item in items:
+            if isinstance(item, Pulse):
+                pulse = item
+                self.pulses.append(pulse)
+            elif isinstance(item, PulseSequence):
+                ps = item
+                for pulse in ps.pulses:
+                    self.pulses.append(pulse)
         self.pulses.sort(key=lambda item: (item.channel, item.start))
 
     def index(self, pulse):
@@ -1304,7 +1310,7 @@ class PulseSequence:
         return new_pc
 
     def get_channel_pulses(self, *channels):
-        """Returns a new PulseSequence containing only the pulses on a specific channel."""
+        """Returns a new PulseSequence containing only the pulses on a specific set of channels."""
 
         new_pc = PulseSequence()
         for pulse in self.pulses:
@@ -1312,12 +1318,12 @@ class PulseSequence:
                 new_pc.add(pulse)
         return new_pc
 
-    def get_qubit_pulses(self, qubit):
-        """Returns a new PulseSequence containing only the pulses on a specific qubit."""
+    def get_qubit_pulses(self, *qubits):
+        """Returns a new PulseSequence containing only the pulses on a specific set of qubits."""
 
         new_pc = PulseSequence()
         for pulse in self.pulses:
-            if pulse.qubit == qubit:
+            if pulse.qubit in qubits:
                 new_pc.add(pulse)
         return new_pc
 
