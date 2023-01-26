@@ -327,7 +327,9 @@ class AbstractPlatform(ABC):
             elif pulse_settings["type"] == "virtual_z":
                 virtual_z_phases[pulse_settings["qubit"]] += pulse_settings["phase"]
             else:
-                raise NotImplementedError("Implementation of CZ gates using pulses of types other than `qf` or `virtual_z` is not supported yet.")
+                raise NotImplementedError(
+                    "Implementation of CZ gates using pulses of types other than `qf` or `virtual_z` is not supported yet."
+                )
 
         return sequence, virtual_z_phases
 
