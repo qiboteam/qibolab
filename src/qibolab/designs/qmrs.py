@@ -1,7 +1,6 @@
 from qibo.config import log, raise_error
 
 from qibolab.designs.abstract import AbstractInstrumentDesign
-from qibolab.platforms.utils import Channel
 
 
 class QMRSDesign(AbstractInstrumentDesign):
@@ -26,82 +25,28 @@ class QMRSDesign(AbstractInstrumentDesign):
     """
 
     def __init__(self, address="192.168.0.1:80", simulation_duration=None, cloud=False):
-        from qibolab.instruments.rohde_schwarz import SGS100A
-
-        self.is_connected = False
+        super().__init__()
 
         # Instantiate QM OPX instruments
         if simulation_duration is None:
             from qibolab.instruments.qm import QMOPX
+            from qibolab.instruments.rohde_schwarz import SGS100A
 
             self.opx = QMOPX("qmopx", address)
+            # Instantiate local oscillators (HARDCODED)
+            self.local_oscillators = [
+                SGS100A("lo_readout_a", "192.168.0.39"),
+                SGS100A("lo_readout_b", "192.168.0.31"),
+                SGS100A("lo_drive_low", "192.168.0.32"),
+                SGS100A("lo_drive_mid", "192.168.0.33"),
+                SGS100A("lo_drive_high", "192.168.0.34"),
+            ]
+
         else:
             from qibolab.instruments.qmsim import QMSim
 
             self.opx = QMSim("qmopx", address, simulation_duration, cloud)
-
-        # Map controllers to qubit channels (HARDCODED)
-        # readout
-        Channel("L3-25_a").ports = [
-            ("con1", 10),
-            ("con1", 9),
-        ]
-        Channel("L3-25_b").ports = [
-            ("con2", 10),
-            ("con2", 9),
-        ]
-        # feedback
-        Channel("L2-5").ports = [("con1", 2), ("con1", 1)]
-        # drive
-        Channel("L3-11").ports = [("con1", 2), ("con1", 1)]
-        Channel("L3-12").ports = [("con1", 4), ("con1", 3)]
-        Channel("L3-13").ports = [("con1", 6), ("con1", 5)]
-        Channel("L3-14").ports = [("con1", 8), ("con1", 7)]
-        Channel("L3-15").ports = [("con3", 2), ("con3", 1)]
-        # flux
-        Channel("L4-1").ports = [("con2", 1)]
-        Channel("L4-2").ports = [("con2", 2)]
-        Channel("L4-3").ports = [("con2", 3)]
-        Channel("L4-4").ports = [("con2", 4)]
-        Channel("L4-5").ports = [("con2", 5)]
-
-        # Instantiate local oscillators (HARDCODED)
-        self.local_oscillators = [
-            SGS100A("lo_readout_a", "192.168.0.39"),
-            SGS100A("lo_readout_b", "192.168.0.31"),
-            SGS100A("lo_drive_low", "192.168.0.32"),
-            SGS100A("lo_drive_mid", "192.168.0.33"),
-            SGS100A("lo_drive_high", "192.168.0.34"),
-        ]
-
-        # Map LOs to channels
-        Channel("L3-25_a").local_oscillator = self.local_oscillators[0]
-        Channel("L3-25_b").local_oscillator = self.local_oscillators[1]
-        Channel("L3-15").local_oscillator = self.local_oscillators[2]
-        Channel("L3-11").local_oscillator = self.local_oscillators[2]
-        Channel("L3-12").local_oscillator = self.local_oscillators[3]
-        Channel("L3-13").local_oscillator = self.local_oscillators[4]
-        Channel("L3-14").local_oscillator = self.local_oscillators[4]
-
-        # Set default LO parameters in the channel
-        Channel("L3-25_a").lo_frequency = 7_300_000_000
-        Channel("L3-25_b").lo_frequency = 7_900_000_000
-        Channel("L3-15").lo_frequency = 4_700_000_000
-        Channel("L3-11").lo_frequency = 4_700_000_000
-        Channel("L3-12").lo_frequency = 5_600_000_000
-        Channel("L3-13").lo_frequency = 6_500_000_000
-        Channel("L3-14").lo_frequency = 6_500_000_000
-
-        Channel("L3-25_a").lo_power = 18.0
-        Channel("L3-25_b").lo_power = 15.0
-        Channel("L3-15").lo_power = 16.0
-        Channel("L3-11").lo_power = 16.0
-        Channel("L3-12").lo_power = 16.0
-        Channel("L3-13").lo_power = 16.0
-        Channel("L3-14").lo_power = 16.0
-
-        # drop the local oscillators to avoid connecting when simulation is used
-        if simulation_duration is not None:
+            # avoid connecting to local oscillators when simulation is used
             self.local_oscillators = []
 
     def connect(self):
@@ -118,19 +63,60 @@ class QMRSDesign(AbstractInstrumentDesign):
                     )
             self.is_connected = True
 
-    def setup(self, qubits, **kwargs):
-        relaxation_time = kwargs["relaxation_time"]
-        time_of_flight = kwargs["time_of_flight"]
-        smearing = kwargs["smearing"]
+    def setup(self, qubits, channels, **kwargs):
+        # Map controllers to qubit channels (HARDCODED)
+        # readout
+        channels["L3-25_a"].ports = [("con1", 10), ("con1", 9)]
+        channels["L3-25_b"].ports = [("con2", 10), ("con2", 9)]
+        # feedback
+        channels["L2-5"].ports = [("con1", 2), ("con1", 1)]
+        # drive
+        channels["L3-11"].ports = [("con1", 2), ("con1", 1)]
+        channels["L3-12"].ports = [("con1", 4), ("con1", 3)]
+        channels["L3-13"].ports = [("con1", 6), ("con1", 5)]
+        channels["L3-14"].ports = [("con1", 8), ("con1", 7)]
+        channels["L3-15"].ports = [("con3", 2), ("con3", 1)]
+        # flux
+        channels["L4-1"].ports = [("con2", 1)]
+        channels["L4-2"].ports = [("con2", 2)]
+        channels["L4-3"].ports = [("con2", 3)]
+        channels["L4-4"].ports = [("con2", 4)]
+        channels["L4-5"].ports = [("con2", 5)]
 
-        for qubit in qubits:
+        # Map LOs to channels
+        channels["L3-25_a"].local_oscillator = self.local_oscillators[0]
+        channels["L3-25_b"].local_oscillator = self.local_oscillators[1]
+        channels["L3-15"].local_oscillator = self.local_oscillators[2]
+        channels["L3-11"].local_oscillator = self.local_oscillators[2]
+        channels["L3-12"].local_oscillator = self.local_oscillators[3]
+        channels["L3-13"].local_oscillator = self.local_oscillators[4]
+        channels["L3-14"].local_oscillator = self.local_oscillators[4]
+
+        # Set default LO parameters in the channel
+        channels["L3-25_a"].lo_frequency = 7_300_000_000
+        channels["L3-25_b"].lo_frequency = 7_900_000_000
+        channels["L3-15"].lo_frequency = 4_700_000_000
+        channels["L3-11"].lo_frequency = 4_700_000_000
+        channels["L3-12"].lo_frequency = 5_600_000_000
+        channels["L3-13"].lo_frequency = 6_500_000_000
+        channels["L3-14"].lo_frequency = 6_500_000_000
+
+        channels["L3-25_a"].lo_power = 18.0
+        channels["L3-25_b"].lo_power = 15.0
+        channels["L3-15"].lo_power = 16.0
+        channels["L3-11"].lo_power = 16.0
+        channels["L3-12"].lo_power = 16.0
+        channels["L3-13"].lo_power = 16.0
+        channels["L3-14"].lo_power = 16.0
+
+        for qubit in qubits.values():
             if qubit.flux is not None:
                 # set flux offset
-                qubit.flux.offset = qubit.characterization.sweetspot
+                qubit.flux.offset = qubit.sweetspot
                 # Set flux filters (useful for CZ gates)
                 qubit.flux.filter = {
-                    "feedforward": qubit.characterization.ff_filter,
-                    "feedback": qubit.characterization.fb_filter,
+                    "feedforward": qubit.ff_filter,
+                    "feedback": qubit.fb_filter,
                 }
             # set LO frequencies
             for channel in [qubit.readout, qubit.drive]:
@@ -144,6 +130,9 @@ class QMRSDesign(AbstractInstrumentDesign):
                         log.warn(f"There is no connection to {lo}. Frequencies were not set.")
 
         # setup QM
+        relaxation_time = kwargs["relaxation_time"]
+        time_of_flight = kwargs["time_of_flight"]
+        smearing = kwargs["smearing"]
         self.opx.setup(qubits, relaxation_time, time_of_flight, smearing)
 
     def start(self):
@@ -165,8 +154,8 @@ class QMRSDesign(AbstractInstrumentDesign):
                 lo.disconnect()
             self.is_connected = False
 
-    def sweep(self, qubits, sequence, *sweepers, nshots=1024, average=True):
-        return self.opx.sweep(qubits, sequence, *sweepers, nshots=nshots, average=average)
+    def play(self, *args, **kwargs):
+        return self.opx.play(*args, **kwargs)
 
-    def play(self, qubits, sequence, nshots=1024):
-        return self.opx.play(qubits, sequence, nshots)
+    def sweep(self, *args, **kwargs):
+        return self.opx.sweep(*args, **kwargs)

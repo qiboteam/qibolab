@@ -73,7 +73,7 @@ class QibolabBackend(NumpyBackend):
         # Transpile the native circuit into a sequence of pulses ``PulseSequence``
         sequence = self.platform.transpile(native_circuit)
 
-        if not self.platform.is_connected():
+        if not self.platform.is_connected:
             self.platform.connect()
             self.platform.setup()
 

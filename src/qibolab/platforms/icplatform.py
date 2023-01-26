@@ -1,6 +1,6 @@
 import copy
 
-from qibolab.platforms.abstract import AbstractPlatform
+from qibolab.platforms.multiqubit import MultiqubitPlatform
 
 
 class Qubit:
@@ -44,7 +44,7 @@ class Qubit:
         self.readout_channels = readout_channels
 
 
-class ICPlatform(AbstractPlatform):
+class ICPlatform(MultiqubitPlatform):
     """Platform for controlling quantum devices with IC.
 
     Example:

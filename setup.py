@@ -53,6 +53,8 @@ setup(
             "sphinx_markdown_tables",
             "nbsphinx",
             "IPython",
+            "sphinx_copybutton",
+            "furo",
         ],
         # TII system dependencies
         "tiiq": [
@@ -60,7 +62,7 @@ setup(
             "qcodes",
             "pyvisa-py==0.5.3",
             "qm-qua",
-            # "qualang-tools",
+            "qualang-tools",
         ],
     },
     python_requires=">=3.8.0",

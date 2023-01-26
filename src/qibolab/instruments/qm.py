@@ -24,7 +24,7 @@ from qm.QuantumMachinesManager import QuantumMachinesManager
 
 from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.pulses import Pulse, Rectangular
-from qibolab.result import ExecutionResult
+from qibolab.result import ExecutionResults
 
 
 class QMPulse:
@@ -48,19 +48,19 @@ class QMPulse:
         self.cos = None
         self.sin = None
 
-    def declare_output(self, characterization=None):
+    def declare_output(self, threshold=None, iq_angle=None):
         self.I = declare(fixed)
         self.Q = declare(fixed)
         self.I_st = declare_stream()
         self.Q_st = declare_stream()
 
-        if characterization is not None and characterization.threshold is not None:
+        if threshold is not None:
             # QUA variables used for single shot classification
             self.shot = declare(bool)
             self.shots = declare_stream()
-            self.threshold = characterization.threshold
-            self.cos = np.cos(characterization.iq_angle)
-            self.sin = np.sin(characterization.iq_angle)
+            self.threshold = threshold
+            self.cos = np.cos(iq_angle)
+            self.sin = np.sin(iq_angle)
 
     def bake(self, config):
         from qualang_tools.bakery import baking
@@ -169,7 +169,7 @@ class QMOPX(AbstractInstrument):
         self.smearing = smearing
         self.relaxation_time = relaxation_time
         # controllers are defined when registering pulses
-        for qubit in qubits:
+        for qubit in qubits.values():
             if qubit.flux:
                 self.register_flux_element(qubit)
 
@@ -223,24 +223,24 @@ class QMOPX(AbstractInstrument):
                 will send to this qubit. This frequency will be mixed with the
                 LO connected to the same channel.
         """
-        if f"drive{qubit}" not in self.config["elements"]:
+        if f"drive{qubit.name}" not in self.config["elements"]:
             # register drive controllers
             self.register_analog_output_controllers(qubit.drive.ports)
             # register element
             lo_frequency = qubit.drive.lo_frequency
-            self.config["elements"][f"drive{qubit}"] = {
+            self.config["elements"][f"drive{qubit.name}"] = {
                 "mixInputs": {
                     "I": qubit.drive.ports[0],
                     "Q": qubit.drive.ports[1],
                     "lo_frequency": lo_frequency,
-                    "mixer": f"mixer_drive{qubit}",
+                    "mixer": f"mixer_drive{qubit.name}",
                 },
                 "intermediate_frequency": intermediate_frequency,
                 "operations": {},
             }
-            drive_g = qubit.characterization.mixer_drive_g
-            drive_phi = qubit.characterization.mixer_drive_phi
-            self.config["mixers"][f"mixer_drive{qubit}"] = [
+            drive_g = qubit.mixer_drive_g
+            drive_phi = qubit.mixer_drive_phi
+            self.config["mixers"][f"mixer_drive{qubit.name}"] = [
                 {
                     "intermediate_frequency": intermediate_frequency,
                     "lo_frequency": lo_frequency,
@@ -248,11 +248,11 @@ class QMOPX(AbstractInstrument):
                 }
             ]
         else:
-            current_if = self.config["elements"][f"drive{qubit}"]["intermediate_frequency"]
+            current_if = self.config["elements"][f"drive{qubit.name}"]["intermediate_frequency"]
             if current_if != intermediate_frequency:
                 raise_error(
                     NotImplementedError,
-                    f"Changing intermediate frequency for qubit {qubit} "
+                    f"Changing intermediate frequency for qubit {qubit.name} "
                     f"from {current_if} to {intermediate_frequency}.",
                 )
 
@@ -265,7 +265,7 @@ class QMOPX(AbstractInstrument):
                 will send to this qubit. This frequency will be mixed with the
                 LO connected to the same channel.
         """
-        if f"readout{qubit}" not in self.config["elements"]:
+        if f"readout{qubit.name}" not in self.config["elements"]:
             # register readout controllers
             self.register_analog_output_controllers(qubit.readout.ports)
             # register feedback controllers
@@ -289,12 +289,12 @@ class QMOPX(AbstractInstrument):
 
             # register element
             lo_frequency = qubit.readout.lo_frequency
-            self.config["elements"][f"readout{qubit}"] = {
+            self.config["elements"][f"readout{qubit.name}"] = {
                 "mixInputs": {
                     "I": qubit.readout.ports[0],
                     "Q": qubit.readout.ports[1],
                     "lo_frequency": lo_frequency,
-                    "mixer": f"mixer_readout{qubit}",
+                    "mixer": f"mixer_readout{qubit.name}",
                 },
                 "intermediate_frequency": intermediate_frequency,
                 "operations": {},
@@ -305,9 +305,9 @@ class QMOPX(AbstractInstrument):
                 "time_of_flight": self.time_of_flight,
                 "smearing": self.smearing,
             }
-            readout_g = qubit.characterization.mixer_readout_g
-            readout_phi = qubit.characterization.mixer_readout_phi
-            self.config["mixers"][f"mixer_readout{qubit}"] = [
+            readout_g = qubit.mixer_readout_g
+            readout_phi = qubit.mixer_readout_phi
+            self.config["mixers"][f"mixer_readout{qubit.name}"] = [
                 {
                     "intermediate_frequency": intermediate_frequency,
                     "lo_frequency": lo_frequency,
@@ -315,11 +315,11 @@ class QMOPX(AbstractInstrument):
                 }
             ]
         else:
-            current_if = self.config["elements"][f"readout{qubit}"]["intermediate_frequency"]
+            current_if = self.config["elements"][f"readout{qubit.name}"]["intermediate_frequency"]
             if current_if != intermediate_frequency:
                 raise_error(
                     NotImplementedError,
-                    f"Changing intermediate frequency for qubit {qubit} "
+                    f"Changing intermediate frequency for qubit {qubit.name} "
                     f"from {current_if} to {intermediate_frequency}.",
                 )
 
@@ -332,11 +332,11 @@ class QMOPX(AbstractInstrument):
                 will send to this qubit. This frequency will be mixed with the
                 LO connected to the same channel.
         """
-        if f"flux{qubit}" not in self.config["elements"]:
+        if f"flux{qubit.name}" not in self.config["elements"]:
             # register controller
             self.register_analog_output_controllers(qubit.flux.ports, qubit.flux.offset, qubit.flux.filter)
             # register element
-            self.config["elements"][f"flux{qubit}"] = {
+            self.config["elements"][f"flux{qubit.name}"] = {
                 "singleInput": {
                     "port": qubit.flux.ports[0],
                 },
@@ -344,11 +344,11 @@ class QMOPX(AbstractInstrument):
                 "operations": {},
             }
         else:
-            current_if = self.config["elements"][f"flux{qubit}"]["intermediate_frequency"]
+            current_if = self.config["elements"][f"flux{qubit.name}"]["intermediate_frequency"]
             if current_if != intermediate_frequency:
                 raise_error(
                     NotImplementedError,
-                    f"Changing intermediate frequency for qubit {qubit} "
+                    f"Changing intermediate frequency for qubit {qubit.name} "
                     f"from {current_if} to {intermediate_frequency}.",
                 )
 
@@ -383,7 +383,7 @@ class QMOPX(AbstractInstrument):
                 if qubit.flux:
                     self.register_flux_element(qubit)
                 # register drive pulse in elements
-                self.config["elements"][f"drive{qubit}"]["operations"][pulse.serial] = pulse.serial
+                self.config["elements"][f"drive{qubit.name}"]["operations"][pulse.serial] = pulse.serial
 
             elif pulse.type.name == "FLUX":
                 serial = self.register_waveform(pulse)
@@ -397,7 +397,7 @@ class QMOPX(AbstractInstrument):
                 # register flux element (if it does not already exist)
                 self.register_flux_element(qubit, pulse.frequency)
                 # register flux pulse in elements
-                self.config["elements"][f"flux{qubit}"]["operations"][pulse.serial] = pulse.serial
+                self.config["elements"][f"flux{qubit.name}"]["operations"][pulse.serial] = pulse.serial
 
             elif pulse.type.name == "READOUT":
                 serial_i = self.register_waveform(pulse, "i")
@@ -411,9 +411,9 @@ class QMOPX(AbstractInstrument):
                         "Q": serial_q,
                     },
                     "integration_weights": {
-                        "cos": f"cosine_weights{qubit}",
-                        "sin": f"sine_weights{qubit}",
-                        "minus_sin": f"minus_sine_weights{qubit}",
+                        "cos": f"cosine_weights{qubit.name}",
+                        "sin": f"sine_weights{qubit.name}",
+                        "minus_sin": f"minus_sine_weights{qubit.name}",
                     },
                     "digital_marker": "ON",
                 }
@@ -424,7 +424,7 @@ class QMOPX(AbstractInstrument):
                 if qubit.flux:
                     self.register_flux_element(qubit)
                 # register readout pulse in elements
-                self.config["elements"][f"readout{qubit}"]["operations"][pulse.serial] = pulse.serial
+                self.config["elements"][f"readout{qubit.name}"]["operations"][pulse.serial] = pulse.serial
 
             else:
                 raise_error(TypeError, f"Unknown pulse type {pulse.type.name}.")
@@ -469,18 +469,18 @@ class QMOPX(AbstractInstrument):
                 object that the integration weights will be used for.
             readout_len (int): Duration of the readout pulse in ns.
         """
-        rotation_angle = qubit.characterization.rotation_angle
+        rotation_angle = qubit.rotation_angle
         self.config["integration_weights"].update(
             {
-                f"cosine_weights{qubit}": {
+                f"cosine_weights{qubit.name}": {
                     "cosine": [(np.cos(rotation_angle), readout_len)],
                     "sine": [(-np.sin(rotation_angle), readout_len)],
                 },
-                f"sine_weights{qubit}": {
+                f"sine_weights{qubit.name}": {
                     "cosine": [(np.sin(rotation_angle), readout_len)],
                     "sine": [(np.cos(rotation_angle), readout_len)],
                 },
-                f"minus_sine_weights{qubit}": {
+                f"minus_sine_weights{qubit.name}": {
                     "cosine": [(-np.sin(rotation_angle), readout_len)],
                     "sine": [(-np.cos(rotation_angle), readout_len)],
                 },
@@ -582,7 +582,7 @@ class QMOPX(AbstractInstrument):
                 shots = handles.get(f"{serial}_shots").fetch_all().astype(int)
             else:
                 shots = None
-            results[pulse.qubit] = results[serial] = ExecutionResult(ires, qres, shots)
+            results[pulse.qubit] = results[serial] = ExecutionResults.from_components(ires, qres, shots)
         return results
 
     def play(self, qubits, sequence, nshots=1024):
@@ -619,7 +619,9 @@ class QMOPX(AbstractInstrument):
         with program() as experiment:
             n = declare(int)
             for qmpulse in qmsequence.ro_pulses:
-                qmpulse.declare_output(qubits[qmpulse.pulse.qubit].characterization)
+                threshold = qubits[qmpulse.pulse.qubit].threshold
+                iq_angle = qubits[qmpulse.pulse.qubit].iq_angle
+                qmpulse.declare_output(threshold, iq_angle)
 
             with for_(n, 0, n < nshots, n + 1):
                 self.play_pulses(qmsequence, relaxation_time=self.relaxation_time)
