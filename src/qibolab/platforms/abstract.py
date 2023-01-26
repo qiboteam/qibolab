@@ -178,10 +178,12 @@ class AbstractPlatform(ABC):
 
         # Load characterization settings and create ``Qubit`` and ``Channel`` objects
         for q in settings["qubits"]:
+            # TODO: Fix this to work for all platforms without the need for if
+            feedback, twpa = None, None
             if len(settings["qubit_channel_map"][q]) == 3:
                 readout, drive, flux = settings["qubit_channel_map"][q]
-                feedback = None
-                twpa = None
+            elif len(settings["qubit_channel_map"][q]) == 4:
+                readout, drive, flux, _ = settings["qubit_channel_map"][q]
             else:
                 readout, drive, flux, feedback, twpa = settings["qubit_channel_map"][q]
             self.qubits[q] = qubit = Qubit(
