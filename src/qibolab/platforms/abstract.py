@@ -12,6 +12,29 @@ from qibo.models import Circuit
 from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse
 from qibolab.transpilers import can_execute, transpile
 
+@dataclass
+class Classifier:
+    """Classifier object used for single shot readout.
+
+    Args:
+        type (str): Name of the classifier.
+        model (Any): Model of the classifier.
+        threshold (float): Threshold for the classifier.
+        iq_angle (float): Angle for the classifier.
+    """
+
+    type: str
+    model: Optional[Any] = field(default=None, init=True)
+    threshold: Optional[float] = field(default=None, init=False)
+    iq_angle: Optional[float] = field(default=None, init=False)
+
+    def __post_init__(self):
+        if isinstance(self.model, str):
+            if self.type == "scikit":
+                import joblib, pathlib
+                self.model = joblib.load(pathlib.Path(__file__).parent.parent / "runcards" / self.model)
+            else: 
+                raise_error(NotImplementedError, f"Classifier type {self.type} not implemented for {self.model}.")
 
 @dataclass
 class Channel:
@@ -92,12 +115,17 @@ class Qubit:
     iq_angle: float = 0.0
     # required for integration weights (not sure if it should be here)
     rotation_angle: float = 0.0
+    # classifier
+    classifier: Optional[Classifier] = None
     # required for mixers (not sure if it should be here)
     mixer_drive_g: float = 0.0
     mixer_drive_phi: float = 0.0
     mixer_readout_g: float = 0.0
     mixer_readout_phi: float = 0.0
 
+    def __post_init__(self):
+        if isinstance(self.classifier, dict):
+            self.classifier = Classifier(**self.classifier)
 
 class AbstractPlatform(ABC):
     """Abstract platform for controlling quantum devices.

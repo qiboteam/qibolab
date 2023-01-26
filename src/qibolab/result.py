@@ -14,6 +14,7 @@ class ExecutionResults:
 
     array: npt.NDArray[ExecRes]
     shots: Optional[npt.NDArray[np.uint32]] = None
+    classified_shots: Optional[npt.NDArray[np.uint32]] = None
 
     @classmethod
     def from_components(cls, is_, qs_, shots=None):
@@ -50,6 +51,20 @@ class ExecutionResults:
     def ground_state_probability(self):
         """Computes ground state probability"""
         return 1 - np.mean(self.shots)
+
+    @cached_property
+    def to_dict_classified_probability(self, state=1):
+        """Serializes classified probability in dict.
+        Args:
+            state (int): if 0 stores the probabilities of finding
+                        the ground state. If 1 stores the
+                        probabilities of finding the excited state.
+        """
+        if state == 1:
+            return {"classified_probability": 1 - self.to_dict_classified_probability}
+        elif state == 0:    
+            return {"classified_probability": self.to_dict_classified_probability}
+        return np.mean(self.shots)
 
     def to_dict_probability(self, state=1):
         """Serialize probabilities in dict.
