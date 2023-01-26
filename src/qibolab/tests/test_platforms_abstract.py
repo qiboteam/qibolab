@@ -133,12 +133,14 @@ def test_two_u3_to_sequence(platform_name):
 
 def test_CZ_to_sequence(platform_name):
     platform = Platform(platform_name)
-    circuit = Circuit(2)
-    circuit.add(gates.X(0))
-    circuit.add(gates.CZ(0, 1))
+    if platform.nqubits > 1:
+        circuit = Circuit(2)
+        circuit.add(gates.X(0))
+        circuit.add(gates.CZ(0, 1))
 
-    sequence: PulseSequence = platform.transpile(circuit)
-    assert len(sequence.pulses) == len(platform.create_CZ_pulse_sequence((2, 1))) + 2
+        sequence: PulseSequence = platform.transpile(circuit)
+        test_sequence, virtual_z_phases = platform.create_CZ_pulse_sequence((2, 1))
+        assert len(sequence.pulses) == len(test_sequence) + 2
 
 
 def test_add_measurement_to_sequence(platform_name):
