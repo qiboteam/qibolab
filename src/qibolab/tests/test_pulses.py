@@ -1,18 +1,18 @@
 """Tests ``pulses.py``."""
+import os
+import shutil
+
 import numpy as np
 import pytest
-import shutil
-import os
-from qibolab.paths import qibolab_folder
 
+from qibolab.paths import qibolab_folder
 from qibolab.pulses import (
+    IIR,
+    SNZ,
     Drag,
     DrivePulse,
     FluxPulse,
     Gaussian,
-    IIR,
-    SNZ,
-    eCap,
     Pulse,
     PulseSequence,
     PulseShape,
@@ -21,8 +21,10 @@ from qibolab.pulses import (
     Rectangular,
     SplitPulse,
     Waveform,
+    eCap,
 )
 from qibolab.symbolic import intSymbolicExpression as se_int
+
 
 def test_pulses_plot_functions():
     p0 = Pulse(0, 40, 0.9, 0, 0, Rectangular(), 0, PulseType.FLUX, 0)
@@ -52,6 +54,7 @@ def test_pulses_plot_functions():
     ps.plot(plot_file)
     assert os.path.exists(plot_file)
     os.remove(plot_file)
+
 
 def test_pulses_pulse_init():
     # standard initialisation
