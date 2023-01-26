@@ -82,9 +82,10 @@ class Waveform:
         plt.ylabel("Amplitude")
         plt.grid(b=True, which="both", axis="both", color="#888888", linestyle="-")
         plt.suptitle(self.serial)
-        plt.show()
         if savefig_filename:
             plt.savefig(savefig_filename)
+        else: 
+            plt.show()
         plt.close()
 
 
@@ -1013,9 +1014,10 @@ class Pulse:
         # ax2.axis([ -1, 1, -1, 1])
         ax2.axis("equal")
         plt.suptitle(self.serial)
-        plt.show()
         if savefig_filename:
             plt.savefig(savefig_filename)
+        else: 
+            plt.show()
         plt.close()
         return
 
@@ -1290,9 +1292,10 @@ class SplitPulse(Pulse):
         ax2.legend()
         # ax2.axis([ -1, 1, -1, 1])
         ax2.axis("equal")
-        plt.show()
         if savefig_filename:
             plt.savefig(savefig_filename)
+        else: 
+            plt.show()
         plt.close()
         return
 
@@ -1687,7 +1690,8 @@ class PulseSequence:
                             ax.axvline(vl, c="slategrey", linestyle="--")
                         ax.axis([0, self.finish, -1, 1])
                         ax.grid(b=True, which="both", axis="both", color="#CCCCCC", linestyle="-")
-            plt.show()
             if savefig_filename:
                 plt.savefig(savefig_filename)
+            else: 
+                plt.show()
             plt.close()
