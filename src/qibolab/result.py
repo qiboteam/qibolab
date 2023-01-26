@@ -17,9 +17,9 @@ class ExecutionResults:
 
     @classmethod
     def from_components(cls, is_, qs_, shots=None):
-        ar = np.empty(len(is_), dtype=ExecRes)
-        ar["i"] = is_
-        ar["q"] = qs_
+        ar = np.empty(len(is_.flatten()), dtype=ExecRes)
+        ar["i"] = is_.flatten()
+        ar["q"] = qs_.flatten()
         ar = np.rec.array(ar)
         return cls(ar, shots)
 

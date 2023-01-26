@@ -40,6 +40,7 @@ class QMRSDesign(AbstractInstrumentDesign):
                 SGS100A("lo_drive_low", "192.168.0.32"),
                 SGS100A("lo_drive_mid", "192.168.0.33"),
                 SGS100A("lo_drive_high", "192.168.0.34"),
+                SGS100A("twpa_a", "192.168.0.35"),
             ]
 
         else:
@@ -91,6 +92,7 @@ class QMRSDesign(AbstractInstrumentDesign):
         channels["L3-12"].local_oscillator = self.local_oscillators[3]
         channels["L3-13"].local_oscillator = self.local_oscillators[4]
         channels["L3-14"].local_oscillator = self.local_oscillators[4]
+        channels["L4-26"].local_oscillator = self.local_oscillators[5]
 
         # Set default LO parameters in the channel
         channels["L3-25_a"].lo_frequency = 7_300_000_000
@@ -109,6 +111,10 @@ class QMRSDesign(AbstractInstrumentDesign):
         channels["L3-13"].lo_power = 16.0
         channels["L3-14"].lo_power = 16.0
 
+        # Map TWPA to channels
+        channels["L4-26"].lo_frequency = 6_558_000_000
+        channels["L4-26"].lo_power = 2.5
+
         for qubit in qubits.values():
             if qubit.flux is not None:
                 # set flux offset
@@ -119,7 +125,7 @@ class QMRSDesign(AbstractInstrumentDesign):
                     "feedback": qubit.fb_filter,
                 }
             # set LO frequencies
-            for channel in [qubit.readout, qubit.drive]:
+            for channel in [qubit.readout, qubit.drive, qubit.twpa]:
                 if channel is not None and channel.local_oscillator is not None:
                     # set LO frequency
                     lo = channel.local_oscillator

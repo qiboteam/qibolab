@@ -67,6 +67,7 @@ class Qubit:
     name: str
     readout: Channel
     feedback: Channel
+    twpa: Optional[Channel] = None
     drive: Optional[Channel] = None
     flux: Optional[Channel] = None
 
@@ -174,16 +175,17 @@ class AbstractPlatform(ABC):
                 readout, drive, flux = settings["qubit_channel_map"][q]
                 feedback = None
             else:
-                readout, drive, flux, feedback = settings["qubit_channel_map"][q]
+                readout, drive, flux, feedback, twpa = settings["qubit_channel_map"][q]
             self.qubits[q] = qubit = Qubit(
                 q,
                 readout=self.get_channel(readout),
                 feedback=self.get_channel(feedback) if feedback else None,
                 drive=self.get_channel(drive) if drive else None,
                 flux=self.get_channel(flux) if flux else None,
+                twpa=self.get_channel(twpa) if twpa else None,
                 **settings["characterization"]["single_qubit"][q],
             )
-            for mode in ["readout", "feedback", "drive", "flux"]:
+            for mode in ["readout", "feedback", "drive", "flux", "twpa"]:
                 channel = getattr(qubit, mode)
                 if channel is not None:
                     channel.qubits.append((qubit, mode))
