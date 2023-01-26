@@ -26,22 +26,6 @@ qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux, Feedback]
     5: ["L3-25_a", null, null, "L2-5"]
 
 native_gates:
-    two_qubit:
-        2-1: # qubit pair
-            CZ:
-                duration: 30
-                amplitude: 0.0553
-                shape: Rectangular()
-                phase_control: -1.5707963267948966
-                phase_target: -1.5707963267948966
-        3-2: # qubit pair
-            CZ:
-                duration: 32
-                amplitude: -0.05145
-                shape: Rectangular()
-                phase_control: -1.5707963267948966
-                phase_target: -1.5707963267948966
-
     single_qubit:
         0: # qubit number
             RX:
@@ -148,6 +132,35 @@ native_gates:
                 type: ro # readout
                 start: 0
                 phase: 0
+    two_qubit:
+        2-1:
+            CZ:
+            - duration: 30
+              amplitude: 0.0544
+              shape: Rectangular()
+              qubit: 2
+              relative_start: 0
+              type: qf
+            - type: virtual_z
+              phase: -1.5707963267948966
+              qubit: 1
+            - type: virtual_z
+              phase: -1.5707963267948966
+              qubit: 2
+        3-2:
+            CZ:
+            - duration: 32
+              amplitude: -0.05145
+              shape: Rectangular()
+              qubit: 3
+              relative_start: 0
+              type: qf
+            - type: virtual_z
+              phase: -1.5707963267948966
+              qubit: 2
+            - type: virtual_z
+              phase: -1.5707963267948966
+              qubit: 3
 
 
 characterization:
@@ -179,8 +192,8 @@ characterization:
             ff_filter: []
             fb_filter: []
             # parameters for single shot classification
-            threshold: 0.0003781194559355205
-            iq_angle: 1.649635973527094
+            threshold: 0.00035138273475677535
+            iq_angle: 1.6721701294746234
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -197,8 +210,8 @@ characterization:
             ff_filter: [1.0684635881381783, -1.0163217174522334]
             fb_filter: [0.947858129314055]
             # parameters for single shot classification
-            threshold: 0.0015386201320889113
-            iq_angle: 5.262511148434912
+            threshold: 0.0015464181301442508
+            iq_angle: 5.3191661189491475
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -215,8 +228,8 @@ characterization:
             ff_filter: []
             fb_filter: []
             # parameters for single shot classification
-            threshold: 0.0023266787732580106
-            iq_angle: 2.782366501012283
+            threshold: 0.0022152764601723013
+            iq_angle: 2.7588149322762376
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -233,8 +246,8 @@ characterization:
             ff_filter: []
             fb_filter: []
             # parameters for single shot classification
-            threshold: 0.0012714813260028832
-            iq_angle: 6.189017097900692
+            threshold: 0.0012611212547473077
+            iq_angle: 6.216368649949152
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
