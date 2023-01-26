@@ -98,6 +98,13 @@ class Qubit:
     mixer_readout_g: float = 0.0
     mixer_readout_phi: float = 0.0
 
+    @property
+    def channels(self):
+        for name in ["readout", "feedback", "drive", "flux", "twpa"]:
+            channel = getattr(self, name)
+            if channel is not None:
+                yield channel
+
 
 class AbstractPlatform(ABC):
     """Abstract platform for controlling quantum devices.
@@ -174,6 +181,7 @@ class AbstractPlatform(ABC):
             if len(settings["qubit_channel_map"][q]) == 3:
                 readout, drive, flux = settings["qubit_channel_map"][q]
                 feedback = None
+                twpa = None
             else:
                 readout, drive, flux, feedback, twpa = settings["qubit_channel_map"][q]
             self.qubits[q] = qubit = Qubit(
