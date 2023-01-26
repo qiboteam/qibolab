@@ -84,7 +84,7 @@ class Waveform:
         plt.suptitle(self.serial)
         if savefig_filename:
             plt.savefig(savefig_filename)
-        else: 
+        else:
             plt.show()
         plt.close()
 
@@ -1019,7 +1019,7 @@ class Pulse:
         plt.suptitle(self.serial)
         if savefig_filename:
             plt.savefig(savefig_filename)
-        else: 
+        else:
             plt.show()
         plt.close()
         return
@@ -1297,7 +1297,7 @@ class SplitPulse(Pulse):
         ax2.axis("equal")
         if savefig_filename:
             plt.savefig(savefig_filename)
-        else: 
+        else:
             plt.show()
         plt.close()
         return
@@ -1695,6 +1695,6 @@ class PulseSequence:
                         ax.grid(visible=True, which="both", axis="both", color="#CCCCCC", linestyle="-")
             if savefig_filename:
                 plt.savefig(savefig_filename)
-            else: 
+            else:
                 plt.show()
             plt.close()
