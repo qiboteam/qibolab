@@ -65,8 +65,8 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 740
-                amplitude: 0.00325
+                duration: 880
+                amplitude: 0.003575
                 frequency: 7_453_265_000
                 shape: Rectangular()
                 type: ro # readout
@@ -83,7 +83,7 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 820
+                duration: 960
                 amplitude: 0.00325
                 frequency: 7_655_107_000
                 shape: Rectangular()
@@ -100,9 +100,9 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 740
-                amplitude: 0.00325
-                frequency: 7_802_391_000
+                duration: 960
+                amplitude: 0.004225
+                frequency: 7_802_191_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -117,8 +117,8 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 740
-                amplitude: 0.00325
+                duration: 640
+                amplitude: 0.0039
                 frequency: 8_057_168_000
                 shape: Rectangular()
                 type: ro # readout
@@ -172,10 +172,14 @@ characterization:
             ff_filter: []
             fb_filter: []
             # parameters for single shot classification
-            threshold: 0.0003781194559355205
-            iq_angle: 1.649635973527094
+            threshold: 0.0005132066630244925
+            iq_angle: 1.6049433524645593
             # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
+            rotation_angle: 63.214
+            # Software classifier
+            classifier:
+                type: "scikit"
+                model: "qw5q_gold/RBF_SVM_1.pkl"
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -190,8 +194,12 @@ characterization:
             ff_filter: [1.0684635881381783, -1.0163217174522334]
             fb_filter: [0.947858129314055]
             # parameters for single shot classification
-            threshold: 0.0015386201320889113
-            iq_angle: 5.262511148434912
+            threshold: 0.0017019586047771007
+            iq_angle: 5.008563275197095
+            # Software classifier
+            classifier:
+                type: "scikit"
+                model: "qw5q_gold/RBF_SVM_2.pkl"
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -208,10 +216,14 @@ characterization:
             ff_filter: []
             fb_filter: []
             # parameters for single shot classification
-            threshold: 0.0023266787732580106
-            iq_angle: 2.782366501012283
+            threshold: 0.0022186519694718564
+            iq_angle: 1.7080380003177587
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
+            # Software classifier
+            classifier:
+                type: "scikit"
+                model: "qw5q_gold/RBF_SVM_3.pkl"
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -226,10 +238,14 @@ characterization:
             ff_filter: []
             fb_filter: []
             # parameters for single shot classification
-            threshold: 0.0012714813260028832
-            iq_angle: 6.189017097900692
+            threshold: -0.0002305032680694733
+            iq_angle: 3.7774230253152434
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
+            # Software classifier
+            classifier:
+                type: "scikit"
+                model: "qw5q_gold/RBF_SVM_4.pkl"
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
