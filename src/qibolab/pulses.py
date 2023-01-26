@@ -80,7 +80,7 @@ class Waveform:
         plt.plot(self.data, c="C0", linestyle="dashed")
         plt.xlabel("Sample Number")
         plt.ylabel("Amplitude")
-        plt.grid(b=True, which="both", axis="both", color="#888888", linestyle="-")
+        plt.grid(visible=True, which="both", axis="both", color="#888888", linestyle="-")
         plt.suptitle(self.serial)
         if savefig_filename:
             plt.savefig(savefig_filename)
