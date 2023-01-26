@@ -7,8 +7,8 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        python-version: [3.8, 3.8, '3.10']
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: [3.8, 3.9, '3.10']
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
@@ -28,7 +28,7 @@ jobs:
         pylint src -E -d E1123,E1120
     - name: Test with pytest core
       run: |
-        pytest src/qibolab --cov=qibolab --cov-report=xml --pyargs qibolab --skip-qpu --platforms tii1q,tii5q
+        pytest src/qibolab --cov=qibolab --cov-report=xml --pyargs qibolab -m "not qpu" --platforms tii1q_b1,qw5q_gold
     - name: Upload coverage to Codecov
       if: startsWith(matrix.os, 'ubuntu')
       uses: codecov/codecov-action@v2

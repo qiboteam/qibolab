@@ -1,18 +1,30 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from typing import List
 
 import yaml
 from qibo import gates
 from qibo.config import log, raise_error
 from qibo.models import Circuit
 
-from qibolab.pulses import (
-    Drag,
-    Gaussian,
-    Pulse,
-    PulseSequence,
-    ReadoutPulse,
-    Rectangular,
-)
+from qibolab.pulses import PulseSequence
+
+
+@dataclass
+class Qubit:
+    name: str
+    readout_frequency: int = 0
+    drive_frequency: int = 0
+    sweetspot: float = 0
+    peak_voltage: float = 0
+    pi_pulse_amplitude: float = 0
+    T1: int = 0
+    T2: int = 0
+    state0_voltage: int = 0
+    state1_voltage: int = 0
+    mean_gnd_states: complex = 0 + 0.0j
+    mean_exc_states: complex = 0 + 0.0j
+    resonator_polycoef_flux: List[float] = field(default_factory=list)
 
 
 class AbstractPlatform(ABC):
@@ -28,20 +40,8 @@ class AbstractPlatform(ABC):
         self.name = name
         self.runcard = runcard
         self.is_connected = False
-        # Load platform settings
-        with open(runcard) as file:
-            self.settings = yaml.safe_load(file)
-
-        self.nqubits = self.settings["nqubits"]
-        if self.nqubits == 1:
-            self.resonator_type = "3D"
-        else:
-            self.resonator_type = "2D"
-
-        self.qubits = self.settings["qubits"]
-        self.topology = self.settings["topology"]
-        self.channels = self.settings["channels"]
-        self.qubit_channel_map = self.settings["qubit_channel_map"]
+        self.settings = None
+        self.reload_settings()
 
         self.instruments = {}
         # Instantiate instruments
@@ -58,7 +58,7 @@ class AbstractPlatform(ABC):
         # Generate qubit_instrument_map from qubit_channel_map and the instruments' channel_port_maps
         self.qubit_instrument_map = {}
         for qubit in self.qubit_channel_map:
-            self.qubit_instrument_map[qubit] = [None, None, None]
+            self.qubit_instrument_map[qubit] = [None, None, None, None]
             for name in self.instruments:
                 if "channel_port_map" in self.settings["instruments"][name]["settings"]:
                     for channel in self.settings["instruments"][name]["settings"]["channel_port_map"]:
@@ -68,8 +68,6 @@ class AbstractPlatform(ABC):
                     for channel in self.settings["instruments"][name]["settings"]["s4g_modules"]:
                         if channel in self.qubit_channel_map[qubit]:
                             self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
-
-        self.reload_settings()
 
     def __repr__(self):
         return self.name
@@ -89,12 +87,16 @@ class AbstractPlatform(ABC):
         self.is_connected = data.get("is_connected")
 
     def _check_connected(self):
-        if not self.is_connected:
+        if not self.is_connected:  # pragma: no cover
             raise_error(RuntimeError, "Cannot access instrument because it is not connected.")
 
     def reload_settings(self):
         with open(self.runcard) as file:
             self.settings = yaml.safe_load(file)
+        self.nqubits = self.settings["nqubits"]
+        self.resonator_type = "3D" if self.nqubits == 1 else "2D"
+        self.topology = self.settings["topology"]
+        self.qubit_channel_map = self.settings["qubit_channel_map"]
 
         self.hardware_avg = self.settings["settings"]["hardware_avg"]
         self.sampling_rate = self.settings["settings"]["sampling_rate"]
@@ -102,16 +104,20 @@ class AbstractPlatform(ABC):
 
         # Load Characterization settings
         self.characterization = self.settings["characterization"]
-        # Load Native Gates
+        self.qubits = {q: Qubit(q, **self.characterization["single_qubit"][q]) for q in self.settings["qubits"]}
+        # Load single qubit Native Gates
         self.native_gates = self.settings["native_gates"]
+        self.two_qubit_natives = set()
+        # Load two qubit Native Gates, if multiqubit platform
+        if "two_qubit" in self.native_gates.keys():
+            for pairs, gates in self.native_gates["two_qubit"].items():
+                self.two_qubit_natives |= set(gates.keys())
+        else:
+            self.two_qubit_natives = ["CZ"]
 
+        # TODO: remove this
         if self.is_connected:
             self.setup()
-
-    @abstractmethod
-    def run_calibration(self, show_plots=False):  # pragma: no cover
-        """Executes calibration routines and updates the settings yml file"""
-        raise NotImplementedError
 
     def connect(self):
         """Connects to lab instruments using the details specified in the calibration settings."""
@@ -127,6 +133,7 @@ class AbstractPlatform(ABC):
                     "Cannot establish connection to " f"{self.name} instruments. " f"Error captured: '{exception}'",
                 )
 
+<<<<<<< HEAD
     def setup(self):
         if not self.is_connected:
             raise_error(
@@ -170,6 +177,11 @@ class AbstractPlatform(ABC):
                 self.qbm[qubit] = self.instruments[self.qubit_instrument_map[qubit][2]]
                 self.qf_port[qubit] = self.qbm[qubit].dacs[self.qubit_channel_map[qubit][2]]
         """
+=======
+    def setup(self):  # pragma: no cover
+        raise_error(NotImplementedError)
+
+>>>>>>> main
     def start(self):
         if self.is_connected:
             for name in self.instruments:
@@ -186,7 +198,6 @@ class AbstractPlatform(ABC):
                 self.instruments[name].disconnect()
             self.is_connected = False
 
-    # TRANSPILATION
     def transpile(self, circuit: Circuit):
         """Transforms a circuit to pulse sequence.
 
@@ -202,8 +213,8 @@ class AbstractPlatform(ABC):
 
         from qibolab.transpilers import can_execute, transpile
 
-        if not can_execute(circuit):
-            circuit, hardware_qubits = transpile(circuit)
+        if not can_execute(circuit, self.two_qubit_natives):
+            circuit, hardware_qubits = transpile(circuit, self.two_qubit_natives)
 
         sequence = PulseSequence()
         sequence.virtual_z_phases = {}
@@ -215,44 +226,6 @@ class AbstractPlatform(ABC):
             if isinstance(gate, gates.I):
                 pass
 
-            # if isinstance(gate, gates.I):
-            #     qubit = gate.target_qubits[0]
-            #     pulse = self.create_RX_pulse(qubit)
-            #     pulse.amplitude = 0
-            #     sequence.append_at_end_of_channel(pulse, pulse.copy())
-
-            # elif isinstance(gate, gates.X):
-            #     qubit = gate.target_qubits[0]
-            #     pulse = self.create_RX90_pulse(qubit, relative_phase=sequence.virtual_z_phases[qubit])
-            #     sequence.append_at_end_of_channel(pulse, pulse.copy())
-
-            # elif isinstance(gate, gates.Y):
-            #     qubit = gate.target_qubits[0]
-            #     pulse = self.create_RX90_pulse(qubit, relative_phase=sequence.virtual_z_phases[qubit] + np.pi / 2)
-            #     sequence.append_at_end_of_channel(pulse, pulse.copy())
-
-            # elif isinstance(gate, gates.RX):
-            #     qubit = gate.target_qubits[0]
-            #     rotation_angle = gate.parameters[0] % (2 * np.pi)
-            #     relative_phase = sequence.virtual_z_phases[qubit]
-            #     if rotation_angle > np.pi:
-            #         rotation_angle = 2 * np.pi - rotation_angle
-            #         relative_phase += np.pi
-            #     pulse = self.create_RX90_pulse(qubit, relative_phase=relative_phase)
-            #     pulse.amplitude *= rotation_angle / np.pi
-            #     sequence.append_at_end_of_channel(pulse, pulse.copy())
-
-            # elif isinstance(gate, gates.RY):
-            #     qubit = gate.target_qubits[0]
-            #     rotation_angle = gate.parameters[0] % (2 * np.pi)
-            #     relative_phase = sequence.virtual_z_phases[qubit] + np.pi / 2
-            #     if rotation_angle > np.pi:
-            #         rotation_angle = 2 * np.pi - rotation_angle
-            #         relative_phase += np.pi
-            #     pulse = self.create_RX90_pulse(qubit, relative_phase=relative_phase)
-            #     pulse.amplitude *= rotation_angle / np.pi
-            #     sequence.append_at_end_of_channel(pulse, pulse.copy())
-
             elif isinstance(gate, gates.Z):
                 qubit = gate.target_qubits[0]
                 sequence.virtual_z_phases[qubit] += np.pi
@@ -260,13 +233,6 @@ class AbstractPlatform(ABC):
             elif isinstance(gate, gates.RZ):
                 qubit = gate.target_qubits[0]
                 sequence.virtual_z_phases[qubit] += gate.parameters[0]
-
-            elif isinstance(gate, gates.M):
-                # Add measurement pulse
-                measurement_start = sequence.finish
-                for qubit in circuit.measurement_gate.target_qubits:
-                    MZ_pulse = self.create_MZ_pulse(qubit, measurement_start)
-                    sequence.add(MZ_pulse)  # append_at_end_of_channel?
 
             elif isinstance(gate, gates.U3):
                 qubit = gate.target_qubits[0]
@@ -291,21 +257,22 @@ class AbstractPlatform(ABC):
                 # apply RZ(phi)
                 sequence.virtual_z_phases[qubit] += phi
 
-            else:
+            elif isinstance(gate, gates.M):
+                # Add measurement pulse
+                measurement_start = sequence.finish
+                mz_pulses = []
+                for qubit in gate.target_qubits:
+                    MZ_pulse = self.create_MZ_pulse(qubit, measurement_start)
+                    sequence.add(MZ_pulse)  # append_at_end_of_channel?
+                    mz_pulses.append(MZ_pulse.serial)
+                gate.pulses = tuple(mz_pulses)
+
+            else:  # pragma: no cover
                 raise_error(
                     NotImplementedError,
                     f"Transpilation of {gate.__class__.__name__} gate has not been implemented yet.",
                 )
 
-        # Finally add measurement gates
-        if circuit.measurement_gate:
-            measurement_start = sequence.finish
-            for qubit in circuit.measurement_gate.target_qubits:
-                MZ_pulse = self.create_MZ_pulse(qubit, measurement_start)
-                sequence.add(MZ_pulse)
-            # FIXME: is there any reason not to include measurement gates as part of the circuit queue?
-            # This workaround adds them at the end, but would it not be desirable to be able to insert
-            # measurement gates in the middle of circuits? (Alvaro)
         return sequence
 
     @abstractmethod
@@ -405,3 +372,36 @@ class AbstractPlatform(ABC):
         from qibolab.pulses import Pulse
 
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
+
+    def set_attenuation(self, qubit, att):  # pragma: no cover
+        """Set attenuation value. Usefeul for calibration routines such as punchout.
+
+        Args:
+            qubit (int): qubit whose attenuation will be modified.
+            att (int): new value of the attenuation (dB).
+        Returns:
+            None
+        """
+        raise_error(NotImplementedError)
+
+    def set_gain(self, qubit, gain):  # pragma: no cover
+        """Set gain value. Usefeul for calibration routines such as Rabis.
+
+        Args:
+            qubit (int): qubit whose attenuation will be modified.
+            gain (int): new value of the gain (dimensionless).
+        Returns:
+            None
+        """
+        raise_error(NotImplementedError)
+
+    def set_current(self, qubit, curr):  # pragma: no cover
+        """Set current value. Usefeul for calibration routines involving flux.
+
+        Args:
+            qubit (int): qubit whose attenuation will be modified.
+            curr (int): new value of the current (A).
+        Returns:
+            None
+        """
+        raise_error(NotImplementedError)
