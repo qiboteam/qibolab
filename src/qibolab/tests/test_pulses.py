@@ -1,12 +1,18 @@
 """Tests ``pulses.py``."""
 import numpy as np
 import pytest
+import shutil
+import os
+from qibolab.paths import qibolab_folder
 
 from qibolab.pulses import (
     Drag,
     DrivePulse,
     FluxPulse,
     Gaussian,
+    IIR,
+    SNZ,
+    eCap,
     Pulse,
     PulseSequence,
     PulseShape,
@@ -18,6 +24,34 @@ from qibolab.pulses import (
 )
 from qibolab.symbolic import intSymbolicExpression as se_int
 
+def test_pulses_plot_functions():
+    p0 = Pulse(0, 40, 0.9, 0, 0, Rectangular(), 0, PulseType.FLUX, 0)
+    p1 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(5), 0, PulseType.DRIVE, 2)
+    p2 = Pulse(0, 40, 0.9, 50e6, 0, Drag(5, 2), 0, PulseType.DRIVE, 200)
+    p3 = FluxPulse(0, 40, 0.9, IIR([-0.5, 2], [1], Rectangular()), 0, 200)
+    p4 = FluxPulse(0, 40, 0.9, SNZ(t_half_flux_pulse=17, b_amplitude=0.8), 0, 200)
+    p5 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
+    p6 = SplitPulse(p5, window_start=10, window_finish=30)
+    ps = p0 + p1 + p2 + p3 + p4 + p5 + p6
+    wf = p0.modulated_waveform_i
+
+    plot_file = qibolab_folder / "tests" / "test_plot.png"
+
+    wf.plot(plot_file)
+    assert os.path.exists(plot_file)
+    os.remove(plot_file)
+
+    p0.plot(plot_file)
+    assert os.path.exists(plot_file)
+    os.remove(plot_file)
+
+    p6.plot(plot_file)
+    assert os.path.exists(plot_file)
+    os.remove(plot_file)
+
+    ps.plot(plot_file)
+    assert os.path.exists(plot_file)
+    os.remove(plot_file)
 
 def test_pulses_pulse_init():
     # standard initialisation
@@ -114,6 +148,9 @@ def test_pulses_pulse_init():
     p7 = Pulse(0, 40, 0.9, 0, 0, Rectangular(), 0, PulseType.FLUX, 0)
     p8 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(5), 0, PulseType.DRIVE, 2)
     p9 = Pulse(0, 40, 0.9, 50e6, 0, Drag(5, 2), 0, PulseType.DRIVE, 200)
+    p10 = FluxPulse(0, 40, 0.9, IIR([-1, 1], [-0.1, 0.1001], Rectangular()), 0, 200)
+    p11 = FluxPulse(0, 40, 0.9, SNZ(t_half_flux_pulse=17, b_amplitude=0.8), 0, 200)
+    p11 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
 
 
 def test_pulses_pulse_attributes():

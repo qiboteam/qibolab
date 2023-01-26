@@ -381,7 +381,10 @@ class IIR(PulseShape):
         if self.pulse:
             num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
             data = lfilter(b=self.b, a=self.a, x=self.target.envelope_waveform_q.data)
-            waveform = Waveform(np.abs(self.pulse.amplitude) * data / np.max(np.abs(data)))
+            data = (np.abs(self.pulse.amplitude) * data)
+            if not np.max(np.abs(data)) == 0:
+                data = (data / np.max(np.abs(data)))
+            waveform = Waveform(data)
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         else:
@@ -978,7 +981,7 @@ class Pulse:
         ax1.set_xlabel("Time [ns]")
         ax1.set_ylabel("Amplitude")
 
-        ax1.grid(b=True, which="both", axis="both", color="#888888", linestyle="-")
+        ax1.grid(visible=True, which="both", axis="both", color="#888888", linestyle="-")
         ax1.axis([self.start, self.finish, -1, 1])
         ax1.legend()
 
@@ -1009,7 +1012,7 @@ class Pulse:
             linestyle="dashed",
         )
 
-        ax2.grid(b=True, which="both", axis="both", color="#888888", linestyle="-")
+        ax2.grid(visible=True, which="both", axis="both", color="#888888", linestyle="-")
         ax2.legend()
         # ax2.axis([ -1, 1, -1, 1])
         ax2.axis("equal")
@@ -1264,7 +1267,7 @@ class SplitPulse(Pulse):
         ax1.set_xlabel("Time [ns]")
         ax1.set_ylabel("Amplitude")
 
-        ax1.grid(b=True, which="both", axis="both", color="#888888", linestyle="-")
+        ax1.grid(visible=True, which="both", axis="both", color="#888888", linestyle="-")
         ax1.axis([self.window_start, self._window_finish, -1, 1])
         ax1.legend()
 
@@ -1288,7 +1291,7 @@ class SplitPulse(Pulse):
             linestyle="dashed",
         )
 
-        ax2.grid(b=True, which="both", axis="both", color="#888888", linestyle="-")
+        ax2.grid(visible=True, which="both", axis="both", color="#888888", linestyle="-")
         ax2.legend()
         # ax2.axis([ -1, 1, -1, 1])
         ax2.axis("equal")
@@ -1689,7 +1692,7 @@ class PulseSequence:
                         for vl in vertical_lines:
                             ax.axvline(vl, c="slategrey", linestyle="--")
                         ax.axis([0, self.finish, -1, 1])
-                        ax.grid(b=True, which="both", axis="both", color="#CCCCCC", linestyle="-")
+                        ax.grid(visible=True, which="both", axis="both", color="#CCCCCC", linestyle="-")
             if savefig_filename:
                 plt.savefig(savefig_filename)
             else: 
