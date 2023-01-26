@@ -381,9 +381,9 @@ class IIR(PulseShape):
         if self.pulse:
             num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
             data = lfilter(b=self.b, a=self.a, x=self.target.envelope_waveform_q.data)
-            data = (np.abs(self.pulse.amplitude) * data)
+            data = np.abs(self.pulse.amplitude) * data
             if not np.max(np.abs(data)) == 0:
-                data = (data / np.max(np.abs(data)))
+                data = data / np.max(np.abs(data))
             waveform = Waveform(data)
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
