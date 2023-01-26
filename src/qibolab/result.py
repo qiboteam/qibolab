@@ -4,47 +4,36 @@ from typing import Optional
 
 import numpy as np
 import numpy.typing as npt
-
-ExecRes = np.dtype([("i", np.float64), ("q", np.float64), ("shots", np.uint32)])
+from scipy import signal
 
 
 @dataclass
 class ExecutionResults:
     """Data structure to deal with the output of execute_pulse_sequence"""
 
-    array: npt.NDArray[ExecRes]
+    i: npt.NDArray[np.float64]
+    q: npt.NDArray[np.float64]
     shots: Optional[npt.NDArray[np.uint32]] = None
 
     @classmethod
     def from_components(cls, is_, qs_, shots=None):
-        ar = np.empty(len(is_.flatten()), dtype=ExecRes)
-        ar["i"] = is_.flatten()
-        ar["q"] = qs_.flatten()
-        ar = np.rec.array(ar)
-        return cls(ar, shots)
+        return cls(is_, qs_, shots)
 
     @property
     def in_progress(self):
         """Placeholder for when we implement live fetching of data from instruments."""
         return False
 
-    @property
-    def i(self):
-        return self.array.i
-
-    @property
-    def q(self):
-        return self.array.q
-
     @cached_property
     def msr(self):
         """Computes msr value."""
-        return np.sqrt(self.array.i**2 + self.array.q**2)
+        return np.sqrt(self.i**2 + self.q**2)
 
     @cached_property
     def phase(self):
         """Computes phase value."""
-        return np.angle(self.array.i + 1.0j * self.array.q)
+        phase = np.angle(self.i + 1.0j * self.q)
+        return signal.detrend(np.unwrap(phase))
 
     @cached_property
     def ground_state_probability(self):
