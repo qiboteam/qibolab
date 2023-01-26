@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import List
-from collections import defaultdict
 
 import yaml
 from qibo import gates
