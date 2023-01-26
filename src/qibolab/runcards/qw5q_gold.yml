@@ -5,7 +5,7 @@ qubits: [0, 1, 2, 3, 4, 5]
 
 settings:
     sampling_rate: 1000000000
-    relaxation_time: 200_000
+    relaxation_time: 50_000
     time_of_flight: 280
     smearing: 0
 
@@ -37,8 +37,8 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 2000
-                amplitude: 0.00325
+                duration: 1000
+                amplitude: 0.0025
                 frequency: 7_226_500_000
                 shape: Rectangular()
                 type: ro # readout
@@ -110,7 +110,7 @@ native_gates:
             MZ:
                 duration: 740
                 amplitude: 0.00325
-                frequency: 8_057_168_000
+                frequency: 8_057_668_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -125,8 +125,8 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 2000
-                amplitude: 0.00325
+                duration: 1000
+                amplitude: 0.0025
                 frequency: 7_008_300_000
                 shape: Rectangular()
                 type: ro # readout
@@ -136,7 +136,7 @@ native_gates:
         2-1:
             CZ:
             - duration: 30
-              amplitude: 0.0544
+              amplitude: 0.05445
               shape: Rectangular()
               qubit: 2
               relative_start: 0
@@ -192,8 +192,8 @@ characterization:
             ff_filter: []
             fb_filter: []
             # parameters for single shot classification
-            threshold: 0.00035138273475677535
-            iq_angle: 1.6721701294746234
+            threshold: 0.00037524450866245845
+            iq_angle: 1.6757060974561195
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -210,8 +210,8 @@ characterization:
             ff_filter: [1.0684635881381783, -1.0163217174522334]
             fb_filter: [0.947858129314055]
             # parameters for single shot classification
-            threshold: 0.0015464181301442508
-            iq_angle: 5.3191661189491475
+            threshold: 0.0015379272764222704
+            iq_angle: 5.262811963416194
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -228,8 +228,8 @@ characterization:
             ff_filter: []
             fb_filter: []
             # parameters for single shot classification
-            threshold: 0.0022152764601723013
-            iq_angle: 2.7588149322762376
+            threshold: 0.0022508677347927984
+            iq_angle: 2.7558636428790386
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -246,8 +246,8 @@ characterization:
             ff_filter: []
             fb_filter: []
             # parameters for single shot classification
-            threshold: 0.0012611212547473077
-            iq_angle: 6.216368649949152
+            threshold: 0.0013280171213055133
+            iq_angle: 6.211036091217338
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
