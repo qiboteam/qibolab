@@ -5,7 +5,7 @@ qubits: [0, 1, 2, 3, 4, 5]
 
 options:
     sampling_rate: 1000000000
-    relaxation_time: 50000
+    relaxation_time: 500_000
     time_of_flight: 280
     smearing: 0
 
@@ -94,8 +94,8 @@ native_gates:
         3: # qubit number
             RX:
                 duration: 40
-                amplitude: 0.145
-                frequency: 6_760_700_000
+                amplitude: 0.151
+                frequency: 6_760_089_894
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
