@@ -6,7 +6,7 @@ from qibolab.designs.basic import BasicInstrumentDesign
 
 
 @dataclass
-class MixedInstrumentDesign(BasicInstrumentDesign):
+class MixerInstrumentDesign(BasicInstrumentDesign):
     """Mixer based instrument design that uses a controller and local oscillators.
 
     Attributes:

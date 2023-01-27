@@ -1,7 +1,7 @@
 from qibo.config import raise_error
 
 from qibolab.designs.basic import BasicInstrumentDesign
-from qibolab.designs.mixed import MixedInstrumentDesign
+from qibolab.designs.mixer import MixerInstrumentDesign
 from qibolab.platforms.platform import DesignPlatform
 
 
@@ -36,7 +36,7 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
             SGS100A("lo_drive_high", "192.168.0.34"),
             SGS100A("twpa_a", "192.168.0.35"),
         ]
-        design = MixedInstrumentDesign(controller, local_oscillators)
+        design = MixerInstrumentDesign(controller, local_oscillators)
 
     else:
         from qibolab.instruments.qmsim import QMSim
