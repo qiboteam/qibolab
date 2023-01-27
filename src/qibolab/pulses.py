@@ -365,8 +365,15 @@ class IIR(PulseShape):
 
         if self.pulse:
             num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
+            self.a = self.a / self.a[0]
+            gain = np.sum(self.b) / np.sum(self.a)
+            if not gain == 0:
+                self.b = self.b / gain
             data = lfilter(b=self.b, a=self.a, x=self.target.envelope_waveform_i.data)
-            waveform = Waveform(np.abs(self.pulse.amplitude) * data / np.max(np.abs(data)))
+            if not np.max(np.abs(data)) == 0:
+                data = data / np.max(np.abs(data))
+            data = np.abs(self.pulse.amplitude) * data
+            waveform = Waveform(data)
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         else:
@@ -380,10 +387,14 @@ class IIR(PulseShape):
 
         if self.pulse:
             num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
-            data = lfilter(b=self.b, a=self.a, x=self.target.envelope_waveform_q.data)
-            data = np.abs(self.pulse.amplitude) * data
+            self.a = self.a / self.a[0]
+            gain = np.sum(self.b) / np.sum(self.a)
+            if not gain == 0:
+                self.b = self.b / gain
+            data = lfilter(b=self.b, a=self.a, x=self.target.envelope_waveform_i.data)
             if not np.max(np.abs(data)) == 0:
                 data = data / np.max(np.abs(data))
+            data = np.abs(self.pulse.amplitude) * data
             waveform = Waveform(data)
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
