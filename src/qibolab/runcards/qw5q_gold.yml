@@ -5,7 +5,7 @@ qubits: [0, 1, 2, 3, 4, 5]
 
 settings:
     sampling_rate: 1000000000
-    relaxation_time: 200_000
+    relaxation_time: 50_000
     time_of_flight: 280
     smearing: 0
 
@@ -26,15 +26,6 @@ qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux, Feedback, TWPA]
     5: ["L3-25_a", null, null, "L2-5", "L4-26"]
 
 native_gates:
-    two_qubit:
-        2-1: # qubit pair
-            CZ:
-                duration: 30
-                amplitude: 0.05477
-                shape: Rectangular()
-                phase_control: -1.5707963267948966
-                phase_target: -1.5707963267948966
-
     single_qubit:
         0: # qubit number
             RX:
@@ -46,8 +37,8 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 2000
-                amplitude: 0.00325
+                duration: 1000
+                amplitude: 0.0025
                 frequency: 7_226_500_000
                 shape: Rectangular()
                 type: ro # readout
@@ -59,7 +50,6 @@ native_gates:
                 amplitude: 0.0484
                 frequency: 4_855_663_000
                 #frequency: 4_718_515_000 # 02 transition (more likely)
-                #frequency: 4_709_500_000 # 02 transition (wrong?)
                 shape: Drag(5, -0.02)
                 type: qd # qubit drive
                 start: 0
@@ -76,7 +66,7 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.05682
-                frequency: 5_799_876_000
+                frequency: 5_800_563_000
                 #frequency: 5_661_400_000 # 02 transition
                 shape: Drag(5, -0.04) #Gaussian(5)
                 type: qd # qubit drive
@@ -93,8 +83,9 @@ native_gates:
         3: # qubit number
             RX:
                 duration: 40
-                amplitude: 0.145
-                frequency: 6_759_804_000
+                amplitude: 0.112
+                frequency: 6_760_922_000
+                #frequency: 6_628_822_000 # 02 transition
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -119,7 +110,7 @@ native_gates:
             MZ:
                 duration: 740
                 amplitude: 0.00325
-                frequency: 8_057_168_000
+                frequency: 8_057_668_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -134,13 +125,42 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 2000
-                amplitude: 0.00325
+                duration: 1000
+                amplitude: 0.0025
                 frequency: 7_008_300_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
                 phase: 0
+    two_qubit:
+        2-1:
+            CZ:
+            - duration: 30
+              amplitude: 0.05445
+              shape: Rectangular()
+              qubit: 2
+              relative_start: 0
+              type: qf
+            - type: virtual_z
+              phase: -1.5707963267948966
+              qubit: 1
+            - type: virtual_z
+              phase: -1.5707963267948966
+              qubit: 2
+        3-2:
+            CZ:
+            - duration: 32
+              amplitude: -0.05145
+              shape: Rectangular()
+              qubit: 3
+              relative_start: 0
+              type: qf
+            - type: virtual_z
+              phase: -1.5707963267948966
+              qubit: 2
+            - type: virtual_z
+              phase: -1.5707963267948966
+              qubit: 3
 
 
 characterization:
@@ -168,12 +188,12 @@ characterization:
             drive_frequency: 4_855_663_000
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.048  # -0.058  # -0.022
+            sweetspot: -0.047
             ff_filter: []
             fb_filter: []
             # parameters for single shot classification
-            threshold: 0.0003781194559355205
-            iq_angle: 1.649635973527094
+            threshold: 0.00037524450866245845
+            iq_angle: 1.6757060974561195
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -186,12 +206,12 @@ characterization:
             drive_frequency: 5_799_876_000
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.046
+            sweetspot: -0.045
             ff_filter: [1.0684635881381783, -1.0163217174522334]
             fb_filter: [0.947858129314055]
             # parameters for single shot classification
-            threshold: 0.0015386201320889113
-            iq_angle: 5.262511148434912
+            threshold: 0.0015379272764222704
+            iq_angle: 5.262811963416194
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -204,12 +224,12 @@ characterization:
             drive_frequency: 6_760_700_000
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.032  # 0.042 # 0.026
+            sweetspot: 0.034
             ff_filter: []
             fb_filter: []
             # parameters for single shot classification
-            threshold: 0.0023266787732580106
-            iq_angle: 2.782366501012283
+            threshold: 0.0022508677347927984
+            iq_angle: 2.7558636428790386
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -222,12 +242,12 @@ characterization:
             drive_frequency: 6_585_053_000
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.058  # -0.066
+            sweetspot: -0.057
             ff_filter: []
             fb_filter: []
             # parameters for single shot classification
-            threshold: 0.0012714813260028832
-            iq_angle: 6.189017097900692
+            threshold: 0.0013280171213055133
+            iq_angle: 6.211036091217338
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
