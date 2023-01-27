@@ -404,8 +404,8 @@ class IIR(PulseShape):
             )
 
     def __repr__(self):
-        formatted_b = [round(b,3) for b in self.b]
-        formatted_a = [round(a,3) for a in self.a]
+        formatted_b = [round(b, 3) for b in self.b]
+        formatted_a = [round(a, 3) for a in self.a]
         return f"{self.name}({formatted_b}, {formatted_a}, {self.target})"
 
 
