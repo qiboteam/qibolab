@@ -391,7 +391,7 @@ class IIR(PulseShape):
             gain = np.sum(self.b) / np.sum(self.a)
             if not gain == 0:
                 self.b = self.b / gain
-            data = lfilter(b=self.b, a=self.a, x=self.target.envelope_waveform_i.data)
+            data = lfilter(b=self.b, a=self.a, x=self.target.envelope_waveform_q.data)
             if not np.max(np.abs(data)) == 0:
                 data = data / np.max(np.abs(data))
             data = np.abs(self.pulse.amplitude) * data
