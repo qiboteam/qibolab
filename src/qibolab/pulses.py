@@ -346,8 +346,8 @@ class IIR(PulseShape):
         self.name = "IIR"
         self.target: PulseShape = target
         self._pulse: Pulse = None
-        self.a: list(float) = a
-        self.b: list(float) = b
+        self.a: np.ndarray = np.array(a)
+        self.b: np.ndarray = np.array(b)
         # Check len(a) = len(b) = 2
 
     @property
@@ -404,7 +404,9 @@ class IIR(PulseShape):
             )
 
     def __repr__(self):
-        return f"{self.name}({self.b}, {self.a}, {self.target})"
+        formatted_b = [round(b,3) for b in self.b]
+        formatted_a = [round(a,3) for a in self.a]
+        return f"{self.name}({formatted_b}, {formatted_a}, {self.target})"
 
 
 class SNZ(PulseShape):
