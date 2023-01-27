@@ -1228,16 +1228,21 @@ class PulseSequence:
 
         return len(self.pulses)
 
-    def add(self, *pulses):
+    def add(self, *items):
         """Adds pulses to the sequence and sorts them by channel and start time."""
 
-        for pulse in pulses:
-            self.pulses.append(pulse)
+        for item in items:
+            if isinstance(item, Pulse):
+                pulse = item
+                self.pulses.append(pulse)
+            elif isinstance(item, PulseSequence):
+                ps = item
+                for pulse in ps.pulses:
+                    self.pulses.append(pulse)
         self.pulses.sort(key=lambda item: (item.channel, item.start))
 
     def append_at_end_of_channel(self, *pulses):
         """Appends pulses to the end of the channel (one at a time), modifying their start time.
-
         Each pulse start time is calculated as the finish time of the last pulse in the channel.
         """
 
@@ -1247,7 +1252,6 @@ class PulseSequence:
 
     def append_at_end_of_sequence(self, *pulses):
         """Appends pulses to the end of the sequence (one at a time), modifying their start time.
-
         Each pulse start time is calculated as the finish time of the last pulse in the sequence.
         """
 
@@ -1323,11 +1327,20 @@ class PulseSequence:
         return new_pc
 
     def get_channel_pulses(self, *channels):
-        """Returns a new PulseSequence containing only the pulses on a specific channel."""
+        """Returns a new PulseSequence containing only the pulses on a specific set of channels."""
 
         new_pc = PulseSequence()
         for pulse in self.pulses:
             if pulse.channel in channels:
+                new_pc.add(pulse)
+        return new_pc
+
+    def get_qubit_pulses(self, *qubits):
+        """Returns a new PulseSequence containing only the pulses on a specific set of qubits."""
+
+        new_pc = PulseSequence()
+        for pulse in self.pulses:
+            if pulse.qubit in qubits:
                 new_pc.add(pulse)
         return new_pc
 
@@ -1373,6 +1386,17 @@ class PulseSequence:
                 channels.append(pulse.channel)
         channels.sort()
         return channels
+
+    @property
+    def qubits(self) -> list:
+        """Returns list containing the qubits associated with the pulses in the sequence."""
+
+        qubits = []
+        for pulse in self.pulses:
+            if not pulse.qubit in qubits:
+                qubits.append(pulse.qubit)
+        qubits.sort()
+        return qubits
 
     def get_pulse_overlaps(self):  # -> dict((int,int): PulseSequence):
         """Returns a dictionary of slices of time (tuples with start and finish times) where pulses overlap."""

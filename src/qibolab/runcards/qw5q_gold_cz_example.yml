@@ -161,32 +161,50 @@ native_gates:
             MZ: {duration: 4000, amplitude: 0.6, frequency: -35747474.74747467, shape: Rectangular(),
                 type: ro, start: 0, phase: 0}
     two_qubit:
-        2-1:
+        2-1: # qubit numbers
             CZ:
-            - duration: 16  # Example of detuning flux pulse on control qubit on q2
-              amplitude: 0.12
+            - duration: 160
+              amplitude: 0.818
               shape: Rectangular()
               qubit: 2
-              relative_start: 4
+              relative_start: 40
               type: qf
-            - duration: 16
-              amplitude: -0.12
+            - duration: 160
+              amplitude: -0.818
               shape: Rectangular()
               qubit: 2
-              relative_start: 20
+              relative_start: 200
               type: qf
-            - duration: 40 # Example of parking flux pulse on q0
-              amplitude: -0.3
+            - duration: 320
+              amplitude: 0.5
+              shape: Rectangular()
+              qubit: 1
+              relative_start: 40
+              type: qf
+            - duration: 20 # Example of Z correction on control qubit
+              amplitude: 0.1
+              shape: Rectangular()
+              qubit: 2
+              relative_start: 360
+              type: qf
+            - duration: 20 # Example of Z correction on control qubit
+              amplitude: -0.1
+              shape: Rectangular()
+              qubit: 2
+              relative_start: 380
+              type: qf
+            - type: virtual_z # Better Z correction
+              phase: 0.015
+              qubit: 2
+            - type: virtual_z # Better Z correction
+              phase: 0.035
+              qubit: 1
+            - duration: 420 # Example of parking pulse
+              amplitude: 0.1
               shape: Rectangular()
               qubit: 0
               relative_start: 0
               type: qf
-            - type: virtual_z # Z correction
-              phase: 0.015
-              qubit: 2
-            - type: virtual_z # Z correction
-              phase: 0.035
-              qubit: 1
 
 characterization:
     single_qubit:
