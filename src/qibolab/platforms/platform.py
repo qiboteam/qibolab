@@ -44,10 +44,12 @@ class DesignPlatform(AbstractPlatform):
         for name in sequence.qubits:
             if self.qubits[name].classifier.type == "scikit":
                 import numpy as np
+
                 result.classified_shots = self.qubits[name].classifier.model.predict(
                     np.vstack([result[name].i, result[name].q]).T
-                )              
-        
+                )
+
         return result
+
     def sweep(self, sequence, *sweepers, nshots=1024, average=True):
         return self.design.sweep(self.qubits, sequence, *sweepers, nshots=nshots, average=average)

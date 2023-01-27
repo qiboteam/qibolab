@@ -12,6 +12,7 @@ from qibo.models import Circuit
 from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse
 from qibolab.transpilers import can_execute, transpile
 
+
 @dataclass
 class Classifier:
     """Classifier object used for single shot readout.
@@ -31,10 +32,14 @@ class Classifier:
     def __post_init__(self):
         if isinstance(self.model, str):
             if self.type == "scikit":
-                import joblib, pathlib
+                import pathlib
+
+                import joblib
+
                 self.model = joblib.load(pathlib.Path(__file__).parent.parent / "runcards" / self.model)
-            else: 
+            else:
                 raise_error(NotImplementedError, f"Classifier type {self.type} not implemented for {self.model}.")
+
 
 @dataclass
 class Channel:
@@ -126,6 +131,7 @@ class Qubit:
     def __post_init__(self):
         if isinstance(self.classifier, dict):
             self.classifier = Classifier(**self.classifier)
+
 
 class AbstractPlatform(ABC):
     """Abstract platform for controlling quantum devices.

@@ -62,7 +62,7 @@ class ExecutionResults:
         """
         if state == 1:
             return {"classified_probability": 1 - self.to_dict_classified_probability}
-        elif state == 0:    
+        elif state == 0:
             return {"classified_probability": self.to_dict_classified_probability}
         return np.mean(self.shots)
 
