@@ -1,5 +1,6 @@
 import collections
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, List, Optional
 
@@ -228,81 +229,85 @@ class AbstractPlatform(ABC):
             circuit, _ = transpile(circuit, self.two_qubit_natives)
 
         sequence = PulseSequence()
-        sequence.virtual_z_phases = collections.defaultdict(int)
-        clock = collections.defaultdict(int)
-        # keep track of gates that were already added to avoid adding them twice
-        added = set()
-        for moment in circuit.queue.moments:
-            for gate in moment:
+        virtual_z_phases = defaultdict(int)
 
-                if isinstance(gate, gates.I) or gate is None or gate in added:
+        # keep track of gates that were already added to avoid adding them twice
+        already_processed = set()
+        # process circuit gates
+        for moment in circuit.queue.moments:
+            moment_start = sequence.finish
+            for gate in moment:
+                if isinstance(gate, gates.I) or gate is None or gate in already_processed:
                     pass
 
                 elif isinstance(gate, gates.Z):
                     qubit = gate.target_qubits[0]
-                    sequence.virtual_z_phases[qubit] += np.pi
+                    virtual_z_phases[qubit] += np.pi
 
                 elif isinstance(gate, gates.RZ):
                     qubit = gate.target_qubits[0]
-                    sequence.virtual_z_phases[qubit] += gate.parameters[0]
+                    virtual_z_phases[qubit] += gate.parameters[0]
 
                 elif isinstance(gate, gates.U3):
                     qubit = gate.target_qubits[0]
                     # Transform gate to U3 and add pi/2-pulses
                     theta, phi, lam = gate.parameters
                     # apply RZ(lam)
-                    sequence.virtual_z_phases[qubit] += lam
+                    virtual_z_phases[qubit] += lam
                     # Fetch pi/2 pulse from calibration
                     RX90_pulse_1 = self.create_RX90_pulse(
-                        qubit, clock[qubit], relative_phase=sequence.virtual_z_phases[qubit]
+                        qubit,
+                        start=max(sequence.get_qubit_pulses(qubit).finish, moment_start),
+                        relative_phase=virtual_z_phases[qubit],
                     )
                     # apply RX(pi/2)
                     sequence.add(RX90_pulse_1)
-                    clock[qubit] += RX90_pulse_1.duration
                     # apply RZ(theta)
-                    sequence.virtual_z_phases[qubit] += theta
+                    virtual_z_phases[qubit] += theta
                     # Fetch pi/2 pulse from calibration
                     RX90_pulse_2 = self.create_RX90_pulse(
-                        qubit, clock[qubit], relative_phase=sequence.virtual_z_phases[qubit] - np.pi
+                        qubit, start=RX90_pulse_1.finish, relative_phase=virtual_z_phases[qubit] - np.pi
                     )
                     # apply RX(-pi/2)
                     sequence.add(RX90_pulse_2)
-                    clock[qubit] += RX90_pulse_2.duration
                     # apply RZ(phi)
-                    sequence.virtual_z_phases[qubit] += phi
-
-                elif isinstance(gate, gates.CZ):
-                    control = max(gate.qubits)
-                    target = min(gate.qubits)
-
-                    pair = f"{control}-{target}"
-                    if pair not in self.native_two_qubit_gates:
-                        raise_error(ValueError, f"CZ gate between {control} and {target} is not available.")
-
-                    cz_pulse = self.create_CZ_pulse(control, target, clock[control])
-                    pulse_kwargs = self.native_two_qubit_gates[pair]["CZ"]
-                    sequence.add(cz_pulse)
-                    clock[control] += cz_pulse.duration
-                    clock[target] += cz_pulse.duration
-                    sequence.virtual_z_phases[control] += pulse_kwargs["phase_control"]
-                    sequence.virtual_z_phases[target] += pulse_kwargs["phase_target"]
+                    virtual_z_phases[qubit] += phi
 
                 elif isinstance(gate, gates.M):
                     # Add measurement pulse
-                    mz_pulses = []
+                    measurement_start = max(sequence.get_qubit_pulses(*gate.target_qubits).finish, moment_start)
+                    gate.pulses = ()
                     for qubit in gate.target_qubits:
-                        MZ_pulse = self.create_MZ_pulse(qubit, clock[qubit])
-                        sequence.add(MZ_pulse)  # append_at_end_of_channel?
-                        mz_pulses.append(MZ_pulse.serial)
-                    gate.pulses = tuple(mz_pulses)
+                        MZ_pulse = self.create_MZ_pulse(qubit, start=measurement_start)
+                        sequence.add(MZ_pulse)
+                        gate.pulses = (*gate.pulses, MZ_pulse.serial)
+
+                elif isinstance(gate, gates.CZ):
+                    # create CZ pulse sequence with start time = 0
+                    cz_sequence, cz_virtual_z_phases = self.create_CZ_pulse_sequence(gate.qubits)
+
+                    # determine the right start time based on the availability of the qubits involved
+                    cz_qubits = {*cz_sequence.qubits, *gate.qubits}
+                    cz_start = max(sequence.get_qubit_pulses(*cz_qubits).finish, moment_start)
+
+                    # shift the pulses
+                    for pulse in cz_sequence.pulses:
+                        pulse.start += cz_start
+
+                    # add pulses to the sequence
+                    sequence.add(cz_sequence)
+
+                    # update z_phases registers
+                    for qubit in cz_virtual_z_phases:
+                        virtual_z_phases[qubit] += cz_virtual_z_phases[qubit]
 
                 else:  # pragma: no cover
                     raise_error(
                         NotImplementedError,
                         f"Transpilation of {gate.__class__.__name__} gate has not been implemented yet.",
                     )
-                added.add(gate)
 
+                already_processed.add(gate)
         return sequence
 
     @abstractmethod
@@ -360,6 +365,48 @@ class AbstractPlatform(ABC):
         qd_shape = pulse_kwargs["shape"]
         qd_channel = self.qubits[qubit].drive.name
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
+
+    def create_CZ_pulse_sequence(self, qubits, start=0):
+        # Check in the settings if qubits[0]-qubits[1] is a key
+        if f"{qubits[0]}-{qubits[1]}" in self.settings["native_gates"]["two_qubit"]:
+            pulse_sequence_settings = self.settings["native_gates"]["two_qubit"][f"{qubits[0]}-{qubits[1]}"]["CZ"]
+        elif f"{qubits[1]}-{qubits[0]}" in self.settings["native_gates"]["two_qubit"]:
+            pulse_sequence_settings = self.settings["native_gates"]["two_qubit"][f"{qubits[1]}-{qubits[0]}"]["CZ"]
+        else:
+            raise_error(
+                ValueError,
+                f"Calibration for CZ gate between qubits {qubits[0]} and {qubits[1]} not found.",
+            )
+
+        # If settings contains only one pulse dictionary, convert it into a list that can be iterated below
+        if isinstance(pulse_sequence_settings, dict):
+            pulse_sequence_settings = [pulse_sequence_settings]
+
+        from qibolab.pulses import FluxPulse, PulseSequence
+
+        sequence = PulseSequence()
+        virtual_z_phases = defaultdict(int)
+
+        for pulse_settings in pulse_sequence_settings:
+            if pulse_settings["type"] == "qf":
+                qf_duration = pulse_settings["duration"]
+                qf_amplitude = pulse_settings["amplitude"]
+                qf_shape = pulse_settings["shape"]
+                qubit = pulse_settings["qubit"]
+                qf_channel = self.settings["qubit_channel_map"][qubit][2]
+                sequence.add(
+                    FluxPulse(
+                        start + pulse_settings["relative_start"], qf_duration, qf_amplitude, qf_shape, qf_channel, qubit
+                    )
+                )
+            elif pulse_settings["type"] == "virtual_z":
+                virtual_z_phases[pulse_settings["qubit"]] += pulse_settings["phase"]
+            else:
+                raise NotImplementedError(
+                    "Implementation of CZ gates using pulses of types other than `qf` or `virtual_z` is not supported yet."
+                )
+
+        return sequence, virtual_z_phases
 
     def create_MZ_pulse(self, qubit, start):
         pulse_kwargs = self.native_single_qubit_gates[qubit]["MZ"]
