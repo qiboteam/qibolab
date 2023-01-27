@@ -5,5 +5,5 @@ output-format = "colorized"
 diasable = ["E1123","E1120"]
 
 [tool.pytest.ini_options]
-testpaths = ['src/qibolab/']
-addopts = " --cov=qibolab --cov-report=xml --platforms tii1q_b1,qw5q_gold -m 'not qpu'"
+
+addopts = 'src/qibolab/tests --cov=qibolab --cov-report=xml -m "not qpu" --platforms tii1q_b1,qw5q_gold '
