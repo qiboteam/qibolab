@@ -35,9 +35,8 @@ class Channel:
     """
 
     name: str
-    qubits: List[tuple] = field(default_factory=list, init=False, repr=False)
-    ports: List[tuple] = field(default_factory=list, init=False)
 
+    ports: List[tuple] = field(default_factory=list, init=False)
     local_oscillator: Any = field(default=None, init=False)
     lo_frequency: float = field(default=0, init=False)
     lo_power: float = field(default=0, init=False)
@@ -195,10 +194,6 @@ class AbstractPlatform(ABC):
                 twpa=self.get_channel(twpa) if twpa else None,
                 **settings["characterization"]["single_qubit"][q],
             )
-            for mode in ["readout", "feedback", "drive", "flux", "twpa"]:
-                channel = getattr(qubit, mode)
-                if channel is not None:
-                    channel.qubits.append((qubit, mode))
 
     @abstractmethod
     def connect(self):
