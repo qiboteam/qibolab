@@ -101,10 +101,9 @@ class Qubit:
 
     @property
     def channels(self):
-        for name in ["readout", "feedback", "drive", "flux", "twpa"]:
-            channel = getattr(self, name)
-            if channel is not None:
-                yield channel
+        for field in dataclasses.fields(self):
+            if isinstance(field, Channel):
+                yield field
 
 
 class AbstractPlatform(ABC):
