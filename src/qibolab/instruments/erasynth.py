@@ -4,9 +4,14 @@ Supports the ERAsynth ++.
 
 https://qcodes.github.io/Qcodes_contrib_drivers/_modules/qcodes_contrib_drivers/drivers/ERAInstruments/erasynth.html#ERASynthBase.clear_read_buffer
 """
-from qcodes_contrib_drivers.drivers.ERAInstruments import ERASynthBase, ERASynthPlus, ERASynthPlusPlus
+from qcodes_contrib_drivers.drivers.ERAInstruments import (
+    ERASynthBase,
+    ERASynthPlus,
+    ERASynthPlusPlus,
+)
 
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
+
 
 class ERA(AbstractInstrument):
     def __init__(self, name, address):
