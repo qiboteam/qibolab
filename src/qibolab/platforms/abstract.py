@@ -1,7 +1,7 @@
 import collections
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import Any, List, Optional
 
 import numpy as np
@@ -101,7 +101,7 @@ class Qubit:
 
     @property
     def channels(self):
-        for field in dataclasses.fields(self):
+        for field in fields(self):
             if isinstance(field, Channel):
                 yield field
 
