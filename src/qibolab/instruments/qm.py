@@ -164,10 +164,10 @@ class QMOPX(AbstractInstrument):
         host, port = self.address.split(":")
         self.manager = QuantumMachinesManager(host, int(port))
 
-    def setup(self, qubits, *args, **kwargs):
-        self.time_of_flight = kwargs.get("time_of_flight", 0)
-        self.smearing = kwargs.get("smearing", 0)
-        self.relaxation_time = kwargs.get("relaxation_time", 50000)
+    def setup(self, qubits, relaxation_time=0, time_of_flight=0, smearing=0, **_kwargs):
+        self.time_of_flight = time_of_flight
+        self.smearing = smearing
+        self.relaxation_time = relaxation_time
         # controllers are defined when registering pulses
         for qubit in qubits.values():
             if qubit.flux:
