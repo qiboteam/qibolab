@@ -31,7 +31,7 @@ class AbstractInstrument(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def setup(self):
+    def setup(self, qubits, *args, **kwargs):
         raise NotImplementedError
 
     @abstractmethod
@@ -45,6 +45,14 @@ class AbstractInstrument(ABC):
     @abstractmethod
     def disconnect(self):
         raise NotImplementedError
+
+    def play(self, *args, **kwargs):
+        """Play a pulse sequence and retrieve feedback."""
+        raise NotImplementedError(f"Instrument {self.name} does not support play.")
+
+    def sweep(self, *args, **kwargs):
+        """Play a pulse sequence while sweeping one or more parameters."""
+        raise NotImplementedError(f"Instrument {self.name} does not support sweep.")
 
 
 class InstrumentException(Exception):

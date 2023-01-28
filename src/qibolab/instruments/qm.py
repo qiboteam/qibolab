@@ -164,7 +164,7 @@ class QMOPX(AbstractInstrument):
         host, port = self.address.split(":")
         self.manager = QuantumMachinesManager(host, int(port))
 
-    def setup(self, qubits, relaxation_time=0, time_of_flight=0, smearing=0):
+    def setup(self, qubits, relaxation_time=0, time_of_flight=0, smearing=0, **_kwargs):
         self.time_of_flight = time_of_flight
         self.smearing = smearing
         self.relaxation_time = relaxation_time
