@@ -18,15 +18,6 @@ class DesignPlatform(AbstractPlatform):
         self.is_connected = True
 
     def setup(self):
-        for qubit in self.qubits.values():
-            if qubit.flux is not None:
-                # set flux offset
-                qubit.flux.offset = qubit.sweetspot
-                # Set flux filters (useful for CZ gates)
-                qubit.flux.filter = {
-                    "feedforward": qubit.ff_filter,
-                    "feedback": qubit.fb_filter,
-                }
         self.design.setup(self.qubits, **self.options)
 
     def start(self):

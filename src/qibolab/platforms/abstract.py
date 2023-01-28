@@ -36,12 +36,34 @@ class Channel:
 
     name: str
 
+    qubit: Optional["Qubit"] = field(default=None, init=False, repr=False)
     ports: List[tuple] = field(default_factory=list, init=False)
     local_oscillator: Any = field(default=None, init=False)
     lo_frequency: float = field(default=0, init=False)
     lo_power: float = field(default=0, init=False)
-    offset: float = field(default=0, init=False)
-    filter: Optional[dict] = field(default=None, init=False)
+    _offset: Optional[float] = field(default=None, init=False)
+    _filter: Optional[dict] = field(default=None, init=False)
+
+    @property
+    def offset(self):
+        if self._offset is None:
+            # operate qubits at their sweetspot unless otherwise stated
+            self._offset = self.qubit.sweetspot
+        return self._offset
+
+    @offset.setter
+    def offset(self, offset):
+        self._offset = offset
+
+    @property
+    def filter(self):
+        if self._filter is None:
+            self._filter = self.qubit.filter
+        return self._filter
+
+    @filter.setter
+    def filter(self, filter):
+        self._filter = filter
 
 
 @dataclass
@@ -85,8 +107,7 @@ class Qubit:
     resonator_polycoef_flux: List[float] = field(default_factory=list)
 
     # filters used for applying CZ gate
-    ff_filter: List[float] = field(default_factory=list)
-    fb_filter: List[float] = field(default_factory=list)
+    filter: dict = field(default_factory=dict)
     # parameters for single shot classification
     threshold: Optional[float] = None
     iq_angle: float = 0.0
@@ -97,6 +118,12 @@ class Qubit:
     mixer_drive_phi: float = 0.0
     mixer_readout_g: float = 0.0
     mixer_readout_phi: float = 0.0
+
+    def __post_init__(self):
+        # register qubit in ``flux`` channel so that we can access
+        # ``sweetspot`` and ``filters`` at the channel level
+        if self.flux:
+            self.flux.qubit = self
 
     @property
     def channels(self):
