@@ -49,9 +49,9 @@ instruments:
 
                 0:                      # qubit id
 
-                    rotation_angle: 160.487  # in degrees 0.0<=v<=360.0
+                    rotation_angle: 142.028  # in degrees 0.0<=v<=360.0
 
-                    threshold: -0.00178       # in V
+                    threshold: -0.00111       # in V
 
             channel_port_map:  # Refrigerator Channel : Instrument port
                 'L3-17_ro': o1 # IQ Port = out0 & out1
@@ -80,22 +80,22 @@ instruments:
             channel_port_map:
                 'L3-17_qd': o1 # IQ Port = out0 & out1
                 99: o2
-    twpa_pump:
-        lib: rohde_schwarz
-        class: SGS100A
-        address: 192.168.0.37
-        roles: [other]
-        settings:
-            frequency: 6.816e+9 # Hz
-            power: 2 # dBm
+    # twpa_pump:
+    #     lib: rohde_schwarz
+    #     class: SGS100A
+    #     address: 192.168.0.37
+    #     roles: [other]
+    #     settings:
+    #         frequency: 6.816e+9 # Hz
+    #         power: 5 # dBm
 
 native_gates:
     single_qubit:
         0: # qubit number
             RX:
                 duration: 40                    # should be multiple of 4
-                amplitude: 0.558
-                frequency: -195_000_000          # difference in qubit frequency 
+                amplitude: 0.551
+                frequency: -200_000_000          # difference in qubit frequency 
                 shape: Drag(5, -0.1)
                 type: qd # qubit drive
             MZ:
