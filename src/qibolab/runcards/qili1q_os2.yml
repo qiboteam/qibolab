@@ -20,7 +20,7 @@ instruments:
     cluster:
         lib: qblox
         class: Cluster
-        address: 192.168.0.3
+        address: 192.168.0.6
         roles: [other]
         settings:
             reference_clock_source      : internal                      # external or internal
@@ -28,7 +28,7 @@ instruments:
     qrm_rf:
         lib: qblox
         class: ClusterQRM_RF
-        address: 192.168.0.3:5 #:7 for loopback
+        address: 192.168.0.6:10 #:7 for loopback
         roles: [readout]
         settings:
             ports:
@@ -60,7 +60,7 @@ instruments:
     qcm_rf:
         lib: qblox
         class: ClusterQCM_RF
-        address: 192.168.0.3:13
+        address: 192.168.0.6:8
         roles: [control]
         settings:
             ports:
@@ -80,14 +80,14 @@ instruments:
             channel_port_map:
                 'L3-17_qd': o1 # IQ Port = out0 & out1
                 99: o2
-    # twpa_pump:
-    #     lib: rohde_schwarz
-    #     class: SGS100A
-    #     address: 192.168.0.37
-    #     roles: [other]
-    #     settings:
-    #         frequency: 6_837_500_000 # Hz
-    #         power: 0 # dBm
+    twpa_pump:
+        lib: rohde_schwarz
+        class: SGS100A
+        address: 192.168.0.37
+        roles: [other]
+        settings:
+            frequency: 6.816e+9 # Hz
+            power: 2 # dBm
 
 native_gates:
     single_qubit:
