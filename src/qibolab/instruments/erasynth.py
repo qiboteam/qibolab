@@ -8,6 +8,7 @@ https://qcodes.github.io/Qcodes_contrib_drivers/_modules/qcodes_contrib_drivers/
 from qcodes_contrib_drivers.drivers.ERAInstruments import ERASynthPlusPlus
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 
+
 class ERA(AbstractInstrument):
     def __init__(self, name, address):
         super().__init__(name, address)
