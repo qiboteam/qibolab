@@ -103,6 +103,7 @@ characterization:
         0:
             readout_frequency: 7_371_293_659 
             drive_frequency: 5_441_555_372
+            pi_pulse_amplitude: 0.8
             T1: 18780
             T2: 8385
             state0_voltage: 1000
