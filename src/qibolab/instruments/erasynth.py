@@ -4,8 +4,8 @@ Supports the ERAsynth ++.
 
 https://qcodes.github.io/Qcodes_contrib_drivers/_modules/qcodes_contrib_drivers/drivers/ERAInstruments/erasynth.html#ERASynthBase.clear_read_buffer
 """
-from qcodes_contrib_drivers.drivers.ERAInstruments import ERASynthBase, ERASynthPlus, ERASynthPlusPlus
 
+from qcodes_contrib_drivers.drivers.ERAInstruments import ERASynthPlusPlus
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 
 class ERA(AbstractInstrument):
@@ -28,10 +28,9 @@ class ERA(AbstractInstrument):
         Connects to the instrument using the IP address set in the runcard.
         """
         if not self.is_connected:
-
             for attempt in range(3):
                 try:
-                    self.device = ERASynthPlusPlus(self.name, f"{self.address}")
+                    self.device = ERASynthPlusPlus(f'{self.name}', f"ASRL{self.address}")
                     self.is_connected = True
                     break
                 except KeyError as exc:
