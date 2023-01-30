@@ -1,7 +1,9 @@
 # A single CI script with github workflow
 name: Tests without qpu
 
-on: [push]
+on: 
+  workflow_dispatch:
+  push:
 
 jobs:
   build:
