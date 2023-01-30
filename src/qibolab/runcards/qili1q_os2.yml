@@ -33,7 +33,7 @@ instruments:
         settings:
             ports:
                 o1:
-                    attenuation                 : 42
+                    attenuation                 : 44
                     lo_enabled                  : true
                     lo_frequency                : 7_805_100_000                    # (Hz) from 2e9 to 18e9
                     gain                        : 0.6                           # for path0 and path1 -1.0<=v<=1.0
@@ -49,9 +49,9 @@ instruments:
 
                 0:                      # qubit id
 
-                    rotation_angle: 233.191  # in degrees 0.0<=v<=360.0
+                    rotation_angle: 160.487  # in degrees 0.0<=v<=360.0
 
-                    threshold: -0.002483       # in V
+                    threshold: -0.00178       # in V
 
             channel_port_map:  # Refrigerator Channel : Instrument port
                 'L3-17_ro': o1 # IQ Port = out0 & out1
@@ -67,8 +67,8 @@ instruments:
                 o1:
                     attenuation                  : 0 # (dB)
                     lo_enabled                   : true
-                    lo_frequency                 : 5_280_261_329 # (Hz) from 2e9 to 18e9
-                    gain                         : 0.8 # for path0 and path1 -1.0<=v<=1.0
+                    lo_frequency                 : 5_280_151_329 # (Hz) from 2e9 to 18e9
+                    gain                         : 0.7 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
                 o2:
                     attenuation                  : 60 # (dB)
@@ -93,14 +93,14 @@ native_gates:
     single_qubit:
         0: # qubit number
             RX:
-                duration: 76                    # should be multiple of 4
-                amplitude: 0.48
-                frequency: -200_000_000          # difference in qubit frequency 
+                duration: 40                    # should be multiple of 4
+                amplitude: 0.558
+                frequency: -195_000_000          # difference in qubit frequency 
                 shape: Drag(5, -0.1)
                 type: qd # qubit drive
             MZ:
                 duration: 2000
-                amplitude: 0.9
+                amplitude: 0.8
                 frequency: 20_000_000           # Difference in resonator frequency 
                 shape: Rectangular()
                 type: ro # readout
@@ -109,10 +109,10 @@ characterization:
     single_qubit:
         0:
             readout_frequency: 7_825_100_000 
-            drive_frequency: 5_080_261_329
+            drive_frequency: 5_080_151_329
             T1: 16832
             T2: 12405
             state0_voltage: 2000
             state1_voltage: 1000
-            mean_gnd_states: (0.001723-0.003286j)
-            mean_exc_states: (-0.000261-0.001336j)
+            mean_gnd_states: (0.00299-0.000005j)
+            mean_exc_states: (-0.000898-0.000747j)
