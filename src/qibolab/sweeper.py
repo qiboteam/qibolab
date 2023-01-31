@@ -19,4 +19,4 @@ class Sweeper:
             pulse_type = self.pulses[0].type.name.lower()
             for pulse in self.pulses:
                 assert pulse.type.name.lower() == pulse_type
-            return
+            return pulse_type
