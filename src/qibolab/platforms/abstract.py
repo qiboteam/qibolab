@@ -485,17 +485,6 @@ class AbstractPlatform(ABC):
         qd_channel = self.qubits[qubit].drive.name
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
-    def create_CZ_pulse(self, control, target, start):
-        pulse_kwargs = self.native_two_qubit_gates[f"{control}-{target}"]["CZ"]
-        return FluxPulse(
-            start,
-            duration=pulse_kwargs["duration"],
-            amplitude=pulse_kwargs["amplitude"],
-            shape=pulse_kwargs["shape"],
-            channel=self.qubits[control].flux.name,
-            qubit=control,
-        )
-
     def set_attenuation(self, qubit, att):  # pragma: no cover
         """Set attenuation value. Usefeul for calibration routines such as punchout.
 
