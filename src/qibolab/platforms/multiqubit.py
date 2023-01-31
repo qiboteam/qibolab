@@ -1,10 +1,10 @@
-from copy import copy
+import copy
 
 import numpy as np
 from qibo.config import raise_error
 
 from qibolab.platforms.abstract import AbstractPlatform
-from qibolab.pulses import PulseSequence
+from qibolab.pulses import PulseSequence, ReadoutPulse
 from qibolab.result import ExecutionResults
 
 
@@ -117,7 +117,7 @@ class MultiqubitPlatform(AbstractPlatform):
                         ro_pulses[pulse.serial] = pulse
                         if abs(pulse.frequency) > self.instruments[name].FREQUENCY_LIMIT:
                             # TODO: implement algorithm to find correct LO
-                            if_frequency = self.native_gates["single_qubit"][pulse.qubit]["MZ"]["frequency"]
+                            if_frequency = self.native_gates["single_qubit"][pulse.qubit]["MZ"]["if_frequency"]
                             self.set_lo_readout_frequency(pulse.qubit, pulse.frequency - if_frequency)
                             pulse.frequency = if_frequency
                             changed[pulse.serial] = True
@@ -177,8 +177,80 @@ class MultiqubitPlatform(AbstractPlatform):
 
         for ro_pulse in ro_pulses.values():
             data[ro_pulse.serial] = ExecutionResults.from_components(*acquisition_results[key])
-            data[ro_pulse.qubit] = copy(data[ro_pulse.serial])
+            data[ro_pulse.qubit] = copy.copy(data[ro_pulse.serial])
         return data
+
+    def sweep(self, sequence, *sweepers, nshots=1024, average=True):
+        original = copy.deepcopy(sequence)
+        map_old_new_pulse = {pulse: pulse.serial for pulse in sequence.ro_pulses}
+        results = {}
+        if len(sweepers) == 1:
+            # single sweeper
+            sweeper = sweepers[0]
+            for value in sweeper.values:
+                for pulse in copy.deepcopy(sweeper.pulses):
+                    shifted_pulses = []
+                    # Removing initial pulse (centered at resonator frequency)
+                    sequence.remove(pulse)
+                    if sweeper.parameter == "amplitude" and max(sweeper.values) > 1:
+                        self.set_attenuation(pulse.qubit, value)
+                    else:
+                        setattr(pulse, sweeper.parameter, getattr(original[pulse.qubit], sweeper.parameter) + value)
+                    if isinstance(pulse, ReadoutPulse):
+                        map_old_new_pulse[original[pulse.qubit]] = pulse.serial
+
+                    # Add pulse with parameter shifted
+                    sequence.add(pulse)
+                    shifted_pulses.append(pulse)
+
+                result = self.execute_pulse_sequence(sequence, nshots)
+
+                # remove shifted pulses from sequence
+                for shifted_pulse in shifted_pulses:
+                    sequence.remove(shifted_pulse)
+
+                # colllect result and append to original pulse
+                for old, new_serial in map_old_new_pulse.items():
+                    result[new_serial].i = result[new_serial].i.mean()
+                    result[new_serial].q = result[new_serial].q.mean()
+                    if old.serial in results:
+                        results[old.serial] += result[new_serial]
+                    else:
+                        results[old.serial] = result[new_serial]
+                        results[old.qubit] = copy.copy(results[old.serial])
+
+        elif len(sweepers) == 2:
+            # 2 sweepers simultaneously
+            for value1 in sweepers[0].values:
+                for value2 in sweepers[1].values:
+                    for sweeper in sweepers:
+                        for pulse in copy.deepcopy(sweeper.pulses):
+                            sequence.remove(pulse)
+                            value = value1 if sweeper == sweepers[0] else value2
+                            if sweeper.parameter == "amplitude" and max(sweeper.values) > 1:
+                                self.set_attenuation(pulse.qubit, value)
+                            else:
+                                setattr(
+                                    pulse, sweeper.parameter, getattr(original[pulse.qubit], sweeper.parameter) + value
+                                )
+                            if isinstance(pulse, ReadoutPulse):
+                                map_old_new_pulse[original[pulse.qubit]] = pulse.serial
+
+                            sequence.add(pulse)
+
+                    result = self.execute_pulse_sequence(sequence, nshots)
+                    for old, new_serial in map_old_new_pulse.items():
+                        result[new_serial].i = result[new_serial].i.mean()
+                        result[new_serial].q = result[new_serial].q.mean()
+                        if old.serial in results:
+                            results[old.serial] += result[new_serial]
+                        else:
+                            results[old.serial] = result[new_serial]
+                            results[old.qubit] = copy.copy(results[old.serial])
+        else:
+            raise_error("Qblox platform supports can support up to 2 sweepers.")
+
+        return results
 
     def measure_fidelity(self, qubits=None, nshots=None):
 

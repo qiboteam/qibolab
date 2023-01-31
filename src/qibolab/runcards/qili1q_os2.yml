@@ -41,7 +41,7 @@ instruments:
                 i1:
                     hardware_demod_en           : true
 
-            
+
             acquisition_hold_off        : 200                           # minimum 4ns
             acquisition_duration        : 1000
 
@@ -95,20 +95,21 @@ native_gates:
             RX:
                 duration: 40                    # should be multiple of 4
                 amplitude: 0.56624413938
-                frequency: -200_000_000          # difference in qubit frequency 
+                frequency: -200_000_000          # difference in qubit frequency
                 shape: Drag(5, -0.1)
                 type: qd # qubit drive
             MZ:
                 duration: 2000
                 amplitude: 0.8
-                frequency: 20_000_000           # Difference in resonator frequency 
+                frequency: 7_825_100_000
+                if_frequency: 20_000_000
                 shape: Rectangular()
                 type: ro # readout
 
 characterization:
     single_qubit:
         0:
-            readout_frequency: 7_825_100_000 
+            readout_frequency: 7_825_100_000
             drive_frequency: 5_080_151_329
             T1: 16832
             T2: 12405
