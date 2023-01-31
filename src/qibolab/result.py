@@ -78,7 +78,7 @@ class ExecutionResults:
         elif state == 0:
             return {"probability": self.ground_state_probability}
 
-    def to_dict(self, average=False):
+    def to_dict(self, average=True):
         """Serialize output in dict.
         Args:
             average (bool): If `True` returns a dictionary of the form
