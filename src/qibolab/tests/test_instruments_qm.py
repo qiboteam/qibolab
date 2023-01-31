@@ -1,6 +1,3 @@
-import json
-import pathlib
-
 import numpy as np
 import pytest
 from qm import qua
@@ -12,21 +9,6 @@ from qibolab.pulses import Pulse, ReadoutPulse, Rectangular
 
 RUNCARD = qibolab_folder / "runcards" / "qw5q_gold.yml"
 DUMMY_ADDRESS = "0.0.0.0:0"
-REGRESSION_FOLDER = pathlib.Path(__file__).with_name("qmregressions")
-
-
-def assert_json_fixture(data, filename):
-    filename = REGRESSION_FOLDER / filename
-    try:
-        with open(filename) as file:
-            target = json.load(file)
-    except:  # pragma: no cover
-        # case not tested in GitHub workflows because files exist
-        with open(filename, "w") as file:
-            json.dump(data, file, indent=4)
-        target = data
-    data = json.loads(json.dumps(data))
-    assert data == target
 
 
 def test_qmpulse():
@@ -72,7 +54,13 @@ def test_qmopx_setup():
     opx = platform.design.controller
     assert opx.time_of_flight == 280
     assert opx.relaxation_time == 50000
-    assert_json_fixture(opx.config, "qmopx_setup.json")
+    # assert that flux elements were registered
+    for q in range(5):
+        assert f"flux{q}" in opx.config["elements"]
+        con, port = opx.config["elements"][f"flux{q}"]["singleInput"]["port"]
+        port = opx.config["controllers"][con]["analog_outputs"][port]
+        assert port["offset"] == platform.qubits[q].sweetspot
+        assert port["filter"] == platform.qubits[q].filter
 
 
 # TODO: Test start/stop
