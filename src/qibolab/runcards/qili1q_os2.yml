@@ -1,5 +1,5 @@
 nqubits: 1
-description: 1-qubit device TII0 in XLD fridge, controlled with qblox cluster rf.
+description: 1-qubit device OS2 in XLD fridge, controlled with qblox cluster rf.
 
 settings:
     hardware_avg: 4096
@@ -11,16 +11,16 @@ qubits: [0]
 topology: # qubit - qubit connections
 -   [1]
 
-channels: ['W4_qd', 'W4_ro', 'V2']
+channels: ['L3-17_qd', 'L3-17_ro', 'L2-4', null]
 
 qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux, QubitBias]
-    0: ['W4_ro', 'W4_qd', null, null]
+    0: ['L3-17_ro', 'L3-17_qd', null, null]
 
 instruments:
     cluster:
         lib: qblox
         class: Cluster
-        address: 192.168.0.3
+        address: 192.168.0.6
         roles: [other]
         settings:
             reference_clock_source      : internal                      # external or internal
@@ -28,38 +28,47 @@ instruments:
     qrm_rf:
         lib: qblox
         class: ClusterQRM_RF
-        address: 192.168.0.3:5 #:7 for loopback
+        address: 192.168.0.6:10 #:7 for loopback
         roles: [readout]
         settings:
             ports:
                 o1:
                     attenuation                 : 44
                     lo_enabled                  : true
-                    lo_frequency                : 7_275_166_285                    # (Hz) from 2e9 to 18e9
-                    gain                        : 0.45                           # for path0 and path1 -1.0<=v<=1.0
+                    lo_frequency                : 7_805_100_000                    # (Hz) from 2e9 to 18e9
+                    gain                        : 0.6                           # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en             : false
                 i1:
-                    hardware_demod_en           : false
+                    hardware_demod_en           : true
 
-            acquisition_hold_off        : 200
-            acquisition_duration        : 2000
+            
+            acquisition_hold_off        : 200                           # minimum 4ns
+            acquisition_duration        : 1000
+
+            classification_parameters:
+
+                0:                      # qubit id
+
+                    rotation_angle: 142.028  # in degrees 0.0<=v<=360.0
+
+                    threshold: -0.00111       # in V
 
             channel_port_map:  # Refrigerator Channel : Instrument port
-                'W4_ro': o1 # IQ Port = out0 & out1
-                'V2': i1
+                'L3-17_ro': o1 # IQ Port = out0 & out1
+                'L2-4': i1
 
     qcm_rf:
         lib: qblox
         class: ClusterQCM_RF
-        address: 192.168.0.3:13
+        address: 192.168.0.6:8
         roles: [control]
         settings:
             ports:
                 o1:
                     attenuation                  : 0 # (dB)
                     lo_enabled                   : true
-                    lo_frequency                 : 5_385_141_908 # (Hz) from 2e9 to 18e9
-                    gain                         : 0.51 # for path0 and path1 -1.0<=v<=1.0
+                    lo_frequency                 : 5_280_151_329 # (Hz) from 2e9 to 18e9
+                    gain                         : 0.7 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
                 o2:
                     attenuation                  : 60 # (dB)
@@ -69,7 +78,7 @@ instruments:
                     hardware_mod_en              : false
 
             channel_port_map:
-                'W4_qd': o1 # IQ Port = out0 & out1
+                'L3-17_qd': o1 # IQ Port = out0 & out1
                 99: o2
     # twpa_pump:
     #     lib: rohde_schwarz
@@ -77,33 +86,33 @@ instruments:
     #     address: 192.168.0.37
     #     roles: [other]
     #     settings:
-    #         frequency: 6_837_500_000 # Hz
-    #         power: 0 # dBm
+    #         frequency: 6.816e+9 # Hz
+    #         power: 5 # dBm
 
 native_gates:
     single_qubit:
         0: # qubit number
             RX:
                 duration: 40                    # should be multiple of 4
-                amplitude: 0.455
-                frequency: -150_000_000          # difference in qubit frequency
-                shape: Gaussian(5)
+                amplitude: 0.56624413938
+                frequency: -200_000_000          # difference in qubit frequency 
+                shape: Drag(5, -0.1)
                 type: qd # qubit drive
             MZ:
                 duration: 2000
-                amplitude: 0.3
-                frequency: 20_000_000           # Difference in resonator frequency
+                amplitude: 0.8
+                frequency: 20_000_000           # Difference in resonator frequency 
                 shape: Rectangular()
                 type: ro # readout
 
 characterization:
     single_qubit:
         0:
-            readout_frequency: 7_295_166_285
-            drive_frequency: 5_235_141_908
-            T1: 21785
-            T2: 8385
-            state0_voltage: 1000
-            state1_voltage: 200
-            mean_gnd_states: (0+0j)
-            mean_exc_states: (0+0j)
+            readout_frequency: 7_825_100_000 
+            drive_frequency: 5_080_151_329
+            T1: 16832
+            T2: 12405
+            state0_voltage: 2000
+            state1_voltage: 1000
+            mean_gnd_states: (0.00299-0.000005j)
+            mean_exc_states: (-0.000898-0.000747j)
