@@ -147,14 +147,6 @@ class AbstractPlatform(ABC):
                     setattr(self.qubits[q], name, value)
             else:
                 self.qubits[q] = Qubit(q, **settings["characterization"]["single_qubit"][q])
-            # TODO: Fix this to work for all platforms without the need for if
-            feedback, twpa = None, None
-            if len(settings["qubit_channel_map"][q]) == 3:
-                readout, drive, flux = settings["qubit_channel_map"][q]
-            elif len(settings["qubit_channel_map"][q]) == 4:
-                readout, drive, flux, _ = settings["qubit_channel_map"][q]
-            else:
-                readout, drive, flux, feedback, twpa = settings["qubit_channel_map"][q]
 
     @abstractmethod
     def connect(self):
@@ -355,7 +347,10 @@ class AbstractPlatform(ABC):
                 qf_amplitude = pulse_settings["amplitude"]
                 qf_shape = pulse_settings["shape"]
                 qubit = pulse_settings["qubit"]
-                qf_channel = self.settings["qubit_channel_map"][qubit][2]
+                if self.qubits[qubit].flux:
+                    qf_channel = self.qubits[qubit].flux.name
+                else:
+                    qf_channel = self.settings["qubit_channel_map"][qubit][2]
                 sequence.add(
                     FluxPulse(
                         start + pulse_settings["relative_start"], qf_duration, qf_amplitude, qf_shape, qf_channel, qubit
