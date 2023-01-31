@@ -95,29 +95,29 @@ class Qubit:
 
     readout_frequency: int = 0
     drive_frequency: int = 0
-    sweetspot: float = 0
-    peak_voltage: float = 0
-    pi_pulse_amplitude: float = 0
+    sweetspot: float = 0.0
+    pi_pulse_amplitude: float = 0.0
     T1: int = 0
     T2: int = 0
-    state0_voltage: int = 0
-    state1_voltage: int = 0
-    mean_gnd_states: complex = 0 + 0.0j
-    mean_exc_states: complex = 0 + 0.0j
-    resonator_polycoef_flux: List[float] = field(default_factory=list)
+    peak_voltage: float = field(default=0.0, repr=False)
+    state0_voltage: int = field(default=0, repr=False)
+    state1_voltage: int = field(default=0, repr=False)
+    mean_gnd_states: complex = field(default=0 + 0j, repr=False)
+    mean_exc_states: complex = field(default=0 + 0j, repr=False)
+    resonator_polycoef_flux: List[float] = field(default_factory=list, repr=False)
 
     # filters used for applying CZ gate
-    filter: dict = field(default_factory=dict)
+    filter: dict = field(default_factory=dict, repr=False)
     # parameters for single shot classification
-    threshold: Optional[float] = None
-    iq_angle: float = 0.0
+    threshold: Optional[float] = field(default=None, repr=False)
+    iq_angle: float = field(default=0.0, repr=False)
     # required for integration weights (not sure if it should be here)
-    rotation_angle: float = 0.0
+    rotation_angle: float = field(default=0.0, repr=False)
     # required for mixers (not sure if it should be here)
-    mixer_drive_g: float = 0.0
-    mixer_drive_phi: float = 0.0
-    mixer_readout_g: float = 0.0
-    mixer_readout_phi: float = 0.0
+    mixer_drive_g: float = field(default=0.0, repr=False)
+    mixer_drive_phi: float = field(default=0.0, repr=False)
+    mixer_readout_g: float = field(default=0.0, repr=False)
+    mixer_readout_phi: float = field(default=0.0, repr=False)
 
     def __post_init__(self):
         # register qubit in ``flux`` channel so that we can access
