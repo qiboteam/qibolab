@@ -127,8 +127,10 @@ class QMOPX(AbstractInstrument):
         manager (:class:`qm.QuantumMachinesManager.QuantumMachinesManager`): Manager object
             used for controlling the QM OPXs.
         config (dict): Configuration dictionary required for pulse execution on the OPXs.
-        time_of_flight (optional,int): Time of flight used for hardware signal integration.
-        smearing (optional,int): Smearing used for hardware signal integration.
+        relaxation_time (int): Default time to wait between shots so that the qubit relaxes to
+            its ground state.
+        time_of_flight (int): Time of flight used for hardware signal integration.
+        smearing (int): Smearing used for hardware signal integration.
     """
 
     def __init__(self, name, address):
@@ -138,6 +140,7 @@ class QMOPX(AbstractInstrument):
         self.manager = None
         self.is_connected = False
 
+        self.relaxation_time = 0
         self.time_of_flight = 0
         self.smearing = 0
         # copied from qblox runcard, not used here yet
@@ -161,10 +164,22 @@ class QMOPX(AbstractInstrument):
         }
 
     def connect(self):
+        """Connect to the QM manager."""
         host, port = self.address.split(":")
         self.manager = QuantumMachinesManager(host, int(port))
 
     def setup(self, qubits, relaxation_time=0, time_of_flight=0, smearing=0, **_kwargs):
+        """Set general machine options and register flux elements in the ``config``.
+
+        Flux elements should be registered on all qubits even when they are not used.
+
+        Args:
+            qubits (list): List of :class:`qibolab.platforms.abstract.Qubit`.
+            relaxation_time (int): Default time to wait between shots so that the qubit relaxes to
+            its ground state.
+            time_of_flight (int): Time of flight used for hardware signal integration.
+            smearing (int): Smearing used for hardware signal integration.
+        """
         self.time_of_flight = time_of_flight
         self.smearing = smearing
         self.relaxation_time = relaxation_time
@@ -178,11 +193,14 @@ class QMOPX(AbstractInstrument):
         pass
 
     def stop(self):
+        """Close all running Quantum Machines."""
+        # TODO: Use logging
         # log.warn("Closing all Quantum Machines.")
         print("Closing all Quantum Machines.")
         self.manager.close_all_quantum_machines()
 
     def disconnect(self):
+        """Disconnect from QM manager."""
         if self.is_connected:
             self.manager.close()
             self.is_connected = False
@@ -206,6 +224,15 @@ class QMOPX(AbstractInstrument):
         return [float(N * x) for x in [(1 - g) * c, (1 + g) * s, (1 - g) * s, (1 + g) * c]]
 
     def register_analog_output_controllers(self, ports, offset=0.0, filter=None):
+        """Register controllers in the ``config``.
+
+        Args:
+            ports (list): List of tuples ``(conX, port)``.
+            offset (float): Constant offset to be played in the given ports.
+                Relevant for ports connected to flux channels.
+            filter (dict): Pulse shape filters. Relevant for ports connected to flux channels.
+                QM syntax should be followed for the filters.
+        """
         controllers = self.config["controllers"]
         for con, port in ports:
             if con not in controllers:
