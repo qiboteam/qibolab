@@ -76,10 +76,10 @@ class DummyPlatform(AbstractPlatform):
         map_old_new_pulse = {pulse: pulse.serial for pulse in sequence.ro_pulses}
         results = {}
         if len(sweepers) == 1:
+            # single sweeper
             sweeper = sweepers[0]
-            sweeper_pulses = copy.deepcopy(sweeper.pulses)
             for value in sweeper.values:
-                for pulse in sweeper_pulses:
+                for pulse in copy.deepcopy(sweeper.pulses):
                     sequence.remove(pulse)
                     if sweeper.parameter == "amplitude" and max(sweeper.values) > 1:
                         self.set_attenuation(pulse.qubit, value)
@@ -102,10 +102,12 @@ class DummyPlatform(AbstractPlatform):
                         results[old.qubit] = copy.copy(results[old.serial])
 
         elif len(sweepers) == 2:
+            # 2 sweepers simultaneously
             for value1 in sweepers[0].values:
                 for value2 in sweepers[1].values:
                     for sweeper in sweepers:
-                        for pulse in sweeper.pulses:
+                        for pulse in copy.deepcopy(sweeper.pulses):
+                            sequence.remove(pulse)
                             value = value1 if sweeper == sweepers[0] else value2
                             if sweeper.parameter == "amplitude" and max(sweeper.values) > 1:
                                 self.set_attenuation(pulse.qubit, value)
@@ -113,26 +115,21 @@ class DummyPlatform(AbstractPlatform):
                                 setattr(
                                     pulse, sweeper.parameter, getattr(original[pulse.qubit], sweeper.parameter) + value
                                 )
+                            if isinstance(pulse, ReadoutPulse):
+                                map_old_new_pulse[original[pulse.qubit]] = pulse.serial
+
+                            sequence.add(pulse)
 
                     result = self.execute_pulse_sequence(sequence, nshots)
-
-                    for new_pulse in set(sweepers[0].pulses + sweepers[1].pulses):
-                        for pulse in original:
-                            if all(
-                                [
-                                    test_changed(pulse, new_pulse, sweeper, value)
-                                    for sweeper, value in zip([sweepers[0], sweepers[1]], [value1, value2])
-                                ]
-                            ):
-                                # if getattr(pulse, sweepers[0].parameter) + value1 == getattr(new_pulse, sweepers[0].parameter) and getattr(pulse, sweepers[1].parameter) + value2 == getattr(new_pulse, sweepers[1].parameter):
-                                result[new_pulse.serial].i = result[new_pulse.serial].i.mean()
-                                result[new_pulse.serial].q = result[new_pulse.serial].q.mean()
-                                if pulse.serial in results:
-                                    results[pulse.serial] += result[new_pulse.serial]
-                                else:
-                                    results[pulse.serial] = result[new_pulse.serial]
-                                results[pulse.qubit] = results[pulse.serial]
+                    for old, new_serial in map_old_new_pulse.items():
+                        result[new_serial].i = result[new_serial].i.mean()
+                        result[new_serial].q = result[new_serial].q.mean()
+                        if old.serial in results:
+                            results[old.serial] += result[new_serial]
+                        else:
+                            results[old.serial] = result[new_serial]
+                            results[old.qubit] = copy.copy(results[old.serial])
         else:
             raise_error("Dummy platform supports can support up to 2 sweepers.")
 
-        return result
+        return results
