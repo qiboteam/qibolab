@@ -1144,6 +1144,8 @@ class ClusterQRM_RF(AbstractInstrument):
                             pulse.qubit
                         ]
 
+                        data[pulse.serial] = (i, q)
+
                     else:
                         raise Exception(
                             """Software Demodulation only supports one acquisition per channel.
