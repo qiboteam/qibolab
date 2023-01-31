@@ -32,7 +32,7 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.9
-                frequency: 20_000_000
+                frequency: 7824855425
                 shape: Rectangular()
                 type: ro # readout
 

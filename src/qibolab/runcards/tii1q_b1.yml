@@ -14,7 +14,7 @@ topology: # qubit - qubit connections
 
 channels: [L3-18_qd, L3-18_ro, L2-2]
 
-qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux, QubitBias]
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux, Feedback, TWPA]
     0: [L3-18_ro, L3-18_qd, null, null]
 
 instruments:
@@ -99,7 +99,8 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.7
-                frequency: 20_000_000           # Difference in resonator frequency
+                frequency: 7_371_405_000           # Difference in resonator frequency
+                if_frequency: 20_000_000
                 shape: Rectangular()
                 type: ro # readout
 

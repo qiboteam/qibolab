@@ -271,6 +271,23 @@ class AbstractPlatform(ABC):
     def __call__(self, sequence, nshots=None):
         return self.execute_pulse_sequence(sequence, nshots)
 
+    def sweep(self, sequence, *sweepers, nshots=1024, average=True):
+        """Executes a pulse sequence for different values of sweeped parameters.
+        Useful for performing chip characterization.
+        Args:
+            sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
+            sweepers (:class:`qibolab.sweeper.Sweeper`): Sweeper objects that specify which
+                parameters are being sweeped.
+            nshots (int): Number of shots to sample from the experiment.
+                If ``None`` the default value provided as hardware_avg in the
+                calibration yml will be used.
+            average (bool): If ``True`` the IQ results of individual shots are averaged
+                on hardware.
+        Returns:
+            Readout results acquired by after execution.
+        """
+        raise_error(NotImplementedError, f"Platform {self.name} does not support sweeping.")
+
     def create_RX90_pulse(self, qubit, start=0, relative_phase=0):
         qd_duration = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["duration"]
         qd_frequency = self.settings["native_gates"]["single_qubit"][qubit]["RX"]["frequency"]
