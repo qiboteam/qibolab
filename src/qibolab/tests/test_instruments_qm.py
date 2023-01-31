@@ -5,7 +5,7 @@ from qm import qua
 from qibolab.instruments.qm import QMOPX, QMPulse, QMSequence
 from qibolab.paths import qibolab_folder
 from qibolab.platform import create_tii_qw5q_gold
-from qibolab.pulses import Pulse, ReadoutPulse, Rectangular
+from qibolab.pulses import FluxPulse, Pulse, ReadoutPulse, Rectangular
 
 RUNCARD = qibolab_folder / "runcards" / "qw5q_gold.yml"
 DUMMY_ADDRESS = "0.0.0.0:0"
@@ -107,7 +107,78 @@ def test_qmopx_register_drive_element():
     assert opx.config["mixers"]["mixer_drive0"] == target_mixer
 
 
-def test_qmpulse_bake():
-    pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
+def test_qmopx_register_readout_element():
+    platform = create_tii_qw5q_gold(RUNCARD, simulation_duration=1000, address=DUMMY_ADDRESS)
+    opx = platform.design.controller
+    opx.register_readout_element(platform.qubits[2], intermediate_frequency=int(1e6))
+    assert "readout2" in opx.config["elements"]
+    target_element = {
+        "mixInputs": {"I": ("con2", 10), "Q": ("con2", 9), "lo_frequency": 7900000000, "mixer": "mixer_readout2"},
+        "intermediate_frequency": 1000000,
+        "operations": {},
+        "outputs": {
+            "out1": ("con2", 2),
+            "out2": ("con2", 1),
+        },
+        "time_of_flight": 0,
+        "smearing": 0,
+    }
+    assert opx.config["elements"]["readout2"] == target_element
+    target_mixer = [{"intermediate_frequency": 1000000, "lo_frequency": 7900000000, "correction": [1.0, 0.0, 0.0, 1.0]}]
+    assert opx.config["mixers"]["mixer_readout2"] == target_mixer
+
+
+@pytest.mark.parametrize("pulse_type,qubit", [("drive", 2), ("readout", 1)])
+def test_qmopx_register_pulse(pulse_type, qubit):
+    platform = create_tii_qw5q_gold(RUNCARD, simulation_duration=1000, address=DUMMY_ADDRESS)
+    opx = platform.design.controller
+    if pulse_type == "drive":
+        pulse = platform.create_RX_pulse(qubit, start=0)
+        target_pulse = {
+            "operation": "control",
+            "length": pulse.duration,
+            "waveforms": {"I": pulse.envelope_waveform_i.serial, "Q": pulse.envelope_waveform_q.serial},
+        }
+
+    else:
+        pulse = platform.create_MZ_pulse(qubit, start=0)
+        target_pulse = {
+            "operation": "measurement",
+            "length": pulse.duration,
+            "waveforms": {"I": "constant_wf0.00325", "Q": "constant_wf0.00325"},
+            "digital_marker": "ON",
+            "integration_weights": {
+                "cos": "cosine_weights1",
+                "minus_sin": "minus_sine_weights1",
+                "sin": "sine_weights1",
+            },
+        }
+
+    opx.register_pulse(platform.qubits[qubit], pulse)
+    assert opx.config["pulses"][pulse.serial] == target_pulse
+    assert target_pulse["waveforms"]["I"] in opx.config["waveforms"]
+    assert target_pulse["waveforms"]["Q"] in opx.config["waveforms"]
+    assert opx.config["elements"][f"{pulse_type}{qubit}"]["operations"][pulse.serial] == pulse.serial
+
+
+def test_qmopx_register_baked_pulse():
+    platform = create_tii_qw5q_gold(RUNCARD, simulation_duration=1000, address=DUMMY_ADDRESS)
+    platform.setup()
+    qubit = platform.qubits[3]
+    pulse = FluxPulse(3, 30, 0.05, Rectangular(), qubit.flux.name, qubit=qubit.name)
     qmpulse = QMPulse(pulse)
-    # TODO: Needs config
+    config = platform.design.controller.config
+    qmpulse.bake(config)
+
+    print(config)
+    assert config["elements"]["flux3"]["operations"] == {"baked_Op_0": "flux3_baked_pulse_0"}
+    assert config["pulses"]["flux3_baked_pulse_0"] == {
+        "operation": "control",
+        "length": 32,
+        "waveforms": {"single": "flux3_baked_wf_0"},
+    }
+    assert config["waveforms"]["flux3_baked_wf_0"] == {
+        "type": "arbitrary",
+        "samples": 29 * [0.05] + 3 * [0],
+        "is_overridable": False,
+    }
