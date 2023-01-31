@@ -68,12 +68,15 @@ class DummyPlatform(AbstractPlatform):
     def sweep(self, sequence, *sweepers, nshots=1024, average=True):
         original = copy.deepcopy(sequence)
         map_old_new_pulse = {pulse: pulse.serial for pulse in sequence.ro_pulses}
+
         results = {}
         if len(sweepers) == 1:
             # single sweeper
             sweeper = sweepers[0]
             for value in sweeper.values:
                 for pulse in copy.deepcopy(sweeper.pulses):
+                    shifted_pulses = []
+                    # Removing initial pulse (centered at resonator frequency)
                     sequence.remove(pulse)
                     if sweeper.parameter == "amplitude" and max(sweeper.values) > 1:
                         self.set_attenuation(pulse.qubit, value)
@@ -82,11 +85,19 @@ class DummyPlatform(AbstractPlatform):
                     if isinstance(pulse, ReadoutPulse):
                         map_old_new_pulse[original[pulse.qubit]] = pulse.serial
 
+                    # Add pulse with parameter shifted
                     sequence.add(pulse)
+                    shifted_pulses.append(pulse)
 
                 result = self.execute_pulse_sequence(sequence, nshots)
 
+                # remove shifted pulses from sequence
+                for shifted_pulse in shifted_pulses:
+                    sequence.remove(shifted_pulse)
+
+                # colllect result and append to original pulse
                 for old, new_serial in map_old_new_pulse.items():
+                    sequence.remove
                     result[new_serial].i = result[new_serial].i.mean()
                     result[new_serial].q = result[new_serial].q.mean()
                     if old.serial in results:
