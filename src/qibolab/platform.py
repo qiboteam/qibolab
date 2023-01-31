@@ -57,7 +57,8 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
     channels["L3-25_a"].ports = [("con1", 10), ("con1", 9)]
     channels["L3-25_b"].ports = [("con2", 10), ("con2", 9)]
     # feedback
-    channels["L2-5"].ports = [("con1", 2), ("con1", 1)]
+    channels["L2-5_a"].ports = [("con1", 2), ("con1", 1)]
+    channels["L2-5_b"].ports = [("con2", 2), ("con2", 1)]
     # drive
     channels["L3-11"].ports = [("con1", 2), ("con1", 1)]
     channels["L3-12"].ports = [("con1", 4), ("con1", 3)]
