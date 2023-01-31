@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from qibo.config import log, raise_error
 
@@ -15,7 +15,7 @@ class MixerInstrumentDesign(BasicInstrumentDesign):
         local_oscillators (list): List of local oscillator instrument objects.
     """
 
-    local_oscillators: list
+    local_oscillators: list = field(default_factory=list)
 
     def connect(self):
         if not self.is_connected:

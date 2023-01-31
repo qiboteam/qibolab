@@ -1,6 +1,6 @@
 from qibo.config import raise_error
 
-from qibolab.designs.basic import BasicInstrumentDesign
+from qibolab.designs.basic import BasicInstrumentDesign, Channel
 from qibolab.designs.mixer import MixerInstrumentDesign
 from qibolab.platforms.platform import DesignPlatform
 
@@ -20,39 +20,19 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
         cloud (bool): See :class:`qibolab.instruments.qmsim.QMSim` for details.
             Relevant only when ``simulation_duration`` is given.
     """
-    # Instantiate QM OPX instruments
-    if simulation_duration is None:
-        from qibolab.instruments.qm import QMOPX
-        from qibolab.instruments.rohde_schwarz import SGS100A
+    # Create channel objects
+    # readout
+    channels = {"L3-25_a": Channel("L3-25_a"), "L3-25_b": Channel("L3-25_b")}
+    # feedback
+    channels.update({"L2-5_a": Channel("L2-5_a"), "L2-5_b": Channel("L2-5_b")})
+    # drive
+    channels.update({f"L3-{i}": Channel(f"L3-{i}") for i in range(11, 16)})
+    # flux
+    channels.update({f"L4-{i}": Channel(f"L4-{i}") for i in range(1, 6)})
+    # TWPA
+    channels["L4-26"] = Channel("L4-26")
 
-        controller = QMOPX("qmopx", "192.168.0.1:80")
-
-        # Instantiate local oscillators (HARDCODED)
-        local_oscillators = [
-            SGS100A("lo_readout_a", "192.168.0.39"),
-            SGS100A("lo_readout_b", "192.168.0.31"),
-            SGS100A("lo_drive_low", "192.168.0.32"),
-            SGS100A("lo_drive_mid", "192.168.0.33"),
-            SGS100A("lo_drive_high", "192.168.0.34"),
-            SGS100A("twpa_a", "192.168.0.35"),
-        ]
-        design = MixerInstrumentDesign(controller, local_oscillators)
-
-    else:
-        from qibolab.instruments.qmsim import QMSim
-
-        if address is None:
-            # connect to TII instruments for simulation
-            address = "192.168.0.1:80"
-
-        controller = QMSim("qmopx", address, simulation_duration, cloud)
-        # avoid connecting to local oscillators when simulation is used
-        local_oscillators = []
-        design = BasicInstrumentDesign(controller)
-
-    platform = DesignPlatform("qw5q_gold", design, runcard)
     # Map controllers to qubit channels (HARDCODED)
-    channels = platform.channels
     # readout
     channels["L3-25_a"].ports = [("con1", 10), ("con1", 9)]
     channels["L3-25_b"].ports = [("con2", 10), ("con2", 9)]
@@ -71,17 +51,6 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
     channels["L4-3"].ports = [("con2", 3)]
     channels["L4-4"].ports = [("con2", 4)]
     channels["L4-5"].ports = [("con2", 5)]
-
-    # Map LOs to channels
-    if local_oscillators:
-        channels["L3-25_a"].local_oscillator = local_oscillators[0]
-        channels["L3-25_b"].local_oscillator = local_oscillators[1]
-        channels["L3-15"].local_oscillator = local_oscillators[2]
-        channels["L3-11"].local_oscillator = local_oscillators[2]
-        channels["L3-12"].local_oscillator = local_oscillators[3]
-        channels["L3-13"].local_oscillator = local_oscillators[4]
-        channels["L3-14"].local_oscillator = local_oscillators[4]
-        channels["L4-26"].local_oscillator = local_oscillators[5]
 
     # Set default LO parameters in the channel
     channels["L3-25_a"].lo_frequency = 7_300_000_000
@@ -102,6 +71,63 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
     channels["L4-26"].lo_frequency = 6_558_000_000
     channels["L4-26"].lo_power = 2.5
 
+    # Instantiate QM OPX instruments
+    if simulation_duration is None:
+        from qibolab.instruments.qm import QMOPX
+        from qibolab.instruments.rohde_schwarz import SGS100A
+
+        controller = QMOPX("qmopx", "192.168.0.1:80")
+
+        # Instantiate local oscillators (HARDCODED)
+        local_oscillators = [
+            SGS100A("lo_readout_a", "192.168.0.39"),
+            SGS100A("lo_readout_b", "192.168.0.31"),
+            SGS100A("lo_drive_low", "192.168.0.32"),
+            SGS100A("lo_drive_mid", "192.168.0.33"),
+            SGS100A("lo_drive_high", "192.168.0.34"),
+            SGS100A("twpa_a", "192.168.0.35"),
+        ]
+        # Map LOs to channels
+        channels["L3-25_a"].local_oscillator = local_oscillators[0]
+        channels["L3-25_b"].local_oscillator = local_oscillators[1]
+        channels["L3-15"].local_oscillator = local_oscillators[2]
+        channels["L3-11"].local_oscillator = local_oscillators[2]
+        channels["L3-12"].local_oscillator = local_oscillators[3]
+        channels["L3-13"].local_oscillator = local_oscillators[4]
+        channels["L3-14"].local_oscillator = local_oscillators[4]
+        channels["L4-26"].local_oscillator = local_oscillators[5]
+
+        design = MixerInstrumentDesign(controller, channels, local_oscillators)
+
+    else:
+        from qibolab.instruments.qmsim import QMSim
+
+        if address is None:
+            # connect to TII instruments for simulation
+            address = "192.168.0.1:80"
+
+        controller = QMSim("qmopx", address, simulation_duration, cloud)
+        # avoid connecting to local oscillators when simulation is used
+        design = BasicInstrumentDesign(controller, channels)
+
+    platform = DesignPlatform("qw5q_gold", design, runcard)
+
+    # assign channels to qubits
+    qubits = platform.qubits
+    for q in [0, 1, 5]:
+        qubits[q].readout = channels["L3-25_a"]
+        qubits[q].feedback = channels["L2-5_a"]
+    for q in [2, 3, 4]:
+        qubits[q].readout = channels["L3-25_b"]
+        qubits[q].feedback = channels["L2-5_b"]
+
+    qubits[0].drive = channels["L3-15"]
+    qubits[0].flux = channels["L4-5"]
+    channels["L4-5"].qubit = qubits[0]
+    for q in range(1, 5):
+        qubits[q].drive = channels[f"L3-{10 + q}"]
+        qubits[q].flux = channels[f"L4-{q}"]
+        channels[f"L4-{q}"].qubit = qubits[q]
     return platform
 
 
