@@ -11,8 +11,8 @@ from scipy import signal
 class ExecutionResults:
     """Data structure to deal with the output of execute_pulse_sequence"""
 
-    i: npt.NDArray[np.float64]
-    q: npt.NDArray[np.float64]
+    _i: npt.NDArray[np.float64]
+    _q: npt.NDArray[np.float64]
     shots: Optional[npt.NDArray[np.uint32]] = None
 
     @classmethod
@@ -24,9 +24,33 @@ class ExecutionResults:
         """Placeholder for when we implement live fetching of data from instruments."""
         return False
 
+    @property
+    def i(self):
+        return self._i
+
+    @i.setter
+    def i(self, value):
+        self._i = value
+
+    @property
+    def q(self):
+        return self._q
+
+    @q.setter
+    def q(self, value):
+        self._q = value
+
+    def __add__(self, data):
+        i = np.append(self.i, data.i)
+        q = np.append(self.q, data.q)
+
+        new_execution_results = self.__class__.from_components(i, q)
+
+        return new_execution_results
+
     @cached_property
-    def measurement(self):
-        """Resonator signal voltage mesurement (MSR) in volts."""
+    def msr(self):
+        """Computes msr value."""
         return np.sqrt(self.i**2 + self.q**2)
 
     @cached_property
@@ -52,7 +76,7 @@ class ExecutionResults:
         elif state == 0:
             return {"probability": self.ground_state_probability}
 
-    def to_dict(self, average=True):
+    def to_dict(self, average=False):
         """Serialize output in dict.
         Args:
             average (bool): If `True` returns a dictionary of the form
