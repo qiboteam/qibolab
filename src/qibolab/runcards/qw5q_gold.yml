@@ -18,12 +18,12 @@ topology: # qubit - qubit connections
 -   [ 0, 0, 0, 0, 0, 1]
 
 qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux, Feedback, TWPA]
-    0: ["L3-25_a", "L3-15", "L4-5", "L2-5", "L4-26"]
-    1: ["L3-25_a", "L3-11", "L4-1", "L2-5", "L4-26"]
-    2: ["L3-25_b", "L3-12", "L4-2", "L2-5", "L4-26"]
-    3: ["L3-25_b", "L3-13", "L4-3", "L2-5", "L4-26"]
-    4: ["L3-25_b", "L3-14", "L4-4", "L2-5", "L4-26"]
-    5: ["L3-25_a", null, null, "L2-5", "L4-26"]
+    0: ["L3-25_a", "L3-15", "L4-5", "L2-5_a", "L4-26"]
+    1: ["L3-25_a", "L3-11", "L4-1", "L2-5_a", "L4-26"]
+    2: ["L3-25_b", "L3-12", "L4-2", "L2-5_b", "L4-26"]
+    3: ["L3-25_b", "L3-13", "L4-3", "L2-5_b", "L4-26"]
+    4: ["L3-25_b", "L3-14", "L4-4", "L2-5_b", "L4-26"]
+    5: ["L3-25_a", null, null, "L2-5_a", "L4-26"]
 
 native_gates:
     two_qubit:
@@ -59,8 +59,8 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 2000
-                amplitude: 0.00325
+                duration: 1000
+                amplitude: 0.0025
                 frequency: 7_226_500_000
                 shape: Rectangular()
                 type: ro # readout
@@ -72,7 +72,6 @@ native_gates:
                 amplitude: 0.0484
                 frequency: 4_855_663_000
                 #frequency: 4_718_515_000 # 02 transition (more likely)
-                #frequency: 4_709_500_000 # 02 transition (wrong?)
                 shape: Drag(5, -0.02)
                 type: qd # qubit drive
                 start: 0
@@ -89,7 +88,7 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.05682
-                frequency: 5_799_876_000
+                frequency: 5_800_563_000
                 #frequency: 5_661_400_000 # 02 transition
                 shape: Drag(5, -0.04) #Gaussian(5)
                 type: qd # qubit drive
@@ -106,8 +105,9 @@ native_gates:
         3: # qubit number
             RX:
                 duration: 40
-                amplitude: 0.145
-                frequency: 6_759_804_000
+                amplitude: 0.112
+                frequency: 6_760_922_000
+                #frequency: 6_628_822_000 # 02 transition
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -147,8 +147,8 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 2000
-                amplitude: 0.00325
+                duration: 1000
+                amplitude: 0.0025
                 frequency: 7_008_300_000
                 shape: Rectangular()
                 type: ro # readout
@@ -164,8 +164,7 @@ characterization:
             T1: 0.0
             T2: 0.0
             sweetspot: 0.0
-            ff_filter: []
-            fb_filter: []
+            filter: {}
             # parameters for single shot classification
             threshold: null
             iq_angle: 0.0
@@ -181,9 +180,8 @@ characterization:
             drive_frequency: 4_855_663_000
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.048  # -0.058  # -0.022
-            ff_filter: []
-            fb_filter: []
+            sweetspot: -0.047
+            filter: {}
             # parameters for single shot classification
             threshold: 0.0005132066630244925
             iq_angle: 1.6049433524645593
@@ -203,9 +201,10 @@ characterization:
             drive_frequency: 5_799_876_000
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.046
-            ff_filter: [1.0684635881381783, -1.0163217174522334]
-            fb_filter: [0.947858129314055]
+            sweetspot: -0.045
+            filter:
+                feedforward: [1.0684635881381783, -1.0163217174522334]
+                feedback: [0.947858129314055]
             # parameters for single shot classification
             threshold: 0.0017019586047771007
             iq_angle: 5.008563275197095
@@ -225,9 +224,8 @@ characterization:
             drive_frequency: 6_760_700_000
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.032  # 0.042 # 0.026
-            ff_filter: []
-            fb_filter: []
+            sweetspot: 0.034
+            filter: {}
             # parameters for single shot classification
             threshold: 0.0022186519694718564
             iq_angle: 1.7080380003177587
@@ -247,9 +245,8 @@ characterization:
             drive_frequency: 6_585_053_000
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.058  # -0.066
-            ff_filter: []
-            fb_filter: []
+            sweetspot: -0.057
+            filter: {}
             # parameters for single shot classification
             threshold: -0.0002305032680694733
             iq_angle: 3.7774230253152434
@@ -270,8 +267,7 @@ characterization:
             T1: 0.0
             T2: 0.0
             sweetspot: 0.0
-            ff_filter: []
-            fb_filter: []
+            filter: {}
             # parameters for single shot classification
             threshold: null
             iq_angle: 0.0
