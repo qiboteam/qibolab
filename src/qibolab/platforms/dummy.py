@@ -39,11 +39,14 @@ class DummyPlatform(AbstractPlatform):
     def to_sequence(self, sequence, gate):  # pragma: no cover
         raise_error(NotImplementedError)
 
-    def execute_pulse_sequence(self, sequence, nshots=None):  # pragma: no cover
-        time.sleep(self.settings.get("sleep_time"))
+    def execute_pulse_sequence(self, sequence, nshots=None, wait_time=None):
+        if wait_time is None:
+            wait_time = self.settings.get("sleep_time")
 
         if nshots is None:
             nshots = self.settings["settings"]["hardware_avg"]
+
+        time.sleep(wait_time)
 
         ro_pulses = {pulse.qubit: pulse.serial for pulse in sequence.ro_pulses}
 
@@ -65,7 +68,7 @@ class DummyPlatform(AbstractPlatform):
     def set_gain(self, qubit, gain):  # pragma: no cover
         pass
 
-    def sweep(self, sequence, *sweepers, nshots=1024, average=True):
+    def sweep(self, sequence, *sweepers, nshots=1024, average=True, wait_time):
         original = copy.deepcopy(sequence)
         map_old_new_pulse = {pulse: pulse.serial for pulse in sequence.ro_pulses}
         results = {}
@@ -87,7 +90,7 @@ class DummyPlatform(AbstractPlatform):
                     sequence.add(pulse)
                     shifted_pulses.append(pulse)
 
-                result = self.execute_pulse_sequence(sequence, nshots)
+                result = self.execute_pulse_sequence(sequence, nshots, wait_time)
 
                 # remove shifted pulses from sequence
                 for shifted_pulse in shifted_pulses:
@@ -95,8 +98,8 @@ class DummyPlatform(AbstractPlatform):
 
                 # colllect result and append to original pulse
                 for old, new_serial in map_old_new_pulse.items():
-                    result[new_serial].i = result[new_serial].i.mean()
-                    result[new_serial].q = result[new_serial].q.mean()
+                    if average:
+                        result[new_serial].compute_average()
                     if old.serial in results:
                         results[old.serial] += result[new_serial]
                     else:
