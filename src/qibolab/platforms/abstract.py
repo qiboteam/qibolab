@@ -133,7 +133,7 @@ class AbstractPlatform(ABC):
                     "Cannot establish connection to " f"{self.name} instruments. " f"Error captured: '{exception}'",
                 )
 
-    def setup(self):  
+    def setup(self):
         raise_error(NotImplementedError)
 
     def start(self):

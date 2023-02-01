@@ -27,14 +27,13 @@ from qibolab.pulses import (
 class tii_rfsoc4x2(AbstractInstrument):
     #
     #################################################################
-    def __init__(self, name: str, address: str): #, setting_parameters: dict):
+    def __init__(self, name: str, address: str):  # , setting_parameters: dict):
         super().__init__(name, address)
         self.cfg: dict = {}
         self.host: str
         self.port: str
         self.host, port = address.split(":")
         self.port = int(port)
-
 
     def connect(self):
         self.is_connected = True
@@ -69,7 +68,7 @@ class tii_rfsoc4x2(AbstractInstrument):
 
         if self.is_connected:
             # Load settings
-            self.cfg = kwargs 
+            self.cfg = kwargs
             jsonDic = self.cfg
             jsonDic["opCode"] = "setup"
             # Create a socket (SOCK_STREAM means a TCP socket)
@@ -83,7 +82,6 @@ class tii_rfsoc4x2(AbstractInstrument):
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
 
-
     def play_sequence_and_acquire(self, sequence):
         """Executes the sequence of instructions and retrieves the readout results.
 
@@ -93,13 +91,13 @@ class tii_rfsoc4x2(AbstractInstrument):
 
         """
         ps: PulseShape
-        
+
         jsonDic = {}
         i = 0
         shape = "const"
         for pulse in sequence:
-            
-            if pulse.channel == "L3-18_qd":   
+
+            if pulse.channel == "L3-18_qd":
                 ps = pulse.shape
                 if type(ps) is Drag:
                     shape = "Drag"
@@ -127,15 +125,15 @@ class tii_rfsoc4x2(AbstractInstrument):
                     "style": style,
                     "rel_sigma": rel_sigma,
                     "beta": beta,
-                    "channel": 1, #pulse.channel,
+                    "channel": 1,  # pulse.channel,
                     #                        "type": pulse.type,
                     "qubit": pulse.qubit,
                 }
                 jsonDic["pulse" + str(i)] = pulseDic
                 i = i + 1
         for pulse in sequence:
-            
-            if pulse.channel == "L3-18_ro":    
+
+            if pulse.channel == "L3-18_ro":
                 ps = pulse.shape
                 if type(ps) is Drag:
                     shape = "Drag"
@@ -163,15 +161,15 @@ class tii_rfsoc4x2(AbstractInstrument):
                     "style": style,
                     "rel_sigma": rel_sigma,
                     "beta": beta,
-                    "channel": 0, #pulse.channel,
+                    "channel": 0,  # pulse.channel,
                     #                        "type": pulse.type,
                     "qubit": pulse.qubit,
                 }
                 jsonDic["pulse" + str(i)] = pulseDic
                 i = i + 1
-            
+
         jsonDic["opCode"] = "execute"
-  
+
         # Create a socket (SOCK_STREAM means a TCP socket)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             # Connect to server and send data
@@ -185,15 +183,9 @@ class tii_rfsoc4x2(AbstractInstrument):
         sock.close()
         return avgi, avgq
 
-
-
-
-
     def start(self):
         """Empty method to comply with AbstractInstrument interface."""
         pass
-
-
 
     def stop(self):
         """Empty method to comply with AbstractInstrument interface."""

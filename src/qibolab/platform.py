@@ -16,6 +16,7 @@ def Platform(name, runcard=None):
         runcard = qibolab_folder / "runcards" / f"{name}.yml"
     if name == "tii1q" or name == "tii5q" or name == "qili":
         from qibolab.platforms.multiqubit import MultiqubitPlatform as Device
+
         if not exists(runcard):
             from qibo.config import raise_error
 

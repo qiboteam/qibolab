@@ -48,7 +48,7 @@ native_gates:
             RX: {duration: 40, amplitude: 0.6, frequency: 5440000000, shape: Gaussian(5),
                 type: qd, start: 0, phase: 0}
             MZ: {duration: 3000, amplitude: 0.0156, frequency: 7371530000, shape: Rectangular(),
-                type: ro, start: 0, phase: 0}            
+                type: ro, start: 0, phase: 0}
 
 characterization:
     single_qubit:
@@ -61,4 +61,3 @@ characterization:
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
             sweetspot: 0
-
