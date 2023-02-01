@@ -399,10 +399,12 @@ class MultiqubitPlatform(AbstractPlatform):
             # single sweeper
             sweeper = sweepers[0]
             for value in sweeper.values:
+                initial_pulses = sweeper.pulses
+                # Remove initial pulses
+                for pulse in sweeper.pulses:
+                    sequence.remove(pulse)
                 for pulse in copy.deepcopy(sweeper.pulses):
                     shifted_pulses = []
-                    # Removing initial pulse (centered at resonator frequency)
-                    sequence.remove(pulse)
                     if sweeper.parameter == "amplitude" and max(sweeper.values) > 1:
                         self.set_attenuation(pulse.qubit, value)
                     else:
@@ -430,6 +432,8 @@ class MultiqubitPlatform(AbstractPlatform):
                         results[old.serial] = result[new_serial]
                         results[old.qubit] = copy.copy(results[old.serial])
 
+            for pulse in initial_pulses:
+                sequence.add(pulse)
         elif len(sweepers) == 2:
             # 2 sweepers simultaneously
             for value1 in sweepers[0].values:

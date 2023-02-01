@@ -94,7 +94,8 @@ native_gates:
             RX:
                 duration: 40                    # should be multiple of 4
                 amplitude: 0.56624413938
-                frequency: -200_000_000          # difference in qubit frequency
+                frequency: 5_080_151_329
+                if_frequency: -200_000_000          # difference in qubit frequency
                 shape: Drag(5, -0.1)
                 type: qd # qubit drive
             MZ:
