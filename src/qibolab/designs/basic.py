@@ -26,19 +26,19 @@ class Channel:
 
     name: str
 
-    qubit: Optional["Qubit"] = field(default=None, init=False, repr=False)
-    ports: List[tuple] = field(default_factory=list, init=False)
-    local_oscillator: Any = field(default=None, init=False)
-    lo_frequency: float = field(default=0, init=False)
-    lo_power: float = field(default=0, init=False)
-    _offset: Optional[float] = field(default=None, init=False)
-    _filter: Optional[dict] = field(default=None, init=False)
+    qubit: Optional["Qubit"] = field(default=None, repr=False)
+    ports: List[tuple] = field(default_factory=list)
+    local_oscillator: Any = None
+    lo_frequency: float = 0.0
+    lo_power: float = 0.0
+    _offset: Optional[float] = None
+    _filter: Optional[dict] = None
 
     @property
     def offset(self):
         if self._offset is None:
             # operate qubits at their sweetspot unless otherwise stated
-            self._offset = self.qubit.sweetspot
+            return self.qubit.sweetspot
         return self._offset
 
     @offset.setter
@@ -48,7 +48,7 @@ class Channel:
     @property
     def filter(self):
         if self._filter is None:
-            self._filter = self.qubit.filter
+            return self.qubit.filter
         return self._filter
 
     @filter.setter

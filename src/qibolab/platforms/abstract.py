@@ -301,6 +301,12 @@ class AbstractPlatform(ABC):
         """
         raise_error(NotImplementedError, f"Platform {self.name} does not support sweeping.")
 
+    def qd_channel(self, qubit):
+        if self.qubits[qubit].drive:
+            return self.qubits[qubit].drive.name
+        else:
+            return self.settings["qubit_channel_map"][qubit][1]
+
     # TODO: Maybe create a dataclass for native gates
     def create_RX90_pulse(self, qubit, start=0, relative_phase=0):
         pulse_kwargs = self.native_single_qubit_gates[qubit]["RX"]
@@ -308,10 +314,7 @@ class AbstractPlatform(ABC):
         qd_frequency = pulse_kwargs["frequency"]
         qd_amplitude = pulse_kwargs["amplitude"] / 2.0
         qd_shape = pulse_kwargs["shape"]
-        if self.qubits[qubit].drive:
-            qd_channel = self.qubits[qubit].drive.name
-        else:
-            qd_channel = self.settings["qubit_channel_map"][qubit][1]
+        qd_channel = self.qd_channel(qubit)
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
     def create_RX_pulse(self, qubit, start=0, relative_phase=0):
@@ -320,10 +323,7 @@ class AbstractPlatform(ABC):
         qd_frequency = pulse_kwargs["frequency"]
         qd_amplitude = pulse_kwargs["amplitude"]
         qd_shape = pulse_kwargs["shape"]
-        if self.qubits[qubit].drive:
-            qd_channel = self.qubits[qubit].drive.name
-        else:
-            qd_channel = self.settings["qubit_channel_map"][qubit][1]
+        qd_channel = self.qd_channel(qubit)
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
     def create_CZ_pulse_sequence(self, qubits, start=0):
@@ -388,10 +388,7 @@ class AbstractPlatform(ABC):
         qd_frequency = pulse_kwargs["frequency"]
         qd_amplitude = pulse_kwargs["amplitude"]
         qd_shape = pulse_kwargs["shape"]
-        if self.qubits[qubit].drive:
-            qd_channel = self.qubits[qubit].drive.name
-        else:
-            qd_channel = self.settings["qubit_channel_map"][qubit][1]
+        qd_channel = self.qd_channel(qubit)
         return Pulse(start, duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
     def create_qubit_readout_pulse(self, qubit, start):
@@ -410,10 +407,7 @@ class AbstractPlatform(ABC):
         if beta != None:
             qd_shape = "Drag(5," + str(beta) + ")"
 
-        if self.qubits[qubit].drive:
-            qd_channel = self.qubits[qubit].drive.name
-        else:
-            qd_channel = self.settings["qubit_channel_map"][qubit][1]
+        qd_channel = self.qd_channel(qubit)
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
     def create_RX_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
@@ -426,10 +420,7 @@ class AbstractPlatform(ABC):
         if beta != None:
             qd_shape = "Drag(5," + str(beta) + ")"
 
-        if self.qubits[qubit].drive:
-            qd_channel = self.qubits[qubit].drive.name
-        else:
-            qd_channel = self.settings["qubit_channel_map"][qubit][1]
+        qd_channel = self.qd_channel(qubit)
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
     def set_attenuation(self, qubit, att):  # pragma: no cover
