@@ -241,7 +241,7 @@ class MultiqubitPlatform(AbstractPlatform):
             data[ro_pulse.qubit] = copy.copy(data[ro_pulse.serial])
         return data
 
-    def sweep(self, sequence, *sweepers, nshots=1024, average=True):
+    def sweep(self, sequence, *sweepers, nshots=1024, average=True, wait_time=None):
         original = copy.deepcopy(sequence)
         map_old_new_pulse = {pulse: pulse.serial for pulse in sequence.ro_pulses}
         results = {}
@@ -281,8 +281,8 @@ class MultiqubitPlatform(AbstractPlatform):
 
                 # colllect result and append to original pulse
                 for old, new_serial in map_old_new_pulse.items():
-                    result[new_serial].i = result[new_serial].i.mean()
-                    result[new_serial].q = result[new_serial].q.mean()
+                    if average:
+                        result[new_serial].compute_average()
                     if old.serial in results:
                         results[old.serial] += result[new_serial]
                     else:
