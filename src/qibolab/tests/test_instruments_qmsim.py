@@ -45,26 +45,36 @@ def assert_regression(samples, filename):
     """
     path = REGRESSION_FOLDER / f"{filename}.hdf5"
 
+    def plot():
+        plt.figure()
+        for con in ["con1", "con2", "con3"]:
+            if hasattr(samples, con):
+                sample = getattr(samples, con)
+                sample.plot()
+        plt.savefig(REGRESSION_FOLDER / f"{filename}.png")
+
     if os.path.exists(path):
         file = h5py.File(path, "r")
         for con, target_data in file.items():
             sample = getattr(samples, con)
             for port, target_waveform in target_data.items():
                 waveform = sample.analog[port]
-                np.testing.assert_allclose(waveform, target_waveform[:])
+                try:
+                    np.testing.assert_allclose(waveform, target_waveform[:])
+                except AssertionError as exception:
+                    plot()
+                    raise exception
 
     else:
-        # TODO: Generalize for arbitrary number of controllers
         file = h5py.File(path, "w")
-        plt.figure()
+        # TODO: Generalize for arbitrary number of controllers
         for con in ["con1", "con2", "con3"]:
             if hasattr(samples, con):
                 sample = getattr(samples, con)
                 group = file.create_group(con)
                 for port, waveforms in sample.analog.items():
                     group[port] = waveforms
-                sample.plot()
-        plt.savefig(REGRESSION_FOLDER / f"{filename}.png")
+        plot()
 
 
 def test_qmsim_resonator_spectroscopy(simulator):
