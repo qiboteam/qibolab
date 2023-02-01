@@ -57,7 +57,8 @@ class ExecutionResults:
     def phase(self):
         """Computes phase value."""
         phase = np.angle(self.i + 1.0j * self.q)
-        return signal.detrend(np.unwrap(phase))
+        # return signal.detrend(np.unwrap(phase))
+        return phase
 
     @cached_property
     def ground_state_probability(self):
@@ -76,6 +77,11 @@ class ExecutionResults:
         elif state == 0:
             return {"probability": self.ground_state_probability}
 
+    def compute_average(self):
+        """Perform average over i and q"""
+        self.i = self.i.mean()
+        self.q = self.q.mean()
+
     def to_dict(self, average=False):
         """Serialize output in dict.
         Args:
@@ -85,16 +91,11 @@ class ExecutionResults:
                             all the values for each shot are saved.
         """
         if average:
-            return {
-                "MSR[V]": self.measurement.mean(),
-                "i[V]": self.i.mean(),
-                "q[V]": self.q.mean(),
-                "phase[rad]": self.phase.mean(),
-            }
-        else:
-            return {
-                "MSR[V]": self.measurement.ravel(),
-                "i[V]": self.i.ravel(),
-                "q[V]": self.q.ravel(),
-                "phase[rad]": self.phase.ravel(),
-            }
+            self.compute_average()
+
+        return {
+            "MSR[V]": self.msr.ravel(),
+            "i[V]": self.i.ravel(),
+            "q[V]": self.q.ravel(),
+            "phase[rad]": self.phase.ravel(),
+        }
