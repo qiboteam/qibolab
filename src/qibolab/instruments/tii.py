@@ -29,37 +29,12 @@ class tii_rfsoc4x2(AbstractInstrument):
     #################################################################
     def __init__(self, name: str, address: str): #, setting_parameters: dict):
         super().__init__(name, address)
-        #self.device: QbloxQrmQcm = None
         self.cfg: dict = {}
         self.host: str
         self.port: str
         self.host, port = address.split(":")
         self.port = int(port)
 
-
-        """
-        self.ports: dict = {}
-        self.acquisition_hold_off: int
-        self.acquisition_duration: int
-        self.discretization_threshold_acq: float
-        self.phase_rotation_acq: float
-        self.channel_port_map: dict = {}
-        self.channels: list = []
-
-        #self._cluster: QbloxCluster = None
-        self._input_ports_keys = ["i1"]
-        self._output_ports_keys = ["o1"]
-        self._sequencers: dict[Sequencer] = {"o1": []}
-        self._port_channel_map: dict = {}
-        self._last_pulsequence_hash: int = 0
-        self._current_pulsesequence_hash: int
-        self._device_parameters = {}
-        self._device_num_output_ports = 1
-        self._device_num_sequencers: int
-        self._free_sequencers_numbers: list[int] = []
-        self._used_sequencers_numbers: list[int] = []
-        self._unused_sequencers_numbers: list[int] = []
-        """
 
     def connect(self):
         self.is_connected = True
@@ -108,19 +83,6 @@ class tii_rfsoc4x2(AbstractInstrument):
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
 
-        """
-        self.experiment = self.settings["instruments"]["tii_rfsoc4x2"]["experiment"]
-
-        jsonDic = self.experiment
-        jsonDic["opCode"] = "setup"
-        # Create a socket (SOCK_STREAM means a TCP socket)
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            # Connect to server and send data
-            sock.connect((self.host, self.port))
-            sock.sendall(json.dumps(jsonDic).encode())
-
-        sock.close()
-        """
 
     def play_sequence_and_acquire(self, sequence):
         """Executes the sequence of instructions and retrieves the readout results.
@@ -131,12 +93,13 @@ class tii_rfsoc4x2(AbstractInstrument):
 
         """
         ps: PulseShape
-
+        
         jsonDic = {}
         i = 0
         shape = "const"
         for pulse in sequence:
-            if pulse.channel == 1:   
+            
+            if pulse.channel == "L3-18_qd":   
                 ps = pulse.shape
                 if type(ps) is Drag:
                     shape = "Drag"
@@ -164,14 +127,15 @@ class tii_rfsoc4x2(AbstractInstrument):
                     "style": style,
                     "rel_sigma": rel_sigma,
                     "beta": beta,
-                    "channel": pulse.channel,
+                    "channel": 1, #pulse.channel,
                     #                        "type": pulse.type,
                     "qubit": pulse.qubit,
                 }
                 jsonDic["pulse" + str(i)] = pulseDic
                 i = i + 1
         for pulse in sequence:
-            if pulse.channel == 0:    
+            
+            if pulse.channel == "L3-18_ro":    
                 ps = pulse.shape
                 if type(ps) is Drag:
                     shape = "Drag"
@@ -199,13 +163,15 @@ class tii_rfsoc4x2(AbstractInstrument):
                     "style": style,
                     "rel_sigma": rel_sigma,
                     "beta": beta,
-                    "channel": pulse.channel,
+                    "channel": 0, #pulse.channel,
                     #                        "type": pulse.type,
                     "qubit": pulse.qubit,
                 }
                 jsonDic["pulse" + str(i)] = pulseDic
                 i = i + 1
+            
         jsonDic["opCode"] = "execute"
+  
         # Create a socket (SOCK_STREAM means a TCP socket)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             # Connect to server and send data

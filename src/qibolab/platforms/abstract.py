@@ -133,10 +133,9 @@ class AbstractPlatform(ABC):
                     "Cannot establish connection to " f"{self.name} instruments. " f"Error captured: '{exception}'",
                 )
 
-    def setup(self):  # pragma: no cover
+    def setup(self):  
         raise_error(NotImplementedError)
 
->>>>>>> main
     def start(self):
         if self.is_connected:
             for name in self.instruments:
