@@ -33,6 +33,7 @@ class QMPulse:
         self.element = f"{pulse.type.name.lower()}{pulse.qubit}"
         self.operation = pulse.serial
         self.relative_phase = pulse.relative_phase / (2 * np.pi)
+        self.duration = pulse.duration
 
         # Stores the baking object (for pulses that need 1ns resolution)
         self.baked = None
@@ -82,9 +83,10 @@ class QMPulse:
                 waveform = self.pulse.envelope_waveform_i.data.tolist()
             self.baked.add_op(self.pulse.serial, self.element, waveform)
             self.baked.play(self.pulse.serial, self.element)
-
             # Append the baking object in the list to call it from the QUA program
             # self.segments.append(b)
+
+        self.duration = self.baked.get_op_length()
 
 
 class QMSequence(list):
@@ -552,8 +554,10 @@ class QMOPX(AbstractInstrument):
             pulse = qmpulse.pulse
             wait_time = pulse.start - clock[qmpulse.element]
             if wait_time >= 12:
-                wait(wait_time // 4 + 1, qmpulse.element)
-            clock[qmpulse.element] += pulse.duration
+                wait_cycles = wait_time // 4 + 1
+                wait(wait_cycles, qmpulse.element)
+                clock[qmpulse.element] += 4 * wait_cycles
+            clock[qmpulse.element] += qmpulse.duration
             if pulse.type.name == "READOUT":
                 measure(
                     qmpulse.operation,
