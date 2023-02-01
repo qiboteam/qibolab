@@ -194,10 +194,17 @@ class MultiqubitPlatform(AbstractPlatform):
             for value in sweeper.values:
                 for pulse in copy.deepcopy(sweeper.pulses):
                     shifted_pulses = []
-                    if sweeper.parameter == "amplitude" and max(sweeper.values) > 1:
-                        self.set_attenuation(pulse.qubit, value)
-                    else:
+                    if sweeper.parameter == "frequency":
                         setattr(pulse, sweeper.parameter, getattr(original[pulse.qubit], sweeper.parameter) + value)
+                    elif sweeper.parameter == "amplitude":
+                        if max(sweeper.values) > 1:
+                            self.set_attenuation(pulse.qubit, value)
+                        else:
+                            setattr(pulse, sweeper.parameter, value)
+                    elif sweeper.paramter == "gain":
+                        self.set_gain(pulse.qubit, value)
+                    else:
+                        setattr(pulse, sweeper.parameter, value)
                     if isinstance(pulse, ReadoutPulse):
                         map_old_new_pulse[original[pulse.qubit]] = pulse.serial
 
@@ -234,12 +241,19 @@ class MultiqubitPlatform(AbstractPlatform):
                         for pulse in copy.deepcopy(sweeper.pulses):
                             shifted_pulses = []
                             value = value1 if sweeper == sweepers[0] else value2
-                            if sweeper.parameter == "amplitude" and max(sweeper.values) > 1:
-                                self.set_attenuation(pulse.qubit, value)
-                            else:
+                            if sweeper.parameter == "frequency":
                                 setattr(
                                     pulse, sweeper.parameter, getattr(original[pulse.qubit], sweeper.parameter) + value
                                 )
+                            elif sweeper.parameter == "amplitude":
+                                if max(sweeper.values) > 1:
+                                    self.set_attenuation(pulse.qubit, value)
+                                else:
+                                    setattr(pulse, sweeper.parameter, value)
+                            elif sweeper.paramter == "gain":
+                                self.set_gain(pulse.qubit, value)
+                            else:
+                                setattr(pulse, sweeper.parameter, value)
                             if isinstance(pulse, ReadoutPulse):
                                 map_old_new_pulse[original[pulse.qubit]] = pulse.serial
 
