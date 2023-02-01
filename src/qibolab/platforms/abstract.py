@@ -386,7 +386,7 @@ class AbstractPlatform(ABC):
         """
         raise_error(NotImplementedError, f"Platform {self.name} does not support sweeping.")
 
-    def sweep(self, sequence, *sweepers, nshots=1024, average=True):
+    def sweep(self, sequence, *sweepers, nshots=1024, average=True, wait_time=None):
         """Executes a pulse sequence for different values of sweeped parameters.
         Useful for performing chip characterization.
         Args:
@@ -398,6 +398,8 @@ class AbstractPlatform(ABC):
                 calibration yml will be used.
             average (bool): If ``True`` the IQ results of individual shots are averaged
                 on hardware.
+            wait_time (int): Relaxation time between shots (ns). If ``None`` it will be used the
+                default value in the runcard.
         Returns:
             Readout results acquired by after execution.
         """
