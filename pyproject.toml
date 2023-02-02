@@ -6,4 +6,4 @@ diasable = ["E1123","E1120"]
 
 [tool.pytest.ini_options]
 
-addopts = ' src/qibolab/tests/ --cov=qibolab --cov-report=xml -m "not qpu" --platforms tii1q_b1,qw5q_gold '
+addopts = ' src/qibolab/tests/ --cov=qibolab --cov-report=xml -m "not qpu" --platforms qili1q_os2'
