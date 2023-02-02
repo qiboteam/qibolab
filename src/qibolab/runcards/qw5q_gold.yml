@@ -190,8 +190,8 @@ characterization:
             sweetspot: -0.047
             filter: {}
             # parameters for single shot classification
-            threshold: 0.00037524450866245845
-            iq_angle: 1.6757060974561195
+            threshold: 0.0003866029782382906
+            iq_angle: 1.592639871886946
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -209,8 +209,8 @@ characterization:
                 feedforward: [1.0684635881381783, -1.0163217174522334]
                 feedback: [0.947858129314055]
             # parameters for single shot classification
-            threshold: 0.0015379272764222704
-            iq_angle: 5.262811963416194
+            threshold: 0.0002854370992410542
+            iq_angle: 5.22160639710761
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -226,8 +226,8 @@ characterization:
             sweetspot: 0.034
             filter: {}
             # parameters for single shot classification
-            threshold: 0.0022508677347927984
-            iq_angle: 2.7558636428790386
+            threshold: 0.0003874098230333525
+            iq_angle: 2.675588050266955
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -243,8 +243,8 @@ characterization:
             sweetspot: -0.057
             filter: {}
             # parameters for single shot classification
-            threshold: 0.0013280171213055133
-            iq_angle: 6.211036091217338
+            threshold: 0.00021263215043920648
+            iq_angle: 6.136297546735154
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
