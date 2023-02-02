@@ -5,7 +5,7 @@ qubits: [0, 1, 2, 3, 4, 5]
 
 settings:
     sampling_rate: 1000000000
-    relaxation_time: 50_000
+    relaxation_time: 500_000
     time_of_flight: 280
     smearing: 0
 
@@ -55,8 +55,8 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 740
-                amplitude: 0.00325
+                duration: 620
+                amplitude: 0.003575
                 frequency: 7_453_265_000
                 shape: Rectangular()
                 type: ro # readout
@@ -73,7 +73,7 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 820
+                duration: 960
                 amplitude: 0.00325
                 frequency: 7_655_107_000
                 shape: Rectangular()
@@ -83,7 +83,7 @@ native_gates:
         3: # qubit number
             RX:
                 duration: 40
-                amplitude: 0.112
+                amplitude: 0.138
                 frequency: 6_760_922_000
                 #frequency: 6_628_822_000 # 02 transition
                 shape: Gaussian(5)
@@ -91,9 +91,9 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 740
-                amplitude: 0.00325
-                frequency: 7_802_391_000
+                duration: 960
+                amplitude: 0.004225
+                frequency: 7_802_191_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -108,8 +108,8 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 740
-                amplitude: 0.00325
+                duration: 640
+                amplitude: 0.0039
                 frequency: 8_057_668_000
                 shape: Rectangular()
                 type: ro # readout
@@ -132,6 +132,7 @@ native_gates:
                 type: ro # readout
                 start: 0
                 phase: 0
+
     two_qubit:
         2-1:
             CZ:
@@ -190,10 +191,14 @@ characterization:
             sweetspot: -0.047
             filter: {}
             # parameters for single shot classification
-            threshold: 0.0003866029782382906
-            iq_angle: 1.592639871886946
+            threshold: 0.00028502261712637096
+            iq_angle: 1.283105298787488
             # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
+            rotation_angle: 63.214
+            # Software classifier
+            # classifier:
+            #     type: "scikit"
+            #     model: "qw5q_gold/RBF_SVM_1.pkl"
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -209,8 +214,12 @@ characterization:
                 feedforward: [1.0684635881381783, -1.0163217174522334]
                 feedback: [0.947858129314055]
             # parameters for single shot classification
-            threshold: 0.0002854370992410542
-            iq_angle: 5.22160639710761
+            threshold: 0.0002694329123116206
+            iq_angle: 4.912447775569025
+            # Software classifier
+            # classifier:
+            #     type: "scikit"
+            #     model: "qw5q_gold/RBF_SVM_2.pkl"
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -226,10 +235,14 @@ characterization:
             sweetspot: 0.034
             filter: {}
             # parameters for single shot classification
-            threshold: 0.0003874098230333525
-            iq_angle: 2.675588050266955
+            threshold: 0.0003363427381347193
+            iq_angle: 1.6124890998581591
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
+            # Software classifier
+            # classifier:
+            #     type: "scikit"
+            #     model: "qw5q_gold/RBF_SVM_3.pkl"
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -243,10 +256,14 @@ characterization:
             sweetspot: -0.057
             filter: {}
             # parameters for single shot classification
-            threshold: 0.00021263215043920648
-            iq_angle: 6.136297546735154
+            threshold: 0.00013079660165463033
+            iq_angle: 5.6303684840135
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
+            # Software classifier
+            # classifier:
+            #     type: "scikit"
+            #     model: "qw5q_gold/RBF_SVM_4.pkl"
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
