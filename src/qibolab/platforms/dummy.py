@@ -70,7 +70,9 @@ class DummyPlatform(AbstractPlatform):
 
     def sweep(self, sequence, *sweepers, nshots=1024, average=True, wait_time=None):
         results = {}
-        self._sweep_recursion(sequence, *sweepers, nshots=nshots, average=average, wait_time=wait_time, results=results)
+        self._sweep_recursion(
+            copy.deepcopy(sequence), *sweepers, nshots=nshots, average=average, wait_time=wait_time, results=results
+        )
         return results
 
     def _sweep_recursion(self, sequence, *sweepers, nshots=1024, average=True, wait_time=None, results=None):
@@ -100,9 +102,12 @@ class DummyPlatform(AbstractPlatform):
                     sequence, *sweepers[1:], nshots=nshots, average=average, wait_time=wait_time, results=results
                 )
             else:
-                result = self.execute_pulse_sequence(
-                    PulseSequence(*[pulse for pulse in sequence if pulse not in sweeper.pulses]), nshots
-                )
+                new_sequence = copy.deepcopy(sequence)
+                # remove original pulse
+                for pulse in sweeper.pulses:
+                    if new_sequence.pulses.count(pulse) > 1:
+                        new_sequence.pulses.remove(pulse)
+                result = self.execute_pulse_sequence(new_sequence, nshots)
 
                 # remove shifted pulses from sequence
                 for shifted_pulse in shifted_pulses:
