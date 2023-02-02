@@ -254,7 +254,7 @@ class QMOPX(AbstractInstrument):
             # register drive controllers
             self.register_analog_output_controllers(qubit.drive.ports)
             # register element
-            lo_frequency = qubit.drive.lo_frequency
+            lo_frequency = int(qubit.drive.local_oscillator.frequency)
             self.config["elements"][f"drive{qubit.name}"] = {
                 "mixInputs": {
                     "I": qubit.drive.ports[0],
@@ -315,7 +315,7 @@ class QMOPX(AbstractInstrument):
                 controllers[con]["analog_inputs"][port] = {"offset": 0.0, "gain_db": 0}
 
             # register element
-            lo_frequency = qubit.readout.lo_frequency
+            lo_frequency = int(qubit.readout.local_oscillator.frequency)
             self.config["elements"][f"readout{qubit.name}"] = {
                 "mixInputs": {
                     "I": qubit.readout.ports[0],
@@ -404,7 +404,7 @@ class QMOPX(AbstractInstrument):
                     "waveforms": {"I": serial_i, "Q": serial_q},
                 }
                 # register drive element (if it does not already exist)
-                if_frequency = pulse.frequency - qubit.drive.lo_frequency
+                if_frequency = pulse.frequency - int(qubit.drive.local_oscillator.frequency)
                 self.register_drive_element(qubit, if_frequency)
                 # register flux element (if available)
                 if qubit.flux:
@@ -445,7 +445,7 @@ class QMOPX(AbstractInstrument):
                     "digital_marker": "ON",
                 }
                 # register readout element (if it does not already exist)
-                if_frequency = pulse.frequency - qubit.readout.lo_frequency
+                if_frequency = pulse.frequency - int(qubit.readout.local_oscillator.frequency)
                 self.register_readout_element(qubit, if_frequency)
                 # register flux element (if available)
                 if qubit.flux:
@@ -722,7 +722,7 @@ class QMOPX(AbstractInstrument):
                     for pulse in sweeper.pulses:
                         # convert to IF frequency for readout and drive pulses
                         qubit = qubits[pulse.qubit]
-                        lo_frequency = getattr(qubit, sweeper.pulse_type).lo_frequency
+                        lo_frequency = int(getattr(qubit, sweeper.pulse_type).local_oscillator.frequency)
                         freqs0.append(declare(int, value=int(pulse.frequency - lo_frequency)))
                 else:
                     raise_error(NotImplementedError)

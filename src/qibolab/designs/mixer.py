@@ -37,7 +37,7 @@ class MixerInstrumentDesign(BasicInstrumentDesign):
                 if channel.local_oscillator is not None:
                     lo = channel.local_oscillator
                     if lo.is_connected:
-                        lo.setup(frequency=channel.lo_frequency, power=channel.lo_power)
+                        lo.setup()
                     else:
                         log.warn(f"There is no connection to {lo}. Frequencies were not set.")
         super().setup(qubits, *args, **kwargs)

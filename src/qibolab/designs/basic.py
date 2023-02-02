@@ -28,9 +28,7 @@ class Channel:
 
     qubit: Optional["Qubit"] = field(default=None, repr=False)
     ports: List[tuple] = field(default_factory=list)
-    local_oscillator: Any = None
-    lo_frequency: float = 0.0
-    lo_power: float = 0.0
+    local_oscillator: Optional[AbstractInstrument] = None
     _offset: Optional[float] = None
     _filter: Optional[dict] = None
 

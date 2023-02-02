@@ -52,54 +52,17 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
     channels["L4-4"].ports = [("con2", 4)]
     channels["L4-5"].ports = [("con2", 5)]
 
-    # Set default LO parameters in the channel
-    channels["L3-25_a"].lo_frequency = 7_300_000_000
-    channels["L3-25_b"].lo_frequency = 7_900_000_000
-    channels["L3-15"].lo_frequency = 4_700_000_000
-    channels["L3-11"].lo_frequency = 4_700_000_000
-    channels["L3-12"].lo_frequency = 5_600_000_000
-    channels["L3-13"].lo_frequency = 6_500_000_000
-    channels["L3-14"].lo_frequency = 6_500_000_000
-    channels["L3-25_a"].lo_power = 18.0
-    channels["L3-25_b"].lo_power = 15.0
-    channels["L3-15"].lo_power = 16.0
-    channels["L3-11"].lo_power = 16.0
-    channels["L3-12"].lo_power = 16.0
-    channels["L3-13"].lo_power = 16.0
-    channels["L3-14"].lo_power = 16.0
-    # Map TWPA to channels
-    channels["L4-26"].lo_frequency = 6_558_000_000
-    channels["L4-26"].lo_power = 2.5
-
     # Instantiate QM OPX instruments
     if simulation_duration is None:
         from qibolab.instruments.qm import QMOPX
-        from qibolab.instruments.rohde_schwarz import SGS100A
+        from qibolab.instruments.rohde_schwarz import SGS100A as LocalOscillator
 
         controller = QMOPX("qmopx", "192.168.0.1:80")
 
-        # Instantiate local oscillators (HARDCODED)
-        local_oscillators = [
-            SGS100A("lo_readout_a", "192.168.0.39"),
-            SGS100A("lo_readout_b", "192.168.0.31"),
-            SGS100A("lo_drive_low", "192.168.0.32"),
-            SGS100A("lo_drive_mid", "192.168.0.33"),
-            SGS100A("lo_drive_high", "192.168.0.34"),
-            SGS100A("twpa_a", "192.168.0.35"),
-        ]
-        # Map LOs to channels
-        channels["L3-25_a"].local_oscillator = local_oscillators[0]
-        channels["L3-25_b"].local_oscillator = local_oscillators[1]
-        channels["L3-15"].local_oscillator = local_oscillators[2]
-        channels["L3-11"].local_oscillator = local_oscillators[2]
-        channels["L3-12"].local_oscillator = local_oscillators[3]
-        channels["L3-13"].local_oscillator = local_oscillators[4]
-        channels["L3-14"].local_oscillator = local_oscillators[4]
-        channels["L4-26"].local_oscillator = local_oscillators[5]
-
-        design = MixerInstrumentDesign(controller, channels, local_oscillators)
-
     else:
+        from qibolab.instruments.dummy_oscillator import (
+            DummyLocalOscillator as LocalOscillator,
+        )
         from qibolab.instruments.qmsim import QMSim
 
         if address is None:
@@ -107,9 +70,40 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
             address = "192.168.0.1:80"
 
         controller = QMSim("qmopx", address, simulation_duration, cloud)
-        # avoid connecting to local oscillators when simulation is used
-        design = BasicInstrumentDesign(controller, channels)
 
+    # Instantiate local oscillators (HARDCODED)
+    local_oscillators = [
+        LocalOscillator("lo_readout_a", "192.168.0.39"),
+        LocalOscillator("lo_readout_b", "192.168.0.31"),
+        LocalOscillator("lo_drive_low", "192.168.0.32"),
+        LocalOscillator("lo_drive_mid", "192.168.0.33"),
+        LocalOscillator("lo_drive_high", "192.168.0.34"),
+        LocalOscillator("twpa_a", "192.168.0.35"),
+    ]
+    # Set LO parameters
+    local_oscillators[0].frequency = 7_300_000_000
+    local_oscillators[1].frequency = 7_900_000_000
+    local_oscillators[2].frequency = 4_700_000_000
+    local_oscillators[3].frequency = 5_600_000_000
+    local_oscillators[4].frequency = 6_500_000_000
+    local_oscillators[0].power = 18.0
+    local_oscillators[1].power = 15.0
+    for i in range(2, 5):
+        local_oscillators[i].power = 16.0
+    # Set TWPA parameters
+    local_oscillators[5].frequency = 6_558_000_000
+    local_oscillators[5].power = 2.5
+    # Map LOs to channels
+    channels["L3-25_a"].local_oscillator = local_oscillators[0]
+    channels["L3-25_b"].local_oscillator = local_oscillators[1]
+    channels["L3-15"].local_oscillator = local_oscillators[2]
+    channels["L3-11"].local_oscillator = local_oscillators[2]
+    channels["L3-12"].local_oscillator = local_oscillators[3]
+    channels["L3-13"].local_oscillator = local_oscillators[4]
+    channels["L3-14"].local_oscillator = local_oscillators[4]
+    channels["L4-26"].local_oscillator = local_oscillators[5]
+
+    design = MixerInstrumentDesign(controller, channels, local_oscillators)
     platform = DesignPlatform("qw5q_gold", design, runcard)
 
     # assign channels to qubits

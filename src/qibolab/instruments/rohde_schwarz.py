@@ -14,16 +14,33 @@ class SGS100A(AbstractInstrument):
     def __init__(self, name, address):
         super().__init__(name, address)
         self.device: LO_SGS100A = None
-        self.power: int
-        self.frequency: int
+        self._power: float
+        self._frequency: float
         self._device_parameters = {}
 
-    rw_property_wrapper = lambda parameter: property(
-        lambda self: self.device.get(parameter),
-        lambda self, x: self._set_device_parameter(parameter, x),
-    )
-    power = rw_property_wrapper("power")
-    frequency = rw_property_wrapper("frequency")
+    @property
+    def frequency(self):
+        if self.is_connected:
+            return self.device.get("frequency")
+        return self._frequency
+
+    @frequency.setter
+    def frequency(self, x):
+        self._frequency = x
+        if self.is_connected:
+            self._set_device_parameter("frequency", x)
+
+    @property
+    def power(self):
+        if self.is_connected:
+            return self.device.get("power")
+        return self._frequency
+
+    @power.setter
+    def power(self, x):
+        self._power = x
+        if self.is_connected:
+            self._set_device_parameter("power", x)
 
     def connect(self):
         """
@@ -72,7 +89,7 @@ class SGS100A(AbstractInstrument):
         """Erases the cache of instrument parameters."""
         self._device_parameters = {}
 
-    def setup(self, **kwargs):
+    def setup(self, frequency=None, power=None, **kwargs):
         """Configures the instrument.
 
         A connection to the instrument needs to be established beforehand.
@@ -83,11 +100,15 @@ class SGS100A(AbstractInstrument):
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
+        if frequency is None:
+            frequency = self._frequency
+        if power is None:
+            power = self._power
 
         if self.is_connected:
             # Load settings
-            self.power = kwargs["power"]
-            self.frequency = kwargs["frequency"]
+            self.power = power
+            self.frequency = frequency
         else:
             raise Exception("There is no connection to the instrument")
 
