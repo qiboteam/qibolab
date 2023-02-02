@@ -145,7 +145,7 @@ def test_qmopx_register_pulse(pulse_type, qubit):
         target_pulse = {
             "operation": "measurement",
             "length": pulse.duration,
-            "waveforms": {"I": "constant_wf0.00325", "Q": "constant_wf0.00325"},
+            "waveforms": {"I": "constant_wf0.003575", "Q": "constant_wf0.003575"},
             "digital_marker": "ON",
             "integration_weights": {
                 "cos": "cosine_weights1",

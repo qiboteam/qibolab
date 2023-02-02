@@ -5,7 +5,7 @@ qubits: [0, 1, 2, 3, 4, 5]
 
 settings:
     sampling_rate: 1000000000
-    relaxation_time: 500_000
+    relaxation_time: 50_000
     time_of_flight: 280
     smearing: 0
 
@@ -137,7 +137,7 @@ native_gates:
         2-1:
             CZ:
             - duration: 30
-              amplitude: 0.05445
+              amplitude: 0.055
               shape: Rectangular()
               qubit: 2
               relative_start: 0
@@ -151,7 +151,7 @@ native_gates:
         3-2:
             CZ:
             - duration: 32
-              amplitude: -0.05145
+              amplitude: -0.0513
               shape: Rectangular()
               qubit: 3
               relative_start: 0
