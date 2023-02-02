@@ -86,8 +86,8 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
     for i in range(2, 5):
         local_oscillators[i].power = 16.0
     # Set TWPA parameters
-    local_oscillators[5].frequency = 6_558_000_000
-    local_oscillators[5].power = 2.5
+    local_oscillators[5].frequency = 6_511_000_000
+    local_oscillators[5].power = 4.5
     # Map LOs to channels
     channels["L3-25_a"].local_oscillator = local_oscillators[0]
     channels["L3-25_b"].local_oscillator = local_oscillators[1]
