@@ -40,17 +40,12 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
     channels["L2-5_a"].ports = [("con1", 2), ("con1", 1)]
     channels["L2-5_b"].ports = [("con2", 2), ("con2", 1)]
     # drive
-    channels["L3-11"].ports = [("con1", 2), ("con1", 1)]
-    channels["L3-12"].ports = [("con1", 4), ("con1", 3)]
-    channels["L3-13"].ports = [("con1", 6), ("con1", 5)]
-    channels["L3-14"].ports = [("con1", 8), ("con1", 7)]
+    for i in range(1, 5):
+        channels[f"L3-1{i}"].ports = [("con1", 2 * i), ("con1", 2 * i - 1)]
     channels["L3-15"].ports = [("con3", 2), ("con3", 1)]
     # flux
-    channels["L4-1"].ports = [("con2", 1)]
-    channels["L4-2"].ports = [("con2", 2)]
-    channels["L4-3"].ports = [("con2", 3)]
-    channels["L4-4"].ports = [("con2", 4)]
-    channels["L4-5"].ports = [("con2", 5)]
+    for i in range(1, 6):
+        channels[f"L4-{i}"].ports = [("con2", i)]
 
     # Instantiate QM OPX instruments
     if simulation_duration is None:
