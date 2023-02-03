@@ -121,3 +121,43 @@ def test_qmsim_bell_circuit(simulator, qubits):
     samples = result.get_simulated_samples()
     qubitstr = "".join(str(q) for q in qubits)
     assert_regression(samples, f"bell_circuit_{qubitstr}")
+
+
+@pytest.mark.parametrize("qubits", [[1, 2]])
+@pytest.mark.parametrize("use_flux_pulse", [True, False])
+def test_qmsim_tune_landscape(simulator, qubits, use_flux_pulse):
+    lowfreq, highfreq = min(qubits), max(qubits)
+
+    y90_pulse = simulator.create_RX90_pulse(lowfreq, start=0, relative_phase=np.pi / 2)
+    x_pulse_start = simulator.create_RX_pulse(highfreq, start=0, relative_phase=0)
+    if use_flux_pulse:
+        flux_pulse = FluxPulse(
+            start=y90_pulse.se_finish,
+            duration=30,
+            amplitude=0.055,
+            shape=Rectangular(),
+            channel=simulator.qubits[highfreq].flux.name,
+            qubit=highfreq,
+        )
+        theta_pulse = simulator.create_RX90_pulse(lowfreq, start=flux_pulse.se_finish, relative_phase=np.pi / 3)
+        x_pulse_end = simulator.create_RX_pulse(highfreq, start=flux_pulse.se_finish, relative_phase=0)
+    else:
+        theta_pulse = simulator.create_RX90_pulse(lowfreq, start=y90_pulse.se_finish, relative_phase=np.pi / 3)
+        x_pulse_end = simulator.create_RX_pulse(highfreq, start=x_pulse_start.se_finish, relative_phase=0)
+
+    measure_lowfreq = simulator.create_qubit_readout_pulse(lowfreq, start=theta_pulse.se_finish)
+    measure_highfreq = simulator.create_qubit_readout_pulse(highfreq, start=x_pulse_end.se_finish)
+
+    sequence = x_pulse_start + y90_pulse
+    if use_flux_pulse:
+        sequence += flux_pulse
+    sequence += theta_pulse + x_pulse_end
+    sequence += measure_lowfreq + measure_highfreq
+
+    result = simulator.execute_pulse_sequence(sequence, nshots=1)
+    samples = result.get_simulated_samples()
+    qubitstr = "".join(str(q) for q in qubits)
+    if use_flux_pulse:
+        assert_regression(samples, f"tune_landscape_{qubitstr}")
+    else:
+        assert_regression(samples, f"tune_landscape_noflux_{qubitstr}")
