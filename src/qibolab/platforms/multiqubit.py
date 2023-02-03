@@ -208,7 +208,6 @@ class MultiqubitPlatform(AbstractPlatform):
                 # Add pulse with parameter shifted
                 sequence.add(pulse)
                 shifted_pulses.append(pulse)
-
             if len(sweepers) > 1:
                 self._sweep_recursion(
                     sequence, *sweepers[1:], nshots=nshots, average=average, wait_time=wait_time, results=results
@@ -217,7 +216,7 @@ class MultiqubitPlatform(AbstractPlatform):
                 # remove original pulse
                 new_sequence = copy.deepcopy(sequence)
                 for pulse in sweeper.pulses:
-                    if new_sequence.pulses.count(pulse) > 1:
+                    if pulse in new_sequence:
                         new_sequence.pulses.remove(pulse)
                 result = self.execute_pulse_sequence(new_sequence, nshots)
 

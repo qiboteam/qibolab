@@ -105,7 +105,7 @@ class DummyPlatform(AbstractPlatform):
                 new_sequence = copy.deepcopy(sequence)
                 # remove original pulse
                 for pulse in sweeper.pulses:
-                    if new_sequence.pulses.count(pulse) > 1:
+                    if pulse in new_sequence:
                         new_sequence.pulses.remove(pulse)
                 result = self.execute_pulse_sequence(new_sequence, nshots)
 
