@@ -688,9 +688,14 @@ class QMOPX(AbstractInstrument):
         with program() as experiment:
             n = declare(int)
             for qmpulse in qmsequence.ro_pulses:
-                # not calculating single shots when sweeping
-                # so we do not pass characterization here
-                qmpulse.declare_output()
+                if average:
+                    # not calculating single shots when averaging
+                    # during sweep so we do not pass ``threshold`` here
+                    qmpulse.declare_output()
+                else:
+                    threshold = qubits[qmpulse.pulse.qubit].threshold
+                    iq_angle = qubits[qmpulse.pulse.qubit].iq_angle
+                    qmpulse.declare_output(threshold, iq_angle)
 
             with for_(n, 0, n < nshots, n + 1):
                 self.sweep_recursion(list(sweepers), qubits, qmsequence)
@@ -699,9 +704,13 @@ class QMOPX(AbstractInstrument):
                 for qmpulse in qmsequence.ro_pulses:
                     Ist_temp = qmpulse.I_st
                     Qst_temp = qmpulse.Q_st
+                    if not average and qmpulse.threshold is not None:
+                        shots_temp = qmpulse.shots
                     for sweeper in reversed(sweepers):
                         Ist_temp = Ist_temp.buffer(len(sweeper.values))
                         Qst_temp = Qst_temp.buffer(len(sweeper.values))
+                        if not average and qmpulse.threshold is not None:
+                            shots_temp = shots_temp.buffer(len(sweeper.values))
                     serial = qmpulse.pulse.serial
                     if average:
                         Ist_temp.average().save(f"{serial}_I")
@@ -709,6 +718,8 @@ class QMOPX(AbstractInstrument):
                     else:
                         Ist_temp.buffer(nshots).save(f"{serial}_I")
                         Qst_temp.buffer(nshots).save(f"{serial}_Q")
+                        if qmpulse.threshold is not None:
+                            shots_temp.buffer(nshots).save(f"{serial}_shots")
 
         result = self.execute_program(experiment)
         return self.fetch_results(result, sequence.ro_pulses)

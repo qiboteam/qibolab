@@ -99,8 +99,8 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
     channels["L3-13"].lo_power = 16.0
     channels["L3-14"].lo_power = 16.0
     # Map TWPA to channels
-    channels["L4-26"].lo_frequency = 6_558_000_000
-    channels["L4-26"].lo_power = 2.5
+    channels["L4-26"].lo_frequency = 6_511_000_000
+    channels["L4-26"].lo_power = 4.5
 
     return platform
 
