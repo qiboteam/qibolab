@@ -21,13 +21,14 @@ SIMULATION_DURATION = 3000
 RUNCARD = qibolab_folder / "runcards" / "qw5q_gold.yml"
 
 
-@pytest.fixture
-def simulator(address):
+@pytest.fixture(scope="module")
+def simulator(request):
     """Platform using the QM cloud simulator.
 
     Args:
         address (str): Address for connecting to the simulator. Provided via command line.
     """
+    address = request.param
     platform = create_tii_qw5q_gold(RUNCARD, simulation_duration=SIMULATION_DURATION, address=address, cloud=True)
     platform.connect()
     platform.setup()

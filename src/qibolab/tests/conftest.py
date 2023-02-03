@@ -20,11 +20,11 @@ def pytest_generate_tests(metafunc):
         pytest.skip("Skipping Rohde Schwarz tests because it is not available in qpu5q.")
 
     address = metafunc.config.option.address
-    if metafunc.module.__name__ == "qibolab.tests.test_instruments_qmsim":
+    if "simulator" in metafunc.fixturenames:
         if address is None:
             pytest.skip("Skipping QM simulator tests because address was not provided.")
         else:
-            metafunc.parametrize("address", [address])
+            metafunc.parametrize("simulator", [address], indirect=True)
 
     if "platform_name" in metafunc.fixturenames:
         if "qubit" in metafunc.fixturenames:
