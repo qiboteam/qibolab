@@ -2,7 +2,7 @@ nqubits: 1
 description: TII's 1-qubit device controlled with the RFSoC4x2 (fpga board).
 
 settings:
-    hardware_avg: 1024 #reps in QICK
+    hardware_avg: 1 #reps in QICK
     repetition_duration: 200_000
     sampling_rate: 9_830_400_000 # DAC sampling rate
 
@@ -45,7 +45,7 @@ instruments:
 native_gates:
     single_qubit:
         0:
-            RX: {duration: 40, amplitude: 0.25, frequency: 5442000000, shape: Gaussian(4),
+            RX: {duration: 40, amplitude: 0.21, frequency: 5442000000, shape: Gaussian(4),
                 type: qd, start: 0, phase: 0}
             MZ: {duration: 3000, amplitude: 0.0156, frequency: 7371530000, shape: Rectangular(),
                 type: ro, start: 0, phase: 0}
