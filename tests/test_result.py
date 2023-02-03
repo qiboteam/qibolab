@@ -14,14 +14,17 @@ def generate_random_result(length=5):
 
 def test_standard_constructor():
     """Testing ExecutionResults constructor"""
-    test = np.array([(1, 2, 3), (1, 2, 3)])
-    ExecutionResults(test[0], test[1])
+    i = np.random.rand(4)
+    q = np.random.rand(4)
+    shots = np.random.rand(4)
+    ExecutionResults(i, q, shots)
 
 
 def test_execution_result_properties():
     """Testing ExecutionResults properties"""
     results = generate_random_result(5)
-    np.testing.assert_equal(np.sqrt(results.i**2 + results.q**2), results.measurement)
+    np.testing.assert_equal(np.sqrt(results.i**2 + results.q**2), results.msr)
+    np.testing.assert_equal(np.angle(results.i + 1.0j * results.q), results.phase)
 
 
 @pytest.mark.parametrize("state", [0, 1])
