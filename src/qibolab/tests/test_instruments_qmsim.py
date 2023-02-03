@@ -10,10 +10,9 @@ from qibo import gates
 from qibo.models import Circuit
 
 from qibolab.backends import QibolabBackend
-from qibolab.instruments.qm import QMOPX, QMPulse, QMSequence
 from qibolab.paths import qibolab_folder
 from qibolab.platform import create_tii_qw5q_gold
-from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse, Rectangular
+from qibolab.pulses import FluxPulse, PulseSequence, Rectangular
 
 REGRESSION_FOLDER = pathlib.Path(__file__).with_name("regressions")
 # WARNING: changing the following parameters will break all saved regressions
@@ -67,6 +66,8 @@ def assert_regression(samples, filename):
                 try:
                     np.testing.assert_allclose(waveform, target_waveform[:])
                 except AssertionError as exception:
+                    np.savetxt(REGRESSION_FOLDER / "waveform.txt", waveform)
+                    np.savetxt(REGRESSION_FOLDER / "target_waveform.txt", target_waveform[:])
                     plot()
                     raise exception
 
@@ -77,8 +78,9 @@ def assert_regression(samples, filename):
             if hasattr(samples, con):
                 sample = getattr(samples, con)
                 group = file.create_group(con)
-                for port, waveforms in sample.analog.items():
-                    group[port] = waveforms
+                for port, waveform in sample.analog.items():
+                    dset = group.create_dataset(port, (SIMULATION_DURATION,), compression="gzip")
+                    dset[:] = waveform
         plot()
 
 
@@ -110,18 +112,56 @@ def test_qmsim_qubit_spectroscopy(simulator):
     assert_regression(samples, "qubit_spectroscopy")
 
 
-@pytest.mark.parametrize("qubits", [[1, 2], [2, 3]])
-def test_qmsim_bell_circuit(simulator, qubits):
-    backend = QibolabBackend(simulator)
-    circuit = Circuit(5)
-    circuit.add(gates.H(qubits[0]))
-    circuit.add(gates.CNOT(*qubits))
-    circuit.add(gates.M(*qubits))
-    result = backend.execute_circuit(circuit, nshots=1, check_transpiled=True)
-    result = result.execution_result
+gatelist = [
+    ["I", "I"],
+    ["RX(pi)", "RX(pi)"],
+    ["RY(pi)", "RY(pi)"],
+    ["RX(pi)", "RY(pi)"],
+    ["RY(pi)", "RX(pi)"],
+    ["RX(pi/2)", "I"],
+    ["RY(pi/2)", "I"],
+    ["RX(pi/2)", "RY(pi/2)"],
+    ["RY(pi/2)", "RX(pi/2)"],
+    ["RX(pi/2)", "RY(pi)"],
+    ["RY(pi/2)", "RX(pi)"],
+    ["RX(pi)", "RY(pi/2)"],
+    ["RY(pi)", "RX(pi/2)"],
+    ["RX(pi/2)", "RX(pi)"],
+    ["RX(pi)", "RX(pi/2)"],
+    ["RY(pi/2)", "RY(pi)"],
+    ["RY(pi)", "RY(pi/2)"],
+    ["RX(pi)", "I"],
+    ["RY(pi)", "I"],
+    ["RX(pi/2)", "RX(pi/2)"],
+    ["RY(pi/2)", "RY(pi/2)"],
+]
+
+
+@pytest.mark.parametrize("count,gate_pair", enumerate(gatelist))
+def test_qmsim_allxy(simulator, count, gate_pair):
+    qubits = [1, 2, 3, 4]
+    sequence = PulseSequence()
+    for qubit in qubits:
+        start = 0
+        for gate in gate_pair:
+            if gate == "I":
+                pulse = None
+            elif gate == "RX(pi)":
+                pulse = simulator.create_RX_pulse(qubit, start=start)
+            elif gate == "RX(pi/2)":
+                pulse = simulator.create_RX90_pulse(qubit, start=start)
+            elif gate == "RY(pi)":
+                pulse = simulator.create_RX_pulse(qubit, start=start, relative_phase=np.pi / 2)
+            elif gate == "RY(pi/2)":
+                pulse = simulator.create_RX90_pulse(qubit, start=start, relative_phase=np.pi / 2)
+            if pulse is not None:
+                sequence.add(pulse)
+                start += pulse.duration
+        sequence.add(simulator.create_MZ_pulse(qubit, start=start))
+
+    result = simulator.execute_pulse_sequence(sequence, nshots=1)
     samples = result.get_simulated_samples()
-    qubitstr = "".join(str(q) for q in qubits)
-    assert_regression(samples, f"bell_circuit_{qubitstr}")
+    assert_regression(samples, f"allxy{count}")
 
 
 @pytest.mark.parametrize("qubits", [[1, 2]])
@@ -162,3 +202,30 @@ def test_qmsim_tune_landscape(simulator, qubits, use_flux_pulse):
         assert_regression(samples, f"tune_landscape_{qubitstr}")
     else:
         assert_regression(samples, f"tune_landscape_noflux_{qubitstr}")
+
+
+@pytest.mark.parametrize("qubits", [[1, 2], [2, 3]])
+def test_qmsim_bell_circuit(simulator, qubits):
+    backend = QibolabBackend(simulator)
+    circuit = Circuit(5)
+    circuit.add(gates.H(qubits[0]))
+    circuit.add(gates.CNOT(*qubits))
+    circuit.add(gates.M(*qubits))
+    result = backend.execute_circuit(circuit, nshots=1, check_transpiled=True)
+    result = result.execution_result
+    samples = result.get_simulated_samples()
+    qubitstr = "".join(str(q) for q in qubits)
+    assert_regression(samples, f"bell_circuit_{qubitstr}")
+
+
+def test_qmsim_ghz_circuit(simulator):
+    backend = QibolabBackend(simulator)
+    circuit = Circuit(5)
+    circuit.add(gates.H(2))
+    circuit.add(gates.CNOT(2, 1))
+    circuit.add(gates.CNOT(2, 3))
+    circuit.add(gates.M(1, 2, 3))
+    result = backend.execute_circuit(circuit, nshots=1, check_transpiled=True)
+    result = result.execution_result
+    samples = result.get_simulated_samples()
+    assert_regression(samples, f"ghz_circuit_123")
