@@ -84,31 +84,35 @@ class DummyPlatform(AbstractPlatform):
                 shifted_pulses = []
                 if sweeper.parameter == "frequency":
                     setattr(pulse, sweeper.parameter, getattr(original[pulse.qubit], sweeper.parameter) + value)
+                    if value != 0:
+                        shifted_pulses.append(pulse)
                 elif sweeper.parameter == "attenuation":
                     self.set_attenuation(pulse.qubit, value)
-                elif sweeper.paramter in "gain":
+                elif sweeper.parameter == "gain":
                     self.set_gain(pulse.qubit, value)
                 else:
                     setattr(pulse, sweeper.parameter, value)
+                    if value != 0:
+                        shifted_pulses.append(pulse)
                 if isinstance(pulse, ReadoutPulse):
                     map_old_new_pulse[original[pulse.qubit]] = pulse.serial
 
-                # Add pulse with parameter shifted
-                sequence.add(pulse)
-                shifted_pulses.append(pulse)
-
+                # Add pulse with parameter shifted only if there are shifted pulses
+                if shifted_pulses:
+                    sequence.add(pulse)
             if len(sweepers) > 1:
                 self._sweep_recursion(
                     sequence, *sweepers[1:], nshots=nshots, average=average, wait_time=wait_time, results=results
                 )
             else:
                 new_sequence = copy.deepcopy(sequence)
-                # remove original pulse
-                for pulse in sweeper.pulses:
-                    if pulse in new_sequence:
-                        new_sequence.pulses.remove(pulse)
-                result = self.execute_pulse_sequence(new_sequence, nshots)
 
+                # remove original pulse only if there are shifted pulses
+                for pulse in sweeper.pulses:
+                    if pulse in new_sequence and shifted_pulses:
+                        new_sequence.pulses.remove(pulse)
+
+                result = self.execute_pulse_sequence(new_sequence, nshots)
                 # remove shifted pulses from sequence
                 for shifted_pulse in shifted_pulses:
                     sequence.remove(shifted_pulse)
