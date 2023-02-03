@@ -6,7 +6,10 @@ import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
+from qibo import gates
+from qibo.models import Circuit
 
+from qibolab.backends import QibolabBackend
 from qibolab.instruments.qm import QMOPX, QMPulse, QMSequence
 from qibolab.paths import qibolab_folder
 from qibolab.platform import create_tii_qw5q_gold
@@ -51,7 +54,8 @@ def assert_regression(samples, filename):
             if hasattr(samples, con):
                 sample = getattr(samples, con)
                 sample.plot()
-        plt.savefig(REGRESSION_FOLDER / f"{filename}.png")
+        # plt.savefig(REGRESSION_FOLDER / f"{filename}.png")
+        plt.show()
 
     if os.path.exists(path):
         file = h5py.File(path, "r")
@@ -103,3 +107,17 @@ def test_qmsim_qubit_spectroscopy(simulator):
     result = simulator.execute_pulse_sequence(sequence, nshots=1)
     samples = result.get_simulated_samples()
     assert_regression(samples, "qubit_spectroscopy")
+
+
+@pytest.mark.parametrize("qubits", [[1, 2], [2, 3]])
+def test_qmsim_bell_circuit(simulator, qubits):
+    backend = QibolabBackend(simulator)
+    circuit = Circuit(5)
+    circuit.add(gates.H(qubits[0]))
+    circuit.add(gates.CNOT(*qubits))
+    circuit.add(gates.M(*qubits))
+    result = backend.execute_circuit(circuit, nshots=1, check_transpiled=True)
+    result = result.execution_result
+    samples = result.get_simulated_samples()
+    qubitstr = "".join(str(q) for q in qubits)
+    assert_regression(samples, f"bell_circuit_{qubitstr}")
