@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from qibolab.result import AveragedResults, ExecRes, ExecutionResults
+from qibolab.result import ExecutionResults
 
 
 def generate_random_result(length=5):
