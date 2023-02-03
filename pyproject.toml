@@ -1,6 +1,4 @@
 [tool.pylint.master]
-exit-zero = true
-errors-only = true
 output-format = "colorized"
 diasable = ["E1123","E1120"]
 
