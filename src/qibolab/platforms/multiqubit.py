@@ -76,6 +76,15 @@ class MultiqubitPlatform(AbstractPlatform):
     def get_gain(self, qubit):
         return self.qd_port[qubit].gain
 
+    def get_attenuation(self, qubit):
+        return self.ro_port[qubit].attenuation
+
+    def get_current(self, qubit):  # pragma: no cover
+        return self.qb_port[qubit].current
+
+    def get_gain(self, qubit):  # pragma: no cover
+        return self.qd_port[qubit].gain
+
     def setup(self):
         if not self.is_connected:
             raise_error(
@@ -243,60 +252,102 @@ class MultiqubitPlatform(AbstractPlatform):
 
     def sweep(self, sequence, *sweepers, nshots=1024, average=True, wait_time=None):
         results = {}
+        map_sweepers = {}
+        copy_sequence = copy.deepcopy(sequence)
+        for sweeper in sweepers:
+            map_sweepers[sweeper.parameter] = {
+                pulse.serial: pulse for pulse in copy_sequence if pulse in sweeper.pulses
+            }
+
         self._sweep_recursion(
-            copy.deepcopy(sequence), *sweepers, nshots=nshots, average=average, wait_time=wait_time, results=results
+            copy_sequence,
+            copy.deepcopy(sequence),
+            *sweepers,
+            nshots=nshots,
+            average=average,
+            wait_time=wait_time,
+            results=results,
+            map_sweepers=map_sweepers,
         )
         return results
 
-    def _sweep_recursion(self, sequence, *sweepers, nshots=1024, average=True, wait_time=None, results=None):
-        original = copy.deepcopy(sequence)
-        map_old_new_pulse = {pulse: pulse.serial for pulse in sequence.ro_pulses}
+    def _sweep_recursion(
+        self,
+        sequence,
+        original_sequence,
+        *sweepers,
+        nshots=1024,
+        average=True,
+        wait_time=None,
+        results=None,
+        map_sweepers=None
+    ):
+        map_original_shifted = {pulse: pulse.serial for pulse in original_sequence.ro_pulses}
+        original_value = {}
         sweeper = sweepers[0]
-        for value in sweeper.values:
-            for pulse in copy.deepcopy(sweeper.pulses):
-                shifted_pulses = []
-                if sweeper.parameter == "frequency":
-                    setattr(pulse, sweeper.parameter, getattr(original[pulse.qubit], sweeper.parameter) + value)
-                    if value != 0:
-                        shifted_pulses.append(pulse)
-                elif sweeper.parameter == "attenuation":
-                    self.set_attenuation(pulse.qubit, value)
-                elif sweeper.parameter in "gain":
-                    self.set_gain(pulse.qubit, value)
-                else:
-                    setattr(pulse, sweeper.parameter, value)
-                    if value != 0:
-                        shifted_pulses.append(pulse)
-                if isinstance(pulse, ReadoutPulse):
-                    map_old_new_pulse[original[pulse.qubit]] = pulse.serial
+        map_sweeper_to_copy = map_sweepers[sweeper.parameter]
 
-                # Add pulse with parameter shifted only if there are shifted pulses
-                if shifted_pulses:
-                    sequence.add(pulse)
+        # save original value of the parameter swept
+        for pulse in map_sweeper_to_copy:
+            if sweeper.parameter == "attenuation":
+                original_value[pulse] = self.get_attenuation(map_sweeper_to_copy[pulse].qubit)
+            elif sweeper.parameter == "gain":
+                original_value[pulse] = self.get_gain(map_sweeper_to_copy[pulse].qubit)
+            else:
+                original_value[pulse] = getattr(map_sweeper_to_copy[pulse], sweeper.parameter)
+
+        # perform sweep recursively
+        for value in sweeper.values:
+            for pulse in map_sweeper_to_copy:
+                if sweeper.parameter == "frequency":
+                    if isinstance(map_sweeper_to_copy[pulse], ReadoutPulse):
+                        value += self.qubits[map_sweeper_to_copy[pulse].qubit].readout_frequency
+                    else:
+                        value += self.qubits[map_sweeper_to_copy[pulse].qubit].drive_frequency
+                    setattr(map_sweeper_to_copy[pulse], sweeper.parameter, value)
+                elif sweeper.parameter == "attenuation":
+                    self.set_attenuation(map_sweeper_to_copy[pulse].qubit, value)
+                elif sweeper.parameter == "gain":
+                    self.set_gain(map_sweeper_to_copy[pulse].qubit, value)
+                else:
+                    setattr(map_sweeper_to_copy[pulse], sweeper.parameter, value)
+                if isinstance(map_sweeper_to_copy[pulse], ReadoutPulse):
+                    map_original_shifted[original_sequence[map_sweeper_to_copy[pulse].qubit]] = map_sweeper_to_copy[
+                        pulse
+                    ].serial
             if len(sweepers) > 1:
                 self._sweep_recursion(
-                    sequence, *sweepers[1:], nshots=nshots, average=average, wait_time=wait_time, results=results
+                    sequence,
+                    original_sequence,
+                    *sweepers[1:],
+                    nshots=nshots,
+                    average=average,
+                    wait_time=wait_time,
+                    results=results,
+                    map_sweepers=map_sweepers,
                 )
             else:
                 new_sequence = copy.deepcopy(sequence)
-                # remove original pulse only if there are shifted pulses
-                for pulse in sweeper.pulses:
-                    if pulse in new_sequence and shifted_pulses:
-                        new_sequence.pulses.remove(pulse)
                 result = self.execute_pulse_sequence(new_sequence, nshots)
-                # remove shifted pulses from sequence
-                for shifted_pulse in shifted_pulses:
-                    sequence.remove(shifted_pulse)
 
                 # colllect result and append to original pulse
-                for old, new_serial in map_old_new_pulse.items():
+                for original_pulse, new_serial in map_original_shifted.items():
                     if average:
                         result[new_serial].compute_average()
-                    if old.serial in results:
-                        results[old.serial] += result[new_serial]
+                    if results:
+                        results[original_pulse.serial] += result[new_serial]
                     else:
-                        results[old.serial] = result[new_serial]
-                        results[old.qubit] = copy.copy(results[old.serial])
+                        results[original_pulse.serial] = result[new_serial]
+                        results[original_pulse.qubit] = copy.copy(results[original_pulse.serial])
+
+        # restore parameter value:
+        for pulse in map_sweeper_to_copy:
+            if sweeper.parameter == "attenuation":
+                self.set_attenuation(map_sweeper_to_copy[pulse].qubit, original_value[pulse])
+            elif sweeper.parameter == "gain":
+                self.set_gain(map_sweeper_to_copy[pulse].qubit, original_value[pulse])
+            else:
+                setattr(map_sweeper_to_copy[pulse], sweeper.parameter, original_value[pulse])
 
     def measure_fidelity(self, qubits=None, nshots=None):
 
