@@ -25,7 +25,7 @@ def test_dummy_execute_pulse_sequence():
 
 @pytest.mark.parametrize("parameter", ["frequency", "amplitude", "attenuation", "gain"])
 @pytest.mark.parametrize("average", [True, False])
-def test_dummy_sweep(parameter, average):
+def test_dummy_single_sweep(parameter, average):
     platform = Platform("dummy")
     sequence = PulseSequence()
     pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
@@ -41,7 +41,7 @@ def test_dummy_sweep(parameter, average):
 @pytest.mark.parametrize("parameter1", ["frequency", "amplitude", "attenuation", "gain"])
 @pytest.mark.parametrize("parameter2", ["frequency", "amplitude", "attenuation", "gain"])
 @pytest.mark.parametrize("average", [True, False])
-def test_dummy_sweep(parameter1, parameter2, average):
+def test_dummy_double_sweep(parameter1, parameter2, average):
     platform = Platform("dummy")
     sequence = PulseSequence()
     pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
