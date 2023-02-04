@@ -53,7 +53,8 @@ class ExecutionResults:
     def phase(self):
         """Computes phase value."""
         phase = np.angle(self.i + 1.0j * self.q)
-        return signal.detrend(np.unwrap(phase))
+        return phase
+        # return signal.detrend(np.unwrap(phase))
 
     @cached_property
     def ground_state_probability(self):
