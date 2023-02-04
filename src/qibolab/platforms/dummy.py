@@ -171,10 +171,8 @@ class DummyPlatform(AbstractPlatform):
 
         # save original value of the parameter swept
         for pulse in map_sweeper_to_copy:
-            if sweeper.parameter == "attenuation":
-                original_value[pulse] = self.get_attenuation(map_sweeper_to_copy[pulse].qubit)
-            elif sweeper.parameter == "gain":
-                original_value[pulse] = self.get_gain(map_sweeper_to_copy[pulse].qubit)
+            if sweeper.parameter in ["attenuation", "gain"]:
+                pass
             else:
                 original_value[pulse] = getattr(map_sweeper_to_copy[pulse], sweeper.parameter)
 
@@ -224,9 +222,7 @@ class DummyPlatform(AbstractPlatform):
 
         # restore parameter value:
         for pulse in map_sweeper_to_copy:
-            if sweeper.parameter == "attenuation":
-                self.set_attenuation(map_sweeper_to_copy[pulse].qubit, original_value[pulse])
-            elif sweeper.parameter == "gain":
-                self.set_gain(map_sweeper_to_copy[pulse].qubit, original_value[pulse])
+            if sweeper.parameter in ["attenuation", "gain"]:
+                pass
             else:
                 setattr(map_sweeper_to_copy[pulse], sweeper.parameter, original_value[pulse])
