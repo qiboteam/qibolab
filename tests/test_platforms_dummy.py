@@ -38,4 +38,18 @@ def test_dummy_sweep(parameter, average):
     platform.sweep(sequence, sweeper, average=average)
 
 
-# TODO: add tests for two sweepers (requires fixes in current implementation of software sweeper)
+@pytest.mark.parametrize("parameter1", ["frequency", "amplitude", "attenuation", "gain"])
+@pytest.mark.parametrize("parameter2", ["frequency", "amplitude", "attenuation", "gain"])
+@pytest.mark.parametrize("average", [True, False])
+def test_dummy_sweep(parameter1, parameter2, average):
+    platform = Platform("dummy")
+    sequence = PulseSequence()
+    pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
+    sequence.add(pulse)
+    for parameter in [parameter1, parameter2]:
+        if parameter == "amplitude":
+            parameter_range = np.random.rand(10)
+        else:
+            parameter_range = np.random.randint(10, size=10)
+        sweeper = Sweeper(parameter, parameter_range, [pulse])
+    platform.sweep(sequence, sweeper, average=average)
