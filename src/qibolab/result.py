@@ -21,11 +21,6 @@ class ExecutionResults:
         return cls(is_, qs_, shots)
 
     @property
-    def in_progress(self):
-        """Placeholder for when we implement live fetching of data from instruments."""
-        return False
-
-    @property
     def i(self):
         return self._i
 
@@ -58,8 +53,7 @@ class ExecutionResults:
     def phase(self):
         """Computes phase value."""
         phase = np.angle(self.i + 1.0j * self.q)
-        return phase
-        # return signal.detrend(np.unwrap(phase))
+        return signal.detrend(np.unwrap(phase))
 
     @cached_property
     def ground_state_probability(self):
