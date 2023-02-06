@@ -1,2 +1,2 @@
-comment:
-  require_changes: false
+github_checks:
+  annotations: false

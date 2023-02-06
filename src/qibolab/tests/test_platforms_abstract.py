@@ -90,7 +90,6 @@ def test_rz_to_sequence(platform_name):
     circuit.add(gates.Z(0))
     sequence: PulseSequence = platform.transpile(circuit)
     assert len(sequence) == 0
-    assert sequence.virtual_z_phases[0] == 0.2 + np.pi
 
 
 def test_u3_to_sequence(platform_name):
@@ -107,7 +106,6 @@ def test_u3_to_sequence(platform_name):
     s = PulseSequence(RX90_pulse1, RX90_pulse2)
 
     np.testing.assert_allclose(sequence.duration, RX90_pulse1.duration + RX90_pulse2.duration)
-    np.testing.assert_allclose(sequence.virtual_z_phases[0], 0.6)
     assert sequence.serial == s.serial
 
 
@@ -123,7 +121,6 @@ def test_two_u3_to_sequence(platform_name):
 
     RX90_pulse = platform.create_RX90_pulse(0)
 
-    np.testing.assert_allclose(sequence.virtual_z_phases[0], 0.6 + 1.5)
     np.testing.assert_allclose(sequence.duration, 2 * 2 * RX90_pulse.duration)
 
     RX90_pulse1 = platform.create_RX90_pulse(0, start=0, relative_phase=0.3)
@@ -132,6 +129,18 @@ def test_two_u3_to_sequence(platform_name):
     RX90_pulse4 = platform.create_RX90_pulse(0, start=RX90_pulse3.finish, relative_phase=1.5 - np.pi)
     s = PulseSequence(RX90_pulse1, RX90_pulse2, RX90_pulse3, RX90_pulse4)
     assert sequence.serial == s.serial
+
+
+def test_CZ_to_sequence(platform_name):
+    platform = Platform(platform_name)
+    if platform.nqubits > 1:
+        circuit = Circuit(2)
+        circuit.add(gates.X(0))
+        circuit.add(gates.CZ(0, 1))
+
+        sequence: PulseSequence = platform.transpile(circuit)
+        test_sequence, virtual_z_phases = platform.create_CZ_pulse_sequence((2, 1))
+        assert len(sequence.pulses) == len(test_sequence) + 2
 
 
 def test_add_measurement_to_sequence(platform_name):
@@ -144,8 +153,6 @@ def test_add_measurement_to_sequence(platform_name):
     assert len(sequence.pulses) == 3
     assert len(sequence.qd_pulses) == 2
     assert len(sequence.ro_pulses) == 1
-
-    np.testing.assert_allclose(sequence.virtual_z_phases[0], 0.6)
 
     RX90_pulse1 = platform.create_RX90_pulse(0, start=0, relative_phase=0.3)
     RX90_pulse2 = platform.create_RX90_pulse(0, start=RX90_pulse1.finish, relative_phase=0.4 - np.pi)
