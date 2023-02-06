@@ -1,7 +1,6 @@
-import collections
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field
 from typing import Any, List, Optional
 
 import numpy as np
@@ -10,60 +9,9 @@ from qibo import gates
 from qibo.config import log, raise_error
 from qibo.models import Circuit
 
+from qibolab.designs.channels import Channel
 from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse
 from qibolab.transpilers import can_execute, transpile
-
-
-@dataclass
-class Channel:
-    """Representation of physical wire connection (channel).
-
-    Name is used as a unique identifier for channels.
-    Channel objects are instantiated by :class:`qibolab.platforms.platform.Platform`,
-    but their attributes are modified and used by instrument designs.
-
-    Args:
-        name (str): Name of the channel as given in the platform runcard.
-
-    Attributes:
-        ports (list): List of tuples (controller (`str`), port (`int`))
-            specifying the QM (I, Q) ports that the channel is connected.
-        qubits (list): List of tuples (:class:`qibolab.platforms.utils.Qubit`, str)
-            for the qubit connected to this channel and the role of the channel.
-        Optional arguments holding local oscillators and related parameters.
-        These are relevant only for mixer-based insturment designs.
-    """
-
-    name: str
-
-    qubit: Optional["Qubit"] = field(default=None, init=False, repr=False)
-    ports: List[tuple] = field(default_factory=list, init=False)
-    local_oscillator: Any = field(default=None, init=False)
-    lo_frequency: float = field(default=0, init=False)
-    lo_power: float = field(default=0, init=False)
-    _offset: Optional[float] = field(default=None, init=False)
-    _filter: Optional[dict] = field(default=None, init=False)
-
-    @property
-    def offset(self):
-        if self._offset is None:
-            # operate qubits at their sweetspot unless otherwise stated
-            self._offset = self.qubit.sweetspot
-        return self._offset
-
-    @offset.setter
-    def offset(self, offset):
-        self._offset = offset
-
-    @property
-    def filter(self):
-        if self._filter is None:
-            self._filter = self.qubit.filter
-        return self._filter
-
-    @filter.setter
-    def filter(self, filter):
-        self._filter = filter
 
 
 @dataclass
@@ -87,11 +35,6 @@ class Qubit:
     """
 
     name: str
-    readout: Channel
-    feedback: Channel
-    twpa: Optional[Channel] = None
-    drive: Optional[Channel] = None
-    flux: Optional[Channel] = None
 
     readout_frequency: int = 0
     drive_frequency: int = 0
@@ -118,6 +61,12 @@ class Qubit:
     mixer_drive_phi: float = 0.0
     mixer_readout_g: float = 0.0
     mixer_readout_phi: float = 0.0
+
+    readout: Optional[Channel] = None
+    feedback: Optional[Channel] = None
+    twpa: Optional[Channel] = None
+    drive: Optional[Channel] = None
+    flux: Optional[Channel] = None
 
     def __post_init__(self):
         # register qubit in ``flux`` channel so that we can access
@@ -146,7 +95,6 @@ class AbstractPlatform(ABC):
         self.runcard = runcard
 
         self.qubits = {}
-        self.channels = {}
 
         self.settings = None
         self.is_connected = False
@@ -168,16 +116,6 @@ class AbstractPlatform(ABC):
     def _check_connected(self):
         if not self.is_connected:  # pragma: no cover
             raise_error(RuntimeError, "Cannot access instrument because it is not connected.")
-
-    def get_channel(self, name):
-        """Returns an existing channel or creates a new one if it does not exist.
-
-        Args:
-            name (str): Name of the channel to get or create.
-        """
-        if name not in self.channels:
-            self.channels[name] = Channel(name)
-        return self.channels[name]
 
     def reload_settings(self):
         # TODO: Remove ``self.settings``
@@ -204,23 +142,11 @@ class AbstractPlatform(ABC):
 
         # Load characterization settings and create ``Qubit`` and ``Channel`` objects
         for q in settings["qubits"]:
-            # TODO: Fix this to work for all platforms without the need for if
-            feedback, twpa = None, None
-            if len(settings["qubit_channel_map"][q]) == 3:
-                readout, drive, flux = settings["qubit_channel_map"][q]
-            elif len(settings["qubit_channel_map"][q]) == 4:
-                readout, drive, flux, _ = settings["qubit_channel_map"][q]
+            if q in self.qubits:
+                for name, value in settings["characterization"]["single_qubit"][q].items():
+                    setattr(self.qubits[q], name, value)
             else:
-                readout, drive, flux, feedback, twpa = settings["qubit_channel_map"][q]
-            self.qubits[q] = qubit = Qubit(
-                q,
-                readout=self.get_channel(readout),
-                feedback=self.get_channel(feedback) if feedback else None,
-                drive=self.get_channel(drive) if drive else None,
-                flux=self.get_channel(flux) if flux else None,
-                twpa=self.get_channel(twpa) if twpa else None,
-                **settings["characterization"]["single_qubit"][q],
-            )
+                self.qubits[q] = Qubit(q, **settings["characterization"]["single_qubit"][q])
 
     @abstractmethod
     def connect(self):
@@ -375,6 +301,12 @@ class AbstractPlatform(ABC):
         """
         raise_error(NotImplementedError, f"Platform {self.name} does not support sweeping.")
 
+    def qd_channel(self, qubit):
+        if self.qubits[qubit].drive:
+            return self.qubits[qubit].drive.name
+        else:
+            return self.settings["qubit_channel_map"][qubit][1]
+
     # TODO: Maybe create a dataclass for native gates
     def create_RX90_pulse(self, qubit, start=0, relative_phase=0):
         pulse_kwargs = self.native_single_qubit_gates[qubit]["RX"]
@@ -382,7 +314,7 @@ class AbstractPlatform(ABC):
         qd_frequency = pulse_kwargs["frequency"]
         qd_amplitude = pulse_kwargs["amplitude"] / 2.0
         qd_shape = pulse_kwargs["shape"]
-        qd_channel = self.qubits[qubit].drive.name
+        qd_channel = self.qd_channel(qubit)
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
     def create_RX_pulse(self, qubit, start=0, relative_phase=0):
@@ -391,7 +323,7 @@ class AbstractPlatform(ABC):
         qd_frequency = pulse_kwargs["frequency"]
         qd_amplitude = pulse_kwargs["amplitude"]
         qd_shape = pulse_kwargs["shape"]
-        qd_channel = self.qubits[qubit].drive.name
+        qd_channel = self.qd_channel(qubit)
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
     def create_CZ_pulse_sequence(self, qubits, start=0):
@@ -421,7 +353,10 @@ class AbstractPlatform(ABC):
                 qf_amplitude = pulse_settings["amplitude"]
                 qf_shape = pulse_settings["shape"]
                 qubit = pulse_settings["qubit"]
-                qf_channel = self.settings["qubit_channel_map"][qubit][2]
+                if self.qubits[qubit].flux:
+                    qf_channel = self.qubits[qubit].flux.name
+                else:
+                    qf_channel = self.settings["qubit_channel_map"][qubit][2]
                 sequence.add(
                     FluxPulse(
                         start + pulse_settings["relative_start"], qf_duration, qf_amplitude, qf_shape, qf_channel, qubit
@@ -442,7 +377,10 @@ class AbstractPlatform(ABC):
         ro_frequency = pulse_kwargs["frequency"]
         ro_amplitude = pulse_kwargs["amplitude"]
         ro_shape = pulse_kwargs["shape"]
-        ro_channel = self.qubits[qubit].readout.name
+        if self.qubits[qubit].readout:
+            ro_channel = self.qubits[qubit].readout.name
+        else:
+            ro_channel = self.settings["qubit_channel_map"][qubit][0]
         return ReadoutPulse(start, ro_duration, ro_amplitude, ro_frequency, 0, ro_shape, ro_channel, qubit=qubit)
 
     def create_qubit_drive_pulse(self, qubit, start, duration, relative_phase=0):
@@ -450,7 +388,7 @@ class AbstractPlatform(ABC):
         qd_frequency = pulse_kwargs["frequency"]
         qd_amplitude = pulse_kwargs["amplitude"]
         qd_shape = pulse_kwargs["shape"]
-        qd_channel = self.qubits[qubit].drive.name
+        qd_channel = self.qd_channel(qubit)
         return Pulse(start, duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
     def create_qubit_readout_pulse(self, qubit, start):
@@ -469,7 +407,7 @@ class AbstractPlatform(ABC):
         if beta != None:
             qd_shape = "Drag(5," + str(beta) + ")"
 
-        qd_channel = self.qubits[qubit].drive.name
+        qd_channel = self.qd_channel(qubit)
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
     def create_RX_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
@@ -482,7 +420,7 @@ class AbstractPlatform(ABC):
         if beta != None:
             qd_shape = "Drag(5," + str(beta) + ")"
 
-        qd_channel = self.qubits[qubit].drive.name
+        qd_channel = self.qd_channel(qubit)
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
     def set_attenuation(self, qubit, att):  # pragma: no cover

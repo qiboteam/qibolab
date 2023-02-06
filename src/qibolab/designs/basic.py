@@ -13,6 +13,7 @@ class BasicInstrumentDesign:
     """
 
     controller: AbstractInstrument
+    channels: dict = field(default_factory=dict)
     is_connected: bool = field(default=False, init=False)
 
     def connect(self):
