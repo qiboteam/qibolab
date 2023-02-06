@@ -1,47 +1,6 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
 
 from qibolab.instruments.abstract import AbstractInstrument
-
-
-@dataclass
-class Channel:
-    """Representation of physical wire connection (channel)."""
-
-    name: str
-    """Name of the channel from the lab schematics."""
-
-    qubit: Optional["Qubit"] = field(default=None, repr=False)
-    """Qubit connected to this channel. Used to set read the sweetspot for flux channels only."""
-    ports: List[tuple] = field(default_factory=list)
-    """List of tuples (controller, port) connected to this channel."""
-    local_oscillator: Optional[AbstractInstrument] = None
-    """Instrument object controlling the local oscillator connected to this channel."""
-    _offset: Optional[float] = None
-    _filter: Optional[dict] = None
-
-    @property
-    def offset(self):
-        """Bias offset for flux channels."""
-        if self._offset is None:
-            # operate qubits at their sweetspot unless otherwise stated
-            return self.qubit.sweetspot
-        return self._offset
-
-    @offset.setter
-    def offset(self, offset):
-        self._offset = offset
-
-    @property
-    def filter(self):
-        """Filters for sending flux pulses through a flux channel."""
-        if self._filter is None:
-            return self.qubit.filter
-        return self._filter
-
-    @filter.setter
-    def filter(self, filter):
-        self._filter = filter
 
 
 @dataclass

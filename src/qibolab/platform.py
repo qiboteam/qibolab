@@ -1,6 +1,6 @@
 from qibo.config import raise_error
 
-from qibolab.designs.basic import BasicInstrumentDesign, Channel
+from qibolab.designs.channels import Channel, ChannelMap
 from qibolab.designs.mixer import MixerInstrumentDesign
 from qibolab.platforms.platform import DesignPlatform
 
@@ -21,16 +21,17 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
             Relevant only when ``simulation_duration`` is given.
     """
     # Create channel objects
+    channels = ChannelMap()
     # readout
-    channels = {"L3-25_a": Channel("L3-25_a"), "L3-25_b": Channel("L3-25_b")}
+    channels |= ChannelMap.from_names("L3-25_a", "L3-25_b")
     # feedback
-    channels.update({"L2-5_a": Channel("L2-5_a"), "L2-5_b": Channel("L2-5_b")})
+    channels |= ChannelMap.from_names("L2-5_a", "L2-5_b")
     # drive
-    channels.update({f"L3-{i}": Channel(f"L3-{i}") for i in range(11, 16)})
+    channels |= ChannelMap.from_names(*(f"L3-{i}" for i in range(11, 16)))
     # flux
-    channels.update({f"L4-{i}": Channel(f"L4-{i}") for i in range(1, 6)})
+    channels |= ChannelMap.from_names(*(f"L4-{i}" for i in range(1, 6)))
     # TWPA
-    channels["L4-26"] = Channel("L4-26")
+    channels |= ChannelMap.from_names("L4-26")
 
     # Map controllers to qubit channels (HARDCODED)
     # readout

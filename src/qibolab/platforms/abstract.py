@@ -9,7 +9,7 @@ from qibo import gates
 from qibo.config import log, raise_error
 from qibo.models import Circuit
 
-from qibolab.designs.basic import Channel
+from qibolab.designs.channels import Channel
 from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse
 from qibolab.transpilers import can_execute, transpile
 
