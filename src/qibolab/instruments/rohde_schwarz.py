@@ -101,9 +101,9 @@ class SGS100A(LocalOscillator):
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
         if frequency is None:
-            frequency = self._frequency
+            frequency = self.frequency
         if power is None:
-            power = self._power
+            power = self.power
 
         if self.is_connected:
             # Load settings
