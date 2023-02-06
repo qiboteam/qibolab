@@ -7,10 +7,10 @@ https://qcodes.github.io/Qcodes/api/generated/qcodes.instrument_drivers.rohde_sc
 """
 import qcodes.instrument_drivers.rohde_schwarz.SGS100A as LO_SGS100A
 
-from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
+from qibolab.instruments.abstract import InstrumentException, LocalOscillator
 
 
-class SGS100A(AbstractInstrument):
+class SGS100A(LocalOscillator):
     def __init__(self, name, address):
         super().__init__(name, address)
         self.device: LO_SGS100A = None

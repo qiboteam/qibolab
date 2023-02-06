@@ -1,7 +1,7 @@
-from qibolab.instruments.abstract import AbstractInstrument
+from qibolab.instruments.abstract import LocalOscillator
 
 
-class DummyLocalOscillator(AbstractInstrument):
+class DummyLocalOscillator(LocalOscillator):
     """Dummy local oscillator driver.
 
     Useful for using with the Quantum Machines simulator.

@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from qibolab.instruments.abstract import AbstractInstrument
+from qibolab.instruments.abstract import LocalOscillator
 
 
 @dataclass
@@ -17,7 +17,7 @@ class Channel:
     """
     ports: List[tuple] = field(default_factory=list)
     """List of tuples (controller, port) connected to this channel."""
-    local_oscillator: Optional[AbstractInstrument] = None
+    local_oscillator: Optional[LocalOscillator] = None
     """Instrument object controlling the local oscillator connected to this channel.
     Not applicable for setups that do not use local oscillators because the controller
     can send sufficiently high frequencies
