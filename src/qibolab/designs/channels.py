@@ -62,7 +62,7 @@ class ChannelMap:
         Args:
             names (str): List of channel names.
         """
-        return ChannelMap({name: Channel(name) for name in names})
+        return cls({name: Channel(name) for name in names})
 
     def __getitem__(self, name):
         return self.channels[name]
@@ -70,9 +70,14 @@ class ChannelMap:
     def __setitem__(self, name, channel):
         self.channels[name] = channel
 
+    def __contains__(self, name):
+        return name in self.channels
+
     def __or__(self, channel_map):
-        return ChannelMap(self.channels | channel_map.channels)
+        channels = self.channels.copy()
+        channels.update(channel_map.channels)
+        return self.__class__(channels)
 
     def __ior__(self, channel_map):
-        self.channels |= channel_map.channels
+        self.channels.update(channel_map.channels)
         return self
