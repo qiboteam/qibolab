@@ -1,10 +1,8 @@
-import pytest
-
 from qibolab.platform import Platform
 
 
 def pytest_addoption(parser):
-    parser.addoption("--platform", type=str, action="store", default=None, help="qpu platform to test")
+    parser.addoption("--platforms", type=str, action="store", default=None, help="qpu platforms to test")
 
 
 def pytest_configure(config):
@@ -12,15 +10,13 @@ def pytest_configure(config):
 
 
 def pytest_generate_tests(metafunc):
-    platform_name = metafunc.config.option.platform
-
-    if platform_name is None:  # pragma: no cover
-        raise ValueError("Test platform name was not specified. Please specify it using the --platform option.")
+    platforms = metafunc.config.option.platforms
+    platforms = [] if platforms is None else platforms.split(",")
 
     if "platform_name" in metafunc.fixturenames:
         if "qubit" in metafunc.fixturenames:
             # TODO: Do backend initialization here instead of every test (currently does not work)
-            qubits = [(platform_name, q) for q in Platform(platform_name).qubits]
+            qubits = [(platform_name, q) for platform_name in platforms for q in Platform(platform_name).qubits]
             metafunc.parametrize("platform_name,qubit", qubits)
         else:
-            metafunc.parametrize("platform_name", [platform_name])
+            metafunc.parametrize("platform_name", platforms)
