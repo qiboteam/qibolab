@@ -768,7 +768,6 @@ class ClusterQRM_RF(AbstractInstrument):
             # generate and store the Waveforms dictionary, the Acquisitions dictionary, the Weights and the Program
             for port in self._output_ports_keys:
                 for sequencer in self._sequencers[port]:
-
                     # Waveforms
                     for index, waveform in enumerate(sequencer.waveforms_buffer.unique_waveforms):
                         sequencer.waveforms[waveform.serial] = {"data": waveform.data.tolist(), "index": index}
@@ -1532,7 +1531,6 @@ class ClusterQCM_RF(AbstractInstrument):
                     self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]],
                     self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]],
                 ]:
-
                     self._set_device_parameter(target, "cont_mode_en_awg_path0", "cont_mode_en_awg_path1", value=False)
                     self._set_device_parameter(
                         target, "cont_mode_waveform_idx_awg_path0", "cont_mode_waveform_idx_awg_path1", value=0
@@ -1832,7 +1830,6 @@ class ClusterQCM_RF(AbstractInstrument):
             # generate and store the Waveforms dictionary, the Acquisitions dictionary, the Weights and the Program
             for port in self._output_ports_keys:
                 for sequencer in self._sequencers[port]:
-
                     # Waveforms
                     for index, waveform in enumerate(sequencer.waveforms_buffer.unique_waveforms):
                         sequencer.waveforms[waveform.serial] = {"data": waveform.data.tolist(), "index": index}
@@ -2247,7 +2244,6 @@ class ClusterQCM(AbstractInstrument):
                     self.device.sequencers[self.DEFAULT_SEQUENCERS["o3"]],
                     self.device.sequencers[self.DEFAULT_SEQUENCERS["o4"]],
                 ]:
-
                     self._set_device_parameter(
                         target, "cont_mode_en_awg_path0", "cont_mode_en_awg_path1", value=False
                     )  # Default after reboot = False
@@ -2540,7 +2536,6 @@ class ClusterQCM(AbstractInstrument):
             # generate and store the Waveforms dictionary, the Acquisitions dictionary, the Weights and the Program
             for port in self._output_ports_keys:
                 for sequencer in self._sequencers[port]:
-
                     # Waveforms
                     for index, waveform in enumerate(sequencer.waveforms_buffer.unique_waveforms):
                         sequencer.waveforms[waveform.serial] = {"data": waveform.data.tolist(), "index": index}

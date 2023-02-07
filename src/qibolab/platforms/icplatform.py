@@ -32,7 +32,6 @@ class Qubit:
         readout,
         readout_channels,
     ):
-
         self.pi_pulse = pi_pulse
         self.readout_pulse = readout_pulse
         self.readout_frequency = readout_frequency
