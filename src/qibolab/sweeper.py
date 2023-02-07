@@ -1,9 +1,18 @@
 from dataclasses import dataclass
+from enum import Enum, auto
 from typing import Optional
 
 import numpy.typing as npt
 
 from qibolab.pulses import PulseType
+
+
+class Parameter(Enum):
+    attenuation = auto()
+    gain = auto()
+    frequency = auto()
+    amplitude = auto()
+    current = auto()
 
 
 @dataclass
@@ -33,7 +42,7 @@ class Sweeper:
             platform.sweep(sequence, sweeper)
 
     Args:
-        parameter (str): parameter to be swept, possible choices are frequency, attenuation, amplitude, current and gain.
+        parameter (`qibolab.sweeper.Parameter`): parameter to be swept, possible choices are frequency, attenuation, amplitude, current and gain.
         values (np.ndarray): sweep range. If the parameter is `frequency` the sweep will be a shift around the readout frequency
             in case of a `ReadoutPulse` or around the drive frequency for a generic `Pulse`. For other parameters the sweep will be
             performed directly over the range specified.
@@ -41,7 +50,7 @@ class Sweeper:
         qubits (lilst): list of `qibolab.platforms.abstract.Qubit` to be swept (optional).
     """
 
-    parameter: str
+    parameter: Parameter
     values: npt.NDArray
     pulses: Optional[list] = None
     qubits: Optional[list] = None

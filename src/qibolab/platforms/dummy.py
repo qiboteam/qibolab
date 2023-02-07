@@ -7,6 +7,7 @@ from qibo.config import log, raise_error
 from qibolab.platforms.abstract import AbstractPlatform
 from qibolab.pulses import PulseSequence, ReadoutPulse
 from qibolab.result import ExecutionResults
+from qibolab.sweeper import Parameter
 
 
 class DummyPlatform(AbstractPlatform):
@@ -113,29 +114,26 @@ class DummyPlatform(AbstractPlatform):
         original_value = {}
         sweeper = sweepers[0]
         map_sweeper_to_copy = map_sweepers[sweeper.parameter]
-
         # save original value of the parameter swept
         for pulse in map_sweeper_to_copy:
-            if sweeper.parameter in ["attenuation", "gain"]:
-                pass
-            else:
-                original_value[pulse] = getattr(map_sweeper_to_copy[pulse], sweeper.parameter)
+            if sweeper.parameter not in [Parameter.attenuation, Parameter.gain, Parameter.current]:
+                original_value[pulse] = getattr(map_sweeper_to_copy[pulse], sweeper.parameter.name)
 
         # perform sweep recursively
         for value in sweeper.values:
             for pulse in map_sweeper_to_copy:
-                if sweeper.parameter == "frequency":
+                if sweeper.parameter is Parameter.frequency:
                     if isinstance(map_sweeper_to_copy[pulse], ReadoutPulse):
                         value += self.qubits[map_sweeper_to_copy[pulse].qubit].readout_frequency
                     else:
                         value += self.qubits[map_sweeper_to_copy[pulse].qubit].drive_frequency
-                    setattr(map_sweeper_to_copy[pulse], sweeper.parameter, value)
-                elif sweeper.parameter == "attenuation":
+                    setattr(map_sweeper_to_copy[pulse], sweeper.parameter.name, value)
+                elif sweeper.parameter is Parameter.attenuation:
                     self.set_attenuation(map_sweeper_to_copy[pulse].qubit, value)
-                elif sweeper.parameter == "gain":
+                elif sweeper.parameter is Parameter.gain:
                     self.set_gain(map_sweeper_to_copy[pulse].qubit, value)
                 else:
-                    setattr(map_sweeper_to_copy[pulse], sweeper.parameter, value)
+                    setattr(map_sweeper_to_copy[pulse], sweeper.parameter.name, value)
                 if isinstance(map_sweeper_to_copy[pulse], ReadoutPulse):
                     map_original_shifted[original_sequence[map_sweeper_to_copy[pulse].qubit]] = map_sweeper_to_copy[
                         pulse
@@ -167,5 +165,5 @@ class DummyPlatform(AbstractPlatform):
 
         # restore parameter value:
         for pulse in map_sweeper_to_copy:
-            if sweeper.parameter not in ["attenuation", "gain"]:
-                setattr(map_sweeper_to_copy[pulse], sweeper.parameter, original_value[pulse])
+            if sweeper.parameter not in [Parameter.attenuation, Parameter.gain, Parameter.current]:
+                setattr(map_sweeper_to_copy[pulse], sweeper.parameter.name, original_value[pulse])
