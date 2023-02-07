@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from qibolab.result import ExecutionResults
+from qibolab.result import ExecRes, ExecutionResults
 
 
 def generate_random_result(length=5):
@@ -20,10 +20,9 @@ def generate_random_avg_result(length=5):
 
 def test_standard_constructor():
     """Testing ExecutionResults constructor"""
-    i = np.random.rand(4)
-    q = np.random.rand(4)
-    shots = np.random.rand(4)
-    ExecutionResults(i, q, shots)
+    test = np.array([(1, 2), (1, 2)], dtype=ExecRes)
+    shots = np.random.rand(3)
+    ExecutionResults(test, shots)
 
 
 def test_execution_result_properties():
@@ -52,20 +51,21 @@ def test_to_dict(average):
     output = results.to_dict(average=average)
     if not average:
         target_dict = {
-            "MSR[V]": results.msr.ravel(),
-            "i[V]": results.i.ravel(),
-            "q[V]": results.q.ravel(),
-            "phase[rad]": results.phase.ravel(),
+            "MSR[V]": results.msr,
+            "i[V]": results.i,
+            "q[V]": results.q,
+            "phase[rad]": results.phase,
         }
         assert output.keys() == target_dict.keys()
         for key in output:
             np.testing.assert_equal(output[key], target_dict[key])
     else:
+        avg = results.compute_average()
         target_dict = {
-            "MSR[V]": results.msr.mean(),
-            "i[V]": results.i.mean(),
-            "q[V]": results.q.mean(),
-            "phase[rad]": results.phase.mean(),
+            "MSR[V]": np.sqrt(avg.i**2 + avg.q**2),
+            "i[V]": avg.i,
+            "q[V]": avg.q,
+            "phase[rad]": np.angle(avg.i + 1.0j * avg.q),
         }
         assert results.to_dict(average=average) == target_dict
 

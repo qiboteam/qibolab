@@ -6,34 +6,39 @@ import numpy as np
 import numpy.typing as npt
 from scipy import signal
 
+ExecRes = np.dtype([("i", np.float64), ("q", np.float64)])
+
+
+@dataclass
+class AveragedResults:
+    """Data structure containing averages of ``ExecutionResults``."""
+
+    i: npt.NDArray[np.float64]
+    q: npt.NDArray[np.float64]
+
 
 @dataclass
 class ExecutionResults:
     """Data structure to deal with the output of :func:`qibolab.platforms.abstract.AbstractPlatform.execute_pulse_sequence`"""
 
-    _i: npt.NDArray[np.float64]
-    _q: npt.NDArray[np.float64]
+    array: npt.NDArray[ExecRes]
     shots: Optional[npt.NDArray[np.uint32]] = None
 
     @classmethod
     def from_components(cls, is_, qs_, shots=None):
-        return cls(is_, qs_, shots)
+        ar = np.empty(is_.shape, dtype=ExecRes)
+        ar["i"] = is_
+        ar["q"] = qs_
+        ar = np.rec.array(ar)
+        return cls(ar, shots)
 
     @property
     def i(self):
-        return self._i
-
-    @i.setter
-    def i(self, value):
-        self._i = value
+        return self.array.i
 
     @property
     def q(self):
-        return self._q
-
-    @q.setter
-    def q(self, value):
-        self._q = value
+        return self.array.q
 
     def __add__(self, data):
         i = np.append(self.i, data.i)
@@ -74,8 +79,7 @@ class ExecutionResults:
 
     def compute_average(self):
         """Perform average over i and q"""
-        self.i = self.i.mean()
-        self.q = self.q.mean()
+        return AveragedResults(self.array.i.mean(), self.array.q.mean())
 
     def to_dict(self, average=False):
         """Serialize output in dict.
@@ -85,12 +89,11 @@ class ExecutionResults:
                             Where each value is averaged over the number shots. If `False`
                             all the values for each shot are saved.
         """
-        if average:
-            self.compute_average()
+        results = self.compute_average() if average else self
 
         return {
-            "MSR[V]": self.msr.ravel(),
-            "i[V]": self.i.ravel(),
-            "q[V]": self.q.ravel(),
-            "phase[rad]": self.phase.ravel(),
+            "MSR[V]": np.sqrt(results.i**2 + results.q**2),
+            "i[V]": results.i,
+            "q[V]": results.q,
+            "phase[rad]": np.angle(results.i + 1.0j * results.q),
         }
