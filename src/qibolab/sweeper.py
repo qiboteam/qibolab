@@ -6,13 +6,10 @@ import numpy.typing as npt
 
 @dataclass
 class Sweeper:
-
     parameter: str
     values: npt.NDArray
     pulses: Optional[list] = None
     qubits: Optional[list] = None
-    # TODO: Change that to the platform default wait time
-    wait_time: int = 0
 
     @property
     def pulse_type(self):

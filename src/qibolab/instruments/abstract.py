@@ -55,6 +55,15 @@ class AbstractInstrument(ABC):
         raise NotImplementedError(f"Instrument {self.name} does not support sweep.")
 
 
+class LocalOscillator(AbstractInstrument):
+    """Abstraction for local oscillator instruments.
+
+    Local oscillators are used to upconvert signals, when
+    the controllers cannot send sufficiently high frequencies
+    to address the qubits and resonators.
+    """
+
+
 class InstrumentException(Exception):
     def __init__(self, instrument: AbstractInstrument, message: str):
         header = f"InstrumentException with {instrument.signature}"
