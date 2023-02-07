@@ -271,13 +271,8 @@ class QMOPX(AbstractInstrument):
                 }
             ]
         else:
-            current_if = self.config["elements"][f"drive{qubit.name}"]["intermediate_frequency"]
-            if current_if != intermediate_frequency:
-                raise_error(
-                    NotImplementedError,
-                    f"Changing intermediate frequency for qubit {qubit.name} "
-                    f"from {current_if} to {intermediate_frequency}.",
-                )
+            self.config["elements"][f"drive{qubit.name}"]["intermediate_frequency"] = intermediate_frequency
+            self.config["mixers"][f"mixer_drive{qubit.name}"][0]["intermediate_frequency"] = intermediate_frequency
 
     def register_readout_element(self, qubit, intermediate_frequency=0):
         """Register resonator elements and controllers in the QM config.
@@ -338,13 +333,8 @@ class QMOPX(AbstractInstrument):
                 }
             ]
         else:
-            current_if = self.config["elements"][f"readout{qubit.name}"]["intermediate_frequency"]
-            if current_if != intermediate_frequency:
-                raise_error(
-                    NotImplementedError,
-                    f"Changing intermediate frequency for qubit {qubit.name} "
-                    f"from {current_if} to {intermediate_frequency}.",
-                )
+            self.config["elements"][f"readout{qubit.name}"]["intermediate_frequency"] = intermediate_frequency
+            self.config["mixers"][f"mixer_readout{qubit.name}"][0]["intermediate_frequency"] = intermediate_frequency
 
     def register_flux_element(self, qubit, intermediate_frequency=0):
         """Register qubit flux elements and controllers in the QM config.
@@ -367,13 +357,7 @@ class QMOPX(AbstractInstrument):
                 "operations": {},
             }
         else:
-            current_if = self.config["elements"][f"flux{qubit.name}"]["intermediate_frequency"]
-            if current_if != intermediate_frequency:
-                raise_error(
-                    NotImplementedError,
-                    f"Changing intermediate frequency for qubit {qubit.name} "
-                    f"from {current_if} to {intermediate_frequency}.",
-                )
+            self.config["elements"][f"flux{qubit.name}"]["intermediate_frequency"] = intermediate_frequency
 
     def register_pulse(self, qubit, pulse):
         """Registers pulse, waveforms and integration weights in QM config.
@@ -618,15 +602,9 @@ class QMOPX(AbstractInstrument):
             nshots (int): Number of repetitions (shots) of the experiment.
             relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
         """
-        # check if there are overlapping drive or flux pulses
-        # this check has many nested loops - may be slow for long sequences
-        # for overlapping in sequence.get_pulse_overlaps():
-        #    if len(overlapping.qd_pulses) > 1:
-        #        raise_error(NotImplementedError, "Quantum Machines driver cannot play "
-        #                                         "overlapping drive pulses.")
-        #    if len(overlapping.qf_pulses) > 1:
-        #        raise_error(NotImplementedError, "Quantum Machines driver cannot play "
-        #                                         "overlapping flux pulses.")
+        # Current driver cannot play overlapping pulses on drive and flux channels
+        # If we want to play overlapping pulses we need to define different elements on the same ports
+        # like we do for readout multiplex
         qmsequence = QMSequence()
         for pulse in sequence:
             qmpulse = qmsequence.add(pulse)
@@ -733,7 +711,7 @@ class QMOPX(AbstractInstrument):
                         lo_frequency = int(getattr(qubit, sweeper.pulse_type).local_oscillator.frequency)
                         freqs0.append(declare(int, value=int(pulse.frequency - lo_frequency)))
                 else:
-                    raise_error(NotImplementedError)
+                    raise_error(NotImplementedError, "Sweeper configuration not implemented.")
 
                 # is it fine to have this declaration inside the ``nshots`` QUA loop?
                 f = declare(int)
@@ -784,10 +762,10 @@ class QMOPX(AbstractInstrument):
                         wait(relaxation_time // 4)
 
             elif sweeper.parameter == "duration":
-                raise_error(NotImplementedError)
+                raise_error(NotImplementedError, "Sweeper configuration not implemented.")
 
             else:
-                raise_error(NotImplementedError)
+                raise_error(NotImplementedError, "Sweeper configuration not implemented.")
 
         elif sweeper.qubits is not None:
             if sweeper.parameter == "offset":
@@ -807,7 +785,7 @@ class QMOPX(AbstractInstrument):
                         wait(relaxation_time // 4, *elements)
 
             else:
-                raise_error(NotImplementedError)
+                raise_error(NotImplementedError, "Sweeper configuration not implemented.")
 
         else:
-            raise_error(NotImplementedError)
+            raise_error(NotImplementedError, "Sweeper configuration not implemented.")
