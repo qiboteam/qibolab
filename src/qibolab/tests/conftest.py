@@ -18,9 +18,7 @@ def pytest_generate_tests(metafunc):
     platforms = [] if platforms is None else platforms.split(",")
 
     if metafunc.module.__name__ == "qibolab.tests.test_instruments_rohde_schwarz":
-        pytest.skip(
-            "Skipping Rohde Schwarz tests because it is not available in qpu5q."
-        )
+        pytest.skip("Skipping Rohde Schwarz tests because it is not available in qpu5q.")
 
     if "platform_name" in metafunc.fixturenames:
         if "qubit" in metafunc.fixturenames:
