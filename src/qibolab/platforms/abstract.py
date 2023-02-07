@@ -319,8 +319,8 @@ class AbstractPlatform(ABC):
                 calibration yml will be used.
             average (bool): If ``True`` the IQ results of individual shots are averaged
                 on hardware.
-            wait_time (int): Relaxation time between shots (ns). If ``None`` it will be used the
-                default value in the runcard.
+            wait_time (int): Relaxation time between shots (ns). If ``None`` the default value from the runcard will be used.
+
         Returns:
             Readout results acquired by after execution.
         """

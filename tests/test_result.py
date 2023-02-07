@@ -46,7 +46,7 @@ def test_to_dict(average):
     output = results.to_dict(average=average)
     if not average:
         target_dict = {
-            "MSR[V]": results.measurement.ravel(),
+            "MSR[V]": results.msr.ravel(),
             "i[V]": results.i.ravel(),
             "q[V]": results.q.ravel(),
             "phase[rad]": results.phase.ravel(),
@@ -56,7 +56,7 @@ def test_to_dict(average):
             np.testing.assert_equal(output[key], target_dict[key])
     else:
         target_dict = {
-            "MSR[V]": results.measurement.mean(),
+            "MSR[V]": results.msr.mean(),
             "i[V]": results.i.mean(),
             "q[V]": results.q.mean(),
             "phase[rad]": results.phase.mean(),
