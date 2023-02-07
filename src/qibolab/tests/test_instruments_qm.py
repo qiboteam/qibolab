@@ -53,7 +53,6 @@ def test_qmopx_setup():
     platform.setup()
     opx = platform.design.controller
     assert opx.time_of_flight == 280
-    assert opx.relaxation_time == 50000
     # assert that flux elements were registered
     for q in range(5):
         assert f"flux{q}" in opx.config["elements"]

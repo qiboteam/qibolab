@@ -18,7 +18,7 @@ class DesignPlatform(AbstractPlatform):
         self.is_connected = True
 
     def setup(self):
-        self.design.setup(self.qubits, **self.options)
+        self.design.setup(self.qubits, **self.settings["settings"])
 
     def start(self):
         self.design.start()
@@ -30,17 +30,14 @@ class DesignPlatform(AbstractPlatform):
         self.design.disconnect()
         self.is_connected = False
 
-    def execute_pulse_sequence(self, sequence, nshots=1024):
-        """Play an arbitrary pulse sequence and retrieve feedback.
+    def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None):
+        if relaxation_time is None:
+            relaxation_time = self.relaxation_time
+        return self.design.play(self.qubits, sequence, nshots=nshots, relaxation_time=relaxation_time)
 
-        Args:
-            sequence (:class:`qibolab.pulses.PulseSequence`): Sequence of pulses to play.
-            nshots (int): Number of hardware repetitions of the execution.
-
-        Returns:
-            TODO: Decide a unified way to return results.
-        """
-        return self.design.play(self.qubits, sequence, nshots)
-
-    def sweep(self, sequence, *sweepers, nshots=1024, average=True):
-        return self.design.sweep(self.qubits, sequence, *sweepers, nshots=nshots, average=average)
+    def sweep(self, sequence, *sweepers, nshots=1024, relaxation_time=None, average=True):
+        if relaxation_time is None:
+            relaxation_time = self.relaxation_time
+        return self.design.sweep(
+            self.qubits, sequence, *sweepers, nshots=nshots, relaxation_time=relaxation_time, average=average
+        )

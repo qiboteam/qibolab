@@ -96,13 +96,14 @@ class AbstractPlatform(ABC):
 
         self.qubits = {}
 
+        # Values for the following are set from the runcard in ``reload_settings``
         self.settings = None
         self.is_connected = False
         self.nqubits = None
         self.resonator_type = None
         self.topology = None
+        self.relaxation_time = None
         self.sampling_rate = None
-        self.options = None
 
         self.native_single_qubit_gates = {}
         self.native_two_qubit_gates = {}
@@ -126,8 +127,8 @@ class AbstractPlatform(ABC):
         self.resonator_type = "3D" if self.nqubits == 1 else "2D"
         self.topology = settings["topology"]
 
-        self.options = settings["settings"]
-        self.sampling_rate = self.options["sampling_rate"]
+        self.relaxation_time = settings["settings"]["repetition_duration"]
+        self.sampling_rate = settings["settings"]["sampling_rate"]
 
         # TODO: Create better data structures for native gates
         self.native_gates = settings["native_gates"]
@@ -265,23 +266,23 @@ class AbstractPlatform(ABC):
         return sequence
 
     @abstractmethod
-    def execute_pulse_sequence(self, sequence, nshots=None):
+    def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None):
         """Executes a pulse sequence.
 
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
-            nshots (int): Number of shots to sample from the experiment.
-                If ``None`` the default value provided as hardware_avg in the
-                calibration yml will be used.
+            nshots (int): Number of shots to sample from the experiment. Default is 1024.
+            relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
+                If ``None`` the default value provided as ``repetition_duration`` in the runcard will be used.
 
         Returns:
             Readout results acquired by after execution.
         """
 
-    def __call__(self, sequence, nshots=None):
-        return self.execute_pulse_sequence(sequence, nshots)
+    def __call__(self, sequence, nshots=1024, relaxation_time=None):
+        return self.execute_pulse_sequence(sequence, nshots, relaxation_time)
 
-    def sweep(self, sequence, *sweepers, nshots=1024, average=True):
+    def sweep(self, sequence, *sweepers, nshots=1024, relaxation_time=None, average=True):
         """Executes a pulse sequence for different values of sweeped parameters.
 
         Useful for performing chip characterization.
@@ -290,11 +291,10 @@ class AbstractPlatform(ABC):
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
             sweepers (:class:`qibolab.sweeper.Sweeper`): Sweeper objects that specify which
                 parameters are being sweeped.
-            nshots (int): Number of shots to sample from the experiment.
-                If ``None`` the default value provided as hardware_avg in the
-                calibration yml will be used.
-            average (bool): If ``True`` the IQ results of individual shots are averaged
-                on hardware.
+            nshots (int): Number of shots to sample from the experiment. Default is 1024.
+            relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
+                If ``None`` the default value provided as ``repetition_duration`` in the runcard will be used.
+            average (bool): If ``True`` the IQ results of individual shots are averaged on hardware.
 
         Returns:
             Readout results acquired by after execution.
