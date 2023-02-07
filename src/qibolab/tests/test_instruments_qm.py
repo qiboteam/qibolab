@@ -53,7 +53,6 @@ def test_qmopx_setup():
     platform.setup()
     opx = platform.design.controller
     assert opx.time_of_flight == 280
-    assert opx.relaxation_time == 50000
     # assert that flux elements were registered
     for q in range(5):
         assert f"flux{q}" in opx.config["elements"]
@@ -161,24 +160,54 @@ def test_qmopx_register_pulse(pulse_type, qubit):
     assert opx.config["elements"][f"{pulse_type}{qubit}"]["operations"][pulse.serial] == pulse.serial
 
 
-def test_qmopx_register_baked_pulse():
+def test_qmopx_register_flux_pulse():
+    qubit = 2
+    platform = create_tii_qw5q_gold(RUNCARD, simulation_duration=1000, address=DUMMY_ADDRESS)
+    opx = platform.design.controller
+    pulse = FluxPulse(0, 30, 0.005, Rectangular(), platform.qubits[qubit].flux.name, qubit)
+    target_pulse = {
+        "operation": "control",
+        "length": pulse.duration,
+        "waveforms": {"single": "constant_wf0.005"},
+    }
+
+    opx.register_pulse(platform.qubits[qubit], pulse)
+    print(opx.config)
+    assert opx.config["pulses"][pulse.serial] == target_pulse
+    assert target_pulse["waveforms"]["single"] in opx.config["waveforms"]
+    assert opx.config["elements"][f"flux{qubit}"]["operations"][pulse.serial] == pulse.serial
+
+
+@pytest.mark.parametrize("duration", [0, 30])
+def test_qmopx_register_baked_pulse(duration):
     platform = create_tii_qw5q_gold(RUNCARD, simulation_duration=1000, address=DUMMY_ADDRESS)
     platform.setup()
     qubit = platform.qubits[3]
-    pulse = FluxPulse(3, 30, 0.05, Rectangular(), qubit.flux.name, qubit=qubit.name)
+    pulse = FluxPulse(3, duration, 0.05, Rectangular(), qubit.flux.name, qubit=qubit.name)
     qmpulse = QMPulse(pulse)
     config = platform.design.controller.config
     qmpulse.bake(config)
 
-    print(config)
     assert config["elements"]["flux3"]["operations"] == {"baked_Op_0": "flux3_baked_pulse_0"}
-    assert config["pulses"]["flux3_baked_pulse_0"] == {
-        "operation": "control",
-        "length": 32,
-        "waveforms": {"single": "flux3_baked_wf_0"},
-    }
-    assert config["waveforms"]["flux3_baked_wf_0"] == {
-        "type": "arbitrary",
-        "samples": 29 * [0.05] + 3 * [0],
-        "is_overridable": False,
-    }
+    if duration == 0:
+        assert config["pulses"]["flux3_baked_pulse_0"] == {
+            "operation": "control",
+            "length": 16,
+            "waveforms": {"single": "flux3_baked_wf_0"},
+        }
+        assert config["waveforms"]["flux3_baked_wf_0"] == {
+            "type": "arbitrary",
+            "samples": 16 * [0],
+            "is_overridable": False,
+        }
+    else:
+        assert config["pulses"]["flux3_baked_pulse_0"] == {
+            "operation": "control",
+            "length": 32,
+            "waveforms": {"single": "flux3_baked_wf_0"},
+        }
+        assert config["waveforms"]["flux3_baked_wf_0"] == {
+            "type": "arbitrary",
+            "samples": 29 * [0.05] + 3 * [0],
+            "is_overridable": False,
+        }
