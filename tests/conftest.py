@@ -8,7 +8,7 @@ def pytest_addoption(parser):
         "--platforms",
         type=str,
         action="store",
-        default=None,
+        default="qili1q_os2",
         help="qpu platforms to test on",
     )
 
