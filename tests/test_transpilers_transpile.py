@@ -6,8 +6,9 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 
-from qibolab.tests.test_transpilers_connectivity import transpose_qubits
 from qibolab.transpilers.transpile import can_execute, transpile
+
+from .test_transpilers_connectivity import transpose_qubits
 
 
 def generate_random_circuit(nqubits, ngates, seed=None):
@@ -62,9 +63,16 @@ def test_transpile(middle_qubit, nqubits, ngates, fuse_one_qubit, two_qubit_nati
 
     circuit = generate_random_circuit(hardware_qubits, ngates)
     transpiled_circuit, hardware_qubits = transpile(
-        circuit, two_qubit_natives=two_qubit_natives, fuse_one_qubit=fuse_one_qubit, middle_qubit=middle_qubit
+        circuit,
+        two_qubit_natives=two_qubit_natives,
+        fuse_one_qubit=fuse_one_qubit,
+        middle_qubit=middle_qubit,
     )
-    assert can_execute(transpiled_circuit, two_qubit_natives=two_qubit_natives, middle_qubit=middle_qubit)
+    assert can_execute(
+        transpiled_circuit,
+        two_qubit_natives=two_qubit_natives,
+        middle_qubit=middle_qubit,
+    )
 
     final_state = backend.execute_circuit(transpiled_circuit).state()
     target_state = backend.execute_circuit(circuit).state()
