@@ -266,14 +266,15 @@ class AbstractPlatform(ABC):
         return sequence
 
     @abstractmethod
-    def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None):
+    def execute_pulse_sequence(self, sequence, nshots=None, wait_time=None):  # pragma: no cover
         """Executes a pulse sequence.
 
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
-            nshots (int): Number of shots to sample from the experiment. Default is 1024.
-            relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
-                If ``None`` the default value provided as ``repetition_duration`` in the runcard will be used.
+            nshots (int): Number of shots to sample from the experiment.
+                If ``None`` the default value provided as hardware_avg in the
+                calibration yml will be used.
+            wait_time (int): Relaxation time. For more information see ``wait_time`` argument in :func:`qibolab.platforms.abstract.sweep`.
 
         Returns:
             Readout results acquired by after execution.
@@ -310,6 +311,26 @@ class AbstractPlatform(ABC):
     def sweep(self, sequence, *sweepers, nshots=1024, average=True, wait_time=None):
         """Executes a pulse sequence for different values of sweeped parameters.
         Useful for performing chip characterization.
+
+        Example:
+            .. code-block:: python
+
+                import numpy as np
+                from qibolab.platform import Platform
+                from qibolab.sweeper import Sweeper
+                from qibolab.pulses import PulseSequence
+
+
+                platform = Platform("dummy")
+                sequence = PulseSequence()
+                parameter = "frequency"
+                pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
+                sequence.add(pulse)
+                parameter_range = np.random.randint(10, size=10)
+                sweeper = Sweeper(parameter, parameter_range, [pulse])
+                platform.sweep(sequence, sweeper)
+
+
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
             sweepers (:class:`qibolab.sweeper.Sweeper`): Sweeper objects that specify which
