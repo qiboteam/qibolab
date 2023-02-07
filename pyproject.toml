@@ -1,13 +1,8 @@
 [tool.pylint.master]
 
 output-format = "colorized"
-disable = ["E1123","E1120"]
+disable = ["E1123", "E1120"]
 
 [tool.pytest.ini_options]
 testpaths = ['src/qibolab']
-addopts = [
-    '--cov=qibolab',
-    '--cov-report=xml',
-    '-m not qpu',
-    '--platforms=qili1q_os2',
-]
+addopts = ['--cov=qibolab', '--cov-report=xml', '-m not qpu']
