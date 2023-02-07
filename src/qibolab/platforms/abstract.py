@@ -350,6 +350,26 @@ class AbstractPlatform(ABC):
     def sweep(self, sequence, *sweepers, nshots=1024, average=True, wait_time=None):
         """Executes a pulse sequence for different values of sweeped parameters.
         Useful for performing chip characterization.
+
+        Example:
+            .. code-block:: python
+
+                import numpy as np
+                from qibolab.platform import Platform
+                from qibolab.sweeper import Sweeper
+                from qibolab.pulses import PulseSequence
+
+
+                platform = Platform("dummy")
+                sequence = PulseSequence()
+                parameter = "frequency"
+                pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
+                sequence.add(pulse)
+                parameter_range = np.random.randint(10, size=10)
+                sweeper = Sweeper(parameter, parameter_range, [pulse])
+                platform.sweep(sequence, sweeper)
+
+
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
             sweepers (:class:`qibolab.sweeper.Sweeper`): Sweeper objects that specify which

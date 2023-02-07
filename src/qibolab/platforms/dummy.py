@@ -222,7 +222,5 @@ class DummyPlatform(AbstractPlatform):
 
         # restore parameter value:
         for pulse in map_sweeper_to_copy:
-            if sweeper.parameter in ["attenuation", "gain"]:
-                pass
-            else:
+            if sweeper.parameter not in ["attenuation", "gain"]:
                 setattr(map_sweeper_to_copy[pulse], sweeper.parameter, original_value[pulse])
