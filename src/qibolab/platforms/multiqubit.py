@@ -10,14 +10,8 @@ from qibolab.result import ExecutionResults
 
 
 class MultiqubitPlatform(AbstractPlatform):
-    def reload_settings(self):
-        super().reload_settings()
-        self.is_connected = False
-        self.characterization = self.settings["characterization"]
-        self.qubit_channel_map = self.settings["qubit_channel_map"]
-        self.hardware_avg = self.settings["settings"]["hardware_avg"]
-        self.repetition_duration = self.settings["settings"]["repetition_duration"]
-
+    def __init__(self, name, runcard):
+        super().__init__(name, runcard)
         self.instruments = {}
         # Instantiate instruments
         for name in self.settings["instruments"]:
@@ -43,6 +37,13 @@ class MultiqubitPlatform(AbstractPlatform):
                     for channel in self.settings["instruments"][name]["settings"]["s4g_modules"]:
                         if channel in self.qubit_channel_map[qubit]:
                             self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
+
+    def reload_settings(self):
+        super().reload_settings()
+        self.characterization = self.settings["characterization"]
+        self.qubit_channel_map = self.settings["qubit_channel_map"]
+        self.hardware_avg = self.settings["settings"]["hardware_avg"]
+        self.repetition_duration = self.settings["settings"]["repetition_duration"]
 
     def set_lo_drive_frequency(self, qubit, freq):
         self.qd_port[qubit].lo_frequency = freq
