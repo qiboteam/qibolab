@@ -43,6 +43,7 @@ def test_dummy_single_sweep(parameter, average):
 @pytest.mark.parametrize("average", [True, False])
 def test_dummy_double_sweep(parameter1, parameter2, average):
     platform = Platform("dummy")
+    sweepers = []
     sequence = PulseSequence()
     pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
     sequence.add(pulse)
@@ -51,5 +52,5 @@ def test_dummy_double_sweep(parameter1, parameter2, average):
             parameter_range = np.random.rand(10)
         else:
             parameter_range = np.random.randint(10, size=10)
-        sweeper = Sweeper(parameter, parameter_range, [pulse])
-    platform.sweep(sequence, sweeper, average=average)
+        sweepers.append(Sweeper(parameter, parameter_range, [pulse]))
+    platform.sweep(sequence, *sweepers, average=average)
