@@ -4,5 +4,10 @@ output-format = "colorized"
 disable = ["E1123","E1120"]
 
 [tool.pytest.ini_options]
-
-addopts = ' src/qibolab/tests/ --cov=qibolab --cov-report=xml -m "not qpu" --platforms qili1q_os2'
+testpaths = ['src/qibolab']
+addopts = [
+    '--cov=qibolab',
+    '--cov-report=xml',
+    '-m not qpu',
+    '--platforms=qili1q_os2',
+]
