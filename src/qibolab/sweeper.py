@@ -6,7 +6,6 @@ import numpy.typing as npt
 
 @dataclass
 class Sweeper:
-
     parameter: str
     values: npt.NDArray
     pulses: Optional[list] = None
