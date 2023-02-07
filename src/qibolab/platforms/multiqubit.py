@@ -352,7 +352,7 @@ class MultiqubitPlatform(AbstractPlatform):
             elif sweeper.parameter is Parameter.gain:
                 self.set_gain(map_sweeper_to_copy[pulse].qubit, original_value[pulse])
             elif sweeper.parameter is Parameter.current:
-                self.current(map_sweeper_to_copy[pulse].qubit, original_value[pulse])
+                self.set_current(map_sweeper_to_copy[pulse].qubit, original_value[pulse])
             else:
                 setattr(map_sweeper_to_copy[pulse], sweeper.parameter.name, original_value[pulse])
 
