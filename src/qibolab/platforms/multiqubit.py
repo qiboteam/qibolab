@@ -148,7 +148,6 @@ class MultiqubitPlatform(AbstractPlatform):
             self.is_connected = False
 
     def execute_pulse_sequence(self, sequence: PulseSequence, nshots=None):
-
         if not self.is_connected:
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
         if nshots is None:
@@ -246,7 +245,6 @@ class MultiqubitPlatform(AbstractPlatform):
         return data
 
     def measure_fidelity(self, qubits=None, nshots=None):
-
         self.reload_settings()
         if not qubits:
             qubits = self.qubits

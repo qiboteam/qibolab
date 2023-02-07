@@ -7,6 +7,7 @@ from qibolab.paths import qibolab_folder, user_folder
 INSTRUMENTS_LIST = ["SPI"]
 instruments = {}
 
+
 # To test --> name = SpiRack
 @pytest.mark.qpu
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)

@@ -47,7 +47,6 @@ class SGS100A(LocalOscillator):
         Connects to the instrument using the IP address set in the runcard.
         """
         if not self.is_connected:
-
             for attempt in range(3):
                 try:
                     self.device = LO_SGS100A.RohdeSchwarz_SGS100A(self.name, f"TCPIP0::{self.address}::5025::SOCKET")
