@@ -23,7 +23,6 @@ def test_dummy_execute_pulse_sequence():
     result = platform.execute_pulse_sequence(sequence, nshots=100)
 
 
-@pytest.mark.parametrize("parameter", Parameter)
 @pytest.mark.parametrize("average", [True, False])
 @pytest.mark.parametrize("nshots", [100, 200])
 def test_dummy_single_sweep(parameter, average, nshots):
