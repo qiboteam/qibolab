@@ -1,6 +1,7 @@
 """Tests ``pulses.py``."""
 import os
 import pathlib
+
 import numpy as np
 
 from qibolab.paths import qibolab_folder
@@ -22,7 +23,6 @@ from qibolab.pulses import (
     eCap,
 )
 from qibolab.symbolic import intSymbolicExpression as se_int
-
 
 HERE = pathlib.Path(__file__).parent
 
