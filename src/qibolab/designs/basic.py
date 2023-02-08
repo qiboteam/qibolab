@@ -9,18 +9,18 @@ class BasicInstrumentDesign:
 
     Attributes:
         controller (:class:`qibolab.instruments.abstract.AbstractInstrument`): Instrument used for sending pulses and retrieving feedback.
-        is_connected (bool): Boolean that shows whether instruments are connected.
+        _is_connected (bool): Boolean that shows whether instruments are connected.
     """
 
     controller: AbstractInstrument
     channels: dict = field(default_factory=dict)
-    is_connected: bool = field(default=False, init=False)
+    _is_connected: bool = field(default=False, init=False)
 
     def connect(self):
         """Connect to all instruments."""
-        if not self.is_connected:
+        if not self._is_connected:
             self.controller.connect()
-        self.is_connected = True
+        self._is_connected = True
 
     def setup(self, qubits, *args, **kwargs):
         """Load settings to instruments."""
@@ -37,7 +37,7 @@ class BasicInstrumentDesign:
     def disconnect(self):
         """Disconnect all instruments."""
         self.controller.disconnect()
-        self.is_connected = False
+        self._is_connected = False
 
     def play(self, *args, **kwargs):
         """Play a pulse sequence and retrieve feedback."""
