@@ -23,7 +23,6 @@ def test_dummy_execute_pulse_sequence():
     result = platform.execute_pulse_sequence(sequence, nshots=100)
 
 
-# @pytest.mark.parametrize("parameter", ["frequency", "amplitude", "attenuation", "gain", current])
 @pytest.mark.parametrize("average", [True, False])
 def test_dummy_single_sweep(average):
     platform = Platform("dummy")
