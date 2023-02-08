@@ -369,6 +369,9 @@ class MultiqubitPlatform(AbstractPlatform):
                 else:
                     value += self.qubits[pulses[pulse].qubit].drive_frequency
                 setattr(pulses[pulse], sweeper.parameter.name, value)
+            elif sweeper.parameter is Parameter.amplitude:
+                current_amplitude = getattr(pulses[pulse], sweeper.parameter.name)
+                setattr(pulses[pulse], sweeper.parameter.name, int(current_amplitude * value))
             elif sweeper.parameter is Parameter.attenuation:
                 self.set_attenuation(pulses[pulse].qubit, value)
             elif sweeper.parameter is Parameter.gain:
