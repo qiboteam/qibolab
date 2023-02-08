@@ -217,6 +217,6 @@ def test_qmopx_register_baked_pulse(duration):
         }
         assert config["waveforms"]["flux3_baked_wf_0"] == {
             "type": "arbitrary",
-            "samples": 29 * [0.05] + 3 * [0],
+            "samples": 30 * [0.05] + 2 * [0],
             "is_overridable": False,
         }
