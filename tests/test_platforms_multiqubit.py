@@ -30,7 +30,9 @@ def copy_runcard(platform_name):
 
 @pytest.fixture
 def platform(platform_name):
-    test_runcard = copy_runcard(platform_name)
+    test_runcard = pathlib.Path(__file__).parent / "test_platforms_multiqubit.yml"
+    original_runcard = qibolab_folder / "runcards" / f"{platform_name}.yml"
+    shutil.copyfile(str(original_runcard), test_runcard)
     _platform = Platform(platform_name, test_runcard)
     _platform.connect()
     _platform.setup()
@@ -165,9 +167,8 @@ def test_multiqubitplatform_execute_multiple_readout_pulses(platform):
 
 @pytest.mark.qpu
 @pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
-def test_excited_state_probabilities_pulses(platform_name, qubit):
-    backend = QibolabBackend(platform_name)
-    platform = backend.platform
+def test_excited_state_probabilities_pulses(platform, qubit):
+    backend = QibolabBackend(platform)
     qd_pulse = platform.create_RX_pulse(qubit)
     ro_pulse = platform.create_MZ_pulse(qubit, start=qd_pulse.duration)
     sequence = PulseSequence()
@@ -175,7 +176,7 @@ def test_excited_state_probabilities_pulses(platform_name, qubit):
     sequence.add(ro_pulse)
     result = platform.execute_pulse_sequence(sequence, nshots=5000)
 
-    cr = CircuitResult(backend, Circuit(platform.nqubits), result)
+    cr = CircuitResult(backend, Circuit(platform.nqubits), result, nshots=5000)
     probs = backend.circuit_result_probabilities(cr, qubits=[qubit])
     warnings.warn(f"Excited state probabilities: {probs}")
     np.testing.assert_allclose(probs, [0, 1], atol=0.05)
@@ -184,9 +185,8 @@ def test_excited_state_probabilities_pulses(platform_name, qubit):
 @pytest.mark.qpu
 @pytest.mark.parametrize("start_zero", [False, True])
 @pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
-def test_ground_state_probabilities_pulses(platform_name, qubit, start_zero):
-    backend = QibolabBackend(platform_name)
-    platform = backend.platform
+def test_ground_state_probabilities_pulses(platform, qubit, start_zero):
+    backend = QibolabBackend(platform)
     if start_zero:
         ro_pulse = platform.create_MZ_pulse(qubit, start=0)
     else:
@@ -196,7 +196,7 @@ def test_ground_state_probabilities_pulses(platform_name, qubit, start_zero):
     sequence.add(ro_pulse)
     result = platform.execute_pulse_sequence(sequence, nshots=5000)
 
-    cr = CircuitResult(backend, Circuit(platform.nqubits), result)
+    cr = CircuitResult(backend, Circuit(platform.nqubits), result, nshots=5000)
     probs = backend.circuit_result_probabilities(cr, qubits=[qubit])
     warnings.warn(f"Ground state probabilities: {probs}")
     np.testing.assert_allclose(probs, [1, 0], atol=0.05)
