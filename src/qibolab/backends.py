@@ -1,28 +1,31 @@
 import itertools
 
 import numpy as np
+from qibo import __version__ as qibo_version
 from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.config import log, raise_error
 from qibo.states import CircuitResult
 
+from qibolab import __version__ as qibolab_version
+from qibolab.platform import Platform
+from qibolab.platforms.abstract import AbstractPlatform
 from qibolab.transpilers import can_execute, transpile
 
 
 class QibolabBackend(NumpyBackend):
     def __init__(self, platform, runcard=None):
-        from qibo import __version__ as qibo_version
-
-        from qibolab import __version__
-        from qibolab.platform import Platform
-
         super().__init__()
         self.name = "qibolab"
-        self.platform = Platform(platform, runcard)
+        if isinstance(platform, AbstractPlatform):
+            self.platform = platform
+        else:
+            self.platform = Platform(platform, runcard)
+
         self.versions = {
             "qibo": qibo_version,
             "numpy": self.np.__version__,
-            "qibolab": __version__,
+            "qibolab": qibolab_version,
         }
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
@@ -128,7 +131,7 @@ class QibolabBackend(NumpyBackend):
             else:
                 outcomes, counts = np.unique(qubit_result.shots, return_counts=True)
                 probabilities.append([0, 0])
-                for i, c in zip(outcomes, counts):
+                for i, c in zip(outcomes.astype(int), counts):
                     probabilities[-1][i] = c / result.nshots
 
         # bring probabilities to the format returned by simulation
