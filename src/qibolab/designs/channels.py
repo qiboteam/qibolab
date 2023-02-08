@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import List, Optional
 
+from qibo.config import raise_error
+
 from qibolab.instruments.abstract import LocalOscillator
 
 
@@ -44,6 +46,8 @@ class Channel:
 
     @offset.setter
     def offset(self, offset):
+        if not isinstance(offset, float):
+            raise_error(TypeError, f"Attempting to set non-float offset {offset}.")
         self._offset = offset
 
     @property
@@ -55,6 +59,8 @@ class Channel:
 
     @filter.setter
     def filter(self, filter):
+        if not isinstance(filter, dict):
+            raise_error(TypeError, f"Channel filter must be dict but is {type(filter)}.")
         self._filter = filter
 
 
@@ -62,7 +68,7 @@ class Channel:
 class ChannelMap:
     """Collection of :class:`qibolab.designs.channel.Channel` objects identified by name."""
 
-    channels: dict = field(default_factory=dict)
+    _channels: dict = field(default_factory=dict)
 
     @classmethod
     def from_names(cls, *names):
@@ -74,19 +80,21 @@ class ChannelMap:
         return cls({name: Channel(name) for name in names})
 
     def __getitem__(self, name):
-        return self.channels[name]
+        return self._channels[name]
 
     def __setitem__(self, name, channel):
-        self.channels[name] = channel
+        if not isinstance(channel, Channel):
+            raise_error(TypeError, f"Cannot add channel of type {type(channel)} to ChannelMap.")
+        self._channels[name] = channel
 
     def __contains__(self, name):
-        return name in self.channels
+        return name in self._channels
 
     def __or__(self, channel_map):
-        channels = self.channels.copy()
-        channels.update(channel_map.channels)
+        channels = self._channels.copy()
+        channels.update(channel_map._channels)
         return self.__class__(channels)
 
     def __ior__(self, channel_map):
-        self.channels.update(channel_map.channels)
+        self._channels.update(channel_map._channels)
         return self

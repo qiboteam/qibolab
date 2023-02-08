@@ -1,3 +1,5 @@
+import pytest
+
 from qibolab.designs.channels import Channel, ChannelMap
 
 
@@ -8,6 +10,17 @@ def test_channel_init():
     assert channel.local_oscillator is None
 
 
+def test_channel_errors():
+    channel = Channel("L1-test")
+    channel.ports = [("c1", 0), ("c2", 1)]
+    with pytest.raises(TypeError):
+        channel.offset = "test"
+    channel.offset = 0.1
+    with pytest.raises(TypeError):
+        channel.filter = "test"
+    channel.filter = {}
+
+
 def test_channel_map_from_names():
     channels = ChannelMap.from_names("a", "b")
     assert "a" in channels
@@ -16,6 +29,14 @@ def test_channel_map_from_names():
     assert isinstance(channels["b"], Channel)
     assert channels["a"].name == "a"
     assert channels["b"].name == "b"
+
+
+def test_channel_map_setitem():
+    channels = ChannelMap()
+    with pytest.raises(TypeError):
+        channels["c"] = "test"
+    channels["c"] = Channel("c")
+    assert isinstance(channels["c"], Channel)
 
 
 def test_channel_map_union():
