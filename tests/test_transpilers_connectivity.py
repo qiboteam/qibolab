@@ -72,7 +72,7 @@ def test_fix_connectivity_unitaries(run_number, nqubits, unitary_dim, depth, mid
     """Checks that the transpiled circuit can be executed and is equivalent to original
     when using unitaries."""
 
-    from qibolab.tests.test_transpilers_unitary_decompositions import random_unitary
+    from .test_transpilers_unitary_decompositions import random_unitary
 
     # find the number of qubits for hardware circuit
     n_hardware_qubits = max(nqubits, middle_qubit + 1)

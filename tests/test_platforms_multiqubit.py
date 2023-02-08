@@ -1,4 +1,5 @@
 import os
+import pathlib
 import shutil
 
 import numpy as np
@@ -15,9 +16,11 @@ from qibolab.pulses import PulseSequence
 qubit = 0
 nshots = 1024
 
+HERE = pathlib.Path(__file__).parent
+
 
 def copy_runcard(platform_name):
-    test_runcard = qibolab_folder / "tests" / "test_platforms_multiqubit.yml"
+    test_runcard = HERE / "test_platforms_multiqubit.yml"
     if not os.path.exists(test_runcard):
         original_runcard = qibolab_folder / "runcards" / f"{platform_name}.yml"
         shutil.copyfile(str(original_runcard), test_runcard)
@@ -125,7 +128,9 @@ def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout(platform):
 
 
 @pytest.mark.qpu
-def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout_no_spacing(platform):
+def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout_no_spacing(
+    platform,
+):
     # Multiple qubit drive pulses and one readout pulse with no spacing between them
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
@@ -136,7 +141,9 @@ def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout_no_spacing
 
 
 @pytest.mark.qpu
-def test_multiqubitplatform_execute_multiple_overlaping_drive_pulses_one_readout(platform):
+def test_multiqubitplatform_execute_multiple_overlaping_drive_pulses_one_readout(
+    platform,
+):
     # Multiple overlapping qubit drive pulses and one readout pulse
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
