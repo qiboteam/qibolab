@@ -1,8 +1,9 @@
 [tool.pylint.master]
 
 output-format = "colorized"
-disable = ["E1123","E1120"]
+disable = ["E1123", "E1120"]
 
 [tool.pytest.ini_options]
-
-addopts = ' src/qibolab/tests/ --cov=qibolab --cov-report=xml -m "not qpu" --platforms qili1q_os2'
+testpaths = ['tests/']
+markers = ["qpu: mark tests that require qpu"]
+addopts = ['--cov=qibolab', '--cov-report=xml', '-m not qpu']
