@@ -23,7 +23,16 @@ class Channel:
     can send sufficiently high frequencies
     """
     _offset: Optional[float] = None
+    """DC offset that should be applied in the channel in order to shift the
+    frequency of the qubit, usually to put it in its sweetspot.
+    Relevant only for flux channels and flux-tunable transmon qubits.
+    """
     _filter: Optional[dict] = None
+    """Filter to be applied to the channel to reduce the distortions when sending
+    flux pulses. Useful for two-qubit gates.
+    Quantum Machines associate filters to channels but this may not be the case
+    in other instruments.
+    """
 
     @property
     def offset(self):
