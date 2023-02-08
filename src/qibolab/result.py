@@ -17,6 +17,24 @@ class AveragedResults:
     i: npt.NDArray[np.float64]
     q: npt.NDArray[np.float64]
 
+    def __add__(self, data):
+        i = np.append(self.i, data.i)
+        q = np.append(self.q, data.q)
+
+        new_execution_results = self.__class__(i, q)
+
+        return new_execution_results
+
+    def to_dict(self):
+        """Serialize output in dict"""
+
+        return {
+            "MSR[V]": np.sqrt(self.i**2 + self.q**2),
+            "i[V]": self.i,
+            "q[V]": self.q,
+            "phase[rad]": np.angle(self.i + 1.0j * self.q),
+        }
+
 
 @dataclass
 class ExecutionResults:
