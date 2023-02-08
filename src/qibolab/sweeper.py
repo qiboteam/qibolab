@@ -8,6 +8,8 @@ from qibolab.pulses import PulseType
 
 
 class Parameter(Enum):
+    """Enum type for sweeping parameter."""
+
     attenuation = auto()
     gain = auto()
     frequency = auto()

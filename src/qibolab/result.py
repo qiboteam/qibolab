@@ -67,8 +67,8 @@ class ExecutionResults:
         return new_execution_results
 
     @cached_property
-    def msr(self):
-        """Computes msr value."""
+    def measurement(self):
+        """Computes measurement value."""
         return np.sqrt(self.i**2 + self.q**2)
 
     @cached_property

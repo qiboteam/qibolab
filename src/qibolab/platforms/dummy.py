@@ -40,14 +40,14 @@ class DummyPlatform(AbstractPlatform):
     def to_sequence(self, sequence, gate):  # pragma: no cover
         raise_error(NotImplementedError)
 
-    def execute_pulse_sequence(self, sequence, nshots=None, wait_time=None):
-        if wait_time is None:
-            wait_time = self.settings.get("sleep_time")
+    def execute_pulse_sequence(self, sequence, nshots=None, relaxation_time=None):
+        if relaxation_time is None:
+            relaxation_time = self.settings.get("sleep_time")
 
         if nshots is None:
             nshots = self.settings["settings"]["hardware_avg"]
 
-        time.sleep(wait_time)
+        time.sleep(relaxation_time)
 
         ro_pulses = {pulse.qubit: pulse.serial for pulse in sequence.ro_pulses}
 
@@ -78,7 +78,7 @@ class DummyPlatform(AbstractPlatform):
     def get_gain(self, qubit):  # pragma: no cover
         pass
 
-    def sweep(self, sequence, *sweepers, nshots=1024, average=True, wait_time=None):
+    def sweep(self, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
         results = {}
         map_sweepers = {}
         copy_sequence = copy.deepcopy(sequence)
@@ -93,7 +93,7 @@ class DummyPlatform(AbstractPlatform):
             *sweepers,
             nshots=nshots,
             average=average,
-            wait_time=wait_time,
+            relaxation_time=relaxation_time,
             results=results,
             map_sweepers=map_sweepers
         )
@@ -106,7 +106,7 @@ class DummyPlatform(AbstractPlatform):
         *sweepers,
         nshots=1024,
         average=True,
-        wait_time=None,
+        relaxation_time=None,
         results=None,
         map_sweepers=None
     ):
@@ -145,7 +145,7 @@ class DummyPlatform(AbstractPlatform):
                     *sweepers[1:],
                     nshots=nshots,
                     average=average,
-                    wait_time=wait_time,
+                    relaxation_time=relaxation_time,
                     results=results,
                     map_sweepers=map_sweepers
                 )
