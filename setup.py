@@ -56,6 +56,14 @@ setup(
             "sphinx_copybutton",
             "furo",
         ],
+        "tests": [
+            "pytest>=7.2.0",
+            "pytest-cov>=4.0.0",
+            "pytest-env>=0.8.1",
+        ],
+        "analysis": [
+            "pylint>=2.16.0",
+        ],
         # TII system dependencies
         "tiiq": [
             "qblox-instruments==0.7.0",

@@ -103,7 +103,7 @@ def test_fSim_to_native(natives):
 
 @pytest.mark.parametrize("natives", [["CZ"], ["iSWAP"], ["CZ", "iSWAP"]])
 def test_GeneralizedfSim_to_native(natives):
-    from qibolab.tests.test_transpilers_unitary_decompositions import random_unitary
+    from .test_transpilers_unitary_decompositions import random_unitary
 
     unitary = random_unitary(1)
     gate = gates.GeneralizedfSim(0, 1, unitary, phi=0.1)
@@ -126,7 +126,7 @@ def test_TOFFOLI_to_native(natives):
 @pytest.mark.parametrize("natives", [["CZ"], ["iSWAP"], ["CZ", "iSWAP"]])
 @pytest.mark.parametrize("nqubits", [1, 2])
 def test_unitary_to_native(nqubits, natives):
-    from qibolab.tests.test_transpilers_unitary_decompositions import random_unitary
+    from .test_transpilers_unitary_decompositions import random_unitary
 
     u = random_unitary(nqubits)
     # transform to SU(2^nqubits) form

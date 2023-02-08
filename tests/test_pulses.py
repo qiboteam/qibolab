@@ -464,7 +464,6 @@ def test_pulses_pulsesequence_operators():
 
 
 def test_pulses_pulsesequence_add():
-
     p0 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(5), 10, PulseType.DRIVE, 1)
     p1 = Pulse(100, 40, 0.9, 50e6, 0, Gaussian(5), 20, PulseType.DRIVE, 2)
 
