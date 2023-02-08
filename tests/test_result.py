@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from qibolab.result import ExecRes, ExecutionResults
+from qibolab.result import ExecutionResults
 
 
 def generate_random_result(length=5):
@@ -14,18 +14,14 @@ def generate_random_result(length=5):
 
 def test_standard_constructor():
     """Testing ExecutionResults constructor"""
-    test = np.array([(1, 2, 3), (1, 2, 3), (1, 2, 3)], dtype=ExecRes)
-    ExecutionResults(test)
+    test = np.array([(1, 2, 3), (1, 2, 3)])
+    ExecutionResults(test[0], test[1])
 
 
 def test_execution_result_properties():
     """Testing ExecutionResults properties"""
     results = generate_random_result(5)
-    np.testing.assert_equal(results.array.i, results.i)
-    np.testing.assert_equal(results.array.q, results.q)
-    np.testing.assert_equal(results.array.shots, results.shots)
-    np.testing.assert_equal(np.sqrt(results.i**2 + results.q**2), results.msr)
-    np.testing.assert_equal(np.angle(results.i + 1.0j * results.q), results.phase)
+    np.testing.assert_equal(np.sqrt(results.i**2 + results.q**2), results.measurement)
 
 
 @pytest.mark.parametrize("state", [0, 1])
@@ -47,7 +43,7 @@ def test_to_dict(average):
     output = results.to_dict(average=average)
     if not average:
         target_dict = {
-            "MSR[V]": results.msr.ravel(),
+            "MSR[V]": results.measurement.ravel(),
             "i[V]": results.i.ravel(),
             "q[V]": results.q.ravel(),
             "phase[rad]": results.phase.ravel(),
@@ -57,7 +53,7 @@ def test_to_dict(average):
             np.testing.assert_equal(output[key], target_dict[key])
     else:
         target_dict = {
-            "MSR[V]": results.msr.mean(),
+            "MSR[V]": results.measurement.mean(),
             "i[V]": results.i.mean(),
             "q[V]": results.q.mean(),
             "phase[rad]": results.phase.mean(),

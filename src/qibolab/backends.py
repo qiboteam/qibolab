@@ -19,8 +19,6 @@ class QibolabBackend(NumpyBackend):
         super().__init__()
         self.name = "qibolab"
         self.platform = Platform(platform, runcard)
-        self.platform.connect()
-        self.platform.setup()
         self.versions = {
             "qibo": qibo_version,
             "numpy": self.np.__version__,
@@ -57,12 +55,13 @@ class QibolabBackend(NumpyBackend):
                 "Hardware backend does not support initial state in circuits.",
             )
 
-        if can_execute(circuit, verbose=False):
+        two_qubit_natives = self.platform.two_qubit_natives
+        if can_execute(circuit, two_qubit_natives, verbose=False):
             native_circuit = circuit
         else:
             # Transform a circuit into proper connectivity and native gates
             log.info("Transpiling circuit.")
-            native_circuit, hardware_qubits = transpile(circuit)
+            native_circuit, _ = transpile(circuit, two_qubit_natives)
             if check_transpiled:
                 backend = NumpyBackend()
                 target_state = backend.execute_circuit(circuit).state()
@@ -74,20 +73,26 @@ class QibolabBackend(NumpyBackend):
         # Transpile the native circuit into a sequence of pulses ``PulseSequence``
         sequence = self.platform.transpile(native_circuit)
 
+        if not self.platform.is_connected:
+            self.platform.connect()
+            self.platform.setup()
+
         # Execute the pulse sequence on the platform
         self.platform.start()
-        readout = self.platform(sequence, nshots)
+        readout = self.platform.execute_pulse_sequence(sequence, nshots)
         self.platform.stop()
         result = CircuitResult(self, native_circuit, readout, nshots)
 
-        shots = readout.get("demodulated_integrated_classified_binned")
         # Register measurement outcomes
-        if shots is not None:
-            for gate in native_circuit.queue:
-                if isinstance(gate, gates.M):
-                    samples = np.array([shots.get(pulse) for pulse in gate.pulses], dtype="int32")
-                    gate.result.backend = self
-                    gate.result.register_samples(samples.T)
+        for gate in native_circuit.queue:
+            if isinstance(gate, gates.M):
+                samples = []
+                for serial in gate.pulses:
+                    shots = readout[serial].shots
+                    if shots is not None:
+                        samples.append(shots)
+                gate.result.backend = self
+                gate.result.register_samples(np.array(samples).T)
         return result
 
     def circuit_result_tensor(self, result):
@@ -109,16 +114,22 @@ class QibolabBackend(NumpyBackend):
         # basic classification
         probabilities = []
         for qubit in qubits:
-            mean_state0: complex = complex(self.platform.characterization["single_qubit"][qubit]["mean_gnd_states"])
-            mean_state1: complex = complex(self.platform.characterization["single_qubit"][qubit]["mean_exc_states"])
-            i = result.execution_result[qubit][2]  # execution_result[qubit] provides the latest
-            q = result.execution_result[qubit][3]  # acquisition data for the corresponding qubit
-            measurement: complex = complex(i, q)
-            d0 = abs(measurement - mean_state0)
-            d1 = abs(measurement - mean_state1)
-            d01 = abs(mean_state0 - mean_state1)
-            p = (d1**2 + d01**2 - d0**2) / 2 / d01**2
-            probabilities.append([p, 1 - p])
+            # execution_result[qubit] provides the latest acquisition data for the corresponding qubit
+            qubit_result = result.execution_result[qubit]
+            if qubit_result.shots is None:
+                mean_state0 = complex(self.platform.qubits[qubit].characterization.mean_gnd_states)
+                mean_state1 = complex(self.platform.qubits[qubit].characterization.mean_exc_states)
+                measurement = complex(qubit_result.I, qubit_result.Q)
+                d0 = abs(measurement - mean_state0)
+                d1 = abs(measurement - mean_state1)
+                d01 = abs(mean_state0 - mean_state1)
+                p = (d1**2 + d01**2 - d0**2) / 2 / d01**2
+                probabilities.append([p, 1 - p])
+            else:
+                outcomes, counts = np.unique(qubit_result.shots, return_counts=True)
+                probabilities.append([0, 0])
+                for i, c in zip(outcomes, counts):
+                    probabilities[-1][i] = c / result.nshots
 
         # bring probabilities to the format returned by simulation
         return np.array(

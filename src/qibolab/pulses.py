@@ -648,7 +648,7 @@ class Pulse:
             raise TypeError(
                 f"duration argument type should be intSymbolicExpression or int, got {type(value).__name__}"
             )
-        elif not value > 0:
+        elif not value >= 0:
             raise ValueError(f"duration argument must be >= 0, got {value}")
         if isinstance(value, se_int):
             self._duration = se_int(value.symbol)["_p" + str(self._id) + "_duration"]

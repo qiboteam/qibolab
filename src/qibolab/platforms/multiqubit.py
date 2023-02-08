@@ -1,7 +1,8 @@
 from copy import copy
 
 import numpy as np
-from qibo.config import raise_error
+import yaml
+from qibo.config import log, raise_error
 
 from qibolab.platforms.abstract import AbstractPlatform
 from qibolab.pulses import PulseSequence
@@ -9,6 +10,41 @@ from qibolab.result import ExecutionResults
 
 
 class MultiqubitPlatform(AbstractPlatform):
+    def __init__(self, name, runcard):
+        super().__init__(name, runcard)
+        self.instruments = {}
+        # Instantiate instruments
+        for name in self.settings["instruments"]:
+            lib = self.settings["instruments"][name]["lib"]
+            i_class = self.settings["instruments"][name]["class"]
+            address = self.settings["instruments"][name]["address"]
+            from importlib import import_module
+
+            InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
+            instance = InstrumentClass(name, address)
+            self.instruments[name] = instance
+
+        # Generate qubit_instrument_map from qubit_channel_map and the instruments' channel_port_maps
+        self.qubit_instrument_map = {}
+        for qubit in self.qubit_channel_map:
+            self.qubit_instrument_map[qubit] = [None, None, None, None]
+            for name in self.instruments:
+                if "channel_port_map" in self.settings["instruments"][name]["settings"]:
+                    for channel in self.settings["instruments"][name]["settings"]["channel_port_map"]:
+                        if channel in self.qubit_channel_map[qubit]:
+                            self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
+                if "s4g_modules" in self.settings["instruments"][name]["settings"]:
+                    for channel in self.settings["instruments"][name]["settings"]["s4g_modules"]:
+                        if channel in self.qubit_channel_map[qubit]:
+                            self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
+
+    def reload_settings(self):
+        super().reload_settings()
+        self.characterization = self.settings["characterization"]
+        self.qubit_channel_map = self.settings["qubit_channel_map"]
+        self.hardware_avg = self.settings["settings"]["hardware_avg"]
+        self.repetition_duration = self.settings["settings"]["repetition_duration"]
+
     def set_lo_drive_frequency(self, qubit, freq):
         self.qd_port[qubit].lo_frequency = freq
 
@@ -29,6 +65,20 @@ class MultiqubitPlatform(AbstractPlatform):
 
     def set_current(self, qubit, current):
         self.qb_port[qubit].current = current
+
+    def connect(self):
+        """Connects to lab instruments using the details specified in the calibration settings."""
+        if not self.is_connected:
+            try:
+                for name in self.instruments:
+                    log.info(f"Connecting to {self.name} instrument {name}.")
+                    self.instruments[name].connect()
+                self.is_connected = True
+            except Exception as exception:
+                raise_error(
+                    RuntimeError,
+                    "Cannot establish connection to " f"{self.name} instruments. " f"Error captured: '{exception}'",
+                )
 
     def setup(self):
         if not self.is_connected:
@@ -81,6 +131,22 @@ class MultiqubitPlatform(AbstractPlatform):
             if not self.qubit_instrument_map[qubit][3] is None:
                 self.qbm[qubit] = self.instruments[self.qubit_instrument_map[qubit][3]]
                 self.qb_port[qubit] = self.qbm[qubit].dacs[self.qubit_channel_map[qubit][3]]
+
+    def start(self):
+        if self.is_connected:
+            for name in self.instruments:
+                self.instruments[name].start()
+
+    def stop(self):
+        if self.is_connected:
+            for name in self.instruments:
+                self.instruments[name].stop()
+
+    def disconnect(self):
+        if self.is_connected:
+            for name in self.instruments:
+                self.instruments[name].disconnect()
+            self.is_connected = False
 
     def execute_pulse_sequence(self, sequence: PulseSequence, nshots=None):
         if not self.is_connected:
