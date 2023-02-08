@@ -1,9 +1,7 @@
 """Tests ``pulses.py``."""
 import os
-import shutil
-
+import pathlib
 import numpy as np
-import pytest
 
 from qibolab.paths import qibolab_folder
 from qibolab.pulses import (
@@ -26,6 +24,9 @@ from qibolab.pulses import (
 from qibolab.symbolic import intSymbolicExpression as se_int
 
 
+HERE = pathlib.Path(__file__).parent
+
+
 def test_pulses_plot_functions():
     p0 = Pulse(0, 40, 0.9, 0, 0, Rectangular(), 0, PulseType.FLUX, 0)
     p1 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(5), 0, PulseType.DRIVE, 2)
@@ -37,7 +38,7 @@ def test_pulses_plot_functions():
     ps = p0 + p1 + p2 + p3 + p4 + p5 + p6
     wf = p0.modulated_waveform_i
 
-    plot_file = qibolab_folder / "tests" / "test_plot.png"
+    plot_file = HERE / "test_plot.png"
 
     wf.plot(plot_file)
     assert os.path.exists(plot_file)
