@@ -232,9 +232,6 @@ class Gaussian(PulseShape):
         """The envelope waveform of the i component of the pulse."""
 
         if self.pulse:
-            # num_samples = int(self.pulse.duration)
-            # if PulseShape.SAMPLING_RATE != 1e9:
-            #    num_samples = int(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
             num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
             x = np.arange(0, num_samples, 1)
             waveform = Waveform(
