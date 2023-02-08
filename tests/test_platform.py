@@ -1,13 +1,12 @@
 import pytest
 
 from qibolab import Platform
+from qibolab.platforms.abstract import AbstractPlatform
 
 
 def test_platform_multiqubit(platform_name):
-    from qibolab.platforms.multiqubit import MultiqubitPlatform
-
     platform = Platform(platform_name)
-    assert isinstance(platform, MultiqubitPlatform)
+    assert isinstance(platform, AbstractPlatform)
 
 
 def test_platform():

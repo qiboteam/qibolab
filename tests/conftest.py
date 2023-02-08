@@ -6,7 +6,7 @@ def pytest_addoption(parser):
         "--platforms",
         type=str,
         action="store",
-        default="qili1q_os2",
+        default="qili1q_os2,qw5q_gold",
         help="qpu platforms to test on",
     )
 

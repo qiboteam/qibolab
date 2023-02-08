@@ -1,5 +1,6 @@
 import os
 import pathlib
+import pickle
 import shutil
 import warnings
 
@@ -12,6 +13,7 @@ from qibo.states import CircuitResult
 from qibolab.backends import QibolabBackend
 from qibolab.paths import qibolab_folder
 from qibolab.platform import Platform
+from qibolab.platforms.multiqubit import MultiqubitPlatform
 from qibolab.pulses import PulseSequence
 
 qubit = 0
@@ -33,10 +35,12 @@ def platform(platform_name):
     os.remove(test_runcard)
 
 
-def test_abstractplatform_init(platform_name):
+def test_multiqubitplatform_init(platform_name):
     with open(qibolab_folder / "runcards" / f"{platform_name}.yml") as file:
         settings = yaml.safe_load(file)
     platform = Platform(platform_name)
+    if not isinstance(platform, MultiqubitPlatform):
+        pytest.skip(f"Skipping MultiqubitPlatform specific test for {platform_name}.")
     assert platform.name == platform_name
     assert platform.is_connected == False
     assert len(platform.instruments) == len(settings["instruments"])
@@ -49,8 +53,6 @@ def test_abstractplatform_init(platform_name):
 
 
 def test_abstractplatform_pickle(platform_name):
-    import pickle
-
     platform = Platform(platform_name)
     serial = pickle.dumps(platform)
     new_platform = pickle.loads(serial)
