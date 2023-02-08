@@ -35,10 +35,12 @@ def platform(platform_name):
     os.remove(test_runcard)
 
 
-def test_abstractplatform_init(platform_name):
+def test_multiqubitplatform_init(platform_name):
     with open(qibolab_folder / "runcards" / f"{platform_name}.yml") as file:
         settings = yaml.safe_load(file)
     platform = Platform(platform_name)
+    if not isinstance(platform, MultiqubitPlatform):
+        pytest.skip(f"Skipping MultiqubitPlatform specific test for {platform_name}.")
     assert platform.name == platform_name
     assert platform.is_connected == False
     assert len(platform.instruments) == len(settings["instruments"])
