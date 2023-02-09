@@ -108,29 +108,29 @@ class DummyPlatform(AbstractPlatform):
         )
         return results
 
-    def set_attenuation(self, qubit, att):  # pragma: no cover
-        pass
+    def set_attenuation(self, qubit, att):
+        """For DummyPlatform this method is empty given that
+        this platform is not connected to instruments"""
 
-    def set_current(self, qubit, current):  # pragma: no cover
-        pass
+    def set_current(self, qubit, current):
+        """For DummyPlatform this method is empty given that
+        this platform is not connected to instruments."""
 
-        if sweeper.qubits is not None:
-            for qubit in sweeper.qubits:
-                if sweeper.parameter is Parameter.attenuation:
-                    self.set_attenuation(qubit, value)
-                elif sweeper.parameter is Parameter.gain:
-                    self.set_gain(qubit, value)
-                elif sweeper.parameter is Parameter.bias:
-                    self.set_bias(qubit, value)
+    def set_gain(self, qubit, gain):
+        """For DummyPlatform this method is empty given that
+        this platform is not connected to instruments."""
 
-    def get_attenuation(self, qubit):  # pragma: no cover
-        pass
+    def get_attenuation(self, qubit):
+        """For DummyPlatform this method is empty given that
+        this platform is not connected to instruments."""
 
-    def get_current(self, qubit):  # pragma: no cover
-        pass
+    def get_current(self, qubit):
+        """For DummyPlatform this method is empty given that
+        this platform is not connected to instruments."""
 
-    def get_gain(self, qubit):  # pragma: no cover
-        pass
+    def get_gain(self, qubit):
+        """For DummyPlatform this method is empty given that
+        this platform is not connected to instruments."""
 
     def sweep(self, sequence, *sweepers, nshots=1024, average=True, wait_time=None):
         results = {}
