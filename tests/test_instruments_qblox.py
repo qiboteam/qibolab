@@ -6,11 +6,11 @@ from qibolab.instruments.qblox import Cluster, ClusterQCM_RF, ClusterQRM_RF
 from qibolab.paths import user_folder
 from qibolab.pulses import Pulse, PulseSequence, ReadoutPulse
 
-from .utils import InstrumentsDict, load_from_platform
+from .conftest import load_from_platform
 
 INSTRUMENTS_LIST = ["Cluster", "ClusterQRM_RF", "ClusterQCM_RF"]
 
-instruments = InstrumentsDict()
+instruments = {}
 instruments_settings = {}
 
 
