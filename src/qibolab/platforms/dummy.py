@@ -60,23 +60,29 @@ class DummyPlatform(AbstractPlatform):
             results[serial] = copy.copy(results[qubit])
         return results
 
-    def set_attenuation(self, qubit, att):  # pragma: no cover
-        pass
+    def set_attenuation(self, qubit, att):
+        """For DummyPlatform this method is empty given that
+        this platform is not connected to instruments"""
 
-    def set_current(self, qubit, current):  # pragma: no cover
-        pass
+    def set_current(self, qubit, current):
+        """For DummyPlatform this method is empty given that
+        this platform is not connected to instruments."""
 
-    def set_gain(self, qubit, gain):  # pragma: no cover
-        pass
+    def set_gain(self, qubit, gain):
+        """For DummyPlatform this method is empty given that
+        this platform is not connected to instruments."""
 
-    def get_attenuation(self, qubit):  # pragma: no cover
-        pass
+    def get_attenuation(self, qubit):
+        """For DummyPlatform this method is empty given that
+        this platform is not connected to instruments."""
 
-    def get_current(self, qubit):  # pragma: no cover
-        pass
+    def get_current(self, qubit):
+        """For DummyPlatform this method is empty given that
+        this platform is not connected to instruments."""
 
-    def get_gain(self, qubit):  # pragma: no cover
-        pass
+    def get_gain(self, qubit):
+        """For DummyPlatform this method is empty given that
+        this platform is not connected to instruments."""
 
     def sweep(self, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
         results = {}
