@@ -59,4 +59,4 @@ jobs:
         pip install .[tiiq]
     - name: Test ${{ matrix.platform }}
       run: |
-        srun -p ${{ matrix.platform }} pytest src/qibolab --pyargs qibolab -m qpu --platform ${{ matrix.platform }} -rx
+        srun -p ${{ matrix.platform }} pytest src/qibolab -m qpu --no-cov --platforms ${{ matrix.platform }}
