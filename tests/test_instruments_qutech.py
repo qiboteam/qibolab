@@ -17,8 +17,9 @@ def test_instruments_qutech_init(instrument):
 @pytest.mark.qpu
 @pytest.mark.parametrize("name", ["SPI"])
 def test_instruments_qutech_setup(platform_name, name):
-    settings = Platform(platform_name).settings
-    instrument, instrument_settings = load_from_platform(settings, name)
+    platform = Platform(platform_name)
+    settings = platform.settings
+    instrument, instrument_settings = load_from_platform(platform, name)
     instrument.setup(**settings["settings"], **instrument_settings)
 
 

@@ -17,8 +17,9 @@ def test_instruments_rohde_schwarz_init(instrument):
 @pytest.mark.qpu
 @pytest.mark.parametrize("instrument_name", ["SGS100A"])
 def test_instruments_rohde_schwarz_setup(platform_name, instrument_name):
-    settings = Platform(platform_name).settings
-    instrument, instrument_settings = load_from_platform(settings, instrument_name)
+    platform = Platform(platform_name)
+    settings = platform.settings
+    instrument, instrument_settings = load_from_platform(platform, instrument_name)
     instrument.connect()
     instrument.setup(**settings["settings"], **instrument_settings)
     for parameter in instrument_settings:

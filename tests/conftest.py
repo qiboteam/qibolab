@@ -16,11 +16,14 @@ def pytest_addoption(parser):
     )
 
 
-def load_from_platform(settings, name):
+def load_from_platform(platform, name):
     """Loads instrument from platform, if it is available.
 
     Useful only for testing :class:`qibolab.platforms.multiqubit.MultiqubitPlatform`.
     """
+    if not isinstance(platform, MultiqubitPlatform):
+        pytest.skip(f"Skipping MultiqubitPlatform test for {platform}.")
+    settings = platform.settings
     for instrument in settings["instruments"].values():
         if instrument["class"] == name:
             lib = instrument["lib"]
@@ -33,8 +36,8 @@ def load_from_platform(settings, name):
 
 @pytest.fixture(scope="module")
 def instrument(request):
-    settings = Platform(request.param[0]).settings
-    inst, _ = load_from_platform(settings, request.param[1])
+    platform = Platform(request.param[0])
+    inst, _ = load_from_platform(platform, request.param[1])
     inst.connect()
     yield inst
     inst.disconnect()
@@ -43,6 +46,11 @@ def instrument(request):
 def pytest_generate_tests(metafunc):
     platforms = metafunc.config.option.platforms
     platforms = [] if platforms is None else platforms.split(",")
+
+    if metafunc.module.__name__ == "tests.test_instruments_qblox":
+        for platform_name in platforms:
+            if not isinstance(Platform(platform_name), MultiqubitPlatform):
+                pytest.skip("Skipping qblox tests because no platform is available.")
 
     if "instrument" in metafunc.fixturenames:
         if metafunc.module.__name__ == "tests.test_instruments_rohde_schwarz":
