@@ -120,8 +120,8 @@ class QibolabBackend(NumpyBackend):
             # execution_result[qubit] provides the latest acquisition data for the corresponding qubit
             qubit_result = result.execution_result[qubit]
             if qubit_result.shots is None:
-                mean_state0 = complex(self.platform.qubits[qubit].characterization.mean_gnd_states)
-                mean_state1 = complex(self.platform.qubits[qubit].characterization.mean_exc_states)
+                mean_state0 = complex(self.platform.qubits[qubit].mean_gnd_states)
+                mean_state1 = complex(self.platform.qubits[qubit].mean_exc_states)
                 measurement = complex(qubit_result.I, qubit_result.Q)
                 d0 = abs(measurement - mean_state0)
                 d1 = abs(measurement - mean_state1)

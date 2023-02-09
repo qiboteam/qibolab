@@ -51,8 +51,15 @@ def pytest_generate_tests(metafunc):
 
     elif "platform_name" in metafunc.fixturenames:
         if "qubit" in metafunc.fixturenames:
-            # TODO: Do backend initialization here instead of every test (currently does not work)
-            qubits = [(platform_name, q) for platform_name in platforms for q in Platform(platform_name).qubits]
+            qubits = []
+            for platform_name in platforms:
+                if platform_name == "qw5q_gold":
+                    # TODO: Find a better way to handle this instead of hardcoding
+                    # exclude witness qubit 5 because it is not connected to drive channel
+                    qubits.extend((platform_name, q) for q in range(5))
+                else:
+                    qubits.extend((platform_name, q) for q in Platform(platform_name).qubits)
+
             metafunc.parametrize("platform_name,qubit", qubits)
         else:
             metafunc.parametrize("platform_name", platforms)

@@ -166,7 +166,7 @@ characterization:
             sweetspot: 0.0
             filter: {}
             # parameters for single shot classification
-            threshold: null
+            threshold: 0.0
             iq_angle: 0.0
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
@@ -269,7 +269,7 @@ characterization:
             sweetspot: 0.0
             filter: {}
             # parameters for single shot classification
-            threshold: null
+            threshold: 0.0
             iq_angle: 0.0
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
