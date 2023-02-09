@@ -17,9 +17,10 @@ instruments_settings = {}
 @pytest.mark.qpu
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
 def test_instruments_qublox_init(platform_name, name):
-    settings = Platform(platform_name).settings
+    platform = Platform(platform_name)
+    settings = platform.settings
     # Instantiate instrument
-    instance, instr_settings = load_from_platform(settings, name)
+    instance, instr_settings = load_from_platform(Platform(platform_name), name)
     instruments[name] = instance
     instruments_settings[name] = instr_settings
     assert instance.name == name
