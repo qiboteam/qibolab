@@ -73,7 +73,9 @@ def test_ground_state_probabilities_circuit(backend):
     result = backend.execute_circuit(circuit, nshots=5000)
     probs = result.probabilities()
     warnings.warn(f"Ground state probabilities: {probs}")
-    np.testing.assert_allclose(probs, [1, 0], atol=0.05)
+    target_probs = np.zeros(2**nqubits)
+    target_probs[0] = 1
+    np.testing.assert_allclose(probs, target_probs, atol=0.05)
 
 
 @pytest.mark.qpu
@@ -86,7 +88,9 @@ def test_excited_state_probabilities_circuit(backend):
     result = backend.execute_circuit(circuit, nshots=5000)
     probs = result.probabilities()
     warnings.warn(f"Excited state probabilities: {probs}")
-    np.testing.assert_allclose(probs, [0, 1], atol=0.05)
+    target_probs = np.zeros(2**nqubits)
+    target_probs[-1] = 1
+    np.testing.assert_allclose(probs, target_probs, atol=0.05)
 
 
 # TODO: test other platforms (qili, icarusq)
