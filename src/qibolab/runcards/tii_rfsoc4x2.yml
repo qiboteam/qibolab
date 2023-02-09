@@ -1,0 +1,63 @@
+nqubits: 1
+description: TII's 1-qubit device controlled with the RFSoC4x2 (fpga board).
+
+settings:
+    hardware_avg: 1 #reps in QICK
+    repetition_duration: 200_000
+    sampling_rate: 9_830_400_000 # DAC sampling rate
+
+qubits: [0]
+
+topology: # qubit - qubit connections
+-   [1]
+channels: [L3-18_qd, L3-18_ro, L2-2]
+
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux, QubitBias]
+    0: [L3-18_ro, L3-18_qd, null, null]
+
+instruments:
+    tii_rfsoc4x2:
+        lib: tii
+        class: tii_rfsoc4x2
+        address: 192.168.2.72:6000
+        roles: [control, readout]
+        settings:
+            ports:
+                o0:
+                    channel: 0
+                o1:
+                    channel: 1
+
+                i0:
+                    channel: 0
+            resonator_phase: 0 #
+            adc_trig_offset: 200 # [Clock ticks]
+            threshold: 0
+            relax_delay: 500 #[Clock ticks]
+            #Experiment
+            max_gain: 32000
+            expt: 1
+            hardware_avg: 1024 #reps in QICK
+        experiment:
+            delay_before_readout: 50 # [ns]
+            rabi_length: 0.01
+
+native_gates:
+    single_qubit:
+        0:
+            RX: {duration: 40, amplitude: 0.21, frequency: 5442000000, shape: Gaussian(4),
+                type: qd, start: 0, phase: 0}
+            MZ: {duration: 3000, amplitude: 0.0156, frequency: 7371530000, shape: Rectangular(),
+                type: ro, start: 0, phase: 0}
+
+characterization:
+    single_qubit:
+        0:
+            readout_frequency: 7.3714e+9
+            resonator_polycoef_flux: []
+            drive_frequency: 5.44045e+9 # 4.41e+9
+            T1: 0.
+            T2: 0.
+            mean_gnd_states: (0+0j)
+            mean_exc_states: (0+0j)
+            sweetspot: 0
