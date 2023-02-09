@@ -1,62 +1,35 @@
 import pytest
-import yaml
 
-from qibolab.instruments.qutech import SPI
-from qibolab.paths import qibolab_folder, user_folder
+from qibolab import Platform
+from qibolab.paths import user_folder
 
-INSTRUMENTS_LIST = ["SPI"]
-instruments = {}
+from .conftest import load_from_platform
 
 
 # To test --> name = SpiRack
 @pytest.mark.qpu
-@pytest.mark.parametrize("name", INSTRUMENTS_LIST)
-def test_instruments_qutech_init(name):
-    test_runcard = qibolab_folder / "tests" / "test_instruments_qutech.yml"
-    with open(test_runcard) as file:
-        settings = yaml.safe_load(file)
-
-    # Instantiate instrument
-    lib = settings["instruments"][name]["lib"]
-    i_class = settings["instruments"][name]["class"]
-    address = settings["instruments"][name]["address"]
-    from importlib import import_module
-
-    InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
-    instance = InstrumentClass(name, address)
-    instruments[name] = instance
-    assert instance.name == name
-    assert instance.address == address
-    assert instance.is_connected == False
-    assert instance.device == None
-    assert instance.signature == f"{name}@{address}"
-    assert instance.data_folder == user_folder / "instruments" / "data" / instance.tmp_folder.name.split("/")[-1]
+def test_instruments_qutech_init(instrument):
+    assert instrument.is_connected == True
+    assert instrument.device == None
+    assert instrument.data_folder == user_folder / "instruments" / "data" / instrument.tmp_folder.name.split("/")[-1]
 
 
 @pytest.mark.qpu
-@pytest.mark.parametrize("name", INSTRUMENTS_LIST)
-def test_instruments_qutech_connect(name):
-    instruments[name].connect()
+@pytest.mark.parametrize("name", ["SPI"])
+def test_instruments_qutech_setup(platform_name, name):
+    platform = Platform(platform_name)
+    settings = platform.settings
+    instrument, instrument_settings = load_from_platform(platform, name)
+    instrument.setup(**settings["settings"], **instrument_settings)
 
 
 @pytest.mark.qpu
-@pytest.mark.parametrize("name", INSTRUMENTS_LIST)
-def test_instruments_qutech_setup(name):
-    test_runcard = qibolab_folder / "tests" / "test_instruments_qutech.yml"
-    with open(test_runcard) as file:
-        settings = yaml.safe_load(file)
-    instruments[name].setup(**settings["settings"], **settings["instruments"][name]["settings"])
+def test_instruments_qutech_disconnect(instrument):
+    instrument.disconnect()
+    assert instrument.is_connected == False
 
 
 @pytest.mark.qpu
-@pytest.mark.parametrize("name", INSTRUMENTS_LIST)
-def test_instruments_qutech_disconnect(name):
-    instruments[name].disconnect()
-    assert instruments[name].is_connected == False
-
-
-@pytest.mark.qpu
-@pytest.mark.parametrize("name", INSTRUMENTS_LIST)
-def test_instruments_qutech_close(name):
-    instruments[name].close()
-    assert instruments[name].is_connected == False
+def test_instruments_qutech_close(instrument):
+    instrument.close()
+    assert instrument.is_connected == False
