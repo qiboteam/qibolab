@@ -16,14 +16,11 @@ def pytest_addoption(parser):
     )
 
 
-def load_from_platform(platform, name):
+def load_from_platform(settings, name):
     """Loads instrument from platform, if it is available.
 
     Useful only for testing :class:`qibolab.platforms.multiqubit.MultiqubitPlatform`.
     """
-    if not isinstance(platform, MultiqubitPlatform):
-        pytest.skip(f"Skipping MultiqubitPlatform test for {platform}.")
-    settings = platform.settings
     for instrument in settings["instruments"].values():
         if instrument["class"] == name:
             lib = instrument["lib"]
@@ -36,8 +33,8 @@ def load_from_platform(platform, name):
 
 @pytest.fixture(scope="module")
 def instrument(request):
-    platform = Platform(request.param[0])
-    inst, _ = load_from_platform(platform, request.param[1])
+    settings = Platform(request.param[0]).settings
+    inst, _ = load_from_platform(settings, request.param[1])
     inst.connect()
     yield inst
     inst.disconnect()
@@ -47,19 +44,11 @@ def pytest_generate_tests(metafunc):
     platforms = metafunc.config.option.platforms
     platforms = [] if platforms is None else platforms.split(",")
 
-    if metafunc.module.__name__ == "tests.test_instruments_qblox":
-        for platform_name in platforms:
-            if not isinstance(Platform(platform_name), MultiqubitPlatform):
-                pytest.skip("Skipping qblox tests because no platform is available.")
-
     if "instrument" in metafunc.fixturenames:
         if metafunc.module.__name__ == "tests.test_instruments_rohde_schwarz":
             metafunc.parametrize("instrument", [(p, "SGS100A") for p in platforms], indirect=True)
         if metafunc.module.__name__ == "tests.test_instruments_qutech":
             metafunc.parametrize("instrument", [(p, "SPI") for p in platforms], indirect=True)
-
-    elif "backend" in metafunc.fixturenames:
-        metafunc.parametrize("backend", platforms, indirect=True)
 
     elif "platform_name" in metafunc.fixturenames:
         if "qubit" in metafunc.fixturenames:
