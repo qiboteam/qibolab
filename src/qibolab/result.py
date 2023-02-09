@@ -68,8 +68,8 @@ class ExecutionResults:
         return new_execution_results
 
     @cached_property
-    def msr(self):
-        """Computes msr value."""
+    def measurement(self):
+        """Resonator signal voltage mesurement (MSR) in volts."""
         return np.sqrt(self.i**2 + self.q**2)
 
     @cached_property

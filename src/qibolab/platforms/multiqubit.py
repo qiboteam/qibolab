@@ -80,10 +80,10 @@ class MultiqubitPlatform(AbstractPlatform):
     def get_attenuation(self, qubit):
         return self.ro_port[qubit].attenuation
 
-    def get_current(self, qubit):  # pragma: no cover
+    def get_current(self, qubit):
         return self.qb_port[qubit].current
 
-    def get_gain(self, qubit):  # pragma: no cover
+    def get_gain(self, qubit):
         return self.qd_port[qubit].gain
 
     def setup(self):
