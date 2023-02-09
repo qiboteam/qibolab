@@ -58,6 +58,9 @@ def pytest_generate_tests(metafunc):
         if metafunc.module.__name__ == "tests.test_instruments_qutech":
             metafunc.parametrize("instrument", [(p, "SPI") for p in platforms], indirect=True)
 
+    elif "backend" in metafunc.fixturenames:
+        metafunc.parametrize("backend", platforms, indirect=True)
+
     elif "platform_name" in metafunc.fixturenames:
         if "qubit" in metafunc.fixturenames:
             qubits = []
