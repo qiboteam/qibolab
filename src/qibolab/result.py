@@ -122,4 +122,4 @@ class ExecutionResults:
         }
 
     def __len__(self):
-        return
+        return len(self.i)
