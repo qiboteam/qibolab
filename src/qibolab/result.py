@@ -5,7 +5,6 @@ from typing import Optional
 
 import numpy as np
 import numpy.typing as npt
-from scipy import signal
 
 ExecRes = np.dtype([("i", np.float64), ("q", np.float64)])
 
