@@ -5,7 +5,7 @@ import yaml
 from qibo.config import log, raise_error
 
 from qibolab.platforms.abstract import AbstractPlatform
-from qibolab.pulses import PulseSequence, ReadoutPulse
+from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import ExecutionResults
 from qibolab.sweeper import Parameter
 
@@ -64,13 +64,13 @@ class MultiqubitPlatform(AbstractPlatform):
     def set_gain(self, qubit, gain):
         self.qd_port[qubit].gain = gain
 
-    def set_current(self, qubit, current):
-        self.qb_port[qubit].current = current
+    def set_bias(self, qubit, bias):
+        self.qb_port[qubit].current = bias
 
     def get_attenuation(self, qubit):
         return self.ro_port[qubit].attenuation
 
-    def get_current(self, qubit):
+    def get_bias(self, qubit):
         return self.qb_port[qubit].current
 
     def get_gain(self, qubit):
@@ -345,8 +345,8 @@ class MultiqubitPlatform(AbstractPlatform):
                 original_value[pulse] = self.get_attenuation(pulses[pulse].qubit)
             elif sweeper.parameter is Parameter.gain:
                 original_value[pulse] = self.get_gain(pulses[pulse].qubit)
-            elif sweeper.parameter is Parameter.current:
-                original_value[pulse] = self.get_current(pulses[pulse].qubit)
+            elif sweeper.parameter is Parameter.bias:
+                original_value[pulse] = self.get_bias(pulses[pulse].qubit)
             else:
                 original_value[pulse] = getattr(pulses[pulse], sweeper.parameter.name)
 
@@ -360,8 +360,8 @@ class MultiqubitPlatform(AbstractPlatform):
                 self.set_attenuation(pulses[pulse].qubit, original_value[pulse])
             elif sweeper.parameter is Parameter.gain:
                 self.set_gain(pulses[pulse].qubit, original_value[pulse])
-            elif sweeper.parameter is Parameter.current:
-                self.set_current(pulses[pulse].qubit, original_value[pulse])
+            elif sweeper.parameter is Parameter.bias:
+                self.set_bias(pulses[pulse].qubit, original_value[pulse])
             else:
                 setattr(pulses[pulse], sweeper.parameter.name, original_value[pulse])
 
@@ -372,23 +372,26 @@ class MultiqubitPlatform(AbstractPlatform):
         pulses = sweeper_pulses[sweeper.parameter]
         for pulse in pulses:
             if sweeper.parameter is Parameter.frequency:
-                if isinstance(pulses[pulse], ReadoutPulse):
+                if pulses[pulse].type is PulseType.READOUT:
                     value += self.qubits[pulses[pulse].qubit].readout_frequency
                 else:
                     value += self.qubits[pulses[pulse].qubit].drive_frequency
                 setattr(pulses[pulse], sweeper.parameter.name, value)
             elif sweeper.parameter is Parameter.amplitude:
-                current_amplitude = getattr(pulses[pulse], sweeper.parameter.name)
-                setattr(pulses[pulse], sweeper.parameter.name, int(current_amplitude * value))
+                if pulses[pulse].type is PulseType.READOUT:
+                    current_amplitude = self.native_gates["single_qubit"][pulses[pulse].qubit]["MZ"]["amplitude"]
+                else:
+                    current_amplitude = self.native_gates["single_qubit"][pulses[pulse].qubit]["RX"]["amplitude"]
+                setattr(pulses[pulse], sweeper.parameter.name, float(current_amplitude * value))
             elif sweeper.parameter is Parameter.attenuation:
                 self.set_attenuation(pulses[pulse].qubit, value)
             elif sweeper.parameter is Parameter.gain:
                 self.set_gain(pulses[pulse].qubit, value)
-            elif sweeper.parameter is Parameter.current:
-                self.set_current(pulses[pulse].qubit, value)
+            elif sweeper.parameter is Parameter.bias:
+                self.set_bias(pulses[pulse].qubit, value)
             else:
                 setattr(pulses[pulse], sweeper.parameter.name, value)
-            if isinstance(pulses[pulse], ReadoutPulse):
+            if pulses[pulse].type is PulseType.READOUT:
                 to_modify = [pulse1 for pulse1 in original_sequence.ro_pulses if pulse1.qubit == pulses[pulse].qubit]
                 if to_modify:
                     map_original_shifted[to_modify[0]] = pulses[pulse].serial

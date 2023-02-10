@@ -463,12 +463,12 @@ class AbstractPlatform(ABC):
         """
         raise_error(NotImplementedError)
 
-    def set_current(self, qubit, curr):  # pragma: no cover
-        """Set current value. Usefeul for calibration routines involving flux.
+    def set_bias(self, qubit, bias):  # pragma: no cover
+        """Set bias value. Usefeul for calibration routines involving flux.
 
         Args:
             qubit (int): qubit whose attenuation will be modified.
-            curr (int): new value of the current (A).
+            bias (int): new value of the bias (V).
         Returns:
             None
         """
