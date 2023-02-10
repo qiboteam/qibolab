@@ -15,6 +15,9 @@ class Parameter(Enum):
     bias = auto()
 
 
+QubitParameter = {Parameter.bias, Parameter.attenuation, Parameter.gain}
+
+
 @dataclass
 class Sweeper:
     """Data structure for Sweeper object.
@@ -47,10 +50,20 @@ class Sweeper:
             in case of a `ReadoutPulse` or around the drive frequency for a generic `Pulse`. If the parameter is `amplitude` the range is
             normalized with the current amplitude of the pulse. For other parameters the sweep will be performed directly over the range specified.
         pulses (list) : list of `qibolab.pulses.Pulse` to be swept (optional).
-        qubits (lilst): list of `qibolab.platforms.abstract.Qubit` to be swept (optional).
+        qubits (list): list of `qibolab.platforms.abstract.Qubit` to be swept (optional).
     """
 
     parameter: Parameter
     values: npt.NDArray
     pulses: Optional[list] = None
     qubits: Optional[list] = None
+
+    def __post_init__(self):
+        if self.pulses and self.qubits:
+            raise ValueError("Cannot use a sweeper on both pulses and qubits.")
+        elif self.pulses and self.parameter in QubitParameter:
+            raise ValueError(f"Cannot sweep {self.parameter} without specifying qubits.")
+        elif self.qubits and self.parameter not in QubitParameter:
+            raise ValueError(f"Cannot sweep {self.parameter} without specifying pulses.")
+        elif not self.pulses and not self.qubits:
+            raise ValueError("Cannot use a sweeper without specifying pulses or qubits.")
