@@ -23,8 +23,9 @@ from qm.qua import (
 from qm.QuantumMachinesManager import QuantumMachinesManager
 
 from qibolab.instruments.abstract import AbstractInstrument
-from qibolab.pulses import Pulse, Rectangular
+from qibolab.pulses import Pulse, PulseType, Rectangular
 from qibolab.result import ExecutionResults
+from qibolab.sweeper import Parameter
 
 
 class QMPulse:
@@ -705,18 +706,20 @@ class QMOPX(AbstractInstrument):
 
         sweeper = sweepers[0]
         if sweeper.pulses is not None:
-            if sweeper.parameter == "frequency":
+            if sweeper.parameter is Parameter.frequency:
                 from qm.qua import update_frequency
 
                 freqs0 = []
-                if sweeper.pulse_type in ("readout", "drive"):
-                    for pulse in sweeper.pulses:
-                        # convert to IF frequency for readout and drive pulses
-                        qubit = qubits[pulse.qubit]
-                        lo_frequency = int(getattr(qubit, sweeper.pulse_type).local_oscillator.frequency)
-                        freqs0.append(declare(int, value=int(pulse.frequency - lo_frequency)))
-                else:
-                    raise_error(NotImplementedError, "Sweeper configuration not implemented.")
+                for pulse in sweeper.pulses:
+                    qubit = qubits[pulse.qubit]
+                    if pulse.type is PulseType.DRIVE:
+                        lo_frequency = int(qubit.drive.local_oscillator.frequency)
+                    elif pulse.type is PulseType.READOUT:
+                        lo_frequency = int(qubit.readout.local_oscillator.frequency)
+                    else:
+                        raise_error(NotImplementedError, f"Cannot sweep frequency of pulse of type {pulse.type}.")
+                    # convert to IF frequency for readout and drive pulses
+                    freqs0.append(declare(int, value=int(pulse.frequency - lo_frequency)))
 
                 # is it fine to have this declaration inside the ``nshots`` QUA loop?
                 f = declare(int)
@@ -731,7 +734,7 @@ class QMOPX(AbstractInstrument):
                     if relaxation_time > 0:
                         wait(relaxation_time // 4)
 
-            elif sweeper.parameter == "amplitude":
+            elif sweeper.parameter == Parameter.amplitude:
                 from qm.qua import amp
 
                 # TODO: It should be -2 < amp(a) < 2 otherwise the we get weird results
@@ -753,7 +756,7 @@ class QMOPX(AbstractInstrument):
                     if relaxation_time > 0:
                         wait(relaxation_time // 4)
 
-            elif sweeper.parameter == "relative_phase":
+            elif sweeper.parameter == Parameter.relative_phase:
                 relphase = declare(fixed)
                 with for_(*from_array(relphase, sweeper.values / (2 * np.pi))):
                     for pulse in sweeper.pulses:
@@ -766,14 +769,11 @@ class QMOPX(AbstractInstrument):
                     if relaxation_time > 0:
                         wait(relaxation_time // 4)
 
-            elif sweeper.parameter == "duration":
-                raise_error(NotImplementedError, "Sweeper configuration not implemented.")
-
             else:
                 raise_error(NotImplementedError, "Sweeper configuration not implemented.")
 
         elif sweeper.qubits is not None:
-            if sweeper.parameter == "offset":
+            if sweeper.parameter == Parameter.bias:
                 from qm.qua import set_dc_offset
 
                 bias0 = [declare(fixed, value=qubits[q].flux.offset) for q in sweeper.qubits]
