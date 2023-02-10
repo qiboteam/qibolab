@@ -36,7 +36,10 @@ def test_dummy_single_sweep(parameter, average, nshots):
     else:
         parameter_range = np.random.randint(10, size=10)
     sequence.add(pulse)
-    sweeper = Sweeper(parameter, parameter_range, [pulse])
+    if parameter in [Parameter.attenuation, Parameter.gain, Parameter.bias]:
+        sweeper = Sweeper(parameter, parameter_range, [pulse.qubit])
+    else:
+        sweeper = Sweeper(parameter, parameter_range, [pulse])
     results = platform.sweep(sequence, sweeper, average=average, nshots=nshots)
 
     assert pulse.serial and pulse.qubit in results
@@ -58,8 +61,16 @@ def test_dummy_double_sweep(parameter1, parameter2, average, nshots):
     parameter_range_1 = np.random.rand(10) if parameter1 is Parameter.amplitude else np.random.randint(10, size=10)
     parameter_range_2 = np.random.rand(10) if parameter2 is Parameter.amplitude else np.random.randint(10, size=10)
 
-    sweeper1 = Sweeper(parameter1, parameter_range_1, [ro_pulse])
-    sweeper2 = Sweeper(parameter2, parameter_range_2, [pulse])
+    if parameter1 in [Parameter.attenuation, Parameter.gain, Parameter.bias]:
+        sweeper1 = Sweeper(parameter1, parameter_range_1, [pulse.qubit])
+    else:
+        sweeper1 = Sweeper(parameter1, parameter_range_1, [pulse])
+
+    if parameter2 in [Parameter.attenuation, Parameter.gain, Parameter.bias]:
+        sweeper2 = Sweeper(parameter2, parameter_range_2, [pulse.qubit])
+    else:
+        sweeper2 = Sweeper(parameter2, parameter_range_2, [pulse])
+
     results = platform.sweep(sequence, sweeper1, sweeper2, average=average, nshots=nshots)
 
     assert ro_pulse.serial and ro_pulse.qubit in results
