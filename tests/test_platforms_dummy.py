@@ -3,7 +3,7 @@ import pytest
 
 from qibolab.platform import Platform
 from qibolab.pulses import PulseSequence
-from qibolab.sweeper import Parameter, Sweeper
+from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 
 
 def test_dummy_initialization():
@@ -36,10 +36,10 @@ def test_dummy_single_sweep(parameter, average, nshots):
     else:
         parameter_range = np.random.randint(10, size=10)
     sequence.add(pulse)
-    if parameter in [Parameter.attenuation, Parameter.gain, Parameter.bias]:
-        sweeper = Sweeper(parameter, parameter_range, [pulse.qubit])
+    if parameter in QubitParameter:
+        sweeper = Sweeper(parameter, parameter_range, qubits=[platform.qubits[0]])
     else:
-        sweeper = Sweeper(parameter, parameter_range, [pulse])
+        sweeper = Sweeper(parameter, parameter_range, pulses=[pulse])
     results = platform.sweep(sequence, sweeper, average=average, nshots=nshots)
 
     assert pulse.serial and pulse.qubit in results
@@ -61,16 +61,14 @@ def test_dummy_double_sweep(parameter1, parameter2, average, nshots):
     parameter_range_1 = np.random.rand(10) if parameter1 is Parameter.amplitude else np.random.randint(10, size=10)
     parameter_range_2 = np.random.rand(10) if parameter2 is Parameter.amplitude else np.random.randint(10, size=10)
 
-    if parameter1 in [Parameter.attenuation, Parameter.gain, Parameter.bias]:
-        sweeper1 = Sweeper(parameter1, parameter_range_1, [pulse.qubit])
+    if parameter1 in QubitParameter:
+        sweeper1 = Sweeper(parameter1, parameter_range_1, qubits=[platform.qubits[0]])
     else:
-        sweeper1 = Sweeper(parameter1, parameter_range_1, [pulse])
-
-    if parameter2 in [Parameter.attenuation, Parameter.gain, Parameter.bias]:
-        sweeper2 = Sweeper(parameter2, parameter_range_2, [pulse.qubit])
+        sweeper1 = Sweeper(parameter1, parameter_range_1, pulses=[ro_pulse])
+    if parameter2 in QubitParameter:
+        sweeper2 = Sweeper(parameter2, parameter_range_2, qubits=[platform.qubits[0]])
     else:
-        sweeper2 = Sweeper(parameter2, parameter_range_2, [pulse])
-
+        sweeper2 = Sweeper(parameter2, parameter_range_2, pulses=[pulse])
     results = platform.sweep(sequence, sweeper1, sweeper2, average=average, nshots=nshots)
 
     assert ro_pulse.serial and ro_pulse.qubit in results
