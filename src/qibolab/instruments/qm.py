@@ -732,7 +732,7 @@ class QMOPX(AbstractInstrument):
                     if relaxation_time > 0:
                         wait(relaxation_time // 4)
 
-            elif sweeper.parameter == Parameter.amplitude:
+            elif sweeper.parameter is Parameter.amplitude:
                 from qm.qua import amp
 
                 # TODO: It should be -2 < amp(a) < 2 otherwise the we get weird results
@@ -754,7 +754,7 @@ class QMOPX(AbstractInstrument):
                     if relaxation_time > 0:
                         wait(relaxation_time // 4)
 
-            elif sweeper.parameter == Parameter.relative_phase:
+            elif sweeper.parameter is Parameter.relative_phase:
                 relphase = declare(fixed)
                 with for_(*from_array(relphase, sweeper.values / (2 * np.pi))):
                     for pulse in sweeper.pulses:
@@ -771,7 +771,7 @@ class QMOPX(AbstractInstrument):
                 raise_error(NotImplementedError, "Sweeper configuration not implemented.")
 
         elif sweeper.qubits is not None:
-            if sweeper.parameter == Parameter.bias:
+            if sweeper.parameter is Parameter.bias:
                 from qm.qua import set_dc_offset
 
                 bias0 = [declare(fixed, value=qubits[q].flux.offset) for q in sweeper.qubits]
