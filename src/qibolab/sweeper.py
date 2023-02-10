@@ -26,17 +26,17 @@ class Sweeper:
     perform sweeps see :func:`qibolab.platforms.abstract.AbstractPlatform.sweep`.
 
     Example:
-        .. code-block:: python
+        .. testcode::
 
             import numpy as np
             from qibolab.platform import Platform
-            from qibolab.sweeper import Sweeper
+            from qibolab.sweeper import Sweeper, Parameter
             from qibolab.pulses import PulseSequence
 
 
             platform = Platform("dummy")
             sequence = PulseSequence()
-            parameter = "frequency"
+            parameter = Parameter.frequency
             pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
             sequence.add(pulse)
             parameter_range = np.random.randint(10, size=10)

@@ -257,6 +257,7 @@ class MultiqubitPlatform(AbstractPlatform):
 
         # create copy of the sequence
         copy_sequence = copy.deepcopy(sequence)
+        map_original_shifted = {pulse: pulse.serial for pulse in copy.deepcopy(copy_sequence).ro_pulses}
 
         # create dictionary containing pulses for each sweeper that point to the same original sequence
         # which is copy_sequence
@@ -275,6 +276,7 @@ class MultiqubitPlatform(AbstractPlatform):
             wait_time=wait_time,
             results=results,
             sweeper_pulses=sweeper_pulses,
+            map_original_shifted=map_original_shifted,
         )
         return results
 
@@ -288,8 +290,8 @@ class MultiqubitPlatform(AbstractPlatform):
         wait_time=None,
         results=None,
         sweeper_pulses=None,
+        map_original_shifted=None,
     ):
-        map_original_shifted = {pulse: pulse.serial for pulse in original_sequence.ro_pulses}
         sweeper = sweepers[0]
 
         # store values before starting to sweep
@@ -310,6 +312,7 @@ class MultiqubitPlatform(AbstractPlatform):
                     wait_time=wait_time,
                     results=results,
                     sweeper_pulses=sweeper_pulses,
+                    map_original_shifted=map_original_shifted,
                 )
             else:
                 new_sequence = copy.deepcopy(sequence)
@@ -382,7 +385,9 @@ class MultiqubitPlatform(AbstractPlatform):
             else:
                 setattr(pulses[pulse], sweeper.parameter.name, value)
             if isinstance(pulses[pulse], ReadoutPulse):
-                map_original_shifted[original_sequence[pulses[pulse].qubit]] = pulses[pulse].serial
+                to_modify = [pulse1 for pulse1 in original_sequence.ro_pulses if pulse1.qubit == pulses[pulse].qubit]
+                if to_modify:
+                    map_original_shifted[to_modify[0]] = pulses[pulse].serial
 
     def measure_fidelity(self, qubits=None, nshots=None):
 

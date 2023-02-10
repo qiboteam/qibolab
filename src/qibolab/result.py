@@ -35,6 +35,9 @@ class AveragedResults:
             "phase[rad]": np.angle(self.i + 1.0j * self.q),
         }
 
+    def __len__(self):
+        return len(self.i)
+
 
 @dataclass
 class ExecutionResults:
@@ -117,3 +120,6 @@ class ExecutionResults:
             "q[V]": results.q,
             "phase[rad]": np.angle(results.i + 1.0j * results.q),
         }
+
+    def __len__(self):
+        return
