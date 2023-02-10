@@ -8,10 +8,12 @@ import numpy.typing as npt
 class Parameter(Enum):
     """Sweeping parameters."""
 
-    attenuation = auto()
-    gain = auto()
     frequency = auto()
     amplitude = auto()
+    relative_phase = auto()
+
+    attenuation = auto()
+    gain = auto()
     bias = auto()
 
 
