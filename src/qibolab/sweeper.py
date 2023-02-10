@@ -61,11 +61,11 @@ class Sweeper:
     qubits: Optional[list] = None
 
     def __post_init__(self):
-        if self.pulses and self.qubits:
+        if self.pulses is not None and self.qubits is not None:
             raise ValueError("Cannot use a sweeper on both pulses and qubits.")
-        elif self.pulses and self.parameter in QubitParameter:
+        elif self.pulses is not None and self.parameter in QubitParameter:
             raise ValueError(f"Cannot sweep {self.parameter} without specifying qubits.")
-        elif self.qubits and self.parameter not in QubitParameter:
+        elif self.qubits is not None and self.parameter not in QubitParameter:
             raise ValueError(f"Cannot sweep {self.parameter} without specifying pulses.")
-        elif not self.pulses and not self.qubits:
+        elif self.pulses is None and self.qubits is None:
             raise ValueError("Cannot use a sweeper without specifying pulses or qubits.")
