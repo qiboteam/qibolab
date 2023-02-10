@@ -25,8 +25,8 @@ class ExecutionResults:
         return False
 
     @cached_property
-    def msr(self):
-        """Computes msr value."""
+    def measurement(self):
+        """Resonator signal voltage mesurement (MSR) in volts."""
         return np.sqrt(self.i**2 + self.q**2)
 
     @cached_property
@@ -62,14 +62,14 @@ class ExecutionResults:
         """
         if average:
             return {
-                "MSR[V]": self.msr.mean(),
+                "MSR[V]": self.measurement.mean(),
                 "i[V]": self.i.mean(),
                 "q[V]": self.q.mean(),
                 "phase[rad]": self.phase.mean(),
             }
         else:
             return {
-                "MSR[V]": self.msr.ravel(),
+                "MSR[V]": self.measurement.ravel(),
                 "i[V]": self.i.ravel(),
                 "q[V]": self.q.ravel(),
                 "phase[rad]": self.phase.ravel(),

@@ -13,14 +13,14 @@ class MixerInstrumentDesign(BasicInstrumentDesign):
 
     Attributes:
         controller (:class:`qibolab.instruments.abstract.AbstractInstrument`): Instrument used for sending pulses and retrieving feedback.
-        is_connected (bool): Boolean that shows whether instruments are connected.
+        _is_connected (bool): Boolean that shows whether instruments are connected.
         local_oscillators (list): List of local oscillator instrument objects.
     """
 
     local_oscillators: List[LocalOscillator] = field(default_factory=list)
 
     def connect(self):
-        if not self.is_connected:
+        if not self._is_connected:
             for lo in self.local_oscillators:
                 try:
                     log.info(f"Connecting to instrument {lo}.")
@@ -41,23 +41,23 @@ class MixerInstrumentDesign(BasicInstrumentDesign):
                     if lo.is_connected:
                         lo.setup()
                     else:
-                        log.warn(f"There is no connection to {lo}. Frequencies were not set.")
+                        log.warning(f"There is no connection to {lo}. Frequencies were not set.")
         super().setup(qubits, *args, **kwargs)
 
     def start(self):
-        if self.is_connected:
+        if self._is_connected:
             for lo in self.local_oscillators:
                 lo.start()
         super().start()
 
     def stop(self):
-        if self.is_connected:
+        if self._is_connected:
             for lo in self.local_oscillators:
                 lo.stop()
         super().stop()
 
     def disconnect(self):
-        if self.is_connected:
+        if self._is_connected:
             for lo in self.local_oscillators:
                 lo.disconnect()
         super().disconnect()
