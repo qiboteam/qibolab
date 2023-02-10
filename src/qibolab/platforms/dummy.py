@@ -137,9 +137,10 @@ class DummyPlatform(AbstractPlatform):
         # create dictionary containing pulses for each sweeper that point to the same original sequence
         # which is copy_sequence
         for sweeper in sweepers:
-            sweeper_pulses[sweeper.parameter] = {
-                pulse.serial: pulse for pulse in copy_sequence if pulse in sweeper.pulses
-            }
+            if sweeper.pulses is not None:
+                sweeper_pulses[sweeper.parameter] = {
+                    pulse.serial: pulse for pulse in copy_sequence if pulse in sweeper.pulses
+                }
 
         # perform sweeping recursively
         self._sweep_recursion(
@@ -170,7 +171,8 @@ class DummyPlatform(AbstractPlatform):
         sweeper = sweepers[0]
 
         # store values before starting to sweep
-        original_value = self._save_original_value(sweeper, sweeper_pulses)
+        if sweeper.pulses is not None:
+            original_value = self._save_original_value(sweeper, sweeper_pulses)
 
         # perform sweep recursively
         for value in sweeper.values:
@@ -203,7 +205,8 @@ class DummyPlatform(AbstractPlatform):
                         results[original_pulse.qubit] = copy.copy(results[original_pulse.serial])
 
         # restore initial value of the pul
-        self._restore_initial_value(sweeper, sweeper_pulses, original_value)
+        if sweeper.pulses is not None:
+            self._restore_initial_value(sweeper, sweeper_pulses, original_value)
 
     def _save_original_value(self, sweeper, sweeper_pulses):
         """Helper method for _sweep_recursion"""
@@ -227,29 +230,36 @@ class DummyPlatform(AbstractPlatform):
         self, sweeper, sweeper_pulses, original_sequence, map_original_shifted, value
     ):
         """Helper method for _sweep_recursion"""
-        pulses = sweeper_pulses[sweeper.parameter]
-        for pulse in pulses:
-            if sweeper.parameter is Parameter.frequency:
-                if pulses[pulse].type is PulseType.READOUT:
-                    value += self.qubits[pulses[pulse].qubit].readout_frequency
+        print(value)
+        if sweeper.pulses is not None:
+            pulses = sweeper_pulses[sweeper.parameter]
+            for pulse in pulses:
+                if sweeper.parameter is Parameter.frequency:
+                    if pulses[pulse].type is PulseType.READOUT:
+                        value += self.qubits[pulses[pulse].qubit].readout_frequency
+                    else:
+                        value += self.qubits[pulses[pulse].qubit].drive_frequency
+                    setattr(pulses[pulse], sweeper.parameter.name, value)
+                elif sweeper.parameter is Parameter.amplitude:
+                    if pulses[pulse].type is PulseType.READOUT:
+                        current_amplitude = self.native_gates["single_qubit"][pulses[pulse].qubit]["MZ"]["amplitude"]
+                    else:
+                        current_amplitude = self.native_gates["single_qubit"][pulses[pulse].qubit]["RX"]["amplitude"]
+                    setattr(pulses[pulse], sweeper.parameter.name, float(current_amplitude * value))
                 else:
-                    value += self.qubits[pulses[pulse].qubit].drive_frequency
-                setattr(pulses[pulse], sweeper.parameter.name, value)
-            elif sweeper.parameter is Parameter.amplitude:
+                    setattr(pulses[pulse], sweeper.parameter.name, value)
                 if pulses[pulse].type is PulseType.READOUT:
-                    current_amplitude = self.native_gates["single_qubit"][pulses[pulse].qubit]["MZ"]["amplitude"]
-                else:
-                    current_amplitude = self.native_gates["single_qubit"][pulses[pulse].qubit]["RX"]["amplitude"]
-                setattr(pulses[pulse], sweeper.parameter.name, float(current_amplitude * value))
-            elif sweeper.parameter is Parameter.attenuation:
-                self.set_attenuation(pulses[pulse].qubit, value)
-            elif sweeper.parameter is Parameter.gain:
-                self.set_gain(pulses[pulse].qubit, value)
-            elif sweeper.parameter is Parameter.bias:
-                self.set_bias(pulses[pulse].qubit, value)
-            else:
-                setattr(pulses[pulse], sweeper.parameter.name, value)
-            if pulses[pulse].type is PulseType.READOUT:
-                to_modify = [pulse1 for pulse1 in original_sequence.ro_pulses if pulse1.qubit == pulses[pulse].qubit]
-                if to_modify:
-                    map_original_shifted[to_modify[0]] = pulses[pulse].serial
+                    to_modify = [
+                        pulse1 for pulse1 in original_sequence.ro_pulses if pulse1.qubit == pulses[pulse].qubit
+                    ]
+                    if to_modify:
+                        map_original_shifted[to_modify[0]] = pulses[pulse].serial
+
+        if sweeper.qubits is not None:
+            for qubit in sweeper.qubits:
+                if sweeper.parameter is Parameter.attenuation:
+                    self.set_attenuation(qubit, value)
+                elif sweeper.parameter is Parameter.gain:
+                    self.set_gain(qubit, value)
+                elif sweeper.parameter is Parameter.bias:
+                    self.set_bias(qubit, value)
