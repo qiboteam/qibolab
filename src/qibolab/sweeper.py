@@ -4,8 +4,6 @@ from typing import Optional
 
 import numpy.typing as npt
 
-from qibolab.pulses import PulseType
-
 
 class Parameter(Enum):
     """Sweeping parameters."""
@@ -14,7 +12,7 @@ class Parameter(Enum):
     gain = auto()
     frequency = auto()
     amplitude = auto()
-    current = auto()
+    bias = auto()
 
 
 @dataclass
@@ -46,8 +44,8 @@ class Sweeper:
     Args:
         parameter (`qibolab.sweeper.Parameter`): parameter to be swept, possible choices are frequency, attenuation, amplitude, current and gain.
         values (np.ndarray): sweep range. If the parameter is `frequency` the sweep will be a shift around the readout frequency
-            in case of a `ReadoutPulse` or around the drive frequency for a generic `Pulse`. For other parameters the sweep will be
-            performed directly over the range specified.
+            in case of a `ReadoutPulse` or around the drive frequency for a generic `Pulse`. If the parameter is `amplitude` the range is
+            normalized with the current amplitude of the pulse. For other parameters the sweep will be performed directly over the range specified.
         pulses (list) : list of `qibolab.pulses.Pulse` to be swept (optional).
         qubits (lilst): list of `qibolab.platforms.abstract.Qubit` to be swept (optional).
     """
@@ -56,10 +54,3 @@ class Sweeper:
     values: npt.NDArray
     pulses: Optional[list] = None
     qubits: Optional[list] = None
-
-    @property
-    def pulse_type(self) -> Optional[PulseType]:
-        types = {p.type for p in self.pulses}
-        if len(types) > 1:
-            raise RuntimeError("Not homogeneous pulses")
-        return next(iter(types), None)
