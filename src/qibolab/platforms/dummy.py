@@ -153,11 +153,12 @@ class DummyPlatform(AbstractPlatform):
 
                     if results:
                         results[original_pulse.serial] += acquisition
+                        results[original_pulse.qubit] += acquisition
                     else:
                         results[original_pulse.serial] = acquisition
                         results[original_pulse.qubit] = copy.copy(results[original_pulse.serial])
 
-        # restore initial value of the pul
+        # restore initial value of the pulse
         if sweeper.pulses is not None:
             self._restore_initial_value(sweeper, sweeper_pulses, original_value)
 
@@ -183,7 +184,6 @@ class DummyPlatform(AbstractPlatform):
         self, sweeper, sweeper_pulses, original_sequence, map_original_shifted, value
     ):
         """Helper method for _sweep_recursion"""
-        print(value)
         if sweeper.pulses is not None:
             pulses = sweeper_pulses[sweeper.parameter]
             for pulse in pulses:
