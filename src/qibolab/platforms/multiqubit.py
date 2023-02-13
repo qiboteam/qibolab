@@ -316,6 +316,7 @@ class MultiqubitPlatform(AbstractPlatform):
 
                     if results:
                         results[original_pulse.serial] += acquisition
+                        results[original_pulse.qubit] += acquisition
                     else:
                         results[original_pulse.serial] = acquisition
                         results[original_pulse.qubit] = copy.copy(results[original_pulse.serial])
