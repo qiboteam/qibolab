@@ -41,7 +41,7 @@ class MixerInstrumentDesign(BasicInstrumentDesign):
                     if lo.is_connected:
                         lo.setup()
                     else:
-                        log.warn(f"There is no connection to {lo}. Frequencies were not set.")
+                        log.warning(f"There is no connection to {lo}. Frequencies were not set.")
         super().setup(qubits, *args, **kwargs)
 
     def start(self):

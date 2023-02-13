@@ -1,6 +1,8 @@
 import os
 import pathlib
+import pickle
 import shutil
+import warnings
 
 import numpy as np
 import pytest
@@ -11,25 +13,18 @@ from qibo.states import CircuitResult
 from qibolab.backends import QibolabBackend
 from qibolab.paths import qibolab_folder
 from qibolab.platform import Platform
+from qibolab.platforms.multiqubit import MultiqubitPlatform
 from qibolab.pulses import PulseSequence
 
 qubit = 0
 nshots = 1024
 
-HERE = pathlib.Path(__file__).parent
-
-
-def copy_runcard(platform_name):
-    test_runcard = HERE / "test_platforms_multiqubit.yml"
-    if not os.path.exists(test_runcard):
-        original_runcard = qibolab_folder / "runcards" / f"{platform_name}.yml"
-        shutil.copyfile(str(original_runcard), test_runcard)
-    return test_runcard
-
 
 @pytest.fixture
 def platform(platform_name):
-    test_runcard = copy_runcard(platform_name)
+    test_runcard = pathlib.Path(__file__).parent / "test_platforms_multiqubit.yml"
+    original_runcard = qibolab_folder / "runcards" / f"{platform_name}.yml"
+    shutil.copyfile(str(original_runcard), test_runcard)
     _platform = Platform(platform_name, test_runcard)
     _platform.connect()
     _platform.setup()
@@ -40,13 +35,13 @@ def platform(platform_name):
     os.remove(test_runcard)
 
 
-def test_abstractplatform_init(platform_name):
-    test_runcard = copy_runcard(platform_name)
-    with open(test_runcard) as file:
+def test_multiqubitplatform_init(platform_name):
+    with open(qibolab_folder / "runcards" / f"{platform_name}.yml") as file:
         settings = yaml.safe_load(file)
-    platform = Platform(platform_name, test_runcard)
+    platform = Platform(platform_name)
+    if not isinstance(platform, MultiqubitPlatform):
+        pytest.skip(f"Skipping MultiqubitPlatform specific test for {platform_name}.")
     assert platform.name == platform_name
-    assert platform.runcard == test_runcard
     assert platform.is_connected == False
     assert len(platform.instruments) == len(settings["instruments"])
     for name in settings["instruments"]:
@@ -58,8 +53,6 @@ def test_abstractplatform_init(platform_name):
 
 
 def test_abstractplatform_pickle(platform_name):
-    import pickle
-
     platform = Platform(platform_name)
     serial = pickle.dumps(platform)
     new_platform = pickle.loads(serial)
@@ -92,6 +85,8 @@ def test_multiqubitplatform_execute_one_drive_pulse(platform):
 @pytest.mark.qpu
 def test_multiqubitplatform_execute_one_long_drive_pulse(platform):
     # Long duration
+    if not isinstance(platform, MultiqubitPlatform):
+        pytest.skip(f"Skipping extra long pulse test for {platform}.")
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=8192 + 200))
     with pytest.raises(NotImplementedError):
@@ -101,6 +96,8 @@ def test_multiqubitplatform_execute_one_long_drive_pulse(platform):
 @pytest.mark.qpu
 def test_multiqubitplatform_execute_one_extralong_drive_pulse(platform):
     # Extra Long duration
+    if not isinstance(platform, MultiqubitPlatform):
+        pytest.skip(f"Skipping extra long pulse test for {platform}.")
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=2 * 8192 + 200))
     with pytest.raises(NotImplementedError):
@@ -170,9 +167,8 @@ def test_multiqubitplatform_execute_multiple_readout_pulses(platform):
 
 @pytest.mark.qpu
 @pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
-def test_excited_state_probabilities_pulses(platform_name, qubit):
-    backend = QibolabBackend(platform_name)
-    platform = backend.platform
+def test_excited_state_probabilities_pulses(platform, qubit):
+    backend = QibolabBackend(platform)
     qd_pulse = platform.create_RX_pulse(qubit)
     ro_pulse = platform.create_MZ_pulse(qubit, start=qd_pulse.duration)
     sequence = PulseSequence()
@@ -180,17 +176,17 @@ def test_excited_state_probabilities_pulses(platform_name, qubit):
     sequence.add(ro_pulse)
     result = platform.execute_pulse_sequence(sequence, nshots=5000)
 
-    cr = CircuitResult(backend, Circuit(platform.nqubits), result)
+    cr = CircuitResult(backend, Circuit(platform.nqubits), result, nshots=5000)
     probs = backend.circuit_result_probabilities(cr, qubits=[qubit])
-    np.testing.assert_allclose(probs, [1, 0], atol=0.05)
+    warnings.warn(f"Excited state probabilities: {probs}")
+    np.testing.assert_allclose(probs, [0, 1], atol=0.05)
 
 
 @pytest.mark.qpu
 @pytest.mark.parametrize("start_zero", [False, True])
 @pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
-def test_ground_state_probabilities_pulses(platform_name, qubit, start_zero):
-    backend = QibolabBackend(platform_name)
-    platform = backend.platform
+def test_ground_state_probabilities_pulses(platform, qubit, start_zero):
+    backend = QibolabBackend(platform)
     if start_zero:
         ro_pulse = platform.create_MZ_pulse(qubit, start=0)
     else:
@@ -200,6 +196,7 @@ def test_ground_state_probabilities_pulses(platform_name, qubit, start_zero):
     sequence.add(ro_pulse)
     result = platform.execute_pulse_sequence(sequence, nshots=5000)
 
-    cr = CircuitResult(backend, Circuit(platform.nqubits), result)
+    cr = CircuitResult(backend, Circuit(platform.nqubits), result, nshots=5000)
     probs = backend.circuit_result_probabilities(cr, qubits=[qubit])
+    warnings.warn(f"Ground state probabilities: {probs}")
     np.testing.assert_allclose(probs, [1, 0], atol=0.05)

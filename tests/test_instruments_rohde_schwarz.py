@@ -1,53 +1,30 @@
 import numpy as np
 import pytest
-import yaml
 
-from qibolab.instruments.rohde_schwarz import SGS100A
-from qibolab.paths import qibolab_folder, user_folder
+from qibolab import Platform
+from qibolab.paths import user_folder
 
-INSTRUMENTS_LIST = ["SGS100A"]
-instruments = {}
+from .conftest import load_from_platform
 
 
 @pytest.mark.qpu
-@pytest.mark.parametrize("name", INSTRUMENTS_LIST)
-def test_instruments_rohde_schwarz_init(name):
-    test_runcard = qibolab_folder / "tests" / "test_instruments_rohde_schwarz.yml"
-    with open(test_runcard) as file:
-        settings = yaml.safe_load(file)
-
-    # Instantiate instrument
-    lib = settings["instruments"][name]["lib"]
-    i_class = settings["instruments"][name]["class"]
-    address = settings["instruments"][name]["address"]
-    from importlib import import_module
-
-    InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
-    instance = InstrumentClass(name, address)
-    instruments[name] = instance
-    assert instance.name == name
-    assert instance.address == address
-    assert instance.is_connected == False
-    assert instance.device == None
-    assert instance.signature == f"{name}@{address}"
-    assert instance.data_folder == user_folder / "instruments" / "data" / instance.tmp_folder.name.split("/")[-1]
+def test_instruments_rohde_schwarz_init(instrument):
+    assert instrument.is_connected == True
+    assert instrument.device
+    assert instrument.data_folder == user_folder / "instruments" / "data" / instrument.tmp_folder.name.split("/")[-1]
 
 
 @pytest.mark.qpu
-@pytest.mark.parametrize("name", INSTRUMENTS_LIST)
-def test_instruments_rohde_schwarz_connect(name):
-    instruments[name].connect()
-
-
-@pytest.mark.qpu
-@pytest.mark.parametrize("name", INSTRUMENTS_LIST)
-def test_instruments_rohde_schwarz_setup(name):
-    test_runcard = qibolab_folder / "tests" / "test_instruments_rohde_schwarz.yml"
-    with open(test_runcard) as file:
-        settings = yaml.safe_load(file)
-    instruments[name].setup(**settings["settings"], **settings["instruments"][name]["settings"])
-    for parameter in settings["instruments"][name]["settings"]:
-        assert getattr(instruments[name], parameter) == settings["instruments"][name]["settings"][parameter]
+@pytest.mark.parametrize("instrument_name", ["SGS100A"])
+def test_instruments_rohde_schwarz_setup(platform_name, instrument_name):
+    platform = Platform(platform_name)
+    settings = platform.settings
+    instrument, instrument_settings = load_from_platform(platform, instrument_name)
+    instrument.connect()
+    instrument.setup(**settings["settings"], **instrument_settings)
+    for parameter in instrument_settings:
+        assert getattr(instrument, parameter) == instrument_settings[parameter]
+    instrument.disconnect()
 
 
 def instrument_set_and_test_parameter_values(instrument, parameter, values):
@@ -57,12 +34,11 @@ def instrument_set_and_test_parameter_values(instrument, parameter, values):
 
 
 @pytest.mark.qpu
-@pytest.mark.parametrize("name", INSTRUMENTS_LIST)
-def test_instruments_rohde_schwarz_set_device_paramter(name):
+def test_instruments_rohde_schwarz_set_device_paramter(instrument):
     instrument_set_and_test_parameter_values(
-        instruments[name], f"power", np.arange(-120, 0, 10)
+        instrument, f"power", np.arange(-120, 0, 10)
     )  # Max power is 25dBm but to be safe testing only until 0dBm
-    instrument_set_and_test_parameter_values(instruments[name], f"frequency", np.arange(1e6, 12750e6, 1e9))
+    instrument_set_and_test_parameter_values(instrument, f"frequency", np.arange(1e6, 12750e6, 1e9))
     """   # TODO: add attitional paramter tests
     SGS100A:
         parameter            value
@@ -90,9 +66,8 @@ def test_instruments_rohde_schwarz_set_device_paramter(name):
 
 
 @pytest.mark.qpu
-@pytest.mark.parametrize("name", INSTRUMENTS_LIST)
-def test_instruments_rohde_schwarz_start_stop_disconnect(name):
-    instruments[name].start()
-    instruments[name].stop()
-    instruments[name].disconnect()
-    assert instruments[name].is_connected == False
+def test_instruments_rohde_schwarz_start_stop_disconnect(instrument):
+    instrument.start()
+    instrument.stop()
+    instrument.disconnect()
+    assert instrument.is_connected == False

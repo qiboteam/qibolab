@@ -606,6 +606,8 @@ class QMOPX(AbstractInstrument):
             nshots (int): Number of repetitions (shots) of the experiment.
             relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
         """
+        if not sequence:
+            return {}
         # Current driver cannot play overlapping pulses on drive and flux channels
         # If we want to play overlapping pulses we need to define different elements on the same ports
         # like we do for readout multiplex
