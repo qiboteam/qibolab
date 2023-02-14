@@ -19,7 +19,10 @@ from qibolab.pulses import (
     PulseShape,
     ReadoutPulse,
     Rectangular,
+    PulseType,
 )
+from qibolab.sweeper import Sweeper
+
 class TII_RFSOC4x2(AbstractInstrument):
     def __init__(self, name: str, address: str):  # , setting_parameters: dict):
         super().__init__(name, address)
@@ -28,6 +31,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         self.port: str
         self.host, port = address.split(":")
         self.port = int(port)
+        
 
 
     def connect(self):
@@ -82,6 +86,10 @@ class TII_RFSOC4x2(AbstractInstrument):
         Each readout pulse generates a separate acquisition.
         Returns:
             Two array with real and imaginary parts if i and q (already averages)
+
+
+
+        TODO: Refactor this method according to sweep method
         """
         ps: PulseShape
 
@@ -164,7 +172,7 @@ class TII_RFSOC4x2(AbstractInstrument):
                 i = i + 1
 
         jsonDic["opCode"] = "execute"
-        print("Check point 3", jsonDic)
+
         # Create a socket (SOCK_STREAM means a TCP socket)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             # Connect to server and send data
@@ -180,9 +188,90 @@ class TII_RFSOC4x2(AbstractInstrument):
 
     def sweep(self, qubits, sequence, *sweepers, nshots, relaxation_time, average=True):
         """Play a pulse sequence while sweeping one or more parameters."""
-        
-        for pulse in sequence:
 
+        #  Parsing the sweeper to dictionary and after to a json file 
+        s: Sweeper
+        s = sweepers[0]
+
+        jsonDic = {}
+        jsonDic['parameter'] = s.parameter
+
+        val = np.ndarray.tolist(s.values)
+        jsonDic['values'] = val
+
+        pulsesDic = {}
+        for i, pulse in enumerate(s.pulses):
+            pulsesDic[str(i)] = self.convert_pulse_to_dic(pulse)
+        jsonDic['pulses'] = pulsesDic
+
+        jsonDic["opCode"] = "sweep"
+
+        print("Check point 3", jsonDic)
+        # Create a socket (SOCK_STREAM means a TCP socket)
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            # Connect to server and send data
+            sock.connect((self.host, self.port))
+            sock.sendall(json.dumps(jsonDic).encode())
+            # Receive data from the server and shut down
+            received = sock.recv(256)
+            avg = json.loads(received.decode("utf-8"))
+            avgi = avg["avgi"]
+            avgq = avg["avgq"]
+        sock.close()
+        return avgi, avgq
+    
+
+    def convert_pulse_to_dic(self, pulse):
+        """Funtion to convert pulse object attributes to a dictionary"""
+        p: Pulse
+        ps: PulseShape
+        pulseDic = {}
+        pDic = {}
+        p = pulse
+
+        if pulse.type == PulseType.DRIVE:
+            ps = pulse.shape
+            if type(ps) is Drag:
+                shape = "Drag"
+                style = "arb"
+                rel_sigma = ps.rel_sigma
+                beta = ps.beta
+            elif type(ps) is Gaussian:
+                shape = "Gaussian"
+                style = "arb"
+                rel_sigma = ps.rel_sigma
+                beta = 0
+            elif type(ps) is Rectangular:
+                shape = "Rectangular"
+                style = "const"
+                rel_sigma = 0
+                beta = 0
+            pDic = {
+                "start": pulse.start,
+                "duration": pulse.duration,
+                "amplitude": pulse.amplitude,
+                "frequency": pulse.frequency,
+                "relative_phase": pulse.relative_phase,
+                "shape": shape,
+                "style": style,
+                "rel_sigma": rel_sigma,
+                "beta": beta,
+                "type": 'qd',
+            }
+  
+        elif pulse.type == PulseType.READOUT:
+            pDic = {
+                "start": pulse.start,
+                "duration": pulse.duration,
+                "amplitude": pulse.amplitude,
+                "frequency": pulse.frequency,
+                "relative_phase": pulse.relative_phase,
+                "shape": "const",               
+                "type": 'ro',
+            }
+          
+        return pDic
+    
     def start(self):
         """Empty method to comply with AbstractInstrument interface."""
         pass
