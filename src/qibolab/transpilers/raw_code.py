@@ -316,27 +316,28 @@ plt.figure(1,figsize=(5,5))
 pos = nx.spectral_layout(chip)
 nx.draw(chip,pos=pos,with_labels = True)
 plt.savefig('chip_21.pdf')
-"""
 
-random_circuit = generate_circuit(n, num_gates)
-print("generate random circuit")
+
+EXAMPLE
+
+random_circuit=generate_circuit(n,num_gates)
+print('generate random circuit')
 print(random_circuit)
-print("----------")
-initial_circuit = shuffle_GATE(random_circuit, 2)
-print("minimize the number of gates:", len(initial_circuit))
+print('----------')
+initial_circuit=shuffle_GATE(random_circuit,2)
+print('minimize the number of gates:', len(initial_circuit))
 print(initial_circuit)
-print("----------")
-cost, circuit, mapping = shuffle_SWAP(2, chip, initial_circuit, "greedy", 1000)
-print("final circuit, number of gates:", len(circuit))
+print('----------')
+cost,circuit,mapping=shuffle_SWAP(2,chip,initial_circuit,'greedy',1000)
+print('final circuit, number of gates:', len(circuit))
 print(circuit)
-print("----------")
-print("number of SWAP gates needed:", cost)
-print("mapping configuration")
+print('----------')
+print('number of SWAP gates needed:', cost)
+print('mapping configuration')
 print(mapping)
 
 print("--- %s seconds ---" % (time.time() - start_time))
 
-"""
 code for plottting the scaling to compare different methods
 you can ignore this part
 
