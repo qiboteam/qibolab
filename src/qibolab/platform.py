@@ -1,14 +1,14 @@
 from qibo.config import raise_error
 
 from qibolab.designs.channels import Channel, ChannelMap
-from qibolab.designs.rfsoc import rfsoc4x2InstrumentDesign
+from qibolab.designs.mixer import MixerInstrumentDesign
 from qibolab.platforms.platform import DesignPlatform
 
 from qibolab.instruments.tii import TII_RFSOC4x2
-from qibolab.instruments.rohde_schwarz import SGS100A as LocalOscillator
+from qibolab.instruments.dummy_oscillator import DummyLocalOscillator as LocalOscillator
 
-def create_tii_rfsoc4x2(runcard, address=None)
-    """Create platform using QICK project on the RFSoS4x2 board.
+def create_tii_rfsoc4x2(runcard, address=None):
+    """Create platform using QICK project on the RFSoS4x2 board and Rohde Schwarz local oscillator for the TWPA
 
     IPs and other instrument related parameters are hardcoded in ``__init__`` and ``setup``.
 
@@ -42,16 +42,16 @@ def create_tii_rfsoc4x2(runcard, address=None)
 
     # Instantiate local oscillators (HARDCODED)
     local_oscillators = [
-        LocalOscillator("twpa_a", "192.168.0.35"),
+        LocalOscillator("twpa", "192.168.0.35"),
     ]
     # Set TWPA parameters
     local_oscillators[0].frequency = 6_511_000_000
     local_oscillators[0].power = 4.5
 
     # Map LOs to channels
-    channels["L4-**"].local_oscillator = local_oscillators[0] #TODO find the real channel
+    channels["L4-26"].local_oscillator = local_oscillators[0] #TODO find the real channel
 
-    design =  rfsoc4x2InstrumentDesign(controller, channels, local_oscillators)
+    design = MixerInstrumentDesign(controller, channels, local_oscillators)
     platform = DesignPlatform("tii_rfsoc4x2", design, runcard)
 
     # assign channels to qubits
@@ -59,7 +59,7 @@ def create_tii_rfsoc4x2(runcard, address=None)
     qubits[0].readout = channels["L3-18_ro"]
     qubits[0].feedback = channels["L2-RO"]
     qubits[0].drive = channels["L3-18_qd"]
-    channels["L4-**"].qubit = qubits[0] #TODO find the real channel
+    channels["L4-26"].qubit = qubits[0] #TODO find the real channel
 
    
     return platform

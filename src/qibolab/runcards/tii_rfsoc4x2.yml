@@ -1,46 +1,22 @@
 nqubits: 1
 description: TII's 1-qubit device controlled with the RFSoC4x2 (fpga board).
 
+qubits: [0]
+
 settings:
-    hardware_avg: 1 #reps in QICK
+    hardware_avg: 1000 #reps in QICK
     repetition_duration: 200_000
     sampling_rate: 9_830_400_000 # DAC sampling rate
-
-qubits: [0]
+    resonator_phase: 0 #
+    adc_trig_offset: 200 # [Clock ticks]
+    threshold: 0
+    relax_delay: 500 #[Clock ticks]
+    max_gain: 32000
+    ro_duration: 3000
+    ro_frequency: 7371530000
 
 topology: # qubit - qubit connections
 -   [1]
-channels: [L3-18_qd, L3-18_ro, L2-2]
-
-qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux, QubitBias]
-    0: [L3-18_ro, L3-18_qd, null, null]
-
-instruments:
-    tii_rfsoc4x2:
-        lib: tii
-        class: tii_rfsoc4x2
-        address: 192.168.2.72:6000
-        roles: [control, readout]
-        settings:
-            ports:
-                o0:
-                    channel: 0
-                o1:
-                    channel: 1
-
-                i0:
-                    channel: 0
-            resonator_phase: 0 #
-            adc_trig_offset: 200 # [Clock ticks]
-            threshold: 0
-            relax_delay: 500 #[Clock ticks]
-            #Experiment
-            max_gain: 32000
-            expt: 1
-            hardware_avg: 1024 #reps in QICK
-        experiment:
-            delay_before_readout: 50 # [ns]
-            rabi_length: 0.01
 
 native_gates:
     single_qubit:
