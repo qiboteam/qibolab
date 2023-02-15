@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests ``symbolic.py``."""
 
 from qibolab.symbolic import (

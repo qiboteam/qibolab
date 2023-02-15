@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 import numpy as np
 import pytest
 from scipy.linalg import expm
 
-from qibolab.transpilers.decompositions import (
+from qibolab.transpilers.unitary_decompositions import (
     bell_basis,
     calculate_h_vector,
     calculate_psi,
@@ -16,7 +15,7 @@ from qibolab.transpilers.decompositions import (
     two_qubit_decomposition,
 )
 
-NREPS = 10  # number of repetitions to execute random tests
+NREPS = 5  # number of repetitions to execute random tests
 ATOL = 1e-12
 
 

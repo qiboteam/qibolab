@@ -1,9 +1,13 @@
-# -*- coding: utf-8 -*-
 """Tests ``pulses.py``."""
-import numpy as np
-import pytest
+import os
+import pathlib
 
+import numpy as np
+
+from qibolab.paths import qibolab_folder
 from qibolab.pulses import (
+    IIR,
+    SNZ,
     Drag,
     DrivePulse,
     FluxPulse,
@@ -16,8 +20,41 @@ from qibolab.pulses import (
     Rectangular,
     SplitPulse,
     Waveform,
+    eCap,
 )
 from qibolab.symbolic import intSymbolicExpression as se_int
+
+HERE = pathlib.Path(__file__).parent
+
+
+def test_pulses_plot_functions():
+    p0 = Pulse(0, 40, 0.9, 0, 0, Rectangular(), 0, PulseType.FLUX, 0)
+    p1 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(5), 0, PulseType.DRIVE, 2)
+    p2 = Pulse(0, 40, 0.9, 50e6, 0, Drag(5, 2), 0, PulseType.DRIVE, 200)
+    p3 = FluxPulse(0, 40, 0.9, IIR([-0.5, 2], [1], Rectangular()), 0, 200)
+    p4 = FluxPulse(0, 40, 0.9, SNZ(t_half_flux_pulse=17, b_amplitude=0.8), 0, 200)
+    p5 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
+    p6 = SplitPulse(p5, window_start=10, window_finish=30)
+    ps = p0 + p1 + p2 + p3 + p4 + p5 + p6
+    wf = p0.modulated_waveform_i
+
+    plot_file = HERE / "test_plot.png"
+
+    wf.plot(plot_file)
+    assert os.path.exists(plot_file)
+    os.remove(plot_file)
+
+    p0.plot(plot_file)
+    assert os.path.exists(plot_file)
+    os.remove(plot_file)
+
+    p6.plot(plot_file)
+    assert os.path.exists(plot_file)
+    os.remove(plot_file)
+
+    ps.plot(plot_file)
+    assert os.path.exists(plot_file)
+    os.remove(plot_file)
 
 
 def test_pulses_pulse_init():
@@ -115,6 +152,9 @@ def test_pulses_pulse_init():
     p7 = Pulse(0, 40, 0.9, 0, 0, Rectangular(), 0, PulseType.FLUX, 0)
     p8 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(5), 0, PulseType.DRIVE, 2)
     p9 = Pulse(0, 40, 0.9, 50e6, 0, Drag(5, 2), 0, PulseType.DRIVE, 200)
+    p10 = FluxPulse(0, 40, 0.9, IIR([-1, 1], [-0.1, 0.1001], Rectangular()), 0, 200)
+    p11 = FluxPulse(0, 40, 0.9, SNZ(t_half_flux_pulse=17, b_amplitude=0.8), 0, 200)
+    p11 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
 
 
 def test_pulses_pulse_attributes():
@@ -165,7 +205,7 @@ def test_pulses_pulse_attributes():
     try:
         p10 = Pulse(
             start=0,
-            duration=0,  # duration should be > 0
+            duration=-1,  # duration should be > 0
             amplitude=0.9,
             frequency=20_000_000,
             relative_phase=0.0,
@@ -217,6 +257,20 @@ def test_pulses_pulse_attributes():
     except:
         assert False
     assert ValueError_raised
+
+    p0 = Pulse(
+        start=0,
+        duration=50,
+        amplitude=0.9,
+        frequency=20_000_000,
+        relative_phase=0.0,
+        shape=Rectangular(),
+        channel=0,
+        type=PulseType.READOUT,
+        qubit=0,
+    )
+    p0.start = 50
+    assert p0.finish == 100
 
 
 def test_pulses_pulse_serial():
@@ -311,8 +365,8 @@ def test_pulses_pulse_aliases():
     )
     assert repr(dp) == "DrivePulse(0, 2000, 0.9, 200_000_000, 0, Gaussian(5), 0, 0)"
 
-    fp = FluxPulse(start=0, duration=300, amplitude=0.9, relative_phase=0.0, shape=Rectangular(), channel=0, qubit=0)
-    assert repr(fp) == "FluxPulse(0, 300, 0.9, 0, Rectangular(), 0, 0)"
+    fp = FluxPulse(start=0, duration=300, amplitude=0.9, shape=Rectangular(), channel=0, qubit=0)
+    assert repr(fp) == "FluxPulse(0, 300, 0.9, Rectangular(), 0, 0)"
 
 
 def test_pulses_pulse_split_pulse():
@@ -410,6 +464,26 @@ def test_pulses_pulsesequence_operators():
     assert and_yet_another_ps.count == 5
 
 
+def test_pulses_pulsesequence_add():
+    p0 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(5), 10, PulseType.DRIVE, 1)
+    p1 = Pulse(100, 40, 0.9, 50e6, 0, Gaussian(5), 20, PulseType.DRIVE, 2)
+
+    p2 = Pulse(200, 40, 0.9, 50e6, 0, Gaussian(5), 30, PulseType.DRIVE, 3)
+    p3 = Pulse(400, 40, 0.9, 50e6, 0, Gaussian(5), 40, PulseType.DRIVE, 4)
+
+    ps = PulseSequence()
+    ps.add(p0)
+    ps.add(p1)
+    psx = PulseSequence(p2, p3)
+    ps.add(psx)
+
+    assert ps.count == 4
+    assert ps.qubits == [1, 2, 3, 4]
+    assert ps.channels == [10, 20, 30, 40]
+    assert ps.start == 0
+    assert ps.finish == 440
+
+
 def test_pulses_pulsesequence_clear():
     p1 = Pulse(600, 40, 0.9, 100e6, 0, Drag(5, 1), 1, PulseType.DRIVE)
     p2 = Pulse(600, 40, 0.9, 100e6, 0, Drag(5, 1), 2, PulseType.DRIVE)
@@ -441,6 +515,24 @@ def test_pulses_pulsesequence_get_channel_pulses():
     assert ps.get_channel_pulses(10).count == 1
     assert ps.get_channel_pulses(20).count == 2
     assert ps.get_channel_pulses(30).count == 3
+    assert ps.get_channel_pulses(20, 30).count == 5
+
+
+def test_pulses_pulsesequence_get_qubit_pulses():
+    p1 = DrivePulse(0, 400, 0.9, 20e6, 0, Gaussian(5), 10, 0)
+    p2 = ReadoutPulse(100, 400, 0.9, 20e6, 0, Rectangular(), 30, 0)
+    p3 = DrivePulse(300, 400, 0.9, 20e6, 0, Drag(5, 50), 20, 1)
+    p4 = DrivePulse(400, 400, 0.9, 20e6, 0, Drag(5, 50), 30, 1)
+    p5 = ReadoutPulse(500, 400, 0.9, 20e6, 0, Rectangular(), 30, 1)
+    p6 = FluxPulse(600, 400, 0.9, Rectangular(), 40, 1)
+    p7 = FluxPulse(900, 400, 0.9, Rectangular(), 40, 2)
+
+    ps = PulseSequence(p1, p2, p3, p4, p5, p6, p7)
+    assert ps.qubits == [0, 1, 2]
+    assert ps.get_qubit_pulses(0).count == 2
+    assert ps.get_qubit_pulses(1).count == 4
+    assert ps.get_qubit_pulses(2).count == 1
+    assert ps.get_qubit_pulses(0, 1).count == 6
 
 
 def test_pulses_pulsesequence_pulses_overlap():
