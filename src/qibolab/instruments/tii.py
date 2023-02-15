@@ -206,7 +206,7 @@ class TII_RFSOC4x2(AbstractInstrument):
 
         jsonDic["opCode"] = "sweep"
 
-        print("Check point 3", jsonDic)
+        print(f'Check point 3: {jsonDic}')
         # Create a socket (SOCK_STREAM means a TCP socket)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             # Connect to server and send data
