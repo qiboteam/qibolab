@@ -2,7 +2,6 @@ import numpy as np
 from general_connectivity import Transpiler
 from qibo import gates
 from qibo.models import Circuit
-from raw_code import generate_circuit
 
 
 def generate_random_circuit(nqubits, ngates):
@@ -30,8 +29,8 @@ def generate_random_circuit(nqubits, ngates):
     return circuit
 
 
-t = Transpiler(connectivity="21_qubits", init_method="greedy")
-t.draw_connectivity()
-circ = generate_random_circuit(3, 8)
+t = Transpiler(connectivity="21_qubits", init_method="greedy", init_samples=10)
+# t.draw_connectivity()
+circ = generate_random_circuit(4, 15)
 print(circ.draw())
 t.transpile(circ)

@@ -285,7 +285,11 @@ def shuffle_SWAP(s, chip, initial_circuit, method, g):
     return cost, circuit, mapping
 
 
+n = 6
+
+"""
 start_time = time.time()
+
 
 n = 6
 num_edges = 6
@@ -296,7 +300,7 @@ plt.figure(1, figsize=(5, 5))
 nx.draw(chip, with_labels=True)
 plt.savefig("chip.pdf")
 
-"""
+
 #give you and idea of time, this random circuit on our 21-qubit chip takes about one hour to find the solution (1583 SWAPs)
 #much longer than a random 21-qubit chip with 32 edges
 #probably because the graph is very structured and there is more shortest paths to compare
