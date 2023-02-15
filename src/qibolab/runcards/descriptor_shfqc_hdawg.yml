@@ -43,15 +43,15 @@ connections:
     - acquire_signal: q4/acquire_line
       ports: [QACHANNELS/0/INPUT]
 
-  device_hdawg:    
+  device_hdawg:
     - rf_signal: q0/flux_line
-      ports: SIGOUTS/0  
+      ports: SIGOUTS/0
     - rf_signal: q1/flux_line
-      ports: SIGOUTS/1  
+      ports: SIGOUTS/1
     - rf_signal: q2/flux_line
-      ports: SIGOUTS/2  
+      ports: SIGOUTS/2
     - rf_signal: q3/flux_line
-      ports: SIGOUTS/3  
+      ports: SIGOUTS/3
     - rf_signal: q4/flux_line
       ports: SIGOUTS/4
     - rf_signal: q03/flux_line

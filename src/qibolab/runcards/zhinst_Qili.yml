@@ -60,7 +60,7 @@ instruments:
             channels: [0]
             drive_range : -10
             lo_frequency: 4_300_000_000 #5_100_000_000
-            if_frequency: -19_058_000 
+            if_frequency: -19_058_000
 
     hdawg:
         lib: zhinst
