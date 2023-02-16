@@ -71,6 +71,7 @@ setup(
             "pyvisa-py==0.5.3",
             "qm-qua>=1.0.1",
             "qualang-tools>=0.13.1",
+            "laboneq>=1.7.0",
         ],
     },
     python_requires=">=3.8.0",
