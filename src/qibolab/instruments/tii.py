@@ -21,7 +21,7 @@ from qibolab.pulses import (
     Rectangular,
     PulseType,
 )
-from qibolab.sweeper import Sweeper
+from qibolab.sweeper import Sweeper, Parameter
 
 class TII_RFSOC4x2(AbstractInstrument):
     def __init__(self, name: str, address: str):  # , setting_parameters: dict):
@@ -75,7 +75,6 @@ class TII_RFSOC4x2(AbstractInstrument):
                 # Connect to server and send data
                 sock.connect((self.host, self.port))
                 sock.sendall(json.dumps(jsonDic).encode())
-
             sock.close()
 
         else:
@@ -191,34 +190,41 @@ class TII_RFSOC4x2(AbstractInstrument):
 
         #  Parsing the sweeper to dictionary and after to a json file 
         s: Sweeper
+        par: Parameter
         s = sweepers[0]
 
         jsonDic = {}
-        jsonDic['parameter'] = s.parameter
+        jsonDic['parameter'] = str(s.parameter)
+        start = s.values[0].item()
+        expt = len(s.values)
 
-        val = np.ndarray.tolist(s.values)
-        jsonDic['values'] = val
+        step= (s.values[1]-s.values[0]).item()
+        range = {'start': start, 'step': step, 'expt': expt}
+
+        jsonDic['range'] = range
 
         pulsesDic = {}
         for i, pulse in enumerate(s.pulses):
             pulsesDic[str(i)] = self.convert_pulse_to_dic(pulse)
         jsonDic['pulses'] = pulsesDic
 
+
         jsonDic["opCode"] = "sweep"
 
-        print(f'Check point 3: {jsonDic}')
+
+
         # Create a socket (SOCK_STREAM means a TCP socket)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             # Connect to server and send data
             sock.connect((self.host, self.port))
             sock.sendall(json.dumps(jsonDic).encode())
             # Receive data from the server and shut down
-            received = sock.recv(256)
+            received = sock.recv(4096)
             avg = json.loads(received.decode("utf-8"))
-            avgi = avg["avgi"]
-            avgq = avg["avgq"]
+            avg_di = avg["avg_di"]
+            avg_dq = avg["avg_dq"]
         sock.close()
-        return avgi, avgq
+        return avg_di, avg_dq
     
 
     def convert_pulse_to_dic(self, pulse):

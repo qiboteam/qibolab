@@ -14,6 +14,7 @@ settings:
     max_gain: 32000
     ro_duration: 3000
     ro_frequency: 7371530000
+    ro_gain: 600
     qubit_gain: 20000
     probe_length: 40
 
