@@ -46,7 +46,7 @@ class Channel:
 
     @offset.setter
     def offset(self, offset):
-        if not isinstance(offset, float):
+        if not isinstance(offset, (int, float)):
             raise_error(TypeError, f"Attempting to set non-float offset {offset}.")
         self._offset = offset
 

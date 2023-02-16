@@ -60,6 +60,12 @@ class DummyPlatform(AbstractPlatform):
             results[serial] = copy.copy(results[qubit])
         return results
 
+    def set_lo_readout_frequency(self, qubit, freq):
+        """Empty since a dummy platform is not connected to any instrument."""
+
+    def set_lo_drive_frequency(self, qubit, freq):
+        """Empty since a dummy platform is not connected to any instrument."""
+
     def set_attenuation(self, qubit, att):
         """Empty since a dummy platform is not connected to any instrument."""
 
@@ -67,6 +73,12 @@ class DummyPlatform(AbstractPlatform):
         """Empty since a dummy platform is not connected to any instrument."""
 
     def set_gain(self, qubit, gain):
+        """Empty since a dummy platform is not connected to any instrument."""
+
+    def get_lo_drive_frequency(self, qubit):
+        """Empty since a dummy platform is not connected to any instrument."""
+
+    def get_lo_readout_frequency(self, qubit):
         """Empty since a dummy platform is not connected to any instrument."""
 
     def get_attenuation(self, qubit):

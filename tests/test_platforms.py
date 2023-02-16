@@ -1,3 +1,6 @@
+"""Tests :class:`qibolab.platforms.multiqubit.MultiqubitPlatform` and
+:class:`qibolab.platforms.platform.DesignPlatform`.
+"""
 import os
 import pathlib
 import pickle
@@ -10,9 +13,10 @@ import yaml
 from qibo.models import Circuit
 from qibo.states import CircuitResult
 
+from qibolab import Platform
 from qibolab.backends import QibolabBackend
 from qibolab.paths import qibolab_folder
-from qibolab.platform import Platform
+from qibolab.platforms.abstract import AbstractPlatform
 from qibolab.platforms.multiqubit import MultiqubitPlatform
 from qibolab.pulses import PulseSequence
 
@@ -33,6 +37,26 @@ def platform(platform_name):
     _platform.stop()
     _platform.disconnect()
     os.remove(test_runcard)
+
+
+def test_platform_multiqubit(platform_name):
+    platform = Platform(platform_name)
+    assert isinstance(platform, AbstractPlatform)
+
+
+def test_platform():
+    with pytest.raises(RuntimeError):
+        platform = Platform("nonexistent")
+
+
+def test_platform_multiqubit(platform_name):
+    platform = Platform(platform_name)
+    assert isinstance(platform, AbstractPlatform)
+
+
+def test_platform():
+    with pytest.raises(RuntimeError):
+        platform = Platform("nonexistent")
 
 
 def test_multiqubitplatform_init(platform_name):
@@ -65,6 +89,48 @@ def test_abstractplatform_pickle(platform_name):
 @pytest.mark.qpu
 def test_abstractplatform_setup_start_stop(platform):
     pass
+
+
+@pytest.mark.qpu
+def test_platform_lo_drive_frequency(platform):
+    platform.set_lo_drive_frequency(qubit, 1e9)
+    assert platform.get_lo_drive_frequency(qubit) == 1e9
+
+
+@pytest.mark.qpu
+def test_platform_lo_readout_frequency(platform):
+    platform.set_lo_readout_frequency(qubit, 1e9)
+    assert platform.get_lo_readout_frequency(qubit) == 1e9
+
+
+@pytest.mark.qpu
+def test_platform_attenuation(platform):
+    if isinstance(platform, MultiqubitPlatform):
+        platform.set_attenuation(qubit, 0)
+        assert platform.get_attenuation(qubit) == 0
+    else:
+        with pytest.raises(NotImplementedError):
+            platform.set_attenuation(qubit, 0)
+        with pytest.raises(NotImplementedError):
+            platform.get_attenuation(qubit)
+
+
+@pytest.mark.qpu
+def test_platform_gain(platform):
+    if isinstance(platform, MultiqubitPlatform):
+        platform.set_gain(qubit, 0)
+        assert platform.get_gain(qubit) == 0
+    else:
+        with pytest.raises(NotImplementedError):
+            platform.set_gain(qubit, 0)
+        with pytest.raises(NotImplementedError):
+            platform.get_gain(qubit)
+
+
+@pytest.mark.qpu
+def test_platform_bias(platform):
+    platform.set_bias(qubit, 0)
+    assert platform.get_bias(qubit) == 0
 
 
 @pytest.mark.qpu
