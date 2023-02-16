@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class to interface with the SPI Rack Qutech Delft
 """
@@ -9,7 +8,6 @@ from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 
 
 class SPI(AbstractInstrument):
-
     property_wrapper = lambda parent, device, *parameter: property(
         lambda self: device.get(parameter[0]), lambda self, x: parent._set_device_parameter(device, *parameter, value=x)
     )

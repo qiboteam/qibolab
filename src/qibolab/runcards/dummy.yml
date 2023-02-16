@@ -7,7 +7,7 @@ settings:
     repetition_duration: 200_000
     minimum_delay_between_instructions: 4
 
-sleep_time: 1 # time to sleep every time ``execute_pulse_sequence`` is called
+sleep_time: 0 # time to sleep every time ``execute_pulse_sequence`` is called
 
 qubits: [0]
 
@@ -15,10 +15,10 @@ topology: null
 
 channels: [1, 2, 3]
 
-qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
-    0: [2, 1, null]
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux, QubitBias]
+    0: [2, 1, null, null]
 
-instruments: null
+instruments: []
 
 native_gates:
     single_qubit:
@@ -32,15 +32,15 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.9
-                frequency: 20_000_000
+                frequency: 7824855425
                 shape: Rectangular()
                 type: ro # readout
 
 characterization:
     single_qubit:
         0:
-            resonator_freq: 7824855425
-            qubit_freq: 5082441303
+            readout_frequency: 7824855425
+            drive_frequency: 5082441303
             T1: 21160
             T2: 17214
             state0_voltage: 847

@@ -105,6 +105,28 @@ SWIPHT
    :members:
    :member-order: bysource
 
+Data structures and sweeping
+============================
+
+.. TODO: Add documentation
+
+.. autoclass:: qibolab.platforms.abstract.Qubit
+   :members:
+   :member-order: bysource
+
+.. autoclass:: qibolab.result.ExecutionResults
+   :members:
+   :member-order: bysource
+
+
+.. autoclass:: qibolab.result.AveragedResults
+   :members:
+   :member-order: bysource
+
+.. autoclass:: qibolab.sweeper.Sweeper
+   :members:
+   :member-order: bysource
+
 Instruments supported
 =====================
 
