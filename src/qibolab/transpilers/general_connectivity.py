@@ -3,6 +3,7 @@ from copy import deepcopy
 
 import matplotlib.pyplot as plt
 import networkx as nx
+import numpy as np
 import sympy
 from qibo import gates
 from qibo.models import Circuit
@@ -46,6 +47,9 @@ class Transpiler:
                 gate_qubits.append(sympy.symbols(f"g{index}"))
                 translated_circuit.append(gate_qubits)
                 index += 1
+            if len(gate.qubits) >= 3:
+                print("ERROR do not use gates acting on more than 2 qubits")
+                return None
         return translated_circuit
 
     def clean(self):
@@ -116,8 +120,7 @@ class Transpiler:
         self.n_swap += len(path_list[0]) - 2
         # Reduce the number of paths to be faster
         for i in range(len(path_list)):
-            path = path_list[i]
-            List = self.map_list(path)
+            List = self.map_list(path_list[i])
             for j in range(len(List)):
                 mapping = List[j]
                 new_graph = nx.relabel_nodes(self.graph, mapping)
@@ -129,6 +132,33 @@ class Transpiler:
                     final_mapping = mapping
         return final_graph, final_circuit, final_mapping
 
+    def init_circuit(self, qibo_circuit):
+        """Initialize the transpiled qibo circuit"""
+        qubit_map = np.zeros((len(self.mapping.keys()),), dtype=int)
+        i = 0
+        for key in self.mapping.keys():
+            qubit_map[self.mapping[key]] = i
+            i += 1
+        print(qubit_map)
+        new_circuit = Circuit(self.connectivity.number_of_nodes())
+        moments = max(qibo_circuit.queue.moment_index)
+        for moment in range(moments):
+            for qubit in range(qibo_circuit.nqubits):
+                gate = qibo_circuit.queue.moments[moment][qubit]
+                if gate == None:
+                    pass
+                elif len(gate.qubits) == 1:
+                    on_qubit = qubit_map[qubit]
+                    new_circuit.add(
+                        gate.on_qubits(
+                            {
+                                qubit: on_qubit,
+                            }
+                        )
+                    )
+
+        print(new_circuit.draw())
+
     def transpile(self, qibo_circuit):
         self.circuit_repr = self.translate_circuit(qibo_circuit)
         self.mapping_list = []
@@ -139,8 +169,8 @@ class Transpiler:
             self.graph, self.mapping = self.greedy_init()
         else:
             print("ERROR")
-        print("Graph: ", self.graph)
         print("Mapping: ", self.mapping)
+        self.init_circuit(qibo_circuit)
         self.mapping_list.append(self.mapping)
         self.circuit_repr = self.reduce(self.graph)
         print("Circuit after first reduce:")
