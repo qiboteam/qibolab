@@ -14,8 +14,8 @@ class SGS100A(LocalOscillator):
     def __init__(self, name, address):
         super().__init__(name, address)
         self.device: LO_SGS100A = None
-        self._power: float
-        self._frequency: float
+        self._power: float = None
+        self._frequency: float = None
         self._device_parameters = {}
 
     @property
@@ -61,6 +61,11 @@ class SGS100A(LocalOscillator):
                 raise InstrumentException(self, f"Unable to connect to {self.name}")
         else:
             raise Exception("There is an open connection to the instrument already")
+        # set proper frequency and power if they were changed before connecting
+        if self._frequency is not None:
+            self._set_device_parameter("frequency", self._frequency)
+        if self._power is not None:
+            self._set_device_parameter("power", self._power)
 
     def _set_device_parameter(self, parameter: str, value):
         """Sets a parameter of the instrument, if it changed from the last stored in the cache.
