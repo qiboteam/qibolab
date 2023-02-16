@@ -7,12 +7,13 @@ settings:
     Flux_Tunable:
     readout_delay: 10.e-6 # 50.e-6
     readout_integration_delay: 40.e-9
-    AcquisitionType: SPECTROSCOPY
+    AcquisitionType: SPECTROSCOPY #
     AveragingMode: CYCLIC #
     HDAWG_ramp_up_rate: 0.e-9
     External_clock: False
     Fast_reset: False
     Fast_reset_time: 500.e-9
+    Bandwidth: 800.e-6
 
 qubits: [0, 1, 2, 3, 4]
 
