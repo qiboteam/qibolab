@@ -69,7 +69,7 @@ class DesignPlatform(AbstractPlatform):
         raise_error(NotImplementedError, f"{self.name} does not support gain.")
 
     def set_bias(self, qubit, bias):
-        self.qubits[qubit].flux.offset = bias
+        self.qubits[qubit].flux.bias = bias
 
     def get_bias(self, qubit):
-        return self.qubits[qubit].flux.offset
+        return self.qubits[qubit].flux.bias

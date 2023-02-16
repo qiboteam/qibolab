@@ -351,7 +351,7 @@ class QMOPX(AbstractInstrument):
         """
         if f"flux{qubit.name}" not in self.config["elements"]:
             # register controller
-            self.register_analog_output_controllers(qubit.flux.ports, qubit.flux.offset, qubit.flux.filter)
+            self.register_analog_output_controllers(qubit.flux.ports, qubit.flux.bias, qubit.flux.filter)
             # register element
             self.config["elements"][f"flux{qubit.name}"] = {
                 "singleInput": {
@@ -776,7 +776,7 @@ class QMOPX(AbstractInstrument):
             if sweeper.parameter is Parameter.bias:
                 from qm.qua import set_dc_offset
 
-                bias0 = [declare(fixed, value=qubits[q].flux.offset) for q in sweeper.qubits]
+                bias0 = [declare(fixed, value=qubits[q].flux.bias) for q in sweeper.qubits]
                 b = declare(fixed)
                 with for_(*from_array(b, sweeper.values)):
                     for q, b0 in zip(sweeper.qubits, bias0):

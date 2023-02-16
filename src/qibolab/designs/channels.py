@@ -24,7 +24,7 @@ class Channel:
     Not applicable for setups that do not use local oscillators because the controller
     can send sufficiently high frequencies
     """
-    _offset: Optional[float] = None
+    _bias: Optional[float] = None
     """DC offset that should be applied in the channel in order to shift the
     frequency of the qubit, usually to put it in its sweetspot.
     Relevant only for flux channels and flux-tunable transmon qubits.
@@ -37,18 +37,18 @@ class Channel:
     """
 
     @property
-    def offset(self):
+    def bias(self):
         """Bias offset for flux channels."""
-        if self._offset is None:
+        if self._bias is None:
             # operate qubits at their sweetspot unless otherwise stated
             return self.qubit.sweetspot
-        return self._offset
+        return self._bias
 
-    @offset.setter
-    def offset(self, offset):
-        if not isinstance(offset, (int, float)):
-            raise_error(TypeError, f"Attempting to set non-float offset {offset}.")
-        self._offset = offset
+    @bias.setter
+    def bias(self, bias):
+        if not isinstance(bias, (int, float)):
+            raise_error(TypeError, f"Attempting to set non-float bias {bias}.")
+        self._bias = bias
 
     @property
     def filter(self):
