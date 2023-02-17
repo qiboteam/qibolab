@@ -103,7 +103,7 @@ class ExecutionResults:
         """Perform average over i and q"""
         return AveragedResults(self.array.i.mean(), self.array.q.mean())
 
-    def to_dict(self, average=False):
+    def to_dict(self, average=True):
         """Serialize output in dict.
         Args:
             average (bool): If `True` returns a dictionary of the form
