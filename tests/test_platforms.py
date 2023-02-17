@@ -49,16 +49,6 @@ def test_platform():
         platform = Platform("nonexistent")
 
 
-def test_platform_multiqubit(platform_name):
-    platform = Platform(platform_name)
-    assert isinstance(platform, AbstractPlatform)
-
-
-def test_platform():
-    with pytest.raises(RuntimeError):
-        platform = Platform("nonexistent")
-
-
 def test_multiqubitplatform_init(platform_name):
     with open(qibolab_folder / "runcards" / f"{platform_name}.yml") as file:
         settings = yaml.safe_load(file)
