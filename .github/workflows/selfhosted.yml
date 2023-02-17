@@ -74,7 +74,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         message: |
-          Run on QPU `{{ $matrix.platform }}` completed! :atom:
+          Run on QPU `${{ matrix.platform }}` completed! :atom:
 
           > *You can download the coverage report as an artifact, from the workflow summary page:*
           > ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
