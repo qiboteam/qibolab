@@ -61,7 +61,10 @@ jobs:
       run: |
         sed -i 's/$PLATFORM/'${{ matrix.platform }}'/' qputests.sh
         srun -p ${{ matrix.platform }} qputests.sh
+        mkdir coverage
+        mv coverage.xml coverage/
+        mv htmlcov coverage/
     - uses: actions/upload-artifact@v3
       with:
         name: coverage-from-self-hosted
-        path: coverage.xml
+        path: coverage/
