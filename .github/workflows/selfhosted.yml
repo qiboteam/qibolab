@@ -68,3 +68,13 @@ jobs:
       with:
         name: coverage-from-self-hosted
         path: coverage/
+    - name: Notify the Pull Request
+      uses: unsplash/comment-on-pr@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        msg: |
+          Run on QPU completed! :atom:
+
+          > *You can download the coverage report as an artifact, from the workflow summary page:* 
+          > ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
