@@ -76,5 +76,5 @@ jobs:
         message: |
           Run on QPU completed! :atom:
 
-          > *You can download the coverage report as an artifact, from the workflow summary page:* 
+          > *You can download the coverage report as an artifact, from the workflow summary page:*
           > ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
