@@ -61,5 +61,7 @@ jobs:
       run: |
         sed -i 's/$PLATFORM/'${{ matrix.platform }}'/' qputests.sh
         srun -p ${{ matrix.platform }} qputests.sh
-        # TODO: Find a better way to upload coverage
-        cat coverage.xml
+- uses: actions/upload-artifact@v3
+  with:
+    name: coverage-from-self-hosted
+    path: coverage.xml
