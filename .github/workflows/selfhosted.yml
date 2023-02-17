@@ -59,7 +59,7 @@ jobs:
         pip install .[tiiq]
     - name: Test ${{ matrix.platform }}
       run: |
-        sed -i 's/$PLATFORM/'${{ matrix.platform }}'/' slurmjob.sh
-        srun -p ${{ matrix.platform }} slurmjob.sh
+        sed -i 's/$PLATFORM/'${{ matrix.platform }}'/' qputests.sh
+        srun -p ${{ matrix.platform }} qputests.sh
         # TODO: Find a better way to upload coverage
         cat coverage.xml
