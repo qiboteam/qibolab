@@ -76,19 +76,19 @@ class DummyPlatform(AbstractPlatform):
         """Empty since a dummy platform is not connected to any instrument."""
 
     def get_lo_drive_frequency(self, qubit):
-        """Empty since a dummy platform is not connected to any instrument."""
+        return 0
 
     def get_lo_readout_frequency(self, qubit):
-        """Empty since a dummy platform is not connected to any instrument."""
+        return 0
 
     def get_attenuation(self, qubit):
-        """Empty since a dummy platform is not connected to any instrument."""
+        return 0
 
     def get_bias(self, qubit):
-        """Empty since a dummy platform is not connected to any instrument."""
+        return 0
 
     def get_gain(self, qubit):
-        """Empty since a dummy platform is not connected to any instrument."""
+        return 0
 
     def sweep(self, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
         results = {}
