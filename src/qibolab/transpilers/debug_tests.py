@@ -32,6 +32,7 @@ def generate_random_circuit(nqubits, ngates):
 def custom_cicuit():
     circuit = Circuit(15)
     circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.X(0))
     circuit.add(gates.CZ(0, 13))
     circuit.add(gates.X(0))
     circuit.add(gates.CZ(0, 3))
@@ -48,7 +49,7 @@ def custom_cicuit():
     return circuit
 
 
-t = Transpiler(connectivity="21_qubits", init_method="greedy", init_samples=20)
+t = Transpiler(connectivity="21_qubits", init_method="greedy", init_samples=100)
 # t.draw_connectivity()
 # circ = generate_random_circuit(4, 15)
 circ = custom_cicuit()
