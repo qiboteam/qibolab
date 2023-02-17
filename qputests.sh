@@ -8,5 +8,7 @@ cd /tmp/tests
 pytest --cov=qibolab --cov-report=xml -m qpu --platforms $PLATFORM
 cd -
 mv /tmp/tests/coverage.xml .
+ls /tmp/tests/
 mv /tmp/tests/htmlcov .
+ls
 rm -r /tmp/tests
