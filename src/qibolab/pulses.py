@@ -101,7 +101,7 @@ class PulseShape(ABC):
         pulse (Pulse): the pulse associated with it. Its parameters are used to generate pulse waveforms.
     """
 
-    SAMPLING_RATE = 2e9  # 1e9  # 1GSaPS
+    SAMPLING_RATE = 1e9  # 1GSaPS
     pulse = None
 
     @property
