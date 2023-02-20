@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import laboneq.simple as lo
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,12 +7,12 @@ import yaml
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.pulses import PulseSequence
 
+# TODO: Pulses timing
+# TODO: se.finish and play with this for pulses
+# TODO: Add return clasified states.
 
-#TODO: Pulses timing
-#TODO: se.finish and play with this for pulses
-#TODO: Add return clasified states.
+# TODO: Sweeps on Amplitude on not on range, but change it on top on them
 
-#TODO: Sweeps on Amplitude on not on range, but change it on top on them
 
 # TODO: Add/Check for loops for multiple qubits
 class Zurich(AbstractInstrument):
@@ -34,7 +33,6 @@ class Zurich(AbstractInstrument):
         self.connect(use_emulation=self.emulation)
 
     def def_calibration(self):
-
         self.calib = lo.Calibration()
 
         for it in range(len(self.qubits)):
@@ -85,7 +83,6 @@ class Zurich(AbstractInstrument):
 
     # Set channel map
     def set_maps(self):
-
         self.map_q = {}
 
         for qubit in self.addressed_qubits:
@@ -183,7 +180,6 @@ class Zurich(AbstractInstrument):
         self.sequence = PulseSequence()
 
     def Z_setup(self):
-
         # self.Zsetup = lo.DeviceSetup.from_descriptor(
         #     yaml_text = self.descriptor,
         #     server_host="localhost",
@@ -212,7 +208,6 @@ class Zurich(AbstractInstrument):
         self.Zsetup.set_calibration(self.calib)
 
     def sequences_to_ZurichPulses(self, sequences, sweepers=None):
-
         self.sequences = sequences
 
         sequence_Z_drives = []
@@ -223,7 +218,7 @@ class Zurich(AbstractInstrument):
         rel_phases = []
         Drive_durations = []
         addressed_qubits = []
-        
+
         Starts = []
         Durations = []
 
@@ -244,7 +239,6 @@ class Zurich(AbstractInstrument):
             Drive_duration = 0
 
             for pulse in sequence:
-
                 starts.append(pulse.start)
                 durations.append(pulse.duration)
                 rel_phase.append(pulse.relative_phase)
@@ -340,7 +334,7 @@ class Zurich(AbstractInstrument):
             sequence_Z_drives.append(sequence_Z_drive)
             Delays.append(delays)
             rel_phases.append(rel_phase)
-            
+
             Starts.append(starts)
             Durations.append(durations)
 
@@ -352,7 +346,7 @@ class Zurich(AbstractInstrument):
         self.rel_phases = rel_phases
         self.Drive_durations = Drive_durations
         self.addressed_qubits = addressed_qubits
-        
+
         self.starts = Starts
         self.durations = Durations
 
@@ -376,7 +370,6 @@ class Zurich(AbstractInstrument):
     # TODO: All the posible sweeps
     # TODO: Select averaging and acquisition modes
     def create_exp(self):
-
         signals = []
         if any(self.sequence_drive):
             if any(self.sequence_flux):
@@ -408,7 +401,7 @@ class Zurich(AbstractInstrument):
         # for j in range(len(self.sequences)):
         #     self.iteration = j
 
-        #For the Resonator Spec
+        # For the Resonator Spec
         # with exp.acquire_loop_rt(
         #     uid="shots",
         #     count=self.settings["hardware_avg"],
@@ -419,8 +412,8 @@ class Zurich(AbstractInstrument):
         #     averaging_mode=lo.AveragingMode.CYCLIC,
         #     # averaging_mode=lo.AveragingMode.SINGLE_SHOT,
         # ):
-        
-        #For multiplex readout
+
+        # For multiplex readout
         with exp.acquire_loop_rt(
             uid="shots",
             count=self.settings["hardware_avg"],
@@ -430,11 +423,8 @@ class Zurich(AbstractInstrument):
             averaging_mode=lo.AveragingMode.CYCLIC,
             # averaging_mode=lo.AveragingMode.SINGLE_SHOT,
         ):
-
             if self.sweepers is not None:
-
                 if len(self.sweepers) == 1:
-
                     if self.sweepers[0].parameter == "freq":
                         with exp.sweep(parameter=self.sweepers_Zh[0]):
                             k = 0
@@ -515,7 +505,6 @@ class Zurich(AbstractInstrument):
         self.experiment = exp
 
     def select_exp(self, exp):
-
         if any(self.sequence_drive):
             if any(self.sequence_flux):
                 for j in range(len(self.sequences)):
@@ -534,7 +523,6 @@ class Zurich(AbstractInstrument):
                     self.qubit_reset(exp)
 
         elif any(self.sequence_flux):
-
             for j in range(len(self.sequences)):
                 self.iteration = j
                 self.Flux(exp)
@@ -542,7 +530,6 @@ class Zurich(AbstractInstrument):
                 self.qubit_reset(exp)
 
         else:
-
             for j in range(len(self.sequences)):
                 self.iteration = j
                 self.Measure(exp)
@@ -557,7 +544,6 @@ class Zurich(AbstractInstrument):
             for qubit in self.addressed_qubits:
                 exp.delay(signal=f"flux{qubit}", time=self.settings["readout_delay"])
 
-                
     def Drive(self, exp):
         j = self.iteration
         with exp.section(uid=f"sequence{j}_drive", alignment=lo.SectionAlignment.RIGHT):
@@ -618,9 +604,7 @@ class Zurich(AbstractInstrument):
                             signal=f"acquire{qubit}", handle=f"sequence_{i}_{j}", kernel=self.sequence_weight[j][i]
                         )
                     elif len(self.sweepers) == 1:
-                        exp.acquire(
-                            signal=f"acquire{qubit}", handle=f"sequence_{j}", kernel=self.sequence_weight[j][i]
-                        )
+                        exp.acquire(signal=f"acquire{qubit}", handle=f"sequence_{j}", kernel=self.sequence_weight[j][i])
 
                 elif len(self.sequence_readout[j]) > 1:
                     exp.acquire(signal=f"acquire{qubit}", handle=f"sequence_{i}_{j}", kernel=self.sequence_weight[j][i])
@@ -656,7 +640,6 @@ class Zurich(AbstractInstrument):
         i = 0
         j = 0
         for pulse in sequence:
-
             starts.append(pulse.start)
             durations.append(pulse.duration)
             # self.rel_phases.append(pulse.relative_phase)
@@ -725,7 +708,6 @@ class Zurich(AbstractInstrument):
         self.sequence_readout = sequence_Z_readout
 
     def execute_sequences(self, sequences, sweepers=None):
-
         # if self.sequence == sequence:
         #     self.repeat_seq()
         # else:
@@ -760,7 +742,7 @@ class Zurich(AbstractInstrument):
                     phase.append(np.angle(spec_res[j]))
                     i.append(spec_res[j].real)
                     q.append(spec_res[j].imag)
-                    
+
             elif len(self.sweepers) == 1:
                 for j in range(1):
                     spec_res.append(self.results.get_data(f"sequence_{j}"))
@@ -827,7 +809,6 @@ class Zurich(AbstractInstrument):
 
                 with exp.section(uid="qubit_readout"):
                     for pulse in self.sequence_readout:
-
                         exp.reserve(signal="drive")
 
                         exp.play(signal="measure", pulse=pulse, phase=self.rel_phases[i])
@@ -896,7 +877,6 @@ class Zurich(AbstractInstrument):
         self.experiment = exp
 
     def execute_pulse_sequence(self, sequence):
-
         self.sequence_to_Zurichpulses(sequence)
         self.sequencepulses_to_exp()
         self.run_seq()
@@ -918,20 +898,18 @@ class Zurich(AbstractInstrument):
         self.results = self.session.run(self.exp)
 
     def run_seq(self):
-        
         # compiler_settings = {
         #     "SHFSG_FORCE_COMMAND_TABLE": True,
         #     "SHFSG_MIN_PLAYWAVE_HINT": 32,
         #     "SHFSG_MIN_PLAYZERO_HINT": 32,
         # }
-        
+
         # self.exp = self.session.compile(self.experiment, compiler_settings=compiler_settings)
 
         self.exp = self.session.compile(self.experiment)
         self.results = self.session.run(self.exp, self.emulation)
 
     def run_multi(self):
-
         compiler_settings = {
             "SHFSG_FORCE_COMMAND_TABLE": True,
             "SHFSG_MIN_PLAYWAVE_HINT": 32,
@@ -1045,7 +1023,6 @@ class Zurich(AbstractInstrument):
     def sequencesPulses_to_exp(self):
         # Create Experiment
         if any(self.sequence_drive) and any(self.sequence_flux) != 0:
-
             signals = []
             for qubit in self.addressed_qubits:
                 signals.append(lo.ExperimentSignal(f"measure{qubit}"))
@@ -1066,7 +1043,6 @@ class Zurich(AbstractInstrument):
                 averaging_mode=lo.AveragingMode.CYCLIC,
                 # acquisition_type=lo.AcquisitionType.INTEGRATION,
             ):
-
                 for j in range(len(self.sequences)):
                     sequence_f = self.sequence_flux[j]
                     sequence_d = self.sequence_drive[j]
@@ -1107,7 +1083,6 @@ class Zurich(AbstractInstrument):
                             exp.delay(signal=f"measure{qubit}", time=self.settings["readout_delay"])
 
         elif any(self.sequence_flux) and not any(self.sequence_drive):
-
             exp = lo.Experiment(
                 uid="Sequence",
                 signals=[
@@ -1125,7 +1100,6 @@ class Zurich(AbstractInstrument):
                 acquisition_type=lo.AcquisitionType.SPECTROSCOPY,
                 # acquisition_type=lo.AcquisitionType.INTEGRATION,
             ):
-
                 for j in range(len(self.sequence_readout)):
                     sequence_f = self.sequence_flux[j]
                     sequence_r = self.sequence_readout[j]
@@ -1150,7 +1124,6 @@ class Zurich(AbstractInstrument):
             pass
 
         else:
-
             signals = []
             for qubit in self.addressed_qubits:
                 signals.append(lo.ExperimentSignal(f"measure{qubit}"))
@@ -1170,7 +1143,6 @@ class Zurich(AbstractInstrument):
                 averaging_mode=lo.AveragingMode.CYCLIC,
                 # acquisition_type=lo.AcquisitionType.INTEGRATION,
             ):
-
                 for j in range(len(self.sequences)):
                     self.iteration = j
                     sequence_r = self.sequence_readout[j]
@@ -1207,7 +1179,6 @@ class Zurich(AbstractInstrument):
         # Create Experiment
 
         if len(self.sequence_drive) != 0:
-
             exp = lo.Experiment(
                 uid="Sequence",
                 signals=[
@@ -1228,21 +1199,16 @@ class Zurich(AbstractInstrument):
                 # averaging_mode=lo.AveragingMode.CYCLIC,
                 # acquisition_type=lo.AcquisitionType.INTEGRATION,
             ):
-
                 with exp.sweep(uid="sweep", parameter=self.SweepParameters, alignment=lo.SectionAlignment.RIGHT):
-
                     with exp.section(uid="qubit_excitation", alignment=lo.SectionAlignment.RIGHT):
                         i = 0
                         for pulse in self.sequence_drive:
-
                             if self.Parameter == "Lenght":
-
                                 exp.play(
                                     signal="drive", pulse=pulse, length=self.SweepParameters, phase=self.rel_phases[i]
                                 )
 
                             if self.Parameter == "Amp":
-
                                 exp.play(
                                     signal="drive",
                                     pulse=pulse,
@@ -1258,7 +1224,6 @@ class Zurich(AbstractInstrument):
 
                     with exp.section(uid="qubit_readout"):
                         for pulse in self.sequence_readout:
-
                             exp.reserve(signal="drive")
 
                             exp.play(signal="measure", pulse=pulse, phase=self.rel_phases[i])
@@ -1278,7 +1243,6 @@ class Zurich(AbstractInstrument):
                         exp.delay(signal="measure", time=self.settings["readout_delay"])
 
         else:
-
             signals = []
             for qubit in self.addressed_qubits:
                 signals.append(lo.ExperimentSignal(f"measure{qubit}"))
@@ -1302,7 +1266,6 @@ class Zurich(AbstractInstrument):
                 averaging_mode=lo.AveragingMode.CYCLIC,
                 # acquisition_type=lo.AcquisitionType.INTEGRATION,
             ):
-
                 # for j in range(len(self.sequence)):
                 #     sequence_f = self.sequence_flux[j]
                 #     sequence_r = self.sequence_readout[j]
@@ -1377,7 +1340,6 @@ class Zurich(AbstractInstrument):
                 # averaging_mode=lo.AveragingMode.CYCLIC,
                 # acquisition_type=lo.AcquisitionType.INTEGRATION,
             ):
-
                 with exp.sweep(parameter=frequency_sweep):
                     j = 0
                     # # inner loop - real-time sweep of qubit drive pulse amplitude
@@ -1397,7 +1359,6 @@ class Zurich(AbstractInstrument):
                     # qubit readout pulse and data acquisition
                     with exp.section():
                         for pulse in self.sequence_readout:
-
                             exp.reserve(signal="drive")
                             exp.play(signal="measure", pulse=pulse, phase=self.rel_phases[i])
 
@@ -1423,7 +1384,6 @@ class Zurich(AbstractInstrument):
 
         # TODO: Add features of above to else
         else:
-
             qubits = self.addressed_qubit
             self.addressed_qubits = self.addressed_qubit
 
@@ -1570,7 +1530,6 @@ class Zurich(AbstractInstrument):
     def sequence_to_ZurichSweep_freq_param(
         self, sequence, freq_start, freq_stop, freq_count, start, stop, count, parameter
     ):
-
         self.sequence = sequence
         sequence_Z_drive = []
         sequence_Z_readout = []
@@ -1583,7 +1542,6 @@ class Zurich(AbstractInstrument):
         j = 0
         k = 0
         for pulse in sequence:
-
             qubit = pulse.qubit
 
             if qubit in addressed_qubits:
@@ -1651,7 +1609,6 @@ class Zurich(AbstractInstrument):
             j += 1
 
             if str(pulse.type) == "PulseType.FLUX":
-
                 # addressed_qubit.append(pulse.qubit)
 
                 if str(pulse.shape) == "Rectangular()":
@@ -1683,7 +1640,6 @@ class Zurich(AbstractInstrument):
 
     # TODO:ERASE
     def execute_flux_sequences(self, sequences):
-
         # if self.sequence == sequence:
         #     self.repeat_seq()
         # else:
@@ -1710,7 +1666,6 @@ class Zurich(AbstractInstrument):
         return msr, phase, i, q
 
     def execute_sweep(self, sequences, sweepers=None):
-
         # if self.sequence == sequence:
         #     self.repeat_seq()
         # else:
@@ -1739,7 +1694,6 @@ class Zurich(AbstractInstrument):
     def execute_flux_sequence_freq_param(
         self, sequence, freq_start, freq_stop, freq_count, start, stop, count, parameter
     ):
-
         self.sequence_to_ZurichSweep_freq_param(
             sequence, freq_start, freq_stop, freq_count, start, stop, count, parameter
         )
@@ -1762,7 +1716,6 @@ class Zurich(AbstractInstrument):
         return msr, phase, i, q
 
     def execute_pulse_sequence_freq(self, sequence, start, stop, points):
-
         self.sequence_to_ZurichPulses(sequence)
         self.sequencePulses_to_exp_freqs(start, stop, points)
         self.run_seq()
@@ -1782,7 +1735,6 @@ class Zurich(AbstractInstrument):
         return msr, phase, i, q
 
     def execute_pulse_sequence_freq_multi(self, sequence, qubits):
-
         # if self.sequence == sequence:
         #     self.repeat_seq()
         # else:
@@ -1822,7 +1774,6 @@ class Zurich(AbstractInstrument):
         j = 0
         k = 0
         for pulse in sequence:
-
             starts.append(pulse.start)
             durations.append(pulse.duration)
             self.rel_phases.append(pulse.relative_phase)
@@ -1951,7 +1902,6 @@ class Zurich(AbstractInstrument):
 
                 with exp.section(uid="qubit_readout"):
                     for pulse in self.sequence_readout:
-
                         exp.reserve(signal="drive")
 
                         exp.play(signal="measure", pulse=pulse, phase=self.rel_phases[i])
@@ -2065,7 +2015,6 @@ class Zurich(AbstractInstrument):
             averaging_mode=lo.AveragingMode.CYCLIC,
             # acquisition_type=lo.AcquisitionType.INTEGRATION,
         ):
-
             for j in range(len(self.sequences)):
                 self.iteration = j
                 # exp = self.Measure(exp)
@@ -2081,7 +2030,6 @@ class Zurich(AbstractInstrument):
         self.experiment = exp
 
     def Measure_sequences(self, sequences):
-
         # if self.sequence == sequence:
         #     self.repeat_seq()
         # else:
