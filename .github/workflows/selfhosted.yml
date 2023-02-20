@@ -43,9 +43,9 @@ jobs:
     - name: Cleanup workspace manually
       run: |
         rm -rf _work/*
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: 3.8
     - name: Install package
@@ -59,4 +59,22 @@ jobs:
         pip install .[tiiq]
     - name: Test ${{ matrix.platform }}
       run: |
-        srun -p ${{ matrix.platform }} pytest -m qpu --no-cov --platforms ${{ matrix.platform }}
+        sed -i 's/$PLATFORM/'${{ matrix.platform }}'/' qputests.sh
+        srun -p ${{ matrix.platform }} qputests.sh
+        mkdir coverage
+        mv coverage.xml coverage/
+        mv htmlcov coverage/
+    - uses: actions/upload-artifact@v3
+      with:
+        name: coverage-from-self-hosted
+        path: coverage/
+    - name: Notify the Pull Request
+      uses: thollander/actions-comment-pull-request@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        message: |
+          Run on QPU `${{ matrix.platform }}` completed! :atom:
+
+          > *You can download the coverage report as an artifact, from the workflow summary page:*
+          > ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
