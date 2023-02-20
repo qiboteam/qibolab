@@ -2,12 +2,11 @@ import laboneq.simple as lo
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
-from qibolab.result import ExecutionResults
-
 
 #
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.pulses import PulseSequence
+from qibolab.result import ExecutionResults
 
 # TODO: Pulses timing
 # TODO: se.finish and play with this for pulses
@@ -403,7 +402,7 @@ class Zurich(AbstractInstrument):
         # for j in range(len(self.sequences)):
         #     self.iteration = j
 
-        #For the Resonator Spec
+        # For the Resonator Spec
         with exp.acquire_loop_rt(
             uid="shots",
             count=self.settings["hardware_avg"],
@@ -414,21 +413,19 @@ class Zurich(AbstractInstrument):
             averaging_mode=lo.AveragingMode.CYCLIC,
             # averaging_mode=lo.AveragingMode.SINGLE_SHOT,
         ):
-        
-        #For multiplex readout
-        # with exp.acquire_loop_rt(
-        #     uid="shots",
-        #     count=self.settings["hardware_avg"],
-        #     # repetition_mode= lo.RepetitionMode.CONSTANT,
-        #     # repetition_time= 20e-6,
-        #     acquisition_type=lo.AcquisitionType.INTEGRATION,
-        #     averaging_mode=lo.AveragingMode.CYCLIC,
-        #     # averaging_mode=lo.AveragingMode.SINGLE_SHOT,
-        # ):
+            # For multiplex readout
+            # with exp.acquire_loop_rt(
+            #     uid="shots",
+            #     count=self.settings["hardware_avg"],
+            #     # repetition_mode= lo.RepetitionMode.CONSTANT,
+            #     # repetition_time= 20e-6,
+            #     acquisition_type=lo.AcquisitionType.INTEGRATION,
+            #     averaging_mode=lo.AveragingMode.CYCLIC,
+            #     # averaging_mode=lo.AveragingMode.SINGLE_SHOT,
+            # ):
 
             if self.sweepers is not None:
                 if len(self.sweepers) == 1:
-
                     if self.sweepers[0].parameter.name == "frequency":
                         with exp.sweep(parameter=self.sweepers_Zh[0]):
                             k = 0
@@ -711,8 +708,8 @@ class Zurich(AbstractInstrument):
         self.sequence_drive = sequence_Z_drive
         self.sequence_readout = sequence_Z_readout
 
- # Separe play and sweep and add relax and shots.
- # And list of Qubits(Object)
+    # Separe play and sweep and add relax and shots.
+    # And list of Qubits(Object)
     def execute_sequences(self, sequences, sweepers=None):
         # if self.sequence == sequence:
         #     self.repeat_seq()
@@ -740,7 +737,7 @@ class Zurich(AbstractInstrument):
                         phase.append(np.angle(datapoint))
                         i.append(datapoint.real)
                         q.append(datapoint.imag)
-                        
+
                 return msr, phase, i, q
 
             elif len(self.sweepers) == 5:
@@ -750,12 +747,10 @@ class Zurich(AbstractInstrument):
                     phase.append(np.angle(spec_res[j]))
                     i.append(spec_res[j].real)
                     q.append(spec_res[j].imag)
-                    
+
                 return msr, phase, i, q
-                    
+
             elif len(self.sweepers) == 1:
-                
- 
                 # handles = result.result_handles
                 # results = {}
                 # for pulse in ro_pulses:
@@ -768,25 +763,23 @@ class Zurich(AbstractInstrument):
                 #         shots = None
                 #     results[pulse.qubit] = results[serial] = ExecutionResults.from_components(ires, qres, shots)
                 # return results
-            
-                
+
                 results = {}
                 for j in range(len(self.sequences)):
                     for pulse in sequences[j].ro_pulses:
-                        
                         spec_res = self.results.get_data(f"sequence_{j}")
                         i = spec_res.real
                         q = spec_res.imag
-                        
+
                         # spec_res.append(self.results.get_data(f"sequence_{j}"))
                         # msr.append(abs(spec_res[j]))
                         # phase.append(np.angle(spec_res[j]))
                         # i.append(spec_res[j].real)
                         # q.append(spec_res[j].imag)
-                
-                shots = self.settings["hardware_avg"] 
+
+                shots = self.settings["hardware_avg"]
                 results[pulse.qubit] = ExecutionResults.from_components(i, q, shots)
-                
+
                 return results
 
         elif len(self.sequence_readout[0]) > 1:
@@ -797,7 +790,7 @@ class Zurich(AbstractInstrument):
                     phase.append(np.angle(datapoint))
                     i.append(datapoint.real)
                     q.append(datapoint.imag)
-            
+
             return msr, phase, i, q
 
         else:
@@ -915,6 +908,7 @@ class Zurich(AbstractInstrument):
         exp.set_signal_map(map_q)
 
         self.experiment = exp
+
     def execute_pulse_sequence(self, sequence):
         self.sequence_to_Zurichpulses(sequence)
         self.sequencepulses_to_exp()
@@ -962,7 +956,6 @@ class Zurich(AbstractInstrument):
         self.results = self.session.run(do_simulation=self.emulation)
 
         # TODO: Add more gates
-
 
     # TODO:Move to platform if we need it
     def create_qubit_readout_pulse(self, qubit, start):
