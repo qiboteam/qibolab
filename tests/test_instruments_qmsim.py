@@ -1,4 +1,15 @@
-"""Test compilation of different pulse sequences using the Quantum Machines simulator."""
+"""Test compilation of different pulse sequences using the Quantum Machines simulator.
+
+In order to run these tests, provide the following options through the ``pytest`` parser:
+    address (str): token for the QM simulator
+    simulation-duration (int): Duration for the simulation in ns.
+    folder (str): Optional folder to save the generated waveforms for each test.
+If a folder is provided the waveforms will be generated and saved during the first run.
+For every other run, the generated waveforms will be compared with the saved ones and errors
+will be raised if there is disagreement.
+If an error is raised or a waveform is generated for the first time, a plot will also be
+created so that the user can check if the waveform looks as expected.
+"""
 import os
 
 import h5py
