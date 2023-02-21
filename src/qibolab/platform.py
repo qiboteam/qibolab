@@ -66,6 +66,9 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
 
         controller = QMSim("qmopx", address, simulation_duration, cloud)
 
+    # set time of flight for readout integration (HARDCODED)
+    controller.time_of_flight = 280
+
     # Instantiate local oscillators (HARDCODED)
     local_oscillators = [
         LocalOscillator("lo_readout_a", "192.168.0.39"),

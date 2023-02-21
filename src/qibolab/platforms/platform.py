@@ -18,7 +18,7 @@ class DesignPlatform(AbstractPlatform):
         self.is_connected = True
 
     def setup(self):
-        self.design.setup(self.qubits, **self.settings["settings"])
+        self.design.setup()
 
     def start(self):
         self.design.start()

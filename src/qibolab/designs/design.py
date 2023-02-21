@@ -33,10 +33,10 @@ class InstrumentDesign:
                     )
         self._is_connected = True
 
-    def setup(self, qubits, *args, **kwargs):
+    def setup(self):
         """Load settings to instruments."""
         for instrument in self.instruments:
-            instrument.setup(qubits, *args, **kwargs)
+            instrument.setup()
 
     def start(self):
         """Start all instruments."""
@@ -62,9 +62,10 @@ class InstrumentDesign:
         result = None
         for instrument in self.instruments:
             new_result = instrument.play(*args, **kwargs)
-            if new_result is not None and result is not None:
-                raise_error(RuntimeError, "Multiple instruments returned acquisition results.")
-            result = new_result
+            if new_result is not None:
+                if result is not None:
+                    raise_error(RuntimeError, "Multiple instruments returned acquisition results.")
+                result = new_result
         return result
 
     def sweep(self, *args, **kwargs):
@@ -72,7 +73,8 @@ class InstrumentDesign:
         result = None
         for instrument in self.instruments:
             new_result = instrument.sweep(*args, **kwargs)
-            if new_result is not None and result is not None:
-                raise_error(RuntimeError, "Multiple instruments returned acquisition results.")
-            result = new_result
+            if new_result is not None:
+                if result is not None:
+                    raise_error(RuntimeError, "Multiple instruments returned acquisition results.")
+                result = new_result
         return result

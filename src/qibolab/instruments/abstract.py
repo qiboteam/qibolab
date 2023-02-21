@@ -31,7 +31,7 @@ class AbstractInstrument(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def setup(self, qubits, *args, **kwargs):
+    def setup(self, *args, **kwargs):
         raise NotImplementedError
 
     @abstractmethod
