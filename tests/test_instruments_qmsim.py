@@ -145,20 +145,19 @@ gatelist = [
 @pytest.mark.parametrize("count,gate_pair", enumerate(gatelist))
 def test_qmsim_allxy(simulator, folder, count, gate_pair):
     qubits = [1, 2, 3, 4]
+    allxy_pulses = {
+        "I": lambda qubit, start: None,
+        "RX(pi)": lambda qubit, start: simulator.create_RX_pulse(qubit, start=start),
+        "RX(pi/2)": lambda qubit, start: simulator.create_RX90_pulse(qubit, start=start),
+        "RY(pi)": lambda qubit, start: simulator.create_RX_pulse(qubit, start=start, relative_phase=np.pi / 2),
+        "RY(pi/2)": lambda qubit, start: simulator.create_RX90_pulse(qubit, start=start, relative_phase=np.pi / 2),
+    }
+
     sequence = PulseSequence()
     for qubit in qubits:
         start = 0
         for gate in gate_pair:
-            if gate == "I":
-                pulse = None
-            elif gate == "RX(pi)":
-                pulse = simulator.create_RX_pulse(qubit, start=start)
-            elif gate == "RX(pi/2)":
-                pulse = simulator.create_RX90_pulse(qubit, start=start)
-            elif gate == "RY(pi)":
-                pulse = simulator.create_RX_pulse(qubit, start=start, relative_phase=np.pi / 2)
-            elif gate == "RY(pi/2)":
-                pulse = simulator.create_RX90_pulse(qubit, start=start, relative_phase=np.pi / 2)
+            pulse = allxy_pulses[gate](qubit, start)
             if pulse is not None:
                 sequence.add(pulse)
                 start += pulse.duration
