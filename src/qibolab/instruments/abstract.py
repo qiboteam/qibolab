@@ -63,6 +63,12 @@ class LocalOscillator(AbstractInstrument):
     to address the qubits and resonators.
     """
 
+    def play(self, *args, **kwargs):
+        """Local oscillators do not play pulses."""
+
+    def sweep(self, *args, **kwargs):
+        """Local oscillators do not play pulses."""
+
 
 class InstrumentException(Exception):
     def __init__(self, instrument: AbstractInstrument, message: str):

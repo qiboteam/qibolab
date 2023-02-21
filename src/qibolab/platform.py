@@ -1,7 +1,6 @@
 from qibo.config import raise_error
 
-from qibolab.designs.channels import Channel, ChannelMap
-from qibolab.designs.mixer import MixerInstrumentDesign
+from qibolab.designs import Channel, ChannelMap, InstrumentDesign
 from qibolab.platforms.platform import DesignPlatform
 
 
@@ -99,7 +98,8 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
     channels["L3-14"].local_oscillator = local_oscillators[4]
     channels["L4-26"].local_oscillator = local_oscillators[5]
 
-    design = MixerInstrumentDesign(controller, channels, local_oscillators)
+    instruments = [controller] + local_oscillators
+    design = InstrumentDesign(instruments, channels)
     platform = DesignPlatform("qw5q_gold", design, runcard)
 
     # assign channels to qubits
