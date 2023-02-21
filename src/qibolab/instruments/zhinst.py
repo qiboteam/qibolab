@@ -4,7 +4,7 @@ import numpy as np
 import yaml
 
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
-from qibolab.pulses import PulseSequence, PulseType
+from qibolab.pulses import PulseSequence, PulseType, Pulse
 from qibolab.result import ExecutionResults
 
 # TODO: Pulses timing
@@ -26,27 +26,50 @@ class ZhPulse:
     
     def __init__(self, pulse):
         self.pulse = pulse
-        self.element = f"{pulse.type.name.lower()}{pulse.qubit}"
+        self.signal = f"{pulse.type.name.lower()}{pulse.qubit}"
         self.operation = pulse.serial
+        self.zhpulse = self.select_pulse(pulse, pulse.type.name.lower())
         self.relative_phase = pulse.relative_phase / (2 * np.pi)
 
         # Stores the baking object (for pulses that need 1ns resolution)
         self.baked = None
         self.baked_amplitude = None
 
-        self.I = None
-        self.Q = None
         self.shot = None
         self.I_st = None
         self.Q_st = None
         self.shots = None
         self.threshold = None
-        self.cos = None
-        self.sin = None
         
-        def bake(self, config):
-            pass
-            
+    def bake(self, config):
+        pass
+        
+    def select_pulse(self, pulse, type):
+        if str(pulse.shape) == "Rectangular()":
+            Zh_Pulse = lo.pulse_library.const(
+                            uid=(f"{type}_{pulse.qubit}_"),
+                            length=round(pulse.duration * 1e-9, 9),
+                            amplitude=pulse.amplitude,
+                        )
+        elif "Gaussian" in str(pulse.shape):
+            sigma = pulse.shape.rel_sigma
+            Zh_Pulse = lo.pulse_library.gaussian(
+                            uid=(f"{type}_{pulse.qubit}_"),
+                            length=round(pulse.duration * 1e-9, 9),
+                            amplitude=pulse.amplitude,
+                            sigma=2 / sigma,
+                        )
+        elif "Drag" in str(pulse.shape):
+            sigma = pulse.shape.rel_sigma
+            beta = pulse.shape.beta
+            Zh_Pulse = lo.pulse_library.drag(
+                            uid=(f"{type}_{pulse.qubit}_"),
+                            length=round(pulse.duration * 1e-9, 9),
+                            amplitude=pulse.amplitude,
+                            sigma=2 / sigma,
+                            beta = beta,
+                        )
+        return Zh_Pulse
     
 # TODO: Adapt
 class ZhSequence(list):
@@ -59,10 +82,11 @@ class ZhSequence(list):
         self.pulse_to_zhpulse = {}
     
     def add(self, pulse):
-        if not isinstance(pulse, Pulse):
-            raise_error(TypeError, f"Pulse {pulse} has invalid type {type(pulse)}.")
-
+        # if not isinstance(pulse, Pulse):
+        #     raise_error(TypeError, f"Pulse {pulse} has invalid type {type(pulse)}.")
+        
         zhpulse = ZhPulse(pulse)
+        
         self.pulse_to_zhpulse[pulse.serial] = zhpulse
         if pulse.type.name == "READOUT":
             self.ro_pulses.append(zhpulse)
@@ -170,7 +194,7 @@ class Zurich(AbstractInstrument):
     def play(self, qubits, sequence, nshots, relaxation_time):
 
         if relaxation_time is None:
-            self.relaxation_time = 10.-6
+            self.relaxation_time = 10.e-6
         else:
             self.relaxation_time = relaxation_time
 
@@ -190,17 +214,17 @@ class Zurich(AbstractInstrument):
         return results
     
     
-    def select_pulse(pulse, type, iter):
+    def select_pulse(self, pulse, type, order):
         if str(pulse.shape) == "Rectangular()":
             Zh_Pulse = lo.pulse_library.const(
-                            uid=(f"{type}_{pulse.qubit}_" + str(iter[0]) + "_" + str(iter[1])),
+                            uid=(f"{type}_{pulse.qubit}_" + str(order[0]) + "_" + str(order[1])),
                             length=round(pulse.duration * 1e-9, 9),
                             amplitude=pulse.amplitude,
                         )
         elif "Gaussian" in str(pulse.shape):
             sigma = pulse.shape.rel_sigma
             Zh_Pulse = lo.pulse_library.gaussian(
-                            uid=(f"{type}_{pulse.qubit}_" + str(iter[0]) + "_" + str(iter[1])),
+                            uid=(f"{type}_{pulse.qubit}_" + str(order[0]) + "_" + str(order[1])),
                             length=round(pulse.duration * 1e-9, 9),
                             amplitude=pulse.amplitude,
                             sigma=2 / sigma,
@@ -209,7 +233,7 @@ class Zurich(AbstractInstrument):
             sigma = pulse.shape.rel_sigma
             beta = pulse.shape.beta
             Zh_Pulse = lo.pulse_library.drag(
-                            uid=(f"{type}_{pulse.qubit}_" + str(iter[0]) + "_" + str(iter[1])),
+                            uid=(f"{type}_{pulse.qubit}_" + str(order[0]) + "_" + str(order[1])),
                             length=round(pulse.duration * 1e-9, 9),
                             amplitude=pulse.amplitude,
                             sigma=2 / sigma,
@@ -217,22 +241,34 @@ class Zurich(AbstractInstrument):
                         )
         return Zh_Pulse
     
-    def register_pulse(self, pulse):
-        l = i = j = k = m = 0
-        if pulse.serial not in pulses:
-            if pulse.type is PulseType.DRIVE:
-                ZhSequence.add(self.select_pulse(pulse, "Drive", iter = [l,i]))
-                i += 1
-            elif pulse.type is PulseType.READOUT:
-                ZhSequence.add(self.select_pulse(pulse, "Readout", iter = [l,j]))
-                j += 1
-            elif pulse.type is PulseType.FLUX:
-                ZhSequence.add(self.select_pulse(pulse, "Flux", iter = [l,k]))
-                k += 1
-            elif pulse.type is PulseType.FLUX_COUPLER:
-                ZhSequence.add(self.select_pulse(pulse, "Flux_Coupler", iter = [l,m]))
-                m += 1
-            l += 1
+    def sequence_zh(self, sequence):
+        Zhsequence = {}
+        l, i, j, k, m, r = 0,0,0,0,0,0
+        for pulse in sequence:
+            Zhsequence[pulse.serial] = ZhPulse(pulse)
+        self.sequence = Zhsequence
+
+    # def register_pulse(self, pulse):
+    #     Zhsequence = {}
+    #     l, i, j, k, m, r = 0,0,0,0,0,0
+    #     if pulse.type is PulseType.DRIVE:
+    #         Zhsequence.append(self.select_pulse(pulse, "Drive", order = [l,i]))
+    #         ZhPulse(pulse)
+    #         i += 1
+    #     elif pulse.type is PulseType.READOUT:
+    #         Zhsequence.append(self.select_pulse(pulse, "Readout", order = [l,j]))
+    #         j += 1
+    #     elif pulse.type is PulseType.FLUX:
+    #         Zhsequence.append(self.select_pulse(pulse, "Flux", order = [l,k]))
+    #         k += 1
+    #     elif pulse.type is PulseType.BIAS:
+    #         Zhsequence.append(self.select_pulse(pulse, "Bias", order = [l,m]))
+    #         m += 1
+    #     elif pulse.type is PulseType.FLUX_COUPLER:
+    #         Zhsequence.append(self.select_pulse(pulse, "Flux_Coupler", order = [l,r]))
+    #         r += 1
+    #     l += 1
+        
                     
                     
 
