@@ -15,6 +15,20 @@ def pytest_addoption(parser):
         help="qpu platforms to test on",
     )
     parser.addoption("--address", type=str, action="store", default=None, help="address for the QM simulator")
+    parser.addoption(
+        "--simulation-duration",
+        type=int,
+        action="store",
+        default=3000,
+        help="simulation duration for QM simulator tests",
+    )
+    parser.addoption(
+        "--folder",
+        type=str,
+        action="store",
+        default="qmregressions",
+        help="folder to save QM simulator test regressions",
+    )
 
 
 def load_from_platform(platform, name):
@@ -48,12 +62,15 @@ def pytest_generate_tests(metafunc):
     platforms = metafunc.config.option.platforms
     platforms = [] if platforms is None else platforms.split(",")
 
-    address = metafunc.config.option.address
     if "simulator" in metafunc.fixturenames:
+        address = metafunc.config.option.address
         if address is None:
             pytest.skip("Skipping QM simulator tests because address was not provided.")
         else:
-            metafunc.parametrize("simulator", [address], indirect=True)
+            duration = metafunc.config.option.simulation_duration
+            folder = metafunc.config.option.folder
+            metafunc.parametrize("simulator", [(address, duration)], indirect=True)
+            metafunc.parametrize("folder", [folder], indirect=True)
 
     if metafunc.module.__name__ == "tests.test_instruments_qblox":
         for platform_name in platforms:

@@ -1,6 +1,5 @@
 """Test compilation of different pulse sequences using the Quantum Machines simulator."""
 import os
-import pathlib
 
 import h5py
 import matplotlib.pyplot as plt
@@ -14,11 +13,6 @@ from qibolab.paths import qibolab_folder
 from qibolab.platform import create_tii_qw5q_gold
 from qibolab.pulses import FluxPulse, PulseSequence, Rectangular
 
-REGRESSION_FOLDER = pathlib.Path(__file__).with_name("regressions")
-# WARNING: changing the following parameters will break all saved regressions
-SIMULATION_DURATION = 3000
-RUNCARD = qibolab_folder / "runcards" / "qw5q_gold.yml"
-
 
 @pytest.fixture(scope="module")
 def simulator(request):
@@ -27,15 +21,21 @@ def simulator(request):
     Args:
         address (str): Address for connecting to the simulator. Provided via command line.
     """
-    address = request.param
-    platform = create_tii_qw5q_gold(RUNCARD, simulation_duration=SIMULATION_DURATION, address=address, cloud=True)
+    address, duration = request.param
+    runcard = qibolab_folder / "runcards" / "qw5q_gold.yml"
+    platform = create_tii_qw5q_gold(runcard, simulation_duration=duration, address=address, cloud=True)
     platform.connect()
     platform.setup()
     yield platform
     platform.disconnect()
 
 
-def assert_regression(samples, filename):
+@pytest.fixture(scope="module")
+def folder(request):
+    return request.param
+
+
+def assert_regression(samples, folder=None, filename=None):
     """Assert that simulated data agree with the saved regression.
 
     If a regression does not exist it is created and the corresponding
@@ -46,45 +46,50 @@ def assert_regression(samples, filename):
         samples (dict): Dictionary holding the waveforms as returned by the QM simulator.
         filename (str): Name of the file that contains the regressions to compare with.
     """
-    path = REGRESSION_FOLDER / f"{filename}.hdf5"
 
     def plot():
         plt.figure()
+        plt.title(filename)
         for con in ["con1", "con2", "con3"]:
             if hasattr(samples, con):
                 sample = getattr(samples, con)
                 sample.plot()
-        # plt.savefig(REGRESSION_FOLDER / f"{filename}.png")
         plt.show()
 
-    if os.path.exists(path):
-        file = h5py.File(path, "r")
-        for con, target_data in file.items():
-            sample = getattr(samples, con)
-            for port, target_waveform in target_data.items():
-                waveform = sample.analog[port]
-                try:
-                    np.testing.assert_allclose(waveform, target_waveform[:])
-                except AssertionError as exception:
-                    np.savetxt(REGRESSION_FOLDER / "waveform.txt", waveform)
-                    np.savetxt(REGRESSION_FOLDER / "target_waveform.txt", target_waveform[:])
-                    plot()
-                    raise exception
-
-    else:
-        file = h5py.File(path, "w")
-        # TODO: Generalize for arbitrary number of controllers
-        for con in ["con1", "con2", "con3"]:
-            if hasattr(samples, con):
-                sample = getattr(samples, con)
-                group = file.create_group(con)
-                for port, waveform in sample.analog.items():
-                    dset = group.create_dataset(port, (SIMULATION_DURATION,), compression="gzip")
-                    dset[:] = waveform
+    if folder is None:
         plot()
+    else:
+        path = os.path.join(folder, f"{filename}.hdf5")
+        if os.path.exists(path):
+            file = h5py.File(path, "r")
+            for con, target_data in file.items():
+                sample = getattr(samples, con)
+                for port, target_waveform in target_data.items():
+                    waveform = sample.analog[port]
+                    try:
+                        np.testing.assert_allclose(waveform, target_waveform[:])
+                    except AssertionError as exception:
+                        np.savetxt(os.path.join(folder, "waveform.txt"), waveform)
+                        np.savetxt(os.path.join(folder, "target_waveform.txt"), target_waveform[:])
+                        plot()
+                        raise exception
+
+        else:
+            plot()
+            if not os.path.exists(folder):
+                os.mkdir(folder)
+            file = h5py.File(path, "w")
+            # TODO: Generalize for arbitrary number of controllers
+            for con in ["con1", "con2", "con3"]:
+                if hasattr(samples, con):
+                    sample = getattr(samples, con)
+                    group = file.create_group(con)
+                    for port, waveform in sample.analog.items():
+                        dset = group.create_dataset(port, (len(waveform),), compression="gzip")
+                        dset[:] = waveform
 
 
-def test_qmsim_resonator_spectroscopy(simulator):
+def test_qmsim_resonator_spectroscopy(simulator, folder):
     qubits = list(range(simulator.nqubits))
     sequence = PulseSequence()
     ro_pulses = {}
@@ -93,10 +98,10 @@ def test_qmsim_resonator_spectroscopy(simulator):
         sequence.add(ro_pulses[qubit])
     result = simulator.execute_pulse_sequence(sequence, nshots=1)
     samples = result.get_simulated_samples()
-    assert_regression(samples, "resonator_spectroscopy")
+    assert_regression(samples, folder, "resonator_spectroscopy")
 
 
-def test_qmsim_qubit_spectroscopy(simulator):
+def test_qmsim_qubit_spectroscopy(simulator, folder):
     qubits = list(range(simulator.nqubits))
     sequence = PulseSequence()
     qd_pulses = {}
@@ -109,7 +114,7 @@ def test_qmsim_qubit_spectroscopy(simulator):
         sequence.add(ro_pulses[qubit])
     result = simulator.execute_pulse_sequence(sequence, nshots=1)
     samples = result.get_simulated_samples()
-    assert_regression(samples, "qubit_spectroscopy")
+    assert_regression(samples, folder, "qubit_spectroscopy")
 
 
 gatelist = [
@@ -138,7 +143,7 @@ gatelist = [
 
 
 @pytest.mark.parametrize("count,gate_pair", enumerate(gatelist))
-def test_qmsim_allxy(simulator, count, gate_pair):
+def test_qmsim_allxy(simulator, folder, count, gate_pair):
     qubits = [1, 2, 3, 4]
     sequence = PulseSequence()
     for qubit in qubits:
@@ -161,12 +166,12 @@ def test_qmsim_allxy(simulator, count, gate_pair):
 
     result = simulator.execute_pulse_sequence(sequence, nshots=1)
     samples = result.get_simulated_samples()
-    assert_regression(samples, f"allxy{count}")
+    assert_regression(samples, folder, f"allxy{count}")
 
 
 @pytest.mark.parametrize("qubits", [[1, 2]])
 @pytest.mark.parametrize("use_flux_pulse", [True, False])
-def test_qmsim_tune_landscape(simulator, qubits, use_flux_pulse):
+def test_qmsim_tune_landscape(simulator, folder, qubits, use_flux_pulse):
     lowfreq, highfreq = min(qubits), max(qubits)
 
     y90_pulse = simulator.create_RX90_pulse(lowfreq, start=0, relative_phase=np.pi / 2)
@@ -199,13 +204,13 @@ def test_qmsim_tune_landscape(simulator, qubits, use_flux_pulse):
     samples = result.get_simulated_samples()
     qubitstr = "".join(str(q) for q in qubits)
     if use_flux_pulse:
-        assert_regression(samples, f"tune_landscape_{qubitstr}")
+        assert_regression(samples, folder, f"tune_landscape_{qubitstr}")
     else:
-        assert_regression(samples, f"tune_landscape_noflux_{qubitstr}")
+        assert_regression(samples, folder, f"tune_landscape_noflux_{qubitstr}")
 
 
 @pytest.mark.parametrize("qubits", [[1, 2], [2, 3]])
-def test_qmsim_bell_circuit(simulator, qubits):
+def test_qmsim_bell_circuit(simulator, folder, qubits):
     backend = QibolabBackend(simulator)
     circuit = Circuit(5)
     circuit.add(gates.H(qubits[0]))
@@ -215,10 +220,10 @@ def test_qmsim_bell_circuit(simulator, qubits):
     result = result.execution_result
     samples = result.get_simulated_samples()
     qubitstr = "".join(str(q) for q in qubits)
-    assert_regression(samples, f"bell_circuit_{qubitstr}")
+    assert_regression(samples, folder, f"bell_circuit_{qubitstr}")
 
 
-def test_qmsim_ghz_circuit(simulator):
+def test_qmsim_ghz_circuit(simulator, folder):
     backend = QibolabBackend(simulator)
     circuit = Circuit(5)
     circuit.add(gates.H(2))
@@ -228,4 +233,4 @@ def test_qmsim_ghz_circuit(simulator):
     result = backend.execute_circuit(circuit, nshots=1, check_transpiled=True)
     result = result.execution_result
     samples = result.get_simulated_samples()
-    assert_regression(samples, f"ghz_circuit_123")
+    assert_regression(samples, folder, "ghz_circuit_123")
