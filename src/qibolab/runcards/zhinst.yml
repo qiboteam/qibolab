@@ -239,7 +239,7 @@ characterization:
             iq_angle: 0.0
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
-            
+
         1:
             readout_frequency: 4.923995e+9
             resonator_polycoef_flux: []
@@ -271,7 +271,7 @@ characterization:
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
         4:
-            readout_frequency: 5.506912e+9 
+            readout_frequency: 5.506912e+9
             resonator_polycoef_flux: []
             drive_frequency: 0.0
             T1: 0.

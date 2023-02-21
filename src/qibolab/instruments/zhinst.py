@@ -21,9 +21,9 @@ from qibolab.result import ExecutionResults
 
 # TODO: Add/Check for loops for multiple qubits
 
+
 # TODO: Adapt( dont think I need it i I use lo.pulse_library)
 class ZhPulse:
-    
     def __init__(self, pulse):
         self.pulse = pulse
         self.element = f"{pulse.type.name.lower()}{pulse.qubit}"
@@ -43,21 +43,20 @@ class ZhPulse:
         self.threshold = None
         self.cos = None
         self.sin = None
-        
+
         def bake(self, config):
             pass
-            
-    
+
+
 # TODO: Adapt
 class ZhSequence(list):
-    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # keep track of readout pulses for registering outputs
         self.ro_pulses = []
         # map from qibolab pulses to ZhPulses (useful when sweeping)
         self.pulse_to_zhpulse = {}
-    
+
     def add(self, pulse):
         if not isinstance(pulse, Pulse):
             raise_error(TypeError, f"Pulse {pulse} has invalid type {type(pulse)}.")
@@ -68,22 +67,19 @@ class ZhSequence(list):
             self.ro_pulses.append(zhpulse)
         super().append(zhpulse)
         return zhpulse
-    
+
 
 class Zurich(AbstractInstrument):
-    
-    
     def __init__(self, name, descriptor, use_emulation=False):
-        
         self.name = name
         self.descriptor = descriptor
         self.emulation = use_emulation
-        
+
         self.is_connected = False
 
         self.time_of_flight = 0
         self.smearing = 0
-        
+
     def connect(self):
         if not self.is_connected:
             for attempt in range(3):
@@ -91,11 +87,11 @@ class Zurich(AbstractInstrument):
                     # self.session = lo.Session(self.Zsetup)
                     # self.device = self.session.connect(self.address)
                     self.device_setup = lo.DeviceSetup.from_descriptor(
-                                    yaml_text = self.descriptor,
-                                    server_host="localhost",
-                                    server_port="8004",
-                                    setup_name=self.name,
-                                    )
+                        yaml_text=self.descriptor,
+                        server_host="localhost",
+                        server_port="8004",
+                        setup_name=self.name,
+                    )
                     self.session = lo.Session(self.device_setup)
                     self.device = self.session.connect(do_emulation=self.emulation)
                     # self.device.reset()
@@ -106,7 +102,6 @@ class Zurich(AbstractInstrument):
             if not self.is_connected:
                 raise InstrumentException(self, f"Unable to connect to {self.name}")
 
-    
     # FIXME: What are these for ???
     def start(self):
         pass
@@ -120,34 +115,27 @@ class Zurich(AbstractInstrument):
             self.is_connected = False
         else:
             print(f"Already disconnected")
-        
-    
+
     def setup(self, qubits, relaxation_time=0, time_of_flight=0, smearing=0, **_kwargs):
-        
         self.relaxation_time = relaxation_time
         self.time_of_flight = time_of_flight
         self.smearing = smearing
-    
+
         self.signal_map = {}
         self.calibration = lo.Calibration()
-    
+
         for qubit in qubits.values():
             if qubit.flux:
                 self.register_flux_line(qubit)
-    
-    
+
     def register_flux_line(self, qubit):
         """Registers qubit flux line to calibration and signal map."""
         q = qubit.name
         self.signal_map[f"flux{q}"] = self.device_setup.logical_signal_groups[f"q{q}"].logical_signals["flux_line"]
         self.calibration[f"/logical_signal_groups/q{q}/flux_line"] = lo.SignalCalibration(
-            range=qubit.flux.power_range,
-            port_delay=0,
-            delay_signal=0,
-            voltage_offset= qubit.flux.offset
+            range=qubit.flux.power_range, port_delay=0, delay_signal=0, voltage_offset=qubit.flux.offset
         )
-    
-    
+
     def compile_exp(self, exp):
         self.exp = self.session.compile(exp)
 
@@ -155,7 +143,7 @@ class Zurich(AbstractInstrument):
         self.results = self.session.run(self.exp)
 
     def run_seq(self):
-        #Compiler settings required for active reset and multiplex.
+        # Compiler settings required for active reset and multiplex.
         compiler_settings = {
             "SHFSG_FORCE_COMMAND_TABLE": True,
             "SHFSG_MIN_PLAYWAVE_HINT": 32,
@@ -166,11 +154,10 @@ class Zurich(AbstractInstrument):
 
         self.exp = self.session.compile(self.experiment)
         self.results = self.session.run(self.exp, self.emulation)
-    
-    def play(self, qubits, sequence, nshots, relaxation_time):
 
+    def play(self, qubits, sequence, nshots, relaxation_time):
         if relaxation_time is None:
-            self.relaxation_time = 10.-6
+            self.relaxation_time = 10.0 - 6
         else:
             self.relaxation_time = relaxation_time
 
@@ -184,64 +171,54 @@ class Zurich(AbstractInstrument):
             i = spec_res.real
             q = spec_res.imag
 
-        shots = 1024 
+        shots = 1024
         results[self.sequence_readout[0].qubit] = ExecutionResults.from_components(i, q, shots)
 
         return results
-    
-    
+
     def select_pulse(pulse, type, iter):
         if str(pulse.shape) == "Rectangular()":
             Zh_Pulse = lo.pulse_library.const(
-                            uid=(f"{type}_{pulse.qubit}_" + str(iter[0]) + "_" + str(iter[1])),
-                            length=round(pulse.duration * 1e-9, 9),
-                            amplitude=pulse.amplitude,
-                        )
+                uid=(f"{type}_{pulse.qubit}_" + str(iter[0]) + "_" + str(iter[1])),
+                length=round(pulse.duration * 1e-9, 9),
+                amplitude=pulse.amplitude,
+            )
         elif "Gaussian" in str(pulse.shape):
             sigma = pulse.shape.rel_sigma
             Zh_Pulse = lo.pulse_library.gaussian(
-                            uid=(f"{type}_{pulse.qubit}_" + str(iter[0]) + "_" + str(iter[1])),
-                            length=round(pulse.duration * 1e-9, 9),
-                            amplitude=pulse.amplitude,
-                            sigma=2 / sigma,
-                        )
+                uid=(f"{type}_{pulse.qubit}_" + str(iter[0]) + "_" + str(iter[1])),
+                length=round(pulse.duration * 1e-9, 9),
+                amplitude=pulse.amplitude,
+                sigma=2 / sigma,
+            )
         elif "Drag" in str(pulse.shape):
             sigma = pulse.shape.rel_sigma
             beta = pulse.shape.beta
             Zh_Pulse = lo.pulse_library.drag(
-                            uid=(f"{type}_{pulse.qubit}_" + str(iter[0]) + "_" + str(iter[1])),
-                            length=round(pulse.duration * 1e-9, 9),
-                            amplitude=pulse.amplitude,
-                            sigma=2 / sigma,
-                            beta = beta,
-                        )
+                uid=(f"{type}_{pulse.qubit}_" + str(iter[0]) + "_" + str(iter[1])),
+                length=round(pulse.duration * 1e-9, 9),
+                amplitude=pulse.amplitude,
+                sigma=2 / sigma,
+                beta=beta,
+            )
         return Zh_Pulse
-    
+
     def register_pulse(self, pulse):
         l = i = j = k = m = 0
         if pulse.serial not in pulses:
             if pulse.type is PulseType.DRIVE:
-                ZhSequence.add(self.select_pulse(pulse, "Drive", iter = [l,i]))
+                ZhSequence.add(self.select_pulse(pulse, "Drive", iter=[l, i]))
                 i += 1
             elif pulse.type is PulseType.READOUT:
-                ZhSequence.add(self.select_pulse(pulse, "Readout", iter = [l,j]))
+                ZhSequence.add(self.select_pulse(pulse, "Readout", iter=[l, j]))
                 j += 1
             elif pulse.type is PulseType.FLUX:
-                ZhSequence.add(self.select_pulse(pulse, "Flux", iter = [l,k]))
+                ZhSequence.add(self.select_pulse(pulse, "Flux", iter=[l, k]))
                 k += 1
             elif pulse.type is PulseType.FLUX_COUPLER:
-                ZhSequence.add(self.select_pulse(pulse, "Flux_Coupler", iter = [l,m]))
+                ZhSequence.add(self.select_pulse(pulse, "Flux_Coupler", iter=[l, m]))
                 m += 1
             l += 1
-                    
-                    
-
-
-
-
-
-
-
 
     def def_calibration(self):
         self.calib = lo.Calibration()
@@ -279,7 +256,8 @@ class Zurich(AbstractInstrument):
                 range=self.instruments["hdawg"]["settings"]["flux_range"],
                 port_delay=0,  # applied to corresponding instrument node, bound to hardware limits
                 delay_signal=0,
-                voltage_offset=[0.02, 0.01])
+                voltage_offset=[0.02, 0.01],
+            )
 
             self.calib[f"/logical_signal_groups/q{qubit}/drive_line"] = lo.SignalCalibration(
                 oscillator=lo.Oscillator(
@@ -339,7 +317,6 @@ class Zurich(AbstractInstrument):
                     "acquire_line"
                 ]
 
-    
     # Reload settings together if possible
     def reload_settings(self):
         with open(self.runcard_file) as file:
@@ -679,7 +656,7 @@ class Zurich(AbstractInstrument):
                 self.Measure(exp)
                 self.qubit_reset(exp)
 
-    #Flux on all qubits
+    # Flux on all qubits
     def Flux(self, exp):
         j = self.iteration
         with exp.section(uid=f"sequence{j}_flux_bias", alignment=lo.SectionAlignment.RIGHT):
