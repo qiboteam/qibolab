@@ -282,10 +282,28 @@ class AbstractPlatform(ABC):
     def __call__(self, sequence, nshots=1024, relaxation_time=None):
         return self.execute_pulse_sequence(sequence, nshots, relaxation_time)
 
-    def sweep(self, sequence, *sweepers, nshots=1024, relaxation_time=None, average=True):
+    def sweep(self, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
         """Executes a pulse sequence for different values of sweeped parameters.
-
         Useful for performing chip characterization.
+
+        Example:
+            .. testcode::
+
+                import numpy as np
+                from qibolab.platform import Platform
+                from qibolab.sweeper import Sweeper, Parameter
+                from qibolab.pulses import PulseSequence
+
+
+                platform = Platform("dummy")
+                sequence = PulseSequence()
+                parameter = Parameter.frequency
+                pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
+                sequence.add(pulse)
+                parameter_range = np.random.randint(10, size=10)
+                sweeper = Sweeper(parameter, parameter_range, [pulse])
+                platform.sweep(sequence, sweeper)
+
 
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
@@ -445,12 +463,12 @@ class AbstractPlatform(ABC):
         """
         raise_error(NotImplementedError)
 
-    def set_current(self, qubit, curr):  # pragma: no cover
-        """Set current value. Usefeul for calibration routines involving flux.
+    def set_bias(self, qubit, bias):  # pragma: no cover
+        """Set bias value. Usefeul for calibration routines involving flux.
 
         Args:
             qubit (int): qubit whose attenuation will be modified.
-            curr (int): new value of the current (A).
+            bias (int): new value of the bias (V).
         Returns:
             None
         """

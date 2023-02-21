@@ -1,12 +1,13 @@
-from copy import copy
+import copy
 
 import numpy as np
 import yaml
 from qibo.config import log, raise_error
 
 from qibolab.platforms.abstract import AbstractPlatform
-from qibolab.pulses import PulseSequence
+from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import ExecutionResults
+from qibolab.sweeper import Parameter
 
 
 class MultiqubitPlatform(AbstractPlatform):
@@ -63,8 +64,17 @@ class MultiqubitPlatform(AbstractPlatform):
     def set_gain(self, qubit, gain):
         self.qd_port[qubit].gain = gain
 
-    def set_current(self, qubit, current):
-        self.qb_port[qubit].current = current
+    def set_bias(self, qubit, bias):
+        self.qb_port[qubit].current = bias
+
+    def get_attenuation(self, qubit):
+        return self.ro_port[qubit].attenuation
+
+    def get_bias(self, qubit):
+        return self.qb_port[qubit].current
+
+    def get_gain(self, qubit):
+        return self.qd_port[qubit].gain
 
     def connect(self):
         """Connects to lab instruments using the details specified in the calibration settings."""
@@ -182,7 +192,7 @@ class MultiqubitPlatform(AbstractPlatform):
                         ro_pulses[pulse.serial] = pulse
                         if abs(pulse.frequency) > self.instruments[name].FREQUENCY_LIMIT:
                             # TODO: implement algorithm to find correct LO
-                            if_frequency = self.native_gates["single_qubit"][pulse.qubit]["MZ"]["frequency"]
+                            if_frequency = self.native_gates["single_qubit"][pulse.qubit]["MZ"]["if_frequency"]
                             self.set_lo_readout_frequency(pulse.qubit, pulse.frequency - if_frequency)
                             pulse.frequency = if_frequency
                             changed[pulse.serial] = True
@@ -190,7 +200,7 @@ class MultiqubitPlatform(AbstractPlatform):
                     for pulse in instrument_pulses[name]:
                         if abs(pulse.frequency) > self.instruments[name].FREQUENCY_LIMIT:
                             # TODO: implement algorithm to find correct LO
-                            if_frequency = self.native_gates["single_qubit"][pulse.qubit]["RX"]["frequency"]
+                            if_frequency = self.native_gates["single_qubit"][pulse.qubit]["RX"]["if_frequency"]
                             self.set_lo_drive_frequency(pulse.qubit, pulse.frequency - if_frequency)
                             pulse.frequency = if_frequency
                             changed[pulse.serial] = True
@@ -242,8 +252,157 @@ class MultiqubitPlatform(AbstractPlatform):
 
         for ro_pulse in ro_pulses.values():
             data[ro_pulse.serial] = ExecutionResults.from_components(*acquisition_results[key])
-            data[ro_pulse.qubit] = copy(data[ro_pulse.serial])
+            data[ro_pulse.qubit] = copy.copy(data[ro_pulse.serial])
         return data
+
+    def sweep(self, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
+        results = {}
+        sweeper_pulses = {}
+
+        # create copy of the sequence
+        copy_sequence = copy.deepcopy(sequence)
+        map_original_shifted = {pulse: pulse.serial for pulse in copy.deepcopy(copy_sequence).ro_pulses}
+
+        # create dictionary containing pulses for each sweeper that point to the same original sequence
+        # which is copy_sequence
+        for sweeper in sweepers:
+            if sweeper.pulses is not None:
+                sweeper_pulses[sweeper.parameter] = {
+                    pulse.serial: pulse for pulse in copy_sequence if pulse in sweeper.pulses
+                }
+
+        # perform sweeping recursively
+        self._sweep_recursion(
+            copy_sequence,
+            copy.deepcopy(sequence),
+            *sweepers,
+            nshots=nshots,
+            average=average,
+            relaxation_time=relaxation_time,
+            results=results,
+            sweeper_pulses=sweeper_pulses,
+            map_original_shifted=map_original_shifted,
+        )
+        return results
+
+    def _sweep_recursion(
+        self,
+        sequence,
+        original_sequence,
+        *sweepers,
+        nshots=1024,
+        average=True,
+        relaxation_time=None,
+        results=None,
+        sweeper_pulses=None,
+        map_original_shifted=None,
+    ):
+        sweeper = sweepers[0]
+
+        # store values before starting to sweep
+        if sweeper.pulses is not None:
+            original_value = self._save_original_value(sweeper, sweeper_pulses)
+
+        # perform sweep recursively
+        for value in sweeper.values:
+            self._update_pulse_sequence_parameters(
+                sweeper, sweeper_pulses, original_sequence, map_original_shifted, value
+            )
+            if len(sweepers) > 1:
+                self._sweep_recursion(
+                    sequence,
+                    original_sequence,
+                    *sweepers[1:],
+                    nshots=nshots,
+                    average=average,
+                    relaxation_time=relaxation_time,
+                    results=results,
+                    sweeper_pulses=sweeper_pulses,
+                    map_original_shifted=map_original_shifted,
+                )
+            else:
+                new_sequence = copy.deepcopy(sequence)
+                result = self.execute_pulse_sequence(new_sequence, nshots)
+
+                # colllect result and append to original pulse
+                for original_pulse, new_serial in map_original_shifted.items():
+                    acquisition = result[new_serial].compute_average() if average else result[new_serial]
+
+                    if results:
+                        results[original_pulse.serial] += acquisition
+                        results[original_pulse.qubit] += acquisition
+                    else:
+                        results[original_pulse.serial] = acquisition
+                        results[original_pulse.qubit] = copy.copy(results[original_pulse.serial])
+
+        # restore initial value of the pul
+        if sweeper.pulses is not None:
+            self._restore_initial_value(sweeper, sweeper_pulses, original_value)
+
+    def _save_original_value(self, sweeper, sweeper_pulses):
+        """Helper method for _sweep_recursion"""
+        original_value = {}
+        pulses = sweeper_pulses[sweeper.parameter]
+        # save original value of the parameter swept
+        for pulse in pulses:
+            if sweeper.parameter is Parameter.attenuation:
+                original_value[pulse] = self.get_attenuation(pulses[pulse].qubit)
+            elif sweeper.parameter is Parameter.gain:
+                original_value[pulse] = self.get_gain(pulses[pulse].qubit)
+            elif sweeper.parameter is Parameter.bias:
+                original_value[pulse] = self.get_bias(pulses[pulse].qubit)
+            else:
+                original_value[pulse] = getattr(pulses[pulse], sweeper.parameter.name)
+
+        return original_value
+
+    def _restore_initial_value(self, sweeper, sweeper_pulses, original_value):
+        """Helper method for _sweep_recursion"""
+        pulses = sweeper_pulses[sweeper.parameter]
+        for pulse in pulses:
+            if sweeper.parameter is Parameter.attenuation:
+                self.set_attenuation(pulses[pulse].qubit, original_value[pulse])
+            elif sweeper.parameter is Parameter.gain:
+                self.set_gain(pulses[pulse].qubit, original_value[pulse])
+            elif sweeper.parameter is Parameter.bias:
+                self.set_bias(pulses[pulse].qubit, original_value[pulse])
+            else:
+                setattr(pulses[pulse], sweeper.parameter.name, original_value[pulse])
+
+    def _update_pulse_sequence_parameters(
+        self, sweeper, sweeper_pulses, original_sequence, map_original_shifted, value
+    ):
+        """Helper method for _sweep_recursion"""
+        if sweeper.pulses is not None:
+            pulses = sweeper_pulses[sweeper.parameter]
+            for pulse in pulses:
+                if sweeper.parameter is Parameter.frequency:
+                    if pulses[pulse].type is PulseType.READOUT:
+                        value += self.qubits[pulses[pulse].qubit].readout_frequency
+                    else:
+                        value += self.qubits[pulses[pulse].qubit].drive_frequency
+                    setattr(pulses[pulse], sweeper.parameter.name, value)
+                elif sweeper.parameter is Parameter.amplitude:
+                    if pulses[pulse].type is PulseType.READOUT:
+                        current_amplitude = self.native_gates["single_qubit"][pulses[pulse].qubit]["MZ"]["amplitude"]
+                    else:
+                        current_amplitude = self.native_gates["single_qubit"][pulses[pulse].qubit]["RX"]["amplitude"]
+                    setattr(pulses[pulse], sweeper.parameter.name, float(current_amplitude * value))
+                if pulses[pulse].type is PulseType.READOUT:
+                    to_modify = [
+                        pulse1 for pulse1 in original_sequence.ro_pulses if pulse1.qubit == pulses[pulse].qubit
+                    ]
+                    if to_modify:
+                        map_original_shifted[to_modify[0]] = pulses[pulse].serial
+
+        if sweeper.qubits is not None:
+            for qubit in sweeper.qubits:
+                if sweeper.parameter is Parameter.attenuation:
+                    self.set_attenuation(qubit, value)
+                elif sweeper.parameter is Parameter.gain:
+                    self.set_gain(qubit, value)
+                elif sweeper.parameter is Parameter.bias:
+                    self.set_bias(qubit, value)
 
     def measure_fidelity(self, qubits=None, nshots=None):
         self.reload_settings()

@@ -95,13 +95,15 @@ native_gates:
             RX:
                 duration: 80                    # should be multiple of 4
                 amplitude: 0.457
-                frequency: -100_000_000          # difference in qubit frequency
+                frequency: 5_079_856_329
+                if_frequency: -100_000_000          # difference in qubit frequency
                 shape: Drag(5, -0.1)
                 type: qd # qubit drive
             MZ:
                 duration: 1000
                 amplitude: 0.7
-                frequency: 20_000_000           # Difference in resonator frequency
+                frequency: 7_825_100_000
+                if_frequency: 20_000_000           # Difference in resonator frequency
                 shape: Rectangular()
                 type: ro # readout
 
