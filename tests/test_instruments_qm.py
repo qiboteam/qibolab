@@ -53,13 +53,6 @@ def test_qmopx_setup():
     platform.setup()
     opx = platform.design.instruments[0]
     assert opx.time_of_flight == 280
-    # assert that flux elements were registered
-    for q in range(5):
-        assert f"flux{q}" in opx.config["elements"]
-        con, port = opx.config["elements"][f"flux{q}"]["singleInput"]["port"]
-        port = opx.config["controllers"][con]["analog_outputs"][port]
-        assert port["offset"] == platform.qubits[q].sweetspot
-        assert port["filter"] == platform.qubits[q].filter
 
 
 # TODO: Test start/stop
@@ -128,7 +121,7 @@ def test_qmopx_register_readout_element():
             "out1": ("con2", 2),
             "out2": ("con2", 1),
         },
-        "time_of_flight": 0,
+        "time_of_flight": 280,
         "smearing": 0,
     }
     assert opx.config["elements"]["readout2"] == target_element
@@ -190,11 +183,12 @@ def test_qmopx_register_flux_pulse():
 @pytest.mark.parametrize("duration", [0, 30])
 def test_qmopx_register_baked_pulse(duration):
     platform = create_tii_qw5q_gold(RUNCARD, simulation_duration=1000, address=DUMMY_ADDRESS)
-    platform.setup()
     qubit = platform.qubits[3]
+    opx = platform.design.instruments[0]
+    opx.register_flux_element(qubit)
     pulse = FluxPulse(3, duration, 0.05, Rectangular(), qubit.flux.name, qubit=qubit.name)
     qmpulse = QMPulse(pulse)
-    config = platform.design.instruments[0].config
+    config = opx.config
     qmpulse.bake(config)
 
     assert config["elements"]["flux3"]["operations"] == {"baked_Op_0": "flux3_baked_pulse_0"}
