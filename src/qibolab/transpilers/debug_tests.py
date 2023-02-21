@@ -49,9 +49,23 @@ def custom_cicuit():
     return circuit
 
 
-t = Transpiler(connectivity="21_qubits", init_method="greedy", init_samples=100)
+def custom_cicuit_simple():
+    circuit = Circuit(5)
+    circuit.add(gates.CZ(0, 2))
+    circuit.add(gates.CZ(1, 2))
+    circuit.add(gates.CZ(1, 0))
+    circuit.add(gates.CZ(2, 1))
+    return circuit
+
+
+transpiler = Transpiler(connectivity="21_qubits", init_method="greedy", init_samples=1000)
 # t.draw_connectivity()
 # circ = generate_random_circuit(4, 15)
-circ = custom_cicuit()
+circ = custom_cicuit_simple()
 print(circ.draw())
-t.transpile(circ)
+transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
+print("Transpiled circuit:")
+print(transpiled_circuit.draw())
+print("init qubit map: ", initial_map)
+print("final qubit map: ", final_map)
+print("added swaps: ", added_swaps)

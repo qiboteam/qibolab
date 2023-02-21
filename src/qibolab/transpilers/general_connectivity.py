@@ -85,7 +85,7 @@ class Transpiler:
             graph = nx.relabel_nodes(self.connectivity, mapping)
             cost = len(self.reduce(graph))
             if cost == 0:
-                return final_graph, final_mapping
+                return graph, mapping
             if cost < final_cost:
                 final_graph = graph
                 final_mapping = mapping
@@ -189,58 +189,77 @@ class Transpiler:
         while self.pos < len(qibo_circuit.queue):
             gate = qibo_circuit.queue[self.pos]
             if len(gate.qubits) == 1:
-                self.transpiled_circuit.add(gate)
+                self.transpiled_circuit.add(gate.on_qubits({gate.qubits[0]: self.qubit_map[gate.qubits[0]]}))
                 self.pos += 1
             else:
                 index += 1
                 if index == matched_gates + 1:
                     break
                 else:
-                    self.transpiled_circuit.add(gate)
+                    self.transpiled_circuit.add(
+                        gate.on_qubits(
+                            {
+                                gate.qubits[0]: self.qubit_map[gate.qubits[0]],
+                                gate.qubits[1]: self.qubit_map[gate.qubits[1]],
+                            }
+                        )
+                    )
                     self.pos += 1
 
     def add_swaps(self, path, meeting_point):
+        forward = path[0 : meeting_point + 1]
+        backward = path[meeting_point + 1 :]
+        if len(forward) > 1:
+            for i in range(len(forward) - 1):
+                self.transpiled_circuit.add(gates.SWAP(self.qubit_map[forward[i]], self.qubit_map[forward[i + 1]]))
+        if len(backward) > 1:
+            for i in range(len(backward) - 1, 0, -1):
+                self.transpiled_circuit.add(gates.SWAP(self.qubit_map[backward[i]], self.qubit_map[backward[i - 1]]))
         return
 
+    def update_qubit_map(self):
+        old_mapping = deepcopy(self.qubit_map)
+        for key in self.mapping.keys():
+            self.qubit_map[self.mapping[key]] = old_mapping[key]
+
     def transpile(self, qibo_circuit):
+        """Qubit initialization and circuit transpiling.
+
+        Args:
+            qibo_circuit: circuit to be transpiled.
+
+        Returns:
+            hardware_mapped_circuit: circut mapped to hardware topology.
+            final_mapping (dict): final qubit mapping.
+            init_mapping (dict): initial qubit mapping.
+            added_swaps (int): number of swap gates added.
+        """
         self.circuit_repr = self.translate_circuit(qibo_circuit)
-        self.mapping_list = []
-        print("Initial Circuit: ", self.circuit_repr)
-        # self.circuit_repr = self.clean()
         if self.init_method == "greedy":
             self.graph, self.mapping = self.greedy_init()
         else:
             print("ERROR")
+        keys = list(self.connectivity.nodes())
         init_qubit_map = self.init_qubit_map(self.mapping)
-        print("Mapping: ", self.mapping)
-        print("Init qubit map: ", init_qubit_map)
+        init_mapping = {keys[i]: init_qubit_map[i] for i in range(len(keys))}
+        self.qubit_map = np.sort(init_qubit_map)
         self.transpiled_circuit = self.init_circuit(qibo_circuit)
-        self.mapping_list.append(self.mapping)
         len_2q_circuit = len(self.circuit_repr)
         self.circuit_repr = self.reduce(self.graph)
         self.pos = 0
         matched_2q_gates = len_2q_circuit - len(self.circuit_repr)
         self.add_gates(qibo_circuit, matched_2q_gates)
-        print("Circuit after first reduce:")
-        print(self.circuit_repr)
-        print(self.transpiled_circuit.draw())
-        print("Matched gates: ", matched_2q_gates)
         self.n_swap = 0
         while len(self.circuit_repr) != 0:
-            print("STEP")
             len_2q_circuit = len(self.circuit_repr)
             path, meeting_point = self.relocate()
             matched_2q_gates = len_2q_circuit - len(self.circuit_repr)
-            self.mapping_list.append(self.mapping)
             self.add_swaps(path, meeting_point)
+            self.update_qubit_map()
             self.add_gates(qibo_circuit, matched_2q_gates)
-            print("Matched gates: ", matched_2q_gates)
-            print("Mapping: ", self.mapping)
-            print("Circuit: ", self.circuit_repr)
-            print("Added swaps: ", self.n_swap)
-        print("Final transpiled circuit")
-        print(self.transpiled_circuit.draw())
-        mapped_circuit = self.init_mapping_circuit(self.transpiled_circuit, init_qubit_map)
+        hardware_mapped_circuit = self.init_mapping_circuit(self.transpiled_circuit, init_qubit_map)
+        final_mapping = {keys[i]: init_qubit_map[self.qubit_map[i]] for i in range(len(keys))}
+        return hardware_mapped_circuit, final_mapping, init_mapping, self.n_swap
 
     def set_special_connectivity(self):
         Q = sympy.symbols([f"q{i}" for i in range(21)])
