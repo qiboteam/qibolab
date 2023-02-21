@@ -96,7 +96,7 @@ def assert_regression(samples, folder=None, filename=None):
                     sample = getattr(samples, con)
                     group = file.create_group(con)
                     for port, waveform in sample.analog.items():
-                        dset = group.create_dataset(port, data=waveform, compression="gzip")
+                        group.create_dataset(port, data=waveform, compression="gzip")
 
 
 def test_qmsim_resonator_spectroscopy(simulator, folder):
