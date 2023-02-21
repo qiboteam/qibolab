@@ -5,7 +5,7 @@ settings:
     hardware_avg: 1000
     sampling_rate: 2.4e+9
     Flux_Tunable:
-    readout_delay: 10.e-6 # 50.e-6
+    repetition_duration: 10.e-6  #readout_delay: 10.e-6 # 50.e-6
     readout_integration_delay: 40.e-9
     AcquisitionType: SPECTROSCOPY #
     AveragingMode: CYCLIC #
@@ -224,47 +224,59 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            resonator_freq: 5.222836e+9  #5.283e+9
+            readout_frequency: 5.222836e+9
             resonator_polycoef_flux: []
-            qubit_freq: 4.0939e+9
-            T1: 0.
-            T2: 0.
+            drive_frequency: 0.0
+            T1: 0.0
+            T2: 0.0
+            sweetspot: 0.0
+            filter: {}
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
-            sweetspot: -0.0185
+
+            # parameters for single shot classification
+            threshold: 0.0
+            iq_angle: 0.0
+            # required for integration weights (not sure if it should be here)
+            rotation_angle: 0.0
+            
         1:
-            resonator_freq: 4.923995e+9  #4.998e+9
+            readout_frequency: 4.923995e+9
             resonator_polycoef_flux: []
-            qubit_freq:
+            drive_frequency: 0.0
             T1: 0.
             T2: 0.
+            sweetspot: 0.0
+            filter: {}
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
-            sweetspot: -0.02
         2:
-            resonator_freq: 6.083717e+9 #6.0785674e+9  #6.117e+9
+            readout_frequency: 6.083717e+9
             resonator_polycoef_flux: []
-            qubit_freq: 4.2932e+9
+            drive_frequency: 0.0
             T1: 0.
             T2: 0.
+            sweetspot: 0.0
+            filter: {}
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
-            sweetspot: 0.019
         3:
-            resonator_freq: 5.777333e+9  #5.839e+9
+            readout_frequency: 5.777333e+9
             resonator_polycoef_flux: []
-            qubit_freq: 4.0843e+9
+            drive_frequency: 0.0
             T1: 0.
             T2: 0.
+            sweetspot: 0.0
+            filter: {}
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
-            sweetspot: 0.020
         4:
-            resonator_freq: 5.506912e+9  #5.569e+9
+            readout_frequency: 5.506912e+9 
             resonator_polycoef_flux: []
-            qubit_freq: 4.0978e+9
+            drive_frequency: 0.0
             T1: 0.
             T2: 0.
+            sweetspot: 0.0
+            filter: {}
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
-            sweetspot: 0.019

@@ -20,6 +20,7 @@ class PulseType(Enum):
     READOUT = "ro"
     DRIVE = "qd"
     FLUX = "qf"
+    FLUX_COUPLER = "cf"
 
 
 class Waveform:

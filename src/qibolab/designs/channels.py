@@ -22,12 +22,15 @@ class Channel:
     local_oscillator: Optional[LocalOscillator] = None
     """Instrument object controlling the local oscillator connected to this channel.
     Not applicable for setups that do not use local oscillators because the controller
-    can send sufficiently high frequencies
+    can send sufficiently high frequencies.
     """
-    _offset: Optional[float] = None
+    power_range: Optional[power_range] = None
+    """Attenuation or amplification of the line, not all intruments have this capability."""
+    _offset: Optional[list] = None
     """DC offset that should be applied in the channel in order to shift the
     frequency of the qubit, usually to put it in its sweetspot.
     Relevant only for flux channels and flux-tunable transmon qubits.
+    As Zurich has iq on a single port this can be a tuple!
     """
     _filter: Optional[dict] = None
     """Filter to be applied to the channel to reduce the distortions when sending

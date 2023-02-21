@@ -4,7 +4,6 @@ from qibolab.designs.channels import Channel, ChannelMap
 from qibolab.designs.mixer import MixerInstrumentDesign
 from qibolab.platforms.platform import DesignPlatform
 
-
 def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=False):
     """Create platform using Quantum Machines (QM) OPXs and Rohde Schwarz local oscillators.
 
@@ -118,6 +117,176 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
         qubits[q].drive = channels[f"L3-{10 + q}"]
         qubits[q].flux = channels[f"L4-{q}"]
         channels[f"L4-{q}"].qubit = qubits[q]
+    return platform
+
+
+def create_tii_IQM5q(runcard, descriptor=None):
+    """Create platform using Zurich Instrumetns (Zh) SHFQC, HDAWGs and PQSC.
+
+    Instrument related parameters are hardcoded in ``__init__`` and ``setup``.
+
+    Args:
+        runcard (str): Path to the runcard file.
+        descriptor (str): Instrument setup descriptor.
+            If ``None`` it will attempt to connect to TII whole Zurich instruments setup.
+    """
+    # Create channel objects
+    channels = ChannelMap()
+    # readout
+    channels |= ChannelMap.from_names("L3-31")
+    # feedback
+    channels |= ChannelMap.from_names("L1-2")
+    # drive
+    channels |= ChannelMap.from_names(*(f"L4-{i}" for i in range(15, 20)))
+    # flux qubits
+    channels |= ChannelMap.from_names(*(f"L4-{i}" for i in range(6, 11)))
+    # flux couplers
+    channels |= ChannelMap.from_names(*(f"L4-{i}" for i in range(11, 15)))
+    # TWPA
+    # channels |= ChannelMap.from_names("L3-10")
+
+    # Map controllers to qubit channels (HARDCODED)
+    # readout
+    channels["L3-31"].ports = [("device_shfqc", "[QACHANNELS/0/INPUT]")]
+    channels["L3-31"].power_range = -5
+    # feedback
+    channels["L1-2"].ports = [("device_shfqc", "[QACHANNELS/0/OUTPUT]")]
+    channels["L1-2"].power_range = 10
+    # drive
+    for i in range(5, 10):
+        channels[f"L4-1{i}"].ports = [("device_shfqc", f"SGCHANNELS/{i-5}/OUTPUT")]
+        channels[f"L4-1{i}"].power_range = 5
+    # flux qubits
+    for i in range(6, 11):
+        channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-6}")]
+        channels[f"L4-{i}"].power_range = 0
+        channels[f"L4-{i}"].offset = .1
+    # flux couplers
+    for i in range(11, 15):
+        channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-11+5}")]
+        channels[f"L4-{i}"].power_range = 0
+
+    #DEVICE HDWAG1 and HDAWG2 ???
+
+    # Instantiate Zh set of instruments[They work as one]
+    from qibolab.instruments.zhinst import Zurich
+    from qibolab.instruments.dummy_oscillator import (
+                DummyLocalOscillator as LocalOscillator,
+            )
+    from qibolab.instruments.rohde_schwarz import SGS100A as TWPA_Oscillator
+    
+    if descriptor is None:
+    
+        descriptor = """\
+        instruments:
+            SHFQC:
+            - address: DEV12146
+              uid: device_shfqc
+            HDAWG:
+            - address: DEV8660
+              uid: device_hdawg
+            PQSC:
+            - address: DEV10055
+              uid: device_pqsc
+
+
+        connections:
+            device_shfqc:
+                - iq_signal: q0/drive_line
+                  ports: SGCHANNELS/0/OUTPUT
+                - iq_signal: q1/drive_line
+                  ports: SGCHANNELS/1/OUTPUT
+                - iq_signal: q2/drive_line
+                  ports: SGCHANNELS/2/OUTPUT
+                - iq_signal: q3/drive_line
+                  ports: SGCHANNELS/3/OUTPUT
+                - iq_signal: q4/drive_line
+                  ports: SGCHANNELS/4/OUTPUT
+                - iq_signal: q/measure_line
+                  ports: [QACHANNELS/0/OUTPUT]
+                - acquire_signal: q/acquire_line
+                  ports: [QACHANNELS/0/INPUT]
+
+            device_hdawg:    
+                - rf_signal: q0/flux_line
+                  ports: SIGOUTS/0  
+                - rf_signal: q1/flux_line
+                  ports: SIGOUTS/1  
+                - rf_signal: q2/flux_line
+                  ports: SIGOUTS/2  
+                - rf_signal: q3/flux_line
+                  ports: SIGOUTS/3  
+                - rf_signal: q4/flux_line
+                  ports: SIGOUTS/4
+                - rf_signal: q03/flux_line
+                  ports: SIGOUTS/4
+                - rf_signal: q13/flux_line
+                  ports: SIGOUTS/4
+                - rf_signal: q23/flux_line
+                  ports: SIGOUTS/4
+
+            device_pqsc:
+                - internal_clock_signal
+                - to: device_hdawg
+                  port: ZSYNCS/2
+                - to: device_shfqc
+                  port: ZSYNCS/0
+        """
+
+    controller = Zurich('EL_ZURO', descriptor, use_emulation=False)
+
+    # Instantiate local oscillators (HARDCODED)
+    local_oscillators = [
+        LocalOscillator("lo_readout", None),
+        LocalOscillator("lo_drive_0", None),
+        LocalOscillator("lo_drive_1", None),
+        LocalOscillator("lo_drive_2", None),
+        LocalOscillator("lo_drive_3", None),
+        LocalOscillator("lo_drive_4", None),
+        LocalOscillator("lo_drive_5", None),
+        # TWPA_Oscillator("TWPA", "192.168.0.35"),
+    ]
+    # Set Dummy LO parameters
+    local_oscillators[0].frequency = 7_300_000_000
+    local_oscillators[1].frequency = 7_900_000_000
+    local_oscillators[2].frequency = 4_700_000_000
+    local_oscillators[3].frequency = 5_600_000_000
+    local_oscillators[4].frequency = 5_600_000_000
+    local_oscillators[5].frequency = 5_600_000_000
+    local_oscillators[6].frequency = 5_600_000_000
+
+    # Set TWPA pump LO parameters
+    # local_oscillators[7].frequency = 6_511_000_000
+    # local_oscillators[7].power = 4.5
+    
+    # Map LOs to channels
+    channels["L3-31"].local_oscillator = local_oscillators[0]
+    channels["L4-15"].local_oscillator = local_oscillators[1]
+    channels["L4-16"].local_oscillator = local_oscillators[2]
+    channels["L4-17"].local_oscillator = local_oscillators[3]
+    channels["L4-18"].local_oscillator = local_oscillators[4]
+    channels["L4-19"].local_oscillator = local_oscillators[5]
+    # channels["Witness???"].local_oscillator = local_oscillators[6]
+    # channels["L3-10"].local_oscillator = local_oscillators[7]
+
+    design = MixerInstrumentDesign(controller, channels, local_oscillators)
+    platform = DesignPlatform("IQM5q", design, runcard)
+
+    # assign channels to qubits
+    qubits = platform.qubits
+    for q in range(0, 5):
+        qubits[q].readout = channels["L3-31"]
+        qubits[q].feedback = channels["L1-2"]
+
+    for q in range(0, 5):
+        qubits[q].drive = channels[f"L4-{15 + q}"]
+        qubits[q].flux = channels[f"L4-{6 + q}"]
+        channels[f"L4-{6 + q}"].qubit = qubits[q]
+        
+    for q in range(0, 4):
+        qubits[q].flux_coupler = channels[f"L4-{11 + q}"]
+        channels[f"L4-{11 + q}"].qubit = qubits[q]
+    
     return platform
 
 
