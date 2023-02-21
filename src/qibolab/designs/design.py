@@ -36,10 +36,7 @@ class InstrumentDesign:
     def setup(self, qubits, *args, **kwargs):
         """Load settings to instruments."""
         for instrument in self.instruments:
-            if instrument.is_connected:
-                instrument.setup(qubits, *args, **kwargs)
-            else:
-                log.warning(f"There is no connection to {instrument}. Frequencies were not set.")
+            instrument.setup(qubits, *args, **kwargs)
 
     def start(self):
         """Start all instruments."""
