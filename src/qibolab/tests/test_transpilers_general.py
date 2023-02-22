@@ -1,7 +1,9 @@
 import numpy as np
-from general_connectivity import Transpiler
+import pytest
 from qibo import gates
 from qibo.models import Circuit
+
+from qibolab.transpilers.general_connectivity import Transpiler
 
 
 def generate_random_circuit(nqubits, ngates):
@@ -30,26 +32,6 @@ def generate_random_circuit(nqubits, ngates):
 
 
 def custom_cicuit():
-    circuit = Circuit(15)
-    circuit.add(gates.CZ(0, 1))
-    circuit.add(gates.X(0))
-    circuit.add(gates.CZ(0, 13))
-    circuit.add(gates.X(0))
-    circuit.add(gates.CZ(0, 3))
-    circuit.add(gates.CZ(10, 4))
-    circuit.add(gates.CZ(0, 11))
-    circuit.add(gates.CZ(2, 11))
-    circuit.add(gates.X(5))
-    circuit.add(gates.CZ(0, 1))
-    circuit.add(gates.CZ(0, 2))
-    circuit.add(gates.RX(8, theta=2.0))
-    circuit.add(gates.CZ(9, 3))
-    circuit.add(gates.CZ(0, 4))
-    circuit.add(gates.CZ(0, 7))
-    return circuit
-
-
-def custom_cicuit_simple():
     circuit = Circuit(5)
     circuit.add(gates.CZ(0, 2))
     circuit.add(gates.CZ(1, 2))
@@ -58,14 +40,16 @@ def custom_cicuit_simple():
     return circuit
 
 
-transpiler = Transpiler(connectivity="21_qubits", init_method="greedy", init_samples=1000)
-# t.draw_connectivity()
-# circ = generate_random_circuit(4, 15)
-circ = custom_cicuit_simple()
-print(circ.draw())
-transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
-print("Transpiled circuit:")
-print(transpiled_circuit.draw())
-print("init qubit map: ", initial_map)
-print("final qubit map: ", final_map)
-print("added swaps: ", added_swaps)
+def test_simple_circuit():
+    transpiler = Transpiler(connectivity="21_qubits", init_method="greedy", init_samples=1)
+    circ = custom_cicuit()
+    transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
+    np.testing.assert_allclose(added_swaps, 2)
+
+
+@pytest.mark.parametrize("gates", [5, 20, 50])
+@pytest.mark.parametrize("qubits", [5, 10, 21])
+def test_random_circuit(gates, qubits):
+    transpiler = Transpiler(connectivity="21_qubits", init_method="greedy", init_samples=1)
+    circ = generate_random_circuit(nqubits=qubits, ngates=gates)
+    transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
