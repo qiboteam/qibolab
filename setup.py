@@ -43,6 +43,7 @@ setup(
     ],
     install_requires=[
         "qibo>=0.1.8",
+        "networkx",
     ],
     extras_require={
         "docs": [
