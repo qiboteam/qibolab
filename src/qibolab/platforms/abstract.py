@@ -96,6 +96,7 @@ class AbstractPlatform(ABC):
         self.runcard = runcard
 
         self.qubits = {}
+        self.couplers = {}
 
         # Values for the following are set from the runcard in ``reload_settings``
         self.settings = None
@@ -149,6 +150,14 @@ class AbstractPlatform(ABC):
                     setattr(self.qubits[q], name, value)
             else:
                 self.qubits[q] = Qubit(q, **settings["characterization"]["single_qubit"][q])
+
+        # TODO: Will it fail with non coupler chips
+        for c in settings["couplers"]:
+            if c in self.couplers:
+                for name, value in settings["characterization"]["two_qubit_couplers"][c].items():
+                    setattr(self.couplers[c], name, value)
+            else:
+                self.couplers[c] = Qubit(c, **settings["characterization"]["two_qubit_couplers"][c])
 
     @abstractmethod
     def connect(self):

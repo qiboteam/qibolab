@@ -167,6 +167,7 @@ def create_tii_IQM5q(runcard, descriptor=None):
     for i in range(11, 15):
         channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-11+5}")]
         channels[f"L4-{i}"].power_range = 0
+        channels[f"L4-{i}"].offset = 0.1
 
     # DEVICE HDWAG1 and HDAWG2 ???
 
@@ -284,15 +285,14 @@ def create_tii_IQM5q(runcard, descriptor=None):
         qubits[q].flux = channels[f"L4-{6 + q}"]
         # channels[f"L4-{6 + q}"].qubit = qubits[q]
 
-    for q in range(0, 2):
-        qubits[q].flux_coupler = channels[f"L4-{11 + q}"]
-        qubits[2].flux_coupler = channels[f"L4-{11 + q}"]
-        # channels[f"L4-{11 + q}"].qubit = qubits[q]
-        # channels[f"L4-{10 + q}"].qubit = qubits[2]
-    for q in range(3, 4):
-        qubits[q].flux_coupler = channels[f"L4-{10 + q}"]
-        qubits[2].flux_coupler = channels[f"L4-{10 + q}"]
-        # channels[f"L4-{10 + q}"].qubit = qubits[q]
+    # assign channels to couplers
+    couplers = platform.couplers
+
+    for c in range(0, 2):
+        couplers[c].flux_coupler = channels[f"L4-{11 + c}"]
+
+    for c in range(3, 5):
+        couplers[c].flux_coupler = channels[f"L4-{11 + c}"]
 
     return platform
 

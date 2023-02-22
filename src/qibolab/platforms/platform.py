@@ -18,7 +18,7 @@ class DesignPlatform(AbstractPlatform):
         self.is_connected = True
 
     def setup(self):
-        self.design.setup(self.qubits, **self.settings["settings"])
+        self.design.setup(self.qubits, self.couplers, **self.settings["settings"])
 
     def start(self):
         self.design.start()
@@ -33,7 +33,7 @@ class DesignPlatform(AbstractPlatform):
     def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None):
         if relaxation_time is None:
             relaxation_time = self.relaxation_time
-        return self.design.play(self.qubits, sequence, nshots=nshots, relaxation_time=relaxation_time)
+        return self.design.play(self.qubits, self.couplers, sequence, nshots=nshots, relaxation_time=relaxation_time)
 
     def sweep(self, sequence, *sweepers, nshots=1024, relaxation_time=None, average=True):
         if relaxation_time is None:
