@@ -59,22 +59,18 @@ class InstrumentDesign:
 
     def play(self, *args, **kwargs):
         """Play a pulse sequence and retrieve feedback."""
-        result = None
+        result = {}
         for instrument in self.instruments:
             new_result = instrument.play(*args, **kwargs)
             if new_result is not None:
-                if result is not None:
-                    raise_error(RuntimeError, "Multiple instruments returned acquisition results.")
-                result = new_result
+                result.update(new_result)
         return result
 
     def sweep(self, *args, **kwargs):
         """Play a pulse sequence while sweeping one or more parameters."""
-        result = None
+        result = {}
         for instrument in self.instruments:
             new_result = instrument.sweep(*args, **kwargs)
             if new_result is not None:
-                if result is not None:
-                    raise_error(RuntimeError, "Multiple instruments returned acquisition results.")
-                result = new_result
+                result.update(new_result)
         return result

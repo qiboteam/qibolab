@@ -47,11 +47,21 @@ class AbstractInstrument(ABC):
         raise NotImplementedError
 
     def play(self, *args, **kwargs):
-        """Play a pulse sequence and retrieve feedback."""
+        """Play a pulse sequence and retrieve feedback.
+
+        Returns:
+            (dict) mapping the serial of the readout pulses used to
+            the acquired :class:`qibolab.result.ExecutionResults` object.
+        """
         raise NotImplementedError(f"Instrument {self.name} does not support play.")
 
     def sweep(self, *args, **kwargs):
-        """Play a pulse sequence while sweeping one or more parameters."""
+        """Play a pulse sequence while sweeping one or more parameters.
+
+        Returns:
+            (dict) mapping the serial of the readout pulses used to
+            the acquired :class:`qibolab.result.ExecutionResults` object.
+        """
         raise NotImplementedError(f"Instrument {self.name} does not support sweep.")
 
 
