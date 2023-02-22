@@ -13,8 +13,8 @@ settings:
     relax_delay: 500 #[Clock ticks]
     max_gain: 32000
     ro_duration: 3000
-    ro_frequency: 7371530000
-    ro_gain: 600
+    ro_frequency: 7274800000
+    ro_gain: 250
     qubit_gain: 20000
     probe_length: 40
 
@@ -24,9 +24,9 @@ topology: # qubit - qubit connections
 native_gates:
     single_qubit:
         0:
-            RX: {duration: 40, amplitude: 0.21, frequency: 5442000000, shape: Gaussian(4),
+            RX: {duration: 40, amplitude: 0.6, frequency: 8110000000, shape: Gaussian(4),
                 type: qd, start: 0, phase: 0}
-            MZ: {duration: 3000, amplitude: 0.0156, frequency: 7371530000, shape: Rectangular(),
+            MZ: {duration: 3000, amplitude: 0.01, frequency: 7274800000, shape: Rectangular(),
                 type: ro, start: 0, phase: 0}
 
 characterization:

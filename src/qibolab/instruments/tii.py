@@ -5,7 +5,7 @@ Supports the following FPGA:
 """
 import json
 import socket
-
+import time 
 import numpy as np
 import yaml
 from qibo.config import log
@@ -211,19 +211,43 @@ class TII_RFSOC4x2(AbstractInstrument):
 
         jsonDic["opCode"] = "sweep"
 
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        received = bytearray()
+        try:
+            # connect to server 
+            sock.connect((self.host, self.port))
 
+            # send data
+            sock.sendall(json.dumps(jsonDic).encode())
+
+            # receive data back from the server
+            while 1:
+                tmp = sock.recv(4096)
+                if not tmp:
+                    break
+                received.extend(tmp) 
+            #received = sock.recv(65536)
+            #time.sleep(1)
+            avg = json.loads(received.decode("utf-8"))
+            avg_di = avg["avg_di"]
+            avg_dq = avg["avg_dq"]
+        finally:
+            # shut down
+            sock.close()
 
         # Create a socket (SOCK_STREAM means a TCP socket)
+        """
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             # Connect to server and send data
             sock.connect((self.host, self.port))
             sock.sendall(json.dumps(jsonDic).encode())
             # Receive data from the server and shut down
-            received = sock.recv(4096)
+            received = sock.recv(65536)
             avg = json.loads(received.decode("utf-8"))
             avg_di = avg["avg_di"]
             avg_dq = avg["avg_dq"]
         sock.close()
+        """
         return avg_di, avg_dq
     
 
