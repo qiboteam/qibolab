@@ -133,7 +133,11 @@ class Zurich(AbstractInstrument):
         for qubit in qubits.values():
             self.register_flux_line(qubit)
             self.register_drive_line(qubit=qubit, intermediate_frequency=0)
-            self.register_readout_line(qubit=qubit, intermediate_frequency=0, Soft_Mod=True)
+            self.register_readout_line(
+                qubit=qubit,
+                intermediate_frequency=qubit.drive_frequency - qubit.drive.local_oscillator.frequency,
+                Soft_Mod=True,
+            )
 
         self.device_setup.set_calibration(self.calibration)
 
@@ -243,13 +247,15 @@ class Zurich(AbstractInstrument):
         self.run_exp()
 
         # TODO: General, several readouts and qubits
-        results = {}
-        exp_res = self.results.get_data(f"sequence")
-        i = exp_res.real
-        q = exp_res.imag
 
+        results = {}
         shots = 1024
-        results[sequence] = ExecutionResults.from_components(i, q, shots)
+        for qubit in qubits.values():
+            if self.sequence[f"readout{qubit.name}"]:
+                exp_res = self.results.get_data(f"sequence{qubit.name}")
+                i = exp_res.real
+                q = exp_res.imag
+                results[f"sequence{qubit.name}"] = ExecutionResults.from_components(i, q, shots)
 
         return results
 
@@ -305,27 +311,29 @@ class Zurich(AbstractInstrument):
         )
 
         # For the Resonator Spec
+        # For play Single shot,
+        # For sweep average true and false, single shot and cyclic.
+        # with exp.acquire_loop_rt(
+        #     uid="shots",
+        #     count=nshots,
+        #     # repetition_mode= lo.RepetitionMode.CONSTANT,
+        #     # repetition_time= 20e-6,
+        #     # acquisition_type=lo.AcquisitionType.SPECTROSCOPY,
+        #     acquisition_type=lo.AcquisitionType.INTEGRATION,
+        #     averaging_mode=lo.AveragingMode.CYCLIC,
+        #     # averaging_mode=lo.AveragingMode.SINGLE_SHOT,
+        # ):
+        # For multiplex readout
         with exp.acquire_loop_rt(
             uid="shots",
             count=nshots,
             # repetition_mode= lo.RepetitionMode.CONSTANT,
             # repetition_time= 20e-6,
-            # acquisition_type=lo.AcquisitionType.SPECTROSCOPY,
-            acquisition_type=lo.AcquisitionType.INTEGRATION,
+            # acquisition_type=lo.AcquisitionType.INTEGRATION,
+            acquisition_type=lo.AcquisitionType.DISCRIMINATION,
             averaging_mode=lo.AveragingMode.CYCLIC,
             # averaging_mode=lo.AveragingMode.SINGLE_SHOT,
         ):
-            # For multiplex readout
-            # with exp.acquire_loop_rt(
-            #     uid="shots",
-            #     count=self.settings["hardware_avg"],
-            #     # repetition_mode= lo.RepetitionMode.CONSTANT,
-            #     # repetition_time= 20e-6,
-            #     acquisition_type=lo.AcquisitionType.INTEGRATION,
-            #     averaging_mode=lo.AveragingMode.CYCLIC,
-            #     # averaging_mode=lo.AveragingMode.SINGLE_SHOT,
-            # ):
-
             self.select_exp(exp, qubits)
 
             self.experiment = exp
@@ -349,26 +357,27 @@ class Zurich(AbstractInstrument):
 
     # Flux on all qubits(Separete, Bias, Flux, Coupler)
     def Flux(self, exp, qubits):
-        with exp.section(uid=f"sequence_flux_bias", alignment=lo.SectionAlignment.RIGHT):
+        # with exp.section(uid=f"sequence_flux_bias", alignment=lo.SectionAlignment.RIGHT):
+        with exp.section(uid=f"sequence_flux_bias"):
             for qubit in qubits.values():
                 time = 0
                 i = 0
                 for pulse in self.sequence[f"flux{qubit.name}"]:
                     exp.delay(signal=f"flux{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
-                    time += round(pulse.pulse.duration * 1e-9, 9)
-                    pulse.zhpulse.uid = pulse.zhpulse.uid + "i"
+                    time += round(pulse.pulse.duration * 1e-9, 9) + round(pulse.pulse.start * 1e-9, 9) - time
+                    pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
                     exp.play(signal=f"flux{qubit.name}", pulse=pulse.zhpulse)
                     i += 1
 
     def Drive(self, exp, qubits):
-        with exp.section(uid=f"sequence_drive", alignment=lo.SectionAlignment.RIGHT):
+        with exp.section(uid=f"sequence_drive"):
             for qubit in qubits.values():
                 time = 0
                 i = 0
                 for pulse in self.sequence[f"drive{qubit.name}"]:
                     exp.delay(signal=f"drive{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
-                    time += round(pulse.pulse.duration * 1e-9, 9)
-                    pulse.zhpulse.uid = pulse.zhpulse.uid + "i"
+                    time += round(pulse.pulse.duration * 1e-9, 9) + round(pulse.pulse.start * 1e-9, 9) - time
+                    pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
                     exp.play(signal=f"drive{qubit.name}", pulse=pulse.zhpulse, phase=pulse.pulse.relative_phase)
                     i += 1
 
@@ -378,17 +387,18 @@ class Zurich(AbstractInstrument):
             for qubit in qubits.values():
                 time = 0
                 i = 0
-                for pulse in self.sequence[f"measure{qubit.name}"]:
+                for pulse in self.sequence[f"readout{qubit.name}"]:
                     exp.delay(signal=f"measure{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
-                    time += round(pulse.pulse.duration * 1e-9, 9)
-                    pulse.zhpulse.uid = pulse.zhpulse.uid + "i"
+                    exp.delay(signal=f"acquire{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
+                    time += round(pulse.pulse.duration * 1e-9, 9) + round(pulse.pulse.start * 1e-9, 9) - time
+                    pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
                     exp.play(signal=f"measure{qubit.name}", pulse=pulse.zhpulse, phase=pulse.pulse.relative_phase)
                     weight = lo.pulse_library.const(
                         uid="weight" + pulse.zhpulse.uid,
                         length=round(pulse.pulse.duration * 1e-9, 9),
                         amplitude=1.0,
                     )
-                    exp.acquire(signal=f"acquire{qubit.name}", handle=f"sequence", kernel=weight)
+                    exp.acquire(signal=f"acquire{qubit.name}", handle=f"sequence{qubit.name}", kernel=weight)
                     i += 1
 
     def qubit_reset(self, exp, qubits, Fast_reset=False):

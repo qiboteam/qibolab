@@ -227,7 +227,7 @@ characterization:
         0:
             readout_frequency: 5.222836e+9
             resonator_polycoef_flux: []
-            drive_frequency: 0.0
+            drive_frequency: 5.7e+9
             T1: 0.0
             T2: 0.0
             sweetspot: 0.0
@@ -244,7 +244,7 @@ characterization:
         1:
             readout_frequency: 4.923995e+9
             resonator_polycoef_flux: []
-            drive_frequency: 0.0
+            drive_frequency: 6.0e+9
             T1: 0.
             T2: 0.
             sweetspot: 0.0

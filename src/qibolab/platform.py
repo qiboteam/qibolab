@@ -263,7 +263,7 @@ def create_tii_IQM5q(runcard, descriptor=None):
         # TWPA_Oscillator("TWPA", "192.168.0.35"),
     ]
     # Set Dummy LO parameters
-    local_oscillators[0].frequency = 7_300_000_000
+    local_oscillators[0].frequency = 5_800_000_000
     local_oscillators[1].frequency = 7_900_000_000
     local_oscillators[2].frequency = 7_900_000_000
     local_oscillators[3].frequency = 5_600_000_000
