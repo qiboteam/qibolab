@@ -161,12 +161,10 @@ def create_tii_IQM5q(runcard, descriptor=None):
     # flux qubits
     for i in range(6, 11):
         channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-6}")]
-        channels[f"L4-{i}"].power_range = 0
         channels[f"L4-{i}"].offset = 0.1
     # flux couplers
     for i in range(11, 15):
         channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-11+5}")]
-        channels[f"L4-{i}"].power_range = 0
         channels[f"L4-{i}"].offset = 0.1
 
     # DEVICE HDWAG1 and HDAWG2 ???
@@ -204,9 +202,25 @@ def create_tii_IQM5q(runcard, descriptor=None):
                   ports: SGCHANNELS/3/OUTPUT
                 - iq_signal: q4/drive_line
                   ports: SGCHANNELS/4/OUTPUT
-                - iq_signal: q/measure_line
+                - iq_signal: q0/measure_line
                   ports: [QACHANNELS/0/OUTPUT]
-                - acquire_signal: q/acquire_line
+                - acquire_signal: q0/acquire_line
+                  ports: [QACHANNELS/0/INPUT]
+                - iq_signal: q1/measure_line
+                  ports: [QACHANNELS/0/OUTPUT]
+                - acquire_signal: q1/acquire_line
+                  ports: [QACHANNELS/0/INPUT]
+                - iq_signal: q2/measure_line
+                  ports: [QACHANNELS/0/OUTPUT]
+                - acquire_signal: q2/acquire_line
+                  ports: [QACHANNELS/0/INPUT]
+                - iq_signal: q3/measure_line
+                  ports: [QACHANNELS/0/OUTPUT]
+                - acquire_signal: q3/acquire_line
+                  ports: [QACHANNELS/0/INPUT]
+                - iq_signal: q4/measure_line
+                  ports: [QACHANNELS/0/OUTPUT]
+                - acquire_signal: q4/acquire_line
                   ports: [QACHANNELS/0/INPUT]
 
             device_hdawg:
@@ -251,11 +265,11 @@ def create_tii_IQM5q(runcard, descriptor=None):
     # Set Dummy LO parameters
     local_oscillators[0].frequency = 7_300_000_000
     local_oscillators[1].frequency = 7_900_000_000
-    local_oscillators[2].frequency = 4_700_000_000
+    local_oscillators[2].frequency = 7_900_000_000
     local_oscillators[3].frequency = 5_600_000_000
     local_oscillators[4].frequency = 5_600_000_000
-    local_oscillators[5].frequency = 5_600_000_000
-    local_oscillators[6].frequency = 5_600_000_000
+    local_oscillators[5].frequency = 5_800_000_000
+    local_oscillators[6].frequency = 5_800_000_000
 
     # Set TWPA pump LO parameters
     # local_oscillators[7].frequency = 6_511_000_000

@@ -24,7 +24,7 @@ class Channel:
     Not applicable for setups that do not use local oscillators because the controller
     can send sufficiently high frequencies.
     """
-    power_range: Optional[power_range] = None
+    power_range: Optional[float] = None
     """Attenuation or amplification of the line, not all intruments have this capability."""
     _offset: Optional[list] = None
     """DC offset that should be applied in the channel in order to shift the

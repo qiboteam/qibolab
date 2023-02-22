@@ -39,10 +39,9 @@ class BasicInstrumentDesign:
         self.controller.disconnect()
         self._is_connected = False
 
-    def play(self, qubits, couplers, sequence, nshots, relaxation_time, *args, **kwargs):
+    def play(self, *args, **kwargs):
         """Play a pulse sequence and retrieve feedback."""
-        # return self.controller.play(*args, **kwargs)
-        return self.controller.play(qubits, couplers, sequence, nshots, relaxation_time, *args, **kwargs)
+        return self.controller.play(*args, **kwargs)
 
     def sweep(self, *args, **kwargs):
         """Play a pulse sequence while sweeping one or more parameters."""
