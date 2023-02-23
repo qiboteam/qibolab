@@ -7,6 +7,10 @@ from qibolab.platforms.platform import DesignPlatform
 
 
 def create_dummy(runcard):
+    """Create a single qubit platform using the dummy instrument.
+
+    Useful for testing.
+    """
     from qibolab.instruments.dummy import DummyInstrument
 
     # Create channel objects

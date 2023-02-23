@@ -169,9 +169,6 @@ class DummyInstrument(AbstractInstrument):
                         value += qubits[pulses[pulse].qubit].drive_frequency
                     setattr(pulses[pulse], sweeper.parameter.name, value)
                 elif sweeper.parameter is Parameter.amplitude:
-                    # if pulses[pulse].type is PulseType.READOUT:
-                    #    current_amplitude = self.native_gates["single_qubit"][pulses[pulse].qubit]["MZ"]["amplitude"]
-                    # else:
                     current_amplitude = pulses[pulse].amplitude
                     setattr(pulses[pulse], sweeper.parameter.name, float(current_amplitude * value))
                 else:
