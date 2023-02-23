@@ -35,9 +35,14 @@ def create_tii_rfsoc4x2(runcard, address=None):
     channels["L3-18_qd"].ports = [("o1", 1)]
 
     # Instantiate QICK instruments
-    controller = TII_RFSOC4x2("tii_rfsoc4x2", "192.168.2.72:6000")
 
-    # Instantiate local oscillators (HARDCODED)
+    if address is None:
+        # connect to TII instruments for simulation
+        address = "192.168.2.72:6000"
+
+    controller = TII_RFSOC4x2("tii_rfsoc4x2", address)
+
+    # Instantiate local oscillators (HARDCODED) # TODO local oscillators should not be needed
     local_oscillators = [
         LocalOscillator("twpa", "192.168.0.35"),
     ]

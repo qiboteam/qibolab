@@ -1,4 +1,5 @@
 """ RFSoC fpga driver.
+
 Supports the following FPGA:
     RFSoC 4x2
 """
@@ -25,7 +26,17 @@ from qibolab.sweeper import Parameter, Sweeper
 
 
 class TII_RFSOC4x2(AbstractInstrument):
-    def __init__(self, name: str, address: str):  # , setting_parameters: dict):
+    """Instrument object for controlling the RFSoC4x2 FPGA.
+
+    The connection requires the FPGA to have a server currently listening.
+    The ``setup`` function must be called before playing pulses with
+    ``play`` (for arbitrary qibolab ``PulseSequence``) or ``sweep``.
+
+    Args:
+        name (str): Name of the instrument instance.
+        address (str): IP address and port for connecting to the FPGA.
+    """
+    def __init__(self, name: str, address: str):
         super().__init__(name, address)
         self.cfg: dict = {}
         self.host: str
@@ -34,19 +45,19 @@ class TII_RFSOC4x2(AbstractInstrument):
         self.port = int(port)
 
     def connect(self):
+        """Connects to the FPGA instrument."""
         self.is_connected = True
 
         # Create a socket (SOCK_STREAM means a TCP socket) and send configuration
         jsonDic = self.cfg
-        jsonDic["opCode"] = "configuration"
+        jsonDic["opCode"] = "configuration" # opCode parameter for server
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            # Connect to server and send data
             sock.connect((self.host, self.port))
             sock.sendall(json.dumps(jsonDic).encode())
-        sock.close()
 
     def setup(self, qubits, **kwargs):
         """Configures the instrument.
+
         A connection to the instrument needs to be established beforehand.
         Args:
             **kwargs: dict = A dictionary of settings loaded from the runcard:
@@ -66,26 +77,28 @@ class TII_RFSOC4x2(AbstractInstrument):
             # Load settings
             self.cfg = kwargs
             jsonDic = self.cfg
-            # print("Check point 3", jsonDic)
-            jsonDic["opCode"] = "setup"
-            # Create a socket (SOCK_STREAM means a TCP socket)
+            jsonDic["opCode"] = "setup" # opCode parameter for server
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                # Connect to server and send data
                 sock.connect((self.host, self.port))
                 sock.sendall(json.dumps(jsonDic).encode())
-            sock.close()
 
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
 
     def play(self, qubits, sequence, nshots, relaxation_time):
         """Executes the sequence of instructions and retrieves the readout results.
+
         Each readout pulse generates a separate acquisition.
+
+        Args:
+            nshots (int): parameter not used
+            relaxation_time: parameter not used
+
         Returns:
             Two array with real and imaginary parts if i and q (already averages)
-        TODO: Refactor this method according to sweep method
         """
-        ps: PulseShape
+        # TODO clean not used parameters
+
         jsonDic = {}
         jsonDic["opCode"] = "execute"
         pulsesDic = {}
@@ -93,21 +106,29 @@ class TII_RFSOC4x2(AbstractInstrument):
             pulsesDic[str(i)] = self.convert_pulse_to_dic(pulse)
         jsonDic["pulses"] = pulsesDic
 
-        # Create a socket (SOCK_STREAM means a TCP socket)
+        # Create a socket and send pulse sequence to the FPGA
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            # Connect to server and send data
             sock.connect((self.host, self.port))
             sock.sendall(json.dumps(jsonDic).encode())
-            # Receive data from the server and shut down
+            # read from the server a maximum of 256 bytes (enough for sequence)
             received = sock.recv(256)
-            avg = json.loads(received.decode("utf-8"))
+            avg = json.loads(received)
             avgi = avg["avgi"]
             avgq = avg["avgq"]
-        sock.close()
         return avgi, avgq
 
     def sweep(self, qubits, sequence, *sweepers, nshots, relaxation_time, average=True):
-        """Play a pulse sequence while sweeping one or more parameters."""
+        """Play a pulse sequence while sweeping one or more parameters.
+
+        Args:
+            qubits: parameter not used
+            sequence: parameter not used
+            *sweepers (list): A list of qibolab Sweepers objects
+            nshots (int): parameter not used
+            relaxation_time: parameter not used
+            average: parameter not used
+        """
+        # TODO clean not used parameters
 
         #  Parsing the sweeper to dictionary and after to a json file
         s: Sweeper
@@ -120,54 +141,37 @@ class TII_RFSOC4x2(AbstractInstrument):
         expt = len(s.values)
 
         step = (s.values[1] - s.values[0]).item()
-        range = {"start": start, "step": step, "expt": expt}
-
-        jsonDic["range"] = range
+        jsonDic["range"] = {"start": start, "step": step, "expt": expt}
 
         pulsesDic = {}
-        for i, pulse in enumerate(s.pulses):
+        for i, pulse in enumerate(s.pulses): # convert pulses to dictionary
             pulsesDic[str(i)] = self.convert_pulse_to_dic(pulse)
         jsonDic["pulses"] = pulsesDic
 
-        jsonDic["opCode"] = "sweep"
+        jsonDic["opCode"] = "sweep" # opCode parameter for server
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         received = bytearray()
         try:
             # connect to server
             sock.connect((self.host, self.port))
-
             # send data
             sock.sendall(json.dumps(jsonDic).encode())
-
             # receive data back from the server
+            # wait for packets until the server is sending them
             while 1:
                 tmp = sock.recv(4096)
                 if not tmp:
                     break
                 received.extend(tmp)
-            # received = sock.recv(65536)
-            # time.sleep(1)
-            avg = json.loads(received.decode("utf-8"))
+            avg = json.loads(received)
             avg_di = avg["avg_di"]
             avg_dq = avg["avg_dq"]
         finally:
             # shut down
             sock.close()
+            # TODO use with syntax
 
-        # Create a socket (SOCK_STREAM means a TCP socket)
-        """
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            # Connect to server and send data
-            sock.connect((self.host, self.port))
-            sock.sendall(json.dumps(jsonDic).encode())
-            # Receive data from the server and shut down
-            received = sock.recv(65536)
-            avg = json.loads(received.decode("utf-8"))
-            avg_di = avg["avg_di"]
-            avg_dq = avg["avg_dq"]
-        sock.close()
-        """
         return avg_di, avg_dq
 
     def convert_pulse_to_dic(self, pulse):

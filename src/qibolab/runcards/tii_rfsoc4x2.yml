@@ -23,11 +23,23 @@ topology: # qubit - qubit connections
 
 native_gates:
     single_qubit:
-        0:
-            RX: {duration: 40, amplitude: 0.6, frequency: 8110000000, shape: Gaussian(4),
-                type: qd, start: 0, phase: 0}
-            MZ: {duration: 3000, amplitude: 0.01, frequency: 7274800000, shape: Rectangular(),
-                type: ro, start: 0, phase: 0}
+        0: # qubit number
+            RX: 
+                duration: 40
+                amplitude: 0.6
+                frequency: 8269000000
+                shape: Gaussian(4)
+                type: qd # qubit drive
+                start: 0
+                phase: 0
+            MZ: 
+                duration: 3000
+                amplitude: 0.01
+                frequency: 7274800000
+                shape: Rectangular()
+                type: ro # readout
+                start: 0
+                phase: 0
 
 characterization:
     single_qubit:
