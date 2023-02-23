@@ -108,6 +108,7 @@ class DummyInstrument(AbstractInstrument):
             )
             if len(sweepers) > 1:
                 self._sweep_recursion(
+                    qubits,
                     sequence,
                     original_sequence,
                     *sweepers[1:],
@@ -185,8 +186,8 @@ class DummyInstrument(AbstractInstrument):
         if sweeper.qubits is not None:
             for qubit in sweeper.qubits:
                 if sweeper.parameter is Parameter.attenuation:
-                    self.set_attenuation(qubit, value)
+                    qubit.readout.attenuation = value
                 elif sweeper.parameter is Parameter.gain:
-                    self.set_gain(qubit, value)
+                    qubit.drive.gain = value
                 elif sweeper.parameter is Parameter.bias:
-                    self.set_bias(qubit, value)
+                    qubit.flux.offset = float(value)

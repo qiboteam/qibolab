@@ -11,7 +11,7 @@ def create_dummy(runcard):
 
     # Create channel objects
     channels = ChannelMap()
-    channels |= ChannelMap.from_names("readout", "drive")
+    channels |= ChannelMap.from_names("readout", "drive", "flux")
 
     # Create dummy controller
     controller = DummyInstrument("dummy", 0)
@@ -23,6 +23,7 @@ def create_dummy(runcard):
     # map channels to qubits
     platform.qubits[0].readout = channels["readout"]
     platform.qubits[0].drive = channels["drive"]
+    platform.qubits[0].flux = channels["flux"]
 
     return platform
 
