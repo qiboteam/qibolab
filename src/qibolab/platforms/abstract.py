@@ -151,14 +151,6 @@ class AbstractPlatform(ABC):
             else:
                 self.qubits[q] = Qubit(q, **settings["characterization"]["single_qubit"][q])
 
-        # TODO: Will it fail with non coupler chips
-        for c in settings["couplers"]:
-            if c in self.couplers:
-                for name, value in settings["characterization"]["two_qubit_couplers"][c].items():
-                    setattr(self.couplers[c], name, value)
-            else:
-                self.couplers[c] = Qubit(c, **settings["characterization"]["two_qubit_couplers"][c])
-
     @abstractmethod
     def connect(self):
         """Connects to instruments."""

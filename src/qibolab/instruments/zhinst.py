@@ -9,23 +9,15 @@ from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.result import ExecutionResults
 
-# TODO: Pulses timing
-# TODO: se.finish and play with this for pulses
 # TODO: Add return clasified states.
-
-# TODO: Sweeps on Amplitude and not on range, but change it on top on them
-
 # TODO: Simulation
 # session = Session(device_setup=device_setup)
 # session.connect(do_emulation=use_emulation)
+# my_results = session.run(exp)
 
-# my_results = session.run(exp, do_simulation=True)
 
 # TODO: Add/Check for loops for multiple qubits
-
-
-# TODO: Adapt( dont think I need it i I use lo.pulse_library and baking)
-# TODO: Check order pulse
+# TODO: Adapt(dont think I need it i I use lo.pulse_library and baking)
 class ZhPulse:
     def __init__(self, pulse):
         self.pulse = pulse
@@ -88,8 +80,6 @@ class Zurich(AbstractInstrument):
         if not self.is_connected:
             for attempt in range(3):
                 try:
-                    # self.session = lo.Session(self.Zsetup)
-                    # self.device = self.session.connect(self.address)
                     self.device_setup = lo.DeviceSetup.from_descriptor(
                         yaml_text=self.descriptor,
                         server_host="localhost",
@@ -106,7 +96,6 @@ class Zurich(AbstractInstrument):
             if not self.is_connected:
                 raise InstrumentException(self, f"Unable to connect to {self.name}")
 
-    # FIXME: What are these for ???
     def start(self):
         pass
 
@@ -131,23 +120,20 @@ class Zurich(AbstractInstrument):
         # Map can be done in experiment, but general calibration needs to be here
         # General calibration != experiment calibration
         for qubit in qubits.values():
-            self.register_flux_line(qubit)
-            self.register_drive_line(qubit=qubit, intermediate_frequency=0)
-            self.register_readout_line(
-                qubit=qubit,
-                intermediate_frequency=qubit.drive_frequency - qubit.drive.local_oscillator.frequency,
-                Soft_Mod=True,
-            )
+            if "c" in str(qubit.name):
+                self.register_flux_line(qubit)
+            else:
+                self.register_flux_line(qubit)
+                self.register_drive_line(
+                    qubit=qubit, intermediate_frequency=qubit.drive_frequency - qubit.drive.local_oscillator.frequency
+                )
+                self.register_readout_line(
+                    qubit=qubit,
+                    intermediate_frequency=qubit.readout_frequency - qubit.readout.local_oscillator.frequency,
+                    Soft_Mod=True,
+                )
 
         self.device_setup.set_calibration(self.calibration)
-
-        # for qubit in qubits.values():
-        #     if qubit.flux:
-        #         self.register_flux_line(qubit)
-
-        # for coupler in couplers.values():
-        #     if coupler.flux:
-        #         self.register_flux_coupler_line(coupler)
 
     def register_readout_line(self, qubit, intermediate_frequency, Soft_Mod=True):
         """Registers qubit measure and acquire lines to calibration and signal map."""
@@ -215,16 +201,6 @@ class Zurich(AbstractInstrument):
             range=qubit.flux.power_range, port_delay=None, delay_signal=0, voltage_offset=qubit.flux.offset
         )
 
-    def register_coupler_flux_line(self, coupler):
-        """Registers qubit flux coupler line to calibration and signal map."""
-        c = coupler.name
-        self.signal_map[f"flux_coupler{c}"] = self.device_setup.logical_signal_groups[f"c{c}"].logical_signals[
-            "flux_coupler_line"
-        ]
-        self.calibration[f"/logical_signal_groups/c{c}/flux_coupler_line"] = lo.SignalCalibration(
-            range=coupler.flux.power_range, port_delay=0, delay_signal=0, voltage_offset=coupler.flux.offset
-        )
-
     def run_exp(self):
         # Compiler settings required for active reset and multiplex.
         compiler_settings = {
@@ -251,11 +227,14 @@ class Zurich(AbstractInstrument):
         results = {}
         shots = 1024
         for qubit in qubits.values():
-            if self.sequence[f"readout{qubit.name}"]:
-                exp_res = self.results.get_data(f"sequence{qubit.name}")
-                i = exp_res.real
-                q = exp_res.imag
-                results[f"sequence{qubit.name}"] = ExecutionResults.from_components(i, q, shots)
+            if "c" in str(qubit.name):
+                pass
+            else:
+                if self.sequence[f"readout{qubit.name}"]:
+                    exp_res = self.results.get_data(f"sequence{qubit.name}")
+                    i = exp_res.real
+                    q = exp_res.imag
+                    results[f"sequence{qubit.name}"] = ExecutionResults.from_components(i, q, shots)
 
         return results
 
@@ -298,10 +277,13 @@ class Zurich(AbstractInstrument):
         signals = []
 
         for qubit in qubits.values():
-            signals.append(lo.ExperimentSignal(f"drive{qubit.name}"))
-            signals.append(lo.ExperimentSignal(f"flux{qubit.name}"))
-            signals.append(lo.ExperimentSignal(f"measure{qubit.name}"))
-            signals.append(lo.ExperimentSignal(f"acquire{qubit.name}"))
+            if "c" in str(qubit.name):
+                signals.append(lo.ExperimentSignal(f"flux{qubit.name}"))
+            else:
+                signals.append(lo.ExperimentSignal(f"drive{qubit.name}"))
+                signals.append(lo.ExperimentSignal(f"flux{qubit.name}"))
+                signals.append(lo.ExperimentSignal(f"measure{qubit.name}"))
+                signals.append(lo.ExperimentSignal(f"acquire{qubit.name}"))
         # for coupler in couplers.values():
         #     signals.append(lo.ExperimentSignal(f"flux_coupler{coupler.name}"))
 
@@ -360,65 +342,80 @@ class Zurich(AbstractInstrument):
         # with exp.section(uid=f"sequence_flux_bias", alignment=lo.SectionAlignment.RIGHT):
         with exp.section(uid=f"sequence_flux_bias"):
             for qubit in qubits.values():
-                time = 0
-                i = 0
-                for pulse in self.sequence[f"flux{qubit.name}"]:
-                    exp.delay(signal=f"flux{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
-                    time += round(pulse.pulse.duration * 1e-9, 9) + round(pulse.pulse.start * 1e-9, 9) - time
-                    pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
-                    exp.play(signal=f"flux{qubit.name}", pulse=pulse.zhpulse)
-                    i += 1
+                if "c" in str(qubit.name):
+                    pass
+                else:
+                    time = 0
+                    i = 0
+                    for pulse in self.sequence[f"flux{qubit.name}"]:
+                        exp.delay(signal=f"flux{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
+                        time += round(pulse.pulse.duration * 1e-9, 9) + round(pulse.pulse.start * 1e-9, 9) - time
+                        pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
+                        exp.play(signal=f"flux{qubit.name}", pulse=pulse.zhpulse)
+                        i += 1
 
     def Drive(self, exp, qubits):
         with exp.section(uid=f"sequence_drive"):
             for qubit in qubits.values():
-                time = 0
-                i = 0
-                for pulse in self.sequence[f"drive{qubit.name}"]:
-                    exp.delay(signal=f"drive{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
-                    time += round(pulse.pulse.duration * 1e-9, 9) + round(pulse.pulse.start * 1e-9, 9) - time
-                    pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
-                    exp.play(signal=f"drive{qubit.name}", pulse=pulse.zhpulse, phase=pulse.pulse.relative_phase)
-                    i += 1
+                if "c" in str(qubit.name):
+                    pass
+                else:
+                    time = 0
+                    i = 0
+                    for pulse in self.sequence[f"drive{qubit.name}"]:
+                        exp.delay(signal=f"drive{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
+                        time += round(pulse.pulse.duration * 1e-9, 9) + round(pulse.pulse.start * 1e-9, 9) - time
+                        pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
+                        exp.play(signal=f"drive{qubit.name}", pulse=pulse.zhpulse, phase=pulse.pulse.relative_phase)
+                        i += 1
 
     def Measure(self, exp, qubits):
         # qubit readout pulse and data acquisition
         with exp.section(uid=f"sequence_measure"):
             for qubit in qubits.values():
-                time = 0
-                i = 0
-                for pulse in self.sequence[f"readout{qubit.name}"]:
-                    exp.delay(signal=f"measure{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
-                    exp.delay(signal=f"acquire{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
-                    time += round(pulse.pulse.duration * 1e-9, 9) + round(pulse.pulse.start * 1e-9, 9) - time
-                    pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
-                    exp.play(signal=f"measure{qubit.name}", pulse=pulse.zhpulse, phase=pulse.pulse.relative_phase)
-                    weight = lo.pulse_library.const(
-                        uid="weight" + pulse.zhpulse.uid,
-                        length=round(pulse.pulse.duration * 1e-9, 9),
-                        amplitude=1.0,
-                    )
-                    exp.acquire(signal=f"acquire{qubit.name}", handle=f"sequence{qubit.name}", kernel=weight)
-                    i += 1
+                if "c" in str(qubit.name):
+                    pass
+                else:
+                    time = 0
+                    i = 0
+                    for pulse in self.sequence[f"readout{qubit.name}"]:
+                        exp.delay(signal=f"measure{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
+                        exp.delay(signal=f"acquire{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
+                        time += round(pulse.pulse.duration * 1e-9, 9) + round(pulse.pulse.start * 1e-9, 9) - time
+                        pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
+                        exp.play(signal=f"measure{qubit.name}", pulse=pulse.zhpulse, phase=pulse.pulse.relative_phase)
+                        weight = lo.pulse_library.const(
+                            uid="weight" + pulse.zhpulse.uid,
+                            length=round(pulse.pulse.duration * 1e-9, 9),
+                            amplitude=1.0,
+                        )
+                        exp.acquire(signal=f"acquire{qubit.name}", handle=f"sequence{qubit.name}", kernel=weight)
+                        i += 1
 
     def qubit_reset(self, exp, qubits, Fast_reset=False):
         # relax time or fast reset after readout - for signal processing and qubit relaxation to ground state
         if Fast_reset:
             for qubit in qubits.values():
-                with exp.section(uid=f"fast_reset", play_after=f"sequence_measure"):
-                    with exp.match_local(handle=f"acquire{qubit}"):
-                        with exp.case(state=0):
-                            pass
-                            # exp.play(some_pulse)
-                        with exp.case(state=1):
-                            pass
-                            # exp.play(some_other_pulse)
+                if "c" in str(qubit.name):
+                    pass
+                else:
+                    with exp.section(uid=f"fast_reset", play_after=f"sequence_measure"):
+                        with exp.match_local(handle=f"acquire{qubit}"):
+                            with exp.case(state=0):
+                                pass
+                                # exp.play(some_pulse)
+                            with exp.case(state=1):
+                                pass
+                                # exp.play(some_other_pulse)
         else:
             with exp.section(uid=f"relax", play_after=f"sequence_measure"):
                 for qubit in qubits.values():
-                    exp.reserve(signal=f"flux{qubit.name}")
-                    exp.reserve(signal=f"drive{qubit.name}")
-                    exp.delay(signal=f"measure{qubit.name}", time=self.relaxation_time)
+                    if "c" in str(qubit.name):
+                        pass
+                    else:
+                        exp.reserve(signal=f"flux{qubit.name}")
+                        exp.reserve(signal=f"drive{qubit.name}")
+                        exp.delay(signal=f"measure{qubit.name}", time=self.relaxation_time)
 
 
 # ------------------------------------------------------------------------------------------------------------

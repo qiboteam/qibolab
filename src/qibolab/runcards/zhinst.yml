@@ -15,8 +15,9 @@ settings:
     Fast_reset_time: 500.e-9
     Bandwidth: 800.e-6
 
-qubits: [0, 1, 2, 3, 4]
-couplers: [0, 1, 3, 4]
+# qubits: [0, 1, 2, 3, 4]
+qubits: [0, 1, 2, 3, 4, "c0", "c1", "c3"]
+# qubits: [0, 1, 2, 3, 4, "c0", "c1", "c3", "c4"]
 
 topology:
 - [1, 0, 1, 0, 0, 0]
@@ -281,6 +282,18 @@ characterization:
             filter: {}
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
+        "c0":
+            sweetspot: 0.0
+            filter: {}
+        "c1":
+            sweetspot: 0.0
+            filter: {}
+        "c3":
+            sweetspot: 0.0
+            filter: {}
+        "c4":
+            sweetspot: 0.0
+            filter: {}
     two_qubit:
 
     two_qubit_couplers:

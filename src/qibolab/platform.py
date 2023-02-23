@@ -121,7 +121,6 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
     return platform
 
 
-# TODO: Treat couplers as qubits but without readout
 def create_tii_IQM5q(runcard, descriptor=None):
     """Create platform using Zurich Instrumetns (Zh) SHFQC, HDAWGs and PQSC.
 
@@ -163,11 +162,12 @@ def create_tii_IQM5q(runcard, descriptor=None):
         channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-6}")]
         channels[f"L4-{i}"].offset = 0.1
     # flux couplers
-    for i in range(11, 15):
+    for i in range(11, 14):
         channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-11+5}")]
         channels[f"L4-{i}"].offset = 0.1
 
-    # DEVICE HDWAG1 and HDAWG2 ???
+    channels[f"L4-14"].ports = [("device_hdawg2", f"SIGOUTS/0")]
+    channels[f"L4-14"].offset = 0.1
 
     # Instantiate Zh set of instruments[They work as one]
     from qibolab.instruments.dummy_oscillator import (
@@ -175,6 +175,16 @@ def create_tii_IQM5q(runcard, descriptor=None):
     )
     from qibolab.instruments.rohde_schwarz import SGS100A as TWPA_Oscillator
     from qibolab.instruments.zhinst import Zurich
+
+    # TODO: Fix connection with the 2 HDAWGs
+    # HDAWG:
+    # - address: DEV8673
+    #   uid: device_hdawg_2
+    #           device_hdawg2:
+    # - rf_signal: qc4/flux_line
+    #   ports: SIGOUTS/0
+    # - to: device_hdawg
+    #   port: ZSYNCS/4
 
     if descriptor is None:
         descriptor = """\
@@ -185,10 +195,10 @@ def create_tii_IQM5q(runcard, descriptor=None):
             HDAWG:
             - address: DEV8660
               uid: device_hdawg
+
             PQSC:
             - address: DEV10055
               uid: device_pqsc
-
 
         connections:
             device_shfqc:
@@ -234,12 +244,12 @@ def create_tii_IQM5q(runcard, descriptor=None):
                   ports: SIGOUTS/3
                 - rf_signal: q4/flux_line
                   ports: SIGOUTS/4
-                - rf_signal: q03/flux_line
-                  ports: SIGOUTS/4
-                - rf_signal: q13/flux_line
-                  ports: SIGOUTS/4
-                - rf_signal: q23/flux_line
-                  ports: SIGOUTS/4
+                - rf_signal: qc0/flux_line
+                  ports: SIGOUTS/5
+                - rf_signal: qc1/flux_line
+                  ports: SIGOUTS/6
+                - rf_signal: qc3/flux_line
+                  ports: SIGOUTS/7
 
             device_pqsc:
                 - internal_clock_signal
@@ -258,30 +268,25 @@ def create_tii_IQM5q(runcard, descriptor=None):
         LocalOscillator("lo_drive_1", None),
         LocalOscillator("lo_drive_2", None),
         LocalOscillator("lo_drive_3", None),
-        LocalOscillator("lo_drive_4", None),
-        LocalOscillator("lo_drive_5", None),
         # TWPA_Oscillator("TWPA", "192.168.0.35"),
     ]
-    # Set Dummy LO parameters
+    # Set Dummy LO parameters (Map only the the two by two oscillators)
     local_oscillators[0].frequency = 5_800_000_000
-    local_oscillators[1].frequency = 7_900_000_000
-    local_oscillators[2].frequency = 7_900_000_000
-    local_oscillators[3].frequency = 5_600_000_000
-    local_oscillators[4].frequency = 5_600_000_000
-    local_oscillators[5].frequency = 5_800_000_000
-    local_oscillators[6].frequency = 5_800_000_000
+    local_oscillators[1].frequency = 6_000_000_000  # For SG1 and SG2
+    local_oscillators[2].frequency = 5_600_000_000  # For SG3 and SG4
+    local_oscillators[3].frequency = 5_200_000_000  # For SG5 and SG6
 
     # Set TWPA pump LO parameters
-    # local_oscillators[7].frequency = 6_511_000_000
-    # local_oscillators[7].power = 4.5
+    # local_oscillators[4].frequency = 6_511_000_000
+    # local_oscillators[4].power = 4.5
 
     # Map LOs to channels
     channels["L3-31"].local_oscillator = local_oscillators[0]
     channels["L4-15"].local_oscillator = local_oscillators[1]
-    channels["L4-16"].local_oscillator = local_oscillators[2]
-    channels["L4-17"].local_oscillator = local_oscillators[3]
-    channels["L4-18"].local_oscillator = local_oscillators[4]
-    channels["L4-19"].local_oscillator = local_oscillators[5]
+    channels["L4-16"].local_oscillator = local_oscillators[1]
+    channels["L4-17"].local_oscillator = local_oscillators[2]
+    channels["L4-18"].local_oscillator = local_oscillators[2]
+    channels["L4-19"].local_oscillator = local_oscillators[3]
     # channels["Witness???"].local_oscillator = local_oscillators[6]
     # channels["L3-10"].local_oscillator = local_oscillators[7]
 
@@ -300,13 +305,23 @@ def create_tii_IQM5q(runcard, descriptor=None):
         # channels[f"L4-{6 + q}"].qubit = qubits[q]
 
     # assign channels to couplers
-    couplers = platform.couplers
-
     for c in range(0, 2):
-        couplers[c].flux_coupler = channels[f"L4-{11 + c}"]
+        qubits[f"c{c}"].flux = channels[f"L4-{11 + c}"]
 
-    for c in range(3, 5):
-        couplers[c].flux_coupler = channels[f"L4-{11 + c}"]
+    # TODO: Add the last channel when the 2nd AWG works
+    for c in range(3, 4):
+        qubits[f"c{c}"].flux = channels[f"L4-{11 + c}"]
+    # for c in range(3, 5):
+    #     qubits[f"c{c}"].flux = channels[f"L4-{11 + c}"]
+
+    # # assign channels to couplers
+    # couplers = platform.couplers
+
+    # for c in range(0, 2):
+    #     couplers[c].flux_coupler = channels[f"L4-{11 + c}"]
+
+    # for c in range(3, 5):
+    #     couplers[c].flux_coupler = channels[f"L4-{11 + c}"]
 
     return platform
 
