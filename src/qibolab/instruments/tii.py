@@ -4,7 +4,8 @@ Supports the following FPGA:
 """
 import json
 import socket
-import time 
+import time
+
 import numpy as np
 import yaml
 from qibo.config import log
@@ -16,11 +17,12 @@ from qibolab.pulses import (
     Pulse,
     PulseSequence,
     PulseShape,
+    PulseType,
     ReadoutPulse,
     Rectangular,
-    PulseType,
 )
-from qibolab.sweeper import Sweeper, Parameter
+from qibolab.sweeper import Parameter, Sweeper
+
 
 class TII_RFSOC4x2(AbstractInstrument):
     def __init__(self, name: str, address: str):  # , setting_parameters: dict):
@@ -30,8 +32,6 @@ class TII_RFSOC4x2(AbstractInstrument):
         self.port: str
         self.host, port = address.split(":")
         self.port = int(port)
-        
-
 
     def connect(self):
         self.is_connected = True
@@ -66,7 +66,7 @@ class TII_RFSOC4x2(AbstractInstrument):
             # Load settings
             self.cfg = kwargs
             jsonDic = self.cfg
-            #print("Check point 3", jsonDic)
+            # print("Check point 3", jsonDic)
             jsonDic["opCode"] = "setup"
             # Create a socket (SOCK_STREAM means a TCP socket)
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -91,10 +91,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         pulsesDic = {}
         for i, pulse in enumerate(sequence):
             pulsesDic[str(i)] = self.convert_pulse_to_dic(pulse)
-        jsonDic['pulses'] = pulsesDic
-    
-
-
+        jsonDic["pulses"] = pulsesDic
 
         # Create a socket (SOCK_STREAM means a TCP socket)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -112,33 +109,32 @@ class TII_RFSOC4x2(AbstractInstrument):
     def sweep(self, qubits, sequence, *sweepers, nshots, relaxation_time, average=True):
         """Play a pulse sequence while sweeping one or more parameters."""
 
-        #  Parsing the sweeper to dictionary and after to a json file 
+        #  Parsing the sweeper to dictionary and after to a json file
         s: Sweeper
         par: Parameter
         s = sweepers[0]
 
         jsonDic = {}
-        jsonDic['parameter'] = str(s.parameter)
+        jsonDic["parameter"] = str(s.parameter)
         start = s.values[0].item()
         expt = len(s.values)
 
-        step= (s.values[1]-s.values[0]).item()
-        range = {'start': start, 'step': step, 'expt': expt}
+        step = (s.values[1] - s.values[0]).item()
+        range = {"start": start, "step": step, "expt": expt}
 
-        jsonDic['range'] = range
+        jsonDic["range"] = range
 
         pulsesDic = {}
         for i, pulse in enumerate(s.pulses):
             pulsesDic[str(i)] = self.convert_pulse_to_dic(pulse)
-        jsonDic['pulses'] = pulsesDic
-
+        jsonDic["pulses"] = pulsesDic
 
         jsonDic["opCode"] = "sweep"
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         received = bytearray()
         try:
-            # connect to server 
+            # connect to server
             sock.connect((self.host, self.port))
 
             # send data
@@ -149,9 +145,9 @@ class TII_RFSOC4x2(AbstractInstrument):
                 tmp = sock.recv(4096)
                 if not tmp:
                     break
-                received.extend(tmp) 
-            #received = sock.recv(65536)
-            #time.sleep(1)
+                received.extend(tmp)
+            # received = sock.recv(65536)
+            # time.sleep(1)
             avg = json.loads(received.decode("utf-8"))
             avg_di = avg["avg_di"]
             avg_dq = avg["avg_dq"]
@@ -173,7 +169,6 @@ class TII_RFSOC4x2(AbstractInstrument):
         sock.close()
         """
         return avg_di, avg_dq
-    
 
     def convert_pulse_to_dic(self, pulse):
         """Funtion to convert pulse object attributes to a dictionary"""
@@ -210,9 +205,9 @@ class TII_RFSOC4x2(AbstractInstrument):
                 "style": style,
                 "rel_sigma": rel_sigma,
                 "beta": beta,
-                "type": 'qd',
+                "type": "qd",
             }
-  
+
         elif pulse.type == PulseType.READOUT:
             pDic = {
                 "start": pulse.start,
@@ -220,12 +215,12 @@ class TII_RFSOC4x2(AbstractInstrument):
                 "amplitude": pulse.amplitude,
                 "frequency": pulse.frequency,
                 "relative_phase": pulse.relative_phase,
-                "shape": "const",               
-                "type": 'ro',
+                "shape": "const",
+                "type": "ro",
             }
-          
+
         return pDic
-    
+
     def start(self):
         """Empty method to comply with AbstractInstrument interface."""
         pass

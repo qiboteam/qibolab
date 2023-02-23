@@ -2,10 +2,10 @@ from qibo.config import raise_error
 
 from qibolab.designs.channels import Channel, ChannelMap
 from qibolab.designs.mixer import MixerInstrumentDesign
+from qibolab.instruments.dummy_oscillator import DummyLocalOscillator as LocalOscillator
+from qibolab.instruments.tii import TII_RFSOC4x2
 from qibolab.platforms.platform import DesignPlatform
 
-from qibolab.instruments.tii import TII_RFSOC4x2
-from qibolab.instruments.dummy_oscillator import DummyLocalOscillator as LocalOscillator
 
 def create_tii_rfsoc4x2(runcard, address=None):
     """Create platform using QICK project on the RFSoS4x2 board and Rohde Schwarz local oscillator for the TWPA
@@ -20,17 +20,17 @@ def create_tii_rfsoc4x2(runcard, address=None):
     # readout
     channels |= ChannelMap.from_names("L3-18_ro")
     # feedback
-    channels |= ChannelMap.from_names("L2-RO")    #TODO find the real channel 
+    channels |= ChannelMap.from_names("L2-RO")  # TODO find the real channel
     # drive
     channels |= ChannelMap.from_names("L3-18_qd")
     # TWPA
-    channels |= ChannelMap.from_names("L4-26") #TODO find the real channel
+    channels |= ChannelMap.from_names("L4-26")  # TODO find the real channel
 
     # Map controllers to qubit channels (HARDCODED)
     # readout
     channels["L3-18_ro"].ports = [("o0", 0)]
     # feedback
-    channels["L2-RO"].ports = [("i0", 0)]    
+    channels["L2-RO"].ports = [("i0", 0)]
     # drive
     channels["L3-18_qd"].ports = [("o1", 1)]
 
@@ -46,7 +46,7 @@ def create_tii_rfsoc4x2(runcard, address=None):
     local_oscillators[0].power = 4.5
 
     # Map LOs to channels
-    channels["L4-26"].local_oscillator = local_oscillators[0] #TODO find the real channel
+    channels["L4-26"].local_oscillator = local_oscillators[0]  # TODO find the real channel
 
     design = MixerInstrumentDesign(controller, channels, local_oscillators)
     platform = DesignPlatform("tii_rfsoc4x2", design, runcard)
@@ -56,10 +56,10 @@ def create_tii_rfsoc4x2(runcard, address=None):
     qubits[0].readout = channels["L3-18_ro"]
     qubits[0].feedback = channels["L2-RO"]
     qubits[0].drive = channels["L3-18_qd"]
-    channels["L4-26"].qubit = qubits[0] #TODO find the real channel
+    channels["L4-26"].qubit = qubits[0]  # TODO find the real channel
 
-   
     return platform
+
 
 def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=False):
     """Create platform using Quantum Machines (QM) OPXs and Rohde Schwarz local oscillators.
