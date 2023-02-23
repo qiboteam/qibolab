@@ -4,12 +4,66 @@ from qibolab.designs.channels import Channel, ChannelMap
 from qibolab.designs.mixer import MixerInstrumentDesign
 from qibolab.platforms.platform import DesignPlatform
 
+from qibolab.instruments.tii import TII_RFSOC4x2
+from qibolab.instruments.dummy_oscillator import DummyLocalOscillator as LocalOscillator
+
+def create_tii_rfsoc4x2(runcard, address=None):
+    """Create platform using QICK project on the RFSoS4x2 board and Rohde Schwarz local oscillator for the TWPA
+    IPs and other instrument related parameters are hardcoded in ``__init__`` and ``setup``.
+    Args:
+        runcard (str): Path to the runcard file.
+        address (str): Address and port for the QICK board.
+            If ``None`` it will attempt to connect to TII instruments.
+    """
+    # Create channel objects
+    channels = ChannelMap()
+    # readout
+    channels |= ChannelMap.from_names("L3-18_ro")
+    # feedback
+    channels |= ChannelMap.from_names("L2-RO")    #TODO find the real channel 
+    # drive
+    channels |= ChannelMap.from_names("L3-18_qd")
+    # TWPA
+    channels |= ChannelMap.from_names("L4-26") #TODO find the real channel
+
+    # Map controllers to qubit channels (HARDCODED)
+    # readout
+    channels["L3-18_ro"].ports = [("o0", 0)]
+    # feedback
+    channels["L2-RO"].ports = [("i0", 0)]    
+    # drive
+    channels["L3-18_qd"].ports = [("o1", 1)]
+
+    # Instantiate QICK instruments
+    controller = TII_RFSOC4x2("tii_rfsoc4x2", "192.168.2.72:6000")
+
+    # Instantiate local oscillators (HARDCODED)
+    local_oscillators = [
+        LocalOscillator("twpa", "192.168.0.35"),
+    ]
+    # Set TWPA parameters
+    local_oscillators[0].frequency = 6_511_000_000
+    local_oscillators[0].power = 4.5
+
+    # Map LOs to channels
+    channels["L4-26"].local_oscillator = local_oscillators[0] #TODO find the real channel
+
+    design = MixerInstrumentDesign(controller, channels, local_oscillators)
+    platform = DesignPlatform("tii_rfsoc4x2", design, runcard)
+
+    # assign channels to qubits
+    qubits = platform.qubits
+    qubits[0].readout = channels["L3-18_ro"]
+    qubits[0].feedback = channels["L2-RO"]
+    qubits[0].drive = channels["L3-18_qd"]
+    channels["L4-26"].qubit = qubits[0] #TODO find the real channel
+
+   
+    return platform
 
 def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=False):
     """Create platform using Quantum Machines (QM) OPXs and Rohde Schwarz local oscillators.
-
     IPs and other instrument related parameters are hardcoded in ``__init__`` and ``setup``.
-
     Args:
         runcard (str): Path to the runcard file.
         simulation_duration (int): Duration for the simulation in ns.
@@ -123,13 +177,11 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
 
 def Platform(name, runcard=None, design=None):
     """Platform for controlling quantum devices.
-
     Args:
         name (str): name of the platform. Options are 'tiiq', 'qili' and 'icarusq'.
         runcard (str): path to the yaml file containing the platform setup.
         design (:class:`qibolab.designs.abstract.AbstractInstrumentDesign`): Instrument
             design to use for the platform.
-
     Returns:
         The plaform class.
     """
@@ -148,6 +200,8 @@ def Platform(name, runcard=None, design=None):
         from qibolab.platforms.icplatform import ICPlatform as Device
     elif name == "qw5q_gold":
         return create_tii_qw5q_gold(runcard)
+    elif name == "tii_rfsoc4x2":
+        return create_tii_rfsoc4x2(runcard)
     else:
         from qibolab.platforms.multiqubit import MultiqubitPlatform as Device
 
