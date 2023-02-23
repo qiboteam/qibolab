@@ -183,7 +183,7 @@ def create_tii_IQM5q(runcard, descriptor=None):
     #           device_hdawg2:
     # - rf_signal: qc4/flux_line
     #   ports: SIGOUTS/0
-    # - to: device_hdawg
+    # - to: device_hdawg2
     #   port: ZSYNCS/4
 
     if descriptor is None:
@@ -195,7 +195,6 @@ def create_tii_IQM5q(runcard, descriptor=None):
             HDAWG:
             - address: DEV8660
               uid: device_hdawg
-
             PQSC:
             - address: DEV10055
               uid: device_pqsc

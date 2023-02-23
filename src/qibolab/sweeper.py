@@ -10,6 +10,7 @@ class Parameter(Enum):
 
     frequency = auto()
     amplitude = auto()
+    length = auto()
     relative_phase = auto()
 
     attenuation = auto()
