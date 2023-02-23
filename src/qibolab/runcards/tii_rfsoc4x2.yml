@@ -24,7 +24,7 @@ topology: # qubit - qubit connections
 native_gates:
     single_qubit:
         0: # qubit number
-            RX: 
+            RX:
                 duration: 40
                 amplitude: 0.6
                 frequency: 8269000000
@@ -32,7 +32,7 @@ native_gates:
                 type: qd # qubit drive
                 start: 0
                 phase: 0
-            MZ: 
+            MZ:
                 duration: 3000
                 amplitude: 0.01
                 frequency: 7274800000
