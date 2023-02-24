@@ -725,10 +725,8 @@ class QMOPX(AbstractInstrument):
             for pulse, f0 in zip(sweeper.pulses, freqs0):
                 qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
                 update_frequency(qmpulse.element, f + f0)
-            if len(sweepers) > 1:
-                self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-            else:
-                self.play_pulses(qmsequence)
+
+            self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
             if relaxation_time > 0:
                 wait(relaxation_time // 4)
 
@@ -748,10 +746,8 @@ class QMOPX(AbstractInstrument):
                     qmpulse.operation = qmpulse.operation * amp(a)
                 else:
                     qmpulse.baked_amplitude = a
-            if len(sweepers) > 1:
-                self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-            else:
-                self.play_pulses(qmsequence)
+
+            self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
             if relaxation_time > 0:
                 wait(relaxation_time // 4)
 
@@ -762,10 +758,8 @@ class QMOPX(AbstractInstrument):
             for pulse in sweeper.pulses:
                 qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
                 qmpulse.relative_phase = relphase
-            if len(sweepers) > 1:
-                self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-            else:
-                self.play_pulses(qmsequence)
+
+            self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
             if relaxation_time > 0:
                 wait(relaxation_time // 4)
 
@@ -778,10 +772,8 @@ class QMOPX(AbstractInstrument):
         with for_(*from_array(b, sweeper.values)):
             for q, b0 in zip(sweeper.qubits, bias0):
                 set_dc_offset(f"flux{q}", "single", b + b0)
-            if len(sweepers) > 1:
-                self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-            else:
-                self.play_pulses(qmsequence)
+
+            self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
             if relaxation_time > 0:
                 wait(relaxation_time // 4)
 
@@ -793,8 +785,11 @@ class QMOPX(AbstractInstrument):
     }
 
     def sweep_recursion(self, sweepers, qubits, qmsequence, relaxation_time):
-        parameter = sweepers[0].parameter
-        if parameter in self.SWEEPERS:
-            self.SWEEPERS[parameter](self, sweepers, qubits, qmsequence, relaxation_time)
+        if len(sweepers) > 0:
+            parameter = sweepers[0].parameter
+            if parameter in self.SWEEPERS:
+                self.SWEEPERS[parameter](self, sweepers, qubits, qmsequence, relaxation_time)
+            else:
+                raise_error(NotImplementedError, f"Sweeper for {parameter} is not implemented.")
         else:
-            raise_error(NotImplementedError, f"Sweeper for {parameter} is not implemented.")
+            self.play_pulses(qmsequence)
