@@ -55,9 +55,9 @@ def test_qmopx_setup():
     assert opx.time_of_flight == 280
     # assert that flux elements were registered
     for q in range(5):
-        assert f"flux{q}" in opx.config["elements"]
-        con, port = opx.config["elements"][f"flux{q}"]["singleInput"]["port"]
-        port = opx.config["controllers"][con]["analog_outputs"][port]
+        assert f"flux{q}" in opx.config.elements
+        con, port = opx.config.elements[f"flux{q}"]["singleInput"]["port"]
+        port = opx.config.controllers[con]["analog_outputs"][port]
         assert port["offset"] == platform.qubits[q].sweetspot
         assert port["filter"] == platform.qubits[q].filter
 
@@ -67,32 +67,32 @@ def test_qmopx_setup():
 
 def test_qmopx_register_analog_output_controllers():
     opx = QMOPX("test", DUMMY_ADDRESS)
-    opx.register_analog_output_controllers([("con1", 1), ("con1", 2)])
-    controllers = opx.config["controllers"]
+    opx.config.register_analog_output_controllers([("con1", 1), ("con1", 2)])
+    controllers = opx.config.controllers
     assert controllers == {"con1": {"analog_outputs": {1: {"offset": 0.0}, 2: {"offset": 0.0}}}}
 
     opx = QMOPX("test", DUMMY_ADDRESS)
-    opx.register_analog_output_controllers([("con1", 1), ("con1", 2)], offset=0.005)
-    controllers = opx.config["controllers"]
+    opx.config.register_analog_output_controllers([("con1", 1), ("con1", 2)], offset=0.005)
+    controllers = opx.config.controllers
     assert controllers == {"con1": {"analog_outputs": {1: {"offset": 0.005}, 2: {"offset": 0.005}}}}
 
     opx = QMOPX("test", DUMMY_ADDRESS)
     filters = {"feedforward": [1, -1], "feedback": [0.95]}
-    opx.register_analog_output_controllers(
+    opx.config.register_analog_output_controllers(
         [
             ("con2", 2),
         ],
         offset=0.005,
         filter=filters,
     )
-    controllers = opx.config["controllers"]
+    controllers = opx.config.controllers
     assert controllers == {
         "con2": {"analog_outputs": {2: {"filter": {"feedback": [0.95], "feedforward": [1, -1]}, "offset": 0.005}}}
     }
 
     opx = QMOPX("test", DUMMY_ADDRESS)
     with pytest.raises(ValueError):
-        opx.register_analog_output_controllers(
+        opx.config.register_analog_output_controllers(
             [
                 ("con2", 2),
             ],
@@ -103,23 +103,23 @@ def test_qmopx_register_analog_output_controllers():
 def test_qmopx_register_drive_element():
     platform = create_tii_qw5q_gold(RUNCARD, simulation_duration=1000, address=DUMMY_ADDRESS)
     opx = platform.design.controller
-    opx.register_drive_element(platform.qubits[0], intermediate_frequency=int(1e6))
-    assert "drive0" in opx.config["elements"]
+    opx.config.register_drive_element(platform.qubits[0], intermediate_frequency=int(1e6))
+    assert "drive0" in opx.config.elements
     target_element = {
         "mixInputs": {"I": ("con3", 2), "Q": ("con3", 1), "lo_frequency": 4700000000, "mixer": "mixer_drive0"},
         "intermediate_frequency": 1000000,
         "operations": {},
     }
-    assert opx.config["elements"]["drive0"] == target_element
+    assert opx.config.elements["drive0"] == target_element
     target_mixer = [{"intermediate_frequency": 1000000, "lo_frequency": 4700000000, "correction": [1.0, 0.0, 0.0, 1.0]}]
-    assert opx.config["mixers"]["mixer_drive0"] == target_mixer
+    assert opx.config.mixers["mixer_drive0"] == target_mixer
 
 
 def test_qmopx_register_readout_element():
     platform = create_tii_qw5q_gold(RUNCARD, simulation_duration=1000, address=DUMMY_ADDRESS)
     opx = platform.design.controller
-    opx.register_readout_element(platform.qubits[2], intermediate_frequency=int(1e6))
-    assert "readout2" in opx.config["elements"]
+    opx.config.register_readout_element(platform.qubits[2], int(1e6), opx.time_of_flight, opx.smearing)
+    assert "readout2" in opx.config.elements
     target_element = {
         "mixInputs": {"I": ("con2", 10), "Q": ("con2", 9), "lo_frequency": 7900000000, "mixer": "mixer_readout2"},
         "intermediate_frequency": 1000000,
@@ -131,9 +131,9 @@ def test_qmopx_register_readout_element():
         "time_of_flight": 0,
         "smearing": 0,
     }
-    assert opx.config["elements"]["readout2"] == target_element
+    assert opx.config.elements["readout2"] == target_element
     target_mixer = [{"intermediate_frequency": 1000000, "lo_frequency": 7900000000, "correction": [1.0, 0.0, 0.0, 1.0]}]
-    assert opx.config["mixers"]["mixer_readout2"] == target_mixer
+    assert opx.config.mixers["mixer_readout2"] == target_mixer
 
 
 @pytest.mark.parametrize("pulse_type,qubit", [("drive", 2), ("readout", 1)])
@@ -162,11 +162,11 @@ def test_qmopx_register_pulse(pulse_type, qubit):
             },
         }
 
-    opx.register_pulse(platform.qubits[qubit], pulse)
-    assert opx.config["pulses"][pulse.serial] == target_pulse
-    assert target_pulse["waveforms"]["I"] in opx.config["waveforms"]
-    assert target_pulse["waveforms"]["Q"] in opx.config["waveforms"]
-    assert opx.config["elements"][f"{pulse_type}{qubit}"]["operations"][pulse.serial] == pulse.serial
+    opx.config.register_pulse(platform.qubits[qubit], pulse, opx.time_of_flight, opx.smearing)
+    assert opx.config.pulses[pulse.serial] == target_pulse
+    assert target_pulse["waveforms"]["I"] in opx.config.waveforms
+    assert target_pulse["waveforms"]["Q"] in opx.config.waveforms
+    assert opx.config.elements[f"{pulse_type}{qubit}"]["operations"][pulse.serial] == pulse.serial
 
 
 def test_qmopx_register_flux_pulse():
@@ -180,11 +180,10 @@ def test_qmopx_register_flux_pulse():
         "waveforms": {"single": "constant_wf0.005"},
     }
 
-    opx.register_pulse(platform.qubits[qubit], pulse)
-    print(opx.config)
-    assert opx.config["pulses"][pulse.serial] == target_pulse
-    assert target_pulse["waveforms"]["single"] in opx.config["waveforms"]
-    assert opx.config["elements"][f"flux{qubit}"]["operations"][pulse.serial] == pulse.serial
+    opx.config.register_pulse(platform.qubits[qubit], pulse, opx.time_of_flight, opx.smearing)
+    assert opx.config.pulses[pulse.serial] == target_pulse
+    assert target_pulse["waveforms"]["single"] in opx.config.waveforms
+    assert opx.config.elements[f"flux{qubit}"]["operations"][pulse.serial] == pulse.serial
 
 
 @pytest.mark.parametrize("duration", [0, 30])
@@ -197,25 +196,25 @@ def test_qmopx_register_baked_pulse(duration):
     config = platform.design.controller.config
     qmpulse.bake(config)
 
-    assert config["elements"]["flux3"]["operations"] == {"baked_Op_0": "flux3_baked_pulse_0"}
+    assert config.elements["flux3"]["operations"] == {"baked_Op_0": "flux3_baked_pulse_0"}
     if duration == 0:
-        assert config["pulses"]["flux3_baked_pulse_0"] == {
+        assert config.pulses["flux3_baked_pulse_0"] == {
             "operation": "control",
             "length": 16,
             "waveforms": {"single": "flux3_baked_wf_0"},
         }
-        assert config["waveforms"]["flux3_baked_wf_0"] == {
+        assert config.waveforms["flux3_baked_wf_0"] == {
             "type": "arbitrary",
             "samples": 16 * [0],
             "is_overridable": False,
         }
     else:
-        assert config["pulses"]["flux3_baked_pulse_0"] == {
+        assert config.pulses["flux3_baked_pulse_0"] == {
             "operation": "control",
             "length": 32,
             "waveforms": {"single": "flux3_baked_wf_0"},
         }
-        assert config["waveforms"]["flux3_baked_wf_0"] == {
+        assert config.waveforms["flux3_baked_wf_0"] == {
             "type": "arbitrary",
             "samples": 30 * [0.05] + 2 * [0],
             "is_overridable": False,
