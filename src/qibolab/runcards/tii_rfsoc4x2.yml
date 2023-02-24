@@ -14,7 +14,7 @@ settings:
     max_gain: 32000
     ro_duration: 3000
     ro_frequency: 7274800000
-    ro_gain: 250
+    ro_gain: 500
     qubit_gain: 20000
     probe_length: 40
 
@@ -25,8 +25,8 @@ native_gates:
     single_qubit:
         0: # qubit number
             RX: 
-                duration: 40
-                amplitude: 0.6
+                duration: 400
+                amplitude: 0.8
                 frequency: 8269000000
                 shape: Gaussian(4)
                 type: qd # qubit drive

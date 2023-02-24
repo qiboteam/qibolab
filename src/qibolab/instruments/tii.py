@@ -112,7 +112,8 @@ class TII_RFSOC4x2(AbstractInstrument):
             sock.sendall(json.dumps(jsonDic).encode())
             # read from the server a maximum of 256 bytes (enough for sequence)
             received = sock.recv(256)
-            avg = json.loads(received)
+            #avg = json.loads(received)
+            avg = json.loads(received.decode("utf-8"))
             avgi = avg["avgi"]
             avgq = avg["avgq"]
         return avgi, avgq
@@ -144,7 +145,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         jsonDic["range"] = {"start": start, "step": step, "expt": expt}
 
         pulsesDic = {}
-        for i, pulse in enumerate(s.pulses): # convert pulses to dictionary
+        for i, pulse in enumerate(sequence.pulses): # convert pulses to dictionary
             pulsesDic[str(i)] = self.convert_pulse_to_dic(pulse)
         jsonDic["pulses"] = pulsesDic
 
@@ -210,6 +211,8 @@ class TII_RFSOC4x2(AbstractInstrument):
                 "rel_sigma": rel_sigma,
                 "beta": beta,
                 "type": "qd",
+                "channel": 1,
+                "qubit": pulse.qubit,
             }
 
         elif pulse.type == PulseType.READOUT:
@@ -221,6 +224,8 @@ class TII_RFSOC4x2(AbstractInstrument):
                 "relative_phase": pulse.relative_phase,
                 "shape": "const",
                 "type": "ro",
+                "channel": 0,
+                "qubit": pulse.qubit,
             }
 
         return pDic
