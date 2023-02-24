@@ -32,7 +32,7 @@ native_gates:
                 type: qd # qubit drive
                 start: 0
                 phase: 0
-            MZ: 
+            MZ:
                 duration: 3000
                 amplitude: 0.01
                 frequency: 7274800000

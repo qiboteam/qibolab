@@ -36,6 +36,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         name (str): Name of the instrument instance.
         address (str): IP address and port for connecting to the FPGA.
     """
+
     def __init__(self, name: str, address: str):
         super().__init__(name, address)
         self.cfg: dict = {}
@@ -50,7 +51,7 @@ class TII_RFSOC4x2(AbstractInstrument):
 
         # Create a socket (SOCK_STREAM means a TCP socket) and send configuration
         jsonDic = self.cfg
-        jsonDic["opCode"] = "configuration" # opCode parameter for server
+        jsonDic["opCode"] = "configuration"  # opCode parameter for server
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect((self.host, self.port))
             sock.sendall(json.dumps(jsonDic).encode())
@@ -77,7 +78,7 @@ class TII_RFSOC4x2(AbstractInstrument):
             # Load settings
             self.cfg = kwargs
             jsonDic = self.cfg
-            jsonDic["opCode"] = "setup" # opCode parameter for server
+            jsonDic["opCode"] = "setup"  # opCode parameter for server
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.connect((self.host, self.port))
                 sock.sendall(json.dumps(jsonDic).encode())
@@ -149,7 +150,7 @@ class TII_RFSOC4x2(AbstractInstrument):
             pulsesDic[str(i)] = self.convert_pulse_to_dic(pulse)
         jsonDic["pulses"] = pulsesDic
 
-        jsonDic["opCode"] = "sweep" # opCode parameter for server
+        jsonDic["opCode"] = "sweep"  # opCode parameter for server
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         received = bytearray()
