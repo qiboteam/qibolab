@@ -8,19 +8,42 @@ from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.result import ExecutionResults
 from qibolab.sweeper import Parameter
 
-# TODO: Add return clasified states.
 # TODO: Simulation
 # session = Session(device_setup=device_setup)
 # session.connect(do_emulation=use_emulation)
 # my_results = session.run(exp)
 
-
+# TODO: Add return clasified states.
 # TODO:For play Single shot,
-# TODO:For sweep average true and false, single shot and cyclic.
-
+# TODO:For sweep average true and false, single shot and cyclic. (Select averaging and acquisition modes)
 
 # TODO: Add/Check for loops for multiple qubits
-# TODO: Adapt(dont think I need it i I use lo.pulse_library and baking)
+# TODO: Baking(se lo.pulse_library and baking) using sampled pulsed at 2GSa/s
+# sampled pulses are not parameterized. However, their length and phase can be swept
+
+# TODO: Do we need reload settings for some sweepers ? (I dont think so)
+# # Reload settings together if possible
+# def reload_settings(self):
+#     with open(self.runcard_file) as file:
+#         self.settings = yaml.safe_load(file)
+#     if self.is_connected:
+#         self.setup(**self.settings)
+# def apply_settings(self):
+# self.def_calibration()
+# self.devicesetup.set_calibration(self.calib)
+
+# TODO: Repeat last compiled experiment, is it useful ?
+# def repeat_seq(self):
+#     self.results = self.session.run()
+# # TODO: All the posible sweeps
+# # TODO: Add 2d sweeps
+
+# # FIXME: Multiplex (For readout)
+# FIXME: Flux on all qubits
+## FIXME: Lenght on pulses
+# FIXME: Handle on acquires
+
+
 class ZhPulse:
     def __init__(self, pulse):
         self.pulse = pulse
@@ -453,11 +476,11 @@ class Zurich(AbstractInstrument):
                         i += 1
 
     def Drive(self, exp, qubits):
-        with exp.section(uid=f"sequence_drive"):
-            for qubit in qubits.values():
-                if "c" in str(qubit.name):
-                    pass
-                else:
+        for qubit in qubits.values():
+            if "c" in str(qubit.name):
+                pass
+            else:
+                with exp.section(uid=f"sequence_drive{qubit.name}"):
                     time = 0
                     i = 0
                     for pulse in self.sequence[f"drive{qubit.name}"]:
@@ -470,13 +493,31 @@ class Zurich(AbstractInstrument):
                             exp.play(signal=f"drive{qubit.name}", pulse=pulse.zhpulse, phase=pulse.pulse.relative_phase)
                             i += 1
 
+    # def Drive(self, exp, qubits):
+    #     with exp.section(uid=f"sequence_drive"):
+    #         for qubit in qubits.values():
+    #             if "c" in str(qubit.name):
+    #                 pass
+    #             else:
+    #                 time = 0
+    #                 i = 0
+    #                 for pulse in self.sequence[f"drive{qubit.name}"]:
+    #                     exp.delay(signal=f"drive{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
+    #                     time += round(pulse.pulse.duration * 1e-9, 9) + round(pulse.pulse.start * 1e-9, 9) - time
+    #                     pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
+    #                     if isinstance(pulse, ZhSweeper):
+    #                         self.play_sweep(exp, qubit, pulse, section="drive")
+    #                     else:
+    #                         exp.play(signal=f"drive{qubit.name}", pulse=pulse.zhpulse, phase=pulse.pulse.relative_phase)
+    #                         i += 1
+
     def Measure(self, exp, qubits):
         # qubit readout pulse and data acquisition
-        with exp.section(uid=f"sequence_measure", play_after=f"sequence_drive"):
-            for qubit in qubits.values():
-                if "c" in str(qubit.name):
-                    pass
-                else:
+        for qubit in qubits.values():
+            if "c" in str(qubit.name):
+                pass
+            else:
+                with exp.section(uid=f"sequence_measure{qubit.name}", play_after=f"sequence_drive{qubit.name}"):
                     time = 0
                     i = 0
                     for pulse in self.sequence[f"readout{qubit.name}"]:
@@ -498,6 +539,34 @@ class Zurich(AbstractInstrument):
                         exp.acquire(signal=f"acquire{qubit.name}", handle=f"sequence{qubit.name}", kernel=weight)
                         i += 1
 
+    # def Measure(self, exp, qubits):
+    #     # qubit readout pulse and data acquisition
+    #     with exp.section(uid=f"sequence_measure", play_after=f"sequence_drive"):
+    #         for qubit in qubits.values():
+    #             if "c" in str(qubit.name):
+    #                 pass
+    #             else:
+    #                 time = 0
+    #                 i = 0
+    #                 for pulse in self.sequence[f"readout{qubit.name}"]:
+    #                     exp.delay(signal=f"measure{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
+    #                     exp.delay(signal=f"acquire{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
+    #                     time += round(pulse.pulse.duration * 1e-9, 9) + round(pulse.pulse.start * 1e-9, 9) - time
+    #                     pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
+    #                     if isinstance(pulse, ZhSweeper):
+    #                         self.play_sweep(exp, qubit, pulse, section="measure")
+    #                     else:
+    #                         exp.play(
+    #                             signal=f"measure{qubit.name}", pulse=pulse.zhpulse, phase=pulse.pulse.relative_phase
+    #                         )
+    #                     weight = lo.pulse_library.const(
+    #                         uid="weight" + pulse.zhpulse.uid,
+    #                         length=round(pulse.pulse.duration * 1e-9, 9),
+    #                         amplitude=1.0,
+    #                     )
+    #                     exp.acquire(signal=f"acquire{qubit.name}", handle=f"sequence{qubit.name}", kernel=weight)
+    #                     i += 1
+
     # TODO: Hardware clasification(lo.acquisitionMode.Driscrimination) and fast reset
     def qubit_reset(self, exp, qubits, Fast_reset=False):
         # relax time or fast reset after readout - for signal processing and qubit relaxation to ground state
@@ -515,14 +584,40 @@ class Zurich(AbstractInstrument):
                                 pass
                                 # exp.play(some_other_pulse)
         else:
-            with exp.section(uid=f"relax", play_after=f"sequence_measure"):
-                for qubit in qubits.values():
-                    if "c" in str(qubit.name):
-                        pass
-                    else:
+            for qubit in qubits.values():
+                if "c" in str(qubit.name):
+                    pass
+                else:
+                    with exp.section(uid=f"relax{qubit.name}", play_after=f"sequence_measure{qubit.name}"):
                         exp.reserve(signal=f"flux{qubit.name}")
                         exp.reserve(signal=f"drive{qubit.name}")
                         exp.delay(signal=f"measure{qubit.name}", time=self.relaxation_time)
+
+    # # TODO: Hardware clasification(lo.acquisitionMode.Driscrimination) and fast reset
+    # def qubit_reset(self, exp, qubits, Fast_reset=False):
+    #     # relax time or fast reset after readout - for signal processing and qubit relaxation to ground state
+    #     if Fast_reset:
+    #         for qubit in qubits.values():
+    #             if "c" in str(qubit.name):
+    #                 pass
+    #             else:
+    #                 with exp.section(uid=f"fast_reset", play_after=f"sequence_measure"):
+    #                     with exp.match_local(handle=f"acquire{qubit}"):
+    #                         with exp.case(state=0):
+    #                             pass
+    #                             # exp.play(some_pulse)
+    #                         with exp.case(state=1):
+    #                             pass
+    #                             # exp.play(some_other_pulse)
+    #     else:
+    #         with exp.section(uid=f"relax", play_after=f"sequence_measure"):
+    #             for qubit in qubits.values():
+    #                 if "c" in str(qubit.name):
+    #                     pass
+    #                 else:
+    #                     exp.reserve(signal=f"flux{qubit.name}")
+    #                     exp.reserve(signal=f"drive{qubit.name}")
+    #                     exp.delay(signal=f"measure{qubit.name}", time=self.relaxation_time)
 
     def sweep(self, qubits, sequence, *sweepers, nshots, relaxation_time, average=True):
         if relaxation_time is None:
@@ -593,31 +688,3 @@ class Zurich(AbstractInstrument):
 
         # else:
         #     raise_error(NotImplementedError, "Sweeper configuration not implemented.")
-
-
-# ------------------------------------------------------------------------------------------------------------
-
-# # Reload settings together if possible
-# def reload_settings(self):
-#     with open(self.runcard_file) as file:
-#         self.settings = yaml.safe_load(file)
-#     if self.is_connected:
-#         self.setup(**self.settings)
-
-# def apply_settings(self):
-# self.def_calibration()
-# self.Zsetup.set_calibration(self.calib)
-
-# def repeat_seq(self):
-#     self.results = self.session.run(do_simulation=self.emulation)
-
-
-# # TODO: 2 consecutive experiments without compiling (Needs memory fix)
-# # TODO: Multiplex (For readout)
-# # TODO: All the posible sweeps
-# # TODO: Select averaging and acquisition modes
-# # Flux on all qubits
-## FIXME: Lenght on pulses
-# FIXME: Handle on acquires
-
-# ------------------------------------------------------------------------------------------------------------

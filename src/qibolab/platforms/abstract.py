@@ -96,7 +96,6 @@ class AbstractPlatform(ABC):
         self.runcard = runcard
 
         self.qubits = {}
-        self.couplers = {}
 
         # Values for the following are set from the runcard in ``reload_settings``
         self.settings = None
