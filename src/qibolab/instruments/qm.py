@@ -22,6 +22,8 @@ from qm.qua import (
     wait,
 )
 from qm.QuantumMachinesManager import QuantumMachinesManager
+from qualang_tools.bakery import baking
+from qualang_tools.loops import from_array
 
 from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.pulses import Pulse, PulseType, Rectangular
@@ -66,8 +68,6 @@ class QMPulse:
             self.sin = np.sin(iq_angle)
 
     def bake(self, config):
-        from qualang_tools.bakery import baking
-
         if self.baked is not None:
             raise_error(RuntimeError, f"Bake was already called for {self.pulse}.")
         # ! Only works for flux pulses that have zero Q waveform
@@ -703,96 +703,98 @@ class QMOPX(AbstractInstrument):
         result = self.execute_program(experiment)
         return self.fetch_results(result, sequence.ro_pulses)
 
-    def sweep_recursion(self, sweepers, qubits, qmsequence, relaxation_time):
-        from qualang_tools.loops import from_array
+    def sweep_frequency(self, sweepers, qubits, qmsequence, relaxation_time):
+        from qm.qua import update_frequency
 
         sweeper = sweepers[0]
-        if sweeper.pulses is not None:
-            if sweeper.parameter is Parameter.frequency:
-                from qm.qua import update_frequency
-
-                freqs0 = []
-                for pulse in sweeper.pulses:
-                    qubit = qubits[pulse.qubit]
-                    if pulse.type is PulseType.DRIVE:
-                        lo_frequency = int(qubit.drive.local_oscillator.frequency)
-                    elif pulse.type is PulseType.READOUT:
-                        lo_frequency = int(qubit.readout.local_oscillator.frequency)
-                    else:
-                        raise_error(NotImplementedError, f"Cannot sweep frequency of pulse of type {pulse.type}.")
-                    # convert to IF frequency for readout and drive pulses
-                    freqs0.append(declare(int, value=int(pulse.frequency - lo_frequency)))
-
-                # is it fine to have this declaration inside the ``nshots`` QUA loop?
-                f = declare(int)
-                with for_(*from_array(f, sweeper.values.astype(int))):
-                    for pulse, f0 in zip(sweeper.pulses, freqs0):
-                        qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
-                        update_frequency(qmpulse.element, f + f0)
-                    if len(sweepers) > 1:
-                        self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-                    else:
-                        self.play_pulses(qmsequence)
-                    if relaxation_time > 0:
-                        wait(relaxation_time // 4)
-
-            elif sweeper.parameter is Parameter.amplitude:
-                from qm.qua import amp
-
-                # TODO: It should be -2 < amp(a) < 2 otherwise the we get weird results
-                # without an error. Amplitude should be fixed to allow arbitrary values
-                # in qibocal
-
-                a = declare(fixed)
-                with for_(*from_array(a, sweeper.values)):
-                    for pulse in sweeper.pulses:
-                        qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
-                        if qmpulse.baked is None:
-                            qmpulse.operation = qmpulse.operation * amp(a)
-                        else:
-                            qmpulse.baked_amplitude = a
-                    if len(sweepers) > 1:
-                        self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-                    else:
-                        self.play_pulses(qmsequence)
-                    if relaxation_time > 0:
-                        wait(relaxation_time // 4)
-
-            elif sweeper.parameter is Parameter.relative_phase:
-                relphase = declare(fixed)
-                with for_(*from_array(relphase, sweeper.values / (2 * np.pi))):
-                    for pulse in sweeper.pulses:
-                        qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
-                        qmpulse.relative_phase = relphase
-                    if len(sweepers) > 1:
-                        self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-                    else:
-                        self.play_pulses(qmsequence)
-                    if relaxation_time > 0:
-                        wait(relaxation_time // 4)
-
+        freqs0 = []
+        for pulse in sweeper.pulses:
+            qubit = qubits[pulse.qubit]
+            if pulse.type is PulseType.DRIVE:
+                lo_frequency = int(qubit.drive.local_oscillator.frequency)
+            elif pulse.type is PulseType.READOUT:
+                lo_frequency = int(qubit.readout.local_oscillator.frequency)
             else:
-                raise_error(NotImplementedError, "Sweeper configuration not implemented.")
+                raise_error(NotImplementedError, f"Cannot sweep frequency of pulse of type {pulse.type}.")
+            # convert to IF frequency for readout and drive pulses
+            freqs0.append(declare(int, value=int(pulse.frequency - lo_frequency)))
 
-        elif sweeper.qubits is not None:
-            if sweeper.parameter is Parameter.bias:
-                from qm.qua import set_dc_offset
-
-                bias0 = [declare(fixed, value=qubits[q].flux.offset) for q in sweeper.qubits]
-                b = declare(fixed)
-                with for_(*from_array(b, sweeper.values)):
-                    for q, b0 in zip(sweeper.qubits, bias0):
-                        set_dc_offset(f"flux{q}", "single", b + b0)
-                    if len(sweepers) > 1:
-                        self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-                    else:
-                        self.play_pulses(qmsequence)
-                    if relaxation_time > 0:
-                        elements = (f"flux{q}" for q in sweeper.qubits)
-                        wait(relaxation_time // 4, *elements)
-
+        # is it fine to have this declaration inside the ``nshots`` QUA loop?
+        f = declare(int)
+        with for_(*from_array(f, sweeper.values.astype(int))):
+            for pulse, f0 in zip(sweeper.pulses, freqs0):
+                qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
+                update_frequency(qmpulse.element, f + f0)
+            if len(sweepers) > 1:
+                self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
             else:
-                raise_error(NotImplementedError, "Sweeper configuration not implemented.")
+                self.play_pulses(qmsequence)
+            if relaxation_time > 0:
+                wait(relaxation_time // 4)
 
+    def sweep_amplitude(self, sweepers, qubits, qmsequence, relaxation_time):
+        from qm.qua import amp
+
+        # TODO: It should be -2 < amp(a) < 2 otherwise the we get weird results
+        # without an error. Amplitude should be fixed to allow arbitrary values
+        # in qibocal
+
+        sweeper = sweepers[0]
+        a = declare(fixed)
+        with for_(*from_array(a, sweeper.values)):
+            for pulse in sweeper.pulses:
+                qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
+                if qmpulse.baked is None:
+                    qmpulse.operation = qmpulse.operation * amp(a)
+                else:
+                    qmpulse.baked_amplitude = a
+            if len(sweepers) > 1:
+                self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
+            else:
+                self.play_pulses(qmsequence)
+            if relaxation_time > 0:
+                wait(relaxation_time // 4)
+
+    def sweep_relative_phase(self, sweepers, qubits, qmsequence, relaxation_time):
+        sweeper = sweepers[0]
+        relphase = declare(fixed)
+        with for_(*from_array(relphase, sweeper.values / (2 * np.pi))):
+            for pulse in sweeper.pulses:
+                qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
+                qmpulse.relative_phase = relphase
+            if len(sweepers) > 1:
+                self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
+            else:
+                self.play_pulses(qmsequence)
+            if relaxation_time > 0:
+                wait(relaxation_time // 4)
+
+    def sweep_bias(self, sweepers, qubits, qmsequence, relaxation_time):
+        from qm.qua import set_dc_offset
+
+        sweeper = sweepers[0]
+        bias0 = [declare(fixed, value=qubits[q].flux.offset) for q in sweeper.qubits]
+        b = declare(fixed)
+        with for_(*from_array(b, sweeper.values)):
+            for q, b0 in zip(sweeper.qubits, bias0):
+                set_dc_offset(f"flux{q}", "single", b + b0)
+            if len(sweepers) > 1:
+                self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
+            else:
+                self.play_pulses(qmsequence)
+            if relaxation_time > 0:
+                wait(relaxation_time // 4)
+
+    SWEEPERS = {
+        Parameter.frequency: sweep_frequency,
+        Parameter.amplitude: sweep_amplitude,
+        Parameter.relative_phase: sweep_relative_phase,
+        Parameter.bias: sweep_bias,
+    }
+
+    def sweep_recursion(self, sweepers, qubits, qmsequence, relaxation_time):
+        parameter = sweepers[0].parameter
+        if parameter in self.SWEEPERS:
+            self.SWEEPERS[parameter](self, sweepers, qubits, qmsequence, relaxation_time)
         else:
-            raise_error(NotImplementedError, "Sweeper configuration not implemented.")
+            raise_error(NotImplementedError, f"Sweeper for {parameter} is not implemented.")
