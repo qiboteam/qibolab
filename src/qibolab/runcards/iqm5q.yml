@@ -5,8 +5,8 @@ settings:
     hardware_avg: 1000
     sampling_rate: 2.4e+9
     Flux_Tunable:
-    relaxation_time: 10.e-6
-    time_of_flight: 40.e-9
+    repetition_duration: 10.e-6
+    readout_integration_delay: 40.e-9
     AcquisitionType: SPECTROSCOPY # Integration Discrimination
     AveragingMode: CYCLIC # CYCLIC
     HDAWG_ramp_up_rate: 0.e-9

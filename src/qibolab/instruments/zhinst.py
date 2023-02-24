@@ -42,6 +42,8 @@ from qibolab.sweeper import Parameter
 # FIXME: Flux on all qubits
 ## FIXME: Lenght on pulses
 # FIXME: Handle on acquires
+# FIXME: I think is a hardware limitation but I cant sweep multple drive oscillator at the same time
+# FIXME: Docs & tests
 
 
 class ZhPulse:
@@ -118,9 +120,13 @@ class ZhSweeper:
                 values=sweeper.values * 10e-9,
             )
         elif parameter == "frequency":
-            Zh_Sweeper = lo.SweepParameter(
+            sweeper.values
+
+            Zh_Sweeper = lo.LinearSweepParameter(
                 uid=sweeper.parameter.name,
-                values=sweeper.values,
+                start=sweeper.values[0],
+                stop=sweeper.values[-1],
+                count=len(sweeper.values),
             )
         elif parameter == "flux_bias":
             Zh_Sweeper = lo.SweepParameter(
@@ -140,6 +146,25 @@ class Zurich(AbstractInstrument):
 
         self.time_of_flight = 0
         self.smearing = 0
+
+        self.signal_map = {}
+        self.calibration = lo.Calibration()
+
+        self.device_setup = None
+        self.session = None
+        self.device = None
+
+        self.relaxation_time = 0.0
+        self.time_of_flight = 0.0
+        self.smearing = 0.0
+
+        self.exp = None
+        self.experiment = None
+        self.results = None
+
+        self.sequence = None
+        self.nsweps = 0.0
+        self.sweeps = None
 
     def connect(self):
         if not self.is_connected:
@@ -279,16 +304,13 @@ class Zurich(AbstractInstrument):
 
     def play(self, qubits, sequence, nshots, relaxation_time):
         if relaxation_time is None:
-            self.relaxation_time = 10.0e-6
-        else:
-            self.relaxation_time = relaxation_time
+            relaxation_time = self.relaxation_time
 
         self.sequence_zh(sequence, sweepers=[])
-        self.create_exp(qubits, nshots)
+        self.create_exp(qubits, nshots, relaxation_time)
         self.run_exp()
 
         # TODO: General, several readouts and qubits
-
         results = {}
         shots = 1024
         for qubit in qubits.values():
@@ -299,16 +321,12 @@ class Zurich(AbstractInstrument):
                     exp_res = self.results.get_data(f"sequence{qubit.name}")
                     i = exp_res.real
                     q = exp_res.imag
-                    results[f"sequence{qubit.name}"] = ExecutionResults.from_components(i, q, shots)
-
+                    results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = ExecutionResults.from_components(
+                        i, q, shots
+                    )
         return results
 
-    # def sequence_zh(self, sequence):
-    #     Zhsequence = defaultdict(list)
-    #     for pulse in sequence:
-    #         Zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"].append(ZhPulse(pulse))
-    #     self.sequence = Zhsequence
-
+    # TODO: Store the sweepers nice
     def sequence_zh(self, sequence, sweepers):
         Zhsequence = defaultdict(list)
         sweeps_all = {}
@@ -329,7 +347,7 @@ class Zurich(AbstractInstrument):
         sweeps_all[nsweps] = sweeps
         self.sweeps = sweeps_all
 
-    def create_exp(self, qubits, nshots, **Params):
+    def create_exp(self, qubits, nshots, relaxation_time, **Params):
         signals = []
 
         for qubit in qubits.values():
@@ -385,17 +403,14 @@ class Zurich(AbstractInstrument):
                         parameter=parameters,
                         reset_oscillator_phase=False,
                     ):
-                        # with exp.sweep(uid=f"sweep_{sweeper.sweeper.parameter.name}_{i}", parameter=sweeper.zhsweeper):
-                        # TODO: Check for line parameters and update calib
-                        self.select_exp(exp, qubits)
-
+                        self.select_exp(exp, qubits, relaxation_time)
                     if sweeper[0].sweeper.parameter.name == "frequency":
                         exp_calib = lo.Calibration()
                         for sweep in sweeper:
-                            qubit = sweep.sweeper.pulse.qubit
-                            if sweep.sweeper.pulse.type.name.lower() == "drive":
+                            qubit = sweep.pulse.qubit
+                            if sweep.pulse.type.name.lower() == "drive":
                                 line = "drive"
-                            elif sweep.sweeper.pulse.type.name.lower() == "readout":
+                            elif sweep.pulse.type.name.lower() == "readout":
                                 line = "measure"
                             exp_calib[f"{line}{qubit}"] = lo.SignalCalibration(
                                 oscillator=lo.Oscillator(
@@ -403,25 +418,19 @@ class Zurich(AbstractInstrument):
                                     modulation_type=lo.ModulationType.HARDWARE,
                                 )
                             )
-
                     elif sweeper[0].sweeper.parameter.name == "flux_bias":
                         exp_calib = lo.Calibration()
                         for sweep in sweeper:
-                            qubit = sweep.sweeper.pulse.qubit
+                            qubit = sweep.pulse.qubit
                             exp_calib[f"flux{qubit}"] = lo.SignalCalibration(voltage_offset=sweep.zhsweeper)
-
                 exp.set_calibration(exp_calib)
-
             else:
-                self.select_exp(exp, qubits)
-
+                self.select_exp(exp, qubits, relaxation_time)
             self.experiment = exp
-
             exp.set_signal_map(self.signal_map)
-
             self.experiment = exp
 
-    def select_exp(self, exp, qubits):
+    def select_exp(self, exp, qubits, relaxation_time):
         if "drive" in str(self.sequence):
             if "flux" in str(self.sequence):
                 self.Flux(exp, qubits)
@@ -431,7 +440,7 @@ class Zurich(AbstractInstrument):
         elif "flux" in str(self.sequence):
             self.Flux(exp, qubits)
         self.Measure(exp, qubits)
-        self.qubit_reset(exp, qubits)
+        self.qubit_reset(exp, qubits, relaxation_time)
 
     def play_sweep(self, exp, qubit, pulse, section):
         if pulse.sweeper.parameter.name == "amplitude":
@@ -475,30 +484,14 @@ class Zurich(AbstractInstrument):
                             exp.play(signal=f"flux{qubit.name}", pulse=pulse.zhpulse)
                         i += 1
 
-    def Drive(self, exp, qubits):
-        for qubit in qubits.values():
-            if "c" in str(qubit.name):
-                pass
-            else:
-                with exp.section(uid=f"sequence_drive{qubit.name}"):
-                    time = 0
-                    i = 0
-                    for pulse in self.sequence[f"drive{qubit.name}"]:
-                        exp.delay(signal=f"drive{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
-                        time += round(pulse.pulse.duration * 1e-9, 9) + round(pulse.pulse.start * 1e-9, 9) - time
-                        pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
-                        if isinstance(pulse, ZhSweeper):
-                            self.play_sweep(exp, qubit, pulse, section="drive")
-                        else:
-                            exp.play(signal=f"drive{qubit.name}", pulse=pulse.zhpulse, phase=pulse.pulse.relative_phase)
-                            i += 1
-
+    # TODO: Analyze the two options for the sections
+    # their parallel sweeper cabilities or multiplexed readout
     # def Drive(self, exp, qubits):
-    #     with exp.section(uid=f"sequence_drive"):
-    #         for qubit in qubits.values():
-    #             if "c" in str(qubit.name):
-    #                 pass
-    #             else:
+    #     for qubit in qubits.values():
+    #         if "c" in str(qubit.name):
+    #             pass
+    #         else:
+    #             with exp.section(uid=f"sequence_drive{qubit.name}"):
     #                 time = 0
     #                 i = 0
     #                 for pulse in self.sequence[f"drive{qubit.name}"]:
@@ -511,41 +504,31 @@ class Zurich(AbstractInstrument):
     #                         exp.play(signal=f"drive{qubit.name}", pulse=pulse.zhpulse, phase=pulse.pulse.relative_phase)
     #                         i += 1
 
-    def Measure(self, exp, qubits):
-        # qubit readout pulse and data acquisition
-        for qubit in qubits.values():
-            if "c" in str(qubit.name):
-                pass
-            else:
-                with exp.section(uid=f"sequence_measure{qubit.name}", play_after=f"sequence_drive{qubit.name}"):
+    def Drive(self, exp, qubits):
+        with exp.section(uid=f"sequence_drive"):
+            for qubit in qubits.values():
+                if "c" in str(qubit.name):
+                    pass
+                else:
                     time = 0
                     i = 0
-                    for pulse in self.sequence[f"readout{qubit.name}"]:
-                        exp.delay(signal=f"measure{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
-                        exp.delay(signal=f"acquire{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
+                    for pulse in self.sequence[f"drive{qubit.name}"]:
+                        exp.delay(signal=f"drive{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
                         time += round(pulse.pulse.duration * 1e-9, 9) + round(pulse.pulse.start * 1e-9, 9) - time
                         pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
                         if isinstance(pulse, ZhSweeper):
-                            self.play_sweep(exp, qubit, pulse, section="measure")
+                            self.play_sweep(exp, qubit, pulse, section="drive")
                         else:
-                            exp.play(
-                                signal=f"measure{qubit.name}", pulse=pulse.zhpulse, phase=pulse.pulse.relative_phase
-                            )
-                        weight = lo.pulse_library.const(
-                            uid="weight" + pulse.zhpulse.uid,
-                            length=round(pulse.pulse.duration * 1e-9, 9),
-                            amplitude=1.0,
-                        )
-                        exp.acquire(signal=f"acquire{qubit.name}", handle=f"sequence{qubit.name}", kernel=weight)
-                        i += 1
+                            exp.play(signal=f"drive{qubit.name}", pulse=pulse.zhpulse, phase=pulse.pulse.relative_phase)
+                            i += 1
 
     # def Measure(self, exp, qubits):
     #     # qubit readout pulse and data acquisition
-    #     with exp.section(uid=f"sequence_measure", play_after=f"sequence_drive"):
-    #         for qubit in qubits.values():
-    #             if "c" in str(qubit.name):
-    #                 pass
-    #             else:
+    #     for qubit in qubits.values():
+    #         if "c" in str(qubit.name):
+    #             pass
+    #         else:
+    #             with exp.section(uid=f"sequence_measure{qubit.name}", play_after=f"sequence_drive{qubit.name}"):
     #                 time = 0
     #                 i = 0
     #                 for pulse in self.sequence[f"readout{qubit.name}"]:
@@ -567,34 +550,36 @@ class Zurich(AbstractInstrument):
     #                     exp.acquire(signal=f"acquire{qubit.name}", handle=f"sequence{qubit.name}", kernel=weight)
     #                     i += 1
 
-    # TODO: Hardware clasification(lo.acquisitionMode.Driscrimination) and fast reset
-    def qubit_reset(self, exp, qubits, Fast_reset=False):
-        # relax time or fast reset after readout - for signal processing and qubit relaxation to ground state
-        if Fast_reset:
+    def Measure(self, exp, qubits):
+        # qubit readout pulse and data acquisition
+        with exp.section(uid=f"sequence_measure", play_after=f"sequence_drive"):
             for qubit in qubits.values():
                 if "c" in str(qubit.name):
                     pass
                 else:
-                    with exp.section(uid=f"fast_reset", play_after=f"sequence_measure"):
-                        with exp.match_local(handle=f"acquire{qubit}"):
-                            with exp.case(state=0):
-                                pass
-                                # exp.play(some_pulse)
-                            with exp.case(state=1):
-                                pass
-                                # exp.play(some_other_pulse)
-        else:
-            for qubit in qubits.values():
-                if "c" in str(qubit.name):
-                    pass
-                else:
-                    with exp.section(uid=f"relax{qubit.name}", play_after=f"sequence_measure{qubit.name}"):
-                        exp.reserve(signal=f"flux{qubit.name}")
-                        exp.reserve(signal=f"drive{qubit.name}")
-                        exp.delay(signal=f"measure{qubit.name}", time=self.relaxation_time)
+                    time = 0
+                    i = 0
+                    for pulse in self.sequence[f"readout{qubit.name}"]:
+                        exp.delay(signal=f"measure{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
+                        exp.delay(signal=f"acquire{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
+                        time += round(pulse.pulse.duration * 1e-9, 9) + round(pulse.pulse.start * 1e-9, 9) - time
+                        pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
+                        if isinstance(pulse, ZhSweeper):
+                            self.play_sweep(exp, qubit, pulse, section="measure")
+                        else:
+                            exp.play(
+                                signal=f"measure{qubit.name}", pulse=pulse.zhpulse, phase=pulse.pulse.relative_phase
+                            )
+                        weight = lo.pulse_library.const(
+                            uid="weight" + pulse.zhpulse.uid,
+                            length=round(pulse.pulse.duration * 1e-9, 9),
+                            amplitude=1.0,
+                        )
+                        exp.acquire(signal=f"acquire{qubit.name}", handle=f"sequence{qubit.name}", kernel=weight)
+                        i += 1
 
-    # # TODO: Hardware clasification(lo.acquisitionMode.Driscrimination) and fast reset
-    # def qubit_reset(self, exp, qubits, Fast_reset=False):
+    # TODO: Hardware clasification(lo.acquisitionMode.Driscrimination) and fast reset
+    # def qubit_reset(self, exp, qubits, relaxation_time, Fast_reset=False):
     #     # relax time or fast reset after readout - for signal processing and qubit relaxation to ground state
     #     if Fast_reset:
     #         for qubit in qubits.values():
@@ -610,23 +595,46 @@ class Zurich(AbstractInstrument):
     #                             pass
     #                             # exp.play(some_other_pulse)
     #     else:
-    #         with exp.section(uid=f"relax", play_after=f"sequence_measure"):
-    #             for qubit in qubits.values():
-    #                 if "c" in str(qubit.name):
-    #                     pass
-    #                 else:
+    #         for qubit in qubits.values():
+    #             if "c" in str(qubit.name):
+    #                 pass
+    #             else:
+    #                 with exp.section(uid=f"relax{qubit.name}", play_after=f"sequence_measure{qubit.name}"):
     #                     exp.reserve(signal=f"flux{qubit.name}")
     #                     exp.reserve(signal=f"drive{qubit.name}")
-    #                     exp.delay(signal=f"measure{qubit.name}", time=self.relaxation_time)
+    #                     exp.delay(signal=f"measure{qubit.name}", time=relaxation_time)
+
+    def qubit_reset(self, exp, qubits, relaxation_time, Fast_reset=False):
+        # relax time or fast reset after readout - for signal processing and qubit relaxation to ground state
+        if Fast_reset:
+            for qubit in qubits.values():
+                if "c" in str(qubit.name):
+                    pass
+                else:
+                    with exp.section(uid=f"fast_reset", play_after=f"sequence_measure"):
+                        with exp.match_local(handle=f"acquire{qubit}"):
+                            with exp.case(state=0):
+                                pass
+                                # exp.play(some_pulse)
+                            with exp.case(state=1):
+                                pass
+                                # exp.play(some_other_pulse)
+        else:
+            with exp.section(uid=f"relax", play_after=f"sequence_measure"):
+                for qubit in qubits.values():
+                    if "c" in str(qubit.name):
+                        pass
+                    else:
+                        exp.reserve(signal=f"flux{qubit.name}")
+                        exp.reserve(signal=f"drive{qubit.name}")
+                        exp.delay(signal=f"measure{qubit.name}", time=relaxation_time)
 
     def sweep(self, qubits, sequence, *sweepers, nshots, relaxation_time, average=True):
         if relaxation_time is None:
-            self.relaxation_time = 10.0e-6
-        else:
-            self.relaxation_time = relaxation_time
+            relaxation_time = self.relaxation_time
 
         self.sequence_zh(sequence, sweepers)
-        self.create_exp(qubits, nshots)
+        self.create_exp(qubits, nshots, relaxation_time)
         self.run_exp()
 
         # TODO: General, several readouts and qubits
@@ -640,8 +648,9 @@ class Zurich(AbstractInstrument):
                     exp_res = self.results.get_data(f"sequence{qubit.name}")
                     i = exp_res.real
                     q = exp_res.imag
-                    results[f"sequence{qubit.name}"] = ExecutionResults.from_components(i, q, shots)
-
+                    results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = ExecutionResults.from_components(
+                        i, q, shots
+                    )
         return results
 
     # TODO: recursion

@@ -339,6 +339,8 @@ def Platform(name, runcard=None, design=None):
         from qibolab.platforms.icplatform import ICPlatform as Device
     elif name == "qw5q_gold":
         return create_tii_qw5q_gold(runcard)
+    elif name == "iqm5q":
+        return create_tii_IQM5q(runcard)
     else:
         from qibolab.platforms.multiqubit import MultiqubitPlatform as Device
 
