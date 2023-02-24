@@ -176,16 +176,6 @@ def create_tii_IQM5q(runcard, descriptor=None):
     from qibolab.instruments.rohde_schwarz import SGS100A as TWPA_Oscillator
     from qibolab.instruments.zhinst import Zurich
 
-    # TODO: Fix connection with the 2 HDAWGs
-    # HDAWG:
-    # - address: DEV8673
-    #   uid: device_hdawg_2
-    #           device_hdawg2:
-    # - rf_signal: qc4/flux_line
-    #   ports: SIGOUTS/0
-    # - to: device_hdawg2
-    #   port: ZSYNCS/4
-
     if descriptor is None:
         descriptor = """\
         instruments:
@@ -195,6 +185,8 @@ def create_tii_IQM5q(runcard, descriptor=None):
             HDAWG:
             - address: DEV8660
               uid: device_hdawg
+            - address: DEV8673
+              uid: device_hdawg2
             PQSC:
             - address: DEV10055
               uid: device_pqsc
@@ -250,8 +242,14 @@ def create_tii_IQM5q(runcard, descriptor=None):
                 - rf_signal: qc3/flux_line
                   ports: SIGOUTS/7
 
+            device_hdawg2:
+                - rf_signal: qc4/flux_line
+                  ports: SIGOUTS/0
+
             device_pqsc:
                 - internal_clock_signal
+                - to: device_hdawg
+                  port: ZSYNCS/4
                 - to: device_hdawg
                   port: ZSYNCS/2
                 - to: device_shfqc
@@ -308,19 +306,8 @@ def create_tii_IQM5q(runcard, descriptor=None):
         qubits[f"c{c}"].flux = channels[f"L4-{11 + c}"]
 
     # TODO: Add the last channel when the 2nd AWG works
-    for c in range(3, 4):
-        qubits[f"c{c}"].flux = channels[f"L4-{11 + c}"]
-    # for c in range(3, 5):
-    #     qubits[f"c{c}"].flux = channels[f"L4-{11 + c}"]
-
-    # # assign channels to couplers
-    # couplers = platform.couplers
-
-    # for c in range(0, 2):
-    #     couplers[c].flux_coupler = channels[f"L4-{11 + c}"]
-
-    # for c in range(3, 5):
-    #     couplers[c].flux_coupler = channels[f"L4-{11 + c}"]
+    for c in range(3, 5):
+        qubits[f"c{c}"].flux = channels[f"L4-{10 + c}"]
 
     return platform
 
