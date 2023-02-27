@@ -15,12 +15,19 @@ class Transpiler:
         self.init_method = init_method
         self.init_samples = init_samples
 
+    def custom_qubit_mapping(self, map):
+        """Define initial qubit mapping using a dictionary of the type {q0: 1, q1: 2, q2: 0}"""
+        self.init_method = "custom"
+        self.mapping = map
+
     def set_connectivity(self, connectivity):
-        if connectivity == "21_qubits":
-            return self.set_special_connectivity()
-        else:
-            # TODO check that it is a real connectivity map
+        if isinstance(connectivity, str):
+            return self.set_special_connectivity(connectivity)
+        elif isinstance(connectivity, type(nx.Graph())):
             return connectivity
+        else:
+            print("Error: use networkx graph to define connectivity; 21 qubit chip will be used as connectivity")
+            return self.set_special_connectivity("21_qubits")
 
     def draw_connectivity(self):
         """Show connectivity graph"""
@@ -32,9 +39,6 @@ class Transpiler:
         """Set the initial mapping for the transpiler."""
         self.init_method = init_method
         self.init_samples = init_samples
-
-    def get_connectivity(self):
-        return self.connectivity
 
     def translate_circuit(self, qibo_circuit):
         """Translate qibo circuit into a list of two qubit gates to be used by the transpiler"""
@@ -71,6 +75,24 @@ class Transpiler:
             del new_circuit[0]
         return new_circuit
 
+    def subgraph_init(self):
+        """Subgraph isomorphism initialization, NP-complete"""
+        H = nx.Graph()
+        H.add_nodes_from([i for i in range(0, self.connectivity.number_of_nodes())])
+        GM = nx.algorithms.isomorphism.GraphMatcher(self.connectivity, H)
+        i = 0
+        H.add_edge(self.circuit_repr[i][0], self.circuit_repr[i][1])
+        while GM.subgraph_is_monomorphic() == True:
+            result = GM
+            i = i + 1
+            H.add_edge(self.circuit_repr[i][0], self.circuit_repr[i][1])
+            GM = nx.algorithms.isomorphism.GraphMatcher(self.connectivity, H)
+            if self.connectivity.number_of_edges() == H.number_of_edges() or i == len(self.circuit_repr) - 1:
+                G = nx.relabel_nodes(self.connectivity, result.mapping)
+                return G, result.mapping
+        G = nx.relabel_nodes(self.connectivity, result.mapping)
+        return G, result.mapping
+
     def greedy_init(self):
         """initialize the circuit with greedy algorithm let a maximum number of 2-qubit gates can be applied without introducing any SWAP gate"""
         nodes = self.connectivity.number_of_nodes()
@@ -79,7 +101,7 @@ class Transpiler:
         final_mapping = {keys[i]: values[i] for i in range(len(keys))}
         final_graph = nx.relabel_nodes(self.connectivity, final_mapping)
         final_cost = len(self.reduce(final_graph))
-        for i in range(self.init_samples):
+        for _ in range(self.init_samples):
             random.shuffle(values)
             mapping = {keys[i]: values[i] for i in range(len(keys))}
             graph = nx.relabel_nodes(self.connectivity, mapping)
@@ -150,10 +172,11 @@ class Transpiler:
         return final_path, meeting_point
 
     def init_circuit(self, qibo_circuit):
+        """Initialize the transpiled circuit"""
         nodes = self.connectivity.number_of_nodes()
         qubits = qibo_circuit.nqubits
         if qubits > nodes:
-            print("ERROR, there are not enough physicl qubits to map the circuit")
+            print("ERROR, there are not enough physical qubits to map the circuit")
             return None
         elif qubits == nodes:
             new_circuit = Circuit(nodes)
@@ -185,6 +208,7 @@ class Transpiler:
         return new_circuit
 
     def add_gates(self, qibo_circuit, matched_gates):
+        """Add one and two qubit gates to transpiled circuit until connectivity is matched"""
         index = 0
         while self.pos < len(qibo_circuit.queue):
             gate = qibo_circuit.queue[self.pos]
@@ -207,6 +231,7 @@ class Transpiler:
                     self.pos += 1
 
     def add_swaps(self, path, meeting_point):
+        """Add swaps to the transpiled circuit to move qubits"""
         forward = path[0 : meeting_point + 1]
         backward = path[meeting_point + 1 :]
         if len(forward) > 1:
@@ -218,6 +243,7 @@ class Transpiler:
         return
 
     def update_qubit_map(self):
+        """Update the qubit mapping after adding swaps"""
         old_mapping = deepcopy(self.qubit_map)
         for key in self.mapping.keys():
             self.qubit_map[self.mapping[key]] = old_mapping[key]
@@ -235,11 +261,16 @@ class Transpiler:
             added_swaps (int): number of swap gates added.
         """
         self.circuit_repr = self.translate_circuit(qibo_circuit)
+        keys = list(self.connectivity.nodes())
         if self.init_method == "greedy":
             self.graph, self.mapping = self.greedy_init()
+        elif self.init_method == "subgraph":
+            self.graph, self.mapping = self.subgraph_init()
+        elif self.init_method == "custom":
+            self.mapping = {keys[i]: self.mapping["q" + str(i)] for i in range(len(keys))}
+            self.graph = nx.relabel_nodes(self.connectivity, self.mapping)
         else:
             print("ERROR")
-        keys = list(self.connectivity.nodes())
         init_qubit_map = self.init_qubit_map(self.mapping)
         init_mapping = {keys[i]: init_qubit_map[i] for i in range(len(keys))}
         self.qubit_map = np.sort(init_qubit_map)
@@ -261,45 +292,61 @@ class Transpiler:
         final_mapping = {keys[i]: init_qubit_map[self.qubit_map[i]] for i in range(len(keys))}
         return hardware_mapped_circuit, final_mapping, init_mapping, self.n_swap
 
-    def set_special_connectivity(self):
-        Q = sympy.symbols([f"q{i}" for i in range(21)])
-        chip = nx.Graph()
-        chip.add_nodes_from(Q)
-        graph_list_h = [
-            (Q[0], Q[1]),
-            (Q[1], Q[2]),
-            (Q[3], Q[4]),
-            (Q[4], Q[5]),
-            (Q[5], Q[6]),
-            (Q[6], Q[7]),
-            (Q[8], Q[9]),
-            (Q[9], Q[10]),
-            (Q[10], Q[11]),
-            (Q[11], Q[12]),
-            (Q[13], Q[14]),
-            (Q[14], Q[15]),
-            (Q[15], Q[16]),
-            (Q[16], Q[17]),
-            (Q[18], Q[19]),
-            (Q[19], Q[20]),
-        ]
-        graph_list_v = [
-            (Q[3], Q[8]),
-            (Q[8], Q[13]),
-            (Q[0], Q[4]),
-            (Q[4], Q[9]),
-            (Q[9], Q[14]),
-            (Q[14], Q[18]),
-            (Q[1], Q[5]),
-            (Q[5], Q[10]),
-            (Q[10], Q[15]),
-            (Q[15], Q[19]),
-            (Q[2], Q[6]),
-            (Q[6], Q[11]),
-            (Q[11], Q[16]),
-            (Q[16], Q[20]),
-            (Q[7], Q[12]),
-            (Q[12], Q[17]),
-        ]
-        chip.add_edges_from(graph_list_h + graph_list_v)
+    def set_special_connectivity(self, connectivity):
+        """Set a TII harware connectivity"""
+        if connectivity == "21_qubits":
+            Q = sympy.symbols([f"q{i}" for i in range(21)])
+            chip = nx.Graph()
+            chip.add_nodes_from(Q)
+            graph_list_h = [
+                (Q[0], Q[1]),
+                (Q[1], Q[2]),
+                (Q[3], Q[4]),
+                (Q[4], Q[5]),
+                (Q[5], Q[6]),
+                (Q[6], Q[7]),
+                (Q[8], Q[9]),
+                (Q[9], Q[10]),
+                (Q[10], Q[11]),
+                (Q[11], Q[12]),
+                (Q[13], Q[14]),
+                (Q[14], Q[15]),
+                (Q[15], Q[16]),
+                (Q[16], Q[17]),
+                (Q[18], Q[19]),
+                (Q[19], Q[20]),
+            ]
+            graph_list_v = [
+                (Q[3], Q[8]),
+                (Q[8], Q[13]),
+                (Q[0], Q[4]),
+                (Q[4], Q[9]),
+                (Q[9], Q[14]),
+                (Q[14], Q[18]),
+                (Q[1], Q[5]),
+                (Q[5], Q[10]),
+                (Q[10], Q[15]),
+                (Q[15], Q[19]),
+                (Q[2], Q[6]),
+                (Q[6], Q[11]),
+                (Q[11], Q[16]),
+                (Q[16], Q[20]),
+                (Q[7], Q[12]),
+                (Q[12], Q[17]),
+            ]
+            chip.add_edges_from(graph_list_h + graph_list_v)
+        elif connectivity == "5_qubits":
+            Q = sympy.symbols([f"q{i}" for i in range(5)])
+            chip = nx.Graph()
+            chip.add_nodes_from(Q)
+            graph_list = [
+                (Q[0], Q[2]),
+                (Q[1], Q[2]),
+                (Q[3], Q[2]),
+                (Q[4], Q[2]),
+            ]
+            chip.add_edges_from(graph_list)
+        else:
+            print("No connectivity map named %s found, 21 qubit chip will be used instead." % connectivity)
+            return self.set_special_connectivity("21_qubits")
         return chip
