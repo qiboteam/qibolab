@@ -26,7 +26,7 @@ def pytest_addoption(parser):
         "--folder",
         type=str,
         action="store",
-        default="qmregressions",
+        default=None,
         help="folder to save QM simulator test regressions",
     )
 

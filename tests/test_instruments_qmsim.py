@@ -22,7 +22,7 @@ from qibo.models import Circuit
 from qibolab.backends import QibolabBackend
 from qibolab.paths import qibolab_folder
 from qibolab.platform import create_tii_qw5q_gold
-from qibolab.pulses import FluxPulse, PulseSequence, Rectangular
+from qibolab.pulses import SNZ, FluxPulse, PulseSequence, Rectangular
 from qibolab.sweeper import Parameter, Sweeper
 
 
@@ -87,7 +87,7 @@ def assert_regression(samples, folder=None, filename=None):
                         raise exception
 
         else:
-            plot()
+            # plot()
             if not os.path.exists(folder):
                 os.mkdir(folder)
             file = h5py.File(path, "w")
@@ -218,7 +218,7 @@ def test_qmsim_allxy(simulator, folder, count, gate_pair):
     assert_regression(samples, folder, f"allxy{count}")
 
 
-@pytest.mark.parametrize("qubits", [[1, 2]])
+@pytest.mark.parametrize("qubits", [[1, 2], [2, 3]])
 @pytest.mark.parametrize("use_flux_pulse", [True, False])
 def test_qmsim_tune_landscape(simulator, folder, qubits, use_flux_pulse):
     lowfreq, highfreq = min(qubits), max(qubits)
@@ -256,6 +256,24 @@ def test_qmsim_tune_landscape(simulator, folder, qubits, use_flux_pulse):
         assert_regression(samples, folder, f"tune_landscape_{qubitstr}")
     else:
         assert_regression(samples, folder, f"tune_landscape_noflux_{qubitstr}")
+
+
+@pytest.mark.parametrize("qubit", [2, 3])
+def test_qmsim_snz_pulse(simulator, folder, qubit):
+    duration = 30
+    amplitude = 0.01
+    sequence = PulseSequence()
+    shape = SNZ(t_half_flux_pulse=duration // 2, b_amplitude=2)
+    channel = simulator.qubits[qubit].flux.name
+    qd_pulse = simulator.create_RX_pulse(qubit, start=0)
+    flux_pulse = FluxPulse(qd_pulse.finish, duration, amplitude, shape, channel, qubit)
+    ro_pulse = simulator.create_MZ_pulse(qubit, start=flux_pulse.finish)
+    sequence.add(qd_pulse)
+    sequence.add(flux_pulse)
+    sequence.add(ro_pulse)
+    result = simulator.execute_pulse_sequence(sequence, nshots=1)
+    samples = result.get_simulated_samples()
+    assert_regression(samples, folder, f"snz_pulse_{qubit}")
 
 
 @pytest.mark.parametrize("qubits", [[1, 2], [2, 3]])
