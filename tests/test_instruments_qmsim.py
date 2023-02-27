@@ -87,7 +87,7 @@ def assert_regression(samples, folder=None, filename=None):
                         raise exception
 
         else:
-            # plot()
+            plot()
             if not os.path.exists(folder):
                 os.mkdir(folder)
             file = h5py.File(path, "w")
