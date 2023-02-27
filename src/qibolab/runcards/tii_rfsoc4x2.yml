@@ -15,7 +15,7 @@ topology: # qubit - qubit connections
 native_gates:
     single_qubit:
         0: # qubit number
-            RX: 
+            RX:
                 duration: 400
                 amplitude: 0.8
                 frequency: 8269000000

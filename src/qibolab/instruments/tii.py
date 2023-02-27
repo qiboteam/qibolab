@@ -5,6 +5,7 @@ Supports the following FPGA:
 """
 import json
 import socket
+
 import numpy as np
 
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
@@ -18,8 +19,8 @@ from qibolab.pulses import (
     ReadoutPulse,
     Rectangular,
 )
-from qibolab.sweeper import Parameter, Sweeper
 from qibolab.result import ExecutionResults
+from qibolab.sweeper import Parameter, Sweeper
 
 
 class TII_RFSOC4x2(AbstractInstrument):
@@ -67,9 +68,9 @@ class TII_RFSOC4x2(AbstractInstrument):
         if self.is_connected:
             # Load needed settings
             self.cfg = {
-                    "repetition_duration": repetition_duration,
-                    "adc_trig_offset": adc_trig_offset,
-                    "max_gain": max_gain,
+                "repetition_duration": repetition_duration,
+                "adc_trig_offset": adc_trig_offset,
+                "max_gain": max_gain,
             }
 
             self.cfg["opCode"] = "setup"  # opCode parameter for server
@@ -118,7 +119,6 @@ class TII_RFSOC4x2(AbstractInstrument):
             avgq = np.array(avg["avgq"])
 
         return {pulse_serial: ExecutionResults.from_components(avgi, avgq)}
-
 
     def sweep(self, qubits, sequence, *sweepers, relaxation_time, nshots=1000, average=True):
         """Play a pulse sequence while sweeping one or more parameters.
@@ -221,7 +221,7 @@ class TII_RFSOC4x2(AbstractInstrument):
                 "type": "qd",
                 "channel": 1,
                 "qubit": pulse.qubit,
-                "serial": pulse.serial,     # TODO remove redundancy
+                "serial": pulse.serial,  # TODO remove redundancy
             }
 
         elif pulse.type == PulseType.READOUT:
@@ -235,7 +235,7 @@ class TII_RFSOC4x2(AbstractInstrument):
                 "type": "ro",
                 "channel": 0,
                 "qubit": pulse.qubit,
-                "serial": pulse.serial,     # TODO remove redundancy
+                "serial": pulse.serial,  # TODO remove redundancy
             }
 
         return pulse_dictionary
