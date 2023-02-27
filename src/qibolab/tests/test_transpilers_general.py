@@ -43,7 +43,7 @@ def custom_cicuit():
 
 
 def test_simple_circuit():
-    transpiler = Transpiler(connectivity="21_qubits", init_method="greedy", init_samples=1)
+    transpiler = Transpiler(connectivity="21_qubits", init_method="greedy", init_samples=0)
     circ = custom_cicuit()
     transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
     np.testing.assert_allclose(added_swaps, 2)
