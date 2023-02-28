@@ -124,7 +124,7 @@ class AbstractPlatform(ABC):
             settings = self.settings = yaml.safe_load(file)
 
         self.nqubits = settings["nqubits"]
-        self.resonator_type = "3D" if self.nqubits == 1 else "2D"
+        self.resonator_type = settings["resonator_type"]
         self.topology = settings["topology"]
 
         self.relaxation_time = settings["settings"]["repetition_duration"]
