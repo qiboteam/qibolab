@@ -16,8 +16,26 @@ from qibolab.sweeper import Parameter
 # TODO:For play Single shot
 # TODO:For sweep average true and false, single shot and cyclic. (Select averaging and acquisition modes)
 
-# TODO: Add/Check for loops for multiple qubits
+# FIXME: Multiplex (For readout)
+# FIXME: Flux on all qubits
+# FIXME: Lenght on pulses
+# FIXME: Handle on acquires
+# FIXME: I think is a hardware limitation but I cant sweep multiple drive oscillator at the same time
+# FIXME: Docs & tests
 
+# TODO:Add return clasified states.
+
+###TEST
+# TODO: Fast Reset
+# TODO: Loops for multiple qubits [Parallel and Nested]
+
+### NO NEED TO:
+# TODO:Add Baking(se lo.pulse_library and baking) using sampled pulsed at 2GSa/s
+# Sampled pulses are not parameterized. However, their length and phase can be swept
+# Seems to not be needed as 1ns can be sent directly
+# TODO: Repeat last compiled experiment, is it useful ?
+# def repeat_seq(self):
+#     self.results = self.session.run()
 # TODO: Do we need reload settings for some sweepers ? (I dont think so)
 # def reload_settings(self):
 #     with open(self.runcard_file) as file:
@@ -28,21 +46,10 @@ from qibolab.sweeper import Parameter
 # self.def_calibration()
 # self.devicesetup.set_calibration(self.calib)
 
-# TODO: Repeat last compiled experiment, is it useful ?
-# def repeat_seq(self):
-#     self.results = self.session.run()
-
-# FIXME: Multiplex (For readout)
-# FIXME: Flux on all qubits
-# FIXME: Lenght on pulses
-# FIXME: Handle on acquires
-# FIXME: I think is a hardware limitation but I cant sweep multiple drive oscillator at the same time
-# FIXME: Docs & tests
-
-# TODO:Add return clasified states.
-# TODO:Add Baking(se lo.pulse_library and baking) using sampled pulsed at 2GSa/s
-# sampled pulses are not parameterized. However, their length and phase can be swept
-# TODO: Fast Reset
+###EXTRA PARAMETERS I NEED:
+# qubit.pi_pulse
+# Soft_Mod : bool #For the readout lines
+# fast_reset : bool
 
 
 class ZhPulse:
@@ -238,7 +245,7 @@ class Zurich(AbstractInstrument):
                 )
         self.device_setup.set_calibration(self.calibration)
 
-    def register_readout_line(self, qubit, intermediate_frequency, Soft_Mod=False):
+    def register_readout_line(self, qubit, intermediate_frequency, Soft_Mod=True):
         """Registers qubit measure and acquire lines to calibration and signal map."""
 
         if Soft_Mod:
@@ -389,8 +396,8 @@ class Zurich(AbstractInstrument):
             count=nshots,
             # repetition_mode= lo.RepetitionMode.CONSTANT,
             # repetition_time= 20e-6,
-            # acquisition_type=lo.AcquisitionType.INTEGRATION, #TODO: I dont know how to make it work
-            acquisition_type=lo.AcquisitionType.SPECTROSCOPY,
+            acquisition_type=lo.AcquisitionType.INTEGRATION,  # TODO: I dont know how to make it work
+            # acquisition_type=lo.AcquisitionType.SPECTROSCOPY,
             # acquisition_type=lo.AcquisitionType.DISCRIMINATION,
             # averaging_mode=lo.AveragingMode.SEQUENTIAL,
             averaging_mode=lo.AveragingMode.CYCLIC,
@@ -534,13 +541,11 @@ class Zurich(AbstractInstrument):
                     pass
                 else:
                     with exp.section(uid=f"fast_reset", play_after=f"sequence_measure"):
-                        with exp.match_local(handle=f"acquire{qubit}"):
+                        with exp.match_local(handle=f"acquire{qubit.name}"):
                             with exp.case(state=0):
                                 pass
-                                # exp.play(some_pulse)
                             with exp.case(state=1):
-                                pass
-                                # exp.play(some_other_pulse)
+                                exp.play(ZhPulse(qubit.pi_pulse).zhpulse)
         else:
             with exp.section(uid=f"relax", play_after=f"sequence_measure"):
                 for qubit in qubits.values():
