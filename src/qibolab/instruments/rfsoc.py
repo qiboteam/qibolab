@@ -3,8 +3,7 @@
 Supports the following FPGA:
     RFSoC 4x2
 """
-import json
-import socket
+from qick import QickSoc, AveragerProgram
 
 import numpy as np
 
@@ -47,6 +46,7 @@ class ExecutePulseSequence(AveragerProgram):
         self.max_gain = cfg["max_gain"]  # TODO redundancy
         self.adc_trig_offset = cfg["adc_trig_offset"]
         self.max_sampling_rate = cfg["sampling_rate"]
+        self.relax_delay = cfg["repetition_duration"]
 
         # connections  (for every qubit here are defined drive and readout lines
         self.connections = {
@@ -62,7 +62,7 @@ class ExecutePulseSequence(AveragerProgram):
         self.soccfg = soc  # No need for a different soc config object since qick is on board
         self.convert_sequence(sequence["pulses"])
 
-        cfg["reps"] = cfg["hardware_avg"]
+        cfg["reps"] = sequence["nshots"]
         super().__init__(soc, cfg)
 
     def convert_sequence(self, sequence):
@@ -157,10 +157,12 @@ class ExecutePulseSequence(AveragerProgram):
             elif pulse_dic["type"] == "ro":
                 pulse_dic["ch"] = gen_ch
 
-                pulse_dic["waveform"] = None  # this could be unsupported
+                #pulse_dic["waveform"] = None  # this could be unsupported
                 pulse_dic["adc_trig_offset"] = self.adc_trig_offset
                 pulse_dic["wait"] = False
                 pulse_dic["syncdelay"] = 100  # clock ticks
+                pulse_dic["style"] = "const"
+                pulse_dic["adc_ch"] = adc_ch
 
                 # prepare readout declaration values
                 readout = {}
@@ -269,7 +271,7 @@ class ExecutePulseSequence(AveragerProgram):
                 phase=pulse["phase"],
                 gain=pulse["gain"],
                 length=pulse["length"],
-                waveform=pulse["waveform"],
+                #waveform=pulse["waveform"],
             )
         else:
             raise Exception(f'Pulse type {pulse["type"]} not recognized!')
@@ -299,7 +301,7 @@ class ExecutePulseSequence(AveragerProgram):
             elif pulse["type"] == "ro":
                 self.measure(
                     pulse_ch=pulse["ch"],
-                    adcs=pulse["adc_ch"],
+                    adcs=[pulse["adc_ch"]],
                     adc_trig_offset=pulse["adc_trig_offset"],
                     t=pulse["time"],
                     wait=pulse["wait"],
@@ -330,7 +332,7 @@ class TII_RFSOC4x2(AbstractInstrument):
     def connect(self):
         """Connects to the FPGA instrument."""
 
-    def setup(self, qubits, repetition_duration, adc_trig_offset, max_gain, **kwargs):
+    def setup(self, qubits, sampling_rate, repetition_duration, adc_trig_offset, max_gain, **kwargs):
         """Configures the instrument.
 
         A connection to the instrument needs to be established beforehand.
@@ -349,6 +351,7 @@ class TII_RFSOC4x2(AbstractInstrument):
                 "repetition_duration": repetition_duration,
                 "adc_trig_offset": adc_trig_offset,
                 "max_gain": max_gain,
+                "sampling_rate": sampling_rate,
             }
 
         else:
@@ -379,7 +382,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         avgi = np.array(avgi[0][0])
         avgq = np.array(avgq[0][0])
 
-        serial = sequence.ro_pulses[0]
+        serial = sequence.ro_pulses[0].serial
         return {serial: ExecutionResults.from_components(avgi, avgq)}
 
     def sweep(self, qubits, sequence, *sweepers, relaxation_time, nshots=1000, average=True):
