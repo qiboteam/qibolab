@@ -160,7 +160,7 @@ class ExecutePulseSequence(AveragerProgram):
                 #pulse_dic["waveform"] = None  # this could be unsupported
                 pulse_dic["adc_trig_offset"] = self.adc_trig_offset
                 pulse_dic["wait"] = False
-                pulse_dic["syncdelay"] = 100  # clock ticks
+                pulse_dic["syncdelay"] = 200  # clock ticks
                 pulse_dic["style"] = "const"
                 pulse_dic["adc_ch"] = adc_ch
 
@@ -168,10 +168,8 @@ class ExecutePulseSequence(AveragerProgram):
                 readout = {}
                 readout["adc_ch"] = adc_ch
                 readout["gen_ch"] = gen_ch
-                readout[
-                    "length"
-                ] = length  # TODO not sure it should be the same as the pulse! This is the window for the adc
-                readout["freq"] = pulse_dic["freq"]
+                readout["length"] = self.soc.us2cycles(length)  # TODO not sure it should be the same as the pulse! This is the window for the adc
+                readout["freq"] = pulse["frequency"] * self.MHz  # this need the MHz value!
 
                 self.readouts.append(readout)
 
@@ -217,9 +215,10 @@ class ExecutePulseSequence(AveragerProgram):
             else:
                 print(f"Avoided redecalaration of channel {readout['ch']}")  # TODO raise warning
                 continue
-            self.declare_readout(
-                ch=readout["adc_ch"], length=readout["length"], freq=readout["freq"], gen_ch=readout["gen_ch"]
-            )
+            self.declare_readout(ch=readout["adc_ch"],
+                                 length=readout["length"],
+                                 freq=readout["freq"],
+                                 gen_ch=readout["gen_ch"])
 
         # list of channels where a pulse is already been registered
         first_pulse_registered = []
@@ -331,6 +330,7 @@ class TII_RFSOC4x2(AbstractInstrument):
 
     def connect(self):
         """Connects to the FPGA instrument."""
+        pass
 
     def setup(self, qubits, sampling_rate, repetition_duration, adc_trig_offset, max_gain, **kwargs):
         """Configures the instrument.
@@ -348,10 +348,10 @@ class TII_RFSOC4x2(AbstractInstrument):
         if self.is_connected:
             # Load needed settings
             self.cfg = {
+                "sampling_rate": sampling_rate,
                 "repetition_duration": repetition_duration,
                 "adc_trig_offset": adc_trig_offset,
                 "max_gain": max_gain,
-                "sampling_rate": sampling_rate,
             }
 
         else:
@@ -404,6 +404,8 @@ class TII_RFSOC4x2(AbstractInstrument):
             Exception = If average is set to False
 
         """
+
+        raise NotImplementedError("Sweepers are not yet implemented")
 
         if average is False:
             raise NotImplementedError("Only averaged results are supported")
