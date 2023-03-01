@@ -31,86 +31,6 @@ from qibolab.result import ExecutionResults
 from qibolab.sweeper import Parameter
 
 
-class QMPulse:
-    def __init__(self, pulse):
-        self.pulse = pulse
-        self.element = f"{pulse.type.name.lower()}{pulse.qubit}"
-        self.operation = pulse.serial
-        self.relative_phase = pulse.relative_phase / (2 * np.pi)
-        self.duration = pulse.duration
-
-        # Stores the baking object (for pulses that need 1ns resolution)
-        self.baked = None
-        self.baked_amplitude = None
-
-        self.I = None
-        self.Q = None
-        self.shot = None
-        self.I_st = None
-        self.Q_st = None
-        self.shots = None
-        self.threshold = None
-        self.cos = None
-        self.sin = None
-
-    def declare_output(self, threshold=None, iq_angle=None):
-        self.I = declare(fixed)
-        self.Q = declare(fixed)
-        self.I_st = declare_stream()
-        self.Q_st = declare_stream()
-
-        if threshold is not None:
-            # QUA variables used for single shot classification
-            self.shot = declare(bool)
-            self.shots = declare_stream()
-            self.threshold = threshold
-            self.cos = np.cos(iq_angle)
-            self.sin = np.sin(iq_angle)
-
-    def bake(self, config):
-        if self.baked is not None:
-            raise_error(RuntimeError, f"Bake was already called for {self.pulse}.")
-        # ! Only works for flux pulses that have zero Q waveform
-
-        # Create the different baked sequences, each one corresponding to a different truncated duration
-        # for t in range(self.pulse.duration + 1):
-        with baking(config.__dict__, padding_method="right") as self.baked:
-            # if t == 0:  # Otherwise, the baking will be empty and will not be created
-            #    wf = [0.0] * 16
-            # else:
-            # wf = waveform[:t].tolist()
-            if self.pulse.duration == 0:
-                waveform = [0.0] * 16
-            else:
-                waveform = self.pulse.envelope_waveform_i.data.tolist()
-            self.baked.add_op(self.pulse.serial, self.element, waveform)
-            self.baked.play(self.pulse.serial, self.element)
-            # Append the baking object in the list to call it from the QUA program
-            # self.segments.append(b)
-
-        self.duration = self.baked.get_op_length()
-
-
-class QMSequence(list):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # keep track of readout pulses for registering outputs
-        self.ro_pulses = []
-        # map from qibolab pulses to QMPulses (useful when sweeping)
-        self.pulse_to_qmpulse = {}
-
-    def add(self, pulse):
-        if not isinstance(pulse, Pulse):
-            raise_error(TypeError, f"Pulse {pulse} has invalid type {type(pulse)}.")
-
-        qmpulse = QMPulse(pulse)
-        self.pulse_to_qmpulse[pulse.serial] = qmpulse
-        if pulse.type.name == "READOUT":
-            self.ro_pulses.append(qmpulse)
-        super().append(qmpulse)
-        return qmpulse
-
-
 @dataclass
 class QMConfig:
     """Configuration for communicating with the ``QuantumMachinesManager``."""
@@ -415,6 +335,86 @@ class QMConfig:
                 },
             }
         )
+
+
+class QMPulse:
+    def __init__(self, pulse):
+        self.pulse = pulse
+        self.element = f"{pulse.type.name.lower()}{pulse.qubit}"
+        self.operation = pulse.serial
+        self.relative_phase = pulse.relative_phase / (2 * np.pi)
+        self.duration = pulse.duration
+
+        # Stores the baking object (for pulses that need 1ns resolution)
+        self.baked = None
+        self.baked_amplitude = None
+
+        self.I = None
+        self.Q = None
+        self.shot = None
+        self.I_st = None
+        self.Q_st = None
+        self.shots = None
+        self.threshold = None
+        self.cos = None
+        self.sin = None
+
+    def declare_output(self, threshold=None, iq_angle=None):
+        self.I = declare(fixed)
+        self.Q = declare(fixed)
+        self.I_st = declare_stream()
+        self.Q_st = declare_stream()
+
+        if threshold is not None:
+            # QUA variables used for single shot classification
+            self.shot = declare(bool)
+            self.shots = declare_stream()
+            self.threshold = threshold
+            self.cos = np.cos(iq_angle)
+            self.sin = np.sin(iq_angle)
+
+    def bake(self, config: QMConfig):
+        if self.baked is not None:
+            raise_error(RuntimeError, f"Bake was already called for {self.pulse}.")
+        # ! Only works for flux pulses that have zero Q waveform
+
+        # Create the different baked sequences, each one corresponding to a different truncated duration
+        # for t in range(self.pulse.duration + 1):
+        with baking(config.__dict__, padding_method="right") as self.baked:
+            # if t == 0:  # Otherwise, the baking will be empty and will not be created
+            #    wf = [0.0] * 16
+            # else:
+            # wf = waveform[:t].tolist()
+            if self.pulse.duration == 0:
+                waveform = [0.0] * 16
+            else:
+                waveform = self.pulse.envelope_waveform_i.data.tolist()
+            self.baked.add_op(self.pulse.serial, self.element, waveform)
+            self.baked.play(self.pulse.serial, self.element)
+            # Append the baking object in the list to call it from the QUA program
+            # self.segments.append(b)
+
+        self.duration = self.baked.get_op_length()
+
+
+class QMSequence(list):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # keep track of readout pulses for registering outputs
+        self.ro_pulses = []
+        # map from qibolab pulses to QMPulses (useful when sweeping)
+        self.pulse_to_qmpulse = {}
+
+    def add(self, pulse):
+        if not isinstance(pulse, Pulse):
+            raise_error(TypeError, f"Pulse {pulse} has invalid type {type(pulse)}.")
+
+        qmpulse = QMPulse(pulse)
+        self.pulse_to_qmpulse[pulse.serial] = qmpulse
+        if pulse.type.name == "READOUT":
+            self.ro_pulses.append(qmpulse)
+        super().append(qmpulse)
+        return qmpulse
 
 
 class QMOPX(AbstractInstrument):
