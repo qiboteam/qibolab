@@ -13,8 +13,10 @@ def create_tii_rfsoc4x2(runcard, address=None):
         address (str): Address and port for the QICK board.
             If ``None`` it will attempt to connect to TII instruments.
     """
+    from qibolab.instruments.dummy_oscillator import (
+        DummyLocalOscillator as LocalOscillator,
+    )
     from qibolab.instruments.rfsoc import TII_RFSOC4x2
-    from qibolab.instruments.dummy_oscillator import DummyLocalOscillator as LocalOscillator
 
     # Create channel objects
     channels = ChannelMap()
