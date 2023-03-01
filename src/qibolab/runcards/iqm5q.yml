@@ -3,7 +3,7 @@ description: IQM 5-qubit device, controlled with Zurich Instruments.
 
 settings:
     hardware_avg: 1000
-    sampling_rate: 2.4e+9
+    sampling_rate: 2.e+9
     Flux_Tunable:
     repetition_duration: 10.e-6
     readout_integration_delay: 40.e-9
@@ -112,7 +112,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: .1 # 1
-                frequency: -28_000_000 #doesnt do anything requiered for qibolab to work
+                frequency: -50_000_000 #doesnt do anything requiered for qibolab to work
                 integration_time : 1.e-7
                 shape: Rectangular()
                 type: ro # readout
@@ -135,7 +135,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: .1 # 1
-                frequency: -28_000_000 #doesnt do anything requiered for qibolab to work
+                frequency: 28_000_000 #doesnt do anything requiered for qibolab to work
                 integration_time : 1.e-7
                 shape: Rectangular()
                 type: ro # readout
@@ -190,7 +190,7 @@ native_gates:
                 shape: Rectangular()
 
     # two_qubit:
-    #     0-3: # qubit numbers
+    #     0-2: # qubit numbers
     #         CZ:
     #             pulse_sequence:
     #                 -   start: 0
