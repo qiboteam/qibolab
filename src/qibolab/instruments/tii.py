@@ -51,7 +51,7 @@ class TII_RFSOC4x2(AbstractInstrument):
             sock.connect((self.host, self.port))
             sock.sendall(json.dumps(self.cfg).encode())
 
-    def setup(self, qubits, repetition_duration, adc_trig_offset, max_gain, **kwargs):
+    def setup(self, qubits, repetition_duration, adc_trig_offset, max_gain, sampling_rate, **kwargs):
         """Configures the instrument.
 
         A connection to the instrument needs to be established beforehand.
@@ -60,6 +60,7 @@ class TII_RFSOC4x2(AbstractInstrument):
             repetition_duration (int): delay before readout (ms)
             adc_trig_offset (int):
             max_gain (int): defined in dac units so that amplitudes can be relative
+            sampling_rate (int): ADC sampling rate
 
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
@@ -71,6 +72,7 @@ class TII_RFSOC4x2(AbstractInstrument):
                 "repetition_duration": repetition_duration,
                 "adc_trig_offset": adc_trig_offset,
                 "max_gain": max_gain,
+                "sampling_rate": sampling_rate
             }
 
             self.cfg["opCode"] = "setup"  # opCode parameter for server
