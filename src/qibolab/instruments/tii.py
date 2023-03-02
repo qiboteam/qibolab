@@ -72,7 +72,7 @@ class TII_RFSOC4x2(AbstractInstrument):
                 "repetition_duration": repetition_duration,
                 "adc_trig_offset": adc_trig_offset,
                 "max_gain": max_gain,
-                "sampling_rate": sampling_rate
+                "sampling_rate": sampling_rate,
             }
 
             self.cfg["opCode"] = "setup"  # opCode parameter for server
