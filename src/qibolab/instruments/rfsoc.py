@@ -49,7 +49,7 @@ class ExecutePulseSequence(AveragerProgram):
         self.syncdelay = 200  # TODO maybe better in runcard
         cfg["reps"] = cfg["nshots"]
 
-        # connections  (for every qubit here are defined drive and readout lines
+        # connections  (for every qubit here are defined drive and readout lines)
         self.connections = {
             "0": {"drive": 1, "readout": 0, "adc_ch": 0},
         }
@@ -122,6 +122,9 @@ class ExecutePulseSequence(AveragerProgram):
             pulse_dic["time"] = pulse.start
             length = pulse.duration * self.mu_s
             pulse_dic["length"] = self.soc.us2cycles(length)  # uses tproc clock now
+
+            if pulse.amplitude > 1:
+                raise Exception("Amplitude is relative and must be <= 1")
             pulse_dic["gain"] = int(pulse.amplitude * self.max_gain)
 
             if pulse.type == PulseType.DRIVE:
@@ -134,7 +137,6 @@ class ExecutePulseSequence(AveragerProgram):
                 pulse_dic["phase"] = self.deg2reg(pulse.relative_phase, gen_ch=gen_ch)
 
                 type_p_shape = type(pulse.shape)
-
                 if type_p_shape is not Gaussian and type_p_shape is not Drag:
                     raise NotImplementedError("Drive pulses can only be Gaussian or Drag")
 
@@ -156,6 +158,10 @@ class ExecutePulseSequence(AveragerProgram):
                     pulse_dic["alpha"] = pulse.beta
 
             elif pulse.type == PulseType.READOUT:
+                type_p_shape = type(pulse.shape)
+                if type_p_shape is not Rectangular:
+                    raise NotImplementedError("Readout pulses can only be Rectangular")
+
                 pulse_dic["type"] = "ro"
                 gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "ro")
                 pulse_dic["ch"] = gen_ch
@@ -222,7 +228,7 @@ class ExecutePulseSequence(AveragerProgram):
             if readout["adc_ch"] not in channel_already_declared:
                 channel_already_declared.append(readout["adc_ch"])
             else:
-                print(f"Avoided redecalaration of channel {readout['ch']}")  # TODO raise warning
+                print(f"Avoided redecalaration of channel {readout['adc_ch']}")  # TODO raise warning
                 continue
             self.declare_readout(
                 ch=readout["adc_ch"], length=readout["length"], freq=readout["freq"], gen_ch=readout["gen_ch"]
@@ -385,13 +391,19 @@ class TII_RFSOC4x2(AbstractInstrument):
             self.cfg["repetition_duration"] = relaxation_time
 
         program = ExecutePulseSequence(self.soc, self.cfg, sequence)
-        avgi, avgq = program.acquire(self.soc, load_pulses=True, progress=False, debug=False)
+        avgi, avgq = program.acquire(
+            self.soc, readouts_per_experiment=len(sequence.ro_pulses), load_pulses=True, progress=False, debug=False
+        )
 
-        avgi = np.array(avgi[0][0])
-        avgq = np.array(avgq[0][0])
+        results = {}
+        for i, ro_pulse in enumerate(sequence.ro_pulses):
+            i_pulse = np.array(avgi[0][i])
+            q_pulse = np.array(avgq[0][i])
 
-        serial = sequence.ro_pulses[0].serial
-        return {serial: ExecutionResults.from_components(avgi, avgq)}
+            serial = ro_pulse.serial
+            results[serial] = ExecutionResults.from_components(i_pulse, q_pulse)
+
+        return results
 
     def sweep(self, qubits, sequence, *sweepers, relaxation_time, nshots=1000, average=True):
         """Play a pulse sequence while sweeping one or more parameters.
