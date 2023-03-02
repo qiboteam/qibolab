@@ -46,6 +46,8 @@ class ExecutePulseSequence(AveragerProgram):
         self.adc_trig_offset = cfg["adc_trig_offset"]
         self.max_sampling_rate = cfg["sampling_rate"]
         self.relax_delay = cfg["repetition_duration"]
+        self.syncdelay = 200  # TODO maybe better in runcard
+        cfg["reps"] = cfg["nshots"]
 
         # connections  (for every qubit here are defined drive and readout lines
         self.connections = {
@@ -59,9 +61,8 @@ class ExecutePulseSequence(AveragerProgram):
         # fill the self.pulse_sequence and the self.readout_pulses oject
         self.soc = soc
         self.soccfg = soc  # No need for a different soc config object since qick is on board
-        self.convert_sequence(sequence["pulses"])
+        self.convert_sequence(sequence)
 
-        cfg["reps"] = sequence["nshots"]
         super().__init__(soc, cfg)
 
     def convert_sequence(self, sequence):
@@ -115,51 +116,58 @@ class ExecutePulseSequence(AveragerProgram):
 
         """
 
-        for _, pulse in sequence.items():
+        for pulse in sequence:
             pulse_dic = {}
 
-            pulse_dic["type"] = pulse["type"]
-            pulse_dic["time"] = pulse["start"]
-
-            gen_ch, adc_ch = self.from_qubit_to_ch(
-                pulse["qubit"], pulse["type"]  # if drive pulse return only gen_ch, otherwise both
-            )
-            pulse_dic["freq"] = self.soc.freq2reg(
-                pulse["frequency"] * self.MHz,  # TODO maybe differentiate between drive and readout
-                gen_ch=gen_ch,
-                ro_ch=adc_ch,
-            )
-
-            length = pulse["duration"] * self.mu_s
+            pulse_dic["time"] = pulse.start
+            length = pulse.duration * self.mu_s
             pulse_dic["length"] = self.soc.us2cycles(length)  # uses tproc clock now
-            pulse_dic["phase"] = self.deg2reg(
-                pulse["relative_phase"], gen_ch=gen_ch  # TODO maybe differentiate between drive and readout
-            )
+            pulse_dic["gain"] = int(pulse.amplitude * self.max_gain)
 
-            pulse_dic["gain"] = int(pulse["amplitude"] * self.max_gain)
-
-            if pulse_dic["type"] == "qd":
+            if pulse.type == PulseType.DRIVE:
+                pulse_dic["type"] = "qd"
+                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "qd")
                 pulse_dic["ch"] = gen_ch
 
-                pulse_dic["waveform"] = pulse["shape"]  # TODO redundancy
-                pulse_dic["shape"] = pulse["shape"]
-                pulse_dic["name"] = pulse["shape"]
-                pulse_dic["style"] = "arb"
+                pulse_dic["freq"] = self.soc.freq2reg(pulse.frequency * self.MHz, gen_ch=gen_ch)
 
-                sigma = length / pulse["rel_sigma"]
+                pulse_dic["phase"] = self.deg2reg(pulse.relative_phase, gen_ch=gen_ch)
+
+                type_p_shape = type(pulse.shape)
+
+                if type_p_shape is not Gaussian and type_p_shape is not Drag:
+                    raise NotImplementedError("Drive pulses can only be Gaussian or Drag")
+
+                pulse_dic["style"] = "arb"
+                sigma = length / pulse.shape.rel_sigma
                 pulse_dic["sigma"] = self.soc.us2cycles(sigma)
 
-                if pulse_dic["shape"] == "Drag":
-                    pulse_dic["delta"] = pulse_dic["sigma"]  # TODO redundancy
-                    pulse_dic["alpha"] = pulse["beta"]
+                if type_p_shape is Gaussian:
+                    pulse_dic["waveform"] = "Gaussian"  # TODO redundancy
+                    pulse_dic["shape"] = "Gaussian"
+                    pulse_dic["name"] = "Gaussian"
 
-            elif pulse_dic["type"] == "ro":
+                if type_p_shape == Drag:
+                    pulse_dic["waveform"] = "Drag"  # TODO redundancy
+                    pulse_dic["shape"] = "Drag"
+                    pulse_dic["name"] = "Drag"
+
+                    pulse_dic["delta"] = pulse_dic["sigma"]  # TODO redundancy
+                    pulse_dic["alpha"] = pulse.beta
+
+            elif pulse.type == PulseType.READOUT:
+                pulse_dic["type"] = "ro"
+                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "ro")
                 pulse_dic["ch"] = gen_ch
+
+                pulse_dic["freq"] = self.soc.freq2reg(pulse.frequency * self.MHz, gen_ch=gen_ch, ro_ch=adc_ch)
+
+                pulse_dic["phase"] = self.deg2reg(pulse.relative_phase, gen_ch=gen_ch)
 
                 # pulse_dic["waveform"] = None  # this could be unsupported
                 pulse_dic["adc_trig_offset"] = self.adc_trig_offset
                 pulse_dic["wait"] = False
-                pulse_dic["syncdelay"] = 200  # clock ticks
+                pulse_dic["syncdelay"] = self.syncdelay
                 pulse_dic["style"] = "const"
                 pulse_dic["adc_ch"] = adc_ch
 
@@ -170,13 +178,13 @@ class ExecutePulseSequence(AveragerProgram):
                 readout["length"] = self.soc.us2cycles(
                     length
                 )  # TODO not sure it should be the same as the pulse! This is the window for the adc
-                readout["freq"] = pulse["frequency"] * self.MHz  # this need the MHz value!
+                readout["freq"] = pulse.frequency * self.MHz  # this need the MHz value!
 
                 self.readouts.append(readout)
 
-            self.pulse_sequence[pulse["serial"]] = pulse_dic  # TODO check if deep copy
+            self.pulse_sequence[pulse.serial] = pulse_dic
 
-            if pulse["frequency"] < self.max_sampling_rate / 2:
+            if pulse.frequency < self.max_sampling_rate / 2:
                 zone = 1
             else:
                 zone = 2
@@ -372,11 +380,11 @@ class TII_RFSOC4x2(AbstractInstrument):
             A dictionary mapping the readout pulse serial to am ExecutionResults object
         """
 
-        data = {"nshots": nshots, "relaxation_time": relaxation_time, "pulses": {}}
-        for i, pulse in enumerate(sequence):
-            data["pulses"][str(i)] = self.convert_pulse_to_dic(pulse)
+        self.cfg["nshots"] = nshots
+        if relaxation_time is not None:
+            self.cfg["repetition_duration"] = relaxation_time
 
-        program = ExecutePulseSequence(self.soc, self.cfg, data)
+        program = ExecutePulseSequence(self.soc, self.cfg, sequence)
         avgi, avgq = program.acquire(self.soc, load_pulses=True, progress=False, debug=False)
 
         avgi = np.array(avgi[0][0])
@@ -407,6 +415,7 @@ class TII_RFSOC4x2(AbstractInstrument):
 
         raise NotImplementedError("Sweepers are not yet implemented")
 
+        """
         if average is False:
             raise NotImplementedError("Only averaged results are supported")
         if len(sweepers) > 1:
@@ -452,60 +461,7 @@ class TII_RFSOC4x2(AbstractInstrument):
             avgq = np.array(avg["avg_dq"])
 
         return {pulse_serial: ExecutionResults.from_components(avgi, avgq)}
-
-    def convert_pulse_to_dic(self, pulse):
-        """Funtion to convert pulse object attributes to a dictionary"""
-        pulse: Pulse
-        pulse_shape: PulseShape
-
-        if pulse.type == PulseType.DRIVE:
-            pulse_shape = pulse.shape
-            if type(pulse_shape) is Drag:
-                shape = "Drag"
-                style = "arb"
-                rel_sigma = pulse_shape.rel_sigma
-                beta = pulse_shape.beta
-            elif type(pulse_shape) is Gaussian:
-                shape = "Gaussian"
-                style = "arb"
-                rel_sigma = pulse_shape.rel_sigma
-                beta = 0
-            elif type(pulse_shape) is Rectangular:
-                shape = "Rectangular"
-                style = "const"
-                rel_sigma = 0
-                beta = 0
-            pulse_dictionary = {
-                "start": pulse.start,
-                "duration": pulse.duration,
-                "amplitude": pulse.amplitude,
-                "frequency": pulse.frequency,
-                "relative_phase": pulse.relative_phase,
-                "shape": shape,
-                "style": style,
-                "rel_sigma": rel_sigma,
-                "beta": beta,
-                "type": "qd",
-                "channel": 1,
-                "qubit": pulse.qubit,
-                "serial": pulse.serial,  # TODO remove redundancy
-            }
-
-        elif pulse.type == PulseType.READOUT:
-            pulse_dictionary = {
-                "start": pulse.start,
-                "duration": pulse.duration,
-                "amplitude": pulse.amplitude,
-                "frequency": pulse.frequency,
-                "relative_phase": pulse.relative_phase,
-                "shape": "const",
-                "type": "ro",
-                "channel": 0,
-                "qubit": pulse.qubit,
-                "serial": pulse.serial,  # TODO remove redundancy
-            }
-
-        return pulse_dictionary
+        """
 
     def start(self):
         """Empty method to comply with AbstractInstrument interface."""
