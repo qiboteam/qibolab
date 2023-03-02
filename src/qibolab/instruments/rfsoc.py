@@ -3,9 +3,8 @@
 Supports the following FPGA:
     RFSoC 4x2
 """
-from qick import QickSoc, AveragerProgram
-
 import numpy as np
+from qick import AveragerProgram, QickSoc
 
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.pulses import (
@@ -157,7 +156,7 @@ class ExecutePulseSequence(AveragerProgram):
             elif pulse_dic["type"] == "ro":
                 pulse_dic["ch"] = gen_ch
 
-                #pulse_dic["waveform"] = None  # this could be unsupported
+                # pulse_dic["waveform"] = None  # this could be unsupported
                 pulse_dic["adc_trig_offset"] = self.adc_trig_offset
                 pulse_dic["wait"] = False
                 pulse_dic["syncdelay"] = 200  # clock ticks
@@ -168,7 +167,9 @@ class ExecutePulseSequence(AveragerProgram):
                 readout = {}
                 readout["adc_ch"] = adc_ch
                 readout["gen_ch"] = gen_ch
-                readout["length"] = self.soc.us2cycles(length)  # TODO not sure it should be the same as the pulse! This is the window for the adc
+                readout["length"] = self.soc.us2cycles(
+                    length
+                )  # TODO not sure it should be the same as the pulse! This is the window for the adc
                 readout["freq"] = pulse["frequency"] * self.MHz  # this need the MHz value!
 
                 self.readouts.append(readout)
@@ -215,10 +216,9 @@ class ExecutePulseSequence(AveragerProgram):
             else:
                 print(f"Avoided redecalaration of channel {readout['ch']}")  # TODO raise warning
                 continue
-            self.declare_readout(ch=readout["adc_ch"],
-                                 length=readout["length"],
-                                 freq=readout["freq"],
-                                 gen_ch=readout["gen_ch"])
+            self.declare_readout(
+                ch=readout["adc_ch"], length=readout["length"], freq=readout["freq"], gen_ch=readout["gen_ch"]
+            )
 
         # list of channels where a pulse is already been registered
         first_pulse_registered = []
@@ -270,7 +270,7 @@ class ExecutePulseSequence(AveragerProgram):
                 phase=pulse["phase"],
                 gain=pulse["gain"],
                 length=pulse["length"],
-                #waveform=pulse["waveform"],
+                # waveform=pulse["waveform"],
             )
         else:
             raise Exception(f'Pulse type {pulse["type"]} not recognized!')
