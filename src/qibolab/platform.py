@@ -337,10 +337,10 @@ def create_tii_1q(runcard, descriptor=None):
     channels["w7"].power_range = 10
     # readout
     channels["w4_r"].ports = [("device_shfqc", "[QACHANNELS/0/OUTPUT]")]
-    channels["w4_r"].power_range = -30
+    channels["w4_r"].power_range = -20
     # drive
     channels[f"w4_d"].ports = [("device_shfqc", f"SGCHANNELS/0/OUTPUT")]
-    channels[f"w4_d"].power_range = -30
+    channels[f"w4_d"].power_range = -20
 
     # Instantiate Zh set of instruments[They work as one]
     from qibolab.instruments.dummy_oscillator import (
@@ -375,7 +375,7 @@ def create_tii_1q(runcard, descriptor=None):
         # TWPA_Oscillator("TWPA", "192.168.0.35"),
     ]
     # Set Dummy LO parameters (Map only the the two by two oscillators)
-    local_oscillators[0].frequency = 7_400_000_000
+    local_oscillators[0].frequency = 7_200_000_000
     local_oscillators[1].frequency = 8_500_000_000  # For SG1 and SG2
 
     # Set TWPA pump LO parameters

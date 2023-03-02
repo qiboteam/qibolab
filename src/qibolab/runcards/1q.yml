@@ -24,7 +24,7 @@ native_gates:
             RX:
                 duration: 90 #80
                 amplitude: 0.75 #0.8
-                frequency: 8.579e+9 #doesnt do anything requiered for qibolab to work
+                frequency: 8.0e+9 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
                 type: qd # qubit drive
@@ -33,7 +33,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: .4 # 1
-                frequency: 7_281_800_000 #7_400_000_000 #doesnt do anything requiered for qibolab to work
+                frequency: 7_281_400_000 #7_400_000_000 #doesnt do anything requiered for qibolab to work
                 integration_time : 1.e-6
                 shape: Rectangular()
                 type: ro # readout
@@ -43,9 +43,9 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            readout_frequency: 7_281_800_000
+            readout_frequency: 7_281_400_000
             resonator_polycoef_flux: []
-            drive_frequency: 8.579e+9
+            drive_frequency: 8.0e+9
             T1: 0.0
             T2: 0.0
             sweetspot: 0.0
