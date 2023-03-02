@@ -26,7 +26,7 @@ native_gates:
             MZ:
                 duration: 3000
                 amplitude: 0.01
-                frequency: 7274800000
+                frequency: 7281300000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -35,7 +35,7 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            readout_frequency: 7.3714e+9
+            readout_frequency: 7.2813e+9
             resonator_polycoef_flux: []
             drive_frequency: 5.44045e+9
             T1: 0.
