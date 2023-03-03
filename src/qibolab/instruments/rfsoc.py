@@ -1,8 +1,11 @@
-""" RFSoC fpga driver.
+""" RFSoC FPGA driver.
+
+This driver needs the library Qick installed
 
 Supports the following FPGA:
     RFSoC 4x2
 """
+
 import numpy as np
 from qick import AveragerProgram, QickSoc
 
@@ -22,31 +25,38 @@ from qibolab.sweeper import Parameter, Sweeper
 
 
 class ExecutePulseSequence(AveragerProgram):
-    """This qick AveragerProgram handles a qibo sequence of pulse"""
+    """This qick AveragerProgram handles a qibo sequence of pulses"""
 
     def __init__(self, soc, cfg, sequence):
-        """In this function the most important settings are defined and the sequence is transpiled.
+        """In this function we define the most important settings and the sequence is transpiled.
 
-        * set the conversion coefficients to be used for frequency and time values
-        * max_gain, adc_trig_offset, max_sampling_rate are imported from cfg (runcard settings)
-        * connections are defined (drive and readout channel for each qubit)
+        In detail:
+            * set the conversion coefficients to be used for frequency and time values
+            * max_gain, adc_trig_offset, max_sampling_rate are imported from cfg (runcard settings)
+            * syncdelay (for each measurement) is defined explicitly
+            * connections are defined (drive, readout channel and adc_ch for each qubit)
 
-        * pulse_sequence, readouts, channels are defined to be filled by convert_sequence()
+            * pulse_sequence, readouts, channels are defined to be filled by convert_sequence()
 
-        * cfg["reps"] is set from hardware_avg
-        * super.__init__
+            * cfg["reps"] is set from hardware_avg
+            * super.__init__
         """
 
-        # conversion coefficients
+        # fill the self.pulse_sequence and the self.readout_pulses oject
+        self.soc = soc
+        self.soccfg = soc  # No need for a different soc config object since qick is on board
+        self.sequence = sequence
+
+        # conversion coefficients (in runcard we have Hz and ns)
         self.MHz = 0.000001
-        self.mu_s = 0.001
+        self.us = 0.001
 
         # settings
         self.max_gain = cfg["max_gain"]  # TODO redundancy
         self.adc_trig_offset = cfg["adc_trig_offset"]
         self.max_sampling_rate = cfg["sampling_rate"]
         self.relax_delay = cfg["repetition_duration"]
-        self.syncdelay = 200  # TODO maybe better in runcard
+        self.syncdelay = self.us2cycles(1.0)  # TODO maybe better in runcard
         cfg["reps"] = cfg["nshots"]
 
         # connections  (for every qubit here are defined drive and readout lines)
@@ -54,147 +64,7 @@ class ExecutePulseSequence(AveragerProgram):
             "0": {"drive": 1, "readout": 0, "adc_ch": 0},
         }
 
-        self.pulse_sequence = {}
-        self.readouts = []
-        self.channels = []
-
-        # fill the self.pulse_sequence and the self.readout_pulses oject
-        self.soc = soc
-        self.soccfg = soc  # No need for a different soc config object since qick is on board
-        self.convert_sequence(sequence)
-
         super().__init__(soc, cfg)
-
-    def convert_sequence(self, sequence):
-        """In this function we transpile the sequence of pulses in a form better suited for qick
-
-        * Note that all the conversions (in different "standard" units and in registers valued are done here
-
-        Three object are of touched by this function:
-        * self.pulse_sequence is a dictionary that contains all the pulse with information regarding the pulse itself.
-          To be used in initialize (set_pulse_registers) and in body (executing)
-
-        * self.readouts is a list that contains all the readout information.
-          To be used in initialize for declare_readout
-
-        * self.channels is a list that contain channel number and nyquist zone of initialization
-
-
-        Templates:
-        self.pulse_sequence = {
-            serial: {
-                "channel":
-                "type":
-                "freq":
-                "length":
-                "phase":
-                "time":
-                "gain"
-                "waveform":     # readout as a default value
-
-                "shape":    # these only if drive
-                "sigma":
-                "name":
-
-                "delta":    # these only if drag
-                "alpha":
-
-                "adc_trig_offset":      # these only if readout
-                "wait": False
-                "syncdelay": 100
-            }
-        }
-        self.readouts = {
-            0: {
-                "adc_ch":
-                "gen_ch":
-                "length":
-                "freq":
-            }
-        }
-        self.channels = [(channel, generation), ...]
-
-        """
-
-        for pulse in sequence:
-            pulse_dic = {}
-
-            pulse_dic["time"] = pulse.start
-            length = pulse.duration * self.mu_s
-            pulse_dic["length"] = self.soc.us2cycles(length)  # uses tproc clock now
-
-            if pulse.amplitude > 1:
-                raise Exception("Amplitude is relative and must be <= 1")
-            pulse_dic["gain"] = int(pulse.amplitude * self.max_gain)
-
-            if pulse.type == PulseType.DRIVE:
-                pulse_dic["type"] = "qd"
-                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "qd")
-                pulse_dic["ch"] = gen_ch
-
-                pulse_dic["freq"] = self.soc.freq2reg(pulse.frequency * self.MHz, gen_ch=gen_ch)
-
-                pulse_dic["phase"] = self.deg2reg(pulse.relative_phase, gen_ch=gen_ch)
-
-                type_p_shape = type(pulse.shape)
-                if type_p_shape is not Gaussian and type_p_shape is not Drag:
-                    raise NotImplementedError("Drive pulses can only be Gaussian or Drag")
-
-                pulse_dic["style"] = "arb"
-                sigma = length / pulse.shape.rel_sigma
-                pulse_dic["sigma"] = self.soc.us2cycles(sigma)
-
-                if type_p_shape is Gaussian:
-                    pulse_dic["waveform"] = "Gaussian"  # TODO redundancy
-                    pulse_dic["shape"] = "Gaussian"
-                    pulse_dic["name"] = "Gaussian"
-
-                if type_p_shape == Drag:
-                    pulse_dic["waveform"] = "Drag"  # TODO redundancy
-                    pulse_dic["shape"] = "Drag"
-                    pulse_dic["name"] = "Drag"
-
-                    pulse_dic["delta"] = pulse_dic["sigma"]  # TODO redundancy
-                    pulse_dic["alpha"] = pulse.beta
-
-            elif pulse.type == PulseType.READOUT:
-                type_p_shape = type(pulse.shape)
-                if type_p_shape is not Rectangular:
-                    raise NotImplementedError("Readout pulses can only be Rectangular")
-
-                pulse_dic["type"] = "ro"
-                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "ro")
-                pulse_dic["ch"] = gen_ch
-
-                pulse_dic["freq"] = self.soc.freq2reg(pulse.frequency * self.MHz, gen_ch=gen_ch, ro_ch=adc_ch)
-
-                pulse_dic["phase"] = self.deg2reg(pulse.relative_phase, gen_ch=gen_ch)
-
-                # pulse_dic["waveform"] = None  # this could be unsupported
-                pulse_dic["adc_trig_offset"] = self.adc_trig_offset
-                pulse_dic["wait"] = False
-                pulse_dic["syncdelay"] = self.syncdelay
-                pulse_dic["style"] = "const"
-                pulse_dic["adc_ch"] = adc_ch
-
-                # prepare readout declaration values
-                readout = {}
-                readout["adc_ch"] = adc_ch
-                readout["gen_ch"] = gen_ch
-                readout["length"] = self.soc.us2cycles(
-                    length
-                )  # TODO not sure it should be the same as the pulse! This is the window for the adc
-                readout["freq"] = pulse.frequency * self.MHz  # this need the MHz value!
-
-                self.readouts.append(readout)
-
-            self.pulse_sequence[pulse.serial] = pulse_dic
-
-            if pulse.frequency < self.max_sampling_rate / 2:
-                zone = 1
-            else:
-                zone = 2
-            self.channels.append((gen_ch, zone))
 
     def from_qubit_to_ch(self, qubit, pulse_type):
         """Helper function for retrieving channel numbers from qubits"""
@@ -219,75 +89,110 @@ class ExecutePulseSequence(AveragerProgram):
         """
 
         # declare nyquist zones for all used channels
-        for channel in self.channels:
-            self.declare_gen(ch=channel[0], nqz=channel[1])
+        ch_already_declared = []
+        for pulse in self.sequence:
+            # TODO remove function
+            if pulse.type == PulseType.DRIVE:
+                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "qd")
+            else:
+                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "ro")
+            if gen_ch not in ch_already_declared:
+                ch_already_declared.append(gen_ch)
+
+                if pulse.frequency < self.max_sampling_rate / 2:
+                    zone = 1
+                else:
+                    zone = 2
+                self.declare_gen(gen_ch, nqz=zone)
+            else:
+                print(f"Avoided redecalaration of channel {gen_ch}")  # TODO
 
         # declare readouts
-        channel_already_declared = []
-        for readout in self.readouts:
-            if readout["adc_ch"] not in channel_already_declared:
-                channel_already_declared.append(readout["adc_ch"])
+        ro_ch_already_declared = []
+        for readout_pulse in self.sequence.ro_pulses:
+            # TODO remove function
+            gen_ch, adc_ch = self.from_qubit_to_ch(readout_pulse.qubit, "ro")
+            if adc_ch not in ro_ch_already_declared:
+                ro_ch_already_declared.append(adc_ch)
+                length = self.soc.us2cycles(readout_pulse.duration * self.us)
+                freq = readout_pulse.frequency * self.MHz
+
+                self.declare_readout(ch=adc_ch, length=length, freq=freq, gen_ch=gen_ch)
             else:
-                print(f"Avoided redecalaration of channel {readout['adc_ch']}")  # TODO raise warning
-                continue
-            self.declare_readout(
-                ch=readout["adc_ch"], length=readout["length"], freq=readout["freq"], gen_ch=readout["gen_ch"]
-            )
+                print(f"Avoided redecalaration of channel {adc_ch}")  # TODO
 
         # list of channels where a pulse is already been registered
         first_pulse_registered = []
 
-        for serial, pulse in self.pulse_sequence.items():
-            if pulse["ch"] not in first_pulse_registered:
-                first_pulse_registered.append(pulse["ch"])
+        for pulse in self.sequence:
+            # TODO remove function
+            if pulse.type == PulseType.DRIVE:
+                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "qd")
             else:
-                continue
+                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "ro")
 
-            self.add_pulse_to_register(pulse)
+            if gen_ch not in first_pulse_registered:
+                first_pulse_registered.append(gen_ch)
+                self.add_pulse_to_register(pulse)
 
         self.synci(200)
 
     def add_pulse_to_register(self, pulse):
         """The task of this function is to call the set_pulse_registers function"""
 
-        if pulse["type"] == "qd":
-            if pulse["shape"] == "Gaussian":
-                self.add_gauss(ch=pulse["ch"], name=pulse["name"], sigma=pulse["sigma"], length=pulse["length"])
+        # TODO remove function
+        if pulse.type == PulseType.DRIVE:
+            gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "qd")
+        else:
+            gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "ro")
 
-            elif pulse["shape"] == "Drag":
+        time = self.soc.us2cycles(pulse.start * self.us)
+        gain = int(pulse.amplitude * self.max_gain)
+        phase = self.deg2reg(pulse.relative_phase, gen_ch=gen_ch)
+
+        us_length = pulse.duration * self.us
+        soc_length = self.soc.us2cycles(us_length)
+
+        if pulse.type == PulseType.DRIVE:
+            name = pulse.shape.name
+            sigma = us_length / pulse.shape.rel_sigma
+
+            freq = self.soc.freq2reg(pulse.frequency * self.MHz, gen_ch=gen_ch)
+
+            if isinstance(pulse.shape, Gaussian):
+                self.add_gauss(ch=gen_ch, name=name, sigma=sigma, length=soc_length)
+
+            elif isinstance(pulse.shape, Drag):
                 self.add_DRAG(
-                    ch=pulse["ch"],
-                    name=pulse["name"],
-                    sigma=pulse["sigma"],
-                    delta=pulse["delta"],
-                    alpha=pulse["alpha"],
-                    length=pulse["length"],
+                    ch=gen_ch,
+                    name=name,
+                    sigma=sigma,
+                    delta=sigma,  # TODO: check if correct
+                    alpha=pulse.beta,
+                    length=soc_length,
                 )
 
             else:
-                raise Exception(f'Pulse shape {pulse["shape"]} not recognized!')
+                raise NotImplementedError(f"Pulse shape {pulse.shape} not supported!")
 
             self.set_pulse_registers(
-                ch=pulse["ch"],
-                style=pulse["style"],
-                freq=pulse["freq"],
-                phase=pulse["phase"],
-                gain=pulse["gain"],
-                waveform=pulse["waveform"],
+                ch=gen_ch,
+                style="arb",
+                freq=freq,
+                phase=phase,
+                gain=gain,
+                waveform=name,
             )
 
-        elif pulse["type"] == "ro":
-            self.set_pulse_registers(
-                ch=pulse["ch"],
-                style=pulse["style"],
-                freq=pulse["freq"],
-                phase=pulse["phase"],
-                gain=pulse["gain"],
-                length=pulse["length"],
-                # waveform=pulse["waveform"],
-            )
+        elif pulse.type == PulseType.READOUT:
+            if not isinstance(pulse.shape, Rectangular):
+                raise NotImplementedError("Only Rectangular readout pulses are supported")
+
+            freq = self.soc.freq2reg(pulse.frequency * self.MHz, gen_ch=gen_ch, ro_ch=adc_ch)
+
+            self.set_pulse_registers(ch=gen_ch, style="const", freq=freq, phase=phase, gain=gain, length=soc_length)
         else:
-            raise Exception(f'Pulse type {pulse["type"]} not recognized!')
+            raise Exception(f"Pulse type {pulse.type} not recognized!")
 
     def body(self):
         """Execute sequence of pulses.
@@ -303,22 +208,30 @@ class ExecutePulseSequence(AveragerProgram):
         # list of channels where a pulse is already been executed
         first_pulse_executed = []
 
-        for serial, pulse in self.pulse_sequence.items():
-            if pulse["ch"] in first_pulse_executed:
+        for pulse in self.sequence:
+            time = self.soc.us2cycles(pulse.start * self.us)
+
+            # TODO remove function
+            if pulse.type == PulseType.DRIVE:
+                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "qd")
+            else:
+                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "ro")
+
+            if gen_ch in first_pulse_executed:
                 self.add_pulse_to_register(pulse)
             else:
-                first_pulse_executed.append(pulse["ch"])
+                first_pulse_executed.append(gen_ch)
 
-            if pulse["type"] == "qd":
-                self.pulse(ch=pulse["ch"], t=pulse["time"])
-            elif pulse["type"] == "ro":
+            if pulse.type == PulseType.DRIVE:
+                self.pulse(ch=gen_ch, t=time)
+            elif pulse.type == PulseType.READOUT:
                 self.measure(
-                    pulse_ch=pulse["ch"],
-                    adcs=[pulse["adc_ch"]],
-                    adc_trig_offset=pulse["adc_trig_offset"],
-                    t=pulse["time"],
-                    wait=pulse["wait"],
-                    syncdelay=pulse["syncdelay"],
+                    pulse_ch=gen_ch,
+                    adcs=[adc_ch],
+                    adc_trig_offset=self.adc_trig_offset,
+                    t=time,
+                    wait=False,  # TODO maybe better not hardcoded
+                    syncdelay=self.syncdelay,
                 )
         self.wait_all()
         self.sync_all(self.relax_delay)
