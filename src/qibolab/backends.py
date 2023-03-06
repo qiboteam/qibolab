@@ -40,6 +40,8 @@ class QibolabBackend(NumpyBackend):
 
         Args:
             circuit (:class:`qibo.core.circuit.Circuit`): Circuit to execute.
+            initial_state (:class:`qibo.core.circuit.Circuit`): Circuit to prepare the initial state.
+                If not ``None`` the total circuit executed is initial_state + circuit.
             nshots (int): Number of shots to sample from the experiment.
                 If ``None`` the default value provided as hardware_avg in the
                 calibration yml will be used.
