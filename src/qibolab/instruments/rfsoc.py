@@ -11,6 +11,7 @@ Registers 15-21 are to be used by sweepers
 
 import numpy as np
 from qick import AveragerProgram, QickSoc, RAveragerProgram
+from qick.qick_asm import QickRegisterManagerMixin
 
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.pulses import (
@@ -240,7 +241,7 @@ class ExecutePulseSequence(AveragerProgram):
         self.sync_all(self.relax_delay)
 
 
-class ExecuteSingleSweep(RAveragerProgram):
+class ExecuteSingleSweep(QickRegisterManagerMixin, RAveragerProgram):
     """This qick RAveragerProgram handles a qibo sequence of pulses with a Sweep"""
 
     def __init__(self, soc, cfg, sequence, sweeper):
@@ -275,6 +276,9 @@ class ExecuteSingleSweep(RAveragerProgram):
         self.relax_delay = cfg["repetition_duration"]
         self.syncdelay = self.us2cycles(1.0)  # TODO maybe better in runcard
         cfg["reps"] = cfg["nshots"]
+
+        cfg["start"] = self.sweeper.values[0]
+        cfg["step"] = self.sweeper.values[1] - self.sweeper.values[0]
         cfg["expts"] = len(self.sweeper.values)
 
         # connections  (for every qubit here are defined drive and readout lines)
@@ -312,7 +316,7 @@ class ExecuteSingleSweep(RAveragerProgram):
         if self.sweeper.parameter == Parameter.frequency:
             # Ro pulse are not supported
             # TODO remove function
-            gen_ch, ro_ch = self.from_qubit_to_ch(self.sweeper.pulse.qubit, "qd")
+            gen_ch, ro_ch = self.from_qubit_to_ch(self.sweeper.pulses[0].qubit, "qd")
             start_val = self.sweeper.values[0] * self.MHz
             start_val = self.freq2reg(start_val, gen_ch=gen_ch)
             self.sweep_register = self.new_reg(page=0, init_val=start_val)
@@ -378,7 +382,7 @@ class ExecuteSingleSweep(RAveragerProgram):
         us_length = pulse.duration * self.us
         soc_length = self.soc.us2cycles(us_length)
 
-        is_pulse_sweeped = self.sweeper.pulse.serial == pulse.serial
+        is_pulse_sweeped = self.sweeper.pulses[0].serial == pulse.serial
 
         if pulse.type == PulseType.DRIVE:
             name = pulse.shape.name
@@ -434,7 +438,7 @@ class ExecuteSingleSweep(RAveragerProgram):
         if self.sweeper.parameter == Parameter.frequency:
             # TODO remove function
             # maybe removable
-            gen_ch, ro_ch = self.from_qubit_to_ch(self.sweeper.pulse.qubit, "qd")
+            gen_ch, ro_ch = self.from_qubit_to_ch(self.sweeper.pulses[0].qubit, "qd")
             old_freq = self.reg2freq(self.soc.tproc.single_read(addr=addr), gen_ch=gen_ch)
             new_val = self.freq2reg(old_freq + self.sweeper_step, gen_ch=gen_ch)
         elif self.sweeper.parameter == Parameter.amplitude:
@@ -582,12 +586,14 @@ class TII_RFSOC4x2(AbstractInstrument):
 
         if len(sweepers) != 1:
             raise NotImplementedError("Only a single sweeper is supported")
+        if len(sweepers[0].pulses) != 1:
+            raise NotImplementedError("Only a single pulse per sweeper is supported")
 
         python_sweep = False
 
-        is_freq = sweepers[0].parameter != Parameter.frequency
-        is_amp = sweepers[0].parameter != Parameter.amplitude
-        if (not is_freq and not is_amp) or (is_freq and sweepers[0].pulse.type == PulseType.READOUT):
+        is_freq = sweepers[0].parameter == Parameter.frequency
+        is_amp = sweepers[0].parameter == Parameter.amplitude
+        if (not is_freq and not is_amp) or (is_freq and sweepers[0].pulses[0].type == PulseType.READOUT):
             python_sweep = True
 
         # general settings
@@ -598,18 +604,21 @@ class TII_RFSOC4x2(AbstractInstrument):
         # executing sweep program
         if not python_sweep:
             program = ExecuteSingleSweep(self.soc, self.cfg, sequence, sweepers[0])
-            avgi, avgq = program.acquire(
+            # avgi, avgq = program.acquire(
+            values, avgi, avgq = program.acquire(
                 self.soc, readouts_per_experiment=len(sequence.ro_pulses), load_pulses=True, progress=False, debug=False
             )
         else:
             for idx, pulse in enumerate(sequence):
-                if pulse.serial == sweepers[0].pulse.serial:
+                if pulse.serial == sweepers[0].pulses[0].serial:
                     idx_pulse = idx
                     break
 
-            avgi = []
-            avgq = []
-            for val in sweepers[0].range:
+            results = {}
+            for i, ro_pulse in enumerate(sequence.ro_pulses):
+                serial = ro_pulse.serial
+                results[serial] = [[], []]
+            for val in sweepers[0].values:
                 if is_freq:
                     sequence[idx_pulse].frequency = val
                 elif is_amp:
@@ -624,11 +633,24 @@ class TII_RFSOC4x2(AbstractInstrument):
                     progress=False,
                     debug=False,
                 )
-                avgi.append(single_i)
-                avgq.append(single_q)
+                for i, serial in enumerate(results.keys()):
+                    i_pulse = single_i[0][i]
+                    q_pulse = single_q[0][i]
+
+                    results[serial][0].append(i_pulse)
+                    results[serial][1].append(q_pulse)
+
+            t_res = {}
+            for i, serial in enumerate(results.keys()):
+                i_res = np.array(results[serial][0])
+                q_res = np.array(results[serial][1])
+                t_res[serial] = ExecutionResults.from_components(i_res, q_res)
+
+            return t_res
             # TODO implement sweep via python loop
 
         # converting results
+        # TODO what should be the output of a sweeper?
         results = {}
         for i, ro_pulse in enumerate(sequence.ro_pulses):
             i_pulse = np.array(avgi[0][i])
