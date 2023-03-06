@@ -7,6 +7,8 @@ settings:
     sampling_rate: 1000000000
     repetition_duration: 50_000
 
+resonator_type: 2D
+
 topology: # qubit - qubit connections
 -   [ 1, 0, 1, 0, 0, 0]
 -   [ 0, 1, 1, 0, 0, 0]

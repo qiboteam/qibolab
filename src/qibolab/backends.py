@@ -21,7 +21,6 @@ class QibolabBackend(NumpyBackend):
             self.platform = platform
         else:
             self.platform = Platform(platform, runcard)
-
         self.versions = {
             "qibo": qibo_version,
             "numpy": self.np.__version__,
@@ -87,15 +86,16 @@ class QibolabBackend(NumpyBackend):
         result = CircuitResult(self, native_circuit, readout, nshots)
 
         # Register measurement outcomes
-        for gate in native_circuit.queue:
-            if isinstance(gate, gates.M):
-                samples = []
-                for serial in gate.pulses:
-                    shots = readout[serial].shots
-                    if shots is not None:
-                        samples.append(shots)
-                gate.result.backend = self
-                gate.result.register_samples(np.array(samples).T)
+        if isinstance(readout, dict):
+            for gate in native_circuit.queue:
+                if isinstance(gate, gates.M):
+                    samples = []
+                    for serial in gate.pulses:
+                        shots = readout[serial].shots
+                        if shots is not None:
+                            samples.append(shots)
+                    gate.result.backend = self
+                    gate.result.register_samples(np.array(samples).T)
         return result
 
     def circuit_result_tensor(self, result):
