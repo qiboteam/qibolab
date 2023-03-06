@@ -152,6 +152,8 @@ class ExecutePulseSequence(AveragerProgram):
 
         time = self.soc.us2cycles(pulse.start * self.us)
         gain = int(pulse.amplitude * self.max_gain)
+        if pulse.amplitude > 1:
+            raise Exception("Relative amplitude higher than 1!")
         phase = self.deg2reg(pulse.relative_phase, gen_ch=gen_ch)
 
         us_length = pulse.duration * self.us
@@ -241,8 +243,8 @@ class ExecutePulseSequence(AveragerProgram):
         self.sync_all(self.relax_delay)
 
 
-class ExecuteSingleSweep(QickRegisterManagerMixin, RAveragerProgram):
-    """This qick RAveragerProgram handles a qibo sequence of pulses with a Sweep"""
+class ExecuteSingleSweep(RAveragerProgram):
+    """This qick AveragerProgram handles a qibo sequence of pulses"""
 
     def __init__(self, soc, cfg, sequence, sweeper):
         """In this function we define the most important settings and the sequence is transpiled.
@@ -263,7 +265,6 @@ class ExecuteSingleSweep(QickRegisterManagerMixin, RAveragerProgram):
         self.soc = soc
         self.soccfg = soc  # No need for a different soc config object since qick is on board
         self.sequence = sequence
-        self.sweeper = sweeper
 
         # conversion coefficients (in runcard we have Hz and ns)
         self.MHz = 0.000001
@@ -277,9 +278,11 @@ class ExecuteSingleSweep(QickRegisterManagerMixin, RAveragerProgram):
         self.syncdelay = self.us2cycles(1.0)  # TODO maybe better in runcard
         cfg["reps"] = cfg["nshots"]
 
-        cfg["start"] = self.sweeper.values[0]
-        cfg["step"] = self.sweeper.values[1] - self.sweeper.values[0]
-        cfg["expts"] = len(self.sweeper.values)
+        # sweeper Settings
+        self.sweeper = sweeper
+        cfg["start"] = sweeper.values[0]
+        cfg["step"] = sweeper.values[1] - sweeper.values[0]
+        cfg["expts"] = len(sweeper.values)
 
         # connections  (for every qubit here are defined drive and readout lines)
         self.connections = {
@@ -310,26 +313,24 @@ class ExecuteSingleSweep(QickRegisterManagerMixin, RAveragerProgram):
 
         """
 
-        # get a page and register for sweep-variable
-        # TODO maybe different function or better implementation in general
-        # maybe I need .item()
-        if self.sweeper.parameter == Parameter.frequency:
-            # Ro pulse are not supported
-            # TODO remove function
-            gen_ch, ro_ch = self.from_qubit_to_ch(self.sweeper.pulses[0].qubit, "qd")
-            start_val = self.sweeper.values[0] * self.MHz
-            start_val = self.freq2reg(start_val, gen_ch=gen_ch)
-            self.sweep_register = self.new_reg(page=0, init_val=start_val)
-            self.sweeper_step = (self.sweeper.values[1] - self.sweeper.values[0]) * self.MHz
-            # self.sweeper_step = self.freq2reg(
-            #    (self.sweeper.values[1] - self.sweeper.values[0]) * self.MHz,
-            #     gen_ch=gen_ch)
-        elif self.sweeper.parameter == Parameter.amplitude:
-            start_val = self.sweeper.values[0]
-            self.sweep_register = self.new_reg(page=0, init_val=start_val)
-            self.sweeper_step = self.sweeper.values[1] - self.sweeper.values[0]
+        # find page and register of sweeper
+        if self.sweeper.pulses[0].type == PulseType.DRIVE:
+            gen_ch, adc_ch = self.from_qubit_to_ch(self.sweeper.pulses[0].qubit, "qd")
         else:
-            raise NotImplementedError()
+            gen_ch, adc_ch = self.from_qubit_to_ch(self.sweeper.pulses[0].qubit, "ro")
+        self.sweeper_page = self.ch_page(gen_ch)
+        if self.sweeper.parameter == Parameter.frequency:
+            self.sweeper_reg = self.sreg(gen_ch, "freq")
+            self.cfg["start"] = self.soc.freq2reg(self.cfg["start"] * self.MHz, gen_ch)
+            self.cfg["step"] = self.soc.freq2reg(self.cfg["step"] * self.MHz, gen_ch)
+
+        elif self.sweeper.parameter == Parameter.amplitude:
+            self.sweeper_reg = self.sreg(gen_ch, "gain")
+            self.cfg["start"] = self.cfg["start"] * self.max_gain
+            self.cfg["step"] = self.cfg["step"] * self.max_gain
+
+            if self.cfg["start"] + self.cfg["step"] * self.cfg["expts"] > self.max_gain:
+                raise Exception("Amplitude higher than maximum!")
 
         # declare nyquist zones for all used channels
         ch_already_declared = []
@@ -364,6 +365,20 @@ class ExecuteSingleSweep(QickRegisterManagerMixin, RAveragerProgram):
             else:
                 print(f"Avoided redecalaration of channel {adc_ch}")  # TODO
 
+        # list of channels where a pulse is already been registered
+        first_pulse_registered = []
+
+        for pulse in self.sequence:
+            # TODO remove function
+            if pulse.type == PulseType.DRIVE:
+                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "qd")
+            else:
+                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "ro")
+
+            if gen_ch not in first_pulse_registered:
+                first_pulse_registered.append(gen_ch)
+                self.add_pulse_to_register(pulse)
+
         self.synci(200)
 
     def add_pulse_to_register(self, pulse):
@@ -377,21 +392,18 @@ class ExecuteSingleSweep(QickRegisterManagerMixin, RAveragerProgram):
 
         time = self.soc.us2cycles(pulse.start * self.us)
         gain = int(pulse.amplitude * self.max_gain)
+        if pulse.amplitude > 1:
+            raise Exception("Relative amplitude higher than 1!")
         phase = self.deg2reg(pulse.relative_phase, gen_ch=gen_ch)
 
         us_length = pulse.duration * self.us
         soc_length = self.soc.us2cycles(us_length)
 
-        is_pulse_sweeped = self.sweeper.pulses[0].serial == pulse.serial
-
         if pulse.type == PulseType.DRIVE:
             name = pulse.shape.name
             sigma = us_length / pulse.shape.rel_sigma
 
-            if not (is_pulse_sweeped and self.sweeper.parameter == Parameter.frequency):
-                freq = self.soc.freq2reg(pulse.frequency * self.MHz, gen_ch=gen_ch)
-            else:  # read self.sweep_register
-                freq = self.soc.tproc.single_read(addr=self.sweep_register.addr)
+            freq = self.soc.freq2reg(pulse.frequency * self.MHz, gen_ch=gen_ch)
 
             if isinstance(pulse.shape, Gaussian):
                 self.add_gauss(ch=gen_ch, name=name, sigma=sigma, length=soc_length)
@@ -422,29 +434,14 @@ class ExecuteSingleSweep(QickRegisterManagerMixin, RAveragerProgram):
             if not isinstance(pulse.shape, Rectangular):
                 raise NotImplementedError("Only Rectangular readout pulses are supported")
 
-            if not (is_pulse_sweeped and self.sweeper.parameter == Parameter.frequency):
-                freq = self.soc.freq2reg(pulse.frequency * self.MHz, gen_ch=gen_ch, ro_ch=adc_ch)
-            else:  # read self.sweep_register
-                freq = self.soc.tproc.single_read(addr=self.sweep_register.addr)
+            freq = self.soc.freq2reg(pulse.frequency * self.MHz, gen_ch=gen_ch, ro_ch=adc_ch)
 
             self.set_pulse_registers(ch=gen_ch, style="const", freq=freq, phase=phase, gain=gain, length=soc_length)
         else:
             raise Exception(f"Pulse type {pulse.type} not recognized!")
 
     def update(self):
-        # register self.sweep_register.addr
-        addr = self.sweep_register.addr
-
-        if self.sweeper.parameter == Parameter.frequency:
-            # TODO remove function
-            # maybe removable
-            gen_ch, ro_ch = self.from_qubit_to_ch(self.sweeper.pulses[0].qubit, "qd")
-            old_freq = self.reg2freq(self.soc.tproc.single_read(addr=addr), gen_ch=gen_ch)
-            new_val = self.freq2reg(old_freq + self.sweeper_step, gen_ch=gen_ch)
-        elif self.sweeper.parameter == Parameter.amplitude:
-            new_val = self.soc.tproc.single_read(addr=addr) + self.sweeper_step
-
-        self.soc.tproc.single_write(addr=addr, data=new_val)
+        self.mathi(self.sweeper_page, self.sweeper_reg, self.sweeper_reg, "+", self.cfg["step"])
 
     def body(self):
         """Execute sequence of pulses.
@@ -457,6 +454,9 @@ class ExecuteSingleSweep(QickRegisterManagerMixin, RAveragerProgram):
         At the end of the pulse wait for clock.
         """
 
+        # list of channels where a pulse is already been executed
+        first_pulse_executed = []
+
         for pulse in self.sequence:
             time = self.soc.us2cycles(pulse.start * self.us)
 
@@ -466,7 +466,10 @@ class ExecuteSingleSweep(QickRegisterManagerMixin, RAveragerProgram):
             else:
                 gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "ro")
 
-            self.add_pulse_to_register(pulse)
+            if gen_ch in first_pulse_executed:
+                self.add_pulse_to_register(pulse)
+            else:
+                first_pulse_executed.append(gen_ch)
 
             if pulse.type == PulseType.DRIVE:
                 self.pulse(ch=gen_ch, t=time)
@@ -564,102 +567,93 @@ class TII_RFSOC4x2(AbstractInstrument):
 
         return results
 
-    def sweep(self, qubits, sequence, *sweepers, relaxation_time, nshots=1000, average=True):
-        """Play a pulse sequence while sweeping one or more parameters.
+    def recursive_python_sweep(self, qubits, sequence, *sweepers):
+        if len(sweepers) == 0:
+            program = ExecutePulseSequence(self.soc, self.cfg, sequence)
+            avgi, avgq = program.acquire(
+                self.soc, readouts_per_experiment=len(sequence.ro_pulses), load_pulses=True, progress=False, debug=False
+            )
+            results = {}
+            for i, ro_pulse in enumerate(sequence.ro_pulses):
+                i_pulse = np.array(avgi[0][i])
+                q_pulse = np.array(avgq[0][i])
 
-        Args:
-            qubits: parameter not used
-            sequence (PulseSequence): arbitary qibolab pulse sequence to execute
-            *sweepers (list): A list of qibolab Sweepers objects
-            nshots (int): number of shots
-            relaxation_time (int): delay before readout (ms)
-            average: parameter not used
+                serial = ro_pulse.serial
+                results[serial] = ExecutionResults.from_components(i_pulse, q_pulse)
+            return results
+        else:
+            sweep_results = []
+            sweeper = sweepers[0]
+            if len(sweeper.pulses) > 1:
+                raise NotImplementedError("Only one pulse per sweep is supported")
+            for idx, pulse in enumerate(sequence):
+                # identify index of sweeped pulse
+                if pulse.serial == sweeper.pulses[0].serial:
+                    idx_pulse = idx
+                    break
 
-        Returns:
-            A dictionary mapping the readout pulse serial to am ExecutionResults object
+            for val in sweeper.values:
+                if sweeper.parameter == Parameter.frequency:
+                    sequence[idx_pulse].frequency = val
+                elif sweeper.parameter == Parameter.amplitude:
+                    # this is relative!!
+                    sequence[idx_pulse].amplitude = val
+                else:
+                    raise NotImplementedError("Parameter type not implemented")
+                res = self.recursive_python_sweep(qubits, sequence, *sweepers[1:])
+                sweep_results.append(res)
+        return sweep_results
 
-        Raises:
-            Exception = If attempting to use more than one Sweeper.
-            Exception = If average is set to False
+    def get_if_python_sweep(self, sequence, *sweepers):
+        python_sweep = True
 
-        """
-
-        if len(sweepers) != 1:
-            raise NotImplementedError("Only a single sweeper is supported")
-        if len(sweepers[0].pulses) != 1:
-            raise NotImplementedError("Only a single pulse per sweeper is supported")
-
-        python_sweep = False
-
-        is_freq = sweepers[0].parameter == Parameter.frequency
         is_amp = sweepers[0].parameter == Parameter.amplitude
-        if (not is_freq and not is_amp) or (is_freq and sweepers[0].pulses[0].type == PulseType.READOUT):
-            python_sweep = True
+        is_freq = sweepers[0].parameter == Parameter.frequency
 
-        # general settings
+        # if there is only a sweeper
+        if len(sweepers) == 1:
+            is_ro = sweepers[0].pulses[0].type == PulseType.READOUT
+            # if it's not a sweep on the readout freq
+            if not (is_freq and is_ro):
+                # if the sweep is on the first pulse of the channel
+                for pulse in sequence:
+                    same_qubit = pulse.qubit == sweepers[0].pulses[0].qubit
+                    same_pulse = pulse.serial == sweepers[0].pulses[0].serial
+                    if same_qubit and same_pulse:
+                        python_sweep = False
+                    elif same_qubit and not same_pulse:
+                        break
+        return python_sweep
+
+    def convert_sweep_results(self, sweeper, sequence, avgi, avgq):
+        sweep_results = []
+        for j, val in enumerate(sweeper.values):
+            results = {}
+
+            for i, ro_pulse in enumerate(sequence.ro_pulses):
+                i_pulse = np.array(avgi[0][i][j])
+                q_pulse = np.array(avgq[0][i][j])
+
+                serial = ro_pulse.serial  # TODO this can change during
+                results[serial] = ExecutionResults.from_components(i_pulse, q_pulse)
+            sweep_results.append(results)
+        return sweep_results
+
+    def sweep(self, qubits, sequence, *sweepers, relaxation_time, nshots=1000, average=True):
         self.cfg["nshots"] = nshots
         if relaxation_time is not None:
             self.cfg["repetition_duration"] = relaxation_time
 
-        # executing sweep program
-        if not python_sweep:
+        python_sweep = self.get_if_python_sweep(sequence, *sweepers)
+
+        if python_sweep:
+            return self.recursive_python_sweep(qubits, sequence, *sweepers)
+        else:
             program = ExecuteSingleSweep(self.soc, self.cfg, sequence, sweepers[0])
-            # avgi, avgq = program.acquire(
             values, avgi, avgq = program.acquire(
                 self.soc, readouts_per_experiment=len(sequence.ro_pulses), load_pulses=True, progress=False, debug=False
             )
-        else:
-            for idx, pulse in enumerate(sequence):
-                if pulse.serial == sweepers[0].pulses[0].serial:
-                    idx_pulse = idx
-                    break
-
-            results = {}
-            for i, ro_pulse in enumerate(sequence.ro_pulses):
-                serial = ro_pulse.serial
-                results[serial] = [[], []]
-            for val in sweepers[0].values:
-                if is_freq:
-                    sequence[idx_pulse].frequency = val
-                elif is_amp:
-                    sequence[idx_pulse].amplitude = val
-                else:
-                    raise NotImplementedError("Only amplitude and Freq are implemented")
-                program = ExecutePulseSequence(self.soc, self.cfg, sequence)
-                single_i, single_q = program.acquire(
-                    self.soc,
-                    readouts_per_experiment=len(sequence.ro_pulses),
-                    load_pulses=True,
-                    progress=False,
-                    debug=False,
-                )
-                for i, serial in enumerate(results.keys()):
-                    i_pulse = single_i[0][i]
-                    q_pulse = single_q[0][i]
-
-                    results[serial][0].append(i_pulse)
-                    results[serial][1].append(q_pulse)
-
-            t_res = {}
-            for i, serial in enumerate(results.keys()):
-                i_res = np.array(results[serial][0])
-                q_res = np.array(results[serial][1])
-                t_res[serial] = ExecutionResults.from_components(i_res, q_res)
-
-            return t_res
-            # TODO implement sweep via python loop
-
-        # converting results
-        # TODO what should be the output of a sweeper?
-        results = {}
-        for i, ro_pulse in enumerate(sequence.ro_pulses):
-            i_pulse = np.array(avgi[0][i])
-            q_pulse = np.array(avgq[0][i])
-
-            serial = ro_pulse.serial
-            results[serial] = ExecutionResults.from_components(i_pulse, q_pulse)
-
-        return results
+            return self.convert_sweep_results(sweepers[0], sequence, avgi, avgq)
 
     def start(self):
         """Empty method to comply with AbstractInstrument interface."""
