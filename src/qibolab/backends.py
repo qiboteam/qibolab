@@ -51,10 +51,17 @@ class QibolabBackend(NumpyBackend):
         Returns:
             CircuitResult object containing the results acquired from the execution.
         """
-        if initial_state is not None:
+        if not isinstance(initial_state, type(circuit)):
             raise_error(
                 ValueError,
-                "Hardware backend does not support initial state in circuits.",
+                "Hardware backend only supports circuits as initial states.",
+            )
+        else:
+            self.execute_circuit(
+                circuit=initial_state + circuit,
+                nshots=nshots,
+                fuse_one_qubit=fuse_one_qubit,
+                check_transpiled=check_transpiled,
             )
 
         two_qubit_natives = self.platform.two_qubit_natives
