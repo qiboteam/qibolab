@@ -34,7 +34,7 @@ class SGS100A(LocalOscillator):
     def power(self):
         if self.is_connected:
             return self.device.get("power")
-        return self._frequency
+        return self._power
 
     @power.setter
     def power(self, x):

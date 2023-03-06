@@ -1,8 +1,35 @@
 from qibo.config import raise_error
 
+from qibolab.designs.basic import BasicInstrumentDesign
 from qibolab.designs.channels import Channel, ChannelMap
 from qibolab.designs.mixer import MixerInstrumentDesign
 from qibolab.platforms.platform import DesignPlatform
+
+
+def create_dummy(runcard):
+    """Create a single qubit platform using the dummy instrument.
+
+    Useful for testing.
+    """
+    from qibolab.instruments.dummy import DummyInstrument
+
+    # Create channel objects
+    channels = ChannelMap()
+    channels |= ChannelMap.from_names("readout", "drive", "flux")
+
+    # Create dummy controller
+    controller = DummyInstrument("dummy", 0)
+    # Create design
+    design = BasicInstrumentDesign(controller, channels)
+    # Create platform
+    platform = DesignPlatform("dummy", design, runcard)
+
+    # map channels to qubits
+    platform.qubits[0].readout = channels["readout"]
+    platform.qubits[0].drive = channels["drive"]
+    platform.qubits[0].flux = channels["flux"]
+
+    return platform
 
 
 def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=False):
@@ -143,7 +170,7 @@ def Platform(name, runcard=None, design=None):
             raise_error(RuntimeError, f"Runcard {name} does not exist.")
 
     if name == "dummy":
-        from qibolab.platforms.dummy import DummyPlatform as Device
+        return create_dummy(runcard)
     elif name == "icarusq":
         from qibolab.platforms.icplatform import ICPlatform as Device
     elif name == "qw5q_gold":
