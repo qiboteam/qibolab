@@ -717,7 +717,11 @@ class QMOPX(AbstractInstrument):
             else:
                 raise_error(NotImplementedError, f"Cannot sweep frequency of pulse of type {pulse.type}.")
             # convert to IF frequency for readout and drive pulses
-            freqs0.append(declare(int, value=int(pulse.frequency - lo_frequency)))
+            f0 = int(pulse.frequency - lo_frequency)
+            freqs0.append(declare(int, value=f0))
+            # check if sweep is within the supported bandwidth [-400, 400] MHz
+            if abs(min(sweeper.values) + f0) > 4e8 or abs(max(sweeper.values) + f0) > 4e8:
+                raise_error(ValueError, "Frequency sweep values are beyond instrument bandwidth.")
 
         # is it fine to have this declaration inside the ``nshots`` QUA loop?
         f = declare(int)
@@ -733,11 +737,13 @@ class QMOPX(AbstractInstrument):
     def sweep_amplitude(self, sweepers, qubits, qmsequence, relaxation_time):
         from qm.qua import amp
 
-        # TODO: It should be -2 < amp(a) < 2 otherwise the we get weird results
-        # without an error. Amplitude should be fixed to allow arbitrary values
-        # in qibocal
-
         sweeper = sweepers[0]
+        # TODO: Consider sweeping amplitude without multiplication
+        if min(sweeper.values) < -2:
+            raise_error(ValueError, "Amplitude sweep values are <-2 which is not supported.")
+        if max(sweeper.values) > 2:
+            raise_error(ValueError, "Amplitude sweep values are >2 which is not supported.")
+
         a = declare(fixed)
         with for_(*from_array(a, sweeper.values)):
             for pulse in sweeper.pulses:
