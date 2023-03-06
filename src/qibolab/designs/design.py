@@ -3,6 +3,7 @@ from typing import List
 
 from qibo.config import log, raise_error
 
+from qibolab.designs.channels import ChannelMap
 from qibolab.instruments.abstract import AbstractInstrument
 
 
@@ -11,12 +12,13 @@ class InstrumentDesign:
     """Instrument design that uses a single controller.
 
     Attributes:
-        controller (:class:`qibolab.instruments.abstract.AbstractInstrument`): Instrument used for sending pulses and retrieving feedback.
+        instruments (list): List of :class:`qibolab.instruments.abstract.AbstractInstrument` objects.
+        channels (:class:`qibolab.designs.ChannelMap`): Channel map describing the connections in the lab.
         _is_connected (bool): Boolean that shows whether instruments are connected.
     """
 
     instruments: List[AbstractInstrument]
-    channels: dict = field(default_factory=dict)
+    channels: ChannelMap = field(default_factory=ChannelMap)
     _is_connected: bool = field(default=False, init=False)
 
     def connect(self):
@@ -62,8 +64,11 @@ class InstrumentDesign:
         result = {}
         for instrument in self.instruments:
             new_result = instrument.play(*args, **kwargs)
-            if new_result is not None:
+            if isinstance(new_result, dict):
                 result.update(new_result)
+            elif new_result is not None:
+                # currently the result of QMSim is not a dict
+                result = new_result
         return result
 
     def sweep(self, *args, **kwargs):
@@ -71,6 +76,9 @@ class InstrumentDesign:
         result = {}
         for instrument in self.instruments:
             new_result = instrument.sweep(*args, **kwargs)
-            if new_result is not None:
+            if isinstance(new_result, dict):
                 result.update(new_result)
+            elif new_result is not None:
+                # currently the result of QMSim is not a dict
+                result = new_result
         return result
