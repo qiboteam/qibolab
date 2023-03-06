@@ -596,11 +596,25 @@ class TII_RFSOC4x2(AbstractInstrument):
                 if sweeper.parameter == Parameter.frequency:
                     sequence[idx_pulse].frequency = val
                 elif sweeper.parameter == Parameter.amplitude:
-                    # this is relative!!
+                    # TODO: understand how this is relative!!
                     sequence[idx_pulse].amplitude = val
                 else:
                     raise NotImplementedError("Parameter type not implemented")
-                res = self.recursive_python_sweep(qubits, sequence, *sweepers[1:])
+                if len(sweepers) == 0:
+                    if not self.get_if_python_sweep(sequence, *sweepers):
+                        program = ExecuteSingleSweep(self.soc, self.cfg, sequence, sweepers[0])
+                        values, avgi, avgq = program.acquire(
+                            self.soc,
+                            readouts_per_experiment=len(sequence.ro_pulses),
+                            load_pulses=True,
+                            progress=False,
+                            debug=False,
+                        )
+                        res = self.convert_sweep_results(sweepers[0], sequence, avgi, avgq)
+                    else:
+                        res = self.recursive_python_sweep(qubits, sequence, *sweepers[1:])
+                else:
+                    res = self.recursive_python_sweep(qubits, sequence, *sweepers[1:])
                 sweep_results.append(res)
         return sweep_results
 
@@ -644,16 +658,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         if relaxation_time is not None:
             self.cfg["repetition_duration"] = relaxation_time
 
-        python_sweep = self.get_if_python_sweep(sequence, *sweepers)
-
-        if python_sweep:
-            return self.recursive_python_sweep(qubits, sequence, *sweepers)
-        else:
-            program = ExecuteSingleSweep(self.soc, self.cfg, sequence, sweepers[0])
-            values, avgi, avgq = program.acquire(
-                self.soc, readouts_per_experiment=len(sequence.ro_pulses), load_pulses=True, progress=False, debug=False
-            )
-            return self.convert_sweep_results(sweepers[0], sequence, avgi, avgq)
+        return self.recursive_python_sweep(qubits, sequence, *sweepers)
 
     def start(self):
         """Empty method to comply with AbstractInstrument interface."""
