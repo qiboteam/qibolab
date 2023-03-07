@@ -462,24 +462,10 @@ class QMOPX(AbstractInstrument):
         host, port = self.address.split(":")
         self.manager = QuantumMachinesManager(host, int(port))
 
-    def setup(self, qubits, relaxation_time=0, time_of_flight=0, smearing=0, **_kwargs):
-        """Set general machine options and register flux elements in the ``config``.
-
-        Flux elements should be registered on all qubits even when they are not used.
-
-        Args:
-            qubits (list): List of :class:`qibolab.platforms.abstract.Qubit`.
-            relaxation_time (int): Default time to wait between shots so that the qubit relaxes to
-            its ground state.
-            time_of_flight (int): Time of flight used for hardware signal integration.
-            smearing (int): Smearing used for hardware signal integration.
-        """
-        self.time_of_flight = time_of_flight
-        self.smearing = smearing
+    def setup(self):
+        """Deprecated method."""
         # controllers are defined when registering pulses
-        for qubit in qubits.values():
-            if qubit.flux:
-                self.config.register_flux_element(qubit)
+        pass
 
     def start(self):
         # TODO: Start the OPX flux offsets?
@@ -608,6 +594,12 @@ class QMOPX(AbstractInstrument):
             nshots (int): Number of repetitions (shots) of the experiment.
             relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
         """
+        # register flux elements for all qubits so that they are
+        # always at sweetspot even when they are not used
+        for qubit in qubits.values():
+            if qubit.flux:
+                self.config.register_flux_element(qubit)
+
         if not sequence:
             return {}
         # Current driver cannot play overlapping pulses on drive and flux channels
