@@ -39,7 +39,9 @@ class QibolabBackend(NumpyBackend):
         """Executes a quantum circuit.
 
         Args:
-            circuit (:class:`qibo.core.circuit.Circuit`): Circuit to execute.
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to execute.
+            initial_state (:class:`qibo.models.circuit.Circuit`): Circuit to prepare the initial state.
+                If ``None`` the default |00...0> state is used.
             nshots (int): Number of shots to sample from the experiment.
                 If ``None`` the default value provided as hardware_avg in the
                 calibration yml will be used.
@@ -51,10 +53,17 @@ class QibolabBackend(NumpyBackend):
         Returns:
             CircuitResult object containing the results acquired from the execution.
         """
-        if initial_state is not None:
+        if not isinstance(initial_state, type(circuit)):
             raise_error(
                 ValueError,
-                "Hardware backend does not support initial state in circuits.",
+                "Hardware backend only supports circuits as initial states.",
+            )
+        else:
+            self.execute_circuit(
+                circuit=initial_state + circuit,
+                nshots=nshots,
+                fuse_one_qubit=fuse_one_qubit,
+                check_transpiled=check_transpiled,
             )
 
         two_qubit_natives = self.platform.two_qubit_natives
