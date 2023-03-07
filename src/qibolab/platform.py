@@ -26,7 +26,6 @@ def create_dummy(runcard):
     platform.qubits[0].readout = channels["readout"]
     platform.qubits[0].drive = channels["drive"]
     platform.qubits[0].flux = channels["flux"]
-
     return platform
 
 
@@ -147,6 +146,12 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
         qubits[q].drive = channels[f"L3-{10 + q}"]
         qubits[q].flux = channels[f"L4-{q}"]
         channels[f"L4-{q}"].qubit = qubits[q]
+
+    # set maximum allowed bias values to protect amplifier
+    # relevant only for qubits where an amplifier is used
+    for q in [0, 3, 4]:
+        platform.qubits[q].flux.max_bias = 0.2
+
     return platform
 
 

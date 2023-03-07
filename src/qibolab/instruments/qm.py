@@ -766,7 +766,17 @@ class QMOPX(AbstractInstrument):
         from qm.qua import set_dc_offset
 
         sweeper = sweepers[0]
-        bias0 = [declare(fixed, value=qubits[q].flux.bias) for q in sweeper.qubits]
+        bias0 = []
+        for q in sweeper.qubits:
+            b0 = qubits[q].flux.bias
+            max_bias = qubits[q].flux.max_bias
+            max_value = max(abs(min(sweeper.values) + b0), abs(max(sweeper.values) + b0))
+            if max_bias is not None and max_value > max_bias:
+                raise_error(
+                    ValueError,
+                    f"Cannot sweep bias up to {max_value} because the maximum supported value is {max_bias}.",
+                )
+            bias0.append(declare(fixed, value=b0))
         b = declare(fixed)
         with for_(*from_array(b, sweeper.values)):
             for q, b0 in zip(sweeper.qubits, bias0):
