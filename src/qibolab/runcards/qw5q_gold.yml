@@ -22,8 +22,9 @@ native_gates:
         0: # qubit number
             RX:
                 duration: 40
-                amplitude: 0.005
-                frequency: 4_650_000_000
+                amplitude: 0.05
+                #frequency: 4_995_300_000
+                frequency: 5_010_300_000
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -41,7 +42,7 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.05
-                frequency: 4_848_763_000
+                frequency: 4_852_223_000
                 #frequency: 4_718_515_000 # 02 transition (more likely)
                 shape: Drag(5, -0.02)
                 type: qd # qubit drive
@@ -59,7 +60,7 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.05682
-                frequency: 5_782_623_000
+                frequency: 5_795_030_000
                 #frequency: 5_661_400_000 # 02 transition
                 shape: Drag(5, -0.04) #Gaussian(5)
                 type: qd # qubit drive
@@ -77,7 +78,8 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.1587
-                frequency: 6_715_582_000
+                frequency: 6_756_682_000
+                #frequency: 6_715_582_000
                 #frequency: 6_628_822_000 # 02 transition
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -95,14 +97,14 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.0617
-                frequency: 6_583_293_000
+                frequency: 6_579_113_000
                 shape: Drag(5, 0.0) #Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 1000 # 640
-                amplitude: 0.005
+                amplitude: 0.004 # 0.0026
                 frequency: 8_058_472_000
                 shape: Rectangular()
                 type: ro # readout
@@ -164,7 +166,7 @@ characterization:
             drive_frequency: 0.0
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.13
+            sweetspot: -0.1176
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
@@ -247,7 +249,7 @@ characterization:
             drive_frequency: 6_585_053_000
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.115
+            sweetspot: -0.1105
             filter: {}
             # parameters for single shot classification
             threshold: 0.00013079660165463033
