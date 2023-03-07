@@ -32,8 +32,9 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
-                frequency: 7_226_500_000
+                amplitude: 0.001
+                frequency: 7_225_846_000
+                #frequency: 7_209_600_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -51,7 +52,7 @@ native_gates:
             MZ:
                 duration: 620
                 amplitude: 0.003
-                frequency: 7_451_440_000
+                frequency: 7_453_063_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -69,7 +70,7 @@ native_gates:
             MZ:
                 duration: 960
                 amplitude: 0.0035
-                frequency: 7_654_407_000
+                frequency: 7_654_952_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -87,7 +88,7 @@ native_gates:
             MZ:
                 duration: 960
                 amplitude: 0.007
-                frequency: 7_801_067_000
+                frequency: 7_802_785_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -165,7 +166,7 @@ characterization:
             drive_frequency: 0.0
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.0
+            sweetspot: -0.14
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
@@ -182,7 +183,7 @@ characterization:
             drive_frequency: 4_855_663_000
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.047
+            sweetspot: 0.28
             filter: {}
             # parameters for single shot classification
             threshold: 0.00028502261712637096
@@ -203,10 +204,11 @@ characterization:
             drive_frequency: 5_799_876_000
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.045
-            filter:
-                feedforward: [1.0684635881381783, -1.0163217174522334]
-                feedback: [0.947858129314055]
+            sweetspot: -0.28
+            filter: {}
+            #filter:
+            #    feedforward: [1.0684635881381783, -1.0163217174522334]
+            #    feedback: [0.947858129314055]
             # parameters for single shot classification
             threshold: 0.0002694329123116206
             iq_angle: 4.912447775569025
@@ -226,7 +228,7 @@ characterization:
             drive_frequency: 6_760_700_000
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.034
+            sweetspot: -0.15
             filter: {}
             # parameters for single shot classification
             threshold: 0.0003363427381347193
@@ -247,7 +249,7 @@ characterization:
             drive_frequency: 6_585_053_000
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.057
+            sweetspot: -0.115
             filter: {}
             # parameters for single shot classification
             threshold: 0.00013079660165463033
