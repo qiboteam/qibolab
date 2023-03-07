@@ -16,7 +16,7 @@ native_gates:
     single_qubit:
         0: # qubit number
             RX:
-                duration: 400
+                duration: 40
                 amplitude: 0.8
                 frequency: 8269000000
                 shape: Gaussian(4)
@@ -24,7 +24,7 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 3000
+                duration: 2000
                 amplitude: 0.01
                 frequency: 7281300000
                 shape: Rectangular()
@@ -35,7 +35,7 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            readout_frequency: 7.2813e+9
+            readout_frequency: 7281300000
             resonator_polycoef_flux: []
             drive_frequency: 5.44045e+9
             T1: 0.

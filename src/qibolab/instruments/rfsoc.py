@@ -5,15 +5,17 @@ This driver needs the library Qick installed
 Supports the following FPGA:
  A   RFSoC 4x2
 
-In page 0, register 13-14 are used for internal counters.
-Registers 15-21 are to be used by sweepers
 """
+
+from copy import deepcopy
+from typing import List
 
 import numpy as np
 from qick import AveragerProgram, QickSoc, RAveragerProgram
 from qick.qick_asm import QickRegisterManagerMixin
 
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
+from qibolab.platforms.abstract import Qubit
 from qibolab.pulses import (
     Drag,
     Gaussian,
@@ -24,7 +26,7 @@ from qibolab.pulses import (
     ReadoutPulse,
     Rectangular,
 )
-from qibolab.result import ExecutionResults
+from qibolab.result import AveragedResults, ExecutionResults
 from qibolab.sweeper import Parameter, Sweeper
 
 
@@ -263,8 +265,8 @@ class ExecuteSingleSweep(RAveragerProgram):
 
         # sweeper Settings
         self.sweeper = sweeper
-        cfg["start"] = sweeper.values[0]
-        cfg["step"] = sweeper.values[1] - sweeper.values[0]
+        # cfg["start"] = sweeper.values[0]
+        # cfg["step"] = sweeper.values[1] - sweeper.values[0]
         cfg["expts"] = len(sweeper.values)
 
         super().__init__(soc, cfg)
@@ -288,15 +290,17 @@ class ExecuteSingleSweep(RAveragerProgram):
         gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
 
         self.sweeper_page = self.ch_page(gen_ch)
+        start = self.sweeper.values[0]
+        step = self.sweeper.values[1] - self.sweeper.values[0]
         if self.sweeper.parameter == Parameter.frequency:
             self.sweeper_reg = self.sreg(gen_ch, "freq")
-            self.cfg["start"] = self.soc.freq2reg(self.cfg["start"] * self.MHz, gen_ch)
-            self.cfg["step"] = self.soc.freq2reg(self.cfg["step"] * self.MHz, gen_ch)
+            self.cfg["start"] = self.soc.freq2reg(start * self.MHz, gen_ch)
+            self.cfg["step"] = self.soc.freq2reg(step * self.MHz, gen_ch)
 
         elif self.sweeper.parameter == Parameter.amplitude:
             self.sweeper_reg = self.sreg(gen_ch, "gain")
-            self.cfg["start"] = self.cfg["start"] * self.max_gain
-            self.cfg["step"] = self.cfg["step"] * self.max_gain
+            self.cfg["start"] = int(start * self.max_gain)
+            self.cfg["step"] = int(step * self.max_gain)
 
             if self.cfg["start"] + self.cfg["step"] * self.cfg["expts"] > self.max_gain:
                 raise Exception("Amplitude higher than maximum!")
@@ -455,66 +459,88 @@ class ExecuteSingleSweep(RAveragerProgram):
 class TII_RFSOC4x2(AbstractInstrument):
     """Instrument object for controlling the RFSoC4x2 FPGA.
 
-    The connection requires the FPGA to have a server currently listening.
-    The ``connect`` and the ``setup`` functions must be called before playing pulses with
-    ``play`` (for arbitrary qibolab ``PulseSequence``) or ``sweep``.
+    Playing pulses requires first the execution of the ``setup`` function.
+    The two way of executing pulses are with ``play`` (for arbitrary qibolab ``PulseSequence``) or
+    with ``sweep`` that execute a ``PulseSequence`` object with one or more ``Sweeper``.
 
     Args:
         name (str): Name of the instrument instance.
-        address (str): IP address and port for connecting to the FPGA.
+
+    Attributes:
+        cfg (dict): Configuration dictionary required for pulse execution.
+        soc (QickSoc): ``Qick`` object needed to access system blocks.
     """
 
-    def __init__(self, name: str, address: str):
+    def __init__(self, name: str, address: str = None):
+        # The address parameter should be None since qibolab is executed directly on-board
         super().__init__(name, address)
         self.cfg: dict = {}
-        self.is_connected = True
         self.soc = QickSoc()
 
     def connect(self):
-        """Connects to the FPGA instrument."""
+        """Empty method to comply with AbstractInstrument interface."""
         pass
 
-    def setup(self, qubits, sampling_rate, repetition_duration, adc_trig_offset, max_gain, **kwargs):
+    def start(self):
+        """Empty method to comply with AbstractInstrument interface."""
+        pass
+
+    def stop(self):
+        """Empty method to comply with AbstractInstrument interface."""
+        pass
+
+    def disconnect(self):
+        """Empty method to comply with AbstractInstrument interface."""
+        pass
+
+    def setup(
+        self,
+        qubits: List[Qubit],
+        sampling_rate: int,
+        repetition_duration: int,
+        adc_trig_offset: int,
+        max_gain: int,
+        **kwargs,
+    ):
         """Configures the instrument.
 
-        A connection to the instrument needs to be established beforehand.
         Args: Settings taken from runcard
-            qubits: parameter not used
-            repetition_duration (int): delay before readout (ms)
-            adc_trig_offset (int):
-            max_gain (int): defined in dac units so that amplitudes can be relative
+            qubits (list): list of :class:`qibolab.platforms.abstract.Qubit`, parameter not used here.
+            sampling_rate (int): sampling rate of the RFSoC (Hz).
+            repetition_duration (int): delay before readout (ms).
+            adc_trig_offset (int): single offset for all adc triggers (clock ticks).
+            max_gain (int): maximum output power of the DAC (DAC units).
 
-        Raises:
-            Exception = If attempting to set a parameter without a connection to the instrument.
+            **kwargs: no additional arguments are expected and used
         """
-        if self.is_connected:
-            # Load needed settings
-            self.cfg = {
-                "sampling_rate": sampling_rate,
-                "repetition_duration": repetition_duration,
-                "adc_trig_offset": adc_trig_offset,
-                "max_gain": max_gain,
-            }
 
-        else:
-            raise Exception("The instrument cannot be set up, there is no connection")
+        # Load settings needed for QickPrograms
+        self.cfg = {
+            "sampling_rate": sampling_rate,
+            "repetition_duration": repetition_duration,
+            "adc_trig_offset": adc_trig_offset,
+            "max_gain": max_gain,
+        }
 
-    def play(self, qubits, sequence, relaxation_time, nshots=1000):
+    def play(self, qubits: List[Qubit], sequence: PulseSequence, relaxation_time: int, nshots: int = 1000) -> dict:
         """Executes the sequence of instructions and retrieves the readout results.
 
         Each readout pulse generates a separate acquisition.
+        The relaxation_time and the number of shots have default values.
 
         Args:
-            qubits: parameter not used
-            sequence (PulseSequence): arbitary qibolab pulse sequence to execute
-            nshots (int): number of shots
-            relaxation_time (int): delay before readout (ms)
-
+            qubits (list): List of :class:`qibolab.platforms.utils.Qubit` objects passed from the platform.
+            sequence (:class:`qibolab.pulses.PulseSequence`). Pulse sequence to play.
+            nshots (int): Number of repetitions (shots) of the experiment.
+            relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
         Returns:
-            A dictionary mapping the readout pulse serial to am ExecutionResults object
+            A dictionary mapping the readout pulses serial to `qibolab.ExecutionResults` objects
         """
 
+        # TODO: simmetries beetween repetition_duration Vs relaxation_time and nshots Vs relaxation_time
+        # nshots gets added to the dictionary
         self.cfg["nshots"] = nshots
+        # if new value is passed, relaxation_time is updated in the dictionary
         if relaxation_time is not None:
             self.cfg["repetition_duration"] = relaxation_time
 
@@ -529,62 +555,104 @@ class TII_RFSOC4x2(AbstractInstrument):
             q_pulse = np.array(avgq[0][i])
 
             serial = ro_pulse.serial
-            results[serial] = ExecutionResults.from_components(i_pulse, q_pulse)
+            # results[serial] = ExecutionResults.from_components(i_pulse, q_pulse)
+            results[serial] = AveragedResults(i_pulse, q_pulse)
 
         return results
 
-    def recursive_python_sweep(self, qubits, sequence, *sweepers):
+    def recursive_python_sweep(
+        self, qubits: List[Qubit], sequence: PulseSequence, or_sequence: PulseSequence, *sweepers: Sweeper
+    ) -> dict:
+        """Execute a sweep of an arbitrary number of Sweepers via recursion.
+
+        Args:
+            qubits (list): List of `qibolab.platforms.utils.Qubit` objects passed from the platform.
+            sequence (`qibolab.pulses.PulseSequence`). Pulse sequence to play.
+            *sweepers (`qibolab.Sweeper`): Sweeper objects.
+        Returns:
+            A dictionary mapping the readout pulses serial to `qibolab.ExecutionResults` objects
+        Raises:
+            NotImplementedError: if a sweep refers to more than one pulse.
+            NotImplementedError: if a sweep refers to a parameter different from frequency or amplitude.
+        """
+        sequence = deepcopy(sequence)
+        original_ro = [ro.serial for ro in or_sequence.ro_pulses]
+        # If there are no sweepers run ExecutePulseSequence acquisition. Last layer for recursion.
         if len(sweepers) == 0:
             program = ExecutePulseSequence(self.soc, self.cfg, sequence, qubits)
             avgi, avgq = program.acquire(
                 self.soc, readouts_per_experiment=len(sequence.ro_pulses), load_pulses=True, progress=False, debug=False
             )
+            # results parsing
             results = {}
-            for i, ro_pulse in enumerate(sequence.ro_pulses):
-                i_pulse = np.array(avgi[0][i])
-                q_pulse = np.array(avgq[0][i])
+            for i, serial in enumerate(original_ro):
+                i_pulse = np.array([avgi[0][i]], np.float64)
+                q_pulse = np.array([avgq[0][i]], np.float64)
 
-                serial = ro_pulse.serial
-                results[serial] = ExecutionResults.from_components(i_pulse, q_pulse)
+                # results[serial] = ExecutionResults.from_components(i_pulse, q_pulse)
+                results[serial] = AveragedResults(i_pulse, q_pulse)
             return results
-        else:
-            sweep_results = []
+        else:  # If sweepers are still in queue
+            sweep_results = {}
+            # check that the first (outest) sweeper is supported
             sweeper = sweepers[0]
             if len(sweeper.pulses) > 1:
                 raise NotImplementedError("Only one pulse per sweep is supported")
-            for idx, pulse in enumerate(sequence):
-                # identify index of sweeped pulse
-                if pulse.serial == sweeper.pulses[0].serial:
-                    idx_pulse = idx
-                    break
+            is_amp = sweeper.parameter == Parameter.amplitude
+            is_freq = sweeper.parameter == Parameter.frequency
+            if not (is_amp or is_freq):
+                raise NotImplementedError("Parameter type not implemented")
 
-            for val in sweeper.values:
-                if sweeper.parameter == Parameter.frequency:
-                    sequence[idx_pulse].frequency = val
-                elif sweeper.parameter == Parameter.amplitude:
-                    # TODO: understand how this is relative!!
-                    sequence[idx_pulse].amplitude = val
-                else:
-                    raise NotImplementedError("Parameter type not implemented")
-                if len(sweepers) == 0:
-                    if not self.get_if_python_sweep(sequence, *sweepers):
-                        program = ExecuteSingleSweep(self.soc, self.cfg, sequence, qubits, sweepers[0])
-                        values, avgi, avgq = program.acquire(
-                            self.soc,
-                            readouts_per_experiment=len(sequence.ro_pulses),
-                            load_pulses=True,
-                            progress=False,
-                            debug=False,
-                        )
-                        res = self.convert_sweep_results(sweepers[0], sequence, avgi, avgq)
-                    else:
-                        res = self.recursive_python_sweep(qubits, sequence, *sweepers[1:])
-                else:
-                    res = self.recursive_python_sweep(qubits, sequence, *sweepers[1:])
-                sweep_results.append(res)
+            # if there is only one sweeper and is supported by qick than use hardware sweep
+            if len(sweepers) == 1 and not self.get_if_python_sweep(sequence, *sweepers):
+                program = ExecuteSingleSweep(self.soc, self.cfg, sequence, qubits, sweepers[0])
+                values, avgi, avgq = program.acquire(
+                    self.soc,
+                    readouts_per_experiment=len(sequence.ro_pulses),
+                    load_pulses=True,
+                    progress=False,
+                    debug=False,
+                )
+                # convert results from qick output to qibolab results
+                res = self.convert_sweep_results(sweepers[0], sequence, original_ro, avgi, avgq)
+                sweep_results = self.merge_sweep_results(sweep_results, res)
+            else:  # if it's not possible to execute qick sweep re-call function
+                # identify index of sweeped pulse TODO: there is a better way
+                idx_pulse = or_sequence.index(sweeper.pulses[0])
+                for val in sweeper.values:
+                    if is_freq:
+                        f0 = qubits[sequence[idx_pulse].qubit].readout_frequency
+                        # TODO relative frequency?
+                        sequence[idx_pulse].frequency = val + f0
+                    elif is_amp:
+                        sequence[idx_pulse].amplitude = val
+                    res = self.recursive_python_sweep(qubits, sequence, or_sequence, *sweepers[1:])
+                    sweep_results = self.merge_sweep_results(sweep_results, res)
         return sweep_results
 
-    def get_if_python_sweep(self, sequence, *sweepers):
+    def merge_sweep_results(self, old_dict, addition):
+        for serial in addition:
+            if serial in old_dict:
+                old_dict[serial] = old_dict[serial] + addition[serial]
+            else:
+                old_dict[serial] = addition[serial]
+        return old_dict
+
+    def get_if_python_sweep(self, sequence: PulseSequence, *sweepers: Sweeper) -> bool:
+        """Check if a sweeper must be run with python loop or on hardware.
+
+        To be run on qick internal loop a sweep must:
+            * not be on the readout frequency
+            * be the first pulse of a channel
+            * be just one sweeper
+
+        Args:
+            sequence (:class:`qibolab.pulses.PulseSequence`). Pulse sequence to play.
+            *sweepers (`qibolab.Sweeper`): Sweeper objects.
+        Returns:
+            A boolean value true if the sweeper must be executed by python loop, false otherwise
+        """
+        # TODO: maybe improve this function and check the channel and not the qubit (multiplexing)
         python_sweep = True
 
         is_amp = sweepers[0].parameter == Parameter.amplitude
@@ -605,35 +673,53 @@ class TII_RFSOC4x2(AbstractInstrument):
                         break
         return python_sweep
 
-    def convert_sweep_results(self, sweeper, sequence, avgi, avgq):
-        sweep_results = []
+    def convert_sweep_results(
+        self, sweeper: Sweeper, sequence: PulseSequence, original_ro: list, avgi: list, avgq: list
+    ) -> dict:
+        """Convert Qick RAveragerProgram results to qibolab dictionary results"""
+        sweep_results = {}
+        # original_ro = [ro.serial for ro in sequence.ro_pulses]
         for j, val in enumerate(sweeper.values):
             results = {}
 
-            for i, ro_pulse in enumerate(sequence.ro_pulses):
-                i_pulse = np.array(avgi[0][i][j])
-                q_pulse = np.array(avgq[0][i][j])
+            for i, serial in enumerate(original_ro):
+                i_pulse = np.array([avgi[0][i][j]], np.float64)
+                q_pulse = np.array([avgq[0][i][j]], np.float64)
 
-                serial = ro_pulse.serial  # TODO this can change during
                 results[serial] = ExecutionResults.from_components(i_pulse, q_pulse)
-            sweep_results.append(results)
+            sweep_results = self.merge_sweep_results(sweep_results, results)
         return sweep_results
 
-    def sweep(self, qubits, sequence, *sweepers, relaxation_time, nshots=1000, average=True):
+    def sweep(
+        self,
+        qubits: List[Qubit],
+        sequence: PulseSequence,
+        *sweepers: Sweeper,
+        relaxation_time: int,
+        nshots: int = 1000,
+        average: bool = True,
+    ) -> dict:
+        """Executes the sweep and retrieves the readout results.
+
+        Each readout pulse generates a separate acquisition.
+        The relaxation_time and the number of shots have default values.
+
+        Args:
+            qubits (list): List of :class:`qibolab.platforms.utils.Qubit` objects passed from the platform.
+            sequence (:class:`qibolab.pulses.PulseSequence`). Pulse sequence to play.
+            *sweepers (`qibolab.Sweeper`): Sweeper objects.
+            nshots (int): Number of repetitions (shots) of the experiment.
+            relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
+        Returns:
+            A dictionary mapping the readout pulses serial to `qibolab.ExecutionResults` objects
+        """
         self.cfg["nshots"] = nshots
         if relaxation_time is not None:
             self.cfg["repetition_duration"] = relaxation_time
 
-        return self.recursive_python_sweep(qubits, sequence, *sweepers)
+        # TODO: bug?
+        # sweep_sequence = sequence.deep_copy()
+        # added for "clarity"
+        or_sequence = sequence
 
-    def start(self):
-        """Empty method to comply with AbstractInstrument interface."""
-        pass
-
-    def stop(self):
-        """Empty method to comply with AbstractInstrument interface."""
-        pass
-
-    def disconnect(self):
-        """Closes the connection to the instrument."""
-        self.is_connected = False
+        return self.recursive_python_sweep(qubits, sequence, or_sequence, *sweepers)
