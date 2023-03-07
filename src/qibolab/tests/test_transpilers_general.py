@@ -33,7 +33,7 @@ def generate_random_circuit(nqubits, ngates):
     return circuit
 
 
-def custom_cicuit():
+def custom_circuit():
     circuit = Circuit(5)
     circuit.add(gates.CZ(0, 2))
     circuit.add(gates.CZ(1, 2))
@@ -44,7 +44,7 @@ def custom_cicuit():
 
 def test_simple_circuit():
     transpiler = Transpiler(connectivity="21_qubits", init_method="greedy", init_samples=0)
-    circ = custom_cicuit()
+    circ = custom_circuit()
     transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
     np.testing.assert_allclose(added_swaps, 2)
 
@@ -89,5 +89,5 @@ def test_custom_connectivity():
         (Q[4], Q[2]),
     ]
     chip.add_edges_from(graph_list)
-    transpiler.set_connectivity(chip)
+    transpiler.connectivity(chip)
     transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
