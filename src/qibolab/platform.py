@@ -64,7 +64,6 @@ def create_tii_rfsoc4x2(runcard, address=None):
     qubits[0].readout = channels["L3-18_ro"]
     qubits[0].feedback = channels["L2-RO"]
     qubits[0].drive = channels["L3-18_qd"]
-    channels["L4-26"].qubit = qubits[0]  # TODO find the real channel
 
     return platform
 

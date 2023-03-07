@@ -31,7 +31,7 @@ from qibolab.sweeper import Parameter, Sweeper
 class ExecutePulseSequence(AveragerProgram):
     """This qick AveragerProgram handles a qibo sequence of pulses"""
 
-    def __init__(self, soc, cfg, sequence):
+    def __init__(self, soc, cfg, sequence, qubits):
         """In this function we define the most important settings and the sequence is transpiled.
 
         In detail:
@@ -50,6 +50,7 @@ class ExecutePulseSequence(AveragerProgram):
         self.soc = soc
         self.soccfg = soc  # No need for a different soc config object since qick is on board
         self.sequence = sequence
+        self.qubits = qubits
 
         # conversion coefficients (in runcard we have Hz and ns)
         self.MHz = 0.000001
@@ -63,24 +64,7 @@ class ExecutePulseSequence(AveragerProgram):
         self.syncdelay = self.us2cycles(1.0)  # TODO maybe better in runcard
         cfg["reps"] = cfg["nshots"]
 
-        # connections  (for every qubit here are defined drive and readout lines)
-        self.connections = {
-            "0": {"drive": 1, "readout": 0, "adc_ch": 0},
-        }
-
         super().__init__(soc, cfg)
-
-    def from_qubit_to_ch(self, qubit, pulse_type):
-        """Helper function for retrieving channel numbers from qubits"""
-
-        drive_ch = self.connections[str(qubit)]["drive"]
-        readout_ch = self.connections[str(qubit)]["readout"]
-        adc_ch = self.connections[str(qubit)]["adc_ch"]
-
-        if pulse_type == "qd":
-            return drive_ch, None
-        elif pulse_type == "ro":
-            return readout_ch, adc_ch
 
     def initialize(self):
         """This function gets called automatically by qick super.__init__, it contains:
@@ -95,11 +79,11 @@ class ExecutePulseSequence(AveragerProgram):
         # declare nyquist zones for all used channels
         ch_already_declared = []
         for pulse in self.sequence:
-            # TODO remove function
-            if pulse.type == PulseType.DRIVE:
-                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "qd")
-            else:
-                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "ro")
+            qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
+            adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
+            ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
+            gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
+
             if gen_ch not in ch_already_declared:
                 ch_already_declared.append(gen_ch)
 
@@ -114,14 +98,14 @@ class ExecutePulseSequence(AveragerProgram):
         # declare readouts
         ro_ch_already_declared = []
         for readout_pulse in self.sequence.ro_pulses:
-            # TODO remove function
-            gen_ch, adc_ch = self.from_qubit_to_ch(readout_pulse.qubit, "ro")
+            adc_ch = self.qubits[readout_pulse.qubit].feedback.ports[0][1]
+            ro_ch = self.qubits[readout_pulse.qubit].readout.ports[0][1]
             if adc_ch not in ro_ch_already_declared:
                 ro_ch_already_declared.append(adc_ch)
                 length = self.soc.us2cycles(readout_pulse.duration * self.us)
                 freq = readout_pulse.frequency * self.MHz
 
-                self.declare_readout(ch=adc_ch, length=length, freq=freq, gen_ch=gen_ch)
+                self.declare_readout(ch=adc_ch, length=length, freq=freq, gen_ch=ro_ch)
             else:
                 print(f"Avoided redecalaration of channel {adc_ch}")  # TODO
 
@@ -129,11 +113,11 @@ class ExecutePulseSequence(AveragerProgram):
         first_pulse_registered = []
 
         for pulse in self.sequence:
-            # TODO remove function
-            if pulse.type == PulseType.DRIVE:
-                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "qd")
-            else:
-                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "ro")
+            qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
+            adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
+            ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
+
+            gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
 
             if gen_ch not in first_pulse_registered:
                 first_pulse_registered.append(gen_ch)
@@ -144,11 +128,10 @@ class ExecutePulseSequence(AveragerProgram):
     def add_pulse_to_register(self, pulse):
         """The task of this function is to call the set_pulse_registers function"""
 
-        # TODO remove function
-        if pulse.type == PulseType.DRIVE:
-            gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "qd")
-        else:
-            gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "ro")
+        qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
+        adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
+        ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
+        gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
 
         time = self.soc.us2cycles(pulse.start * self.us)
         gain = int(pulse.amplitude * self.max_gain)
@@ -217,11 +200,10 @@ class ExecutePulseSequence(AveragerProgram):
         for pulse in self.sequence:
             time = self.soc.us2cycles(pulse.start * self.us)
 
-            # TODO remove function
-            if pulse.type == PulseType.DRIVE:
-                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "qd")
-            else:
-                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "ro")
+            qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
+            adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
+            ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
+            gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
 
             if gen_ch in first_pulse_executed:
                 self.add_pulse_to_register(pulse)
@@ -246,7 +228,7 @@ class ExecutePulseSequence(AveragerProgram):
 class ExecuteSingleSweep(RAveragerProgram):
     """This qick AveragerProgram handles a qibo sequence of pulses"""
 
-    def __init__(self, soc, cfg, sequence, sweeper):
+    def __init__(self, soc, cfg, sequence, qubits, sweeper):
         """In this function we define the most important settings and the sequence is transpiled.
 
         In detail:
@@ -265,6 +247,7 @@ class ExecuteSingleSweep(RAveragerProgram):
         self.soc = soc
         self.soccfg = soc  # No need for a different soc config object since qick is on board
         self.sequence = sequence
+        self.qubits = qubits
 
         # conversion coefficients (in runcard we have Hz and ns)
         self.MHz = 0.000001
@@ -284,24 +267,7 @@ class ExecuteSingleSweep(RAveragerProgram):
         cfg["step"] = sweeper.values[1] - sweeper.values[0]
         cfg["expts"] = len(sweeper.values)
 
-        # connections  (for every qubit here are defined drive and readout lines)
-        self.connections = {
-            "0": {"drive": 1, "readout": 0, "adc_ch": 0},
-        }
-
         super().__init__(soc, cfg)
-
-    def from_qubit_to_ch(self, qubit, pulse_type):
-        """Helper function for retrieving channel numbers from qubits"""
-
-        drive_ch = self.connections[str(qubit)]["drive"]
-        readout_ch = self.connections[str(qubit)]["readout"]
-        adc_ch = self.connections[str(qubit)]["adc_ch"]
-
-        if pulse_type == "qd":
-            return drive_ch, None
-        elif pulse_type == "ro":
-            return readout_ch, adc_ch
 
     def initialize(self):
         """This function gets called automatically by qick super.__init__, it contains:
@@ -314,10 +280,13 @@ class ExecuteSingleSweep(RAveragerProgram):
         """
 
         # find page and register of sweeper
-        if self.sweeper.pulses[0].type == PulseType.DRIVE:
-            gen_ch, adc_ch = self.from_qubit_to_ch(self.sweeper.pulses[0].qubit, "qd")
-        else:
-            gen_ch, adc_ch = self.from_qubit_to_ch(self.sweeper.pulses[0].qubit, "ro")
+
+        pulse = self.sweeper.pulses[0]
+        qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
+        adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
+        ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
+        gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
+
         self.sweeper_page = self.ch_page(gen_ch)
         if self.sweeper.parameter == Parameter.frequency:
             self.sweeper_reg = self.sreg(gen_ch, "freq")
@@ -335,11 +304,11 @@ class ExecuteSingleSweep(RAveragerProgram):
         # declare nyquist zones for all used channels
         ch_already_declared = []
         for pulse in self.sequence:
-            # TODO remove function
-            if pulse.type == PulseType.DRIVE:
-                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "qd")
-            else:
-                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "ro")
+            qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
+            adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
+            ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
+            gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
+
             if gen_ch not in ch_already_declared:
                 ch_already_declared.append(gen_ch)
 
@@ -354,14 +323,14 @@ class ExecuteSingleSweep(RAveragerProgram):
         # declare readouts
         ro_ch_already_declared = []
         for readout_pulse in self.sequence.ro_pulses:
-            # TODO remove function
-            gen_ch, adc_ch = self.from_qubit_to_ch(readout_pulse.qubit, "ro")
+            adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
+            ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
             if adc_ch not in ro_ch_already_declared:
                 ro_ch_already_declared.append(adc_ch)
                 length = self.soc.us2cycles(readout_pulse.duration * self.us)
                 freq = readout_pulse.frequency * self.MHz
 
-                self.declare_readout(ch=adc_ch, length=length, freq=freq, gen_ch=gen_ch)
+                self.declare_readout(ch=adc_ch, length=length, freq=freq, gen_ch=ro_ch)
             else:
                 print(f"Avoided redecalaration of channel {adc_ch}")  # TODO
 
@@ -369,11 +338,10 @@ class ExecuteSingleSweep(RAveragerProgram):
         first_pulse_registered = []
 
         for pulse in self.sequence:
-            # TODO remove function
-            if pulse.type == PulseType.DRIVE:
-                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "qd")
-            else:
-                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "ro")
+            qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
+            adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
+            ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
+            gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
 
             if gen_ch not in first_pulse_registered:
                 first_pulse_registered.append(gen_ch)
@@ -384,11 +352,10 @@ class ExecuteSingleSweep(RAveragerProgram):
     def add_pulse_to_register(self, pulse):
         """The task of this function is to call the set_pulse_registers function"""
 
-        # TODO remove function
-        if pulse.type == PulseType.DRIVE:
-            gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "qd")
-        else:
-            gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "ro")
+        qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
+        adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
+        ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
+        gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
 
         time = self.soc.us2cycles(pulse.start * self.us)
         gain = int(pulse.amplitude * self.max_gain)
@@ -460,11 +427,10 @@ class ExecuteSingleSweep(RAveragerProgram):
         for pulse in self.sequence:
             time = self.soc.us2cycles(pulse.start * self.us)
 
-            # TODO remove function
-            if pulse.type == PulseType.DRIVE:
-                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "qd")
-            else:
-                gen_ch, adc_ch = self.from_qubit_to_ch(pulse.qubit, "ro")
+            qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
+            adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
+            ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
+            gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
 
             if gen_ch in first_pulse_executed:
                 self.add_pulse_to_register(pulse)
@@ -552,7 +518,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         if relaxation_time is not None:
             self.cfg["repetition_duration"] = relaxation_time
 
-        program = ExecutePulseSequence(self.soc, self.cfg, sequence)
+        program = ExecutePulseSequence(self.soc, self.cfg, sequence, qubits)
         avgi, avgq = program.acquire(
             self.soc, readouts_per_experiment=len(sequence.ro_pulses), load_pulses=True, progress=False, debug=False
         )
@@ -569,7 +535,7 @@ class TII_RFSOC4x2(AbstractInstrument):
 
     def recursive_python_sweep(self, qubits, sequence, *sweepers):
         if len(sweepers) == 0:
-            program = ExecutePulseSequence(self.soc, self.cfg, sequence)
+            program = ExecutePulseSequence(self.soc, self.cfg, sequence, qubits)
             avgi, avgq = program.acquire(
                 self.soc, readouts_per_experiment=len(sequence.ro_pulses), load_pulses=True, progress=False, debug=False
             )
@@ -602,7 +568,7 @@ class TII_RFSOC4x2(AbstractInstrument):
                     raise NotImplementedError("Parameter type not implemented")
                 if len(sweepers) == 0:
                     if not self.get_if_python_sweep(sequence, *sweepers):
-                        program = ExecuteSingleSweep(self.soc, self.cfg, sequence, sweepers[0])
+                        program = ExecuteSingleSweep(self.soc, self.cfg, sequence, qubits, sweepers[0])
                         values, avgi, avgq = program.acquire(
                             self.soc,
                             readouts_per_experiment=len(sequence.ro_pulses),
