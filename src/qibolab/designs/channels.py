@@ -35,19 +35,26 @@ class Channel:
     Quantum Machines associate filters to channels but this may not be the case
     in other instruments.
     """
+    max_bias: Optional[float] = None
+    """Maximum voltage that we can send for flux bias without damaging amplifiers.
+    If the user attempts to send a higher value the platform will raise an error
+    to avoid the operation of being executed in the real instruments.
+    """
 
     @property
     def bias(self):
         """Bias offset for flux channels."""
         if self._bias is None:
             # operate qubits at their sweetspot unless otherwise stated
-            return self.qubit.sweetspot
+            self.bias = self.qubit.sweetspot
         return self._bias
 
     @bias.setter
     def bias(self, bias):
         if not isinstance(bias, (int, float)):
             raise_error(TypeError, f"Attempting to set non-float bias {bias}.")
+        if self.max_bias is not None and abs(bias) > self.max_bias:
+            raise_error(ValueError, f"{bias} exceeds the maximum allowed bias {self.max_bias}.")
         self._bias = bias
 
     @property
