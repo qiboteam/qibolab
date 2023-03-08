@@ -1,0 +1,122 @@
+nqubits: 1
+description: 1-qubit device OS2 in XLD fridge, controlled with qblox cluster rf.
+
+settings:
+    hardware_avg: 1024
+    repetition_duration: 200_000
+    sampling_rate: 1_000_000_000
+
+qubits: [0]
+
+resonator_type: 3D
+
+topology: # qubit - qubit connections
+-   [1]
+
+channels: ['L3-17_qd', 'L3-17_ro', 'L2-4', null]
+
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux, QubitBias]
+    0: ['L3-17_ro', 'L3-17_qd', null, null]
+
+instruments:
+    cluster:
+        lib: qblox
+        class: Cluster
+        address: 192.168.0.6
+        roles: [other]
+        settings:
+            reference_clock_source      : internal                      # external or internal
+
+    qrm_rf:
+        lib: qblox
+        class: ClusterQRM_RF
+        address: 192.168.0.6:10 #:7 for loopback
+        roles: [readout]
+        settings:
+            ports:
+                o1:
+                    attenuation                 : 44
+                    lo_enabled                  : true
+                    lo_frequency                : 7_805_100_000                    # (Hz) from 2e9 to 18e9
+                    gain                        : 0.6                           # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en             : false
+                i1:
+                    hardware_demod_en           : true
+
+
+            acquisition_hold_off        : 200                           # minimum 4ns
+            acquisition_duration        : 1000
+
+            classification_parameters:
+
+                0:                      # qubit id
+
+                    rotation_angle: 176.045  # in degrees 0.0<=v<=360.0
+
+                    threshold: -0.001283       # in V
+
+            channel_port_map:  # Refrigerator Channel : Instrument port
+                'L3-17_ro': o1 # IQ Port = out0 & out1
+                'L2-4': i1
+
+    qcm_rf:
+        lib: qblox
+        class: ClusterQCM_RF
+        address: 192.168.0.6:8
+        roles: [control]
+        settings:
+            ports:
+                o1:
+                    attenuation                  : 0 # (dB)
+                    lo_enabled                   : true
+                    lo_frequency                 : 5_179_856_329 # (Hz) from 2e9 to 18e9
+                    gain                         : 0.35 # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en              : false
+                o2:
+                    attenuation                  : 60 # (dB)
+                    lo_enabled                   : true
+                    lo_frequency                 : 6_000_000_000 # (Hz) from 2e9 to 18e9
+                    gain                         : 0 # for path0 and path1 -1.0<=v<=1.0
+                    hardware_mod_en              : false
+
+            channel_port_map:
+                'L3-17_qd': o1 # IQ Port = out0 & out1
+                99: o2
+    twpa_pump:
+        lib: rohde_schwarz
+        class: SGS100A
+        address: 192.168.0.37
+        roles: [other]
+        settings:
+            frequency: 6.816e+9 # Hz
+            power: 2.3 # dBm
+
+native_gates:
+    single_qubit:
+        0: # qubit number
+            RX:
+                duration: 80                    # should be multiple of 4
+                amplitude: 0.457
+                frequency: 5_079_856_329
+                if_frequency: -100_000_000          # difference in qubit frequency
+                shape: Drag(5, -0.1)
+                type: qd # qubit drive
+            MZ:
+                duration: 1000
+                amplitude: 0.7
+                frequency: 7_825_100_000
+                if_frequency: 20_000_000           # Difference in resonator frequency
+                shape: Rectangular()
+                type: ro # readout
+
+characterization:
+    single_qubit:
+        0:
+            readout_frequency: 7_825_100_000
+            drive_frequency: 5_079_856_329
+            T1: 16832
+            T2: 12405
+            state0_voltage: 2000
+            state1_voltage: 1000
+            mean_gnd_states: (0.002704-0.000786j)
+            mean_exc_states: (-0.000596-0.000932j)

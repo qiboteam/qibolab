@@ -41,6 +41,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "recommonmark",
+    "sphinx_copybutton",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -58,6 +59,11 @@ exclude_patterns = []
 # a list of builtin themes.
 #
 html_theme = "furo"
+
+# custom title
+html_title = "Version " + release
+
+# custom html theme options (colors and font)
 
 html_theme_options = {
     "light_css_variables": {

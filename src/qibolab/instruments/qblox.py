@@ -4,7 +4,7 @@ Supports the following Instruments:
     Cluster
     Cluster QRM-RF
     Cluster QCM-RF
-Compatible with qblox-instruments driver 0.6.1 (23/5/2022).
+Compatible with qblox-instruments driver 0.7.0 (8/8/2022).
 It does not support the operation of multiple clusters symultaneously.
 https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/
 """
@@ -373,6 +373,7 @@ class ClusterQRM_RF(AbstractInstrument):
 
     DEFAULT_SEQUENCERS: dict = {"o1": 0, "i1": 0}
     SAMPLING_RATE: int = 1e9  # 1 GSPS
+    FREQUENCY_LIMIT = 300e6
 
     property_wrapper = lambda parent, *parameter: property(
         lambda self: parent.device.get(parameter[0]),
@@ -607,6 +608,8 @@ class ClusterQRM_RF(AbstractInstrument):
             self.acquisition_hold_off = kwargs["acquisition_hold_off"]
             self.acquisition_duration = kwargs["acquisition_duration"]
 
+            self._last_pulsequence_hash = 0
+
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
 
@@ -693,8 +696,7 @@ class ClusterQRM_RF(AbstractInstrument):
 
         # Check if the sequence to be processed is the same as the last one.
         # If so, there is no need to generate new waveforms and program
-        # Except if hardware demodulation is activated (to force a memory reset until qblox fix the issue)
-        if self.ports["i1"].hardware_demod_en or self._current_pulsesequence_hash != self._last_pulsequence_hash:
+        if self._current_pulsesequence_hash != self._last_pulsequence_hash:
             port = "o1"
             # initialise the list of free sequencer numbers to include the default for each port {'o1': 0}
             self._free_sequencers_numbers = [self.DEFAULT_SEQUENCERS[port]] + [1, 2, 3, 4, 5]
@@ -766,7 +768,6 @@ class ClusterQRM_RF(AbstractInstrument):
             # generate and store the Waveforms dictionary, the Acquisitions dictionary, the Weights and the Program
             for port in self._output_ports_keys:
                 for sequencer in self._sequencers[port]:
-
                     # Waveforms
                     for index, waveform in enumerate(sequencer.waveforms_buffer.unique_waveforms):
                         sequencer.waveforms[waveform.serial] = {"data": waveform.data.tolist(), "index": index}
@@ -932,7 +933,7 @@ class ClusterQRM_RF(AbstractInstrument):
         It configures certain parameters of the instrument based on the needs of resources determined
         while processing the pulse sequence.
         """
-        if self.ports["i1"].hardware_demod_en or self._current_pulsesequence_hash != self._last_pulsequence_hash:
+        if self._current_pulsesequence_hash != self._last_pulsequence_hash:
             self._last_pulsequence_hash = self._current_pulsesequence_hash
 
             # Setup
@@ -972,8 +973,9 @@ class ClusterQRM_RF(AbstractInstrument):
                     # with open(self.data_folder / filename, "w", encoding="utf-8") as file:
                     #     json.dump(qblox_dict[sequencer], file, indent=4)
 
-        # Arm sequencers
+        # Clear acquisition memory and arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
+            self.device.sequencers[sequencer_number].delete_acquisition_data(all=True)
             self.device.arm_sequencer(sequencer_number)
 
         # DEBUG: QRM Print Readable Snapshot
@@ -987,10 +989,6 @@ class ClusterQRM_RF(AbstractInstrument):
         # Start used sequencers
         for sequencer_number in self._used_sequencers_numbers:
             self.device.start_sequencer(sequencer_number)
-            # DEBUG sync_en
-            # print(
-            #     f"device: {self.name}, sequencer: {sequencer_number}, sync_en: {self.device.sequencers[sequencer_number].get('sync_en')}"
-            # )
 
     def acquire(self):
         """Retrieves the readout results.
@@ -1107,6 +1105,7 @@ class ClusterQRM_RF(AbstractInstrument):
         acquisition_results["demodulated_integrated_binned"] = {}
         acquisition_results["demodulated_integrated_classified_binned"] = {}
         acquisition_results["probability"] = {}
+        data = {}
         for port in self._output_ports_keys:
             for sequencer in self._sequencers[port]:
                 if not self.ports["i1"].hardware_demod_en:  # Software Demodulation
@@ -1143,6 +1142,8 @@ class ClusterQRM_RF(AbstractInstrument):
                         acquisition_results[pulse.qubit] = acquisition_results["averaged_demodulated_integrated"][
                             pulse.qubit
                         ]
+
+                        data[pulse.serial] = (i, q)
 
                     else:
                         raise Exception(
@@ -1206,6 +1207,12 @@ class ClusterQRM_RF(AbstractInstrument):
                             pulse.qubit
                         ] = acquisition_results["demodulated_integrated_classified_binned"][pulse.serial]
 
+                        data[acquisition_name] = (
+                            shots_i,
+                            shots_q,
+                            acquisition_results["demodulated_integrated_classified_binned"][acquisition_name],
+                        )
+
                         acquisition_results["probability"][pulse.serial] = np.mean(
                             acquisition_results["demodulated_integrated_classified_binned"][pulse.serial]
                         )
@@ -1232,6 +1239,7 @@ class ClusterQRM_RF(AbstractInstrument):
                             i, q = self._process_acquisition_results(
                                 scope_acquisition_raw_results, pulse, demodulate=True
                             )
+
                             acquisition_results["averaged_demodulated_integrated"][pulse.serial] = (
                                 np.sqrt(i**2 + q**2),
                                 np.arctan2(q, i),
@@ -1245,7 +1253,10 @@ class ClusterQRM_RF(AbstractInstrument):
                         # DEBUG: QRM Plot Incomming Pulses
                         # import qibolab.instruments.debug.incomming_pulse_plotting as pp
                         # pp.plot(raw_results)
-        return acquisition_results
+                        # DEBUG: QRM Plot Acquisition_results
+                        # from qibolab.debug.debug import plot_acquisition_results
+                        # plot_acquisition_results(acquisition_results, pulse, savefig_filename='acquisition_results.png')
+        return data
 
     def _process_acquisition_results(self, acquisition_results, readout_pulse: Pulse, demodulate=True):
         """Processes the results of the acquisition.
@@ -1416,6 +1427,7 @@ class ClusterQCM_RF(AbstractInstrument):
 
     DEFAULT_SEQUENCERS = {"o1": 0, "o2": 1}
     SAMPLING_RATE: int = 1e9  # 1 GSPS
+    FREQUENCY_LIMIT = 500e6
 
     property_wrapper = lambda parent, *parameter: property(
         lambda self: parent.device.get(parameter[0]),
@@ -1486,7 +1498,7 @@ class ClusterQCM_RF(AbstractInstrument):
                 )()
 
                 self.ports["o2"] = type(
-                    f"port_o1",
+                    f"port_o2",
                     (),
                     {
                         "attenuation": self.property_wrapper("out1_att"),
@@ -1521,7 +1533,6 @@ class ClusterQCM_RF(AbstractInstrument):
                     self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]],
                     self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]],
                 ]:
-
                     self._set_device_parameter(target, "cont_mode_en_awg_path0", "cont_mode_en_awg_path1", value=False)
                     self._set_device_parameter(
                         target, "cont_mode_waveform_idx_awg_path0", "cont_mode_waveform_idx_awg_path1", value=0
@@ -1653,8 +1664,8 @@ class ClusterQCM_RF(AbstractInstrument):
             ]  # Default after reboot = 6_000_000_000
             self.ports["o1"].gain = kwargs["ports"]["o1"]["gain"]  # Default after reboot = 1
             self.ports["o1"].hardware_mod_en = kwargs["ports"]["o1"]["hardware_mod_en"]  # Default after reboot = False
-            self.ports["o1"].nco_freq = 0  # Default after reboot = 1
-            self.ports["o1"].nco_phase_offs = 0  # Default after reboot = 1
+            self.ports["o1"].nco_freq = 0
+            self.ports["o1"].nco_phase_offs = 0
 
             self.ports["o2"].attenuation = kwargs["ports"]["o2"]["attenuation"]
             self.ports["o2"].lo_enabled = kwargs["ports"]["o2"]["lo_enabled"]  # Default after reboot = True
@@ -1663,9 +1674,10 @@ class ClusterQCM_RF(AbstractInstrument):
             ]  # Default after reboot = 6_000_000_000
             self.ports["o2"].gain = kwargs["ports"]["o2"]["gain"]  # Default after reboot = 1
             self.ports["o2"].hardware_mod_en = kwargs["ports"]["o2"]["hardware_mod_en"]  # Default after reboot = False
-            self.ports["o2"].nco_freq = 0  # Default after reboot = 1
-            self.ports["o2"].nco_phase_offs = 0  # Default after reboot = 1
+            self.ports["o2"].nco_freq = 0
+            self.ports["o2"].nco_phase_offs = 0
 
+            self._last_pulsequence_hash = 0
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
 
@@ -1820,7 +1832,6 @@ class ClusterQCM_RF(AbstractInstrument):
             # generate and store the Waveforms dictionary, the Acquisitions dictionary, the Weights and the Program
             for port in self._output_ports_keys:
                 for sequencer in self._sequencers[port]:
-
                     # Waveforms
                     for index, waveform in enumerate(sequencer.waveforms_buffer.unique_waveforms):
                         sequencer.waveforms[waveform.serial] = {"data": waveform.data.tolist(), "index": index}
@@ -2092,6 +2103,8 @@ class ClusterQCM(AbstractInstrument):
 
             ports['oX'].gain (float): (mapped to qrm.sequencers[0].gain_awg_path0 and qrm.sequencers[0].gain_awg_path1)
                 Sets the gain on both paths of the output port.
+            ports['oX'].offset (float): (mapped to qrm.outX_offset)
+                Sets the offset on the output port.
             ports['oX'].hardware_mod_en (bool): (mapped to qrm.sequencers[0].mod_en_awg) Enables pulse
                 modulation in hardware. When set to False, pulse modulation is done at the host computer
                 and a modulated pulse waveform should be uploaded to the instrument. When set to True,
@@ -2167,6 +2180,7 @@ class ClusterQCM(AbstractInstrument):
                     (),
                     {
                         "gain": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o1"], "gain_awg_path0"),
+                        "offset": self.property_wrapper("out0_offset"),
                         "hardware_mod_en": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o1"], "mod_en_awg"),
                         "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o1"], "nco_freq"),
                         "nco_phase_offs": self.sequencer_property_wrapper(
@@ -2180,6 +2194,7 @@ class ClusterQCM(AbstractInstrument):
                     (),
                     {
                         "gain": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o2"], "gain_awg_path1"),
+                        "offset": self.property_wrapper("out1_offset"),
                         "hardware_mod_en": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o2"], "mod_en_awg"),
                         "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o2"], "nco_freq"),
                         "nco_phase_offs": self.sequencer_property_wrapper(
@@ -2193,6 +2208,7 @@ class ClusterQCM(AbstractInstrument):
                     (),
                     {
                         "gain": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o3"], "gain_awg_path0"),
+                        "offset": self.property_wrapper("out2_offset"),
                         "hardware_mod_en": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o3"], "mod_en_awg"),
                         "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o3"], "nco_freq"),
                         "nco_phase_offs": self.sequencer_property_wrapper(
@@ -2206,6 +2222,7 @@ class ClusterQCM(AbstractInstrument):
                     (),
                     {
                         "gain": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o4"], "gain_awg_path1"),
+                        "offset": self.property_wrapper("out3_offset"),
                         "hardware_mod_en": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o4"], "mod_en_awg"),
                         "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o4"], "nco_freq"),
                         "nco_phase_offs": self.sequencer_property_wrapper(
@@ -2229,7 +2246,6 @@ class ClusterQCM(AbstractInstrument):
                     self.device.sequencers[self.DEFAULT_SEQUENCERS["o3"]],
                     self.device.sequencers[self.DEFAULT_SEQUENCERS["o4"]],
                 ]:
-
                     self._set_device_parameter(
                         target, "cont_mode_en_awg_path0", "cont_mode_en_awg_path1", value=False
                     )  # Default after reboot = False
@@ -2330,28 +2346,12 @@ class ClusterQCM(AbstractInstrument):
         A connection to the instrument needs to be established beforehand.
         Args:
             **kwargs: dict = A dictionary of settings loaded from the runcard:
-                kwargs['ports']['o1']['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
+                oX: ['o1', 'o2', 'o3', 'o4']
+                kwargs['ports'][oX]['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
                     `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their linear regime, if necessary, lowering the attenuation
                     applied at the output.
-                kwargs['ports']['o1']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
-                    using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
-
-                kwargs['ports']['o2']['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
-                    `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their linear regime, if necessary, lowering the attenuation
-                    applied at the output.
-                kwargs['ports']['o2']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
-                    using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
-
-                kwargs['ports']['o3']['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
-                    `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their linear regime, if necessary, lowering the attenuation
-                    applied at the output.
-                kwargs['ports']['o3']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
-                    using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
-
-                kwargs['ports']['o4']['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
-                    `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their linear regime, if necessary, lowering the attenuation
-                    applied at the output.
-                kwargs['ports']['o4']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
+                kwargs['ports'][oX]['offset'] (float): [-2.5 - 2.5 V] offset in volts applied to the output port.
+                kwargs['ports'][oX]['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
                     using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
 
                 kwargs['channel_port_map'] (dict): a dictionary of (str: str) containing mappings between channel numbers and device ports:
@@ -2374,12 +2374,14 @@ class ClusterQCM(AbstractInstrument):
 
             for port in ["o1", "o2", "o3", "o4"]:
                 self.ports[port].gain = kwargs["ports"][port]["gain"]  # Default after reboot = 1
+                self.ports[port].offset = kwargs["ports"][port]["offset"]
                 self.ports[port].hardware_mod_en = kwargs["ports"][port][
                     "hardware_mod_en"
                 ]  # Default after reboot = False
                 self.ports[port].nco_freq = 0  # Default after reboot = 1
                 self.ports[port].nco_phase_offs = 0  # Default after reboot = 1
 
+            self._last_pulsequence_hash = 0
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
 
@@ -2536,7 +2538,6 @@ class ClusterQCM(AbstractInstrument):
             # generate and store the Waveforms dictionary, the Acquisitions dictionary, the Weights and the Program
             for port in self._output_ports_keys:
                 for sequencer in self._sequencers[port]:
-
                     # Waveforms
                     for index, waveform in enumerate(sequencer.waveforms_buffer.unique_waveforms):
                         sequencer.waveforms[waveform.serial] = {"data": waveform.data.tolist(), "index": index}
