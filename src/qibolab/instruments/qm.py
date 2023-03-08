@@ -344,6 +344,10 @@ class QMPulse:
         self.operation = pulse.serial
         self.relative_phase = pulse.relative_phase / (2 * np.pi)
         self.duration = pulse.duration
+        # delay to use in wait instruction before playing the pulse
+        self.delay = 0
+        # elements to align before playing the pulse
+        self.align_elements = []
 
         # Stores the baking object (for pulses that need 1ns resolution)
         self.baked = None
@@ -404,6 +408,8 @@ class QMSequence(list):
         self.ro_pulses = []
         # map from qibolab pulses to QMPulses (useful when sweeping)
         self.pulse_to_qmpulse = {}
+        # keep track of timings to properly introduce ``wait`` instructions
+        self.clock = collections.defaultdict(int)
 
     def add(self, pulse):
         if not isinstance(pulse, Pulse):
@@ -414,6 +420,13 @@ class QMSequence(list):
         if pulse.type.name == "READOUT":
             self.ro_pulses.append(qmpulse)
         super().append(qmpulse)
+
+        wait_time = pulse.start - self.clock[qmpulse.element]
+        if wait_time >= 12:
+            qmpulse.delay = wait_time // 4 + 1
+            self.clock[qmpulse.element] += 4 * qmpulse.delay
+        self.clock[qmpulse.element] += qmpulse.duration
+
         return qmpulse
 
 
@@ -517,15 +530,10 @@ class QMOPX(AbstractInstrument):
         """
         needs_reset = False
         align()
-        clock = collections.defaultdict(int)
         for qmpulse in qmsequence:
             pulse = qmpulse.pulse
-            wait_time = pulse.start - clock[qmpulse.element]
-            if wait_time >= 12:
-                wait_cycles = wait_time // 4 + 1
-                wait(wait_cycles, qmpulse.element)
-                clock[qmpulse.element] += 4 * wait_cycles
-            clock[qmpulse.element] += qmpulse.duration
+            if qmpulse.delay >= 4:
+                wait(qmpulse.delay, qmpulse.element)
             if pulse.type.name == "READOUT":
                 measure(
                     qmpulse.operation,
@@ -552,7 +560,7 @@ class QMOPX(AbstractInstrument):
 
         # for Rabi-length?
         if relaxation_time > 0:
-            wait(relaxation_time // 4, *clock.keys())
+            wait(relaxation_time // 4)
 
         # Save data to the stream processing
         for qmpulse in qmsequence.ro_pulses:
