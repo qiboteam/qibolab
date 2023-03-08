@@ -20,6 +20,34 @@ def create_dummy(runcard):
     # Create design
     design = InstrumentDesign([instrument], channels)
     # Create platform
+    platform = DesignPlatform("multiqubit_dummy", design, runcard)
+
+    # map channels to qubits
+
+    for qubit in platform.qubits:
+        platform.qubits[qubit].readout = channels["readout"]
+        platform.qubits[qubit].drive = channels["drive"]
+        platform.qubits[qubit].flux = channels["flux"]
+
+    return platform
+
+
+def create_multiqubit_dummy(runcard):
+    """Create a multi qubit platform using the dummy instrument.
+
+    Useful for testing.
+    """
+    from qibolab.instruments.dummy import DummyInstrument
+
+    # Create channel objects
+    channels = ChannelMap()
+    channels |= ChannelMap.from_names("readout", "drive", "flux")
+
+    # Create dummy controller
+    instrument = DummyInstrument("dummy", 0)
+    # Create design
+    design = InstrumentDesign([instrument], channels)
+    # Create platform
     platform = DesignPlatform("dummy", design, runcard)
 
     # map channels to qubits
@@ -173,6 +201,8 @@ def Platform(name, runcard=None, design=None):
 
     if name == "dummy":
         return create_dummy(runcard)
+    elif name == "multiqubit_dummy":
+        return create_multiqubit_dummy(runcard)
     elif name == "icarusq":
         from qibolab.platforms.icplatform import ICPlatform as Device
     elif name == "qw5q_gold":
