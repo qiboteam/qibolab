@@ -6,8 +6,9 @@ from qibolab.pulses import PulseSequence
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 
 
-def test_dummy_initialization():
-    platform = Platform("dummy")
+@pytest.mark.parametrize("dummy_platform", ["dummy", "multiqubit_dummy"])
+def test_dummy_initialization(dummy_platform):
+    platform = Platform(dummy_platform)
     platform.reload_settings()
     platform.connect()
     platform.setup()
@@ -16,19 +17,21 @@ def test_dummy_initialization():
     platform.disconnect()
 
 
-def test_dummy_execute_pulse_sequence():
-    platform = Platform("dummy")
+@pytest.mark.parametrize("dummy_platform", ["dummy", "multiqubit_dummy"])
+def test_dummy_execute_pulse_sequence(dummy_platform):
+    platform = Platform(dummy_platform)
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_readout_pulse(0, 0))
     result = platform.execute_pulse_sequence(sequence, nshots=100)
 
 
+@pytest.mark.parametrize("dummy_platform", ["dummy", "multiqubit_dummy"])
 @pytest.mark.parametrize("parameter", Parameter)
 @pytest.mark.parametrize("average", [True, False])
 @pytest.mark.parametrize("nshots", [100, 200])
-def test_dummy_single_sweep(parameter, average, nshots):
+def test_dummy_single_sweep(dummy_platform, parameter, average, nshots):
     swept_points = 5
-    platform = Platform("dummy")
+    platform = Platform(dummy_platform)
     sequence = PulseSequence()
     pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
     if parameter is Parameter.amplitude:
@@ -46,13 +49,14 @@ def test_dummy_single_sweep(parameter, average, nshots):
     assert len(results[pulse.qubit]) == swept_points if average else int(nshots * swept_points)
 
 
+@pytest.mark.parametrize("dummy_platform", ["dummy", "multiqubit_dummy"])
 @pytest.mark.parametrize("parameter1", Parameter)
 @pytest.mark.parametrize("parameter2", Parameter)
 @pytest.mark.parametrize("average", [True, False])
 @pytest.mark.parametrize("nshots", [100, 1000])
-def test_dummy_double_sweep(parameter1, parameter2, average, nshots):
+def test_dummy_double_sweep(dummy_platform, parameter1, parameter2, average, nshots):
     swept_points = 5
-    platform = Platform("dummy")
+    platform = Platform(dummy_platform)
     sequence = PulseSequence()
     pulse = platform.create_qubit_drive_pulse(qubit=0, start=0, duration=1000)
     ro_pulse = platform.create_qubit_readout_pulse(qubit=0, start=pulse.finish)
