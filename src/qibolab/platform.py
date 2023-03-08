@@ -23,11 +23,9 @@ def create_dummy(runcard):
     platform = DesignPlatform("multiqubit_dummy", design, runcard)
 
     # map channels to qubits
-
-    for qubit in platform.qubits:
-        platform.qubits[qubit].readout = channels["readout"]
-        platform.qubits[qubit].drive = channels["drive"]
-        platform.qubits[qubit].flux = channels["flux"]
+    platform.qubits[0].readout = channels["readout"]
+    platform.qubits[0].drive = channels["drive"]
+    platform.qubits[0].flux = channels["flux"]
 
     return platform
 
@@ -51,9 +49,10 @@ def create_multiqubit_dummy(runcard):
     platform = DesignPlatform("dummy", design, runcard)
 
     # map channels to qubits
-    platform.qubits[0].readout = channels["readout"]
-    platform.qubits[0].drive = channels["drive"]
-    platform.qubits[0].flux = channels["flux"]
+    for qubit in platform.qubits:
+        platform.qubits[qubit].readout = channels["readout"]
+        platform.qubits[qubit].drive = channels["drive"]
+        platform.qubits[qubit].flux = channels["flux"]
 
     return platform
 
