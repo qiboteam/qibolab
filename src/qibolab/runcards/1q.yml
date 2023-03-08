@@ -5,7 +5,7 @@ settings:
     hardware_avg: 1024
     sampling_rate: 2.e+9
     repetition_duration: 10.e-6
-    readout_integration_delay: 40.e-9
+    readout_integration_delay: 100.e-9
     AcquisitionType: SPECTROSCOPY # Integration Discrimination
     AveragingMode: CYCLIC # Sequential
     External_clock: False
@@ -24,7 +24,7 @@ native_gates:
             RX:
                 duration: 90 #80
                 amplitude: 0.75 #0.8
-                frequency: 8.0e+9 #doesnt do anything requiered for qibolab to work
+                frequency: 7_886_614_046 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
                 type: qd # qubit drive
@@ -33,7 +33,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: .4 # 1
-                frequency: 7_281_400_000 #7_400_000_000 #doesnt do anything requiered for qibolab to work
+                frequency: 7_266_000_000 #7_400_000_000 #doesnt do anything requiered for qibolab to work
                 integration_time : 1.e-6
                 shape: Rectangular()
                 type: ro # readout
@@ -43,9 +43,9 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            readout_frequency: 7_281_400_000
+            readout_frequency: 7_266_400_000
             resonator_polycoef_flux: []
-            drive_frequency: 8.0e+9
+            drive_frequency: 7_886_614_046
             T1: 0.0
             T2: 0.0
             sweetspot: 0.0
@@ -57,3 +57,30 @@ characterization:
             iq_angle: 0.0
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
+
+
+        # 3: # qubit id
+        #     RX:
+        #         duration: 40                   # should be multiple of 4
+        #         amplitude: 0.228
+        #         if_frequency: -100_000_000
+        #         frequency: 7_886_614_046 #7_883_548_829
+        #         shape: Gaussian(5)
+        #         type: qd # qubit drive
+        #     MZ:
+        #         duration: 2000
+        #         amplitude: 0.4
+        #         if_frequency: 20_000_000
+        #         frequency: 7_266_608_059
+        #         shape: Rectangular()
+        #         type: ro # readout
+
+            #         3:
+            # readout_frequency: 7_266_608_059
+            # drive_frequency: 7_886_614_046 #7_883_548_829
+            # T1: 8401
+            # T2: 0
+            # state0_voltage: 980.0526149089349
+            # state1_voltage: 71.62920482865404
+            # mean_gnd_states: (-0.0008611160959753611+0.00046795533680255605j)
+            # mean_exc_states: (3.254111797580043e-05+6.381080335860311e-05j)

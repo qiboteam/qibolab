@@ -83,7 +83,8 @@ class ExecutionResults:
     @cached_property
     def ground_state_probability(self):
         """Computes ground state probability"""
-        return 1 - np.mean(self.shots)
+        # return 1 - np.mean(self.shots)
+        return 1 - np.sqrt(self.i**2 + self.q**2)
 
     def to_dict_probability(self, state=1):
         """Serialize probabilities in dict.

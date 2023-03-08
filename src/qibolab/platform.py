@@ -136,7 +136,7 @@ def create_tii_IQM5q(runcard, descriptor=None):
     # readout
     channels |= ChannelMap.from_names("L3-31")
     # feedback
-    channels |= ChannelMap.from_names("L1-2")
+    channels |= ChannelMap.from_names("L2-7")
     # drive
     channels |= ChannelMap.from_names(*(f"L4-{i}" for i in range(15, 20)))
     # flux qubits
@@ -147,27 +147,27 @@ def create_tii_IQM5q(runcard, descriptor=None):
     # channels |= ChannelMap.from_names("L3-10")
 
     # Map controllers to qubit channels (HARDCODED)
-    # readout
-    channels["L3-31"].ports = [("device_shfqc", "[QACHANNELS/0/INPUT]")]
-    channels["L3-31"].power_range = -5
     # feedback
-    channels["L1-2"].ports = [("device_shfqc", "[QACHANNELS/0/OUTPUT]")]
-    channels["L1-2"].power_range = 10
+    channels["L3-31"].ports = [("device_shfqc", "[QACHANNELS/0/INPUT]")]
+    channels["L3-31"].power_range = 10
+    # readout
+    channels["L2-7"].ports = [("device_shfqc", "[QACHANNELS/0/OUTPUT]")]
+    channels["L2-7"].power_range = -15
     # drive
     for i in range(5, 10):
         channels[f"L4-1{i}"].ports = [("device_shfqc", f"SGCHANNELS/{i-5}/OUTPUT")]
-        channels[f"L4-1{i}"].power_range = 5
+        channels[f"L4-1{i}"].power_range = -10
     # flux qubits
     for i in range(6, 11):
         channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-6}")]
-        channels[f"L4-{i}"].offset = 0.1
+        channels[f"L4-{i}"].offset = 0.0
     # flux couplers
     for i in range(11, 14):
         channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-11+5}")]
-        channels[f"L4-{i}"].offset = 0.1
+        channels[f"L4-{i}"].offset = 0.0
 
     channels[f"L4-14"].ports = [("device_hdawg2", f"SIGOUTS/0")]
-    channels[f"L4-14"].offset = 0.1
+    channels[f"L4-14"].offset = 0.0
 
     # Instantiate Zh set of instruments[They work as one]
     from qibolab.instruments.dummy_oscillator import (
@@ -268,17 +268,17 @@ def create_tii_IQM5q(runcard, descriptor=None):
         # TWPA_Oscillator("TWPA", "192.168.0.35"),
     ]
     # Set Dummy LO parameters (Map only the the two by two oscillators)
-    local_oscillators[0].frequency = 5_800_000_000
-    local_oscillators[1].frequency = 6_000_000_000  # For SG1 and SG2
-    local_oscillators[2].frequency = 5_600_000_000  # For SG3 and SG4
-    local_oscillators[3].frequency = 5_200_000_000  # For SG5 and SG6
+    local_oscillators[0].frequency = 5_500_000_000
+    local_oscillators[1].frequency = 4_000_000_000  # For SG1 and SG2
+    local_oscillators[2].frequency = 4_600_000_000  # For SG3 and SG4
+    local_oscillators[3].frequency = 4_200_000_000  # For SG5 and SG6
 
     # Set TWPA pump LO parameters
     # local_oscillators[4].frequency = 6_511_000_000
     # local_oscillators[4].power = 4.5
 
     # Map LOs to channels
-    channels["L3-31"].local_oscillator = local_oscillators[0]
+    channels["L2-7"].local_oscillator = local_oscillators[0]
     channels["L4-15"].local_oscillator = local_oscillators[1]
     channels["L4-16"].local_oscillator = local_oscillators[1]
     channels["L4-17"].local_oscillator = local_oscillators[2]
@@ -289,12 +289,13 @@ def create_tii_IQM5q(runcard, descriptor=None):
 
     design = MixerInstrumentDesign(controller, channels, local_oscillators)
     platform = DesignPlatform("IQM5q", design, runcard)
+    platform.resonator_type = "2D"
 
     # assign channels to qubits
     qubits = platform.qubits
     for q in range(0, 5):
-        qubits[q].readout = channels["L3-31"]
-        qubits[q].feedback = channels["L1-2"]
+        qubits[q].feedback = channels["L3-31"]
+        qubits[q].readout = channels["L2-7"]
 
     for q in range(0, 5):
         qubits[q].drive = channels[f"L4-{15 + q}"]
@@ -337,10 +338,10 @@ def create_tii_1q(runcard, descriptor=None):
     channels["w7"].power_range = 10
     # readout
     channels["w4_r"].ports = [("device_shfqc", "[QACHANNELS/0/OUTPUT]")]
-    channels["w4_r"].power_range = -20
+    channels["w4_r"].power_range = 10
     # drive
     channels[f"w4_d"].ports = [("device_shfqc", f"SGCHANNELS/0/OUTPUT")]
-    channels[f"w4_d"].power_range = -20
+    channels[f"w4_d"].power_range = 0
 
     # Instantiate Zh set of instruments[They work as one]
     from qibolab.instruments.dummy_oscillator import (
@@ -376,7 +377,7 @@ def create_tii_1q(runcard, descriptor=None):
     ]
     # Set Dummy LO parameters (Map only the the two by two oscillators)
     local_oscillators[0].frequency = 7_200_000_000
-    local_oscillators[1].frequency = 8_500_000_000  # For SG1 and SG2
+    local_oscillators[1].frequency = 7_800_000_000  # For SG1 and SG2
 
     # Set TWPA pump LO parameters
     # local_oscillators[4].frequency = 6_511_000_000
