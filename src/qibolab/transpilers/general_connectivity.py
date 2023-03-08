@@ -11,8 +11,8 @@ from qibo.models import Circuit
 
 
 class Transpiler:
-    def __init__(self, connectivity="21_qubits", init_method="greedy", init_samples=100):
-        self.connectivity(connectivity)
+    def __init__(self, connectivity, init_method="greedy", init_samples=100):
+        self.connectivity = connectivity
         self._init_method = init_method
         self._init_samples = init_samples
 
@@ -80,6 +80,11 @@ class Transpiler:
         self._init_method = "custom"
         self._mapping = map
 
+    @property
+    def connectivity(self):
+        return self._connectivity
+
+    @connectivity.setter
     def connectivity(self, connectivity):
         """Set the hardware chip connectivity.
 
@@ -87,12 +92,11 @@ class Transpiler:
             connectivity (string or networkx graph): set a special TII chip connectivity (using a string) or define a
             custom connectivity (using a networkx graph).
         """
-        if isinstance(connectivity, str):
-            self._connectivity = self.special_connectivity(connectivity)
-        elif isinstance(connectivity, type(nx.Graph())):
+
+        if isinstance(connectivity, type(nx.Graph())):
             self._connectivity = connectivity
         else:
-            raise_error(TypeError, "Use string for special connectivity or networkx graph for custom connectivity")
+            raise_error(TypeError, "Use networkx graph for custom connectivity")
 
     def draw_connectivity(self):
         """Show connectivity graph."""
@@ -360,61 +364,3 @@ class Transpiler:
         old_mapping = deepcopy(self._qubit_map)
         for key in self._mapping.keys():
             self._qubit_map[self._mapping[key]] = old_mapping[key]
-
-    def special_connectivity(self, connectivity):
-        """Return a TII harware chip connectivity as a networkx graph"""
-        if connectivity == "21_qubits":
-            Q = sympy.symbols([f"q{i}" for i in range(21)])
-            chip = nx.Graph()
-            chip.add_nodes_from(Q)
-            graph_list_h = [
-                (Q[0], Q[1]),
-                (Q[1], Q[2]),
-                (Q[3], Q[4]),
-                (Q[4], Q[5]),
-                (Q[5], Q[6]),
-                (Q[6], Q[7]),
-                (Q[8], Q[9]),
-                (Q[9], Q[10]),
-                (Q[10], Q[11]),
-                (Q[11], Q[12]),
-                (Q[13], Q[14]),
-                (Q[14], Q[15]),
-                (Q[15], Q[16]),
-                (Q[16], Q[17]),
-                (Q[18], Q[19]),
-                (Q[19], Q[20]),
-            ]
-            graph_list_v = [
-                (Q[3], Q[8]),
-                (Q[8], Q[13]),
-                (Q[0], Q[4]),
-                (Q[4], Q[9]),
-                (Q[9], Q[14]),
-                (Q[14], Q[18]),
-                (Q[1], Q[5]),
-                (Q[5], Q[10]),
-                (Q[10], Q[15]),
-                (Q[15], Q[19]),
-                (Q[2], Q[6]),
-                (Q[6], Q[11]),
-                (Q[11], Q[16]),
-                (Q[16], Q[20]),
-                (Q[7], Q[12]),
-                (Q[12], Q[17]),
-            ]
-            chip.add_edges_from(graph_list_h + graph_list_v)
-        elif connectivity == "5_qubits":
-            Q = sympy.symbols([f"q{i}" for i in range(5)])
-            chip = nx.Graph()
-            chip.add_nodes_from(Q)
-            graph_list = [
-                (Q[0], Q[2]),
-                (Q[1], Q[2]),
-                (Q[3], Q[2]),
-                (Q[4], Q[2]),
-            ]
-            chip.add_edges_from(graph_list)
-        else:
-            raise_error(ValueError, "Wrong connectivity value (use '5_qubits' or '21_qubits')")
-        return chip
