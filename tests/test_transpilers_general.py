@@ -128,7 +128,7 @@ def test_subgraph_init():
 
 def test_custom_mapping():
     transpiler = Transpiler(connectivity=special_connectivity("5_qubits"))
-    transpiler.custom_qubit_mapping({"q0": 1, "q1": 2, "q2": 3, "q3": 4, "q4": 0})
+    transpiler.custom_qubit_mapping([1, 2, 3, 4, 0])
     circ = generate_random_circuit(5, 20)
     transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
 

@@ -1,20 +1,30 @@
 import random
 from copy import deepcopy
+from enum import Enum, auto
 
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
-import sympy
 from qibo import gates
 from qibo.config import log, raise_error
 from qibo.models import Circuit
 
+DEFAULT_INIT_SAMPLES = 100
+
+
+class QubitInitMethod(Enum):
+    greedy = auto()
+    subgraph = auto()
+    custom = auto()
+
 
 class Transpiler:
-    def __init__(self, connectivity, init_method="greedy", init_samples=100):
+    def __init__(self, connectivity, init_method="greedy", init_samples=None):
         self.connectivity = connectivity
-        self._init_method = init_method
-        self._init_samples = init_samples
+        self.init_method = init_method
+        if self.init_method is QubitInitMethod.greedy and init_samples is None:
+            init_samples = DEFAULT_INIT_SAMPLES
+        self.init_samples = init_samples
 
         self._circuit_repr = None
         self._mapping = None
@@ -39,30 +49,20 @@ class Transpiler:
         self._added_swaps = 0
         self.translate_circuit(qibo_circuit)
         keys = list(self._connectivity.nodes())
-        if self._init_method == "greedy":
+        if self._init_method is QubitInitMethod.greedy:
             self.greedy_init()
-        elif self._init_method == "subgraph":
+        elif self._init_method is QubitInitMethod.subgraph:
             self.subgraph_init()
-        elif self._init_method == "custom":
-            self._mapping = {keys[i]: self._mapping["q" + str(i)] for i in range(len(keys))}
+        elif self._init_method is QubitInitMethod.custom:
+            self._mapping = dict(zip(keys, self._mapping.values()))
             self._graph = nx.relabel_nodes(self._connectivity, self._mapping)
-        else:
-            raise_error(ValueError, "Wrong qubit mapping initialization method (use 'greedy', 'subgraph' or 'custom')")
         init_qubit_map = self.init_qubit_map()
-        init_mapping = {keys[i]: init_qubit_map[i] for i in range(len(keys))}
+        init_mapping = dict(zip(keys, init_qubit_map))
         self._qubit_map = np.sort(init_qubit_map)
         self.init_circuit(qibo_circuit)
-        len_2q_circuit = len(self._circuit_repr)
-        self._circuit_repr = self.reduce(self._graph)
-        matched_2q_gates = len_2q_circuit - len(self._circuit_repr)
-        self.add_gates(qibo_circuit, matched_2q_gates)
+        self.first_transpiler_step(qibo_circuit)
         while len(self._circuit_repr) != 0:
-            len_2q_circuit = len(self._circuit_repr)
-            path, meeting_point = self.relocate()
-            matched_2q_gates = len_2q_circuit - len(self._circuit_repr)
-            self.add_swaps(path, meeting_point)
-            self.update_qubit_map()
-            self.add_gates(qibo_circuit, matched_2q_gates)
+            self.transpiler_step(qibo_circuit)
         final_mapping = {keys[i]: init_qubit_map[self._qubit_map[i]] for i in range(len(keys))}
         return (
             self.init_mapping_circuit(self.transpiled_circuit, init_qubit_map),
@@ -71,14 +71,37 @@ class Transpiler:
             self._added_swaps,
         )
 
+    def transpiler_step(self, qibo_circuit):
+        """Transpilation step. Find new mapping, add swap gates and apply gates that can be run with this configuration.
+
+        Args:
+            qibo_circuit (qibo.Circuit): circuit to be transpiled.
+        """
+        len_2q_circuit = len(self._circuit_repr)
+        path, meeting_point = self.relocate()
+        self.add_swaps(path, meeting_point)
+        self.update_qubit_map()
+        self.add_gates(qibo_circuit, len_2q_circuit - len(self._circuit_repr))
+
+    def first_transpiler_step(self, qibo_circuit):
+        """First transpilation step. Apply gates that can be run with the initial qubit mapping.
+
+        Args:
+            qibo_circuit (qibo.Circuit): circuit to be transpiled.
+        """
+        len_2q_circuit = len(self._circuit_repr)
+        self._circuit_repr = self.reduce(self._graph)
+        self.add_gates(qibo_circuit, len_2q_circuit - len(self._circuit_repr))
+
     def custom_qubit_mapping(self, map):
         """Define a custom initial qubit mapping.
 
         Args:
-            map (dict): Dictionary of the type {q0: 1, q1: 2, q2: 0} reporting the circuit to chip qubit mapping.
+            map (list): List reporting the circuit to chip qubit mapping,
+            example [1,2,0] to assign the logical to physical qubit mapping.
         """
-        self._init_method = "custom"
-        self._mapping = map
+        self.init_method = QubitInitMethod.custom
+        self._mapping = dict(zip(range(len(map)), map))
 
     @property
     def connectivity(self):
@@ -89,11 +112,10 @@ class Transpiler:
         """Set the hardware chip connectivity.
 
         Args:
-            connectivity (string or networkx graph): set a special TII chip connectivity (using a string) or define a
-            custom connectivity (using a networkx graph).
+            connectivity (networkx graph): define connectivity.
         """
 
-        if isinstance(connectivity, type(nx.Graph())):
+        if isinstance(connectivity, nx.Graph):
             self._connectivity = connectivity
         else:
             raise_error(TypeError, "Use networkx graph for custom connectivity")
@@ -104,15 +126,35 @@ class Transpiler:
         nx.draw(self._connectivity, pos=pos, with_labels=True)
         plt.show()
 
+    @property
+    def init_method(self):
+        return self._init_method
+
+    @init_method.setter
     def init_method(self, init_method, init_samples=100):
         """Set the initial mapping method for the transpiler.
 
         Args:
             init_method (string): Initial mapping method ("greedy" or "subgraph").
+        """
+        if isinstance(init_method, str):
+            init_method = QubitInitMethod[init_method]
+        self._init_method = init_method
+
+    @property
+    def init_samples(self):
+        return self._init_samples
+
+    @init_samples.setter
+    def init_samples(self, init_samples):
+        """Set the initial mapping method for the transpiler.
+
+        Args:
             init_samples (int): Number of random qubit mapping samples to be tested
             (required only for "greedy" initialization).
         """
-        self._init_method = init_method
+        if init_samples is not None:
+            self.init_method = QubitInitMethod.greedy
         self._init_samples = init_samples
 
     def translate_circuit(self, qibo_circuit):
@@ -122,14 +164,12 @@ class Transpiler:
             qibo_circuit (qibo.Circuit): circuit to be transpiled.
         """
         translated_circuit = []
-        index = 1
-        for gate in qibo_circuit.queue:
+        for index, gate in enumerate(qibo_circuit.queue):
             if len(gate.qubits) == 2:
                 gate_qubits = list(gate.qubits)
                 gate_qubits.sort()
-                gate_qubits.append(sympy.symbols(f"g{index}"))
+                gate_qubits.append(index)
                 translated_circuit.append(gate_qubits)
-                index += 1
             if len(gate.qubits) >= 3:
                 raise_error("ERROR do not use gates acting on more than 2 qubits")
         self._circuit_repr = translated_circuit
@@ -174,13 +214,13 @@ class Transpiler:
         gates can be applied without introducing any SWAP gate"""
         nodes = self._connectivity.number_of_nodes()
         keys = list(self._connectivity.nodes())
-        values = [i for i in range(nodes)]
-        final_mapping = {keys[i]: values[i] for i in range(len(keys))}
+        values = list(range(nodes))
+        final_mapping = dict(zip(keys, values))
         final_graph = nx.relabel_nodes(self._connectivity, final_mapping)
         final_cost = len(self.reduce(final_graph))
         for _ in range(self._init_samples):
             random.shuffle(values)
-            mapping = {keys[i]: values[i] for i in range(len(keys))}
+            mapping = dict(zip(keys, values))
             graph = nx.relabel_nodes(self._connectivity, mapping)
             cost = len(self.reduce(graph))
             if cost == 0:
@@ -200,11 +240,9 @@ class Transpiler:
         Returns:
             qubit_map (np.array): array containing the initial qubit mapping of the circuit.
         """
-        qubit_map = np.zeros((len(self._mapping.keys()),), dtype=int)
-        i = 0
-        for key in self._mapping.keys():
-            qubit_map[self._mapping[key]] = i
-            i += 1
+        qubit_map = np.zeros((len(self._mapping),), dtype=int)
+        for i, value in enumerate(self._mapping.values()):
+            qubit_map[value] = i
         return qubit_map
 
     def map_list(self, path):
@@ -224,7 +262,7 @@ class Transpiler:
         meeting_point_list = []
         for i in range(len(path) - 1):
             values = path_middle[:i] + path_ends + path_middle[i:]
-            mapping = {keys[i]: values[i] for i in range(len(keys))}
+            mapping = dict(zip(keys, values))
             mapping_list.append(mapping)
             meeting_point_list.append(i)
         return mapping_list, meeting_point_list
@@ -244,7 +282,7 @@ class Transpiler:
         keys = [i for i in range(0, nodes)]
         values = keys
         final_graph = self._graph
-        final_mapping = {keys[i]: values[i] for i in range(len(keys))}
+        final_mapping = dict(zip(keys, values))
         # Consider all shortest paths
         path_list = [p for p in nx.all_shortest_paths(self._graph, source=circuit[0][0], target=circuit[0][1])]
         self._added_swaps += len(path_list[0]) - 2
@@ -299,20 +337,7 @@ class Transpiler:
         """
         new_circuit = Circuit(self._connectivity.number_of_nodes())
         for gate in circuit.queue:
-            if len(gate.qubits) == 1:
-                new_circuit.add(
-                    gate.on_qubits(
-                        {
-                            gate.qubits[0]: qubit_map[gate.qubits[0]],
-                        }
-                    )
-                )
-            elif len(gate.qubits) == 2:
-                new_circuit.add(
-                    gate.on_qubits(
-                        {gate.qubits[0]: qubit_map[gate.qubits[0]], gate.qubits[1]: qubit_map[gate.qubits[1]]}
-                    )
-                )
+            new_circuit.add(gate.on_qubits({q: qubit_map[q] for q in gate.qubits}))
         return new_circuit
 
     def add_gates(self, qibo_circuit, matched_gates):
