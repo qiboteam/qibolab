@@ -41,7 +41,7 @@ native_gates:
         1: # qubit number
             RX:
                 duration: 40
-                amplitude: 0.05
+                amplitude: 0.05145
                 frequency: 4_852_223_000
                 #frequency: 4_718_515_000 # 02 transition (more likely)
                 shape: Drag(5, -0.02)
@@ -59,7 +59,7 @@ native_gates:
         2: # qubit number
             RX:
                 duration: 40
-                amplitude: 0.05682
+                amplitude: 0.05662
                 frequency: 5_795_030_000
                 #frequency: 5_661_400_000 # 02 transition
                 shape: Drag(5, -0.04) #Gaussian(5)
@@ -77,7 +77,7 @@ native_gates:
         3: # qubit number
             RX:
                 duration: 40
-                amplitude: 0.1587
+                amplitude: 0.1508
                 frequency: 6_756_682_000
                 #frequency: 6_715_582_000
                 #frequency: 6_628_822_000 # 02 transition
@@ -96,7 +96,7 @@ native_gates:
         4: # qubit number
             RX:
                 duration: 40
-                amplitude: 0.0617
+                amplitude: 0.0555
                 frequency: 6_579_113_000
                 shape: Drag(5, 0.0) #Gaussian(5)
                 type: qd # qubit drive

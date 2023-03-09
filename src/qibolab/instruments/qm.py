@@ -713,8 +713,9 @@ class QMOPX(AbstractInstrument):
             f0 = int(pulse.frequency - lo_frequency)
             freqs0.append(declare(int, value=f0))
             # check if sweep is within the supported bandwidth [-400, 400] MHz
-            if abs(min(sweeper.values) + f0) > 4e8 or abs(max(sweeper.values) + f0) > 4e8:
-                raise_error(ValueError, "Frequency sweep values are beyond instrument bandwidth.")
+            max_freq = max(abs(min(sweeper.values) + f0), abs(max(sweeper.values) + f0))
+            if max_freq > 4e8:
+                raise_error(ValueError, f"Frequency {max_freq} for qubit {qubit.name} is beyond instrument bandwidth.")
 
         # is it fine to have this declaration inside the ``nshots`` QUA loop?
         f = declare(int)
