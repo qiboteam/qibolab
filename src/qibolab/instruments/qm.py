@@ -780,8 +780,6 @@ class QMOPX(AbstractInstrument):
                 update_frequency(qmpulse.element, f + f0)
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-            if relaxation_time > 0:
-                wait(relaxation_time // 4)
 
     def sweep_amplitude(self, sweepers, qubits, qmsequence, relaxation_time):
         from qm.qua import amp
@@ -803,8 +801,6 @@ class QMOPX(AbstractInstrument):
                     qmpulse.baked_amplitude = a
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-            if relaxation_time > 0:
-                wait(relaxation_time // 4)
 
     def sweep_relative_phase(self, sweepers, qubits, qmsequence, relaxation_time):
         sweeper = sweepers[0]
@@ -815,8 +811,6 @@ class QMOPX(AbstractInstrument):
                 qmpulse.relative_phase = relphase
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-            if relaxation_time > 0:
-                wait(relaxation_time // 4)
 
     def sweep_bias(self, sweepers, qubits, qmsequence, relaxation_time):
         from qm.qua import set_dc_offset
@@ -839,8 +833,6 @@ class QMOPX(AbstractInstrument):
                 set_dc_offset(f"flux{q}", "single", b + b0)
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-            if relaxation_time > 0:
-                wait(relaxation_time // 4)
 
     SWEEPERS = {
         Parameter.frequency: sweep_frequency,
@@ -850,8 +842,6 @@ class QMOPX(AbstractInstrument):
     }
 
     def sweep_recursion(self, sweepers, qubits, qmsequence, relaxation_time):
-        # TODO: I think ``relaxation_time`` should be passed in ``play_pulses`` only
-        # not in the sweeper calls
         if len(sweepers) > 0:
             parameter = sweepers[0].parameter
             if parameter in self.SWEEPERS:
@@ -859,4 +849,4 @@ class QMOPX(AbstractInstrument):
             else:
                 raise_error(NotImplementedError, f"Sweeper for {parameter} is not implemented.")
         else:
-            self.play_pulses(qmsequence, relaxation_time=0)
+            self.play_pulses(qmsequence, relaxation_time)
