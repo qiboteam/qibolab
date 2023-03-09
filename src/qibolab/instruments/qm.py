@@ -357,15 +357,17 @@ class QMPulse:
         self.duration = pulse.duration
 
         self.previous_qmpulse = None
+        # ``QMPulse`` that plays right before the current pulse
+        # the delay of the current pulse will be in respect to the previous pulse
         self.next_qmpulses = []
+        # list of pulses that have the current pulse registered as ``previous_qmpulse``
+        # the elements of these pulses will be aligned with the current pulse
 
         # Stores the baking object (for pulses that need 1ns resolution)
         self.baked = None
         self.baked_amplitude = None
 
         # TODO: Create create a new dataclass for these
-        # TODO: Skip ``assign`` call in ``play_pulses`` if shot classification is
-        # is not needed to save time
         self.I = None
         self.Q = None
         self.shot = None
@@ -420,58 +422,20 @@ class QMPulse:
         self.duration = self.baked.get_op_length()
 
 
-# TODO: Implement Moment object which has fixed start and duration
-# TODO: Pad all waveforms with two zeros left and right to avoid overlapping pulses
-# TODO: Merge moments that have durations or wait times <16ns
-
-
-@dataclass
-class Moment:
-    start: int
-    duration: int
-    qmpulses: List[QMPulse] = field(default_factory=list)
-    next_moment: Optional["Moment"] = None
-    previous_moment: Optional["Moment"] = None
-
-    def add(self, qmpulse):
-        self.qmpulses.append(qmpulse)
-
-    @property
-    def finish(self):
-        return self.start + self.duration
-
-    @property
-    def delay(self):
-        """Delay to be used in QUA ``wait`` instruction in clock cycles."""
-        if self.previous_moment is None:
-            return self.start // 4
-        else:
-            return (self.start - self.previous_moment.finish) // 4
-
-    @property
-    def elements(self):
-        return {qmpulse.element for qmpulse in self.qmpulses}
+# TODO: Merge pulses that have durations or wait times <16ns
 
 
 @dataclass
 class Sequence:
     """Pulse sequence containing QM specific pulses (``qmpulse``).
 
-    Dfined in :meth:`qibolab.instruments.qm.QMOPX.play`.
+    Defined in :meth:`qibolab.instruments.qm.QMOPX.play`.
     Holds attributes for the ``element`` and ``operation`` that
     corresponds to each pulse, as defined in the QM config.
     """
 
-    # TODO: Implement constructor ``from_sequence`` which loops over the
-    # given ``PulseSequence`` sorted according to (start, duration)
-    # TODO: Implement ``.play()`` method?
-    # Pulses with the same start and duration go to the same moment
-    # Use align and wait between moments only
-
     qmpulses: List[QMPulse] = field(default_factory=list)
-    # moments: List[Moment] = field(default_factory=list)
-    # times_to_moments: Dict[Tuple[int, int], Moment] = field(default_factory=dict)
-
+    """List of :class:`qibolab.instruments.qm.QMPulse` objects corresponding to the original pulses."""
     ro_pulses: List[QMPulse] = field(default_factory=list)
     """List of readout pulses used for registering outputs."""
     pulse_to_qmpulse: Dict[Pulse, QMPulse] = field(default_factory=dict)
@@ -493,23 +457,6 @@ class Sequence:
                 break
 
         self.qmpulses.append(qmpulse)
-
-        # pulse_moment = (pulse.start, pulse.duration)
-        ## create new ``Moment`` for this time block if it doesn't already exist
-        # if pulse_moment not in self.times_to_moments:
-        #    moment = Moment(*pulse_moment)
-        #    for previous_moment in reversed(self.moments):
-        #        if previous_moment.finish <= moment.start:
-        #            moment.previous_moment = previous_moment
-        #            break
-        #    self.moments.append(moment)
-        #    self.times_to_moments[pulse_moment] = moment
-        # else:
-        #    moment = self.times_to_moments[pulse_moment]
-        ## add pulse to moment
-        # moment.add(qmpulse)
-        # qmpulse.moment = moment
-
         return qmpulse
 
 

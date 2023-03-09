@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from qm import qua
 
-from qibolab.instruments.qm import QMOPX, QMPulse, QMSequence
+from qibolab.instruments.qm import QMOPX, QMPulse, Sequence
 from qibolab.paths import qibolab_folder
 from qibolab.platform import create_tii_qw5q_gold
 from qibolab.pulses import FluxPulse, Pulse, ReadoutPulse, Rectangular
@@ -35,14 +35,37 @@ def test_qmpulse_declare_output():
 def test_qmsequence():
     qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
     ro_pulse = ReadoutPulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch1", qubit=0)
-    qmsequence = QMSequence()
+    qmsequence = Sequence()
     with pytest.raises(TypeError):
-        qmsequence.add("test")
-    qmsequence.add(qd_pulse)
-    qmsequence.add(ro_pulse)
+        qmsequence.add("test", padding_len=4)
+    qmsequence.add(qd_pulse, padding_len=4)
+    qmsequence.add(ro_pulse, padding_len=4)
     assert len(qmsequence.pulse_to_qmpulse) == 2
-    assert len(qmsequence) == 2
     assert len(qmsequence.ro_pulses) == 1
+
+
+def test_qmpulse_previous_and_next():
+    nqubits = 5
+    qmsequence = Sequence()
+    qd_qmpulses = []
+    ro_qmpulses = []
+    for qubit in range(nqubits):
+        qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), f"drive{qubit}", qubit=qubit)
+        qd_qmpulses.append(qmsequence.add(qd_pulse, padding_len=4))
+    for qubit in range(nqubits):
+        ro_pulse = ReadoutPulse(40, 100, 0.05, int(3e9), 0.0, Rectangular(), f"readout{qubit}", qubit=qubit)
+        ro_qmpulses.append(qmsequence.add(ro_pulse, padding_len=4))
+
+    last_qd_qmpulse = qd_qmpulses.pop()
+    for qd_qmpulse in qd_qmpulses:
+        assert qd_qmpulse.previous_qmpulse is None
+        assert len(qd_qmpulse.next_qmpulses) == 0
+    assert last_qd_qmpulse.previous_qmpulse is None
+    assert len(last_qd_qmpulse.next_qmpulses)
+
+    for ro_qmpulse in ro_qmpulses:
+        assert ro_qmpulse.previous_qmpulse == last_qd_qmpulse
+        assert len(ro_qmpulse.next_qmpulses) == 0
 
 
 # TODO: Test connect/disconnect
@@ -155,7 +178,7 @@ def test_qmopx_register_pulse(pulse_type, qubit):
             },
         }
 
-    opx.config.register_pulse(platform.qubits[qubit], pulse, opx.time_of_flight, opx.smearing)
+    opx.config.register_pulse(platform.qubits[qubit], pulse, opx.time_of_flight, opx.smearing, padding_len=0)
     assert opx.config.pulses[pulse.serial] == target_pulse
     assert target_pulse["waveforms"]["I"] in opx.config.waveforms
     assert target_pulse["waveforms"]["Q"] in opx.config.waveforms
@@ -173,7 +196,7 @@ def test_qmopx_register_flux_pulse():
         "waveforms": {"single": "constant_wf0.005"},
     }
 
-    opx.config.register_pulse(platform.qubits[qubit], pulse, opx.time_of_flight, opx.smearing)
+    opx.config.register_pulse(platform.qubits[qubit], pulse, opx.time_of_flight, opx.smearing, padding_len=0)
     assert opx.config.pulses[pulse.serial] == target_pulse
     assert target_pulse["waveforms"]["single"] in opx.config.waveforms
     assert opx.config.elements[f"flux{qubit}"]["operations"][pulse.serial] == pulse.serial
@@ -188,7 +211,7 @@ def test_qmopx_register_baked_pulse(duration):
     pulse = FluxPulse(3, duration, 0.05, Rectangular(), qubit.flux.name, qubit=qubit.name)
     qmpulse = QMPulse(pulse)
     config = opx.config
-    qmpulse.bake(config)
+    qmpulse.bake(config, padding_len=0)
 
     assert config.elements["flux3"]["operations"] == {"baked_Op_0": "flux3_baked_pulse_0"}
     if duration == 0:
