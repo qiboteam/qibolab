@@ -26,8 +26,8 @@ native_gates:
     single_qubit:
         0: # qubit number
             RX:
-                duration: 40 #80
-                amplitude: 0.97 #0.8
+                duration: 100 #80
+                amplitude: 0.625 #0.8
                 frequency: 4_097_400_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
@@ -35,10 +35,10 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 2000 #2000.e-9
-                amplitude: .01 # 1
+                duration: 1000 #2000.e-9
+                amplitude: .1 # 1
                 frequency: 5_228_000_000 #5_228_000_000 #doesnt do anything requiered for qibolab to work
-                integration_time : 2.e-6
+                integration_time : 1.e-6
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -165,7 +165,7 @@ characterization:
             drive_frequency: 4_097_400_000
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.0 #Use this as an amplitude of the flux_bias
+            sweetspot: 0.5 #Use this as an amplitude of the flux_bias
             filter: {}
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
@@ -175,8 +175,9 @@ characterization:
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # ro_range_lp: -15
-            # ro_range_lp: -15
-            # ro_range_lp: -15
+            # ro_range_hp: -15
+            # qd_range: -15
+            # flux_range: -15
 
         1:
             readout_frequency: 4_932_000_000

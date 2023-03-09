@@ -146,17 +146,17 @@ def create_tii_IQM5q(runcard, descriptor=None):
     # TWPA
     # channels |= ChannelMap.from_names("L3-10")
 
-    # Map controllers to qubit channels (HARDCODED)
+    # Map controllers to qubit channels
     # feedback
     channels["L3-31"].ports = [("device_shfqc", "[QACHANNELS/0/INPUT]")]
     channels["L3-31"].power_range = 10
     # readout
     channels["L2-7"].ports = [("device_shfqc", "[QACHANNELS/0/OUTPUT]")]
-    channels["L2-7"].power_range = -15
+    channels["L2-7"].power_range = -25
     # drive
     for i in range(5, 10):
         channels[f"L4-1{i}"].ports = [("device_shfqc", f"SGCHANNELS/{i-5}/OUTPUT")]
-        channels[f"L4-1{i}"].power_range = -10
+        channels[f"L4-1{i}"].power_range = -5
     # flux qubits
     for i in range(6, 11):
         channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-6}")]
@@ -173,7 +173,6 @@ def create_tii_IQM5q(runcard, descriptor=None):
     from qibolab.instruments.dummy_oscillator import (
         DummyLocalOscillator as LocalOscillator,
     )
-    from qibolab.instruments.rohde_schwarz import SGS100A as TWPA_Oscillator
     from qibolab.instruments.zhinst import Zurich
 
     if descriptor is None:
@@ -258,34 +257,19 @@ def create_tii_IQM5q(runcard, descriptor=None):
 
     controller = Zurich("EL_ZURO", descriptor, use_emulation=False)
 
-    # Instantiate local oscillators (HARDCODED)
-    local_oscillators = [
-        LocalOscillator("lo_readout", None),
-        LocalOscillator("lo_drive_0", None),
-        LocalOscillator("lo_drive_1", None),
-        LocalOscillator("lo_drive_2", None),
-        LocalOscillator("lo_drive_3", None),
-        # TWPA_Oscillator("TWPA", "192.168.0.35"),
-    ]
-    # Set Dummy LO parameters (Map only the the two by two oscillators)
+    # Instantiate local oscillators
+    local_oscillators = [LocalOscillator(f"lo_{kind}", None) for kind in ["readout"] + [f"drive_{n}" for n in range(4)]]
+
+    # Set Dummy LO parameters (Map only the two by two oscillators)
     local_oscillators[0].frequency = 5_500_000_000
     local_oscillators[1].frequency = 4_000_000_000  # For SG1 and SG2
     local_oscillators[2].frequency = 4_600_000_000  # For SG3 and SG4
     local_oscillators[3].frequency = 4_200_000_000  # For SG5 and SG6
 
-    # Set TWPA pump LO parameters
-    # local_oscillators[4].frequency = 6_511_000_000
-    # local_oscillators[4].power = 4.5
-
     # Map LOs to channels
-    channels["L2-7"].local_oscillator = local_oscillators[0]
-    channels["L4-15"].local_oscillator = local_oscillators[1]
-    channels["L4-16"].local_oscillator = local_oscillators[1]
-    channels["L4-17"].local_oscillator = local_oscillators[2]
-    channels["L4-18"].local_oscillator = local_oscillators[2]
-    channels["L4-19"].local_oscillator = local_oscillators[3]
-    # channels["Witness???"].local_oscillator = local_oscillators[6]
-    # channels["L3-10"].local_oscillator = local_oscillators[7]
+    ch_to_lo = {"L2-7": 0, "L4-15": 1, "L4-16": 1, "L4-17": 2, "L4-18": 2, "L4-19": 3}
+    for ch, lo in ch_to_lo.items():
+        channels[ch].local_oscillator = local_oscillators[lo]
 
     design = MixerInstrumentDesign(controller, channels, local_oscillators)
     platform = DesignPlatform("IQM5q", design, runcard)
@@ -300,7 +284,6 @@ def create_tii_IQM5q(runcard, descriptor=None):
     for q in range(0, 5):
         qubits[q].drive = channels[f"L4-{15 + q}"]
         qubits[q].flux = channels[f"L4-{6 + q}"]
-        # channels[f"L4-{6 + q}"].qubit = qubits[q]
 
     # assign channels to couplers
     for c in range(0, 2):
@@ -373,20 +356,14 @@ def create_tii_1q(runcard, descriptor=None):
     local_oscillators = [
         LocalOscillator("lo_readout", None),
         LocalOscillator("lo_drive_0", None),
-        # TWPA_Oscillator("TWPA", "192.168.0.35"),
     ]
     # Set Dummy LO parameters (Map only the the two by two oscillators)
     local_oscillators[0].frequency = 7_200_000_000
     local_oscillators[1].frequency = 7_800_000_000  # For SG1 and SG2
 
-    # Set TWPA pump LO parameters
-    # local_oscillators[4].frequency = 6_511_000_000
-    # local_oscillators[4].power = 4.5
-
     # Map LOs to channels
     channels["w4_r"].local_oscillator = local_oscillators[0]
     channels["w4_d"].local_oscillator = local_oscillators[1]
-    # channels["L3-10"].local_oscillator = local_oscillators[7]
 
     design = MixerInstrumentDesign(controller, channels, local_oscillators)
     platform = DesignPlatform("1q", design, runcard)

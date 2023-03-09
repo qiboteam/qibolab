@@ -30,10 +30,19 @@ class DesignPlatform(AbstractPlatform):
         self.design.disconnect()
         self.is_connected = False
 
-    def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None):
+    def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None, fast_reset=False):
         if relaxation_time is None:
             relaxation_time = self.relaxation_time
-        return self.design.play(self.qubits, sequence, nshots=nshots, relaxation_time=relaxation_time)
+        if fast_reset is True:
+            fast_reset = {}
+            for qubit in self.qubits.values():
+                if "c" in str(qubit.name):
+                    pass
+                else:
+                    fast_reset[qubit.name] = self.create_RX_pulse(qubit=qubit.name, start=0)
+        return self.design.play(
+            self.qubits, sequence, nshots=nshots, relaxation_time=relaxation_time, fast_reset=fast_reset
+        )
 
     def sweep(self, sequence, *sweepers, nshots=1024, relaxation_time=None, average=True):
         if relaxation_time is None:
