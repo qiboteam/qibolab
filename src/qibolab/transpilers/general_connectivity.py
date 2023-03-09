@@ -13,12 +13,30 @@ DEFAULT_INIT_SAMPLES = 100
 
 
 class QubitInitMethod(Enum):
+    """A class to define the initial qubit mapping methods."""
+
     greedy = auto()
     subgraph = auto()
     custom = auto()
 
 
 class Transpiler:
+    """A class to perform initial qubit mapping and connectivity matching.
+
+    Properties:
+        connectivity (networkx.graph): chip connectivity.
+        init_method (string or QubitInitMethod): initial qubit mapping method.
+        init_samples (int): number of random qubit initializations for greedy initial qubit mapping.
+
+    Attributes:
+        _circuit_repr (list): quantum circuit represented as a list (only 2 qubit gates).
+        _mapping (dict): circuit to physical qubit mapping during transpiling.
+        _graph (networkx.graph): qubit mapped as nodes of the connectivity graph.
+        _qubit_map (np.array): circuit to physical qubit mapping during transpiling as vector.
+        _circuit_position (int): position in the circuit.
+        _added_swaps (int): number of swaps added to the circuit to match connectivity.
+    """
+
     def __init__(self, connectivity, init_method="greedy", init_samples=None):
         self.connectivity = connectivity
         self.init_method = init_method
@@ -63,7 +81,7 @@ class Transpiler:
         self.first_transpiler_step(qibo_circuit)
         while len(self._circuit_repr) != 0:
             self.transpiler_step(qibo_circuit)
-        final_mapping = {keys[i]: init_qubit_map[self._qubit_map[i]] for i in range(len(keys))}
+        final_mapping = {key: init_qubit_map[self._qubit_map[i]] for i, key in enumerate(keys)}
         return (
             self.init_mapping_circuit(self.transpiled_circuit, init_qubit_map),
             final_mapping,
@@ -191,7 +209,7 @@ class Transpiler:
     def subgraph_init(self):
         """Subgraph isomorphism initialization, NP-complete it can take a long time for large circuits."""
         H = nx.Graph()
-        H.add_nodes_from([i for i in range(0, self._connectivity.number_of_nodes())])
+        H.add_nodes_from([i for i in range(self._connectivity.number_of_nodes())])
         GM = nx.algorithms.isomorphism.GraphMatcher(self._connectivity, H)
         i = 0
         H.add_edge(self._circuit_repr[i][0], self._circuit_repr[i][1])
