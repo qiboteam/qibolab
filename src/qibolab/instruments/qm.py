@@ -204,12 +204,15 @@ class QMConfig:
         else:
             self.elements[f"flux{qubit.name}"]["intermediate_frequency"] = intermediate_frequency
 
-    def register_pulse(self, qubit, pulse, time_of_flight, smearing):
+    def register_pulse(self, qubit, pulse, time_of_flight, smearing, padding_len):
         """Registers pulse, waveforms and integration weights in QM config.
 
         Args:
             qubit (:class:`qibolab.platforms.utils.Qubit`): Qubit that the pulse acts on.
             pulse (:class:`qibolab.pulses.Pulse`): Pulse object to register.
+            padding_len (int): Length of padding (ns) to use for the waveform to avoid overlapping pulses.
+                Needs to be a multiple of 4. Padding is introduced symmetrically at the left and
+                right of the waveform.
 
         Returns:
             element (str): Name of the element this pulse will be played on.
@@ -218,12 +221,12 @@ class QMConfig:
                 "drive0", "drive1", "flux0", "readout0", ...
         """
         if pulse.serial not in self.pulses:
-            if pulse.type.name == "DRIVE":
-                serial_i = self.register_waveform(pulse, "i")
-                serial_q = self.register_waveform(pulse, "q")
+            if pulse.type is PulseType.DRIVE:
+                serial_i = self.register_waveform(pulse, "i", padding_len)
+                serial_q = self.register_waveform(pulse, "q", padding_len)
                 self.pulses[pulse.serial] = {
                     "operation": "control",
-                    "length": pulse.duration,
+                    "length": pulse.duration + padding_len,
                     "waveforms": {"I": serial_i, "Q": serial_q},
                 }
                 # register drive element (if it does not already exist)
@@ -235,11 +238,11 @@ class QMConfig:
                 # register drive pulse in elements
                 self.elements[f"drive{qubit.name}"]["operations"][pulse.serial] = pulse.serial
 
-            elif pulse.type.name == "FLUX":
-                serial = self.register_waveform(pulse)
+            elif pulse.type is PulseType.FLUX:
+                serial = self.register_waveform(pulse, "i", padding_len)
                 self.pulses[pulse.serial] = {
                     "operation": "control",
-                    "length": pulse.duration,
+                    "length": pulse.duration + padding_len,
                     "waveforms": {
                         "single": serial,
                     },
@@ -249,13 +252,13 @@ class QMConfig:
                 # register flux pulse in elements
                 self.elements[f"flux{qubit.name}"]["operations"][pulse.serial] = pulse.serial
 
-            elif pulse.type.name == "READOUT":
-                serial_i = self.register_waveform(pulse, "i")
-                serial_q = self.register_waveform(pulse, "q")
-                self.register_integration_weights(qubit, pulse.duration)
+            elif pulse.type is PulseType.READOUT:
+                serial_i = self.register_waveform(pulse, "i", padding_len)
+                serial_q = self.register_waveform(pulse, "q", padding_len)
+                self.register_integration_weights(qubit, pulse.duration + padding_len)
                 self.pulses[pulse.serial] = {
                     "operation": "measurement",
-                    "length": pulse.duration,
+                    "length": pulse.duration + padding_len,
                     "waveforms": {
                         "I": serial_i,
                         "Q": serial_q,
@@ -279,8 +282,10 @@ class QMConfig:
             else:
                 raise_error(TypeError, f"Unknown pulse type {pulse.type.name}.")
 
-    def register_waveform(self, pulse, mode="i"):
+    def register_waveform(self, pulse, mode, padding_len):
         """Registers waveforms in QM config.
+
+        Pads waveform with 4ns of zeros (2ns left and 2ns right) to avoid overlapping pulses.
 
         QM supports two kinds of waveforms, examples:
             "zero_wf": {"type": "constant", "sample": 0.0}
@@ -289,6 +294,9 @@ class QMConfig:
         Args:
             pulse (:class:`qibolab.pulses.Pulse`): Pulse object to read the waveform from.
             mode (str): "i" or "q" specifying which channel the waveform will be played.
+            padding_len (int): Length of padding (ns) to use for the waveform to avoid overlapping pulses.
+                Needs to be a multiple of 4. Padding is introduced symmetrically at the left and
+                right of the waveform.
 
         Returns:
             serial (str): String with a serialization of the waveform.
@@ -307,7 +315,9 @@ class QMConfig:
             waveform = getattr(pulse, f"envelope_waveform_{mode}")
             serial = waveform.serial
             if serial not in self.waveforms:
-                self.waveforms[serial] = {"type": "arbitrary", "samples": waveform.data.tolist()}
+                padding = (padding_len // 2) * [0.0]
+                samples = padding + waveform.data.tolist() + padding
+                self.waveforms[serial] = {"type": "arbitrary", "samples": samples}
         return serial
 
     def register_integration_weights(self, qubit, readout_len):
@@ -353,6 +363,9 @@ class QMPulse:
         self.baked = None
         self.baked_amplitude = None
 
+        # TODO: Create create a new dataclass for these
+        # TODO: Skip ``assign`` call in ``play_pulses`` if shot classification is
+        # is not needed to save time
         self.I = None
         self.Q = None
         self.shot = None
@@ -377,7 +390,7 @@ class QMPulse:
             self.cos = np.cos(iq_angle)
             self.sin = np.sin(iq_angle)
 
-    def bake(self, config: QMConfig):
+    def bake(self, config: QMConfig, padding_len: int):
         if self.baked is not None:
             raise_error(RuntimeError, f"Bake was already called for {self.pulse}.")
         # ! Only works for flux pulses that have zero Q waveform
@@ -385,14 +398,12 @@ class QMPulse:
         # Create the different baked sequences, each one corresponding to a different truncated duration
         # for t in range(self.pulse.duration + 1):
         with baking(config.__dict__, padding_method="right") as self.baked:
-            # if t == 0:  # Otherwise, the baking will be empty and will not be created
-            #    wf = [0.0] * 16
-            # else:
-            # wf = waveform[:t].tolist()
             if self.pulse.duration == 0:
+                # otherwise, the baking will be empty and will not be created
                 waveform = [0.0] * 16
             else:
-                waveform = self.pulse.envelope_waveform_i.data.tolist()
+                padding = (padding_len // 2) * [0]
+                waveform = padding + self.pulse.envelope_waveform_i.data.tolist() + padding
             self.baked.add_op(self.pulse.serial, self.element, waveform)
             self.baked.play(self.pulse.serial, self.element)
             # Append the baking object in the list to call it from the QUA program
@@ -422,7 +433,7 @@ class QMSequence(list):
         # keep track of timings to properly introduce ``wait`` instructions
         self.clock = collections.defaultdict(int)
 
-    def add(self, pulse):
+    def add(self, pulse, padding_len):
         if not isinstance(pulse, Pulse):
             raise_error(TypeError, f"Pulse {pulse} has invalid type {type(pulse)}.")
 
@@ -433,10 +444,10 @@ class QMSequence(list):
         super().append(qmpulse)
 
         wait_time = pulse.start - self.clock[qmpulse.element]
-        if wait_time >= 12:
-            qmpulse.delay = wait_time // 4 + 1
+        if wait_time >= 16:
+            qmpulse.delay = wait_time // 4
             self.clock[qmpulse.element] += 4 * qmpulse.delay
-        self.clock[qmpulse.element] += qmpulse.duration
+        self.clock[qmpulse.element] += qmpulse.duration + padding_len
 
         return qmpulse
 
@@ -474,6 +485,7 @@ class QMOPX(AbstractInstrument):
 
         self.time_of_flight = 0
         self.smearing = 0
+        self.padding_len = 4
         # copied from qblox runcard, not used here yet
         # hardware_avg: 1024
         # sampling_rate: 1_000_000_000
@@ -568,6 +580,7 @@ class QMOPX(AbstractInstrument):
                     play(qmpulse.operation, qmpulse.element)
                 if needs_reset:
                     reset_frame(qmpulse.element)
+                    needs_reset = False
 
         # for Rabi-length?
         if relaxation_time > 0:
@@ -627,16 +640,18 @@ class QMOPX(AbstractInstrument):
         # If we want to play overlapping pulses we need to define different elements on the same ports
         # like we do for readout multiplex
         qmsequence = QMSequence()
-        for pulse in sequence:
-            qmpulse = qmsequence.add(pulse)
+        for pulse in sorted(sequence.pulses, key=lambda pulse: (pulse.start, pulse.duration)):
+            qmpulse = qmsequence.add(pulse, self.padding_len)
             if pulse.duration % 4 or pulse.duration < 16:
                 if pulse.type.name != "FLUX":
                     raise_error(NotImplementedError, "1ns resolution is available for flux pulses only.")
                 # register flux element (if it does not already exist)
                 self.config.register_flux_element(qubits[pulse.qubit], pulse.frequency)
-                qmpulse.bake(self.config)
+                qmpulse.bake(self.config, self.padding_len)
             else:
-                self.config.register_pulse(qubits[pulse.qubit], pulse, self.time_of_flight, self.smearing)
+                self.config.register_pulse(
+                    qubits[pulse.qubit], pulse, self.time_of_flight, self.smearing, self.padding_len
+                )
 
         return qmsequence
 
