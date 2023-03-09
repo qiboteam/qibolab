@@ -1,5 +1,6 @@
 import collections
 from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 from qibo.config import log, raise_error
@@ -354,10 +355,9 @@ class QMPulse:
         self.operation = pulse.serial
         self.relative_phase = pulse.relative_phase / (2 * np.pi)
         self.duration = pulse.duration
-        # delay to use in wait instruction before playing the pulse
-        self.delay = 0
-        # elements to align before playing the pulse
-        self.align_elements = []
+
+        self.previous_qmpulse = None
+        self.next_qmpulses = []
 
         # Stores the baking object (for pulses that need 1ns resolution)
         self.baked = None
@@ -375,6 +375,14 @@ class QMPulse:
         self.threshold = None
         self.cos = None
         self.sin = None
+
+    @property
+    def delay(self):
+        """Delay to be used in QUA ``wait`` instruction in clock cycles."""
+        if self.previous_qmpulse is None:
+            return self.pulse.start // 4
+        else:
+            return (self.pulse.start - self.previous_qmpulse.pulse.finish) // 4
 
     def declare_output(self, threshold=None, iq_angle=None):
         self.I = declare(fixed)
@@ -417,21 +425,57 @@ class QMPulse:
 # TODO: Merge moments that have durations or wait times <16ns
 
 
-class QMSequence(list):
+@dataclass
+class Moment:
+    start: int
+    duration: int
+    qmpulses: List[QMPulse] = field(default_factory=list)
+    next_moment: Optional["Moment"] = None
+    previous_moment: Optional["Moment"] = None
+
+    def add(self, qmpulse):
+        self.qmpulses.append(qmpulse)
+
+    @property
+    def finish(self):
+        return self.start + self.duration
+
+    @property
+    def delay(self):
+        """Delay to be used in QUA ``wait`` instruction in clock cycles."""
+        if self.previous_moment is None:
+            return self.start // 4
+        else:
+            return (self.start - self.previous_moment.finish) // 4
+
+    @property
+    def elements(self):
+        return {qmpulse.element for qmpulse in self.qmpulses}
+
+
+@dataclass
+class Sequence:
+    """Pulse sequence containing QM specific pulses (``qmpulse``).
+
+    Dfined in :meth:`qibolab.instruments.qm.QMOPX.play`.
+    Holds attributes for the ``element`` and ``operation`` that
+    corresponds to each pulse, as defined in the QM config.
+    """
+
     # TODO: Implement constructor ``from_sequence`` which loops over the
     # given ``PulseSequence`` sorted according to (start, duration)
     # TODO: Implement ``.play()`` method?
     # Pulses with the same start and duration go to the same moment
     # Use align and wait between moments only
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # keep track of readout pulses for registering outputs
-        self.ro_pulses = []
-        # map from qibolab pulses to QMPulses (useful when sweeping)
-        self.pulse_to_qmpulse = {}
-        # keep track of timings to properly introduce ``wait`` instructions
-        self.clock = collections.defaultdict(int)
+    qmpulses: List[QMPulse] = field(default_factory=list)
+    # moments: List[Moment] = field(default_factory=list)
+    # times_to_moments: Dict[Tuple[int, int], Moment] = field(default_factory=dict)
+
+    ro_pulses: List[QMPulse] = field(default_factory=list)
+    """List of readout pulses used for registering outputs."""
+    pulse_to_qmpulse: Dict[Pulse, QMPulse] = field(default_factory=dict)
+    """Map from qibolab pulses to QMPulses (useful when sweeping)."""
 
     def add(self, pulse, padding_len):
         if not isinstance(pulse, Pulse):
@@ -439,15 +483,32 @@ class QMSequence(list):
 
         qmpulse = QMPulse(pulse)
         self.pulse_to_qmpulse[pulse.serial] = qmpulse
-        if pulse.type.name == "READOUT":
+        if pulse.type is PulseType.READOUT:
             self.ro_pulses.append(qmpulse)
-        super().append(qmpulse)
 
-        wait_time = pulse.start - self.clock[qmpulse.element]
-        if wait_time >= 16:
-            qmpulse.delay = wait_time // 4
-            self.clock[qmpulse.element] += 4 * qmpulse.delay
-        self.clock[qmpulse.element] += qmpulse.duration + padding_len
+        for previous_qmpulse in reversed(self.qmpulses):
+            if previous_qmpulse.pulse.finish <= pulse.start:
+                previous_qmpulse.next_qmpulses.append(qmpulse)
+                qmpulse.previous_qmpulse = previous_qmpulse
+                break
+
+        self.qmpulses.append(qmpulse)
+
+        # pulse_moment = (pulse.start, pulse.duration)
+        ## create new ``Moment`` for this time block if it doesn't already exist
+        # if pulse_moment not in self.times_to_moments:
+        #    moment = Moment(*pulse_moment)
+        #    for previous_moment in reversed(self.moments):
+        #        if previous_moment.finish <= moment.start:
+        #            moment.previous_moment = previous_moment
+        #            break
+        #    self.moments.append(moment)
+        #    self.times_to_moments[pulse_moment] = moment
+        # else:
+        #    moment = self.times_to_moments[pulse_moment]
+        ## add pulse to moment
+        # moment.add(qmpulse)
+        # qmpulse.moment = moment
 
         return qmpulse
 
@@ -539,25 +600,63 @@ class QMOPX(AbstractInstrument):
 
         return machine.execute(program)
 
+    def create_qmsequence(self, qubits, sequence):
+        """Translates a :class:`qibolab.pulses.PulseSequence` to a :class:`qibolab.instruments.qm.Sequence`.
+
+        Also register flux elements for all qubits (if applicable) so that all qubits are operated at their
+        sweetspot.
+
+        Args:
+            qubits (list): List of :class:`qibolab.platforms.abstract.Qubit` objects
+                passed from the platform.
+            sequence (:class:`qibolab.pulses.PulseSequence`). Pulse sequence to translate.
+
+        Returns:
+            (:class:`qibolab.instruments.qm.Sequence`) containing the pulses from given pulse sequence.
+        """
+        # register flux elements for all qubits so that they are
+        # always at sweetspot even when they are not used
+        for qubit in qubits.values():
+            if qubit.flux:
+                self.config.register_flux_element(qubit)
+
+        # Current driver cannot play overlapping pulses on drive and flux channels
+        # If we want to play overlapping pulses we need to define different elements on the same ports
+        # like we do for readout multiplex
+        qmsequence = Sequence()
+        for pulse in sorted(sequence.pulses, key=lambda pulse: (pulse.start, pulse.duration)):
+            qmpulse = qmsequence.add(pulse, self.padding_len)
+            if pulse.duration % 4 or pulse.duration < 16:
+                if pulse.type.name != "FLUX":
+                    raise_error(NotImplementedError, "1ns resolution is available for flux pulses only.")
+                # register flux element (if it does not already exist)
+                self.config.register_flux_element(qubits[pulse.qubit], pulse.frequency)
+                qmpulse.bake(self.config, self.padding_len)
+            else:
+                self.config.register_pulse(
+                    qubits[pulse.qubit], pulse, self.time_of_flight, self.smearing, self.padding_len
+                )
+
+        return qmsequence
+
     @staticmethod
-    def play_pulses(qmsequence, relaxation_time=0):
+    def play_pulses(qmsequence, relaxation_time):
         """Part of QUA program that plays an arbitrary pulse sequence.
 
         Should be used inside a ``program()`` context.
 
         Args:
-            qmsequence (list): Pulse sequence containing QM specific pulses (``qmpulse``).
-                These pulses are defined in :meth:`qibolab.instruments.qm.QMOPX.play` and
-                hold attributes for the ``element`` and ``operation`` that corresponds to
-                each pulse, as defined in the QM config.
+            qmsequence (:class:`qibolab.instruments.qm.Sequence`): Pulse sequence containing QM specific pulses.
+                These pulses are defined in :meth:`qibolab.instruments.qm.QMOPX.create_qmsequence`
+                and hold information about their scheduling and what element they will be played.
         """
         needs_reset = False
         align()
-        for qmpulse in qmsequence:
-            pulse = qmpulse.pulse
+        for qmpulse in qmsequence.qmpulses:
             if qmpulse.delay >= 4:
                 wait(qmpulse.delay, qmpulse.element)
-            if pulse.type.name == "READOUT":
+
+            if qmpulse.pulse.type is PulseType.READOUT:
                 measure(
                     qmpulse.operation,
                     qmpulse.element,
@@ -566,7 +665,9 @@ class QMOPX(AbstractInstrument):
                     dual_demod.full("minus_sin", "out1", "cos", "out2", qmpulse.Q),
                 )
                 if qmpulse.threshold is not None:
+                    # TODO: Disable this if shot classification is not neeeded
                     assign(qmpulse.shot, qmpulse.I * qmpulse.cos - qmpulse.Q * qmpulse.sin > qmpulse.threshold)
+
             else:
                 if not isinstance(qmpulse.relative_phase, float) or qmpulse.relative_phase != 0:
                     frame_rotation_2pi(qmpulse.relative_phase, qmpulse.element)
@@ -582,7 +683,11 @@ class QMOPX(AbstractInstrument):
                     reset_frame(qmpulse.element)
                     needs_reset = False
 
-        # for Rabi-length?
+            elements_to_align = {qmp.element for qmp in qmpulse.next_qmpulses}
+            if elements_to_align:
+                elements_to_align.add(qmpulse.element)
+                align(*elements_to_align)
+
         if relaxation_time > 0:
             wait(relaxation_time // 4)
 
@@ -615,45 +720,6 @@ class QMOPX(AbstractInstrument):
                 shots = None
             results[pulse.qubit] = results[serial] = ExecutionResults.from_components(ires, qres, shots)
         return results
-
-    def create_qmsequence(self, qubits, sequence):
-        """Translates a :class:`qibolab.pulses.PulseSequence` to a :class:`qibolab.instruments.qm.QMSequence`.
-
-        Also register flux elements for all qubits (if applicable) so that all qubits are operated at their
-        sweetspot.
-
-        Args:
-            qubits (list): List of :class:`qibolab.platforms.abstract.Qubit` objects
-                passed from the platform.
-            sequence (:class:`qibolab.pulses.PulseSequence`). Pulse sequence to translate.
-
-        Returns:
-            (:class:`qibolab.instruments.qm.QMSequence`) containing the pulses from given pulse sequence.
-        """
-        # register flux elements for all qubits so that they are
-        # always at sweetspot even when they are not used
-        for qubit in qubits.values():
-            if qubit.flux:
-                self.config.register_flux_element(qubit)
-
-        # Current driver cannot play overlapping pulses on drive and flux channels
-        # If we want to play overlapping pulses we need to define different elements on the same ports
-        # like we do for readout multiplex
-        qmsequence = QMSequence()
-        for pulse in sorted(sequence.pulses, key=lambda pulse: (pulse.start, pulse.duration)):
-            qmpulse = qmsequence.add(pulse, self.padding_len)
-            if pulse.duration % 4 or pulse.duration < 16:
-                if pulse.type.name != "FLUX":
-                    raise_error(NotImplementedError, "1ns resolution is available for flux pulses only.")
-                # register flux element (if it does not already exist)
-                self.config.register_flux_element(qubits[pulse.qubit], pulse.frequency)
-                qmpulse.bake(self.config, self.padding_len)
-            else:
-                self.config.register_pulse(
-                    qubits[pulse.qubit], pulse, self.time_of_flight, self.smearing, self.padding_len
-                )
-
-        return qmsequence
 
     def play(self, qubits, sequence, nshots, relaxation_time):
         """Plays an arbitrary pulse sequence using QUA program.
@@ -837,6 +903,8 @@ class QMOPX(AbstractInstrument):
     }
 
     def sweep_recursion(self, sweepers, qubits, qmsequence, relaxation_time):
+        # TODO: I think ``relaxation_time`` should be passed in ``play_pulses`` only
+        # not in the sweeper calls
         if len(sweepers) > 0:
             parameter = sweepers[0].parameter
             if parameter in self.SWEEPERS:
@@ -844,4 +912,4 @@ class QMOPX(AbstractInstrument):
             else:
                 raise_error(NotImplementedError, f"Sweeper for {parameter} is not implemented.")
         else:
-            self.play_pulses(qmsequence)
+            self.play_pulses(qmsequence, relaxation_time=0)
