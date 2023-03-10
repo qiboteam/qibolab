@@ -167,6 +167,45 @@ def test_qmsim_sweep_bias(simulator, folder):
     assert_regression(samples, folder, f"sweep_bias")
 
 
+def test_qmsim_sweep_start(simulator, folder):
+    qubits = list(range(simulator.nqubits))
+    sequence = PulseSequence()
+    qd_pulses = {}
+    ro_pulses = {}
+    for qubit in qubits:
+        qd_pulses[qubit] = simulator.create_RX_pulse(qubit, start=0)
+        ro_pulses[qubit] = simulator.create_MZ_pulse(qubit, start=qd_pulses[qubit].finish)
+        sequence.add(qd_pulses[qubit])
+        sequence.add(ro_pulses[qubit])
+    values = [20, 40]
+    pulses = [ro_pulses[qubit] for qubit in qubits]
+    sweeper = Sweeper(Parameter.start, values, pulses=pulses)
+    result = simulator.sweep(sequence, sweeper, nshots=1, relaxation_time=0)
+    samples = result.get_simulated_samples()
+    assert_regression(samples, folder, f"sweep_start")
+
+
+def test_qmsim_sweep_start_two_pulses(simulator, folder):
+    qubits = list(range(simulator.nqubits))
+    sequence = PulseSequence()
+    qd_pulses1 = {}
+    qd_pulses2 = {}
+    ro_pulses = {}
+    for qubit in qubits:
+        qd_pulses1[qubit] = simulator.create_RX_pulse(qubit, start=0)
+        qd_pulses2[qubit] = simulator.create_RX_pulse(qubit, start=qd_pulses1[qubit].finish)
+        ro_pulses[qubit] = simulator.create_MZ_pulse(qubit, start=qd_pulses2[qubit].finish)
+        sequence.add(qd_pulses1[qubit])
+        sequence.add(qd_pulses2[qubit])
+        sequence.add(ro_pulses[qubit])
+    values = [20, 60]
+    pulses = [qd_pulses2[qubit] for qubit in qubits]
+    sweeper = Sweeper(Parameter.start, values, pulses=pulses)
+    result = simulator.sweep(sequence, sweeper, nshots=1, relaxation_time=0)
+    samples = result.get_simulated_samples()
+    assert_regression(samples, folder, f"sweep_start_two_pulses")
+
+
 gatelist = [
     ["I", "I"],
     ["RX(pi)", "RX(pi)"],

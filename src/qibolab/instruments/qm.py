@@ -404,6 +404,9 @@ class QMPulse:
         self.relative_phase = pulse.relative_phase / (2 * np.pi)
         self.duration = pulse.duration
 
+        # for sweeping pulse start time
+        self.sweeped_delay = None
+
         self.previous = None
         # ``QMPulse`` that plays right before the current pulse
         # the delay of the current pulse will be in respect to the previous pulse
@@ -420,10 +423,18 @@ class QMPulse:
     @property
     def delay(self):
         """Delay to be used in QUA ``wait`` instruction in clock cycles."""
+        if self.sweeped_delay is not None:
+            return self.sweeped_delay
+
         if self.previous is None:
-            return self.pulse.start // 4
+            wait_time = self.pulse.start
         else:
-            return (self.pulse.start - self.previous.pulse.finish) // 4
+            wait_time = self.pulse.start - self.previous.pulse.finish
+
+        if wait_time >= 16:
+            return wait_time // 4
+        else:
+            return None
 
     def declare_output(self, threshold=None, angle=None):
         self.acquisition = AcquisitionVariables(threshold=threshold, angle=angle)
@@ -635,7 +646,7 @@ class QMOPX(AbstractInstrument):
         needs_reset = False
         align()
         for qmpulse in qmsequence.qmpulses:
-            if qmpulse.delay >= 4:
+            if qmpulse.delay is not None:
                 wait(qmpulse.delay, qmpulse.element)
 
             if qmpulse.pulse.type is PulseType.READOUT:
@@ -864,11 +875,23 @@ class QMOPX(AbstractInstrument):
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
 
+    def sweep_start(self, sweepers, qubits, qmsequence, relaxation_time):
+        sweeper = sweepers[0]
+        delay = declare(int)
+        values = np.array(sweeper.values) // 4
+        with for_(*from_array(delay, values.astype(int))):
+            for pulse in sweeper.pulses:
+                qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
+                qmpulse.sweeped_delay = delay
+
+            self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
+
     SWEEPERS = {
         Parameter.frequency: sweep_frequency,
         Parameter.amplitude: sweep_amplitude,
         Parameter.relative_phase: sweep_relative_phase,
         Parameter.bias: sweep_bias,
+        Parameter.start: sweep_start,
     }
 
     def sweep_recursion(self, sweepers, qubits, qmsequence, relaxation_time):
