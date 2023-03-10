@@ -30,7 +30,7 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 1000
+                duration: 700
                 amplitude: 0.001
                 #frequency: 7_225_846_000
                 frequency: 7_212_500_000
@@ -41,15 +41,15 @@ native_gates:
         1: # qubit number
             RX:
                 duration: 40
-                amplitude: 0.05145
-                frequency: 4_852_223_000
+                amplitude: 0.0478
+                frequency: 4_826_863_000
                 #frequency: 4_718_515_000 # 02 transition (more likely)
                 shape: Drag(5, -0.02)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
-                duration: 1000 # 620
+                duration: 700 # 620
                 amplitude: 0.002
                 frequency: 7_453_063_000
                 shape: Rectangular()
@@ -60,14 +60,14 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.05662
-                frequency: 5_795_030_000
+                frequency: 5_764_050_000
                 #frequency: 5_661_400_000 # 02 transition
                 shape: Drag(5, -0.04) #Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
-                duration: 1000 # 960
+                duration: 700 # 960
                 amplitude: 0.004 # 0.0035
                 frequency: 7_654_952_000
                 shape: Rectangular()
@@ -86,7 +86,7 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 1000 # 960
+                duration: 700 # 960
                 amplitude: 0.004 # 0.007
                 frequency: 7_803_223_000
                 shape: Rectangular()
@@ -103,7 +103,7 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 1000 # 640
+                duration: 700 # 640
                 amplitude: 0.004 # 0.0026
                 frequency: 8_058_472_000
                 shape: Rectangular()
@@ -183,7 +183,7 @@ characterization:
             drive_frequency: 4_855_663_000
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.286
+            sweetspot: 0.332
             filter: {}
             # parameters for single shot classification
             threshold: 0.00021798729818936269
@@ -204,11 +204,10 @@ characterization:
             drive_frequency: 5_799_876_000
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.273
-            filter: {}
-            #filter:
-            #    feedforward: [1.0684635881381783, -1.0163217174522334]
-            #    feedback: [0.947858129314055]
+            sweetspot: -0.229
+            filter:
+                feedforward: [1.0684635881381783, -1.0163217174522334]
+                feedback: [0.947858129314055]
             # parameters for single shot classification
             threshold: 0.0002549689720589
             iq_angle: 2.5565860049778686
