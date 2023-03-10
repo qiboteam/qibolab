@@ -1,3 +1,4 @@
+import itertools
 import random
 from copy import deepcopy
 from enum import Enum, auto
@@ -395,15 +396,16 @@ class Transpiler:
         """
         forward = path[0 : meeting_point + 1]
         backward = path[meeting_point + 1 :]
+        backward.reverse()
         if len(forward) > 1:
-            for i in range(len(forward) - 1):
-                self.transpiled_circuit.add(gates.SWAP(self._qubit_map[forward[i]], self._qubit_map[forward[i + 1]]))
+            for f1, f2 in itertools.pairwise(forward):
+                self.transpiled_circuit.add(gates.SWAP(self._qubit_map[f1], self._qubit_map[f2]))
         if len(backward) > 1:
-            for i in range(len(backward) - 1, 0, -1):
-                self.transpiled_circuit.add(gates.SWAP(self._qubit_map[backward[i]], self._qubit_map[backward[i - 1]]))
+            for b1, b2 in itertools.pairwise(backward):
+                self.transpiled_circuit.add(gates.SWAP(self._qubit_map[b1], self._qubit_map[b2]))
 
     def update_qubit_map(self):
         """Update the qubit mapping after adding swaps"""
         old_mapping = deepcopy(self._qubit_map)
-        for key in self._mapping.keys():
+        for key in self._mapping:
             self._qubit_map[self._mapping[key]] = old_mapping[key]
