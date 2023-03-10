@@ -1,7 +1,7 @@
-import itertools
 import random
 from copy import deepcopy
 from enum import Enum, auto
+from itertools import pairwise
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -398,10 +398,10 @@ class Transpiler:
         backward = path[meeting_point + 1 :]
         backward.reverse()
         if len(forward) > 1:
-            for f1, f2 in itertools.pairwise(forward):
+            for f1, f2 in pairwise(forward):
                 self.transpiled_circuit.add(gates.SWAP(self._qubit_map[f1], self._qubit_map[f2]))
         if len(backward) > 1:
-            for b1, b2 in itertools.pairwise(backward):
+            for b1, b2 in pairwise(backward):
                 self.transpiled_circuit.add(gates.SWAP(self._qubit_map[b1], self._qubit_map[b2]))
 
     def update_qubit_map(self):
