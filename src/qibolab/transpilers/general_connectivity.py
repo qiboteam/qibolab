@@ -233,13 +233,11 @@ class Transpiler:
         gates can be applied without introducing any SWAP gate"""
         nodes = self._connectivity.number_of_nodes()
         keys = list(self._connectivity.nodes())
-        values = list(range(nodes))
-        final_mapping = dict(zip(keys, values))
+        final_mapping = dict(zip(keys, list(range(nodes))))
         final_graph = nx.relabel_nodes(self._connectivity, final_mapping)
         final_cost = len(self.reduce(final_graph))
         for _ in range(self._init_samples):
-            random.shuffle(values)
-            mapping = dict(zip(keys, values))
+            mapping = dict(zip(keys, random.sample(range(nodes), nodes)))
             graph = nx.relabel_nodes(self._connectivity, mapping)
             cost = len(self.reduce(graph))
             if cost == 0:
@@ -274,14 +272,13 @@ class Transpiler:
             mapping_list (list): all possible walks of qubits for a given path.
             meeting_point_list (list): all possible qubit meeting point in the path.
         """
-        keys = path
         path_ends = [path[0]] + [path[-1]]
         path_middle = path[1:-1]
         mapping_list = []
         meeting_point_list = []
         for i in range(len(path) - 1):
             values = path_middle[:i] + path_ends + path_middle[i:]
-            mapping = dict(zip(keys, values))
+            mapping = dict(zip(path, values))
             mapping_list.append(mapping)
             meeting_point_list.append(i)
         return mapping_list, meeting_point_list
@@ -298,17 +295,16 @@ class Transpiler:
         nodes = self._graph.number_of_nodes()
         circuit = self.reduce(self._graph)
         final_circuit = circuit
-        keys = [i for i in range(0, nodes)]
-        values = keys
+        keys = list(range(nodes))
         final_graph = self._graph
-        final_mapping = dict(zip(keys, values))
+        final_mapping = dict(zip(keys, keys))
         # Consider all shortest paths
         path_list = [p for p in nx.all_shortest_paths(self._graph, source=circuit[0][0], target=circuit[0][1])]
         self._added_swaps += len(path_list[0]) - 2
         final_path = path_list[0]
         # Reduce the number of paths to be faster
-        for i in range(len(path_list)):
-            List, meeting_point_list = self.map_list(path_list[i])
+        for path in path_list:
+            List, meeting_point_list = self.map_list(path)
             for j in range(len(List)):
                 mapping = List[j]
                 new_graph = nx.relabel_nodes(self._graph, mapping)
@@ -318,7 +314,7 @@ class Transpiler:
                     final_graph = new_graph
                     final_circuit = new_circuit
                     final_mapping = mapping
-                    final_path = path_list[i]
+                    final_path = path
                     meeting_point = meeting_point_list[j]
         self._graph = final_graph
         self._mapping = final_mapping
