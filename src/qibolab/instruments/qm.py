@@ -404,11 +404,11 @@ class QMPulse:
         self.relative_phase = pulse.relative_phase / (2 * np.pi)
         self.duration = pulse.duration
 
-        self.previous_qmpulse = None
+        self.previous = None
         # ``QMPulse`` that plays right before the current pulse
         # the delay of the current pulse will be in respect to the previous pulse
-        self.next_qmpulses = []
-        # list of pulses that have the current pulse registered as ``previous_qmpulse``
+        self.next = []
+        # list of pulses that have the current pulse registered as ``previous``
         # the elements of these pulses will be aligned with the current pulse
 
         self.acquisition = None
@@ -420,10 +420,10 @@ class QMPulse:
     @property
     def delay(self):
         """Delay to be used in QUA ``wait`` instruction in clock cycles."""
-        if self.previous_qmpulse is None:
+        if self.previous is None:
             return self.pulse.start // 4
         else:
-            return (self.pulse.start - self.previous_qmpulse.pulse.finish) // 4
+            return (self.pulse.start - self.previous.pulse.finish) // 4
 
     def declare_output(self, threshold=None, angle=None):
         self.acquisition = AcquisitionVariables(threshold=threshold, angle=angle)
@@ -468,6 +468,20 @@ class Sequence:
     """List of readout pulses used for registering outputs."""
     pulse_to_qmpulse: Dict[Pulse, QMPulse] = field(default_factory=dict)
     """Map from qibolab pulses to QMPulses (useful when sweeping)."""
+    pulse_finish: Dict[int, List[QMPulse]] = field(default_factory=lambda: collections.defaultdict(list))
+    """Map to find all pulses that finish at a given time (useful for ``_find_previous``)."""
+
+    def _find_previous(self, pulse):
+        for finish in reversed(sorted(self.pulse_finish.keys())):
+            if finish <= pulse.start:
+                # first try to find a previous pulse targeting the same qubit
+                last_pulses = self.pulse_finish[finish]
+                for previous in reversed(last_pulses):
+                    if previous.pulse.qubit == pulse.qubit:
+                        return previous
+                # if no pulse is found, remove the qubit constraint
+                return last_pulses[-1]
+        return None
 
     def add(self, pulse, padding_len):
         if not isinstance(pulse, Pulse):
@@ -478,12 +492,12 @@ class Sequence:
         if pulse.type is PulseType.READOUT:
             self.ro_pulses.append(qmpulse)
 
-        for previous_qmpulse in reversed(self.qmpulses):
-            if previous_qmpulse.pulse.finish <= pulse.start:
-                previous_qmpulse.next_qmpulses.append(qmpulse)
-                qmpulse.previous_qmpulse = previous_qmpulse
-                break
+        previous = self._find_previous(pulse)
+        if previous is not None:
+            previous.next.append(qmpulse)
+            qmpulse.previous = previous
 
+        self.pulse_finish[pulse.finish].append(qmpulse)
         self.qmpulses.append(qmpulse)
         return qmpulse
 
@@ -650,9 +664,8 @@ class QMOPX(AbstractInstrument):
                     reset_frame(qmpulse.element)
                     needs_reset = False
 
-            elements_to_align = {qmp.element for qmp in qmpulse.next_qmpulses}
-            if elements_to_align:
-                elements_to_align.add(qmpulse.element)
+            elements_to_align = {qmp.element for qmp in qmpulse.next} | {qmpulse.element}
+            if len(elements_to_align) > 1:
                 align(*elements_to_align)
 
         if relaxation_time > 0:
