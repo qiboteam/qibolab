@@ -22,6 +22,7 @@ from qm.qua import (
     stream_processing,
     wait,
 )
+from qm.qua._dsl import _ResultSource, _Variable  # for type declaration only
 from qm.QuantumMachinesManager import QuantumMachinesManager
 from qualang_tools.bakery import baking
 from qualang_tools.loops import from_array
@@ -348,6 +349,53 @@ class QMConfig:
         )
 
 
+@dataclass
+class AcquisitionVariables:
+    """QUA variables used for saving of acquisition results.
+
+    This class can be instantiated only within a QUA program scope.
+
+    Each readout pulse is associated with its own set of acquisition variables.
+    """
+
+    I: _Variable = field(default_factory=lambda: declare(fixed))
+    Q: _Variable = field(default_factory=lambda: declare(fixed))
+    """Variables to save the (I, Q) values acquired from a single shot."""
+    I_st: _ResultSource = field(default_factory=lambda: declare_stream())
+    Q_st: _ResultSource = field(default_factory=lambda: declare_stream())
+    """Streams to collect the results of all shots."""
+
+    threshold: Optional[float] = None
+    """Threshold to be used for classification of single shots."""
+    angle: Optional[float] = None
+    """Angle in the IQ plane to be used for classification of single shots."""
+    shot: Optional[_Variable] = None
+    shots: Optional[_ResultSource] = None
+    """Variable and stream to collect the classified shots.
+    Used only if a threshold and angle is given.
+    """
+
+    def __post_init__(self):
+        """Create QUA variables needed for single shot classification."""
+        if self.threshold is not None:
+            self.shot = declare(bool)
+            self.shots = declare_stream()
+            self.cos = np.cos(self.angle)
+            self.sin = np.sin(self.angle)
+
+    def save(self):
+        """QUA instruction to save acquired results from variables to streams."""
+        save(self.I, self.I_st)
+        save(self.Q, self.Q_st)
+        if self.threshold is not None:
+            save(self.shot, self.shots)
+
+    def classify_shots(self):
+        """QUA instruction to classify shots in real time and save the result to a variable."""
+        if self.threshold is not None:
+            assign(self.shot, self.I * self.cos - self.Q * self.sin > self.threshold)
+
+
 class QMPulse:
     def __init__(self, pulse):
         self.pulse = pulse
@@ -363,20 +411,11 @@ class QMPulse:
         # list of pulses that have the current pulse registered as ``previous_qmpulse``
         # the elements of these pulses will be aligned with the current pulse
 
+        self.acquisition = None
+
         # Stores the baking object (for pulses that need 1ns resolution)
         self.baked = None
         self.baked_amplitude = None
-
-        # TODO: Create create a new dataclass for these
-        self.I = None
-        self.Q = None
-        self.shot = None
-        self.I_st = None
-        self.Q_st = None
-        self.shots = None
-        self.threshold = None
-        self.cos = None
-        self.sin = None
 
     @property
     def delay(self):
@@ -386,19 +425,8 @@ class QMPulse:
         else:
             return (self.pulse.start - self.previous_qmpulse.pulse.finish) // 4
 
-    def declare_output(self, threshold=None, iq_angle=None):
-        self.I = declare(fixed)
-        self.Q = declare(fixed)
-        self.I_st = declare_stream()
-        self.Q_st = declare_stream()
-
-        if threshold is not None:
-            # QUA variables used for single shot classification
-            self.shot = declare(bool)
-            self.shots = declare_stream()
-            self.threshold = threshold
-            self.cos = np.cos(iq_angle)
-            self.sin = np.sin(iq_angle)
+    def declare_output(self, threshold=None, angle=None):
+        self.acquisition = AcquisitionVariables(threshold=threshold, angle=angle)
 
     def bake(self, config: QMConfig, padding_len: int):
         if self.baked is not None:
@@ -529,14 +557,7 @@ class QMOPX(AbstractInstrument):
             self.is_connected = False
 
     def execute_program(self, program):
-        """Executes an arbitrary program written in QUA language.
-
-        Args:
-            program: QUA program.
-
-        Returns:
-            TODO
-        """
+        """Executes an arbitrary program written in QUA language."""
         machine = self.manager.open_qm(self.config.__dict__)
 
         # for debugging only
@@ -604,16 +625,15 @@ class QMOPX(AbstractInstrument):
                 wait(qmpulse.delay, qmpulse.element)
 
             if qmpulse.pulse.type is PulseType.READOUT:
+                acquisition = qmpulse.acquisition
                 measure(
                     qmpulse.operation,
                     qmpulse.element,
                     None,
-                    dual_demod.full("cos", "out1", "sin", "out2", qmpulse.I),
-                    dual_demod.full("minus_sin", "out1", "cos", "out2", qmpulse.Q),
+                    dual_demod.full("cos", "out1", "sin", "out2", acquisition.I),
+                    dual_demod.full("minus_sin", "out1", "cos", "out2", acquisition.Q),
                 )
-                if qmpulse.threshold is not None:
-                    # TODO: Disable this if shot classification is not neeeded
-                    assign(qmpulse.shot, qmpulse.I * qmpulse.cos - qmpulse.Q * qmpulse.sin > qmpulse.threshold)
+                acquisition.classify_shots()
 
             else:
                 if not isinstance(qmpulse.relative_phase, float) or qmpulse.relative_phase != 0:
@@ -640,10 +660,7 @@ class QMOPX(AbstractInstrument):
 
         # Save data to the stream processing
         for qmpulse in qmsequence.ro_pulses:
-            save(qmpulse.I, qmpulse.I_st)
-            save(qmpulse.Q, qmpulse.Q_st)
-            if qmpulse.threshold is not None:
-                save(qmpulse.shot, qmpulse.shots)
+            qmpulse.acquisition.save()
 
     @staticmethod
     def fetch_results(result, ro_pulses):
@@ -694,15 +711,13 @@ class QMOPX(AbstractInstrument):
                 self.play_pulses(qmsequence, relaxation_time)
 
             with stream_processing():
-                # I_st.average().save("I")
-                # Q_st.average().save("Q")
-                # n_st.buffer().save_all("n")
                 for qmpulse in qmsequence.ro_pulses:
                     serial = qmpulse.pulse.serial
-                    qmpulse.I_st.buffer(nshots).save(f"{serial}_I")
-                    qmpulse.Q_st.buffer(nshots).save(f"{serial}_Q")
-                    if qmpulse.threshold is not None:
-                        qmpulse.shots.buffer(nshots).save(f"{serial}_shots")
+                    acquisition = qmpulse.acquisition
+                    acquisition.I_st.buffer(nshots).save(f"{serial}_I")
+                    acquisition.Q_st.buffer(nshots).save(f"{serial}_Q")
+                    if acquisition.threshold is not None:
+                        acquisition.shots.buffer(nshots).save(f"{serial}_shots")
 
         result = self.execute_program(experiment)
         return self.fetch_results(result, sequence.ro_pulses)
@@ -730,15 +745,17 @@ class QMOPX(AbstractInstrument):
 
             with stream_processing():
                 for qmpulse in qmsequence.ro_pulses:
-                    Ist_temp = qmpulse.I_st
-                    Qst_temp = qmpulse.Q_st
-                    if not average and qmpulse.threshold is not None:
-                        shots_temp = qmpulse.shots
+                    acquisition = qmpulse.acquisition
+                    Ist_temp = acquisition.I_st
+                    Qst_temp = acquisition.Q_st
+                    if not average and acquisition.threshold is not None:
+                        shots_temp = acquisition.shots
                     for sweeper in reversed(sweepers):
                         Ist_temp = Ist_temp.buffer(len(sweeper.values))
                         Qst_temp = Qst_temp.buffer(len(sweeper.values))
-                        if not average and qmpulse.threshold is not None:
+                        if not average and acquisition.threshold is not None:
                             shots_temp = shots_temp.buffer(len(sweeper.values))
+
                     serial = qmpulse.pulse.serial
                     if average:
                         Ist_temp.average().save(f"{serial}_I")
