@@ -395,8 +395,7 @@ class Transpiler:
             meeting_point (int): qubit meeting point in the path.
         """
         forward = path[0 : meeting_point + 1]
-        backward = path[meeting_point + 1 :]
-        backward.reverse()
+        backward = path[meeting_point + 1 :: -1]
         if len(forward) > 1:
             for f1, f2 in pairwise(forward):
                 self.transpiled_circuit.add(gates.SWAP(self._qubit_map[f1], self._qubit_map[f2]))
@@ -407,5 +406,5 @@ class Transpiler:
     def update_qubit_map(self):
         """Update the qubit mapping after adding swaps"""
         old_mapping = deepcopy(self._qubit_map)
-        for key in self._mapping:
-            self._qubit_map[self._mapping[key]] = old_mapping[key]
+        for key, value in self._mapping.items():
+            self._qubit_map[value] = old_mapping[key]
