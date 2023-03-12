@@ -644,6 +644,12 @@ class QMOPX(AbstractInstrument):
         return self.fetch_results(result, sequence.ro_pulses)
 
     def sweep(self, qubits, sequence, *sweepers, nshots, relaxation_time, average=True):
+        # register flux elements for all qubits so that they are
+        # always at sweetspot even when they are not used
+        for qubit in qubits.values():
+            if qubit.flux:
+                self.config.register_flux_element(qubit)
+
         qmsequence = QMSequence()
         for pulse in sequence:
             qmpulse = qmsequence.add(pulse)
