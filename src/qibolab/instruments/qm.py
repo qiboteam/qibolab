@@ -446,7 +446,7 @@ class QMPulse:
 
         # Create the different baked sequences, each one corresponding to a different truncated duration
         # for t in range(self.pulse.duration + 1):
-        with baking(config.__dict__, padding_method="right") as self.baked:
+        with baking(config.__dict__, padding_method="symmetric_l") as self.baked:
             if self.pulse.duration == 0:
                 # otherwise, the baking will be empty and will not be created
                 waveform = [0.0] * 16
@@ -619,13 +619,13 @@ class QMOPX(AbstractInstrument):
         qmsequence = Sequence()
         for pulse in sorted(sequence.pulses, key=lambda pulse: (pulse.start, pulse.duration)):
             qmpulse = qmsequence.add(pulse, self.padding_len)
-            if pulse.duration % 4 or pulse.duration < 16:
-                if pulse.type.name != "FLUX":
-                    raise_error(NotImplementedError, "1ns resolution is available for flux pulses only.")
+            if pulse.type is PulseType.FLUX:
                 # register flux element (if it does not already exist)
                 self.config.register_flux_element(qubits[pulse.qubit], pulse.frequency)
                 qmpulse.bake(self.config, self.padding_len)
             else:
+                if pulse.duration % 4 != 0 or pulse.duration < 16:
+                    raise_error(NotImplementedError, "1ns resolution is available for flux pulses only.")
                 self.config.register_pulse(
                     qubits[pulse.qubit], pulse, self.time_of_flight, self.smearing, self.padding_len
                 )
