@@ -230,7 +230,7 @@ class Transpiler:
         self._mapping = result.mapping
 
     def greedy_init(self):
-        """initialize the circuit with greedy algorithm let a maximum number of 2-qubit
+        """Initialize the circuit with greedy algorithm let a maximum number of 2-qubit
         gates can be applied without introducing any SWAP gate"""
         nodes = self._connectivity.number_of_nodes()
         keys = list(self._connectivity.nodes())
