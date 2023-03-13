@@ -22,9 +22,8 @@ native_gates:
         0: # qubit number
             RX:
                 duration: 40
-                amplitude: 0.05
-                #frequency: 4_995_300_000
-                frequency: 5_010_300_000
+                amplitude: 0.0395
+                frequency: 5_047_680_000
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -78,7 +77,7 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.1508
-                frequency: 6_756_682_000
+                frequency: 6_758_382_000
                 #frequency: 6_715_582_000
                 #frequency: 6_628_822_000 # 02 transition
                 shape: Gaussian(5)
@@ -97,7 +96,7 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.0555
-                frequency: 6_579_113_000
+                frequency: 6_587_993_000
                 shape: Drag(5, 0.0) #Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -166,11 +165,11 @@ characterization:
             drive_frequency: 0.0
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.1176
+            sweetspot: -0.1311
             filter: {}
             # parameters for single shot classification
-            threshold: 0.0001732058288106756
-            iq_angle: 2.9919018531322843
+            threshold: 0.00016702217548251758
+            iq_angle: 2.7340151644288095
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -186,8 +185,8 @@ characterization:
             sweetspot: 0.276
             filter: {}
             # parameters for single shot classification
-            threshold: 0.0002201850396728251
-            iq_angle: 4.619838831197781
+            threshold: 0.00021717304199806543
+            iq_angle: 4.641564603079179
             # required for integration weights (not sure if it should be here)
             rotation_angle: 63.214
             # Software classifier
@@ -204,13 +203,13 @@ characterization:
             drive_frequency: 5_799_876_000
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.283
+            sweetspot: -0.281
             filter:
                 feedforward: [1.0684635881381783, -1.0163217174522334]
                 feedback: [0.947858129314055]
             # parameters for single shot classification
-            threshold: 0.00023922761402299505
-            iq_angle: 4.006340269281878
+            threshold: 0.00023460529434775378
+            iq_angle: 4.010229522727564
             # Software classifier
             # classifier:
             #     type: "scikit"
@@ -230,8 +229,8 @@ characterization:
             sweetspot: -0.2
             filter: {}
             # parameters for single shot classification
-            threshold: 0.0003503324577034273
-            iq_angle: 4.7747012957131965
+            threshold: 0.000335647490341843
+            iq_angle: 4.781771943738393
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # Software classifier
@@ -248,11 +247,11 @@ characterization:
             drive_frequency: 6_585_053_000
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.1105
+            sweetspot: -0.1165
             filter: {}
             # parameters for single shot classification
-            threshold: 7.741224434165442e-05
-            iq_angle: 4.308858106650311
+            threshold: 7.089287689657903e-05
+            iq_angle: 4.305491204191809
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # Software classifier

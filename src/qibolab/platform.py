@@ -106,7 +106,7 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
     # Set LO parameters
     local_oscillators[0].frequency = 7_300_000_000
     local_oscillators[1].frequency = 7_900_000_000
-    local_oscillators[2].frequency = 4_700_000_000
+    local_oscillators[2].frequency = 4_950_000_000
     local_oscillators[3].frequency = 5_600_000_000
     local_oscillators[4].frequency = 6_500_000_000
     local_oscillators[0].power = 18.0
