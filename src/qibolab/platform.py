@@ -1,8 +1,33 @@
 from qibo.config import raise_error
 
-from qibolab.designs.channels import Channel, ChannelMap
-from qibolab.designs.mixer import MixerInstrumentDesign
+from qibolab.designs import Channel, ChannelMap, InstrumentDesign
 from qibolab.platforms.platform import DesignPlatform
+
+
+def create_dummy(runcard):
+    """Create a single qubit platform using the dummy instrument.
+
+    Useful for testing.
+    """
+    from qibolab.instruments.dummy import DummyInstrument
+
+    # Create channel objects
+    channels = ChannelMap()
+    channels |= ChannelMap.from_names("readout", "drive", "flux")
+
+    # Create dummy controller
+    instrument = DummyInstrument("dummy", 0)
+    # Create design
+    design = InstrumentDesign([instrument], channels)
+    # Create platform
+    platform = DesignPlatform("dummy", design, runcard)
+
+    # map channels to qubits
+    platform.qubits[0].readout = channels["readout"]
+    platform.qubits[0].drive = channels["drive"]
+    platform.qubits[0].flux = channels["flux"]
+
+    return platform
 
 
 def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=False):
@@ -67,6 +92,9 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
 
         controller = QMSim("qmopx", address, simulation_duration, cloud)
 
+    # set time of flight for readout integration (HARDCODED)
+    controller.time_of_flight = 280
+
     # Instantiate local oscillators (HARDCODED)
     local_oscillators = [
         LocalOscillator("lo_readout_a", "192.168.0.39"),
@@ -99,7 +127,8 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
     channels["L3-14"].local_oscillator = local_oscillators[4]
     channels["L4-26"].local_oscillator = local_oscillators[5]
 
-    design = MixerInstrumentDesign(controller, channels, local_oscillators)
+    instruments = [controller] + local_oscillators
+    design = InstrumentDesign(instruments, channels)
     platform = DesignPlatform("qw5q_gold", design, runcard)
 
     # assign channels to qubits
@@ -143,7 +172,7 @@ def Platform(name, runcard=None, design=None):
             raise_error(RuntimeError, f"Runcard {name} does not exist.")
 
     if name == "dummy":
-        from qibolab.platforms.dummy import DummyPlatform as Device
+        return create_dummy(runcard)
     elif name == "icarusq":
         from qibolab.platforms.icplatform import ICPlatform as Device
     elif name == "qw5q_gold":

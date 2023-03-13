@@ -251,7 +251,7 @@ class MultiqubitPlatform(AbstractPlatform):
                         pulse.frequency += self.get_lo_drive_frequency(pulse.qubit)
 
         for ro_pulse in ro_pulses.values():
-            data[ro_pulse.serial] = ExecutionResults.from_components(*acquisition_results[key])
+            data[ro_pulse.serial] = ExecutionResults.from_components(*acquisition_results[ro_pulse.serial])
             data[ro_pulse.qubit] = copy.copy(data[ro_pulse.serial])
         return data
 
