@@ -19,7 +19,7 @@ native_gates:
                 duration: 40
                 amplitude: 0.03
                 frequency: 5541800000
-                shape: Gaussian(4)
+                shape: Rectangular() #Gaussian(4)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
