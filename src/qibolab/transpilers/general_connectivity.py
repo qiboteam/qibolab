@@ -1,11 +1,11 @@
 import random
 from copy import deepcopy
 from enum import Enum, auto
-from itertools import pairwise
 
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
+from more_itertools import pairwise
 from qibo import gates
 from qibo.config import log, raise_error
 from qibo.models import Circuit
@@ -272,7 +272,7 @@ class Transpiler:
             mapping_list (list): all possible walks of qubits for a given path.
             meeting_point_list (list): all possible qubit meeting point in the path.
         """
-        path_ends = [path[0]] + [path[-1]]
+        path_ends = [path[0], path[-1]]
         path_middle = path[1:-1]
         mapping_list = []
         meeting_point_list = []
@@ -304,9 +304,8 @@ class Transpiler:
         final_path = path_list[0]
         # Reduce the number of paths to be faster
         for path in path_list:
-            List, meeting_point_list = self.map_list(path)
-            for j in range(len(List)):
-                mapping = List[j]
+            list_, meeting_point_list = self.map_list(path)
+            for j, mapping in enumerate(list_):
                 new_graph = nx.relabel_nodes(self._graph, mapping)
                 new_circuit = self.reduce(new_graph)
                 # Greedy looking for the optimal path and the optimal walk on this path
