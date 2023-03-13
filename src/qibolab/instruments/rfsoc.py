@@ -61,12 +61,12 @@ class ExecutePulseSequence(AveragerProgram):
         self.max_gain = cfg["max_gain"]
         self.adc_trig_offset = cfg["adc_trig_offset"]
         self.max_sampling_rate = cfg["sampling_rate"]
-        self.relax_delay = cfg["repetition_duration"]
-        self.syncdelay = self.us2cycles(1.0)  # TODO maybe better in runcard
-        if self.relax_delay < self.syncdelay:
-            raise Exception(f" syncdelay {self.syncdelay} must be less than relax_delay {self.relax_delay}")
 
-        cfg["reps"] = cfg["nshots"]
+        # TODO maybe better in runcard
+        self.relax_delay = self.us2cycles(cfg["repetition_duration"] * self.us)  # wait end body
+        self.syncdelay = self.us2cycles(0)  # wait measure
+        self.wait_initialize = self.us2cycles(2.0)  # wait end initialize
+
         super().__init__(soc, cfg)
 
     def initialize(self):
@@ -83,7 +83,6 @@ class ExecutePulseSequence(AveragerProgram):
         ch_already_declared = []
         for pulse in self.sequence:
             qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
-            adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
             ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
             gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
 
@@ -94,6 +93,7 @@ class ExecutePulseSequence(AveragerProgram):
                     zone = 1
                 else:
                     zone = 2
+
                 self.declare_gen(gen_ch, nqz=zone)
             else:
                 print(f"Avoided redecalaration of channel {gen_ch}")  # TODO
@@ -117,7 +117,6 @@ class ExecutePulseSequence(AveragerProgram):
 
         for pulse in self.sequence:
             qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
-            adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
             ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
 
             gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
@@ -126,7 +125,7 @@ class ExecutePulseSequence(AveragerProgram):
                 first_pulse_registered.append(gen_ch)
                 self.add_pulse_to_register(pulse)
 
-        self.synci(200)
+        self.sync_all(self.wait_initialize)
 
     def add_pulse_to_register(self, pulse):
         """The task of this function is to call the set_pulse_registers function"""
@@ -138,34 +137,43 @@ class ExecutePulseSequence(AveragerProgram):
 
         time = self.soc.us2cycles(pulse.start * self.us)
         gain = int(pulse.amplitude * self.max_gain)
-        if pulse.amplitude > 1:
-            raise Exception("Relative amplitude higher than 1!")
+
+        if gain == 0 or gain > self.max_gain:
+            raise Exception("Amplitude > 1 or <= 0! {gain}")
+
         phase = self.deg2reg(pulse.relative_phase, gen_ch=gen_ch)
 
         us_length = pulse.duration * self.us
         soc_length = self.soc.us2cycles(us_length)
 
+        is_drag = isinstance(pulse.shape, Drag)
+        is_gaus = isinstance(pulse.shape, Gaussian)
+        is_rect = isinstance(pulse.shape, Rectangular)
+
         if pulse.type == PulseType.DRIVE:
+            freq = self.soc.freq2reg(pulse.frequency * self.MHz, gen_ch=gen_ch)
+        elif pulse.type == PulseType.READOUT:
+            freq = self.soc.freq2reg(pulse.frequency * self.MHz, gen_ch=gen_ch, ro_ch=adc_ch)
+        else:
+            raise Exception(f"Pulse type {pulse.type} not recognized!")
+
+        if is_drag or is_gaus:
             name = pulse.shape.name
             sigma = us_length / pulse.shape.rel_sigma
+            sigma = self.soc.us2cycles(us_length / pulse.shape.rel_sigma)
 
-            freq = self.soc.freq2reg(pulse.frequency * self.MHz, gen_ch=gen_ch)
-
-            if isinstance(pulse.shape, Gaussian):
+            if is_gaus:
                 self.add_gauss(ch=gen_ch, name=name, sigma=sigma, length=soc_length)
 
-            elif isinstance(pulse.shape, Drag):
+            elif is_drag:
                 self.add_DRAG(
                     ch=gen_ch,
                     name=name,
                     sigma=sigma,
-                    delta=sigma,
+                    delta=sigma,  # TODO: check if correct
                     alpha=pulse.beta,
                     length=soc_length,
                 )
-
-            else:
-                raise NotImplementedError(f"Pulse shape {pulse.shape} not supported!")
 
             self.set_pulse_registers(
                 ch=gen_ch,
@@ -176,15 +184,11 @@ class ExecutePulseSequence(AveragerProgram):
                 waveform=name,
             )
 
-        elif pulse.type == PulseType.READOUT:
-            if not isinstance(pulse.shape, Rectangular):
-                raise NotImplementedError("Only Rectangular readout pulses are supported")
-
-            freq = self.soc.freq2reg(pulse.frequency * self.MHz, gen_ch=gen_ch, ro_ch=adc_ch)
-
+        elif is_rect:
             self.set_pulse_registers(ch=gen_ch, style="const", freq=freq, phase=phase, gain=gain, length=soc_length)
+
         else:
-            raise Exception(f"Pulse type {pulse.type} not recognized!")
+            raise NotImplementedError(f"Pulse shape {pulse.shape} not supported!")
 
     def body(self):
         """Execute sequence of pulses.
@@ -219,7 +223,7 @@ class ExecutePulseSequence(AveragerProgram):
                 self.measure(
                     pulse_ch=gen_ch,
                     adcs=[adc_ch],
-                    adc_trig_offset=self.adc_trig_offset,
+                    adc_trig_offset=time + self.adc_trig_offset,
                     t=time,
                     wait=False,
                     syncdelay=self.syncdelay,
@@ -260,16 +264,14 @@ class ExecuteSingleSweep(RAveragerProgram):
         self.max_gain = cfg["max_gain"]
         self.adc_trig_offset = cfg["adc_trig_offset"]
         self.max_sampling_rate = cfg["sampling_rate"]
-        self.relax_delay = cfg["repetition_duration"]
-        self.syncdelay = self.us2cycles(1.0)  # TODO maybe better in runcard
-        cfg["reps"] = cfg["nshots"]
-        if self.relax_delay < self.syncdelay:
-            raise Exception(f" syncdelay {self.syncdelay} must be less than relax_delay {self.relax_delay}")
+
+        # TODO maybe better in runcard
+        self.relax_delay = self.us2cycles(cfg["repetition_duration"] * self.us)  # wait end body
+        self.syncdelay = self.us2cycles(0)  # wait measure
+        self.wait_initialize = self.us2cycles(2.0)  # wait end initialize
 
         # sweeper Settings
         self.sweeper = sweeper
-        # cfg["start"] = sweeper.values[0]
-        # cfg["step"] = sweeper.values[1] - sweeper.values[0]
         cfg["expts"] = len(sweeper.values)
 
         super().__init__(soc, cfg)
@@ -312,7 +314,6 @@ class ExecuteSingleSweep(RAveragerProgram):
         ch_already_declared = []
         for pulse in self.sequence:
             qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
-            adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
             ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
             gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
 
@@ -346,7 +347,6 @@ class ExecuteSingleSweep(RAveragerProgram):
 
         for pulse in self.sequence:
             qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
-            adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
             ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
             gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
 
@@ -354,10 +354,12 @@ class ExecuteSingleSweep(RAveragerProgram):
                 first_pulse_registered.append(gen_ch)
                 self.add_pulse_to_register(pulse)
 
-        self.synci(200)
+        self.sync_all(self.wait_initialize)
 
     def add_pulse_to_register(self, pulse):
         """The task of this function is to call the set_pulse_registers function"""
+
+        is_sweeped = self.sweeper.pulses[0] == pulse
 
         qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
         adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
@@ -365,24 +367,46 @@ class ExecuteSingleSweep(RAveragerProgram):
         gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
 
         time = self.soc.us2cycles(pulse.start * self.us)
-        gain = int(pulse.amplitude * self.max_gain)
-        if pulse.amplitude > 1:
-            raise Exception("Relative amplitude higher than 1!")
+
+        if is_sweeped and self.sweeper.parameter == Parameter.amplitude:
+            gain = self.cfg["start"]
+        else:
+            gain = int(pulse.amplitude * self.max_gain)
+
+        if gain == 0 or gain > self.max_gain:
+            raise Exception("Amplitude > 1 or <= 0! {gain}")
+
         phase = self.deg2reg(pulse.relative_phase, gen_ch=gen_ch)
 
         us_length = pulse.duration * self.us
         soc_length = self.soc.us2cycles(us_length)
 
+        is_drag = isinstance(pulse.shape, Drag)
+        is_gaus = isinstance(pulse.shape, Gaussian)
+        is_rect = isinstance(pulse.shape, Rectangular)
+
         if pulse.type == PulseType.DRIVE:
+            if is_sweeped and self.sweeper.parameter == Parameter.frequency:
+                freq = self.cfg["start"]
+            else:
+                freq = self.soc.freq2reg(pulse.frequency * self.MHz, gen_ch=gen_ch)
+
+        elif pulse.type == PulseType.READOUT:
+            freq = self.soc.freq2reg(pulse.frequency * self.MHz, gen_ch=gen_ch, ro_ch=adc_ch)
+        else:
+            raise Exception(f"Pulse type {pulse.type} not recognized!")
+
+        if is_drag or is_gaus:
             name = pulse.shape.name
             sigma = us_length / pulse.shape.rel_sigma
+            sigma = self.soc.us2cycles(us_length / pulse.shape.rel_sigma)
 
-            freq = self.soc.freq2reg(pulse.frequency * self.MHz, gen_ch=gen_ch)
+            print(f"gauss with {name} {sigma} {soc_length}")
 
-            if isinstance(pulse.shape, Gaussian):
+            if is_gaus:
                 self.add_gauss(ch=gen_ch, name=name, sigma=sigma, length=soc_length)
 
-            elif isinstance(pulse.shape, Drag):
+            elif is_drag:
                 self.add_DRAG(
                     ch=gen_ch,
                     name=name,
@@ -391,9 +415,6 @@ class ExecuteSingleSweep(RAveragerProgram):
                     alpha=pulse.beta,
                     length=soc_length,
                 )
-
-            else:
-                raise NotImplementedError(f"Pulse shape {pulse.shape} not supported!")
 
             self.set_pulse_registers(
                 ch=gen_ch,
@@ -404,15 +425,11 @@ class ExecuteSingleSweep(RAveragerProgram):
                 waveform=name,
             )
 
-        elif pulse.type == PulseType.READOUT:
-            if not isinstance(pulse.shape, Rectangular):
-                raise NotImplementedError("Only Rectangular readout pulses are supported")
-
-            freq = self.soc.freq2reg(pulse.frequency * self.MHz, gen_ch=gen_ch, ro_ch=adc_ch)
-
+        elif is_rect:
             self.set_pulse_registers(ch=gen_ch, style="const", freq=freq, phase=phase, gain=gain, length=soc_length)
+
         else:
-            raise Exception(f"Pulse type {pulse.type} not recognized!")
+            raise NotImplementedError(f"Pulse shape {pulse.shape} not supported!")
 
     def update(self):
         self.mathi(self.sweeper_page, self.sweeper_reg, self.sweeper_reg, "+", self.cfg["step"])
@@ -450,9 +467,9 @@ class ExecuteSingleSweep(RAveragerProgram):
                 self.measure(
                     pulse_ch=gen_ch,
                     adcs=[adc_ch],
-                    adc_trig_offset=self.adc_trig_offset,
+                    adc_trig_offset=time + self.adc_trig_offset,
                     t=time,
-                    wait=False,  # TODO maybe better not hardcoded
+                    wait=False,
                     syncdelay=self.syncdelay,
                 )
         self.wait_all()
@@ -542,7 +559,7 @@ class TII_RFSOC4x2(AbstractInstrument):
 
         # TODO: simmetries beetween repetition_duration Vs relaxation_time and nshots Vs relaxation_time
         # nshots gets added to the dictionary
-        self.cfg["nshots"] = nshots
+        self.cfg["reps"] = nshots
         # if new value is passed, relaxation_time is updated in the dictionary
         if relaxation_time is not None:
             self.cfg["repetition_duration"] = relaxation_time
@@ -706,8 +723,6 @@ class TII_RFSOC4x2(AbstractInstrument):
         Returns:
             A boolean value true if the sweeper must be executed by python loop, false otherwise
         """
-        # TODO: maybe improve this function and check the channel and not the qubit (multiplexing)
-        python_sweep = True
 
         is_amp = sweepers[0].parameter == Parameter.amplitude
         is_freq = sweepers[0].parameter == Parameter.frequency
@@ -808,7 +823,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         Returns:
             A dictionary mapping the readout pulses serial to qibolab results objects
         """
-        self.cfg["nshots"] = nshots
+        self.cfg["reps"] = nshots
         if relaxation_time is not None:
             self.cfg["repetition_duration"] = relaxation_time
 
