@@ -75,7 +75,8 @@ class Transpiler:
         elif self._init_method is QubitInitMethod.custom:
             self._mapping = dict(zip(keys, self._mapping.values()))
             self._graph = nx.relabel_nodes(self._connectivity, self._mapping)
-        init_qubit_map = self.init_qubit_map()
+        # Inverse permutation
+        init_qubit_map = np.argsort(np.asarray(list(self._mapping.values())))
         init_mapping = dict(zip(keys, init_qubit_map))
         self._qubit_map = np.sort(init_qubit_map)
         self.init_circuit(qibo_circuit)
@@ -250,17 +251,6 @@ class Transpiler:
                 final_cost = cost
         self._graph = final_graph
         self._mapping = final_mapping
-
-    def init_qubit_map(self):
-        """Initial circuit-hardware qubit mapping.
-
-        Returns:
-            qubit_map (np.array): array containing the initial qubit mapping of the circuit.
-        """
-        qubit_map = np.zeros((len(self._mapping),), dtype=int)
-        for i, value in enumerate(self._mapping.values()):
-            qubit_map[value] = i
-        return qubit_map
 
     def map_list(self, path):
         """Return all possible walks of qubits for a given path.
