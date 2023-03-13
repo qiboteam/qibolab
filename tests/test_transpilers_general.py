@@ -1,8 +1,8 @@
 import networkx as nx
 import numpy as np
 import pytest
-import sympy
 from qibo import gates
+from qibo.config import raise_error
 from qibo.models import Circuit
 
 from qibolab.transpilers.general_connectivity import Transpiler
@@ -45,7 +45,7 @@ def custom_circuit():
 def special_connectivity(connectivity):
     """Return a TII harware chip connectivity as a networkx graph"""
     if connectivity == "21_qubits":
-        Q = sympy.symbols([f"q{i}" for i in range(21)])
+        Q = [f"q{i}" for i in range(21)]
         chip = nx.Graph()
         chip.add_nodes_from(Q)
         graph_list_h = [
@@ -86,7 +86,7 @@ def special_connectivity(connectivity):
         ]
         chip.add_edges_from(graph_list_h + graph_list_v)
     elif connectivity == "5_qubits":
-        Q = sympy.symbols([f"q{i}" for i in range(5)])
+        Q = [f"q{i}" for i in range(5)]
         chip = nx.Graph()
         chip.add_nodes_from(Q)
         graph_list = [
@@ -105,6 +105,27 @@ def test_connectivity_and_samples():
     assert transpiler.init_samples == 20
 
 
+def test_connectivity_setter_error():
+    transpiler = Transpiler(connectivity=special_connectivity("21_qubits"), init_method="greedy", init_samples=20)
+    with pytest.raises(TypeError):
+        transpiler.connectivity = 1
+
+
+def test_3q_error():
+    circ = Circuit(3)
+    circ.add(gates.TOFFOLI(0, 1, 2))
+    transpiler = Transpiler(connectivity=special_connectivity("21_qubits"), init_method="greedy", init_samples=20)
+    with pytest.raises(ValueError):
+        transpiler.transpile(circ)
+
+
+def test_insufficient_qubits():
+    circ = generate_random_circuit(10, 10)
+    transpiler = Transpiler(connectivity=special_connectivity("5_qubits"), init_method="greedy", init_samples=20)
+    with pytest.raises(ValueError):
+        transpiler.transpile(circ)
+
+
 def test_simple_circuit():
     transpiler = Transpiler(connectivity=special_connectivity("21_qubits"), init_method="greedy", init_samples=0)
     circ = custom_circuit()
@@ -120,16 +141,20 @@ def test_random_circuit(gates, qubits):
     transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
 
 
-def test_5q():
-    transpiler = Transpiler(connectivity=special_connectivity("5_qubits"), init_method="greedy", init_samples=20)
-    circ = generate_random_circuit(5, 20)
-    transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
-
-
-def test_subgraph_init():
+@pytest.mark.parametrize("gates", [10, 20, 50])
+def test_subgraph_init(gates):
     transpiler = Transpiler(connectivity=special_connectivity("5_qubits"), init_method="subgraph")
-    circ = generate_random_circuit(5, 20)
+    circ = generate_random_circuit(5, gates)
     transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
+
+
+def test_subgraph_init_simple():
+    transpiler = Transpiler(connectivity=special_connectivity("5_qubits"), init_method="subgraph")
+    circ = Circuit(3)
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.CZ(2, 1))
+    transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
+    assert added_swaps == 0
 
 
 def test_custom_mapping():
@@ -142,7 +167,7 @@ def test_custom_mapping():
 def test_custom_connectivity():
     transpiler = Transpiler(connectivity=special_connectivity("5_qubits"), init_method="greedy", init_samples=20)
     circ = generate_random_circuit(5, 20)
-    Q = sympy.symbols([f"q{i}" for i in range(5)])
+    Q = [f"q{i}" for i in range(5)]
     chip = nx.Graph()
     chip.add_nodes_from(Q)
     graph_list = [

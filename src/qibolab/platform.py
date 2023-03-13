@@ -151,7 +151,7 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
         channels[f"L4-{q}"].qubit = qubits[q]
 
     # Platfom topology
-    Q = sympy.symbols([f"q{i}" for i in range(5)])
+    Q = [f"q{i}" for i in range(5)]
     chip = nx.Graph()
     chip.add_nodes_from(Q)
     graph_list = [

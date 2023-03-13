@@ -76,7 +76,7 @@ class Transpiler:
             self._mapping = dict(zip(keys, self._mapping.values()))
             self._graph = nx.relabel_nodes(self._connectivity, self._mapping)
         # Inverse permutation
-        init_qubit_map = np.argsort(np.asarray(list(self._mapping.values())))
+        init_qubit_map = np.argsort(list(self._mapping.values()))
         init_mapping = dict(zip(keys, init_qubit_map))
         self._qubit_map = np.sort(init_qubit_map)
         self.init_circuit(qibo_circuit)
@@ -137,7 +137,7 @@ class Transpiler:
 
         if isinstance(connectivity, nx.Graph):
             self._connectivity = connectivity
-        else:  # pragma: no cover
+        else:
             raise_error(TypeError, "Use networkx graph for custom connectivity")
 
     def draw_connectivity(self):  # pragma: no cover
@@ -190,8 +190,8 @@ class Transpiler:
                 gate_qubits.sort()
                 gate_qubits.append(index)
                 translated_circuit.append(gate_qubits)
-            if len(gate.qubits) >= 3:  # pragma: no cover
-                raise_error("ERROR do not use gates acting on more than 2 qubits")
+            if len(gate.qubits) >= 3:
+                raise_error(ValueError, "ERROR do not use gates acting on more than 2 qubits")
         self._circuit_repr = translated_circuit
 
     def reduce(self, graph):
@@ -316,7 +316,7 @@ class Transpiler:
         """
         nodes = self._connectivity.number_of_nodes()
         qubits = qibo_circuit.nqubits
-        if qubits > nodes:  # pragma: no cover
+        if qubits > nodes:
             raise_error(ValueError, "There are not enough physical qubits in the hardware to map the circuit")
         elif qubits == nodes:
             new_circuit = Circuit(nodes)
