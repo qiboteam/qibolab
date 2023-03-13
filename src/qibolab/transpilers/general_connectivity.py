@@ -316,11 +316,11 @@ class Transpiler:
         """
         nodes = self._connectivity.number_of_nodes()
         qubits = qibo_circuit.nqubits
-        if qubits > nodes:
+        if qubits > nodes:  # pragma: no cover
             raise_error(ValueError, "There are not enough physical qubits in the hardware to map the circuit")
         elif qubits == nodes:
             new_circuit = Circuit(nodes)
-        else:  # pragma: no cover
+        else:
             log.warning(
                 "You are using more physical qubits than required by the circuit, some qubits will be added to the circuit"
             )
