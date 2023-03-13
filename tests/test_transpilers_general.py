@@ -99,6 +99,12 @@ def special_connectivity(connectivity):
     return chip
 
 
+def test_connectivity_and_samples():
+    transpiler = Transpiler(connectivity=special_connectivity("21_qubits"), init_method="greedy", init_samples=20)
+    assert transpiler.connectivity.number_of_nodes() == 21
+    assert transpiler.init_samples == 20
+
+
 def test_simple_circuit():
     transpiler = Transpiler(connectivity=special_connectivity("21_qubits"), init_method="greedy", init_samples=0)
     circ = custom_circuit()
@@ -121,7 +127,7 @@ def test_5q():
 
 
 def test_subgraph_init():
-    transpiler = Transpiler(connectivity=special_connectivity("5_qubits"), init_method="subgraph", init_samples=20)
+    transpiler = Transpiler(connectivity=special_connectivity("5_qubits"), init_method="subgraph")
     circ = generate_random_circuit(5, 20)
     transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
 

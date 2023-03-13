@@ -137,10 +137,10 @@ class Transpiler:
 
         if isinstance(connectivity, nx.Graph):
             self._connectivity = connectivity
-        else:
+        else:  # pragma: no cover
             raise_error(TypeError, "Use networkx graph for custom connectivity")
 
-    def draw_connectivity(self):
+    def draw_connectivity(self):  # pragma: no cover
         """Show connectivity graph."""
         pos = nx.spectral_layout(self._connectivity)
         nx.draw(self._connectivity, pos=pos, with_labels=True)
@@ -190,7 +190,7 @@ class Transpiler:
                 gate_qubits.sort()
                 gate_qubits.append(index)
                 translated_circuit.append(gate_qubits)
-            if len(gate.qubits) >= 3:
+            if len(gate.qubits) >= 3:  # pragma: no cover
                 raise_error("ERROR do not use gates acting on more than 2 qubits")
         self._circuit_repr = translated_circuit
 
@@ -280,8 +280,6 @@ class Transpiler:
             final_path (list): best path to move qubits.
             meeting_point (int): qubit meeting point in the path.
         """
-        if len(self._circuit_repr) == 0:
-            return 0
         nodes = self._graph.number_of_nodes()
         circuit = self.reduce(self._graph)
         final_circuit = circuit
@@ -322,7 +320,7 @@ class Transpiler:
             raise_error(ValueError, "There are not enough physical qubits in the hardware to map the circuit")
         elif qubits == nodes:
             new_circuit = Circuit(nodes)
-        else:
+        else:  # pragma: no cover
             log.warning(
                 "You are using more physical qubits than required by the circuit, some qubits will be added to the circuit"
             )
