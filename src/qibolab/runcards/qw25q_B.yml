@@ -41,7 +41,7 @@ qubit_channel_map:
     B2:   [L3-27_a, L3-8, L1-12, null] 
     B3:   [L3-27_b, L3-9, L1-13, null] 
     B4:   [L3-27_b, L3-19, L1-14, null] 
-    B5:   [L3-27_b, L4-22, L1-15, null] 
+    B5:   [L3-27_b, null, L1-15, null] #L4-22
 
 instruments:
     cluster:
@@ -149,29 +149,29 @@ instruments:
                 'L3-19': o2 # 0
                 
     # #Drive module qB5
-    qcm_rf4:
-        lib: qblox
-        class: ClusterQCM_RF
-        address: 192.168.0.6:7
-        roles: [control]
-        settings:
-            ports:
-                o1: # qubit qB5
-                    attenuation                  : 24 # (dB)
-                    lo_enabled                   : true
-                    lo_frequency                 : 6_369_000_000 # (Hz) from 2e9 to 18e9
-                    gain                         : 0.5 # for path0 and path1 -1.0<=v<=1.0
-                    hardware_mod_en              : false
-                o2: # qubit qB6
-                    attenuation                  : 16 # (dB)
-                    lo_enabled                   : true
-                    lo_frequency                 : 7_060_000_000 # (Hz) from 2e9 to 18e9
-                    gain                         : 0.5 # for path0 and path1 -1.0<=v<=1.0
-                    hardware_mod_en              : false
+    # qcm_rf4:
+    #     lib: qblox
+    #     class: ClusterQCM_RF
+    #     address: 192.168.0.6:7
+    #     roles: [control]
+    #     settings:
+    #         ports:
+    #             o1: # qubit qB5
+    #                 attenuation                  : 24 # (dB)
+    #                 lo_enabled                   : true
+    #                 lo_frequency                 : 6_369_000_000 # (Hz) from 2e9 to 18e9
+    #                 gain                         : 0.5 # for path0 and path1 -1.0<=v<=1.0
+    #                 hardware_mod_en              : false
+    #             o2: # qubit qB6
+    #                 attenuation                  : 16 # (dB)
+    #                 lo_enabled                   : true
+    #                 lo_frequency                 : 7_060_000_000 # (Hz) from 2e9 to 18e9
+    #                 gain                         : 0.5 # for path0 and path1 -1.0<=v<=1.0
+    #                 hardware_mod_en              : false
 
-            channel_port_map:
-                'L4-22': o1 # 1
-                '99': o2 # 0
+    #         channel_port_map:
+    #             'L4-22': o1 # 1
+    #             '99': o2 # 0
 
     #Cluster QCM usado para bias mediante el offset
     qcm_bb1:
@@ -199,7 +199,7 @@ instruments:
                 o2: {gain: 1, offset: 0, hardware_mod_en: false}
                 o3: {gain: 0, offset: 0, hardware_mod_en: false} #not used
                 o4: {gain: 0, offset: 0, hardware_mod_en: false} #not used
-            channel_port_map: {L1-15: o1, 99: o2, 99: o3, 99: o4}
+            channel_port_map: {L1-15: o1, 100: o2, 101: o3, 102: o4}
 
 native_gates:
     single_qubit:
@@ -292,7 +292,8 @@ native_gates:
                 frequency: 8_000_000_000    # resonator frequency
                 if_frequency: 140_000_000    # difference in resonator frequency
                 shape: Rectangular()
-                type: ro                    # readout                            
+                type: ro                    # readout     
+
 characterization:
     single_qubit:
         B0:
