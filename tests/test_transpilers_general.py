@@ -2,7 +2,6 @@ import networkx as nx
 import numpy as np
 import pytest
 from qibo import gates
-from qibo.config import raise_error
 from qibo.models import Circuit
 
 from qibolab.transpilers.general_connectivity import Transpiler

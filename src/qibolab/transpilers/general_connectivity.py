@@ -1,5 +1,4 @@
 import random
-from copy import deepcopy
 from enum import Enum, auto
 
 import matplotlib.pyplot as plt
@@ -203,7 +202,7 @@ class Transpiler:
         Returns:
             new_circuit (list): reduced circuit.
         """
-        new_circuit = deepcopy(self._circuit_repr)
+        new_circuit = self._circuit_repr.copy()
         while new_circuit != [] and (new_circuit[0][0], new_circuit[0][1]) in graph.edges():
             del new_circuit[0]
         return new_circuit
@@ -388,6 +387,6 @@ class Transpiler:
 
     def update_qubit_map(self):
         """Update the qubit mapping after adding swaps"""
-        old_mapping = deepcopy(self._qubit_map)
+        old_mapping = self._qubit_map.copy()
         for key, value in self._mapping.items():
             self._qubit_map[value] = old_mapping[key]

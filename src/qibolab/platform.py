@@ -1,5 +1,4 @@
 import networkx as nx
-import sympy
 from qibo.config import raise_error
 
 from qibolab.designs import Channel, ChannelMap, InstrumentDesign
