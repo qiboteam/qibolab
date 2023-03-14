@@ -257,6 +257,32 @@ def test_qmsim_allxy(simulator, folder, count, gate_pair):
     assert_regression(samples, folder, f"allxy{count}")
 
 
+def test_qmsim_chevron(simulator, folder):
+    lowfreq, highfreq = 1, 2
+    initialize_1 = simulator.create_RX_pulse(lowfreq, start=0, relative_phase=0)
+    initialize_2 = simulator.create_RX_pulse(highfreq, start=0, relative_phase=0)
+    flux_pulse = FluxPulse(
+        start=initialize_2.finish,
+        duration=31,
+        amplitude=0.05,
+        shape=Rectangular(),
+        channel=simulator.qubits[highfreq].flux.name,
+        qubit=highfreq,
+    )
+    measure_lowfreq = simulator.create_qubit_readout_pulse(lowfreq, start=flux_pulse.finish)
+    measure_highfreq = simulator.create_qubit_readout_pulse(highfreq, start=flux_pulse.finish)
+    sequence = PulseSequence()
+    sequence.add(initialize_1)
+    sequence.add(initialize_2)
+    sequence.add(flux_pulse)
+    sequence.add(measure_lowfreq)
+    sequence.add(measure_highfreq)
+
+    result = simulator.execute_pulse_sequence(sequence, nshots=1)
+    samples = result.get_simulated_samples()
+    assert_regression(samples, folder, f"chevron")
+
+
 @pytest.mark.parametrize("qubits", [[1, 2], [2, 3]])
 @pytest.mark.parametrize("use_flux_pulse", [True, False])
 def test_qmsim_tune_landscape(simulator, folder, qubits, use_flux_pulse):
