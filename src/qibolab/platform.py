@@ -152,15 +152,20 @@ def create_tii_IQM5q(runcard, descriptor=None):
     channels["L3-31"].power_range = 10
     # readout
     channels["L2-7"].ports = [("device_shfqc", "[QACHANNELS/0/OUTPUT]")]
-    channels["L2-7"].power_range = -25
+    channels["L2-7"].power_range = -25  # -25[0] -20[1]
     # drive
     for i in range(5, 10):
         channels[f"L4-1{i}"].ports = [("device_shfqc", f"SGCHANNELS/{i-5}/OUTPUT")]
         channels[f"L4-1{i}"].power_range = -5
+    channels[f"L4-1{8}"].ports = [("device_shfqc", f"SGCHANNELS/{8-5}/OUTPUT")]
+    channels[f"L4-1{8}"].power_range = -5
+
     # flux qubits
     for i in range(6, 11):
         channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-6}")]
         channels[f"L4-{i}"].offset = 0.0
+    channels[f"L4-{9}"].ports = [("device_hdawg", f"SIGOUTS/{9-6}")]
+    channels[f"L4-{9}"].offset = -10.0
     # flux couplers
     for i in range(11, 14):
         channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-11+5}")]

@@ -26,7 +26,7 @@ class Channel:
     """
     power_range: Optional[int] = None
     """Attenuation or amplification of the line, not all intruments have this capability."""
-    _bias: Optional[list] = None
+    _bias: Optional[float] = None
     """DC offset that should be applied in the channel in order to shift the
     frequency of the qubit, usually to put it in its sweetspot.
     Relevant only for flux channels and flux-tunable transmon qubits.
