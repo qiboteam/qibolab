@@ -1,3 +1,4 @@
+import networkx as nx
 from qibo.config import raise_error
 
 from qibolab.designs import Channel, ChannelMap, InstrumentDesign
@@ -147,6 +148,20 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
         qubits[q].drive = channels[f"L3-{10 + q}"]
         qubits[q].flux = channels[f"L4-{q}"]
         channels[f"L4-{q}"].qubit = qubits[q]
+
+    # Platfom topology
+    Q = [f"q{i}" for i in range(5)]
+    chip = nx.Graph()
+    chip.add_nodes_from(Q)
+    graph_list = [
+        (Q[0], Q[2]),
+        (Q[1], Q[2]),
+        (Q[3], Q[2]),
+        (Q[4], Q[2]),
+    ]
+    chip.add_edges_from(graph_list)
+    platform.topology = chip
+
     return platform
 
 

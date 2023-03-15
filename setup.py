@@ -43,6 +43,8 @@ setup(
     ],
     install_requires=[
         "qibo>=0.1.8",
+        "networkx",
+        "more-itertools",
     ],
     extras_require={
         "docs": [
