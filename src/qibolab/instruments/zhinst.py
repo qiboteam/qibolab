@@ -7,13 +7,14 @@ from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.pulses import FluxPulse, Pulse
 from qibolab.result import ExecutionResults
 
+# TODO: Flux as offsets and create script that puts them all at 0 when finished.
+
 # TODO: Simulation
 # session = Session(device_setup=device_setup)
 # session.connect(do_emulation=use_emulation)
 # my_results = session.run(exp)
 
 # FIXME: Multiplex (For readout)
-# FIXME: Lenght on pulses
 # FIXME: Handle on acquires
 # FIXME: I think is a hardware limitation but I cant sweep multiple drive oscillator at the same time
 # FIXME: Docs & tests
@@ -279,7 +280,8 @@ class Zurich(AbstractInstrument):
                 frequency=int(qubit.readout.local_oscillator.frequency),
             ),
             range=qubit.feedback.power_range,
-            port_delay=150e-9,  # self.time_of_flight,
+            port_delay=250e-9,  # self.time_of_flight,
+            threshold=0.259,  # qubits.threshold
         )
 
     def register_drive_line(self, qubit, intermediate_frequency):
@@ -326,7 +328,6 @@ class Zurich(AbstractInstrument):
         self.calibration_step(qubits)
         self.create_exp(qubits, nshots, relaxation_time, fast_reset)
         self.run_exp()
-        self.disconnect()
 
         # TODO: General, several readouts and qubits
         results = {}
@@ -341,8 +342,10 @@ class Zurich(AbstractInstrument):
                     results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = ExecutionResults.from_components(
                         i, q
                     )
-        self.run_sim(sim_time)
+
+        # self.run_sim(sim_time) #FIXME: Cant sim on executions with multiple pulse sequences (ALLXY) without reconnection to the real devices which takes time.
         # lo.show_pulse_sheet("pulses", self.exp) #FIXME: Wait until next LO release for bugs
+        # self.disconnect() #FIXME: Cant disconnect on executions with multiple pulse sequences (ALLXY)
         return results
 
     # TODO: Store the sweepers nice[Find a way to store nested vs parallel sweeps]
@@ -558,7 +561,6 @@ class Zurich(AbstractInstrument):
                                     round(pulse.pulse.duration * 1e-9, 9) + round(pulse.pulse.start * 1e-9, 9) - time
                                 )
                                 pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
-
                                 if isinstance(pulse, ZhSweeper):
                                     self.play_sweep(exp, qubit, pulse, section="drive")
                                 elif isinstance(pulse, ZhPulse):
@@ -584,7 +586,10 @@ class Zurich(AbstractInstrument):
                 with exp.section(uid=f"sequence_measure{qubit.name}", play_after=play_after):
                     if self.sequence[f"drive{qubit.name}"]:
                         last_drive_pulse = self.sequence[f"drive{qubit.name}"][-1]
-                        time = round(last_drive_pulse.pulse.finish * 1e-9, 9)
+                        if isinstance(last_drive_pulse, ZhPulse):
+                            time = round(last_drive_pulse.pulse.finish * 1e-9, 9)
+                        else:
+                            time = 0
                     else:
                         time = 0
                     i = 0
@@ -601,11 +606,21 @@ class Zurich(AbstractInstrument):
                                     signal=f"measure{qubit.name}", pulse=pulse.zhpulse, phase=pulse.pulse.relative_phase
                                 )
                             # FIXME: This should be defined by the user as a pulse elsewhere
+                            # FIXME: Create optimal kernel [Active Reset notebook]
                             weight = lo.pulse_library.const(
                                 uid="weight" + pulse.zhpulse.uid,
                                 length=round(pulse.pulse.duration * 1e-9, 9),
-                                amplitude=1.0,
+                                amplitude=1,
                             )
+
+                            # #For Discrimination
+                            # weight = lo.pulse_library.sampled_pulse_complex(
+                            #     np.ones([int(pulse.pulse.duration *2)]) * np.exp(1j * 262.169)
+                            # )
+                            # weight = lo.pulse_library.sampled_pulse_real(
+                            #     np.ones([int(pulse.pulse.duration *2)]) * np.exp(1j * 262.169)
+                            # )
+
                             exp.acquire(signal=f"acquire{qubit.name}", handle=f"sequence{qubit.name}", kernel=weight)
                             i += 1
 
@@ -635,7 +650,7 @@ class Zurich(AbstractInstrument):
                         if self.sequence[f"readout{qubit.name}"]:
                             exp.delay(signal=f"measure{qubit.name}", time=relaxation_time)
 
-    def sweep(self, qubits, sequence, *sweepers, nshots, relaxation_time, average=True, sim_time=10e-6):
+    def sweep(self, qubits, sequence, *sweepers, nshots, relaxation_time, average=True, sim_time=2e-6):
         if relaxation_time is None:
             relaxation_time = self.relaxation_time
 
@@ -644,7 +659,6 @@ class Zurich(AbstractInstrument):
         self.calibration_step(qubits)
         self.create_exp(qubits, nshots, relaxation_time, fast_reset=False)
         self.run_exp()
-        self.disconnect()
 
         # TODO: General, several readouts and qubits
         results = {}
@@ -660,8 +674,9 @@ class Zurich(AbstractInstrument):
                         i, q
                     )
 
-        self.run_sim(sim_time)
+        # self.run_sim(sim_time) #FIXME: Careful placement or reconnection to avoid messing with several executions
         # lo.show_pulse_sheet("pulses", self.exp) #FIXME: Wait until next LO release for bugs
+        # self.disconnect() #FIXME: Careful placement or reconnection to avoid messing with several executions
         return results
 
     # TODO: Recursion tests and Better sweeps logic
@@ -768,7 +783,7 @@ plt.rcParams.update(
 def plot_simulation(
     compiled_experiment,
     start_time=0.0,
-    length=10e-6,
+    length=2e-6,
     xaxis_label="Time (s)",
     yaxis_label="Amplitude",
     plot_width=6,

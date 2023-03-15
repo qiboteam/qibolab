@@ -49,7 +49,7 @@ class DesignPlatform(AbstractPlatform):
             sim_time=sim_time,
         )
 
-    def sweep(self, sequence, *sweepers, nshots=1024, relaxation_time=None, average=True, sim_time=10e-6):
+    def sweep(self, sequence, *sweepers, nshots=1024, relaxation_time=None, average=True, sim_time=2e-6):
         if relaxation_time is None:
             relaxation_time = self.relaxation_time
         return self.design.sweep(

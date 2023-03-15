@@ -23,9 +23,9 @@ native_gates:
     single_qubit:
         0: # qubit number
             RX:
-                duration: 100 #80
-                amplitude: 0.625 #0.8
-                frequency: 4_099_400_000 #doesnt do anything requiered for qibolab to work
+                duration: 104
+                amplitude: .75
+                frequency: 4_098_200_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
                 type: qd # qubit drive
@@ -33,8 +33,8 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000 #2000.e-9
-                amplitude: .1 # .1
-                frequency: 5_228_000_000 #doesnt do anything requiered for qibolab to work
+                amplitude: .2 # .1
+                frequency: 5_228_700_000 #doesnt do anything requiered for qibolab to work
                 integration_time : 1.e-6
                 shape: Rectangular()
                 type: ro # readout
@@ -157,9 +157,9 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            readout_frequency: 5_228_000_000 #5_228_000_000
+            readout_frequency: 5_228_700_000 #5_228_000_000
             resonator_polycoef_flux: []
-            drive_frequency: 4_099_400_000
+            drive_frequency: 4_098_200_000
             T1: 0.0
             T2: 0.0
             sweetspot: -0.0 #Use this as an amplitude of the flux_bias
@@ -167,10 +167,8 @@ characterization:
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
             # parameters for single shot classification
-            threshold: 0.0
-            iq_angle: 0.0
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
+            threshold: 0.268483
+            iq_angle: 308.167
             # To save power values on the runcard
             # ro_range_lp: -15
             # ro_range_hp: -15
