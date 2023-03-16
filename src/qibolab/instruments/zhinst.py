@@ -7,6 +7,8 @@ from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.pulses import FluxPulse, Pulse
 from qibolab.result import ExecutionResults
 
+# TODO: Implement Slepian shaped flux pulse
+# FIXME: Amplitude seems to get multiplied ???
 # TODO: Flux as offsets and create script that puts them all at 0 when finished.
 
 # TODO: Simulation
@@ -280,8 +282,8 @@ class Zurich(AbstractInstrument):
                 frequency=int(qubit.readout.local_oscillator.frequency),
             ),
             range=qubit.feedback.power_range,
-            port_delay=250e-9,  # self.time_of_flight,
-            threshold=0.259,  # qubits.threshold
+            port_delay=280e-9,  # self.time_of_flight,
+            threshold=qubit.threshold,  # qubits.threshold
         )
 
     def register_drive_line(self, qubit, intermediate_frequency):
@@ -545,14 +547,14 @@ class Zurich(AbstractInstrument):
 
     # qubit drive pulses
     def Drive(self, exp, qubits):
-        with exp.section(uid=f"sequence_drive"):
-            for qubit in qubits.values():
-                if "c" in str(qubit.name):
-                    pass
-                else:
-                    time = 0
-                    i = 0
-                    if self.sequence[f"drive{qubit.name}"]:
+        for qubit in qubits.values():
+            if "c" in str(qubit.name):
+                pass
+            else:
+                time = 0
+                i = 0
+                if self.sequence[f"drive{qubit.name}"]:
+                    with exp.section(uid=f"sequence_drive{qubit.name}"):
                         for pulse in self.sequence[f"drive{qubit.name}"]:
                             # FIXME: Check delay schedule
                             if not isinstance(pulse, ZhSweeper_line):
@@ -582,7 +584,7 @@ class Zurich(AbstractInstrument):
                 play_after = None
                 # if f"drive{qubit.name}" in str(self.sequence):
                 if self.sequence[f"drive{qubit.name}"]:
-                    play_after = f"sequence_drive"
+                    play_after = f"sequence_drive{qubit.name}"
                 with exp.section(uid=f"sequence_measure{qubit.name}", play_after=play_after):
                     if self.sequence[f"drive{qubit.name}"]:
                         last_drive_pulse = self.sequence[f"drive{qubit.name}"][-1]
@@ -607,18 +609,22 @@ class Zurich(AbstractInstrument):
                                 )
                             # FIXME: This should be defined by the user as a pulse elsewhere
                             # FIXME: Create optimal kernel [Active Reset notebook]
+
                             weight = lo.pulse_library.const(
                                 uid="weight" + pulse.zhpulse.uid,
-                                length=round(pulse.pulse.duration * 1e-9, 9),
+                                length=round(pulse.pulse.duration * 1e-9, 9) - 100e-9,
                                 amplitude=1,
                             )
 
+                            # weight = lo.pulse_library.const(
+                            #     uid="weight" + pulse.zhpulse.uid,
+                            #     length=round(pulse.pulse.duration * 1e-9, 9)+700e-9,
+                            #     amplitude=1,
+                            # )
+
                             # #For Discrimination
                             # weight = lo.pulse_library.sampled_pulse_complex(
-                            #     np.ones([int(pulse.pulse.duration *2)]) * np.exp(1j * 262.169)
-                            # )
-                            # weight = lo.pulse_library.sampled_pulse_real(
-                            #     np.ones([int(pulse.pulse.duration *2)]) * np.exp(1j * 262.169)
+                            #     np.ones([int(pulse.pulse.duration *2)]) * np.exp(1j * qubit.iq_angle)
                             # )
 
                             exp.acquire(signal=f"acquire{qubit.name}", handle=f"sequence{qubit.name}", kernel=weight)
@@ -723,7 +729,8 @@ class Zurich(AbstractInstrument):
         with exp.sweep(
             uid=f"sweep_{sweeper.parameter.name.lower()}_{i}",
             parameter=parameter,
-            reset_oscillator_phase=False,
+            reset_oscillator_phase=True,
+            # reset_oscillator_phase=True,
         ):
             if len(self.sweepers) > 0:
                 self.sweep_recursion(qubits, exp, exp_calib, relaxation_time)

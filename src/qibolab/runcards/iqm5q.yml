@@ -4,11 +4,9 @@ description: IQM 5-qubit device, controlled with Zurich Instruments.
 settings:
     hardware_avg: 4096
     sampling_rate: 2.e+9
-    repetition_duration: 10.e-6
-    readout_integration_delay: 100.e-9
+    relaxation_time: 300.e-6
+    time_of_flight: 280.e-9
     Fast_reset: False
-    Fast_reset_time: 500.e-9
-    Bandwidth: 800.e-6
 
 qubits: [0, 1, 2, 3, 4, "c0", "c1", "c3", "c4"]
 
@@ -23,17 +21,17 @@ native_gates:
     single_qubit:
         0: # qubit number
             RX:
-                duration: 104
-                amplitude: .75
+                duration: 75
+                amplitude: .58
                 frequency: 4_098_200_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
-                # shape: Drag(5, 0.04)
+                # shape: Drag(5, 0.02)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
-                duration: 1000 #2000.e-9
-                amplitude: .2 # .1
+                duration: 500 #2000.e-9
+                amplitude: .1 # .1
                 frequency: 5_228_700_000 #doesnt do anything requiered for qibolab to work
                 integration_time : 1.e-6
                 shape: Rectangular()
@@ -47,7 +45,7 @@ native_gates:
         1: # qubit number
             RX:
                 duration: 90 #80
-                amplitude: 0.2 #0.8
+                amplitude: 0.2 #0.2
                 frequency: 4_170_000_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
@@ -69,9 +67,9 @@ native_gates:
 
         2: # qubit number
             RX:
-                duration: 90 #80
-                amplitude: 0.75 #0.8
-                frequency: 4_589_000_000 #doesnt do anything requiered for qibolab to work
+                duration: 200 #60
+                amplitude: .75 #0.54 # Multiplied by the sweeper ?
+                frequency: 4_321_500_000 # 4_541_100_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
                 type: qd # qubit drive
@@ -79,8 +77,8 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 2000
-                amplitude: .01 # 1
-                frequency: 6_086_000_000 #doesnt do anything requiered for qibolab to work
+                amplitude: .5 # 1
+                frequency: 6_086_700_000 #doesnt do anything requiered for qibolab to work
                 integration_time : 1.e-6
                 shape: Rectangular()
                 type: ro # readout
@@ -167,8 +165,8 @@ characterization:
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
             # parameters for single shot classification
-            threshold: 0.268483
-            iq_angle: 308.167
+            threshold: 0.222844
+            iq_angle: 6.637
             # To save power values on the runcard
             # ro_range_lp: -15
             # ro_range_hp: -15
@@ -186,15 +184,18 @@ characterization:
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
         2:
-            readout_frequency: 6_086_000_000
+            readout_frequency: 6_086_700_000
             resonator_polycoef_flux: []
-            drive_frequency: 4_589_000_000
+            drive_frequency: 4_321_500_000 #4_541_100_000
             T1: 0.
             T2: 0.
-            sweetspot: 0.0
+            sweetspot: 0.62
             filter: {}
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
+            # parameters for single shot classification
+            threshold: 0.350665
+            iq_angle: 191.016
         3:
             readout_frequency: 5_783_000_000
             resonator_polycoef_flux: []

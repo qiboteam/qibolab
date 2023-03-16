@@ -152,20 +152,16 @@ def create_tii_IQM5q(runcard, descriptor=None):
     channels["L3-31"].power_range = 10
     # readout
     channels["L2-7"].ports = [("device_shfqc", "[QACHANNELS/0/OUTPUT]")]
-    channels["L2-7"].power_range = -20  # -20[0] -20[1]
+    channels["L2-7"].power_range = -15  # -20[0] -20[1] -15[2] #-15 MAX for LP
     # drive
     for i in range(5, 10):
         channels[f"L4-1{i}"].ports = [("device_shfqc", f"SGCHANNELS/{i-5}/OUTPUT")]
-        channels[f"L4-1{i}"].power_range = -20
-    channels[f"L4-1{8}"].ports = [("device_shfqc", f"SGCHANNELS/{8-5}/OUTPUT")]
-    channels[f"L4-1{8}"].power_range = -5
+        channels[f"L4-1{i}"].power_range = -15
 
     # flux qubits (CAREFUL WITH THIS !!!)
     for i in range(6, 11):
         channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-6}")]
         channels[f"L4-{i}"].offset = 0.0
-    channels[f"L4-{9}"].ports = [("device_hdawg", f"SIGOUTS/{9-6}")]
-    channels[f"L4-{9}"].offset = 0.0
     # flux couplers (CAREFUL WITH THIS !!!)
     for i in range(11, 14):
         channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-11+5}")]
@@ -266,7 +262,7 @@ def create_tii_IQM5q(runcard, descriptor=None):
     local_oscillators = [LocalOscillator(f"lo_{kind}", None) for kind in ["readout"] + [f"drive_{n}" for n in range(4)]]
 
     # Set Dummy LO parameters (Map only the two by two oscillators)
-    local_oscillators[0].frequency = 5_500_000_000
+    local_oscillators[0].frequency = 5_500_000_000  # 5_500_000
     local_oscillators[1].frequency = 4_000_000_000  # For SG1 and SG2
     local_oscillators[2].frequency = 4_600_000_000  # For SG3 and SG4
     local_oscillators[3].frequency = 4_200_000_000  # For SG5 and SG6
@@ -320,7 +316,7 @@ def create_tii_1q(runcard, descriptor=None):
     # TWPA
     # channels |= ChannelMap.from_names("L3-10")
 
-    # Map controllers to qubit channels (HARDCODED)
+    # Map controllers to qubit channels
     # feedback
     channels["w7"].ports = [("device_shfqc", "[QACHANNELS/0/INPUT]")]
     channels["w7"].power_range = 10
@@ -357,7 +353,7 @@ def create_tii_1q(runcard, descriptor=None):
 
     controller = Zurich("EL_ZURO", descriptor, use_emulation=False)
 
-    # Instantiate local oscillators (HARDCODED)
+    # Instantiate local oscillators
     local_oscillators = [
         LocalOscillator("lo_readout", None),
         LocalOscillator("lo_drive_0", None),

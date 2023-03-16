@@ -128,7 +128,7 @@ class AbstractPlatform(ABC):
         self.resonator_type = "3D" if self.nqubits == 1 else "2D"
         self.topology = settings["topology"]
 
-        self.relaxation_time = settings["settings"]["repetition_duration"]
+        self.relaxation_time = settings["settings"]["relaxation_time"]
         self.sampling_rate = settings["settings"]["sampling_rate"]
 
         # TODO: Create better data structures for native gates
