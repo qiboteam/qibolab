@@ -7,6 +7,7 @@ Supports the following FPGA:
 
 """
 
+import math
 from typing import List
 
 import numpy as np
@@ -62,12 +63,47 @@ class ExecutePulseSequence(AveragerProgram):
         self.adc_trig_offset = cfg["adc_trig_offset"]
         self.max_sampling_rate = cfg["sampling_rate"]
 
-        # TODO maybe better in runcard
-        self.relax_delay = self.us2cycles(cfg["repetition_duration"] * self.us)  # wait end body
-        self.syncdelay = self.us2cycles(0)  # wait measure
-        self.wait_initialize = self.us2cycles(2.0)  # wait end initialize
+        # TODO maybe better elsewhere
+        # relax_delay is the time waited at the end of the program (relevant for ADC)
+        # syncdelay is the time waited at the end of every measure (this changes the overall t)
+        # wait_initialize is the time waited at the end of initialize
+        self.relax_delay = self.us2cycles(cfg["repetition_duration"] * self.us)
+        self.syncdelay = self.us2cycles(0)
+        self.wait_initialize = self.us2cycles(2.0)
 
         super().__init__(soc, cfg)
+
+    def acquire(self, soc, readouts_per_experiment=1, load_pulses=True, progress=False, debug=False, average=True):
+        if average:
+            return super().acquire(
+                soc,
+                readouts_per_experiment=readouts_per_experiment,
+                load_pulses=load_pulses,
+                progress=progress,
+                debug=debug,
+            )
+        else:
+            super().acquire(
+                soc,
+                readouts_per_experiment=readouts_per_experiment,
+                load_pulses=load_pulses,
+                progress=progress,
+                debug=debug,
+            )
+            return self.collect_shots()
+
+    def collect_shots(self):
+        results = []
+        adcs = [self.qubits[p.qubit].feedback.ports[0][1] for p in self.sequence.ro_pulses]
+        lengths = [
+            self.soc.us2cycles(p.duration * self.us) for p in self.sequence.ro_pulses
+        ]  # TODO add readout channel for right conversion
+        for idx, _ in enumerate(adcs):
+            readout_length
+            i = self.di_buf[idx].reshape((1, self.cfg["reps"])) / lengths[idx]
+            q = self.dq_buf[idx].reshape((1, self.cfg["reps"])) / lengths[idx]
+            results.append((i, q))
+        return results
 
     def initialize(self):
         """This function gets called automatically by qick super.__init__, it contains:
@@ -96,6 +132,7 @@ class ExecutePulseSequence(AveragerProgram):
 
                 self.declare_gen(gen_ch, nqz=zone)
             else:
+                continue
                 print(f"Avoided redecalaration of channel {gen_ch}")  # TODO
 
         # declare readouts
@@ -105,16 +142,16 @@ class ExecutePulseSequence(AveragerProgram):
             ro_ch = self.qubits[readout_pulse.qubit].readout.ports[0][1]
             if adc_ch not in ro_ch_already_declared:
                 ro_ch_already_declared.append(adc_ch)
-                length = self.soc.us2cycles(readout_pulse.duration * self.us)
+                length = self.soc.us2cycles(readout_pulse.duration * self.us, gen_ch=ro_ch)
                 freq = readout_pulse.frequency * self.MHz
 
                 self.declare_readout(ch=adc_ch, length=length, freq=freq, gen_ch=ro_ch)
             else:
+                continue
                 print(f"Avoided redecalaration of channel {adc_ch}")  # TODO
 
-        # list of channels where a pulse is already been registered
+        # register first pulses of all channels
         first_pulse_registered = []
-
         for pulse in self.sequence:
             qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
             ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
@@ -128,23 +165,23 @@ class ExecutePulseSequence(AveragerProgram):
         self.sync_all(self.wait_initialize)
 
     def add_pulse_to_register(self, pulse):
-        """The task of this function is to call the set_pulse_registers function"""
+        """This function calls the set_pulse_registers function"""
 
         qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
         adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
         ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
         gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
 
-        time = self.soc.us2cycles(pulse.start * self.us)
+        time = self.soc.us2cycles(pulse.start * self.us)  # TODO remove
         gain = int(pulse.amplitude * self.max_gain)
 
         if gain == 0 or gain > self.max_gain:
             raise Exception("Amplitude > 1 or <= 0! {gain}")
 
-        phase = self.deg2reg(pulse.relative_phase, gen_ch=gen_ch)
+        phase = self.deg2reg(math.degrees(pulse.relative_phase), gen_ch=gen_ch)
 
         us_length = pulse.duration * self.us
-        soc_length = self.soc.us2cycles(us_length)
+        soc_length = self.soc.us2cycles(us_length, gen_ch=gen_ch)
 
         is_drag = isinstance(pulse.shape, Drag)
         is_gaus = isinstance(pulse.shape, Gaussian)
@@ -160,7 +197,9 @@ class ExecutePulseSequence(AveragerProgram):
         if is_drag or is_gaus:
             name = pulse.shape.name
             sigma = us_length / pulse.shape.rel_sigma
-            sigma = self.soc.us2cycles(us_length / pulse.shape.rel_sigma)
+            sigma = self.soc.us2cycles(
+                us_length / pulse.shape.rel_sigma, gen_ch=gen_ch
+            )  # TODO probably conversion is linear
 
             if is_gaus:
                 self.add_gauss(ch=gen_ch, name=name, sigma=sigma, length=soc_length)
@@ -196,7 +235,7 @@ class ExecutePulseSequence(AveragerProgram):
         If the pulse is already loaded it just launches it,
         otherwise first calls the add_pulse_to_register function.
 
-        If readout pulse it does a measurment with an adc trigger, in general does not wait.
+        If readout pulse it does a measurment with an adc trigger, it does not wait.
 
         At the end of the pulse wait for clock.
         """
@@ -228,7 +267,7 @@ class ExecutePulseSequence(AveragerProgram):
                     wait=False,
                     syncdelay=self.syncdelay,
                 )
-        self.wait_all()
+        self.wait_all()  # TODO check comment (waiti with attributes)
         self.sync_all(self.relax_delay)
 
 
@@ -265,16 +304,51 @@ class ExecuteSingleSweep(RAveragerProgram):
         self.adc_trig_offset = cfg["adc_trig_offset"]
         self.max_sampling_rate = cfg["sampling_rate"]
 
-        # TODO maybe better in runcard
-        self.relax_delay = self.us2cycles(cfg["repetition_duration"] * self.us)  # wait end body
-        self.syncdelay = self.us2cycles(0)  # wait measure
-        self.wait_initialize = self.us2cycles(2.0)  # wait end initialize
+        # TODO maybe better elsewhere
+        # relax_delay is the time waited at the end of the program (relevant for ADC)
+        # syncdelay is the time waited at the end of every measure (this changes the overall t)
+        # wait_initialize is the time waited at the end of initialize
+        self.relax_delay = self.us2cycles(cfg["repetition_duration"] * self.us)
+        self.syncdelay = self.us2cycles(0)
+        self.wait_initialize = self.us2cycles(2.0)
 
         # sweeper Settings
         self.sweeper = sweeper
         cfg["expts"] = len(sweeper.values)
 
         super().__init__(soc, cfg)
+
+    def acquire(self, soc, readouts_per_experiment=1, load_pulses=True, progress=False, debug=False, average=True):
+        if average:
+            return super().acquire(
+                soc,
+                readouts_per_experiment=readouts_per_experiment,
+                load_pulses=load_pulses,
+                progress=progress,
+                debug=debug,
+            )
+        else:
+            super().acquire(
+                soc,
+                readouts_per_experiment=readouts_per_experiment,
+                load_pulses=load_pulses,
+                progress=progress,
+                debug=debug,
+            )
+            return self.collect_shots()
+
+    def collect_shots(self):
+        results = []
+        adcs = [self.qubits[p.qubit].feedback.ports[0][1] for p in self.sequence.ro_pulses]
+        lengths = [
+            self.soc.us2cycles(p.duration * self.us) for p in self.sequence.ro_pulses
+        ]  # TODO add readout channel for right conversion
+        for idx, _ in enumerate(adcs):
+            readout_length
+            i = self.di_buf[idx].reshape((self.cfg["expts"], self.cfg["reps"])) / lengths[idx]
+            q = self.dq_buf[idx].reshape((self.cfg["expts"], self.cfg["reps"])) / lengths[idx]
+            results.append((i, q))
+        return results
 
     def initialize(self):
         """This function gets called automatically by qick super.__init__, it contains:
@@ -326,6 +400,7 @@ class ExecuteSingleSweep(RAveragerProgram):
                     zone = 2
                 self.declare_gen(gen_ch, nqz=zone)
             else:
+                continue
                 print(f"Avoided redecalaration of channel {gen_ch}")  # TODO
 
         # declare readouts
@@ -335,16 +410,16 @@ class ExecuteSingleSweep(RAveragerProgram):
             ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
             if adc_ch not in ro_ch_already_declared:
                 ro_ch_already_declared.append(adc_ch)
-                length = self.soc.us2cycles(readout_pulse.duration * self.us)
+                length = self.soc.us2cycles(readout_pulse.duration * self.us, gen_ch=ro_ch)
                 freq = readout_pulse.frequency * self.MHz
 
                 self.declare_readout(ch=adc_ch, length=length, freq=freq, gen_ch=ro_ch)
             else:
+                continue
                 print(f"Avoided redecalaration of channel {adc_ch}")  # TODO
 
-        # list of channels where a pulse is already been registered
+        # register first pulses of all channels
         first_pulse_registered = []
-
         for pulse in self.sequence:
             qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
             ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
@@ -357,7 +432,7 @@ class ExecuteSingleSweep(RAveragerProgram):
         self.sync_all(self.wait_initialize)
 
     def add_pulse_to_register(self, pulse):
-        """The task of this function is to call the set_pulse_registers function"""
+        """This function calls the set_pulse_registers function"""
 
         is_sweeped = self.sweeper.pulses[0] == pulse
 
@@ -366,7 +441,7 @@ class ExecuteSingleSweep(RAveragerProgram):
         ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
         gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
 
-        time = self.soc.us2cycles(pulse.start * self.us)
+        time = self.soc.us2cycles(pulse.start * self.us)  # TODO remove
 
         if is_sweeped and self.sweeper.parameter == Parameter.amplitude:
             gain = self.cfg["start"]
@@ -376,10 +451,10 @@ class ExecuteSingleSweep(RAveragerProgram):
         if gain == 0 or gain > self.max_gain:
             raise Exception("Amplitude > 1 or <= 0! {gain}")
 
-        phase = self.deg2reg(pulse.relative_phase, gen_ch=gen_ch)
+        phase = self.deg2reg(math.degrees(pulse.relative_phase), gen_ch=gen_ch)
 
         us_length = pulse.duration * self.us
-        soc_length = self.soc.us2cycles(us_length)
+        soc_length = self.soc.us2cycles(us_length, gen_ch=gen_ch)
 
         is_drag = isinstance(pulse.shape, Drag)
         is_gaus = isinstance(pulse.shape, Gaussian)
@@ -399,7 +474,9 @@ class ExecuteSingleSweep(RAveragerProgram):
         if is_drag or is_gaus:
             name = pulse.shape.name
             sigma = us_length / pulse.shape.rel_sigma
-            sigma = self.soc.us2cycles(us_length / pulse.shape.rel_sigma)
+            sigma = self.soc.us2cycles(
+                us_length / pulse.shape.rel_sigma, gen_ch=gen_ch
+            )  # TODO probably conversion is linear
 
             print(f"gauss with {name} {sigma} {soc_length}")
 
@@ -440,7 +517,7 @@ class ExecuteSingleSweep(RAveragerProgram):
         If the pulse is already loaded it just launches it,
         otherwise first calls the add_pulse_to_register function.
 
-        If readout pulse it does a measurment with an adc trigger, in general does not wait.
+        If readout pulse it does a measurment with an adc trigger, it does not wait.
 
         At the end of the pulse wait for clock.
         """
@@ -613,9 +690,10 @@ class TII_RFSOC4x2(AbstractInstrument):
                 avgi, avgq = program.acquire(
                     self.soc,
                     readouts_per_experiment=len(sequence.ro_pulses),
-                    load_pulses=True,
+                    load_pulses=True,  # TODO remove default values
                     progress=False,
                     debug=False,
+                    average=average,
                 )
                 # parse acquire results
                 for i, serial in enumerate(original_ro):
@@ -624,12 +702,13 @@ class TII_RFSOC4x2(AbstractInstrument):
                     results[serial] = AveragedResults(i_pulse, q_pulse)
             # if average is false use program.acquire_decimated
             else:
-                iqres = program.acquire_decimated(
+                iqres = program.acquire(
                     self.soc,
                     readouts_per_experiment=len(sequence.ro_pulses),
                     load_pulses=True,
                     progress=False,
                     debug=False,
+                    average=average,
                 )
                 # TODO check if works with multiple readout
                 # parse acquire_decimated results
