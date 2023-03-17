@@ -73,7 +73,7 @@ class ExecutePulseSequence(AveragerProgram):
 
         super().__init__(soc, cfg)
 
-    def acquire(self, soc, readouts_per_experiment=1, load_pulses=True, progress=False, debug=False, average=True):
+    def acquire(self, soc, readouts_per_experiment=1, load_pulses=True, progress=False, debug=False, average=False):
         if average:
             return super().acquire(
                 soc,
@@ -93,17 +93,31 @@ class ExecutePulseSequence(AveragerProgram):
             return self.collect_shots()
 
     def collect_shots(self):
-        results = []
-        adcs = [self.qubits[p.qubit].feedback.ports[0][1] for p in self.sequence.ro_pulses]
-        lengths = [
-            self.soc.us2cycles(p.duration * self.us) for p in self.sequence.ro_pulses
-        ]  # TODO add readout channel for right conversion
-        for idx, _ in enumerate(adcs):
-            readout_length
-            i = self.di_buf[idx].reshape((1, self.cfg["reps"])) / lengths[idx]
-            q = self.dq_buf[idx].reshape((1, self.cfg["reps"])) / lengths[idx]
-            results.append((i, q))
-        return results
+        tot_i = []
+        tot_q = []
+
+        adcs = []
+        lengths = []
+        adc_count = {}
+        for pulse in self.sequence.ro_pulses:
+            adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
+            ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
+            adcs.append(self.qubits[pulse.qubit].feedback.ports[0][1])
+            lengths.append(self.soc.us2cycles(pulse.duration * self.us, gen_ch=ro_ch))
+
+            if adc_ch in adc_count:
+                adc_count[adc_ch] = adc_count[adc_ch] + 1
+            else:
+                adc_count[adc_ch] = 1
+
+        for idx, adc_ch in enumerate(adc_count):
+            count = adc_count[adc_ch]
+            i = self.di_buf[idx].reshape((count, self.cfg["reps"])) / lengths[idx]
+            q = self.dq_buf[idx].reshape((count, self.cfg["reps"])) / lengths[idx]
+
+            tot_i.append(i)
+            tot_q.append(q)
+        return tot_i, tot_q
 
     def initialize(self):
         """This function gets called automatically by qick super.__init__, it contains:
@@ -320,13 +334,14 @@ class ExecuteSingleSweep(RAveragerProgram):
 
     def acquire(self, soc, readouts_per_experiment=1, load_pulses=True, progress=False, debug=False, average=True):
         if average:
-            return super().acquire(
+            values, i, q = super().acquire(
                 soc,
                 readouts_per_experiment=readouts_per_experiment,
                 load_pulses=load_pulses,
                 progress=progress,
                 debug=debug,
             )
+            return i, q
         else:
             super().acquire(
                 soc,
@@ -338,17 +353,31 @@ class ExecuteSingleSweep(RAveragerProgram):
             return self.collect_shots()
 
     def collect_shots(self):
-        results = []
-        adcs = [self.qubits[p.qubit].feedback.ports[0][1] for p in self.sequence.ro_pulses]
-        lengths = [
-            self.soc.us2cycles(p.duration * self.us) for p in self.sequence.ro_pulses
-        ]  # TODO add readout channel for right conversion
-        for idx, _ in enumerate(adcs):
-            readout_length
-            i = self.di_buf[idx].reshape((self.cfg["expts"], self.cfg["reps"])) / lengths[idx]
-            q = self.dq_buf[idx].reshape((self.cfg["expts"], self.cfg["reps"])) / lengths[idx]
-            results.append((i, q))
-        return results
+        tot_i = []
+        tot_q = []
+
+        adcs = []
+        lengths = []
+        adc_count = {}
+        for pulse in self.sequence.ro_pulses:
+            adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
+            ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
+            adcs.append(self.qubits[pulse.qubit].feedback.ports[0][1])
+            lengths.append(self.soc.us2cycles(pulse.duration * self.us, gen_ch=ro_ch))
+
+            if adc_ch in adc_count:
+                adc_count[adc_ch] = adc_count[adc_ch] + 1
+            else:
+                adc_count[adc_ch] = 1
+
+        for idx, adc_ch in enumerate(adc_count):
+            count = adc_count[adc_ch]
+            i = self.di_buf[idx].reshape((count, self.cfg["expts"], self.cfg["reps"])) / lengths[idx]
+            q = self.dq_buf[idx].reshape((count, self.cfg["expts"], self.cfg["reps"])) / lengths[idx]
+
+            tot_i.append(i)
+            tot_q.append(q)
+        return tot_i, tot_q
 
     def initialize(self):
         """This function gets called automatically by qick super.__init__, it contains:
@@ -635,6 +664,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         """
 
         # TODO: simmetries beetween repetition_duration Vs relaxation_time and nshots Vs relaxation_time
+
         # nshots gets added to the dictionary
         self.cfg["reps"] = nshots
         # if new value is passed, relaxation_time is updated in the dictionary
@@ -642,18 +672,25 @@ class TII_RFSOC4x2(AbstractInstrument):
             self.cfg["repetition_duration"] = relaxation_time
 
         program = ExecutePulseSequence(self.soc, self.cfg, sequence, qubits)
-        avgi, avgq = program.acquire(
-            self.soc, readouts_per_experiment=len(sequence.ro_pulses), load_pulses=True, progress=False, debug=False
+        average = False
+        toti, totq = program.acquire(
+            self.soc,
+            readouts_per_experiment=len(sequence.ro_pulses),
+            load_pulses=True,
+            progress=False,
+            debug=False,
+            average=average,
         )
 
         results = {}
-        for i, ro_pulse in enumerate(sequence.ro_pulses):
-            i_pulse = np.array(avgi[0][i])
-            q_pulse = np.array(avgq[0][i])
+        adcs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
+        for j in range(len(adcs)):
+            for i, ro_pulse in enumerate(sequence.ro_pulses):
+                i_pulse = np.array(toti[j][i])
+                q_pulse = np.array(totq[j][i])
 
-            serial = ro_pulse.serial
-            # results[serial] = ExecutionResults.from_components(i_pulse, q_pulse)
-            results[serial] = AveragedResults(i_pulse, q_pulse)
+                serial = ro_pulse.serial
+                results[serial] = ExecutionResults.from_components(i_pulse, q_pulse)
 
         return results
 
@@ -683,40 +720,26 @@ class TII_RFSOC4x2(AbstractInstrument):
 
         # If there are no sweepers run ExecutePulseSequence acquisition. Last layer for recursion.
         if len(sweepers) == 0:
-            results = {}
             program = ExecutePulseSequence(self.soc, self.cfg, sequence, qubits)
-            # if average is true use program.acquire
-            if average:
-                avgi, avgq = program.acquire(
-                    self.soc,
-                    readouts_per_experiment=len(sequence.ro_pulses),
-                    load_pulses=True,  # TODO remove default values
-                    progress=False,
-                    debug=False,
-                    average=average,
-                )
-                # parse acquire results
+            toti, totq = program.acquire(
+                self.soc,
+                readouts_per_experiment=len(sequence.ro_pulses),
+                load_pulses=True,  # TODO remove default values
+                progress=False,
+                debug=False,
+                average=average,
+            )
+            results = {}
+            adcs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
+            for j in range(len(adcs)):
                 for i, serial in enumerate(original_ro):
-                    i_pulse = np.array([avgi[0][i]])
-                    q_pulse = np.array([avgq[0][i]])
-                    results[serial] = AveragedResults(i_pulse, q_pulse)
-            # if average is false use program.acquire_decimated
-            else:
-                iqres = program.acquire(
-                    self.soc,
-                    readouts_per_experiment=len(sequence.ro_pulses),
-                    load_pulses=True,
-                    progress=False,
-                    debug=False,
-                    average=average,
-                )
-                # TODO check if works with multiple readout
-                # parse acquire_decimated results
-                for i, serial in enumerate(original_ro):
-                    # averaging on the time for every measurement
-                    i_pulse = np.mean(iqres[i], axis=2)[:, 0]
-                    q_pulse = np.mean(iqres[i], axis=2)[:, 1]
-                    results[serial] = ExecutionResults.from_components(i_pulse, q_pulse)
+                    i_pulse = np.array(toti[j][i])
+                    q_pulse = np.array(totq[j][i])
+
+                    if average:
+                        results[serial] = AveragedResults(i_pulse, q_pulse)
+                    else:
+                        results[serial] = ExecutionResults.from_components(i_pulse, q_pulse)
             return results
 
         # If sweepers are still in queue
@@ -730,35 +753,26 @@ class TII_RFSOC4x2(AbstractInstrument):
             if not (is_amp or is_freq):
                 raise NotImplementedError("Parameter type not implemented")
 
-            sweep_results = {}
             # if there is only one sweeper and is supported by qick than use hardware sweep
             if len(sweepers) == 1 and not self.get_if_python_sweep(sequence, qubits, *sweepers):
                 program = ExecuteSingleSweep(self.soc, self.cfg, sequence, qubits, sweepers[0])
+                toti, totq = program.acquire(
+                    self.soc,
+                    readouts_per_experiment=len(sequence.ro_pulses),
+                    load_pulses=True,
+                    progress=False,
+                    debug=False,
+                    average=average,
+                )
                 if average:
-                    values, avgi, avgq = program.acquire(
-                        self.soc,
-                        readouts_per_experiment=len(sequence.ro_pulses),
-                        load_pulses=True,
-                        progress=False,
-                        debug=False,
-                    )
-                    # parse results of acquire sweep to a dictionary of qibolab results
-                    res = self.convert_av_sweep_results(sweepers[0], original_ro, avgi, avgq)
+                    res = self.convert_av_sweep_results(sweepers[0], original_ro, toti, totq)
                 else:
-                    values, iq_res = program.acquire_decimated(
-                        self.soc,
-                        readouts_per_experiment=len(sequence.ro_pulses),
-                        load_pulses=True,
-                        progress=False,
-                        debug=False,
-                    )
-                    # parse results of acquire_decimated sweep to a dictionary of qibolab results
-                    res = self.convert_nav_sweep_results(sweepers[0], original_ro, iq_res)
-                # merge the dictionary obtained with the one already saved
-                sweep_results = self.merge_sweep_results(sweep_results, res)
+                    res = self.convert_nav_sweep_results(sweepers[0], original_ro, sequence, qubits, toti, totq)
+                return res
 
             # if it's not possible to execute qick sweep re-call function
             else:
+                sweep_results = {}
                 idx_pulse = or_sequence.index(sweeper.pulses[0])
                 for val in sweeper.values:
                     if is_freq:
@@ -827,7 +841,7 @@ class TII_RFSOC4x2(AbstractInstrument):
             if is_same_ch and is_same_pulse:
                 return False
             # if the channel is the same, but the pulse is not then it's not the first
-            elif same_ch and not same_pulse:
+            elif is_same_ch and not same_pulse:
                 return True
 
         # this return should not be reachable, here for safety
@@ -856,7 +870,9 @@ class TII_RFSOC4x2(AbstractInstrument):
             sweep_results = self.merge_sweep_results(sweep_results, results)
         return sweep_results
 
-    def convert_nav_sweep_results(self, sweeper: Sweeper, original_ro: list, iqres: list) -> dict:
+    def convert_nav_sweep_results(
+        self, sweeper: Sweeper, original_ro: list, sequence: PulseSequence, qubits: List[Qubit], toti: list, totq: list
+    ) -> dict:
         """Convert sweep results from acquire_decimated to qibolab dictionary results
         Args:
             *sweepers (`qibolab.Sweeper`): Sweeper objects.
@@ -866,16 +882,18 @@ class TII_RFSOC4x2(AbstractInstrument):
             A dictionary mapping the readout pulses serial to qibolab results objects
         """
         sweep_results = {}
-        # add a result for every value of the sweep
-        for j, val in enumerate(sweeper.values):
-            results = {}
-            # add a result for every readouts pulse
-            for i, serial in enumerate(original_ro):
-                i_pulse = np.mean(iqres[i], axis=2)[:, 0][j]
-                q_pulse = np.mean(iqres[i], axis=2)[:, 1][j]
-                results[serial] = AveragedResults(i_pulse, q_pulse)
-            # merge new result with already saved ones
-            sweep_results = self.merge_sweep_results(sweep_results, results)
+
+        adcs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
+        for k in range(len(adcs)):
+            for j, val in enumerate(sweeper.values):
+                results = {}
+                # add a result for every readouts pulse
+                for i, serial in enumerate(original_ro):
+                    i_pulse = np.array(toti[k][i][j])
+                    q_pulse = np.array(totq[k][i][j])
+                    results[serial] = ExecutionResults.from_components(i_pulse, q_pulse)
+                # merge new result with already saved ones
+                sweep_results = self.merge_sweep_results(sweep_results, results)
         return sweep_results
 
     def sweep(
