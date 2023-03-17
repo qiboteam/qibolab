@@ -48,8 +48,8 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 1000 # 620
-                amplitude: 0.002
+                duration: 760 # 620
+                amplitude: 0.003
                 frequency: 7_453_063_000
                 shape: Rectangular()
                 type: ro # readout
@@ -66,8 +66,8 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 1000 # 960
-                amplitude: 0.004 # 0.0035
+                duration: 740 # 960
+                amplitude: 0.0044 # 0.0035
                 frequency: 7_654_952_000
                 shape: Rectangular()
                 type: ro # readout
@@ -168,8 +168,8 @@ characterization:
             sweetspot: -0.1311
             filter: {}
             # parameters for single shot classification
-            threshold: 0.00016702217548251758
-            iq_angle: 2.7340151644288095
+            threshold: 0.00016183935510953666
+            iq_angle: 2.6521204896065895
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -185,8 +185,8 @@ characterization:
             sweetspot: 0.276
             filter: {}
             # parameters for single shot classification
-            threshold: 0.00021717304199806543
-            iq_angle: 4.641564603079179
+            threshold: 0.0003020766716557774
+            iq_angle: 4.667056345747116
             # required for integration weights (not sure if it should be here)
             rotation_angle: 63.214
             # Software classifier
@@ -208,8 +208,8 @@ characterization:
                 feedforward: [1.0684635881381783, -1.0163217174522334]
                 feedback: [0.947858129314055]
             # parameters for single shot classification
-            threshold: 0.00023460529434775378
-            iq_angle: 4.010229522727564
+            threshold: 0.00021105951060197703
+            iq_angle: 3.940632185611408
             # Software classifier
             # classifier:
             #     type: "scikit"
@@ -229,8 +229,8 @@ characterization:
             sweetspot: -0.2
             filter: {}
             # parameters for single shot classification
-            threshold: 0.000335647490341843
-            iq_angle: 4.781771943738393
+            threshold: 0.0003468248167735104
+            iq_angle: 4.738458147783961
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # Software classifier
@@ -250,8 +250,8 @@ characterization:
             sweetspot: -0.1165
             filter: {}
             # parameters for single shot classification
-            threshold: 7.089287689657903e-05
-            iq_angle: 4.305491204191809
+            threshold: 0.00010026825499288424
+            iq_angle: 4.279226389775321
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # Software classifier
