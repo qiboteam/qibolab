@@ -628,9 +628,8 @@ class TII_RFSOC4x2(AbstractInstrument):
         soc (QickSoc): ``Qick`` object needed to access system blocks.
     """
 
-    def __init__(self, name: str, address: str = None):
-        # The address parameter should be None since qibolab is executed directly on-board
-        super().__init__(name, address)
+    def __init__(self, name: str):
+        super().__init__(name, address=None)  # address is None since qibolab is on board
         self.cfg: dict = {}  # dictionary with runcard settings, filled in setup()
         self.soc = QickSoc()  # QickSoc object
 
