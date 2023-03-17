@@ -12,7 +12,6 @@ from typing import Dict, List, Tuple, Union
 
 import numpy as np
 from qick import AveragerProgram, QickSoc, RAveragerProgram
-from qick.qick_asm import QickRegisterManagerMixin
 
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.platforms.abstract import Qubit
@@ -23,7 +22,6 @@ from qibolab.pulses import (
     PulseSequence,
     PulseShape,
     PulseType,
-    ReadoutPulse,
     Rectangular,
 )
 from qibolab.result import AveragedResults, ExecutionResults
@@ -859,7 +857,7 @@ class TII_RFSOC4x2(AbstractInstrument):
             A boolean value true if the sweeper must be executed by python loop, false otherwise
         """
 
-        is_amp = sweepers[0].parameter == Parameter.amplitude
+        # is_amp = sweepers[0].parameter == Parameter.amplitude
         is_freq = sweepers[0].parameter == Parameter.frequency
 
         # if there isn't only a sweeper do a python sweep
@@ -883,7 +881,7 @@ class TII_RFSOC4x2(AbstractInstrument):
             if is_same_ch and is_same_pulse:
                 return False
             # if the channel is the same, but the pulse is not then it's not the first
-            elif is_same_ch and not same_pulse:
+            elif is_same_ch and not is_same_pulse:
                 return True
 
         # this return should not be reachable, here for safety
