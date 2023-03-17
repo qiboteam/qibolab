@@ -6,7 +6,7 @@ from qibolab.platforms.platform import DesignPlatform
 
 
 def create_dummy(runcard):
-    """Create a single qubit platform using the dummy instrument.
+    """Create a dummy platform using the dummy instrument.
 
     Useful for testing.
     """
@@ -24,9 +24,10 @@ def create_dummy(runcard):
     platform = DesignPlatform("dummy", design, runcard)
 
     # map channels to qubits
-    platform.qubits[0].readout = channels["readout"]
-    platform.qubits[0].drive = channels["drive"]
-    platform.qubits[0].flux = channels["flux"]
+    for qubit in platform.qubits:
+        platform.qubits[qubit].readout = channels["readout"]
+        platform.qubits[qubit].drive = channels["drive"]
+        platform.qubits[qubit].flux = channels["flux"]
 
     return platform
 
