@@ -4,7 +4,7 @@ description: 21-qubit device at XLD fridge, controlled with qblox cluster rf.
 # connected to reem1
 
 settings:
-    hardware_avg: 2000
+    hardware_avg: 512
     repetition_duration: 10_000 # 200_000
     sampling_rate: 1_000_000_000
 
@@ -110,15 +110,15 @@ instruments:
         settings:
             ports:
                 o1: # qubit qB1
-                    attenuation                  : 30 # (dB) # should be multiple of 2
+                    attenuation                  : 40 # (dB) # should be multiple of 2
                     lo_enabled                   : true
                     lo_frequency                 : 5_022_501_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.5 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
                 o2: # qubit qB2
-                    attenuation                  : 30 # (dB)
+                    attenuation                  : 20 # 40 # (dB)
                     lo_enabled                   : true
-                    lo_frequency                 : 6_114_345_467 # (Hz) from 2e9 to 18e9
+                    lo_frequency                 : 6_196_579_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.5 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
 
@@ -135,13 +135,13 @@ instruments:
         settings:
             ports:
                 o1: # qubit qB3
-                    attenuation                  : 30 # (dB)
+                    attenuation                  : 40 # (dB)
                     lo_enabled                   : true
                     lo_frequency                 : 5_538_000_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.5 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : false
                 o2: # qubit qB4
-                    attenuation                  : 30 # (dB)
+                    attenuation                  : 40 # (dB)
                     lo_enabled                   : true
                     lo_frequency                 : 6_779_000_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.5 # for path0 and path1 -1.0<=v<=1.0
@@ -238,10 +238,10 @@ native_gates:
                 type: ro                    # readout                
         B2: # qubit id
             RX:
-                duration: 40                   # should be multiple of 4
+                duration: 44                   # should be multiple of 4
                 amplitude: 0.5
-                frequency: 6_114_345_467    # qubit frequency
-                if_frequency: 0  # difference in qubit frequency
+                frequency: 5_996_579_000    # qubit frequency
+                if_frequency: -200_000_000  # difference in qubit frequency
                 shape: Gaussian(5)
                 type: qd                    # qubit drive
             MZ:
@@ -310,7 +310,7 @@ characterization:
             mean_exc_states: (0.0+0.0j)
         B1:
             readout_frequency: 6_927_880_000
-            drive_frequency: 5_073_000_000
+            drive_frequency: 5_790_000_000
             T1: 0
             T2: 0
             state0_voltage: 0.0
@@ -319,8 +319,8 @@ characterization:
             mean_exc_states: (0.0+0.0j)
         B2:
             readout_frequency: 7_137_953_000
-            drive_frequency: 5_955_000_000
-            T1: 0
+            drive_frequency: 5_996_579_000
+            T1: 9405
             T2: 0
             state0_voltage: 0.0
             state1_voltage: 0.0
