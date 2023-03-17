@@ -217,14 +217,14 @@ class MultiqubitPlatform(AbstractPlatform):
             if "readout" in roles[name]:
                 if not instrument_pulses[name].is_empty:
                     if not instrument_pulses[name].ro_pulses.is_empty:
-                        if all([pulse.serial in changed for pulse in instrument_pulses[name].ro_pulses]):
-                            # FIXME: for precision sweep in resonator spectroscopy
-                            # change necessary to perform precision sweep
-                            # TODO: move this to instruments (ask Alvaro)
-                            # TODO: check if this will work with multiplex
-                            for sequencers in self.instruments[name]._sequencers.values():
-                                for sequencer in sequencers:
-                                    sequencer.pulses = instrument_pulses[name].ro_pulses
+                        # if all([pulse.serial in changed for pulse in instrument_pulses[name].ro_pulses]):
+                        #     # FIXME: for precision sweep in resonator spectroscopy
+                        #     # change necessary to perform precision sweep
+                        #     # TODO: move this to instruments (ask Alvaro)
+                        #     # TODO: check if this will work with multiplex
+                        #     for sequencers in self.instruments[name]._sequencers.values():
+                        #         for sequencer in sequencers:
+                        #             sequencer.pulses = instrument_pulses[name].ro_pulses
                         results = self.instruments[name].acquire()
                         existing_keys = set(acquisition_results.keys()) & set(results.keys())
                         for key, value in results.items():
