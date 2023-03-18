@@ -45,6 +45,7 @@ setup(
         "qibo>=0.1.8",
         "networkx",
         "more-itertools",
+        "pyyaml"
     ],
     extras_require={
         "docs": [
