@@ -67,9 +67,9 @@ native_gates:
 
         2: # qubit number
             RX:
-                duration: 200 #60
-                amplitude: .75 #0.54 # Multiplied by the sweeper ?
-                frequency: 4_321_500_000 # 4_541_100_000 #doesnt do anything requiered for qibolab to work
+                duration: 70 #200 #60
+                amplitude: .5 #0.54 # Multiplied by the sweeper ?
+                frequency: 4_401_000_000 #4_505_500_000 #4_321_500_000 # 4_541_100_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
                 type: qd # qubit drive
@@ -111,9 +111,9 @@ native_gates:
                 shape: Rectangular()
         4: # qubit number
             RX:
-                duration: 20 #80
+                duration: 56 #80
                 amplitude: 0.75 #0.8
-                frequency: 4_089_000_000 #doesnt do anything requiered for qibolab to work
+                frequency: 4_355_000_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
                 type: qd # qubit drive
@@ -121,8 +121,8 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: .05 # 1
-                frequency: 5_515_000_000 #doesnt do anything requiered for qibolab to work
+                amplitude: .1 # 1
+                frequency: 5_517_000_000 #doesnt do anything requiered for qibolab to work
                 integration_time : 1.e-6
                 shape: Rectangular()
                 type: ro # readout
@@ -186,10 +186,11 @@ characterization:
         2:
             readout_frequency: 6_086_700_000
             resonator_polycoef_flux: []
-            drive_frequency: 4_321_500_000 #4_541_100_000
+            drive_frequency: 4_401_000_000 #4_505_500_000 #4_321_500_000 #4_541_100_000
             T1: 0.
             T2: 0.
-            sweetspot: 0.62
+            sweetspot: 0.5 #0.62 0.00
+            # anharmonicity:Around 100MHz  4_400_500_000 #4_436_500_000
             filter: {}
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
@@ -207,9 +208,9 @@ characterization:
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
         4:
-            readout_frequency: 5_515_000_000
+            readout_frequency: 5_517_000_000
             resonator_polycoef_flux: []
-            drive_frequency: 4_089_000_000
+            drive_frequency: 4_355_000_000
             T1: 0.
             T2: 0.
             sweetspot: 0.0
@@ -232,7 +233,7 @@ characterization:
             # To save power values on the runcard
             # flux_range: -0
         "c4":
-            sweetspot: 0.0
+            sweetspot: 0.0 #0.16
             filter: {}
             # To save power values on the runcard
             # flux_range: -0
@@ -240,6 +241,7 @@ characterization:
 
     two_qubit_couplers:
         0:
+            # frequency: 3_753_000_000 or 3_503_000_000
             sweetspot: 0.0
             filter: {}
         1:

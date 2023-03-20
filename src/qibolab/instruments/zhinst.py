@@ -7,6 +7,9 @@ from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.pulses import FluxPulse, Pulse
 from qibolab.result import ExecutionResults
 
+# TODO: Scan de IQM coupler (doble frequencia)
+# TODO: Scan de flujo amplitud y lenght (doble sweep a un pulso)
+
 # TODO: Implement Slepian shaped flux pulse
 # FIXME: Amplitude seems to get multiplied ???
 # TODO: Flux as offsets and create script that puts them all at 0 when finished.
@@ -357,7 +360,8 @@ class Zurich(AbstractInstrument):
         for qubit in qubits.values():
             pulse = FluxPulse(
                 start=0,
-                duration=sequence.duration,
+                # duration=sequence.duration,
+                duration=sequence.finish,
                 amplitude=qubit.sweetspot,
                 shape="Rectangular",
                 channel=qubit.flux.name,
@@ -532,18 +536,18 @@ class Zurich(AbstractInstrument):
     # Flux on all qubits(Separete, Bias, Flux, Coupler)
     def Flux(self, exp, qubits):
         for qubit in qubits.values():
-            if "c" in str(qubit.name):
-                pass
-            else:
-                with exp.section(uid=f"sequence_bias{qubit.name}"):
-                    i = 0
-                    for pulse in self.sequence[f"flux{qubit.name}"]:
-                        pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
-                        if isinstance(pulse, ZhSweeper_line):
-                            self.play_sweep(exp, qubit, pulse, section="flux")
-                        else:
-                            exp.play(signal=f"flux{qubit.name}", pulse=pulse.zhpulse)
-                        i += 1
+            # if "c" in str(qubit.name):
+            #     pass
+            # else:
+            with exp.section(uid=f"sequence_bias{qubit.name}"):
+                i = 0
+                for pulse in self.sequence[f"flux{qubit.name}"]:
+                    pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
+                    if isinstance(pulse, ZhSweeper_line):
+                        self.play_sweep(exp, qubit, pulse, section="flux")
+                    else:
+                        exp.play(signal=f"flux{qubit.name}", pulse=pulse.zhpulse)
+                    i += 1
 
     # qubit drive pulses
     def Drive(self, exp, qubits):
@@ -612,7 +616,7 @@ class Zurich(AbstractInstrument):
 
                             weight = lo.pulse_library.const(
                                 uid="weight" + pulse.zhpulse.uid,
-                                length=round(pulse.pulse.duration * 1e-9, 9) - 100e-9,
+                                length=round(pulse.pulse.duration * 1e-9, 9),
                                 amplitude=1,
                             )
 
