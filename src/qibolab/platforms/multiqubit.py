@@ -68,7 +68,7 @@ class MultiqubitPlatform(AbstractPlatform):
         if qubit in self.qbm:
              self.qb_port[qubit].current = bias
         elif qubit in self.qfm:
-            self.qf_port[qubit].offset == bias
+            self.qf_port[qubit].offset = bias
 
     def get_attenuation(self, qubit):
         return self.ro_port[qubit].attenuation
