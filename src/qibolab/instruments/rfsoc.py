@@ -723,9 +723,20 @@ class TII_RFSOC4x2(AbstractInstrument):
                 q_pulse = np.array(totq[j][i])
 
                 serial = ro_pulse.serial
-                results[serial] = ExecutionResults.from_components(i_pulse, q_pulse)
+
+                shots = self.classify_shots(i_pulse, q_pulse, qubits[ro_pulse.qubit])
+                results[serial] = ExecutionResults.from_components(i_pulse, q_pulse, shots)
 
         return results
+
+    def classify_shots(self, i_values: List[float], q_values: List[float], qubit: Qubit) -> List[float]:
+        """Classify IQ values using qubit threshold and rotation_angle"""
+        if qubit.rotation_angle is None or qubit.threshold is None:
+            return None
+        angle = np.radians(qubit.rotation_angle)
+        rotated = np.cos(angle) * np.array(i_values) - np.sin(angle) * np.array(q_values)
+        shots = np.heaviside(np.array(rotated) - qubit.threshold, 0)
+        return shots
 
     def recursive_python_sweep(
         self,
@@ -772,7 +783,9 @@ class TII_RFSOC4x2(AbstractInstrument):
                     if average:
                         results[serial] = AveragedResults(i_pulse, q_pulse)
                     else:
-                        results[serial] = ExecutionResults.from_components(i_pulse, q_pulse)
+                        qubit = qubits[or_sequence.ro_pulses[i].qubit]
+                        shots = self.classify_shots(i_pulse, q_pulse, qubit)
+                        results[serial] = ExecutionResults.from_components(i_pulse, q_pulse, shots)
             return results
 
         # If sweepers are still in queue
@@ -942,7 +955,10 @@ class TII_RFSOC4x2(AbstractInstrument):
                 for i, serial in enumerate(original_ro):
                     i_pulse = np.array(toti[k][i][j])
                     q_pulse = np.array(totq[k][i][j])
-                    results[serial] = ExecutionResults.from_components(i_pulse, q_pulse)
+
+                    qubit = qubits[sequence.ro_pulses[i].qubit]
+                    shots = self.classify_shots(i_pulse, q_pulse, qubit)
+                    results[serial] = ExecutionResults.from_components(i_pulse, q_pulse, shots)
                 # merge new result with already saved ones
                 sweep_results = self.merge_sweep_results(sweep_results, results)
         return sweep_results
