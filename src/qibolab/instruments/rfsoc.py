@@ -20,7 +20,6 @@ from qibolab.pulses import (
     Gaussian,
     Pulse,
     PulseSequence,
-    PulseShape,
     PulseType,
     ReadoutPulse,
     Rectangular,
@@ -218,7 +217,7 @@ class ExecutePulseSequence(AveragerProgram):
 
         # if pulse is drag or gaussian first define the i-q shape and then set register
         if is_drag or is_gaus:
-            name = pulse.shape.name
+            name = pulse.serial
             sigma = us_length / pulse.shape.rel_sigma
             sigma = self.soc.us2cycles(
                 us_length / pulse.shape.rel_sigma, gen_ch=gen_ch
@@ -532,7 +531,7 @@ class ExecuteSingleSweep(RAveragerProgram):
 
         # if pulse is drag or gaussian first define the i-q shape and then set register
         if is_drag or is_gaus:
-            name = pulse.shape.name
+            name = pulse.serial
             sigma = us_length / pulse.shape.rel_sigma
             sigma = self.soc.us2cycles(
                 us_length / pulse.shape.rel_sigma, gen_ch=gen_ch
