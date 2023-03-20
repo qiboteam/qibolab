@@ -131,9 +131,15 @@ native_gates:
         2-1:
             CZ:
             - duration: 30
-              amplitude: 0.2785
+              amplitude: 0.2779
               shape: Rectangular()
               qubit: 2
+              relative_start: 0
+              type: qf
+            - duration: 30
+              amplitude: 0.1311
+              shape: Rectangular()
+              qubit: 0
               relative_start: 0
               type: qf
             - type: virtual_z
