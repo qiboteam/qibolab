@@ -22,6 +22,7 @@ from qibolab.pulses import (
     PulseSequence,
     PulseShape,
     PulseType,
+    ReadoutPulse,
     Rectangular,
 )
 from qibolab.result import AveragedResults, ExecutionResults
@@ -632,6 +633,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         super().__init__(name, address=None)  # address is None since qibolab is on board
         self.cfg: dict = {}  # dictionary with runcard settings, filled in setup()
         self.soc = QickSoc()  # QickSoc object
+        self.states_calibrated = False
 
     def connect(self):
         """Empty method to comply with AbstractInstrument interface."""
@@ -656,12 +658,14 @@ class TII_RFSOC4x2(AbstractInstrument):
         repetition_duration: int,
         adc_trig_offset: int,
         max_gain: int,
+        calibrate: bool = True,
         **kwargs,
     ):
         """Configures the instrument.
 
-        Args: Settings taken from runcard
-            qubits (list): list of `qibolab.platforms.abstract.Qubit`, parameter not used here.
+        Args: Settings taken from runcard (except calibrate argument)
+            calibrate(bool): if true runs the calibrate_state routine getting treshold and angle
+            qubits (list): list of `qibolab.platforms.abstract.Qubit`
             sampling_rate (int): sampling rate of the RFSoC (Hz).
             repetition_duration (int): delay before readout (ns).
             adc_trig_offset (int): single offset for all adc triggers (tproc CLK ticks).
@@ -677,8 +681,81 @@ class TII_RFSOC4x2(AbstractInstrument):
             "max_gain": max_gain,
         }
 
+        if calibrate:
+            self.calibration_cfg = {}
+            self.calibrate_states(qubits)
+            self.states_calibrated = True
+
+    def calibrate_states(self, qubits: List[Qubit]):
+        """Runs a calibration and sets threshold and angle paramters"""
+        # TODO maybe this could be moved to create_tii_rfsoc4x2() to use create_RX_pulse and create_MZ_pulse
+        # TODO integration with qibocal routines
+
+        for qubit in qubits:
+            self.calibration_cfg[qubit] = {}
+
+            # definition of MZ pulse
+            ro_duration = 2000
+            ro_frequency = 7371800000
+            ro_amplitude = 0.046
+            ro_shape = Rectangular()
+            ro_channel = qubits[qubit].readout.name
+            # definition of RX pulse
+            qd_duration = 28
+            qd_frequency = 5541675000
+            qd_amplitude = 0.09
+            qd_shape = Rectangular()
+            qd_channel = qubits[qubit].drive.name
+            # sequence that should measure 0
+            sequence0 = PulseSequence()
+            ro_pulse = ReadoutPulse(0, ro_duration, ro_amplitude, ro_frequency, 0, ro_shape, ro_channel, qubit=qubit)
+
+            sequence0.add(ro_pulse)
+            res0 = self.play(qubits, sequence0, nshots=2000)[ro_pulse.serial]
+
+            # sequence that should measure 1
+            sequence1 = PulseSequence()
+            qd_pulse = Pulse(0, qd_duration, qd_amplitude, qd_frequency, 0, qd_shape, qd_channel, qubit=qubit)
+            ro_pulse = ReadoutPulse(
+                qd_pulse.finish, ro_duration, ro_amplitude, ro_frequency, 0, ro_shape, ro_channel, qubit=qubit
+            )
+
+            sequence1.add(qd_pulse)
+            sequence1.add(ro_pulse)
+            res1 = self.play(qubits, sequence1, nshots=2000)[ro_pulse.serial]
+
+            #
+            ig = res0.i
+            qg = res0.q
+            ie = res1.i
+            qe = res1.q
+
+            xg, yg = np.median(ig), np.median(qg)
+            xe, ye = np.median(ie), np.median(qe)
+
+            theta = -np.arctan2((ye - yg), (xe - xg))
+
+            ig_new = ig * np.cos(theta) - qg * np.sin(theta)
+            qg_new = ig * np.sin(theta) + qg * np.cos(theta)
+            ie_new = ie * np.cos(theta) - qe * np.sin(theta)
+            qe_new = ie * np.sin(theta) + qe * np.cos(theta)
+
+            xg, yg = np.median(ig_new), np.median(qg_new)
+            xe, ye = np.median(ie_new), np.median(qe_new)
+
+            numbins = 200
+            ng, binsg = np.histogram(ig_new, bins=numbins)
+            ne, binse = np.histogram(ie_new, bins=numbins)
+
+            contrast = np.abs((np.cumsum(ng) - np.cumsum(ne)) / (0.5 * ng.sum() + 0.5 * ne.sum()))
+            tind = contrast.argmax()
+            threshold = binsg[tind]
+
+            self.calibration_cfg[qubit]["threshold"] = threshold
+            self.calibration_cfg[qubit]["rotation_angle"] = theta
+
     def play(
-        self, qubits: List[Qubit], sequence: PulseSequence, relaxation_time: int, nshots: int = 1000
+        self, qubits: List[Qubit], sequence: PulseSequence, relaxation_time: int = None, nshots: int = 1000
     ) -> Dict[str, ExecutionResults]:
         """Executes the sequence of instructions and retrieves the readout results.
 
@@ -731,11 +808,17 @@ class TII_RFSOC4x2(AbstractInstrument):
 
     def classify_shots(self, i_values: List[float], q_values: List[float], qubit: Qubit) -> List[float]:
         """Classify IQ values using qubit threshold and rotation_angle"""
-        if qubit.rotation_angle is None or qubit.threshold is None:
-            return None
-        angle = np.radians(qubit.rotation_angle)
+        if self.states_calibrated:
+            angle = self.calibration_cfg[qubit.name]["rotation_angle"]
+            threshold = self.calibration_cfg[qubit.name]["threshold"]
+        else:
+            if qubit.rotation_angle is None or qubit.threshold is None:
+                return None
+            angle = np.radians(qubit.rotation_angle)
+            threshold = qubit.threshold
+
         rotated = np.cos(angle) * np.array(i_values) - np.sin(angle) * np.array(q_values)
-        shots = np.heaviside(np.array(rotated) - qubit.threshold, 0)
+        shots = np.heaviside(np.array(rotated) - threshold, 0)
         return shots
 
     def recursive_python_sweep(
