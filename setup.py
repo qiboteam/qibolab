@@ -65,6 +65,7 @@ setup(
         # TII system dependencies
         "tiiq": [
             "qblox-instruments==0.7.0",
+            "qcodes_contrib_drivers==0.19.0",
             "qcodes",
             "pyvisa-py==0.5.3",
             "qm-qua>=1.0.1",
