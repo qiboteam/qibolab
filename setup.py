@@ -41,11 +41,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering :: Physics",
     ],
-    install_requires=[
-        "qibo>=0.1.8",
-        "networkx",
-        "more-itertools",
-    ],
+    install_requires=["qibo>=0.1.8", "networkx", "more-itertools", "pyyaml"],
     extras_require={
         "docs": [
             "sphinx",
