@@ -16,7 +16,7 @@ def test_instruments_erasynth_init(instrument):
 
 @pytest.mark.qpu
 @pytest.mark.parametrize("instrument_name", ["ERA"])
-def test_instruments_rohde_schwarz_setup(platform_name, instrument_name):
+def test_instruments_erasynth_setup(platform_name, instrument_name):
     platform = Platform(platform_name)
     settings = platform.settings
     instrument, instrument_settings = load_from_platform(platform, instrument_name)
@@ -34,7 +34,7 @@ def instrument_set_and_test_parameter_values(instrument, parameter, values):
 
 
 @pytest.mark.qpu
-def test_instruments_rohde_schwarz_set_device_paramter(instrument):
+def test_instruments_erasynth_set_device_paramter(instrument):
     instrument_set_and_test_parameter_values(
         instrument, f"power", np.arange(-60, 0, 10)
     )  # Max power is 25dBm but to be safe testing only until 0dBm
@@ -42,7 +42,7 @@ def test_instruments_rohde_schwarz_set_device_paramter(instrument):
 
 
 @pytest.mark.qpu
-def test_instruments_rohde_schwarz_start_stop_disconnect(instrument):
+def test_instruments_erasynth_start_stop_disconnect(instrument):
     instrument.start()
     instrument.stop()
     instrument.disconnect()
