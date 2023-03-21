@@ -6,6 +6,7 @@ https://qcodes.github.io/Qcodes_contrib_drivers/_modules/qcodes_contrib_drivers/
 """
 
 from qcodes_contrib_drivers.drivers.ERAInstruments import ERASynthPlusPlus
+
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 
 
@@ -31,7 +32,7 @@ class ERA(AbstractInstrument):
         if not self.is_connected:
             for attempt in range(3):
                 try:
-                    self.device = ERASynthPlusPlus(f'{self.name}', f"ASRL{self.address}")
+                    self.device = ERASynthPlusPlus(f"{self.name}", f"ASRL{self.address}")
                     self.is_connected = True
                     break
                 except KeyError as exc:
