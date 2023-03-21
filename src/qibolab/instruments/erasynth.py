@@ -72,7 +72,7 @@ class ERA(AbstractInstrument):
                     if parameter == "power":
                         self._post("amplitude", float(value))
                     elif parameter == "frequency":
-                        self._post("frequency", int(value))                            
+                        self._post("frequency", int(value))
                 self._device_parameters[parameter] = value
             else:
                 raise Exception(f"Attempting to set {parameter} without a connection to the instrument")
@@ -157,7 +157,7 @@ class ERA(AbstractInstrument):
         value = str(value)
         print(f"posting {name}={value} to {self.name}")
         for _ in range(3):
-            response = requests.post(f"http://{self.address}/", data={name:value}, timeout=1)
+            response = requests.post(f"http://{self.address}/", data={name: value}, timeout=1)
             if response.status_code == 200:
                 return True
             else:
