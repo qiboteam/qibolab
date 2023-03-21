@@ -6,11 +6,10 @@ from qibo.models import Circuit
 
 from qibolab.transpilers.general_connectivity import Transpiler
 
-np.random.seed(42)
 
-
-def generate_random_circuit(nqubits, ngates):
+def generate_random_circuit(nqubits, ngates, seed=42):
     """Generate a random circuit with RX and CZ gates."""
+    np.random.seed(seed)
     one_qubit_gates = [gates.RX]
     two_qubit_gates = [gates.CZ]
     n1, n2 = len(one_qubit_gates), len(two_qubit_gates)
