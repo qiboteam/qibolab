@@ -5,9 +5,11 @@ Supports the ERAsynth ++.
 https://qcodes.github.io/Qcodes_contrib_drivers/_modules/qcodes_contrib_drivers/drivers/ERAInstruments/erasynth.html#ERASynthBase.clear_read_buffer
 """
 
-from qcodes_contrib_drivers.drivers.ERAInstruments import ERASynthPlusPlus
-import requests
 import time
+
+import requests
+from qcodes_contrib_drivers.drivers.ERAInstruments import ERASynthPlusPlus
+
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 
 
@@ -70,7 +72,7 @@ class ERA(AbstractInstrument):
                     if parameter == "power":
                         self._post("amplitude", value)
                     elif parameter == "frequency":
-                        self._post("frequency", value)                            
+                        self._post("frequency", value)
                 self._device_parameters[parameter] = value
             else:
                 raise Exception(f"Attempting to set {parameter} without a connection to the instrument")
@@ -109,7 +111,7 @@ class ERA(AbstractInstrument):
 
                 if kwargs["reference_clock_source"] == "internal":
                     self._post("reference_int_ext", 0)
-                elif kwargs["reference_clock_source"] == "external":    
+                elif kwargs["reference_clock_source"] == "external":
                     self._post("reference_int_ext", 1)
                 else:
                     raise Exception(f"Invalid reference clock source {kwargs['reference_clock_source']}")
@@ -147,16 +149,16 @@ class ERA(AbstractInstrument):
     def _post(self, name, value):
         """
         Post a value to the instrument's web server.
-        
+
         Try to post three times, waiting for 0.1 seconds between each attempt.
-        
+
         Args:
             name: str = The name of the value to post.
             value: str = The value to post.
         """
         for _ in range(3):
             print(requests.get(f"http://{self.address}/"))
-            response = requests.post(f"http://{self.address}/", data={name:value}, timeout=3)
+            response = requests.post(f"http://{self.address}/", data={name: value}, timeout=3)
             if response.status_code == 200 and response.text == "OK":
                 self._post("readAll", 1)
                 self._post("readDiagnotic", 0)
