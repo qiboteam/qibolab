@@ -32,8 +32,8 @@ sequence.add(
 )
 
 # Define platform and load specific runcard
-runcard = qibolab_folder / "runcards" / "tii1q.yml"
-platform = Platform("tii1q", runcard)
+runcard = qibolab_folder / "runcards" / "tii_rfsocZCU111.yml"
+platform = Platform("tii_rfsocZCU111", runcard)
 
 # Connects to lab instruments using the details specified in the calibration settings.
 platform.connect()

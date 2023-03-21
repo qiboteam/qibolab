@@ -523,6 +523,77 @@ class TII_RFSOC4x2(AbstractInstrument):
             self.soc, readouts_per_experiment=len(sequence.ro_pulses), load_pulses=True, progress=False, debug=False
         )
 
+class TII_RFSOC_ZCU111(AbstractInstrument):
+    """Instrument object for controlling the RFSoC4x2 FPGA.
+
+    The connection requires the FPGA to have a server currently listening.
+    The ``connect`` and the ``setup`` functions must be called before playing pulses with
+    ``play`` (for arbitrary qibolab ``PulseSequence``) or ``sweep``.
+
+    Args:
+        name (str): Name of the instrument instance.
+        address (str): IP address and port for connecting to the FPGA.
+    """
+
+    def __init__(self, name: str, address: str):
+        super().__init__(name, address)
+        self.cfg: dict = {}
+        self.is_connected = True
+        self.soc = QickSoc()
+
+    def connect(self):
+        """Connects to the FPGA instrument."""
+        pass
+
+    def setup(self, qubits, sampling_rate, repetition_duration, adc_trig_offset, max_gain, **kwargs):
+        """Configures the instrument.
+
+        A connection to the instrument needs to be established beforehand.
+        Args: Settings taken from runcard
+            qubits: parameter not used
+            repetition_duration (int): delay before readout (ms)
+            adc_trig_offset (int):
+            max_gain (int): defined in dac units so that amplitudes can be relative
+
+        Raises:
+            Exception = If attempting to set a parameter without a connection to the instrument.
+        """
+        if self.is_connected:
+            # Load needed settings
+            self.cfg = {
+                "sampling_rate": sampling_rate,
+                "repetition_duration": repetition_duration,
+                "adc_trig_offset": adc_trig_offset,
+                "max_gain": max_gain,
+            }
+
+        else:
+            raise Exception("The instrument cannot be set up, there is no connection")
+
+    def play(self, qubits, sequence, relaxation_time, nshots=1000):
+        """Executes the sequence of instructions and retrieves the readout results.
+
+        Each readout pulse generates a separate acquisition.
+
+        Args:
+            qubits: parameter not used
+            sequence (PulseSequence): arbitary qibolab pulse sequence to execute
+            nshots (int): number of shots
+            relaxation_time (int): delay before readout (ms)
+
+        Returns:
+            A dictionary mapping the readout pulse serial to am ExecutionResults object
+        """
+
+        self.cfg["nshots"] = nshots
+        if relaxation_time is not None:
+            self.cfg["repetition_duration"] = relaxation_time
+
+        program = ExecutePulseSequence(self.soc, self.cfg, sequence, qubits)
+        avgi, avgq = program.acquire(
+            self.soc, readouts_per_experiment=len(sequence.ro_pulses), load_pulses=True, progress=False, debug=False
+        )
+
         results = {}
         for i, ro_pulse in enumerate(sequence.ro_pulses):
             i_pulse = np.array(avgi[0][i])
