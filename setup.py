@@ -43,6 +43,9 @@ setup(
     ],
     install_requires=[
         "qibo>=0.1.8",
+        "networkx",
+        "more-itertools",
+        "pyyaml"
     ],
     extras_require={
         "docs": [
@@ -56,11 +59,21 @@ setup(
             "sphinx_copybutton",
             "furo",
         ],
+        "tests": [
+            "pytest>=7.2.0",
+            "pytest-cov>=4.0.0",
+            "pytest-env>=0.8.1",
+        ],
+        "analysis": [
+            "pylint>=2.16.0",
+        ],
         # TII system dependencies
         "tiiq": [
             "qblox-instruments==0.7.0",
             "qcodes",
             "pyvisa-py==0.5.3",
+            "qm-qua>=1.0.1",
+            "qualang-tools>=0.13.1",
         ],
     },
     python_requires=">=3.8.0",
