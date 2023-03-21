@@ -6,16 +6,18 @@ https://qcodes.github.io/Qcodes_contrib_drivers/_modules/qcodes_contrib_drivers/
 """
 
 from qcodes_contrib_drivers.drivers.ERAInstruments import ERASynthPlusPlus
-
+import requests
+import time
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 
 
 class ERA(AbstractInstrument):
-    def __init__(self, name, address):
+    def __init__(self, name, address, ethernet=True):
         super().__init__(name, address)
         self.device: ERASynthPlusPlus = None
         self.power: int
         self.frequency: int
+        self.ethernet = ethernet
         self._device_parameters = {}
 
     rw_property_wrapper = lambda parameter: property(
@@ -32,7 +34,11 @@ class ERA(AbstractInstrument):
         if not self.is_connected:
             for attempt in range(3):
                 try:
-                    self.device = ERASynthPlusPlus(f"{self.name}", f"ASRL{self.address}")
+                    if not self.ethernet:
+                        self.device = ERASynthPlusPlus(f"{self.name}", f"TCPIP::{self.address}::INSTR")
+                    else:
+                        self._post("readAll", 1)
+                        self._post("readDiagnotic", 0)
                     self.is_connected = True
                     break
                 except KeyError as exc:
@@ -56,12 +62,15 @@ class ERA(AbstractInstrument):
         """
         if not (parameter in self._device_parameters and self._device_parameters[parameter] == value):
             if self.is_connected:
-                if not parameter in self._device_parameters:
+                if not self.ethernet:
                     if not hasattr(self.device, parameter):
                         raise Exception(f"The instrument {self.name} does not have parameter {parameter}")
                     self.device.set(parameter, value)
                 else:
-                    self.device.set(parameter, value)
+                    if parameter == "power":
+                        self._post("amplitude", value)
+                    elif parameter == "frequency":
+                        self._post("frequency", value)                            
                 self._device_parameters[parameter] = value
             else:
                 raise Exception(f"Attempting to set {parameter} without a connection to the instrument")
@@ -86,36 +95,72 @@ class ERA(AbstractInstrument):
             # Load settings
             self.power = kwargs["power"]
             self.frequency = kwargs["frequency"]
-            if kwargs["reference_clock_source"] == "internal":
-                self.device.ref_osc_source("int")
-            elif kwargs["reference_clock_source"] == "external":
-                self.device.ref_osc_source("ext")
+            if not self.ethernet:
+                if kwargs["reference_clock_source"] == "internal":
+                    self.device.ref_osc_source("int")
+                elif kwargs["reference_clock_source"] == "external":
+                    self.device.ref_osc_source("ext")
+                else:
+                    raise Exception(f"Invalid reference clock source {kwargs['reference_clock_source']}")
             else:
-                raise Exception("Invalid reference clock source")
+                self._post("preset", 1)
+                self._post("readAll", 1)
+                self._post("rfoutput", 0)
+
+                if kwargs["reference_clock_source"] == "internal":
+                    self._post("reference_int_ext", 0)
+                elif kwargs["reference_clock_source"] == "external":    
+                    self._post("reference_int_ext", 1)
+                else:
+                    raise Exception(f"Invalid reference clock source {kwargs['reference_clock_source']}")
         else:
             raise Exception("There is no connection to the instrument")
 
     def start(self):
-        self.device.on()
+        self.on()
 
     def stop(self):
-        self.device.off()
+        self.off()
 
     def disconnect(self):
         if self.is_connected:
-            self.device.close()
             self.is_connected = False
 
     def __del__(self):
         self.disconnect()
 
     def on(self):
-        self.device.on()
+        if not self.ethernet:
+            self.device.on()
+        else:
+            self._post("rfoutput", 1)
 
     def off(self):
-        self.device.off()
+        if not self.ethernet:
+            self.device.off()
+        else:
+            self._post("rfoutput", 0)
 
     def close(self):
-        if self.is_connected:
-            self.device.close()
-            self.is_connected = False
+        self.is_connected = False
+
+    def _post(self, name, value):
+        """
+        Post a value to the instrument's web server.
+        
+        Try to post three times, waiting for 0.1 seconds between each attempt.
+        
+        Args:
+            name: str = The name of the value to post.
+            value: str = The value to post.
+        """
+        for _ in range(3):
+            print(requests.get(f"http://{self.address}/"))
+            response = requests.post(f"http://{self.address}/", data={name:value}, timeout=3)
+            if response.status_code == 200 and response.text == "OK":
+                self._post("readAll", 1)
+                self._post("readDiagnotic", 0)
+                return True
+            else:
+                time.sleep(0.1)
+        raise InstrumentException(self, f"Unable to post {name}={value} to {self.name}")
