@@ -38,7 +38,7 @@ class ERA(AbstractInstrument):
                         self.device = ERASynthPlusPlus(f"{self.name}", f"TCPIP::{self.address}::INSTR")
                     else:
                         self._post("readAll", 1)
-                        self._post("readDiagnotic", 0)
+                        self._post("readDiagnostic", 0)
                     self.is_connected = True
                     break
                 except KeyError as exc:
@@ -68,9 +68,9 @@ class ERA(AbstractInstrument):
                     self.device.set(parameter, value)
                 else:
                     if parameter == "power":
-                        self._post("amplitude", value)
+                        self._post("amplitude", float(value))
                     elif parameter == "frequency":
-                        self._post("frequency", value)                            
+                        self._post("frequency", int(value))                            
                 self._device_parameters[parameter] = value
             else:
                 raise Exception(f"Attempting to set {parameter} without a connection to the instrument")
@@ -103,8 +103,6 @@ class ERA(AbstractInstrument):
                 else:
                     raise Exception(f"Invalid reference clock source {kwargs['reference_clock_source']}")
             else:
-                self._post("preset", 1)
-                self._post("readAll", 1)
                 self._post("rfoutput", 0)
 
                 if kwargs["reference_clock_source"] == "internal":
@@ -154,12 +152,11 @@ class ERA(AbstractInstrument):
             name: str = The name of the value to post.
             value: str = The value to post.
         """
+        value = str(value)
+        print(f"posting {name}={value} to {self.name}")
         for _ in range(3):
-            print(requests.get(f"http://{self.address}/"))
-            response = requests.post(f"http://{self.address}/", data={name:value}, timeout=3)
-            if response.status_code == 200 and response.text == "OK":
-                self._post("readAll", 1)
-                self._post("readDiagnotic", 0)
+            response = requests.post(f"http://{self.address}/", data={name:value}, timeout=1)
+            if response.status_code == 200:
                 return True
             else:
                 time.sleep(0.1)
