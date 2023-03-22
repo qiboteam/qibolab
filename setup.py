@@ -68,7 +68,7 @@ setup(
         "tiiq": [
             "qblox-instruments==0.7.0",
             "qcodes",
-            "qick",
+            "qick@git+https://github.com/openquantumhardware/qick.git@main",
             "pyvisa-py==0.5.3",
             "qm-qua>=1.0.1",
             "qualang-tools>=0.13.1",
