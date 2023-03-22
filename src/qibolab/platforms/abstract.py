@@ -153,10 +153,9 @@ class AbstractPlatform(ABC):
             else:
                 self.qubits[q] = Qubit(q, **settings["characterization"]["single_qubit"][q])
 
-
-    def update(self, updates:dict):
+    def update(self, updates: dict):
         r"""Updates the runcard.
-        
+
         Args:
 
             udates (dict): Dictionary containing the parameters to update the runcard.
