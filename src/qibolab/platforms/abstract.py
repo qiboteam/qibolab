@@ -165,7 +165,7 @@ class AbstractPlatform(ABC):
             if par == "readout_frequency":
                 for qubit, value in values.items():
                     self.native_single_qubit_gates[qubit]["MZ"]["frequency"] = value
-            elif par  == "drive_frequency":
+            elif par == "drive_frequency":
                 for qubit, value in values:
                     self.native_single_qubit_gates[qubit]["RX"]["frequency"] = value
 
