@@ -56,7 +56,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         repetition_duration: int,
         adc_trig_offset: int,
         max_gain: int,
-        calibrate: bool = True,
+        calibrate: bool = False,
         **kwargs,
     ):
         """Configures the instrument.
@@ -159,8 +159,18 @@ class TII_RFSOC4x2(AbstractInstrument):
         }
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect((self.host, self.port))
-            sock.send(pickle.dumps(server_commands))
 
+            msg_encoded = pickle.dumps(server_commands)
+            sock.send(pickle.dumps(len(msg_encoded)))
+
+            count = len(msg_encoded)
+            sock.send(msg_encoded)
+            """
+            while count != 0:
+                minimum = min(1448, count)
+                sock.send(msg_encoded[len(msg_encoded)-count:minimum])
+                count = count - minimum
+            """
             received = bytearray()
             while True:
                 tmp = sock.recv(4096)
@@ -182,7 +192,10 @@ class TII_RFSOC4x2(AbstractInstrument):
         }
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect((self.host, self.port))
-            sock.send(pickle.dumps(server_commands))
+
+            msg_encoded = pickle.dumps(server_commands)
+            sock.send(pickle.dumps(len(msg_encoded)))
+            sock.send(msg_encoded)
 
             received = bytearray()
             while True:
@@ -221,6 +234,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         if relaxation_time is not None:
             self.cfg["repetition_duration"] = relaxation_time
 
+        average = False
         toti, totq = self.call_executepulsesequence(self.cfg, sequence, qubits, len(sequence.ro_pulses), average)
 
         results = {}
