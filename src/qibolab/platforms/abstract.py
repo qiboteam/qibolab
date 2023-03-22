@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, List, Optional
 
 import numpy as np
@@ -153,6 +154,40 @@ class AbstractPlatform(ABC):
             else:
                 self.qubits[q] = Qubit(q, **settings["characterization"]["single_qubit"][q])
 
+    def dump(self, path: Path):
+        general_settings = {}
+
+        # general informations
+        general_settings["nqubits"] = self.nqubits
+        general_settings["qubits"] = list(self.qubits.keys())
+        general_settings["resonator_type"] = self.resonator_type
+        general_settings["topology"] = self.topology
+        with open(path, "w") as file:
+            yaml.dump(general_settings, file, sort_keys=False, indent=4, default_flow_style=None)
+
+        settings = {}
+        # settings
+        settings["settings"] = {}
+        settings["settings"]["repetition_duration"] = self.relaxation_time
+        settings["settings"]["sampling_rate"] = self.sampling_rate
+
+        # native gates
+        settings["native_gates"] = {}
+        settings["native_gates"]["single_qubits"] = self.native_single_qubit_gates
+        settings["native_gates"]["two_qubits"] = self.native_two_qubit_gates
+
+        settings["characterization"] = {}
+        settings["characterization"]["single_qubit"] = {}
+        for qubit in general_settings["qubits"]:
+            settings["characterization"]["single_qubit"][qubit] = {}
+            for key, item in self.qubits[qubit].__dict__.items():
+                # print(item)
+                if isinstance(item, float) or isinstance(item, int) and not key == "name":
+                    settings["characterization"]["single_qubit"][qubit][key] = item
+
+        with open(path, "a") as file:
+            yaml.dump(settings, file, sort_keys=False, indent=4, default_flow_style=False)
+
     def update(self, updates: dict):
         r"""Updates the runcard.
 
@@ -163,10 +198,10 @@ class AbstractPlatform(ABC):
         for par, values in updates.items():
             if par == "readout_frequency":
                 for qubit, value in values.items():
-                    self.native_single_qubit_gates[qubit]["MZ"]["frequency"] = value
+                    self.native_single_qubit_gates[qubit]["MZ"]["frequency"] = int(value * 1e9)
             elif par == "drive_frequency":
                 for qubit, value in values:
-                    self.native_single_qubit_gates[qubit]["RX"]["frequency"] = value
+                    self.native_single_qubit_gates[qubit]["RX"]["frequency"] = int(value * 1e9)
 
     @abstractmethod
     def connect(self):
