@@ -9,12 +9,14 @@ settings:
     time_of_flight: 200
     adc_trig_offset: 200
     max_gain: 32000
+    mixer_freq: 10
+    LO_freq: 7000000000
     
 
 topology: # qubit - qubit connections
 -   [ 1, 0, 0]
--   [ 0, 1, 1]
--   [ 1, 0, 1]
+-   [ 0, 1, 0]
+-   [ 0, 0, 1]
 
 
 native_gates:

@@ -2,8 +2,9 @@
 
 This driver needs the library Qick installed
 
-Supports the following FPGA:
- A   RFSoC 4x2
+Supports the following FPGAs:
+   RFSoC 4x2
+   ZCU111
 
 In page 0, register 13-14 are used for internal counters.
 Registers 15-21 are to be used by sweepers
@@ -78,7 +79,8 @@ class ExecutePulseSequence(AveragerProgram):
 
         # declare nyquist zones for all used channels
         ch_already_declared = []
-        for pulse in self.sequence:
+
+        for pulse in self.sequence.qd_pulses:
             qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
             adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
             ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
@@ -93,7 +95,28 @@ class ExecutePulseSequence(AveragerProgram):
                     zone = 2
                 self.declare_gen(gen_ch, nqz=zone)
             else:
-                print(f"Avoided redecalaration of channel {gen_ch}")  # TODO
+                print(f"Avoided redecalaration of channel {gen_ch}")  # TODO 
+
+        mux_freqs  = []
+        mux_gains = []
+        for pulse in self.sequence.ro_pulses:
+            qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
+            adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
+            ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
+            gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
+
+            if pulse.frequency < self.max_sampling_rate / 2:
+                zone = 1
+            else:
+                zone = 2
+            mux_gains.append(pulse.amplitude)
+            mux_freqs.append((pulse.frequency - self.cfg["mixer_freq"] - self.cfg["LO_freq"])*self.MHz)
+
+        self.declare_gen(ch=ro_ch, nqz=zone,
+                        mixer_freq=self.cfg["mixer_freq"],
+                        mux_freqs=mux_freqs,
+                        mux_gains=mux_gains,
+                        ro_ch=adc_ch)
 
         # declare readouts
         ro_ch_already_declared = []
@@ -101,7 +124,7 @@ class ExecutePulseSequence(AveragerProgram):
             adc_ch = self.qubits[readout_pulse.qubit].feedback.ports[0][1]
             ro_ch = self.qubits[readout_pulse.qubit].readout.ports[0][1]
             if adc_ch not in ro_ch_already_declared:
-                ro_ch_already_declared.append(adc_ch)
+                ro_ch_already_declared.append(ro_ch)
                 length = self.soc.us2cycles(readout_pulse.duration * self.us)
                 freq = readout_pulse.frequency * self.MHz
 
@@ -177,9 +200,10 @@ class ExecutePulseSequence(AveragerProgram):
             if not isinstance(pulse.shape, Rectangular):
                 raise NotImplementedError("Only Rectangular readout pulses are supported")
 
-            freq = self.soc.freq2reg(pulse.frequency * self.MHz, gen_ch=gen_ch, ro_ch=adc_ch)
+            #freq = self.soc.freq2reg(pulse.frequency * self.MHz, gen_ch=gen_ch, ro_ch=adc_ch)
 
-            self.set_pulse_registers(ch=gen_ch, style="const", freq=freq, phase=phase, gain=gain, length=soc_length)
+            self.set_pulse_registers(ch=gen_ch, style="const", length=soc_length,
+                                     mask=[pulse.qubit])
         else:
             raise Exception(f"Pulse type {pulse.type} not recognized!")
 
@@ -494,6 +518,8 @@ class TII_RFSOC4x2(AbstractInstrument):
                 "repetition_duration": repetition_duration,
                 "adc_trig_offset": adc_trig_offset,
                 "max_gain": max_gain,
+                "mixer_freq": mixer_freq,
+                "LO_freq": LO_freq,
             }
 
         else:
@@ -539,13 +565,13 @@ class TII_RFSOC_ZCU111(AbstractInstrument):
         super().__init__(name, address)
         self.cfg: dict = {}
         self.is_connected = True
-        self.soc = QickSoc()
+        self.soc = QickSoc(bitfile="/home/xilinx/jupyter_notebooks/qick_111_rfbv1_mux.bit")
 
     def connect(self):
         """Connects to the FPGA instrument."""
         pass
 
-    def setup(self, qubits, sampling_rate, repetition_duration, adc_trig_offset, max_gain, **kwargs):
+    def setup(self, qubits, sampling_rate, repetition_duration, adc_trig_offset, max_gain, mixer_freq, LO_freq, **kwargs):
         """Configures the instrument.
 
         A connection to the instrument needs to be established beforehand.
@@ -565,6 +591,8 @@ class TII_RFSOC_ZCU111(AbstractInstrument):
                 "repetition_duration": repetition_duration,
                 "adc_trig_offset": adc_trig_offset,
                 "max_gain": max_gain,
+                "mixer_freq": mixer_freq,
+                "LO_freq": LO_freq,
             }
 
         else:
