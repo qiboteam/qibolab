@@ -155,6 +155,12 @@ class AbstractPlatform(ABC):
 
 
     def update(self, updates:dict):
+        r"""Updates the runcard.
+        
+        Args:
+
+            udates (dict): Dictionary containing the parameters to update the runcard.
+        """
         for par, values in updates.items():
             if par == "readout_frequency":
                 for qubit, value in values.items():
