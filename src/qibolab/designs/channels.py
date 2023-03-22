@@ -24,8 +24,6 @@ class Channel:
     Not applicable for setups that do not use local oscillators because the controller
     can send sufficiently high frequencies.
     """
-    power_range: Optional[int] = None
-    """Attenuation or amplification of the line, not all intruments have this capability."""
     _bias: Optional[float] = None
     """DC offset that should be applied in the channel in order to shift the
     frequency of the qubit, usually to put it in its sweetspot.
@@ -37,6 +35,8 @@ class Channel:
     Quantum Machines associate filters to channels but this may not be the case
     in other instruments.
     """
+    power_range: Optional[int] = None
+    """Attenuation or amplification of the line, not all intruments have this capability."""
 
     @property
     def offset(self):
