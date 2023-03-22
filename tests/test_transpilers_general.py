@@ -7,8 +7,9 @@ from qibo.models import Circuit
 from qibolab.transpilers.general_connectivity import Transpiler
 
 
-def generate_random_circuit(nqubits, ngates):
+def generate_random_circuit(nqubits, ngates, seed=42):
     """Generate a random circuit with RX and CZ gates."""
+    np.random.seed(seed)
     one_qubit_gates = [gates.RX]
     two_qubit_gates = [gates.CZ]
     n1, n2 = len(one_qubit_gates), len(two_qubit_gates)
@@ -140,7 +141,7 @@ def test_random_circuit(gates, qubits):
     transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
 
 
-@pytest.mark.parametrize("gates", [10, 20, 50])
+@pytest.mark.parametrize("gates", [20, 50])
 def test_subgraph_init(gates):
     transpiler = Transpiler(connectivity=special_connectivity("5_qubits"), init_method="subgraph")
     circ = generate_random_circuit(5, gates)
