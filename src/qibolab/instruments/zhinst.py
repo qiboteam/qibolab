@@ -4,20 +4,16 @@ import laboneq.simple as lo
 import numpy as np
 
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
-from qibolab.pulses import FluxPulse, Pulse
+from qibolab.pulses import FluxPulse, Pulse, PulseSequence
 from qibolab.result import ExecutionResults
 
-# TODO: Scan de IQM coupler (doble frequencia)
 # TODO: Scan de flujo amplitud y lenght (doble sweep a un pulso)
+# TODO: Determine optimal integration weights based on raw readout results of two measurement pulses
 
 # TODO: Implement Slepian shaped flux pulse
+
 # FIXME: Amplitude seems to get multiplied ???
 # TODO: Flux as offsets and create script that puts them all at 0 when finished.
-
-# TODO: Simulation
-# session = Session(device_setup=device_setup)
-# session.connect(do_emulation=use_emulation)
-# my_results = session.run(exp)
 
 # FIXME: Multiplex (For readout)
 # FIXME: Handle on acquires
@@ -27,8 +23,6 @@ from qibolab.result import ExecutionResults
 ###TEST
 # TODO: Fast Reset
 # TODO: Loops for multiple qubits [Parallel and Nested]
-# TODO:For play Single shot
-# TODO:For play Discrimination
 
 
 class ZhPulse:
@@ -285,7 +279,7 @@ class Zurich(AbstractInstrument):
                 frequency=int(qubit.readout.local_oscillator.frequency),
             ),
             range=qubit.feedback.power_range,
-            port_delay=280e-9,  # self.time_of_flight,
+            port_delay=0.0,  # 280e-9,  # self.time_of_flight,
             threshold=qubit.threshold,  # qubits.threshold
         )
 
@@ -325,7 +319,7 @@ class Zurich(AbstractInstrument):
         self.exp = self.session.compile(self.experiment, compiler_settings=compiler_settings)
         self.results = self.session.run(self.exp)
 
-    def play(self, qubits, sequence, nshots, relaxation_time, fast_reset, sim_time=10e-6):
+    def play(self, qubits, sequence, nshots, relaxation_time, fast_reset, sim_time=10e-6, acquisition_type=None):
         if relaxation_time is None:
             relaxation_time = self.relaxation_time
 
@@ -358,10 +352,19 @@ class Zurich(AbstractInstrument):
         Zhsequence = defaultdict(list)
         self.sequence_qibo = sequence
         for qubit in qubits.values():
+            aux_sequence = PulseSequence()
+            for pulse in sequence:
+                if pulse.qubit == qubit.name:
+                    aux_sequence.add(pulse)
+
+            # TODO: Ths fixed the flux timing issue, but I saw that
+            # sending it before the drive got me better results
+            # (Maybe 1 time of fight earlier ?)
             pulse = FluxPulse(
-                start=0,
-                # duration=sequence.duration,
-                duration=sequence.finish,
+                # start=sequence.start,
+                # duration=sequence.finish,
+                start=aux_sequence.start,
+                duration=aux_sequence.duration,
                 amplitude=qubit.sweetspot,
                 shape="Rectangular",
                 channel=qubit.flux.name,
@@ -436,6 +439,12 @@ class Zurich(AbstractInstrument):
             signals=signals,
         )
 
+        # for qubit in qubits.values():
+        #     if qubit.threshold != 0:
+        #         self.acquisition_type=lo.AcquisitionType.DISCRIMINATION,
+        #     elif self.acquisition_type is None:
+        #         self.acquisition_type = lo.AcquisitionType.INTEGRATION
+
         if self.acquisition_type is None:
             self.acquisition_type = lo.AcquisitionType.INTEGRATION
 
@@ -443,10 +452,11 @@ class Zurich(AbstractInstrument):
             uid="shots",
             count=nshots,
             # repetition_mode= lo.RepetitionMode.CONSTANT,
-            # repetition_time= 50e-6,
-            acquisition_type=self.acquisition_type,
-            # acquisition_type=lo.AcquisitionType.DISCRIMINATION,
+            # repetition_time= 350e-6,
+            # acquisition_type=self.acquisition_type,
+            acquisition_type=lo.AcquisitionType.RAW,
             averaging_mode=lo.AveragingMode.CYCLIC,
+            # try single shot always if it doesnt mean memory issues
             # averaging_mode=lo.AveragingMode.SINGLE_SHOT,
         ):
             if self.nsweeps > 0:
@@ -541,8 +551,12 @@ class Zurich(AbstractInstrument):
             # else:
             with exp.section(uid=f"sequence_bias{qubit.name}"):
                 i = 0
+                time = 0
                 for pulse in self.sequence[f"flux{qubit.name}"]:
-                    pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
+                    if not isinstance(pulse, ZhSweeper_line):
+                        pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
+                        exp.delay(signal=f"flux{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
+                        time += round(pulse.pulse.duration * 1e-9, 9) + round(pulse.pulse.start * 1e-9, 9) - time
                     if isinstance(pulse, ZhSweeper_line):
                         self.play_sweep(exp, qubit, pulse, section="flux")
                     else:
@@ -620,10 +634,22 @@ class Zurich(AbstractInstrument):
                                 amplitude=1,
                             )
 
+                            # Smearing
+                            # exp.delay(signal=f"measure{qubit.name}", time=500e-9)
+
+                            # We adjust for smearing and remove smearing/2 at the end
                             # weight = lo.pulse_library.const(
                             #     uid="weight" + pulse.zhpulse.uid,
-                            #     length=round(pulse.pulse.duration * 1e-9, 9)+700e-9,
+                            #     length=round(pulse.pulse.duration * 1e-9, 9)-750e-9,
                             #     amplitude=1,
+                            # )
+
+                            # Optimal weights
+                            # samples = np.load("/home/admin/Juan/qibolab/src/qibolab/instruments/Optimal_weights_conj.npy")
+
+                            # weight = lo.pulse_library.sampled_pulse_complex(
+                            #     uid="weight" + pulse.zhpulse.uid,
+                            #     samples=samples,
                             # )
 
                             # #For Discrimination

@@ -30,7 +30,9 @@ class DesignPlatform(AbstractPlatform):
         self.design.disconnect()
         self.is_connected = False
 
-    def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None, fast_reset=False, sim_time=10e-6):
+    def execute_pulse_sequence(
+        self, sequence, nshots=1024, relaxation_time=None, fast_reset=False, sim_time=10e-6, acquisition_type=None
+    ):
         if relaxation_time is None:
             relaxation_time = self.relaxation_time
         if fast_reset is True:
@@ -47,6 +49,7 @@ class DesignPlatform(AbstractPlatform):
             relaxation_time=relaxation_time,
             fast_reset=fast_reset,
             sim_time=sim_time,
+            acquisition_type=acquisition_type,
         )
 
     def sweep(self, sequence, *sweepers, nshots=1024, relaxation_time=None, average=True, sim_time=2e-6):
