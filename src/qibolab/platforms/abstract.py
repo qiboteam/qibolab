@@ -153,6 +153,16 @@ class AbstractPlatform(ABC):
             else:
                 self.qubits[q] = Qubit(q, **settings["characterization"]["single_qubit"][q])
 
+
+    def update(self, updates:dict):
+        for par, values in updates.items():
+            if par == "readout_frequency":
+                for qubit, value in values.items():
+                    self.native_single_qubit_gates[qubit]["MZ"]["frequency"] = value
+            elif par  == "drive_frequency":
+                for qubit, value in values:
+                    self.native_single_qubit_gates[qubit]["RX"]["frequency"] = value
+
     @abstractmethod
     def connect(self):
         """Connects to instruments."""
