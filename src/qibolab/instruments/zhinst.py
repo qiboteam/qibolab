@@ -124,13 +124,13 @@ class ZhSweeper_line:
             self.signal = f"flux{qubit.name}"
             self.zhpulse = lo.pulse_library.const(
                 uid=(f"flux_{qubit.name}_"),
-                length=round(sequence.duration * 1e-9, 9),  # 3.0e-6,
+                length=round(sequence.duration * 1e-9, 9),
             )
 
         # Need something better to store multiple sweeps on the same pulse
         self.zhsweeper = self.select_sweeper(sweeper, sweeper.parameter.name)
 
-    # Does LinearSweepParameter vs SweepParameter provide any advantage ?
+    # Does LinearSweepParameter vs SweepParameter provide any advantage ???
     def select_sweeper(self, sweeper, parameter):
         if parameter == "bias":
             Zh_Sweeper = lo.SweepParameter(
@@ -264,7 +264,7 @@ class Zurich(AbstractInstrument):
             range=qubit.readout.power_range,
             port_delay=None,
             # port_mode= lo.PortMode.LF,
-            delay_signal=0,  # self.time_of_flight,
+            delay_signal=0,
         )
 
         self.signal_map[f"acquire{q}"] = self.device_setup.logical_signal_groups[f"q{q}"].logical_signals[
@@ -280,7 +280,7 @@ class Zurich(AbstractInstrument):
             ),
             range=qubit.feedback.power_range,
             port_delay=0.0,  # 280e-9,  # self.time_of_flight,
-            threshold=qubit.threshold,  # qubits.threshold
+            threshold=qubit.threshold,
         )
 
     def register_drive_line(self, qubit, intermediate_frequency):
@@ -359,7 +359,7 @@ class Zurich(AbstractInstrument):
 
             # TODO: Ths fixed the flux timing issue, but I saw that
             # sending it before the drive got me better results
-            # (Maybe 1 time of fight earlier ?)
+            # (Maybe 1 time of fight earlier ?). Create calibration routine
             pulse = FluxPulse(
                 # start=sequence.start,
                 # duration=sequence.finish,
@@ -439,11 +439,18 @@ class Zurich(AbstractInstrument):
             signals=signals,
         )
 
+        # TODO: Smart way to select among between SPECTROSCOPY, INTEGRATION, DISCRIMINATION or RAW acquisition
+        # according to the present parameters on the runcard and/or execute parameters.
         # for qubit in qubits.values():
         #     if qubit.threshold != 0:
         #         self.acquisition_type=lo.AcquisitionType.DISCRIMINATION,
         #     elif self.acquisition_type is None:
         #         self.acquisition_type = lo.AcquisitionType.INTEGRATION
+        #     elif (something):
+        #       self.acquisition_type = lo.AcquisitionType.INTEGRATION
+
+        # TODO: Smart way to select among between CYCLIC or SINGLE_SHOT averaging.
+        # Ideally only use SINGLE_SHOT for the calibrate qubit states.
 
         if self.acquisition_type is None:
             self.acquisition_type = lo.AcquisitionType.INTEGRATION
@@ -451,12 +458,11 @@ class Zurich(AbstractInstrument):
         with exp.acquire_loop_rt(
             uid="shots",
             count=nshots,
-            # repetition_mode= lo.RepetitionMode.CONSTANT,
-            # repetition_time= 350e-6,
-            # acquisition_type=self.acquisition_type,
-            acquisition_type=lo.AcquisitionType.RAW,
+            # repetition_mode= lo.RepetitionMode.CONSTANT, #TODO: Does it provide any speed advantage ?
+            # repetition_time= None,
+            acquisition_type=self.acquisition_type,
+            # acquisition_type=lo.AcquisitionType.RAW,
             averaging_mode=lo.AveragingMode.CYCLIC,
-            # try single shot always if it doesnt mean memory issues
             # averaging_mode=lo.AveragingMode.SINGLE_SHOT,
         ):
             if self.nsweeps > 0:
@@ -483,7 +489,7 @@ class Zurich(AbstractInstrument):
     # FIXME: This seems to create the 2D issues ?!?
     def play_sweep(self, exp, qubit, pulse, section):
         # FIXME: This loop for when a pulse is swept with several parameters(Max:3[Lenght, Amplitude, Phase])
-        if len(self.sweeps) == 100:  # Need a better way of checking
+        if len(self.sweeps) == "2 sweeps on one single pulse":  # Need a better way of checking
             exp.play(
                 signal=f"{section}{qubit.name}",
                 pulse=pulse.zhpulse,
@@ -542,13 +548,11 @@ class Zurich(AbstractInstrument):
                 )
                 print("pulse", pulse.zhpulse)
 
-    # Create a similar section for Flux pulses if it works !!!
-    # Flux on all qubits(Separete, Bias, Flux, Coupler)
+    # TODO: If sweetspot != 0 ypu will send flux pulses for biasing
+    # for the constant offset you need to use the platform
+    # I use the first for sweeping flux check if it works with the second althought is a line parameter.
     def Flux(self, exp, qubits):
         for qubit in qubits.values():
-            # if "c" in str(qubit.name):
-            #     pass
-            # else:
             with exp.section(uid=f"sequence_bias{qubit.name}"):
                 i = 0
                 time = 0
@@ -594,13 +598,13 @@ class Zurich(AbstractInstrument):
                                 exp.delay(signal=f"drive{qubit.name}", time=pulse.zhsweeper)
 
     # qubit readout pulse and data acquisition
+    # TODO: Test and see if exp.measure() from 2.2.0 is useful for us
     def Measure(self, exp, qubits):
         for qubit in qubits.values():
             if "c" in str(qubit.name):
                 pass
             else:
                 play_after = None
-                # if f"drive{qubit.name}" in str(self.sequence):
                 if self.sequence[f"drive{qubit.name}"]:
                     play_after = f"sequence_drive{qubit.name}"
                 with exp.section(uid=f"sequence_measure{qubit.name}", play_after=play_after):
@@ -615,8 +619,8 @@ class Zurich(AbstractInstrument):
                     i = 0
                     if self.sequence[f"readout{qubit.name}"]:
                         for pulse in self.sequence[f"readout{qubit.name}"]:
-                            exp.delay(signal=f"measure{qubit.name}", time=0)
-                            # exp.delay(signal=f"measure{qubit.name}", time= round(pulse.pulse.start * 1e-9, 9) - time)
+                            # exp.delay(signal=f"measure{qubit.name}", time=0)
+                            exp.delay(signal=f"measure{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
                             time += round(pulse.pulse.duration * 1e-9, 9) + round(pulse.pulse.start * 1e-9, 9) - time
                             pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
                             if isinstance(pulse, ZhSweeper):
@@ -625,16 +629,17 @@ class Zurich(AbstractInstrument):
                                 exp.play(
                                     signal=f"measure{qubit.name}", pulse=pulse.zhpulse, phase=pulse.pulse.relative_phase
                                 )
-                            # FIXME: This should be defined by the user as a pulse elsewhere
-                            # FIXME: Create optimal kernel [Active Reset notebook]
 
+                            # FIXME: Dummy integration use the below one when possible
                             weight = lo.pulse_library.const(
                                 uid="weight" + pulse.zhpulse.uid,
                                 length=round(pulse.pulse.duration * 1e-9, 9),
                                 amplitude=1,
                             )
 
-                            # Smearing
+                            # TODO: Test and calibrate this and use only when possible
+                            # Smearing: Reduce the acquire start by this value and the end by value/2 (APROX)
+
                             # exp.delay(signal=f"measure{qubit.name}", time=500e-9)
 
                             # We adjust for smearing and remove smearing/2 at the end
@@ -644,6 +649,7 @@ class Zurich(AbstractInstrument):
                             #     amplitude=1,
                             # )
 
+                            # TODO: Load them form somewhere else
                             # Optimal weights
                             # samples = np.load("/home/admin/Juan/qibolab/src/qibolab/instruments/Optimal_weights_conj.npy")
 
@@ -653,8 +659,14 @@ class Zurich(AbstractInstrument):
                             # )
 
                             # #For Discrimination
+                            # Dummy:
                             # weight = lo.pulse_library.sampled_pulse_complex(
                             #     np.ones([int(pulse.pulse.duration *2)]) * np.exp(1j * qubit.iq_angle)
+                            # )
+                            # Optimal:
+                            # weight = lo.pulse_library.sampled_pulse_complex(
+                            #     uid="weight" + pulse.zhpulse.uid,
+                            #     samples = samples * np.exp(1j * qubit.iq_angle,
                             # )
 
                             exp.acquire(signal=f"acquire{qubit.name}", handle=f"sequence{qubit.name}", kernel=weight)
@@ -672,6 +684,7 @@ class Zurich(AbstractInstrument):
                             with exp.case(state=0):
                                 pass
                             with exp.case(state=1):
+                                # TODO: Fast pulse coming from qubit object
                                 exp.play(signal=f"drive{qubit.name}", pulse=ZhPulse(fast_reset[qubit.name]).zhpulse)
         else:
             for qubit in qubits.values():
@@ -696,7 +709,7 @@ class Zurich(AbstractInstrument):
         self.create_exp(qubits, nshots, relaxation_time, fast_reset=False)
         self.run_exp()
 
-        # TODO: General, several readouts and qubits
+        # TODO: Test for several readouts and qubits simultaneosuly
         results = {}
         for qubit in qubits.values():
             if "c" in str(qubit.name):
@@ -769,6 +782,7 @@ class Zurich(AbstractInstrument):
 
     # -----------------------------------------------------------------------------
 
+    # TODO: Implement further pulse viewing functions from 2.2.0
     # should this be added in a way so the user can check how the sequence looks like ?
     def run_sim(self, sim_time):
         self.device_setup = lo.DeviceSetup.from_descriptor(
