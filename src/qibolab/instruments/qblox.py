@@ -648,12 +648,12 @@ class ClusterQRM_RF(AbstractInstrument):
         if self.ports["i1"].hardware_demod_en and qubit in self.classification_parameters:
             self._set_device_parameter(
                 self.device.sequencers[next_sequencer_number],
-                "phase_rotation_acq",
+                "thresholded_acq_rotation",
                 value=self.classification_parameters[qubit]["rotation_angle"],
             )
             self._set_device_parameter(
                 self.device.sequencers[next_sequencer_number],
-                "discretization_threshold_acq",
+                "thresholded_acq_threshold",
                 value=self.classification_parameters[qubit]["threshold"] * self.acquisition_duration,
             )
         # create sequencer wrapper
