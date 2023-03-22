@@ -196,12 +196,16 @@ class AbstractPlatform(ABC):
             udates (dict): Dictionary containing the parameters to update the runcard.
         """
         for par, values in updates.items():
-            if par == "readout_frequency":
-                for qubit, value in values.items():
-                    self.native_single_qubit_gates[qubit]["MZ"]["frequency"] = int(value * 1e9)
-            elif par == "drive_frequency":
-                for qubit, value in values:
-                    self.native_single_qubit_gates[qubit]["RX"]["frequency"] = int(value * 1e9)
+            for qubit, value in values.items():
+                if "frequency" in par:
+                    freq = int(value * 1e9)
+                    if par == "readout_frequency":
+                        self.native_single_qubit_gates[qubit]["MZ"]["frequency"] = freq
+                        self.qubits[qubit].readout_frequency = freq
+
+                    elif par == "drive_frequency":
+                        self.native_single_qubit_gates[qubit]["RX"]["frequency"] = freq
+                        self.qubits[qubit].readout_frequency = freq
 
     @abstractmethod
     def connect(self):
