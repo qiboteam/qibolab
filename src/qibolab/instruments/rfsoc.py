@@ -7,7 +7,6 @@ Supports the following FPGA:
 
 """
 
-import math
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
@@ -202,7 +201,7 @@ class ExecutePulseSequence(AveragerProgram):
             raise Exception("Amp must be in [-1,1], was: {pulse.amplitude}")
 
         # phase converted from rad (qibolab) to deg (qick) and then to reg vals
-        phase = self.deg2reg(math.degrees(pulse.relative_phase), gen_ch=gen_ch)
+        phase = self.deg2reg(np.degrees(pulse.relative_phase), gen_ch=gen_ch)
 
         # pulse length converted with DAC CLK
         us_length = pulse.duration * self.us
@@ -518,7 +517,7 @@ class ExecuteSingleSweep(RAveragerProgram):
             raise Exception("Amp must be in [-1,1], was: {pulse.amplitude}")
 
         # phase converted from rad (qibolab) to deg (qick) and to register vals
-        phase = self.deg2reg(math.degrees(pulse.relative_phase), gen_ch=gen_ch)
+        phase = self.deg2reg(np.degrees(pulse.relative_phase), gen_ch=gen_ch)
 
         # pulse length converted with DAC CLK
         us_length = pulse.duration * self.us
@@ -707,13 +706,13 @@ class TII_RFSOC4x2(AbstractInstrument):
 
             # definition of MZ pulse
             ro_duration = 2000
-            ro_frequency = 7371800000
+            ro_frequency = qubits[qubit].readout_frequency
             ro_amplitude = 0.046
             ro_shape = Rectangular()
             ro_channel = qubits[qubit].readout.name
             # definition of RX pulse
             qd_duration = 28
-            qd_frequency = 5541675000
+            qd_frequency = qubits[qubit].drive_frequency
             qd_amplitude = 0.09
             qd_shape = Rectangular()
             qd_channel = qubits[qubit].drive.name
