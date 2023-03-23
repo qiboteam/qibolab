@@ -7,6 +7,12 @@ Supports the following FPGAs:
    ZCU111
 """
 
+"""
+TODO:
+    single shots
+    sweep
+"""
+
 import math
 from typing import Dict, List, Tuple, Union
 
@@ -145,10 +151,10 @@ class ExecutePulseSequence(AveragerProgram):
 
         """
 
-        # declare nyquist zones for all used channels
+        # declare nyquist zones for all used drive channels
         ch_already_declared = []
 
-        for pulse in self.sequence:
+        for pulse in self.sequence.qd_pulses:
             qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
             ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
             gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
@@ -161,21 +167,44 @@ class ExecutePulseSequence(AveragerProgram):
                 else:
                     self.declare_gen(gen_ch, nqz=2)
 
+        # declare nyquist zones for all readout channels (multiplexed)
+        # TODO avoid redeclarations
+        mux_freqs  = []
+        mux_gains = []
+        for pulse in self.sequence.ro_pulses:
+            qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
+            adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
+            ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
+            gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
+
+            if pulse.frequency < self.max_sampling_rate / 2:
+                zone = 1
+            else:
+                zone = 2
+            mux_gains.append(pulse.amplitude) # TODO add max_gain
+            mux_freqs.append((pulse.frequency - self.cfg["mixer_freq"] - self.cfg["LO_freq"])*self.MHz)
+
+        self.declare_gen(ch=ro_ch, nqz=zone,
+                        mixer_freq=self.cfg["mixer_freq"],
+                        mux_freqs=mux_freqs,
+                        mux_gains=mux_gains,
+                        ro_ch=adc_ch)
+
         # declare readouts
         ro_ch_already_declared = []
         for readout_pulse in self.sequence.ro_pulses:
             adc_ch = self.qubits[readout_pulse.qubit].feedback.ports[0][1]
             ro_ch = self.qubits[readout_pulse.qubit].readout.ports[0][1]
             if adc_ch not in ro_ch_already_declared:
-                ro_ch_already_declared.append(adc_ch)
+                ro_ch_already_declared.append(ro_ch)
                 length = self.soc.us2cycles(readout_pulse.duration * self.us, gen_ch=ro_ch)
                 freq = readout_pulse.frequency * self.MHz
                 # in declare_readout frequency in MHz
                 self.declare_readout(ch=adc_ch, length=length, freq=freq, gen_ch=ro_ch)
 
-        # register first pulses of all channels
+        # register first pulses of all drive channels
         first_pulse_registered = []
-        for pulse in self.sequence:
+        for pulse in self.sequence.qd_pulses:
             qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
             ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
 
@@ -185,11 +214,66 @@ class ExecutePulseSequence(AveragerProgram):
                 first_pulse_registered.append(gen_ch)
                 self.add_pulse_to_register(pulse)
 
+        # register readout pulses (multiplexed)
+        
+        """
+        This build a dictionary:
+        {
+            'start_time_1': [Pulse1, Pulse2],
+            'start_time_2': [Pulse3, Pulse4],
+            }
+        """
+        multi_ro_pulses = {}
+        for pulse in self.sequence.ro_pulses:
+            if pulse.start not in multi_ro_pulses:
+                multi_ro_pulses[pulse.start] = []
+            multi_ro_pulses[pulse.start].append(pulse)
+        self.multi_ro_pulses = multi_ro_pulses
+
+        # register first pulses of all ro channels
+        first_pulse_registered = []
+        for start_time in multi_ro_pulses:
+            pulse = multi_ro_pulses[start_time][0]
+
+            qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
+            ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
+            gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
+
+            if gen_ch not in first_pulse_registered:
+                first_pulse_registered.append(gen_ch)
+                self.add_readout_to_register(multi_ro_pulses[start_time])
+
         # sync all channels and wait some time
         self.sync_all(self.wait_initialize)
 
+    def add_readout_to_register(self, ro_pulses: List[Pulse]):
+        mask = []
+        for pulse in ro_pulses:
+            mask.append(pulse.qubit)
+        
+        pulse = ro_pulses[0]
+
+        qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
+        adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
+        ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
+        gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
+
+        us_length = pulse.duration * self.us
+        soc_length = self.soc.us2cycles(us_length)
+        
+        if not isinstance(pulse.shape, Rectangular):
+            raise Exception("Only Rectangular ro pulses are supported")
+
+        self.set_pulse_registers(ch=gen_ch,
+                                 style="const",
+                                 length=soc_length,
+                                 mask=mask)
+
     def add_pulse_to_register(self, pulse: Pulse):
         """This function calls the set_pulse_registers function"""
+
+        if pulse.type == PulseType.DRIVE:
+            raise Exception("add_pulse_to_register is just for drive!")
 
         # find channels relevant for this pulse
         qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
@@ -251,14 +335,6 @@ class ExecutePulseSequence(AveragerProgram):
                 waveform=name,
             )
 
-        elif pulse.type == PulseType.READOUT:
-            if not isinstance(pulse.shape, Rectangular):
-                raise NotImplementedError("Only Rectangular readout pulses are supported")
-
-        # if pulse is rectangular set directly register
-        elif is_rect:
-            self.set_pulse_registers(ch=gen_ch, style="const", freq=freq, phase=phase, gain=gain, length=soc_length)
-
         else:
             raise NotImplementedError(f"Shape {pulse.shape} not supported!")
 
@@ -275,7 +351,7 @@ class ExecutePulseSequence(AveragerProgram):
 
         # list of channels where a pulse is already been executed
         first_pulse_executed = []
-
+        ro_executed_pulses_time = []
         for pulse in self.sequence:
             # time follows tproc CLK
             time = self.soc.us2cycles(pulse.start * self.us)
@@ -285,22 +361,30 @@ class ExecutePulseSequence(AveragerProgram):
             ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
             gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
 
-            if gen_ch in first_pulse_executed:
-                self.add_pulse_to_register(pulse)
-            else:
-                first_pulse_executed.append(gen_ch)
-
             if pulse.type == PulseType.DRIVE:
+                if gen_ch in first_pulse_executed:
+                    self.add_pulse_to_register(pulse)
+                else:
+                    first_pulse_executed.append(gen_ch)
                 self.pulse(ch=gen_ch, t=time)
+
             elif pulse.type == PulseType.READOUT:
-                self.measure(
-                    pulse_ch=gen_ch,
-                    adcs=[adc_ch],
-                    adc_trig_offset=time + self.adc_trig_offset,
-                    t=time,
-                    wait=False,
-                    syncdelay=self.syncdelay,
-                )
+                # TODO call set_pulse_registers if needed
+                if pulse.start not in ro_executed_pulses_time:
+                    ro_executed_pulses_time.append(pulse.start)
+    
+                    adcs = []
+                    for pulse in self.multi_ro_pulses[pulse.start]:
+                        adcs.append(self.qubits[pulse.qubit].feedback.ports[0][1])
+
+                    self.measure(pulse_ch=gen_ch,
+                        adcs=adcs,
+                        adc_trig_offset=time + self.adc_trig_offset,
+                        t=time,
+                        wait=False,
+                        syncdelay=self.syncdelay,
+                    )
+
         self.wait_all()
         self.sync_all(self.relax_delay)
 
@@ -726,7 +810,7 @@ class TII_RFSOC4x2(AbstractInstrument):
 
 
 class TII_RFSOC_ZCU111(AbstractInstrument):
-    """Instrument object for controlling the RFSoC4x2 FPGA.
+    """Instrument object for controlling the ZCU111 FPGA.
 
     The connection requires the FPGA to have a server currently listening.
     The ``connect`` and the ``setup`` functions must be called before playing pulses with
@@ -737,15 +821,23 @@ class TII_RFSOC_ZCU111(AbstractInstrument):
         address (str): IP address and port for connecting to the FPGA.
     """
 
-    def __init__(self, name: str, address: str):
-        super().__init__(name, address)
+    def __init__(self, name: str):
+        super().__init__(name, address=None)
         self.cfg: dict = {}
         self.is_connected = True
         self.soc = QickSoc(bitfile="/home/xilinx/jupyter_notebooks/qick_111_rfbv1_mux.bit")
 
     def connect(self):
-        """Connects to the FPGA instrument."""
-        pass
+        """Empty method to comply with AbstractInstrument interface."""
+
+    def start(self):
+        """Empty method to comply with AbstractInstrument interface."""
+
+    def stop(self):
+        """Empty method to comply with AbstractInstrument interface."""
+
+    def disconnect(self):
+        """Empty method to comply with AbstractInstrument interface."""
 
     def setup(
         self, qubits, sampling_rate, repetition_duration, adc_trig_offset, max_gain, mixer_freq, LO_freq, **kwargs
@@ -773,6 +865,8 @@ class TII_RFSOC_ZCU111(AbstractInstrument):
                 "LO_freq": LO_freq,
             }
 
+        calibrate = False
+        self.states_calibrated = False
         if calibrate:
             self.calibration_cfg = {}
             self.calibrate_states(qubits)
@@ -873,7 +967,7 @@ class TII_RFSOC_ZCU111(AbstractInstrument):
             self.cfg["repetition_duration"] = relaxation_time
 
         program = ExecutePulseSequence(self.soc, self.cfg, sequence, qubits)
-        average = False
+        average = True # TODO change after correct collect_shots
         toti, totq = program.acquire(
             self.soc,
             readouts_per_experiment=len(sequence.ro_pulses),
@@ -886,14 +980,18 @@ class TII_RFSOC_ZCU111(AbstractInstrument):
         results = {}
         adcs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
         for j in range(len(adcs)):
+            count = 0
             for i, ro_pulse in enumerate(sequence.ro_pulses):
-                i_pulse = np.array(toti[j][i])
-                q_pulse = np.array(totq[j][i])
 
-                serial = ro_pulse.serial
+                if qubits[ro_pulse.qubit].feedback.ports[0][1] == adcs[j]:
+                    i_pulse = np.array(toti[j][count])
+                    q_pulse = np.array(totq[j][count])
+                    count = count + 1
 
-                shots = self.classify_shots(i_pulse, q_pulse, qubits[ro_pulse.qubit])
-                results[serial] = ExecutionResults.from_components(i_pulse, q_pulse, shots)
+                    serial = ro_pulse.serial
+
+                    shots = self.classify_shots(i_pulse, q_pulse, qubits[ro_pulse.qubit])
+                    results[serial] = ExecutionResults.from_components(i_pulse, q_pulse, shots)
 
         return results
 

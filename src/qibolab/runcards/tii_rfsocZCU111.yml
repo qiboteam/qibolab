@@ -49,7 +49,7 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 620
+                duration: 1000
                 amplitude: 0.003575
                 frequency: 7_453_265_000
                 shape: Rectangular()
@@ -67,7 +67,7 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 620
+                duration: 1000
                 amplitude: 0.003575
                 frequency: 7_453_265_000
                 shape: Rectangular()

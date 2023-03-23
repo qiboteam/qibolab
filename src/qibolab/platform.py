@@ -25,7 +25,7 @@ def create_tii_rfsocZCU111(runcard, address=None):
     # readout
     channels |= ChannelMap.from_names("L3-18_ro")
     # feedback
-    channels |= ChannelMap.from_names("L2_3-RO")
+    channels |= ChannelMap.from_names("L2-3-RO_0")
     # drive
     channels |= ChannelMap.from_names("L4-23_qd")
     # Flux
@@ -34,7 +34,7 @@ def create_tii_rfsocZCU111(runcard, address=None):
     # readout
     channels |= ChannelMap.from_names("L3-18_ro")
     # feedback
-    channels |= ChannelMap.from_names("L2-3-RO")
+    channels |= ChannelMap.from_names("L2-3-RO_1")
     # drive
     channels |= ChannelMap.from_names("L4-24_qd")
     # Flux
@@ -43,7 +43,7 @@ def create_tii_rfsocZCU111(runcard, address=None):
     # readout
     channels |= ChannelMap.from_names("L3-18_ro")
     # feedback
-    channels |= ChannelMap.from_names("L2-3-RO")
+    channels |= ChannelMap.from_names("L2-3-RO_2")
     # drive
     channels |= ChannelMap.from_names("L4-25_qd")
     # Flux
@@ -54,16 +54,16 @@ def create_tii_rfsocZCU111(runcard, address=None):
     # readout
     channels["L3-18_ro"].ports = [("dac6", 6)]
     # feedback
-    channels["L2-3-RO"].ports = [("adc0", 0)]
+    channels["L2-3-RO_0"].ports = [("adc0", 0)]
     # drive
     channels["L4-23_qd"].ports = [("dac0", 0)]
     # Flux
     channels["L1-16_fl"].ports = [("dac3", 3)]
     # Qubit 1
     # Readout
-    channels["L3-18_ro"].ports = [("dac3", 3)]
+    channels["L3-18_ro"].ports = [("dac3", 6)]
     # feedback
-    channels["L2-3-RO"].ports = [("adc0", 1)]
+    channels["L2-3-RO_1"].ports = [("adc0", 1)]
     # drive
     channels["L4-24_qd"].ports = [("dac1", 1)]
     # Flux
@@ -72,7 +72,7 @@ def create_tii_rfsocZCU111(runcard, address=None):
     # Readout
     channels["L3-18_ro"].ports = [("dac6", 6)]
     # feedback
-    channels["L2-3-RO"].ports = [("adc0", 2)]
+    channels["L2-3-RO_2"].ports = [("adc0", 2)]
     # drive
     channels["L4-25_qd"].ports = [("dac2", 2)]
     # Flux
@@ -80,11 +80,8 @@ def create_tii_rfsocZCU111(runcard, address=None):
 
     # Instantiate QICK instruments
 
-    if address is None:
-        # connect to TII instruments for simulation
-        address = "192.168.2.81:6000"
 
-    controller = TII_RFSOC_ZCU111("tii_rfsocZCU111", address)
+    controller = TII_RFSOC_ZCU111("tii_rfsocZCU111")
 
     # Instantiate local oscillators (HARDCODED) # TODO local oscillators should not be needed
     local_oscillators = [
@@ -103,13 +100,13 @@ def create_tii_rfsocZCU111(runcard, address=None):
     # assign channels to qubits
     qubits = platform.qubits
     qubits[0].readout = channels["L3-18_ro"]
-    qubits[0].feedback = channels["L2-3-RO"]
+    qubits[0].feedback = channels["L2-3-RO_0"]
     qubits[0].drive = channels["L4-23_qd"]
     qubits[1].readout = channels["L3-18_ro"]
-    qubits[1].feedback = channels["L2-3-RO"]
+    qubits[1].feedback = channels["L2-3-RO_1"]
     qubits[1].drive = channels["L4-24_qd"]
     qubits[2].readout = channels["L3-18_ro"]
-    qubits[2].feedback = channels["L2-3-RO"]
+    qubits[2].feedback = channels["L2-3-RO_2"]
     qubits[2].drive = channels["L4-25_qd"]
     return platform
 
