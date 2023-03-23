@@ -31,7 +31,7 @@ class AbstractInstrument(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def setup(self, qubits, *args, **kwargs):
+    def setup(self, *args, **kwargs):
         raise NotImplementedError
 
     @abstractmethod
@@ -47,11 +47,21 @@ class AbstractInstrument(ABC):
         raise NotImplementedError
 
     def play(self, *args, **kwargs):
-        """Play a pulse sequence and retrieve feedback."""
+        """Play a pulse sequence and retrieve feedback.
+
+        Returns:
+            (dict) mapping the serial of the readout pulses used to
+            the acquired :class:`qibolab.result.ExecutionResults` object.
+        """
         raise NotImplementedError(f"Instrument {self.name} does not support play.")
 
     def sweep(self, *args, **kwargs):
-        """Play a pulse sequence while sweeping one or more parameters."""
+        """Play a pulse sequence while sweeping one or more parameters.
+
+        Returns:
+            (dict) mapping the serial of the readout pulses used to
+            the acquired :class:`qibolab.result.ExecutionResults` object.
+        """
         raise NotImplementedError(f"Instrument {self.name} does not support sweep.")
 
 
@@ -62,6 +72,12 @@ class LocalOscillator(AbstractInstrument):
     the controllers cannot send sufficiently high frequencies
     to address the qubits and resonators.
     """
+
+    def play(self, *args, **kwargs):
+        """Local oscillators do not play pulses."""
+
+    def sweep(self, *args, **kwargs):
+        """Local oscillators do not play pulses."""
 
 
 class InstrumentException(Exception):

@@ -1107,11 +1107,7 @@ class TII_RFSOC4x2(AbstractInstrument):
                 continue  # amp does not need modification, here for clarity
 
         # deep copy of the sequence that can be modified without harm
-        # TODO: bug? sequence.deep_copy() exists but does not work
-        # sweepsequenc = sequence.deep_copy()
-        from copy import deepcopy
-
-        sweepsequence = deepcopy(sequence)
+        sweepsequence = sequence.copy()
 
         results = self.recursive_python_sweep(qubits, sweepsequence, sequence, *sweepers, average=average)
 
