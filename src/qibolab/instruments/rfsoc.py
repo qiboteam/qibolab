@@ -9,7 +9,6 @@ Supports the following FPGAs:
 
 """
 TODO:
-    single shots
     sweep
 """
 
@@ -131,10 +130,11 @@ class ExecutePulseSequence(AveragerProgram):
 
         adcs, adc_count = np.unique(adcs, return_counts=True)
 
+        len_out = int(len(self.di_buf[0]) / len(adcs))
         for idx, adc_ch in enumerate(adcs):
             count = adc_count[adc_ch]
-            i_val = self.di_buf[idx].reshape((count, self.cfg["reps"])) / lengths[idx]
-            q_val = self.dq_buf[idx].reshape((count, self.cfg["reps"])) / lengths[idx]
+            i_val = self.di_buf[idx][:len_out].reshape((count, self.cfg["reps"])) / lengths[idx]
+            q_val = self.dq_buf[idx][:len_out].reshape((count, self.cfg["reps"])) / lengths[idx]
 
             tot_i.append(i_val)
             tot_q.append(q_val)
@@ -169,7 +169,7 @@ class ExecutePulseSequence(AveragerProgram):
 
         # declare nyquist zones for all readout channels (multiplexed)
         # TODO avoid redeclarations
-        mux_freqs  = []
+        mux_freqs = []
         mux_gains = []
         for pulse in self.sequence.ro_pulses:
             qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
@@ -181,14 +181,17 @@ class ExecutePulseSequence(AveragerProgram):
                 zone = 1
             else:
                 zone = 2
-            mux_gains.append(pulse.amplitude) # TODO add max_gain
-            mux_freqs.append((pulse.frequency - self.cfg["mixer_freq"] - self.cfg["LO_freq"])*self.MHz)
+            mux_gains.append(pulse.amplitude)  # TODO add max_gain
+            mux_freqs.append((pulse.frequency - self.cfg["mixer_freq"] - self.cfg["LO_freq"]) * self.MHz)
 
-        self.declare_gen(ch=ro_ch, nqz=zone,
-                        mixer_freq=self.cfg["mixer_freq"],
-                        mux_freqs=mux_freqs,
-                        mux_gains=mux_gains,
-                        ro_ch=adc_ch)
+        self.declare_gen(
+            ch=ro_ch,
+            nqz=zone,
+            mixer_freq=self.cfg["mixer_freq"],
+            mux_freqs=mux_freqs,
+            mux_gains=mux_gains,
+            ro_ch=adc_ch,
+        )
 
         # declare readouts
         ro_ch_already_declared = []
@@ -215,7 +218,7 @@ class ExecutePulseSequence(AveragerProgram):
                 self.add_pulse_to_register(pulse)
 
         # register readout pulses (multiplexed)
-        
+
         """
         This build a dictionary:
         {
@@ -250,7 +253,7 @@ class ExecutePulseSequence(AveragerProgram):
         mask = []
         for pulse in ro_pulses:
             mask.append(pulse.qubit)
-        
+
         pulse = ro_pulses[0]
 
         qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
@@ -260,14 +263,11 @@ class ExecutePulseSequence(AveragerProgram):
 
         us_length = pulse.duration * self.us
         soc_length = self.soc.us2cycles(us_length)
-        
+
         if not isinstance(pulse.shape, Rectangular):
             raise Exception("Only Rectangular ro pulses are supported")
 
-        self.set_pulse_registers(ch=gen_ch,
-                                 style="const",
-                                 length=soc_length,
-                                 mask=mask)
+        self.set_pulse_registers(ch=gen_ch, style="const", length=soc_length, mask=mask)
 
     def add_pulse_to_register(self, pulse: Pulse):
         """This function calls the set_pulse_registers function"""
@@ -372,12 +372,13 @@ class ExecutePulseSequence(AveragerProgram):
                 # TODO call set_pulse_registers if needed
                 if pulse.start not in ro_executed_pulses_time:
                     ro_executed_pulses_time.append(pulse.start)
-    
+
                     adcs = []
                     for pulse in self.multi_ro_pulses[pulse.start]:
                         adcs.append(self.qubits[pulse.qubit].feedback.ports[0][1])
 
-                    self.measure(pulse_ch=gen_ch,
+                    self.measure(
+                        pulse_ch=gen_ch,
                         adcs=adcs,
                         adc_trig_offset=time + self.adc_trig_offset,
                         t=time,
@@ -713,6 +714,7 @@ class ExecuteSingleSweep(RAveragerProgram):
         self.sync_all(self.relax_delay)
 
 
+# TODO OUTDATED CLASS
 class TII_RFSOC4x2(AbstractInstrument):
     """Instrument object for controlling the RFSoC4x2 FPGA.
 
@@ -877,6 +879,7 @@ class TII_RFSOC_ZCU111(AbstractInstrument):
         # TODO maybe this could be moved to create_tii_rfsoc4x2() to
         #      use create_RX_pulse and create_MZ_pulse
         # TODO integration with qibocal routines
+        raise NotImplementedError("Section valid for only one qubit (as it is)")
 
         for qubit in qubits:
             self.calibration_cfg[qubit] = {}
@@ -967,7 +970,7 @@ class TII_RFSOC_ZCU111(AbstractInstrument):
             self.cfg["repetition_duration"] = relaxation_time
 
         program = ExecutePulseSequence(self.soc, self.cfg, sequence, qubits)
-        average = True # TODO change after correct collect_shots
+        average = False
         toti, totq = program.acquire(
             self.soc,
             readouts_per_experiment=len(sequence.ro_pulses),
@@ -982,7 +985,6 @@ class TII_RFSOC_ZCU111(AbstractInstrument):
         for j in range(len(adcs)):
             count = 0
             for i, ro_pulse in enumerate(sequence.ro_pulses):
-
                 if qubits[ro_pulse.qubit].feedback.ports[0][1] == adcs[j]:
                     i_pulse = np.array(toti[j][count])
                     q_pulse = np.array(totq[j][count])
