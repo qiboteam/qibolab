@@ -195,7 +195,9 @@ class AbstractPlatform(ABC):
 
             updates (dict): Dictionary containing the parameters to update the runcard.
         """
+        print(updates)
         for par, values in updates.items():
+            print("q", par)
             for qubit, value in values.items():
                 if "frequency" in par:
                     freq = int(value * 1e9)
@@ -206,6 +208,12 @@ class AbstractPlatform(ABC):
                     elif par == "drive_frequency":
                         self.native_single_qubit_gates[qubit]["RX"]["frequency"] = freq
                         self.qubits[qubit].readout_frequency = freq
+                if "amplitude" in par:
+                    amplitude = value
+                    if par == "readout_amplitude":
+                        self.native_single_qubit_gates[qubit]["MZ"]["amplitude"] = amplitude
+                    if par == "drive_amplitude":
+                        self.native_single_qubit_gates[qubit]["RX"]["amplitude"] = amplitude
 
     @abstractmethod
     def connect(self):
