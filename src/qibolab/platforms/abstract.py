@@ -181,7 +181,6 @@ class AbstractPlatform(ABC):
         for qubit in general_settings["qubits"]:
             settings["characterization"]["single_qubit"][qubit] = {}
             for key, item in self.qubits[qubit].__dict__.items():
-                # print(item)
                 if isinstance(item, float) or isinstance(item, int) and not key == "name":
                     settings["characterization"]["single_qubit"][qubit][key] = item
 
@@ -195,9 +194,7 @@ class AbstractPlatform(ABC):
 
             updates (dict): Dictionary containing the parameters to update the runcard.
         """
-        print(updates)
         for par, values in updates.items():
-            print("q", par)
             for qubit, value in values.items():
                 if "frequency" in par:
                     freq = int(value * 1e9)
@@ -209,7 +206,7 @@ class AbstractPlatform(ABC):
                         self.native_single_qubit_gates[qubit]["RX"]["frequency"] = freq
                         self.qubits[qubit].readout_frequency = freq
                 if "amplitude" in par:
-                    amplitude = value
+                    amplitude = int(value)
                     if par == "readout_amplitude":
                         self.native_single_qubit_gates[qubit]["MZ"]["amplitude"] = amplitude
                     if par == "drive_amplitude":
