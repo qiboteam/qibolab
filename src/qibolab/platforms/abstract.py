@@ -206,7 +206,7 @@ class AbstractPlatform(ABC):
                         self.native_single_qubit_gates[qubit]["RX"]["frequency"] = freq
                         self.qubits[qubit].readout_frequency = freq
                 if "amplitude" in par:
-                    amplitude = int(value)
+                    amplitude = float(value)
                     if par == "readout_amplitude":
                         self.native_single_qubit_gates[qubit]["MZ"]["amplitude"] = amplitude
                     if par == "drive_amplitude":
