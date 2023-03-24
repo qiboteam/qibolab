@@ -168,6 +168,7 @@ class ExecutePulseSequence(AveragerProgram):
         # declare nyquist zones for all used drive channels
         ch_already_declared = []
 
+        # TODO: check declaration for flux channels
         for pulse in self.sequence.qd_pulses:
             qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
             ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
@@ -245,8 +246,39 @@ class ExecutePulseSequence(AveragerProgram):
                 first_pulse_registered.append(gen_ch)
                 self.add_readout_to_register(self.multi_ro_pulses[start_time])
 
+        # TODO complete
+        # register flux pulses
+        for qubit in self.qubits:
+            if qubit.flux:
+                pulses = self.sequence.qf_pulses.get_qubit_pulses(qubit)
+                self.add_fluxes_to_register(qubit, pulses, self.sequence.duration)
+
         # sync all channels and wait some time
         self.sync_all(self.wait_initialize)
+
+    def add_fluxes_to_register(self, qubit, pulses, duration):
+        sweetspot = qubit.flux.bias  # TODO convert units
+        gen_ch = qubit.flux.ports[0][1]
+        duration = self.soc.us2cycles(duration * self.us, gen_ch=gen_ch)
+
+        i = np.full(duration, sweetspot)
+        q = np.full(duration, 0)
+
+        for pulse in pulses:
+            start = self.soc.us2cycles(pulse.start * self.us, gen_ch=gen_ch)
+            finish = self.soc.us2cycles(pulse.finish * self.us, gen_ch=gen_ch)
+            amp = int(pulse.amplitude * self.max_gain)
+            i[start:finish] += np.full(pulse_duration, amp)
+
+        self.add_pulse(f"flux_{qubit}", i, q)
+        self.set_pulse_registers(
+            ch=gen_ch,
+            waveform=f"flux_{qubit}",
+            style="const",
+            outsel="input",
+        )
+
+    # TODO
 
     def add_readout_to_register(self, ro_pulses: List[Pulse]):
         mask = []
@@ -347,6 +379,11 @@ class ExecutePulseSequence(AveragerProgram):
 
         At the end of the pulse wait for clock.
         """
+
+        for qubit in self.qubits:
+            if qubit.flux:
+                gen_ch = qubit.flux.ports[0][1]
+                self.pulse(ch=gen_ch)
 
         # list of channels where a pulse is already been executed
         first_pulse_executed = []
