@@ -32,8 +32,8 @@ def create_dummy(runcard):
     return platform
 
 
-def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=False):
-    """Create platform using Quantum Machines (QM) OPXs and Rohde Schwarz local oscillators.
+def create_tii_qw25q_v3_e10(runcard, simulation_duration=None, address=None, cloud=False):
+    """Create platform using Quantum Machines (QM) OPXs and Rohde Schwarz/ERAsynth local oscillators.
 
     IPs and other instrument related parameters are hardcoded in ``__init__`` and ``setup``.
 
@@ -49,31 +49,62 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
     """
     # Create channel objects
     channels = ChannelMap()
-    # readout
-    channels |= ChannelMap.from_names("L3-25_a", "L3-25_b")
-    # feedback
-    channels |= ChannelMap.from_names("L2-5_a", "L2-5_b")
-    # drive
-    channels |= ChannelMap.from_names(*(f"L3-{i}" for i in range(11, 16)))
-    # flux
-    channels |= ChannelMap.from_names(*(f"L4-{i}" for i in range(1, 6)))
-    # TWPA
-    channels |= ChannelMap.from_names("L4-26")
 
-    # Map controllers to qubit channels (HARDCODED)
-    # readout
-    channels["L3-25_a"].ports = [("con1", 10), ("con1", 9)]
-    channels["L3-25_b"].ports = [("con2", 10), ("con2", 9)]
-    # feedback
-    channels["L2-5_a"].ports = [("con1", 2), ("con1", 1)]
-    channels["L2-5_b"].ports = [("con2", 2), ("con2", 1)]
-    # drive
-    for i in range(1, 5):
-        channels[f"L3-1{i}"].ports = [("con1", 2 * i), ("con1", 2 * i - 1)]
-    channels["L3-15"].ports = [("con3", 2), ("con3", 1)]
-    # flux
-    for i in range(1, 6):
-        channels[f"L4-{i}"].ports = [("con2", i)]
+    # Wiring
+    wiring = {
+        "feedback": {
+            "A": ["L2-1_a", "L2-1_b"],
+            "B": ["L2-2_a", "L2-2_b"],
+            "C": ["L2-3_a", "L2-3_b"],
+            "D": ["L2-4_a", "L2-4_b"],
+        },
+        "readout": {
+            "A": ["L3-26_a", "L3-26_b"],
+            "B": ["L3-27_a", "L3-27_b"],
+            "C": ["L3-18_a", "L3-18_b"],
+            "D": ["L3-30_a", "L3-30_b"],
+        },
+        "drive": {
+            "A": [f"L3-{i}" for i in range(1, 7)],
+            "B": [f"L3-{i}" for i in range(7, 10)] + ["L3-19", "L4-22"],
+            "C": [f"L4-{i}" for i in range(23, 28)],
+            "D": [f"L4-{i}" for i in range(28, 31)],
+        },
+        "flux": {
+            "A": [f"L1-{i}" for i in range(5, 10)] + ["L1-4"],
+            "B": [f"L1-{i}" for i in range(10, 16)],
+            "C": [f"L1-{i}" for i in range(16, 21)],
+            "D": [f"L1-{i}" for i in range(21, 26)],
+        },
+    }
+    
+    connections = {
+        "A": [1,2,3],
+        "B": [4,5],
+        "C": [6,7],
+        "D": [8,9],
+    }
+
+    # Create channels
+    for channel in wiring:
+        for qubit in wiring[qubit]:
+            for wire in wiring[qubit][channel]:
+                channels |= ChannelMap.from_names(wire)
+
+    for qubit in connections:
+        channels[wiring["feedback"][qubit][0]].port = [(f"con{connections[qubit][0]}", 1), (f"con{connections[qubit][0]}", 2)]
+        channels[wiring["feedback"][qubit][1]].port = [(f"con{connections[qubit][1]}", 1), (f"con{connections[qubit][1]}", 2)]
+        channels[wiring["readout"][qubit][0]].port = [(f"con{connections[qubit][0]}", 9), (f"con{connections[qubit][0]}", 10)]
+        channels[wiring["readout"][qubit][1]].port = [(f"con{connections[qubit][1]}", 9), (f"con{connections[qubit][1]}", 10)]
+
+        wires_list = wiring["drive"][qubit]
+        for i in range(len(wires_list)):
+            channels[wires_list[i]].port = [(f"con{connections[qubit][(2*i)//8]}", 2*i%8 + 1), (f"con{connections[qubit][(2*i)//8]}", 2*i%8 + 2)]
+            last_port = 2*i%8 + 2
+
+        wires_list = wiring["flux"][qubit]
+        for i in range(len(wires_list)):
+            channels[wires_list[i]].port = [(f"con{connections[qubit][i//8]}", (i+last_port)%8 + 1)] 
 
     # Instantiate QM OPX instruments
     if simulation_duration is None:
@@ -98,57 +129,35 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
     controller.time_of_flight = 280
 
     # Instantiate local oscillators (HARDCODED)
-    local_oscillators = [
-        LocalOscillator("lo_readout_a", "192.168.0.39"),
-        LocalOscillator("lo_readout_b", "192.168.0.31"),
-        LocalOscillator("lo_drive_low", "192.168.0.32"),
-        LocalOscillator("lo_drive_mid", "192.168.0.33"),
-        LocalOscillator("lo_drive_high", "192.168.0.34"),
-        LocalOscillator("twpa_a", "192.168.0.35"),
-    ]
-    # Set LO parameters
-    local_oscillators[0].frequency = 7_300_000_000
-    local_oscillators[1].frequency = 7_900_000_000
-    local_oscillators[2].frequency = 4_700_000_000
-    local_oscillators[3].frequency = 5_600_000_000
-    local_oscillators[4].frequency = 6_500_000_000
-    local_oscillators[0].power = 18.0
-    local_oscillators[1].power = 15.0
-    for i in range(2, 5):
-        local_oscillators[i].power = 16.0
-    # Set TWPA parameters
-    local_oscillators[5].frequency = 6_511_000_000
-    local_oscillators[5].power = 4.5
-    # Map LOs to channels
-    channels["L3-25_a"].local_oscillator = local_oscillators[0]
-    channels["L3-25_b"].local_oscillator = local_oscillators[1]
-    channels["L3-15"].local_oscillator = local_oscillators[2]
-    channels["L3-11"].local_oscillator = local_oscillators[2]
-    channels["L3-12"].local_oscillator = local_oscillators[3]
-    channels["L3-13"].local_oscillator = local_oscillators[4]
-    channels["L3-14"].local_oscillator = local_oscillators[4]
-    channels["L4-26"].local_oscillator = local_oscillators[5]
+    local_oscillators = [LocalOscillator(f"era_0{i}", f"192.168.0.20{i}") for i in range(1, 9)] + \
+        [LocalOscillator(f"LO_{i}", f"192.168.0.3{i}") for i in [1,2,3,4,5,6,9]],
 
     instruments = [controller] + local_oscillators
     design = InstrumentDesign(instruments, channels)
-    platform = DesignPlatform("qw5q_gold", design, runcard)
+    platform = DesignPlatform("qw25q", design, runcard)
 
     # assign channels to qubits
     qubits = platform.qubits
-    for q in [0, 1, 5]:
-        qubits[q].readout = channels["L3-25_a"]
-        qubits[q].feedback = channels["L2-5_a"]
-    for q in [2, 3, 4]:
-        qubits[q].readout = channels["L3-25_b"]
-        qubits[q].feedback = channels["L2-5_b"]
+    for channel in ["flux", "drive"]:
+        for qubit in wiring[channel]:
+            for i, wire in enumerate(wiring[channel][qubit]):
+                q = f"{qubit}{i+1}"
+                if channel == "flux":
+                    qubits[q].flux = wire
+                elif channel == "drive":
+                    qubits[q].drive = wire
+    
+    for q in range(0, 4):
+        for qubit in connections:
+            qubits[f"{qubit}{q}"].readout = wiring["readout"][qubit][0]
+            qubits[f"{qubit}{q}"].feedback = wiring["feedback"][qubit][0]
+    for q in range(4, 8):
+        for qubit in connections:
+            if (not qubit == "A") and (q == 6):
+                break
+            qubits[f"{qubit}{q}"].readout = wiring["readout"][qubit][1]
+            qubits[f"{qubit}{q}"].feedback = wiring["feedback"][qubit][1]
 
-    qubits[0].drive = channels["L3-15"]
-    qubits[0].flux = channels["L4-5"]
-    channels["L4-5"].qubit = qubits[0]
-    for q in range(1, 5):
-        qubits[q].drive = channels[f"L3-{10 + q}"]
-        qubits[q].flux = channels[f"L4-{q}"]
-        channels[f"L4-{q}"].qubit = qubits[q]
 
     # Platfom topology
     Q = [f"q{i}" for i in range(5)]
