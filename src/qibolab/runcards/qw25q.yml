@@ -1,21 +1,16 @@
 nqubits: 5
-description: QuantWare 5-qubit device.
+description: QuantWare 25-qubit device with 4 witness. qw25q_v3_e10
 
-qubits: [0, 1, 2, 3, 4, 5]
+qubits: [A0, A1, A2, A3, A4, A5, A6, 
+        B0, B1, B2, B3, B4, B5,
+        C0, C1, C2, C3, C4, C5,
+        D0, D1, D2, D3, D4, D5]
 
 settings:
     sampling_rate: 1000000000
     repetition_duration: 50_000
 
 resonator_type: 2D
-
-topology: # qubit - qubit connections
--   [ 1, 0, 1, 0, 0, 0]
--   [ 0, 1, 1, 0, 0, 0]
--   [ 1, 1, 1, 1, 1, 0]
--   [ 0, 0, 1, 1, 0, 0]
--   [ 0, 0, 1, 0, 1, 0]
--   [ 0, 0, 0, 0, 0, 1]
 
 native_gates:
     single_qubit:
