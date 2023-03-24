@@ -37,15 +37,11 @@ class DesignPlatform(AbstractPlatform):
             relaxation_time = self.relaxation_time
         return self.design.play(self.qubits, sequence, nshots=nshots, relaxation_time=relaxation_time)
 
-    def sweep(self, sequence, *sweepers, nshots=1024, relaxation_time=None):
+    def sweep(self, sequence, *sweepers, nshots=1024, relaxation_time=None, average=True):
         if relaxation_time is None:
             relaxation_time = self.relaxation_time
         return self.design.sweep(
-            self.qubits,
-            sequence,
-            *sweepers,
-            nshots=nshots,
-            relaxation_time=relaxation_time,
+            self.qubits, sequence, *sweepers, nshots=nshots, relaxation_time=relaxation_time, average=average
         )
 
     def set_lo_drive_frequency(self, qubit, freq):

@@ -32,8 +32,8 @@ class ExecutionResults:
         return self.array.q
 
     def __add__(self, data):
-        i = np.append(self.i, data.i, axis=0)
-        q = np.append(self.q, data.q, axis=0)
+        i = np.append(self.i, data.i)
+        q = np.append(self.q, data.q)
 
         new_execution_results = self.__class__.from_components(i, q)
 
