@@ -59,6 +59,20 @@ class ExecutePulseSequence(AveragerProgram):
         self.sequence = sequence
         self.qubits = qubits
 
+        # register readout pulses (multiplexed)
+        """
+        This build a dictionary:
+        {
+            'start_time_1': [Pulse1, Pulse2],
+            'start_time_2': [Pulse3, Pulse4],
+            }
+        """
+        self.multi_ro_pulses = {}
+        for pulse in self.sequence.ro_pulses:
+            if pulse.start not in self.multi_ro_pulses:
+                self.multi_ro_pulses[pulse.start] = []
+            self.multi_ro_pulses[pulse.start].append(pulse)
+
         # conversion coefficients (in runcard we have Hz and ns)
         self.MHz = 0.000001
         self.us = 0.001
@@ -194,12 +208,13 @@ class ExecutePulseSequence(AveragerProgram):
         )
 
         # declare readouts
-        ro_ch_already_declared = []
+        # TODO check
+        adc_ch_already_declared = []
         for readout_pulse in self.sequence.ro_pulses:
             adc_ch = self.qubits[readout_pulse.qubit].feedback.ports[0][1]
             ro_ch = self.qubits[readout_pulse.qubit].readout.ports[0][1]
-            if adc_ch not in ro_ch_already_declared:
-                ro_ch_already_declared.append(ro_ch)
+            if adc_ch not in adc_ch_already_declared:
+                adc_ch_already_declared.append(adc_ch)
                 length = self.soc.us2cycles(readout_pulse.duration * self.us, gen_ch=ro_ch)
                 freq = readout_pulse.frequency * self.MHz
                 # in declare_readout frequency in MHz
@@ -217,26 +232,10 @@ class ExecutePulseSequence(AveragerProgram):
                 first_pulse_registered.append(gen_ch)
                 self.add_pulse_to_register(pulse)
 
-        # register readout pulses (multiplexed)
-
-        """
-        This build a dictionary:
-        {
-            'start_time_1': [Pulse1, Pulse2],
-            'start_time_2': [Pulse3, Pulse4],
-            }
-        """
-        multi_ro_pulses = {}
-        for pulse in self.sequence.ro_pulses:
-            if pulse.start not in multi_ro_pulses:
-                multi_ro_pulses[pulse.start] = []
-            multi_ro_pulses[pulse.start].append(pulse)
-        self.multi_ro_pulses = multi_ro_pulses
-
         # register first pulses of all ro channels
         first_pulse_registered = []
-        for start_time in multi_ro_pulses:
-            pulse = multi_ro_pulses[start_time][0]
+        for start_time in self.multi_ro_pulses:
+            pulse = self.multi_ro_pulses[start_time][0]
 
             qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
             ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
@@ -244,7 +243,7 @@ class ExecutePulseSequence(AveragerProgram):
 
             if gen_ch not in first_pulse_registered:
                 first_pulse_registered.append(gen_ch)
-                self.add_readout_to_register(multi_ro_pulses[start_time])
+                self.add_readout_to_register(self.multi_ro_pulses[start_time])
 
         # sync all channels and wait some time
         self.sync_all(self.wait_initialize)
@@ -417,6 +416,20 @@ class ExecuteSingleSweep(RAveragerProgram):
         self.sequence = sequence
         self.qubits = qubits
 
+        # register readout pulses (multiplexed)
+        """
+        This build a dictionary:
+        {
+            'start_time_1': [Pulse1, Pulse2],
+            'start_time_2': [Pulse3, Pulse4],
+            }
+        """
+        self.multi_ro_pulses = {}
+        for pulse in self.sequence.ro_pulses:
+            if pulse.start not in self.multi_ro_pulses:
+                self.multi_ro_pulses[pulse.start] = []
+            self.multi_ro_pulses[pulse.start].append(pulse)
+
         # conversion coefficients (in runcard we have Hz and ns)
         self.MHz = 0.000001
         self.us = 0.001
@@ -495,10 +508,11 @@ class ExecuteSingleSweep(RAveragerProgram):
 
         adcs, adc_count = np.unique(adcs, return_counts=True)
 
+        len_out = int(len(self.di_buf[0]) / len(adcs))
         for idx, adc_ch in enumerate(adcs):
             count = adc_count[adc_ch]
-            i_val = self.di_buf[idx].reshape((count, self.cfg["expts"], self.cfg["reps"])) / lengths[idx]
-            q_val = self.dq_buf[idx].reshape((count, self.cfg["expts"], self.cfg["reps"])) / lengths[idx]
+            i_val = self.di_buf[idx][:len_out].reshape((count, self.cfg["expts"], self.cfg["reps"])) / lengths[idx]
+            q_val = self.dq_buf[idx][:len_out].reshape((count, self.cfg["expts"], self.cfg["reps"])) / lengths[idx]
 
             tot_i.append(i_val)
             tot_q.append(q_val)
@@ -546,9 +560,9 @@ class ExecuteSingleSweep(RAveragerProgram):
             if self.cfg["start"] + self.cfg["step"] * self.cfg["expts"] > self.max_gain:
                 raise Exception("Amplitude higher than maximum!")
 
-        # declare nyquist zones for all used channels
+        # declare nyquist zones for all used drive channels
         ch_already_declared = []
-        for pulse in self.sequence:
+        for pulse in self.sequence.qd_pulses:
             qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
             ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
             gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
@@ -561,21 +575,48 @@ class ExecuteSingleSweep(RAveragerProgram):
                 else:
                     self.declare_gen(gen_ch, nqz=2)
 
+        # declare nyquist zones for all readout channels (multiplexed)
+        # TODO avoid redeclarations
+        mux_freqs = []
+        mux_gains = []
+        for pulse in self.sequence.ro_pulses:
+            qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
+            adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
+            ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
+            gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
+
+            if pulse.frequency < self.max_sampling_rate / 2:
+                zone = 1
+            else:
+                zone = 2
+            mux_gains.append(pulse.amplitude)  # TODO add max_gain
+            mux_freqs.append((pulse.frequency - self.cfg["mixer_freq"] - self.cfg["LO_freq"]) * self.MHz)
+
+        self.declare_gen(
+            ch=ro_ch,
+            nqz=zone,
+            mixer_freq=self.cfg["mixer_freq"],
+            mux_freqs=mux_freqs,
+            mux_gains=mux_gains,
+            ro_ch=adc_ch,
+        )
+
         # declare readouts
-        ro_ch_already_declared = []
+        # TODO check
+        adc_ch_already_declared = []
         for readout_pulse in self.sequence.ro_pulses:
             adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
             ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
-            if adc_ch not in ro_ch_already_declared:
-                ro_ch_already_declared.append(adc_ch)
+            if adc_ch not in adc_ch_already_declared:
+                adc_ch_already_declared.append(adc_ch)
                 length = self.soc.us2cycles(readout_pulse.duration * self.us, gen_ch=ro_ch)
                 freq = readout_pulse.frequency * self.MHz
                 # for declare_readout freqs in MHz and not in register values
                 self.declare_readout(ch=adc_ch, length=length, freq=freq, gen_ch=ro_ch)
 
-        # register first pulses of all channels
+        # register first pulses of all channels (drive)
         first_pulse_registered = []
-        for pulse in self.sequence:
+        for pulse in self.sequence.qd_pulses:
             qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
             ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
             gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
@@ -584,11 +625,47 @@ class ExecuteSingleSweep(RAveragerProgram):
                 first_pulse_registered.append(gen_ch)
                 self.add_pulse_to_register(pulse)
 
+        # register first pulses of all ro channels
+        first_pulse_registered = []
+        for start_time in self.multi_ro_pulses:
+            pulse = self.multi_ro_pulses[start_time][0]
+
+            qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
+            ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
+            gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
+
+            if gen_ch not in first_pulse_registered:
+                first_pulse_registered.append(gen_ch)
+                self.add_readout_to_register(self.multi_ro_pulses[start_time])
+
         # sync all channels and wait some time
         self.sync_all(self.wait_initialize)
 
+    def add_readout_to_register(self, ro_pulses: List[Pulse]):
+        mask = []
+        for pulse in ro_pulses:
+            mask.append(pulse.qubit)
+
+        pulse = ro_pulses[0]
+
+        qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
+        adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
+        ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
+        gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
+
+        us_length = pulse.duration * self.us
+        soc_length = self.soc.us2cycles(us_length)
+
+        if not isinstance(pulse.shape, Rectangular):
+            raise Exception("Only Rectangular ro pulses are supported")
+
+        self.set_pulse_registers(ch=gen_ch, style="const", length=soc_length, mask=mask)
+
     def add_pulse_to_register(self, pulse):
         """This function calls the set_pulse_registers function"""
+
+        if pulse.type == PulseType.DRIVE:
+            raise Exception("add_pulse_to_register is just for drive!")
 
         is_sweeped = self.sweeper.pulses[0] == pulse
 
@@ -684,7 +761,7 @@ class ExecuteSingleSweep(RAveragerProgram):
 
         # list of channels where a pulse is already been executed
         first_pulse_executed = []
-
+        ro_executed_pulses_time = []
         for pulse in self.sequence:
             # time follows tproc CLK
             time = self.soc.us2cycles(pulse.start * self.us)
@@ -694,22 +771,31 @@ class ExecuteSingleSweep(RAveragerProgram):
             ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
             gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
 
-            if gen_ch in first_pulse_executed:
-                self.add_pulse_to_register(pulse)
-            else:
-                first_pulse_executed.append(gen_ch)
-
             if pulse.type == PulseType.DRIVE:
+                if gen_ch in first_pulse_executed:
+                    self.add_pulse_to_register(pulse)
+                else:
+                    first_pulse_executed.append(gen_ch)
                 self.pulse(ch=gen_ch, t=time)
+
             elif pulse.type == PulseType.READOUT:
-                self.measure(
-                    pulse_ch=gen_ch,
-                    adcs=[adc_ch],
-                    adc_trig_offset=time + self.adc_trig_offset,
-                    t=time,
-                    wait=False,
-                    syncdelay=self.syncdelay,
-                )
+                # TODO call set_pulse_registers if needed
+                if pulse.start not in ro_executed_pulses_time:
+                    ro_executed_pulses_time.append(pulse.start)
+
+                    adcs = []
+                    for pulse in self.multi_ro_pulses[pulse.start]:
+                        adcs.append(self.qubits[pulse.qubit].feedback.ports[0][1])
+
+                    self.measure(
+                        pulse_ch=gen_ch,
+                        adcs=adcs,
+                        adc_trig_offset=time + self.adc_trig_offset,
+                        t=time,
+                        wait=False,
+                        syncdelay=self.syncdelay,
+                    )
+
         self.wait_all()
         self.sync_all(self.relax_delay)
 
