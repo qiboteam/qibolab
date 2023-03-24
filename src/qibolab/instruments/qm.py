@@ -27,7 +27,7 @@ from qualang_tools.loops import from_array
 
 from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.pulses import Pulse, PulseType, Rectangular
-from qibolab.result import ExecutionResults
+from qibolab.result import AveragedResults, ExecutionResults
 from qibolab.sweeper import Parameter
 
 
@@ -562,7 +562,7 @@ class QMOPX(AbstractInstrument):
                 save(qmpulse.shot, qmpulse.shots)
 
     @staticmethod
-    def fetch_results(result, ro_pulses):
+    def fetch_results(result, ro_pulses, average):
         """Fetches results from an executed experiment."""
         # TODO: Update result asynchronously instead of waiting
         # for all values, in order to allow live plotting
@@ -581,7 +581,10 @@ class QMOPX(AbstractInstrument):
                 shots = handles.get(f"{serial}_shots").fetch_all().astype(int)
             else:
                 shots = None
-            results[pulse.qubit] = results[serial] = ExecutionResults.from_components(ires, qres, shots)
+            if average:
+                results[pulse.qubit] = results[serial] = AveragedResults.from_components(ires, qres)
+            else:
+                results[pulse.qubit] = results[serial] = ExecutionResults.from_components(ires, qres, shots)
         return results
 
     def play(self, qubits, sequence, nshots, relaxation_time):
