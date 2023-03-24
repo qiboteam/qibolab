@@ -54,9 +54,6 @@ class QMConfig:
             filter (dict): Pulse shape filters. Relevant for ports connected to flux channels.
                 QM syntax should be followed for the filters.
         """
-        if abs(offset) > 0.2:
-            raise_error(ValueError, f"DC offset for Quantum Machines cannot exceed 0.1V but is {offset}.")
-
         for con, port in ports:
             if con not in self.controllers:
                 self.controllers[con] = {"analog_outputs": {}}
@@ -643,6 +640,12 @@ class QMOPX(AbstractInstrument):
         return self.fetch_results(result, sequence.ro_pulses)
 
     def sweep(self, qubits, sequence, *sweepers, nshots, relaxation_time, average=True):
+        # register flux elements for all qubits so that they are
+        # always at sweetspot even when they are not used
+        for qubit in qubits.values():
+            if qubit.flux:
+                self.config.register_flux_element(qubit)
+
         qmsequence = QMSequence()
         for pulse in sequence:
             qmpulse = qmsequence.add(pulse)
@@ -709,7 +712,12 @@ class QMOPX(AbstractInstrument):
             else:
                 raise_error(NotImplementedError, f"Cannot sweep frequency of pulse of type {pulse.type}.")
             # convert to IF frequency for readout and drive pulses
-            freqs0.append(declare(int, value=int(pulse.frequency - lo_frequency)))
+            f0 = int(pulse.frequency - lo_frequency)
+            freqs0.append(declare(int, value=f0))
+            # check if sweep is within the supported bandwidth [-400, 400] MHz
+            max_freq = max(abs(min(sweeper.values) + f0), abs(max(sweeper.values) + f0))
+            if max_freq > 4e8:
+                raise_error(ValueError, f"Frequency {max_freq} for qubit {qubit.name} is beyond instrument bandwidth.")
 
         # is it fine to have this declaration inside the ``nshots`` QUA loop?
         f = declare(int)
@@ -719,17 +727,17 @@ class QMOPX(AbstractInstrument):
                 update_frequency(qmpulse.element, f + f0)
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-            if relaxation_time > 0:
-                wait(relaxation_time // 4)
 
     def sweep_amplitude(self, sweepers, qubits, qmsequence, relaxation_time):
         from qm.qua import amp
 
-        # TODO: It should be -2 < amp(a) < 2 otherwise the we get weird results
-        # without an error. Amplitude should be fixed to allow arbitrary values
-        # in qibocal
-
         sweeper = sweepers[0]
+        # TODO: Consider sweeping amplitude without multiplication
+        if min(sweeper.values) < -2:
+            raise_error(ValueError, "Amplitude sweep values are <-2 which is not supported.")
+        if max(sweeper.values) > 2:
+            raise_error(ValueError, "Amplitude sweep values are >2 which is not supported.")
+
         a = declare(fixed)
         with for_(*from_array(a, sweeper.values)):
             for pulse in sweeper.pulses:
@@ -740,8 +748,6 @@ class QMOPX(AbstractInstrument):
                     qmpulse.baked_amplitude = a
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-            if relaxation_time > 0:
-                wait(relaxation_time // 4)
 
     def sweep_relative_phase(self, sweepers, qubits, qmsequence, relaxation_time):
         sweeper = sweepers[0]
@@ -752,22 +758,28 @@ class QMOPX(AbstractInstrument):
                 qmpulse.relative_phase = relphase
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-            if relaxation_time > 0:
-                wait(relaxation_time // 4)
 
     def sweep_bias(self, sweepers, qubits, qmsequence, relaxation_time):
         from qm.qua import set_dc_offset
 
         sweeper = sweepers[0]
-        bias0 = [declare(fixed, value=qubits[q].flux.bias) for q in sweeper.qubits]
+        bias0 = []
+        for q in sweeper.qubits:
+            b0 = qubits[q].flux.bias
+            max_bias = qubits[q].flux.max_bias
+            max_value = max(abs(min(sweeper.values) + b0), abs(max(sweeper.values) + b0))
+            if max_bias is not None and max_value > max_bias:
+                raise_error(
+                    ValueError,
+                    f"Cannot sweep bias up to {max_value} because the maximum supported value is {max_bias}.",
+                )
+            bias0.append(declare(fixed, value=b0))
         b = declare(fixed)
         with for_(*from_array(b, sweeper.values)):
             for q, b0 in zip(sweeper.qubits, bias0):
                 set_dc_offset(f"flux{q}", "single", b + b0)
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-            if relaxation_time > 0:
-                wait(relaxation_time // 4)
 
     SWEEPERS = {
         Parameter.frequency: sweep_frequency,
@@ -784,4 +796,4 @@ class QMOPX(AbstractInstrument):
             else:
                 raise_error(NotImplementedError, f"Sweeper for {parameter} is not implemented.")
         else:
-            self.play_pulses(qmsequence)
+            self.play_pulses(qmsequence, relaxation_time)
