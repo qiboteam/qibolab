@@ -78,8 +78,8 @@ class ExecutionResults:
 
         return {
             "MSR[V]": self.measurement,
-            "i[V]": float(self.i),  # float to convert from array to float type
-            "q[V]": float(self.q),  # float to convert from array to float type
+            "i[V]": self.i,
+            "q[V]": self.q,
             "phase[rad]": self.phase,
         }
 

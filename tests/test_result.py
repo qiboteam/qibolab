@@ -15,7 +15,7 @@ def generate_random_result(length=5):
 def generate_random_avg_result(length=5):
     i = np.random.rand(length)
     q = np.random.rand(length)
-    return AveragedResults(i, q)
+    return AveragedResults.from_components(i, q)
 
 
 def test_standard_constructor():
@@ -48,7 +48,7 @@ def test_to_dict_probability(state):
 def test_to_dict(average):
     """Testing to_dict method"""
     results = generate_random_result(5)
-    output = results.to_dict(average=average)
+    output = results.to_dict()
     if not average:
         target_dict = {
             "MSR[V]": results.measurement,
@@ -60,14 +60,14 @@ def test_to_dict(average):
         for key in output:
             np.testing.assert_equal(output[key], target_dict[key])
     else:
-        avg = results.compute_average()
+        avg = results.average
         target_dict = {
             "MSR[V]": np.sqrt(avg.i**2 + avg.q**2),
             "i[V]": avg.i,
             "q[V]": avg.q,
             "phase[rad]": np.angle(avg.i + 1.0j * avg.q),
         }
-        assert results.to_dict(average=average) == target_dict
+        assert avg.to_dict() == target_dict
 
 
 def test_averaged_results_add():
