@@ -626,14 +626,80 @@ class ClusterQRM_RF(AbstractInstrument):
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
 
+        parameters = [
+                "channel_map_path0_out0_en",
+                "channel_map_path1_out1_en",
+                "cont_mode_en_awg_path0",
+                "cont_mode_en_awg_path1",
+                "cont_mode_waveform_idx_awg_path0",
+                "cont_mode_waveform_idx_awg_path1",
+                "demod_en_acq",
+                "gain_awg_path0",
+                "gain_awg_path1",
+                "integration_length_acq",
+                "marker_ovr_en",
+                "marker_ovr_value",
+                "mixer_corr_gain_ratio",
+                "mixer_corr_phase_offset_degree",
+                "mod_en_awg",
+                "nco_freq",
+                "nco_phase_offs",
+                "nco_prop_delay_comp",
+                "nco_prop_delay_comp_en",
+                "offset_awg_path0",
+                "offset_awg_path1",
+                "sync_en",
+                # "thresholded_acq_marker_address",
+                "thresholded_acq_marker_en",
+                "thresholded_acq_marker_invert",
+                "thresholded_acq_rotation",
+                "thresholded_acq_threshold",
+                # "thresholded_acq_trigger_address",
+                "thresholded_acq_trigger_en",
+                "thresholded_acq_trigger_invert",
+                "trigger10_count_threshold",
+                "trigger10_threshold_invert",
+                "trigger11_count_threshold",
+                "trigger11_threshold_invert",
+                "trigger12_count_threshold",
+                "trigger12_threshold_invert",
+                "trigger13_count_threshold",
+                "trigger13_threshold_invert",
+                "trigger14_count_threshold",
+                "trigger14_threshold_invert",
+                "trigger15_count_threshold",
+                "trigger15_threshold_invert",
+                "trigger1_count_threshold",
+                "trigger1_threshold_invert",
+                "trigger2_count_threshold",
+                "trigger2_threshold_invert",
+                "trigger3_count_threshold",
+                "trigger3_threshold_invert",
+                "trigger4_count_threshold",
+                "trigger4_threshold_invert",
+                "trigger5_count_threshold",
+                "trigger5_threshold_invert",
+                "trigger6_count_threshold",
+                "trigger6_threshold_invert",
+                "trigger7_count_threshold",
+                "trigger7_threshold_invert",
+                "trigger8_count_threshold",
+                "trigger8_threshold_invert",
+                "trigger9_count_threshold",
+                "trigger9_threshold_invert",
+                "upsample_rate_awg_path0",
+                "upsample_rate_awg_path1",
+            ]
+
         # select a new sequencer and configure it as required
         next_sequencer_number = self._free_sequencers_numbers.pop(0)
         if next_sequencer_number != self.DEFAULT_SEQUENCERS[port]:
-            for parameter in self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].parameters:
+            for parameter in parameters:
                 value = self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].get(param_name=parameter)
-                if not value is None:
-                    target = self.device.sequencers[next_sequencer_number]
-                    self._set_device_parameter(target, parameter, value=value)
+                if value is None:
+                    raise RuntimeError
+                target = self.device.sequencers[next_sequencer_number]
+                self._set_device_parameter(target, parameter, value=value)
 
         # if hardware demodulation is enabled, configure nco_frequency and classification parameters
         if self.ports["i1"].hardware_demod_en or self.ports["o1"].hardware_mod_en:
