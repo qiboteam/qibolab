@@ -51,7 +51,7 @@ class DummyInstrument(AbstractInstrument):
             results[qubit] = results[serial] = ExecutionResults.from_components(i, q, shots)
         return results
 
-    def sweep(self, qubits, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
+    def sweep(self, qubits, sequence, *sweepers, nshots=1024, relaxation_time=None):
         results = {}
         sweeper_pulses = {}
 
@@ -74,7 +74,6 @@ class DummyInstrument(AbstractInstrument):
             copy.deepcopy(sequence),
             *sweepers,
             nshots=nshots,
-            average=average,
             relaxation_time=relaxation_time,
             results=results,
             sweeper_pulses=sweeper_pulses,
@@ -89,7 +88,6 @@ class DummyInstrument(AbstractInstrument):
         original_sequence,
         *sweepers,
         nshots=1024,
-        average=True,
         relaxation_time=None,
         results=None,
         sweeper_pulses=None,
@@ -113,7 +111,6 @@ class DummyInstrument(AbstractInstrument):
                     original_sequence,
                     *sweepers[1:],
                     nshots=nshots,
-                    average=average,
                     relaxation_time=relaxation_time,
                     results=results,
                     sweeper_pulses=sweeper_pulses,
@@ -125,12 +122,11 @@ class DummyInstrument(AbstractInstrument):
 
                 # colllect result and append to original pulse
                 for original_pulse, new_serial in map_original_shifted.items():
-                    acquisition = result[new_serial].compute_average() if average else result[new_serial]
                     if original_pulse.serial in results:
-                        results[original_pulse.serial] += acquisition
-                        results[original_pulse.qubit] += acquisition
+                        results[original_pulse.serial] += result[new_serial]
+                        results[original_pulse.qubit] += result[new_serial]
                     else:
-                        results[original_pulse.serial] = acquisition
+                        results[original_pulse.serial] = result[new_serial]
                         results[original_pulse.qubit] = copy.copy(results[original_pulse.serial])
         # restore initial value of the pulse
         if sweeper.pulses is not None:

@@ -24,9 +24,8 @@ def test_dummy_execute_pulse_sequence():
 
 
 @pytest.mark.parametrize("parameter", Parameter)
-@pytest.mark.parametrize("average", [True, False])
 @pytest.mark.parametrize("nshots", [100, 200])
-def test_dummy_single_sweep(parameter, average, nshots):
+def test_dummy_single_sweep(parameter, nshots):
     swept_points = 5
     platform = Platform("dummy")
     sequence = PulseSequence()
@@ -40,17 +39,16 @@ def test_dummy_single_sweep(parameter, average, nshots):
         sweeper = Sweeper(parameter, parameter_range, qubits=[platform.qubits[0]])
     else:
         sweeper = Sweeper(parameter, parameter_range, pulses=[pulse])
-    results = platform.sweep(sequence, sweeper, average=average, nshots=nshots)
+    results = platform.sweep(sequence, sweeper, nshots=nshots)
 
     assert pulse.serial and pulse.qubit in results
-    assert len(results[pulse.qubit]) == swept_points if average else int(nshots * swept_points)
+    assert len(results[pulse.qubit]) == int(nshots * swept_points)
 
 
 @pytest.mark.parametrize("parameter1", Parameter)
 @pytest.mark.parametrize("parameter2", Parameter)
-@pytest.mark.parametrize("average", [True, False])
 @pytest.mark.parametrize("nshots", [100, 1000])
-def test_dummy_double_sweep(parameter1, parameter2, average, nshots):
+def test_dummy_double_sweep(parameter1, parameter2, nshots):
     swept_points = 5
     platform = Platform("dummy")
     sequence = PulseSequence()
@@ -77,16 +75,15 @@ def test_dummy_double_sweep(parameter1, parameter2, average, nshots):
         sweeper2 = Sweeper(parameter2, parameter_range_2, qubits=[platform.qubits[0]])
     else:
         sweeper2 = Sweeper(parameter2, parameter_range_2, pulses=[pulse])
-    results = platform.sweep(sequence, sweeper1, sweeper2, average=average, nshots=nshots)
+    results = platform.sweep(sequence, sweeper1, sweeper2, nshots=nshots)
 
     assert ro_pulse.serial and ro_pulse.qubit in results
-    assert len(results[ro_pulse.serial]) == swept_points**2 if average else int(nshots * swept_points**2)
+    assert len(results[ro_pulse.serial]) == int(nshots * swept_points**2)
 
 
 @pytest.mark.parametrize("parameter", Parameter)
-@pytest.mark.parametrize("average", [True, False])
 @pytest.mark.parametrize("nshots", [100, 1000])
-def test_dummy_single_sweep_multiplex(parameter, average, nshots):
+def test_dummy_single_sweep_multiplex(parameter, nshots):
     swept_points = 5
     platform = Platform("dummy")
     sequence = PulseSequence()
@@ -105,11 +102,11 @@ def test_dummy_single_sweep_multiplex(parameter, average, nshots):
     else:
         sweeper1 = Sweeper(parameter, parameter_range, pulses=[ro_pulses[qubit] for qubit in platform.qubits])
 
-    results = platform.sweep(sequence, sweeper1, average=average, nshots=nshots)
+    results = platform.sweep(sequence, sweeper1, nshots=nshots)
 
     for ro_pulse in ro_pulses.values():
         assert ro_pulse.serial and ro_pulse.qubit in results
-        assert len(results[ro_pulse.qubit]) == swept_points if average else int(nshots * swept_points)
+        assert len(results[ro_pulse.qubit]) == int(nshots * swept_points)
 
 
 # TODO: add test_dummy_double_sweep_multiplex
