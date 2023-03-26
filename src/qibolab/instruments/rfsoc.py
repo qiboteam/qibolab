@@ -7,12 +7,6 @@ Supports the following FPGAs:
    ZCU111
 """
 
-"""
-TODO:
-    sweep
-"""
-
-import math
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
@@ -33,7 +27,7 @@ from qibolab.result import AveragedResults, ExecutionResults
 from qibolab.sweeper import Parameter, Sweeper
 
 
-class ExecutePulseSequence(AveragerProgram):
+class MuxExecutePulseSequence(AveragerProgram):
     """This qick AveragerProgram handles a qibo sequence of pulses"""
 
     def __init__(self, soc: QickSoc, cfg: dict, sequence: PulseSequence, qubits: List[Qubit]):
@@ -154,21 +148,17 @@ class ExecutePulseSequence(AveragerProgram):
             tot_q.append(q_val)
         return tot_i, tot_q
 
-    def initialize(self):
-        """This function gets called automatically by qick super.__init__,
+    def declare_gen_fluxes(self):
+        ch_already_declared = []
+        for pulse in self.sequence.qf_pulses:
+            ch = self.qubits[pulse.qubit].flux.ports[0][1]
+            if ch not in ch_already_declared:
+                ch_already_declared.append(ch)
+                self.declare_gen(ch, nqz=1)
 
-        it contains:
-        * declaration of channels and nyquist zones
-        * declaration of readouts (just one per channel, otherwise ignores it)
-        * for element in sequence calls the add_pulse_to_register function
-          (if first pulse for channel, otherwise it will be done in the body)
-
-        """
-
-        # declare nyquist zones for all used drive channels
+    def declare_gen_drives(self):
         ch_already_declared = []
 
-        # TODO: check declaration for flux channels
         for pulse in self.sequence.qd_pulses:
             qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
             ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
@@ -177,27 +167,30 @@ class ExecutePulseSequence(AveragerProgram):
             if gen_ch not in ch_already_declared:
                 ch_already_declared.append(gen_ch)
 
-                if pulse.frequency < self.max_sampling_rate / 2:
-                    self.declare_gen(gen_ch, nqz=1)
-                else:
-                    self.declare_gen(gen_ch, nqz=2)
+                zone = 1 if pulse.frequency < self.max_sampling_rate / 2 else 2
+                self.declare_gen(gen_ch, nqz=zone)
 
-        # declare nyquist zones for all readout channels (multiplexed)
-        # TODO avoid redeclarations
+    def declare_gen_mux_readouts(self):
+        """
+        Only one readout channel is supported
+        """
+
+        adc_ch_added = []
         mux_freqs = []
         mux_gains = []
         for pulse in self.sequence.ro_pulses:
-            qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
             adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
             ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
-            gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
 
-            if pulse.frequency < self.max_sampling_rate / 2:
-                zone = 1
-            else:
-                zone = 2
-            mux_gains.append(pulse.amplitude)  # TODO add max_gain
-            mux_freqs.append((pulse.frequency - self.cfg["mixer_freq"] - self.cfg["LO_freq"]) * self.MHz)
+            if adc_ch not in adc_ch_added:
+                adc_ch_added.append(adc_ch)
+                zone = 1 if pulse.frequency < self.max_sampling_rate / 2 else 2
+
+                freq = pulse.frequency - self.cfg["mixer_freq"] - self.cfg["LO_freq"]
+                freq = freq * self.MHz
+
+                mux_gains.append(pulse.amplitude)
+                mux_freqs.append(freq)
 
         self.declare_gen(
             ch=ro_ch,
@@ -205,11 +198,10 @@ class ExecutePulseSequence(AveragerProgram):
             mixer_freq=self.cfg["mixer_freq"],
             mux_freqs=mux_freqs,
             mux_gains=mux_gains,
-            ro_ch=adc_ch,
+            ro_ch=adc_ch_added[0],  # we use just one for dec
         )
 
-        # declare readouts
-        # TODO check
+    def declare_readout_freq(self):
         adc_ch_already_declared = []
         for readout_pulse in self.sequence.ro_pulses:
             adc_ch = self.qubits[readout_pulse.qubit].feedback.ports[0][1]
@@ -221,13 +213,31 @@ class ExecutePulseSequence(AveragerProgram):
                 # in declare_readout frequency in MHz
                 self.declare_readout(ch=adc_ch, length=length, freq=freq, gen_ch=ro_ch)
 
+    def initialize(self):
+        """This function gets called automatically by qick super.__init__,
+
+        it contains:
+        * declaration of channels and nyquist zones
+        * declaration of readouts (just one per channel, otherwise ignores it)
+        * for element in sequence calls the add_pulse_to_register function
+          (if first pulse for channel, otherwise it will be done in the body)
+
+        """
+
+        # declare nyquist zones for all used flux channels
+        self.declare_gen_fluxes()
+        # declare nyquist zones for all used drive channels
+        self.declare_gen_drives()
+        # declare nyquist zones for all readout channels (multiplexed)
+        self.declare_gen_mux_readouts()
+
+        # declare readouts
+        self.declare_readout_freq()
+
         # register first pulses of all drive channels
         first_pulse_registered = []
         for pulse in self.sequence.qd_pulses:
-            qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
-            ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
-
-            gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
+            gen_ch = self.qubits[pulse.qubit].drive.ports[0][1]
 
             if gen_ch not in first_pulse_registered:
                 first_pulse_registered.append(gen_ch)
@@ -238,47 +248,54 @@ class ExecutePulseSequence(AveragerProgram):
         for start_time in self.multi_ro_pulses:
             pulse = self.multi_ro_pulses[start_time][0]
 
-            qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
-            ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
-            gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
+            gen_ch = self.qubits[pulse.qubit].readout.ports[0][1]
 
             if gen_ch not in first_pulse_registered:
                 first_pulse_registered.append(gen_ch)
                 self.add_readout_to_register(self.multi_ro_pulses[start_time])
 
-        # TODO complete
         # register flux pulses
         for qubit in self.qubits:
             if qubit.flux:
-                pulses = self.sequence.qf_pulses.get_qubit_pulses(qubit)
-                self.add_fluxes_to_register(qubit, pulses, self.sequence.duration)
+                # TODO convert bias
+                self.set_const_value(qubit, qubit.flux.bias)
 
         # sync all channels and wait some time
         self.sync_all(self.wait_initialize)
 
-    def add_fluxes_to_register(self, qubit, pulses, duration):
-        sweetspot = qubit.flux.bias  # TODO convert units
+    def set_const_value(self, qubit, value):
         gen_ch = qubit.flux.ports[0][1]
-        duration = self.soc.us2cycles(duration * self.us, gen_ch=gen_ch)
 
-        i = np.full(duration, sweetspot)
+        duration = 10
+        i = np.full(duration, value)
         q = np.full(duration, 0)
 
-        for pulse in pulses:
-            start = self.soc.us2cycles(pulse.start * self.us, gen_ch=gen_ch)
-            finish = self.soc.us2cycles(pulse.finish * self.us, gen_ch=gen_ch)
-            amp = int(pulse.amplitude * self.max_gain)
-            i[start:finish] += np.full(pulse_duration, amp)
-
-        self.add_pulse(f"flux_{qubit}", i, q)
+        self.add_pulse(f"const_{value}_{qubit}", i, q)
         self.set_pulse_registers(
-            ch=gen_ch,
-            waveform=f"flux_{qubit}",
-            style="const",
-            outsel="input",
+            ch=gen_ch, waveform=f"const_{value}_{qubit}", style="arb", outsel="input", stdysel="last"
         )
+        self.pulse(ch=gen_ch)
 
-    # TODO
+    def fire_flux_pulse(self, pulse):
+        qubit = self.qubits[pulse.qubit]
+        gen_ch = qubit.flux.ports[0][1]
+        sweetspot = qubit.flux.bias  # TODO convert units
+
+        padding = 10
+
+        start = self.soc.us2cycles(pulse.start * self.us, gen_ch=gen_ch)
+        finish = self.soc.us2cycles(pulse.finish * self.us, gen_ch=gen_ch)
+        duration = self.soc.us2cycles(pulse.duration * self.us, gen_ch=gen_ch)
+
+        amp = int(pulse.amplitude * self.max_gain)
+
+        i = np.full(duration + 2 * padding, sweetspot)
+        q = np.full(duration + 2 * padding, 0)
+        i[start + padding : finish + padding] += np.full(duration, amp)
+
+        self.add_pulse(pulse.serial, i, q)
+        self.set_pulse_registers(ch=gen_ch, waveform=pulse.serial, style="arb", outsel="input", stdysel="last")
+        self.pulse(ch=gen_ch)
 
     def add_readout_to_register(self, ro_pulses: List[Pulse]):
         mask = []
@@ -288,7 +305,6 @@ class ExecutePulseSequence(AveragerProgram):
         pulse = ro_pulses[0]
 
         qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
-        adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
         ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
         gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
 
@@ -318,7 +334,7 @@ class ExecutePulseSequence(AveragerProgram):
             raise Exception("Amp must be in [-1,1], was: {pulse.amplitude}")
 
         # phase converted from rad (qibolab) to deg (qick) and then to reg vals
-        phase = self.deg2reg(math.degrees(pulse.relative_phase), gen_ch=gen_ch)
+        phase = self.deg2reg(np.degrees(pulse.relative_phase), gen_ch=gen_ch)
 
         # pulse length converted with DAC CLK
         us_length = pulse.duration * self.us
@@ -380,11 +396,6 @@ class ExecutePulseSequence(AveragerProgram):
         At the end of the pulse wait for clock.
         """
 
-        for qubit in self.qubits:
-            if qubit.flux:
-                gen_ch = qubit.flux.ports[0][1]
-                self.pulse(ch=gen_ch)
-
         # list of channels where a pulse is already been executed
         first_pulse_executed = []
         ro_executed_pulses_time = []
@@ -393,7 +404,6 @@ class ExecutePulseSequence(AveragerProgram):
             time = self.soc.us2cycles(pulse.start * self.us)
 
             qd_ch = self.qubits[pulse.qubit].drive.ports[0][1]
-            adc_ch = self.qubits[pulse.qubit].feedback.ports[0][1]
             ro_ch = self.qubits[pulse.qubit].readout.ports[0][1]
             gen_ch = qd_ch if pulse.type == PulseType.DRIVE else ro_ch
 
@@ -403,6 +413,9 @@ class ExecutePulseSequence(AveragerProgram):
                 else:
                     first_pulse_executed.append(gen_ch)
                 self.pulse(ch=gen_ch, t=time)
+
+            elif pulse.type == PulseType.FLUX:
+                self.fire_flux_pulse(pulse)
 
             elif pulse.type == PulseType.READOUT:
                 # TODO call set_pulse_registers if needed
@@ -423,6 +436,11 @@ class ExecutePulseSequence(AveragerProgram):
                     )
 
         self.wait_all()
+
+        for qubit in self.qubits:
+            if qubit.flux:
+                self.set_const_value(qubit, 0)
+
         self.sync_all(self.relax_delay)
 
 
@@ -722,7 +740,7 @@ class ExecuteSingleSweep(RAveragerProgram):
             raise Exception("Amp must be in [-1,1], was: {pulse.amplitude}")
 
         # phase converted from rad (qibolab) to deg (qick) and to register vals
-        phase = self.deg2reg(math.degrees(pulse.relative_phase), gen_ch=gen_ch)
+        phase = self.deg2reg(np.degrees(pulse.relative_phase), gen_ch=gen_ch)
 
         # pulse length converted with DAC CLK
         us_length = pulse.duration * self.us
@@ -928,7 +946,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         if relaxation_time is not None:
             self.cfg["repetition_duration"] = relaxation_time
 
-        program = ExecutePulseSequence(self.soc, self.cfg, sequence, qubits)
+        program = MuxExecutePulseSequence(self.soc, self.cfg, sequence, qubits)
         avgi, avgq = program.acquire(
             self.soc, readouts_per_experiment=len(sequence.ro_pulses), load_pulses=True, progress=False, debug=False
         )
@@ -1092,7 +1110,7 @@ class TII_RFSOC_ZCU111(AbstractInstrument):
         if relaxation_time is not None:
             self.cfg["repetition_duration"] = relaxation_time
 
-        program = ExecutePulseSequence(self.soc, self.cfg, sequence, qubits)
+        program = MuxExecutePulseSequence(self.soc, self.cfg, sequence, qubits)
         average = False
         toti, totq = program.acquire(
             self.soc,
@@ -1168,7 +1186,7 @@ class TII_RFSOC_ZCU111(AbstractInstrument):
         # If there are no sweepers run ExecutePulseSequence acquisition.
         # Last layer for recursion.
         if len(sweepers) == 0:
-            program = ExecutePulseSequence(self.soc, self.cfg, sequence, qubits)
+            program = MuxExecutePulseSequence(self.soc, self.cfg, sequence, qubits)
             toti, totq = program.acquire(
                 self.soc,
                 readouts_per_experiment=len(sequence.ro_pulses),
