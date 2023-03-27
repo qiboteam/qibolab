@@ -1,11 +1,9 @@
 from dataclasses import dataclass
-from functools import cached_property
 from typing import Optional
 
 import numpy as np
-import numpy.typing as npt
 
-from qibolab.platforms.abstract import AbstractPlatform, Qubit
+from qibolab.platforms.abstract import AbstractPlatform
 
 
 class DesignPlatform(AbstractPlatform):
@@ -37,10 +35,6 @@ class DesignPlatform(AbstractPlatform):
         self.design.disconnect()
         self.is_connected = False
 
-    def check_coupler(self, qubit: Qubit) -> bool:
-        """Checks if the qubit is a coupler qubit."""
-        return not qubit.flux_coupler
-
     def execute_pulse_sequence(self, sequence, **kwargs):
         options = ExecutionParameters(kwargs)
 
@@ -50,18 +44,13 @@ class DesignPlatform(AbstractPlatform):
             options.fast_reset = {
                 qubit.name: self.create_RX_pulse(qubit=qubit.name, start=sequence.finish)
                 for qubit in self.qubits.values()
-                if self.check_coupler(qubit)
+                if not qubit.flux_coupler
             }
 
         return self.design.play(
             self.qubits,
             sequence,
-            nshots=options.nshots,
-            relaxation_time=options.relaxation_time,
-            fast_reset=options.fast_reset,
-            sim_time=options.sim_time,
-            acquisition_type=options.acquisition_type,
-            averaging_type=options.averaging_type,
+            options=options,
         )
 
     def sweep(self, sequence, *sweepers, **kwargs):
@@ -73,18 +62,14 @@ class DesignPlatform(AbstractPlatform):
             options.fast_reset = {
                 qubit.name: self.create_RX_pulse(qubit=qubit.name, start=sequence.finish)
                 for qubit in self.qubits.values()
-                if self.check_coupler(qubit)
+                if not qubit.flux_coupler
             }
+
         return self.design.sweep(
             self.qubits,
             sequence,
             *sweepers,
-            nshots=options.nshots,
-            relaxation_time=options.relaxation_time,
-            fast_reset=options.fast_reset,
-            sim_time=options.sim_time,
-            acquisition_type=options.acquisition_type,
-            averaging_type=options.averaging_type,
+            options=options,
         )
 
 
@@ -96,8 +81,8 @@ class ExecutionParameters:
     :relaxation_time: Relaxation time for the qubit
     :fast_reset: Enable or disable fast reset
     :sim_time: Time for the simulation execution
-    :acquisition_type: Data acquisition mode (INTEGRATION, RAW, DISCRIMINATION)
-    :averaging_type: Data averaging mode (CYLIC, SINGLESHOT)
+    :acquisition_type: Data acquisition mode (SPECTROSCOPY, INTEGRATION, RAW, DISCRIMINATION)
+    :averaging_type: Data averaging mode (CYLIC[True averaging], SINGLESHOT[False averaging], [SEQUENTIAL, bad averaging])
     """
 
     nshots: Optional[np.uint32] = None
@@ -105,8 +90,8 @@ class ExecutionParameters:
     fast_reset: Optional[bool] = False
     sim_time: Optional[np.float64] = 10e-6
     acquisition_type: Optional[str] = None
-    averaging_type: Optional[str] = None
+    averaging_mode: Optional[str] = None
 
-    def __init__(self, dict):
-        for k, v in dict.items():
+    def __init__(self, dictionary):
+        for k, v in dictionary.items():
             setattr(self, k, v)
