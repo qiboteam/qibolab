@@ -1,13 +1,14 @@
+import networkx as nx
 from qibo.config import raise_error
 
-from qibolab.designs.channels import Channel, ChannelMap
-from qibolab.designs.mixer import MixerInstrumentDesign
+from qibolab.designs import ChannelMap, InstrumentDesign
 from qibolab.platforms.platform import DesignPlatform
 
 
 def create_tii_rfsoc4x2(runcard: str):
-    """Create platform using QICK project on the RFSoS4x2 board and Rohde Schwarz local oscillator for the TWPA
-    IPs and other instrument related parameters are hardcoded in ``__init__`` and ``setup``.
+    """Create platform using QICK project on the RFSoS4x2 board
+       IPs and other instrument related parameters are hardcoded
+       in ``__init__`` and ``setup``.
     Args:
         runcard (str): Path to the runcard file.
     """
@@ -28,7 +29,7 @@ def create_tii_rfsoc4x2(runcard: str):
 
     # Instantiate QICK instruments
     controller = TII_RFSOC4x2("tii_rfsoc4x2")
-    design = MixerInstrumentDesign(controller, channels)  # TODO: use single instrument design
+    design = InstrumentDesign([controller], channels)
 
     platform = DesignPlatform("tii_rfsoc4x2", design, runcard)
 
@@ -37,6 +38,31 @@ def create_tii_rfsoc4x2(runcard: str):
     qubits[0].readout = channels["L3-18_ro"]
     qubits[0].feedback = channels["L2-RO"]
     qubits[0].drive = channels["L3-18_qd"]
+
+
+def create_dummy(runcard):
+    """Create a dummy platform using the dummy instrument.
+
+    Useful for testing.
+    """
+    from qibolab.instruments.dummy import DummyInstrument
+
+    # Create channel objects
+    channels = ChannelMap()
+    channels |= ChannelMap.from_names("readout", "drive", "flux")
+
+    # Create dummy controller
+    instrument = DummyInstrument("dummy", 0)
+    # Create design
+    design = InstrumentDesign([instrument], channels)
+    # Create platform
+    platform = DesignPlatform("dummy", design, runcard)
+
+    # map channels to qubits
+    for qubit in platform.qubits:
+        platform.qubits[qubit].readout = channels["readout"]
+        platform.qubits[qubit].drive = channels["drive"]
+        platform.qubits[qubit].flux = channels["flux"]
 
     return platform
 
@@ -103,6 +129,9 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
 
         controller = QMSim("qmopx", address, simulation_duration, cloud)
 
+    # set time of flight for readout integration (HARDCODED)
+    controller.time_of_flight = 280
+
     # Instantiate local oscillators (HARDCODED)
     local_oscillators = [
         LocalOscillator("lo_readout_a", "192.168.0.39"),
@@ -135,7 +164,8 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
     channels["L3-14"].local_oscillator = local_oscillators[4]
     channels["L4-26"].local_oscillator = local_oscillators[5]
 
-    design = MixerInstrumentDesign(controller, channels, local_oscillators)
+    instruments = [controller] + local_oscillators
+    design = InstrumentDesign(instruments, channels)
     platform = DesignPlatform("qw5q_gold", design, runcard)
 
     # assign channels to qubits
@@ -154,6 +184,20 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
         qubits[q].drive = channels[f"L3-{10 + q}"]
         qubits[q].flux = channels[f"L4-{q}"]
         channels[f"L4-{q}"].qubit = qubits[q]
+
+    # Platfom topology
+    Q = [f"q{i}" for i in range(5)]
+    chip = nx.Graph()
+    chip.add_nodes_from(Q)
+    graph_list = [
+        (Q[0], Q[2]),
+        (Q[1], Q[2]),
+        (Q[3], Q[2]),
+        (Q[4], Q[2]),
+    ]
+    chip.add_edges_from(graph_list)
+    platform.topology = chip
+
     return platform
 
 
@@ -179,7 +223,7 @@ def Platform(name, runcard=None, design=None):
             raise_error(RuntimeError, f"Runcard {name} does not exist.")
 
     if name == "dummy":
-        from qibolab.platforms.dummy import DummyPlatform as Device
+        return create_dummy(runcard)
     elif name == "icarusq":
         from qibolab.platforms.icplatform import ICPlatform as Device
     elif name == "qw5q_gold":

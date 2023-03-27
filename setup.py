@@ -41,9 +41,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering :: Physics",
     ],
-    install_requires=[
-        "qibo>=0.1.8",
-    ],
+    install_requires=["qibo>=0.1.8", "networkx", "more-itertools", "pyyaml"],
     extras_require={
         "docs": [
             "sphinx",
@@ -68,6 +66,7 @@ setup(
         "tiiq": [
             "qblox-instruments==0.7.0",
             "qcodes",
+            "qick@git+https://github.com/openquantumhardware/qick.git@26a2f46",
             "pyvisa-py==0.5.3",
             "qm-qua>=1.0.1",
             "qualang-tools>=0.13.1",

@@ -4,49 +4,41 @@ import time
 import numpy as np
 from qibo.config import log, raise_error
 
-from qibolab.platforms.abstract import AbstractPlatform
+from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import ExecutionResults
 from qibolab.sweeper import Parameter
 
 
-class DummyPlatform(AbstractPlatform):
-    """Dummy platform that returns random voltage values.
+class DummyInstrument(AbstractInstrument):
+    """Dummy instrument that returns random voltage values.
 
     Useful for testing code without requiring access to hardware.
 
     Args:
-        name (str): name of the platform.
+        name (str): name of the instrument.
+        address (int): address to connect to the instrument.
+            Not used since the instrument is dummy, it only
+            exists to keep the same interface with other
+            instruments.
     """
 
-    def __init__(self, name, runcard):
-        super().__init__(name, runcard)
-
     def connect(self):
-        log.info("Connecting to dummy platform.")
+        log.info("Connecting to dummy instrument.")
 
-    def setup(self):
-        log.info("Setting up dummy platform.")
+    def setup(self, *args, **kwargs):
+        log.info("Setting up dummy instrument.")
 
     def start(self):
-        log.info("Starting dummy platform.")
+        log.info("Starting dummy instrument.")
 
     def stop(self):
-        log.info("Stopping dummy platform.")
+        log.info("Stopping dummy instrument.")
 
     def disconnect(self):
-        log.info("Disconnecting dummy platform.")
+        log.info("Disconnecting dummy instrument.")
 
-    def to_sequence(self, sequence, gate):  # pragma: no cover
-        raise_error(NotImplementedError)
-
-    def execute_pulse_sequence(self, sequence, nshots=None, relaxation_time=None):
-        if relaxation_time is None:
-            relaxation_time = self.settings.get("sleep_time")
-
-        if nshots is None:
-            nshots = self.settings["settings"]["hardware_avg"]
-
+    def play(self, qubits, sequence, nshots, relaxation_time):
         time.sleep(relaxation_time)
 
         ro_pulses = {pulse.qubit: pulse.serial for pulse in sequence.ro_pulses}
@@ -56,29 +48,10 @@ class DummyPlatform(AbstractPlatform):
             i = np.random.rand(nshots)
             q = np.random.rand(nshots)
             shots = np.random.rand(nshots)
-            results[qubit] = ExecutionResults.from_components(i, q, shots)
-            results[serial] = copy.copy(results[qubit])
+            results[qubit] = results[serial] = ExecutionResults.from_components(i, q, shots)
         return results
 
-    def set_attenuation(self, qubit, att):
-        """Empty since a dummy platform is not connected to any instrument."""
-
-    def set_bias(self, qubit, bias):
-        """Empty since a dummy platform is not connected to any instrument."""
-
-    def set_gain(self, qubit, gain):
-        """Empty since a dummy platform is not connected to any instrument."""
-
-    def get_attenuation(self, qubit):
-        """Empty since a dummy platform is not connected to any instrument."""
-
-    def get_bias(self, qubit):
-        """Empty since a dummy platform is not connected to any instrument."""
-
-    def get_gain(self, qubit):
-        """Empty since a dummy platform is not connected to any instrument."""
-
-    def sweep(self, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
+    def sweep(self, qubits, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
         results = {}
         sweeper_pulses = {}
 
@@ -96,6 +69,7 @@ class DummyPlatform(AbstractPlatform):
 
         # perform sweeping recursively
         self._sweep_recursion(
+            qubits,
             copy_sequence,
             copy.deepcopy(sequence),
             *sweepers,
@@ -110,6 +84,7 @@ class DummyPlatform(AbstractPlatform):
 
     def _sweep_recursion(
         self,
+        qubits,
         sequence,
         original_sequence,
         *sweepers,
@@ -129,10 +104,11 @@ class DummyPlatform(AbstractPlatform):
         # perform sweep recursively
         for value in sweeper.values:
             self._update_pulse_sequence_parameters(
-                sweeper, sweeper_pulses, original_sequence, map_original_shifted, value
+                qubits, sweeper, sweeper_pulses, original_sequence, map_original_shifted, value
             )
             if len(sweepers) > 1:
                 self._sweep_recursion(
+                    qubits,
                     sequence,
                     original_sequence,
                     *sweepers[1:],
@@ -145,7 +121,7 @@ class DummyPlatform(AbstractPlatform):
                 )
             else:
                 new_sequence = copy.deepcopy(sequence)
-                result = self.execute_pulse_sequence(new_sequence, nshots)
+                result = self.play(qubits, new_sequence, nshots, relaxation_time)
                 # colllect result and append to original pulse
                 for original_pulse, new_serial in map_original_shifted.items():
                     acquisition = result[new_serial].compute_average() if average else result[new_serial]
@@ -180,7 +156,7 @@ class DummyPlatform(AbstractPlatform):
                 setattr(pulses[pulse], sweeper.parameter.name, original_value[pulse])
 
     def _update_pulse_sequence_parameters(
-        self, sweeper, sweeper_pulses, original_sequence, map_original_shifted, value
+        self, qubits, sweeper, sweeper_pulses, original_sequence, map_original_shifted, value
     ):
         """Helper method for _sweep_recursion"""
         if sweeper.pulses is not None:
@@ -188,15 +164,12 @@ class DummyPlatform(AbstractPlatform):
             for pulse in pulses:
                 if sweeper.parameter is Parameter.frequency:
                     if pulses[pulse].type is PulseType.READOUT:
-                        value += self.qubits[pulses[pulse].qubit].readout_frequency
+                        value += qubits[pulses[pulse].qubit].readout_frequency
                     else:
-                        value += self.qubits[pulses[pulse].qubit].drive_frequency
+                        value += qubits[pulses[pulse].qubit].drive_frequency
                     setattr(pulses[pulse], sweeper.parameter.name, value)
                 elif sweeper.parameter is Parameter.amplitude:
-                    if pulses[pulse].type is PulseType.READOUT:
-                        current_amplitude = self.native_gates["single_qubit"][pulses[pulse].qubit]["MZ"]["amplitude"]
-                    else:
-                        current_amplitude = self.native_gates["single_qubit"][pulses[pulse].qubit]["RX"]["amplitude"]
+                    current_amplitude = pulses[pulse].amplitude
                     setattr(pulses[pulse], sweeper.parameter.name, float(current_amplitude * value))
                 else:
                     setattr(pulses[pulse], sweeper.parameter.name, value)
@@ -210,8 +183,8 @@ class DummyPlatform(AbstractPlatform):
         if sweeper.qubits is not None:
             for qubit in sweeper.qubits:
                 if sweeper.parameter is Parameter.attenuation:
-                    self.set_attenuation(qubit, value)
+                    qubit.readout.attenuation = value
                 elif sweeper.parameter is Parameter.gain:
-                    self.set_gain(qubit, value)
+                    qubit.drive.gain = value
                 elif sweeper.parameter is Parameter.bias:
-                    self.set_bias(qubit, value)
+                    qubit.flux.offset = float(value)
