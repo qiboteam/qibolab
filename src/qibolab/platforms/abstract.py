@@ -217,6 +217,8 @@ class AbstractPlatform(ABC):
                     self.qubits[qubit].thresold = float(value)
                 elif "rotation_angle" in par:
                     self.qubits[qubit].rotation_angle = float(value)
+                elif "length" in par:  # assume only drive length
+                    self.native_single_qubit_gates[qubit]["RX"]["duration"] = float(value)
                 else:
                     raise_error(ValueError, "Unknown parameter.")
 
