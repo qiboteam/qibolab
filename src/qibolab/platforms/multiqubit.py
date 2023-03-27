@@ -65,13 +65,19 @@ class MultiqubitPlatform(AbstractPlatform):
         self.qd_port[qubit].gain = gain
 
     def set_bias(self, qubit, bias):
-        self.qb_port[qubit].current = bias
+        if qubit in self.qbm:
+             self.qb_port[qubit].current = bias
+        elif qubit in self.qfm:
+            self.qf_port[qubit].offset = bias
 
     def get_attenuation(self, qubit):
         return self.ro_port[qubit].attenuation
 
     def get_bias(self, qubit):
-        return self.qb_port[qubit].current
+        if qubit in self.qbm:
+            return self.qb_port[qubit].current
+        elif qubit in self.qfm:
+            return self.qf_port[qubit].offset
 
     def get_gain(self, qubit):
         return self.qd_port[qubit].gain
@@ -217,14 +223,6 @@ class MultiqubitPlatform(AbstractPlatform):
             if "readout" in roles[name]:
                 if not instrument_pulses[name].is_empty:
                     if not instrument_pulses[name].ro_pulses.is_empty:
-                        if all([pulse.serial in changed for pulse in instrument_pulses[name].ro_pulses]):
-                            # FIXME: for precision sweep in resonator spectroscopy
-                            # change necessary to perform precision sweep
-                            # TODO: move this to instruments (ask Alvaro)
-                            # TODO: check if this will work with multiplex
-                            for sequencers in self.instruments[name]._sequencers.values():
-                                for sequencer in sequencers:
-                                    sequencer.pulses = instrument_pulses[name].ro_pulses
                         results = self.instruments[name].acquire()
                         existing_keys = set(acquisition_results.keys()) & set(results.keys())
                         for key, value in results.items():
