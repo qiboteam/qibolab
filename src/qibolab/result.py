@@ -32,8 +32,8 @@ class ExecutionResults:
         return self.array.q
 
     def __add__(self, data):
-        i = np.append(self.i, data.i)
-        q = np.append(self.q, data.q)
+        i = np.append(self.i, data.i, axis=0)
+        q = np.append(self.q, data.q, axis=0)
 
         new_execution_results = self.__class__.from_components(i, q)
 
@@ -71,7 +71,7 @@ class ExecutionResults:
     @property
     def average(self):
         """Perform average over i and q"""
-        return AveragedResults.from_components(self.i.mean(), self.q.mean())
+        return AveragedResults.from_components(np.mean(self.i, keepdims=True), np.mean(self.q, keepdims=True))
 
     def to_dict(self):
         """Serialize output in dict."""
@@ -88,6 +88,5 @@ class ExecutionResults:
         return len(self.i)
 
 
-@dataclass
 class AveragedResults(ExecutionResults):
     """Data structure containing averages of ``ExecutionResults``."""
