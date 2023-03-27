@@ -198,7 +198,7 @@ class ExecutePulseSequence(AveragerProgram):
             raise Exception("Amplitude must be < 1 and > 1, was: {pulse.amplitude}")
 
         # phase gets converted from rad (qibolab) to degrees (qick) and then to register values
-        phase = self.deg2reg(math.degrees(pulse.relative_phase), gen_ch=gen_ch)
+        phase = self.deg2reg(np.degrees(pulse.relative_phase), gen_ch=gen_ch)
 
         # pulse length converted with DAC CLK
         us_length = pulse.duration * self.us
@@ -218,11 +218,8 @@ class ExecutePulseSequence(AveragerProgram):
 
         # if pulse is drag or gaussian first define the i-q shape and then set register
         if is_drag or is_gaus:
-            name = pulse.shape.name
-            sigma = us_length / pulse.shape.rel_sigma
-            sigma = self.soc.us2cycles(
-                us_length / pulse.shape.rel_sigma, gen_ch=gen_ch
-            )  # TODO probably conversion is linear
+            name = pulse.serial  # pulse.shape.name
+            sigma = soc_length / pulse.shape.rel_sigma
 
             if is_gaus:
                 self.add_gauss(ch=gen_ch, name=name, sigma=sigma, length=soc_length)
@@ -233,7 +230,7 @@ class ExecutePulseSequence(AveragerProgram):
                     name=name,
                     sigma=sigma,
                     delta=sigma,  # TODO: check if correct
-                    alpha=pulse.beta,
+                    alpha=pulse.shape.beta,
                     length=soc_length,
                 )
 
@@ -508,7 +505,7 @@ class ExecuteSingleSweep(RAveragerProgram):
             raise Exception("Amplitude must be < 1 and > 1, was: {pulse.amplitude}")
 
         # phase gets converted from rad (qibolab) to degrees (qick) and then to register values
-        phase = self.deg2reg(math.degrees(pulse.relative_phase), gen_ch=gen_ch)
+        phase = self.deg2reg(np.degrees(pulse.relative_phase), gen_ch=gen_ch)
 
         # pulse length converted with DAC CLK
         us_length = pulse.duration * self.us
@@ -547,7 +544,7 @@ class ExecuteSingleSweep(RAveragerProgram):
                     name=name,
                     sigma=sigma,
                     delta=sigma,  # TODO: check if correct
-                    alpha=pulse.beta,
+                    alpha=pulse.shape.beta,
                     length=soc_length,
                 )
 
@@ -683,6 +680,7 @@ class TII_RFSOC4x2(AbstractInstrument):
 
         if calibrate:
             self.calibration_cfg = {}
+            self.states_calibrated = False  # this must set to false
             self.calibrate_states(qubits)
             self.states_calibrated = True
 
