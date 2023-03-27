@@ -77,12 +77,12 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
             "D": [f"L1-{i}" for i in range(21, 26)],
         },
     }
-    
+
     connections = {
-        "A": [1,2,3],
-        "B": [4,5],
-        "C": [6,7],
-        "D": [8,9],
+        "A": [1, 2, 3],
+        "B": [4, 5],
+        "C": [6, 7],
+        "D": [8, 9],
     }
 
     # Create channels
@@ -92,19 +92,34 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
                 channels |= ChannelMap.from_names(wire)
 
     for feedline in connections:
-        channels[wiring["feedback"][feedline][0]].port = [(f"con{connections[feedline][0]}", 1), (f"con{connections[feedline][0]}", 2)]
-        channels[wiring["feedback"][feedline][1]].port = [(f"con{connections[feedline][1]}", 1), (f"con{connections[feedline][1]}", 2)]
-        channels[wiring["readout"][feedline][0]].port = [(f"con{connections[feedline][0]}", 9), (f"con{connections[feedline][0]}", 10)]
-        channels[wiring["readout"][feedline][1]].port = [(f"con{connections[feedline][1]}", 9), (f"con{connections[feedline][1]}", 10)]
+        channels[wiring["feedback"][feedline][0]].port = [
+            (f"con{connections[feedline][0]}", 1),
+            (f"con{connections[feedline][0]}", 2),
+        ]
+        channels[wiring["feedback"][feedline][1]].port = [
+            (f"con{connections[feedline][1]}", 1),
+            (f"con{connections[feedline][1]}", 2),
+        ]
+        channels[wiring["readout"][feedline][0]].port = [
+            (f"con{connections[feedline][0]}", 9),
+            (f"con{connections[feedline][0]}", 10),
+        ]
+        channels[wiring["readout"][feedline][1]].port = [
+            (f"con{connections[feedline][1]}", 9),
+            (f"con{connections[feedline][1]}", 10),
+        ]
 
         wires_list = wiring["drive"][feedline]
         for i in range(len(wires_list)):
-            channels[wires_list[i]].port = [(f"con{connections[feedline][(2*i)//8]}", 2*i%8 + 1), (f"con{connections[feedline][(2*i)//8]}", 2*i%8 + 2)]
-            last_port = 2*i%8 + 2
+            channels[wires_list[i]].port = [
+                (f"con{connections[feedline][(2*i)//8]}", 2 * i % 8 + 1),
+                (f"con{connections[feedline][(2*i)//8]}", 2 * i % 8 + 2),
+            ]
+            last_port = 2 * i % 8 + 2
 
         wires_list = wiring["flux"][feedline]
         for i in range(len(wires_list)):
-            channels[wires_list[i]].port = [(f"con{connections[feedline][i//8]}", (i+last_port)%8 + 1)] 
+            channels[wires_list[i]].port = [(f"con{connections[feedline][i//8]}", (i + last_port) % 8 + 1)]
 
     # Instantiate QM OPX instruments
     if simulation_duration is None:
@@ -129,18 +144,14 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
     controller.time_of_flight = 280
 
     # Instantiate local oscillators (HARDCODED)
-    local_oscillators = [LocalOscillator(f"era_0{i}", f"192.168.0.20{i}") for i in range(1, 9)] + \
-        [LocalOscillator(f"LO_{i}", f"192.168.0.3{i}") for i in [1,2,3,4,5,6,9]]
+    local_oscillators = [LocalOscillator(f"era_0{i}", f"192.168.0.20{i}") for i in range(1, 9)] + [
+        LocalOscillator(f"LO_{i}", f"192.168.0.3{i}") for i in [1, 2, 3, 4, 5, 6, 9]
+    ]
     drive_local_oscillators = {
-        "A": ["LO_05"] + \
-            2*["LO_01"] + \
-            2*["LO_01"]+\
-            ["era_01"],
-        "B": ["era_02"] + \
-            4*["LO_06"],
+        "A": ["LO_05"] + 2 * ["LO_01"] + 2 * ["LO_01"] + ["era_01"],
+        "B": ["era_02"] + 4 * ["LO_06"],
         "C": [f"era_0{i}" for i in range(3, 8)],
-        "D": ["era_08"] + \
-            2*["LO_01"]
+        "D": ["era_08"] + 2 * ["LO_01"],
     }
     # Configure local oscillator's frequency and power
     for lo in local_oscillators:
@@ -148,7 +159,7 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
             lo.frequency = 6.1e9
             lo.power = 21
         elif lo.name == "LO_03":
-            lo.frequency = 7.e+9
+            lo.frequency = 7.0e9
             lo.power = 21
         elif lo.name == "LO_04":
             lo.frequency = 7.5e9
@@ -195,28 +206,60 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
                     qubits[q].drive = channels[wire]
                     # if "era" in qubits[q].drive.local_oscillator.name:
                     #     qubits[q].drive.local_oscillator.frequency = qubits[q].drive.frequency + 200e6
-    
-    for q in ["A1", "A2", "A4", "B1", "B2", "B3", "C1", "C4", "D1", "D2"]: #Qubits with LO around 7e9
+
+    for q in ["A1", "A2", "A4", "B1", "B2", "B3", "C1", "C4", "D1", "D2"]:  # Qubits with LO around 7e9
         qubits[q].readout = channels[wiring["readout"][feedline][0]]
         qubits[q].feedback = channels[wiring["feedback"][feedline][0]]
-    for q in ["A3", "A5", "A6", "B4", "B5", "C2", "C3", "C5", "D4", "D5"]: #Qubits with LO around 7.5e9
+    for q in ["A3", "A5", "A6", "B4", "B5", "C2", "C3", "C5", "D4", "D5"]:  # Qubits with LO around 7.5e9
         qubits[q].readout = channels[wiring["readout"][feedline][1]]
         qubits[q].feedback = channels[wiring["feedback"][feedline][1]]
-    
- 
+
     # Platfom topology
     Q = []
-    for i in range(1,7): 
-        Q += ["A{i}"] 
-    for i in range(1,6): 
-        Q += ["B{i}"] 
-    for i in range(1,6): 
-        Q += ["C{i}"] 
-    for i in range(1,6): 
-        Q += ["D{i}"] 
-    chip = nx.Graph() 
-    chip.add_nodes_from(Q) 
-    graph_list = [(Q[0], Q[1]), (Q[0], Q[2]), (Q[0], Q[20]), (Q[1], Q[3]), (Q[2], Q[4]), (Q[2], Q[19]), (Q[3], Q[4]), (Q[3], Q[8]), (Q[4], Q[6]), (Q[5], Q[2]), (Q[5], Q[8]), (Q[5], Q[18]), (Q[5], Q[13]), (Q[6], Q[8]), (Q[6], Q[7]), (Q[7], Q[9]), (Q[8], Q[9]), (Q[9], Q[10]), (Q[9], Q[13]), (Q[10], Q[11]), (Q[11], Q[13]), (Q[11], Q[12]), (Q[12], Q[14]), (Q[13], Q[14]), (Q[14], Q[18]), (Q[14], Q[15]), (Q[15], Q[16]), (Q[16], Q[18]), (Q[16], Q[17]), (Q[17], Q[19]), (Q[18], Q[19]), (Q[19], Q[20]), ] 
+    for i in range(1, 7):
+        Q += ["A{i}"]
+    for i in range(1, 6):
+        Q += ["B{i}"]
+    for i in range(1, 6):
+        Q += ["C{i}"]
+    for i in range(1, 6):
+        Q += ["D{i}"]
+    chip = nx.Graph()
+    chip.add_nodes_from(Q)
+    graph_list = [
+        (Q[0], Q[1]),
+        (Q[0], Q[2]),
+        (Q[0], Q[20]),
+        (Q[1], Q[3]),
+        (Q[2], Q[4]),
+        (Q[2], Q[19]),
+        (Q[3], Q[4]),
+        (Q[3], Q[8]),
+        (Q[4], Q[6]),
+        (Q[5], Q[2]),
+        (Q[5], Q[8]),
+        (Q[5], Q[18]),
+        (Q[5], Q[13]),
+        (Q[6], Q[8]),
+        (Q[6], Q[7]),
+        (Q[7], Q[9]),
+        (Q[8], Q[9]),
+        (Q[9], Q[10]),
+        (Q[9], Q[13]),
+        (Q[10], Q[11]),
+        (Q[11], Q[13]),
+        (Q[11], Q[12]),
+        (Q[12], Q[14]),
+        (Q[13], Q[14]),
+        (Q[14], Q[18]),
+        (Q[14], Q[15]),
+        (Q[15], Q[16]),
+        (Q[16], Q[18]),
+        (Q[16], Q[17]),
+        (Q[17], Q[19]),
+        (Q[18], Q[19]),
+        (Q[19], Q[20]),
+    ]
     chip.add_edges_from(graph_list)
 
     platform.topology = chip
