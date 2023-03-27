@@ -45,46 +45,52 @@ def custom_circuit():
 def special_connectivity(connectivity):
     """Return a TII harware chip connectivity as a networkx graph"""
     if connectivity == "21_qubits":
-        Q = [f"q{i}" for i in range(21)]
+        Q = []
+        for i in range(1, 7):
+            Q.append["A{i}"]
+        for i in range(1, 6):
+            Q.append["B{i}"]
+        for i in range(1, 6):
+            Q.append["C{i}"]
+        for i in range(1, 6):
+            Q.append["D{i}"]
         chip = nx.Graph()
         chip.add_nodes_from(Q)
-        graph_list_h = [
+        graph_list[
             (Q[0], Q[1]),
-            (Q[1], Q[2]),
+            (Q[0], Q[2]),
+            (Q[0], Q[20]),
+            (Q[1], Q[3]),
+            (Q[2], Q[4]),
+            (Q[2], Q[19]),
             (Q[3], Q[4]),
-            (Q[4], Q[5]),
-            (Q[5], Q[6]),
+            (Q[3], Q[8]),
+            (Q[4], Q[6]),
+            (Q[5], Q[2]),
+            (Q[5], Q[8]),
+            (Q[5], Q[18]),
+            (Q[5], Q[13]),
+            (Q[6], Q[8]),
             (Q[6], Q[7]),
+            (Q[7], Q[9]),
             (Q[8], Q[9]),
             (Q[9], Q[10]),
+            (Q[9], Q[13]),
             (Q[10], Q[11]),
+            (Q[11], Q[13]),
             (Q[11], Q[12]),
+            (Q[12], Q[14]),
             (Q[13], Q[14]),
+            (Q[14], Q[18]),
             (Q[14], Q[15]),
             (Q[15], Q[16]),
+            (Q[16], Q[18]),
             (Q[16], Q[17]),
+            (Q[17], Q[19]),
             (Q[18], Q[19]),
             (Q[19], Q[20]),
         ]
-        graph_list_v = [
-            (Q[3], Q[8]),
-            (Q[8], Q[13]),
-            (Q[0], Q[4]),
-            (Q[4], Q[9]),
-            (Q[9], Q[14]),
-            (Q[14], Q[18]),
-            (Q[1], Q[5]),
-            (Q[5], Q[10]),
-            (Q[10], Q[15]),
-            (Q[15], Q[19]),
-            (Q[2], Q[6]),
-            (Q[6], Q[11]),
-            (Q[11], Q[16]),
-            (Q[16], Q[20]),
-            (Q[7], Q[12]),
-            (Q[12], Q[17]),
-        ]
-        chip.add_edges_from(graph_list_h + graph_list_v)
+        chip.add_edges_from(graph_list)
     elif connectivity == "5_qubits":
         Q = [f"q{i}" for i in range(5)]
         chip = nx.Graph()
