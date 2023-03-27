@@ -32,7 +32,7 @@ def create_dummy(runcard):
     return platform
 
 
-def create_tii_qw25q_v3_e10(runcard, simulation_duration=None, address=None, cloud=False):
+def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=False):
     """Create platform using Quantum Machines (QM) OPXs and Rohde Schwarz/ERAsynth local oscillators.
 
     IPs and other instrument related parameters are hardcoded in ``__init__`` and ``setup``.
@@ -87,24 +87,24 @@ def create_tii_qw25q_v3_e10(runcard, simulation_duration=None, address=None, clo
 
     # Create channels
     for channel in wiring:
-        for qubit in wiring[qubit]:
-            for wire in wiring[qubit][channel]:
+        for feedline in wiring[feedline]:
+            for wire in wiring[feedline][channel]:
                 channels |= ChannelMap.from_names(wire)
 
-    for qubit in connections:
-        channels[wiring["feedback"][qubit][0]].port = [(f"con{connections[qubit][0]}", 1), (f"con{connections[qubit][0]}", 2)]
-        channels[wiring["feedback"][qubit][1]].port = [(f"con{connections[qubit][1]}", 1), (f"con{connections[qubit][1]}", 2)]
-        channels[wiring["readout"][qubit][0]].port = [(f"con{connections[qubit][0]}", 9), (f"con{connections[qubit][0]}", 10)]
-        channels[wiring["readout"][qubit][1]].port = [(f"con{connections[qubit][1]}", 9), (f"con{connections[qubit][1]}", 10)]
+    for feedline in connections:
+        channels[wiring["feedback"][feedline][0]].port = [(f"con{connections[feedline][0]}", 1), (f"con{connections[feedline][0]}", 2)]
+        channels[wiring["feedback"][feedline][1]].port = [(f"con{connections[feedline][1]}", 1), (f"con{connections[feedline][1]}", 2)]
+        channels[wiring["readout"][feedline][0]].port = [(f"con{connections[feedline][0]}", 9), (f"con{connections[feedline][0]}", 10)]
+        channels[wiring["readout"][feedline][1]].port = [(f"con{connections[feedline][1]}", 9), (f"con{connections[feedline][1]}", 10)]
 
-        wires_list = wiring["drive"][qubit]
+        wires_list = wiring["drive"][feedline]
         for i in range(len(wires_list)):
-            channels[wires_list[i]].port = [(f"con{connections[qubit][(2*i)//8]}", 2*i%8 + 1), (f"con{connections[qubit][(2*i)//8]}", 2*i%8 + 2)]
+            channels[wires_list[i]].port = [(f"con{connections[feedline][(2*i)//8]}", 2*i%8 + 1), (f"con{connections[feedline][(2*i)//8]}", 2*i%8 + 2)]
             last_port = 2*i%8 + 2
 
-        wires_list = wiring["flux"][qubit]
+        wires_list = wiring["flux"][feedline]
         for i in range(len(wires_list)):
-            channels[wires_list[i]].port = [(f"con{connections[qubit][i//8]}", (i+last_port)%8 + 1)] 
+            channels[wires_list[i]].port = [(f"con{connections[feedline][i//8]}", (i+last_port)%8 + 1)] 
 
     # Instantiate QM OPX instruments
     if simulation_duration is None:
@@ -132,16 +132,52 @@ def create_tii_qw25q_v3_e10(runcard, simulation_duration=None, address=None, clo
     local_oscillators = [LocalOscillator(f"era_0{i}", f"192.168.0.20{i}") for i in range(1, 9)] + \
         [LocalOscillator(f"LO_{i}", f"192.168.0.3{i}") for i in [1,2,3,4,5,6,9]]
     drive_local_oscillators = {
-        "A": [LocalOscillator(f"LO_05", f"192.168.0.35")] + \
-            2*[LocalOscillator(f"LO_01", f"192.168.0.31")] + \
-            2*[LocalOscillator(f"LO_01", f"192.168.0.31")]+\
-            [LocalOscillator("era_01", "192.168.0.201")],
-        "B": [LocalOscillator(f"era_02", f"192.168.0.202")] + \
-            4*[LocalOscillator(f"LO_06", f"192.168.0.206")],
-        "C": [LocalOscillator(f"era_0{i}", f"192.168.0.20{i}") for i in range(3, 8)],
-        "D": [LocalOscillator(f"era_08", "192.168.0.208")] + \
-            2*[LocalOscillator(f"LO_01", "192.168.0.31")]
+        "A": ["LO_05"] + \
+            2*["LO_01"] + \
+            2*["LO_01"]+\
+            ["era_01"],
+        "B": ["era_02"] + \
+            4*["LO_06"],
+        "C": [f"era_0{i}" for i in range(3, 8)],
+        "D": ["era_08"] + \
+            2*["LO_01"]
     }
+    # Configure local oscillator's frequency and power
+    for lo in local_oscillators:
+        if lo.name == "LO_01":
+            lo.frequency = 6.1e9
+            lo.power = 21
+        elif lo.name == "LO_03":
+            lo.frequency = 7.e+9
+            lo.power = 21
+        elif lo.name == "LO_04":
+            lo.frequency = 7.5e9
+            lo.power = 21
+        elif lo.name == "LO_05":
+            lo.frequency = 5.3e9
+            lo.power = 18
+        elif lo.name == "LO_06":
+            lo.frequency = 6.2e9
+            lo.power = 21
+        elif "era" in lo.name:
+            lo.frequency = 4e9
+            lo.power = 15
+
+    # Assign local oscillators to channels
+    for lo in local_oscillators:
+        if lo.name == "LO_03":
+            for feedline in connections:
+                channels[wiring["readout"][feedline][0]].local_oscillator = lo
+                channels[wiring["feedback"][feedline][0]].local_oscillator = lo
+        elif lo.name == "LO_04":
+            for feedline in connections:
+                channels[wiring["readout"][feedline][1]].local_oscillator = lo
+                channels[wiring["feedback"][feedline][1]].local_oscillator = lo
+        else:
+            for feedline in drive_local_oscillators:
+                for i, name in enumerate(drive_local_oscillators[feedline]):
+                    if lo.name == name:
+                        channels[wiring["drive"][feedline][i]].local_oscillator = lo
 
     instruments = [controller] + local_oscillators
     design = InstrumentDesign(instruments, channels)
@@ -150,65 +186,39 @@ def create_tii_qw25q_v3_e10(runcard, simulation_duration=None, address=None, clo
     # assign channels to qubits
     qubits = platform.qubits
     for channel in ["flux", "drive"]:
-        for qubit in wiring[channel]:
-            for i, wire in enumerate(wiring[channel][qubit]):
-                q = f"{qubit}{i+1}"
+        for feedline in wiring[channel]:
+            for i, wire in enumerate(wiring[channel][feedline]):
+                q = f"{feedline}{i+1}"
                 if channel == "flux":
                     qubits[q].flux = wire
                 elif channel == "drive":
                     qubits[q].drive = wire
-                    channels[wire].local_oscillator = drive_local_oscillators[qubit][i]
+                    if "era" in qubits[q].drive.local_oscillator.name:
+                        qubits[q].drive.local_oscillator.frequency = qubits[q].drive.frequency + 200e6
     
-    for q in range(0, 4):
-        for qubit in connections:
-            qubits[f"{qubit}{q}"].readout = wiring["readout"][qubit][0]
-            qubits[f"{qubit}{q}"].feedback = wiring["feedback"][qubit][0]
-    for q in range(4, 7):
-        for qubit in connections:
-            if (not qubit == "A") and (q == 6):
-                break
-            qubits[f"{qubit}{q}"].readout = wiring["readout"][qubit][1]
-            qubits[f"{qubit}{q}"].feedback = wiring["feedback"][qubit][1]
+    for q in ["A1", "A2", "A4", "B0", "B1", "B2", "B3", "C1", "C4", "D1", "D2"]: #Qubits with LO around 7e9
+        qubits[q].readout = wiring["readout"][feedline][0]
+        qubits[q].feedback = wiring["feedback"][feedline][0]
+    for q in ["A3", "A5", "A6", "B4", "B5", "C2", "C3", "C5", "D4", "D5"]: #Qubits with LO around 7.5e9
+        qubits[f"{feedline}{q}"].readout = wiring["readout"][feedline][1]
+        qubits[f"{feedline}{q}"].feedback = wiring["feedback"][feedline][1]
     
-    # Add LO_03 to all readout lines on their first module
-    for qubit in connections:
-        channels[wiring["readout"][qubit][0]].local_oscillator = LocalOscillator("LO_03", "192.168.0.33")
-        channels[wiring["readout"][qubit][1]].local_oscillator = LocalOscillator("LO_04", "192.168.0.34")
-        channels[wiring["feedback"][qubit][0]].local_oscillator = LocalOscillator("LO_03", "192.168.0.33")
-        channels[wiring["feedback"][qubit][1]].local_oscillator = LocalOscillator("LO_04", "192.168.0.34")
-    
-    # Configure local oscillator's frequency and power
-    for q in qubits:
-        if qubits[q].readout.local_oscillator.name == "LO_01":
-            qubits[q].readout.local_oscillator.frequency = 6e9
-            qubits[q].readout.local_oscillator.power = 21
-        elif qubits[q].readout.local_oscillator.name == "LO_03":
-            qubits[q].readout.local_oscillator.frequency = 6.5e9
-            qubits[q].readout.local_oscillator.power = 21
-        elif qubits[q].readout.local_oscillator.name == "LO_04":
-            qubits[q].readout.local_oscillator.frequency = 6.5e9
-            qubits[q].readout.local_oscillator.power = 21
-        elif qubits[q].readout.local_oscillator.name == "LO_05":
-            qubits[q].readout.local_oscillator.frequency = 6e9
-            qubits[q].readout.local_oscillator.power = 18
-        elif qubits[q].readout.local_oscillator.name == "LO_06":
-            qubits[q].readout.local_oscillator.frequency = 6e9
-            qubits[q].readout.local_oscillator.power = 21
-        
-        qubits[q].readout.local_oscillator.frequency = 6.5e9
-    
-
+ 
     # Platfom topology
-    Q = [chr(i+65) + str(j+1) for i in range(4) for j in range(5)] + "A6"
-    chip = nx.Graph()
-    chip.add_nodes_from(Q)
-    graph_list = [
-        (Q[0], Q[2]),
-        (Q[1], Q[2]),
-        (Q[3], Q[2]),
-        (Q[4], Q[2]),
-    ]
+    Q = [] 
+    for i in range(1,7): 
+        Q.append ["A{i}"] 
+    for i in range(1,6): 
+        Q.append ["B{i}"] 
+    for i in range(1,6): 
+        Q.append ["C{i}"] 
+    for i in range(1,6): 
+        Q.append ["D{i}"] 
+    chip = nx.Graph() 
+    chip.add_nodes_from(Q) 
+    graph_list = [(Q[0], Q[1]), (Q[0], Q[2]), (Q[0], Q[20]), (Q[1], Q[3]), (Q[2], Q[4]), (Q[2], Q[19]), (Q[3], Q[4]), (Q[3], Q[8]), (Q[4], Q[6]), (Q[5], Q[2]), (Q[5], Q[8]), (Q[5], Q[18]), (Q[5], Q[13]), (Q[6], Q[8]), (Q[6], Q[7]), (Q[7], Q[9]), (Q[8], Q[9]), (Q[9], Q[10]), (Q[9], Q[13]), (Q[10], Q[11]), (Q[11], Q[13]), (Q[11], Q[12]), (Q[12], Q[14]), (Q[13], Q[14]), (Q[14], Q[18]), (Q[14], Q[15]), (Q[15], Q[16]), (Q[16], Q[18]), (Q[16], Q[17]), (Q[17], Q[19]), (Q[18], Q[19]), (Q[19], Q[20]), ] 
     chip.add_edges_from(graph_list)
+
     platform.topology = chip
 
     return platform
@@ -240,7 +250,7 @@ def Platform(name, runcard=None, design=None):
     elif name == "icarusq":
         from qibolab.platforms.icplatform import ICPlatform as Device
     elif name == "qw5q_gold":
-        return create_tii_qw5q_gold(runcard)
+        return create_tii_qw25q(runcard)
     else:
         from qibolab.platforms.multiqubit import MultiqubitPlatform as Device
 
