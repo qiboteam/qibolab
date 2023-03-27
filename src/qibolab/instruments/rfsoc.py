@@ -530,10 +530,8 @@ class ExecuteSingleSweep(RAveragerProgram):
         # if pulse is drag or gaussian first define the i-q shape and then set register
         if is_drag or is_gaus:
             name = pulse.shape.name
-            sigma = us_length / pulse.shape.rel_sigma
-            sigma = self.soc.us2cycles(
-                us_length / pulse.shape.rel_sigma, gen_ch=gen_ch
-            )  # TODO probably conversion is linear
+
+            sigma = soc_length / pulse.shape.rel_sigma
 
             if is_gaus:
                 self.add_gauss(ch=gen_ch, name=name, sigma=sigma, length=soc_length)
