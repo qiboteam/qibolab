@@ -9,6 +9,8 @@ from qibo import gates
 from qibo.config import log, raise_error
 from qibo.models import Circuit
 
+from qibolab.transpilers.gate_decompositions import translate_gate
+
 DEFAULT_INIT_SAMPLES = 100
 
 
@@ -18,6 +20,14 @@ class QubitInitMethod(Enum):
     greedy = auto()
     subgraph = auto()
     custom = auto()
+
+
+class TwoQubitNatives(Enum):
+    """A class to define the two qubit native gates."""
+
+    CZ = auto()
+    ISWAP = auto()
+    all = auto()
 
 
 class Transpiler:
@@ -37,25 +47,69 @@ class Transpiler:
         _added_swaps (int): number of swaps added to the circuit to match connectivity.
     """
 
-    def __init__(self, connectivity, init_method="greedy", init_samples=None):
+    def __init__(self, connectivity, init_method="greedy", init_samples=None, two_qubit_natives="CZ"):
         self.connectivity = connectivity
         self.init_method = init_method
         if self.init_method is QubitInitMethod.greedy and init_samples is None:
             init_samples = DEFAULT_INIT_SAMPLES
         self.init_samples = init_samples
+        self.two_qubit_natives = two_qubit_natives
 
         self._circuit_repr = None
         self._mapping = None
         self._graph = None
         self._qubit_map = None
+        self._transpiled_circuit = None
         self._circuit_position = 0
         self._added_swaps = 0
 
-    def transpile(self, qibo_circuit):
-        """Qubit mapping initialization and circuit transpiling.
+    def transpile(self, circuit, fuse_one_qubit=False, fusion_algorithm=False):
+        """Full transpilation, match connectivity and translation into native gates.
 
         Args:
-            qibo_circuit (qibo.Circuit): circuit to be transpiled.
+            circuit (qibo.Circuit): circuit to be transpiled.
+            fuse_one_qubit (bool):
+            fusion_algorithm (bool):
+
+        Returns:
+            transpiled_circuit (qibo.Circuit): circut mapped to hardware topology with only native gates.
+            final_mapping (dict): final qubit mapping.
+            init_mapping (dict): initial qubit mapping.
+            added_swaps (int): number of swap gates added.
+        """
+
+        # TODO: ask Stavros what this part of the code do and if it is useful in this case
+        if fusion_algorithm:
+            # Re-arrange gates using qibo's fusion algorithm
+            # this may reduce number of SWAPs when fixing for connectivity
+            fcircuit = circuit.fuse(max_qubits=2)
+            new = circuit.__class__(circuit.nqubits)
+            for fgate in fcircuit.queue:
+                if isinstance(fgate, gates.FusedGate):
+                    new.add(fgate.gates)
+                else:
+                    new.add(fgate)
+            circuit = new
+
+        # Match connectivity
+        mapped_circuit, final_mapping, init_mapping, added_swaps = self.match_connectivity(circuit)
+
+        # Two-qubit gates to native
+        new = translate_circuit(mapped_circuit, two_qubit_natives=self._two_qubit_natives, translate_single_qubit=False)
+        # Optional: fuse one-qubit gates to reduce circuit depth
+        if fuse_one_qubit:
+            new = new.fuse(max_qubits=1)
+        # One-qubit gates to native
+        transpiled_circuit = translate_circuit(
+            new, two_qubit_natives=self._two_qubit_natives, translate_single_qubit=True
+        )
+        return (transpiled_circuit, final_mapping, init_mapping, added_swaps)
+
+    def match_connectivity(self, circuit):
+        """Qubit mapping initialization and circuit connectivity matching.
+
+        Args:
+            circuit (qibo.Circuit): circuit to be matched to hardware connectivity.
 
         Returns:
             hardware_mapped_circuit (qibo.Circuit): circut mapped to hardware topology.
@@ -65,7 +119,7 @@ class Transpiler:
         """
         self._circuit_position = 0
         self._added_swaps = 0
-        self.translate_circuit(qibo_circuit)
+        self.create_circuit_repr(circuit)
         keys = list(self._connectivity.nodes())
         if self._init_method is QubitInitMethod.greedy:
             self.greedy_init()
@@ -78,13 +132,14 @@ class Transpiler:
         init_qubit_map = np.argsort(list(self._mapping.values()))
         init_mapping = dict(zip(keys, init_qubit_map))
         self._qubit_map = np.sort(init_qubit_map)
-        self.init_circuit(qibo_circuit)
-        self.first_transpiler_step(qibo_circuit)
+        self.init_circuit(circuit)
+        self.first_transpiler_step(circuit)
         while len(self._circuit_repr) != 0:
-            self.transpiler_step(qibo_circuit)
+            self.transpiler_step(circuit)
         final_mapping = {key: init_qubit_map[self._qubit_map[i]] for i, key in enumerate(keys)}
+        hardware_mapped_circuit = (self.init_mapping_circuit(self._transpiled_circuit, init_qubit_map),)
         return (
-            self.init_mapping_circuit(self.transpiled_circuit, init_qubit_map),
+            hardware_mapped_circuit,
             final_mapping,
             init_mapping,
             self._added_swaps,
@@ -150,7 +205,7 @@ class Transpiler:
         return self._init_method
 
     @init_method.setter
-    def init_method(self, init_method, init_samples=100):
+    def init_method(self, init_method):
         """Set the initial mapping method for the transpiler.
 
         Args:
@@ -159,6 +214,21 @@ class Transpiler:
         if isinstance(init_method, str):
             init_method = QubitInitMethod[init_method]
         self._init_method = init_method
+
+    @property
+    def two_qubit_natives(self):
+        return self._two_qubit_natives
+
+    @two_qubit_natives.setter
+    def two_qubit_natives(self, two_qubit_natives):
+        """Set the initial mapping method for the transpiler.
+
+        Args:
+            init_method (string): Initial mapping method ("greedy" or "subgraph").
+        """
+        if isinstance(two_qubit_natives, str):
+            two_qubit_natives = TwoQubitNatives[two_qubit_natives]
+        self._two_qubit_natives = two_qubit_natives
 
     @property
     def init_samples(self):
@@ -176,7 +246,7 @@ class Transpiler:
             self.init_method = QubitInitMethod.greedy
         self._init_samples = init_samples
 
-    def translate_circuit(self, qibo_circuit):
+    def create_circuit_repr(self, qibo_circuit):
         """Translate qibo circuit into a list of two qubit gates to be used by the transpiler.
 
         Args:
@@ -324,7 +394,7 @@ class Transpiler:
                 "You are using more physical qubits than required by the circuit, some qubits will be added to the circuit"
             )
             new_circuit = Circuit(nodes)
-        self.transpiled_circuit = new_circuit
+        self._transpiled_circuit = new_circuit
 
     def init_mapping_circuit(self, circuit, qubit_map):
         """Initial qubit mapping of the transpiled qibo circuit
@@ -352,14 +422,14 @@ class Transpiler:
         while self._circuit_position < len(qibo_circuit.queue):
             gate = qibo_circuit.queue[self._circuit_position]
             if len(gate.qubits) == 1:
-                self.transpiled_circuit.add(gate.on_qubits({gate.qubits[0]: self._qubit_map[gate.qubits[0]]}))
+                self._transpiled_circuit.add(gate.on_qubits({gate.qubits[0]: self._qubit_map[gate.qubits[0]]}))
                 self._circuit_position += 1
             else:
                 index += 1
                 if index == matched_gates + 1:
                     break
                 else:
-                    self.transpiled_circuit.add(
+                    self._transpiled_circuit.add(
                         gate.on_qubits(
                             {
                                 gate.qubits[0]: self._qubit_map[gate.qubits[0]],
@@ -380,13 +450,80 @@ class Transpiler:
         backward = path[meeting_point + 1 :: -1]
         if len(forward) > 1:
             for f1, f2 in pairwise(forward):
-                self.transpiled_circuit.add(gates.SWAP(self._qubit_map[f1], self._qubit_map[f2]))
+                self._transpiled_circuit.add(gates.SWAP(self._qubit_map[f1], self._qubit_map[f2]))
         if len(backward) > 1:
             for b1, b2 in pairwise(backward):
-                self.transpiled_circuit.add(gates.SWAP(self._qubit_map[b1], self._qubit_map[b2]))
+                self._transpiled_circuit.add(gates.SWAP(self._qubit_map[b1], self._qubit_map[b2]))
 
     def update_qubit_map(self):
         """Update the qubit mapping after adding swaps"""
         old_mapping = self._qubit_map.copy()
         for key, value in self._mapping.items():
             self._qubit_map[value] = old_mapping[key]
+
+
+def translate_circuit(circuit, two_qubit_natives, translate_single_qubit=False):
+    """Translates a circuit to native gates.
+
+    Args:
+        circuit (qibo.models.Circuit): Circuit model to translate into native gates.
+        two_qubit_natives (list): List of two qubit native gates
+            supported by the quantum hardware ("CZ" and/or "iSWAP").
+        translate_single_qubit (bool):
+
+    Returns:
+        new (qibo.models.Circuit): Equivalent circuit with native gates.
+    """
+    new = circuit.__class__(circuit.nqubits)
+    for gate in circuit.queue:
+        if len(gate.qubits) > 1 or translate_single_qubit:
+            new.add(translate_gate(gate, two_qubit_natives))
+        else:
+            new.add(gate)
+    return new
+
+
+# TODO
+def can_execute(circuit, two_qubit_natives, connectivity, verbose=True):
+    """Checks if a circuit can be executed on Hardware.
+
+    Args:
+        circuit (qibo.models.Circuit): Circuit model to check.
+        two_qubit_natives (list): List of two qubit native gates
+            supported by the quantum hardware ("CZ" and/or "iSWAP").
+        connectivity:
+        verbose (bool): If ``True`` it prints debugging log messages.
+
+    Returns ``True`` if the following conditions are satisfied:
+        - Circuit does not contain more than two-qubit gates.
+        - All one-qubit gates are I, Z, RZ or U3.
+        - All two-qubit gates are CZ or iSWAP based on two_qubit_natives.
+        - Circuit matches connectivity.
+    otherwise returns ``False``.
+    """
+
+    # pring messages only if ``verbose == True``
+    vlog = lambda msg: log.info(msg) if verbose else lambda msg: None
+    for gate in circuit.queue:
+        if isinstance(gate, gates.M):
+            continue
+
+        if len(gate.qubits) == 1:
+            if not isinstance(gate, (gates.I, gates.Z, gates.RZ, gates.U3)):
+                vlog(f"{gate.name} is not a single qubit native gate.")
+                return False
+
+        elif len(gate.qubits) == 2:
+            if gate.__class__.__name__ not in two_qubit_natives:
+                vlog(f"{gate.name} is not a two qubit native gate.")
+                return False
+            else:
+                vlog("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
+                return False
+
+        else:
+            vlog(f"{gate.name} acts on more than two qubits.")
+            return False
+
+    vlog("Circuit can be executed.")
+    return True
