@@ -211,6 +211,8 @@ class AbstractPlatform(ABC):
                         self.native_single_qubit_gates[qubit]["MZ"]["amplitude"] = amplitude
                     if par == "drive_amplitude":
                         self.native_single_qubit_gates[qubit]["RX"]["amplitude"] = amplitude
+                if "t2" in par:
+                    self.qubits[qubit].T2 = float(value)
 
     @abstractmethod
     def connect(self):
