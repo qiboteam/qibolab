@@ -213,6 +213,8 @@ class AbstractPlatform(ABC):
                         self.native_single_qubit_gates[qubit]["RX"]["amplitude"] = amplitude
                 elif "t2" in par:
                     self.qubits[qubit].T2 = float(value)
+                elif "t1" in par:
+                    self.qubits[qubit].T1 = float(value)
                 elif "thresold" in par:
                     self.qubits[qubit].thresold = float(value)
                 elif "rotation_angle" in par:
