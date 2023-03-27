@@ -74,8 +74,6 @@ setup(
             "zhinst-toolkit>=0.5.0",
             "laboneq>=2.2.0",
             "laboneq-token>=1.0.0",
-            # from laboneq.simple import install_token
-            # install_token("LabOneQ.AllQuantumInOne.")
         ],
     },
     python_requires=">=3.8.0",
