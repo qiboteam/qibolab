@@ -109,13 +109,17 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
     # Instantiate QM OPX instruments
     if simulation_duration is None:
         from qibolab.instruments.qm import QMOPX
-        from qibolab.instruments.rohde_schwarz import SGS100A as LocalOscillator
+        from qibolab.instruments.rohde_schwarz import SGS100A as LO_RS_SGS100A
+        from qibolab.instruments.erasynth import ERA as LO_ERA
 
         controller = QMOPX("qmopx", "192.168.0.1:80")
 
     else:
         from qibolab.instruments.dummy_oscillator import (
-            DummyLocalOscillator as LocalOscillator,
+            DummyLocalOscillator as LO_ERA,
+        )
+        from qibolab.instruments.dummy_oscillator import (
+            DummyLocalOscillator as LO_RS_SGS100A,
         )
         from qibolab.instruments.qmsim import QMSim
 
@@ -129,8 +133,8 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
     controller.time_of_flight = 280
 
     # Instantiate local oscillators (HARDCODED)
-    local_oscillators = [LocalOscillator(f"era_0{i}", f"192.168.0.20{i}") for i in range(1, 9)] + \
-        [LocalOscillator(f"LO_{i}", f"192.168.0.3{i}") for i in [1,2,3,4,5,6,9]]
+    local_oscillators = [LO_ERA(f"era_0{i}", f"192.168.0.20{i}") for i in range(1, 9)] + \
+        [LO_RS_SGS100A(f"LO_0{i}", f"192.168.0.3{i}") for i in [1,2,3,4,5,6,9]]
     drive_local_oscillators = {
         "A": ["LO_05"] + \
             2*["LO_01"] + \
@@ -193,8 +197,8 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
                     qubits[q].flux = channels[wire]
                 elif channel == "drive":
                     qubits[q].drive = channels[wire]
-                    # if "era" in qubits[q].drive.local_oscillator.name:
-                    #     qubits[q].drive.local_oscillator.frequency = qubits[q].drive.frequency + 200e6
+                    if "era" in qubits[q].drive.local_oscillator.name:
+                        qubits[q].drive.local_oscillator.frequency = qubits[q].drive.frequency + 200e6
     
     for q in ["A1", "A2", "A4", "B1", "B2", "B3", "C1", "C4", "D1", "D2"]: #Qubits with LO around 7e9
         qubits[q].readout = channels[wiring["readout"][feedline][0]]
@@ -203,7 +207,6 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
         qubits[q].readout = channels[wiring["readout"][feedline][1]]
         qubits[q].feedback = channels[wiring["feedback"][feedline][1]]
     
- 
     # Platfom topology
     Q = []
     for i in range(1,7): 
