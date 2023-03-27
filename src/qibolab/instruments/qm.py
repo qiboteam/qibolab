@@ -580,7 +580,6 @@ class QMOPX(AbstractInstrument):
             if f"{serial}_shots" in handles:
                 shots = handles.get(f"{serial}_shots").fetch_all().astype(int)
             else:
-                shots = None
                 results[pulse.qubit] = results[serial] = (
                     AveragedResults.from_components(ires, qres)
                     if average
