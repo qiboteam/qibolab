@@ -66,7 +66,7 @@ class MultiqubitPlatform(AbstractPlatform):
 
     def set_bias(self, qubit, bias):
         if qubit in self.qbm:
-             self.qb_port[qubit].current = bias
+            self.qb_port[qubit].current = bias
         elif qubit in self.qfm:
             self.qf_port[qubit].offset = bias
 
