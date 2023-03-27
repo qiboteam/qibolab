@@ -181,7 +181,6 @@ class ERA(LocalOscillator):
             value: str = The value to post.
         """
         value = str(value)
-        print(f"posting {name}={value} to {self.name}")
         for _ in range(3):
             response = requests.post(f"http://{self.address}/", data={name: value}, timeout=1)
             if response.status_code == 200:
