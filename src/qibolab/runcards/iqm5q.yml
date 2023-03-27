@@ -30,8 +30,8 @@ native_gates:
                 start: 0
                 phase: 0
             MZ:
-                duration: 500 #2000.e-9
-                amplitude: .1 # .1
+                duration: 2000 #2000.e-9
+                amplitude: .05 # .1
                 frequency: 5_228_700_000 #doesnt do anything requiered for qibolab to work
                 integration_time : 1.e-6
                 shape: Rectangular()
@@ -77,9 +77,9 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 2000
-                amplitude: .5
-                frequency: 6_085_700_000 #doesnt do anything requiered for qibolab to work
-                integration_time : 1.5e-6
+                amplitude: .1
+                frequency: 6_120_000_000 #6_085_700_000 #doesnt do anything requiered for qibolab to work
+                integration_time : 2.0e-6
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -111,9 +111,9 @@ native_gates:
                 shape: Rectangular()
         4: # qubit number
             RX:
-                duration: 56 #80
-                amplitude: 0.75 #0.8
-                frequency: 4_355_000_000 #doesnt do anything requiered for qibolab to work
+                duration: 108 #110 #80
+                amplitude: 0.5 #0.8
+                frequency: 4_249_300_000 #Small detuning increase freq #4_248_775_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
                 type: qd # qubit drive
@@ -121,9 +121,9 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: .1 # 1
+                amplitude: .8 # 1
                 frequency: 5_517_000_000 #doesnt do anything requiered for qibolab to work
-                integration_time : 1.e-6
+                integration_time : 2.e-6
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -184,7 +184,7 @@ characterization:
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
         2:
-            readout_frequency: 6_085_700_000
+            readout_frequency: 6_120_000_000
             resonator_polycoef_flux: []
             drive_frequency: 4_471_650_000 # 4_401_600_000 #4_541_100_000
             T1: 0.
@@ -210,13 +210,16 @@ characterization:
         4:
             readout_frequency: 5_517_000_000
             resonator_polycoef_flux: []
-            drive_frequency: 4_355_000_000
+            drive_frequency: 4_249_300_000
             T1: 0.
             T2: 0.
             sweetspot: 0.0
             filter: {}
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
+            # parameters for single shot classification
+            threshold: 0.370954 #0.350665
+            iq_angle: 4.528 #191.016
         "c0":
             sweetspot: 0.0
             filter: {}

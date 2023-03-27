@@ -67,7 +67,7 @@ class Qubit:
     twpa: Optional[Channel] = None
     drive: Optional[Channel] = None
     flux: Optional[Channel] = None
-    flux_coupler: Optional[List[Channel]] = None
+    flux_coupler: Optional[List["Qubit"]] = None
 
     def __post_init__(self):
         # register qubit in ``flux`` channel so that we can access
@@ -329,9 +329,9 @@ class AbstractPlatform(ABC):
     # TODO: Maybe create a dataclass for native gates
     def create_RX90_pulse(self, qubit, start=0, relative_phase=0):
         pulse_kwargs = self.native_single_qubit_gates[qubit]["RX"]
-        qd_duration = pulse_kwargs["duration"]
+        qd_duration = int(pulse_kwargs["duration"] / 2.0)
         qd_frequency = pulse_kwargs["frequency"]
-        qd_amplitude = pulse_kwargs["amplitude"] / 2.0
+        qd_amplitude = pulse_kwargs["amplitude"]
         qd_shape = pulse_kwargs["shape"]
         qd_channel = self.get_qd_channel(qubit)
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
