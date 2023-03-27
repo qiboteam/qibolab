@@ -581,7 +581,11 @@ class QMOPX(AbstractInstrument):
                 shots = handles.get(f"{serial}_shots").fetch_all().astype(int)
             else:
                 shots = None
-                results[pulse.qubit] = results[serial] = AveragedResults.from_components(ires, qres) if average else ExecutionResults.from_components(ires, qres, shots)
+                results[pulse.qubit] = results[serial] = (
+                    AveragedResults.from_components(ires, qres)
+                    if average
+                    else ExecutionResults.from_components(ires, qres, shots)
+                )
         return results
 
     def play(self, qubits, sequence, nshots, relaxation_time):
