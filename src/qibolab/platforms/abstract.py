@@ -205,14 +205,20 @@ class AbstractPlatform(ABC):
                     elif par == "drive_frequency":
                         self.native_single_qubit_gates[qubit]["RX"]["frequency"] = freq
                         self.qubits[qubit].readout_frequency = freq
-                if "amplitude" in par:
+                elif "amplitude" in par:
                     amplitude = float(value)
                     if par == "readout_amplitude":
                         self.native_single_qubit_gates[qubit]["MZ"]["amplitude"] = amplitude
                     if par == "drive_amplitude":
                         self.native_single_qubit_gates[qubit]["RX"]["amplitude"] = amplitude
-                if "t2" in par:
+                elif "t2" in par:
                     self.qubits[qubit].T2 = float(value)
+                elif "thresold" in par:
+                    self.qubits[qubit].thresold = float(value)
+                elif "rotation_angle" in par:
+                    self.qubits[qubit].rotation_angle = float(value)
+                else:
+                    raise_error(ValueError, "Unknown parameter.")
 
     @abstractmethod
     def connect(self):
