@@ -56,7 +56,7 @@ def special_connectivity(connectivity):
             Q.append["D{i}"]
         chip = nx.Graph()
         chip.add_nodes_from(Q)
-        graph_list[
+        graph_list = [
             (Q[0], Q[1]),
             (Q[0], Q[2]),
             (Q[0], Q[20]),

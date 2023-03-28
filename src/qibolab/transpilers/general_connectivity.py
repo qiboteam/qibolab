@@ -9,7 +9,7 @@ from qibo import gates
 from qibo.config import log, raise_error
 from qibo.models import Circuit
 
-from qibolab.transpilers.gate_decompositions import translate_gate
+from qibolab.transpilers.gate_decompositions import TwoQubitNatives, translate_gate
 
 DEFAULT_INIT_SAMPLES = 100
 
@@ -22,21 +22,14 @@ class QubitInitMethod(Enum):
     custom = auto()
 
 
-class TwoQubitNatives(Enum):
-    """A class to define the two qubit native gates."""
-
-    CZ = auto()
-    ISWAP = auto()
-    all = auto()
-
-
 class Transpiler:
     """A class to perform initial qubit mapping and connectivity matching.
 
     Properties:
         connectivity (networkx.graph): chip connectivity.
-        init_method (string or QubitInitMethod): initial qubit mapping method.
+        init_method (str or QubitInitMethod): initial qubit mapping method.
         init_samples (int): number of random qubit initializations for greedy initial qubit mapping.
+        two_qubit_natives (TwoQubitNatives or str): two qubit gate/s that can be implemented by the hardware
 
     Attributes:
         _circuit_repr (list): quantum circuit represented as a list (only 2 qubit gates).
@@ -68,8 +61,8 @@ class Transpiler:
 
         Args:
             circuit (qibo.Circuit): circuit to be transpiled.
-            fuse_one_qubit (bool):
-            fusion_algorithm (bool):
+            fuse_one_qubit (bool): Fuse two or more one qubit gates in sequence
+            fusion_algorithm (bool): Try to reduce the number of SWAP in the transpiler by using qibo fusion algorithm
 
         Returns:
             transpiled_circuit (qibo.Circuit): circut mapped to hardware topology with only native gates.
@@ -83,7 +76,7 @@ class Transpiler:
             # Re-arrange gates using qibo's fusion algorithm
             # this may reduce number of SWAPs when fixing for connectivity
             fcircuit = circuit.fuse(max_qubits=2)
-            new = circuit.__class__(circuit.nqubits)
+            new = type(circuit)(circuit.nqubits)
             for fgate in fcircuit.queue:
                 if isinstance(fgate, gates.FusedGate):
                     new.add(fgate.gates)
@@ -209,7 +202,7 @@ class Transpiler:
         """Set the initial mapping method for the transpiler.
 
         Args:
-            init_method (string): Initial mapping method ("greedy" or "subgraph").
+            init_method (str): Initial mapping method ("greedy" or "subgraph").
         """
         if isinstance(init_method, str):
             init_method = QubitInitMethod[init_method]
@@ -221,10 +214,10 @@ class Transpiler:
 
     @two_qubit_natives.setter
     def two_qubit_natives(self, two_qubit_natives):
-        """Set the initial mapping method for the transpiler.
+        """Set the native hardware two qubit gates.
 
         Args:
-            init_method (string): Initial mapping method ("greedy" or "subgraph").
+            two_qubit_natives (TwoQubitNatives or str):
         """
         if isinstance(two_qubit_natives, str):
             two_qubit_natives = TwoQubitNatives[two_qubit_natives]
@@ -474,7 +467,7 @@ def translate_circuit(circuit, two_qubit_natives, translate_single_qubit=False):
     Returns:
         new (qibo.models.Circuit): Equivalent circuit with native gates.
     """
-    new = circuit.__class__(circuit.nqubits)
+    new = type(circuit)(circuit.nqubits)
     for gate in circuit.queue:
         if len(gate.qubits) > 1 or translate_single_qubit:
             new.add(translate_gate(gate, two_qubit_natives))
@@ -514,10 +507,11 @@ def can_execute(circuit, two_qubit_natives, connectivity, verbose=True):
                 return False
 
         elif len(gate.qubits) == 2:
-            if gate.__class__.__name__ not in two_qubit_natives:
+            # Change
+            if type(gate).__name__ not in two_qubit_natives:
                 vlog(f"{gate.name} is not a two qubit native gate.")
                 return False
-            else:
+            elif gate.qubits in connectivity:  # check if respect connectivity
                 vlog("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
                 return False
 
