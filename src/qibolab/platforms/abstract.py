@@ -217,12 +217,12 @@ class AbstractPlatform(ABC):
                         self.native_single_qubit_gates[qubit]["RX"]["amplitude"] = amplitude
                 elif par == "t2":
                     self.qubits[qubit].T2 = float(value)
-                elif "t1" in par:
+                elif "t1" == par:
                     self.qubits[qubit].T1 = float(value)
-                elif "thresold" in par:
+                elif "thresold" == par:
                     self.qubits[qubit].thresold = float(value)
-                elif "rotation_angle" in par:
-                    self.qubits[qubit].rotation_angle = float(value)
+                elif "iq_angle" == par:
+                    self.qubits[qubit].iq_angle = float(value)
                 elif "beta" in par:
                     shape = self.native_single_qubit_gates[qubit]["RX"]["shape"]
                     rel_sigma = re.findall(r"[\d]+[.\d]+|[\d]*[.][\d]+|[\d]+", shape)[0]
