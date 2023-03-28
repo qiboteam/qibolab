@@ -237,5 +237,68 @@ def sweeper_block(begin: int, end: int, step: int, register: Register, block, up
 
     return header_block + body_block + footer_block
 
+
 def loop_block(begin: int, end: int, step: int, register: Register, block):
     return sweeper_block(begin, end, step, register, block, None)
+
+def convert_phase(phase_rad:float):
+    phase_deg = (phase_rad * 360 / (2 * np.pi)) % 360
+    return int(phase_deg / 360 * 1e9)
+    """
+    The phase is divided into 1e9 steps between 0° and 360°, 
+    expressed as an integer between 0 and 1e9 (e.g 45°=125e6). 
+    """
+
+def convert_frequency(freq:float):
+    if not (freq >= -500e6 and freq <= 500e6):
+        raise ValueError("frequency must be a float between -500e6 and 500e6 Hz")
+    return int(freq * 4) % 2**18 # two's complement of 18? TODO: confirm with qblox
+    """
+    The frequency is divided into 4e9 steps between -500 and 500 MHz and
+    expressed as an integer between -2e9 and 2e9. (e.g. 1 MHz=4e6).
+    """
+
+def convert_gain(gain:float):
+    if not (gain >= -1 and gain <= 1):
+        raise ValueError("gain must be a float between -1 and 1")
+    return int(gain * (2**16-1)) % 2**32 # two's complement 32 bit number? or 12 or 24?
+    """ Both gain values are divided in 2**sample path width steps."""
+    """ QCM DACs resolution 16bits, QRM DACs and ADCs 12 bit"""
+
+def convert_offset(offset:float, mod_type:str):
+    if mod_type == "QCM":
+        if not (offset >= -2.5 and offset <= 2.5):
+            raise ValueError("offset must be a float between -2.5 and 2.5")
+        return int(offset/2.5 * (2**8-1)) % 2**16
+
+    elif mod_type == "QRM":
+        if not (offset >= -1 and offset <= 1):
+            raise ValueError("offset must be a float between -1 and 1")
+        return int(offset/1 * (2**6-1)) % 2**12
+    
+    else:
+        raise ValueError("Invalid module type, it must be either QRM or QCM")
+
+    # two's complement 32 bit number? or 12 or 24?
+    """ Both offset values are divided in 2**sample path width steps."""
+    """ QCM DACs resolution 16bits, QRM DACs and ADCs 12 bit"""
+    """ QCM 5Vpp, QRM 2Vpp"""
+
+
+
+# https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/tutorials/nco.html#Fast-chirped-pulses-using-Q1ASM
+"""
+The sequencer program can fundamentally only support integer values. 
+However, the NCO has a frequency resolution of 0.25 Hz and supports 1e9 phase values. 
+Therefore, frequencies in the sequencer program must be given as an integer multiple of 1/4 Hz, 
+and phases as an integer multiple of 360/1e9 degrees.
+
+Internally, the processor stores negative values using two’s complement. 
+This has some implications for our program: 
+- We cannot directly store a negative value in a register. 
+   Substracting a larger value from a smaller one works as expected though. 
+- Immediate values are handled by the compiler, i.e. set_freq-100 gives the expected result of -25 Hz.
+- Comparisons (jlt, jge) with registers storing a negative value do not work as expected, 
+   as the smallest negative number is larger than the largest positive number. 
+   To keep the program general we should therefore use loop instead.
+"""

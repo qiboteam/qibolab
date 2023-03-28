@@ -18,7 +18,10 @@ from qblox_instruments.qcodes_drivers.sequencer import Sequencer as QbloxSequenc
 
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType, Waveform
-from qibolab.instruments.qblox_q1asm import Program, Block, Register, wait_block, sweeper_block, loop_block
+from qibolab.instruments.qblox_q1asm import Program, Block, Register
+from qibolab.instruments.qblox_q1asm import wait_block, sweeper_block, loop_block
+from qibolab.instruments.qblox_q1asm import convert_phase, convert_frequency
+from qibolab.instruments.qblox_q1asm import convert_gain, convert_offset
 
 class WaveformsBuffer:
     """A class to represent a buffer that holds the unique waveforms used by a sequencer.
@@ -848,13 +851,11 @@ class ClusterQRM_RF(AbstractInstrument):
 
                     # Program
                     minimum_delay_between_instructions = 4
-                    wait_loop_step: int = 1000
 
                     active_reset = False
                     address = 1
                     active_reset_pulse_idx_I = 1
                     active_reset_pulse_idx_Q = 1
-
 
                     pulses = sequencer.pulses
                     sequence_total_duration = (
@@ -885,14 +886,7 @@ class ClusterQRM_RF(AbstractInstrument):
                             n
                         ].relative_phase != 0:
                             # Set phase
-                            p = 10
-                            phase = (pulses[n].relative_phase * 360 / (2 * np.pi)) % 360
-                            coarse = int(round(phase / 0.9, p))
-                            fine = int(round((phase - coarse * 0.9) / 2.25e-3, p))
-                            ultra_fine = int(round((phase - coarse * 0.9 - fine * 2.25e-3) / 3.6e-7, p))
-                            error = abs(phase - coarse * 0.9 - fine * 2.25e-3 - ultra_fine * 3.6e-7)
-                            assert error < 3.6e-7
-                            pulses_block.append(f"set_ph {coarse}, {fine}, {ultra_fine}", comment=f"set relative phase {pulses[n].relative_phase} rads")
+                            pulses_block.append(f"set_ph {convert_phase(pulses[n].relative_phase)}", comment=f"set relative phase {pulses[n].relative_phase} rads")
                         if pulses[n].type == PulseType.READOUT:
                             delay_after_play = self.acquisition_hold_off
 
@@ -1001,9 +995,9 @@ class ClusterQRM_RF(AbstractInstrument):
                     self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
 
                     # DEBUG: Save sequence to file
-                    # filename = f"{self.name}_sequencer{sequencer.number}_sequence.json"
-                    # with open(self.data_folder / filename, "w", encoding="utf-8") as file:
-                    #     json.dump(qblox_dict[sequencer], file, indent=4)
+                    filename = f"{self.name}_sequencer{sequencer.number}_sequence.json"
+                    with open(filename, "w", encoding="utf-8") as file:
+                        json.dump(qblox_dict[sequencer], file, indent=4)
 
         # Clear acquisition memory and arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
