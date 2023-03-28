@@ -1,3 +1,4 @@
+import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -11,7 +12,7 @@ from qibo.config import log, raise_error
 from qibo.models import Circuit
 
 from qibolab.designs.channels import Channel
-from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse
+from qibolab.pulses import Drag, FluxPulse, Pulse, PulseSequence, ReadoutPulse
 from qibolab.transpilers import can_execute, transpile
 
 
@@ -219,6 +220,11 @@ class AbstractPlatform(ABC):
                     self.qubits[qubit].thresold = float(value)
                 elif "rotation_angle" in par:
                     self.qubits[qubit].rotation_angle = float(value)
+                elif "beta" in par:
+                    shape = self.native_single_qubit_gates[qubit]["RX"]["shape"]
+                    rel_sigma = re.findall(r"[\d]+[.\d]+|[\d]*[.][\d]+|[\d]+", shape)[0]
+                    self.native_single_qubit_gates[qubit]["RX"]["shape"] = f"Drag({rel_sigma}, {float(value)})"
+
                 else:
                     raise_error(ValueError, "Unknown parameter.")
 
