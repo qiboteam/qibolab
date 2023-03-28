@@ -36,8 +36,8 @@ class Qubit:
     """
 
     name: str
-
-    readout_frequency: int = 0
+    bare_resonator_frequency: int = 0
+    readout_frequency: int = 0  # this is the dressed frequency
     drive_frequency: int = 0
     sweetspot: float = 0
     peak_voltage: float = 0
@@ -206,6 +206,8 @@ class AbstractPlatform(ABC):
                     elif par == "drive_frequency":
                         self.native_single_qubit_gates[qubit]["RX"]["frequency"] = freq
                         self.qubits[qubit].readout_frequency = freq
+                    elif par == "bare_resonator_frequency":
+                        self.qubits[qubit].bare_resonator_frequency = freq
                 elif "amplitude" in par:
                     amplitude = float(value)
                     if par == "readout_amplitude":
