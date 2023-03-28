@@ -189,7 +189,7 @@ def test_instruments_qublox_set_device_paramters(name):
         cont_mode_waveform_idx_awg_path0 :	0
         cont_mode_waveform_idx_awg_path1 :	0
         demod_en_acq                     :	False
-        thresholded_acq_threshold     :	0
+        thresholded_acq_threshold        :	0
         gain_awg_path0                   :	1
         gain_awg_path1                   :	1
         integration_length_acq           :	2000
@@ -202,7 +202,7 @@ def test_instruments_qublox_set_device_paramters(name):
         nco_phase_offs                   :	0 (Degrees)
         offset_awg_path0                 :	0
         offset_awg_path1                 :	0
-        thresholded_acq_rotation               :	0 (Degrees)
+        thresholded_acq_rotation         :	0 (Degrees)
         sequence                         :	/nfs/users/alvaro.orgaz/qibolab/src/qibola...
         sync_en                          :	True
         upsample_rate_awg_path0          :	0
