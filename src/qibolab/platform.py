@@ -204,12 +204,13 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
                         qubits[q].drive.local_oscillator.frequency = qubits[q].drive_frequency + 200e6
 
     for q in ["A1", "A2", "A4", "B1", "B2", "B3", "C1", "C4", "D1", "D2"]:  # Qubits with LO around 7e9
-        qubits[q].readout = channels[wiring["readout"][feedline][0]]
-        qubits[q].feedback = channels[wiring["feedback"][feedline][0]]
+        qubits[q].readout = channels[wiring["readout"][q[0]][0]]
+        qubits[q].feedback = channels[wiring["feedback"][q[0]][0]]
     for q in ["A3", "A5", "A6", "B4", "B5", "C2", "C3", "C5", "D3", "D4", "D5"]:  # Qubits with LO around 7.5e9
-        qubits[q].readout = channels[wiring["readout"][feedline][1]]
-        qubits[q].feedback = channels[wiring["feedback"][feedline][1]]
+        qubits[q].readout = channels[wiring["readout"][q[0]][1]]
+        qubits[q].feedback = channels[wiring["feedback"][q[0]][1]]
 
+    print(qubits)
     # Platfom topology
     Q = []
     for i in range(1, 7):
