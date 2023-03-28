@@ -18,7 +18,7 @@ from qblox_instruments.qcodes_drivers.sequencer import Sequencer as QbloxSequenc
 
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType, Waveform
-
+from qibolab.instruments.qblox_q1asm import Program, Block, Register, wait_block, sweeper_block, loop_block
 
 class WaveformsBuffer:
     """A class to represent a buffer that holds the unique waveforms used by a sequencer.
@@ -850,81 +850,35 @@ class ClusterQRM_RF(AbstractInstrument):
                     minimum_delay_between_instructions = 4
                     wait_loop_step: int = 1000
 
+                    active_reset = False
+                    address = 1
+                    active_reset_pulse_idx_I = 1
+                    active_reset_pulse_idx_Q = 1
+
+
                     pulses = sequencer.pulses
                     sequence_total_duration = (
                         pulses.start + pulses.duration + minimum_delay_between_instructions
                     )  # the minimum delay between instructions is 4ns
-                    time_between_repetitions = repetition_duration - sequence_total_duration
-                    assert time_between_repetitions > 0
 
-                    wait_time = time_between_repetitions
-                    extra_wait = wait_time % wait_loop_step
-                    while wait_time > 0 and extra_wait < 4:
-                        wait_loop_step += 1
-                        extra_wait = wait_time % wait_loop_step
-                    num_wait_loops = (wait_time - extra_wait) // wait_loop_step
+                    program = Program()
+                    nshots_register =  Register(program, "nshots")
 
-                    header = f"""
-                    move 0,R0                # loop iterator (nshots)
-                    nop
-                    wait_sync {minimum_delay_between_instructions}
-                    loop:"""
+                    header_block = Block("setup")
+                    if active_reset:
+                        header_block.append(f"set_latch_en {address}, 4", f"monitor triggers on address {address}")
+                    header_block.append(f"wait_sync {minimum_delay_between_instructions}")
+
+                    body_block = Block()
+
                     if self.ports["i1"].hardware_demod_en or self.ports["o1"].hardware_mod_en:
-                        header += "\n" + "                    reset_ph"
-                    body = ""
+                        body_block.append("reset_ph")
+                        body_block.append_spacer()
 
-                    footer = f"""
-                    # wait {wait_time} ns"""
-                    if num_wait_loops > 0:
-                        footer += f"""
-                    move {num_wait_loops},R2
-                    nop
-                    waitloop2:
-                        wait {wait_loop_step}
-                        loop R2,@waitloop2"""
-                    if extra_wait > 0:
-                        footer += f"""
-                    wait {extra_wait}"""
-                    else:
-                        footer += f"""
-                    # wait 0"""
-
-                    footer += f"""
-                    add R0,1,R0              # increment iterator
-                    nop                      # wait a cycle for R0 to be available
-                    jlt R0,{nshots},@loop        # nshots
-                    stop
-                    """
-
+                    pulses_block = Block("play_and_acquire")
                     # Add an initial wait instruction for the first pulse of the sequence
-                    wait_time = pulses[0].start
-                    extra_wait = wait_time % wait_loop_step
-                    while wait_time > 0 and extra_wait < 4:
-                        wait_loop_step += 1
-                        extra_wait = wait_time % wait_loop_step
-                    num_wait_loops = (wait_time - extra_wait) // wait_loop_step
-
-                    if wait_time > 0:
-                        initial_wait_instruction = f"""
-                    # wait {wait_time} ns"""
-                        if num_wait_loops > 0:
-                            initial_wait_instruction += f"""
-                    move {num_wait_loops},R1
-                    nop
-                    waitloop1:
-                        wait {wait_loop_step}
-                        loop R1,@waitloop1"""
-                        if extra_wait > 0:
-                            initial_wait_instruction += f"""
-                    wait {extra_wait}"""
-                        else:
-                            initial_wait_instruction += f"""
-                    # wait 0"""
-                    else:
-                        initial_wait_instruction = """
-                    # wait 0"""
-
-                    body += initial_wait_instruction
+                    initial_wait_block = wait_block(wait_time = pulses[0].start, register = Register(program), force_multiples_of_4=False)
+                    pulses_block += initial_wait_block
 
                     for n in range(pulses.count):
                         if (self.ports["i1"].hardware_demod_en or self.ports["o1"].hardware_mod_en) and pulses[
@@ -938,22 +892,20 @@ class ClusterQRM_RF(AbstractInstrument):
                             ultra_fine = int(round((phase - coarse * 0.9 - fine * 2.25e-3) / 3.6e-7, p))
                             error = abs(phase - coarse * 0.9 - fine * 2.25e-3 - ultra_fine * 3.6e-7)
                             assert error < 3.6e-7
-                            set_ph_instruction = f"                    set_ph {coarse}, {fine}, {ultra_fine}"
-                            set_ph_instruction += (
-                                " " * (45 - len(set_ph_instruction))
-                                + f"# set relative phase {pulses[n].relative_phase} rads"
-                            )
-                            body += "\n" + set_ph_instruction
+                            pulses_block.append(f"set_ph {coarse}, {fine}, {ultra_fine}", comment=f"set relative phase {pulses[n].relative_phase} rads")
                         if pulses[n].type == PulseType.READOUT:
                             delay_after_play = self.acquisition_hold_off
 
                             if len(pulses) > n + 1:
                                 # If there are more pulses to be played, the delay is the time between the pulse end and the next pulse start
                                 delay_after_acquire = pulses[n + 1].start - pulses[n].start - self.acquisition_hold_off
+                                time_between_repetitions = repetition_duration - sequence_total_duration
                             else:
                                 delay_after_acquire = (
-                                    sequence_total_duration - pulses[n].start - self.acquisition_hold_off
+                                    sequence_total_duration - pulses[n].start
                                 )
+                                time_between_repetitions = repetition_duration - sequence_total_duration - self.acquisition_hold_off
+                            assert time_between_repetitions > 0
 
                             if delay_after_acquire < minimum_delay_between_instructions:
                                 raise Exception(
@@ -961,15 +913,14 @@ class ClusterQRM_RF(AbstractInstrument):
                                 )
 
                             # Prepare play instruction: play wave_i_index, wave_q_index, delay_next_instruction
-                            play_instruction = f"                    play {sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_i)},{sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_q)},{delay_after_play}"
-                            # Add the serial of the pulse as a comment
-                            play_instruction += " " * (45 - len(play_instruction)) + f"# play waveforms {pulses[n]}"
-                            body += "\n" + play_instruction
+                            pulses_block.append(f"play  {sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_i)},{sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_q)},{delay_after_play}", comment=f"play waveforms {pulses[n]}")
 
                             # Prepare acquire instruction: acquire acquisition_index, bin_index, delay_next_instruction
-                            acquire_instruction = f"                    acquire {pulses.ro_pulses.index(pulses[n])},R0,{delay_after_acquire}"
-                            # Add the serial of the pulse as a comment
-                            body += "\n" + acquire_instruction
+                            if active_reset:
+                                pulses_block.append(f"acquire {pulses.ro_pulses.index(pulses[n])},{nshots_register},4")
+                                pulses_block.append(f"latch_rst {delay_after_acquire + 300 - 4}")
+                            else:
+                                pulses_block.append(f"acquire {pulses.ro_pulses.index(pulses[n])},{nshots_register},{delay_after_acquire}")
 
                         else:
                             # Calculate the delay_after_play that is to be used as an argument to the play instruction
@@ -985,12 +936,27 @@ class ClusterQRM_RF(AbstractInstrument):
                                 )
 
                             # Prepare play instruction: play wave_i_index, wave_q_index, delay_next_instruction
-                            play_instruction = f"                    play {sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_i)},{sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_q)},{delay_after_play}"
-                            # Add the serial of the pulse as a comment
-                            play_instruction += " " * (45 - len(play_instruction)) + f"# play waveforms {pulses[n]}"
-                            body += "\n" + play_instruction
+                            pulses_block.append(f"play  {sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_i)},{sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_q)},{delay_after_play}", comment=f"play waveforms {pulses[n]}")
 
-                    sequencer.program = header + body + footer
+                    body_block += pulses_block 
+                    body_block.append_spacer()
+
+                    if active_reset:
+                        final_reset_block = Block()
+                        final_reset_block.append(f"set_cond 1, {address}, 0, 4", comment="active reset")
+                        final_reset_block.append(f"play {active_reset_pulse_idx_I}, {active_reset_pulse_idx_Q}, 4", level=1)
+                        final_reset_block.append(f"set_cond 0, {address}, 0, 4")
+                    else:
+                        final_reset_block = wait_block(wait_time = time_between_repetitions, register = Register(program), force_multiples_of_4=False)
+                    body_block += final_reset_block
+
+                    footer_block = Block("cleaup")
+                    footer_block.append(f"stop")
+
+                    nshots_block = loop_block(begin=0, end=nshots, step=1, register=nshots_register, block=body_block)
+                    program.add_blocks(header_block, nshots_block, footer_block)
+
+                    sequencer.program = repr(program)
 
     def upload(self):
         """Uploads waveforms and programs of all sequencers and arms them in preparation for execution.
