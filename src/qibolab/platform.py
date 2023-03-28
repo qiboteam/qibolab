@@ -93,18 +93,18 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
 
     for feedline in connections:
         for channel in ["feedback", "readout"]:
-            channels[wiring[channel][feedline][0]].port = [
+            channels[wiring[channel][feedline][0]].ports = [
                 (f"con{connections[feedline][0]}", 1),
                 (f"con{connections[feedline][0]}", 2),
             ]
-            channels[wiring[channel][feedline][1]].port = [
+            channels[wiring[channel][feedline][1]].ports = [
                 (f"con{connections[feedline][1]}", 1),
                 (f"con{connections[feedline][1]}", 2),
             ]
 
         wires_list = wiring["drive"][feedline]
         for i in range(len(wires_list)):
-            channels[wires_list[i]].port = [
+            channels[wires_list[i]].ports = [
                 (f"con{connections[feedline][(2*i)//8]}", 2 * i % 8 + 1),
                 (f"con{connections[feedline][(2*i)//8]}", 2 * i % 8 + 2),
             ]
@@ -112,7 +112,7 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
 
         wires_list = wiring["flux"][feedline]
         for i in range(len(wires_list)):
-            channels[wires_list[i]].port = [(f"con{connections[feedline][i//8]}", (i + last_port) % 8 + 1)]
+            channels[wires_list[i]].ports = [(f"con{connections[feedline][i//8]}", (i + last_port) % 8 + 1)]
 
     # Instantiate QM OPX instruments
     if simulation_duration is None:
@@ -197,6 +197,7 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
                 q = f"{feedline}{i+1}"
                 if channel == "flux":
                     qubits[q].flux = channels[wire]
+                    channels[wire].qubit = qubits[q]
                 elif channel == "drive":
                     qubits[q].drive = channels[wire]
                     if "era" in qubits[q].drive.local_oscillator.name:
@@ -209,6 +210,7 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
         qubits[q].readout = channels[wiring["readout"][feedline][1]]
         qubits[q].feedback = channels[wiring["feedback"][feedline][1]]
 
+    print(qubits)
     # Platfom topology
     Q = []
     for i in range(1, 7):
