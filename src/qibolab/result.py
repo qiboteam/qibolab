@@ -32,6 +32,9 @@ class ExecutionResults:
         return self.array.q
 
     def __add__(self, data):
+        assert len(data.i) == len(data.q)
+        # concatenate on first dimension; if a scalar is passed, just append it
+        axis = 0 if len(data.i) > 0 else None
         i = np.append(self.i, data.i, axis=0)
         q = np.append(self.q, data.q, axis=0)
 
@@ -56,7 +59,7 @@ class ExecutionResults:
         """Computes ground state probability"""
         return 1 - np.mean(self.shots)
 
-    def to_dict_probability(self, state=1):
+    def serial_probability(self, state=1):
         """Serialize probabilities in dict.
         Args:
             state (int): if 0 stores the probabilities of finding
@@ -73,7 +76,8 @@ class ExecutionResults:
         """Perform average over i and q"""
         return AveragedResults.from_components(np.mean(self.i, keepdims=True), np.mean(self.q, keepdims=True))
 
-    def to_dict(self):
+    @property
+    def serial(self):
         """Serialize output in dict."""
 
         return {
