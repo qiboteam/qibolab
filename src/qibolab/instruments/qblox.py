@@ -699,10 +699,9 @@ class ClusterQRM_RF(AbstractInstrument):
         if next_sequencer_number != self.DEFAULT_SEQUENCERS[port]:
             for parameter in parameters:
                 value = self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].get(param_name=parameter)
-                if value is None:
-                    raise RuntimeError
-                target = self.device.sequencers[next_sequencer_number]
-                self._set_device_parameter(target, parameter, value=value)
+                if value:
+                    target = self.device.sequencers[next_sequencer_number]
+                    self._set_device_parameter(target, parameter, value=value)
 
         # if hardware demodulation is enabled, configure nco_frequency and classification parameters
         if self.ports["i1"].hardware_demod_en or self.ports["o1"].hardware_mod_en:
