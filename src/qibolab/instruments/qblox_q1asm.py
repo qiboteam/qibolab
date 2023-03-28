@@ -26,7 +26,7 @@ class Program():
 
 
 class Block():
-    GLOBAL_INDENTATION_LEVEL = 0
+    GLOBAL_INDENTATION_LEVEL = 3
     SPACES_PER_LEVEL = 4
     SPACES_BEFORE_COMMENT = 4
 
