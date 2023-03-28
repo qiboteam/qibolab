@@ -24,8 +24,6 @@ class ERA(LocalOscillator):
 
     @property
     def frequency(self):
-        if self.is_connected:
-            return self.device.get("frequency")
         return self._frequency
 
     @frequency.setter
@@ -36,8 +34,6 @@ class ERA(LocalOscillator):
 
     @property
     def power(self):
-        if self.is_connected:
-            return self.device.get("power")
         return self._power
 
     @power.setter
@@ -114,6 +110,7 @@ class ERA(LocalOscillator):
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
+        kwargs["reference_clock_source"] = "external"
         if frequency is None:
             frequency = self.frequency
         if power is None:

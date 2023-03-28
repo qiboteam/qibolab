@@ -10,7 +10,6 @@ settings:
     sampling_rate: 1000000000
     repetition_duration: 50_000
 topology: "Simone to fix"
-
 resonator_type: 2D
 
 native_gates:

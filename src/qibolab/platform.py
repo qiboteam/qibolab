@@ -92,22 +92,15 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
                 channels |= ChannelMap.from_names(wire)
 
     for feedline in connections:
-        channels[wiring["feedback"][feedline][0]].port = [
-            (f"con{connections[feedline][0]}", 1),
-            (f"con{connections[feedline][0]}", 2),
-        ]
-        channels[wiring["feedback"][feedline][1]].port = [
-            (f"con{connections[feedline][1]}", 1),
-            (f"con{connections[feedline][1]}", 2),
-        ]
-        channels[wiring["readout"][feedline][0]].port = [
-            (f"con{connections[feedline][0]}", 9),
-            (f"con{connections[feedline][0]}", 10),
-        ]
-        channels[wiring["readout"][feedline][1]].port = [
-            (f"con{connections[feedline][1]}", 9),
-            (f"con{connections[feedline][1]}", 10),
-        ]
+        for channel in ["feedback", "readout"]:
+            channels[wiring[channel][feedline][0]].port = [
+                (f"con{connections[feedline][0]}", 1),
+                (f"con{connections[feedline][0]}", 2),
+            ]
+            channels[wiring[channel][feedline][1]].port = [
+                (f"con{connections[feedline][1]}", 1),
+                (f"con{connections[feedline][1]}", 2),
+            ]
 
         wires_list = wiring["drive"][feedline]
         for i in range(len(wires_list)):
@@ -212,7 +205,7 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
     for q in ["A1", "A2", "A4", "B1", "B2", "B3", "C1", "C4", "D1", "D2"]:  # Qubits with LO around 7e9
         qubits[q].readout = channels[wiring["readout"][feedline][0]]
         qubits[q].feedback = channels[wiring["feedback"][feedline][0]]
-    for q in ["A3", "A5", "A6", "B4", "B5", "C2", "C3", "C5", "D4", "D5"]:  # Qubits with LO around 7.5e9
+    for q in ["A3", "A5", "A6", "B4", "B5", "C2", "C3", "C5", "D3", "D4", "D5"]:  # Qubits with LO around 7.5e9
         qubits[q].readout = channels[wiring["readout"][feedline][1]]
         qubits[q].feedback = channels[wiring["feedback"][feedline][1]]
 
