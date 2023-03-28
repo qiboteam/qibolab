@@ -17,8 +17,15 @@ backend = NumpyBackend()
 class TwoQubitNatives(Flag):
     """A class to define the two qubit native gates."""
 
-    CZ = auto()
-    ISWAP = auto()
+    CZ = gates.CZ
+    ISWAP = gates.iSWAP
+
+    @classmethod
+    def from_gate(cls, gate: gates.Gate):
+        for variant in cls:
+            if variant.value is gate:
+                return variant
+        raise_error(ValueError, f"Gate type {gate} not native.")
 
 
 class GateDecompositions:

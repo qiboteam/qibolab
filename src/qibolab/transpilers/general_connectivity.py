@@ -476,15 +476,13 @@ def translate_circuit(circuit, two_qubit_natives, translate_single_qubit=False):
     return new
 
 
-# TODO
-def can_execute(circuit, two_qubit_natives, connectivity, verbose=True):
+def can_execute(circuit: Circuit, two_qubit_natives: TwoQubitNatives, connectivity: nx.Graph, verbose=True):
     """Checks if a circuit can be executed on Hardware.
 
     Args:
         circuit (qibo.models.Circuit): Circuit model to check.
-        two_qubit_natives (list): List of two qubit native gates
-            supported by the quantum hardware ("CZ" and/or "iSWAP").
-        connectivity:
+        two_qubit_natives (TwoQubitNatives): two qubit gate/s that can be implemented by the hardware.
+        connectivity (networkx.graph): chip connectivity.
         verbose (bool): If ``True`` it prints debugging log messages.
 
     Returns ``True`` if the following conditions are satisfied:
@@ -508,16 +506,18 @@ def can_execute(circuit, two_qubit_natives, connectivity, verbose=True):
 
         elif len(gate.qubits) == 2:
             # Change
-            if type(gate).__name__ not in two_qubit_natives:
-                vlog(f"{gate.name} is not a two qubit native gate.")
+            try:
+                if TwoQubitNatives.from_gate(type(gate)) not in two_qubit_natives:
+                    vlog(f"{gate.name} is not in two_qubit_native.")
+                    return False
+            except ValueError:
+                vlog(f"{gate.name} cannot be used as a two qubit native gate.")
                 return False
-            elif gate.qubits in connectivity:  # check if respect connectivity
+            if gate.qubits in connectivity.edges:
                 vlog("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
                 return False
-
         else:
             vlog(f"{gate.name} acts on more than two qubits.")
             return False
-
     vlog("Circuit can be executed.")
     return True

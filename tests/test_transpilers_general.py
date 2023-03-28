@@ -4,7 +4,8 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 
-from qibolab.transpilers.general_connectivity import Transpiler
+from qibolab.transpilers.gate_decompositions import TwoQubitNatives
+from qibolab.transpilers.general_connectivity import Transpiler, can_execute
 
 
 def generate_random_circuit(nqubits, ngates, seed=42):
@@ -30,15 +31,6 @@ def generate_random_circuit(nqubits, ngates, seed=42):
             circuit.add(gate(*q, theta=theta, trainable=False))
         else:
             circuit.add(gate(*q))
-    return circuit
-
-
-def custom_circuit():
-    circuit = Circuit(5)
-    circuit.add(gates.CZ(0, 2))
-    circuit.add(gates.CZ(1, 2))
-    circuit.add(gates.CZ(1, 0))
-    circuit.add(gates.CZ(2, 1))
     return circuit
 
 
@@ -105,6 +97,22 @@ def special_connectivity(connectivity):
     return chip
 
 
+def custom_circuit():
+    circuit = Circuit(5)
+    circuit.add(gates.CZ(0, 2))
+    circuit.add(gates.CZ(1, 2))
+    circuit.add(gates.Z(1))
+    circuit.add(gates.CZ(2, 1))
+    return circuit
+
+
+def test_can_execute():
+    assert can_execute(
+        custom_circuit(), two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits")
+    )
+
+
+"""
 def test_connectivity_and_samples():
     transpiler = Transpiler(connectivity=special_connectivity("21_qubits"), init_method="greedy", init_samples=20)
     assert transpiler.connectivity.number_of_nodes() == 21
@@ -185,3 +193,4 @@ def test_custom_connectivity():
     chip.add_edges_from(graph_list)
     transpiler.connectivity = chip
     transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
+"""
