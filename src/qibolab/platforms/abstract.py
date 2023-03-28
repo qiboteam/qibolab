@@ -267,7 +267,7 @@ class AbstractPlatform(ABC):
         return sequence
 
     @abstractmethod
-    def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None):
+    def execute_pulse_sequence(self, sequence, **kwargs):
         """Executes a pulse sequence.
 
         Args:
@@ -275,15 +275,16 @@ class AbstractPlatform(ABC):
             nshots (int): Number of shots to sample from the experiment. Default is 1024.
             relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
                 If ``None`` the default value provided as ``repetition_duration`` in the runcard will be used.
+            **kwargs: Variables for ExecutionParameters
 
         Returns:
             Readout results acquired by after execution.
         """
 
-    def __call__(self, sequence, nshots=1024, relaxation_time=None):
-        return self.execute_pulse_sequence(sequence, nshots, relaxation_time)
+    def __call__(self, sequence, **kwargs):
+        return self.execute_pulse_sequence(sequence, **kwargs)
 
-    def sweep(self, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
+    def sweep(self, sequence, *sweepers, **kwargs):
         """Executes a pulse sequence for different values of sweeped parameters.
         Useful for performing chip characterization.
 
@@ -314,6 +315,7 @@ class AbstractPlatform(ABC):
             relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
                 If ``None`` the default value provided as ``repetition_duration`` in the runcard will be used.
             average (bool): If ``True`` the IQ results of individual shots are averaged on hardware.
+            **kwargs: Variables for ExecutionParameters
 
         Returns:
             Readout results acquired by after execution.

@@ -83,8 +83,8 @@ class ExecutionResults:
     @cached_property
     def ground_state_probability(self):
         """Computes ground state probability"""
-        if self.shots == None:
-            return 1 - np.sqrt(self.i**2 + self.q**2)
+        if self.shots is None:
+            return 1 - self.measurement
         else:
             return 1 - np.mean(self.shots)
 
