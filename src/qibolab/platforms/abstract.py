@@ -44,6 +44,7 @@ class Qubit:
     pi_pulse_amplitude: float = 0
     T1: int = 0
     T2: int = 0
+    T2_spin_echo: int = 0
     state0_voltage: int = 0
     state1_voltage: int = 0
     mean_gnd_states: complex = 0 + 0.0j
@@ -211,7 +212,7 @@ class AbstractPlatform(ABC):
                         self.native_single_qubit_gates[qubit]["MZ"]["amplitude"] = amplitude
                     if par == "drive_amplitude":
                         self.native_single_qubit_gates[qubit]["RX"]["amplitude"] = amplitude
-                elif "t2" in par:
+                elif par == "t2":
                     self.qubits[qubit].T2 = float(value)
                 elif "t1" in par:
                     self.qubits[qubit].T1 = float(value)
@@ -221,6 +222,9 @@ class AbstractPlatform(ABC):
                     self.qubits[qubit].rotation_angle = float(value)
                 elif "length" in par:  # assume only drive length
                     self.native_single_qubit_gates[qubit]["RX"]["duration"] = int(value)
+                elif par == "t2_spin_echo":
+                    self.qubits[qubit].T2_spin_echo = int(value)
+
                 else:
                     raise_error(ValueError, "Unknown parameter.")
 
