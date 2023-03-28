@@ -225,6 +225,8 @@ class AbstractPlatform(ABC):
                     rel_sigma = re.findall(r"[\d]+[.\d]+|[\d]*[.][\d]+|[\d]+", shape)[0]
                     self.native_single_qubit_gates[qubit]["RX"]["shape"] = f"Drag({rel_sigma}, {float(value)})"
 
+                elif "length" in par:  # assume only drive length
+                    self.native_single_qubit_gates[qubit]["RX"]["duration"] = int(value)
                 else:
                     raise_error(ValueError, "Unknown parameter.")
 
