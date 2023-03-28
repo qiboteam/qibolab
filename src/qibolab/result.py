@@ -32,11 +32,11 @@ class ExecutionResults:
         return self.array.q
 
     def __add__(self, data):
-        assert len(data.i) == len(data.q)
+        assert len(data.i.shape) == len(data.q.shape)
         # concatenate on first dimension; if a scalar is passed, just append it
-        axis = 0 if len(data.i) > 0 else None
-        i = np.append(self.i, data.i, axis=0)
-        q = np.append(self.q, data.q, axis=0)
+        axis = 0 if len(data.i.shape) > 0 else None
+        i = np.append(self.i, data.i, axis=axis)
+        q = np.append(self.q, data.q, axis=axis)
 
         new_execution_results = self.__class__.from_components(i, q)
 
@@ -74,7 +74,7 @@ class ExecutionResults:
     @property
     def average(self):
         """Perform average over i and q"""
-        return AveragedResults.from_components(np.mean(self.i, keepdims=True), np.mean(self.q, keepdims=True))
+        return AveragedResults.from_components(np.mean(self.i), np.mean(self.q))
 
     @property
     def serial(self):
