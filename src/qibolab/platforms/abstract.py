@@ -205,7 +205,7 @@ class AbstractPlatform(ABC):
 
                     elif par == "drive_frequency":
                         self.native_single_qubit_gates[qubit]["RX"]["frequency"] = freq
-                        self.qubits[qubit].readout_frequency = freq
+                        self.qubits[qubit].drive_frequency = freq
                     elif par == "bare_resonator_frequency":
                         self.qubits[qubit].bare_resonator_frequency = freq
                 elif "amplitude" in par:
