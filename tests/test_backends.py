@@ -26,12 +26,16 @@ def generate_circuit_with_gate(nqubits, gate, **kwargs):
 
 
 @pytest.mark.qpu
-def test_execute_circuit_errors(backend):
+def test_execute_circuit_initial_state(backend):
     circuit = Circuit(1)
     circuit.add(gates.X(0))
     circuit.add(gates.M(0))
     with pytest.raises(ValueError):
         backend.execute_circuit(circuit, initial_state=np.ones(2))
+
+    initial_circuit = Circuit(1)
+    initial_circuit.add(gates.H(0))
+    backend.execute_circuit(circuit, initial_state=initial_circuit)
 
 
 @pytest.mark.qpu
