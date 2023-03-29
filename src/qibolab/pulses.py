@@ -768,7 +768,7 @@ class Pulse:
         """
 
         # pulse start, duration and finish are in ns
-        return 2 * np.pi * self._frequency * self._start.value / 1e9
+        return 2 * np.pi * self._frequency * self.start / 1e9
 
     @property
     def relative_phase(self) -> float:
@@ -797,7 +797,7 @@ class Pulse:
 
         The total phase is computed as the sum of the global and relative phases.
         """
-        return 2 * np.pi * self._frequency * self._start.value / 1e9 + self._relative_phase
+        return 2 * np.pi * self._frequency * self.start / 1e9 + self._relative_phase
 
     @property
     def shape(self) -> PulseShape:
