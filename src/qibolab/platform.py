@@ -1,3 +1,4 @@
+import networkx as nx
 from qibo.config import raise_error
 
 from qibolab.designs import Channel, ChannelMap, InstrumentDesign
@@ -5,7 +6,7 @@ from qibolab.platforms.platform import DesignPlatform
 
 
 def create_dummy(runcard):
-    """Create a single qubit platform using the dummy instrument.
+    """Create a dummy platform using the dummy instrument.
 
     Useful for testing.
     """
@@ -23,9 +24,11 @@ def create_dummy(runcard):
     platform = DesignPlatform("dummy", design, runcard)
 
     # map channels to qubits
-    platform.qubits[0].readout = channels["readout"]
-    platform.qubits[0].drive = channels["drive"]
-    platform.qubits[0].flux = channels["flux"]
+    for qubit in platform.qubits:
+        platform.qubits[qubit].readout = channels["readout"]
+        platform.qubits[qubit].drive = channels["drive"]
+        platform.qubits[qubit].flux = channels["flux"]
+
     return platform
 
 
@@ -149,8 +152,20 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
 
     # set maximum allowed bias values to protect amplifier
     # relevant only for qubits where an amplifier is used
-    for q in [0, 3, 4]:
+    for q in range(5):
         platform.qubits[q].flux.max_bias = 0.2
+    # Platfom topology
+    Q = [f"q{i}" for i in range(5)]
+    chip = nx.Graph()
+    chip.add_nodes_from(Q)
+    graph_list = [
+        (Q[0], Q[2]),
+        (Q[1], Q[2]),
+        (Q[3], Q[2]),
+        (Q[4], Q[2]),
+    ]
+    chip.add_edges_from(graph_list)
+    platform.topology = chip
 
     return platform
 

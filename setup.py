@@ -41,9 +41,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering :: Physics",
     ],
-    install_requires=[
-        "qibo>=0.1.8",
-    ],
+    install_requires=["qibo>=0.1.8", "networkx", "more-itertools", "pyyaml"],
     extras_require={
         "docs": [
             "sphinx",
@@ -69,8 +67,8 @@ setup(
             "qblox-instruments==0.7.0",
             "qcodes",
             "pyvisa-py==0.5.3",
-            "qm-qua>=1.0.1",
-            "qualang-tools>=0.13.1",
+            "qm-qua==1.1.1",
+            "qualang-tools==0.14.0",
         ],
     },
     python_requires=">=3.8.0",
