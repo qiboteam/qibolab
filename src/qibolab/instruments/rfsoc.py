@@ -32,9 +32,12 @@ class TII_RFSOC4x2(AbstractInstrument):
 
     def __init__(self, name: str, address: str):
         super().__init__(name, address=address)
-        self.cfg: dict = {}  # dictionary with runcard, filled in setup()
+        self.cfg: dict = {}  # dictionary with instrument settings, filled in setup()
         self.host, self.port = address.split(":")
         self.port = int(self.port)
+
+        # call the setup function to configure the cfg dicitonary
+        self.setup()
 
     def connect(self):
         """Empty method to comply with AbstractInstrument interface."""
@@ -58,8 +61,6 @@ class TII_RFSOC4x2(AbstractInstrument):
     ):
         """Configures the instrument.
         Args: Settings (except calibrate argument)
-            calibrate(bool): if true runs the calibrate_state routine
-                             getting treshold and angle
             sampling_rate (int): sampling rate of the RFSoC (Hz).
             repetition_duration (int): delay before readout (ns).
             adc_trig_offset (int): single offset for all adc triggers
@@ -89,7 +90,7 @@ class TII_RFSOC4x2(AbstractInstrument):
                    * send the  pickled dictionary
                    * wait for response (arbitray number of bytes)
 
-        git config [--global] user.name "Full Name"       Args:
+        Args:
                    cfg: dictionary containing general settings for Qick programs
                    sequence: arbitrary PulseSequence object to execute
                    qubits: list of qubits of the platform
