@@ -699,6 +699,21 @@ class QMOPX(AbstractInstrument):
         result = self.execute_program(experiment)
         return self.fetch_results(result, sequence.ro_pulses)
 
+    @staticmethod
+    def maximum_sweep_value(values, value0):
+        """Calculates maximum value that is reached during a sweep.
+
+        Useful to check whether a sweep exceeds the range of allowed values.
+        Note that both the array of values we sweep and the center value can
+        be negative, so we need to make sure that the maximum absolute value
+        is within range.
+
+        Args:
+            values (np.ndarray): Array of values we will sweep over.
+            value0 (float, int): Center value of the sweep.
+        """
+        return max(abs(min(values) + value0), abs(max(values) + value0))
+
     def sweep_frequency(self, sweepers, qubits, qmsequence, relaxation_time):
         from qm.qua import update_frequency
 
@@ -716,7 +731,7 @@ class QMOPX(AbstractInstrument):
             f0 = int(pulse.frequency - lo_frequency)
             freqs0.append(declare(int, value=f0))
             # check if sweep is within the supported bandwidth [-400, 400] MHz
-            max_freq = max(abs(min(sweeper.values) + f0), abs(max(sweeper.values) + f0))
+            max_freq = self.maximum_sweep_value(sweeper.values, f0)
             if max_freq > 4e8:
                 raise_error(ValueError, f"Frequency {max_freq} for qubit {qubit.name} is beyond instrument bandwidth.")
 
@@ -768,7 +783,7 @@ class QMOPX(AbstractInstrument):
         for q in sweeper.qubits:
             b0 = qubits[q].flux.bias
             max_bias = qubits[q].flux.max_bias
-            max_value = max(abs(min(sweeper.values) + b0), abs(max(sweeper.values) + b0))
+            max_value = self.maximum_sweep_value(sweeper.values, b0)
             check_max_bias(max_value, max_bias)
             bias0.append(declare(fixed, value=b0))
         b = declare(fixed)
