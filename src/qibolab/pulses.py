@@ -604,8 +604,10 @@ class Pulse:
     @property
     def start(self) -> int:
         """Returns the time when the pulse is scheduled to be played, in ns."""
-
-        return self._start.value
+        if isinstance(self._start, se_int):
+            return self._start.value
+        else:
+            return self._start
 
     @start.setter
     def start(self, value):
@@ -619,22 +621,28 @@ class Pulse:
             raise TypeError(f"start argument type should be intSymbolicExpression or int, got {type(value).__name__}")
         elif not value >= 0:
             raise ValueError(f"start argument must be >= 0, got {value}")
+
         if isinstance(value, se_int):
-            # self._start = value
-            # self._start = intSymbolicExpression(value)
             self._start = se_int(value.symbol)["_p" + str(self._id) + "_start"]
+            
         elif isinstance(value, np.integer):
-            self._start = se_int(int(value))["_p" + str(self._id) + "_start"]
+            self._start = int(value)
         elif isinstance(value, int):
-            self._start = se_int(value)["_p" + str(self._id) + "_start"]
+            self._start = value
+
         if self._duration:
-            self._finish = (self._start + self._duration)["_p" + str(self._id) + "_finish"]
+            if isinstance(self._start, se_int) or isinstance(self._duration, se_int):
+                self._finish = (self._start + self._duration)["_p" + str(self._id) + "_finish"]
+            else:
+                self._finish = (self._start + self._duration)
 
     @property
     def duration(self) -> int:
         """Returns the duration of the pulse, in ns."""
-
-        return self._duration.value
+        if isinstance(self._duration, se_int):
+            return self._duration.value
+        else:
+            return self._duration
 
     @duration.setter
     def duration(self, value):
@@ -652,12 +660,17 @@ class Pulse:
             raise ValueError(f"duration argument must be >= 0, got {value}")
         if isinstance(value, se_int):
             self._duration = se_int(value.symbol)["_p" + str(self._id) + "_duration"]
+
         elif isinstance(value, np.integer):
-            self._duration = se_int(int(value))["_p" + str(self._id) + "_duration"]
+            self._duration = int(value)
         elif isinstance(value, int):
-            self._duration = se_int(value)["_p" + str(self._id) + "_duration"]
+            self._duration = value
+
         if self._start:
-            self._finish = (self._start + self._duration)["_p" + str(self._id) + "_finish"]
+            if isinstance(self._start, se_int) or isinstance(self._duration, se_int):
+                self._finish = (self._start + self._duration)["_p" + str(self._id) + "_finish"]
+            else:
+                self._finish = (self._start + self._duration)
 
     @property
     def finish(self) -> int:
@@ -665,25 +678,37 @@ class Pulse:
 
         Calculated as pulse.start - pulse finish.
         """
-
-        return self._finish.value
+        if isinstance(self._finish, se_int):
+            return self._finish.value
+        else:
+            return self._finish
 
     @property
     def se_start(self) -> se_int:
         """Returns a symbolic expression for the pulse start."""
 
-        return self._start
+        if isinstance(self._start, se_int):
+            return self._start
+        else:
+            return se_int(self._start)["_p" + str(self._id) + "_start"]
 
     @property
     def se_duration(self) -> se_int:
         """Returns a symbolic expression for the pulse duration."""
 
-        return self._duration
+        if isinstance(self._duration, se_int):
+            return self._duration
+        else:
+            return se_int(self._duration)["_p" + str(self._id) + "_duration"]
 
     @property
     def se_finish(self) -> se_int:
         """Returns a symbolic expression for the pulse finish."""
 
+        if isinstance(self._finish, se_int):
+            return self._finish
+        else:
+            return se_int(self._finish)["_p" + str(self._id) + "_finish"]
         return self._finish
 
     @property
