@@ -348,7 +348,7 @@ characterization:
             sweetspot: 0                          
         1:
             readout_frequency: 7_452_574_203 
-            drive_frequency: 4_542_000_000
+            drive_frequency: 4_650_000_000
             T1: 1_830
             T2: 130
             state0_voltage: 0.0
