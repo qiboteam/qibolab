@@ -210,7 +210,6 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
         qubits[q].readout = channels[wiring["readout"][q[0]][1]]
         qubits[q].feedback = channels[wiring["feedback"][q[0]][1]]
 
-    print(qubits)
     # Platfom topology
     Q = []
     for i in range(1, 7):
