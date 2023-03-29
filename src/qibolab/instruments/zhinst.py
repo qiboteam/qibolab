@@ -1,26 +1,27 @@
 import os
 from collections import defaultdict
+from pathlib import Path
 
 import laboneq._token
 import laboneq.simple as lo
 import numpy as np
 
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
+from qibolab.paths import qibolab_folder
+from qibolab.platforms.platform import AcquisitionType, AveragingMode
 from qibolab.pulses import FluxPulse, PulseSequence
 from qibolab.result import ExecutionResults
 
 os.environ["LABONEQ_TOKEN"] = "ciao come va?"  # or other random text
 laboneq._token.is_valid_token = lambda _token: True
 
-# FIXME: Amplitude !!!
+# FIXME: Amplitude = 1.0, 1st pi pulse wider.
 
 # TODO: #483 from Andrea, AveragedResults
-
 # TODO: Scan de flujo amplitud y lenght (doble sweep a un pulso)
 
-
 # FIXME: Multiplex (For readout). Workaround integration weights padding with zeros.
-# FIXME: Handle on acquires
+# FIXME: Handle on acquires for list of pulse sequences
 # FIXME: I think is a hardware limitation but I cant sweep multiple drive oscillator at the same time
 # FIXME: Docs & tests
 
@@ -119,7 +120,7 @@ class ZhSweeper:
         if parameter == "amplitude":
             zh_sweeper = lo.SweepParameter(
                 uid=sweeper.parameter.name,
-                values=sweeper.values,
+                values=sweeper.values,  # * self.pulse.amplitude,
             )
         elif parameter == "duration":
             zh_sweeper = lo.SweepParameter(
@@ -200,6 +201,7 @@ class Zurich(AbstractInstrument):
         self.relaxation_time = 0.0
         self.time_of_flight = 0.0
         self.smearing = 0.0
+        self.chip = None
 
         self.exp = None
         self.experiment = None
@@ -474,16 +476,17 @@ class Zurich(AbstractInstrument):
 
         # Defaults
         if options.acquisition_type is None:
-            if all(qubits[qubit].threshold != 0 for qubit in self.sequence_qibo.qubits):
-                options.acquisition_type = (lo.AcquisitionType.DISCRIMINATION,)
+            # if all(qubits[qubit].threshold != 0 for qubit in self.sequence_qibo.qubits):
+            if 1 == 0:
+                options.acquisition_type = lo.AcquisitionType.DISCRIMINATION
             else:
                 options.acquisition_type = lo.AcquisitionType.INTEGRATION
         else:
-            if options.acquisition_type == "INTEGRATION":
+            if options.acquisition_type is AcquisitionType.INTEGRATION:
                 options.acquisition_type = lo.AcquisitionType.INTEGRATION
-            elif options.acquisition_type == "RAW":
+            elif options.acquisition_type is AcquisitionType.RAW:
                 options.acquisition_type = lo.AcquisitionType.RAW
-            elif options.acquisition_type == "DISCRIMINATION":
+            elif options.acquisition_type is AcquisitionType.DISCRIMINATION:
                 options.acquisition_type = lo.AcquisitionType.DISCRIMINATION
             elif self.acquisition_type == lo.AcquisitionType.SPECTROSCOPY:
                 options.acquisition_type = lo.AcquisitionType.SPECTROSCOPY
@@ -491,12 +494,11 @@ class Zurich(AbstractInstrument):
         if options.averaging_mode is None:
             options.averaging_mode = lo.AveragingMode.CYCLIC
         else:
-            if options.averaging_mode == "CYClIC":
+            if options.averaging_mode is AveragingMode.CYCLIC:
                 options.averaging_mode = lo.AveragingMode.CYCLIC
-            elif options.averaging_mode == "SINGLESHOT":
+            elif options.averaging_mode is AveragingMode.SINGLESHOT:
                 options.averaging_mode = lo.AveragingMode.SINGLE_SHOT
 
-        # FIXME: DISCRIMINATION is a tuple and INTEGRATION a variable ???
         print(options.acquisition_type)
         print(options.averaging_mode)
 
@@ -510,14 +512,24 @@ class Zurich(AbstractInstrument):
         ):
             if self.nsweeps > 0:
                 exp_calib = lo.Calibration()
-                self.sweep_recursion(qubits, exp, exp_calib, options.relaxation_time)
+                self.sweep_recursion(
+                    qubits, exp, exp_calib, options.relaxation_time, options.acquisition_type, options.fast_reset
+                )
                 exp.set_calibration(exp_calib)
+
+            # TODO: Gate sweeps for flipping, AllXY (,RB ?):
+            elif self.nsweeps == "gate_sweep":
+                print("Estoy en ello")
+                # inner loop - sweep over sequence lengths
+                for pulse_sequences in pulse_sequences:
+                    self.select_exp(exp, qubits, options.relaxation_time, options.acquisition_type, options.fast_reset)
+                    # Careful with the definition of handel and their recovery
             else:
-                self.select_exp(exp, qubits, options.relaxation_time, options.fast_reset)
+                self.select_exp(exp, qubits, options.relaxation_time, options.acquisition_type, options.fast_reset)
             self.experiment = exp
             exp.set_signal_map(self.signal_map)
 
-    def select_exp(self, exp, qubits, relaxation_time, fast_reset=False):
+    def select_exp(self, exp, qubits, relaxation_time, acquisition_type, fast_reset=False):
         """Build Zurich Experiment selecting the relevant sections"""
         if "drive" in str(self.sequence):
             if "flux" in str(self.sequence):
@@ -527,7 +539,7 @@ class Zurich(AbstractInstrument):
                 self.drive(exp, qubits)
         elif "flux" in str(self.sequence):
             self.flux(exp, qubits)
-        self.measure_relax(exp, qubits, relaxation_time)
+        self.measure_relax(exp, qubits, relaxation_time, acquisition_type)
         if fast_reset is not False:
             self.fast_reset(exp, qubits, fast_reset)
 
@@ -563,6 +575,8 @@ class Zurich(AbstractInstrument):
                 parameters.append(partial_sweep.uid)
             print("parameters", parameters)
             if any("amplitude" in param for param in parameters):
+                # Zurich is already mutyplying the pulse amplitude with the sweeper amplitude
+                pulse.zhpulse.amplitude = 1
                 exp.play(
                     signal=f"{section}{qubit.name}",
                     pulse=pulse.zhpulse,
@@ -646,7 +660,7 @@ class Zurich(AbstractInstrument):
     # For pulsed spectroscopy, set integration_length and either measure_pulse or measure_pulse_length.
     # For CW spectroscopy, set only integration_length and do not specify the measure signal.
     # For all other measurements, set either length or pulse for both the measure pulse and integration kernel.
-    def measure_relax(self, exp, qubits, relaxation_time):
+    def measure_relax(self, exp, qubits, relaxation_time, acquisition_type):
         """qubit readout pulse, data acquisition and qubit relaxation to ground state"""
         for qubit in qubits.values():
             if not qubit.flux_coupler:
@@ -671,55 +685,41 @@ class Zurich(AbstractInstrument):
                             time += round(pulse.pulse.duration * 1e-9, 9) + round(pulse.pulse.start * 1e-9, 9) - time
                             pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
 
-                            # FIXME: Dummy integration use the below one when possible
-                            # weight = lo.pulse_library.const(
-                            #     uid="weight" + pulse.zhpulse.uid,
-                            #     length=round(pulse.pulse.duration * 1e-9, 9), #-self.time_of_flight
-                            #     amplitude=1,
-                            # )
-
-                            # TODO: Test and calibrate this and use only when possible
-                            # Smearing: Reduce the acquire start by this value and the end by value/2 (APROX)
-
-                            # exp.delay(signal=f"measure{qubit.name}", time=500e-9)
-                            exp.delay(signal=f"measure{qubit.name}", time=100e-9)
-
-                            # We adjust for smearing and remove smearing/2 at the end
-                            weight = lo.pulse_library.const(
-                                uid="weight" + pulse.zhpulse.uid,
-                                length=round(pulse.pulse.duration * 1e-9, 9) - 150e-9,
-                                amplitude=1,
+                            weights_file = Path(
+                                str(qibolab_folder)
+                                + f"/runcards/{self.chip}/weights/integration_weights_optimization_qubit_{qubit.name}.npy"
                             )
-
-                            # TODO: Load them form somewhere else
-                            # Optimal weights
-                            # samples = np.load(
-                            #     "/home/admin/Juan/qibolab/src/qibolab/instruments/Optimal_weights_conj.npy"
-                            # )
-
-                            # weight = lo.pulse_library.sampled_pulse_complex(
-                            #     uid="weight" + pulse.zhpulse.uid,
-                            #     samples=samples,
-                            # )
-
-                            # #For Discrimination
-                            # Dummy:
-                            # weight = lo.pulse_library.sampled_pulse_complex(
-                            #     np.ones([int(pulse.pulse.duration *2)]) * np.exp(1j * qubit.iq_angle)
-                            # )
-                            # Optimal:
-                            # weight = lo.pulse_library.sampled_pulse_complex(
-                            #     uid="weight" + pulse.zhpulse.uid,
-                            #     samples = samples * np.exp(1j * qubit.iq_angle,
-                            # )
-
-                            # measure_pulse_parameters
-                            # if isinstance(pulse, ZhSweeper):
-                            #     self.play_sweep(exp, qubit, pulse, section="measure")
-                            # else:
-                            #     exp.play(
-                            #         signal=f"measure{qubit.name}", pulse=pulse.zhpulse, phase=pulse.pulse.relative_phase
-                            #     )
+                            if weights_file.is_file():
+                                # Optimal weights
+                                samples = np.load(
+                                    str(qibolab_folder)
+                                    + f"/runcards/{self.chip}/weights/integration_weights_optimization_qubit_{qubit.name}.npy",
+                                    allow_pickle=True,
+                                )
+                                if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
+                                    weight = lo.pulse_library.sampled_pulse_complex(
+                                        uid="weight" + pulse.zhpulse.uid,
+                                        samples=samples[0] * np.exp(1j * qubit.iq_angle),
+                                    )
+                                else:
+                                    weight = lo.pulse_library.sampled_pulse_complex(
+                                        uid="weight" + pulse.zhpulse.uid,
+                                        samples=samples[0],
+                                    )
+                            else:
+                                # Dumb weights
+                                exp.delay(signal=f"measure{qubit.name}", time=self.smearing)
+                                # We adjust for smearing and remove smearing/2 at the end
+                                if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
+                                    weight = lo.pulse_library.sampled_pulse_complex(
+                                        np.ones([int(pulse.pulse.duration * 2)]) * np.exp(1j * qubit.iq_angle)
+                                    )
+                                else:
+                                    weight = lo.pulse_library.const(
+                                        uid="weight" + pulse.zhpulse.uid,
+                                        length=round(pulse.pulse.duration * 1e-9, 9) - 1.5 * self.smearing,
+                                        amplitude=1,
+                                    )
 
                             exp.measure(
                                 acquire_signal=f"acquire{qubit.name}",
@@ -730,7 +730,7 @@ class Zurich(AbstractInstrument):
                                 measure_signal=f"measure{qubit.name}",
                                 measure_pulse=pulse.zhpulse,
                                 measure_pulse_length=round(pulse.pulse.duration * 1e-9, 9),
-                                measure_pulse_parameters=None,  # meter aqui el sweep
+                                measure_pulse_parameters=None,  # meter aqui el sweep ?
                                 measure_pulse_amplitude=None,
                                 acquire_delay=self.time_of_flight,
                                 reset_delay=relaxation_time,
@@ -739,7 +739,11 @@ class Zurich(AbstractInstrument):
 
     def fast_reset(self, exp, qubits, fast_reset):
         """fast reset after readout - small delay for signal processing"""
-        for qubit in qubits.values():
+        print("Im fast resetting")
+        print(fast_reset)
+        print(self.sequence_qibo.qubits)
+        for qubit_name in self.sequence_qibo.qubits:
+            qubit = qubits[qubit_name]
             if not qubit.flux_coupler:
                 with exp.section(uid=f"fast_reset{qubit.name}", play_after=f"sequence_measure{qubit.name}"):
                     with exp.match_local(handle=f"acquire{qubit.name}"):
@@ -777,7 +781,7 @@ class Zurich(AbstractInstrument):
         return results
 
     # TODO: Recursion tests and Better sweeps logic
-    def sweep_recursion(self, qubits, exp, exp_calib, relaxation_time):
+    def sweep_recursion(self, qubits, exp, exp_calib, relaxation_time, acquisition_type, fast_reset):
         """Sweepers recursion for multiple nested sweepers"""
         # Ordered like this for how they defined the frequncy sweep on qibocal to be the last
         # and I need it to be the outer one
@@ -826,9 +830,9 @@ class Zurich(AbstractInstrument):
             reset_oscillator_phase=True,
         ):
             if len(self.sweepers) > 0:
-                self.sweep_recursion(qubits, exp, exp_calib, relaxation_time)
+                self.sweep_recursion(qubits, exp, exp_calib, relaxation_time, acquisition_type, fast_reset)
             else:
-                self.select_exp(exp, qubits, relaxation_time, fast_reset=False)
+                self.select_exp(exp, qubits, relaxation_time, acquisition_type, fast_reset)
 
     # -----------------------------------------------------------------------------
 

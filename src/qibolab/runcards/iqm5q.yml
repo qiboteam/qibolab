@@ -7,6 +7,7 @@ settings:
     relaxation_time: 300.e-6
     time_of_flight: 280.e-9
     Fast_reset: False
+    chip: iqm5q
 
 qubits: [0, 1, 2, 3, 4, "c0", "c1", "c3", "c4"]
 
@@ -111,8 +112,8 @@ native_gates:
                 shape: Rectangular()
         4: # qubit number
             RX:
-                duration: 108 #110 #80
-                amplitude: 0.5 #0.8
+                duration: 100 #110 #80
+                amplitude: 0.512 #0.8
                 frequency: 4_249_300_000 #Small detuning increase freq #4_248_775_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
@@ -121,7 +122,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: .8 # 1
+                amplitude: .55 # 1
                 frequency: 5_517_000_000 #doesnt do anything requiered for qibolab to work
                 integration_time : 2.e-6
                 shape: Rectangular()
@@ -165,7 +166,7 @@ characterization:
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
             # parameters for single shot classification
-            threshold: 0.222844
+            threshold: 0.0 #0.222844
             iq_angle: 6.637
             # To save power values on the runcard
             # ro_range_lp: -15
@@ -218,8 +219,8 @@ characterization:
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
             # parameters for single shot classification
-            threshold: 0.370954 #0.350665
-            iq_angle: 4.528 #191.016
+            threshold: 0.348421 #0.370954 #0.350665
+            iq_angle: 1.589 # -91.712 #191.016
         "c0":
             sweetspot: 0.0
             filter: {}

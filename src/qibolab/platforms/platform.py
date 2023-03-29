@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import Enum, auto
 from typing import Optional
 
 import numpy as np
@@ -36,7 +37,7 @@ class DesignPlatform(AbstractPlatform):
         self.is_connected = False
 
     def execute_pulse_sequence(self, sequence, **kwargs):
-        options = ExecutionParameters(kwargs)
+        options = ExecutionParameters(**kwargs)
 
         if options.relaxation_time is None:
             options.relaxation_time = self.relaxation_time
@@ -54,7 +55,7 @@ class DesignPlatform(AbstractPlatform):
         )
 
     def sweep(self, sequence, *sweepers, **kwargs):
-        options = ExecutionParameters(kwargs)
+        options = ExecutionParameters(**kwargs)
 
         if options.relaxation_time is None:
             options.relaxation_time = self.relaxation_time
@@ -73,6 +74,27 @@ class DesignPlatform(AbstractPlatform):
         )
 
 
+class AcquisitionType(Enum):
+    """
+    Types of data acquisition from hardware.
+    (SPECTROSCOPY[Weird Zurich mode], INTEGRATION, RAW, DISCRIMINATION)
+    """
+
+    RAW = auto()
+    INTEGRATION = auto()
+    DISCRIMINATION = auto()
+
+
+class AveragingMode(Enum):
+    """
+    Types of data averaging from hardware.
+    (CYLIC[True averaging], SINGLESHOT[False averaging], [SEQUENTIAL, bad averaging])
+    """
+
+    CYCLIC = auto()
+    SINGLESHOT = auto()
+
+
 @dataclass
 class ExecutionParameters:
     """Data structure to deal with execution parameters
@@ -81,17 +103,13 @@ class ExecutionParameters:
     :relaxation_time: Relaxation time for the qubit
     :fast_reset: Enable or disable fast reset
     :sim_time: Time for the simulation execution
-    :acquisition_type: Data acquisition mode (SPECTROSCOPY, INTEGRATION, RAW, DISCRIMINATION)
-    :averaging_type: Data averaging mode (CYLIC[True averaging], SINGLESHOT[False averaging], [SEQUENTIAL, bad averaging])
+    :acquisition_type: Data acquisition mode
+    :averaging_mode: Data averaging mode
     """
 
     nshots: Optional[np.uint32] = None
     relaxation_time: Optional[np.uint32] = None
     fast_reset: Optional[bool] = False
     sim_time: Optional[np.float64] = 10e-6
-    acquisition_type: Optional[str] = None
-    averaging_mode: Optional[str] = None
-
-    def __init__(self, dictionary):
-        for k, v in dictionary.items():
-            setattr(self, k, v)
+    acquisition_type: AcquisitionType = AcquisitionType.INTEGRATION
+    averaging_mode: AveragingMode = AveragingMode.CYCLIC
