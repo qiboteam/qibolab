@@ -17,11 +17,20 @@ from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qblox_instruments.qcodes_drivers.sequencer import Sequencer as QbloxSequencer
 
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
+from qibolab.instruments.qblox_q1asm import (
+    Block,
+    Program,
+    Register,
+    convert_frequency,
+    convert_gain,
+    convert_offset,
+    convert_phase,
+    loop_block,
+    sweeper_block,
+    wait_block,
+)
 from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType, Waveform
-from qibolab.instruments.qblox_q1asm import Program, Block, Register
-from qibolab.instruments.qblox_q1asm import wait_block, sweeper_block, loop_block
-from qibolab.instruments.qblox_q1asm import convert_phase, convert_frequency
-from qibolab.instruments.qblox_q1asm import convert_gain, convert_offset
+
 
 class WaveformsBuffer:
     """A class to represent a buffer that holds the unique waveforms used by a sequencer.
@@ -633,7 +642,7 @@ class ClusterQRM_RF(AbstractInstrument):
         next_sequencer_number = self._free_sequencers_numbers.pop(0)
         if next_sequencer_number != self.DEFAULT_SEQUENCERS[port]:
             for parameter in self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].parameters:
-                # exclude read-only parameter `present` and others that have wrong default values (qblox bug)  
+                # exclude read-only parameter `present` and others that have wrong default values (qblox bug)
                 if not parameter in ["present", "thresholded_acq_marker_address", "thresholded_acq_trigger_address"]:
                     value = self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].get(param_name=parameter)
                     if value:
@@ -799,7 +808,7 @@ class ClusterQRM_RF(AbstractInstrument):
                     )  # the minimum delay between instructions is 4ns
 
                     program = Program()
-                    nshots_register =  Register(program, "nshots")
+                    nshots_register = Register(program, "nshots")
 
                     header_block = Block("setup")
                     if active_reset:
@@ -814,7 +823,9 @@ class ClusterQRM_RF(AbstractInstrument):
 
                     pulses_block = Block("play_and_acquire")
                     # Add an initial wait instruction for the first pulse of the sequence
-                    initial_wait_block = wait_block(wait_time = pulses[0].start, register = Register(program), force_multiples_of_4=False)
+                    initial_wait_block = wait_block(
+                        wait_time=pulses[0].start, register=Register(program), force_multiples_of_4=False
+                    )
                     pulses_block += initial_wait_block
 
                     for n in range(pulses.count):
@@ -822,7 +833,10 @@ class ClusterQRM_RF(AbstractInstrument):
                             n
                         ].relative_phase != 0:
                             # Set phase
-                            pulses_block.append(f"set_ph {convert_phase(pulses[n].relative_phase)}", comment=f"set relative phase {pulses[n].relative_phase} rads")
+                            pulses_block.append(
+                                f"set_ph {convert_phase(pulses[n].relative_phase)}",
+                                comment=f"set relative phase {pulses[n].relative_phase} rads",
+                            )
                         if pulses[n].type == PulseType.READOUT:
                             delay_after_play = self.acquisition_hold_off
 
@@ -831,10 +845,10 @@ class ClusterQRM_RF(AbstractInstrument):
                                 delay_after_acquire = pulses[n + 1].start - pulses[n].start - self.acquisition_hold_off
                                 time_between_repetitions = repetition_duration - sequence_total_duration
                             else:
-                                delay_after_acquire = (
-                                    sequence_total_duration - pulses[n].start
+                                delay_after_acquire = sequence_total_duration - pulses[n].start
+                                time_between_repetitions = (
+                                    repetition_duration - sequence_total_duration - self.acquisition_hold_off
                                 )
-                                time_between_repetitions = repetition_duration - sequence_total_duration - self.acquisition_hold_off
                             assert time_between_repetitions > 0
 
                             if delay_after_acquire < minimum_delay_between_instructions:
@@ -843,14 +857,19 @@ class ClusterQRM_RF(AbstractInstrument):
                                 )
 
                             # Prepare play instruction: play wave_i_index, wave_q_index, delay_next_instruction
-                            pulses_block.append(f"play  {sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_i)},{sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_q)},{delay_after_play}", comment=f"play waveforms {pulses[n]}")
+                            pulses_block.append(
+                                f"play  {sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_i)},{sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_q)},{delay_after_play}",
+                                comment=f"play waveforms {pulses[n]}",
+                            )
 
                             # Prepare acquire instruction: acquire acquisition_index, bin_index, delay_next_instruction
                             if active_reset:
                                 pulses_block.append(f"acquire {pulses.ro_pulses.index(pulses[n])},{nshots_register},4")
                                 pulses_block.append(f"latch_rst {delay_after_acquire + 300 - 4}")
                             else:
-                                pulses_block.append(f"acquire {pulses.ro_pulses.index(pulses[n])},{nshots_register},{delay_after_acquire}")
+                                pulses_block.append(
+                                    f"acquire {pulses.ro_pulses.index(pulses[n])},{nshots_register},{delay_after_acquire}"
+                                )
 
                         else:
                             # Calculate the delay_after_play that is to be used as an argument to the play instruction
@@ -866,18 +885,25 @@ class ClusterQRM_RF(AbstractInstrument):
                                 )
 
                             # Prepare play instruction: play wave_i_index, wave_q_index, delay_next_instruction
-                            pulses_block.append(f"play  {sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_i)},{sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_q)},{delay_after_play}", comment=f"play waveforms {pulses[n]}")
+                            pulses_block.append(
+                                f"play  {sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_i)},{sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_q)},{delay_after_play}",
+                                comment=f"play waveforms {pulses[n]}",
+                            )
 
-                    body_block += pulses_block 
+                    body_block += pulses_block
                     body_block.append_spacer()
 
                     if active_reset:
                         final_reset_block = Block()
                         final_reset_block.append(f"set_cond 1, {address}, 0, 4", comment="active reset")
-                        final_reset_block.append(f"play {active_reset_pulse_idx_I}, {active_reset_pulse_idx_Q}, 4", level=1)
+                        final_reset_block.append(
+                            f"play {active_reset_pulse_idx_I}, {active_reset_pulse_idx_Q}, 4", level=1
+                        )
                         final_reset_block.append(f"set_cond 0, {address}, 0, 4")
                     else:
-                        final_reset_block = wait_block(wait_time = time_between_repetitions, register = Register(program), force_multiples_of_4=False)
+                        final_reset_block = wait_block(
+                            wait_time=time_between_repetitions, register=Register(program), force_multiples_of_4=False
+                        )
                     body_block += final_reset_block
 
                     footer_block = Block("cleaup")
@@ -1660,7 +1686,7 @@ class ClusterQCM_RF(AbstractInstrument):
         next_sequencer_number = self._free_sequencers_numbers.pop(0)
         if next_sequencer_number != self.DEFAULT_SEQUENCERS[port]:
             for parameter in self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].parameters:
-                # exclude read-only parameter `present`  
+                # exclude read-only parameter `present`
                 if not parameter in ["present"]:
                     value = self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].get(param_name=parameter)
                     if value:
@@ -2366,7 +2392,7 @@ class ClusterQCM(AbstractInstrument):
         next_sequencer_number = self._free_sequencers_numbers.pop(0)
         if next_sequencer_number != self.DEFAULT_SEQUENCERS[port]:
             for parameter in self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].parameters:
-                # exclude read-only parameter `present`  
+                # exclude read-only parameter `present`
                 if not parameter in ["present"]:
                     value = self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].get(param_name=parameter)
                     if value:
