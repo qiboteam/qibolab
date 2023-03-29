@@ -298,6 +298,7 @@ class TII_RFSOC4x2(AbstractInstrument):
                         qubit = qubits[or_sequence.ro_pulses[i].qubit]
                         shots = self.classify_shots(i_pulse, q_pulse, qubit)
                         results[serial] = ExecutionResults.from_components(i_pulse, q_pulse, shots)
+
             return results
 
         # If sweepers are still in queue
@@ -334,6 +335,7 @@ class TII_RFSOC4x2(AbstractInstrument):
                     res = self.recursive_python_sweep(qubits, sequence, or_sequence, *sweepers[1:], average=average)
                     # merge the dictionary obtained with the one already saved
                     sweep_results = self.merge_sweep_results(sweep_results, res)
+
         return sweep_results
 
     def merge_sweep_results(
@@ -518,4 +520,4 @@ class TII_RFSOC4x2(AbstractInstrument):
             elif sweeper.parameter == Parameter.amplitude:
                 continue
 
-        return
+        return results
