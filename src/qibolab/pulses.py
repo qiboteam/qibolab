@@ -624,7 +624,7 @@ class Pulse:
 
         if isinstance(value, se_int):
             self._start = se_int(value.symbol)["_p" + str(self._id) + "_start"]
-            
+
         elif isinstance(value, np.integer):
             self._start = int(value)
         elif isinstance(value, int):
@@ -634,7 +634,7 @@ class Pulse:
             if isinstance(self._start, se_int) or isinstance(self._duration, se_int):
                 self._finish = (self._start + self._duration)["_p" + str(self._id) + "_finish"]
             else:
-                self._finish = (self._start + self._duration)
+                self._finish = self._start + self._duration
 
     @property
     def duration(self) -> int:
@@ -670,7 +670,7 @@ class Pulse:
             if isinstance(self._start, se_int) or isinstance(self._duration, se_int):
                 self._finish = (self._start + self._duration)["_p" + str(self._id) + "_finish"]
             else:
-                self._finish = (self._start + self._duration)
+                self._finish = self._start + self._duration
 
     @property
     def finish(self) -> int:
