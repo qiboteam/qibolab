@@ -6,7 +6,7 @@ Supports the following FPGA:
 
 import pickle
 import socket
-from typing import Dict, List, Union
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 
@@ -35,7 +35,6 @@ class TII_RFSOC4x2(AbstractInstrument):
         self.cfg: dict = {}  # dictionary with runcard, filled in setup()
         self.host, self.port = address.split(":")
         self.port = int(self.port)
-        self.states_calibrated = False
 
     def connect(self):
         """Empty method to comply with AbstractInstrument interface."""
@@ -56,7 +55,6 @@ class TII_RFSOC4x2(AbstractInstrument):
         repetition_duration: int,
         adc_trig_offset: int,
         max_gain: int,
-        calibrate: bool = False,
         **kwargs,
     ):
         """Configures the instrument.
@@ -79,76 +77,32 @@ class TII_RFSOC4x2(AbstractInstrument):
             "max_gain": max_gain,
         }
 
-        if calibrate:
-            self.calibration_cfg = {}
-            self.calibrate_states(qubits)
-            self.states_calibrated = True
+    def call_executepulsesequence(
+        self, cfg: dict, sequence: PulseSequence, qubits: List[Qubit], readouts_per_experiment: int, average: bool
+    ) -> Tuple(list, list):
+        """Sends to the server on board all the objects and information needed for
+                  executing an arbitrary PulseSequence.
 
-    def calibrate_states(self, qubits: List[Qubit]):
-        """Runs a calibration and sets threshold and angle paramters"""
-        # TODO maybe this could be moved to create_tii_rfsoc4x2() to
-        #      use create_RX_pulse and create_MZ_pulse
-        # TODO integration with qibocal routines
+                  The communication protocol is:
+                   * prepare a single dictionary with all needed objects
+                   * pickle it
+                   * send to the server the length in byte of the pickled dictionary
+                   * the server now will wait for that number of bytes
+                   * send the  pickled dictionary
+                   * wait for response (arbitray number of bytes)
 
-        for qubit in qubits:
-            self.calibration_cfg[qubit] = {}
+        git config [--global] user.name "Full Name"       Args:
+                   cfg: dictionary containing general settings for Qick programs
+                   sequence: arbitrary PulseSequence object to execute
+                   qubits: list of qubits of the platform
+                   readouts_per_experiment: number of readout pulse to execute
+                   average: if True returns averaged results, otherwise single shots
 
-            # definition of MZ pulse
-            ro_duration = 2000
-            ro_frequency = 7371800000
-            ro_amplitude = 0.046
-            ro_shape = Rectangular()
-            ro_channel = qubits[qubit].readout.name
-            # definition of RX pulse
-            qd_duration = 28
-            qd_frequency = 5541675000
-            qd_amplitude = 0.09
-            qd_shape = Rectangular()
-            qd_channel = qubits[qubit].drive.name
-            # sequence that should measure 0
-            sequence0 = PulseSequence()
-            ro_pulse = ReadoutPulse(0, ro_duration, ro_amplitude, ro_frequency, 0, ro_shape, ro_channel, qubit=qubit)
+               Returns:
+                   Lists of I and Q value measured
+        """
 
-            sequence0.add(ro_pulse)
-            res0 = self.play(qubits, sequence0, nshots=2000)[ro_pulse.serial]
-
-            # sequence that should measure 1
-            sequence1 = PulseSequence()
-            qd_pulse = Pulse(0, qd_duration, qd_amplitude, qd_frequency, 0, qd_shape, qd_channel, qubit=qubit)
-            ro_pulse = ReadoutPulse(
-                qd_pulse.finish, ro_duration, ro_amplitude, ro_frequency, 0, ro_shape, ro_channel, qubit=qubit
-            )
-
-            sequence1.add(qd_pulse)
-            sequence1.add(ro_pulse)
-            res1 = self.play(qubits, sequence1, nshots=2000)[ro_pulse.serial]
-
-            #
-            i_zero = res0.i
-            q_zero = res0.q
-            i_one = res1.i
-            q_one = res1.q
-
-            x_zero, y_zero = np.median(i_zero), np.median(q_zero)
-            x_one, y_one = np.median(i_one), np.median(q_one)
-
-            theta = -np.arctan2((y_one - y_zero), (x_one - x_zero))
-
-            ig_new = i_zero * np.cos(theta) - q_zero * np.sin(theta)
-            ie_new = i_one * np.cos(theta) - q_one * np.sin(theta)
-
-            numbins = 200
-            n_zero, binsg = np.histogram(ig_new, bins=numbins)
-            n_one, binse = np.histogram(ie_new, bins=numbins)
-
-            contrast = np.abs((np.cumsum(n_zero) - np.cumsum(n_one)) / (0.5 * n_zero.sum() + 0.5 * n_one.sum()))
-            tind = contrast.argmax()
-            threshold = binsg[tind]
-
-            self.calibration_cfg[qubit]["threshold"] = threshold
-            self.calibration_cfg[qubit]["rotation_angle"] = theta
-
-    def call_executepulsesequence(self, cfg, sequence, qubits, readouts_per_experiment, average):
+        # preparing the dictionary to send
         server_commands = {
             "operation_code": "execute_pulse_sequence",
             "cfg": cfg,
@@ -157,20 +111,18 @@ class TII_RFSOC4x2(AbstractInstrument):
             "readouts_per_experiment": readouts_per_experiment,
             "average": average,
         }
+
+        # open a connection
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect((self.host, self.port))
 
             msg_encoded = pickle.dumps(server_commands)
+            # first send 15 bytes with the length of the message
             sock.send(pickle.dumps(len(msg_encoded)))
 
-            count = len(msg_encoded)
             sock.send(msg_encoded)
-            """
-            while count != 0:
-                minimum = min(1448, count)
-                sock.send(msg_encoded[len(msg_encoded)-count:minimum])
-                count = count - minimum
-            """
+
+            # wait till the server is sending
             received = bytearray()
             while True:
                 tmp = sock.recv(4096)
@@ -180,7 +132,39 @@ class TII_RFSOC4x2(AbstractInstrument):
         results = pickle.loads(received)
         return results["i"], results["q"]
 
-    def call_executesinglesweep(self, cfg, sequence, qubits, sweeper, readouts_per_experiment, average):
+    def call_executesinglesweep(
+        self,
+        cfg: dict,
+        sequence: PulseSequence,
+        qubits: List[Qubit],
+        sweeper: Sweeper,
+        readouts_per_experiment: int,
+        average: bool,
+    ) -> Tuple(list, list):
+        """Sends to the server on board all the objects and information needed for
+           executing a sweep.
+
+           The communication protocol is:
+            * prepare a single dictionary with all needed objects
+            * pickle it
+            * send to the server the length in byte of the pickled dictionary
+            * the server now will wait for that number of bytes
+            * send the  pickled dictionary
+            * wait for response (arbitray number of bytes)
+
+        Args:
+            cfg: dictionary containing general settings for Qick programs
+            sequence: arbitrary PulseSequence object to execute
+            qubits: list of qubits of the platform
+            sweeper: Sweeper object
+            readouts_per_experiment: number of readout pulse to execute
+            average: if True returns averaged results, otherwise single shots
+
+        Returns:
+            Lists of I and Q value measured
+        """
+
+        # preparing the dictionary to send
         server_commands = {
             "operation_code": "execute_single_sweep",
             "cfg": cfg,
@@ -190,13 +174,18 @@ class TII_RFSOC4x2(AbstractInstrument):
             "readouts_per_experiment": readouts_per_experiment,
             "average": average,
         }
+
+        # open a connection
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect((self.host, self.port))
 
             msg_encoded = pickle.dumps(server_commands)
+            # first send 15 bytes with the length of the message
             sock.send(pickle.dumps(len(msg_encoded)))
+
             sock.send(msg_encoded)
 
+            # wait till the server is sending
             received = bytearray()
             while True:
                 tmp = sock.recv(4096)
@@ -210,8 +199,9 @@ class TII_RFSOC4x2(AbstractInstrument):
         self, qubits: List[Qubit], sequence: PulseSequence, relaxation_time: int = None, nshots: int = 1000
     ) -> Dict[str, ExecutionResults]:
         """Executes the sequence of instructions and retrieves readout results.
-        Each readout pulse generates a separate acquisition.
-        The relaxation_time and the number of shots have default values.
+           Each readout pulse generates a separate acquisition.
+           The relaxation_time and the number of shots have default values.
+
         Args:
             qubits (list): List of `qibolab.platforms.utils.Qubit` objects
                            passed from the platform.
@@ -252,15 +242,12 @@ class TII_RFSOC4x2(AbstractInstrument):
         return results
 
     def classify_shots(self, i_values: List[float], q_values: List[float], qubit: Qubit) -> List[float]:
-        """Classify IQ values using qubit threshold and rotation_angle"""
-        if self.states_calibrated:
-            angle = self.calibration_cfg[qubit.name]["rotation_angle"]
-            threshold = self.calibration_cfg[qubit.name]["threshold"]
-        else:
-            if qubit.rotation_angle is None or qubit.threshold is None:
-                return None
-            angle = np.radians(qubit.rotation_angle)
-            threshold = qubit.threshold
+        """Classify IQ values using qubit threshold and rotation_angle if available in runcard"""
+
+        if qubit.rotation_angle is None or qubit.threshold is None:
+            return None
+        angle = np.radians(qubit.rotation_angle)
+        threshold = qubit.threshold
 
         rotated = np.cos(angle) * np.array(i_values) - np.sin(angle) * np.array(q_values)
         shots = np.heaviside(np.array(rotated) - threshold, 0)
@@ -521,12 +508,7 @@ class TII_RFSOC4x2(AbstractInstrument):
             elif sweeper.parameter == Parameter.amplitude:
                 continue  # amp does not need modification, here for clarity
 
-        # deep copy of the sequence that can be modified without harm
-        # TODO: bug? sequence.deep_copy() exists but does not work
-        # sweepsequenc = sequence.deep_copy()
-        from copy import deepcopy
-
-        sweepsequence = deepcopy(sequence)
+        sweepsequence = sequence.copy()
 
         results = self.recursive_python_sweep(qubits, sweepsequence, sequence, *sweepers, average=average)
 
