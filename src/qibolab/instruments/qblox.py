@@ -631,7 +631,12 @@ class ClusterQRM_RF(AbstractInstrument):
         if next_sequencer_number != self.DEFAULT_SEQUENCERS[port]:
             for parameter in self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].parameters:
                 # exclude read-only parameter `present` and others that have wrong default values (qblox bug)
-                if not parameter in ["present", "thresholded_acq_marker_address", "thresholded_acq_trigger_address", "sequence"]:
+                if not parameter in [
+                    "present",
+                    "thresholded_acq_marker_address",
+                    "thresholded_acq_trigger_address",
+                    "sequence",
+                ]:
                     value = self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].get(param_name=parameter)
                     if value:
                         target = self.device.sequencers[next_sequencer_number]
