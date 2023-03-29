@@ -86,7 +86,7 @@ def test_instruments_qublox_set_property_wrappers(name):
             port, "gain", sequencer, "gain_awg_path0", "gain_awg_path1", values=np.linspace(-1, 1, 20)
         )
         instrument_test_property_wrapper(port, "hardware_mod_en", sequencer, "mod_en_awg", values=[True, False])
-        instrument_test_property_wrapper(port, "nco_freq", sequencer, "nco_freq", values=np.linspace(-300e6, 300e6, 20))
+        instrument_test_property_wrapper(port, "nco_freq", sequencer, "nco_freq", values=np.linspace(-500e6, 500e6, 20))
         instrument_test_property_wrapper(
             port, "nco_phase_offs", sequencer, "nco_phase_offs", values=np.linspace(0, 359, 20)
         )
@@ -129,7 +129,7 @@ def test_instruments_qublox_set_property_wrappers(name):
             port, "gain", sequencer, "gain_awg_path0", "gain_awg_path1", values=np.linspace(-1, 1, 20)
         )
         instrument_test_property_wrapper(port, "hardware_mod_en", sequencer, "mod_en_awg", values=[True, False])
-        instrument_test_property_wrapper(port, "nco_freq", sequencer, "nco_freq", values=np.linspace(-300e6, 300e6, 20))
+        instrument_test_property_wrapper(port, "nco_freq", sequencer, "nco_freq", values=np.linspace(-500e6, 500e6, 20))
         instrument_test_property_wrapper(
             port, "nco_phase_offs", sequencer, "nco_phase_offs", values=np.linspace(0, 359, 20)
         )
@@ -144,7 +144,7 @@ def test_instruments_qublox_set_property_wrappers(name):
             port, "gain", sequencer, "gain_awg_path0", "gain_awg_path1", values=np.linspace(-1, 1, 20)
         )
         instrument_test_property_wrapper(port, "hardware_mod_en", sequencer, "mod_en_awg", values=[True, False])
-        instrument_test_property_wrapper(port, "nco_freq", sequencer, "nco_freq", values=np.linspace(-300e6, 300e6, 20))
+        instrument_test_property_wrapper(port, "nco_freq", sequencer, "nco_freq", values=np.linspace(-500e6, 500e6, 20))
         instrument_test_property_wrapper(
             port, "nco_phase_offs", sequencer, "nco_phase_offs", values=np.linspace(0, 359, 20)
         )

@@ -239,7 +239,6 @@ class MultiqubitPlatform(AbstractPlatform):
                 for pulse in instrument_pulses[name]:
                     if pulse.serial in changed:
                         pippo = acquisition_results[pulse.serial]
-                        # if abs(pulse.frequency) > 300e6:
                         pulse.frequency += self.get_lo_readout_frequency(pulse.qubit)
                         acquisition_results[pulse.serial] = pippo
             if "control" in roles[name]:
