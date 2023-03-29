@@ -107,7 +107,7 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
         channels[wiring["readout"][feedline][1]].ports = [
             (f"con{connections[feedline][1]}", 9),
             (f"con{connections[feedline][1]}", 10),
-        ]        
+        ]
 
         wires_list = wiring["drive"][feedline]
         for i in range(len(wires_list)):
@@ -116,11 +116,13 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
                 (f"con{connections[feedline][(2*i)//8]}", 2 * i % 8 + 2),
             ]
             last_port = 2 * i % 8 + 2
-            last_con = (2*i)//8
+            last_con = (2 * i) // 8
 
         wires_list = wiring["flux"][feedline]
         for i in range(len(wires_list)):
-            channels[wires_list[i]].ports = [(f"con{connections[feedline][last_con + (i + last_port)//8]}", (i + last_port) % 8 + 1)]
+            channels[wires_list[i]].ports = [
+                (f"con{connections[feedline][last_con + (i + last_port)//8]}", (i + last_port) % 8 + 1)
+            ]
 
     # Instantiate QM OPX instruments
     if simulation_duration is None:
@@ -220,6 +222,7 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
 
     # Save temporarely the qubits as a yaml file
     import yaml
+
     yaml.dump(qubits, open("qubits.yaml", "w"))
 
     # Platfom topology
