@@ -647,8 +647,8 @@ class QMOPX(AbstractInstrument):
                 for qmpulse in qmsequence.ro_pulses:
                     serial = qmpulse.pulse.serial
                     if raw_adc:
-                        qmpulse.raw_adc.input1().save(f"{serial}_I")
-                        qmpulse.raw_adc.input2().save(f"{serial}_Q")
+                        qmpulse.raw_adc.input1().average().save(f"{serial}_I")
+                        qmpulse.raw_adc.input2().average().save(f"{serial}_Q")
                     else:
                         qmpulse.I_st.buffer(nshots).save(f"{serial}_I")
                         qmpulse.Q_st.buffer(nshots).save(f"{serial}_Q")
