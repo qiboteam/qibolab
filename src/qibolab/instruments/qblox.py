@@ -2690,14 +2690,9 @@ class ClusterQCM(AbstractInstrument):
                             )
                         if self.ports[port].hardware_mod_en and pulses[n].relative_phase != 0:
                             # Set phase
-                            p = 10
                             phase = (pulses[n].relative_phase * 360 / (2 * np.pi)) % 360
-                            coarse = int(round(phase / 0.9, p))
-                            fine = int(round((phase - coarse * 0.9) / 2.25e-3, p))
-                            ultra_fine = int(round((phase - coarse * 0.9 - fine * 2.25e-3) / 3.6e-7, p))
-                            error = abs(phase - coarse * 0.9 - fine * 2.25e-3 - ultra_fine * 3.6e-7)
-                            assert error < 3.6e-7
-                            set_ph_instruction = f"                    set_ph {coarse}, {fine}, {ultra_fine}"
+                            phase = int(phase / 360 * 1e9)
+                            set_ph_instruction = f"                    set_ph {phase}"
                             set_ph_instruction += (
                                 " " * (45 - len(set_ph_instruction))
                                 + f"# set relative phase {pulses[n].relative_phase} rads"
