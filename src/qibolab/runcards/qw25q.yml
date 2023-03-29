@@ -25,7 +25,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
+                amplitude: 0.5
                 frequency: 6.885759E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -42,7 +42,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
+                amplitude: 0.5
                 frequency: 7.267593E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -59,7 +59,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
+                amplitude: 0.5
                 frequency: 7.521734E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -76,7 +76,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
+                amplitude: 0.5
                 frequency: 7.119070E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -93,7 +93,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
+                amplitude: 0.5
                 frequency: 7.691763E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -110,7 +110,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
+                amplitude: 0.5
                 frequency: 7.942399E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -127,7 +127,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
+                amplitude: 0.5
                 frequency: 6.927829E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -144,7 +144,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
+                amplitude: 0.5
                 frequency: 7.138028E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -161,7 +161,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
+                amplitude: 0.5
                 frequency: 7.343333E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -178,7 +178,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
+                amplitude: 0.5
                 frequency: 7.748361E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -195,7 +195,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
+                amplitude: 0.5
                 frequency: 7.599758E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -212,7 +212,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
+                amplitude: 0.5
                 frequency: 7.061090E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -229,7 +229,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
+                amplitude: 0.5
                 frequency: 7.460670E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -246,7 +246,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
+                amplitude: 0.5
                 frequency: 7.627060E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -263,7 +263,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
+                amplitude: 0.5
                 frequency: 7.220770E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -280,7 +280,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
+                amplitude: 0.5
                 frequency: 7.830770E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -297,7 +297,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
+                amplitude: 0.5
                 frequency: 6.952000E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -314,7 +314,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
+                amplitude: 0.5
                 frequency: 7.111110E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -331,7 +331,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
+                amplitude: 0.5
                 frequency: 7.342070E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -348,7 +348,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
+                amplitude: 0.5
                 frequency: 7.800000E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -365,7 +365,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
+                amplitude: 0.5
                 frequency: 7.459960E+09
                 shape: Rectangular()
                 type: ro # readout
