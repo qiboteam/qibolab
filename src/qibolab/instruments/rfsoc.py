@@ -50,18 +50,16 @@ class TII_RFSOC4x2(AbstractInstrument):
 
     def setup(
         self,
-        qubits: List[Qubit],
-        sampling_rate: int,
-        repetition_duration: int,
-        adc_trig_offset: int,
-        max_gain: int,
+        sampling_rate: int = 9_830_400_000,
+        repetition_duration: int = 100_000,
+        adc_trig_offset: int = 200,
+        max_gain: int = 32000,
         **kwargs,
     ):
         """Configures the instrument.
-        Args: Settings taken from runcard (except calibrate argument)
+        Args: Settings (except calibrate argument)
             calibrate(bool): if true runs the calibrate_state routine
                              getting treshold and angle
-            qubits (list): list of `qibolab.platforms.abstract.Qubit`
             sampling_rate (int): sampling rate of the RFSoC (Hz).
             repetition_duration (int): delay before readout (ns).
             adc_trig_offset (int): single offset for all adc triggers
@@ -79,7 +77,7 @@ class TII_RFSOC4x2(AbstractInstrument):
 
     def call_executepulsesequence(
         self, cfg: dict, sequence: PulseSequence, qubits: List[Qubit], readouts_per_experiment: int, average: bool
-    ) -> Tuple(list, list):
+    ) -> Tuple[list, list]:
         """Sends to the server on board all the objects and information needed for
                   executing an arbitrary PulseSequence.
 
@@ -140,7 +138,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         sweeper: Sweeper,
         readouts_per_experiment: int,
         average: bool,
-    ) -> Tuple(list, list):
+    ) -> Tuple[list, list]:
         """Sends to the server on board all the objects and information needed for
            executing a sweep.
 
