@@ -1,4 +1,5 @@
 import collections
+import math
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -93,7 +94,7 @@ class QMConfig:
             # register drive controllers
             self.register_analog_output_controllers(qubit.drive.ports)
             # register element
-            lo_frequency = int(qubit.drive.local_oscillator.frequency)
+            lo_frequency = math.floor(qubit.drive.local_oscillator.frequency)
             self.elements[f"drive{qubit.name}"] = {
                 "mixInputs": {
                     "I": qubit.drive.ports[0],
@@ -149,7 +150,7 @@ class QMConfig:
                 controllers[con]["analog_inputs"][port] = {"offset": 0.0, "gain_db": 0}
 
             # register element
-            lo_frequency = int(qubit.readout.local_oscillator.frequency)
+            lo_frequency = math.floor(qubit.readout.local_oscillator.frequency)
             self.elements[f"readout{qubit.name}"] = {
                 "mixInputs": {
                     "I": qubit.readout.ports[0],
@@ -225,7 +226,7 @@ class QMConfig:
                     "waveforms": {"I": serial_i, "Q": serial_q},
                 }
                 # register drive element (if it does not already exist)
-                if_frequency = pulse.frequency - int(qubit.drive.local_oscillator.frequency)
+                if_frequency = pulse.frequency - math.floor(qubit.drive.local_oscillator.frequency)
                 self.register_drive_element(qubit, if_frequency)
                 # register flux element (if available)
                 if qubit.flux:
@@ -266,7 +267,7 @@ class QMConfig:
                     "digital_marker": "ON",
                 }
                 # register readout element (if it does not already exist)
-                if_frequency = pulse.frequency - int(qubit.readout.local_oscillator.frequency)
+                if_frequency = pulse.frequency - math.floor(qubit.readout.local_oscillator.frequency)
                 self.register_readout_element(qubit, if_frequency, time_of_flight, smearing)
                 # register flux element (if available)
                 if qubit.flux:
@@ -547,6 +548,7 @@ class QMOPX(AbstractInstrument):
                     play(qmpulse.operation, qmpulse.element)
                 if needs_reset:
                     reset_frame(qmpulse.element)
+                    needs_reset = False
 
         # for Rabi-length?
         if relaxation_time > 0:
@@ -722,13 +724,13 @@ class QMOPX(AbstractInstrument):
         for pulse in sweeper.pulses:
             qubit = qubits[pulse.qubit]
             if pulse.type is PulseType.DRIVE:
-                lo_frequency = int(qubit.drive.local_oscillator.frequency)
+                lo_frequency = math.floor(qubit.drive.local_oscillator.frequency)
             elif pulse.type is PulseType.READOUT:
-                lo_frequency = int(qubit.readout.local_oscillator.frequency)
+                lo_frequency = math.floor(qubit.readout.local_oscillator.frequency)
             else:
                 raise_error(NotImplementedError, f"Cannot sweep frequency of pulse of type {pulse.type}.")
             # convert to IF frequency for readout and drive pulses
-            f0 = int(pulse.frequency - lo_frequency)
+            f0 = math.floor(pulse.frequency - lo_frequency)
             freqs0.append(declare(int, value=f0))
             # check if sweep is within the supported bandwidth [-400, 400] MHz
             max_freq = self.maximum_sweep_value(sweeper.values, f0)
