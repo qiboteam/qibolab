@@ -103,17 +103,17 @@ def test_instruments_qublox_set_property_wrappers(name):
         # FIXME: I don't know why this is failing
         instrument_test_property_wrapper(
             instrument,
-            "discretization_threshold_acq",
+            "thresholded_acq_threshold",
             sequencer,
-            "discretization_threshold_acq",
+            "thresholded_acq_threshold",
             # values=np.linspace(-16777212.0, 16777212.0, 20),
             values=np.zeros(1),
         )
         instrument_test_property_wrapper(
             instrument,
-            "phase_rotation_acq",
+            "thresholded_acq_rotation",
             sequencer,
-            "phase_rotation_acq",
+            "thresholded_acq_rotation",
             values=np.zeros(1),
             # values=np.linspace(0, 359, 20)
         )
@@ -189,7 +189,7 @@ def test_instruments_qublox_set_device_paramters(name):
         cont_mode_waveform_idx_awg_path0 :	0
         cont_mode_waveform_idx_awg_path1 :	0
         demod_en_acq                     :	False
-        discretization_threshold_acq     :	0
+        thresholded_acq_threshold        :	0
         gain_awg_path0                   :	1
         gain_awg_path1                   :	1
         integration_length_acq           :	2000
@@ -202,7 +202,7 @@ def test_instruments_qublox_set_device_paramters(name):
         nco_phase_offs                   :	0 (Degrees)
         offset_awg_path0                 :	0
         offset_awg_path1                 :	0
-        phase_rotation_acq               :	0 (Degrees)
+        thresholded_acq_rotation         :	0 (Degrees)
         sequence                         :	/nfs/users/alvaro.orgaz/qibolab/src/qibola...
         sync_en                          :	True
         upsample_rate_awg_path0          :	0
