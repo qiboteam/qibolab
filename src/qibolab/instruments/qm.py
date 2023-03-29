@@ -25,6 +25,7 @@ from qm.QuantumMachinesManager import QuantumMachinesManager
 from qualang_tools.bakery import baking
 from qualang_tools.loops import from_array
 
+from qibolab.designs.channels import check_max_bias
 from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.pulses import Pulse, PulseType, Rectangular
 from qibolab.result import ExecutionResults
@@ -768,11 +769,7 @@ class QMOPX(AbstractInstrument):
             b0 = qubits[q].flux.bias
             max_bias = qubits[q].flux.max_bias
             max_value = max(abs(min(sweeper.values) + b0), abs(max(sweeper.values) + b0))
-            if max_bias is not None and max_value > max_bias:
-                raise_error(
-                    ValueError,
-                    f"Cannot sweep bias up to {max_value} because the maximum supported value is {max_bias}.",
-                )
+            check_max_bias(max_value, max_bias)
             bias0.append(declare(fixed, value=b0))
         b = declare(fixed)
         with for_(*from_array(b, sweeper.values)):
