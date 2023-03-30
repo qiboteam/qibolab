@@ -86,7 +86,6 @@ class Transpiler:
 
         # Match connectivity
         mapped_circuit, final_mapping, init_mapping, added_swaps = self.match_connectivity(circuit)
-
         # Two-qubit gates to native
         new = translate_circuit(mapped_circuit, two_qubit_natives=self._two_qubit_natives, translate_single_qubit=False)
         # Optional: fuse one-qubit gates to reduce circuit depth
@@ -96,7 +95,7 @@ class Transpiler:
         transpiled_circuit = translate_circuit(
             new, two_qubit_natives=self._two_qubit_natives, translate_single_qubit=True
         )
-        return (transpiled_circuit, final_mapping, init_mapping, added_swaps)
+        return transpiled_circuit, final_mapping, init_mapping, added_swaps
 
     def match_connectivity(self, circuit):
         """Qubit mapping initialization and circuit connectivity matching.
@@ -130,13 +129,8 @@ class Transpiler:
         while len(self._circuit_repr) != 0:
             self.transpiler_step(circuit)
         final_mapping = {key: init_qubit_map[self._qubit_map[i]] for i, key in enumerate(keys)}
-        hardware_mapped_circuit = (self.init_mapping_circuit(self._transpiled_circuit, init_qubit_map),)
-        return (
-            hardware_mapped_circuit,
-            final_mapping,
-            init_mapping,
-            self._added_swaps,
-        )
+        hardware_mapped_circuit = self.init_mapping_circuit(self._transpiled_circuit, init_qubit_map)
+        return hardware_mapped_circuit, final_mapping, init_mapping, self._added_swaps
 
     def transpiler_step(self, qibo_circuit):
         """Transpilation step. Find new mapping, add swap gates and apply gates that can be run with this configuration.
@@ -505,9 +499,8 @@ def can_execute(circuit: Circuit, two_qubit_natives: TwoQubitNatives, connectivi
                 return False
 
         elif len(gate.qubits) == 2:
-            # Change
             try:
-                if TwoQubitNatives.from_gate(type(gate)) not in two_qubit_natives:
+                if not (TwoQubitNatives.from_gate(gate) in two_qubit_natives):
                     vlog(f"{gate.name} is not in two_qubit_native.")
                     return False
             except ValueError:

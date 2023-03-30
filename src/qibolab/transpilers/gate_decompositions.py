@@ -17,15 +17,15 @@ backend = NumpyBackend()
 class TwoQubitNatives(Flag):
     """A class to define the two qubit native gates."""
 
-    CZ = gates.CZ
-    ISWAP = gates.iSWAP
+    CZ = auto()
+    iSWAP = auto()
 
     @classmethod
     def from_gate(cls, gate: gates.Gate):
-        for variant in cls:
-            if variant.value is gate:
-                return variant
-        raise_error(ValueError, f"Gate type {gate} not native.")
+        try:
+            return getattr(cls, gate.__class__.__name__)
+        except AttributeError:
+            raise_error(ValueError, f"Gate {gate} cannot be used as native.")
 
 
 class GateDecompositions:
@@ -80,7 +80,7 @@ def translate_gate(gate, native_gates: TwoQubitNatives):
     if len(gate.qubits) == 1:
         return onequbit_dec(gate)
 
-    if native_gates is TwoQubitNatives.CZ | TwoQubitNatives.ISWAP:
+    if native_gates is TwoQubitNatives.CZ | TwoQubitNatives.iSWAP:
         # Check for a special optimized decomposition.
         if gate.__class__ in opt_dec.decompositions:
             return opt_dec(gate)
@@ -101,7 +101,7 @@ def translate_gate(gate, native_gates: TwoQubitNatives):
                 return iswap_dec(gate)
     elif native_gates is TwoQubitNatives.CZ:
         return cz_dec(gate)
-    elif native_gates is TwoQubitNatives.ISWAP:
+    elif native_gates is TwoQubitNatives.iSWAP:
         if gate.__class__ in iswap_dec.decompositions:
             return iswap_dec(gate)
         else:
@@ -111,7 +111,7 @@ def translate_gate(gate, native_gates: TwoQubitNatives):
             iswap_decomposed = []
             for g in cz_decomposed:
                 # Need recursive function as gates.Unitary is not in iswap_dec
-                for g_translated in translate_gate(g, TwoQubitNatives.ISWAP):
+                for g_translated in translate_gate(g, TwoQubitNatives.iSWAP):
                     iswap_decomposed.append(g_translated)
             return iswap_decomposed
     else:  # pragma: no cover
