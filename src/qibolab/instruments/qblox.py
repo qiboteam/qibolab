@@ -642,8 +642,8 @@ class ClusterQRM_RF(AbstractInstrument):
         next_sequencer_number = self._free_sequencers_numbers.pop(0)
         if next_sequencer_number != self.DEFAULT_SEQUENCERS[port]:
             for parameter in self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].parameters:
-                # exclude read-only parameter `present` and others that have wrong default values (qblox bug)
-                if not parameter in ["present", "thresholded_acq_marker_address", "thresholded_acq_trigger_address"]:
+                # exclude read-only parameter `sequence` and others that have wrong default values (qblox bug)
+                if not parameter in ["sequence", "thresholded_acq_marker_address", "thresholded_acq_trigger_address"]:
                     value = self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].get(param_name=parameter)
                     if value:
                         target = self.device.sequencers[next_sequencer_number]
@@ -1686,8 +1686,8 @@ class ClusterQCM_RF(AbstractInstrument):
         next_sequencer_number = self._free_sequencers_numbers.pop(0)
         if next_sequencer_number != self.DEFAULT_SEQUENCERS[port]:
             for parameter in self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].parameters:
-                # exclude read-only parameter `present`
-                if not parameter in ["present"]:
+                # exclude read-only parameter `sequence`
+                if not parameter in ["sequence"]:
                     value = self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].get(param_name=parameter)
                     if value:
                         target = self.device.sequencers[next_sequencer_number]
@@ -2392,8 +2392,8 @@ class ClusterQCM(AbstractInstrument):
         next_sequencer_number = self._free_sequencers_numbers.pop(0)
         if next_sequencer_number != self.DEFAULT_SEQUENCERS[port]:
             for parameter in self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].parameters:
-                # exclude read-only parameter `present`
-                if not parameter in ["present"]:
+                # exclude read-only parameter `sequence`
+                if not parameter in ["sequence"]:
                     value = self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].get(param_name=parameter)
                     if value:
                         target = self.device.sequencers[next_sequencer_number]
