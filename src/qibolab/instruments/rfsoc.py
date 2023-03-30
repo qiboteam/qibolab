@@ -6,7 +6,8 @@ Supports the following FPGA:
 
 import pickle
 import socket
-from typing import Dict, List, Tuple, Union
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -15,6 +16,16 @@ from qibolab.platforms.abstract import Qubit
 from qibolab.pulses import Pulse, PulseSequence, PulseType, ReadoutPulse, Rectangular
 from qibolab.result import AveragedResults, ExecutionResults
 from qibolab.sweeper import Parameter, Sweeper
+
+
+@dataclass
+class QickProgramConfig:
+    sampling_rate: int = 9_830_400_000
+    repetition_duration: int = 100_000
+    adc_trig_offset: int = 200
+    max_gain: int = 32_000
+    reps: int = 1000
+    expts: Optional[int] = None
 
 
 class TII_RFSOC4x2(AbstractInstrument):
@@ -26,18 +37,15 @@ class TII_RFSOC4x2(AbstractInstrument):
     Args:
         name (str): Name of the instrument instance.
     Attributes:
-        cfg (dict): Configuration dictionary required for pulse execution.
+        cfg (QickProgramConfig): Configuration dictionary required for pulse execution.
         soc (QickSoc): ``Qick`` object needed to access system blocks.
     """
 
     def __init__(self, name: str, address: str):
         super().__init__(name, address=address)
-        self.cfg: dict = {}  # dictionary with instrument settings, filled in setup()
         self.host, self.port = address.split(":")
         self.port = int(self.port)
-
-        # call the setup function to configure the cfg dicitonary
-        self.setup()
+        self.cfg = QickProgramConfig()  # Containes the main settings
 
     def connect(self):
         """Empty method to comply with AbstractInstrument interface."""
@@ -53,31 +61,35 @@ class TII_RFSOC4x2(AbstractInstrument):
 
     def setup(
         self,
-        sampling_rate: int = 9_830_400_000,
-        repetition_duration: int = 100_000,
-        adc_trig_offset: int = 200,
-        max_gain: int = 32000,
-        **kwargs,
+        sampling_rate: int = None,
+        repetition_duration: int = None,
+        adc_trig_offset: int = None,
+        max_gain: int = None,
     ):
-        """Configures the instrument.
+        """Changes the configuration of the instrument.
         Args: Settings (except calibrate argument)
             sampling_rate (int): sampling rate of the RFSoC (Hz).
             repetition_duration (int): delay before readout (ns).
             adc_trig_offset (int): single offset for all adc triggers
                                    (tproc CLK ticks).
             max_gain (int): maximum output power of the DAC (DAC units).
-            **kwargs: no additional arguments are expected and used
         """
-
-        self.cfg = {
-            "sampling_rate": sampling_rate,
-            "repetition_duration": repetition_duration,
-            "adc_trig_offset": adc_trig_offset,
-            "max_gain": max_gain,
-        }
+        if sampling_rate is not None:
+            self.cfg.sampling_rate = sampling_rate
+        if repetition_duration is not None:
+            self.cfg.repetition_duration = repetition_duration
+        if adc_trig_offset is not None:
+            self.cfg.adc_trig_offset = adc_trig_offset
+        if max_gain is not None:
+            self.cfg.max_gain = max_gain
 
     def call_executepulsesequence(
-        self, cfg: dict, sequence: PulseSequence, qubits: List[Qubit], readouts_per_experiment: int, average: bool
+        self,
+        cfg: QickProgramConfig,
+        sequence: PulseSequence,
+        qubits: List[Qubit],
+        readouts_per_experiment: int,
+        average: bool,
     ) -> Tuple[list, list]:
         """Sends to the server on board all the objects and information needed for
                   executing an arbitrary PulseSequence.
@@ -91,7 +103,7 @@ class TII_RFSOC4x2(AbstractInstrument):
                    * wait for response (arbitray number of bytes)
 
         Args:
-                   cfg: dictionary containing general settings for Qick programs
+                   cfg: QickProgramConfig object with general settings for Qick programs
                    sequence: arbitrary PulseSequence object to execute
                    qubits: list of qubits of the platform
                    readouts_per_experiment: number of readout pulse to execute
@@ -133,7 +145,7 @@ class TII_RFSOC4x2(AbstractInstrument):
 
     def call_executesinglesweep(
         self,
-        cfg: dict,
+        cfg: QickProgramConfig,
         sequence: PulseSequence,
         qubits: List[Qubit],
         sweeper: Sweeper,
@@ -152,7 +164,7 @@ class TII_RFSOC4x2(AbstractInstrument):
             * wait for response (arbitray number of bytes)
 
         Args:
-            cfg: dictionary containing general settings for Qick programs
+            cfg: QickProgramConfig object with general settings for Qick programs
             sequence: arbitrary PulseSequence object to execute
             qubits: list of qubits of the platform
             sweeper: Sweeper object
@@ -195,7 +207,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         return results["i"], results["q"]
 
     def play(
-        self, qubits: List[Qubit], sequence: PulseSequence, relaxation_time: int = None, nshots: int = 1000
+        self, qubits: List[Qubit], sequence: PulseSequence, relaxation_time: int = None, nshots: int = None
     ) -> Dict[str, ExecutionResults]:
         """Executes the sequence of instructions and retrieves readout results.
            Each readout pulse generates a separate acquisition.
@@ -216,12 +228,12 @@ class TII_RFSOC4x2(AbstractInstrument):
         # TODO: repetition_duration Vs relaxation_time
         # TODO: nshots Vs relaxation_time
 
-        # nshots gets added to configuration dictionary
-        self.cfg["reps"] = nshots
-        # if new value is passed, relaxation_time is updated in the dictionary
         # TODO: actually this changes the actual dictionary, maybe better not
+        # if new value are passed, they are updated in the config obj
+        if nshots is not None:
+            self.cfg.reps = nshots
         if relaxation_time is not None:
-            self.cfg["repetition_duration"] = relaxation_time
+            self.cfg.repetition_duration = relaxation_time
 
         average = False
         toti, totq = self.call_executepulsesequence(self.cfg, sequence, qubits, len(sequence.ro_pulses), average)
@@ -495,12 +507,12 @@ class TII_RFSOC4x2(AbstractInstrument):
             A dict mapping the readout pulses serial to qibolab results objects
         """
 
-        # nshots gets added to configuration dictionary
-        self.cfg["reps"] = nshots
-        # if new value is passed, relaxation_time is updated in the dictionary
         # TODO: actually this changes the actual dictionary, maybe better not
+        # if new value are passed, they are updated in the config obj
+        if nshots is not None:
+            self.cfg.reps = nshots
         if relaxation_time is not None:
-            self.cfg["repetition_duration"] = relaxation_time
+            self.cfg.repetition_duration = relaxation_time
 
         # sweepers.values are modified to reflect actual sweeped values
         for sweeper in sweepers:
