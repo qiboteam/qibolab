@@ -191,8 +191,8 @@ class TII_RFSOC4x2(AbstractInstrument):
             sock.connect((self.host, self.port))
 
             msg_encoded = pickle.dumps(server_commands)
-            # first send 15 bytes with the length of the message
-            sock.send(pickle.dumps(len(msg_encoded)))
+            # first send 4 bytes with the length of the message
+            sock.send(len(msg_encoded).to_bytes(4, "big"))
 
             sock.send(msg_encoded)
 
@@ -326,7 +326,9 @@ class TII_RFSOC4x2(AbstractInstrument):
 
             # if there is one sweeper supported by qick than use hardware sweep
             if len(sweepers) == 1 and not self.get_if_python_sweep(sequence, qubits, *sweepers):
-                toti, totq = self.call_executesinglesweep(self.cfg, sequence, qubits, sweepers[0])
+                toti, totq = self.call_executesinglesweep(
+                    self.cfg, sequence, qubits, sweepers[0], len(sequence.ro_pulses), average
+                )
                 if average:
                     # convert averaged results
                     res = self.convert_av_sweep_results(sweepers[0], original_ro, toti, totq)
