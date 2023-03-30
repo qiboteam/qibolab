@@ -116,8 +116,8 @@ class TII_RFSOC4x2(AbstractInstrument):
             sock.connect((self.host, self.port))
 
             msg_encoded = pickle.dumps(server_commands)
-            # first send 15 bytes with the length of the message
-            sock.send(pickle.dumps(len(msg_encoded)))
+            # first send 4 bytes with the length of the message
+            sock.send(len(msg_encoded).to_bytes(4, "big"))
 
             sock.send(msg_encoded)
 
