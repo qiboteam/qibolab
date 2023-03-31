@@ -509,6 +509,31 @@ class QMOPX(AbstractInstrument):
         return machine.execute(program)
 
     @staticmethod
+    def readout(qmpulse, raw_adc):
+        """Plays a readout pulse and assigns the acquired results in QUA variables.
+
+        Args:
+            qmpulse (:class:`qibolab.instruments.qm.QMPulse`): Readout pulse to play.
+            raw_adc (bool): If ``True`` it captures the raw ADC signal, otherwise it integrates.
+        """
+        if raw_adc:
+            measure(
+                qmpulse.operation,
+                qmpulse.element,
+                qmpulse.raw_adc,
+            )
+        else:
+            measure(
+                qmpulse.operation,
+                qmpulse.element,
+                None,
+                dual_demod.full("cos", "out1", "sin", "out2", qmpulse.I),
+                dual_demod.full("minus_sin", "out1", "cos", "out2", qmpulse.Q),
+            )
+            if qmpulse.threshold is not None:
+                assign(qmpulse.shot, qmpulse.I * qmpulse.cos - qmpulse.Q * qmpulse.sin > qmpulse.threshold)
+
+    @staticmethod
     def play_pulses(qmsequence, relaxation_time=0, raw_adc=False):
         """Part of QUA program that plays an arbitrary pulse sequence.
 
@@ -531,23 +556,8 @@ class QMOPX(AbstractInstrument):
                 wait(wait_cycles, qmpulse.element)
                 clock[qmpulse.element] += 4 * wait_cycles
             clock[qmpulse.element] += qmpulse.duration
-            if pulse.type.name == "READOUT":
-                if raw_adc:
-                    measure(
-                        qmpulse.operation,
-                        qmpulse.element,
-                        qmpulse.raw_adc,
-                    )
-                else:
-                    measure(
-                        qmpulse.operation,
-                        qmpulse.element,
-                        None,
-                        dual_demod.full("cos", "out1", "sin", "out2", qmpulse.I),
-                        dual_demod.full("minus_sin", "out1", "cos", "out2", qmpulse.Q),
-                    )
-                    if qmpulse.threshold is not None:
-                        assign(qmpulse.shot, qmpulse.I * qmpulse.cos - qmpulse.Q * qmpulse.sin > qmpulse.threshold)
+            if pulse.type is PulseType.READOUT:
+                QMOPX.readout(qmpulse, raw_adc)
             else:
                 if not isinstance(qmpulse.relative_phase, float) or qmpulse.relative_phase != 0:
                     frame_rotation_2pi(qmpulse.relative_phase, qmpulse.element)
@@ -603,6 +613,19 @@ class QMOPX(AbstractInstrument):
             results[pulse.qubit] = results[serial] = ExecutionResults.from_components(ires, qres, shots)
         return results
 
+    @staticmethod
+    def save_streams(qmpulse, nshots, raw_adc):
+        """Saves streams acquired from readout."""
+        serial = qmpulse.pulse.serial
+        if raw_adc:
+            qmpulse.raw_adc.input1().average().save(f"{serial}_I")
+            qmpulse.raw_adc.input2().average().save(f"{serial}_Q")
+        else:
+            qmpulse.I_st.buffer(nshots).save(f"{serial}_I")
+            qmpulse.Q_st.buffer(nshots).save(f"{serial}_Q")
+            if qmpulse.threshold is not None:
+                qmpulse.shots.buffer(nshots).save(f"{serial}_shots")
+
     def play(self, qubits, sequence, nshots, relaxation_time, raw_adc=False):
         """Plays an arbitrary pulse sequence using QUA program.
 
@@ -648,19 +671,8 @@ class QMOPX(AbstractInstrument):
                 self.play_pulses(qmsequence, relaxation_time, raw_adc)
 
             with stream_processing():
-                # I_st.average().save("I")
-                # Q_st.average().save("Q")
-                # n_st.buffer().save_all("n")
                 for qmpulse in qmsequence.ro_pulses:
-                    serial = qmpulse.pulse.serial
-                    if raw_adc:
-                        qmpulse.raw_adc.input1().average().save(f"{serial}_I")
-                        qmpulse.raw_adc.input2().average().save(f"{serial}_Q")
-                    else:
-                        qmpulse.I_st.buffer(nshots).save(f"{serial}_I")
-                        qmpulse.Q_st.buffer(nshots).save(f"{serial}_Q")
-                        if qmpulse.threshold is not None:
-                            qmpulse.shots.buffer(nshots).save(f"{serial}_shots")
+                    self.save_streams(qmpulse, nshots, raw_adc)
 
         result = self.execute_program(experiment)
         return self.fetch_results(result, sequence.ro_pulses, raw_adc)
