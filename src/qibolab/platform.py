@@ -762,7 +762,7 @@ def Platform(name, runcard=None, design=None):
     elif name == "qw25q":
         return create_tii_qw25q(runcard)
     elif name == "qw25q_A":
-        return create_tii_qw25q_A(runcard)    
+        return create_tii_qw25q_A(runcard)
     elif name == "qw25q_B":
         return create_tii_qw25q_B(runcard)
     else:
