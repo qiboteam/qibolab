@@ -86,16 +86,13 @@ instruments:
             acquisition_hold_off        : 500
             acquisition_duration        : 900
 
-            # classification_parameters:
-                # 0:  # qubit id
-                #     rotation_angle: 0           # in degrees 0.0<=v<=360.0
-                #     threshold: 0                # in V
-                # 1:  # qubit id
-                #     rotation_angle: 0     # in degrees 0.0<=v<=360.0
-                #     threshold: 0         # in V
-                # 5:  # qubit id
-                #     rotation_angle: 0           # in degrees 0.0<=v<=360.0
-                #     threshold: 0                # in V
+            classification_parameters:
+                0:  # qubit id
+                    rotation_angle: 164.437           # in degrees 0.0<=v<=360.0
+                    threshold: 0.005354                # in V
+                1:  # qubit id
+                    rotation_angle: 280.880     # in degrees 0.0<=v<=360.0
+                    threshold: 0.001779         # in V
 
 
             channel_port_map:   # Refrigerator Channel : Instrument port
@@ -122,14 +119,14 @@ instruments:
 
             classification_parameters:
                 2:  # qubit id
-                    rotation_angle: 107.254     # in degrees 0.0<=v<=360.0
-                    threshold: 0.001659         # in V
+                    rotation_angle: 37.102     # in degrees 0.0<=v<=360.0
+                    threshold: 0.001768         # in V
                 3:  # qubit id
-                    rotation_angle: 0.001659           # in degrees 0.0<=v<=360.0
-                    threshold: 0.001704                # in V
-                # 4:  # qubit id
-                #     rotation_angle: 0           # in degrees 0.0<=v<=360.0
-                #     threshold: 0                # in V
+                    rotation_angle: 38.279           # in degrees 0.0<=v<=360.0
+                    threshold: 0.002435                # in V
+                4:  # qubit id
+                    rotation_angle: 285.730           # in degrees 0.0<=v<=360.0
+                    threshold: 0.000354                # in V
 
             channel_port_map:   # Refrigerator Channel : Instrument port
                 'L3-25b' : o1    # IQ Port = out0 & out1
