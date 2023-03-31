@@ -359,18 +359,19 @@ class MultiqubitPlatform(AbstractPlatform):
         if sweeper.pulses is not None:
             pulses = sweeper_pulses[sweeper.parameter]
             for pulse in pulses:
+                update_value = value
                 if sweeper.parameter is Parameter.frequency:
                     if pulses[pulse].type is PulseType.READOUT:
-                        value += self.qubits[pulses[pulse].qubit].readout_frequency
+                        update_value += self.qubits[pulses[pulse].qubit].readout_frequency
                     else:
-                        value += self.qubits[pulses[pulse].qubit].drive_frequency
-                    setattr(pulses[pulse], sweeper.parameter.name, value)
+                        valupdate_valueue += self.qubits[pulses[pulse].qubit].drive_frequency
+                    setattr(pulses[pulse], sweeper.parameter.name, update_value)
                 elif sweeper.parameter is Parameter.amplitude:
                     if pulses[pulse].type is PulseType.READOUT:
                         current_amplitude = self.native_gates["single_qubit"][pulses[pulse].qubit]["MZ"]["amplitude"]
                     else:
                         current_amplitude = self.native_gates["single_qubit"][pulses[pulse].qubit]["RX"]["amplitude"]
-                    setattr(pulses[pulse], sweeper.parameter.name, float(current_amplitude * value))
+                    setattr(pulses[pulse], sweeper.parameter.name, float(current_amplitude * update_value))
                 if pulses[pulse].type is PulseType.READOUT:
                     to_modify = [
                         pulse1 for pulse1 in original_sequence.ro_pulses if pulse1.qubit == pulses[pulse].qubit
