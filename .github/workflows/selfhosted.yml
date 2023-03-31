@@ -54,9 +54,7 @@ jobs:
         conda create --prefix=testenv python=${{ matrix.python-version }}
         conda activate ./testenv
         python -m pip install --upgrade pip
-        pip install pytest-cov
-        pip install git+https://github.com/qiboteam/qibo
-        pip install .[tiiq]
+        poetry install --with tests,tiiq
     - name: Test ${{ matrix.platform }}
       run: |
         sed -i 's/$PLATFORM/'${{ matrix.platform }}'/' qputests.sh
