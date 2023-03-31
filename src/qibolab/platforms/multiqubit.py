@@ -189,10 +189,9 @@ class MultiqubitPlatform(AbstractPlatform):
         for instrument in readout_instruments + control_instruments:
             instrument_pulses[instrument.name] = sequence.get_channel_pulses(*instrument.channels)
             for pulse in instrument_pulses[instrument.name]:
-                # TODO: take into account multiple LOs
-                # SWEEP LO AND FIX IF
+                # FIXME: this will not work with arbitrary frequencies
                 if abs(pulse.frequency) > instrument.FREQUENCY_LIMIT:
-                    changed[pulse.serial] = pulse
+                    changed[pulse] = pulse.serial
                     if instrument in readout_instruments:
                         if_frequency = self.native_gates["single_qubit"][pulse.qubit]["MZ"]["if_frequency"]
                         self.set_lo_readout_frequency(pulse.qubit, pulse.frequency - if_frequency)
@@ -200,7 +199,6 @@ class MultiqubitPlatform(AbstractPlatform):
                         if_frequency = self.native_gates["single_qubit"][pulse.qubit]["RX"]["if_frequency"]
                         self.set_lo_drive_frequency(pulse.qubit, pulse.frequency - if_frequency)
                     pulse.frequency = if_frequency
-
             instrument.process_pulse_sequence(instrument_pulses[instrument.name], nshots, self.repetition_duration)
             instrument.upload()
 
@@ -208,7 +206,6 @@ class MultiqubitPlatform(AbstractPlatform):
         for instrument in readout_instruments + control_instruments:
             if instrument_pulses[instrument.name]:
                 instrument.play_sequence()
-
         # STEP 3: acquire results
         acquisition_results = {}
         for instrument in readout_instruments:
@@ -221,25 +218,23 @@ class MultiqubitPlatform(AbstractPlatform):
                     else:
                         acquisition_results[key] = value
 
+        data = {}
         # STEP 4: change back pulse frequencies
         for instrument in readout_instruments + control_instruments:
-            for pulse in instrument_pulses[instrument.name]:
-                if pulse.serial in changed:
-                    if instrument in readout_instruments:
-                        result = acquisition_results[pulse.serial]
-                        pulse.frequency += self.get_lo_readout_frequency(pulse.qubit)
-                        acquisition_results[pulse.serial] = result
-                    elif instrument in control_instruments:
-                        result = acquisition_results[pulse.serial]
-                        pulse.frequency += self.get_lo_drive_frequency(pulse.qubit)
-                        acquisition_results[pulse.serial] = result
-
-        # STEP 5: construct output
-        data = {}
-        for instrument in readout_instruments:
-            for pulse in instrument_pulses[instrument.name]:
-                data[pulse.serial] = ExecutionResults.from_components(*acquisition_results[pulse.serial])
-                data[pulse.qubit] = copy.copy(data[pulse.serial])
+            for pulse in copy.deepcopy(instrument_pulses[instrument.name]):
+                for change in changed:
+                    if pulse == change:
+                        if instrument in readout_instruments:
+                            result = acquisition_results[pulse.serial]
+                            pulse.frequency += self.get_lo_readout_frequency(pulse.qubit)
+                            acquisition_results[pulse.serial] = result
+                        elif instrument in control_instruments:
+                            result = acquisition_results[pulse.serial]
+                            pulse.frequency += self.get_lo_drive_frequency(pulse.qubit)
+                            acquisition_results[pulse.serial] = result
+                if instrument in readout_instruments:
+                    data[pulse.serial] = ExecutionResults.from_components(*acquisition_results[pulse.serial])
+                    data[pulse.qubit] = copy.copy(data[pulse.serial])
 
         return data
 
@@ -296,7 +291,6 @@ class MultiqubitPlatform(AbstractPlatform):
             self._update_pulse_sequence_parameters(
                 sweeper, sweeper_pulses, original_sequence, map_original_shifted, value
             )
-            print("BEFORE_SEQUENCE", sequence)
             if len(sweepers) > 1:
                 self._sweep_recursion(
                     sequence,
@@ -311,9 +305,7 @@ class MultiqubitPlatform(AbstractPlatform):
                 )
             else:
                 new_sequence = copy.deepcopy(sequence)
-                print("SEQUENCE", new_sequence)
                 result = self.execute_pulse_sequence(new_sequence, nshots)
-                print("RESULT", result.keys())
 
                 # colllect result and append to original pulse
                 for original_pulse, new_serial in map_original_shifted.items():
