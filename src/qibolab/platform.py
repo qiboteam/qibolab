@@ -101,12 +101,12 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
             (f"con{connections[feedline][1]}", 2),
         ]
         channels[wiring["readout"][feedline][0]].ports = [
-            (f"con{connections[feedline][0]}", 9),
             (f"con{connections[feedline][0]}", 10),
+            (f"con{connections[feedline][0]}", 9),
         ]
         channels[wiring["readout"][feedline][1]].ports = [
-            (f"con{connections[feedline][1]}", 9),
             (f"con{connections[feedline][1]}", 10),
+            (f"con{connections[feedline][1]}", 9),
         ]
 
         wires_list = wiring["drive"][feedline]
@@ -332,12 +332,12 @@ def create_tii_qw25q_A(runcard, simulation_duration=None, address=None, cloud=Fa
             (f"con{connections[feedline][1]}", 2),
         ]
         channels[wiring["readout"][feedline][0]].ports = [
-            (f"con{connections[feedline][0]}", 9),
             (f"con{connections[feedline][0]}", 10),
+            (f"con{connections[feedline][0]}", 9),
         ]
         channels[wiring["readout"][feedline][1]].ports = [
-            (f"con{connections[feedline][1]}", 9),
             (f"con{connections[feedline][1]}", 10),
+            (f"con{connections[feedline][1]}", 9),
         ]
 
         wires_list = wiring["drive"][feedline]
@@ -392,11 +392,11 @@ def create_tii_qw25q_A(runcard, simulation_duration=None, address=None, cloud=Fa
             lo.frequency = 6.1e9
             lo.power = 21
         elif lo.name == "LO_03":
-            lo.frequency = 7.1e9
-            lo.power = 23
+            lo.frequency = 7.01e9
+            lo.power = 25
         elif lo.name == "LO_04":
-            lo.frequency = 7.7e9
-            lo.power = 23
+            lo.frequency = 7.5e9
+            lo.power = 25
         elif lo.name == "LO_05":
             lo.frequency = 5.3e9
             lo.power = 18
@@ -504,7 +504,6 @@ def create_tii_qw25q_A(runcard, simulation_duration=None, address=None, cloud=Fa
     platform.topology = chip
 
     return platform
-
 
 
 def create_tii_qw25q_B(runcard, simulation_duration=None, address=None, cloud=False):
