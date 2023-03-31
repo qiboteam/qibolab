@@ -33,12 +33,18 @@ class ExecutionResults:
 
     def __add__(self, data):
         assert len(data.i.shape) == len(data.q.shape)
+        if data.shots is not None:
+            assert len(data.i.shape) == len(data.shots.shape)
         # concatenate on first dimension; if a scalar is passed, just append it
         axis = 0 if len(data.i.shape) > 0 else None
         i = np.append(self.i, data.i, axis=axis)
         q = np.append(self.q, data.q, axis=axis)
+        if data.shots is not None:
+            shots = np.append(self.shots, data.shots, axis=axis)
+        else:
+            shots = None
 
-        new_execution_results = self.__class__.from_components(i, q)
+        new_execution_results = self.__class__.from_components(i, q, shots)
 
         return new_execution_results
 
@@ -88,7 +94,6 @@ class ExecutionResults:
         }
 
     def __len__(self):
-        assert len(self.i) == len(self.q)
         return len(self.i)
 
 

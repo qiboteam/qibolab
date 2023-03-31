@@ -70,6 +70,21 @@ def test_serial(average):
         assert avg.serial == target_dict
 
 
+def test_results_add():
+    """Testing __add__ method of ExecutionResults"""
+    res_1 = generate_random_result(10)
+    res_2 = generate_random_result(5)
+
+    total = res_1 + res_2
+    target_i = np.append(res_1.i, res_2.i)
+    target_q = np.append(res_1.q, res_2.q)
+    target_shots = np.append(res_1.shots, res_2.shots)
+
+    np.testing.assert_equal(total.i, target_i)
+    np.testing.assert_equal(total.q, target_q)
+    np.testing.assert_equal(total.shots, target_shots)
+
+
 def test_averaged_results_add():
     """Testing __add__ method of AveragedResults"""
     avg_res_1 = generate_random_avg_result(10)

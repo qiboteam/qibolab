@@ -588,7 +588,7 @@ class QMOPX(AbstractInstrument):
             )
         return results
 
-    def play(self, qubits, sequence, nshots, relaxation_time):
+    def play(self, qubits, sequence, nshots, relaxation_time, average):
         """Plays an arbitrary pulse sequence using QUA program.
 
         Args:
@@ -597,6 +597,9 @@ class QMOPX(AbstractInstrument):
             sequence (:class:`qibolab.pulses.PulseSequence`). Pulse sequence to play.
             nshots (int): Number of repetitions (shots) of the experiment.
             relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
+            average (bool): If True the return type is :class:`qibolab.result.AveragedResults` which includes
+                averaged values of i and q. If False the return type is :class:`qibolab.result.ExecutionResults`
+                which includes i, q and shot for each shots.
         """
         # register flux elements for all qubits so that they are
         # always at sweetspot even when they are not used
@@ -644,7 +647,7 @@ class QMOPX(AbstractInstrument):
                         qmpulse.shots.buffer(nshots).save(f"{serial}_shots")
 
         result = self.execute_program(experiment)
-        return self.fetch_results(result, sequence.ro_pulses)
+        return self.fetch_results(result, sequence.ro_pulses, average)
 
     def sweep(self, qubits, sequence, *sweepers, nshots, relaxation_time, average=True):
         qmsequence = QMSequence()
@@ -697,7 +700,7 @@ class QMOPX(AbstractInstrument):
                             shots_temp.buffer(nshots).save(f"{serial}_shots")
 
         result = self.execute_program(experiment)
-        return self.fetch_results(result, sequence.ro_pulses)
+        return self.fetch_results(result, sequence.ro_pulses, average)
 
     def sweep_frequency(self, sweepers, qubits, qmsequence, relaxation_time):
         from qm.qua import update_frequency
