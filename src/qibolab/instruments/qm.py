@@ -1,4 +1,5 @@
 import collections
+import math
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -26,6 +27,7 @@ from qualang_tools.bakery import baking
 from qualang_tools.loops import from_array
 from qualang_tools.units import unit
 
+from qibolab.designs.channels import check_max_bias
 from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.pulses import Pulse, PulseType, Rectangular
 from qibolab.result import ExecutionResults
@@ -55,9 +57,6 @@ class QMConfig:
             filter (dict): Pulse shape filters. Relevant for ports connected to flux channels.
                 QM syntax should be followed for the filters.
         """
-        if abs(offset) > 0.2:
-            raise_error(ValueError, f"DC offset for Quantum Machines cannot exceed 0.1V but is {offset}.")
-
         for con, port in ports:
             if con not in self.controllers:
                 self.controllers[con] = {"analog_outputs": {}}
@@ -96,7 +95,7 @@ class QMConfig:
             # register drive controllers
             self.register_analog_output_controllers(qubit.drive.ports)
             # register element
-            lo_frequency = int(qubit.drive.local_oscillator.frequency)
+            lo_frequency = math.floor(qubit.drive.local_oscillator.frequency)
             self.elements[f"drive{qubit.name}"] = {
                 "mixInputs": {
                     "I": qubit.drive.ports[0],
@@ -152,7 +151,7 @@ class QMConfig:
                 controllers[con]["analog_inputs"][port] = {"offset": 0.0, "gain_db": 0}
 
             # register element
-            lo_frequency = int(qubit.readout.local_oscillator.frequency)
+            lo_frequency = math.floor(qubit.readout.local_oscillator.frequency)
             self.elements[f"readout{qubit.name}"] = {
                 "mixInputs": {
                     "I": qubit.readout.ports[0],
@@ -228,7 +227,7 @@ class QMConfig:
                     "waveforms": {"I": serial_i, "Q": serial_q},
                 }
                 # register drive element (if it does not already exist)
-                if_frequency = pulse.frequency - int(qubit.drive.local_oscillator.frequency)
+                if_frequency = pulse.frequency - math.floor(qubit.drive.local_oscillator.frequency)
                 self.register_drive_element(qubit, if_frequency)
                 # register flux element (if available)
                 if qubit.flux:
@@ -269,7 +268,7 @@ class QMConfig:
                     "digital_marker": "ON",
                 }
                 # register readout element (if it does not already exist)
-                if_frequency = pulse.frequency - int(qubit.readout.local_oscillator.frequency)
+                if_frequency = pulse.frequency - math.floor(qubit.readout.local_oscillator.frequency)
                 self.register_readout_element(qubit, if_frequency, time_of_flight, smearing)
                 # register flux element (if available)
                 if qubit.flux:
@@ -571,6 +570,7 @@ class QMOPX(AbstractInstrument):
                     play(qmpulse.operation, qmpulse.element)
                 if needs_reset:
                     reset_frame(qmpulse.element)
+                    needs_reset = False
 
         # for Rabi-length?
         if relaxation_time > 0:
@@ -678,6 +678,12 @@ class QMOPX(AbstractInstrument):
         return self.fetch_results(result, sequence.ro_pulses, raw_adc)
 
     def sweep(self, qubits, sequence, *sweepers, nshots, relaxation_time, average=True):
+        # register flux elements for all qubits so that they are
+        # always at sweetspot even when they are not used
+        for qubit in qubits.values():
+            if qubit.flux:
+                self.config.register_flux_element(qubit)
+
         qmsequence = QMSequence()
         for pulse in sequence:
             qmpulse = qmsequence.add(pulse)
@@ -730,6 +736,21 @@ class QMOPX(AbstractInstrument):
         result = self.execute_program(experiment)
         return self.fetch_results(result, sequence.ro_pulses)
 
+    @staticmethod
+    def maximum_sweep_value(values, value0):
+        """Calculates maximum value that is reached during a sweep.
+
+        Useful to check whether a sweep exceeds the range of allowed values.
+        Note that both the array of values we sweep and the center value can
+        be negative, so we need to make sure that the maximum absolute value
+        is within range.
+
+        Args:
+            values (np.ndarray): Array of values we will sweep over.
+            value0 (float, int): Center value of the sweep.
+        """
+        return max(abs(min(values) + value0), abs(max(values) + value0))
+
     def sweep_frequency(self, sweepers, qubits, qmsequence, relaxation_time):
         from qm.qua import update_frequency
 
@@ -738,13 +759,18 @@ class QMOPX(AbstractInstrument):
         for pulse in sweeper.pulses:
             qubit = qubits[pulse.qubit]
             if pulse.type is PulseType.DRIVE:
-                lo_frequency = int(qubit.drive.local_oscillator.frequency)
+                lo_frequency = math.floor(qubit.drive.local_oscillator.frequency)
             elif pulse.type is PulseType.READOUT:
-                lo_frequency = int(qubit.readout.local_oscillator.frequency)
+                lo_frequency = math.floor(qubit.readout.local_oscillator.frequency)
             else:
                 raise_error(NotImplementedError, f"Cannot sweep frequency of pulse of type {pulse.type}.")
             # convert to IF frequency for readout and drive pulses
-            freqs0.append(declare(int, value=int(pulse.frequency - lo_frequency)))
+            f0 = math.floor(pulse.frequency - lo_frequency)
+            freqs0.append(declare(int, value=f0))
+            # check if sweep is within the supported bandwidth [-400, 400] MHz
+            max_freq = self.maximum_sweep_value(sweeper.values, f0)
+            if max_freq > 4e8:
+                raise_error(ValueError, f"Frequency {max_freq} for qubit {qubit.name} is beyond instrument bandwidth.")
 
         # is it fine to have this declaration inside the ``nshots`` QUA loop?
         f = declare(int)
@@ -754,17 +780,17 @@ class QMOPX(AbstractInstrument):
                 update_frequency(qmpulse.element, f + f0)
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-            if relaxation_time > 0:
-                wait(relaxation_time // 4)
 
     def sweep_amplitude(self, sweepers, qubits, qmsequence, relaxation_time):
         from qm.qua import amp
 
-        # TODO: It should be -2 < amp(a) < 2 otherwise the we get weird results
-        # without an error. Amplitude should be fixed to allow arbitrary values
-        # in qibocal
-
         sweeper = sweepers[0]
+        # TODO: Consider sweeping amplitude without multiplication
+        if min(sweeper.values) < -2:
+            raise_error(ValueError, "Amplitude sweep values are <-2 which is not supported.")
+        if max(sweeper.values) > 2:
+            raise_error(ValueError, "Amplitude sweep values are >2 which is not supported.")
+
         a = declare(fixed)
         with for_(*from_array(a, sweeper.values)):
             for pulse in sweeper.pulses:
@@ -775,8 +801,6 @@ class QMOPX(AbstractInstrument):
                     qmpulse.baked_amplitude = a
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-            if relaxation_time > 0:
-                wait(relaxation_time // 4)
 
     def sweep_relative_phase(self, sweepers, qubits, qmsequence, relaxation_time):
         sweeper = sweepers[0]
@@ -787,22 +811,24 @@ class QMOPX(AbstractInstrument):
                 qmpulse.relative_phase = relphase
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-            if relaxation_time > 0:
-                wait(relaxation_time // 4)
 
     def sweep_bias(self, sweepers, qubits, qmsequence, relaxation_time):
         from qm.qua import set_dc_offset
 
         sweeper = sweepers[0]
-        bias0 = [declare(fixed, value=qubits[q].flux.bias) for q in sweeper.qubits]
+        bias0 = []
+        for q in sweeper.qubits:
+            b0 = qubits[q].flux.bias
+            max_bias = qubits[q].flux.max_bias
+            max_value = self.maximum_sweep_value(sweeper.values, b0)
+            check_max_bias(max_value, max_bias)
+            bias0.append(declare(fixed, value=b0))
         b = declare(fixed)
         with for_(*from_array(b, sweeper.values)):
             for q, b0 in zip(sweeper.qubits, bias0):
                 set_dc_offset(f"flux{q}", "single", b + b0)
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-            if relaxation_time > 0:
-                wait(relaxation_time // 4)
 
     SWEEPERS = {
         Parameter.frequency: sweep_frequency,
@@ -819,4 +845,4 @@ class QMOPX(AbstractInstrument):
             else:
                 raise_error(NotImplementedError, f"Sweeper for {parameter} is not implemented.")
         else:
-            self.play_pulses(qmsequence)
+            self.play_pulses(qmsequence, relaxation_time)
