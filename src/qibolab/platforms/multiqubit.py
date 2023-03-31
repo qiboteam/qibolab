@@ -229,9 +229,7 @@ class MultiqubitPlatform(AbstractPlatform):
                             pulse.frequency += self.get_lo_readout_frequency(pulse.qubit)
                             acquisition_results[pulse.serial] = result
                         elif instrument in control_instruments:
-                            result = acquisition_results[pulse.serial]
                             pulse.frequency += self.get_lo_drive_frequency(pulse.qubit)
-                            acquisition_results[pulse.serial] = result
                 if instrument in readout_instruments:
                     data[pulse.serial] = ExecutionResults.from_components(*acquisition_results[pulse.serial])
                     data[pulse.qubit] = copy.copy(data[pulse.serial])
