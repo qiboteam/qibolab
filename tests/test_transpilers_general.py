@@ -78,15 +78,10 @@ def special_connectivity(connectivity):
         ]
         chip.add_edges_from(graph_list_h + graph_list_v)
         """
-        Q = []
-        for i in range(1, 7):
-            Q.append([f"A{i}"])
-        for i in range(1, 6):
-            Q.append([f"B{i}"])
-        for i in range(1, 6):
-            Q.append([f"C{i}"])
-        for i in range(1, 6):
-            Q.append([f"D{i}"])
+        Q=[f"A{i}" for i in range(1, 7)]
+        Q.append([f"B{i}" for i in range(1, 6)])
+        Q.append([f"C{i}" for i in range(1, 6)])
+        Q.append([f"D{i}" for i in range(1, 6)])
         chip = nx.Graph()
         chip.add_nodes_from(Q)
         graph_list = [
@@ -139,19 +134,40 @@ def special_connectivity(connectivity):
     return chip
 
 
-def custom_circuit():
+def test_can_execute():
     circuit = Circuit(5)
     circuit.add(gates.CZ(0, 2))
     circuit.add(gates.CZ(1, 2))
     circuit.add(gates.Z(1))
     circuit.add(gates.CZ(2, 1))
-    return circuit
+    assert can_execute(circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits"))
 
 
-def test_can_execute():
-    assert can_execute(
-        custom_circuit(), two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits")
-    )
+# TODO not working, can execute must return false
+def test_cannot_execute_connectivity():
+    circuit = Circuit(5)
+    circuit.add(gates.CZ(0, 1))
+    assert can_execute(circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits"))
+
+
+def test_cannot_execute_native2q():
+    circuit = Circuit(5)
+    circuit.add(gates.CNOT(0, 2))
+    assert not can_execute(circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits"))
+
+
+def test_cannot_execute_native1q():
+    circuit = Circuit(5)
+    circuit.add(gates.H(0))
+    assert not can_execute(circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits"))
+
+
+# TODO raise error, no return false
+def test_cannot_execute_wrong_native():
+    circuit = Circuit(5)
+    circuit.add(gates.CZ(0, 2))
+    with pytest.raises(AttributeError):
+        can_execute(circuit, two_qubit_natives=TwoQubitNatives.CNOT, connectivity=special_connectivity("5_qubits"))
 
 
 def test_connectivity_and_samples():

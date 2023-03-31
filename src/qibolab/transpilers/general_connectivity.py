@@ -29,7 +29,8 @@ class Transpiler:
         connectivity (networkx.graph): chip connectivity.
         init_method (str or QubitInitMethod): initial qubit mapping method.
         init_samples (int): number of random qubit initializations for greedy initial qubit mapping.
-        two_qubit_natives (TwoQubitNatives or str): two qubit gate/s that can be implemented by the hardware
+        two_qubit_natives (TwoQubitNatives or str): two qubit gate/s that can be implemented by the hardware.
+        sampling_split (float): fraction of paths tested (between 0 and 1).
 
     Attributes:
         _circuit_repr (list): quantum circuit represented as a list (only 2 qubit gates).
@@ -40,13 +41,16 @@ class Transpiler:
         _added_swaps (int): number of swaps added to the circuit to match connectivity.
     """
 
-    def __init__(self, connectivity, init_method="greedy", init_samples=None, two_qubit_natives="CZ"):
+    def __init__(
+        self, connectivity, init_method="greedy", init_samples=None, two_qubit_natives="CZ", sampling_split=1.0
+    ):
         self.connectivity = connectivity
         self.init_method = init_method
         if self.init_method is QubitInitMethod.greedy and init_samples is None:
             init_samples = DEFAULT_INIT_SAMPLES
         self.init_samples = init_samples
         self.two_qubit_natives = two_qubit_natives
+        self.sampling_split = sampling_split
 
         self._circuit_repr = None
         self._mapping = None
@@ -180,6 +184,23 @@ class Transpiler:
             self._connectivity = connectivity
         else:
             raise_error(TypeError, "Use networkx graph for custom connectivity")
+
+    @property
+    def sampling_split(self):
+        return self._sampling_split
+
+    @connectivity.setter
+    def sampling_split(self, sampling_split):
+        """Set the sampling split.
+
+        Args:
+            sampling_split (float): define fraction of shortest path tested.
+        """
+
+        if sampling_split > 0.0 and 1.0 >= sampling_split:
+            self._sampling_split = sampling_split
+        else:
+            raise_error(ValueError, "Sampling_split must be set between 0 and 1")
 
     def draw_connectivity(self):  # pragma: no cover
         """Show connectivity graph."""
@@ -345,10 +366,11 @@ class Transpiler:
         # Consider all shortest paths
         path_list = [p for p in nx.all_shortest_paths(self._graph, source=circuit[0][0], target=circuit[0][1])]
         self._added_swaps += len(path_list[0]) - 2
-        final_path = path_list[0]
+        # TODO use here self.sampling_split
         # Reduce the number of paths to be faster
         for path in path_list:
             list_, meeting_point_list = self.map_list(path)
+            # TODO use here self.sampling_split
             for j, mapping in enumerate(list_):
                 new_graph = nx.relabel_nodes(self._graph, mapping)
                 new_circuit = self.reduce(new_graph)
