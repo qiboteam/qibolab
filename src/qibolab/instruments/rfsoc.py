@@ -378,8 +378,8 @@ class TII_RFSOC4x2(AbstractInstrument):
         """Check if a sweeper must be run with python loop or on hardware.
         To be run on qick internal loop a sweep must:
             * not be on the readout frequency
-            * be the first pulse of a channel
             * be just one sweeper
+            * only one pulse per channel supported (for now)
         Args:
             sequence (`qibolab.pulses.PulseSequence`). Pulse sequence to play.
             qubits (list): List of `qibolab.platforms.utils.Qubit` objects
@@ -403,21 +403,18 @@ class TII_RFSOC4x2(AbstractInstrument):
             return True
 
         # check if the sweeped pulse is the first on the DAC channel
+        already_pulsed = []
         for pulse in sequence:
             pulse_q = qubits[pulse.qubit]
-            sweep_q = qubits[sweepers[0].pulses[0].qubit]
             pulse_ch = pulse_q.feedback[0][1] if is_ro else pulse_q.drive.ports[0][1]
-            sweep_ch = sweep_q.feedback[0][1] if is_ro else sweep_q.drive.ports[0][1]
-            is_same_ch = pulse_ch == sweep_ch
-            is_same_pulse = pulse.serial == sweepers[0].pulses[0].serial
-            # if channels are equal and pulses are equal we can hardware sweep
-            if is_same_ch and is_same_pulse:
-                return False
-            elif is_same_ch and not is_same_pulse:
-                return True
 
-        # this return should not be reachable, here for safety
-        return True
+            if pulse_ch in already_pulsed:
+                return True
+            else:
+                already_pulsed.append(pulse_ch)
+
+        # if all passed, do a firmware sweep
+        return False
 
     def convert_av_sweep_results(
         self, sweeper: Sweeper, original_ro: List[str], avgi: List[float], avgq: List[float]
