@@ -24,6 +24,7 @@ from qm.qua import (
 from qm.QuantumMachinesManager import QuantumMachinesManager
 from qualang_tools.bakery import baking
 from qualang_tools.loops import from_array
+from qualang_tools.units import unit
 
 from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.pulses import Pulse, PulseType, Rectangular
@@ -574,7 +575,7 @@ class QMOPX(AbstractInstrument):
                     save(qmpulse.shot, qmpulse.shots)
 
     @staticmethod
-    def fetch_results(result, ro_pulses):
+    def fetch_results(result, ro_pulses, raw_adc=False):
         """Fetches results from an executed experiment."""
         # TODO: Update result asynchronously instead of waiting
         # for all values, in order to allow live plotting
@@ -589,6 +590,12 @@ class QMOPX(AbstractInstrument):
             serial = pulse.serial
             ires = handles.get(f"{serial}_I").fetch_all()
             qres = handles.get(f"{serial}_Q").fetch_all()
+            if raw_adc:
+                # convert raw ADC signal to volts
+                u = unit()
+                ires = u.raw2volts(ires)
+                qres = u.raw2volts(qres)
+
             if f"{serial}_shots" in handles:
                 shots = handles.get(f"{serial}_shots").fetch_all().astype(int)
             else:
@@ -656,7 +663,7 @@ class QMOPX(AbstractInstrument):
                             qmpulse.shots.buffer(nshots).save(f"{serial}_shots")
 
         result = self.execute_program(experiment)
-        return self.fetch_results(result, sequence.ro_pulses)
+        return self.fetch_results(result, sequence.ro_pulses, raw_adc)
 
     def sweep(self, qubits, sequence, *sweepers, nshots, relaxation_time, average=True):
         qmsequence = QMSequence()
