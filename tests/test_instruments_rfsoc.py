@@ -1,0 +1,186 @@
+import numpy as np
+import pytest
+
+from qibolab.instruments.rfsoc import QickProgramConfig
+from qibolab.paths import qibolab_folder
+from qibolab.platform import create_tii_rfsoc4x2
+from qibolab.platforms.abstract import Qubit
+from qibolab.pulses import PulseSequence
+from qibolab.result import AveragedResults, ExecutionResults
+from qibolab.sweeper import Parameter, Sweeper
+
+RUNCARD = qibolab_folder / "runcards" / "tii_rfsoc4x2.yml"
+DUMMY_ADDRESS = "0.0.0.0:0"
+
+# TODO server tests
+# call_executepulsesequence
+# call_executesinglesweep
+# play
+# recursive_python_sweep
+
+
+def test_tii_rfsoc4x2_init():
+    platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
+    instrument = platform.design.instruments[0]
+
+    assert instrument.host == "0.0.0.0"
+    assert instrument.port == 0
+    assert isinstance(instrument.cfg, QickProgramConfig)
+
+
+def test_tii_rfsoc4x2_setup():
+    platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
+    instrument = platform.design.instruments[0]
+
+    target_cfg = QickProgramConfig(
+        sampling_rate=5_000_000_000, repetition_duration=1_000, adc_trig_offset=150, max_gain=30_000
+    )
+
+    instrument.setup(sampling_rate=5_000_000_000, repetition_duration=1_000, adc_trig_offset=150, max_gain=30_000)
+
+    assert instrument.cfg == target_cfg
+
+
+def test_classify_shots():
+    qubit0 = Qubit(name="q0", threshold=1, rotation_angle=90)
+    qubit1 = Qubit(
+        name="q1",
+    )
+    i_val = [0] * 7
+    q_val = [-5, -1.5, -0.5, 0, 0.5, 1.5, 5]
+
+    platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
+    instrument = platform.design.instruments[0]
+
+    shots = instrument.classify_shots(i_val, q_val, qubit0)
+    target_shots = np.array([1, 1, 0, 0, 0, 0, 0])
+
+    assert (target_shots == shots).all()
+    assert instrument.classify_shots(i_val, q_val, qubit1) is None
+
+
+def test_merge_sweep_results():
+    dict_a = {"serial1": AveragedResults(i=[0], q=[1])}
+    dict_b = {"serial1": AveragedResults(i=[4], q=[4]), "serial2": AveragedResults(i=[5], q=[5])}
+    dict_c = {}
+    targ_dict = {"serial1": AveragedResults(i=[0, 4], q=[1, 4]), "serial2": AveragedResults(i=[5], q=[5])}
+
+    platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
+    instrument = platform.design.instruments[0]
+    out_dict1 = instrument.merge_sweep_results(dict_a, dict_b)
+    out_dict2 = instrument.merge_sweep_results(dict_c, dict_a)
+
+    assert targ_dict.keys() == out_dict1.keys()
+    assert (out_dict1["serial1"].i == targ_dict["serial1"].i).all()
+    assert (out_dict1["serial1"].q == targ_dict["serial1"].q).all()
+
+    assert dict_a.keys() == out_dict2.keys()
+    assert (out_dict2["serial1"].i == dict_a["serial1"].i).all()
+    assert (out_dict2["serial1"].q == dict_a["serial1"].q).all()
+
+
+def test_get_if_python_sweep():
+    platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
+    instrument = platform.design.instruments[0]
+
+    sequence_1 = PulseSequence()
+    sequence_1.add(platform.create_RX_pulse(qubit=0, start=0))
+    sequence_1.add(platform.create_MZ_pulse(qubit=0, start=100))
+    sweep1 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 100, 10), pulses=[sequence_1[0]])
+    sweep2 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 100, 10), pulses=[sequence_1[1]])
+    sweep3 = Sweeper(parameter=Parameter.amplitude, values=np.arange(0.01, 0.5, 0.1), pulses=[sequence_1[1]])
+    sequence_2 = PulseSequence()
+    sequence_2.add(platform.create_RX_pulse(qubit=0, start=0))
+    sequence_2.add(platform.create_RX_pulse(qubit=0, start=100))
+
+    print(platform.qubits)
+    print
+
+    assert instrument.get_if_python_sweep(sequence_1, platform.qubits, sweep2)
+    assert instrument.get_if_python_sweep(sequence_2, platform.qubits, sweep1)
+    assert instrument.get_if_python_sweep(sequence_2, platform.qubits, sweep1, sweep1)
+    assert not instrument.get_if_python_sweep(sequence_1, platform.qubits, sweep1)
+    assert not instrument.get_if_python_sweep(sequence_1, platform.qubits, sweep3)
+
+
+def test_convert_av_sweep_results():
+    platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
+    instrument = platform.design.instruments[0]
+
+    sequence = PulseSequence()
+    sequence.add(platform.create_RX_pulse(qubit=0, start=0))
+    sequence.add(platform.create_MZ_pulse(qubit=0, start=100))
+    sequence.add(platform.create_MZ_pulse(qubit=0, start=200))
+    sweep1 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 35, 10), pulses=[sequence[0]])
+    serial1 = sequence[1].serial
+    serial2 = sequence[2].serial
+
+    avgi = [[[1, 2, 3], [0, 1, 2]]]
+    avgq = [[[7, 8, 9], [-1, -2, -3]]]
+
+    ro_serials = [ro.serial for ro in sequence.ro_pulses]
+    out_dict = instrument.convert_av_sweep_results(sweep1, ro_serials, avgi, avgq)
+    targ_dict = {
+        serial1: AveragedResults(i=[1, 2, 3], q=[7, 8, 9]),
+        serial2: AveragedResults(i=[0, 1, 2], q=[-1, -2, -3]),
+    }
+
+    assert out_dict.keys() == targ_dict.keys()
+    assert (out_dict[serial1].i == targ_dict[serial1].i).all()
+    assert (out_dict[serial1].q == targ_dict[serial1].q).all()
+    assert (out_dict[serial2].i == targ_dict[serial2].i).all()
+    assert (out_dict[serial2].q == targ_dict[serial2].q).all()
+
+
+def test_convert_nav_sweep_results():
+    platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
+    instrument = platform.design.instruments[0]
+
+    sequence = PulseSequence()
+    sequence.add(platform.create_RX_pulse(qubit=0, start=0))
+    sequence.add(platform.create_MZ_pulse(qubit=0, start=100))
+    sequence.add(platform.create_MZ_pulse(qubit=0, start=200))
+    sweep1 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 35, 10), pulses=[sequence[0]])
+    serial1 = sequence[1].serial
+    serial2 = sequence[2].serial
+
+    avgi = [[[[1, 1], [2, 2], [3, 3]], [[0, 0], [1, 1], [2, 2]]]]
+    avgq = [[[[7, 7], [8, 8], [9, 9]], [[-1, -1], [-2, -2], [-3, -3]]]]
+
+    ro_serials = [ro.serial for ro in sequence.ro_pulses]
+    out_dict = instrument.convert_nav_sweep_results(sweep1, ro_serials, sequence, platform.qubits, avgi, avgq)
+    targ_dict = {
+        serial1: ExecutionResults.from_components(np.array([1, 1, 2, 2, 3, 3]), np.array([7, 7, 8, 8, 9, 9])),
+        serial2: ExecutionResults.from_components(np.array([0, 0, 1, 1, 2, 2]), np.array([-1, -1, -2, -2, -3, -3])),
+    }
+
+    assert out_dict.keys() == targ_dict.keys()
+    assert (out_dict[serial1].i == targ_dict[serial1].i).all()
+    assert (out_dict[serial1].q == targ_dict[serial1].q).all()
+    assert (out_dict[serial2].i == targ_dict[serial2].i).all()
+    assert (out_dict[serial2].q == targ_dict[serial2].q).all()
+
+
+@pytest.mark.qpu
+def test_call_executepulsesequence():
+    pass
+
+
+@pytest.mark.qpu
+def test_call_executesinglesweep():
+    pass
+
+
+@pytest.mark.qpu
+def test_play():
+    pass
+
+
+@pytest.mark.qpu
+def test_sweep():
+    pass
+
+
+@pytest.mark.qpu
+def test_python_reqursive_sweep():
+    pass

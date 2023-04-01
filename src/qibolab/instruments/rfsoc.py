@@ -225,9 +225,6 @@ class TII_RFSOC4x2(AbstractInstrument):
             `qibolab.ExecutionResults` objects
         """
 
-        # TODO: repetition_duration Vs relaxation_time
-        # TODO: nshots Vs relaxation_time
-
         # TODO: actually this changes the actual dictionary, maybe better not
         # if new value are passed, they are updated in the config obj
         if nshots is not None:
@@ -406,7 +403,8 @@ class TII_RFSOC4x2(AbstractInstrument):
         already_pulsed = []
         for pulse in sequence:
             pulse_q = qubits[pulse.qubit]
-            pulse_ch = pulse_q.feedback[0][1] if is_ro else pulse_q.drive.ports[0][1]
+            pulse_is_ro = pulse.type == PulseType.READOUT
+            pulse_ch = pulse_q.readout.ports[0][1] if pulse_is_ro else pulse_q.drive.ports[0][1]
 
             if pulse_ch in already_pulsed:
                 return True
