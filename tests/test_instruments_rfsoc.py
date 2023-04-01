@@ -12,12 +12,6 @@ from qibolab.sweeper import Parameter, Sweeper
 RUNCARD = qibolab_folder / "runcards" / "tii_rfsoc4x2.yml"
 DUMMY_ADDRESS = "0.0.0.0:0"
 
-# TODO server tests
-# call_executepulsesequence
-# call_executesinglesweep
-# play
-# recursive_python_sweep
-
 
 def test_tii_rfsoc4x2_init():
     platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
@@ -161,26 +155,94 @@ def test_convert_nav_sweep_results():
     assert (out_dict[serial2].q == targ_dict[serial2].q).all()
 
 
+# TODO actually all these qpu tests require the board, not the qpu
 @pytest.mark.qpu
 def test_call_executepulsesequence():
-    pass
+    platform = create_tii_rfsoc4x2(RUNCARD)
+    instrument = platform.design.instruments[0]
+
+    sequence = PulseSequence()
+    sequence.add(platform.create_RX_pulse(qubit=0, start=0))
+    sequence.add(platform.create_MZ_pulse(qubit=0, start=100))
+
+    i_vals_nav, q_vals_nav = instrument.call_executepulsesequence(instrument.cfg, sequence, platform.qubits, 1, False)
+    i_vals_av, q_vals_av = instrument.call_executepulsesequence(instrument.cfg, sequence, platform.qubits, 1, True)
+
+    assert i_vals_nav.shape == [1, 1, 1000]
+    assert q_vals_nav.shape == [1, 1, 1000]
+    assert i_vals_av.shape == [1, 1, 1]
+    assert q_vals_av.shape == [1, 1, 1]
 
 
 @pytest.mark.qpu
 def test_call_executesinglesweep():
-    pass
+    platform = create_tii_rfsoc4x2(RUNCARD)
+    instrument = platform.design.instruments[0]
+
+    sequence = PulseSequence()
+    sequence.add(platform.create_RX_pulse(qubit=0, start=0))
+    sequence.add(platform.create_MZ_pulse(qubit=0, start=100))
+    sweep = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 35, 10), pulses=[sequence[0]])
+
+    i_vals_nav, q_vals_nav = instrument.call_executesinglesweep(
+        instrument.cfg, sequence, platform.qubits, sweep, 1, False
+    )
+    i_vals_av, q_vals_av = instrument.call_executesinglesweep(instrument.cfg, sequence, platform.qubits, sweep, 1, True)
+
+    assert i_vals_nav.shape == [1, 1, len(sweep.values), 1000]
+    assert q_vals_nav.shape == [1, 1, len(sweep.values), 1000]
+    assert i_vals_av.shape == [1, 1, len(sweep.values), 1]
+    assert q_vals_av.shape == [1, 1, len(sweep.values), 1]
 
 
 @pytest.mark.qpu
 def test_play():
-    pass
+    platform = create_tii_rfsoc4x2(RUNCARD)
+    instrument = platform.design.instruments[0]
+
+    sequence = PulseSequence()
+    sequence.add(platform.create_RX_pulse(qubit=0, start=0))
+    sequence.add(platform.create_MZ_pulse(qubit=0, start=100))
+
+    out_dict = instrument.play(platform.qubits, sequence)
+
+    assert sequence[1].serial in out_dict
+    assert isinstance(out_dict[sequence[1].serial], ExecutionResults)
+    assert out_dict[sequence[1].serial].i.shape == [1, 1, 1000]
 
 
 @pytest.mark.qpu
 def test_sweep():
-    pass
+    platform = create_tii_rfsoc4x2(RUNCARD)
+    instrument = platform.design.instruments[0]
+
+    sequence = PulseSequence()
+    sequence.add(platform.create_RX_pulse(qubit=0, start=0))
+    sequence.add(platform.create_MZ_pulse(qubit=0, start=100))
+    sweep = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 35, 10), pulses=[sequence[0]])
+
+    out_dict1 = instrument.sweep(platform.qubits, sequence, sweep, average=True)
+    out_dict2 = instrument.sweep(platform.qubits, sequence, sweep, average=False)
+
+    assert sequence[1].serial in out_dict1
+    assert sequence[1].serial in out_dict2
+    assert isinstance(out_dict1[sequence[1].serial], AveragedResults)
+    assert isinstance(out_dict2[sequence[1].serial], ExecutionResults)
+    assert out_dict1[sequence[1].serial].i.shape == [1, 1, len(sweep.values), 1]
+    assert out_dict2[sequence[1].serial].i.shape == [1, 1, len(sweep.values), 1000]
 
 
 @pytest.mark.qpu
 def test_python_reqursive_sweep():
-    pass
+    platform = create_tii_rfsoc4x2(RUNCARD)
+    instrument = platform.design.instruments[0]
+
+    sequence = PulseSequence()
+    sequence.add(platform.create_RX_pulse(qubit=0, start=0))
+    sequence.add(platform.create_MZ_pulse(qubit=0, start=100))
+    sweep1 = Sweeper(parameter=Parameter.amplitude, values=np.arange(0.01, 0.03, 10), pulses=[sequence[0]])
+    sweep2 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 35, 10), pulses=[sequence[0]])
+
+    out_dict = instrument.sweep(platform.qubits, sequence, sweep1, sweep2, average=True)
+
+    assert sequence[1].serial in out_dict
