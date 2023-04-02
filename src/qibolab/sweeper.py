@@ -15,6 +15,7 @@ class Parameter(Enum):
     attenuation = auto()
     gain = auto()
     bias = auto()
+    lo_frequency = auto()
 
 
 QubitParameter = {Parameter.bias, Parameter.attenuation, Parameter.gain}
