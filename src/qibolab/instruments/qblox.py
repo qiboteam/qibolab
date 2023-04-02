@@ -676,6 +676,16 @@ class ClusterQRM_RF(AbstractInstrument):
         self._sequencers[port].append(sequencer)
         return sequencer
 
+    def get_if(self, pulse):
+        _rf = pulse.frequency
+        _lo = self.ports[self.channel_port_map[pulse.channel]].lo_frequency
+        _if = _rf - _lo
+        if abs(_if) > self.FREQUENCY_LIMIT:
+            raise RuntimeError(f"""
+            Pulse frequency {_rf} cannot be synthesised with current lo frequency {_lo}.
+            The intermediate frequency {_if} would exceed the maximum frequency of {self.FREQUENCY_LIMIT}
+            """)
+
     def process_pulse_sequence(self, instrument_pulses: PulseSequence, nshots: int, repetition_duration: int):
         """Processes a list of pulses, generating the waveforms and sequence program required by
         the instrument to synthesise them.
@@ -733,7 +743,7 @@ class ClusterQRM_RF(AbstractInstrument):
                         )
                     # get next sequencer
                     sequencer = self._get_next_sequencer(
-                        port=port, frequency=non_overlapping_pulses[0].frequency, qubit=non_overlapping_pulses[0].qubit
+                        port=port, frequency=self.get_if(non_overlapping_pulses[0].frequency), qubit=non_overlapping_pulses[0].qubit
                     )
 
                     # make a temporary copy of the pulses to be processed
@@ -765,7 +775,7 @@ class ClusterQRM_RF(AbstractInstrument):
                             # get next sequencer
                             sequencer = self._get_next_sequencer(
                                 port=port,
-                                frequency=non_overlapping_pulses[0].frequency,
+                                frequency=self.get_if(non_overlapping_pulses[0].frequency),
                                 qubit=non_overlapping_pulses[0].qubit,
                             )
 
@@ -1254,7 +1264,7 @@ class ClusterQRM_RF(AbstractInstrument):
         the number of smaples acquired).
         """
         if demodulate:
-            acquisition_frequency = readout_pulse.frequency
+            acquisition_frequency = self.get_if(readout_pulse.frequency)
 
             # DOWN Conversion
             n0 = 0
@@ -1709,6 +1719,16 @@ class ClusterQCM_RF(AbstractInstrument):
         self._sequencers[port].append(sequencer)
         return sequencer
 
+    def get_if(self, pulse):
+        _rf = pulse.frequency
+        _lo = self.ports[self.channel_port_map[pulse.channel]].lo_frequency
+        _if = _rf - _lo
+        if abs(_if) > self.FREQUENCY_LIMIT:
+            raise RuntimeError(f"""
+            Pulse frequency {_rf} cannot be synthesised with current lo frequency {_lo}.
+            The intermediate frequency {_if} would exceed the maximum frequency of {self.FREQUENCY_LIMIT}
+            """)
+
     def process_pulse_sequence(self, instrument_pulses: PulseSequence, nshots: int, repetition_duration: int):
         """Processes a list of pulses, generating the waveforms and sequence program required by
         the instrument to synthesise them.
@@ -1772,7 +1792,7 @@ class ClusterQCM_RF(AbstractInstrument):
                         # get next sequencer
                         sequencer = self._get_next_sequencer(
                             port=port,
-                            frequency=non_overlapping_pulses[0].frequency,
+                            frequency=self.get_if(non_overlapping_pulses[0].frequency),
                             qubit=non_overlapping_pulses[0].qubit,
                         )
 
@@ -1805,7 +1825,7 @@ class ClusterQCM_RF(AbstractInstrument):
                                 # get next sequencer
                                 sequencer = self._get_next_sequencer(
                                     port=port,
-                                    frequency=non_overlapping_pulses[0].frequency,
+                                    frequency=self.get_if(non_overlapping_pulses[0].frequency),
                                     qubit=non_overlapping_pulses[0].qubit,
                                 )
 
@@ -2410,6 +2430,16 @@ class ClusterQCM(AbstractInstrument):
         self._sequencers[port].append(sequencer)
         return sequencer
 
+    def get_if(self, pulse):
+        _rf = pulse.frequency
+        _lo = self.ports[self.channel_port_map[pulse.channel]].lo_frequency
+        _if = _rf - _lo
+        if abs(_if) > self.FREQUENCY_LIMIT:
+            raise RuntimeError(f"""
+            Pulse frequency {_rf} cannot be synthesised with current lo frequency {_lo}.
+            The intermediate frequency {_if} would exceed the maximum frequency of {self.FREQUENCY_LIMIT}
+            """)
+
     def process_pulse_sequence(self, instrument_pulses: PulseSequence, nshots: int, repetition_duration: int):
         """Processes a list of pulses, generating the waveforms and sequence program required by
         the instrument to synthesise them.
@@ -2475,7 +2505,7 @@ class ClusterQCM(AbstractInstrument):
                         # get next sequencer
                         sequencer = self._get_next_sequencer(
                             port=port,
-                            frequency=non_overlapping_pulses[0].frequency,
+                            frequency=self.get_if(non_overlapping_pulses[0].frequency),
                             qubit=non_overlapping_pulses[0].qubit,
                         )
 
@@ -2508,7 +2538,7 @@ class ClusterQCM(AbstractInstrument):
                                 # get next sequencer
                                 sequencer = self._get_next_sequencer(
                                     port=port,
-                                    frequency=non_overlapping_pulses[0].frequency,
+                                    frequency=self.get_if(non_overlapping_pulses[0].frequency),
                                     qubit=non_overlapping_pulses[0].qubit,
                                 )
 
