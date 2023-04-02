@@ -207,7 +207,12 @@ class TII_RFSOC4x2(AbstractInstrument):
         return results["i"], results["q"]
 
     def play(
-        self, qubits: List[Qubit], sequence: PulseSequence, relaxation_time: int = None, nshots: int = None
+        self,
+        qubits: List[Qubit],
+        sequence: PulseSequence,
+        relaxation_time: int = None,
+        nshots: int = None,
+        average: bool = False,
     ) -> Dict[str, ExecutionResults]:
         """Executes the sequence of instructions and retrieves readout results.
            Each readout pulse generates a separate acquisition.
@@ -225,14 +230,12 @@ class TII_RFSOC4x2(AbstractInstrument):
             `qibolab.ExecutionResults` objects
         """
 
-        # TODO: actually this changes the actual dictionary, maybe better not
         # if new value are passed, they are updated in the config obj
         if nshots is not None:
             self.cfg.reps = nshots
         if relaxation_time is not None:
             self.cfg.repetition_duration = relaxation_time
 
-        average = False
         toti, totq = self.call_executepulsesequence(self.cfg, sequence, qubits, len(sequence.ro_pulses), average)
 
         results = {}
@@ -244,8 +247,11 @@ class TII_RFSOC4x2(AbstractInstrument):
 
                 serial = ro_pulse.serial
 
-                shots = self.classify_shots(i_pulse, q_pulse, qubits[ro_pulse.qubit])
-                results[serial] = ExecutionResults.from_components(i_pulse, q_pulse, shots)
+                if average:
+                    results[serial] = AveragedResults(i_pulse, q_pulse)
+                else:
+                    shots = self.classify_shots(i_pulse, q_pulse, qubits[ro_pulse.qubit])
+                    results[serial] = ExecutionResults.from_components(i_pulse, q_pulse, shots)
 
         return results
 
@@ -293,22 +299,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         # If there are no sweepers run ExecutePulseSequence acquisition.
         # Last layer for recursion.
         if len(sweepers) == 0:
-            toti, totq = self.call_executepulsesequence(self.cfg, sequence, qubits, len(sequence.ro_pulses), average)
-            results = {}
-            adcs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
-            for j in range(len(adcs)):
-                for i, serial in enumerate(original_ro):
-                    i_pulse = np.array(toti[j][i])
-                    q_pulse = np.array(totq[j][i])
-
-                    if average:
-                        results[serial] = AveragedResults(i_pulse, q_pulse)
-                    else:
-                        qubit = qubits[or_sequence.ro_pulses[i].qubit]
-                        shots = self.classify_shots(i_pulse, q_pulse, qubit)
-                        results[serial] = ExecutionResults.from_components(i_pulse, q_pulse, shots)
-
-            return results
+            return self.play(qubits, sequence, average=average)
 
         # If sweepers are still in queue
         else:
@@ -326,12 +317,8 @@ class TII_RFSOC4x2(AbstractInstrument):
                 toti, totq = self.call_executesinglesweep(
                     self.cfg, sequence, qubits, sweepers[0], len(sequence.ro_pulses), average
                 )
-                if average:
-                    # convert averaged results
-                    res = self.convert_sweep_results(sweepers[0], original_ro, sequence, qubits, toti, totq, average)
-                else:
-                    # convert not averaged results
-                    res = self.convert_sweep_results(sweepers[0], original_ro, sequence, qubits, toti, totq, average)
+                # convert results
+                res = self.convert_sweep_results(sweepers[0], original_ro, sequence, qubits, toti, totq, average)
                 return res
 
             # if it's not possible to execute qick sweep re-call function
@@ -483,7 +470,6 @@ class TII_RFSOC4x2(AbstractInstrument):
             A dict mapping the readout pulses serial to qibolab results objects
         """
 
-        # TODO: actually this changes the actual dictionary, maybe better not
         # if new value are passed, they are updated in the config obj
         if nshots is not None:
             self.cfg.reps = nshots
