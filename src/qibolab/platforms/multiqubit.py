@@ -190,6 +190,27 @@ class MultiqubitPlatform(AbstractPlatform):
             roles[name] = self.settings["instruments"][name]["roles"]
             if "control" in roles[name] or "readout" in roles[name]:
                 instrument_pulses[name] = sequence.get_channel_pulses(*self.instruments[name].channels)
+
+                # until we have frequency planning use the ifs stored in the runcard to change the los
+                if self.instruments[name].__class__ in ["ClusterQRM_RF", "ClusterQCM_RF", "ClusterQCM"]:
+                    for port in self.instruments[name]:
+                        _los = []
+                        _ifs = []
+                        port_pulses = instrument_pulses[name].get_channel_pulses(self.instruments[name]._port_channel_map[port])
+                        for pulse in port_pulses:
+                            if pulse.type == PulseType.READOUT:
+                                _if = int(self.native_gates["single_qubit"][pulse.qubit]["RX"]["if_frequency"])
+                            elif pulse.type == PulseType.DRIVE:
+                                _if = int(self.native_gates["single_qubit"][pulse.qubit]["MZ"]["if_frequency"])
+                            _los.append(int(pulse.frequency - _if))
+                            _ifs.append(int(_if))
+                        if len(_los) > 1:
+                            for _ in range(1, len(_los)):
+                                if _los[0] != _los[_]:
+                                    raise ValueError(f"Pulses {instrument_pulses[name]} sharing the lo at device {name} - port {port} cannot be synthesised with intermediate frequencies {_ifs}")
+                        if len(_los) > 0:
+                            self.instruments[name].ports[port].lo_frequency = _los[0]
+
                 self.instruments[name].process_pulse_sequence(instrument_pulses[name], nshots, self.repetition_duration)
                 self.instruments[name].upload()
         for name in self.instruments:
