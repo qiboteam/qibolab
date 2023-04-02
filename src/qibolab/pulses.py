@@ -875,6 +875,9 @@ class Pulse:
 
         return f"Pulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {format(self.frequency, '_')}, {format(self.relative_phase, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.type}, {self.qubit})"
 
+    def id(self) -> int:
+        return id(self)
+
     @property
     def envelope_waveform_i(self) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
