@@ -113,7 +113,7 @@ def test_convert_av_sweep_results():
     avgq = [[[7, 8, 9], [-1, -2, -3]]]
 
     ro_serials = [ro.serial for ro in sequence.ro_pulses]
-    out_dict = instrument.convert_av_sweep_results(sweep1, ro_serials, avgi, avgq)
+    out_dict = instrument.convert_sweep_results(sweep1, ro_serials, sequence, platform.qubits, avgi, avgq, True)
     targ_dict = {
         serial1: AveragedResults(i=[1, 2, 3], q=[7, 8, 9]),
         serial2: AveragedResults(i=[0, 1, 2], q=[-1, -2, -3]),
@@ -142,7 +142,7 @@ def test_convert_nav_sweep_results():
     avgq = [[[[7, 7], [8, 8], [9, 9]], [[-1, -1], [-2, -2], [-3, -3]]]]
 
     ro_serials = [ro.serial for ro in sequence.ro_pulses]
-    out_dict = instrument.convert_nav_sweep_results(sweep1, ro_serials, sequence, platform.qubits, avgi, avgq)
+    out_dict = instrument.convert_sweep_results(sweep1, ro_serials, sequence, platform.qubits, avgi, avgq, False)
     targ_dict = {
         serial1: ExecutionResults.from_components(np.array([1, 1, 2, 2, 3, 3]), np.array([7, 7, 8, 8, 9, 9])),
         serial2: ExecutionResults.from_components(np.array([0, 0, 1, 1, 2, 2]), np.array([-1, -1, -2, -2, -3, -3])),
