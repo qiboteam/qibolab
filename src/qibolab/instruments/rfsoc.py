@@ -328,10 +328,10 @@ class TII_RFSOC4x2(AbstractInstrument):
                 )
                 if average:
                     # convert averaged results
-                    res = self.convert_av_sweep_results(sweepers[0], original_ro, toti, totq)
+                    res = self.convert_sweep_results(sweepers[0], original_ro, sequence, qubits, toti, totq, average)
                 else:
                     # convert not averaged results
-                    res = self.convert_nav_sweep_results(sweepers[0], original_ro, sequence, qubits, toti, totq)
+                    res = self.convert_sweep_results(sweepers[0], original_ro, sequence, qubits, toti, totq, average)
                 return res
 
             # if it's not possible to execute qick sweep re-call function
@@ -414,33 +414,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         # if all passed, do a firmware sweep
         return False
 
-    def convert_av_sweep_results(
-        self, sweeper: Sweeper, original_ro: List[str], avgi: List[float], avgq: List[float]
-    ) -> Dict[str, AveragedResults]:
-        """Convert sweep results from acquire(average=True) to qibolab dict res
-        Args:
-            *sweepers (`qibolab.Sweeper`): Sweeper objects.
-            original_ro (list): list of the ro serials of the original sequence
-            avgi (list): averaged i vals obtained with `acquire(average=True)`
-            avgq (list): averaged q vals obtained with `acquire(average=True)`
-        Returns:
-            A dict mapping the readout pulses serial to qibolab results objects
-        """
-        # TODO extend to readout on multiple adcs
-        sweep_results = {}
-        # add a result for every value of the sweep
-        for j in range(len(sweeper.values)):
-            results = {}
-            # add a result for every readouts pulse
-            for i, serial in enumerate(original_ro):
-                i_pulse = np.array([avgi[0][i][j]])
-                q_pulse = np.array([avgq[0][i][j]])
-                results[serial] = AveragedResults(i_pulse, q_pulse)
-            # merge new result with already saved ones
-            sweep_results = self.merge_sweep_results(sweep_results, results)
-        return sweep_results
-
-    def convert_nav_sweep_results(
+    def convert_sweep_results(
         self,
         sweeper: Sweeper,
         original_ro: List[str],
@@ -448,16 +422,18 @@ class TII_RFSOC4x2(AbstractInstrument):
         qubits: List[Qubit],
         toti: List[float],
         totq: List[float],
-    ) -> Dict[str, ExecutionResults]:
-        """Convert sweep res from acquire(average=False) to qibolab dict res
+        average: bool,
+    ) -> Dict[str, Union[ExecutionResults, AveragedResults]]:
+        """Convert sweep res to qibolab dict res
         Args:
             *sweepers (`qibolab.Sweeper`): Sweeper objects.
             original_ro (list): list of ro serials of the original sequence
             sequence (`qibolab.pulses.PulseSequence`). Pulse sequence to play.
             qubits (list): List of `qibolab.platforms.utils.Qubit` objects
                  passed from the platform.
-            toti (list): i values obtained with `acquire(average=True)`
-            totq (list): q values obtained with `acquire(average=True)`
+            toti (list): i values
+            totq (list): q values
+            average (bool): true if the result is from averaged acquisition
         Returns:
             A dict mapping the readout pulses serial to qibolab results objects
         """
@@ -472,9 +448,12 @@ class TII_RFSOC4x2(AbstractInstrument):
                     i_pulse = np.array(toti[k][i][j])
                     q_pulse = np.array(totq[k][i][j])
 
-                    qubit = qubits[sequence.ro_pulses[i].qubit]
-                    shots = self.classify_shots(i_pulse, q_pulse, qubit)
-                    results[serial] = ExecutionResults.from_components(i_pulse, q_pulse, shots)
+                    if average:
+                        results[serial] = AveragedResults(i_pulse, q_pulse)
+                    else:
+                        qubit = qubits[sequence.ro_pulses[i].qubit]
+                        shots = self.classify_shots(i_pulse, q_pulse, qubit)
+                        results[serial] = ExecutionResults.from_components(i_pulse, q_pulse, shots)
                 # merge new result with already saved ones
                 sweep_results = self.merge_sweep_results(sweep_results, results)
         return sweep_results
