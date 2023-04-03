@@ -168,10 +168,10 @@ def test_call_executepulsesequence():
     i_vals_nav, q_vals_nav = instrument.call_executepulsesequence(instrument.cfg, sequence, platform.qubits, 1, False)
     i_vals_av, q_vals_av = instrument.call_executepulsesequence(instrument.cfg, sequence, platform.qubits, 1, True)
 
-    assert i_vals_nav.shape == [1, 1, 1000]
-    assert q_vals_nav.shape == [1, 1, 1000]
-    assert i_vals_av.shape == [1, 1, 1]
-    assert q_vals_av.shape == [1, 1, 1]
+    assert np.shape(i_vals_nav) == (1, 1, 1000)
+    assert np.shape(q_vals_nav) == (1, 1, 1000)
+    assert np.shape(i_vals_av) == (1, 1)
+    assert np.shape(q_vals_av) == (1, 1)
 
 
 @pytest.mark.qpu
@@ -189,10 +189,10 @@ def test_call_executesinglesweep():
     )
     i_vals_av, q_vals_av = instrument.call_executesinglesweep(instrument.cfg, sequence, platform.qubits, sweep, 1, True)
 
-    assert i_vals_nav.shape == [1, 1, len(sweep.values), 1000]
-    assert q_vals_nav.shape == [1, 1, len(sweep.values), 1000]
-    assert i_vals_av.shape == [1, 1, len(sweep.values), 1]
-    assert q_vals_av.shape == [1, 1, len(sweep.values), 1]
+    assert np.shape(i_vals_nav) == (1, 1, len(sweep.values), 1000)
+    assert np.shape(q_vals_nav) == (1, 1, len(sweep.values), 1000)
+    assert np.shape(i_vals_av) == (1, 1, len(sweep.values))
+    assert np.shape(q_vals_av) == (1, 1, len(sweep.values))
 
 
 @pytest.mark.qpu
@@ -208,7 +208,7 @@ def test_play():
 
     assert sequence[1].serial in out_dict
     assert isinstance(out_dict[sequence[1].serial], ExecutionResults)
-    assert out_dict[sequence[1].serial].i.shape == [1, 1, 1000]
+    assert np.shape(out_dict[sequence[1].serial].i) == (1000,)
 
 
 @pytest.mark.qpu
@@ -221,15 +221,15 @@ def test_sweep():
     sequence.add(platform.create_MZ_pulse(qubit=0, start=100))
     sweep = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 35, 10), pulses=[sequence[0]])
 
-    out_dict1 = instrument.sweep(platform.qubits, sequence, sweep, average=True)
-    out_dict2 = instrument.sweep(platform.qubits, sequence, sweep, average=False)
+    out_dict1 = instrument.sweep(platform.qubits, sequence, sweep, average=True, relaxation_time=100_000)
+    out_dict2 = instrument.sweep(platform.qubits, sequence, sweep, average=False, relaxation_time=100_000)
 
     assert sequence[1].serial in out_dict1
     assert sequence[1].serial in out_dict2
     assert isinstance(out_dict1[sequence[1].serial], AveragedResults)
     assert isinstance(out_dict2[sequence[1].serial], ExecutionResults)
-    assert out_dict1[sequence[1].serial].i.shape == [1, 1, len(sweep.values), 1]
-    assert out_dict2[sequence[1].serial].i.shape == [1, 1, len(sweep.values), 1000]
+    assert np.shape(out_dict1[sequence[1].serial].i) == (len(sweep.values),)
+    assert np.shape(out_dict2[sequence[1].serial].i) == (len(sweep.values) * 1000,)
 
 
 @pytest.mark.qpu
@@ -243,6 +243,6 @@ def test_python_reqursive_sweep():
     sweep1 = Sweeper(parameter=Parameter.amplitude, values=np.arange(0.01, 0.03, 10), pulses=[sequence[0]])
     sweep2 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 35, 10), pulses=[sequence[0]])
 
-    out_dict = instrument.sweep(platform.qubits, sequence, sweep1, sweep2, average=True)
+    out_dict = instrument.sweep(platform.qubits, sequence, sweep1, sweep2, average=True, relaxation_time=100_000)
 
     assert sequence[1].serial in out_dict
