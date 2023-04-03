@@ -201,6 +201,114 @@ def create_tii_rfsoc4x2(runcard, address=None):
     return platform
 
 
+def create_tii_zcu111(runcard, address=None):
+    """Create platform using QICK project on the ZCU111 board and EraSynth local oscillator for the Readout
+    IPs and other instrument related parameters are hardcoded in ``__init__`` and ``setup``.
+    Args:
+        runcard (str): Path to the runcard file.
+        address (str): Address and port for the QICK board.
+            If ``None`` it will attempt to connect to TII instruments.
+    """
+    from qibolab.instruments.dummy_oscillator import (
+        DummyLocalOscillator as LocalOscillator,
+    )
+    from qibolab.instruments.rfsoc import TII_ZCU111
+
+    # Create channel objects
+    channels = ChannelMap()
+
+    # QUBIT 0
+    # readout
+    channels |= ChannelMap.from_names("L3-18_ro")
+    # feedback
+    channels |= ChannelMap.from_names("L2-3-RO_0")
+    # drive
+    channels |= ChannelMap.from_names("L4-23_qd")
+    # Flux
+    channels |= ChannelMap.from_names("L1-16_fl")
+    # QUBIT 1
+    # readout
+    channels |= ChannelMap.from_names("L3-18_ro")
+    # feedback
+    channels |= ChannelMap.from_names("L2-3-RO_1")
+    # drive
+    channels |= ChannelMap.from_names("L4-24_qd")
+    # Flux
+    channels |= ChannelMap.from_names("L1-17_fl")
+    # QUBIT 2
+    # readout
+    channels |= ChannelMap.from_names("L3-18_ro")
+    # feedback
+    channels |= ChannelMap.from_names("L2-3-RO_2")
+    # drive
+    channels |= ChannelMap.from_names("L4-25_qd")
+    # Flux
+    channels |= ChannelMap.from_names("L1-18_fl")
+
+    # Map controllers to qubit channels (HARDCODED)
+    # Qubit 0
+    # readout
+    channels["L3-18_ro"].ports = [("dac6", 6)]
+    # feedback
+    channels["L2-3-RO_0"].ports = [("adc0", 0)]
+    # drive
+    channels["L4-23_qd"].ports = [("dac0", 0)]
+    # Flux
+    channels["L1-16_fl"].ports = [("dac3", 3)]
+    # Qubit 1
+    # Readout
+    channels["L3-18_ro"].ports = [("dac3", 6)]
+    # feedback
+    channels["L2-3-RO_1"].ports = [("adc0", 1)]
+    # drive
+    channels["L4-24_qd"].ports = [("dac1", 1)]
+    # Flux
+    channels["L1-17_fl"].ports = [("dac4", 4)]
+    # Qubit 2
+    # Readout
+    channels["L3-18_ro"].ports = [("dac6", 6)]
+    # feedback
+    channels["L2-3-RO_2"].ports = [("adc0", 2)]
+    # drive
+    channels["L4-25_qd"].ports = [("dac2", 2)]
+    # Flux
+    channels["L1-18_fl"].ports = [("dac5", 5)]
+
+    # Instantiate QICK instruments
+
+    if address is None:
+        address = "192.168.2.81:6000"
+    controller = TII_ZCU111("tii_zcu111", address)
+
+    # Instantiate local oscillators (HARDCODED) # TODO local oscillators should not be needed
+    local_oscillators = [
+        LocalOscillator("twpa", "192.168.0.35"),
+    ]
+    # Set TWPA parameters
+    # local_oscillators[0].frequency = 6_511_000_000
+    # local_oscillators[0].power = 4.5
+
+    # Map LOs to channels
+    # channels["L4-26"].local_oscillator = local_oscillators[0]  # TODO find the real channel
+
+    # TODO add local_oscillators
+    design = InstrumentDesign([controller], channels)
+    platform = DesignPlatform("tii_rfsocZCU111", design, runcard)
+
+    # assign channels to qubits
+    qubits = platform.qubits
+    qubits[0].readout = channels["L3-18_ro"]
+    qubits[0].feedback = channels["L2-3-RO_0"]
+    qubits[0].drive = channels["L4-23_qd"]
+    qubits[1].readout = channels["L3-18_ro"]
+    qubits[1].feedback = channels["L2-3-RO_1"]
+    qubits[1].drive = channels["L4-24_qd"]
+    qubits[2].readout = channels["L3-18_ro"]
+    qubits[2].feedback = channels["L2-3-RO_2"]
+    qubits[2].drive = channels["L4-25_qd"]
+    return platform
+
+
 def Platform(name, runcard=None, design=None):
     """Platform for controlling quantum devices.
     Args:
@@ -228,6 +336,8 @@ def Platform(name, runcard=None, design=None):
         return create_tii_qw5q_gold(runcard)
     elif name == "tii_rfsoc4x2":
         return create_tii_rfsoc4x2(runcard)
+    elif name == "tii_zcu111":
+        return create_tii_zcu111(runcard)
     else:
         from qibolab.platforms.multiqubit import MultiqubitPlatform as Device
 
