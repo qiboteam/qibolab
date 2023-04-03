@@ -9,8 +9,9 @@ import numpy as np
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.paths import qibolab_folder
 from qibolab.platforms.platform import AcquisitionType, AveragingMode
-from qibolab.pulses import FluxPulse, PulseSequence
+from qibolab.pulses import FluxPulse, PulseSequence, PulseType
 from qibolab.result import ExecutionResults
+from qibolab.sweeper import Parameter
 
 os.environ["LABONEQ_TOKEN"] = "ciao come va?"  # or other random text
 laboneq._token.is_valid_token = lambda _token: True
@@ -129,9 +130,9 @@ class ZhSweeper:
                 values=sweeper.values * 1e-9,
             )
         elif parameter == "frequency":
-            if self.pulse.type.name.lower() == "readout":
+            if self.pulse.type is PulseType.READOUT:
                 intermediate_frequency = qubit.readout_frequency - qubit.readout.local_oscillator.frequency
-            elif self.pulse.type.name.lower() == "drive":
+            elif self.pulse.type is PulseType.DRIVE:
                 intermediate_frequency = qubit.drive_frequency - qubit.drive.local_oscillator.frequency
             zh_sweeper = lo.LinearSweepParameter(
                 uid=sweeper.parameter.name,
@@ -153,7 +154,7 @@ class ZhSweeperLine:
         self.sweeper = sweeper
 
         # TODO: This only works on near time loops
-        if sweeper.parameter.name == "bias":
+        if sweeper.parameter is Parameter.bias:
             self.signal = f"flux{qubit.name}"
             self.zhpulse = lo.pulse_library.const(
                 uid=(f"flux_{qubit.name}_"),
@@ -254,7 +255,7 @@ class Zurich(AbstractInstrument):
 
     # TODO: Load settings from the runcard
     # def setup(self, qubits, relaxation_time, time_of_flight, smearing, **_kwargs):
-    def setup(self, qubits, **_kwargs):
+    def setup(self, **_kwargs):
         """Zurich general pre experiment calibration definitions
         I should not remove qubits as other platforms may need it
         """
@@ -381,7 +382,10 @@ class Zurich(AbstractInstrument):
                         i, q
                     )
 
-        # self.run_sim(sim_time) #FIXME: Cant sim on executions with multiple pulse sequences (ALLXY) without reconnection to the real devices which takes time.
+        if options.sim_time is not None:
+            self.run_sim(
+                round(options.sim_time * 1e-9, 9)
+            )  # FIXME: Cant sim on executions with multiple pulse sequences (ALLXY) without reconnection to the real devices which takes time.
         # lo.show_pulse_sheet("pulses", self.exp) #FIXME: Wait until next LO release for bugs
         # self.disconnect() #FIXME: Cant disconnect on executions with multiple pulse sequences (ALLXY)
         return results
@@ -424,7 +428,7 @@ class Zurich(AbstractInstrument):
             if sweeper.parameter.name in {"amplitude", "frequency", "duration", "relative_phase"}:
                 for pulse in sweeper.pulses:
                     aux_list = zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"]
-                    if sweeper.parameter.name == "frequency" and pulse.type.name.lower() == "readout":
+                    if sweeper.parameter is Parameter.frequency and pulse.type is PulseType.READOUT:
                         self.acquisition_type = lo.AcquisitionType.SPECTROSCOPY
                     for element in aux_list:
                         if pulse == element.pulse:
@@ -776,7 +780,10 @@ class Zurich(AbstractInstrument):
                         i, q
                     )
 
-        # self.run_sim(sim_time) #FIXME: Careful placement or reconnection to avoid messing with several executions
+        if options.sim_time is not None:
+            self.run_sim(
+                round(options.sim_time * 1e-9, 9)
+            )  # FIXME: Careful placement or reconnection to avoid messing with several executions
         # lo.show_pulse_sheet("pulses", self.exp) #FIXME: Wait until next LO release for bugs
         # self.disconnect() #FIXME: Careful placement or reconnection to avoid messing with several executions
         return results
@@ -793,12 +800,12 @@ class Zurich(AbstractInstrument):
         parameter = None
         print("sweep", sweeper.parameter.name.lower())
 
-        if sweeper.parameter.name.lower() == "frequency":
+        if sweeper.parameter is Parameter.frequency:
             for pulse in sweeper.pulses:
                 qubit = pulse.qubit
-                if pulse.type.name.lower() == "drive":
+                if pulse.type is PulseType.DRIVE:
                     line = "drive"
-                elif pulse.type.name.lower() == "readout":
+                elif pulse.type is PulseType.READOUT:
                     line = "measure"
                 exp_calib[f"{line}{qubit}"] = lo.SignalCalibration(
                     oscillator=lo.Oscillator(
@@ -807,14 +814,14 @@ class Zurich(AbstractInstrument):
                     )
                 )
 
-        if sweeper.parameter.name == "bias":
+        if sweeper.parameter is Parameter.bias:
             for qubit in sweeper.qubits.values():
                 # for qubit in sweeper.qubits.values():
                 #     qubit = sweeper.qubits[qubit]
 
                 parameter = ZhSweeperLine(sweeper, qubit, self.sequence_qibo).zhsweeper
 
-        if sweeper.parameter.name == "delay":
+        elif sweeper.parameter is Parameter.delay:
             pulse = sweeper.pulses[0]
             qubit = pulse.qubit
             # for qubit in sweeper.qubits.values():
@@ -822,7 +829,7 @@ class Zurich(AbstractInstrument):
 
             parameter = ZhSweeperLine(sweeper, qubit, self.sequence_qibo).zhsweeper
 
-        if parameter is None:
+        elif parameter is None:
             parameter = ZhSweeper(sweeper.pulses[0], sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
 
         with exp.sweep(
@@ -861,30 +868,6 @@ class Zurich(AbstractInstrument):
         )
 
 
-import re
-
-# additional imports for plotting
-import matplotlib.pyplot as plt
-import matplotlib.style as style
-
-# numpy for mathematics
-import numpy as np
-from matplotlib import cycler
-
-style.use("default")
-
-plt.rcParams.update(
-    {
-        "font.weight": "light",
-        "axes.labelweight": "light",
-        "axes.titleweight": "normal",
-        "axes.prop_cycle": cycler(color=["#006699", "#FF0000", "#66CC33", "#CC3399"]),
-        "svg.fonttype": "none",  # Make text editable in SVG
-        "text.usetex": False,
-    }
-)
-
-
 # Try to convert this to plotty
 def plot_simulation(
     compiled_experiment,
@@ -895,6 +878,29 @@ def plot_simulation(
     plot_width=6,
     plot_height=2,
 ):
+    import re
+
+    # additional imports for plotting
+    import matplotlib.pyplot as plt
+    import matplotlib.style as style
+
+    # numpy for mathematics
+    import numpy as np
+    from matplotlib import cycler
+
+    style.use("default")
+
+    plt.rcParams.update(
+        {
+            "font.weight": "light",
+            "axes.labelweight": "light",
+            "axes.titleweight": "normal",
+            "axes.prop_cycle": cycler(color=["#006699", "#FF0000", "#66CC33", "#CC3399"]),
+            "svg.fonttype": "none",  # Make text editable in SVG
+            "text.usetex": False,
+        }
+    )
+
     simulation = lo.OutputSimulator(compiled_experiment)
 
     mapped_signals = compiled_experiment.experiment.signal_mapping_status["mapped_signals"]

@@ -140,7 +140,7 @@ class ExecutionParameters:
 
     nshots: Optional[np.uint32] = None
     relaxation_time: Optional[np.uint32] = None
-    fast_reset: Optional[bool] = False
-    sim_time: Optional[np.float64] = 10e-6
+    fast_reset: bool = False
+    sim_time: Optional[int] = None
     acquisition_type: AcquisitionType = AcquisitionType.INTEGRATION
     averaging_mode: AveragingMode = AveragingMode.CYCLIC
