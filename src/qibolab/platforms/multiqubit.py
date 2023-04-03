@@ -362,7 +362,7 @@ class MultiqubitPlatform(AbstractPlatform):
                     if pulses[pulse].type is PulseType.READOUT:
                         update_value += self.qubits[pulses[pulse].qubit].readout_frequency
                     else:
-                        valupdate_valueue += self.qubits[pulses[pulse].qubit].drive_frequency
+                        update_value += self.qubits[pulses[pulse].qubit].drive_frequency
                     setattr(pulses[pulse], sweeper.parameter.name, update_value)
                 elif sweeper.parameter is Parameter.amplitude:
                     if pulses[pulse].type is PulseType.READOUT:
