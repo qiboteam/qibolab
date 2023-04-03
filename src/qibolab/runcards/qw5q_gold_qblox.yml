@@ -79,7 +79,7 @@ instruments:
                     lo_enabled                  : true
                     lo_frequency                : 7_250_000_000                    # (Hz) from 2e9 to 18e9
                     gain                        : 0.6                              # for path0 and path1 -1.0<=v<=1.0
-                    hardware_mod_en             : false
+                    hardware_mod_en             : true
                 i1:
                     hardware_demod_en           : true
 
@@ -110,7 +110,7 @@ instruments:
                     lo_enabled                  : true
                     lo_frequency                : 7_850_000_000                   # (Hz) from 2e9 to 18e9
                     gain                        : 0.6                              # for path0 and path1 -1.0<=v<=1.0
-                    hardware_mod_en             : false
+                    hardware_mod_en             : true
                 i1:
                     hardware_demod_en           : true
 
@@ -144,13 +144,13 @@ instruments:
                     lo_enabled                   : true
                     lo_frequency                 : 5_246_600_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.488 # for path0 and path1 -1.0<=v<=1.0
-                    hardware_mod_en              : false
+                    hardware_mod_en              : true
                 o2: # not used
                     attenuation                  : 0 # (dB)
                     lo_enabled                   : false
                     lo_frequency                 : 2_000_000_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0 # for path0 and path1 -1.0<=v<=1.0
-                    hardware_mod_en              : false
+                    hardware_mod_en              : true
 
             channel_port_map:
                 'L3-15': o1 # q0
@@ -167,13 +167,13 @@ instruments:
                     lo_enabled                   : true
                     lo_frequency                 : 5_052_013_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.56 # for path0 and path1 -1.0<=v<=1.0
-                    hardware_mod_en              : false
+                    hardware_mod_en              : true
                 o2: # qubit q2
                     attenuation                  : 20 # (dB)
                     lo_enabled                   : true
                     lo_frequency                 : 5_995_026_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.647 # for path0 and path1 -1.0<=v<=1.0
-                    hardware_mod_en              : false
+                    hardware_mod_en              : true
 
             channel_port_map:
                 'L3-11': o1 # q1
@@ -190,13 +190,13 @@ instruments:
                     lo_enabled                   : true
                     lo_frequency                 : 6_961_250_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.538 # for path0 and path1 -1.0<=v<=1.0
-                    hardware_mod_en              : false
+                    hardware_mod_en              : true
                 o2: # qubit q4
                     attenuation                  : 20 # (dB)
                     lo_enabled                   : true
                     lo_frequency                 : 6_788_003_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.645 # for path0 and path1 -1.0<=v<=1.0
-                    hardware_mod_en              : false
+                    hardware_mod_en              : true
 
             channel_port_map:
                 'L3-13': o1 # 1
