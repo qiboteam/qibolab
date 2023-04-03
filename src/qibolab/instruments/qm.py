@@ -361,13 +361,13 @@ class AcquisitionVariables:
     I: _Variable = field(default_factory=lambda: declare(fixed))
     Q: _Variable = field(default_factory=lambda: declare(fixed))
     """Variables to save the (I, Q) values acquired from a single shot."""
-    I_st: _ResultSource = field(default_factory=lambda: declare_stream())
-    Q_st: _ResultSource = field(default_factory=lambda: declare_stream())
+    I_stream: _ResultSource = field(default_factory=lambda: declare_stream())
+    Q_stream: _ResultSource = field(default_factory=lambda: declare_stream())
     """Streams to collect the results of all shots."""
 
     raw_adc: bool = False
     """Flag to select whether we are acquiring raw ADC data."""
-    adc_str: Optional[_ResultSource] = None
+    adc_stream: Optional[_ResultSource] = None
     """Stream to collect raw ADC data."""
 
     threshold: Optional[float] = None
@@ -383,7 +383,7 @@ class AcquisitionVariables:
     def __post_init__(self):
         """Create QUA variables needed for single shot classification."""
         if self.raw_adc:
-            self.adc_st = declare_stream(adc_trace=True)
+            self.adc_stream = declare_stream(adc_trace=True)
 
         if self.threshold is not None:
             self.shot = declare(bool)
@@ -393,8 +393,8 @@ class AcquisitionVariables:
 
     def save(self):
         """QUA instruction to save acquired results from variables to streams."""
-        save(self.I, self.I_st)
-        save(self.Q, self.Q_st)
+        save(self.I, self.I_stream)
+        save(self.Q, self.Q_stream)
         if self.threshold is not None:
             save(self.shot, self.shots)
 
@@ -650,7 +650,7 @@ class QMOPX(AbstractInstrument):
         """
         acquisition = qmpulse.acquisition
         if raw_adc:
-            measure(qmpulse.operation, qmpulse.element, acquisition.adc_st)
+            measure(qmpulse.operation, qmpulse.element, acquisition.adc_stream)
         else:
             measure(
                 qmpulse.operation,
@@ -742,11 +742,11 @@ class QMOPX(AbstractInstrument):
         serial = qmpulse.pulse.serial
         acquisition = qmpulse.acquisition
         if raw_adc:
-            acquisition.adc_st.input1().average().save(f"{serial}_I")
-            acquisition.adc_st.input2().average().save(f"{serial}_Q")
+            acquisition.adc_stream.input1().average().save(f"{serial}_I")
+            acquisition.adc_stream.input2().average().save(f"{serial}_Q")
         else:
-            acquisition.I_st.buffer(nshots).save(f"{serial}_I")
-            acquisition.Q_st.buffer(nshots).save(f"{serial}_Q")
+            acquisition.I_stream.buffer(nshots).save(f"{serial}_I")
+            acquisition.Q_stream.buffer(nshots).save(f"{serial}_Q")
             if acquisition.threshold is not None:
                 acquisition.shots.buffer(nshots).save(f"{serial}_shots")
 
@@ -806,8 +806,8 @@ class QMOPX(AbstractInstrument):
             with stream_processing():
                 for qmpulse in qmsequence.ro_pulses:
                     acquisition = qmpulse.acquisition
-                    Ist_temp = acquisition.I_st
-                    Qst_temp = acquisition.Q_st
+                    Ist_temp = acquisition.I_stream
+                    Qst_temp = acquisition.Q_stream
                     if not average and acquisition.threshold is not None:
                         shots_temp = acquisition.shots
                     for sweeper in reversed(sweepers):

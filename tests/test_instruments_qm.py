@@ -28,7 +28,7 @@ def test_qmpulse_declare_output():
     assert acquisition.cos == np.cos(0.2)
     assert acquisition.sin == np.sin(0.2)
     assert isinstance(acquisition.I, qua._dsl._Variable)
-    assert isinstance(acquisition.I_st, qua._dsl._ResultSource)
+    assert isinstance(acquisition.I_stream, qua._dsl._ResultSource)
     assert isinstance(acquisition.shot, qua._dsl._Variable)
     assert isinstance(acquisition.shots, qua._dsl._ResultSource)
 
