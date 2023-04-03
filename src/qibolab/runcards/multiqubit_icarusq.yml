@@ -15,8 +15,8 @@ topology: # qubit - qubit connections
 
 channels: [1_ro, 1_qb]
 
-qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux]
-    0: [1_ro, 1_qb, 99]
+qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux, QubitBias]
+    0: [1_ro, 1_qb, 99, 99]
 
 instruments:
     awg:
@@ -119,36 +119,36 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            resonator_freq: 7824715967.361432
-            qubit_freq: 5082221756
+            readout_frequency: 7824715967.361432
+            drive_frequency: 5082221756
             T1: 2192.895853326451
             T2: 6933.310025260633
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
             mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
         1:
-            resonator_freq: 7824715967.361432
-            qubit_freq: 5082221756
+            readout_frequency: 7824715967.361432
+            drive_frequency: 5082221756
             T1: 2192.895853326451
             T2: 6933.310025260633
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
             mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
         2:
-            resonator_freq: 7824715967.361432
-            qubit_freq: 5082221756
+            readout_frequency: 7824715967.361432
+            drive_frequency: 5082221756
             T1: 2192.895853326451
             T2: 6933.310025260633
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
             mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
         3:
-            resonator_freq: 7824715967.361432
-            qubit_freq: 5082221756
+            readout_frequency: 7824715967.361432
+            drive_frequency: 5082221756
             T1: 2192.895853326451
             T2: 6933.310025260633
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)
             mean_exc_states: (0.00011805761369462914+0.00018604439195544947j)
         4:
-            resonator_freq: 7824715967.361432
-            qubit_freq: 5082221756
+            readout_frequency: 7824715967.361432
+            drive_frequency: 5082221756
             T1: 2192.895853326451
             T2: 6933.310025260633
             mean_gnd_states: (0.0005331494337056071-0.0007740003889083592j)

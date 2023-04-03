@@ -20,7 +20,6 @@ Qibolab key features:
 * Support multiple heterogeneous platforms.
 * Use existing calibration procedures for experimentalists.
 
-This documentation refers to qibolab |release|.
 
 Contents
 ========

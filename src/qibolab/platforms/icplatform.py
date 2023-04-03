@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
 import copy
 
-from qibolab.platforms.abstract import AbstractPlatform
+from qibolab.platforms.multiqubit import MultiqubitPlatform
 
 
 class Qubit:
@@ -33,7 +32,6 @@ class Qubit:
         readout,
         readout_channels,
     ):
-
         self.pi_pulse = pi_pulse
         self.readout_pulse = readout_pulse
         self.readout_frequency = readout_frequency
@@ -45,7 +43,7 @@ class Qubit:
         self.readout_channels = readout_channels
 
 
-class ICPlatform(AbstractPlatform):
+class ICPlatform(MultiqubitPlatform):
     """Platform for controlling quantum devices with IC.
 
     Example:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import bisect
 import socket
 import struct

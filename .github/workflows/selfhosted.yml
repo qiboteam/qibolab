@@ -1,33 +1,78 @@
 # CI workflow that runs on qpu
 name: Tests with qpu
 
-on: [push]
+on:
+  pull_request:
+    types: [labeled]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
 
 jobs:
+  prepare:
+    if: contains(join(github.event.pull_request.labels.*.name), 'run-on')
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        env:
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          platforms="{\"platform\":["
+          combined=""
+          shopt -s lastpipe
+          jq -c '.[]' <<< "$LABELS" | while read label; do
+              platform=(${label//-/ })
+              if [ ${platform[0]} == "\"run" ] && [ ${platform[1]} == "on" ]; then
+                platforms="${platforms}${combined:+,}\"${platform[2]}"
+                combined=${platforms}
+              fi
+          done
+          platforms+="]}"
+          echo ${platforms}
+          echo matrix="${platforms}" >> $GITHUB_OUTPUT
   build:
-    if: false # Skip qpu tests until we have a working configuration for zhinst
+    needs: prepare
     strategy:
-      matrix:
-        python-version: [3.8]
+      matrix: ${{fromJSON(needs.prepare.outputs.matrix)}}
+      fail-fast: false
     runs-on: self-hosted
     steps:
     - name: Cleanup workspace manually
       run: |
         rm -rf _work/*
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: 3.8
     - name: Install package
       shell: bash -l {0}
       run: |
         conda create --prefix=testenv python=${{ matrix.python-version }}
         conda activate ./testenv
         python -m pip install --upgrade pip
-        pip install pytest
-        pip install git+https://github.com/qiboteam/qibo
-        pip install .[tiiq]
-    - name: Test tii5q
+        poetry install --with tests,tiiq
+    - name: Test ${{ matrix.platform }}
       run: |
-        srun -p qpu5q pytest src/qibolab --pyargs qibolab --skip-no-qpu --platforms tii5q
+        sed -i 's/$PLATFORM/'${{ matrix.platform }}'/' qputests.sh
+        srun -p ${{ matrix.platform }} qputests.sh
+        mkdir coverage
+        mv coverage.xml coverage/
+        mv htmlcov coverage/
+    - uses: actions/upload-artifact@v3
+      with:
+        name: coverage-from-self-hosted
+        path: coverage/
+    - name: Notify the Pull Request
+      uses: thollander/actions-comment-pull-request@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        message: |
+          Run on QPU `${{ matrix.platform }}` completed! :atom:
+
+          > *You can download the coverage report as an artifact, from the workflow summary page:*
+          > ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
