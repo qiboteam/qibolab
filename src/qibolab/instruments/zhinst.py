@@ -17,6 +17,7 @@ laboneq._token.is_valid_token = lambda _token: True
 
 # FIXME: Amplitude = 1.0, 1st pi pulse wider.
 
+# TODO: Maybe we can combine play() sweep() and play several sequences
 # TODO: #483 from Andrea, AveragedResults
 # TODO: Scan de flujo amplitud y lenght (doble sweep a un pulso)
 
