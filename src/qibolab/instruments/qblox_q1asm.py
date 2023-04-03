@@ -198,47 +198,42 @@ def wait_block(wait_time: int, register: Register, force_multiples_of_4: bool = 
     return block
 
 
-def sweeper_block(begin: int, end: int, step: int, register: Register, block, update_parameter_block=None):
+def sweeper_block(start: int, stop: int, step: int, register: Register, block, update_parameter_block=None):
     # validate values
-    if not (isinstance(begin, int) and isinstance(end, int) and isinstance(step, int)):
+    if not (isinstance(start, int) and isinstance(stop, int) and isinstance(step, int)):
         raise ValueError("begin, end and step must be int")
-    if end != begin and step == 0:
+    if stop != start and step == 0:
         raise ValueError("step must not be 0")
-    if (end > begin and not step > 0) or (end < begin and not step < 0):
+    if (stop > start and not step > 0) or (stop < start and not step < 0):
         raise ValueError("invalid step")
+    if start < 0 or stop < 0:
+        raise ValueError("sweep possitive values only")
 
     header_block = Block()
     # same behaviour as range() includes the first but never the last
-    if begin >= 0:
-        header_block.append(f"move {begin}, {register}", comment=register.name + " loop")
-        header_block.append("nop")
-    else:
-        header_block.append(f"move 0, {register}", comment=register.name + " loop")
-        header_block.append("nop")
-        header_block.append(f"sub {register}, {abs(begin)}, {register}")
-        header_block.append("nop")
-
+    header_block.append(f"move {start}, {register}", comment=register.name + " loop")
+    header_block.append("nop")
     header_block.append(f"loop_{register}:")
-    header_block.append("")
+    header_block.append_spacer()
 
     body_block = Block()
     body_block.indentation = 1
     body_block += block
 
     footer_block = Block()
-    footer_block.append("")
-    if end > begin:
+    footer_block.append_spacer()
+    if stop > start:
         footer_block.append(f"add {register}, {step}, {register}")
         footer_block.append("nop")
         if update_parameter_block:
             footer_block += update_parameter_block
-        footer_block.append(f"jlt {register}, {end}, @loop_{register}", comment=register.name + " loop")
-    elif end < begin:
+        footer_block.append(f"jlt {register}, {stop}, @loop_{register}", comment=register.name + " loop")
+    elif stop < start:
         footer_block.append(f"sub {register}, {abs(step)}, {register}")
         footer_block.append("nop")
         if update_parameter_block:
             footer_block += update_parameter_block
-        footer_block.append(f"jge {register}, {end + 1}, @loop_{register}", comment=register.name + " loop")
+        footer_block.append(f"jge {register}, {stop + 1}, @loop_{register}", comment=register.name + " loop")
 
     return header_block + body_block + footer_block
 
@@ -259,7 +254,7 @@ def convert_phase(phase_rad: float):
 def convert_frequency(freq: float):
     if not (freq >= -500e6 and freq <= 500e6):
         raise ValueError("frequency must be a float between -500e6 and 500e6 Hz")
-    return int(freq * 4) % 2**18  # two's complement of 18? TODO: confirm with qblox
+    return int(freq * 4) % 2**32  # two's complement of 18? TODO: confirm with qblox
     """
     The frequency is divided into 4e9 steps between -500 and 500 MHz and
     expressed as an integer between -2e9 and 2e9. (e.g. 1 MHz=4e6).
