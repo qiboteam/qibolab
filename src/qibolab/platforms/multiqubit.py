@@ -164,11 +164,15 @@ class MultiqubitPlatform(AbstractPlatform):
                 self.instruments[name].disconnect()
             self.is_connected = False
 
-    def execute_pulse_sequence(self, sequence: PulseSequence, nshots=None):
+    def execute_pulse_sequence(self, sequence: PulseSequence, nshots=None, navgs=None, relaxation_time=None, sweepers:list = []):
         if not self.is_connected:
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
         if nshots is None:
-            nshots = self.hardware_avg
+            nshots = 1
+        if navgs is None:
+            navgs = self.hardware_avg
+        if relaxation_time is None:
+            relaxation_time = self.relaxation_time
 
         # DEBUG: Plot Pulse Sequence
         # sequence.plot('plot.png')
@@ -211,7 +215,7 @@ class MultiqubitPlatform(AbstractPlatform):
                         if len(_los) > 0:
                             self.instruments[name].ports[port].lo_frequency = _los[0]
 
-                self.instruments[name].process_pulse_sequence(instrument_pulses[name], nshots, self.relaxation_time)
+                self.instruments[name].process_pulse_sequence(instrument_pulses[name], nshots, navgs, relaxation_time, sweepers)
                 self.instruments[name].upload()
         for name in self.instruments:
             if "control" in roles[name] or "readout" in roles[name]:
@@ -223,7 +227,7 @@ class MultiqubitPlatform(AbstractPlatform):
             if "readout" in roles[name]:
                 if not instrument_pulses[name].is_empty:
                     if not instrument_pulses[name].ro_pulses.is_empty:
-                        results = self.instruments[name].acquire()
+                        results = self.instruments[name].acquire(sweepers)
                         existing_keys = set(acquisition_results.keys()) & set(results.keys())
                         for key, value in results.items():
                             if key in existing_keys:
@@ -242,6 +246,12 @@ class MultiqubitPlatform(AbstractPlatform):
         map_id_serial = {}
         sequence_copy = sequence.copy()
 
+        if average:
+            navgs = nshots
+            nshots = 1
+        else:
+            navgs = 1
+
         sweepers_copy = []
         for sweeper in sweepers:
             sweepers_copy.append(Sweeper(
@@ -256,15 +266,23 @@ class MultiqubitPlatform(AbstractPlatform):
             id_results[pulse.id] = ExecutionResults.from_components(np.array([]), np.array([]))
             id_results[pulse.qubit] = id_results[pulse.id]
 
-        # perform sweeping recursively
-        self._sweep_recursion(
-            sequence_copy,
-            *tuple(sweepers_copy),
-            results=id_results,
-            nshots=nshots,
-            average=average,
-            relaxation_time=relaxation_time
-        )
+        # for-loop-based sweepers
+        # self._sweep_recursion_for_loops(
+        #     sequence_copy,
+        #     *tuple(sweepers_copy),
+        #     results=id_results,
+        #     nshots=nshots,
+        #     navgs=navgs,
+        #     average=average,
+        #     relaxation_time=relaxation_time
+        # )
+        
+        # rt-based sweepers
+        result = self.execute_pulse_sequence(sequence_copy, nshots, navgs, relaxation_time, sweepers_copy)
+        for pulse in sequence_copy.ro_pulses:
+            id_results[pulse.id] += result[pulse.serial]
+            id_results[pulse.qubit] = id_results[pulse.id]
+
         
         serial_results = {}
         for pulse in sequence_copy.ro_pulses:
@@ -272,13 +290,14 @@ class MultiqubitPlatform(AbstractPlatform):
             serial_results[pulse.qubit] = id_results[pulse.id]
         return serial_results
 
-    def _sweep_recursion(
+    def _sweep_recursion_for_loops(
         self,
         sequence,
         *sweepers,
         results,
-        nshots=1024,
-        average=True,
+        nshots,
+        navgs,
+        average=False,
         relaxation_time=None,
     ):
         sweeper = sweepers[0]
@@ -295,18 +314,18 @@ class MultiqubitPlatform(AbstractPlatform):
             initial = {}
             for qubit in sweeper.qubits:
                 initial[qubit] = self.get_bias(qubit)
-        if sweeper.parameter is Parameter.frequency:
+        elif sweeper.parameter is Parameter.frequency:
             initial = {}
             for pulse in sweeper.pulses:
                 initial[pulse.id] = pulse.frequency
-        if sweeper.parameter is Parameter.lo_frequency:
+        elif sweeper.parameter is Parameter.lo_frequency:
             initial = {}
             for pulse in sweeper.pulses:
                 if pulse.type == PulseType.READOUT:
                     initial[pulse.id] = self.get_lo_readout_frequency(pulse.qubit)
                 elif pulse.type == PulseType.DRIVE:
                     initial[pulse.id] = self.get_lo_readout_frequency(pulse.qubit)
-        if sweeper.parameter is Parameter.amplitude:
+        elif sweeper.parameter is Parameter.amplitude:
             initial = {}
             for pulse in sweeper.pulses:
                 initial[pulse.id] = pulse.amplitude
@@ -322,16 +341,16 @@ class MultiqubitPlatform(AbstractPlatform):
             elif sweeper.parameter is Parameter.bias:
                 for qubit in sweeper.qubits:
                     self.set_bias(qubit, initial[qubit] + value)
-            if sweeper.parameter is Parameter.frequency:
+            elif sweeper.parameter is Parameter.frequency:
                 for pulse in sweeper.pulses:
                     pulse.frequency = initial[pulse.id] + value
-            if sweeper.parameter is Parameter.lo_frequency:
+            elif sweeper.parameter is Parameter.lo_frequency:
                 for pulse in sweeper.pulses:
                     if pulse.type == PulseType.READOUT:
                         self.set_lo_readout_frequency(initial[pulse.id] + value)
                     elif pulse.type == PulseType.DRIVE:
                         self.set_lo_readout_frequency(initial[pulse.id] + value)
-            if sweeper.parameter is Parameter.amplitude:
+            elif sweeper.parameter is Parameter.amplitude:
                 for pulse in sweeper.pulses:
                     pulse.amplitude = initial[pulse.id] + value
 
@@ -345,10 +364,11 @@ class MultiqubitPlatform(AbstractPlatform):
                     relaxation_time=relaxation_time,
                 )
             else:
-                result = self.execute_pulse_sequence(sequence, nshots)
+                result = self.execute_pulse_sequence(sequence, nshots, navgs, relaxation_time)
                 for pulse in sequence.ro_pulses:
                     results[pulse.id] += result[pulse.serial].compute_average() if average else result[pulse.serial]
                     results[pulse.qubit] = results[pulse.id]
+
 
     def measure_fidelity(self, qubits=None, nshots=None):
         self.reload_settings()
