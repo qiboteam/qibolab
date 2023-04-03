@@ -30,7 +30,8 @@ from qibolab.instruments.qblox_q1asm import (
     wait_block,
 )
 from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType, Waveform
-from qibolab.sweeper import Sweeper, Parameter
+from qibolab.sweeper import Parameter, Sweeper
+
 
 class WaveformsBuffer:
     """A class to represent a buffer that holds the unique waveforms used by a sequencer.
@@ -681,13 +682,17 @@ class ClusterQRM_RF(AbstractInstrument):
         _lo = self.ports[self.channel_port_map[pulse.channel]].lo_frequency
         _if = _rf - _lo
         if abs(_if) > self.FREQUENCY_LIMIT:
-            raise RuntimeError(f"""
+            raise RuntimeError(
+                f"""
             Pulse frequency {_rf} cannot be synthesised with current lo frequency {_lo}.
             The intermediate frequency {_if} would exceed the maximum frequency of {self.FREQUENCY_LIMIT}
-            """)
+            """
+            )
         return _if
 
-    def process_pulse_sequence(self, instrument_pulses: PulseSequence, nshots: int, navgs: int, relaxation_time: int, sweepers:list = []):
+    def process_pulse_sequence(
+        self, instrument_pulses: PulseSequence, nshots: int, navgs: int, repetition_duration: int, sweepers: list = []
+    ):
         """Processes a list of pulses, generating the waveforms and sequence program required by
         the instrument to synthesise them.
 
@@ -705,7 +710,7 @@ class ClusterQRM_RF(AbstractInstrument):
         Args:
             instrument_pulses (PulseSequence): A collection of Pulse objects to be played by the instrument.
             nshots (int): The number of times the sequence of pulses should be executed.
-            relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
+            repetition_duration (int): The total duration of the pulse sequence execution plus the reset/relaxation time.
         """
 
         # Save the hash of the current sequence of pulses.
@@ -713,7 +718,7 @@ class ClusterQRM_RF(AbstractInstrument):
             (
                 instrument_pulses,
                 nshots,
-                relaxation_time,
+                repetition_duration,
                 self.ports["o1"].hardware_mod_en,
                 self.ports["i1"].hardware_demod_en,
             )
@@ -748,7 +753,9 @@ class ClusterQRM_RF(AbstractInstrument):
                         )
                     # get next sequencer
                     sequencer = self._get_next_sequencer(
-                        port=port, frequency=self.get_if(non_overlapping_pulses[0]), qubit=non_overlapping_pulses[0].qubit
+                        port=port,
+                        frequency=self.get_if(non_overlapping_pulses[0]),
+                        qubit=non_overlapping_pulses[0].qubit,
                     )
 
                     # make a temporary copy of the pulses to be processed
@@ -821,11 +828,13 @@ class ClusterQRM_RF(AbstractInstrument):
                     sequence_total_duration = (
                         pulses.start + pulses.duration + minimum_delay_between_instructions
                     )  # the minimum delay between instructions is 4ns
+                    time_between_repetitions = repetition_duration - sequence_total_duration
+                    assert time_between_repetitions > 0
 
                     program = Program()
-                    bin_n = Register(program, "bin_n")
                     nshots_register = Register(program, "nshots")
                     navgs_register = Register(program, "navgs")
+                    bin_n = Register(program, "bin_n")
 
                     header_block = Block("setup")
                     if active_reset:
@@ -860,13 +869,12 @@ class ClusterQRM_RF(AbstractInstrument):
                             if len(pulses) > n + 1:
                                 # If there are more pulses to be played, the delay is the time between the pulse end and the next pulse start
                                 delay_after_acquire = pulses[n + 1].start - pulses[n].start - self.acquisition_hold_off
-                                time_between_repetitions = relaxation_time
                             else:
                                 delay_after_acquire = sequence_total_duration - pulses[n].start
                                 time_between_repetitions = (
-                                    relaxation_time - self.acquisition_hold_off
+                                    repetition_duration - sequence_total_duration - self.acquisition_hold_off
                                 )
-                            assert time_between_repetitions > 0
+                                assert time_between_repetitions > 0
 
                             if delay_after_acquire < minimum_delay_between_instructions:
                                 raise Exception(
@@ -899,7 +907,6 @@ class ClusterQRM_RF(AbstractInstrument):
                                 raise Exception(
                                     f"The minimum delay between pulses is {minimum_delay_between_instructions}ns."
                                 )
-                            time_between_repetitions = relaxation_time
 
                             # Prepare play instruction: play wave_i_index, wave_q_index, delay_next_instruction
                             pulses_block.append(
@@ -929,10 +936,8 @@ class ClusterQRM_RF(AbstractInstrument):
                     footer_block = Block("cleaup")
                     footer_block.append(f"stop")
 
-                    
                     sweepers.reverse()
                     for sweeper in sweepers:
-                        
                         if sweeper.parameter is Parameter.frequency:
                             start = int(sweeper.values[0])
                             step = int(sweeper.values[1] - sweeper.values[0])
@@ -950,27 +955,84 @@ class ClusterQRM_RF(AbstractInstrument):
                             aux_start = convert_frequency(aux_start)
                             aux_stop = convert_frequency(aux_stop)
                             aux_step = convert_frequency(aux_step)
-                            
+
                             aux_register = Register(program, "frequency_aux")
                             frequency_register = Register(program, "frequency")
                             update_frequency_block = Block()
 
                             if sequencer.pulses[0] in sweeper.pulses:
-
                                 delta = min(start, stop) + self.get_if(sequencer.pulses[0])
-                                if delta>=0:
-                                    update_frequency_block.append(f"add {aux_register}, {convert_frequency(delta)}, {frequency_register}")
+                                if delta >= 0:
+                                    update_frequency_block.append(
+                                        f"add {aux_register}, {convert_frequency(delta)}, {frequency_register}"
+                                    )
                                 else:
-                                    update_frequency_block.append(f"sub {aux_register}, {convert_frequency(abs(delta))}, {frequency_register}")
+                                    update_frequency_block.append(
+                                        f"sub {aux_register}, {convert_frequency(abs(delta))}, {frequency_register}"
+                                    )
 
                                 update_frequency_block.append(f"nop")
                                 update_frequency_block.append(f"set_freq {frequency_register}")
                                 update_frequency_block.append("upd_param 1000")
 
+                            body_block = sweeper_block(
+                                start=aux_start,
+                                stop=aux_stop,
+                                step=aux_step,
+                                register=aux_register,
+                                block=body_block,
+                                update_parameter_block=update_frequency_block,
+                            )
 
-                            body_block = sweeper_block(start=aux_start, stop=aux_stop, step=aux_step, register=aux_register, block=body_block, update_parameter_block=update_frequency_block)
-                    
-                    nshots_block: Block = loop_block(begin=0, end=nshots, step=1, register=nshots_register, block=body_block)
+                        if sweeper.parameter is Parameter.amplitude:
+                            start = sweeper.values[0]
+                            step = sweeper.values[1] - sweeper.values[0]
+                            stop = start + step * len(sweeper.values)
+
+                            if stop > start:
+                                aux_start = 0
+                                aux_stop = stop - start
+                                aux_step = step
+                            else:
+                                aux_stop = 0
+                                aux_start = start - stop
+                                aux_step = step
+
+                            aux_start = convert_gain(aux_start)
+                            aux_stop = convert_gain(aux_stop)
+                            aux_step = convert_gain(aux_step)
+
+                            aux_register = Register(program, "gain_aux")
+                            gain_register = Register(program, "gain")
+                            update_gain_block = Block()
+
+                            if sequencer.pulses[0] in sweeper.pulses:
+                                delta = min(start, stop) + self.ports[port].gain
+                                if delta >= 0:
+                                    update_gain_block.append(
+                                        f"add {aux_register}, {convert_gain(delta)}, {gain_register}"
+                                    )
+                                else:
+                                    update_gain_block.append(
+                                        f"sub {aux_register}, {convert_gain(abs(delta))}, {gain_register}"
+                                    )
+
+                                update_gain_block.append(f"nop")
+                                update_gain_block.append(f"set_awg_gain {gain_register}, {gain_register}")
+                                update_gain_block.append("upd_param 1000")
+
+                            body_block = sweeper_block(
+                                start=aux_start,
+                                stop=aux_stop,
+                                step=aux_step,
+                                register=aux_register,
+                                block=body_block,
+                                update_parameter_block=update_gain_block,
+                            )
+
+                    nshots_block: Block = loop_block(
+                        begin=0, end=nshots, step=1, register=nshots_register, block=body_block
+                    )
                     nshots_block.prepend(f"move 0, {bin_n}", "reset bin counter")
                     nshots_block.append_spacer()
 
@@ -978,9 +1040,6 @@ class ClusterQRM_RF(AbstractInstrument):
                     program.add_blocks(header_block, navgs_block, footer_block)
 
                     sequencer.program = repr(program)
-
-
-                    
 
     def upload(self):
         """Uploads waveforms and programs of all sequencers and arms them in preparation for execution.
@@ -1042,11 +1101,12 @@ class ClusterQRM_RF(AbstractInstrument):
         """Plays the sequence of pulses.
 
         Starts the sequencers needed to play the sequence of pulses."""
+
         # Start used sequencers
         for sequencer_number in self._used_sequencers_numbers:
             self.device.start_sequencer(sequencer_number)
 
-    def acquire(self, sweepers:list = []):
+    def acquire(self):
         """Retrieves the readout results.
 
         Returns:
@@ -1129,8 +1189,9 @@ class ClusterQRM_RF(AbstractInstrument):
 
         # Wait until sequencers have stopped
         for sequencer_number in self._used_sequencers_numbers:
-            self.device.get_sequencer_state(sequencer_number, timeout=1)
-            self.device.get_acquisition_state(sequencer_number, timeout=1)
+            self.device.get_sequencer_state(sequencer_number, timeout=10)
+            self.device.get_acquisition_state(sequencer_number, timeout=10)
+            # TODO: calculate expected execution duration to be used here
 
         acquisition_results = {}
 
@@ -1782,13 +1843,17 @@ class ClusterQCM_RF(AbstractInstrument):
         _lo = self.ports[self.channel_port_map[pulse.channel]].lo_frequency
         _if = _rf - _lo
         if abs(_if) > self.FREQUENCY_LIMIT:
-            raise RuntimeError(f"""
+            raise RuntimeError(
+                f"""
             Pulse frequency {_rf} cannot be synthesised with current lo frequency {_lo}.
             The intermediate frequency {_if} would exceed the maximum frequency of {self.FREQUENCY_LIMIT}
-            """)
+            """
+            )
         return _if
-    
-    def process_pulse_sequence(self, instrument_pulses: PulseSequence, nshots: int, navgs: int, relaxation_time: int, sweepers:list = []):
+
+    def process_pulse_sequence(
+        self, instrument_pulses: PulseSequence, nshots: int, navgs: int, repetition_duration: int, sweepers: list = []
+    ):
         """Processes a list of pulses, generating the waveforms and sequence program required by
         the instrument to synthesise them.
 
@@ -1806,7 +1871,7 @@ class ClusterQCM_RF(AbstractInstrument):
         Args:
             instrument_pulses (PulseSequence): A collection of Pulse objects to be played by the instrument.
             nshots (int): The number of times the sequence of pulses should be executed.
-            relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
+            repetition_duration (int): The total duration of the pulse sequence execution plus the reset/relaxation time.
         """
 
         # Save the hash of the current sequence of pulses.
@@ -1814,7 +1879,7 @@ class ClusterQCM_RF(AbstractInstrument):
             (
                 instrument_pulses,
                 nshots,
-                relaxation_time,
+                repetition_duration,
                 self.ports["o1"].hardware_mod_en,
                 self.ports["o2"].hardware_mod_en,
             )
@@ -1912,16 +1977,20 @@ class ClusterQCM_RF(AbstractInstrument):
                     sequence_total_duration = (
                         pulses.start + pulses.duration + minimum_delay_between_instructions
                     )  # the minimum delay between instructions is 4ns
+                    time_between_repetitions = repetition_duration - sequence_total_duration
+                    assert time_between_repetitions > 0
 
                     program = Program()
                     nshots_register = Register(program, "nshots")
+                    navgs_register = Register(program, "navgs")
+                    bin_n = Register(program, "bin_n")
 
                     header_block = Block("setup")
-                    header_block.append(f"wait_sync {minimum_delay_between_instructions}")
 
                     body_block = Block()
 
                     if self.ports[port].hardware_mod_en:
+                        body_block.append(f"wait_sync {minimum_delay_between_instructions}")
                         body_block.append("reset_ph")
                         body_block.append_spacer()
 
@@ -1961,7 +2030,6 @@ class ClusterQCM_RF(AbstractInstrument):
                     body_block += pulses_block
                     body_block.append_spacer()
 
-                    time_between_repetitions = relaxation_time
                     final_reset_block = wait_block(
                         wait_time=time_between_repetitions, register=Register(program), force_multiples_of_4=False
                     )
@@ -1972,7 +2040,6 @@ class ClusterQCM_RF(AbstractInstrument):
 
                     sweepers.reverse()
                     for sweeper in sweepers:
-                        
                         if sweeper.parameter is Parameter.frequency:
                             start = int(sweeper.values[0])
                             step = int(sweeper.values[1] - sweeper.values[0])
@@ -1990,27 +2057,87 @@ class ClusterQCM_RF(AbstractInstrument):
                             aux_start = convert_frequency(aux_start)
                             aux_stop = convert_frequency(aux_stop)
                             aux_step = convert_frequency(aux_step)
-                            
+
                             aux_register = Register(program, "frequency_aux")
                             frequency_register = Register(program, "frequency")
                             update_frequency_block = Block()
 
-                            delta = min(start, stop) + self.get_if(sweeper.pulses[0])
-                            if delta>=0:
-                                update_frequency_block.append(f"add {aux_register}, {convert_frequency(delta)}, {frequency_register}")
+                            if sequencer.pulses[0] in sweeper.pulses:
+                                delta = min(start, stop) + self.get_if(sequencer.pulses[0])
+                                if delta >= 0:
+                                    update_frequency_block.append(
+                                        f"add {aux_register}, {convert_frequency(delta)}, {frequency_register}"
+                                    )
+                                else:
+                                    update_frequency_block.append(
+                                        f"sub {aux_register}, {convert_frequency(abs(delta))}, {frequency_register}"
+                                    )
 
+                                update_frequency_block.append(f"nop")
+                                update_frequency_block.append(f"set_freq {frequency_register}")
+                                update_frequency_block.append("upd_param 1000")
+
+                            body_block = sweeper_block(
+                                start=aux_start,
+                                stop=aux_stop,
+                                step=aux_step,
+                                register=aux_register,
+                                block=body_block,
+                                update_parameter_block=update_frequency_block,
+                            )
+
+                        if sweeper.parameter is Parameter.amplitude:
+                            start = sweeper.values[0]
+                            step = sweeper.values[1] - sweeper.values[0]
+                            stop = start + step * len(sweeper.values)
+
+                            if stop > start:
+                                aux_start = 0
+                                aux_stop = stop - start
+                                aux_step = step
                             else:
-                                update_frequency_block.append(f"sub {aux_register}, {convert_frequency(abs(delta))}, {frequency_register}")
+                                aux_stop = 0
+                                aux_start = start - stop
+                                aux_step = step
 
-                            update_frequency_block.append(f"nop")
-                            update_frequency_block.append(f"set_freq {frequency_register}")
-                            update_frequency_block.append("upd_param 1000")
+                            aux_start = convert_gain(aux_start)
+                            aux_stop = convert_gain(aux_stop)
+                            aux_step = convert_gain(aux_step)
 
+                            aux_register = Register(program, "gain_aux")
+                            gain_register = Register(program, "gain")
+                            update_gain_block = Block()
 
-                            body_block = sweeper_block(start=aux_start, stop=aux_stop, step=aux_step, register=aux_register, block=body_block, update_parameter_block=update_frequency_block)
-                    
-                    nshots_block = loop_block(begin=0, end=nshots, step=1, register=nshots_register, block=body_block)
-                    program.add_blocks(header_block, nshots_block, footer_block)
+                            if sequencer.pulses[0] in sweeper.pulses:
+                                delta = min(start, stop) + self.ports[port].gain
+                                if delta >= 0:
+                                    update_gain_block.append(
+                                        f"add {aux_register}, {convert_gain(delta)}, {gain_register}"
+                                    )
+                                else:
+                                    update_gain_block.append(
+                                        f"sub {aux_register}, {convert_gain(abs(delta))}, {gain_register}"
+                                    )
+
+                                update_gain_block.append(f"nop")
+                                update_gain_block.append(f"set_awg_gain {gain_register}, {gain_register}")
+                                update_gain_block.append("upd_param 1000")
+
+                            body_block = sweeper_block(
+                                start=aux_start,
+                                stop=aux_stop,
+                                step=aux_step,
+                                register=aux_register,
+                                block=body_block,
+                                update_parameter_block=update_gain_block,
+                            )
+
+                    nshots_block: Block = loop_block(
+                        begin=0, end=nshots, step=1, register=nshots_register, block=body_block
+                    )
+
+                    navgs_block = loop_block(begin=0, end=navgs, step=1, register=navgs_register, block=nshots_block)
+                    program.add_blocks(header_block, navgs_block, footer_block)
 
                     sequencer.program = repr(program)
 
@@ -2492,13 +2619,17 @@ class ClusterQCM(AbstractInstrument):
         _lo = self.ports[self.channel_port_map[pulse.channel]].lo_frequency
         _if = _rf - _lo
         if abs(_if) > self.FREQUENCY_LIMIT:
-            raise RuntimeError(f"""
+            raise RuntimeError(
+                f"""
             Pulse frequency {_rf} cannot be synthesised with current lo frequency {_lo}.
             The intermediate frequency {_if} would exceed the maximum frequency of {self.FREQUENCY_LIMIT}
-            """)
+            """
+            )
         return _if
 
-    def process_pulse_sequence(self, instrument_pulses: PulseSequence, nshots: int, navgs: int, relaxation_time: int, sweepers:list = []):
+    def process_pulse_sequence(
+        self, instrument_pulses: PulseSequence, nshots: int, navgs: int, repetition_duration: int, sweepers: list = []
+    ):
         """Processes a list of pulses, generating the waveforms and sequence program required by
         the instrument to synthesise them.
 
@@ -2516,7 +2647,7 @@ class ClusterQCM(AbstractInstrument):
         Args:
             instrument_pulses (PulseSequence): A collection of Pulse objects to be played by the instrument.
             nshots (int): The number of times the sequence of pulses should be executed.
-            relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
+            repetition_duration (int): The total duration of the pulse sequence execution plus the reset/relaxation time.
         """
 
         # Save the hash of the current sequence of pulses.
@@ -2524,7 +2655,7 @@ class ClusterQCM(AbstractInstrument):
             (
                 instrument_pulses,
                 nshots,
-                relaxation_time,
+                repetition_duration,
                 self.ports["o1"].hardware_mod_en,
                 self.ports["o2"].hardware_mod_en,
                 self.ports["o3"].hardware_mod_en,
@@ -2624,16 +2755,20 @@ class ClusterQCM(AbstractInstrument):
                     sequence_total_duration = (
                         pulses.start + pulses.duration + minimum_delay_between_instructions
                     )  # the minimum delay between instructions is 4ns
+                    time_between_repetitions = repetition_duration - sequence_total_duration
+                    assert time_between_repetitions > 0
 
                     program = Program()
                     nshots_register = Register(program, "nshots")
+                    navgs_register = Register(program, "navgs")
+                    bin_n = Register(program, "bin_n")
 
                     header_block = Block("setup")
-                    header_block.append(f"wait_sync {minimum_delay_between_instructions}")
 
                     body_block = Block()
 
                     if self.ports[port].hardware_mod_en:
+                        header_block.append(f"wait_sync {minimum_delay_between_instructions}")
                         body_block.append("reset_ph")
                         body_block.append_spacer()
 
@@ -2673,7 +2808,6 @@ class ClusterQCM(AbstractInstrument):
                     body_block += pulses_block
                     body_block.append_spacer()
 
-                    time_between_repetitions = relaxation_time
                     final_reset_block = wait_block(
                         wait_time=time_between_repetitions, register=Register(program), force_multiples_of_4=False
                     )
@@ -2684,7 +2818,6 @@ class ClusterQCM(AbstractInstrument):
 
                     sweepers.reverse()
                     for sweeper in sweepers:
-                        
                         if sweeper.parameter is Parameter.frequency:
                             start = int(sweeper.values[0])
                             step = int(sweeper.values[1] - sweeper.values[0])
@@ -2702,27 +2835,87 @@ class ClusterQCM(AbstractInstrument):
                             aux_start = convert_frequency(aux_start)
                             aux_stop = convert_frequency(aux_stop)
                             aux_step = convert_frequency(aux_step)
-                            
+
                             aux_register = Register(program, "frequency_aux")
                             frequency_register = Register(program, "frequency")
                             update_frequency_block = Block()
 
-                            delta = min(start, stop) + self.get_if(sweeper.pulses[0])
-                            if delta>=0:
-                                update_frequency_block.append(f"add {aux_register}, {convert_frequency(delta)}, {frequency_register}")
+                            if sequencer.pulses[0] in sweeper.pulses:
+                                delta = min(start, stop) + self.get_if(sequencer.pulses[0])
+                                if delta >= 0:
+                                    update_frequency_block.append(
+                                        f"add {aux_register}, {convert_frequency(delta)}, {frequency_register}"
+                                    )
+                                else:
+                                    update_frequency_block.append(
+                                        f"sub {aux_register}, {convert_frequency(abs(delta))}, {frequency_register}"
+                                    )
 
+                                update_frequency_block.append(f"nop")
+                                update_frequency_block.append(f"set_freq {frequency_register}")
+                                update_frequency_block.append("upd_param 1000")
+
+                            body_block = sweeper_block(
+                                start=aux_start,
+                                stop=aux_stop,
+                                step=aux_step,
+                                register=aux_register,
+                                block=body_block,
+                                update_parameter_block=update_frequency_block,
+                            )
+
+                        if sweeper.parameter is Parameter.amplitude:
+                            start = sweeper.values[0]
+                            step = sweeper.values[1] - sweeper.values[0]
+                            stop = start + step * len(sweeper.values)
+
+                            if stop > start:
+                                aux_start = 0
+                                aux_stop = stop - start
+                                aux_step = step
                             else:
-                                update_frequency_block.append(f"sub {aux_register}, {convert_frequency(abs(delta))}, {frequency_register}")
+                                aux_stop = 0
+                                aux_start = start - stop
+                                aux_step = step
 
-                            update_frequency_block.append(f"nop")
-                            update_frequency_block.append(f"set_freq {frequency_register}")
-                            update_frequency_block.append("upd_param 1000")
+                            aux_start = convert_gain(aux_start)
+                            aux_stop = convert_gain(aux_stop)
+                            aux_step = convert_gain(aux_step)
 
+                            aux_register = Register(program, "gain_aux")
+                            gain_register = Register(program, "gain")
+                            update_gain_block = Block()
 
-                            body_block = sweeper_block(start=aux_start, stop=aux_stop, step=aux_step, register=aux_register, block=body_block, update_parameter_block=update_frequency_block)
-                    
-                    nshots_block = loop_block(begin=0, end=nshots, step=1, register=nshots_register, block=body_block)
-                    program.add_blocks(header_block, nshots_block, footer_block)
+                            if sequencer.pulses[0] in sweeper.pulses:
+                                delta = min(start, stop) + self.ports[port].gain
+                                if delta >= 0:
+                                    update_gain_block.append(
+                                        f"add {aux_register}, {convert_gain(delta)}, {gain_register}"
+                                    )
+                                else:
+                                    update_gain_block.append(
+                                        f"sub {aux_register}, {convert_gain(abs(delta))}, {gain_register}"
+                                    )
+
+                                update_gain_block.append(f"nop")
+                                update_gain_block.append(f"set_awg_gain {gain_register}, {gain_register}")
+                                update_gain_block.append("upd_param 1000")
+
+                            body_block = sweeper_block(
+                                start=aux_start,
+                                stop=aux_stop,
+                                step=aux_step,
+                                register=aux_register,
+                                block=body_block,
+                                update_parameter_block=update_gain_block,
+                            )
+
+                    nshots_block: Block = loop_block(
+                        begin=0, end=nshots, step=1, register=nshots_register, block=body_block
+                    )
+
+                    navgs_block = loop_block(begin=0, end=navgs, step=1, register=navgs_register, block=nshots_block)
+                    program.add_blocks(header_block, navgs_block, footer_block)
 
                     sequencer.program = repr(program)
 
@@ -2780,12 +2973,13 @@ class ClusterQCM(AbstractInstrument):
         for sequencer_number in self._used_sequencers_numbers:
             self.device.arm_sequencer(sequencer_number)
 
-        # DEBUG: QRM Print Readable Snapshot
+        # DEBUG: QCM Print Readable Snapshot
         # print(self.name)
         # self.device.print_readable_snapshot(update=True)
 
     def play_sequence(self):
         """Executes the sequence of instructions."""
+
         for sequencer_number in self._used_sequencers_numbers:
             # Start used sequencers
             self.device.start_sequencer(sequencer_number)
