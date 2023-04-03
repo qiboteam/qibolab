@@ -259,13 +259,13 @@ def test_instruments_process_pulse_sequence_upload_play(platform_name, name):
     instrument = instruments[name]
     settings = Platform(platform_name).settings
     instrument.setup(**settings["settings"], **instruments_settings[name])
-    repetition_duration = settings["settings"]["repetition_duration"]
+    relaxation_time = settings["settings"]["relaxation_time"]
     instrument_pulses = {}
     instrument_pulses[name] = PulseSequence()
     if "QCM" in instrument.__class__.__name__:
         for channel in instrument.channel_port_map:
             instrument_pulses[name].add(Pulse(0, 200, 1, 10e6, np.pi / 2, "Gaussian(5)", str(channel)))
-        instrument.process_pulse_sequence(instrument_pulses[name], nshots=5, repetition_duration=repetition_duration)
+        instrument.process_pulse_sequence(instrument_pulses[name], nshots=5, relaxation_time=relaxation_time)
         instrument.upload()
         instrument.play_sequence()
     if "QRM" in instrument.__class__.__name__:
@@ -277,7 +277,7 @@ def test_instruments_process_pulse_sequence_upload_play(platform_name, name):
         instrument.device.sequencers[0].sync_en(
             False
         )  # TODO: Check why this is necessary here and not when playing a PS of only one readout pulse
-        instrument.process_pulse_sequence(instrument_pulses[name], nshots=5, repetition_duration=repetition_duration)
+        instrument.process_pulse_sequence(instrument_pulses[name], nshots=5, relaxation_time=relaxation_time)
         instrument.upload()
         instrument.play_sequence()
         acquisition_results = instrument.acquire()

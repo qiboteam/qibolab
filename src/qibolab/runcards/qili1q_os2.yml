@@ -3,7 +3,7 @@ description: 1-qubit device OS2 in XLD fridge, controlled with qblox cluster rf.
 
 settings:
     hardware_avg: 1024
-    repetition_duration: 200_000
+    relaxation_time: 200_000
     sampling_rate: 1_000_000_000
 
 qubits: [0]

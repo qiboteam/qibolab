@@ -3,7 +3,7 @@ description: 5-qubit device at XLD fridge, controlled with qblox cluster rf.
 
 settings:
     hardware_avg: 1024
-    repetition_duration: 20_000 # 200_000
+    relaxation_time: 20_000 # 200_000
     sampling_rate: 1_000_000_000
 
 qubits: [0, 1, 2, 3, 4, 5]

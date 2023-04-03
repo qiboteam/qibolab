@@ -453,7 +453,7 @@ class QMOPX(AbstractInstrument):
         # copied from qblox runcard, not used here yet
         # hardware_avg: 1024
         # sampling_rate: 1_000_000_000
-        # repetition_duration: 200_000
+        # relaxation_time: 200_000
         # minimum_delay_between_instructions: 4
         self.config = QMConfig()
 

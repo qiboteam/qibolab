@@ -5,7 +5,7 @@ qubits: [0, 1, 2, 3, 4]
 
 settings:
     sampling_rate: 1000000000
-    repetition_duration: 0
+    relaxation_time: 0
 
 resonator_type: 2D
 

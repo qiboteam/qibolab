@@ -44,7 +44,7 @@ class MultiqubitPlatform(AbstractPlatform):
         self.characterization = self.settings["characterization"]
         self.qubit_channel_map = self.settings["qubit_channel_map"]
         self.hardware_avg = self.settings["settings"]["hardware_avg"]
-        self.repetition_duration = self.settings["settings"]["repetition_duration"]
+        self.relaxation_time = self.settings["settings"]["relaxation_time"]
 
     def set_lo_drive_frequency(self, qubit, freq):
         self.qd_port[qubit].lo_frequency = freq
@@ -211,7 +211,7 @@ class MultiqubitPlatform(AbstractPlatform):
                         if len(_los) > 0:
                             self.instruments[name].ports[port].lo_frequency = _los[0]
 
-                self.instruments[name].process_pulse_sequence(instrument_pulses[name], nshots, self.repetition_duration)
+                self.instruments[name].process_pulse_sequence(instrument_pulses[name], nshots, self.relaxation_time)
                 self.instruments[name].upload()
         for name in self.instruments:
             if "control" in roles[name] or "readout" in roles[name]:

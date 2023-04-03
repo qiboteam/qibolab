@@ -687,7 +687,7 @@ class ClusterQRM_RF(AbstractInstrument):
             """)
         return _if
 
-    def process_pulse_sequence(self, instrument_pulses: PulseSequence, nshots: int, repetition_duration: int):
+    def process_pulse_sequence(self, instrument_pulses: PulseSequence, nshots: int, relaxation_time: int):
         """Processes a list of pulses, generating the waveforms and sequence program required by
         the instrument to synthesise them.
 
@@ -705,7 +705,7 @@ class ClusterQRM_RF(AbstractInstrument):
         Args:
             instrument_pulses (PulseSequence): A collection of Pulse objects to be played by the instrument.
             nshots (int): The number of times the sequence of pulses should be executed.
-            repetition_duration (int): The total duration of the pulse sequence execution plus the reset/relaxation time.
+            relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
         """
 
         # Save the hash of the current sequence of pulses.
@@ -713,7 +713,7 @@ class ClusterQRM_RF(AbstractInstrument):
             (
                 instrument_pulses,
                 nshots,
-                repetition_duration,
+                relaxation_time,
                 self.ports["o1"].hardware_mod_en,
                 self.ports["i1"].hardware_demod_en,
             )
@@ -854,11 +854,11 @@ class ClusterQRM_RF(AbstractInstrument):
                             if len(pulses) > n + 1:
                                 # If there are more pulses to be played, the delay is the time between the pulse end and the next pulse start
                                 delay_after_acquire = pulses[n + 1].start - pulses[n].start - self.acquisition_hold_off
-                                time_between_repetitions = repetition_duration - sequence_total_duration
+                                time_between_repetitions = relaxation_time
                             else:
                                 delay_after_acquire = sequence_total_duration - pulses[n].start
                                 time_between_repetitions = (
-                                    repetition_duration - sequence_total_duration - self.acquisition_hold_off
+                                    relaxation_time - self.acquisition_hold_off
                                 )
                             assert time_between_repetitions > 0
 
@@ -1731,7 +1731,7 @@ class ClusterQCM_RF(AbstractInstrument):
             """)
         return _if
     
-    def process_pulse_sequence(self, instrument_pulses: PulseSequence, nshots: int, repetition_duration: int):
+    def process_pulse_sequence(self, instrument_pulses: PulseSequence, nshots: int, relaxation_time: int):
         """Processes a list of pulses, generating the waveforms and sequence program required by
         the instrument to synthesise them.
 
@@ -1749,7 +1749,7 @@ class ClusterQCM_RF(AbstractInstrument):
         Args:
             instrument_pulses (PulseSequence): A collection of Pulse objects to be played by the instrument.
             nshots (int): The number of times the sequence of pulses should be executed.
-            repetition_duration (int): The total duration of the pulse sequence execution plus the reset/relaxation time.
+            relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
         """
 
         # Save the hash of the current sequence of pulses.
@@ -1757,7 +1757,7 @@ class ClusterQCM_RF(AbstractInstrument):
             (
                 instrument_pulses,
                 nshots,
-                repetition_duration,
+                relaxation_time,
                 self.ports["o1"].hardware_mod_en,
                 self.ports["o2"].hardware_mod_en,
             )
@@ -1856,7 +1856,7 @@ class ClusterQCM_RF(AbstractInstrument):
                     sequence_total_duration = (
                         pulses.start + pulses.duration + minimum_delay_between_instructions
                     )  # the minimum delay between instructions is 4ns
-                    time_between_repetitions = repetition_duration - sequence_total_duration
+                    time_between_repetitions = relaxation_time
                     assert time_between_repetitions > 0
 
                     wait_time = time_between_repetitions
@@ -2443,7 +2443,7 @@ class ClusterQCM(AbstractInstrument):
             """)
         return _if
 
-    def process_pulse_sequence(self, instrument_pulses: PulseSequence, nshots: int, repetition_duration: int):
+    def process_pulse_sequence(self, instrument_pulses: PulseSequence, nshots: int, relaxation_time: int):
         """Processes a list of pulses, generating the waveforms and sequence program required by
         the instrument to synthesise them.
 
@@ -2461,7 +2461,7 @@ class ClusterQCM(AbstractInstrument):
         Args:
             instrument_pulses (PulseSequence): A collection of Pulse objects to be played by the instrument.
             nshots (int): The number of times the sequence of pulses should be executed.
-            repetition_duration (int): The total duration of the pulse sequence execution plus the reset/relaxation time.
+            relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
         """
 
         # Save the hash of the current sequence of pulses.
@@ -2469,7 +2469,7 @@ class ClusterQCM(AbstractInstrument):
             (
                 instrument_pulses,
                 nshots,
-                repetition_duration,
+                relaxation_time,
                 self.ports["o1"].hardware_mod_en,
                 self.ports["o2"].hardware_mod_en,
                 self.ports["o3"].hardware_mod_en,
@@ -2570,7 +2570,7 @@ class ClusterQCM(AbstractInstrument):
                     sequence_total_duration = (
                         pulses.start + pulses.duration + minimum_delay_between_instructions
                     )  # the minimum delay between instructions is 4ns
-                    time_between_repetitions = repetition_duration - sequence_total_duration
+                    time_between_repetitions = relaxation_time
                     assert time_between_repetitions > 0
 
                     wait_time = time_between_repetitions

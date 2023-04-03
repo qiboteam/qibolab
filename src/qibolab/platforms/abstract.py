@@ -131,7 +131,7 @@ class AbstractPlatform(ABC):
 
         self.topology = settings["topology"]
 
-        self.relaxation_time = settings["settings"]["repetition_duration"]
+        self.relaxation_time = settings["settings"]["relaxation_time"]
         self.sampling_rate = settings["settings"]["sampling_rate"]
 
         # TODO: Create better data structures for native gates
@@ -277,7 +277,7 @@ class AbstractPlatform(ABC):
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
             nshots (int): Number of shots to sample from the experiment. Default is 1024.
             relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
-                If ``None`` the default value provided as ``repetition_duration`` in the runcard will be used.
+                If ``None`` the default value provided as ``relaxation_time`` in the runcard will be used.
 
         Returns:
             Readout results acquired by after execution.
@@ -315,7 +315,7 @@ class AbstractPlatform(ABC):
                 parameters are being sweeped.
             nshots (int): Number of shots to sample from the experiment. Default is 1024.
             relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
-                If ``None`` the default value provided as ``repetition_duration`` in the runcard will be used.
+                If ``None`` the default value provided as ``relaxation_time`` in the runcard will be used.
             average (bool): If ``True`` the IQ results of individual shots are averaged on hardware.
 
         Returns:
