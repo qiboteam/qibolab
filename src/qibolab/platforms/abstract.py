@@ -10,7 +10,7 @@ from qibo.config import log, raise_error
 from qibo.models import Circuit
 
 from qibolab.designs.channels import Channel
-from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse
+from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse, DrivePulse
 from qibolab.transpilers import can_execute, transpile
 
 
@@ -337,7 +337,7 @@ class AbstractPlatform(ABC):
         qd_amplitude = pulse_kwargs["amplitude"] / 2.0
         qd_shape = pulse_kwargs["shape"]
         qd_channel = self.get_qd_channel(qubit)
-        return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
+        return DrivePulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
     def create_RX_pulse(self, qubit, start=0, relative_phase=0):
         pulse_kwargs = self.native_single_qubit_gates[qubit]["RX"]
@@ -346,7 +346,7 @@ class AbstractPlatform(ABC):
         qd_amplitude = pulse_kwargs["amplitude"]
         qd_shape = pulse_kwargs["shape"]
         qd_channel = self.get_qd_channel(qubit)
-        return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
+        return DrivePulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
     def create_CZ_pulse_sequence(self, qubits, start=0):
         # Check in the settings if qubits[0]-qubits[1] is a key
@@ -411,7 +411,7 @@ class AbstractPlatform(ABC):
         qd_amplitude = pulse_kwargs["amplitude"]
         qd_shape = pulse_kwargs["shape"]
         qd_channel = self.get_qd_channel(qubit)
-        return Pulse(start, duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
+        return DrivePulse(start, duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
     def create_qubit_readout_pulse(self, qubit, start):
         return self.create_MZ_pulse(qubit, start)
@@ -430,7 +430,7 @@ class AbstractPlatform(ABC):
             qd_shape = "Drag(5," + str(beta) + ")"
 
         qd_channel = self.get_qd_channel(qubit)
-        return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
+        return DrivePulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
     def create_RX_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
         # create RX pi pulse with drag shape
@@ -443,7 +443,7 @@ class AbstractPlatform(ABC):
             qd_shape = "Drag(5," + str(beta) + ")"
 
         qd_channel = self.get_qd_channel(qubit)
-        return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
+        return DrivePulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
     @abstractmethod
     def set_lo_drive_frequency(self, qubit, freq):
