@@ -280,22 +280,22 @@ class MultiqubitPlatform(AbstractPlatform):
             id_results[pulse.id] = ExecutionResults.from_components(np.array([]), np.array([]))
             id_results[pulse.qubit] = id_results[pulse.id]
 
-        # for-loop-based sweepers
-        self._sweep_recursion_for_loops(
-            sequence_copy,
-            *tuple(sweepers_copy),
-            results=id_results,
-            nshots=nshots,
-            navgs=navgs,
-            average=average,
-            relaxation_time=relaxation_time,
-        )
+        # # for-loop-based sweepers
+        # self._sweep_recursion_for_loops(
+        #     sequence_copy,
+        #     *tuple(sweepers_copy),
+        #     results=id_results,
+        #     nshots=nshots,
+        #     navgs=navgs,
+        #     average=average,
+        #     relaxation_time=relaxation_time,
+        # )
 
-        # # rt-based sweepers
-        # result = self.execute_pulse_sequence(sequence_copy, nshots, navgs, relaxation_time, sweepers_copy)
-        # for pulse in sequence_copy.ro_pulses:
-        #     id_results[pulse.id] += result[pulse.serial]
-        #     id_results[pulse.qubit] = id_results[pulse.id]
+        # rt-based sweepers
+        result = self.execute_pulse_sequence(sequence_copy, nshots, navgs, relaxation_time, sweepers_copy)
+        for pulse in sequence_copy.ro_pulses:
+            id_results[pulse.id] += result[pulse.serial]
+            id_results[pulse.qubit] = id_results[pulse.id]
 
         serial_results = {}
         for pulse in sequence_copy.ro_pulses:
