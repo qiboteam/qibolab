@@ -14,11 +14,15 @@ def test_channel_errors():
     channel = Channel("L1-test")
     channel.ports = [("c1", 0), ("c2", 1)]
     with pytest.raises(TypeError):
-        channel.offset = "test"
-    channel.offset = 0.1
+        channel.bias = "test"
+    channel.bias = 0.1
     with pytest.raises(TypeError):
         channel.filter = "test"
     channel.filter = {}
+    # attempt to set bias higher than the allowed value
+    channel.max_bias = 0.2
+    with pytest.raises(ValueError):
+        channel.bias = 0.3
 
 
 def test_channel_map_from_names():

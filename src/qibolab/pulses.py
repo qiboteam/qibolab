@@ -102,6 +102,7 @@ class PulseShape(ABC):
         pulse (Pulse): the pulse associated with it. Its parameters are used to generate pulse waveforms.
     """
 
+    SAMPLING_RATE = 1e9  # 1e9  # 1GSaPS
     SAMPLING_RATE = 1e9  # 1GSaPS
     pulse = None
 
@@ -1471,13 +1472,13 @@ class PulseSequence:
 
         return PulseSequence(*self.pulses)
 
-    def deep_copy(self):
+    def copy(self):
         """Returns a deep copy of the sequence.
 
         It returns a new PulseSequence with replicates of each of the pulses contained in the original sequence.
         """
 
-        return PulseSequence(*[pulse.deep_copy() for pulse in self.pulses])
+        return PulseSequence(*[pulse.copy() for pulse in self.pulses])
 
     @property
     def ro_pulses(self):

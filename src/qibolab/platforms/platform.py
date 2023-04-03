@@ -3,6 +3,7 @@ from enum import Enum, auto
 from typing import Optional
 
 import numpy as np
+from qibo.config import raise_error
 
 from qibolab.platforms.abstract import AbstractPlatform
 
@@ -24,7 +25,7 @@ class DesignPlatform(AbstractPlatform):
         self.is_connected = True
 
     def setup(self):
-        self.design.setup(self.qubits, **self.settings["settings"])
+        self.design.setup()
 
     def start(self):
         self.design.start()
@@ -72,6 +73,36 @@ class DesignPlatform(AbstractPlatform):
             *sweepers,
             options=options,
         )
+
+    def set_lo_drive_frequency(self, qubit, freq):
+        self.qubits[qubit].drive.local_oscillator.frequency = freq
+
+    def get_lo_drive_frequency(self, qubit):
+        return self.qubits[qubit].drive.local_oscillator.frequency
+
+    def set_lo_readout_frequency(self, qubit, freq):
+        self.qubits[qubit].readout.local_oscillator.frequency = freq
+
+    def get_lo_readout_frequency(self, qubit):
+        return self.qubits[qubit].readout.local_oscillator.frequency
+
+    def set_attenuation(self, qubit, att):
+        raise_error(NotImplementedError, f"{self.name} does not support attenuation.")
+
+    def get_attenuation(self, qubit):
+        raise_error(NotImplementedError, f"{self.name} does not support attenuation.")
+
+    def set_gain(self, qubit, gain):
+        raise_error(NotImplementedError, f"{self.name} does not support gain.")
+
+    def get_gain(self, qubit):
+        raise_error(NotImplementedError, f"{self.name} does not support gain.")
+
+    def set_bias(self, qubit, bias):
+        self.qubits[qubit].flux.bias = bias
+
+    def get_bias(self, qubit):
+        return self.qubits[qubit].flux.bias
 
 
 class AcquisitionType(Enum):

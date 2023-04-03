@@ -81,3 +81,35 @@ def test_dummy_double_sweep(parameter1, parameter2, average, nshots):
 
     assert ro_pulse.serial and ro_pulse.qubit in results
     assert len(results[ro_pulse.serial]) == swept_points**2 if average else int(nshots * swept_points**2)
+
+
+@pytest.mark.parametrize("parameter", Parameter)
+@pytest.mark.parametrize("average", [True, False])
+@pytest.mark.parametrize("nshots", [100, 1000])
+def test_dummy_single_sweep_multiplex(parameter, average, nshots):
+    swept_points = 5
+    platform = Platform("dummy")
+    sequence = PulseSequence()
+    ro_pulses = {}
+    for qubit in platform.qubits:
+        ro_pulses[qubit] = platform.create_qubit_readout_pulse(qubit=qubit, start=0)
+        sequence.add(ro_pulses[qubit])
+    parameter_range = (
+        np.random.rand(swept_points)
+        if parameter is Parameter.amplitude
+        else np.random.randint(swept_points, size=swept_points)
+    )
+
+    if parameter in QubitParameter:
+        sweeper1 = Sweeper(parameter, parameter_range, qubits=[platform.qubits[qubit] for qubit in platform.qubits])
+    else:
+        sweeper1 = Sweeper(parameter, parameter_range, pulses=[ro_pulses[qubit] for qubit in platform.qubits])
+
+    results = platform.sweep(sequence, sweeper1, average=average, nshots=nshots)
+
+    for ro_pulse in ro_pulses.values():
+        assert ro_pulse.serial and ro_pulse.qubit in results
+        assert len(results[ro_pulse.qubit]) == swept_points if average else int(nshots * swept_points)
+
+
+# TODO: add test_dummy_double_sweep_multiplex

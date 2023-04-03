@@ -125,7 +125,11 @@ class AbstractPlatform(ABC):
             settings = self.settings = yaml.safe_load(file)
 
         self.nqubits = settings["nqubits"]
-        self.resonator_type = "3D" if self.nqubits == 1 else "2D"
+        if "resonator_type" in self.settings:
+            self.resonator_type = self.settings["resonator_type"]
+        else:
+            self.resonator_type = "3D" if self.nqubits == 1 else "2D"
+
         self.topology = settings["topology"]
 
         self.relaxation_time = settings["settings"]["relaxation_time"]
@@ -276,6 +280,8 @@ class AbstractPlatform(ABC):
             relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
                 If ``None`` the default value provided as ``repetition_duration`` in the runcard will be used.
             **kwargs: Variables for ExecutionParameters
+            raw_adc (bool): If ``True`` it will return the raw ADC data instead of demodulating and integrating.
+                This is useful for some initial calibrations. Default is ``False``.
 
         Returns:
             Readout results acquired by after execution.
@@ -444,7 +450,34 @@ class AbstractPlatform(ABC):
         qd_channel = self.get_qd_channel(qubit)
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
-    def set_attenuation(self, qubit, att):  # pragma: no cover
+    @abstractmethod
+    def set_lo_drive_frequency(self, qubit, freq):
+        """Set frequency of the qubit drive local oscillator.
+
+        Args:
+            qubit (int): qubit whose local oscillator will be modified.
+            freq (int): new value of the frequency in Hz.
+        """
+
+    @abstractmethod
+    def get_lo_drive_frequency(self, qubit):
+        """Get frequency of the qubit drive local oscillator in Hz."""
+
+    @abstractmethod
+    def set_lo_readout_frequency(self, qubit, freq):
+        """Set frequency of the qubit drive local oscillator.
+
+        Args:
+            qubit (int): qubit whose local oscillator will be modified.
+            freq (int): new value of the frequency in Hz.
+        """
+
+    @abstractmethod
+    def get_lo_readout_frequency(self, qubit):
+        """Get frequency of the qubit readout local oscillator in Hz."""
+
+    @abstractmethod
+    def set_attenuation(self, qubit, att):
         """Set attenuation value. Usefeul for calibration routines such as punchout.
 
         Args:
@@ -453,10 +486,14 @@ class AbstractPlatform(ABC):
         Returns:
             None
         """
-        raise_error(NotImplementedError)
 
-    def set_gain(self, qubit, gain):  # pragma: no cover
-        """Set gain value. Usefeul for calibration routines such as Rabis.
+    @abstractmethod
+    def get_attenuation(self, qubit):
+        """Get attenuation value. Usefeul for calibration routines such as punchout."""
+
+    @abstractmethod
+    def set_gain(self, qubit, gain):
+        """Set gain value. Usefeul for calibration routines such as Rabi oscillations.
 
         Args:
             qubit (int): qubit whose attenuation will be modified.
@@ -464,9 +501,13 @@ class AbstractPlatform(ABC):
         Returns:
             None
         """
-        raise_error(NotImplementedError)
 
-    def set_bias(self, qubit, bias):  # pragma: no cover
+    @abstractmethod
+    def get_gain(self, qubit):
+        """Get gain value. Usefeul for calibration routines such as Rabi oscillations."""
+
+    @abstractmethod
+    def set_bias(self, qubit, bias):
         """Set bias value. Usefeul for calibration routines involving flux.
 
         Args:
@@ -475,4 +516,7 @@ class AbstractPlatform(ABC):
         Returns:
             None
         """
-        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def get_bias(self, qubit):
+        """Get bias value. Usefeul for calibration routines involving flux."""

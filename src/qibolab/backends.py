@@ -21,7 +21,6 @@ class QibolabBackend(NumpyBackend):
             self.platform = platform
         else:
             self.platform = Platform(platform, runcard)
-
         self.versions = {
             "qibo": qibo_version,
             "numpy": self.np.__version__,
@@ -40,7 +39,9 @@ class QibolabBackend(NumpyBackend):
         """Executes a quantum circuit.
 
         Args:
-            circuit (:class:`qibo.core.circuit.Circuit`): Circuit to execute.
+            circuit (:class:`qibo.models.circuit.Circuit`): Circuit to execute.
+            initial_state (:class:`qibo.models.circuit.Circuit`): Circuit to prepare the initial state.
+                If ``None`` the default |00...0> state is used.
             nshots (int): Number of shots to sample from the experiment.
                 If ``None`` the default value provided as hardware_avg in the
                 calibration yml will be used.
@@ -52,10 +53,17 @@ class QibolabBackend(NumpyBackend):
         Returns:
             CircuitResult object containing the results acquired from the execution.
         """
-        if initial_state is not None:
+        if isinstance(initial_state, type(circuit)):
+            self.execute_circuit(
+                circuit=initial_state + circuit,
+                nshots=nshots,
+                fuse_one_qubit=fuse_one_qubit,
+                check_transpiled=check_transpiled,
+            )
+        elif initial_state is not None:
             raise_error(
                 ValueError,
-                "Hardware backend does not support initial state in circuits.",
+                "Hardware backend only supports circuits as initial states.",
             )
 
         two_qubit_natives = self.platform.two_qubit_natives
@@ -87,15 +95,16 @@ class QibolabBackend(NumpyBackend):
         result = CircuitResult(self, native_circuit, readout, nshots)
 
         # Register measurement outcomes
-        for gate in native_circuit.queue:
-            if isinstance(gate, gates.M):
-                samples = []
-                for serial in gate.pulses:
-                    shots = readout[serial].shots
-                    if shots is not None:
-                        samples.append(shots)
-                gate.result.backend = self
-                gate.result.register_samples(np.array(samples).T)
+        if isinstance(readout, dict):
+            for gate in native_circuit.queue:
+                if isinstance(gate, gates.M):
+                    samples = []
+                    for serial in gate.pulses:
+                        shots = readout[serial].shots
+                        if shots is not None:
+                            samples.append(shots)
+                    gate.result.backend = self
+                    gate.result.register_samples(np.array(samples).T)
         return result
 
     def circuit_result_tensor(self, result):
