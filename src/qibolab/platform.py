@@ -300,12 +300,22 @@ def create_tii_zcu111(runcard, address=None):
     qubits[0].readout = channels["L3-18_ro"]
     qubits[0].feedback = channels["L2-3-RO_0"]
     qubits[0].drive = channels["L4-23_qd"]
+    qubits[0].flux = channels["L1-16_fl"]
+
     qubits[1].readout = channels["L3-18_ro"]
     qubits[1].feedback = channels["L2-3-RO_1"]
     qubits[1].drive = channels["L4-24_qd"]
+    qubits[1].flux = channels["L1-17_fl"]
+
     qubits[2].readout = channels["L3-18_ro"]
     qubits[2].feedback = channels["L2-3-RO_2"]
     qubits[2].drive = channels["L4-25_qd"]
+    qubits[2].flux = channels["L1-18_fl"]
+
+    qubits[0].flux.bias = 0
+    qubits[1].flux.bias = 0
+    qubits[2].flux.bias = 0
+
     return platform
 
 
