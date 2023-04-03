@@ -962,7 +962,7 @@ class Pulse:
                 self.qubit,
             )
         elif self.type == PulseType.DRIVE:
-            return ReadoutPulse(
+            return DrivePulse(
                 self.start,
                 self.duration,
                 self.amplitude,
