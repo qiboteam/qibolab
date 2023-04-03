@@ -106,7 +106,7 @@ instruments:
         settings:
             ports:
                 o1:
-                    attenuation                 : 44 # should be multiple of 2
+                    attenuation                 : 38 # should be multiple of 2
                     lo_enabled                  : true
                     lo_frequency                : 7_850_000_000                   # (Hz) from 2e9 to 18e9
                     gain                        : 0.6                              # for path0 and path1 -1.0<=v<=1.0
@@ -281,7 +281,7 @@ native_gates:
                 type: qd                    # qubit drive
             MZ:
                 duration: 2000
-                amplitude: 0.4
+                amplitude: 0.2
                 frequency: 7_655_148_879    # resonator frequency
                 if_frequency: -194_851_121    # difference in resonator frequency
                 shape: Rectangular()
@@ -296,7 +296,7 @@ native_gates:
                 type: qd                    # qubit drive
             MZ:
                 duration: 2000
-                amplitude: 0.4
+                amplitude: 0.2
                 frequency: 7_803_437_704    # resonator frequency
                 if_frequency: -46_562_296    # difference in resonator frequency
                 shape: Rectangular()
@@ -312,8 +312,8 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.4
-                frequency: 8_058_746_969      # resonator frequency
-                if_frequency: 208_746_969    # difference in resonator frequency
+                frequency: 8_058_694_073      # resonator frequency
+                if_frequency: 208_694_073    # difference in resonator frequency
                 shape: Rectangular()
                 type: ro                    # readout
         5: # qubit id
