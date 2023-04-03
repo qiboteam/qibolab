@@ -60,6 +60,7 @@ optional = true
 [tool.poetry.group.tiiq.dependencies]
 qblox-instruments = "0.9.0"
 qcodes = "^0.37.0"
+qcodes_contrib_drivers = "0.18.0"
 pyvisa-py = "0.5.3"
 qm-qua = "==1.1.1"
 qualang-tools = "==0.14.0"
