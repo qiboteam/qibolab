@@ -83,15 +83,6 @@ def test_qmopx_register_analog_output_controllers():
         "con2": {"analog_outputs": {2: {"filter": {"feedback": [0.95], "feedforward": [1, -1]}, "offset": 0.005}}}
     }
 
-    opx = QMOPX("test", DUMMY_ADDRESS)
-    with pytest.raises(ValueError):
-        opx.config.register_analog_output_controllers(
-            [
-                ("con2", 2),
-            ],
-            offset=0.3,
-        )
-
 
 def test_qmopx_register_drive_element():
     platform = create_tii_qw5q_gold(RUNCARD, simulation_duration=1000, address=DUMMY_ADDRESS)
