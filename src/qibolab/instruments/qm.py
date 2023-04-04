@@ -393,21 +393,32 @@ class AcquisitionVariables:
 
 
 class QMPulse:
-    def __init__(self, pulse):
-        self.pulse = pulse
-        self.element = f"{pulse.type.name.lower()}{pulse.qubit}"
-        self.operation = pulse.serial
-        self.relative_phase = pulse.relative_phase / (2 * np.pi)
-        self.duration = pulse.duration
-        # cycles to wait before playing the pulse
-        # this is calculated and assigned by :meth:`qibolab.instruments.qm.Sequence.add`
-        self.wait_cycles = None
+    """Wrapper around :class:`qibolab.pulses.Pulse` for easier translation to QUA program."""
 
-        self.acquisition = None
+    def __init__(self, pulse: Pulse):
+        self.pulse: Pulse = pulse
+        """:class:`qibolab.pulses.Pulse` implemting the current pulse."""
+        self.element: str = f"{pulse.type.name.lower()}{pulse.qubit}"
+        """Element that the pulse will be played on, as defined in the QM config."""
+        self.operation: str = pulse.serial
+        """Name of the operation that is implementing the pulse in the QM config."""
+        self.relative_phase: float = pulse.relative_phase / (2 * np.pi)
+        """Relative phase of the pulse normalized to follow QM convention.
+        May be overrident when sweeping phase."""
+        self.duration: int = pulse.duration
+        """Duration of the pulse. May be overrident when sweeping duration."""
+        self.wait_cycles: Optional[int] = None
+        """Instrument clock cycles (1 cycle = 4ns) to wait before playing the pulse.
+        Calculated and assigned by :meth:`qibolab.instruments.qm.Sequence.add`.
+        May be overriden when sweeping delay."""
 
-        # Stores the baking object (for pulses that need 1ns resolution)
+        self.acquisition: AcquisitionVariables = None
+        """Data class containing the variables required for data acquisition for the instrument."""
+
         self.baked = None
+        """Baking object implementing the pulse when 1ns resolution is needed."""
         self.baked_amplitude = None
+        """Amplitude of the baked pulse."""
 
     def declare_output(self, threshold=None, angle=None, raw_adc=False):
         self.acquisition = AcquisitionVariables(threshold=threshold, angle=angle, raw_adc=raw_adc)
@@ -453,7 +464,7 @@ class Sequence:
     clock: Dict[str, int] = field(default_factory=lambda: collections.defaultdict(int))
     """Dictionary used to keep track of times of each element, in order to calculate wait times."""
 
-    def add(self, pulse):
+    def add(self, pulse: Pulse):
         if not isinstance(pulse, Pulse):
             raise_error(TypeError, f"Pulse {pulse} has invalid type {type(pulse)}.")
 
