@@ -23,13 +23,14 @@ def test_qmpulse_declare_output():
     qmpulse = QMPulse(pulse)
     with qua.program() as _:
         qmpulse.declare_output(0.1, 0.2)
-    assert qmpulse.threshold == 0.1
-    assert qmpulse.cos == np.cos(0.2)
-    assert qmpulse.sin == np.sin(0.2)
-    assert isinstance(qmpulse.I, qua._dsl._Variable)
-    assert isinstance(qmpulse.I_st, qua._dsl._ResultSource)
-    assert isinstance(qmpulse.shot, qua._dsl._Variable)
-    assert isinstance(qmpulse.shots, qua._dsl._ResultSource)
+    acquisition = qmpulse.acquisition
+    assert acquisition.threshold == 0.1
+    assert acquisition.cos == np.cos(0.2)
+    assert acquisition.sin == np.sin(0.2)
+    assert isinstance(acquisition.I, qua._dsl._Variable)
+    assert isinstance(acquisition.I_stream, qua._dsl._ResultSource)
+    assert isinstance(acquisition.shot, qua._dsl._Variable)
+    assert isinstance(acquisition.shots, qua._dsl._ResultSource)
 
 
 def test_qmsequence():
