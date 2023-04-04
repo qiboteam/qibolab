@@ -399,6 +399,9 @@ class QMPulse:
         self.operation = pulse.serial
         self.relative_phase = pulse.relative_phase / (2 * np.pi)
         self.duration = pulse.duration
+        # cycles to wait before playing the pulse
+        # this is calculated and assigned by :meth:`qibolab.instruments.qm.Sequence.add`
+        self.wait_cycles = None
 
         self.acquisition = None
 
@@ -447,8 +450,8 @@ class Sequence:
     """List of readout pulses used for registering outputs."""
     pulse_to_qmpulse: Dict[Pulse, QMPulse] = field(default_factory=dict)
     """Map from qibolab pulses to QMPulses (useful when sweeping)."""
-    pulse_finish: Dict[int, List[QMPulse]] = field(default_factory=lambda: collections.defaultdict(list))
-    """Map to find all pulses that finish at a given time (useful for ``_find_previous``)."""
+    clock: Dict[str, int] = field(default_factory=lambda: collections.defaultdict(int))
+    """Dictionary used to keep track of times of each element, in order to calculate wait times."""
 
     def add(self, pulse):
         if not isinstance(pulse, Pulse):
@@ -459,7 +462,12 @@ class Sequence:
         if pulse.type is PulseType.READOUT:
             self.ro_pulses.append(qmpulse)
 
-        self.pulse_finish[pulse.finish].append(qmpulse)
+        wait_time = pulse.start - self.clock[qmpulse.element]
+        if wait_time >= 12:
+            qmpulse.wait_cycles = wait_time // 4 + 1
+            self.clock[qmpulse.element] += 4 * qmpulse.wait_cycles
+        self.clock[qmpulse.element] += qmpulse.duration
+
         self.qmpulses.append(qmpulse)
         return qmpulse
 
@@ -618,15 +626,10 @@ class QMOPX(AbstractInstrument):
         """
         needs_reset = False
         align()
-        clock = collections.defaultdict(int)
         for qmpulse in qmsequence.qmpulses:
             pulse = qmpulse.pulse
-            wait_time = pulse.start - clock[qmpulse.element]
-            if wait_time >= 12:
-                wait_cycles = wait_time // 4 + 1
-                wait(wait_cycles, qmpulse.element)
-                clock[qmpulse.element] += 4 * wait_cycles
-            clock[qmpulse.element] += qmpulse.duration
+            if qmpulse.wait_cycles is not None:
+                wait(qmpulse.wait_cycles, qmpulse.element)
             if pulse.type is PulseType.READOUT:
                 QMOPX.readout(qmpulse, raw_adc)
             else:
@@ -646,7 +649,7 @@ class QMOPX(AbstractInstrument):
 
         # for Rabi-length?
         if relaxation_time > 0:
-            wait(relaxation_time // 4, *clock.keys())
+            wait(relaxation_time // 4)
 
         # Save data to the stream processing
         if not raw_adc:
