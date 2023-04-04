@@ -264,6 +264,7 @@ class MultiqubitPlatform(AbstractPlatform):
             sweeper_pulses=sweeper_pulses,
             map_original_shifted=map_original_shifted,
         )
+
         return results
 
     def _sweep_recursion(
