@@ -393,10 +393,10 @@ def create_tii_qw25q_A(runcard, simulation_duration=None, address=None, cloud=Fa
             lo.power = 21
         elif lo.name == "LO_03":
             lo.frequency = 7.01e9
-            lo.power = 25
+            lo.power = 23
         elif lo.name == "LO_04":
             lo.frequency = 7.5e9
-            lo.power = 25
+            lo.power = 23
         elif lo.name == "LO_05":
             lo.frequency = 5.3e9
             lo.power = 18
