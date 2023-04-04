@@ -252,9 +252,9 @@ def create_tii_zcu111(runcard, address=None):
     # feedback
     channels["L2-3-RO_0"].ports = [("adc0", 0)]
     # drive
-    channels["L4-23_qd"].ports = [("dac0", 0)]
+    channels["L4-23_qd"].ports = [("dac3", 3)]
     # Flux
-    channels["L1-16_fl"].ports = [("dac3", 3)]
+    channels["L1-16_fl"].ports = [("dac0", 0)]
     # Qubit 1
     # Readout
     channels["L3-18_ro"].ports = [("dac3", 6)]
@@ -277,7 +277,7 @@ def create_tii_zcu111(runcard, address=None):
     # Instantiate QICK instruments
 
     if address is None:
-        address = "192.168.2.81:6000"
+        address = "192.168.0.81:6000"
     controller = TII_ZCU111("tii_zcu111", address)
 
     # Instantiate local oscillators (HARDCODED) # TODO local oscillators should not be needed

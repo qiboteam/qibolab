@@ -26,6 +26,8 @@ class QickProgramConfig:
     max_gain: int = 32_000
     reps: int = 1000
     expts: Optional[int] = None
+    mixer_freq: Optional[int] = None
+    LO_freq: Optional[int] = None
 
 
 class TII_RFSOC4x2(AbstractInstrument):
@@ -502,4 +504,4 @@ class TII_ZCU111(TII_RFSOC4x2):  # Containes the main settings:
         super().__init__(name, address=address)
         self.host, self.port = address.split(":")
         self.port = int(self.port)
-        self.cfg = QickProgramConfig(sampling_rate=6_000_000_000)
+        self.cfg = QickProgramConfig(sampling_rate=6_000_000_000, mixer_freq=10, LO_freq=0)
