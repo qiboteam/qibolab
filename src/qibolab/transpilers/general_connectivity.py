@@ -120,6 +120,11 @@ class Transpiler:
         if self._init_method is QubitInitMethod.greedy:
             self.greedy_init()
         elif self._init_method is QubitInitMethod.subgraph:
+            if len(self._circuit_repr) < 2:
+                raise_error(
+                    ValueError,
+                    "The circuit must contain at least two two-qubit gates in order to apply subgraph initialization",
+                )
             self.subgraph_init()
         elif self._init_method is QubitInitMethod.custom:
             self._mapping = dict(zip(keys, self._mapping.values()))
@@ -300,11 +305,17 @@ class Transpiler:
             if self._connectivity.number_of_edges() == H.number_of_edges() or i == len(self._circuit_repr) - 1:
                 G = nx.relabel_nodes(self._connectivity, result.mapping)
                 self._graph = G
-                self._mapping = result.mapping
+                self._mapping = dict(zip(result.mapping.values(), result.mapping.keys()))
+                print("perfect match")
+                print(self._mapping)
+                print(result.mapping)
                 return
         G = nx.relabel_nodes(self._connectivity, result.mapping)
         self._graph = G
-        self._mapping = result.mapping
+        self._mapping = dict(zip(result.mapping.values(), result.mapping.keys()))
+        print("no perfect match")
+        print(self._mapping)
+        print(result.mapping)
 
     def greedy_init(self):
         """Initialize the circuit with greedy algorithm let a maximum number of 2-qubit
@@ -344,9 +355,9 @@ class Transpiler:
         mapping_list = []
         meeting_point_list = []
         test_paths = list(range(len(path) - 1))
-        if self.sampling_split != 1.0:
+        if self._sampling_split != 1.0:
             test_paths = np.random.choice(
-                test_paths, size=int(np.ceil(len(test_paths) * self.sampling_split)), replace=False
+                test_paths, size=int(np.ceil(len(test_paths) * self._sampling_split)), replace=False
             )
         for i in test_paths:
             values = path_middle[:i] + path_ends + path_middle[i:]
@@ -460,7 +471,7 @@ class Transpiler:
             meeting_point (int): qubit meeting point in the path.
         """
         forward = path[0 : meeting_point + 1]
-        backward = path[meeting_point + 1 :: -1]
+        backward = list(reversed(path[meeting_point + 1 :]))
         if len(forward) > 1:
             for f1, f2 in pairwise(forward):
                 self._transpiled_circuit.add(gates.SWAP(self._qubit_map[f1], self._qubit_map[f2]))
@@ -532,7 +543,7 @@ def can_execute(circuit: Circuit, two_qubit_natives: TwoQubitNatives, connectivi
             except ValueError:
                 vlog(f"{gate.name} cannot be used as a two qubit native gate.")
                 return False
-            if gate.qubits in connectivity.edges:
+            if gate.qubits not in connectivity.edges:
                 vlog("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
                 return False
         else:

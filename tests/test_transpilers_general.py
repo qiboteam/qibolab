@@ -37,7 +37,7 @@ def generate_random_circuit(nqubits, ngates, seed=42):
 def special_connectivity(connectivity):
     """Return a TII harware chip connectivity as a networkx graph"""
     if connectivity == "21_qubits":
-        Q = [f"q{i}" for i in range(21)]
+        Q = [i for i in range(21)]
         chip = nx.Graph()
         chip.add_nodes_from(Q)
         graph_list_h = [
@@ -78,7 +78,7 @@ def special_connectivity(connectivity):
         ]
         chip.add_edges_from(graph_list_h + graph_list_v)
     elif connectivity == "5_qubits":
-        Q = [f"q{i}" for i in range(5)]
+        Q = [i for i in range(5)]
         chip = nx.Graph()
         chip.add_nodes_from(Q)
         graph_list = [
@@ -100,11 +100,10 @@ def test_can_execute():
     assert can_execute(circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits"))
 
 
-# TODO not working, can execute must return false
 def test_cannot_execute_connectivity():
     circuit = Circuit(5)
     circuit.add(gates.CZ(0, 1))
-    assert can_execute(circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits"))
+    assert not can_execute(circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits"))
 
 
 def test_cannot_execute_native2q():
@@ -119,7 +118,7 @@ def test_cannot_execute_native1q():
     assert not can_execute(circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits"))
 
 
-# TODO raise error, no return false
+# TODO fix raise error, should return false
 def test_cannot_execute_wrong_native():
     circuit = Circuit(5)
     circuit.add(gates.CZ(0, 2))
@@ -167,7 +166,7 @@ def test_random_circuits(gates, qubits, natives):
     transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
     assert len(initial_map) == 21 and len(final_map) == 21
     assert added_swaps >= 0
-    assert can_execute(transpiled_circuit, two_qubit_natives=natives, connectivity=special_connectivity("5_qubits"))
+    assert can_execute(transpiled_circuit, two_qubit_natives=natives, connectivity=special_connectivity("21_qubits"))
 
 
 def test_subgraph_init_simple():
@@ -183,9 +182,17 @@ def test_subgraph_init_simple():
     )
 
 
+def test_subgraph_init_fail():
+    transpiler = Transpiler(connectivity=special_connectivity("5_qubits"), init_method="subgraph")
+    circ = Circuit(5)
+    circ.add(gates.CZ(0, 1))
+    with pytest.raises(ValueError):
+        transpiler.transpile(circ)
+
+
 def test_subgraph_init():
     transpiler = Transpiler(connectivity=special_connectivity("5_qubits"), init_method="subgraph")
-    circ = generate_random_circuit(5, 50)
+    circ = generate_random_circuit(5, 10)
     transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
     assert added_swaps >= 0
     assert len(initial_map) == 5 and len(final_map) == 5
@@ -244,5 +251,5 @@ def test_split():
     assert added_swaps >= 0
     assert len(initial_map) == 21 and len(final_map) == 21
     assert can_execute(
-        transpiled_circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits")
+        transpiled_circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("21_qubits")
     )
