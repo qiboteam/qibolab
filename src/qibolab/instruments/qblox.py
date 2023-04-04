@@ -362,9 +362,9 @@ class ClusterQRM_RF(AbstractInstrument):
                 acquired pulses is done at the host computer. When set to True, the demodulation, integration
                 and discretization of the pulse is done in real time at the FPGA of the instrument.
 
-        acquisition_hold_off (int): Delay between the start of playing a readout pulse and the start of
+        acquisition.hold_off (int): Delay between the start of playing a readout pulse and the start of
             the acquisition, in ns. Must be > 0 and multiple of 4.
-        acquisition_duration (int): (mapped to qrm.sequencers[0].integration_length_acq) Duration
+        acquisition.duration (int): (mapped to qrm.sequencers[0].integration_length_acq) Duration
             of the pulse acquisition, in ns. Must be > 0 and multiple of 4.
 
         classification_parameters (dict): A dictionary containing the paramters needed classify the state of each qubit.
@@ -412,8 +412,9 @@ class ClusterQRM_RF(AbstractInstrument):
         super().__init__(name, address)
         self.device: QbloxQrmQcm = None
         self.ports: dict = {}
-        self.acquisition_hold_off: int
-        self.acquisition_duration: int
+        self.acquisition = None
+        # self.acquisition.hold_off: int
+        # self.acquisition.duration: int
         self.channel_port_map: dict = {}
         self.classification_parameters: dict = {}
         self.channels: list = []
@@ -472,11 +473,16 @@ class ClusterQRM_RF(AbstractInstrument):
                     },
                 )()
                 # map acquisition_duration attribute
-                setattr(
-                    self.__class__,
-                    "acquisition_duration",
-                    self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o1"], "integration_length_acq"),
-                )
+                self.acquisition = type(
+                    f"acquisition",
+                    (),
+                    {
+                        "hold_off": 0,
+                        "duration": self.sequencer_property_wrapper(
+                            self.DEFAULT_SEQUENCERS["o1"], "integration_length_acq"
+                        ),
+                    },
+                )()
 
                 # save reference to cluster
                 self._cluster = cluster
@@ -618,8 +624,8 @@ class ClusterQRM_RF(AbstractInstrument):
                 "hardware_demod_en"
             ]  # Default after reboot = False
 
-            self.acquisition_hold_off = kwargs["acquisition_hold_off"]
-            self.acquisition_duration = kwargs["acquisition_duration"]
+            self.acquisition.hold_off = kwargs["acquisition_hold_off"]
+            self.acquisition.duration = kwargs["acquisition_duration"]
 
             self._last_pulsequence_hash = 0
 
@@ -669,7 +675,7 @@ class ClusterQRM_RF(AbstractInstrument):
             self._set_device_parameter(
                 self.device.sequencers[next_sequencer_number],
                 "thresholded_acq_threshold",
-                value=self.classification_parameters[qubit]["threshold"] * self.acquisition_duration,
+                value=self.classification_parameters[qubit]["threshold"] * self.acquisition.duration,
             )
         # create sequencer wrapper
         sequencer = Sequencer(next_sequencer_number)
@@ -864,15 +870,15 @@ class ClusterQRM_RF(AbstractInstrument):
                                 comment=f"set relative phase {pulses[n].relative_phase} rads",
                             )
                         if pulses[n].type == PulseType.READOUT:
-                            delay_after_play = self.acquisition_hold_off
+                            delay_after_play = self.acquisition.hold_off
 
                             if len(pulses) > n + 1:
                                 # If there are more pulses to be played, the delay is the time between the pulse end and the next pulse start
-                                delay_after_acquire = pulses[n + 1].start - pulses[n].start - self.acquisition_hold_off
+                                delay_after_acquire = pulses[n + 1].start - pulses[n].start - self.acquisition.hold_off
                             else:
                                 delay_after_acquire = sequence_total_duration - pulses[n].start
                                 time_between_repetitions = (
-                                    repetition_duration - sequence_total_duration - self.acquisition_hold_off
+                                    repetition_duration - sequence_total_duration - self.acquisition.hold_off
                                 )
                                 assert time_between_repetitions > 0
 
@@ -1007,7 +1013,7 @@ class ClusterQRM_RF(AbstractInstrument):
                             update_gain_block = Block()
 
                             if sequencer.pulses[0] in sweeper.pulses:
-                                delta = min(start, stop) + self.ports[port].gain
+                                delta = min(start, stop)  # + self.ports[port].gain
                                 if delta >= 0:
                                     update_gain_block.append(
                                         f"add {aux_register}, {convert_gain(delta)}, {gain_register}"
@@ -1096,6 +1102,11 @@ class ClusterQRM_RF(AbstractInstrument):
         # DEBUG: QRM Print Readable Snapshot
         # print(self.name)
         # self.device.print_readable_snapshot(update=True)
+
+        # DEBUG: QRM RF Save Readable Snapshot
+        # filename = f"{self.name}_snapshot.json"
+        # with open(filename, "w", encoding="utf-8") as file:
+        #     print_readable_snapshot(self.device, file, update=True)
 
     def play_sequence(self):
         """Plays the sequence of pulses.
@@ -1231,10 +1242,10 @@ class ClusterQRM_RF(AbstractInstrument):
 
                         acquisition_results["averaged_raw"][pulse.serial] = (
                             scope_acquisition_raw_results["acquisition"]["scope"]["path0"]["data"][
-                                0 : self.acquisition_duration
+                                0 : self.acquisition.duration
                             ],
                             scope_acquisition_raw_results["acquisition"]["scope"]["path1"]["data"][
-                                0 : self.acquisition_duration
+                                0 : self.acquisition.duration
                             ],
                         )
                         acquisition_results["averaged_raw"][pulse.qubit] = acquisition_results["averaged_raw"][
@@ -1298,13 +1309,13 @@ class ClusterQRM_RF(AbstractInstrument):
                             np.array(
                                 binned_raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path0"]
                             )
-                            / self.acquisition_duration
+                            / self.acquisition.duration
                         )
                         shots_q = (
                             np.array(
                                 binned_raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path1"]
                             )
-                            / self.acquisition_duration
+                            / self.acquisition.duration
                         )
 
                         acquisition_results["demodulated_integrated_binned"][pulse.serial] = (
@@ -1343,10 +1354,10 @@ class ClusterQRM_RF(AbstractInstrument):
 
                             acquisition_results["averaged_raw"][pulse.serial] = (
                                 scope_acquisition_raw_results["acquisition"]["scope"]["path0"]["data"][
-                                    0 : self.acquisition_duration
+                                    0 : self.acquisition.duration
                                 ],
                                 scope_acquisition_raw_results["acquisition"]["scope"]["path1"]["data"][
-                                    0 : self.acquisition_duration
+                                    0 : self.acquisition.duration
                                 ],
                             )
                             acquisition_results["averaged_raw"][pulse.qubit] = acquisition_results["averaged_raw"][
@@ -1387,7 +1398,7 @@ class ClusterQRM_RF(AbstractInstrument):
 
             # DOWN Conversion
             n0 = 0
-            n1 = self.acquisition_duration
+            n1 = self.acquisition.duration
             input_vec_I = np.array(acquisition_results["acquisition"]["scope"]["path0"]["data"][n0:n1])
             input_vec_Q = np.array(acquisition_results["acquisition"]["scope"]["path1"]["data"][n0:n1])
             input_vec_I -= np.mean(input_vec_I)  # qblox does not remove the offsets in hardware
@@ -1414,10 +1425,10 @@ class ClusterQRM_RF(AbstractInstrument):
             # plt.show()
         else:
             i = np.mean(
-                np.array(acquisition_results["acquisition"]["bins"]["integration"]["path0"]) / self.acquisition_duration
+                np.array(acquisition_results["acquisition"]["bins"]["integration"]["path0"]) / self.acquisition.duration
             )
             q = np.mean(
-                np.array(acquisition_results["acquisition"]["bins"]["integration"]["path1"]) / self.acquisition_duration
+                np.array(acquisition_results["acquisition"]["bins"]["integration"]["path1"]) / self.acquisition.duration
             )
             integrated_signal = i, q
         return integrated_signal
@@ -2109,7 +2120,7 @@ class ClusterQCM_RF(AbstractInstrument):
                             update_gain_block = Block()
 
                             if sequencer.pulses[0] in sweeper.pulses:
-                                delta = min(start, stop) + self.ports[port].gain
+                                delta = min(start, stop)  # + self.ports[port].gain
                                 if delta >= 0:
                                     update_gain_block.append(
                                         f"add {aux_register}, {convert_gain(delta)}, {gain_register}"
@@ -2197,6 +2208,11 @@ class ClusterQCM_RF(AbstractInstrument):
         # DEBUG: QRM Print Readable Snapshot
         # print(self.name)
         # self.device.print_readable_snapshot(update=True)
+
+        # DEBUG: QCM RF Save Readable Snapshot
+        # filename = f"{self.name}_snapshot.json"
+        # with open(filename, "w", encoding="utf-8") as file:
+        #     print_readable_snapshot(self.device, file, update=True)
 
     def play_sequence(self):
         """Plays the sequence of pulses.
@@ -2887,7 +2903,7 @@ class ClusterQCM(AbstractInstrument):
                             update_gain_block = Block()
 
                             if sequencer.pulses[0] in sweeper.pulses:
-                                delta = min(start, stop) + self.ports[port].gain
+                                delta = min(start, stop)  # + self.ports[port].gain
                                 if delta >= 0:
                                     update_gain_block.append(
                                         f"add {aux_register}, {convert_gain(delta)}, {gain_register}"
@@ -2977,6 +2993,11 @@ class ClusterQCM(AbstractInstrument):
         # print(self.name)
         # self.device.print_readable_snapshot(update=True)
 
+        # DEBUG: QCM Save Readable Snapshot
+        # filename = f"{self.name}_snapshot.json"
+        # with open(filename, "w", encoding="utf-8") as file:
+        #     print_readable_snapshot(self.device, file, update=True)
+
     def play_sequence(self):
         """Executes the sequence of instructions."""
 
@@ -2999,3 +3020,60 @@ class ClusterQCM(AbstractInstrument):
         """Empty method to comply with AbstractInstrument interface."""
         self._cluster = None
         self.is_connected = False
+
+
+def print_readable_snapshot(device, file, update: bool = False, max_chars: int = 80) -> None:
+    """
+    Prints a readable version of the snapshot.
+    The readable snapshot includes the name, value and unit of each
+    parameter.
+    A convenience function to quickly get an overview of the
+    status of an instrument.
+
+    Args:
+        update: If ``True``, update the state by querying the
+            instrument. If ``False``, just use the latest values in memory.
+            This argument gets passed to the snapshot function.
+        max_chars: the maximum number of characters per line. The
+            readable snapshot will be cropped if this value is exceeded.
+            Defaults to 80 to be consistent with default terminal width.
+    """
+    floating_types = (float, np.integer, np.floating)
+    snapshot = device.snapshot(update=update)
+
+    par_lengths = [len(p) for p in snapshot["parameters"]]
+
+    # Min of 50 is to prevent a super long parameter name to break this
+    # function
+    par_field_len = min(max(par_lengths) + 1, 50)
+
+    file.write(device.name + ":" + "\n")
+    file.write("{0:<{1}}".format("\tparameter ", par_field_len) + "value" + "\n")
+    file.write("-" * max_chars + "\n")
+    for par in sorted(snapshot["parameters"]):
+        name = snapshot["parameters"][par]["name"]
+        msg = "{0:<{1}}:".format(name, par_field_len)
+
+        # in case of e.g. ArrayParameters, that usually have
+        # snapshot_value == False, the parameter may not have
+        # a value in the snapshot
+        val = snapshot["parameters"][par].get("value", "Not available")
+
+        unit = snapshot["parameters"][par].get("unit", None)
+        if unit is None:
+            # this may be a multi parameter
+            unit = snapshot["parameters"][par].get("units", None)
+        if isinstance(val, floating_types):
+            msg += f"\t{val:.5g} "
+            # numpy float and int types format like builtins
+        else:
+            msg += f"\t{val} "
+        if unit != "":  # corresponds to no unit
+            msg += f"({unit})"
+        # Truncate the message if it is longer than max length
+        if len(msg) > max_chars and not max_chars == -1:
+            msg = msg[0 : max_chars - 3] + "..."
+        file.write(msg + "\n")
+
+    for submodule in device.submodules.values():
+        print_readable_snapshot(submodule, file, update=update, max_chars=max_chars)
