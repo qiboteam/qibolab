@@ -9,7 +9,7 @@ from qibolab.pulses import PulseSequence
 from qibolab.result import AveragedResults, ExecutionResults
 from qibolab.sweeper import Parameter, Sweeper
 
-RUNCARD = qibolab_folder / "runcards" / "tii_rfsoc4x2.yml"
+RUNCARD = qibolab_folder / "runcards" / "tii1q_b1"
 DUMMY_ADDRESS = "0.0.0.0:0"
 
 
