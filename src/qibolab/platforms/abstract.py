@@ -12,6 +12,7 @@ from qibo.models import Circuit
 from qibolab.designs.channels import Channel
 from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse
 from qibolab.transpilers import can_execute, transpile
+from qibolab.transpilers.gate_decompositions import TwoQubitNatives
 
 
 @dataclass
@@ -106,8 +107,7 @@ class AbstractPlatform(ABC):
         self.sampling_rate = None
 
         self.native_single_qubit_gates = {}
-        self.native_two_qubit_gates = {}
-        self.two_qubit_natives = set()
+        self.two_qubit_natives = TwoQubitNatives
         # Load platform settings
         self.reload_settings()
 
@@ -138,12 +138,11 @@ class AbstractPlatform(ABC):
         self.native_gates = settings["native_gates"]
         self.native_single_qubit_gates = self.native_gates["single_qubit"]
         if "two_qubit" in self.native_gates:
-            self.native_two_qubit_gates = self.native_gates["two_qubit"]
-            for gates in self.native_gates["two_qubit"].values():
-                self.two_qubit_natives |= set(gates.keys())
+            for gate in self.native_gates["two_qubit"].values():
+                self.two_qubit_natives |= TwoQubitNatives[gate]
         else:
             # dummy value to avoid transpiler failure for single qubit devices
-            self.two_qubit_natives = {"CZ"}
+            self.two_qubit_natives = TwoQubitNatives.CZ
 
         # Load characterization settings and create ``Qubit`` and ``Channel`` objects
         for q in settings["qubits"]:

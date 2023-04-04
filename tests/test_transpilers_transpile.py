@@ -90,10 +90,8 @@ def test_can_execute_false():
     assert not can_execute(circuit1, two_qubit_natives=TwoQubitNatives.CZ | TwoQubitNatives.iSWAP)
     circuit2 = Circuit(2)
     circuit2.add(gates.CNOT(0, 1))
-    assert not can_execute(circuit2, two_qubit_natives=TwoQubitNatives.CZ | TwoQubitNatives.iSWAP)
+    with pytest.raises(ValueError):
+        can_execute(circuit2, two_qubit_natives=TwoQubitNatives.CZ | TwoQubitNatives.iSWAP)
     circuit3 = Circuit(3)
-    circuit3.add(gates.CNOT(1, 2))
+    circuit3.add(gates.TOFFOLI(0, 1, 2))
     assert not can_execute(circuit3, two_qubit_natives=TwoQubitNatives.CZ | TwoQubitNatives.iSWAP)
-    circuit4 = Circuit(3)
-    circuit4.add(gates.TOFFOLI(0, 1, 2))
-    assert not can_execute(circuit4, two_qubit_natives=TwoQubitNatives.CZ | TwoQubitNatives.iSWAP)
