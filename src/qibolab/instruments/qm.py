@@ -588,7 +588,7 @@ class QMOPX(AbstractInstrument):
             )
         return results
 
-    def play(self, qubits, sequence, nshots, relaxation_time, average):
+    def play(self, qubits, sequence, nshots, relaxation_time, average=True):
         """Plays an arbitrary pulse sequence using QUA program.
 
         Args:
