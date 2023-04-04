@@ -38,7 +38,7 @@ class DummyInstrument(AbstractInstrument):
     def disconnect(self):
         log.info("Disconnecting dummy instrument.")
 
-    def play(self, qubits, sequence, nshots, relaxation_time):
+    def play(self, qubits, sequence, nshots, relaxation_time, raw_adc=False):
         time.sleep(relaxation_time)
 
         ro_pulses = {pulse.qubit: pulse.serial for pulse in sequence.ro_pulses}

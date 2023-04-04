@@ -150,6 +150,10 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
         qubits[q].flux = channels[f"L4-{q}"]
         channels[f"L4-{q}"].qubit = qubits[q]
 
+    # set maximum allowed bias values to protect amplifier
+    # relevant only for qubits where an amplifier is used
+    for q in range(5):
+        platform.qubits[q].flux.max_bias = 0.2
     # Platfom topology
     Q = [f"q{i}" for i in range(5)]
     chip = nx.Graph()
