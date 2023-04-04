@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from qm import qua
 
-from qibolab.instruments.qm import QMOPX, QMPulse, QMSequence
+from qibolab.instruments.qm import QMOPX, QMPulse, Sequence
 from qibolab.paths import qibolab_folder
 from qibolab.platform import create_tii_qw5q_gold
 from qibolab.pulses import FluxPulse, Pulse, ReadoutPulse, Rectangular
@@ -36,13 +36,13 @@ def test_qmpulse_declare_output():
 def test_qmsequence():
     qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
     ro_pulse = ReadoutPulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch1", qubit=0)
-    qmsequence = QMSequence()
+    qmsequence = Sequence()
     with pytest.raises(TypeError):
         qmsequence.add("test")
     qmsequence.add(qd_pulse)
     qmsequence.add(ro_pulse)
     assert len(qmsequence.pulse_to_qmpulse) == 2
-    assert len(qmsequence) == 2
+    assert len(qmsequence.qmpulses) == 2
     assert len(qmsequence.ro_pulses) == 1
 
 

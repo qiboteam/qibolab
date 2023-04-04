@@ -1,7 +1,7 @@
 import collections
 import math
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Dict, List, Optional
 
 import numpy as np
 from qibo.config import log, raise_error
@@ -220,7 +220,7 @@ class QMConfig:
                 "drive0", "drive1", "flux0", "readout0", ...
         """
         if pulse.serial not in self.pulses:
-            if pulse.type.name == "DRIVE":
+            if pulse.type is PulseType.DRIVE:
                 serial_i = self.register_waveform(pulse, "i")
                 serial_q = self.register_waveform(pulse, "q")
                 self.pulses[pulse.serial] = {
@@ -237,7 +237,7 @@ class QMConfig:
                 # register drive pulse in elements
                 self.elements[f"drive{qubit.name}"]["operations"][pulse.serial] = pulse.serial
 
-            elif pulse.type.name == "FLUX":
+            elif pulse.type is PulseType.FLUX:
                 serial = self.register_waveform(pulse)
                 self.pulses[pulse.serial] = {
                     "operation": "control",
@@ -251,7 +251,7 @@ class QMConfig:
                 # register flux pulse in elements
                 self.elements[f"flux{qubit.name}"]["operations"][pulse.serial] = pulse.serial
 
-            elif pulse.type.name == "READOUT":
+            elif pulse.type is PulseType.READOUT:
                 serial_i = self.register_waveform(pulse, "i")
                 serial_q = self.register_waveform(pulse, "q")
                 self.register_integration_weights(qubit, pulse.duration)
@@ -433,13 +433,22 @@ class QMPulse:
         self.duration = self.baked.get_op_length()
 
 
-class QMSequence(list):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # keep track of readout pulses for registering outputs
-        self.ro_pulses = []
-        # map from qibolab pulses to QMPulses (useful when sweeping)
-        self.pulse_to_qmpulse = {}
+@dataclass
+class Sequence:
+    """Pulse sequence containing QM specific pulses (``qmpulse``).
+    Defined in :meth:`qibolab.instruments.qm.QMOPX.play`.
+    Holds attributes for the ``element`` and ``operation`` that
+    corresponds to each pulse, as defined in the QM config.
+    """
+
+    qmpulses: List[QMPulse] = field(default_factory=list)
+    """List of :class:`qibolab.instruments.qm.QMPulse` objects corresponding to the original pulses."""
+    ro_pulses: List[QMPulse] = field(default_factory=list)
+    """List of readout pulses used for registering outputs."""
+    pulse_to_qmpulse: Dict[Pulse, QMPulse] = field(default_factory=dict)
+    """Map from qibolab pulses to QMPulses (useful when sweeping)."""
+    pulse_finish: Dict[int, List[QMPulse]] = field(default_factory=lambda: collections.defaultdict(list))
+    """Map to find all pulses that finish at a given time (useful for ``_find_previous``)."""
 
     def add(self, pulse):
         if not isinstance(pulse, Pulse):
@@ -447,9 +456,11 @@ class QMSequence(list):
 
         qmpulse = QMPulse(pulse)
         self.pulse_to_qmpulse[pulse.serial] = qmpulse
-        if pulse.type.name == "READOUT":
+        if pulse.type is PulseType.READOUT:
             self.ro_pulses.append(qmpulse)
-        super().append(qmpulse)
+
+        self.pulse_finish[pulse.finish].append(qmpulse)
+        self.qmpulses.append(qmpulse)
         return qmpulse
 
 
@@ -539,6 +550,39 @@ class QMOPX(AbstractInstrument):
 
         return machine.execute(program)
 
+    def create_qmsequence(self, qubits, sequence):
+        """Translates a :class:`qibolab.pulses.PulseSequence` to a :class:`qibolab.instruments.qm.Sequence`.
+        Also register flux elements for all qubits (if applicable) so that all qubits are operated at their
+        sweetspot.
+        Args:
+            qubits (list): List of :class:`qibolab.platforms.abstract.Qubit` objects
+                passed from the platform.
+            sequence (:class:`qibolab.pulses.PulseSequence`). Pulse sequence to translate.
+        Returns:
+            (:class:`qibolab.instruments.qm.Sequence`) containing the pulses from given pulse sequence.
+        """
+        # register flux elements for all qubits so that they are
+        # always at sweetspot even when they are not used
+        for qubit in qubits.values():
+            if qubit.flux:
+                self.config.register_flux_element(qubit)
+
+        # Current driver cannot play overlapping pulses on drive and flux channels
+        # If we want to play overlapping pulses we need to define different elements on the same ports
+        # like we do for readout multiplex
+        qmsequence = Sequence()
+        for pulse in sorted(sequence.pulses, key=lambda pulse: (pulse.start, pulse.duration)):
+            qmpulse = qmsequence.add(pulse)
+            if pulse.type is PulseType.FLUX:
+                # register flux element (if it does not already exist)
+                self.config.register_flux_element(qubits[pulse.qubit], pulse.frequency)
+                qmpulse.bake(self.config)
+            else:
+                if pulse.duration % 4 != 0 or pulse.duration < 16:
+                    raise_error(NotImplementedError, "1ns resolution is available for flux pulses only.")
+                self.config.register_pulse(qubits[pulse.qubit], pulse, self.time_of_flight, self.smearing)
+        return qmsequence
+
     @staticmethod
     def readout(qmpulse, raw_adc):
         """Plays a readout pulse and assigns the acquired results in QUA variables.
@@ -575,7 +619,7 @@ class QMOPX(AbstractInstrument):
         needs_reset = False
         align()
         clock = collections.defaultdict(int)
-        for qmpulse in qmsequence:
+        for qmpulse in qmsequence.qmpulses:
             pulse = qmpulse.pulse
             wait_time = pulse.start - clock[qmpulse.element]
             if wait_time >= 12:
@@ -662,29 +706,10 @@ class QMOPX(AbstractInstrument):
             nshots (int): Number of repetitions (shots) of the experiment.
             relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
         """
-        # register flux elements for all qubits so that they are
-        # always at sweetspot even when they are not used
-        for qubit in qubits.values():
-            if qubit.flux:
-                self.config.register_flux_element(qubit)
-
         if not sequence:
             return {}
-        # Current driver cannot play overlapping pulses on drive and flux channels
-        # If we want to play overlapping pulses we need to define different elements on the same ports
-        # like we do for readout multiplex
-        qmsequence = QMSequence()
-        for pulse in sequence:
-            qmpulse = qmsequence.add(pulse)
-            if pulse.duration % 4 or pulse.duration < 16:
-                if pulse.type.name != "FLUX":
-                    raise_error(NotImplementedError, "1ns resolution is available for flux pulses only.")
-                # register flux element (if it does not already exist)
-                self.config.register_flux_element(qubits[pulse.qubit], pulse.frequency)
-                qmpulse.bake(self.config)
-            else:
-                self.config.register_pulse(qubits[pulse.qubit], pulse, self.time_of_flight, self.smearing)
 
+        qmsequence = self.create_qmsequence(qubits, sequence)
         # play pulses using QUA
         with program() as experiment:
             n = declare(int)
@@ -704,24 +729,10 @@ class QMOPX(AbstractInstrument):
         return self.fetch_results(result, sequence.ro_pulses, raw_adc)
 
     def sweep(self, qubits, sequence, *sweepers, nshots, relaxation_time, average=True):
-        # register flux elements for all qubits so that they are
-        # always at sweetspot even when they are not used
-        for qubit in qubits.values():
-            if qubit.flux:
-                self.config.register_flux_element(qubit)
+        if not sequence:
+            return {}
 
-        qmsequence = QMSequence()
-        for pulse in sequence:
-            qmpulse = qmsequence.add(pulse)
-            if pulse.duration % 4 or pulse.duration < 16:
-                if pulse.type.name != "FLUX":
-                    raise_error(NotImplementedError, "1ns resolution is available for flux pulses only.")
-                # register flux element (if it does not already exist)
-                self.config.register_flux_element(qubits[pulse.qubit], pulse.frequency)
-                qmpulse.bake(self.config)
-            else:
-                self.config.register_pulse(qubits[pulse.qubit], pulse, self.time_of_flight, self.smearing)
-
+        qmsequence = self.create_qmsequence(qubits, sequence)
         # play pulses using QUA
         with program() as experiment:
             n = declare(int)
