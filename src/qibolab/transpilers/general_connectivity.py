@@ -189,7 +189,7 @@ class Transpiler:
     def sampling_split(self):
         return self._sampling_split
 
-    @connectivity.setter
+    @sampling_split.setter
     def sampling_split(self, sampling_split):
         """Set the sampling split.
 
@@ -200,7 +200,7 @@ class Transpiler:
         if sampling_split > 0.0 and 1.0 >= sampling_split:
             self._sampling_split = sampling_split
         else:
-            raise_error(ValueError, "Sampling_split must be set between 0 and 1")
+            raise_error(ValueError, "Sampling_split must be set greater than 0 and less or equal 1")
 
     def draw_connectivity(self):  # pragma: no cover
         """Show connectivity graph."""
@@ -330,20 +330,25 @@ class Transpiler:
         self._mapping = final_mapping
 
     def map_list(self, path):
-        """Return all possible walks of qubits for a given path.
+        """Return all possible walks of qubits, or a fraction, for a given path.
 
         Args:
             path (list): path to move qubits.
 
         Returns:
-            mapping_list (list): all possible walks of qubits for a given path.
-            meeting_point_list (list): all possible qubit meeting point in the path.
+            mapping_list (list): all possible walks of qubits, or a fraction of them based on self.sampling_split, for a given path.
+            meeting_point_list (list): qubit meeting point for each path.
         """
         path_ends = [path[0], path[-1]]
         path_middle = path[1:-1]
         mapping_list = []
         meeting_point_list = []
-        for i in range(len(path) - 1):
+        test_paths = list(range(len(path) - 1))
+        if self.sampling_split != 1.0:
+            test_paths = np.random.choice(
+                test_paths, size=int(np.ceil(len(test_paths) * self.sampling_split)), replace=False
+            )
+        for i in test_paths:
             values = path_middle[:i] + path_ends + path_middle[i:]
             mapping = dict(zip(path, values))
             mapping_list.append(mapping)
@@ -366,11 +371,10 @@ class Transpiler:
         # Consider all shortest paths
         path_list = [p for p in nx.all_shortest_paths(self._graph, source=circuit[0][0], target=circuit[0][1])]
         self._added_swaps += len(path_list[0]) - 2
-        # TODO use here self.sampling_split
-        # Reduce the number of paths to be faster
+        # Here test all paths
         for path in path_list:
+            # map_list uses self.sampling_split
             list_, meeting_point_list = self.map_list(path)
-            # TODO use here self.sampling_split
             for j, mapping in enumerate(list_):
                 new_graph = nx.relabel_nodes(self._graph, mapping)
                 new_circuit = self.reduce(new_graph)

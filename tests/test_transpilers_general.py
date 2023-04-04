@@ -269,3 +269,23 @@ def test_custom_connectivity():
     assert can_execute(
         transpiled_circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits")
     )
+
+
+def test_split_setter():
+    with pytest.raises(ValueError):
+        transpiler = Transpiler(
+            connectivity=special_connectivity("5_qubits"), init_method="subgraph", sampling_split=2.0
+        )
+
+
+def test_split():
+    transpiler = Transpiler(
+        connectivity=special_connectivity("21_qubits"), init_method="greedy", init_samples=20, sampling_split=0.2
+    )
+    circ = generate_random_circuit(21, 50)
+    transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
+    assert added_swaps >= 0
+    assert len(initial_map) == 21 and len(final_map) == 21
+    assert can_execute(
+        transpiled_circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits")
+    )
