@@ -299,7 +299,11 @@ class TII_RFSOC4x2(AbstractInstrument):
         # If there are no sweepers run ExecutePulseSequence acquisition.
         # Last layer for recursion.
         if len(sweepers) == 0:
-            return self.play(qubits, sequence, average=average)
+            res = self.play(qubits, sequence, average=average)
+            newres = {}
+            for idx, key in enumerate(res):
+                newres[original_ro[idx]] = res[key]
+            return newres
 
         # If sweepers are still in queue
         else:
