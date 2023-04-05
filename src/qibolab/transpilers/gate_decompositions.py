@@ -41,7 +41,9 @@ class GateDecompositions:
 
     def __call__(self, gate):
         """Decompose a gate."""
-        if gate.parameters or (gate.__class__ is gates.FusedGate):
+        if gate.__class__ is gates.I:
+            decomposition = self.decompositions[gate.__class__]
+        elif gate.parameters or (gate.__class__ is gates.FusedGate):
             decomposition = self.decompositions[gate.__class__](gate)
         else:
             decomposition = self.decompositions[gate.__class__]
