@@ -384,12 +384,12 @@ def create_tii_qw25q_A(runcard, simulation_duration=None, address=None, cloud=Fa
         LO_RS_SGS100A(f"LO_0{i}", f"192.168.0.3{i}") for i in [1, 3, 4, 5, 6, 9]
     ]
     drive_local_oscillators = {
-        "A": ["LO_05"] + 2 * ["LO_01"] + 2 * ["LO_01"] + ["era_01"],
+        "A": ["LO_05"] + 2 * ["LO_01"] + ["LO_05"] + ["LO_01"] + ["era_01"],
     }
     # Configure local oscillator's frequency and power
     for lo in local_oscillators:
         if lo.name == "LO_01":
-            lo.frequency = 6.1e9
+            lo.frequency = 6.e9
             lo.power = 21
         elif lo.name == "LO_03":
             lo.frequency = 7.01e9

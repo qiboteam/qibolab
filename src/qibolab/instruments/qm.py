@@ -54,8 +54,8 @@ class QMConfig:
             filter (dict): Pulse shape filters. Relevant for ports connected to flux channels.
                 QM syntax should be followed for the filters.
         """
-        if abs(offset) > 0.2:
-            raise_error(ValueError, f"DC offset for Quantum Machines cannot exceed 0.1V but is {offset}.")
+        if abs(offset) > 0.5:
+            raise_error(ValueError, f"DC offset for Quantum Machines cannot exceed 0.5V but is {offset}.")
 
         for con, port in ports:
             if con not in self.controllers:
@@ -148,7 +148,7 @@ class QMConfig:
                     }
                 if "analog_inputs" not in controllers[con]:
                     controllers[con]["analog_inputs"] = {}
-                controllers[con]["analog_inputs"][port] = {"offset": 0.0, "gain_db": 0}
+                controllers[con]["analog_inputs"][port] = {"offset": 0.0, "gain_db": 15}
 
             # register element
             lo_frequency = int(qubit.readout.local_oscillator.frequency)
