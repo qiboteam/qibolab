@@ -248,10 +248,12 @@ class TII_RFSOC4x2(AbstractInstrument):
                 serial = ro_pulse.serial
 
                 if average:
-                    results[serial] = AveragedResults(i_pulse, q_pulse)
+                    results[ro_pulse.qubit] = results[serial] = AveragedResults(i_pulse, q_pulse)
                 else:
                     shots = self.classify_shots(i_pulse, q_pulse, qubits[ro_pulse.qubit])
-                    results[serial] = ExecutionResults.from_components(i_pulse, q_pulse, shots)
+                    results[ro_pulse.qubit] = results[serial] = ExecutionResults.from_components(
+                        i_pulse, q_pulse, shots
+                    )
 
         return results
 
@@ -440,11 +442,13 @@ class TII_RFSOC4x2(AbstractInstrument):
                     q_pulse = np.array(totq[k][i][j])
 
                     if average:
-                        results[serial] = AveragedResults(i_pulse, q_pulse)
+                        results[sequence.ro_pulses[i].qubit] = results[serial] = AveragedResults(i_pulse, q_pulse)
                     else:
                         qubit = qubits[sequence.ro_pulses[i].qubit]
                         shots = self.classify_shots(i_pulse, q_pulse, qubit)
-                        results[serial] = ExecutionResults.from_components(i_pulse, q_pulse, shots)
+                        results[sequence.ro_pulses[i].qubit] = results[serial] = ExecutionResults.from_components(
+                            i_pulse, q_pulse, shots
+                        )
                 # merge new result with already saved ones
                 sweep_results = self.merge_sweep_results(sweep_results, results)
         return sweep_results

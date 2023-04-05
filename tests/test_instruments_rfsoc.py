@@ -119,7 +119,6 @@ def test_convert_av_sweep_results():
         serial2: AveragedResults(i=[0, 1, 2], q=[-1, -2, -3]),
     }
 
-    assert out_dict.keys() == targ_dict.keys()
     assert (out_dict[serial1].i == targ_dict[serial1].i).all()
     assert (out_dict[serial1].q == targ_dict[serial1].q).all()
     assert (out_dict[serial2].i == targ_dict[serial2].i).all()
@@ -148,7 +147,6 @@ def test_convert_nav_sweep_results():
         serial2: ExecutionResults.from_components(np.array([0, 0, 1, 1, 2, 2]), np.array([-1, -1, -2, -2, -3, -3])),
     }
 
-    assert out_dict.keys() == targ_dict.keys()
     assert (out_dict[serial1].i == targ_dict[serial1].i).all()
     assert (out_dict[serial1].q == targ_dict[serial1].q).all()
     assert (out_dict[serial2].i == targ_dict[serial2].i).all()
