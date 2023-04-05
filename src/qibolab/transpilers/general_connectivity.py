@@ -131,6 +131,7 @@ class Transpiler:
             self._graph = nx.relabel_nodes(self._connectivity, self._mapping)
         # Inverse permutation
         init_qubit_map = np.argsort(list(self._mapping.values()))
+        print(init_qubit_map)
         init_mapping = dict(zip(keys, init_qubit_map))
         self._qubit_map = np.sort(init_qubit_map)
         self.init_circuit(circuit)
@@ -299,22 +300,23 @@ class Transpiler:
         H.add_edge(self._circuit_repr[i][0], self._circuit_repr[i][1])
         while GM.subgraph_is_monomorphic() == True:
             result = GM
-            i = i + 1
+            i += 1
             H.add_edge(self._circuit_repr[i][0], self._circuit_repr[i][1])
             GM = nx.algorithms.isomorphism.GraphMatcher(self._connectivity, H)
             if self._connectivity.number_of_edges() == H.number_of_edges() or i == len(self._circuit_repr) - 1:
                 G = nx.relabel_nodes(self._connectivity, result.mapping)
                 self._graph = G
-                self._mapping = dict(zip(result.mapping.values(), result.mapping.keys()))
+                # self._mapping = dict(zip(result.mapping.values(), result.mapping.keys()))
+                self._mapping = result.mapping
                 print("perfect match")
-                print(self._mapping)
+                print(dict(zip(result.mapping.values(), result.mapping.keys())))
                 print(result.mapping)
                 return
         G = nx.relabel_nodes(self._connectivity, result.mapping)
         self._graph = G
         self._mapping = dict(zip(result.mapping.values(), result.mapping.keys()))
         print("no perfect match")
-        print(self._mapping)
+        print(dict(zip(result.mapping.values(), result.mapping.keys())))
         print(result.mapping)
 
     def greedy_init(self):
