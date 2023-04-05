@@ -388,7 +388,7 @@ class AcquisitionVariables:
 
     def classify_shots(self):
         """QUA instruction to classify shots in real time and save the result to a variable."""
-        if self.shot is not None:
+        if self.threshold is not None and self.angle is not None:
             assign(self.shot, self.I * self.cos - self.Q * self.sin > self.threshold)
 
 
