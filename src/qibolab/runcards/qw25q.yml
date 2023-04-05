@@ -8,7 +8,7 @@ qubits: [A1, A2, A3, A4, A5, A6,
 
 settings:
     sampling_rate: 1000000000
-    repetition_duration: 50_000
+    repetition_duration: 100_000
 topology: "Simone to fix"
 resonator_type: 2D
 
@@ -17,15 +17,15 @@ native_gates:
         A1:
             RX:
                 duration: 40
-                amplitude: 0.0875
-                frequency: 5.043716E+09
+                amplitude: 0.08312499999999999
+                frequency: 5060569932
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0061
+                amplitude: 0.0081
                 frequency: 6.885359E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -42,7 +42,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0031
+                amplitude: 0.0051
                 frequency: 7.267493E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -51,7 +51,7 @@ native_gates:
         A3:
             RX:
                 duration: 40
-                amplitude: 0.28
+                amplitude: 0.31360000000000005
                 frequency: 5991211180
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -68,7 +68,7 @@ native_gates:
         A4:
             RX:
                 duration: 40
-                amplitude: 0.128364018
+                amplitude: 0.11430302346828
                 frequency: 5239405485
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -76,7 +76,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0031
+                amplitude: 0.0051
                 frequency: 7.119170E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -93,7 +93,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.5
+                amplitude: 0.0051
                 frequency: 7.692063E+09
                 shape: Rectangular()
                 type: ro # readout
@@ -110,7 +110,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0031
+                amplitude: 0.0051
                 frequency: 7942098387
                 shape: Rectangular()
                 type: ro # readout

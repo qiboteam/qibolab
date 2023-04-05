@@ -390,7 +390,7 @@ def create_tii_qw25q_A(runcard, simulation_duration=None, address=None, cloud=Fa
     for lo in local_oscillators:
         if lo.name == "LO_01":
             lo.frequency = 6.e9
-            lo.power = 21
+            lo.power = 23
         elif lo.name == "LO_03":
             lo.frequency = 7.01e9
             lo.power = 23
@@ -399,7 +399,7 @@ def create_tii_qw25q_A(runcard, simulation_duration=None, address=None, cloud=Fa
             lo.power = 23
         elif lo.name == "LO_05":
             lo.frequency = 5.3e9
-            lo.power = 18
+            lo.power = 20
         elif lo.name == "LO_06":
             lo.frequency = 6.2e9
             lo.power = 21
