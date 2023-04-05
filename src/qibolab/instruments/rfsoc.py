@@ -380,14 +380,12 @@ class TII_RFSOC4x2(AbstractInstrument):
             loop, false otherwise
         """
 
-        # is_amp = sweepers[0].parameter == Parameter.amplitude
-        is_freq = sweepers[0].parameter == Parameter.frequency
-
         # if there isn't only a sweeper do a python sweep
         if len(sweepers) != 1:
             return True
 
-        is_ro = sweepers[0].pulses[0].type == PulseType.READOUT
+        is_freq = sweepers[0].parameter is Parameter.frequency
+        is_ro = sweepers[0].pulses[0].type is PulseType.READOUT
         # if it's a sweep on the readout freq do a python sweep
         if is_freq and is_ro:
             return True
