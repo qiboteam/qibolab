@@ -736,7 +736,7 @@ class ClusterQRM_RF(AbstractInstrument):
 
         # Check if the sequence to be processed is the same as the last one.
         # If so, there is no need to generate new waveforms and program
-        if self._current_pulsesequence_hash != self._last_pulsequence_hash:
+        if True:  # self._current_pulsesequence_hash != self._last_pulsequence_hash:
             port = "o1"
             # initialise the list of free sequencer numbers to include the default for each port {'o1': 0}
             self._free_sequencers_numbers = [self.DEFAULT_SEQUENCERS[port]] + [1, 2, 3, 4, 5]
@@ -942,7 +942,6 @@ class ClusterQRM_RF(AbstractInstrument):
                     footer_block = Block("cleaup")
                     footer_block.append(f"stop")
 
-                    sweepers.reverse()
                     for sweeper in sweepers:
                         if sweeper.parameter is Parameter.frequency:
                             start = int(sweeper.values[0])
@@ -994,19 +993,17 @@ class ClusterQRM_RF(AbstractInstrument):
                             start = sweeper.values[0]
                             step = sweeper.values[1] - sweeper.values[0]
                             stop = start + step * len(sweeper.values)
+                            n = len(sweeper.values)
 
-                            if stop > start:
+                            if start < stop:  # step is possitive
                                 aux_start = 0
-                                aux_stop = stop - start
-                                aux_step = step
-                            else:
-                                aux_stop = 0
-                                aux_start = start - stop
-                                aux_step = step
+                                aux_step = convert_gain(step)
+                                aux_stop = aux_step * (n - 1) + 1
 
-                            aux_start = convert_gain(aux_start)
-                            aux_stop = convert_gain(aux_stop)
-                            aux_step = convert_gain(aux_step)
+                            elif stop < start:  # step is negative
+                                aux_stop = 0
+                                aux_step = convert_gain(abs(step))
+                                aux_start = aux_step * (n - 1) + 1
 
                             aux_register = Register(program, "gain_aux")
                             gain_register = Register(program, "gain")
@@ -1054,7 +1051,7 @@ class ClusterQRM_RF(AbstractInstrument):
         It configures certain parameters of the instrument based on the needs of resources determined
         while processing the pulse sequence.
         """
-        if self._current_pulsesequence_hash != self._last_pulsequence_hash:
+        if True:  # self._current_pulsesequence_hash != self._last_pulsequence_hash:
             self._last_pulsequence_hash = self._current_pulsesequence_hash
 
             # Setup
@@ -1093,6 +1090,7 @@ class ClusterQRM_RF(AbstractInstrument):
                     filename = f"{self.name}_sequencer{sequencer.number}_sequence.json"
                     with open(filename, "w", encoding="utf-8") as file:
                         json.dump(qblox_dict[sequencer], file, indent=4)
+                        file.write(sequencer.program)
 
         # Clear acquisition memory and arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
@@ -1104,9 +1102,9 @@ class ClusterQRM_RF(AbstractInstrument):
         # self.device.print_readable_snapshot(update=True)
 
         # DEBUG: QRM RF Save Readable Snapshot
-        # filename = f"{self.name}_snapshot.json"
-        # with open(filename, "w", encoding="utf-8") as file:
-        #     print_readable_snapshot(self.device, file, update=True)
+        filename = f"{self.name}_snapshot.json"
+        with open(filename, "w", encoding="utf-8") as file:
+            print_readable_snapshot(self.device, file, update=True)
 
     def play_sequence(self):
         """Plays the sequence of pulses.
@@ -1200,9 +1198,10 @@ class ClusterQRM_RF(AbstractInstrument):
 
         # Wait until sequencers have stopped
         for sequencer_number in self._used_sequencers_numbers:
-            self.device.get_sequencer_state(sequencer_number, timeout=10)
-            self.device.get_acquisition_state(sequencer_number, timeout=10)
+            print(self.device.get_sequencer_state(sequencer_number, timeout=10))
+            print(self.device.get_acquisition_state(sequencer_number, timeout=10))
             # TODO: calculate expected execution duration to be used here
+        # self.device.stop_sequencer()
 
         acquisition_results = {}
 
@@ -1898,7 +1897,7 @@ class ClusterQCM_RF(AbstractInstrument):
 
         # Check if the sequence to be processed is the same as the last one.
         # If so, there is no need to generate new waveforms and program
-        if self._current_pulsesequence_hash != self._last_pulsequence_hash:
+        if True:  # self._current_pulsesequence_hash != self._last_pulsequence_hash:
             self._free_sequencers_numbers = [2, 3, 4, 5]
 
             # process the pulses for every port
@@ -2044,12 +2043,15 @@ class ClusterQCM_RF(AbstractInstrument):
                     final_reset_block = wait_block(
                         wait_time=time_between_repetitions, register=Register(program), force_multiples_of_4=False
                     )
+
+                    # final_reset_block.append_spacer()
+                    # final_reset_block.append(f"add {bin_n}, 1, {bin_n}", "not used")
+
                     body_block += final_reset_block
 
                     footer_block = Block("cleaup")
                     footer_block.append(f"stop")
 
-                    sweepers.reverse()
                     for sweeper in sweepers:
                         if sweeper.parameter is Parameter.frequency:
                             start = int(sweeper.values[0])
@@ -2101,19 +2103,17 @@ class ClusterQCM_RF(AbstractInstrument):
                             start = sweeper.values[0]
                             step = sweeper.values[1] - sweeper.values[0]
                             stop = start + step * len(sweeper.values)
+                            n = len(sweeper.values)
 
-                            if stop > start:
+                            if start < stop:  # step is possitive
                                 aux_start = 0
-                                aux_stop = stop - start
-                                aux_step = step
-                            else:
-                                aux_stop = 0
-                                aux_start = start - stop
-                                aux_step = step
+                                aux_step = convert_gain(step)
+                                aux_stop = aux_step * (n - 1) + 1
 
-                            aux_start = convert_gain(aux_start)
-                            aux_stop = convert_gain(aux_stop)
-                            aux_step = convert_gain(aux_step)
+                            elif stop < start:  # step is negative
+                                aux_stop = 0
+                                aux_step = convert_gain(abs(step))
+                                aux_start = aux_step * (n - 1) + 1
 
                             aux_register = Register(program, "gain_aux")
                             gain_register = Register(program, "gain")
@@ -2147,6 +2147,9 @@ class ClusterQCM_RF(AbstractInstrument):
                         begin=0, end=nshots, step=1, register=nshots_register, block=body_block
                     )
 
+                    # nshots_block.prepend(f"move 0, {bin_n}", "not used")
+                    # nshots_block.append_spacer()
+
                     navgs_block = loop_block(begin=0, end=navgs, step=1, register=navgs_register, block=nshots_block)
                     program.add_blocks(header_block, navgs_block, footer_block)
 
@@ -2159,7 +2162,7 @@ class ClusterQCM_RF(AbstractInstrument):
         It configures certain parameters of the instrument based on the needs of resources determined
         while processing the pulse sequence.
         """
-        if self._current_pulsesequence_hash != self._last_pulsequence_hash:
+        if True:  # self._current_pulsesequence_hash != self._last_pulsequence_hash:
             self._last_pulsequence_hash = self._current_pulsesequence_hash
 
             # Setup
@@ -2200,6 +2203,7 @@ class ClusterQCM_RF(AbstractInstrument):
                     filename = f"{self.name}_sequencer{sequencer.number}_sequence.json"
                     with open(filename, "w", encoding="utf-8") as file:
                         json.dump(qblox_dict[sequencer], file, indent=4)
+                        file.write(sequencer.program)
 
         # Arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
@@ -2210,9 +2214,9 @@ class ClusterQCM_RF(AbstractInstrument):
         # self.device.print_readable_snapshot(update=True)
 
         # DEBUG: QCM RF Save Readable Snapshot
-        # filename = f"{self.name}_snapshot.json"
-        # with open(filename, "w", encoding="utf-8") as file:
-        #     print_readable_snapshot(self.device, file, update=True)
+        filename = f"{self.name}_snapshot.json"
+        with open(filename, "w", encoding="utf-8") as file:
+            print_readable_snapshot(self.device, file, update=True)
 
     def play_sequence(self):
         """Plays the sequence of pulses.
@@ -2681,7 +2685,7 @@ class ClusterQCM(AbstractInstrument):
 
         # Check if the sequence to be processed is the same as the last one.
         # If so, there is no need to generate new waveforms and program
-        if self._current_pulsesequence_hash != self._last_pulsequence_hash:
+        if True:  # self._current_pulsesequence_hash != self._last_pulsequence_hash:
             self._free_sequencers_numbers = [4, 5]
 
             # process the pulses for every port
@@ -2832,7 +2836,6 @@ class ClusterQCM(AbstractInstrument):
                     footer_block = Block("cleaup")
                     footer_block.append(f"stop")
 
-                    sweepers.reverse()
                     for sweeper in sweepers:
                         if sweeper.parameter is Parameter.frequency:
                             start = int(sweeper.values[0])
@@ -2884,19 +2887,17 @@ class ClusterQCM(AbstractInstrument):
                             start = sweeper.values[0]
                             step = sweeper.values[1] - sweeper.values[0]
                             stop = start + step * len(sweeper.values)
+                            n = len(sweeper.values)
 
-                            if stop > start:
+                            if start < stop:  # step is possitive
                                 aux_start = 0
-                                aux_stop = stop - start
-                                aux_step = step
-                            else:
-                                aux_stop = 0
-                                aux_start = start - stop
-                                aux_step = step
+                                aux_step = convert_gain(step)
+                                aux_stop = aux_step * (n - 1) + 1
 
-                            aux_start = convert_gain(aux_start)
-                            aux_stop = convert_gain(aux_stop)
-                            aux_step = convert_gain(aux_step)
+                            elif stop < start:  # step is negative
+                                aux_stop = 0
+                                aux_step = convert_gain(abs(step))
+                                aux_start = aux_step * (n - 1) + 1
 
                             aux_register = Register(program, "gain_aux")
                             gain_register = Register(program, "gain")
@@ -2942,7 +2943,7 @@ class ClusterQCM(AbstractInstrument):
         It configures certain parameters of the instrument based on the needs of resources determined
         while processing the pulse sequence.
         """
-        if self._current_pulsesequence_hash != self._last_pulsequence_hash:
+        if True:  # self._current_pulsesequence_hash != self._last_pulsequence_hash:
             self._last_pulsequence_hash = self._current_pulsesequence_hash
 
             # Setup
@@ -2984,6 +2985,7 @@ class ClusterQCM(AbstractInstrument):
                     filename = f"{self.name}_sequencer{sequencer.number}_sequence.json"
                     with open(filename, "w", encoding="utf-8") as file:
                         json.dump(qblox_dict[sequencer], file, indent=4)
+                        file.write(sequencer.program)
 
         # Arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
@@ -2994,9 +2996,9 @@ class ClusterQCM(AbstractInstrument):
         # self.device.print_readable_snapshot(update=True)
 
         # DEBUG: QCM Save Readable Snapshot
-        # filename = f"{self.name}_snapshot.json"
-        # with open(filename, "w", encoding="utf-8") as file:
-        #     print_readable_snapshot(self.device, file, update=True)
+        filename = f"{self.name}_snapshot.json"
+        with open(filename, "w", encoding="utf-8") as file:
+            print_readable_snapshot(self.device, file, update=True)
 
     def play_sequence(self):
         """Executes the sequence of instructions."""

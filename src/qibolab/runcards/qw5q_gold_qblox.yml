@@ -146,7 +146,7 @@ instruments:
                     gain                         : 0.488 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : true
                 o2: # not used
-                    attenuation                  : 0 # (dB)
+                    attenuation                  : 60 # (dB)
                     lo_enabled                   : false
                     lo_frequency                 : 2_000_000_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0 # for path0 and path1 -1.0<=v<=1.0

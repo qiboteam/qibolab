@@ -274,6 +274,7 @@ class MultiqubitPlatform(AbstractPlatform):
                     qubits=sweeper.qubits,
                 )
             )
+        sweepers_copy.reverse()
 
         for pulse in sequence_copy.ro_pulses:
             map_id_serial[pulse.id] = pulse.serial
