@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 
 import numpy as np
 from qibo.config import log, raise_error
+from qm import qua
 from qm.qua import (
     align,
     assign,
@@ -19,7 +20,6 @@ from qm.qua import (
     program,
     reset_frame,
     reset_phase,
-    save,
     stream_processing,
     wait,
 )
@@ -373,7 +373,7 @@ class AcquisitionVariables:
         if self.raw_adc:
             self.adc_stream = declare_stream(adc_trace=True)
 
-        if self.threshold is not None:
+        if self.threshold is not None and self.angle is not None:
             self.shot = declare(bool)
             self.shots = declare_stream()
             self.cos = np.cos(self.angle)
@@ -381,14 +381,14 @@ class AcquisitionVariables:
 
     def save(self):
         """QUA instruction to save acquired results from variables to streams."""
-        save(self.I, self.I_stream)
-        save(self.Q, self.Q_stream)
-        if self.threshold is not None:
-            save(self.shot, self.shots)
+        qua.save(self.I, self.I_stream)
+        qua.save(self.Q, self.Q_stream)
+        if self.shot is not None:
+            qua.save(self.shot, self.shots)
 
     def classify_shots(self):
         """QUA instruction to classify shots in real time and save the result to a variable."""
-        if self.threshold is not None:
+        if self.shot is not None:
             assign(self.shot, self.I * self.cos - self.Q * self.sin > self.threshold)
 
 
