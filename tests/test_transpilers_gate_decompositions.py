@@ -30,7 +30,7 @@ def assert_matrices_allclose(gate, two_qubit_natives):
     np.testing.assert_allclose(c, 1)
 
 
-@pytest.mark.parametrize("gatename", ["H", "X", "Y"])
+@pytest.mark.parametrize("gatename", ["H", "X", "Y", "I"])
 def test_pauli_to_native(gatename):
     gate = getattr(gates, gatename)(0)
     assert_matrices_allclose(gate, two_qubit_natives=["CZ"])
