@@ -8,6 +8,7 @@ from qibo.config import log, raise_error
 from qibo.states import CircuitResult
 
 from qibolab import __version__ as qibolab_version
+from qibolab.compilers import compiler
 from qibolab.platform import Platform
 from qibolab.platforms.abstract import AbstractPlatform
 from qibolab.transpilers import can_execute, transpile
@@ -82,7 +83,7 @@ class QibolabBackend(NumpyBackend):
                 log.info("Transpiler test passed.")
 
         # Transpile the native circuit into a sequence of pulses ``PulseSequence``
-        sequence = self.platform.transpile(native_circuit)
+        sequence = compiler(native_circuit, self.platform)
 
         if not self.platform.is_connected:
             self.platform.connect()

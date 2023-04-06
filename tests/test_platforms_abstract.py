@@ -5,9 +5,13 @@ from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 
 from qibolab.backends import QibolabBackend
+from qibolab.compilers import compiler
 from qibolab.platform import Platform
 from qibolab.platforms.abstract import AbstractPlatform
 from qibolab.pulses import PulseSequence
+from qibolab.transpilers import can_execute, transpile
+
+# TODO: Change these to compiler unit tests
 
 
 def generate_circuit_with_gate(nqubits, gate, *params, **kwargs):
@@ -15,6 +19,16 @@ def generate_circuit_with_gate(nqubits, gate, *params, **kwargs):
     circuit.add(gate(q, *params, **kwargs) for q in range(nqubits))
     circuit.add(gates.M(*range(nqubits)))
     return circuit
+
+
+def compile_circuit(circuit, platform):
+    """Compile a circuit to a pulse sequence."""
+    if can_execute(circuit, platform.two_qubit_natives):
+        native_circuit = circuit
+    else:
+        native_circuit, _ = transpile(circuit, platform.two_qubit_natives)
+    sequence = compiler(native_circuit, platform)
+    return sequence
 
 
 def test_u3_sim_agreement():
@@ -51,7 +65,7 @@ def test_transpile(platform_name, gateargs):
     else:
         nseq = 2
     circuit = generate_circuit_with_gate(nqubits, *gateargs)
-    sequence = platform.transpile(circuit)
+    sequence = compile_circuit(circuit, platform)
     assert len(sequence) == (nseq + 1) * nqubits
 
 
@@ -62,7 +76,7 @@ def test_transpile_two_gates(platform_name):
     circuit.add(gates.RY(0, theta=0.2))
     circuit.add(gates.M(0))
 
-    sequence = platform.transpile(circuit)
+    sequence = compile_circuit(circuit, platform)
 
     assert len(sequence.pulses) == 5
     assert len(sequence.qd_pulses) == 4
@@ -75,7 +89,7 @@ def test_measurement(platform_name):
     circuit = Circuit(nqubits)
     qubits = [qubit for qubit in range(nqubits)]
     circuit.add(gates.M(*qubits))
-    sequence: PulseSequence = platform.transpile(circuit)
+    sequence = compile_circuit(circuit, platform)
 
     assert len(sequence) == 1 * nqubits
     assert len(sequence.qd_pulses) == 0 * nqubits
@@ -88,7 +102,7 @@ def test_rz_to_sequence(platform_name):
     circuit = Circuit(1)
     circuit.add(gates.RZ(0, theta=0.2))
     circuit.add(gates.Z(0))
-    sequence: PulseSequence = platform.transpile(circuit)
+    sequence = compile_circuit(circuit, platform)
     assert len(sequence) == 0
 
 
@@ -97,7 +111,7 @@ def test_u3_to_sequence(platform_name):
     circuit = Circuit(1)
     circuit.add(gates.U3(0, 0.1, 0.2, 0.3))
 
-    sequence: PulseSequence = platform.transpile(circuit)
+    sequence = compile_circuit(circuit, platform)
     assert len(sequence.pulses) == 2
     assert len(sequence.qd_pulses) == 2
 
@@ -115,7 +129,7 @@ def test_two_u3_to_sequence(platform_name):
     circuit.add(gates.U3(0, 0.1, 0.2, 0.3))
     circuit.add(gates.U3(0, 0.4, 0.6, 0.5))
 
-    sequence: PulseSequence = platform.transpile(circuit)
+    sequence = compile_circuit(circuit, platform)
     assert len(sequence.pulses) == 4
     assert len(sequence.qd_pulses) == 4
 
@@ -138,7 +152,7 @@ def test_CZ_to_sequence(platform_name):
         circuit.add(gates.X(0))
         circuit.add(gates.CZ(0, 1))
 
-        sequence: PulseSequence = platform.transpile(circuit)
+        sequence = compile_circuit(circuit, platform)
         test_sequence, virtual_z_phases = platform.create_CZ_pulse_sequence((2, 1))
         assert len(sequence.pulses) == len(test_sequence) + 2
 
@@ -149,7 +163,7 @@ def test_add_measurement_to_sequence(platform_name):
     circuit.add(gates.U3(0, 0.1, 0.2, 0.3))
     circuit.add(gates.M(0))
 
-    sequence: PulseSequence = platform.transpile(circuit)
+    sequence = compile_circuit(circuit, platform)
     assert len(sequence.pulses) == 3
     assert len(sequence.qd_pulses) == 2
     assert len(sequence.ro_pulses) == 1
