@@ -239,7 +239,6 @@ class TII_RFSOC4x2(AbstractInstrument):
             self.cfg.repetition_duration = relaxation_time
 
         toti, totq = self.call_executepulsesequence(self.cfg, sequence, qubits, len(sequence.ro_pulses), average)
-        print(toti)
 
         results = {}
         adc_chs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
