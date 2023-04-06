@@ -131,7 +131,6 @@ class Transpiler:
             self._graph = nx.relabel_nodes(self._connectivity, self._mapping)
         # Inverse permutation
         init_qubit_map = np.argsort(list(self._mapping.values()))
-        print(init_qubit_map)
         init_mapping = dict(zip(keys, init_qubit_map))
         self._qubit_map = np.sort(init_qubit_map)
         self.init_circuit(circuit)
@@ -292,7 +291,10 @@ class Transpiler:
         return new_circuit
 
     def subgraph_init(self):
-        """Subgraph isomorphism initialization, NP-complete it can take a long time for large circuits."""
+        # TODO fix networkx.GM.mapping for small subgraphs
+        """Subgraph isomorphism initialization, NP-complete it can take a long time for large circuits.
+        NB: this ititialization method may fail for very short circuits
+        """
         H = nx.Graph()
         H.add_nodes_from([i for i in range(self._connectivity.number_of_nodes())])
         GM = nx.algorithms.isomorphism.GraphMatcher(self._connectivity, H)
@@ -305,19 +307,16 @@ class Transpiler:
             GM = nx.algorithms.isomorphism.GraphMatcher(self._connectivity, H)
             if self._connectivity.number_of_edges() == H.number_of_edges() or i == len(self._circuit_repr) - 1:
                 G = nx.relabel_nodes(self._connectivity, result.mapping)
+                keys = list(result.mapping.keys())
+                keys.sort()
                 self._graph = G
-                # self._mapping = dict(zip(result.mapping.values(), result.mapping.keys()))
-                self._mapping = result.mapping
-                print("perfect match")
-                print(dict(zip(result.mapping.values(), result.mapping.keys())))
-                print(result.mapping)
+                self._mapping = {i: result.mapping[i] for i in keys}
                 return
         G = nx.relabel_nodes(self._connectivity, result.mapping)
+        keys = list(result.mapping.keys())
+        keys.sort()
         self._graph = G
-        self._mapping = dict(zip(result.mapping.values(), result.mapping.keys()))
-        print("no perfect match")
-        print(dict(zip(result.mapping.values(), result.mapping.keys())))
-        print(result.mapping)
+        self._mapping = {i: result.mapping[i] for i in keys}
 
     def greedy_init(self):
         """Initialize the circuit with greedy algorithm let a maximum number of 2-qubit

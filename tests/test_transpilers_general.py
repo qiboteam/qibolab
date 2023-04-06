@@ -171,9 +171,11 @@ def test_random_circuits(gates, qubits, natives):
 
 def test_subgraph_init_simple():
     transpiler = Transpiler(connectivity=special_connectivity("5_qubits"), init_method="subgraph")
-    circ = Circuit(3)
+    circ = Circuit(5)
     circ.add(gates.CZ(0, 1))
     circ.add(gates.CZ(2, 1))
+    circ.add(gates.CZ(3, 1))
+    circ.add(gates.CZ(4, 1))
     transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
     assert added_swaps == 0
     assert len(initial_map) == 5 and len(final_map) == 5
@@ -192,7 +194,7 @@ def test_subgraph_init_fail():
 
 def test_subgraph_init():
     transpiler = Transpiler(connectivity=special_connectivity("5_qubits"), init_method="subgraph")
-    circ = generate_random_circuit(5, 10)
+    circ = generate_random_circuit(5, 50)
     transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
     assert added_swaps >= 0
     assert len(initial_map) == 5 and len(final_map) == 5
