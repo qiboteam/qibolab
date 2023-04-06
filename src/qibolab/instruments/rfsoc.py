@@ -1,4 +1,5 @@
 """ RFSoC FPGA driver.
+
 This driver needs the library Qick installed
 Supports the following FPGA:
  *   RFSoC 4x2
@@ -34,6 +35,7 @@ class TII_RFSOC4x2(AbstractInstrument):
     The two way of executing pulses are with ``play`` (for arbitrary
     qibolab ``PulseSequence``) or with ``sweep`` that execute a
     ``PulseSequence`` object with one or more ``Sweeper``.
+
     Args:
         name (str): Name of the instrument instance.
     Attributes:
@@ -67,6 +69,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         max_gain: int = None,
     ):
         """Changes the configuration of the instrument.
+
         Args:
             sampling_rate (int): sampling rate of the RFSoC (Hz).
             repetition_duration (int): delay before readout (ns).
@@ -100,7 +103,6 @@ class TII_RFSOC4x2(AbstractInstrument):
             qubits: list of qubits of the platform
             readouts_per_experiment: number of readout pulse to execute
             average: if True returns averaged results, otherwise single shots
-
         Returns:
             Lists of I and Q value measured
         """
@@ -134,7 +136,6 @@ class TII_RFSOC4x2(AbstractInstrument):
             sweeper: Sweeper object
             readouts_per_experiment: number of readout pulse to execute
             average: if True returns averaged results, otherwise single shots
-
         Returns:
             Lists of I and Q value measured
         """
@@ -161,7 +162,6 @@ class TII_RFSOC4x2(AbstractInstrument):
             * the server now will wait for that number of bytes
             * send the  pickled dictionary
             * wait for response (arbitray number of bytes)
-
         Returns:
             Lists of I and Q value measured
         """
@@ -259,6 +259,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         average: bool,
     ) -> Dict[str, Union[AveragedResults, ExecutionResults]]:
         """Execute a sweep of an arbitrary number of Sweepers via recursion.
+
         Args:
             qubits (list): List of `qibolab.platforms.utils.Qubit` objects
                     passed from the platform.
@@ -332,6 +333,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         If dict_b has a key (serial) that dict_a does not have, simply add it,
         otherwise sum the two results (`qibolab.result.ExecutionResults`
         or `qibolab.result.AveragedResults`)
+
         Args:
             dict_a (dict): dict mapping ro pulses serial to qibolab res objects
             dict_b (dict): dict mapping ro pulses serial to qibolab res objects
@@ -347,10 +349,12 @@ class TII_RFSOC4x2(AbstractInstrument):
 
     def get_if_python_sweep(self, sequence: PulseSequence, qubits: List[Qubit], *sweepers: Sweeper) -> bool:
         """Check if a sweeper must be run with python loop or on hardware.
+
         To be run on qick internal loop a sweep must:
             * not be on the readout frequency
             * be just one sweeper
             * only one pulse per channel supported (for now)
+
         Args:
             sequence (`qibolab.pulses.PulseSequence`). Pulse sequence to play.
             qubits (list): List of `qibolab.platforms.utils.Qubit` objects
@@ -397,6 +401,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         average: bool,
     ) -> Dict[str, Union[ExecutionResults, AveragedResults]]:
         """Convert sweep res to qibolab dict res
+
         Args:
             *sweepers (`qibolab.Sweeper`): Sweeper objects.
             original_ro (list): list of ro serials of the original sequence
@@ -444,6 +449,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         """Executes the sweep and retrieves the readout results.
         Each readout pulse generates a separate acquisition.
         The relaxation_time and the number of shots have default values.
+
         Args:
             qubits (list): List of `qibolab.platforms.utils.Qubit` objects
                            passed from the platform.
