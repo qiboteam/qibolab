@@ -200,3 +200,9 @@ ATS9371
 .. autoclass:: qibolab.instruments.icarusq.AlazarADC
    :members:
    :member-order: bysource
+
+RFSoC 4x2
+-------
+.. autoclass:: qibolab.instruments.rfsoc.TII_RFSOC4x2
+   :members:
+   :member-order: bysource
