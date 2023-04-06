@@ -4,7 +4,7 @@ Supports the following Instruments:
     Cluster
     Cluster QRM-RF
     Cluster QCM-RF
-Compatible with qblox-instruments driver 0.7.0 (8/8/2022).
+Compatible with qblox-instruments driver 0.9.0 (28/2/2023).
 It does not support the operation of multiple clusters symultaneously.
 https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/
 """
@@ -630,10 +630,12 @@ class ClusterQRM_RF(AbstractInstrument):
         next_sequencer_number = self._free_sequencers_numbers.pop(0)
         if next_sequencer_number != self.DEFAULT_SEQUENCERS[port]:
             for parameter in self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].parameters:
-                value = self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].get(param_name=parameter)
-                if not value is None:
-                    target = self.device.sequencers[next_sequencer_number]
-                    self._set_device_parameter(target, parameter, value=value)
+                # exclude read-only parameter `present` and others that have wrong default values (qblox bug)
+                if not parameter in ["present", "thresholded_acq_marker_address", "thresholded_acq_trigger_address"]:
+                    value = self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].get(param_name=parameter)
+                    if value:
+                        target = self.device.sequencers[next_sequencer_number]
+                        self._set_device_parameter(target, parameter, value=value)
 
         # if hardware demodulation is enabled, configure nco_frequency and classification parameters
         if self.ports["i1"].hardware_demod_en or self.ports["o1"].hardware_mod_en:
@@ -648,12 +650,12 @@ class ClusterQRM_RF(AbstractInstrument):
         if self.ports["i1"].hardware_demod_en and qubit in self.classification_parameters:
             self._set_device_parameter(
                 self.device.sequencers[next_sequencer_number],
-                "phase_rotation_acq",
+                "thresholded_acq_rotation",
                 value=self.classification_parameters[qubit]["rotation_angle"],
             )
             self._set_device_parameter(
                 self.device.sequencers[next_sequencer_number],
-                "discretization_threshold_acq",
+                "thresholded_acq_threshold",
                 value=self.classification_parameters[qubit]["threshold"] * self.acquisition_duration,
             )
         # create sequencer wrapper
@@ -865,14 +867,9 @@ class ClusterQRM_RF(AbstractInstrument):
                             n
                         ].relative_phase != 0:
                             # Set phase
-                            p = 10
                             phase = (pulses[n].relative_phase * 360 / (2 * np.pi)) % 360
-                            coarse = int(round(phase / 0.9, p))
-                            fine = int(round((phase - coarse * 0.9) / 2.25e-3, p))
-                            ultra_fine = int(round((phase - coarse * 0.9 - fine * 2.25e-3) / 3.6e-7, p))
-                            error = abs(phase - coarse * 0.9 - fine * 2.25e-3 - ultra_fine * 3.6e-7)
-                            assert error < 3.6e-7
-                            set_ph_instruction = f"                    set_ph {coarse}, {fine}, {ultra_fine}"
+                            phase = int(phase / 360 * 1e9)
+                            set_ph_instruction = f"                    set_ph {phase}"
                             set_ph_instruction += (
                                 " " * (45 - len(set_ph_instruction))
                                 + f"# set relative phase {pulses[n].relative_phase} rads"
@@ -1698,10 +1695,12 @@ class ClusterQCM_RF(AbstractInstrument):
         next_sequencer_number = self._free_sequencers_numbers.pop(0)
         if next_sequencer_number != self.DEFAULT_SEQUENCERS[port]:
             for parameter in self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].parameters:
-                value = self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].get(param_name=parameter)
-                if not value is None:
-                    target = self.device.sequencers[next_sequencer_number]
-                    self._set_device_parameter(target, parameter, value=value)
+                # exclude read-only parameter `present`
+                if not parameter in ["present"]:
+                    value = self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].get(param_name=parameter)
+                    if value:
+                        target = self.device.sequencers[next_sequencer_number]
+                        self._set_device_parameter(target, parameter, value=value)
 
         # if hardware modulation is enabled configure nco_frequency
         if self.ports[port].hardware_mod_en:
@@ -1930,14 +1929,9 @@ class ClusterQCM_RF(AbstractInstrument):
                             )
                         if self.ports[port].hardware_mod_en and pulses[n].relative_phase != 0:
                             # Set phase
-                            p = 10
                             phase = (pulses[n].relative_phase * 360 / (2 * np.pi)) % 360
-                            coarse = int(round(phase / 0.9, p))
-                            fine = int(round((phase - coarse * 0.9) / 2.25e-3, p))
-                            ultra_fine = int(round((phase - coarse * 0.9 - fine * 2.25e-3) / 3.6e-7, p))
-                            error = abs(phase - coarse * 0.9 - fine * 2.25e-3 - ultra_fine * 3.6e-7)
-                            assert error < 3.6e-7
-                            set_ph_instruction = f"                    set_ph {coarse}, {fine}, {ultra_fine}"
+                            phase = int(phase / 360 * 1e9)
+                            set_ph_instruction = f"                    set_ph {phase}"
                             set_ph_instruction += (
                                 " " * (45 - len(set_ph_instruction))
                                 + f"# set relative phase {pulses[n].relative_phase} rads"
@@ -2402,10 +2396,12 @@ class ClusterQCM(AbstractInstrument):
         next_sequencer_number = self._free_sequencers_numbers.pop(0)
         if next_sequencer_number != self.DEFAULT_SEQUENCERS[port]:
             for parameter in self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].parameters:
-                value = self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].get(param_name=parameter)
-                if not value is None:
-                    target = self.device.sequencers[next_sequencer_number]
-                    self._set_device_parameter(target, parameter, value=value)
+                # exclude read-only parameter `present`
+                if not parameter in ["present"]:
+                    value = self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].get(param_name=parameter)
+                    if value:
+                        target = self.device.sequencers[next_sequencer_number]
+                        self._set_device_parameter(target, parameter, value=value)
 
         # if hardware modulation is enabled configure nco_frequency
         if self.ports[port].hardware_mod_en:
@@ -2635,14 +2631,9 @@ class ClusterQCM(AbstractInstrument):
                             )
                         if self.ports[port].hardware_mod_en and pulses[n].relative_phase != 0:
                             # Set phase
-                            p = 10
                             phase = (pulses[n].relative_phase * 360 / (2 * np.pi)) % 360
-                            coarse = int(round(phase / 0.9, p))
-                            fine = int(round((phase - coarse * 0.9) / 2.25e-3, p))
-                            ultra_fine = int(round((phase - coarse * 0.9 - fine * 2.25e-3) / 3.6e-7, p))
-                            error = abs(phase - coarse * 0.9 - fine * 2.25e-3 - ultra_fine * 3.6e-7)
-                            assert error < 3.6e-7
-                            set_ph_instruction = f"                    set_ph {coarse}, {fine}, {ultra_fine}"
+                            phase = int(phase / 360 * 1e9)
+                            set_ph_instruction = f"                    set_ph {phase}"
                             set_ph_instruction += (
                                 " " * (45 - len(set_ph_instruction))
                                 + f"# set relative phase {pulses[n].relative_phase} rads"
