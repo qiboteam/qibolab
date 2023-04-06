@@ -241,9 +241,10 @@ class TII_RFSOC4x2(AbstractInstrument):
         toti, totq = self.call_executepulsesequence(self.cfg, sequence, qubits, len(sequence.ro_pulses), average)
 
         results = {}
-        adcs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
-        for j in range(len(adcs)):
-            for i, ro_pulse in enumerate(sequence.ro_pulses):
+        adc_chs = np.unique([idx for idx in range(len(sequence.ro_pulses))])
+        for j in range(len(adc_chs)):
+            channel = sequence.ro_pulses[j].qubit
+            for i, ro_pulse in enumerate(sequence.ro_pulses.get_qubit_pulses(channel)):
                 i_pulse = np.array(toti[j][i])
                 q_pulse = np.array(totq[j][i])
 
@@ -504,4 +505,8 @@ class TII_ZCU111(TII_RFSOC4x2):  # Containes the main settings:
         super().__init__(name, address=address)
         self.host, self.port = address.split(":")
         self.port = int(self.port)
-        self.cfg = QickProgramConfig(sampling_rate=6_000_000_000, mixer_freq=10, LO_freq=0)
+        self.cfg = QickProgramConfig(
+            sampling_rate=6_000_000_000,
+            mixer_freq=0,
+            LO_freq=7_000_000_000,
+        )
