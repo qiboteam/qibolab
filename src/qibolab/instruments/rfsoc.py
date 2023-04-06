@@ -13,7 +13,7 @@ import numpy as np
 
 from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.platforms.abstract import Qubit
-from qibolab.pulses import Pulse, PulseSequence, PulseType, ReadoutPulse, Rectangular
+from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import AveragedResults, ExecutionResults
 from qibolab.sweeper import Parameter, Sweeper
 
@@ -67,7 +67,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         max_gain: int = None,
     ):
         """Changes the configuration of the instrument.
-        Args: Settings (except calibrate argument)
+        Args:
             sampling_rate (int): sampling rate of the RFSoC (Hz).
             repetition_duration (int): delay before readout (ns).
             adc_trig_offset (int): single offset for all adc triggers
@@ -83,7 +83,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         if max_gain is not None:
             self.cfg.max_gain = max_gain
 
-    def call_executepulsesequence(
+    def _execute_pulse_sequence(
         self,
         cfg: QickProgramConfig,
         sequence: PulseSequence,
@@ -91,29 +91,20 @@ class TII_RFSOC4x2(AbstractInstrument):
         readouts_per_experiment: int,
         average: bool,
     ) -> Tuple[list, list]:
-        """Sends to the server on board all the objects and information needed for
-                  executing an arbitrary PulseSequence.
-
-                  The communication protocol is:
-                   * prepare a single dictionary with all needed objects
-                   * pickle it
-                   * send to the server the length in byte of the pickled dictionary
-                   * the server now will wait for that number of bytes
-                   * send the  pickled dictionary
-                   * wait for response (arbitray number of bytes)
+        """Prepares the dictionary to send to the qibosoq server in order
+           to execute a PulseSequence.
 
         Args:
-                   cfg: QickProgramConfig object with general settings for Qick programs
-                   sequence: arbitrary PulseSequence object to execute
-                   qubits: list of qubits of the platform
-                   readouts_per_experiment: number of readout pulse to execute
-                   average: if True returns averaged results, otherwise single shots
+            cfg: QickProgramConfig object with general settings for Qick programs
+            sequence: arbitrary PulseSequence object to execute
+            qubits: list of qubits of the platform
+            readouts_per_experiment: number of readout pulse to execute
+            average: if True returns averaged results, otherwise single shots
 
-               Returns:
-                   Lists of I and Q value measured
+        Returns:
+            Lists of I and Q value measured
         """
 
-        # preparing the dictionary to send
         server_commands = {
             "operation_code": "execute_pulse_sequence",
             "cfg": cfg,
@@ -122,28 +113,9 @@ class TII_RFSOC4x2(AbstractInstrument):
             "readouts_per_experiment": readouts_per_experiment,
             "average": average,
         }
+        return self._open_connection(self.host, self.port, server_commands)
 
-        # open a connection
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.connect((self.host, self.port))
-
-            msg_encoded = pickle.dumps(server_commands)
-            # first send 4 bytes with the length of the message
-            sock.send(len(msg_encoded).to_bytes(4, "big"))
-
-            sock.send(msg_encoded)
-
-            # wait till the server is sending
-            received = bytearray()
-            while True:
-                tmp = sock.recv(4096)
-                if not tmp:
-                    break
-                received.extend(tmp)
-        results = pickle.loads(received)
-        return results["i"], results["q"]
-
-    def call_executesinglesweep(
+    def _execute_single_sweep(
         self,
         cfg: QickProgramConfig,
         sequence: PulseSequence,
@@ -152,16 +124,8 @@ class TII_RFSOC4x2(AbstractInstrument):
         readouts_per_experiment: int,
         average: bool,
     ) -> Tuple[list, list]:
-        """Sends to the server on board all the objects and information needed for
-           executing a sweep.
-
-           The communication protocol is:
-            * prepare a single dictionary with all needed objects
-            * pickle it
-            * send to the server the length in byte of the pickled dictionary
-            * the server now will wait for that number of bytes
-            * send the  pickled dictionary
-            * wait for response (arbitray number of bytes)
+        """Prepares the dictionary to send to the qibosoq server in order
+           to execute a sweep.
 
         Args:
             cfg: QickProgramConfig object with general settings for Qick programs
@@ -175,7 +139,6 @@ class TII_RFSOC4x2(AbstractInstrument):
             Lists of I and Q value measured
         """
 
-        # preparing the dictionary to send
         server_commands = {
             "operation_code": "execute_single_sweep",
             "cfg": cfg,
@@ -185,17 +148,30 @@ class TII_RFSOC4x2(AbstractInstrument):
             "readouts_per_experiment": readouts_per_experiment,
             "average": average,
         }
+        return self._open_connection(self.host, self.port, server_commands)
 
+    @staticmethod
+    def _open_connection(host: str, port: int, server_commands: dict):
+        """Sends to the server on board all the objects and information needed for
+           executing a sweep or a pulse sequence.
+
+           The communication protocol is:
+            * pickle the dictionary containing all needed information
+            * send to the server the length in byte of the pickled dictionary
+            * the server now will wait for that number of bytes
+            * send the  pickled dictionary
+            * wait for response (arbitray number of bytes)
+
+        Returns:
+            Lists of I and Q value measured
+        """
         # open a connection
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.connect((self.host, self.port))
-
+            sock.connect((host, port))
             msg_encoded = pickle.dumps(server_commands)
             # first send 4 bytes with the length of the message
             sock.send(len(msg_encoded).to_bytes(4, "big"))
-
             sock.send(msg_encoded)
-
             # wait till the server is sending
             received = bytearray()
             while True:
@@ -228,7 +204,7 @@ class TII_RFSOC4x2(AbstractInstrument):
                                    ground state between shots in ns.
             raw_adc (bool): allows to acquire raw adc data
         Returns:
-            A dictionary mapping the readout pulses serial to
+            A dictionary mapping the readout pulses serial and respective qubits to
             `qibolab.ExecutionResults` objects
         """
 
@@ -241,7 +217,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         if relaxation_time is not None:
             self.cfg.repetition_duration = relaxation_time
 
-        toti, totq = self.call_executepulsesequence(self.cfg, sequence, qubits, len(sequence.ro_pulses), average)
+        toti, totq = self._execute_pulse_sequence(self.cfg, sequence, qubits, len(sequence.ro_pulses), average)
 
         results = {}
         adcs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
@@ -293,7 +269,7 @@ class TII_RFSOC4x2(AbstractInstrument):
                     sequence to not modify.
             *sweepers (`qibolab.Sweeper`): Sweeper objects.
         Returns:
-            A dictionary mapping the readout pulses serial to qibolab
+            A dictionary mapping the readout pulses serial and respective qubits to
             results objects
         Raises:
             NotImplementedError: if a sweep refers to more than one pulse.
@@ -325,7 +301,7 @@ class TII_RFSOC4x2(AbstractInstrument):
 
             # if there is one sweeper supported by qick than use hardware sweep
             if len(sweepers) == 1 and not self.get_if_python_sweep(sequence, qubits, *sweepers):
-                toti, totq = self.call_executesinglesweep(
+                toti, totq = self._execute_single_sweep(
                     self.cfg, sequence, qubits, sweepers[0], len(sequence.ro_pulses), average
                 )
                 # convert results
@@ -347,8 +323,8 @@ class TII_RFSOC4x2(AbstractInstrument):
 
         return sweep_results
 
+    @staticmethod
     def merge_sweep_results(
-        self,
         dict_a: Dict[str, Union[AveragedResults, ExecutionResults]],
         dict_b: Dict[str, Union[AveragedResults, ExecutionResults]],
     ) -> Dict[str, Union[AveragedResults, ExecutionResults]]:
@@ -478,7 +454,8 @@ class TII_RFSOC4x2(AbstractInstrument):
             nshots (int): Number of repetitions (shots) of the experiment.
             average (bool): if False returns single shot measurements
         Returns:
-            A dict mapping the readout pulses serial to qibolab results objects
+            A dictionary mapping the readout pulses serial and respective qubits to
+            results objects
         """
 
         # if new value are passed, they are updated in the config obj
