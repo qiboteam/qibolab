@@ -387,20 +387,26 @@ native_gates:
             - type: virtual_z
               phase: -1.5707963267948966
               qubit: 2
-        A3-A2:
+        A3-A4:
             CZ:
-            - duration: 32
-              amplitude: -0.0513
+            - duration: 20
+              amplitude: 0.08
               shape: Rectangular()
-              qubit: 3
+              qubit: A3
               relative_start: 0
               type: qf
             - type: virtual_z
               phase: -1.5707963267948966
-              qubit: 2
+              qubit: A4
             - type: virtual_z
               phase: -1.5707963267948966
-              qubit: 3
+              qubit: A3
+            - duration: 100
+              amplitude: -0.249
+              shape: Rectangular()
+              qubit: A1
+              relative_start: 0
+              type: qf
 
 
 characterization:
