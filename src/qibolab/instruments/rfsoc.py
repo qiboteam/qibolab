@@ -213,7 +213,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         relaxation_time: int = None,
         nshots: int = None,
         average: bool = False,
-        raw_adc: bool = False
+        raw_adc: bool = False,
     ) -> Dict[str, ExecutionResults]:
         """Executes the sequence of instructions and retrieves readout results.
            Each readout pulse generates a separate acquisition.
