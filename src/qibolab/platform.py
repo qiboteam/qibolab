@@ -168,7 +168,7 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
 
 
 def create_tii_rfsoc4x2(runcard, address=None):
-    """Create platform using QICK project on the RFSoS4x2 board
+    """Create platform using QICK project on the RFSoC4x2 board
     IPs and other instrument related parameters are hardcoded in ``__init__`` and ``setup``.
     Args:
         runcard (str): Path to the runcard file.
