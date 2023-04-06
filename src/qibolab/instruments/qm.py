@@ -542,8 +542,8 @@ class QMOPX(AbstractInstrument):
                         qmpulse.operation,
                         qmpulse.element,
                         None,
-                        dual_demod.full("cos", "out1", "sin", "out2", qmpulse.I),
-                        dual_demod.full("minus_sin", "out1", "cos", "out2", qmpulse.Q),
+                        dual_demod.full("cos", "out2", "sin", "out1", qmpulse.I),
+                        dual_demod.full("minus_sin", "out2", "cos", "out1", qmpulse.Q),
                     )
                     if qmpulse.threshold is not None:
                         assign(qmpulse.shot, qmpulse.I * qmpulse.cos - qmpulse.Q * qmpulse.sin > qmpulse.threshold)

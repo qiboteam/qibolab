@@ -413,8 +413,8 @@ characterization:
             sweetspot: 0.249
             filter: {}
             # parameters for single shot classification
-            threshold: 0.0
-            iq_angle: 0.0
+            threshold: 0.000288842361133913
+            iq_angle: 0.3303038506310445
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -447,8 +447,8 @@ characterization:
             sweetspot: -0.016
             filter: {}
             # parameters for single shot classification
-            threshold: 0.0
-            iq_angle: 0.0
+            threshold:  0.00020222941643111404
+            iq_angle:  5.103481108701182
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -464,8 +464,8 @@ characterization:
             sweetspot: -0.365
             filter: {}
             # parameters for single shot classification
-            threshold: 0.0
-            iq_angle: 0.0
+            threshold: 0.0005338844703923734
+            iq_angle: 2.6099089349946785
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
