@@ -239,9 +239,10 @@ class TII_RFSOC4x2(AbstractInstrument):
             self.cfg.repetition_duration = relaxation_time
 
         toti, totq = self.call_executepulsesequence(self.cfg, sequence, qubits, len(sequence.ro_pulses), average)
+        print(toti)
 
         results = {}
-        adc_chs = np.unique([idx for idx in range(len(sequence.ro_pulses))])
+        adc_chs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
         for j in range(len(adc_chs)):
             channel = sequence.ro_pulses[j].qubit
             for i, ro_pulse in enumerate(sequence.ro_pulses.get_qubit_pulses(channel)):
