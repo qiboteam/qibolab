@@ -170,87 +170,70 @@ class MultiqubitPlatform(AbstractPlatform):
         if nshots is None:
             nshots = self.hardware_avg
 
-        # DEBUG: Plot Pulse Sequence
-        # sequence.plot('plot.png')
-        # DEBUG: sync_en
-        # from qblox_instruments.qcodes_drivers.cluster import Cluster
-        # cluster:Cluster = self.instruments['cluster'].device
-        # for module in cluster.modules:
-        #     if module.get("present"):
-        #         for sequencer in module.sequencers:
-        #             if sequencer.get('sync_en'):
-        #                 print(f"type: {module.module_type}, sequencer: {sequencer.name}, sync_en: True")
-
-        # Process Pulse Sequence. Assign pulses to instruments and generate waveforms & program
         instrument_pulses = {}
-        roles = {}
-        ro_pulses = {}
         changed = {}
-        data = {}
-        for name in self.instruments:
-            roles[name] = self.settings["instruments"][name]["roles"]
-            if "control" in roles[name] or "readout" in roles[name]:
-                instrument_pulses[name] = sequence.get_channel_pulses(*self.instruments[name].channels)
-                # Change pulses frequency to if and correct lo accordingly (before was done in qibolab)
 
-                if "readout" in roles[name]:
-                    for pulse in instrument_pulses[name]:
-                        ro_pulses[pulse.serial] = pulse
-                        if abs(pulse.frequency) > self.instruments[name].FREQUENCY_LIMIT:
-                            # TODO: implement algorithm to find correct LO
-                            if_frequency = self.native_gates["single_qubit"][pulse.qubit]["MZ"]["if_frequency"]
-                            self.set_lo_readout_frequency(pulse.qubit, pulse.frequency - if_frequency)
-                            pulse.frequency = if_frequency
-                            changed[pulse.serial] = True
-                elif "control" in roles[name]:
-                    for pulse in instrument_pulses[name]:
-                        if abs(pulse.frequency) > self.instruments[name].FREQUENCY_LIMIT:
-                            # TODO: implement algorithm to find correct LO
-                            if_frequency = self.native_gates["single_qubit"][pulse.qubit]["RX"]["if_frequency"]
-                            self.set_lo_drive_frequency(pulse.qubit, pulse.frequency - if_frequency)
-                            pulse.frequency = if_frequency
-                            changed[pulse.serial] = True
+        readout_instruments = [
+            self.instruments[instrument]
+            for instrument in self.instruments
+            if self.settings["instruments"][instrument]["roles"] == ["readout"]
+        ]
 
-                self.instruments[name].process_pulse_sequence(instrument_pulses[name], nshots, self.repetition_duration)
-                self.instruments[name].upload()
-        for name in self.instruments:
-            if "control" in roles[name] or "readout" in roles[name]:
-                if not instrument_pulses[name].is_empty:
-                    self.instruments[name].play_sequence()
+        control_instruments = [
+            self.instruments[instrument]
+            for instrument in self.instruments
+            if self.settings["instruments"][instrument]["roles"] == ["control"]
+        ]
 
+        # STEP 1: upload sequence
+        for instrument in readout_instruments + control_instruments:
+            instrument_pulses[instrument.name] = sequence.get_channel_pulses(*instrument.channels)
+            for pulse in instrument_pulses[instrument.name]:
+                # FIXME: this will not work with arbitrary frequencies
+                if abs(pulse.frequency) > instrument.FREQUENCY_LIMIT:
+                    changed[pulse] = pulse.serial
+                    if instrument in readout_instruments:
+                        if_frequency = self.native_gates["single_qubit"][pulse.qubit]["MZ"]["if_frequency"]
+                        self.set_lo_readout_frequency(pulse.qubit, pulse.frequency - if_frequency)
+                    elif instrument in control_instruments:
+                        if_frequency = self.native_gates["single_qubit"][pulse.qubit]["RX"]["if_frequency"]
+                        self.set_lo_drive_frequency(pulse.qubit, pulse.frequency - if_frequency)
+                    pulse.frequency = if_frequency
+            instrument.process_pulse_sequence(instrument_pulses[instrument.name], nshots, self.repetition_duration)
+            instrument.upload()
+
+        # STEP 2: play sequence
+        for instrument in readout_instruments + control_instruments:
+            if instrument_pulses[instrument.name]:
+                instrument.play_sequence()
+        # STEP 3: acquire results
         acquisition_results = {}
-        for name in self.instruments:
-            if "readout" in roles[name]:
-                if not instrument_pulses[name].is_empty:
-                    if not instrument_pulses[name].ro_pulses.is_empty:
-                        results = self.instruments[name].acquire()
-                        existing_keys = set(acquisition_results.keys()) & set(results.keys())
-                        for key, value in results.items():
-                            if key in existing_keys:
-                                acquisition_results[key].update(value)
-                            else:
-                                acquisition_results[key] = value
+        for instrument in readout_instruments:
+            if instrument_pulses[instrument.name] and instrument_pulses[instrument.name].ro_pulses:
+                results = instrument.acquire()
+                existing_keys = set(acquisition_results.keys()) & set(results.keys())
+                for key, value in results.items():
+                    if key in existing_keys:
+                        acquisition_results[key].update(value)
+                    else:
+                        acquisition_results[key] = value
 
-        # change back the frequency of the pulses
-        for name in self.instruments:
-            roles[name] = self.settings["instruments"][name]["roles"]
-            if "readout" in roles[name]:
-                instrument_pulses[name] = sequence.get_channel_pulses(*self.instruments[name].channels)
-                for pulse in instrument_pulses[name]:
-                    if pulse.serial in changed:
-                        pippo = acquisition_results[pulse.serial]
-                        # if abs(pulse.frequency) > 300e6:
-                        pulse.frequency += self.get_lo_readout_frequency(pulse.qubit)
-                        acquisition_results[pulse.serial] = pippo
-            if "control" in roles[name]:
-                instrument_pulses[name] = sequence.get_channel_pulses(*self.instruments[name].channels)
-                for pulse in instrument_pulses[name]:
-                    if pulse.serial in changed:
-                        pulse.frequency += self.get_lo_drive_frequency(pulse.qubit)
+        data = {}
+        # STEP 4: change back pulse frequencies
+        for instrument in readout_instruments + control_instruments:
+            for pulse in copy.deepcopy(instrument_pulses[instrument.name]):
+                for change in changed:
+                    if pulse == change:
+                        if instrument in readout_instruments:
+                            result = acquisition_results[pulse.serial]
+                            pulse.frequency += self.get_lo_readout_frequency(pulse.qubit)
+                            acquisition_results[pulse.serial] = result
+                        elif instrument in control_instruments:
+                            pulse.frequency += self.get_lo_drive_frequency(pulse.qubit)
+                if instrument in readout_instruments:
+                    data[pulse.serial] = ExecutionResults.from_components(*acquisition_results[pulse.serial])
+                    data[pulse.qubit] = copy.copy(data[pulse.serial])
 
-        for ro_pulse in ro_pulses.values():
-            data[ro_pulse.serial] = ExecutionResults.from_components(*acquisition_results[ro_pulse.serial])
-            data[ro_pulse.qubit] = copy.copy(data[ro_pulse.serial])
         return data
 
     def sweep(self, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
@@ -326,14 +309,14 @@ class MultiqubitPlatform(AbstractPlatform):
                 for original_pulse, new_serial in map_original_shifted.items():
                     acquisition = result[new_serial].compute_average() if average else result[new_serial]
 
-                    if results:
+                    if original_pulse.serial in results:
                         results[original_pulse.serial] += acquisition
                         results[original_pulse.qubit] += acquisition
                     else:
                         results[original_pulse.serial] = acquisition
                         results[original_pulse.qubit] = copy.copy(results[original_pulse.serial])
 
-        # restore initial value of the pul
+        # restore initial value of the pulse
         if sweeper.pulses is not None:
             self._restore_initial_value(sweeper, sweeper_pulses, original_value)
 
@@ -374,18 +357,19 @@ class MultiqubitPlatform(AbstractPlatform):
         if sweeper.pulses is not None:
             pulses = sweeper_pulses[sweeper.parameter]
             for pulse in pulses:
+                update_value = value
                 if sweeper.parameter is Parameter.frequency:
                     if pulses[pulse].type is PulseType.READOUT:
-                        value += self.qubits[pulses[pulse].qubit].readout_frequency
+                        update_value += self.qubits[pulses[pulse].qubit].readout_frequency
                     else:
-                        value += self.qubits[pulses[pulse].qubit].drive_frequency
-                    setattr(pulses[pulse], sweeper.parameter.name, value)
+                        update_value += self.qubits[pulses[pulse].qubit].drive_frequency
+                    setattr(pulses[pulse], sweeper.parameter.name, update_value)
                 elif sweeper.parameter is Parameter.amplitude:
                     if pulses[pulse].type is PulseType.READOUT:
                         current_amplitude = self.native_gates["single_qubit"][pulses[pulse].qubit]["MZ"]["amplitude"]
                     else:
                         current_amplitude = self.native_gates["single_qubit"][pulses[pulse].qubit]["RX"]["amplitude"]
-                    setattr(pulses[pulse], sweeper.parameter.name, float(current_amplitude * value))
+                    setattr(pulses[pulse], sweeper.parameter.name, float(current_amplitude * update_value))
                 if pulses[pulse].type is PulseType.READOUT:
                     to_modify = [
                         pulse1 for pulse1 in original_sequence.ro_pulses if pulse1.qubit == pulses[pulse].qubit

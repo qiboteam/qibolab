@@ -106,8 +106,8 @@ class AbstractPlatform(ABC):
         self.relaxation_time = None
         self.sampling_rate = None
 
-        self.native_single_qubit_gates = {}
-        self.two_qubit_natives = TwoQubitNatives
+        self.single_qubit_natives = {}
+        self.two_qubit_natives = None
         # Load platform settings
         self.reload_settings()
 
@@ -136,7 +136,7 @@ class AbstractPlatform(ABC):
 
         # TODO: Create better data structures for native gates
         self.native_gates = settings["native_gates"]
-        self.native_single_qubit_gates = self.native_gates["single_qubit"]
+        self.single_qubit_natives = self.native_gates["single_qubit"]
         if "two_qubit" in self.native_gates:
             for gate in self.native_gates["two_qubit"].values():
                 self.two_qubit_natives |= TwoQubitNatives[gate]
