@@ -213,6 +213,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         relaxation_time: int = None,
         nshots: int = None,
         average: bool = False,
+        raw_adc: bool = False
     ) -> Dict[str, ExecutionResults]:
         """Executes the sequence of instructions and retrieves readout results.
            Each readout pulse generates a separate acquisition.
@@ -225,10 +226,14 @@ class TII_RFSOC4x2(AbstractInstrument):
             nshots (int): Number of repetitions (shots) of the experiment.
             relaxation_time (int): Time to wait for the qubit to relax to its
                                    ground state between shots in ns.
+            raw_adc (bool): allows to acquire raw adc data
         Returns:
             A dictionary mapping the readout pulses serial to
             `qibolab.ExecutionResults` objects
         """
+
+        if raw_adc:
+            raise NotImplementedError("Raw data acquisition is not supported")
 
         # if new value are passed, they are updated in the config obj
         if nshots is not None:
