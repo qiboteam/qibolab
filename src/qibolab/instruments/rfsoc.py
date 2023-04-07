@@ -1,7 +1,9 @@
 """ RFSoC FPGA driver.
+
 This driver needs the library Qick installed
 Supports the following FPGA:
  *   RFSoC 4x2
+ *   ZCU111
 """
 
 import pickle
@@ -13,14 +15,14 @@ import numpy as np
 
 from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.platforms.abstract import Qubit
-from qibolab.pulses import Pulse, PulseSequence, PulseType, ReadoutPulse, Rectangular
+from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import AveragedResults, ExecutionResults
 from qibolab.sweeper import Parameter, Sweeper
 
 
 @dataclass
 class QickProgramConfig:
-    sampling_rate: int = 9_830_400_000
+    sampling_rate: int = None
     repetition_duration: int = 100_000
     adc_trig_offset: int = 200
     max_gain: int = 32_000
@@ -30,12 +32,13 @@ class QickProgramConfig:
     LO_freq: Optional[int] = None
 
 
-class TII_RFSOC4x2(AbstractInstrument):
+class RFSoC(AbstractInstrument):
     """Instrument object for controlling the RFSoC4x2 FPGA.
     Playing pulses requires first the execution of the ``setup`` function.
     The two way of executing pulses are with ``play`` (for arbitrary
     qibolab ``PulseSequence``) or with ``sweep`` that execute a
     ``PulseSequence`` object with one or more ``Sweeper``.
+
     Args:
         name (str): Name of the instrument instance.
     Attributes:
@@ -306,15 +309,6 @@ class TII_RFSOC4x2(AbstractInstrument):
 
         # If sweepers are still in queue
         else:
-            # check that the first (outest) sweeper is supported
-            sweeper = sweepers[0]
-            if len(sweeper.pulses) > 1:
-                raise NotImplementedError("Only one pulse per sweep supported")
-            is_amp = sweeper.parameter == Parameter.amplitude
-            is_freq = sweeper.parameter == Parameter.frequency
-            if not (is_amp or is_freq):
-                raise NotImplementedError("Parameter type not implemented")
-
             # if there is one sweeper supported by qick than use hardware sweep
             if len(sweepers) == 1 and not self.get_if_python_sweep(sequence, qubits, *sweepers):
                 toti, totq = self.call_executesinglesweep(
@@ -328,11 +322,19 @@ class TII_RFSOC4x2(AbstractInstrument):
             else:
                 sweep_results = {}
                 idx_pulse = or_sequence.index(sweeper.pulses[0])
+
+                sweeper = sweepers[0]
+                is_amp = sweeper.parameter == Parameter.amplitude
+                is_freq = sweeper.parameter == Parameter.frequency
+                is_bias = sweeper.parameter == Parameter.bias
+
                 for val in sweeper.values:
                     if is_freq:
                         sequence[idx_pulse].frequency = val
                     elif is_amp:
                         sequence[idx_pulse].amplitude = val
+                    elif is_bias:
+                        qubits[sweeper.pulses[0].qubit].bias = val
                     res = self.recursive_python_sweep(qubits, sequence, or_sequence, *sweepers[1:], average=average)
                     # merge the dictionary obtained with the one already saved
                     sweep_results = self.merge_sweep_results(sweep_results, res)
@@ -377,6 +379,9 @@ class TII_RFSOC4x2(AbstractInstrument):
             loop, false otherwise
         """
 
+        # TODO NotImplemented
+        return True
+
         # is_amp = sweepers[0].parameter == Parameter.amplitude
         is_freq = sweepers[0].parameter == Parameter.frequency
 
@@ -415,6 +420,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         average: bool,
     ) -> Dict[str, Union[ExecutionResults, AveragedResults]]:
         """Convert sweep res to qibolab dict res
+
         Args:
             *sweepers (`qibolab.Sweeper`): Sweeper objects.
             original_ro (list): list of ro serials of the original sequence
@@ -460,6 +466,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         """Executes the sweep and retrieves the readout results.
         Each readout pulse generates a separate acquisition.
         The relaxation_time and the number of shots have default values.
+
         Args:
             qubits (list): List of `qibolab.platforms.utils.Qubit` objects
                            passed from the platform.
@@ -479,12 +486,26 @@ class TII_RFSOC4x2(AbstractInstrument):
         if relaxation_time is not None:
             self.cfg.repetition_duration = relaxation_time
 
+        # TODO temporary solution (unpack sweepers to multiple sweepers)
+        if len(sweepers[0].pulses) > 1:
+            new_sweepers = []
+            for pulse in sweepers[0].pulses:
+                sw = Sweeper(sweepers[0].parameter, sweepers[0].values, pulses=[pulse])
+                new_sweepers.append(sw)
+
+        old_sweepers = sweepers
+        sweepers = new_sweepers
+
         # sweepers.values are modified to reflect actual sweeped values
         for sweeper in sweepers:
             if sweeper.parameter == Parameter.frequency:
                 sweeper.values += sweeper.pulses[0].frequency
             elif sweeper.parameter == Parameter.amplitude:
                 continue  # amp does not need modification, here for clarity
+            elif sweeper.parameter == Parameter.bias:
+                continue  # bias does not need modification, here for clarity
+            else:
+                raise NotImplementedError(f"Sweeper parameter {sweeper.parameter} not supported")
 
         sweepsequence = sequence.copy()
 
@@ -496,11 +517,24 @@ class TII_RFSOC4x2(AbstractInstrument):
                 sweeper.values -= sweeper.pulses[0].frequency
             elif sweeper.parameter == Parameter.amplitude:
                 continue
+            elif sweeper.parameter == Parameter.bias:
+                continue
 
+        sweepers = old_sweepers
         return results
 
 
-class TII_ZCU111(TII_RFSOC4x2):  # Containes the main settings:
+class TII_RFSOC4x2(RFSoC):  # Containes the main settings:
+    def __init__(self, name: str, address: str):
+        super().__init__(name, address=address)
+        self.host, self.port = address.split(":")
+        self.port = int(self.port)
+        self.cfg = QickProgramConfig(
+            sampling_rate=9_830_400_000,
+        )
+
+
+class TII_ZCU111(RFSoC):  # Containes the main settings:
     def __init__(self, name: str, address: str):
         super().__init__(name, address=address)
         self.host, self.port = address.split(":")
