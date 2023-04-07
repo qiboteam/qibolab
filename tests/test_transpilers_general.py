@@ -97,6 +97,7 @@ def test_can_execute():
     circuit.add(gates.CZ(1, 2))
     circuit.add(gates.Z(1))
     circuit.add(gates.CZ(2, 1))
+    circuit.add(gates.M(0))
     assert can_execute(circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits"))
 
 
@@ -124,12 +125,10 @@ def test_cannot_execute_native3q():
     assert not can_execute(circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits"))
 
 
-# TODO fix raise error, should return false
 def test_cannot_execute_wrong_native():
     circuit = Circuit(5)
-    circuit.add(gates.CZ(0, 2))
-    with pytest.raises(AttributeError):
-        can_execute(circuit, two_qubit_natives=TwoQubitNatives.CNOT, connectivity=special_connectivity("5_qubits"))
+    circuit.add(gates.iSWAP(0, 2))
+    assert not can_execute(circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits"))
 
 
 def test_connectivity_and_samples():
