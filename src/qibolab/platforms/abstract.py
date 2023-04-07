@@ -107,8 +107,7 @@ class AbstractPlatform(ABC):
         self.sampling_rate = None
 
         self.single_qubit_natives = {}
-        # TODO: find a better initialization to start with an empty flag class
-        self.two_qubit_natives = TwoQubitNatives.CZ and TwoQubitNatives.iSWAP
+        self.two_qubit_natives = TwoQubitNatives(0)
         # Load platform settings
         self.reload_settings()
 
