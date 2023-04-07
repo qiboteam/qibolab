@@ -320,10 +320,10 @@ class RFSoC(AbstractInstrument):
 
             # if it's not possible to execute qick sweep re-call function
             else:
+                sweeper = sweepers[0]
                 sweep_results = {}
                 idx_pulse = or_sequence.index(sweeper.pulses[0])
 
-                sweeper = sweepers[0]
                 is_amp = sweeper.parameter == Parameter.amplitude
                 is_freq = sweeper.parameter == Parameter.frequency
                 is_bias = sweeper.parameter == Parameter.bias
@@ -486,15 +486,17 @@ class RFSoC(AbstractInstrument):
         if relaxation_time is not None:
             self.cfg.repetition_duration = relaxation_time
 
-        # TODO temporary solution (unpack sweepers to multiple sweepers)
-        if len(sweepers[0].pulses) > 1:
-            new_sweepers = []
-            for pulse in sweepers[0].pulses:
-                sw = Sweeper(sweepers[0].parameter, sweepers[0].values, pulses=[pulse])
-                new_sweepers.append(sw)
+        from copy import deepcopy
 
-        old_sweepers = sweepers
-        sweepers = new_sweepers
+        old_sweepers = deepcopy(list(sweepers))
+
+        # TODO temporary solution (unpack sweepers to multiple sweepers)
+        sweepers = []
+        for sweeper in old_sweepers:
+            for pulse in sweeper.pulses:
+                vals = deepcopy(sweeper.values)
+                sw = Sweeper(sweeper.parameter, vals, pulses=[pulse])
+                sweepers.append(sw)
 
         # sweepers.values are modified to reflect actual sweeped values
         for sweeper in sweepers:
