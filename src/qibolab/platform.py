@@ -681,6 +681,10 @@ def create_tii_qw25q_B(runcard, simulation_duration=None, address=None, cloud=Fa
 
     yaml.dump(qubits, open("qubits.yaml", "w"))
 
+    # set maximum allowed bias values to protect amplifier
+    # relevant only for qubits where an amplifier is used
+    for q in range(5):
+        platform.qubits[q].flux.max_bias = 0.2
     # Platfom topology
     Q = []
     for i in range(1, 7):
