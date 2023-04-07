@@ -107,7 +107,8 @@ class AbstractPlatform(ABC):
         self.sampling_rate = None
 
         self.single_qubit_natives = {}
-        self.two_qubit_natives = None
+        # TODO: find a better initialization to start with an empty flag class
+        self.two_qubit_natives = TwoQubitNatives.CZ and TwoQubitNatives.iSWAP
         # Load platform settings
         self.reload_settings()
 
@@ -134,13 +135,12 @@ class AbstractPlatform(ABC):
         self.relaxation_time = settings["settings"]["repetition_duration"]
         self.sampling_rate = settings["settings"]["sampling_rate"]
 
-        # TODO: Create better data structures for native gates
+        # Load native gates
         self.native_gates = settings["native_gates"]
         self.single_qubit_natives = self.native_gates["single_qubit"]
         if "two_qubit" in self.native_gates:
             for gate in self.native_gates["two_qubit"].values():
-                # TODO: fix this
-                self.two_qubit_natives = TwoQubitNatives.CZ
+                self.two_qubit_natives |= TwoQubitNatives[list(gate)[0]]
         else:
             # dummy value to avoid transpiler failure for single qubit devices
             self.two_qubit_natives = TwoQubitNatives.CZ
@@ -329,7 +329,6 @@ class AbstractPlatform(ABC):
         else:
             return self.settings["qubit_channel_map"][qubit][1]
 
-    # TODO: Maybe create a dataclass for native gates
     def create_RX90_pulse(self, qubit, start=0, relative_phase=0):
         pulse_kwargs = self.single_qubit_natives[qubit]["RX"]
         qd_duration = pulse_kwargs["duration"]
