@@ -19,6 +19,10 @@ def test_channel_errors():
     with pytest.raises(TypeError):
         channel.filter = "test"
     channel.filter = {}
+    # attempt to set bias higher than the allowed value
+    channel.max_bias = 0.2
+    with pytest.raises(ValueError):
+        channel.bias = 0.3
 
 
 def test_channel_map_from_names():

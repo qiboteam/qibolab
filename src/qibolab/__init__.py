@@ -1,3 +1,5 @@
-__version__ = "0.0.3.dev0"
+import importlib.metadata as im
+
+__version__ = im.version(__package__)
 
 from qibolab.platform import Platform

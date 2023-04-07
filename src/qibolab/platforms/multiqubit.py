@@ -307,7 +307,7 @@ class MultiqubitPlatform(AbstractPlatform):
 
                 # colllect result and append to original pulse
                 for original_pulse, new_serial in map_original_shifted.items():
-                    acquisition = result[new_serial].compute_average() if average else result[new_serial]
+                    acquisition = result[new_serial].average if average else result[new_serial]
 
                     if original_pulse.serial in results:
                         results[original_pulse.serial] += acquisition
@@ -362,7 +362,7 @@ class MultiqubitPlatform(AbstractPlatform):
                     if pulses[pulse].type is PulseType.READOUT:
                         update_value += self.qubits[pulses[pulse].qubit].readout_frequency
                     else:
-                        valupdate_valueue += self.qubits[pulses[pulse].qubit].drive_frequency
+                        update_value += self.qubits[pulses[pulse].qubit].drive_frequency
                     setattr(pulses[pulse], sweeper.parameter.name, update_value)
                 elif sweeper.parameter is Parameter.amplitude:
                     if pulses[pulse].type is PulseType.READOUT:

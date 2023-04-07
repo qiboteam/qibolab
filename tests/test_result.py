@@ -15,7 +15,7 @@ def generate_random_result(length=5):
 def generate_random_avg_result(length=5):
     i = np.random.rand(length)
     q = np.random.rand(length)
-    return AveragedResults(i, q)
+    return AveragedResults.from_components(i, q)
 
 
 def test_standard_constructor():
@@ -33,22 +33,22 @@ def test_execution_result_properties():
 
 
 @pytest.mark.parametrize("state", [0, 1])
-def test_to_dict_probability(state):
-    """Testing to_dict_probability method"""
+def test_serial_probability(state):
+    """Testing serial_probability method"""
     results = generate_random_result(5)
     if state == 0:
         target_dict = {"probability": results.ground_state_probability}
     else:
         target_dict = {"probability": 1 - results.ground_state_probability}
 
-    assert target_dict == results.to_dict_probability(state=state)
+    assert target_dict == results.serial_probability(state=state)
 
 
 @pytest.mark.parametrize("average", [True, False])
-def test_to_dict(average):
+def test_serial(average):
     """Testing to_dict method"""
     results = generate_random_result(5)
-    output = results.to_dict(average=average)
+    output = results.serial
     if not average:
         target_dict = {
             "MSR[V]": results.measurement,
@@ -60,14 +60,29 @@ def test_to_dict(average):
         for key in output:
             np.testing.assert_equal(output[key], target_dict[key])
     else:
-        avg = results.compute_average()
+        avg = results.average
         target_dict = {
             "MSR[V]": np.sqrt(avg.i**2 + avg.q**2),
             "i[V]": avg.i,
             "q[V]": avg.q,
             "phase[rad]": np.angle(avg.i + 1.0j * avg.q),
         }
-        assert results.to_dict(average=average) == target_dict
+        assert avg.serial == target_dict
+
+
+def test_results_add():
+    """Testing __add__ method of ExecutionResults"""
+    res_1 = generate_random_result(10)
+    res_2 = generate_random_result(5)
+
+    total = res_1 + res_2
+    target_i = np.append(res_1.i, res_2.i)
+    target_q = np.append(res_1.q, res_2.q)
+    target_shots = np.append(res_1.shots, res_2.shots)
+
+    np.testing.assert_equal(total.i, target_i)
+    np.testing.assert_equal(total.q, target_q)
+    np.testing.assert_equal(total.shots, target_shots)
 
 
 def test_averaged_results_add():
@@ -86,7 +101,7 @@ def test_averaged_results_add():
 def test_to_dict_averaged_results():
     """Testing to_dict method"""
     results = generate_random_avg_result(5)
-    output = results.to_dict()
+    output = results.serial
 
     target_dict = {
         "MSR[V]": np.sqrt(results.i**2 + results.q**2),
