@@ -91,13 +91,13 @@ class Transpiler:
         # Match connectivity
         mapped_circuit, final_mapping, init_mapping, added_swaps = self.match_connectivity(circuit)
         # Two-qubit gates to native
-        new = translate_circuit(mapped_circuit, two_qubit_natives=self._two_qubit_natives, translate_single_qubit=False)
+        new = translate_circuit(mapped_circuit, two_qubit_natives=self.two_qubit_natives, translate_single_qubit=False)
         # Optional: fuse one-qubit gates to reduce circuit depth
         if fuse_one_qubit:
             new = new.fuse(max_qubits=1)
         # One-qubit gates to native
         transpiled_circuit = translate_circuit(
-            new, two_qubit_natives=self._two_qubit_natives, translate_single_qubit=True
+            new, two_qubit_natives=self.two_qubit_natives, translate_single_qubit=True
         )
         return transpiled_circuit, final_mapping, init_mapping, added_swaps
 
@@ -356,9 +356,9 @@ class Transpiler:
         mapping_list = []
         meeting_point_list = []
         test_paths = list(range(len(path) - 1))
-        if self._sampling_split != 1.0:
+        if self.sampling_split != 1.0:
             test_paths = np.random.choice(
-                test_paths, size=int(np.ceil(len(test_paths) * self._sampling_split)), replace=False
+                test_paths, size=int(np.ceil(len(test_paths) * self.sampling_split)), replace=False
             )
         for i in test_paths:
             values = path_middle[:i] + path_ends + path_middle[i:]

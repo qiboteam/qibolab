@@ -118,6 +118,12 @@ def test_cannot_execute_native1q():
     assert not can_execute(circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits"))
 
 
+def test_cannot_execute_native3q():
+    circuit = Circuit(5)
+    circuit.add(gates.TOFFOLI(0, 1, 2))
+    assert not can_execute(circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits"))
+
+
 # TODO fix raise error, should return false
 def test_cannot_execute_wrong_native():
     circuit = Circuit(5)
@@ -153,14 +159,14 @@ def test_insufficient_qubits():
         transpiler.transpile(circ)
 
 
-@pytest.mark.parametrize("gates", [10, 50])
+@pytest.mark.parametrize("gates", [1, 10, 50])
 @pytest.mark.parametrize("qubits", [5, 21])
 @pytest.mark.parametrize(
     "natives", [TwoQubitNatives.CZ, TwoQubitNatives.iSWAP, TwoQubitNatives.CZ | TwoQubitNatives.iSWAP]
 )
 def test_random_circuits(gates, qubits, natives):
     transpiler = Transpiler(
-        connectivity=special_connectivity("21_qubits"), init_method="greedy", init_samples=20, two_qubit_natives=natives
+        connectivity=special_connectivity("21_qubits"), init_method="greedy", init_samples=50, two_qubit_natives=natives
     )
     circ = generate_random_circuit(nqubits=qubits, ngates=gates)
     transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
@@ -250,6 +256,21 @@ def test_split():
     )
     circ = generate_random_circuit(21, 50)
     transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
+    assert added_swaps >= 0
+    assert len(initial_map) == 21 and len(final_map) == 21
+    assert can_execute(
+        transpiled_circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("21_qubits")
+    )
+
+
+@pytest.mark.parametrize("one_q", [True, False])
+@pytest.mark.parametrize("two_q", [True, False])
+def test_fusion_algorithms(one_q, two_q):
+    transpiler = Transpiler(connectivity=special_connectivity("21_qubits"), init_method="greedy", init_samples=20)
+    circ = generate_random_circuit(21, 50)
+    transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(
+        circ, fusion_algorithm=two_q, fuse_one_qubit=one_q
+    )
     assert added_swaps >= 0
     assert len(initial_map) == 21 and len(final_map) == 21
     assert can_execute(
