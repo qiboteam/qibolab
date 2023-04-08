@@ -283,6 +283,35 @@ def test_qmsim_chevron(simulator, folder):
     assert_regression(samples, folder, "chevron")
 
 
+def test_qmsim_chevron_sweeper(simulator, folder):
+    lowfreq, highfreq = 1, 2
+    initialize_1 = simulator.create_RX_pulse(lowfreq, start=0, relative_phase=0)
+    initialize_2 = simulator.create_RX_pulse(highfreq, start=0, relative_phase=0)
+    flux_pulse = FluxPulse(
+        start=initialize_2.finish,
+        duration=20,
+        amplitude=0.05,
+        shape=Rectangular(),
+        channel=simulator.qubits[highfreq].flux.name,
+        qubit=highfreq,
+    )
+    measure_lowfreq = simulator.create_qubit_readout_pulse(lowfreq, start=flux_pulse.finish)
+    measure_highfreq = simulator.create_qubit_readout_pulse(highfreq, start=flux_pulse.finish)
+    sequence = PulseSequence()
+    sequence.add(initialize_1)
+    sequence.add(initialize_2)
+    sequence.add(flux_pulse)
+    sequence.add(measure_lowfreq)
+    sequence.add(measure_highfreq)
+
+    values = [10, 48]
+    sweeper = Sweeper(Parameter.duration, values, pulses=[flux_pulse])
+    result = simulator.sweep(sequence, sweeper, nshots=1, relaxation_time=0)
+
+    samples = result.get_simulated_samples()
+    assert_regression(samples, folder, "chevron_sweep")
+
+
 @pytest.mark.parametrize("qubits", [[1, 2], [2, 3]])
 @pytest.mark.parametrize("use_flux_pulse", [True, False])
 def test_qmsim_tune_landscape(simulator, folder, qubits, use_flux_pulse):

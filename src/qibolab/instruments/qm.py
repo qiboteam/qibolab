@@ -9,6 +9,7 @@ from qm import qua
 from qm.qua import (
     align,
     assign,
+    case_,
     declare,
     declare_stream,
     dual_demod,
@@ -21,6 +22,7 @@ from qm.qua import (
     reset_frame,
     reset_phase,
     stream_processing,
+    switch_,
     wait,
 )
 from qm.qua._dsl import _ResultSource, _Variable  # for type declaration only
@@ -31,7 +33,7 @@ from qualang_tools.units import unit
 
 from qibolab.designs.channels import check_max_bias
 from qibolab.instruments.abstract import AbstractInstrument
-from qibolab.pulses import Pulse, PulseType, Rectangular
+from qibolab.pulses import Pulse, PulseType, ReadoutPulse, Rectangular
 from qibolab.result import ExecutionResults
 from qibolab.sweeper import Parameter
 
@@ -419,7 +421,7 @@ class QMPulse:
         """Pulses that will be played after the current pulse.
         These pulses need to be re-aligned if we are sweeping the delay or duration."""
 
-        self.baked = None
+        self._baked = None
         """Baking object implementing the pulse when 1ns resolution is needed."""
         self.baked_amplitude = None
         """Amplitude of the baked pulse."""
@@ -438,31 +440,37 @@ class QMPulse:
         else:
             return None
 
+    @property
+    def baked(self):
+        return self._baked
+
+    @baked.setter
+    def baked(self, baked):
+        self._baked = baked
+        self.duration = baked.get_op_length()
+
     def declare_output(self, threshold=None, angle=None, raw_adc=False):
         self.acquisition = AcquisitionVariables(threshold=threshold, angle=angle, raw_adc=raw_adc)
 
-    def bake(self, config: QMConfig):
-        if self.baked is not None:
-            raise_error(RuntimeError, f"Bake was already called for {self.pulse}.")
-        # ! Only works for flux pulses that have zero Q waveform
 
-        # Create the different baked sequences, each one corresponding to a different truncated duration
-        # for t in range(self.pulse.duration + 1):
-        with baking(config.__dict__, padding_method="right") as self.baked:
-            # if t == 0:  # Otherwise, the baking will be empty and will not be created
-            #    wf = [0.0] * 16
-            # else:
-            # wf = waveform[:t].tolist()
-            if self.pulse.duration == 0:
-                waveform = [0.0] * 16
-            else:
-                waveform = self.pulse.envelope_waveform_i.data.tolist()
-            self.baked.add_op(self.pulse.serial, self.element, waveform)
-            self.baked.play(self.pulse.serial, self.element)
-            # Append the baking object in the list to call it from the QUA program
-            # self.segments.append(b)
-
-        self.duration = self.baked.get_op_length()
+def bake(qmpulse: QMPulse, config: QMConfig):
+    # ! Only works for flux pulses that have zero Q waveform
+    # Create the different baked sequences, each one corresponding to a different truncated duration
+    # for t in range(self.pulse.duration + 1):
+    with baking(config.__dict__, padding_method="right") as baked:
+        # if t == 0:  # Otherwise, the baking will be empty and will not be created
+        #    wf = [0.0] * 16
+        # else:
+        # wf = waveform[:t].tolist()
+        if qmpulse.pulse.duration == 0:
+            waveform = [0.0] * 16
+        else:
+            waveform = qmpulse.pulse.envelope_waveform_i.data.tolist()
+        baked.add_op(qmpulse.pulse.serial, qmpulse.element, waveform)
+        baked.play(qmpulse.pulse.serial, qmpulse.element)
+        # Append the baking object in the list to call it from the QUA program
+        # self.segments.append(b)
+    return baked
 
 
 @dataclass
@@ -485,6 +493,7 @@ class Sequence:
     """Map to find all pulses that finish at a given time (useful for ``_find_previous``)."""
 
     def _find_previous(self, pulse):
+        # TODO: Maybe the pulse timing should be determined using the symbolic expressions
         for finish in reversed(sorted(self.pulse_finish.keys())):
             if finish <= pulse.start:
                 # first try to find a previous pulse targeting the same qubit
@@ -492,6 +501,11 @@ class Sequence:
                 for previous in reversed(last_pulses):
                     if previous.pulse.qubit == pulse.qubit:
                         return previous
+                # if no pulse is found and this is measurement pulse
+                # remove the qubit constraint
+                # this is required for the Chevron sweep to work properly
+                if isinstance(pulse, ReadoutPulse):
+                    return last_pulses[-1]
         return None
 
     def add(self, pulse: Pulse):
@@ -630,7 +644,7 @@ class QMOPX(AbstractInstrument):
             if pulse.type is PulseType.FLUX:
                 # register flux element (if it does not already exist)
                 self.config.register_flux_element(qubits[pulse.qubit], pulse.frequency)
-                qmpulse.bake(self.config)
+                qmpulse.baked = bake(qmpulse, self.config)
             else:
                 if pulse.duration % 4 != 0 or pulse.duration < 16:
                     raise_error(NotImplementedError, "1ns resolution is available for flux pulses only.")
@@ -936,12 +950,47 @@ class QMOPX(AbstractInstrument):
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
 
+    def sweep_duration(self, sweepers, qubits, qmsequence, relaxation_time):
+        sweeper = sweepers[0]
+
+        duration = declare(int)
+        values = np.array(sweeper.values).astype(int)
+
+        # register baked pulses for all different durations
+        # TODO: Maybe this needs to be moved outside the program scope
+        segments = {}
+        for pulse in sweeper.pulses:
+            qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
+            segments[qmpulse] = []
+            for value in values:
+                original_duration = qmpulse.pulse.duration
+                qmpulse.pulse.duration = value
+                segments[qmpulse].append(bake(qmpulse, self.config))
+                qmpulse.pulse.duration = original_duration
+
+        with for_(*from_array(duration, values)):
+            with switch_(duration, unsafe=True):
+                for i, value in enumerate(values):
+                    with case_(value):
+                        for pulse in sweeper.pulses:
+                            qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
+                            qmpulse.baked = segments[qmpulse][i]
+                            # find all pulses that are connected to ``qmpulse`` and update their delays
+                            to_process = set(qmpulse.next)
+                            while to_process:
+                                next_qmpulse = to_process.pop()
+                                to_process |= next_qmpulse.next
+                                next_qmpulse.wait_time_variable = value // 4
+
+                        self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
+
     SWEEPERS = {
         Parameter.frequency: sweep_frequency,
         Parameter.amplitude: sweep_amplitude,
         Parameter.relative_phase: sweep_relative_phase,
         Parameter.bias: sweep_bias,
         Parameter.delay: sweep_delay,
+        Parameter.duration: sweep_duration,
     }
 
     def sweep_recursion(self, sweepers, qubits, qmsequence, relaxation_time):
