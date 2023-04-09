@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from qibolab.instruments.rfsoc import QickProgramConfig
+from qibolab.instruments.rfsoc import QickProgramConfig, create_qick_sweeps
 from qibolab.paths import qibolab_folder
 from qibolab.platform import create_tii_rfsoc4x2
 from qibolab.platforms.abstract import Qubit
@@ -83,12 +83,12 @@ def test_get_if_python_sweep():
     sweep1 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 100, 10), pulses=[sequence_1[0]])
     sweep2 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 100, 10), pulses=[sequence_1[1]])
     sweep3 = Sweeper(parameter=Parameter.amplitude, values=np.arange(0.01, 0.5, 0.1), pulses=[sequence_1[1]])
+    sweep1 = create_qick_sweeps([sweep1], sequence_1, platform.qubits)[0]
+    sweep2 = create_qick_sweeps([sweep2], sequence_1, platform.qubits)[0]
+    sweep3 = create_qick_sweeps([sweep3], sequence_1, platform.qubits)[0]
     sequence_2 = PulseSequence()
     sequence_2.add(platform.create_RX_pulse(qubit=0, start=0))
     sequence_2.add(platform.create_RX_pulse(qubit=0, start=100))
-
-    print(platform.qubits)
-    print
 
     assert instrument.get_if_python_sweep(sequence_1, platform.qubits, sweep2)
     assert instrument.get_if_python_sweep(sequence_2, platform.qubits, sweep1)
@@ -106,6 +106,7 @@ def test_convert_av_sweep_results():
     sequence.add(platform.create_MZ_pulse(qubit=0, start=100))
     sequence.add(platform.create_MZ_pulse(qubit=0, start=200))
     sweep1 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 35, 10), pulses=[sequence[0]])
+    sweep1 = create_qick_sweeps([sweep1], sequence, platform.qubits)[0]
     serial1 = sequence[1].serial
     serial2 = sequence[2].serial
 
@@ -135,6 +136,7 @@ def test_convert_nav_sweep_results():
     sequence.add(platform.create_MZ_pulse(qubit=0, start=100))
     sequence.add(platform.create_MZ_pulse(qubit=0, start=200))
     sweep1 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 35, 10), pulses=[sequence[0]])
+    sweep1 = create_qick_sweeps([sweep1], sequence, platform.qubits)[0]
     serial1 = sequence[1].serial
     serial2 = sequence[2].serial
 
