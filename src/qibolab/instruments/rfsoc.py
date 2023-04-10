@@ -59,12 +59,13 @@ def create_qick_sweeps(sweepers, sequence, qubits):
                     # starts.append(sweeper.values[0] * pulse.amplitude)
                     starts.append(sweeper.values[0])
         elif is_bias:
-            starts.append(sweeper.values[0])
+            for qubit in sweeper.qubits:
+                starts.append(sweeper.values[0])
 
         indexes = []
         if is_bias:
             for qubit in sweeper.qubits:
-                for idx, seq_qubit in qubits:
+                for idx, seq_qubit in enumerate(qubits):
                     if qubit == seq_qubit:
                         indexes.append(idx)
         else:
@@ -437,30 +438,37 @@ class RFSoC(AbstractInstrument):
             loop, false otherwise
         """
 
-        # is_amp = sweepers[0].parameter == Parameter.amplitude
-        is_freq = sweepers[0].parameter == Parameter.frequency
-
         # if there isn't only a sweeper do a python sweep
         if len(sweepers) != 1:
             return True
 
-        is_ro = sweepers[0].pulses[0].type == PulseType.READOUT
-        # if it's a sweep on the readout freq do a python sweep
-        if is_freq and is_ro:
-            return True
+        is_amp = sweepers[0].parameter is Parameter.amplitude
+        is_freq = sweepers[0].parameter is Parameter.frequency
+        is_bias = sweepers[0].parameter is Parameter.bias
 
-        # check if the sweeped pulse is the first on the DAC channel
-        for sweep_pulse in sweepers[0].pulses:
-            already_pulsed = []
-            for pulse in sequence:
-                pulse_q = qubits[pulse.qubit]
-                pulse_is_ro = pulse.type == PulseType.READOUT
-                pulse_ch = pulse_q.readout.ports[0][1] if pulse_is_ro else pulse_q.drive.ports[0][1]
+        if is_freq or is_amp:
+            is_ro = sweepers[0].pulses[0].type == PulseType.READOUT
+            # if it's a sweep on the readout freq do a python sweep
+            if is_freq and is_ro:
+                return True
 
-                if pulse_ch in already_pulsed and pulse == sweep_pulse:
-                    return True
-                else:
-                    already_pulsed.append(pulse_ch)
+            # check if the sweeped pulse is the first on the DAC channel
+            for sweep_pulse in sweepers[0].pulses:
+                already_pulsed = []
+                for pulse in sequence:
+                    pulse_q = qubits[pulse.qubit]
+                    pulse_is_ro = pulse.type == PulseType.READOUT
+                    pulse_ch = pulse_q.readout.ports[0][1] if pulse_is_ro else pulse_q.drive.ports[0][1]
+
+                    if pulse_ch in already_pulsed and pulse == sweep_pulse:
+                        return True
+                    else:
+                        already_pulsed.append(pulse_ch)
+        elif is_bias:
+            for sweep_qubit in sweepers[0].indexes:
+                for pulse in sequence.qf_pulses:
+                    if pulse.qubit is sweep_qubit:
+                        return True
 
         # if all passed, do a firmware sweep
         return False
