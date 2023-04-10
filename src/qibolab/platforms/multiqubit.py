@@ -45,6 +45,46 @@ class MultiqubitPlatform(AbstractPlatform):
         self.qubit_channel_map = self.settings["qubit_channel_map"]
         self.hardware_avg = self.settings["settings"]["hardware_avg"]
         self.repetition_duration = self.settings["settings"]["repetition_duration"]
+    
+    def update(self, updates: dict):
+        # update platform dependent parameters linked to instruments
+        for par, values in updates.items():
+            for qubit, value in values.items():
+                # log.info(f"qubit: {qubit} - parameter: {par} - values: {value}")
+                # log.info(f"qubit readout instrument: {self.qubit_instrument_map[qubit][0]}")
+                # log.info(f"qubit drive instrument: {self.qubit_instrument_map[qubit][1]}")
+                # log.info(f"qubit bias instrument: {self.qubit_instrument_map[qubit][2]}")
+                # log.info(f"qubit flux instrument: {self.qubit_instrument_map[qubit][3]}")
+
+                # log.info(f"qubit read out channel: {self.ro_channel[qubit]}")
+                # log.info(f"qubit qubit drive channel: {self.qd_channel[qubit]}")
+                # log.info(f"qubit qubit bias channel: {self.qb_channel[qubit]}")
+                # log.info(f"qubit qubit flux channel: {self.qf_channel[qubit]}")
+
+                if "attenuation" == par:
+                    attenuation = float(value)
+                    #save current_config
+                    instrument_name = self.qubit_instrument_map[qubit][0]
+                    self.current_config[instrument_name]["settings"]["ports"]["o1"] = attenuation
+                    #configure RO attenuation
+                    self.ro_port[qubit].attenuation = attenuation
+                
+                elif "threshold" == par:
+                    threshold = float(value)
+                    #save current_config
+                    instrument_name = self.qubit_instrument_map[qubit][0]
+                    self.current_config[instrument_name]["settings"]["classification_parameters"][qubit]["threshold"] = threshold
+                    instrument_name.setup( **self.current_config["settings"], **self.current_config["instruments"][instrument_name]["settings"])
+                
+                elif "rotation_angle" == par:
+                    rotation_angle = float(value)
+                    #save current_config
+                    instrument_name = self.qubit_instrument_map[qubit][0]
+                    self.current_config[instrument_name]["settings"]["classification_parameters"][qubit]["rotation_angle"] = rotation_angle
+                    instrument_name.setup( **self.current_config["settings"], **self.current_config["instruments"][instrument_name]["settings"])
+
+                else:
+                    super().update(updates)
 
     def set_lo_drive_frequency(self, qubit, freq):
         self.qd_port[qubit].lo_frequency = freq

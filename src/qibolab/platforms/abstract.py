@@ -178,8 +178,6 @@ class AbstractPlatform(ABC):
             updates (dict): Dictionary containing the parameters to update the runcard.
         """
 
-        #TODO: Call platform.setup() when an instrument parameter is modified after fitting. 
-        # for example att after punchout fitting or threshold/iq_angle after qubit states classification
         for par, values in updates.items():
             for qubit, value in values.items():
                 
