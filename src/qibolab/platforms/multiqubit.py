@@ -60,27 +60,40 @@ class MultiqubitPlatform(AbstractPlatform):
                 # log.info(f"qubit qubit drive channel: {self.qd_channel[qubit]}")
                 # log.info(f"qubit qubit bias channel: {self.qb_channel[qubit]}")
                 # log.info(f"qubit qubit flux channel: {self.qf_channel[qubit]}")
+                if par == "drive_frequency":
+                    freq = int(value * 1e9)
+                    #update QCM LO_frequency
+                    instrument_name = self.qubit_instrument_map[qubit][1]
+                    port = self.qdm[qubit].channel_port_map[self.qubit_channel_map[qubit][1]]
+                    drive_if = self.native_single_qubit_gates[qubit]["RX"]["if_frequency"]
+                    # log.info(f"qubit: {qubit} - instrument: {instrument_name} - port: {port} - drive freq: {freq}  - new drive LO freq : {freq - drive_if}")
+                    self.current_config["instruments"][instrument_name]["settings"]["ports"][port]["lo_frequency"] = freq - drive_if
+                    
+                    #configure LO drive frequency
+                    self.qd_port[qubit].lo_frequency = freq - drive_if
 
-                if "attenuation" == par:
+                elif par == "attenuation":
                     attenuation = float(value)
                     #save current_config
                     instrument_name = self.qubit_instrument_map[qubit][0]
-                    self.current_config[instrument_name]["settings"]["ports"]["o1"] = attenuation
+                    port = self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]
+                    #log.info(f"qubit: {qubit} - instrument: {instrument_name} - port: {port} ")
+                    self.current_config["instruments"][instrument_name]["settings"]["ports"][port]["attenuation"] = attenuation
                     #configure RO attenuation
                     self.ro_port[qubit].attenuation = attenuation
                 
-                elif "threshold" == par:
+                elif par == "threshold":
                     threshold = float(value)
                     #save current_config
                     instrument_name = self.qubit_instrument_map[qubit][0]
-                    self.current_config[instrument_name]["settings"]["classification_parameters"][qubit]["threshold"] = threshold
+                    self.current_config["instruments"][instrument_name]["settings"]["classification_parameters"][qubit]["threshold"] = threshold
                     instrument_name.setup( **self.current_config["settings"], **self.current_config["instruments"][instrument_name]["settings"])
                 
-                elif "rotation_angle" == par:
+                elif par == "rotation_angle":
                     rotation_angle = float(value)
                     #save current_config
                     instrument_name = self.qubit_instrument_map[qubit][0]
-                    self.current_config[instrument_name]["settings"]["classification_parameters"][qubit]["rotation_angle"] = rotation_angle
+                    self.current_config["instruments"][instrument_name]["settings"]["classification_parameters"][qubit]["rotation_angle"] = rotation_angle
                     instrument_name.setup( **self.current_config["settings"], **self.current_config["instruments"][instrument_name]["settings"])
 
                 else:

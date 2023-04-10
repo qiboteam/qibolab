@@ -200,13 +200,14 @@ class AbstractPlatform(ABC):
                     self.native_single_qubit_gates[qubit]["RX"]["frequency"] = freq
                     self.current_config["native_gates"]["single_qubit"][qubit]["RX"]["frequency"] = freq
                     
-                    if "if_frequency" in self.native_single_qubit_gates[qubit]["RX"]:
-                        self.native_single_qubit_gates[qubit]["RX"]["if_frequency"] = freq - self.get_lo_drive_frequency(qubit)
-                        self.current_config["native_gates"]["single_qubit"][qubit]["RX"]["if_frequency"] = freq - self.get_lo_drive_frequency(qubit)
+                    # if_frequency in drive_frequency is always fixed
+                    # if "if_frequency" in self.native_single_qubit_gates[qubit]["RX"]:
+                    #     self.native_single_qubit_gates[qubit]["RX"]["if_frequency"] = freq - self.get_lo_drive_frequency(qubit)
+                    #     self.current_config["native_gates"]["single_qubit"][qubit]["RX"]["if_frequency"] = freq - self.get_lo_drive_frequency(qubit)
 
                     # Ask Andrea if needed
-                    self.qubits[qubit].readout_frequency = freq
-                    self.current_config["characterization"]["single_qubit"][qubit]["readout_frequency"] = freq
+                    # self.qubits[qubit].readout_frequency = freq
+                    # self.current_config["characterization"]["single_qubit"][qubit]["readout_frequency"] = freq
 
                     self.qubits[qubit].drive_frequency = freq
                     self.current_config["characterization"]["single_qubit"][qubit]["drive_frequency"] = freq
