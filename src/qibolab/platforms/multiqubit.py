@@ -187,7 +187,7 @@ class MultiqubitPlatform(AbstractPlatform):
 
         # STEP 1: upload sequence
         for instrument in readout_instruments + control_instruments:
-            instrument_pulses[instrument.name] = sequence.get_channel_pulses(*instrument.channels)
+            instrument_pulses[instrument.name] = copy.deepcopy(sequence.get_channel_pulses(*instrument.channels))
             for pulse in instrument_pulses[instrument.name]:
                 # FIXME: this will not work with arbitrary frequencies
                 if abs(pulse.frequency) > instrument.FREQUENCY_LIMIT:
@@ -219,20 +219,12 @@ class MultiqubitPlatform(AbstractPlatform):
                         acquisition_results[key] = value
 
         data = {}
-        # STEP 4: change back pulse frequencies
-        for instrument in readout_instruments + control_instruments:
-            for pulse in copy.deepcopy(instrument_pulses[instrument.name]):
-                for change in changed:
-                    if pulse == change:
-                        if instrument in readout_instruments:
-                            result = acquisition_results[pulse.serial]
-                            pulse.frequency += self.get_lo_readout_frequency(pulse.qubit)
-                            acquisition_results[pulse.serial] = result
-                        elif instrument in control_instruments:
-                            pulse.frequency += self.get_lo_drive_frequency(pulse.qubit)
-                if instrument in readout_instruments:
-                    data[pulse.serial] = ExecutionResults.from_components(*acquisition_results[pulse.serial])
-                    data[pulse.qubit] = copy.copy(data[pulse.serial])
+        for serial in acquisition_results:
+            for if_pulse, original in changed.items():
+                if serial == if_pulse.serial:
+                    data[original] = data[if_pulse.qubit] = ExecutionResults.from_components(
+                        *acquisition_results[serial]
+                    )
 
         return data
 
@@ -264,6 +256,7 @@ class MultiqubitPlatform(AbstractPlatform):
             sweeper_pulses=sweeper_pulses,
             map_original_shifted=map_original_shifted,
         )
+
         return results
 
     def _sweep_recursion(
