@@ -257,13 +257,14 @@ def test_qmsim_allxy(simulator, folder, count, gate_pair):
     assert_regression(samples, folder, f"allxy{count}")
 
 
-def test_qmsim_chevron(simulator, folder):
+@pytest.mark.parametrize("duration", [31, 32])
+def test_qmsim_chevron(simulator, folder, duration):
     lowfreq, highfreq = 1, 2
     initialize_1 = simulator.create_RX_pulse(lowfreq, start=0, relative_phase=0)
     initialize_2 = simulator.create_RX_pulse(highfreq, start=0, relative_phase=0)
     flux_pulse = FluxPulse(
         start=initialize_2.finish,
-        duration=31,
+        duration=duration,
         amplitude=0.05,
         shape=Rectangular(),
         channel=simulator.qubits[highfreq].flux.name,
@@ -280,7 +281,7 @@ def test_qmsim_chevron(simulator, folder):
 
     result = simulator.execute_pulse_sequence(sequence, nshots=1)
     samples = result.get_simulated_samples()
-    assert_regression(samples, folder, "chevron")
+    assert_regression(samples, folder, f"chevron_{duration}")
 
 
 def test_qmsim_chevron_sweeper(simulator, folder):
