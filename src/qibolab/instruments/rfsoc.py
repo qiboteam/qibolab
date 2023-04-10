@@ -308,10 +308,12 @@ class RFSoC(AbstractInstrument):
                 serial = ro_pulse.serial
 
                 if average:
-                    results[serial] = AveragedResults(i_pulse, q_pulse)
+                    results[ro_pulse.qubit] = results[serial] = AveragedResults(i_pulse, q_pulse)
                 else:
                     shots = self.classify_shots(i_pulse, q_pulse, qubits[ro_pulse.qubit])
-                    results[serial] = ExecutionResults.from_components(i_pulse, q_pulse, shots)
+                    results[ro_pulse.qubit] = results[serial] = ExecutionResults.from_components(
+                        i_pulse, q_pulse, shots
+                    )
 
         return results
 
@@ -360,7 +362,11 @@ class RFSoC(AbstractInstrument):
             res = self.play(qubits, sequence, average=average)
             newres = {}
             for idx, key in enumerate(res):
-                newres[original_ro[idx // 2]] = res[key]
+                if idx % 2 == 1:
+                    newres[original_ro[idx // 2]] = res[key]
+                else:
+                    newres[key] = res[key]
+
             return newres
 
         elif len(sweepers) == 1 and not self.get_if_python_sweep(sequence, qubits, *sweepers):
@@ -375,7 +381,7 @@ class RFSoC(AbstractInstrument):
             if self.get_if_python_sweep(sequence, qubits, *sweepers):  # TODO modify
                 values = []
                 for idx, pulse in enumerate(sweeper.pulses):
-                    val = np.arange(0, sweeper.expts) * sweeper.step + sweepers.starts[idx]
+                    val = np.arange(0, sweeper.expts) * sweeper.step + sweeper.starts[idx]
                     values.append(val)
 
                 results = {}
@@ -444,16 +450,17 @@ class RFSoC(AbstractInstrument):
             return True
 
         # check if the sweeped pulse is the first on the DAC channel
-        already_pulsed = []
-        for pulse in sequence:
-            pulse_q = qubits[pulse.qubit]
-            pulse_is_ro = pulse.type == PulseType.READOUT
-            pulse_ch = pulse_q.readout.ports[0][1] if pulse_is_ro else pulse_q.drive.ports[0][1]
+        for sweep_pulse in sweepers[0].pulses:
+            already_pulsed = []
+            for pulse in sequence:
+                pulse_q = qubits[pulse.qubit]
+                pulse_is_ro = pulse.type == PulseType.READOUT
+                pulse_ch = pulse_q.readout.ports[0][1] if pulse_is_ro else pulse_q.drive.ports[0][1]
 
-            if pulse_ch in already_pulsed:
-                return True
-            else:
-                already_pulsed.append(pulse_ch)
+                if pulse_ch in already_pulsed and pulse == sweep_pulse:
+                    return True
+                else:
+                    already_pulsed.append(pulse_ch)
 
         # if all passed, do a firmware sweep
         return False
@@ -493,12 +500,20 @@ class RFSoC(AbstractInstrument):
                     i_pulse = np.array(toti[k][i][j])
                     q_pulse = np.array(totq[k][i][j])
 
+                    # this removes all zero elements from the array since qick
+                    # gives zero as a result when adc is off in mux ro
+                    # maybe this could be done better in qibosoq
+                    i_pulse = i_pulse[i_pulse != 0]
+                    q_pulse = q_pulse[q_pulse != 0]
+
                     if average:
-                        results[serial] = AveragedResults(i_pulse, q_pulse)
+                        results[sequence.ro_pulses[i].qubit] = results[serial] = AveragedResults(i_pulse, q_pulse)
                     else:
                         qubit = qubits[sequence.ro_pulses[i].qubit]
                         shots = self.classify_shots(i_pulse, q_pulse, qubit)
-                        results[serial] = ExecutionResults.from_components(i_pulse, q_pulse, shots)
+                        results[sequence.ro_pulses[i].qubit] = results[serial] = ExecutionResults.from_components(
+                            i_pulse, q_pulse, shots
+                        )
                 # merge new result with already saved ones
                 sweep_results = self.merge_sweep_results(sweep_results, results)
         return sweep_results
