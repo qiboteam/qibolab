@@ -35,7 +35,7 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.27579
-                frequency: 5_847_003_636
+                frequency: 5847236333
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -52,7 +52,7 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.294784
-                frequency: 5_992_061_631
+                frequency: 5992461631
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -69,7 +69,7 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.11704629603151873
-                frequency: 5_233_538_193
+                frequency: 5235417892
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
