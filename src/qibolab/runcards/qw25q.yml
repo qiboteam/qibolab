@@ -25,8 +25,8 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0040
-                frequency: 6886009383
+                amplitude: 0.001
+                frequency: 6.885325e+9
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -34,8 +34,8 @@ native_gates:
         A2:
             RX:
                 duration: 40
-                amplitude: 0.4755
-                frequency: 5.8513e+9
+                amplitude: 0.27579
+                frequency: 5_847_003_636
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -43,7 +43,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.003111
-                frequency: 7267518645
+                frequency: 7.267169e+9
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -51,8 +51,8 @@ native_gates:
         A3:
             RX:
                 duration: 40
-                amplitude: 0.31360000000000005
-                frequency: 5991311000
+                amplitude: 0.294784
+                frequency: 5_992_061_631
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -60,7 +60,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.0062
-                frequency: 7.5213366e+9
+                frequency: 7.521437e+9
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -68,8 +68,8 @@ native_gates:
         A4:
             RX:
                 duration: 40
-                amplitude: 0.11430302346828
-                frequency: 5239567901
+                amplitude: 0.11704629603151873
+                frequency: 5_233_538_193
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -77,7 +77,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.0025
-                frequency: 7119206723
+                frequency: 7.118957e+9
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -94,7 +94,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.0025
-                frequency: 7.691263E+09
+                frequency: 7.691499e+09
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -111,7 +111,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.0025
-                frequency: 7941361800
+                frequency: 7.940802e+9
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -433,11 +433,11 @@ characterization:
             drive_frequency: 5.8513e+9
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.489
+            sweetspot: -0.446
             filter: {}
             # parameters for single shot classification
-            threshold: 0.0
-            iq_angle: 0.0
+            threshold: 0.000381284307164716
+            iq_angle: 1.694513818627754
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -450,11 +450,11 @@ characterization:
             drive_frequency: 5.991311e+9
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.016
+            sweetspot: 0.303
             filter: {}
             # parameters for single shot classification
-            threshold:  0.00020222941643111404
-            iq_angle:  5.103481108701182
+            threshold:  0.00019707441633820758
+            iq_angle:  4.696365195011337
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -467,11 +467,11 @@ characterization:
             drive_frequency: 5.239805e+9
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.365
+            sweetspot: 0.025
             filter: {}
             # parameters for single shot classification
-            threshold: 0.0005338844703923734
-            iq_angle: 2.6099089349946785
+            threshold: 0.0005963967501651805
+            iq_angle: 1.587713989049901
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
