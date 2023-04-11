@@ -290,7 +290,7 @@ def test_qmsim_chevron_sweeper(simulator, folder):
     initialize_2 = simulator.create_RX_pulse(highfreq, start=0, relative_phase=0)
     flux_pulse = FluxPulse(
         start=initialize_2.finish,
-        duration=20,
+        duration=1,
         amplitude=0.05,
         shape=Rectangular(),
         channel=simulator.qubits[highfreq].flux.name,

@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from qm import qua
 
-from qibolab.instruments.qm import QMOPX, QMPulse, Sequence
+from qibolab.instruments.qm import QMOPX, QMPulse, Sequence, bake
 from qibolab.paths import qibolab_folder
 from qibolab.platform import create_tii_qw5q_gold
 from qibolab.pulses import FluxPulse, Pulse, ReadoutPulse, Rectangular
@@ -229,7 +229,7 @@ def test_qmopx_register_baked_pulse(duration):
     pulse = FluxPulse(3, duration, 0.05, Rectangular(), qubit.flux.name, qubit=qubit.name)
     qmpulse = QMPulse(pulse)
     config = opx.config
-    qmpulse.bake(config)
+    qmpulse.baked = bake(qmpulse, config)
 
     assert config.elements["flux3"]["operations"] == {"baked_Op_0": "flux3_baked_pulse_0"}
     if duration == 0:

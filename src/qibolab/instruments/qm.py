@@ -980,7 +980,9 @@ class QMOPX(AbstractInstrument):
                             while to_process:
                                 next_qmpulse = to_process.pop()
                                 to_process |= next_qmpulse.next
-                                next_qmpulse.wait_time_variable = value // 4
+                                next_qmpulse.wait_time += value // 4
+                                if value % 4 != 0:
+                                    next_qmpulse.wait_time += 1
 
                         self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
 
