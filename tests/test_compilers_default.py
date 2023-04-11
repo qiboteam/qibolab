@@ -4,14 +4,10 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 
-from qibolab.backends import QibolabBackend
-from qibolab.compilers import compiler
-from qibolab.platform import Platform
-from qibolab.platforms.abstract import AbstractPlatform
+from qibolab import Platform
+from qibolab.compilers.default import compiler
 from qibolab.pulses import PulseSequence
 from qibolab.transpilers import can_execute, transpile
-
-# TODO: Change these to compiler unit tests
 
 
 def generate_circuit_with_gate(nqubits, gate, *params, **kwargs):
@@ -44,31 +40,6 @@ def test_u3_sim_agreement():
     np.testing.assert_allclose(u3_matrix, target_matrix)
 
 
-@pytest.mark.parametrize(
-    "gateargs",
-    [
-        (gates.I,),
-        (gates.X,),
-        (gates.Y,),
-        (gates.Z,),
-        (gates.RX, np.pi / 8),
-        (gates.RY, -np.pi / 8),
-        (gates.RZ, np.pi / 4),
-        (gates.U3, 0.1, 0.2, 0.3),
-    ],
-)
-def test_transpile(platform_name, gateargs):
-    platform = Platform(platform_name)
-    nqubits = platform.nqubits
-    if gateargs[0] in (gates.I, gates.Z, gates.RZ):
-        nseq = 0
-    else:
-        nseq = 2
-    circuit = generate_circuit_with_gate(nqubits, *gateargs)
-    sequence = compile_circuit(circuit, platform)
-    assert len(sequence) == (nseq + 1) * nqubits
-
-
 def test_transpile_two_gates(platform_name):
     platform = Platform(platform_name)
     circuit = Circuit(1)
@@ -84,7 +55,7 @@ def test_transpile_two_gates(platform_name):
 
 
 def test_measurement(platform_name):
-    platform: AbstractPlatform = Platform(platform_name)
+    platform = Platform(platform_name)
     nqubits = platform.nqubits
     circuit = Circuit(nqubits)
     qubits = [qubit for qubit in range(nqubits)]

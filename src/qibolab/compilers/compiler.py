@@ -22,6 +22,9 @@ class Compiler:
             raise_error(KeyError, f"Cannot remove {item} from compiler because it does not exist.")
         self.rules.pop(item)
 
+    def __setitem__(self, key, rule):
+        self.rules[key] = rule
+
     def __getitem__(self, item):
         if item not in self.rules:
             raise_error(KeyError, f"Compiler rule not available for {item}.")
