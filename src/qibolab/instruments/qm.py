@@ -803,12 +803,12 @@ class QMOPX(AbstractInstrument):
                     acquisition = qmpulse.acquisition
                     Ist_temp = acquisition.I_stream
                     Qst_temp = acquisition.Q_stream
-                    if not average and qmpulse.threshold is not None:
+                    if not average and acquisition.threshold is not None:
                         shots_temp = qmpulse.shots
                     for sweeper in reversed(sweepers):
                         Ist_temp = Ist_temp.buffer(len(sweeper.values))
                         Qst_temp = Qst_temp.buffer(len(sweeper.values))
-                        if not average and qmpulse.threshold is not None:
+                        if not average and acquisition.threshold is not None:
                             shots_temp = shots_temp.buffer(len(sweeper.values))
                     serial = qmpulse.pulse.serial
                     if average:
@@ -817,7 +817,7 @@ class QMOPX(AbstractInstrument):
                     else:
                         Ist_temp.buffer(nshots).save(f"{serial}_I")
                         Qst_temp.buffer(nshots).save(f"{serial}_Q")
-                        if qmpulse.threshold is not None:
+                        if acquisition.threshold is not None:
                             shots_temp.buffer(nshots).save(f"{serial}_shots")
 
         result = self.execute_program(experiment)
