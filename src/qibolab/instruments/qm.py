@@ -969,7 +969,7 @@ class QMOPX(AbstractInstrument):
                 qmpulse.pulse.duration = original_duration
 
         with for_(*from_array(duration, values)):
-            with switch_(duration, unsafe=True):
+            with switch_(duration):
                 for i, value in enumerate(values):
                     with case_(value):
                         for pulse in sweeper.pulses:
