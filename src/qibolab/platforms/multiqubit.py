@@ -4,7 +4,7 @@ import numpy as np
 import yaml
 from qibo.config import log, raise_error
 
-from qibolab.platforms.abstract import AbstractPlatform
+from qibolab.platforms.abstract import AbstractPlatform, Qubit
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import ExecutionResults
 from qibolab.sweeper import Parameter
@@ -64,20 +64,20 @@ class MultiqubitPlatform(AbstractPlatform):
     def set_gain(self, qubit, gain):
         self.qd_port[qubit].gain = gain
 
-    def set_bias(self, qubit, bias):
-        if qubit in self.qbm:
-            self.qb_port[qubit].current = bias
-        elif qubit in self.qfm:
-            self.qf_port[qubit].offset = bias
+    def set_bias(self, qubit: Qubit, bias):
+        if qubit.name in self.qbm:
+            self.qb_port[qubit.name].current = bias
+        elif qubit.name in self.qfm:
+            self.qf_port[qubit.name].offset = bias
 
     def get_attenuation(self, qubit):
         return self.ro_port[qubit].attenuation
 
-    def get_bias(self, qubit):
-        if qubit in self.qbm:
-            return self.qb_port[qubit].current
-        elif qubit in self.qfm:
-            return self.qf_port[qubit].offset
+    def get_bias(self, qubit: Qubit):
+        if qubit.name in self.qbm:
+            return self.qb_port[qubit.name].current
+        elif qubit.name in self.qfm:
+            return self.qf_port[qubit.name].offset
 
     def get_gain(self, qubit):
         return self.qd_port[qubit].gain
@@ -324,7 +324,7 @@ class MultiqubitPlatform(AbstractPlatform):
             elif sweeper.parameter is Parameter.gain:
                 original_value[pulse] = self.get_gain(pulses[pulse].qubit)
             elif sweeper.parameter is Parameter.bias:
-                original_value[pulse] = self.get_bias(pulses[pulse].qubit)
+                original_value[pulse] = self.get_bias(self.qubits[pulses[pulse].qubit])
             else:
                 original_value[pulse] = getattr(pulses[pulse], sweeper.parameter.name)
 
@@ -339,7 +339,7 @@ class MultiqubitPlatform(AbstractPlatform):
             elif sweeper.parameter is Parameter.gain:
                 self.set_gain(pulses[pulse].qubit, original_value[pulse])
             elif sweeper.parameter is Parameter.bias:
-                self.set_bias(pulses[pulse].qubit, original_value[pulse])
+                self.set_bias(self.qubits[pulses[pulse].qubit], original_value[pulse])
             else:
                 setattr(pulses[pulse], sweeper.parameter.name, original_value[pulse])
 
