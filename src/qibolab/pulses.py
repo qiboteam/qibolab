@@ -637,7 +637,11 @@ class Pulse:
                 self._start = value
 
         if not self._duration is None:
-            if isinstance(self._start, se_int) or isinstance(self._duration, se_int) or isinstance(self._finish, se_int):
+            if (
+                isinstance(self._start, se_int)
+                or isinstance(self._duration, se_int)
+                or isinstance(self._finish, se_int)
+            ):
                 self._finish = se_int(self._start + self._duration)["_p" + str(self._id) + "_finish"]
             else:
                 self._finish = self._start + self._duration
@@ -679,7 +683,11 @@ class Pulse:
                 self._duration = value
 
         if not self._start is None:
-            if isinstance(self._start, se_int) or isinstance(self._duration, se_int) or isinstance(self._finish, se_int):
+            if (
+                isinstance(self._start, se_int)
+                or isinstance(self._duration, se_int)
+                or isinstance(self._finish, se_int)
+            ):
                 self._finish = se_int(self._start + self._duration)["_p" + str(self._id) + "_finish"]
             else:
                 self._finish = self._start + self._duration
