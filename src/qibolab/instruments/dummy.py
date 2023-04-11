@@ -38,7 +38,7 @@ class DummyInstrument(AbstractInstrument):
     def disconnect(self):
         log.info("Disconnecting dummy instrument.")
 
-    def play(self, qubits, sequence, nshots, relaxation_time):
+    def play(self, qubits, sequence, nshots, relaxation_time, raw_adc=False):
         time.sleep(relaxation_time)
 
         ro_pulses = {pulse.qubit: pulse.serial for pulse in sequence.ro_pulses}
@@ -122,17 +122,16 @@ class DummyInstrument(AbstractInstrument):
             else:
                 new_sequence = copy.deepcopy(sequence)
                 result = self.play(qubits, new_sequence, nshots, relaxation_time)
+
                 # colllect result and append to original pulse
                 for original_pulse, new_serial in map_original_shifted.items():
                     acquisition = result[new_serial].compute_average() if average else result[new_serial]
-
-                    if results:
+                    if original_pulse.serial in results:
                         results[original_pulse.serial] += acquisition
                         results[original_pulse.qubit] += acquisition
                     else:
                         results[original_pulse.serial] = acquisition
                         results[original_pulse.qubit] = copy.copy(results[original_pulse.serial])
-
         # restore initial value of the pulse
         if sweeper.pulses is not None:
             self._restore_initial_value(sweeper, sweeper_pulses, original_value)
@@ -145,7 +144,6 @@ class DummyInstrument(AbstractInstrument):
         for pulse in pulses:
             if sweeper.parameter not in [Parameter.attenuation, Parameter.gain, Parameter.bias]:
                 original_value[pulse] = getattr(pulses[pulse], sweeper.parameter.name)
-
         return original_value
 
     def _restore_initial_value(self, sweeper, sweeper_pulses, original_value):
