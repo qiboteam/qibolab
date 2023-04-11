@@ -18,14 +18,14 @@ native_gates:
             RX:
                 duration: 30
                 amplitude: 0.05
-                frequency: 5_541_940_000 #5_541_675_000
+                frequency: 5_542_000_000 #5_541_675_000
                 shape: Rectangular()
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 600
-                amplitude: 0.046
+                amplitude: 0.040
                 frequency: 7371800000
                 shape: Rectangular()
                 type: ro # readout
@@ -37,7 +37,7 @@ characterization:
         0:
             readout_frequency: 7.3718e+9
             resonator_polycoef_flux: []
-            drive_frequency: 5_541_940_000
+            drive_frequency: 5_542_000_000
             threshold: -1.555234
             rotation_angle: 324.276
             T1: 0.

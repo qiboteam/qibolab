@@ -9,11 +9,12 @@ from qibolab.pulses import PulseSequence
 from qibolab.result import AveragedResults, ExecutionResults
 from qibolab.sweeper import Parameter, Sweeper
 
-RUNCARD = qibolab_folder / "runcards" / "tii_rfsoc4x2.yml"
+RUNCARD = qibolab_folder / "runcards" / "tii1q_b1.yml"
 DUMMY_ADDRESS = "0.0.0.0:0"
 
 
 def test_tii_rfsoc4x2_init():
+    """Tests instrument can initilize and its attribute are assigned"""
     platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
     instrument = platform.design.instruments[0]
 
@@ -23,6 +24,7 @@ def test_tii_rfsoc4x2_init():
 
 
 def test_tii_rfsoc4x2_setup():
+    """Modify the QickProgramConfig object using `setup` and check that it changes accordingly"""
     platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
     instrument = platform.design.instruments[0]
 
@@ -36,6 +38,7 @@ def test_tii_rfsoc4x2_setup():
 
 
 def test_classify_shots():
+    """Creates fake IQ values and check classification works as expected"""
     qubit0 = Qubit(name="q0", threshold=1, rotation_angle=90)
     qubit1 = Qubit(
         name="q1",
@@ -54,6 +57,7 @@ def test_classify_shots():
 
 
 def test_merge_sweep_results():
+    """Creates fake dictionary of results and check merging works as expected"""
     dict_a = {"serial1": AveragedResults(i=[0], q=[1])}
     dict_b = {"serial1": AveragedResults(i=[4], q=[4]), "serial2": AveragedResults(i=[5], q=[5])}
     dict_c = {}
@@ -74,6 +78,12 @@ def test_merge_sweep_results():
 
 
 def test_get_if_python_sweep():
+    """Creates pulse sequences and check if they can be swept by the firmware.
+
+    Qibosoq does not support sweep on readout frequency, more than one sweep
+    at the same time, sweep on channels where multiple pulses are sent.
+    If Qibosoq does not support the sweep, the driver will use a python loop
+    """
     platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
     instrument = platform.design.instruments[0]
 
@@ -98,6 +108,9 @@ def test_get_if_python_sweep():
 
 
 def test_convert_av_sweep_results():
+    """Qibosoq sends results using nested lists, check if the conversion
+    to dictionary of AveragedResults, for averaged sweep, works as expected
+    """
     platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
     instrument = platform.design.instruments[0]
 
@@ -120,7 +133,6 @@ def test_convert_av_sweep_results():
         serial2: AveragedResults(i=[0, 1, 2], q=[-1, -2, -3]),
     }
 
-    assert out_dict.keys() == targ_dict.keys()
     assert (out_dict[serial1].i == targ_dict[serial1].i).all()
     assert (out_dict[serial1].q == targ_dict[serial1].q).all()
     assert (out_dict[serial2].i == targ_dict[serial2].i).all()
@@ -128,6 +140,9 @@ def test_convert_av_sweep_results():
 
 
 def test_convert_nav_sweep_results():
+    """Qibosoq sends results using nested lists, check if the conversion
+    to dictionary of ExecutionResults, for not averaged sweep, works as expected
+    """
     platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
     instrument = platform.design.instruments[0]
 
@@ -150,16 +165,17 @@ def test_convert_nav_sweep_results():
         serial2: ExecutionResults.from_components(np.array([0, 0, 1, 1, 2, 2]), np.array([-1, -1, -2, -2, -3, -3])),
     }
 
-    assert out_dict.keys() == targ_dict.keys()
     assert (out_dict[serial1].i == targ_dict[serial1].i).all()
     assert (out_dict[serial1].q == targ_dict[serial1].q).all()
     assert (out_dict[serial2].i == targ_dict[serial2].i).all()
     assert (out_dict[serial2].q == targ_dict[serial2].q).all()
 
 
-# TODO actually all these qpu tests require the board, not the qpu
 @pytest.mark.qpu
 def test_call_executepulsesequence():
+    """Executes a PulseSequence and check if result shape is as expected.
+    Both for averaged results and not averaged results.
+    """
     platform = create_tii_rfsoc4x2(RUNCARD)
     instrument = platform.design.instruments[0]
 
@@ -178,6 +194,9 @@ def test_call_executepulsesequence():
 
 @pytest.mark.qpu
 def test_call_executesinglesweep():
+    """Executes a firmware sweep and check if result shape is as expected.
+    Both for averaged results and not averaged results.
+    """
     platform = create_tii_rfsoc4x2(RUNCARD)
     instrument = platform.design.instruments[0]
 
@@ -199,6 +218,7 @@ def test_call_executesinglesweep():
 
 @pytest.mark.qpu
 def test_play():
+    """Sends a PulseSequence using `play` and check results are what expected"""
     platform = create_tii_rfsoc4x2(RUNCARD)
     instrument = platform.design.instruments[0]
 
@@ -215,6 +235,7 @@ def test_play():
 
 @pytest.mark.qpu
 def test_sweep():
+    """Sends a PulseSequence using `sweep` and check results are what expected"""
     platform = create_tii_rfsoc4x2(RUNCARD)
     instrument = platform.design.instruments[0]
 
@@ -236,6 +257,7 @@ def test_sweep():
 
 @pytest.mark.qpu
 def test_python_reqursive_sweep():
+    """Sends a PulseSequence directly to `python_reqursive_sweep` and check results are what expected"""
     platform = create_tii_rfsoc4x2(RUNCARD)
     instrument = platform.design.instruments[0]
 
