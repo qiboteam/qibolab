@@ -818,7 +818,7 @@ class QMOPX(AbstractInstrument):
                     Ist_temp = acquisition.I_stream
                     Qst_temp = acquisition.Q_stream
                     if not average and acquisition.threshold is not None:
-                        shots_temp = qmpulse.shots
+                        shots_temp = acquisition.shots
                     for sweeper in reversed(sweepers):
                         Ist_temp = Ist_temp.buffer(len(sweeper.values))
                         Qst_temp = Qst_temp.buffer(len(sweeper.values))
