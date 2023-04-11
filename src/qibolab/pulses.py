@@ -709,7 +709,6 @@ class Pulse:
             return self._finish
         else:
             return se_int(self._finish)["_p" + str(self._id) + "_finish"]
-        return self._finish
 
     @property
     def amplitude(self) -> float:
