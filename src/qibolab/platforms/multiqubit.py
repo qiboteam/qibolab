@@ -300,7 +300,7 @@ class MultiqubitPlatform(AbstractPlatform):
 
                 # colllect result and append to original pulse
                 for original_pulse, new_serial in map_original_shifted.items():
-                    acquisition = result[new_serial].compute_average() if average else result[new_serial]
+                    acquisition = result[new_serial].average if average else result[new_serial]
 
                     if original_pulse.serial in results:
                         results[original_pulse.serial] += acquisition

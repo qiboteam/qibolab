@@ -32,10 +32,10 @@ class DesignPlatform(AbstractPlatform):
         self.design.disconnect()
         self.is_connected = False
 
-    def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None):
+    def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None, raw_adc=False):
         if relaxation_time is None:
             relaxation_time = self.relaxation_time
-        return self.design.play(self.qubits, sequence, nshots=nshots, relaxation_time=relaxation_time)
+        return self.design.play(self.qubits, sequence, nshots=nshots, relaxation_time=relaxation_time, raw_adc=raw_adc)
 
     def sweep(self, sequence, *sweepers, nshots=1024, relaxation_time=None, average=True):
         if relaxation_time is None:

@@ -364,7 +364,7 @@ class AbstractPlatform(ABC):
         return sequence
 
     @abstractmethod
-    def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None):
+    def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None, raw_adc=False):
         """Executes a pulse sequence.
 
         Args:
@@ -372,13 +372,15 @@ class AbstractPlatform(ABC):
             nshots (int): Number of shots to sample from the experiment. Default is 1024.
             relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
                 If ``None`` the default value provided as ``repetition_duration`` in the runcard will be used.
+            raw_adc (bool): If ``True`` it will return the raw ADC data instead of demodulating and integrating.
+                This is useful for some initial calibrations. Default is ``False``.
 
         Returns:
             Readout results acquired by after execution.
         """
 
-    def __call__(self, sequence, nshots=1024, relaxation_time=None):
-        return self.execute_pulse_sequence(sequence, nshots, relaxation_time)
+    def __call__(self, sequence, nshots=1024, relaxation_time=None, raw_adc=False):
+        return self.execute_pulse_sequence(sequence, nshots, relaxation_time, raw_adc)
 
     def sweep(self, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
         """Executes a pulse sequence for different values of sweeped parameters.
