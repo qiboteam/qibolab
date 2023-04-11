@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import List, Optional
 
 import numpy as np
 import yaml
@@ -177,7 +177,7 @@ class AbstractPlatform(ABC):
 
         # native gates
         settings["native_gates"] = {}
-        settings["native_gates"]["single_qubits"] = self.native_single_qubit_gates
+        settings["native_gates"]["single_qubit"] = self.native_single_qubit_gates
         settings["native_gates"]["two_qubits"] = self.native_two_qubit_gates
 
         settings["characterization"] = {}
