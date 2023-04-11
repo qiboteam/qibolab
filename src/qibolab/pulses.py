@@ -625,14 +625,20 @@ class Pulse:
         if isinstance(value, se_int):
             self._start = se_int(value.symbol)["_p" + str(self._id) + "_start"]
 
-        elif isinstance(value, np.integer):
-            self._start = int(value)
-        elif isinstance(value, int):
-            self._start = value
+        elif isinstance(self._start, se_int):
+            if isinstance(value, np.integer):
+                self._start.value = int(value)
+            elif isinstance(value, int):
+                self._start.value = value
+        else:
+            if isinstance(value, np.integer):
+                self._start = int(value)
+            elif isinstance(value, int):
+                self._start = value
 
         if not self._duration is None:
-            if isinstance(self._start, se_int) or isinstance(self._duration, se_int):
-                self._finish = (self._start + self._duration)["_p" + str(self._id) + "_finish"]
+            if isinstance(self._start, se_int) or isinstance(self._duration, se_int) or isinstance(self._finish, se_int):
+                self._finish = se_int(self._start + self._duration)["_p" + str(self._id) + "_finish"]
             else:
                 self._finish = self._start + self._duration
 
@@ -661,14 +667,20 @@ class Pulse:
         if isinstance(value, se_int):
             self._duration = se_int(value.symbol)["_p" + str(self._id) + "_duration"]
 
-        elif isinstance(value, np.integer):
-            self._duration = int(value)
-        elif isinstance(value, int):
-            self._duration = value
+        elif isinstance(self._duration, se_int):
+            if isinstance(value, np.integer):
+                self._duration.value = int(value)
+            elif isinstance(value, int):
+                self._duration.value = value
+        else:
+            if isinstance(value, np.integer):
+                self._duration = int(value)
+            elif isinstance(value, int):
+                self._duration = value
 
         if not self._start is None:
-            if isinstance(self._start, se_int) or isinstance(self._duration, se_int):
-                self._finish = (self._start + self._duration)["_p" + str(self._id) + "_finish"]
+            if isinstance(self._start, se_int) or isinstance(self._duration, se_int) or isinstance(self._finish, se_int):
+                self._finish = se_int(self._start + self._duration)["_p" + str(self._id) + "_finish"]
             else:
                 self._finish = self._start + self._duration
 
@@ -687,28 +699,25 @@ class Pulse:
     def se_start(self) -> se_int:
         """Returns a symbolic expression for the pulse start."""
 
-        if isinstance(self._start, se_int):
-            return self._start
-        else:
-            return se_int(self._start)["_p" + str(self._id) + "_start"]
+        if not isinstance(self._start, se_int):
+            self._start = se_int(self._start)["_p" + str(self._id) + "_start"]
+        return self._start
 
     @property
     def se_duration(self) -> se_int:
         """Returns a symbolic expression for the pulse duration."""
 
-        if isinstance(self._duration, se_int):
-            return self._duration
-        else:
-            return se_int(self._duration)["_p" + str(self._id) + "_duration"]
+        if not isinstance(self._duration, se_int):
+            self._duration = se_int(self._duration)["_p" + str(self._id) + "_duration"]
+        return self._duration
 
     @property
     def se_finish(self) -> se_int:
         """Returns a symbolic expression for the pulse finish."""
 
-        if isinstance(self._finish, se_int):
-            return self._finish
-        else:
-            return se_int(self._finish)["_p" + str(self._id) + "_finish"]
+        if not isinstance(self._finish, se_int):
+            self._finish = se_int(self._finish)["_p" + str(self._id) + "_finish"]
+        return self._finish
 
     @property
     def amplitude(self) -> float:
