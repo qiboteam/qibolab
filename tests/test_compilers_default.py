@@ -27,6 +27,31 @@ def compile_circuit(circuit, platform):
     return sequence
 
 
+@pytest.mark.parametrize(
+    "gateargs",
+    [
+        (gates.I,),
+        (gates.X,),
+        (gates.Y,),
+        (gates.Z,),
+        (gates.RX, np.pi / 8),
+        (gates.RY, -np.pi / 8),
+        (gates.RZ, np.pi / 4),
+        (gates.U3, 0.1, 0.2, 0.3),
+    ],
+)
+def test_transpile(platform_name, gateargs):
+    platform = Platform(platform_name)
+    nqubits = platform.nqubits
+    if gateargs[0] in (gates.I, gates.Z, gates.RZ):
+        nseq = 0
+    else:
+        nseq = 2
+    circuit = generate_circuit_with_gate(nqubits, *gateargs)
+    sequence = compile_circuit(circuit, platform)
+    assert len(sequence) == (nseq + 1) * nqubits
+
+
 def test_u3_sim_agreement():
     backend = NumpyBackend()
     theta, phi, lam = 0.1, 0.2, 0.3
