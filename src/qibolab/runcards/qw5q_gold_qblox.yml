@@ -343,6 +343,8 @@ characterization:
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
             sweetspot: 0.427
+            threshold: 
+            iq_angle:
         1:
             readout_frequency: 7_453_190_140
             drive_frequency: 4_852_013_000
@@ -353,6 +355,8 @@ characterization:
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
             sweetspot: 0.151
+            threshold: 
+            iq_angle:
         2:
             readout_frequency: 7_655_148_879
             drive_frequency: 5_795_026_000
@@ -363,6 +367,8 @@ characterization:
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
             sweetspot: -0.257
+            threshold: 
+            iq_angle:
         3:
             readout_frequency: 7_803_437_704
             drive_frequency: 6_761_250_000
@@ -373,6 +379,8 @@ characterization:
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
             sweetspot: 0.878
+            threshold: 
+            iq_angle:
         4:
             readout_frequency: 8_058_746_969
             drive_frequency: 6_588_003_000
@@ -383,6 +391,8 @@ characterization:
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
             sweetspot: -0.559
+            threshold: 
+            iq_angle:
         5:
             readout_frequency: 7_118_680_035
             drive_frequency: 4_700_000_000
@@ -393,3 +403,5 @@ characterization:
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
             sweetspot: 0
+            threshold: 
+            iq_angle:

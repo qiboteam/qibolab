@@ -169,7 +169,7 @@ class AbstractPlatform(ABC):
             yaml.dump(self.settings, file, sort_keys=False, indent=4, default_flow_style=None)
 
     def update(self, updates: dict):
-        r"""Updates the runcard.
+        r"""Updates platform common runcard parameters after calibration actions.
 
         Args:
 
@@ -178,7 +178,8 @@ class AbstractPlatform(ABC):
 
         for par, values in updates.items():
             for qubit, value in values.items():
-                # fitted resonator frequency from resonator spec experiment
+                
+                # resonator_spectroscopy / resonator_spectroscopy_flux / resonator_punchout_attenuation
                 if par == "readout_frequency":
                     freq = int(value * 1e9)
                     self.native_single_qubit_gates[qubit]["MZ"]["frequency"] = freq
@@ -195,85 +196,79 @@ class AbstractPlatform(ABC):
                     self.qubits[qubit].readout_frequency = freq
                     self.current_config["characterization"]["single_qubit"][qubit]["readout_frequency"] = freq
 
-                # fitted qubit frequency from qubit spec experiment
-                elif par == "drive_frequency":
-                    freq = int(value * 1e9)
-                    self.native_single_qubit_gates[qubit]["RX"]["frequency"] = freq
-                    self.current_config["native_gates"]["single_qubit"][qubit]["RX"]["frequency"] = freq
-
-                    # if_frequency in drive_frequency is always fixed
-                    # if "if_frequency" in self.native_single_qubit_gates[qubit]["RX"]:
-                    #     self.native_single_qubit_gates[qubit]["RX"]["if_frequency"] = freq - self.get_lo_drive_frequency(qubit)
-                    #     self.current_config["native_gates"]["single_qubit"][qubit]["RX"]["if_frequency"] = freq - self.get_lo_drive_frequency(qubit)
-
-                    # Ask Andrea if needed
-                    # self.qubits[qubit].readout_frequency = freq
-                    # self.current_config["characterization"]["single_qubit"][qubit]["readout_frequency"] = freq
-
-                    self.qubits[qubit].drive_frequency = freq
-                    self.current_config["characterization"]["single_qubit"][qubit]["drive_frequency"] = freq
-
-                # Fitted bare resonator frequency from punchout experiment
+                # resonator_punchout_attenuation
+                if par == "att@lp":
+                    #TODO: Are we going to save the att@lp somwhere in the native_gates or characterization?
+                    True
+                
+                # resonator_punchout_attenuation
                 # Ask Andrea: Needs to be added in all platform runcards?
                 elif par == "bare_resonator_frequency":
                     freq = int(value * 1e9)
                     self.qubits[qubit].bare_resonator_frequency = freq
                     self.current_config["characterization"]["single_qubit"][qubit]["bare_resonator_frequency"] = freq
 
-                # Fitted RX/MZ pulse amplitude from Rabi/resonator spec experiment
-                # TODO: Add update RX amplitude form flipping. Ask Andrea if we shpuld modify the flipping
+                # resonator_spectroscopy_flux / qubit_spectroscopy_flux
+                if par == "sweetspot":
+                    #TODO: update self.current_config["characterization"]["single_qubit"][qubit]["sweetspot"] = sweetspot
+                    True
+
+                # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
+                elif par == "drive_frequency":
+                    freq = int(value * 1e9)
+                    self.native_single_qubit_gates[qubit]["RX"]["frequency"] = freq
+                    self.current_config["native_gates"]["single_qubit"][qubit]["RX"]["frequency"] = freq
+
+
+                    self.qubits[qubit].drive_frequency = freq
+                    self.current_config["characterization"]["single_qubit"][qubit]["drive_frequency"] = freq
+
+
                 elif "amplitude" in par:
                     amplitude = float(value)
+                    # resonator_spectroscopy
                     if par == "readout_amplitude":
                         self.native_single_qubit_gates[qubit]["MZ"]["amplitude"] = amplitude
                         self.current_config["native_gates"]["single_qubit"][qubit]["MZ"]["amplitude"] = amplitude
 
-                    if par == "drive_amplitude":
+                    # rabi_amplitude / flipping
+                    if (par == "drive_amplitude" or par == "amplitudes"):
                         self.native_single_qubit_gates[qubit]["RX"]["amplitude"] = amplitude
                         self.current_config["native_gates"]["single_qubit"][qubit]["RX"]["amplitude"] = amplitude
 
-                # Fitted T2 from Ramsey experiment.
-                # Not a good T2 fitting. Probably we should remove from Ramsey and use only spin echo
-                elif par == "t2":
+                # rabi_duration
+                elif par == "drive_length":
+                    duration = float(value)
+                    self.native_single_qubit_gates[qubit]["RX"]["duration"] = duration
+                    self.current_config["native_gates"]["single_qubit"][qubit]["RX"]["duration"] = duration
+
+                # ramsey / spin_echo
+                elif (par == "t2" or par == "t2_spin_echo"):
                     self.qubits[qubit].T2 = float(value)
                     self.current_config["characterization"]["single_qubit"][qubit]["T2"] = float(value)
 
-                # Fitted T2 from spin echo experiment.
-                elif par == "t2_spin_echo":
-                    self.qubits[qubit].T2_spin_echo = int(value)
-                    self.current_config["characterization"]["single_qubit"][qubit]["t2_spin_echo"] = float(value)
-
-                # Fitted T1 from t1 experiment.
+                # t1
                 elif "t1" == par:
                     self.qubits[qubit].T1 = float(value)
-                    self.current_config["characterization"]["single_qubit"][qubit]["T2"] = float(value)
+                    self.current_config["characterization"]["single_qubit"][qubit]["T1"] = float(value)
 
-                # Fitted threshold from classify qubit states experiment.
-                # In qblox runcard these parameters are part of the instruments!
+                # classification
                 elif "threshold" == par:
                     self.qubits[qubit].thresold = float(value)
                     self.current_config["characterization"]["single_qubit"][qubit]["threshold"] = float(value)
 
-                # Fitted iq_angle from classify qubit states experiment.
-                # In qblox runcard these parameters are part of the instruments!
+                # classification
                 elif "iq_angle" == par:
                     self.qubits[qubit].iq_angle = float(value)
                     self.current_config["characterization"]["single_qubit"][qubit]["iq_angle"] = float(value)
 
-                # Fitted drive pulse Drag beta parameter from allXY drag pulse tunning experiment.
+                # drag pulse tunning
                 elif "beta" in par:
                     shape = self.native_single_qubit_gates[qubit]["RX"]["shape"]
                     rel_sigma = re.findall(r"[\d]+[.\d]+|[\d]*[.][\d]+|[\d]+", shape)[0]
                     self.native_single_qubit_gates[qubit]["RX"]["shape"] = f"Drag({rel_sigma}, {float(value)})"
                     self.current_config["native_gates"]["single_qubit"][qubit]["RX"][
                         "shape"
-                    ] = f"Drag({rel_sigma}, {float(value)})"
-
-                # Fitted drive pulse length from Rabi experiment.
-                elif "drive_length" in par:
-                    self.native_single_qubit_gates[qubit]["RX"]["duration"] = int(value)
-                    self.current_config["native_gates"]["single_qubit"][qubit]["RX"][
-                        "duration"
                     ] = f"Drag({rel_sigma}, {float(value)})"
 
                 else:

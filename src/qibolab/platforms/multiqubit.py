@@ -47,7 +47,12 @@ class MultiqubitPlatform(AbstractPlatform):
         self.repetition_duration = self.settings["settings"]["repetition_duration"]
 
     def update(self, updates: dict):
-        # update platform dependent parameters linked to instruments
+        r"""Updates platform dependent runcard parameters and set up platform instruments if needed.
+
+        Args:
+
+            updates (dict): Dictionary containing the parameters to update the runcard.
+        """
         for par, values in updates.items():
             for qubit, value in values.items():
                 # log.info(f"qubit: {qubit} - parameter: {par} - values: {value}")
@@ -60,35 +65,50 @@ class MultiqubitPlatform(AbstractPlatform):
                 # log.info(f"qubit qubit drive channel: {self.qd_channel[qubit]}")
                 # log.info(f"qubit qubit bias channel: {self.qb_channel[qubit]}")
                 # log.info(f"qubit qubit flux channel: {self.qf_channel[qubit]}")
+                        
+                # resonator_punchout_attenuation
+                if par == "att@lp":
+                    #TODO: update current_config[instruments][qrf][settings][ports][port_oX][attenuation]
+                    #TODO: set qubit instrument attenuation: self.ro_port[qubit].attenuation = att
+
+                    # attenuation = float(value)
+                    # # save current_config
+                    # instrument_name = self.qubit_instrument_map[qubit][0]
+                    # port = self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]
+                    # # log.info(f"qubit: {qubit} - instrument: {instrument_name} - port: {port} ")
+                    # self.current_config["instruments"][instrument_name]["settings"]["ports"][port][
+                    #     "attenuation"
+                    # ] = attenuation
+                    # # configure RO attenuation
+                    # self.ro_port[qubit].attenuation = attenuation
+                    True
+                
+                # resonator_spectroscopy_flux / qubit_spectroscopy_flux
+                if par == "sweetspot":
+                    #TODO: update current_config[instruments][qcm_bbX][settings][ports][port_oX][offset]
+                    #TODO: set qubit instrument offset: self.qb_port[qubit].current = sweetspot
+                    True
+
+                # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
                 if par == "drive_frequency":
                     freq = int(value * 1e9)
-                    # update QCM LO_frequency
+                    
+                    # update Qblox qubit LO drive frequency config
                     instrument_name = self.qubit_instrument_map[qubit][1]
                     port = self.qdm[qubit].channel_port_map[self.qubit_channel_map[qubit][1]]
                     drive_if = self.native_single_qubit_gates[qubit]["RX"]["if_frequency"]
-                    # log.info(f"qubit: {qubit} - instrument: {instrument_name} - port: {port} - drive freq: {freq}  - new drive LO freq : {freq - drive_if}")
                     self.current_config["instruments"][instrument_name]["settings"]["ports"][port]["lo_frequency"] = (
                         freq - drive_if
                     )
 
-                    # configure LO drive frequency
+                    # set Qblox qubit LO drive frequency
                     self.qd_port[qubit].lo_frequency = freq - drive_if
 
-                elif par == "attenuation":
-                    attenuation = float(value)
-                    # save current_config
-                    instrument_name = self.qubit_instrument_map[qubit][0]
-                    port = self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]
-                    # log.info(f"qubit: {qubit} - instrument: {instrument_name} - port: {port} ")
-                    self.current_config["instruments"][instrument_name]["settings"]["ports"][port][
-                        "attenuation"
-                    ] = attenuation
-                    # configure RO attenuation
-                    self.ro_port[qubit].attenuation = attenuation
 
-                elif par == "threshold":
+                # classification
+                if par == "threshold":
                     threshold = float(value)
-                    # save current_config
+                    # update Qblox qubit classification threshold
                     instrument_name = self.qubit_instrument_map[qubit][0]
                     self.current_config["instruments"][instrument_name]["settings"]["classification_parameters"][qubit][
                         "threshold"
@@ -98,9 +118,10 @@ class MultiqubitPlatform(AbstractPlatform):
                         **self.current_config["instruments"][instrument_name]["settings"],
                     )
 
-                elif par == "rotation_angle":
+                # classification
+                if par == "iq_angle":
                     rotation_angle = float(value)
-                    # save current_config
+                    # update Qblox qubit classification iq angle
                     instrument_name = self.qubit_instrument_map[qubit][0]
                     self.current_config["instruments"][instrument_name]["settings"]["classification_parameters"][qubit][
                         "rotation_angle"
@@ -110,8 +131,7 @@ class MultiqubitPlatform(AbstractPlatform):
                         **self.current_config["instruments"][instrument_name]["settings"],
                     )
 
-                else:
-                    super().update(updates)
+                super().update(updates)
 
     def set_lo_drive_frequency(self, qubit, freq):
         self.qd_port[qubit].lo_frequency = freq
