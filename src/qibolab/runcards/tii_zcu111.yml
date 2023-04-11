@@ -34,7 +34,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.0025
-                frequency: 7_226_500_000
+                frequency: 6_950_000_000 #7_050_000_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -52,7 +52,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.003575
-                frequency: 7_453_265_000
+                frequency: 7_340_000_000 # 7_450_000_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -70,7 +70,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.003575
-                frequency: 7_453_265_000
+                frequency: 7_120_265_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0

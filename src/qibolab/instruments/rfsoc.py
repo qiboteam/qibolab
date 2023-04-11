@@ -381,20 +381,27 @@ class RFSoC(AbstractInstrument):
             sweeper = sweepers[0]
             if self.get_if_python_sweep(sequence, qubits, *sweepers):  # TODO modify
                 values = []
-                for idx, pulse in enumerate(sweeper.pulses):
-                    val = np.arange(0, sweeper.expts) * sweeper.step + sweeper.starts[idx]
-                    values.append(val)
+                if sweeper.parameter is Parameter.frequency or sweeper.parameter is Parameter.amplitude:
+                    for idx, _ in enumerate(sweeper.pulses):
+                        val = np.arange(0, sweeper.expts) * sweeper.step + sweeper.starts[idx]
+                        values.append(val)
+                else:
+                    for idx, _ in enumerate(sweeper.indexes):
+                        val = np.arange(0, sweeper.expts) * sweeper.step + sweeper.starts[idx]
+                        values.append(val)
 
                 results = {}
                 for idx in range(sweeper.expts):
                     # update values
-                    for jdx in range(len(sweeper.pulses)):
-                        if sweeper.parameter is Parameter.frequency:
-                            sequence[sweeper.indexes[jdx]].frequency = values[jdx][idx]
-                        elif sweeper.parameter is Parameter.amplitude:
-                            sequence[sweeper.indexes[jdx]].amplitude = values[jdx][idx]
-                        elif sweeper.parameter is Parameter.bias:
-                            qubits[sweeper.indexes[jdx]].bias = values[jdx][idx]
+                    if sweeper.parameter is Parameter.frequency or sweeper.parameter is Parameter.amplitude:
+                        for jdx in range(len(sweeper.pulses)):
+                            if sweeper.parameter is Parameter.frequency:
+                                sequence[sweeper.indexes[jdx]].frequency = values[jdx][idx]
+                            elif sweeper.parameter is Parameter.amplitude:
+                                sequence[sweeper.indexes[jdx]].amplitude = values[jdx][idx]
+                    else:
+                        for jdx in sweeper.indexes:
+                            qubits[jdx].flux.bias = values[jdx][idx]
 
                     res = self.recursive_python_sweep(qubits, sequence, original_ro, *sweepers[1:], average=average)
                     results = self.merge_sweep_results(res, results)
@@ -465,6 +472,7 @@ class RFSoC(AbstractInstrument):
                     else:
                         already_pulsed.append(pulse_ch)
         elif is_bias:
+            return True
             for sweep_qubit in sweepers[0].indexes:
                 for pulse in sequence.qf_pulses:
                     if pulse.qubit is sweep_qubit:
