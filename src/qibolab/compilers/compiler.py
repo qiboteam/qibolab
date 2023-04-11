@@ -1,6 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
 
+import numpy as np
 from qibo import gates
 from qibo.config import raise_error
 
