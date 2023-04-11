@@ -98,15 +98,7 @@ class QibolabBackend(NumpyBackend):
 
         # Register measurement outcomes
         if isinstance(readout, dict):
-            for gate in native_circuit.queue:
-                if isinstance(gate, gates.M):
-                    samples = []
-                    for serial in gate.pulses:
-                        shots = readout[serial].shots
-                        if shots is not None:
-                            samples.append(shots)
-                    gate.result.backend = self
-                    gate.result.register_samples(np.array(samples).T)
+            self.compiler.assign_measurements(self, readout)
         return result
 
     def circuit_result_tensor(self, result):

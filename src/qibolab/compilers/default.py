@@ -72,11 +72,8 @@ def cz_rule(gate, platform):
 @compiler.register(gates.M)
 def measurement_rule(gate, platform):
     """Measurement gate applied using the platform readout pulse."""
-    gate.pulses = ()
     sequence = PulseSequence()
     for qubit in gate.target_qubits:
         MZ_pulse = platform.create_MZ_pulse(qubit, start=0)
         sequence.add(MZ_pulse)
-        # TODO: Remove this so that the compiler does not modify the circuit object
-        gate.pulses = (*gate.pulses, MZ_pulse.serial)
     return sequence, {}
