@@ -630,7 +630,7 @@ class Pulse:
         elif isinstance(value, int):
             self._start = value
 
-        if self._duration:
+        if not self._duration is None:
             if isinstance(self._start, se_int) or isinstance(self._duration, se_int):
                 self._finish = (self._start + self._duration)["_p" + str(self._id) + "_finish"]
             else:
@@ -666,7 +666,7 @@ class Pulse:
         elif isinstance(value, int):
             self._duration = value
 
-        if self._start or isinstance(self._start, int):
+        if not self._start is None:
             if isinstance(self._start, se_int) or isinstance(self._duration, se_int):
                 self._finish = (self._start + self._duration)["_p" + str(self._id) + "_finish"]
             else:
