@@ -8,27 +8,58 @@ from qibolab.pulses import PulseSequence, ReadoutPulse
 
 @dataclass
 class Compiler:
+    """Compiler that transforms a :class:`qibo.models.Circuit` to a :class:`qibolab.pulses.PulseSequence`.
+
+    The transformation is done using a dictionary of rules which map each Qibo gate to a
+    pulse sequence and some virtual Z-phases.
+
+    A rule is a function that takes two argumens:
+        gate (:class:`qibo.gates.abstract.Gate`): Gate object to be compiled.
+        platform (:class:`qibolab.platforms.abstract.AbstractPlatform`): Platform object to read
+            native gate pulses from.
+    and returns
+        sequence (:class:`qibolab.pulses.PulseSequence`): Sequence of pulses that implement
+            the given gate.
+        virtual_z_phases (dict): Dictionary mapping qubits to virtual Z-phases induced by the gate.
+
+    See ``qibolab.compilers.default`` for an example of a compiler implementation.
+    """
+
     rules: dict = field(default_factory=dict)
 
-    def register(self, gate_cls):
-        def inner(func):
-            self.rules[gate_cls] = func
-            return func
-
-        return inner
-
-    def remove(self, item):
-        if item not in self.rules:
-            raise_error(KeyError, f"Cannot remove {item} from compiler because it does not exist.")
-        self.rules.pop(item)
-
     def __setitem__(self, key, rule):
+        """Sets a new rule to the compiler.
+
+        If a rule already exists for the gate, it will be overwritten.
+        """
         self.rules[key] = rule
 
     def __getitem__(self, item):
         if item not in self.rules:
             raise_error(KeyError, f"Compiler rule not available for {item}.")
         return self.rules[item]
+
+    def register(self, gate_cls):
+        """Decorator for registering a function as a rule in the compiler.
+
+        Using this decorator is optional. Alternatively the user can set the rules directly
+        via ``__setitem__`.
+
+        Args:
+            gate_cls: Qibo gate object that the rule will be assigned to.
+        """
+
+        def inner(func):
+            self[gate_cls] = func
+            return func
+
+        return inner
+
+    def remove(self, item):
+        """Remove rule for the given gate."""
+        if item not in self.rules:
+            raise_error(KeyError, f"Cannot remove {item} from compiler because it does not exist.")
+        self.rules.pop(item)
 
     def __call__(self, circuit, platform):
         """Transforms a circuit to pulse sequence.
