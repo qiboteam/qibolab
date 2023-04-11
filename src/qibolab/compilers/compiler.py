@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 
 from qibo.config import raise_error
 
-from qibolab.pulses import PulseSequence
+from qibolab.pulses import PulseSequence, ReadoutPulse
 
 
 @dataclass
@@ -55,7 +55,24 @@ class Compiler:
             for gate in moment:
                 if gate is not None and gate not in already_processed:
                     rule = self[gate.__class__]
-                    sequence, virtual_z_phases = rule(sequence, virtual_z_phases, moment_start, gate, platform)
+                    # get local sequence and phases for the current gate
+                    gate_sequence, gate_phases = rule(gate, platform)
+
+                    # update global pulse sequence
+                    # determine the right start time based on the availability of the qubits involved
+                    all_qubits = {*gate_sequence.qubits, *gate.qubits}
+                    start = max(sequence.get_qubit_pulses(*all_qubits).finish, moment_start)
+                    # shift start time and phase according to the global sequence
+                    for pulse in gate_sequence:
+                        pulse.start += start
+                        if not isinstance(pulse, ReadoutPulse):
+                            pulse.relative_phase += virtual_z_phases[pulse.qubit]
+                        sequence.add(pulse)
+
+                    # update virtual Z phases
+                    for qubit, phase in gate_phases.items():
+                        virtual_z_phases[qubit] += phase
+
                     already_processed.add(gate)
 
         return sequence
