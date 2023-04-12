@@ -65,11 +65,11 @@ class MultiqubitPlatform(AbstractPlatform):
                 # log.info(f"qubit qubit drive channel: {self.qd_channel[qubit]}")
                 # log.info(f"qubit qubit bias channel: {self.qb_channel[qubit]}")
                 # log.info(f"qubit qubit flux channel: {self.qf_channel[qubit]}")
-                        
+
                 # resonator_punchout_attenuation
                 if par == "att@lp":
-                    #TODO: update current_config[instruments][qrf][settings][ports][port_oX][attenuation]
-                    #TODO: set qubit instrument attenuation: self.ro_port[qubit].attenuation = att
+                    # TODO: update current_config[instruments][qrf][settings][ports][port_oX][attenuation]
+                    # TODO: set qubit instrument attenuation: self.ro_port[qubit].attenuation = att
 
                     # attenuation = float(value)
                     # # save current_config
@@ -82,17 +82,17 @@ class MultiqubitPlatform(AbstractPlatform):
                     # # configure RO attenuation
                     # self.ro_port[qubit].attenuation = attenuation
                     True
-                
+
                 # resonator_spectroscopy_flux / qubit_spectroscopy_flux
                 if par == "sweetspot":
-                    #TODO: update current_config[instruments][qcm_bbX][settings][ports][port_oX][offset]
-                    #TODO: set qubit instrument offset: self.qb_port[qubit].current = sweetspot
+                    # TODO: update current_config[instruments][qcm_bbX][settings][ports][port_oX][offset]
+                    # TODO: set qubit instrument offset: self.qb_port[qubit].current = sweetspot
                     True
 
                 # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
                 if par == "drive_frequency":
                     freq = int(value * 1e9)
-                    
+
                     # update Qblox qubit LO drive frequency config
                     instrument_name = self.qubit_instrument_map[qubit][1]
                     port = self.qdm[qubit].channel_port_map[self.qubit_channel_map[qubit][1]]
@@ -103,7 +103,6 @@ class MultiqubitPlatform(AbstractPlatform):
 
                     # set Qblox qubit LO drive frequency
                     self.qd_port[qubit].lo_frequency = freq - drive_if
-
 
                 # classification
                 if par == "threshold":

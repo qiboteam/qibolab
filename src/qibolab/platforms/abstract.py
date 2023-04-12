@@ -178,7 +178,6 @@ class AbstractPlatform(ABC):
 
         for par, values in updates.items():
             for qubit, value in values.items():
-                
                 # resonator_spectroscopy / resonator_spectroscopy_flux / resonator_punchout_attenuation
                 if par == "readout_frequency":
                     freq = int(value * 1e9)
@@ -198,9 +197,9 @@ class AbstractPlatform(ABC):
 
                 # resonator_punchout_attenuation
                 if par == "att@lp":
-                    #TODO: Are we going to save the att@lp somwhere in the native_gates or characterization?
+                    # TODO: Are we going to save the att@lp somwhere in the native_gates or characterization?
                     True
-                
+
                 # resonator_punchout_attenuation
                 # Ask Andrea: Needs to be added in all platform runcards?
                 elif par == "bare_resonator_frequency":
@@ -210,7 +209,7 @@ class AbstractPlatform(ABC):
 
                 # resonator_spectroscopy_flux / qubit_spectroscopy_flux
                 if par == "sweetspot":
-                    #TODO: update self.current_config["characterization"]["single_qubit"][qubit]["sweetspot"] = sweetspot
+                    # TODO: update self.current_config["characterization"]["single_qubit"][qubit]["sweetspot"] = sweetspot
                     True
 
                 # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
@@ -219,10 +218,8 @@ class AbstractPlatform(ABC):
                     self.native_single_qubit_gates[qubit]["RX"]["frequency"] = freq
                     self.current_config["native_gates"]["single_qubit"][qubit]["RX"]["frequency"] = freq
 
-
                     self.qubits[qubit].drive_frequency = freq
                     self.current_config["characterization"]["single_qubit"][qubit]["drive_frequency"] = freq
-
 
                 elif "amplitude" in par:
                     amplitude = float(value)
@@ -232,7 +229,7 @@ class AbstractPlatform(ABC):
                         self.current_config["native_gates"]["single_qubit"][qubit]["MZ"]["amplitude"] = amplitude
 
                     # rabi_amplitude / flipping
-                    if (par == "drive_amplitude" or par == "amplitudes"):
+                    if par == "drive_amplitude" or par == "amplitudes":
                         self.native_single_qubit_gates[qubit]["RX"]["amplitude"] = amplitude
                         self.current_config["native_gates"]["single_qubit"][qubit]["RX"]["amplitude"] = amplitude
 
@@ -243,7 +240,7 @@ class AbstractPlatform(ABC):
                     self.current_config["native_gates"]["single_qubit"][qubit]["RX"]["duration"] = duration
 
                 # ramsey / spin_echo
-                elif (par == "t2" or par == "t2_spin_echo"):
+                elif par == "t2" or par == "t2_spin_echo":
                     self.qubits[qubit].T2 = float(value)
                     self.current_config["characterization"]["single_qubit"][qubit]["T2"] = float(value)
 
