@@ -972,16 +972,17 @@ class Pulse:
                 self.channel,
                 self.qubit,
             )
-        
+
         elif self.type == PulseType.FLUX:
             return FluxPulse(
                 self.start,
                 self.duration,
+                self.amplitude,
                 repr(self._shape),  # self._shape,
                 self.channel,
                 self.qubit,
             )
-        else: 
+        else:
             # return eval(self.serial)
             return Pulse(
                 self.start,

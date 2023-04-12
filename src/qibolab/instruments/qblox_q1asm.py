@@ -125,6 +125,7 @@ class Register:
     def __init__(self, program: Program, name: str = ""):
         self._number = program.next_register()
         self._name = name
+        self._type = type
 
     def __repr__(self) -> str:
         return "R" + str(self._number)
@@ -198,8 +199,7 @@ def wait_block(wait_time: int, register: Register, force_multiples_of_4: bool = 
     return block
 
 
-def sweeper_block(start: int, stop: int, step: int, register: Register, block, update_parameter_block=None):
-    # validate values
+def loop_block(start: int, stop: int, step: int, register: Register, block):  # validate values
     if not (isinstance(start, int) and isinstance(stop, int) and isinstance(step, int)):
         raise ValueError("begin, end and step must be int")
     if stop != start and step == 0:
@@ -225,21 +225,13 @@ def sweeper_block(start: int, stop: int, step: int, register: Register, block, u
     if stop > start:
         footer_block.append(f"add {register}, {step}, {register}")
         footer_block.append("nop")
-        if update_parameter_block:
-            footer_block += update_parameter_block
         footer_block.append(f"jlt {register}, {stop}, @loop_{register}", comment=register.name + " loop")
     elif stop < start:
         footer_block.append(f"sub {register}, {abs(step)}, {register}")
         footer_block.append("nop")
-        if update_parameter_block:
-            footer_block += update_parameter_block
         footer_block.append(f"jge {register}, {stop + 1}, @loop_{register}", comment=register.name + " loop")
 
     return header_block + body_block + footer_block
-
-
-def loop_block(begin: int, end: int, step: int, register: Register, block):
-    return sweeper_block(begin, end, step, register, block, None)
 
 
 def convert_phase(phase_rad: float):
@@ -269,19 +261,10 @@ def convert_gain(gain: float):
     """ QCM DACs resolution 16bits, QRM DACs and ADCs 12 bit"""
 
 
-def convert_offset(offset: float, mod_type: str):
-    if mod_type == "QCM":
-        if not (offset >= -2.5 and offset <= 2.5):
-            raise ValueError("offset must be a float between -2.5 and 2.5")
-        return int(offset / 2.5 * (2**8 - 1)) % 2**16
-
-    elif mod_type == "QRM":
-        if not (offset >= -1 and offset <= 1):
-            raise ValueError("offset must be a float between -1 and 1")
-        return int(offset / 1 * (2**6 - 1)) % 2**12
-
-    else:
-        raise ValueError("Invalid module type, it must be either QRM or QCM")
+def convert_offset(offset: float):
+    if not (offset >= -2.5 and offset <= 2.5):
+        raise ValueError("offset must be a float between -2.5 and 2.5")
+    return int(offset / 2.5 * (2**16 - 1)) % 2**32
 
     # two's complement 32 bit number? or 12 or 24?
     """ Both offset values are divided in 2**sample path width steps."""

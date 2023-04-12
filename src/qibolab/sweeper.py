@@ -11,6 +11,9 @@ class Parameter(Enum):
     frequency = auto()
     amplitude = auto()
     relative_phase = auto()
+    delay = auto()
+    start = auto()
+    duration = auto()
 
     attenuation = auto()
     gain = auto()

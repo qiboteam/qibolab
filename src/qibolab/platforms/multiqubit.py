@@ -25,13 +25,14 @@ class MultiqubitPlatform(AbstractPlatform):
             instance = InstrumentClass(name, address)
             self.instruments[name] = instance
 
-        # Generate qubit_instrument_map from qubit_channel_map and the instruments' channel_port_maps
+        # Generate qubit_instrument_map from runcard
         self.qubit_instrument_map = {}
         for qubit in self.qubit_channel_map:
             self.qubit_instrument_map[qubit] = [None, None, None, None]
             for name in self.instruments:
-                if "channel_port_map" in self.settings["instruments"][name]["settings"]:
-                    for channel in self.settings["instruments"][name]["settings"]["channel_port_map"]:
+                if self.settings["instruments"][name]["class"] in ["ClusterQRM_RF", "ClusterQCM_RF", "ClusterQCM"]:
+                    for port in self.settings["instruments"][name]["settings"]["ports"]:
+                        channel = self.settings["instruments"][name]["settings"]["ports"][port]["channel"]
                         if channel in self.qubit_channel_map[qubit]:
                             self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
                 if "s4g_modules" in self.settings["instruments"][name]["settings"]:
@@ -132,17 +133,17 @@ class MultiqubitPlatform(AbstractPlatform):
             if not self.qubit_instrument_map[qubit][0] is None:
                 self.qrm[qubit] = self.instruments[self.qubit_instrument_map[qubit][0]]
                 self.ro_port[qubit] = self.qrm[qubit].ports[
-                    self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]
+                    self.qrm[qubit]._channel_port_map[self.qubit_channel_map[qubit][0]]
                 ]
             if not self.qubit_instrument_map[qubit][1] is None:
                 self.qdm[qubit] = self.instruments[self.qubit_instrument_map[qubit][1]]
                 self.qd_port[qubit] = self.qdm[qubit].ports[
-                    self.qdm[qubit].channel_port_map[self.qubit_channel_map[qubit][1]]
+                    self.qdm[qubit]._channel_port_map[self.qubit_channel_map[qubit][1]]
                 ]
             if not self.qubit_instrument_map[qubit][2] is None:
                 self.qfm[qubit] = self.instruments[self.qubit_instrument_map[qubit][2]]
                 self.qf_port[qubit] = self.qfm[qubit].ports[
-                    self.qfm[qubit].channel_port_map[self.qubit_channel_map[qubit][2]]
+                    self.qfm[qubit]._channel_port_map[self.qubit_channel_map[qubit][2]]
                 ]
             if not self.qubit_instrument_map[qubit][3] is None:
                 self.qbm[qubit] = self.instruments[self.qubit_instrument_map[qubit][3]]
@@ -169,10 +170,14 @@ class MultiqubitPlatform(AbstractPlatform):
     ):
         if not self.is_connected:
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
-        if nshots is None:
+        if nshots is None and navgs is None:
             nshots = 1
-        if navgs is None:
             navgs = self.hardware_avg
+        elif nshots and navgs is None:
+            navgs = 1
+        elif navgs and nshots is None:
+            nshots = 1
+
         if relaxation_time is None:
             relaxation_time = self.relaxation_time
         repetition_duration = sequence.duration + relaxation_time
@@ -232,7 +237,7 @@ class MultiqubitPlatform(AbstractPlatform):
                 self.instruments[name].upload()
         for name in self.instruments:
             if "control" in roles[name] or "readout" in roles[name]:
-                if not instrument_pulses[name].is_empty:
+                if True:  # not instrument_pulses[name].is_empty:
                     self.instruments[name].play_sequence()
 
         acquisition_results = {}
@@ -266,11 +271,15 @@ class MultiqubitPlatform(AbstractPlatform):
 
         sweepers_copy = []
         for sweeper in sweepers:
+            if sweeper.pulses:
+                ps = [sequence_copy[sequence_copy.index(pulse)] for pulse in sweeper.pulses]
+            else:
+                ps = None
             sweepers_copy.append(
                 Sweeper(
                     parameter=sweeper.parameter,
                     values=sweeper.values,
-                    pulses=[sequence_copy[sequence_copy.index(pulse)] for pulse in sweeper.pulses],
+                    pulses=ps,
                     qubits=sweeper.qubits,
                 )
             )
@@ -282,7 +291,7 @@ class MultiqubitPlatform(AbstractPlatform):
             id_results[pulse.qubit] = id_results[pulse.id]
 
         # # for-loop-based sweepers
-        # self._sweep_recursion_for_loops(
+        # self._sweep_recursion(
         #     sequence_copy,
         #     *tuple(sweepers_copy),
         #     results=id_results,
@@ -304,7 +313,7 @@ class MultiqubitPlatform(AbstractPlatform):
             serial_results[pulse.qubit] = id_results[pulse.id]
         return serial_results
 
-    def _sweep_recursion_for_loops(
+    def _sweep_recursion(
         self,
         sequence,
         *sweepers,
@@ -374,6 +383,7 @@ class MultiqubitPlatform(AbstractPlatform):
                     *sweepers[1:],
                     results=results,
                     nshots=nshots,
+                    navgs=navgs,
                     average=average,
                     relaxation_time=relaxation_time,
                 )
