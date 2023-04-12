@@ -42,7 +42,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.003111
+                amplitude: 0.004111
                 frequency: 7.267169e+9
                 shape: Rectangular()
                 type: ro # readout
@@ -52,14 +52,14 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.294784
-                frequency: 5992461631
+                frequency: 5992053134
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0062
+                amplitude: 0.0072
                 frequency: 7.521437e+9
                 shape: Rectangular()
                 type: ro # readout
@@ -68,15 +68,15 @@ native_gates:
         A4:
             RX:
                 duration: 40
-                amplitude: 0.11704629603151873
-                frequency: 5235417892
+                amplitude: 0.13331573117989984
+                frequency: 5223324979
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
+                amplitude: 0.0035
                 frequency: 7.118957e+9
                 shape: Rectangular()
                 type: ro # readout
@@ -436,8 +436,8 @@ characterization:
             sweetspot: -0.446
             filter: {}
             # parameters for single shot classification
-            threshold: 0.000381284307164716
-            iq_angle: 1.694513818627754
+            threshold: 0.0006086154555524454
+            iq_angle: 1.8107232593883087
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -453,8 +453,8 @@ characterization:
             sweetspot: 0.303
             filter: {}
             # parameters for single shot classification
-            threshold:  0.00019707441633820758
-            iq_angle:  4.696365195011337
+            threshold:  0.0002810378953340043
+            iq_angle:  4.820865248333714
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -470,8 +470,8 @@ characterization:
             sweetspot: 0.025
             filter: {}
             # parameters for single shot classification
-            threshold: 0.0005963967501651805
-            iq_angle: 1.587713989049901
+            threshold: 0.0008589653136880513
+            iq_angle: 1.7438495495760686
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
