@@ -446,9 +446,7 @@ characterization:
             T1: 0.0
             T2: 0.0
             sweetspot: 0.303
-            filter:
-                feedforward: [1.0684635881381783, -1.0163217174522334]
-                feedback: [0.947858129314055]
+            filter: {}
             # parameters for single shot classification
             threshold:  0.0002810378953340043
             iq_angle:  4.820865248333714
