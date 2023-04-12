@@ -65,7 +65,7 @@ class ExecutionResults:
         """Computes ground state probability"""
         return 1 - np.mean(self.shots)
 
-    def serial_probability(self, state=1):
+    def raw_probability(self, state=1):
         """Serialize probabilities in dict.
         Args:
             state (int): if 0 stores the probabilities of finding
@@ -83,7 +83,7 @@ class ExecutionResults:
         return AveragedResults.from_components(np.mean(self.i), np.mean(self.q))
 
     @property
-    def serial(self):
+    def raw(self):
         """Serialize output in dict."""
 
         return {
