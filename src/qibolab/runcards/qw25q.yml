@@ -390,7 +390,7 @@ native_gates:
         A3-A4:
             CZ:
             - duration: 20
-              amplitude: 0.08
+              amplitude: 0.055
               shape: Rectangular()
               qubit: A3
               relative_start: 0
@@ -401,12 +401,7 @@ native_gates:
             - type: virtual_z
               phase: -1.5707963267948966
               qubit: A3
-            - duration: 100
-              amplitude: -0.249
-              shape: Rectangular()
-              qubit: A1
-              relative_start: 0
-              type: qf
+
 
 
 characterization:
@@ -416,7 +411,7 @@ characterization:
             drive_frequency: 5.06217e+9
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.249
+            sweetspot: 0.
             filter: {}
             # parameters for single shot classification
             threshold: 0.000288842361133913
@@ -501,7 +496,7 @@ characterization:
             drive_frequency: 6.860000E+09
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.45
+            sweetspot: 0.
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
