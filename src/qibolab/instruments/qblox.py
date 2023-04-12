@@ -50,6 +50,7 @@ class SweeperType(Enum):
     gain = auto()
     offset = auto()
     phase = auto()
+    start = auto()
     time = auto()
     number = auto()
 
@@ -75,7 +76,7 @@ class QbloxSweeper:
                 Parameter.amplitude: SweeperType.gain,
                 Parameter.bias: SweeperType.offset,
                 Parameter.relative_phase: SweeperType.phase,
-                Parameter.start: SweeperType.time,
+                Parameter.start: SweeperType.start,
                 Parameter.duration: SweeperType.time,
                 Parameter.delay: SweeperType.time,
             }
@@ -133,7 +134,7 @@ class QbloxSweeper:
             SweeperType.gain: (lambda v: all((-1 <= x and x <= 1) for x in v)),
             SweeperType.offset: (lambda v: all((-2.5 <= x and x <= 2.5) for x in v)),
             SweeperType.phase: (lambda v: True),
-            SweeperType.time: (lambda v: all((4 <= x and x < 2**16) for x in v)),
+            SweeperType.start: (lambda v: all((4 <= x and x < 2**16) for x in v)),
             SweeperType.number: (lambda v: all((-(2**16) < x and x < 2**16) for x in v)),
         }
 
@@ -145,7 +146,7 @@ class QbloxSweeper:
             SweeperType.gain: convert_gain,
             SweeperType.offset: convert_offset,
             SweeperType.phase: convert_phase,
-            SweeperType.time: (lambda x: int(x) % 2**16),
+            SweeperType.start: (lambda x: int(x) % 2**16),
             SweeperType.number: (lambda x: int(x) % 2**32),
         }
 
@@ -171,14 +172,16 @@ class QbloxSweeper:
             update_parameter_block = Block()
             update_time = 1000
             if self.type == SweeperType.frequency:
-                update_parameter_block.append(f"set_freq {self.register}")
+                update_parameter_block.append(f"set_freq {self.register}")  # move to pulse
                 update_parameter_block.append(f"upd_param {update_time}")
             if self.type == SweeperType.gain:
-                update_parameter_block.append(f"set_awg_gain {self.register}, {self.register}")
+                update_parameter_block.append(f"set_awg_gain {self.register}, {self.register}")  # move to pulse
                 update_parameter_block.append(f"upd_param {update_time}")
             if self.type == SweeperType.offset:
                 update_parameter_block.append(f"set_awg_offs {self.register}, {self.register}")
                 update_parameter_block.append(f"upd_param {update_time}")
+            # if self.type == SweeperType.start:
+            #     update_parameter_block.append(f"wait {self.register}") # move to pulse
             if self.type == SweeperType.time:
                 pass
             if self.type == SweeperType.number:
@@ -199,13 +202,48 @@ class QbloxSweeper:
         )
         footer_block.append("nop")
 
-        # assumes step != 0 therefore start != stop
-        if (self.abs_start < 0 and self.abs_stop >= 0) or (self.abs_stop < 0 and self.abs_start >= 0):  # crosses 0
-            footer_block.append(f"jge {self.register}, {2**31}, @loop_{self.register}")
-        footer_block.append(
-            f"jlt {self.register}, {self.con_stop}, @loop_{self.register}",
-            comment=f"{self.register.name} loop, stop: {round(self.abs_stop, 6):_}",
-        )
+        if self.abs_step > 0:  # increasing
+            if (self.abs_start < 0 and self.abs_stop < 0) or (self.abs_stop > 0 and self.abs_start >= 0):  # no crossing
+                footer_block.append(
+                    f"jlt {self.register}, {self.con_stop}, @loop_{self.register}",
+                    comment=f"{self.register.name} loop, stop: {round(self.abs_stop, 6):_}",
+                )
+            elif self.abs_start < 0 and self.abs_stop >= 0:  # crossing
+                footer_block.append(
+                    f"jge {self.register}, {2**31}, @loop_{self.register}",
+                )
+                footer_block.append(
+                    f"jlt {self.register}, {self.con_stop}, @loop_{self.register}",
+                    comment=f"{self.register.name} loop, stop: {round(self.abs_stop, 6):_}",
+                )
+            else:
+                raise ValueError(
+                    f"incorrect values for abs_start: {self.abs_start}, abs_stop: {self.abs_stop}, abs_step: {self.abs_step}"
+                )
+        elif self.abs_step < 0:  # decreasing
+            if (self.abs_start < 0 and self.abs_stop < 0) or (self.abs_stop >= 0 and self.abs_start > 0):  # no crossing
+                footer_block.append(
+                    f"jge {self.register}, {self.con_stop + 1}, @loop_{self.register}",
+                    comment=f"{self.register.name} loop, stop: {round(self.abs_stop, 6):_}",
+                )
+            elif self.abs_start >= 0 and self.abs_stop < 0:  # crossing
+                if self.con_stop + 1 != 2**32:
+                    footer_block.append(
+                        f"jlt {self.register}, {2**31}, @loop_{self.register}",
+                    )
+                    footer_block.append(
+                        f"jge {self.register}, {self.con_stop + 1}, @loop_{self.register}",
+                        comment=f"{self.register.name} loop, stop: {round(self.abs_stop, 6):_}",
+                    )
+                else:
+                    footer_block.append(
+                        f"jlt {self.register}, {2**31}, @loop_{self.register}",
+                        comment=f"{self.register.name} loop, stop: {round(self.abs_stop, 6):_}",
+                    )
+            else:
+                raise ValueError(
+                    f"incorrect values for abs_start: {self.abs_start}, abs_stop: {self.abs_stop}, abs_step: {self.abs_step}"
+                )
 
         return header_block + body_block + footer_block
 
@@ -900,7 +938,10 @@ class ClusterQRM_RF(AbstractInstrument):
         for sweeper in sweepers:
             num_bins *= len(sweeper.values)
 
-        self._execution_time = navgs * num_bins * (repetition_duration * 1e-9)
+        if num_bins >= 2**17:
+            raise ValueError(f"The maximum number of bins required exceeds the maximum 131,072")
+
+        self._execution_time = navgs * num_bins * ((repetition_duration + 1000 * len(sweepers)) * 1e-9)
         # Check if the sequence to be processed is the same as the last one.
         # If so, there is no need to generate new waveforms and program
         if True:  # self._current_pulsesequence_hash != self._last_pulsequence_hash:
@@ -1022,8 +1063,8 @@ class ClusterQRM_RF(AbstractInstrument):
                         if sweeper.parameter == Parameter.frequency:
                             if sequencer.pulses:
                                 center = self.get_if(sequencer.pulses[0])
-                        if sweeper.parameter == Parameter.amplitude:
-                            center = self.ports[port].gain
+                        # if sweeper.parameter == Parameter.amplitude:
+                        #     center = self.ports[port].gain
                         # if sweeper.parameter == Parameter.bias:
                         #     center = self.ports[port].offset
                         sweeper.qs = QbloxSweeper(program=program, sweeper=sweeper, add_to=center)
@@ -1055,6 +1096,9 @@ class ClusterQRM_RF(AbstractInstrument):
                     pulses_block += initial_wait_block
 
                     for n in range(pulses.count):
+                        if pulses[n].sweeper and pulses[n].sweeper.type == SweeperType.start:
+                            pulses_block.append(f"wait {pulses[n].sweeper.register}")
+
                         if self.ports["o1"].hardware_mod_en:
                             # # Set frequency
                             # _if = self.get_if(pulses[n])
@@ -1441,46 +1485,31 @@ class ClusterQRM_RF(AbstractInstrument):
                         `acquisition_results[ro_pulse.qubit]`
 
         """
-        # # Start playing sequences
-        # for sequencer_number in self._used_sequencers_numbers:
-        #     self.device.start_sequencer(sequencer_number)
 
-        # Wait until sequencers have stopped
-        # m = {}
-        # m[2] = getattr(cluster, "module2")
-        # m[3] = getattr(cluster, "module3")
-        # m[4] = getattr(cluster, "module4")
-        # m[5] = getattr(cluster, "module5")
-        # m[8] = getattr(cluster, "module8")
-        # m[10] = getattr(cluster, "module10")
-        # m[12] = getattr(cluster, "module12")
+        time_out = int(self._execution_time) + 60
+        import time
 
-        # from qibo.config import log
+        from qibo.config import log
 
-        # import time
-        # t = time.time()
+        t = time.time()
 
-        # while time.time() - t < 20:
-
-        #     for mn in m.keys():
-        #         for sequencer in m[mn].sequencers:
-        #             if sequencer.get('sync_en'):
-        #                 log.info(f"{sequencer.name} sync_en: {sequencer.get('sync_en')}")
-
-        #     for mn in m.keys():
-        #         for s in range(6):
-        #                 state = m[mn].get_sequencer_state(s)
-        #                 if not 'IDLE' in state:
-        #                     log.info(f"{m[mn].sequencers[s].name} state: {state}")
-        #     time.sleep(1)
-
-        time_out = int(self._execution_time // 60) + 1
-
+        log.info(f"Estimated execution time: {int(self._execution_time)//60}m {int(self._execution_time) % 60}s")
         for sequencer_number in self._used_sequencers_numbers:
-            print(self.device.get_sequencer_state(sequencer_number, timeout=time_out))
-            print(self.device.get_acquisition_state(sequencer_number, timeout=time_out))
-            # TODO: calculate expected execution duration to be used here
-        # self.device.stop_sequencer()
+            while True:
+                try:
+                    state = self.device.get_sequencer_state(sequencer_number)
+                except:
+                    pass
+                else:
+                    if state.status == "STOPPED":
+                        log.info(f"{self.device.sequencers[sequencer_number].name} state: {state}")
+                        # TODO: check flags for errors
+                        break
+                    elif time.time() - t > time_out:
+                        log.info(f"Timeout - {self.device.sequencers[sequencer_number].name} state: {state}")
+                        self.device.stop_sequencer(sequencer_number)
+                        break
+                time.sleep(1)
 
         acquisition_results = {}
 
@@ -2265,8 +2294,8 @@ class ClusterQCM_RF(AbstractInstrument):
                         if sweeper.parameter == Parameter.frequency:
                             if sequencer.pulses:
                                 center = self.get_if(sequencer.pulses[0])
-                        if sweeper.parameter == Parameter.amplitude:
-                            center = self.ports[port].gain
+                        # if sweeper.parameter == Parameter.amplitude:
+                        #     center = self.ports[port].gain
                         # if sweeper.parameter == Parameter.bias:
                         #     center = self.ports[port].offset
                         sweeper.qs = QbloxSweeper(program=program, sweeper=sweeper, add_to=center)
@@ -2296,6 +2325,9 @@ class ClusterQCM_RF(AbstractInstrument):
                     pulses_block += initial_wait_block
 
                     for n in range(pulses.count):
+                        if pulses[n].sweeper and pulses[n].sweeper.type == SweeperType.start:
+                            pulses_block.append(f"wait {pulses[n].sweeper.register}")
+
                         if self.ports[port].hardware_mod_en:
                             # # Set frequency
                             # _if = self.get_if(pulses[n])
@@ -3095,10 +3127,10 @@ class ClusterQCM(AbstractInstrument):
                         if sweeper.parameter == Parameter.frequency:
                             if sequencer.pulses:
                                 center = self.get_if(sequencer.pulses[0])
-                        if sweeper.parameter == Parameter.amplitude:
-                            center = self.ports[port].gain
-                        if sweeper.parameter == Parameter.bias:
-                            center = self.ports[port].offset
+                        # if sweeper.parameter == Parameter.amplitude:
+                        #     center = self.ports[port].gain
+                        # if sweeper.parameter == Parameter.bias: (this goes on top of the external offset)
+                        #     center = self.ports[port].offset
                         sweeper.qs = QbloxSweeper(program=program, sweeper=sweeper, add_to=center)
 
                         if sweeper.qubits and sequencer.qubit in sweeper.qubits:
@@ -3126,6 +3158,9 @@ class ClusterQCM(AbstractInstrument):
                     pulses_block += initial_wait_block
 
                     for n in range(pulses.count):
+                        if pulses[n].sweeper and pulses[n].sweeper.type == SweeperType.start:
+                            pulses_block.append(f"wait {pulses[n].sweeper.register}")
+
                         if self.ports[port].hardware_mod_en:
                             # # Set frequency
                             # _if = self.get_if(pulses[n])
