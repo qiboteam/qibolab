@@ -184,9 +184,9 @@ instruments:
         roles: [control]
         settings:
             ports:
-                o1: {channel: L4-1, gain: 0.5, offset:  -0.358, qubit: 1} #q1
-                o2: {channel: L4-2, gain: 0.5, offset: -0.165, qubit: 2} #q2
-                o3: {channel: L4-3, gain: 0.5, offset:  0.098, qubit: 3} #q3
+                o1: {channel: L4-1, gain: 0.5, offset:  -0.360, qubit: 1} #q1
+                o2: {channel: L4-2, gain: 0.5, offset: -0.167, qubit: 2} #q2
+                o3: {channel: L4-3, gain: 0.5, offset:  0.095, qubit: 3} #q3
                 o4: {channel: L4-4, gain: 0.5, offset: -0.329, qubit: 4} #q4
 
     #Cluster QCM usado para bias mediante el offset
@@ -197,7 +197,7 @@ instruments:
         roles: [control]
         settings:
             ports:
-                o1: {channel: L4-5,gain: 0.5, offset: 0.336, qubit: 0} #q0
+                o1: {channel: L4-5,gain: 0.5, offset: 0.335, qubit: 0} #q0
 
     twpa_pump:
         lib: rohde_schwarz
@@ -328,7 +328,7 @@ characterization:
             state1_voltage: 0.0
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
-            sweetspot: 0.336
+            sweetspot: 0.335
         1:
             readout_frequency: 7_453_190_140
             drive_frequency: 4_852_013_000
@@ -338,7 +338,7 @@ characterization:
             state1_voltage: 0.0
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
-            sweetspot: -0.352
+            sweetspot: -0.360
         2:
             readout_frequency: 7_655_148_879
             drive_frequency: 5_795_026_000
@@ -348,7 +348,7 @@ characterization:
             state1_voltage: 0.0
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
-            sweetspot: -0.165
+            sweetspot: -0.167
         3:
             readout_frequency: 7_803_437_704
             drive_frequency: 6_761_250_000
@@ -358,7 +358,7 @@ characterization:
             state1_voltage: 0.0
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
-            sweetspot: 0.098
+            sweetspot: 0.095
         4:
             readout_frequency: 8_058_673_359
             drive_frequency: 6_588_003_000
