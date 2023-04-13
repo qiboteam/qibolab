@@ -178,6 +178,7 @@ class AbstractPlatform(ABC):
 
         for par, values in updates.items():
             for qubit, value in values.items():
+                log.info(f"qubit {qubit} - param {par} - values {value}")
                 # resonator_spectroscopy / resonator_spectroscopy_flux / resonator_punchout_attenuation
                 if par == "readout_frequency":
                     freq = int(value * 1e9)
@@ -196,10 +197,10 @@ class AbstractPlatform(ABC):
                     self.current_config["characterization"]["single_qubit"][qubit]["readout_frequency"] = freq
 
                 # resonator_punchout_attenuation
-                if par == "att@lp":
+                elif par == "readout_attenuation":
                     # TODO: Are we going to save the att@lp somwhere in the native_gates or characterization?
                     True
-
+                    
                 # resonator_punchout_attenuation
                 # Ask Andrea: Needs to be added in all platform runcards?
                 elif par == "bare_resonator_frequency":
@@ -208,9 +209,10 @@ class AbstractPlatform(ABC):
                     self.current_config["characterization"]["single_qubit"][qubit]["bare_resonator_frequency"] = freq
 
                 # resonator_spectroscopy_flux / qubit_spectroscopy_flux
-                if par == "sweetspot":
-                    # TODO: update self.current_config["characterization"]["single_qubit"][qubit]["sweetspot"] = sweetspot
-                    True
+                elif par == "sweetspot":
+                    sweetspot = float(value)
+                    self.qubits[qubit].sweetspot = sweetspot
+                    self.current_config["characterization"]["single_qubit"][qubit]["sweetspot"] = sweetspot
 
                 # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
                 elif par == "drive_frequency":
@@ -235,29 +237,33 @@ class AbstractPlatform(ABC):
 
                 # rabi_duration
                 elif par == "drive_length":
-                    duration = float(value)
+                    duration = int(value)
                     self.native_single_qubit_gates[qubit]["RX"]["duration"] = duration
                     self.current_config["native_gates"]["single_qubit"][qubit]["RX"]["duration"] = duration
 
                 # ramsey / spin_echo
                 elif par == "t2" or par == "t2_spin_echo":
-                    self.qubits[qubit].T2 = float(value)
-                    self.current_config["characterization"]["single_qubit"][qubit]["T2"] = float(value)
+                    t2 = float(value)
+                    self.qubits[qubit].T2 = t2
+                    self.current_config["characterization"]["single_qubit"][qubit]["T2"] = t2
 
                 # t1
-                elif "t1" == par:
-                    self.qubits[qubit].T1 = float(value)
-                    self.current_config["characterization"]["single_qubit"][qubit]["T1"] = float(value)
+                elif par == "t1":
+                    t1 = float(value)
+                    self.qubits[qubit].T1 = t1
+                    self.current_config["characterization"]["single_qubit"][qubit]["T1"] = t1
 
                 # classification
-                elif "threshold" == par:
-                    self.qubits[qubit].thresold = float(value)
-                    self.current_config["characterization"]["single_qubit"][qubit]["threshold"] = float(value)
+                elif par == "threshold":
+                    threshold = float(value)
+                    self.qubits[qubit].thresold = threshold
+                    self.current_config["characterization"]["single_qubit"][qubit]["threshold"] = threshold
 
                 # classification
-                elif "iq_angle" == par:
-                    self.qubits[qubit].iq_angle = float(value)
-                    self.current_config["characterization"]["single_qubit"][qubit]["iq_angle"] = float(value)
+                elif par == "iq_angle":
+                    iq_angle = float(value)
+                    self.qubits[qubit].iq_angle = iq_angle
+                    self.current_config["characterization"]["single_qubit"][qubit]["iq_angle"] = iq_angle
 
                 # drag pulse tunning
                 elif "beta" in par:
@@ -269,7 +275,7 @@ class AbstractPlatform(ABC):
                     ] = f"Drag({rel_sigma}, {float(value)})"
 
                 else:
-                    raise_error(ValueError, "Unknown parameter.")
+                    raise_error(ValueError, f"Unknown parameter {par} for qubit {qubit}")
 
         # reload_settings after execute any calibration routine keeping fitted parameters
         self.reload_settings()

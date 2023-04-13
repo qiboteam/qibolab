@@ -55,7 +55,6 @@ class MultiqubitPlatform(AbstractPlatform):
         """
         for par, values in updates.items():
             for qubit, value in values.items():
-                # log.info(f"qubit: {qubit} - parameter: {par} - values: {value}")
                 # log.info(f"qubit readout instrument: {self.qubit_instrument_map[qubit][0]}")
                 # log.info(f"qubit drive instrument: {self.qubit_instrument_map[qubit][1]}")
                 # log.info(f"qubit bias instrument: {self.qubit_instrument_map[qubit][2]}")
@@ -67,27 +66,28 @@ class MultiqubitPlatform(AbstractPlatform):
                 # log.info(f"qubit qubit flux channel: {self.qf_channel[qubit]}")
 
                 # resonator_punchout_attenuation
-                if par == "att@lp":
-                    # TODO: update current_config[instruments][qrf][settings][ports][port_oX][attenuation]
-                    # TODO: set qubit instrument attenuation: self.ro_port[qubit].attenuation = att
-
-                    # attenuation = float(value)
-                    # # save current_config
-                    # instrument_name = self.qubit_instrument_map[qubit][0]
-                    # port = self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]
-                    # # log.info(f"qubit: {qubit} - instrument: {instrument_name} - port: {port} ")
-                    # self.current_config["instruments"][instrument_name]["settings"]["ports"][port][
-                    #     "attenuation"
-                    # ] = attenuation
-                    # # configure RO attenuation
-                    # self.ro_port[qubit].attenuation = attenuation
+                if par == "readout_attenuation":
+                    attenuation = float(value)
+                    # save current_config
+                    instrument_name = self.qubit_instrument_map[qubit][0]
+                    port = self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]
+                    # log.info(f"qubit: {qubit} - instrument: {instrument_name} - port: {port} ")
+                    self.current_config["instruments"][instrument_name]["settings"]["ports"][port][
+                        "attenuation"
+                    ] = attenuation
+                    # configure RO attenuation
+                    self.ro_port[qubit].attenuation = attenuation
                     True
 
                 # resonator_spectroscopy_flux / qubit_spectroscopy_flux
                 if par == "sweetspot":
-                    # TODO: update current_config[instruments][qcm_bbX][settings][ports][port_oX][offset]
-                    # TODO: set qubit instrument offset: self.qb_port[qubit].current = sweetspot
-                    True
+                    sweetspot = float(value)
+                    # save current_config
+                    instrument_name = self.qubit_instrument_map[qubit][2]
+                    port = elf.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][2]]
+                    self.current_config["instruments"][instrument_name]["settings"]["ports"][port][offset] = sweetspot
+                    # configure instrument qcm_bb offset
+                    self.qb_port[qubit].current = sweetspot
 
                 # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
                 if par == "drive_frequency":
@@ -112,9 +112,10 @@ class MultiqubitPlatform(AbstractPlatform):
                     self.current_config["instruments"][instrument_name]["settings"]["classification_parameters"][qubit][
                         "threshold"
                     ] = threshold
-                    instrument_name.setup(
+
+                    self.instruments[instrument_name].setup(
                         **self.current_config["settings"],
-                        **self.current_config["instruments"][instrument_name]["settings"],
+                        **self.current_config["instruments"][instrument_name]["settings"]
                     )
 
                 # classification
@@ -125,9 +126,10 @@ class MultiqubitPlatform(AbstractPlatform):
                     self.current_config["instruments"][instrument_name]["settings"]["classification_parameters"][qubit][
                         "rotation_angle"
                     ] = rotation_angle
-                    instrument_name.setup(
+
+                    self.instruments[instrument_name].setup(
                         **self.current_config["settings"],
-                        **self.current_config["instruments"][instrument_name]["settings"],
+                        **self.current_config["instruments"][instrument_name]["settings"]
                     )
 
                 super().update(updates)
