@@ -5,7 +5,7 @@ from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 
 from qibolab import Platform
-from qibolab.compilers.default import compiler
+from qibolab.compilers import Compiler
 from qibolab.pulses import PulseSequence
 from qibolab.transpilers import can_execute, transpile
 
@@ -23,6 +23,8 @@ def compile_circuit(circuit, platform):
         native_circuit = circuit
     else:
         native_circuit, _ = transpile(circuit, platform.two_qubit_natives)
+
+    compiler = Compiler.default()
     sequence = compiler(native_circuit, platform)
     return sequence
 

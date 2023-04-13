@@ -4,35 +4,26 @@ Uses I, Z, RZ, U3, CZ and M as the set of native gates.
 """
 import math
 
-from qibo import gates
-
-from qibolab.compilers.compiler import Compiler
 from qibolab.pulses import PulseSequence
 
-compiler = Compiler()
 
-
-@compiler.register(gates.I)
 def identity_rule(gate, platform):
     """Identity gate skipped."""
     return PulseSequence(), {}
 
 
-@compiler.register(gates.Z)
 def z_rule(gate, platform):
     """Z gate applied virtually."""
     qubit = gate.target_qubits[0]
     return PulseSequence(), {qubit: math.pi}
 
 
-@compiler.register(gates.RZ)
 def rz_rule(gate, platform):
     """RZ gate applied virtually."""
     qubit = gate.target_qubits[0]
     return PulseSequence(), {qubit: gate.parameters[0]}
 
 
-@compiler.register(gates.U3)
 def u3_rule(gate, platform):
     """U3 applied as RZ-RX-RZ-RX-RZ."""
     qubit = gate.target_qubits[0]
@@ -59,7 +50,6 @@ def u3_rule(gate, platform):
     return sequence, virtual_z_phases
 
 
-@compiler.register(gates.CZ)
 def cz_rule(gate, platform):
     """CZ applied as defined in the platform runcard.
 
@@ -69,7 +59,6 @@ def cz_rule(gate, platform):
     return platform.create_CZ_pulse_sequence(gate.qubits)
 
 
-@compiler.register(gates.M)
 def measurement_rule(gate, platform):
     """Measurement gate applied using the platform readout pulse."""
     sequence = PulseSequence()

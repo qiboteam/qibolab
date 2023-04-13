@@ -5,6 +5,14 @@ import numpy as np
 from qibo import gates
 from qibo.config import raise_error
 
+from qibolab.compilers.default import (
+    cz_rule,
+    identity_rule,
+    measurement_rule,
+    rz_rule,
+    u3_rule,
+    z_rule,
+)
 from qibolab.pulses import PulseSequence, ReadoutPulse
 
 
@@ -27,8 +35,23 @@ class Compiler:
     See ``qibolab.compilers.default`` for an example of a compiler implementation.
     """
 
-    rules: dict = field(default_factory=dict)
+    rules: dict
+    """Map from gates to compilation rules."""
     measurement_map: dict = field(default_factory=dict)
+    """Map from each measurement gate to the sequence of readout pulses implementing it."""
+
+    @classmethod
+    def default(cls):
+        return cls(
+            {
+                gates.I: identity_rule,
+                gates.Z: z_rule,
+                gates.RZ: rz_rule,
+                gates.U3: u3_rule,
+                gates.CZ: cz_rule,
+                gates.M: measurement_rule,
+            }
+        )
 
     def __setitem__(self, key, rule):
         """Sets a new rule to the compiler.
@@ -38,6 +61,7 @@ class Compiler:
         self.rules[key] = rule
 
     def __getitem__(self, item):
+        """Get an existing rule for a given gate."""
         if item not in self.rules:
             raise_error(KeyError, f"Compiler rule not available for {item}.")
         return self.rules[item]
