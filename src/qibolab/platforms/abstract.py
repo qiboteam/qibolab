@@ -199,19 +199,30 @@ class AbstractPlatform(ABC):
 
             updates (dict): Dictionary containing the parameters to update the runcard.
         """
+
         for par, values in updates.items():
             for qubit, value in values.items():
-                if "frequency" in par:
+                if par == "readout_frequency":
                     freq = int(value * 1e9)
-                    if par == "readout_frequency":
-                        self.native_single_qubit_gates[qubit]["MZ"]["frequency"] = freq
-                        self.qubits[qubit].readout_frequency = freq
+                    self.native_single_qubit_gates[qubit]["MZ"]["frequency"] = freq
+                    if "if_frequency" in self.native_single_qubit_gates[qubit]["MZ"]:
+                        self.native_single_qubit_gates[qubit]["MZ"][
+                            "if_frequency"
+                        ] = freq - self.get_lo_readout_frequency(qubit)
+                    self.qubits[qubit].readout_frequency = freq
 
-                    elif par == "drive_frequency":
-                        self.native_single_qubit_gates[qubit]["RX"]["frequency"] = freq
-                        self.qubits[qubit].drive_frequency = freq
-                    elif par == "bare_resonator_frequency":
-                        self.qubits[qubit].bare_resonator_frequency = freq
+                elif par == "drive_frequency":
+                    freq = int(value * 1e9)
+                    self.native_single_qubit_gates[qubit]["RX"]["frequency"] = freq
+                    if "if_frequency" in self.native_single_qubit_gates[qubit]["RX"]:
+                        self.native_single_qubit_gates[qubit]["RX"][
+                            "if_frequency"
+                        ] = freq - self.get_lo_drive_frequency(qubit)
+                    self.qubits[qubit].readout_frequency = freq
+                    self.qubits[qubit].drive_frequency = freq
+                elif par == "bare_resonator_frequency":
+                    freq = int(value * 1e9)
+                    self.qubits[qubit].bare_resonator_frequency = freq
                 elif "amplitude" in par:
                     amplitude = float(value)
                     if par == "readout_amplitude":

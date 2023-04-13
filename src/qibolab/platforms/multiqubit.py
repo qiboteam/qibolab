@@ -4,7 +4,7 @@ import numpy as np
 import yaml
 from qibo.config import log, raise_error
 
-from qibolab.platforms.abstract import AbstractPlatform
+from qibolab.platforms.abstract import AbstractPlatform, Qubit
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import ExecutionResults
 from qibolab.sweeper import Parameter
@@ -64,20 +64,20 @@ class MultiqubitPlatform(AbstractPlatform):
     def set_gain(self, qubit, gain):
         self.qd_port[qubit].gain = gain
 
-    def set_bias(self, qubit, bias):
-        if qubit in self.qbm:
-            self.qb_port[qubit].current = bias
-        elif qubit in self.qfm:
-            self.qf_port[qubit].offset = bias
+    def set_bias(self, qubit: Qubit, bias):
+        if qubit.name in self.qbm:
+            self.qb_port[qubit.name].current = bias
+        elif qubit.name in self.qfm:
+            self.qf_port[qubit.name].offset = bias
 
     def get_attenuation(self, qubit):
         return self.ro_port[qubit].attenuation
 
-    def get_bias(self, qubit):
-        if qubit in self.qbm:
-            return self.qb_port[qubit].current
-        elif qubit in self.qfm:
-            return self.qf_port[qubit].offset
+    def get_bias(self, qubit: Qubit):
+        if qubit.name in self.qbm:
+            return self.qb_port[qubit.name].current
+        elif qubit.name in self.qfm:
+            return self.qf_port[qubit.name].offset
 
     def get_gain(self, qubit):
         return self.qd_port[qubit].gain
@@ -187,7 +187,7 @@ class MultiqubitPlatform(AbstractPlatform):
 
         # STEP 1: upload sequence
         for instrument in readout_instruments + control_instruments:
-            instrument_pulses[instrument.name] = sequence.get_channel_pulses(*instrument.channels)
+            instrument_pulses[instrument.name] = copy.deepcopy(sequence.get_channel_pulses(*instrument.channels))
             for pulse in instrument_pulses[instrument.name]:
                 # FIXME: this will not work with arbitrary frequencies
                 if abs(pulse.frequency) > instrument.FREQUENCY_LIMIT:
@@ -219,20 +219,12 @@ class MultiqubitPlatform(AbstractPlatform):
                         acquisition_results[key] = value
 
         data = {}
-        # STEP 4: change back pulse frequencies
-        for instrument in readout_instruments + control_instruments:
-            for pulse in copy.deepcopy(instrument_pulses[instrument.name]):
-                for change in changed:
-                    if pulse == change:
-                        if instrument in readout_instruments:
-                            result = acquisition_results[pulse.serial]
-                            pulse.frequency += self.get_lo_readout_frequency(pulse.qubit)
-                            acquisition_results[pulse.serial] = result
-                        elif instrument in control_instruments:
-                            pulse.frequency += self.get_lo_drive_frequency(pulse.qubit)
-                if instrument in readout_instruments:
-                    data[pulse.serial] = ExecutionResults.from_components(*acquisition_results[pulse.serial])
-                    data[pulse.qubit] = copy.copy(data[pulse.serial])
+        for serial in acquisition_results:
+            for if_pulse, original in changed.items():
+                if serial == if_pulse.serial:
+                    data[original] = data[if_pulse.qubit] = ExecutionResults.from_components(
+                        *acquisition_results[serial]
+                    )
 
         return data
 
@@ -264,6 +256,7 @@ class MultiqubitPlatform(AbstractPlatform):
             sweeper_pulses=sweeper_pulses,
             map_original_shifted=map_original_shifted,
         )
+
         return results
 
     def _sweep_recursion(
@@ -331,7 +324,7 @@ class MultiqubitPlatform(AbstractPlatform):
             elif sweeper.parameter is Parameter.gain:
                 original_value[pulse] = self.get_gain(pulses[pulse].qubit)
             elif sweeper.parameter is Parameter.bias:
-                original_value[pulse] = self.get_bias(pulses[pulse].qubit)
+                original_value[pulse] = self.get_bias(self.qubits[pulses[pulse].qubit])
             else:
                 original_value[pulse] = getattr(pulses[pulse], sweeper.parameter.name)
 
@@ -346,7 +339,7 @@ class MultiqubitPlatform(AbstractPlatform):
             elif sweeper.parameter is Parameter.gain:
                 self.set_gain(pulses[pulse].qubit, original_value[pulse])
             elif sweeper.parameter is Parameter.bias:
-                self.set_bias(pulses[pulse].qubit, original_value[pulse])
+                self.set_bias(self.qubits[pulses[pulse].qubit], original_value[pulse])
             else:
                 setattr(pulses[pulse], sweeper.parameter.name, original_value[pulse])
 
