@@ -35,7 +35,7 @@ class Compiler:
     See ``qibolab.compilers.default`` for an example of a compiler implementation.
     """
 
-    rules: dict
+    rules: dict = field(default_factory=dict)
     """Map from gates to compilation rules."""
     measurement_map: dict = field(default_factory=dict)
     """Map from each measurement gate to the sequence of readout pulses implementing it."""
