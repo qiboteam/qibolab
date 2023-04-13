@@ -210,10 +210,10 @@ instruments:
         roles: [control]
         settings:
             ports:
-                o1: {gain: 1, offset:  0.151, hardware_mod_en: false} #q1
-                o2: {gain: 1, offset: -0.257, hardware_mod_en: false} #q2
-                o3: {gain: 1, offset:  0.878, hardware_mod_en: false} #q3
-                o4: {gain: 1, offset: -0.559, hardware_mod_en: false} #q4
+                o1: {gain: 1, offset:  -0.358, hardware_mod_en: false} #q1
+                o2: {gain: 1, offset: -0.165, hardware_mod_en: false} #q2
+                o3: {gain: 1, offset:  0.098, hardware_mod_en: false} #q3
+                o4: {gain: 1, offset: -0.329, hardware_mod_en: false} #q4
             channel_port_map: {L4-1: o1, L4-2: o2, L4-3: o3, L4-4: o4}
 
     #Cluster QCM usado para bias mediante el offset
@@ -224,7 +224,7 @@ instruments:
         roles: [control]
         settings:
             ports:
-                o1: {gain: 1, offset: 0.427, hardware_mod_en: false} #q0
+                o1: {gain: 1, offset: 0.336, hardware_mod_en: false} #q0
                 o2: {gain: 0, offset: 0.0, hardware_mod_en: false} #not used
                 o3: {gain: 0, offset: 0.0, hardware_mod_en: false} #not used
                 o4: {gain: 0, offset: 0.0, hardware_mod_en: false} #not used
@@ -342,7 +342,7 @@ characterization:
             state1_voltage: 0.0
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
-            sweetspot: 0.427
+            sweetspot: 0.336
         1:
             readout_frequency: 7_453_190_140
             drive_frequency: 4_852_013_000
@@ -352,7 +352,7 @@ characterization:
             state1_voltage: 0.0
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
-            sweetspot: 0.151
+            sweetspot: -0.358
         2:
             readout_frequency: 7_655_148_879
             drive_frequency: 5_795_026_000
@@ -362,7 +362,7 @@ characterization:
             state1_voltage: 0.0
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
-            sweetspot: -0.257
+            sweetspot: -0.165
         3:
             readout_frequency: 7_803_437_704
             drive_frequency: 6_761_250_000
@@ -372,7 +372,7 @@ characterization:
             state1_voltage: 0.0
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
-            sweetspot: 0.878
+            sweetspot: 0.098
         4:
             readout_frequency: 8_058_746_969
             drive_frequency: 6_588_003_000
@@ -382,7 +382,7 @@ characterization:
             state1_voltage: 0.0
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
-            sweetspot: -0.559
+            sweetspot: -0.329
         5:
             readout_frequency: 7_118_680_035
             drive_frequency: 4_700_000_000
