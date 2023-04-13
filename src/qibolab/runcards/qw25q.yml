@@ -68,8 +68,8 @@ native_gates:
         A4:
             RX:
                 duration: 40
-                amplitude: 0.13000950104663833
-                frequency: 5226614452
+                amplitude: 0.1482108311931677
+                frequency: 5254172241
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -373,9 +373,9 @@ native_gates:
                 phase: 0
 
     two_qubit:
-        A2-A1:
+        A2-A4:
             CZ:
-            - duration: 30
+            - duration: 20
               amplitude: 0.015
               shape: Rectangular()
               qubit: 2
@@ -431,8 +431,8 @@ characterization:
             sweetspot: -0.446
             filter: {}
             # parameters for single shot classification
-            threshold: 0.0006086154555524454
-            iq_angle: 1.8107232593883087
+            threshold: 0.000576042595836885
+            iq_angle: 1.8616077849009018
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -448,8 +448,8 @@ characterization:
             sweetspot: 0.303
             filter: {}
             # parameters for single shot classification
-            threshold:  0.0002810378953340043
-            iq_angle:  4.820865248333714
+            threshold:  0.0002743498286988214
+            iq_angle:  4.84040150167509
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -465,8 +465,8 @@ characterization:
             sweetspot: 0.025
             filter: {}
             # parameters for single shot classification
-            threshold: 0.0008589653136880513
-            iq_angle: 1.7438495495760686
+            threshold: 0.0004609324422037786
+            iq_angle: 0.9633164563672447
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
