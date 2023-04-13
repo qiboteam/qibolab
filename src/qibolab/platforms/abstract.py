@@ -200,7 +200,7 @@ class AbstractPlatform(ABC):
                 elif par == "readout_attenuation":
                     # TODO: Are we going to save the att@lp somwhere in the native_gates or characterization?
                     True
-                    
+
                 # resonator_punchout_attenuation
                 # Ask Andrea: Needs to be added in all platform runcards?
                 elif par == "bare_resonator_frequency":

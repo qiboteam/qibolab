@@ -115,7 +115,7 @@ class MultiqubitPlatform(AbstractPlatform):
 
                     self.instruments[instrument_name].setup(
                         **self.current_config["settings"],
-                        **self.current_config["instruments"][instrument_name]["settings"]
+                        **self.current_config["instruments"][instrument_name]["settings"],
                     )
 
                 # classification
@@ -129,7 +129,7 @@ class MultiqubitPlatform(AbstractPlatform):
 
                     self.instruments[instrument_name].setup(
                         **self.current_config["settings"],
-                        **self.current_config["instruments"][instrument_name]["settings"]
+                        **self.current_config["instruments"][instrument_name]["settings"],
                     )
 
                 super().update(updates)
