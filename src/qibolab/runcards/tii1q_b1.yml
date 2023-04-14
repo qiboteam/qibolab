@@ -1,0 +1,47 @@
+nqubits: 1
+description: TII's 1-qubit device controlled with the RFSoC4x2 (fpga board).
+
+qubits: [0]
+
+settings:
+    repetition_duration: 100_000
+    sampling_rate: 9_830_400_000 # DAC sampling rate
+    adc_trig_offset: 200 # [Clock ticks]
+    max_gain: 32000
+
+topology: # qubit - qubit connections
+-   [1]
+
+native_gates:
+    single_qubit:
+        0: # qubit number
+            RX:
+                duration: 30
+                amplitude: 0.05
+                frequency: 5_542_000_000 #5_541_675_000
+                shape: Rectangular()
+                type: qd # qubit drive
+                start: 0
+                phase: 0
+            MZ:
+                duration: 600
+                amplitude: 0.040
+                frequency: 7371800000
+                shape: Rectangular()
+                type: ro # readout
+                start: 0
+                phase: 0
+
+characterization:
+    single_qubit:
+        0:
+            readout_frequency: 7.3718e+9
+            resonator_polycoef_flux: []
+            drive_frequency: 5_542_000_000
+            threshold: -1.555234
+            rotation_angle: 324.276
+            T1: 0.
+            T2: 0.
+            mean_gnd_states: (0+0j)
+            mean_exc_states: (0+0j)
+            sweetspot: 0
