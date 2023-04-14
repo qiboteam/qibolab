@@ -1,6 +1,5 @@
-import re
 import math
-
+import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, field

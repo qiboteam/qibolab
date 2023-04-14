@@ -39,23 +39,20 @@ class MultiqubitPlatform(AbstractPlatform):
                         if channel in self.qubit_channel_map[qubit]:
                             self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
 
-
     def reload_settings(self):
         super().reload_settings()
         self.characterization = self.settings["characterization"]
         self.qubit_channel_map = self.settings["qubit_channel_map"]
         self.hardware_avg = self.settings["settings"]["hardware_avg"]
         self.repetition_duration = self.settings["settings"]["repetition_duration"]
-        
-        #FIX: Set attenuation again to the original value after sweep attenuation in punchout
-        if hasattr(self, 'qubit_instrument_map'):
+
+        # FIX: Set attenuation again to the original value after sweep attenuation in punchout
+        if hasattr(self, "qubit_instrument_map"):
             for qubit in range(self.nqubits):
                 print(qubit)
                 instrument_name = self.qubit_instrument_map[qubit][0]
                 port = self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]
-                att = self.current_config["instruments"][instrument_name]["settings"]["ports"][port][
-                    "attenuation"
-                ]
+                att = self.current_config["instruments"][instrument_name]["settings"]["ports"][port]["attenuation"]
                 self.ro_port[qubit].attenuation = att
 
     def update(self, updates: dict):
