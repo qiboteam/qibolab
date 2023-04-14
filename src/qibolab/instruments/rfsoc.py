@@ -477,7 +477,7 @@ class TII_RFSOC4x2(AbstractInstrument):
             if sweeper.parameter == Parameter.frequency:
                 sweeper.values += sweeper.pulses[0].frequency
             elif sweeper.parameter == Parameter.amplitude:
-                continue  # amp does not need modification, here for clarity
+                sweeper.values *= sweeper.pulses[0].amplitude
 
         sweepsequence = sequence.copy()
 
@@ -488,6 +488,6 @@ class TII_RFSOC4x2(AbstractInstrument):
             if sweeper.parameter == Parameter.frequency:
                 sweeper.values -= sweeper.pulses[0].frequency
             elif sweeper.parameter == Parameter.amplitude:
-                continue
+                sweeper.values /= sweeper.pulses[0].amplitude
 
         return results
