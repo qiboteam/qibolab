@@ -1,4 +1,6 @@
 import re
+import math
+
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -198,11 +200,11 @@ class AbstractPlatform(ABC):
 
                 # resonator_punchout_attenuation
                 elif par == "readout_attenuation":
-                    # TODO: Are we going to save the att@lp somwhere in the native_gates or characterization?
+                    # TODO: Are we going to save the attenuation somwhere in the native_gates or characterization
+                    # in all platforms?
                     True
 
                 # resonator_punchout_attenuation
-                # Ask Andrea: Needs to be added in all platform runcards?
                 elif par == "bare_resonator_frequency":
                     freq = int(value * 1e9)
                     self.qubits[qubit].bare_resonator_frequency = freq
@@ -226,7 +228,7 @@ class AbstractPlatform(ABC):
                 elif "amplitude" in par:
                     amplitude = float(value)
                     # resonator_spectroscopy
-                    if par == "readout_amplitude":
+                    if par == "readout_amplitude" and not math.isnan(amplitude):
                         self.native_single_qubit_gates[qubit]["MZ"]["amplitude"] = amplitude
                         self.current_config["native_gates"]["single_qubit"][qubit]["MZ"]["amplitude"] = amplitude
 

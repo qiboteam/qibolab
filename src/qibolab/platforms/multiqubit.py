@@ -39,12 +39,24 @@ class MultiqubitPlatform(AbstractPlatform):
                         if channel in self.qubit_channel_map[qubit]:
                             self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
 
+
     def reload_settings(self):
         super().reload_settings()
         self.characterization = self.settings["characterization"]
         self.qubit_channel_map = self.settings["qubit_channel_map"]
         self.hardware_avg = self.settings["settings"]["hardware_avg"]
         self.repetition_duration = self.settings["settings"]["repetition_duration"]
+        
+        #FIX: Set attenuation again to the original value after sweep attenuation in punchout
+        if hasattr(self, 'qubit_instrument_map'):
+            for qubit in range(self.nqubits):
+                print(qubit)
+                instrument_name = self.qubit_instrument_map[qubit][0]
+                port = self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]
+                att = self.current_config["instruments"][instrument_name]["settings"]["ports"][port][
+                    "attenuation"
+                ]
+                self.ro_port[qubit].attenuation = att
 
     def update(self, updates: dict):
         r"""Updates platform dependent runcard parameters and set up platform instruments if needed.
@@ -64,6 +76,7 @@ class MultiqubitPlatform(AbstractPlatform):
                 # log.info(f"qubit qubit drive channel: {self.qd_channel[qubit]}")
                 # log.info(f"qubit qubit bias channel: {self.qb_channel[qubit]}")
                 # log.info(f"qubit qubit flux channel: {self.qf_channel[qubit]}")
+                # log.info(f"attenuation before updating: {self.ro_port[qubit].attenuation}")
 
                 # resonator_punchout_attenuation
                 if par == "readout_attenuation":
@@ -415,7 +428,6 @@ class MultiqubitPlatform(AbstractPlatform):
                 original_value[pulse] = self.get_bias(self.qubits[pulses[pulse].qubit])
             else:
                 original_value[pulse] = getattr(pulses[pulse], sweeper.parameter.name)
-
         return original_value
 
     def _restore_initial_value(self, sweeper, sweeper_pulses, original_value):
