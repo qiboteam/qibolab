@@ -58,10 +58,16 @@ def test_classify_shots():
 
 def test_merge_sweep_results():
     """Creates fake dictionary of results and check merging works as expected"""
-    dict_a = {"serial1": AveragedResults(i=[0], q=[1])}
-    dict_b = {"serial1": AveragedResults(i=[4], q=[4]), "serial2": AveragedResults(i=[5], q=[5])}
+    dict_a = {"serial1": AveragedResults.from_components(np.array([0]), np.array([1]))}
+    dict_b = {
+        "serial1": AveragedResults.from_components(np.array([4]), np.array([4])),
+        "serial2": AveragedResults.from_components(np.array([5]), np.array([5])),
+    }
     dict_c = {}
-    targ_dict = {"serial1": AveragedResults(i=[0, 4], q=[1, 4]), "serial2": AveragedResults(i=[5], q=[5])}
+    targ_dict = {
+        "serial1": AveragedResults.from_components(np.array([0, 4]), np.array([1, 4])),
+        "serial2": AveragedResults.from_components(np.array([5]), np.array([5])),
+    }
 
     platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
     instrument = platform.design.instruments[0]
@@ -125,8 +131,8 @@ def test_convert_av_sweep_results():
     ro_serials = [ro.serial for ro in sequence.ro_pulses]
     out_dict = instrument.convert_sweep_results(sweep1, ro_serials, sequence, platform.qubits, avgi, avgq, True)
     targ_dict = {
-        serial1: AveragedResults(i=[1, 2, 3], q=[7, 8, 9]),
-        serial2: AveragedResults(i=[0, 1, 2], q=[-1, -2, -3]),
+        serial1: AveragedResults.from_components(np.array([1, 2, 3]), np.array([7, 8, 9])),
+        serial2: AveragedResults.from_components(np.array([0, 1, 2]), np.array([-1, -2, -3])),
     }
 
     assert (out_dict[serial1].i == targ_dict[serial1].i).all()
