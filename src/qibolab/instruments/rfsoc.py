@@ -289,7 +289,7 @@ class RFSoC(AbstractInstrument):
                 serial = ro_pulse.serial
 
                 if average:
-                    results[ro_pulse.qubit] = results[serial] = AveragedResults(i_pulse, q_pulse)
+                    results[ro_pulse.qubit] = results[serial] = AveragedResults.from_components(i_pulse, q_pulse)
                 else:
                     shots = self.classify_shots(i_pulse, q_pulse, qubits[ro_pulse.qubit])
                     results[ro_pulse.qubit] = results[serial] = ExecutionResults.from_components(
@@ -507,7 +507,9 @@ class RFSoC(AbstractInstrument):
                     q_pulse = q_pulse[q_pulse != 0]
 
                     if average:
-                        results[sequence.ro_pulses[i].qubit] = results[serial] = AveragedResults(i_pulse, q_pulse)
+                        results[sequence.ro_pulses[i].qubit] = results[serial] = AveragedResults.from_components(
+                            i_pulse, q_pulse
+                        )
                     else:
                         qubit = qubits[sequence.ro_pulses[i].qubit]
                         shots = self.classify_shots(i_pulse, q_pulse, qubit)

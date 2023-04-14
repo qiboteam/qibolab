@@ -30,7 +30,7 @@ from qualang_tools.units import unit
 from qibolab.designs.channels import check_max_bias
 from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.pulses import Pulse, PulseType, Rectangular
-from qibolab.result import ExecutionResults
+from qibolab.result import AveragedResults, ExecutionResults
 from qibolab.sweeper import Parameter
 
 
@@ -585,7 +585,7 @@ class QMOPX(AbstractInstrument):
                     save(qmpulse.shot, qmpulse.shots)
 
     @staticmethod
-    def fetch_results(result, ro_pulses, raw_adc=False):
+    def fetch_results(result, ro_pulses, average, raw_adc=False):
         """Fetches results from an executed experiment."""
         # TODO: Update result asynchronously instead of waiting
         # for all values, in order to allow live plotting
@@ -610,7 +610,11 @@ class QMOPX(AbstractInstrument):
                 shots = handles.get(f"{serial}_shots").fetch_all().astype(int)
             else:
                 shots = None
-            results[pulse.qubit] = results[serial] = ExecutionResults.from_components(ires, qres, shots)
+            results[pulse.qubit] = results[serial] = (
+                AveragedResults.from_components(ires, qres)
+                if average
+                else ExecutionResults.from_components(ires, qres, shots)
+            )
         return results
 
     @staticmethod
@@ -626,7 +630,7 @@ class QMOPX(AbstractInstrument):
             if qmpulse.threshold is not None:
                 qmpulse.shots.buffer(nshots).save(f"{serial}_shots")
 
-    def play(self, qubits, sequence, nshots, relaxation_time, raw_adc=False):
+    def play(self, qubits, sequence, nshots, relaxation_time, average=False, raw_adc=False):
         """Plays an arbitrary pulse sequence using QUA program.
 
         Args:
@@ -635,6 +639,9 @@ class QMOPX(AbstractInstrument):
             sequence (:class:`qibolab.pulses.PulseSequence`). Pulse sequence to play.
             nshots (int): Number of repetitions (shots) of the experiment.
             relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
+            average (bool): If True the return type is :class:`qibolab.result.AveragedResults` which includes
+                averaged values of i and q. If False the return type is :class:`qibolab.result.ExecutionResults`
+                which includes i, q and shot for each shots.
         """
         # register flux elements for all qubits so that they are
         # always at sweetspot even when they are not used
@@ -675,7 +682,7 @@ class QMOPX(AbstractInstrument):
                     self.save_streams(qmpulse, nshots, raw_adc)
 
         result = self.execute_program(experiment)
-        return self.fetch_results(result, sequence.ro_pulses, raw_adc)
+        return self.fetch_results(result, sequence.ro_pulses, average, raw_adc)
 
     def sweep(self, qubits, sequence, *sweepers, nshots, relaxation_time, average=True):
         # register flux elements for all qubits so that they are
@@ -734,7 +741,7 @@ class QMOPX(AbstractInstrument):
                             shots_temp.buffer(nshots).save(f"{serial}_shots")
 
         result = self.execute_program(experiment)
-        return self.fetch_results(result, sequence.ro_pulses)
+        return self.fetch_results(result, sequence.ro_pulses, average, raw_adc=False)
 
     @staticmethod
     def maximum_sweep_value(values, value0):
