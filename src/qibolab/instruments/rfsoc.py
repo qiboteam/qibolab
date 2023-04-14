@@ -30,6 +30,7 @@ class QickProgramConfig:
     expts: Optional[int] = None  # TODO remove
     mixer_freq: Optional[int] = None
     LO_freq: Optional[int] = None
+    LO_power: Optional[float] = None
 
 
 @dataclass
@@ -582,5 +583,6 @@ class TII_ZCU111(RFSoC):  # Containes the main settings:
         self.cfg = QickProgramConfig(
             sampling_rate=6_000_000_000,
             mixer_freq=0,
-            LO_freq=7_000_000_000,
+            LO_freq=6_850_000_000,
+            LO_power=15.0,
         )

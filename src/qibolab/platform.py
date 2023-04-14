@@ -290,8 +290,8 @@ def create_tii_zcu111(runcard, address=None):
         ERA("ErasynthLO", "192.168.000.210"),
     ]
     # Set ErasynthLO parameters
-    local_oscillators[0].power = 15.0
-    local_oscillators[0].frequency =  6.85e9
+    local_oscillators[0].power = controller.cfg.LO_power
+    local_oscillators[0].frequency =  controller.cfg.LO_freq
 
 
 
