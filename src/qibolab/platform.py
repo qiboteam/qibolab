@@ -213,9 +213,10 @@ def create_tii_zcu111(runcard, address=None):
         address (str): Address and port for the QICK board.
             If ``None`` it will attempt to connect to TII instruments.
     """
-    from qibolab.instruments.dummy_oscillator import (
-        DummyLocalOscillator as LocalOscillator,
-    )
+    # from qibolab.instruments.dummy_oscillator import (
+    #    DummyLocalOscillator as LocalOscillator,
+    # )
+    from qibolab.instruments.erasynth import ERA
     from qibolab.instruments.rfsoc import TII_ZCU111
 
     # Create channel objects
@@ -284,19 +285,16 @@ def create_tii_zcu111(runcard, address=None):
         address = "192.168.0.81:6000"
     controller = TII_ZCU111("tii_zcu111", address)
 
-    # Instantiate local oscillators (HARDCODED) # TODO local oscillators should not be needed
+    # Instantiate local oscillators (HARDCODED)
     local_oscillators = [
-        LocalOscillator("twpa", "192.168.0.35"),
+        ERA("ErasynthLO", "192.168.000.210"),
     ]
-    # Set TWPA parameters
-    # local_oscillators[0].frequency = 6_511_000_000
-    # local_oscillators[0].power = 4.5
+    # Set ErasynthLO parameters
+    local_oscillators[0].power = controller.cfg.LO_power
+    local_oscillators[0].frequency = controller.cfg.LO_freq
 
-    # Map LOs to channels
-    # channels["L4-26"].local_oscillator = local_oscillators[0]  # TODO find the real channel
-
-    # TODO add local_oscillators
-    design = InstrumentDesign([controller], channels)
+    instruments = [controller] + local_oscillators
+    design = InstrumentDesign(instruments, channels)
     platform = DesignPlatform("tii_rfsocZCU111", design, runcard)
 
     # assign channels to qubits
