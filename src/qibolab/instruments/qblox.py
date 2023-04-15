@@ -1091,7 +1091,7 @@ class ClusterQRM_RF(AbstractInstrument):
                     pulses_block = Block("play_and_acquire")
                     # Add an initial wait instruction for the first pulse of the sequence
                     initial_wait_block = wait_block(
-                        wait_time=pulses[0].start, register=Register(program), force_multiples_of_4=False
+                        wait_time=pulses[0].start, register=Register(program), force_multiples_of_4=True
                     )
                     pulses_block += initial_wait_block
 
@@ -2755,6 +2755,7 @@ class ClusterQCM(AbstractInstrument):
                         f"port_" + port,
                         (),
                         {
+                            "channel": None,
                             "gain": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS[port], "gain_awg_path0"),
                             "offset": self.property_wrapper(f"out{n}_offset"),
                             "hardware_mod_en": self.sequencer_property_wrapper(
@@ -2972,7 +2973,7 @@ class ClusterQCM(AbstractInstrument):
 
     def get_if(self, pulse):
         _rf = pulse.frequency
-        _lo = self.ports[self._channel_port_map[pulse.channel]].lo_frequency
+        _lo = 0
         _if = _rf - _lo
         if abs(_if) > self.FREQUENCY_LIMIT:
             raise RuntimeError(
@@ -3380,6 +3381,14 @@ class ClusterQCM(AbstractInstrument):
                     self._set_device_parameter(target, "channel_map_path1_out1_en", value=False)
                     self._set_device_parameter(target, "channel_map_path1_out3_en", value=False)
 
+            # There seems to be a bug in qblox that when any of the mappings between paths and outputs is set,
+            # the general offset goes to 0 (eventhout the parameter will still show the right value).
+            # Until that is fixed, I'm going to always set the offset just before playing (bypassing the cache):
+            self.device.out0_offset(self.device.get("out0_offset"))
+            self.device.out1_offset(self.device.get("out1_offset"))
+            self.device.out2_offset(self.device.get("out2_offset"))
+            self.device.out3_offset(self.device.get("out3_offset"))
+
             # Upload waveforms and program
             qblox_dict = {}
             sequencer: Sequencer
@@ -3431,6 +3440,18 @@ class ClusterQCM(AbstractInstrument):
         """Stops all sequencers"""
         try:
             self.device.stop_sequencer()
+        except:
+            pass
+
+        try:
+            self._set_device_parameter(self.device, "out0_offset", value=0)
+            self._set_device_parameter(self.device, "out1_offset", value=0)
+            self._set_device_parameter(self.device, "out2_offset", value=0)
+            self._set_device_parameter(self.device, "out3_offset", value=0)
+            # self.device.out0_offset(0)
+            # self.device.out1_offset(0)
+            # self.device.out2_offset(0)
+            # self.device.out3_offset(0)
         except:
             pass
 

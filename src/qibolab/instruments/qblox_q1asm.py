@@ -256,7 +256,7 @@ def convert_frequency(freq: float):
 def convert_gain(gain: float):
     if not (gain >= -1 and gain <= 1):
         raise ValueError("gain must be a float between -1 and 1")
-    return int(gain * (2**16 - 1)) % 2**32  # two's complement 32 bit number? or 12 or 24?
+    return int(gain * (2**15 - 1)) % 2**32  # two's complement 32 bit number? or 12 or 24?
     """ Both gain values are divided in 2**sample path width steps."""
     """ QCM DACs resolution 16bits, QRM DACs and ADCs 12 bit"""
 
@@ -264,7 +264,7 @@ def convert_gain(gain: float):
 def convert_offset(offset: float):
     if not (offset >= -2.5 and offset <= 2.5):
         raise ValueError("offset must be a float between -2.5 and 2.5")
-    return int(offset / 2.5 * (2**16 - 1)) % 2**32
+    return int(offset / 2.5 * (2**15 - 1)) % 2**32
 
     # two's complement 32 bit number? or 12 or 24?
     """ Both offset values are divided in 2**sample path width steps."""

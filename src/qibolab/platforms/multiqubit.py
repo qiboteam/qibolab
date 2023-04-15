@@ -218,11 +218,15 @@ class MultiqubitPlatform(AbstractPlatform):
                         for pulse in port_pulses:
                             if pulse.type == PulseType.READOUT:
                                 _if = int(self.native_gates["single_qubit"][pulse.qubit]["MZ"]["if_frequency"])
+                                pulse._if = _if
+                                _los.append(int(pulse.frequency - _if))
+                                _ifs.append(int(_if))
                             elif pulse.type == PulseType.DRIVE:
                                 _if = int(self.native_gates["single_qubit"][pulse.qubit]["RX"]["if_frequency"])
-                            pulse._if = _if
-                            _los.append(int(pulse.frequency - _if))
-                            _ifs.append(int(_if))
+                                pulse._if = _if
+                                _los.append(int(pulse.frequency - _if))
+                                _ifs.append(int(_if))
+
                         if len(_los) > 1:
                             for _ in range(1, len(_los)):
                                 if _los[0] != _los[_]:
