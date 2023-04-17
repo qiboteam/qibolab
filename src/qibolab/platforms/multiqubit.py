@@ -360,7 +360,14 @@ class MultiqubitPlatform(AbstractPlatform):
         #         initial[pulse.id] = pulse.amplitude
 
         for_loop_sweepers = [Parameter.attenuation, Parameter.lo_frequency]
-        rt_sweepers = [Parameter.frequency, Parameter.gain, Parameter.bias, Parameter.amplitude, Parameter.start]
+        rt_sweepers = [
+            Parameter.frequency,
+            Parameter.gain,
+            Parameter.bias,
+            Parameter.amplitude,
+            Parameter.start,
+            Parameter.duration,
+        ]
 
         if sweeper.parameter in for_loop_sweepers:
             # perform sweep recursively

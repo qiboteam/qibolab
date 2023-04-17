@@ -184,10 +184,10 @@ instruments:
         roles: [control]
         settings:
             ports:
-                o1: {channel: L4-1, gain: 1, offset:  0, qubit: 1} #q1
-                o2: {channel: L4-2, gain: 1, offset: 0, qubit: 2} #q2
-                o3: {channel: L4-3, gain: 1, offset:  0, qubit: 3} #q3
-                o4: {channel: L4-4, gain: 1, offset: 0, qubit: 4} #q4
+                o1: {channel: L4-1, gain: 1, offset:  -0.720, qubit: 1} #q1
+                o2: {channel: L4-2, gain: 1, offset: -0.330, qubit: 2} #q2
+                o3: {channel: L4-3, gain: 1, offset:  0.186, qubit: 3} #q3
+                o4: {channel: L4-4, gain: 1, offset: -0.658, qubit: 4} #q4
                 # o1: {channel: L4-1, gain: 0.5, offset:  -0.360, qubit: 1} #q1
                 # o2: {channel: L4-2, gain: 0.5, offset: -0.167, qubit: 2} #q2
                 # o3: {channel: L4-3, gain: 0.5, offset:  0.095, qubit: 3} #q3
@@ -201,7 +201,7 @@ instruments:
         roles: [control]
         settings:
             ports:
-                o1: {channel: L4-5,gain: 1, offset: 0, qubit: 0} #q0
+                o1: {channel: L4-5,gain: 1, offset: 0.670, qubit: 0} #q0
                 # o1: {channel: L4-5,gain: 0.5, offset: 0.335, qubit: 0} #q0
                 # o4: {channel: L4-3, gain: 0.5, offset:  0.095, qubit: 3} #q3 oscilloscope
 
@@ -311,7 +311,7 @@ native_gates:
         3-2:
             CZ:
             - duration: 32
-              amplitude: -0.20371
+              amplitude: 1 # -0.20371
               shape: Rectangular()
               qubit: 3
               relative_start: 0
@@ -334,7 +334,7 @@ characterization:
             state1_voltage: 0.0
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
-            sweetspot: 0
+            sweetspot: 0.670
             # sweetspot: 0.335
         1:
             readout_frequency: 7_453_190_140
@@ -345,7 +345,7 @@ characterization:
             state1_voltage: 0.0
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
-            sweetspot: 0
+            sweetspot: -0.720
             # sweetspot: -0.360
         2:
             readout_frequency: 7_655_148_879
@@ -356,7 +356,7 @@ characterization:
             state1_voltage: 0.0
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
-            sweetspot: 0
+            sweetspot: -0.330
             # sweetspot: -0.167
         3:
             readout_frequency: 7_803_437_704
@@ -367,7 +367,7 @@ characterization:
             state1_voltage: 0.0
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
-            sweetspot: 0
+            sweetspot: 0.186
             # sweetspot: 0.095
         4:
             readout_frequency: 8_058_673_359
@@ -378,7 +378,7 @@ characterization:
             state1_voltage: 0.0
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
-            sweetspot: 0
+            sweetspot: -0.658
             # sweetspot: -0.329
         5:
             readout_frequency: 7_118_680_035

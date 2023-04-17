@@ -184,10 +184,14 @@ instruments:
         roles: [control]
         settings:
             ports:
-                o1: {channel: L4-1, gain: 0.5, offset:  -0.360, qubit: 1} #q1
-                o2: {channel: L4-2, gain: 0.5, offset: -0.167, qubit: 2} #q2
-                o3: {channel: L4-3, gain: 0.5, offset:  0.095, qubit: 3} #q3
-                o4: {channel: L4-4, gain: 0.5, offset: -0.329, qubit: 4} #q4
+                o1: {channel: L4-1, gain: 1, offset:  -0.720, qubit: 1} #q1
+                o2: {channel: L4-2, gain: 1, offset: -0.334, qubit: 2} #q2
+                o3: {channel: L4-3, gain: 1, offset:  0.190, qubit: 3} #q3
+                o4: {channel: L4-4, gain: 1, offset: -0.658, qubit: 4} #q4
+                # o1: {channel: L4-1, gain: 0.5, offset:  -0.360, qubit: 1} #q1
+                # o2: {channel: L4-2, gain: 0.5, offset: -0.167, qubit: 2} #q2
+                # o3: {channel: L4-3, gain: 0.5, offset:  0.095, qubit: 3} #q3
+                # o4: {channel: L4-4, gain: 0.5, offset: -0.329, qubit: 4} #q4
 
     #Cluster QCM usado para bias mediante el offset
     qcm_bb2:
@@ -197,7 +201,9 @@ instruments:
         roles: [control]
         settings:
             ports:
-                o1: {channel: L4-5,gain: 0.5, offset: 0.335, qubit: 0} #q0
+                o1: {channel: L4-5,gain: 1, offset: 0.670, qubit: 0} #q0
+                # o1: {channel: L4-5,gain: 0.5, offset: 0.335, qubit: 0} #q0
+                # o4: {channel: L4-3, gain: 0.5, offset:  0.095, qubit: 3} #q3 oscilloscope
 
     twpa_pump:
         lib: rohde_schwarz
@@ -305,7 +311,7 @@ native_gates:
         3-2:
             CZ:
             - duration: 32
-              amplitude: -0.2432
+              amplitude: -0.25048
               shape: Rectangular()
               qubit: 3
               relative_start: 0
