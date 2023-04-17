@@ -26,15 +26,15 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.005
-                frequency: 4_700_000_000
+                frequency: 6_750_000_000
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.06
-                frequency: 6_952_000_000 #7_050_000_000
+                amplitude: 0.2
+                frequency: 7_111_265_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -43,15 +43,15 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.0484
-                frequency: 4_855_663_000
+                frequency: 6_855_663_000
                 #frequency: 4_718_515_000 # 02 transition (more likely)
-                shape: Rectangular()
+                shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.06
+                amplitude: 0.2
                 frequency: 7_343_000_000 # 7_450_000_000
                 shape: Rectangular()
                 type: ro # readout
@@ -61,16 +61,16 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.0484
-                frequency: 4_855_663_000
+                frequency: 6_866_663_000
                 #frequency: 4_718_515_000 # 02 transition (more likely)
-                shape: Rectangular()
+                shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.06
-                frequency: 7_111_265_000
+                amplitude: 0.2
+                frequency: 6_952_000_000 #7_050_000_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -98,7 +98,7 @@ characterization:   #TODO No characterization yet
     single_qubit:
         0:
             readout_frequency: 0.0
-            drive_frequency: 0.0
+            drive_frequency: 6_700_000_000
             T1: 0.0
             T2: 0.0
             sweetspot: 0.0

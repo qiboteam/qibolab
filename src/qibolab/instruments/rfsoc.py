@@ -40,7 +40,7 @@ class QickSweep:
     pulses: List[Pulse] = None  # list of pulses
     indexes: List[int] = None  # list of the indexes of the sweeped pulses
     starts: List[Union[int, float]] = None  # list of start values
-    step: Union[int, float] = None  # single step
+    steps: List[Union[int, float]] = None  # single step
     expts: int = None  # single number of points
 
 
@@ -52,16 +52,20 @@ def create_qick_sweeps(sweepers, sequence, qubits):
         is_bias = sweeper.parameter is Parameter.bias
 
         starts = []
+        steps = []
         if is_freq or is_amp:
             for pulse in sweeper.pulses:
                 if is_freq:
                     starts.append(sweeper.values[0] + pulse.frequency)
+                    steps.append(sweeper.values[1] - sweeper.values[0])
                 elif is_amp:
                     # starts.append(sweeper.values[0] * pulse.amplitude)
-                    starts.append(sweeper.values[0])
+                    starts.append(sweeper.values[0] * pulse.amplitude)
+                    steps.append((sweeper.values[1] - sweeper.values[0]) * pulse.amplitude)
         elif is_bias:
             for qubit in sweeper.qubits:
                 starts.append(sweeper.values[0])
+                steps.append(sweeper.values[1] - sweeper.values[0])
 
         indexes = []
         if is_bias:
@@ -81,7 +85,7 @@ def create_qick_sweeps(sweepers, sequence, qubits):
             pulses=sweeper.pulses,
             indexes=indexes,
             starts=starts,
-            step=sweeper.values[1] - sweeper.values[0],
+            steps=steps,
             expts=len(sweeper.values),
         )
         sweeps.append(q)
@@ -280,6 +284,7 @@ class RFSoC(AbstractInstrument):
 
         results = {}
         adc_chs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
+
         for j in range(len(adc_chs)):
             channel = sequence.ro_pulses[j].qubit
             for i, ro_pulse in enumerate(sequence.ro_pulses.get_qubit_pulses(channel)):
@@ -289,7 +294,9 @@ class RFSoC(AbstractInstrument):
                 serial = ro_pulse.serial
 
                 if average:
-                    results[ro_pulse.qubit] = results[serial] = AveragedResults.from_components(i_pulse, q_pulse)
+                    results[ro_pulse.qubit] = results[serial] = AveragedResults.from_components(
+                        np.array([i_pulse]), np.array([q_pulse])
+                    )
                 else:
                     shots = self.classify_shots(i_pulse, q_pulse, qubits[ro_pulse.qubit])
                     results[ro_pulse.qubit] = results[serial] = ExecutionResults.from_components(
@@ -353,7 +360,7 @@ class RFSoC(AbstractInstrument):
 
         elif len(sweepers) == 1 and not self.get_if_python_sweep(sequence, qubits, *sweepers):
             sweeper = sweepers[0]
-            toti, totq = self.call_executesinglesweep(
+            toti, totq = self._execute_single_sweep(
                 self.cfg, sequence, qubits, sweeper, len(sequence.ro_pulses), average
             )
             res = self.convert_sweep_results(sweeper, original_ro, sequence, qubits, toti, totq, average)
@@ -364,11 +371,11 @@ class RFSoC(AbstractInstrument):
                 values = []
                 if sweeper.parameter is Parameter.frequency or sweeper.parameter is Parameter.amplitude:
                     for idx, _ in enumerate(sweeper.pulses):
-                        val = np.arange(0, sweeper.expts) * sweeper.step + sweeper.starts[idx]
+                        val = np.arange(0, sweeper.expts) * sweeper.steps[idx] + sweeper.starts[idx]
                         values.append(val)
                 else:
                     for idx, _ in enumerate(sweeper.indexes):
-                        val = np.arange(0, sweeper.expts) * sweeper.step + sweeper.starts[idx]
+                        val = np.arange(0, sweeper.expts) * sweeper.steps[idx] + sweeper.starts[idx]
                         values.append(val)
 
                 results = {}
@@ -428,6 +435,8 @@ class RFSoC(AbstractInstrument):
             A boolean value true if the sweeper must be executed by python
             loop, false otherwise
         """
+
+        return True
 
         # if there isn't only a sweeper do a python sweep
         if len(sweepers) != 1:
@@ -585,6 +594,6 @@ class TII_ZCU111(RFSoC):  # Containes the main settings:
         self.cfg = QickProgramConfig(
             sampling_rate=6_000_000_000,
             mixer_freq=0,
-            LO_freq=6_850_000_000,
+            LO_freq=6_930_000_000,
             LO_power=15.0,
         )
