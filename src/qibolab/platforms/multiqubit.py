@@ -395,7 +395,7 @@ class MultiqubitPlatform(AbstractPlatform):
                 else:
                     result = self.execute_pulse_sequence(sequence, nshots, navgs, relaxation_time)
                     for pulse in sequence.ro_pulses:
-                        results[pulse.id] += result[pulse.serial].compute_average() if average else result[pulse.serial]
+                        results[pulse.id] += result[pulse.serial].average if average else result[pulse.serial]
                         results[pulse.qubit] = results[pulse.id]
         else:
             if all(s.parameter in rt_sweepers for s in sweepers):
