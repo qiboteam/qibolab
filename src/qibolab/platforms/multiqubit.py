@@ -49,7 +49,6 @@ class MultiqubitPlatform(AbstractPlatform):
         # FIX: Set attenuation again to the original value after sweep attenuation in punchout
         if hasattr(self, "qubit_instrument_map"):
             for qubit in range(self.nqubits):
-                print(qubit)
                 instrument_name = self.qubit_instrument_map[qubit][0]
                 port = self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]
                 att = self.current_config["instruments"][instrument_name]["settings"]["ports"][port]["attenuation"]
@@ -77,17 +76,15 @@ class MultiqubitPlatform(AbstractPlatform):
 
                 # resonator_punchout_attenuation
                 if par == "readout_attenuation":
-                    attenuation = float(value)
+                    attenuation = int(value)
                     # save current_config
                     instrument_name = self.qubit_instrument_map[qubit][0]
                     port = self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]
-                    # log.info(f"qubit: {qubit} - instrument: {instrument_name} - port: {port} ")
                     self.current_config["instruments"][instrument_name]["settings"]["ports"][port][
                         "attenuation"
                     ] = attenuation
                     # configure RO attenuation
                     self.ro_port[qubit].attenuation = attenuation
-                    True
 
                 # resonator_spectroscopy_flux / qubit_spectroscopy_flux
                 if par == "sweetspot":
