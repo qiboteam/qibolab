@@ -36,7 +36,7 @@ class ExecutionResults:
         if data.shots is not None:
             assert len(data.i.shape) == len(data.shots.shape)
         # concatenate on first dimension; if a scalar is passed, just append it
-        axis = 0 if len(data.i.shape) > 0 else None
+        axis = 0 if len(data.i.shape) > 1 else None
         i = np.append(self.i, data.i, axis=axis)
         q = np.append(self.q, data.q, axis=axis)
         if data.shots is not None:

@@ -210,6 +210,51 @@ class Rectangular(PulseShape):
         return f"{self.name}()"
 
 
+class Exponential(PulseShape):
+    """ """
+
+    def __init__(self, tau: float, g: float):
+        self.name = "Exponential"
+        self.pulse: Pulse = None
+        self.tau: float = float(tau)
+        self.g: float = float(g)
+
+    @property
+    def envelope_waveform_i(self) -> Waveform:
+        """The envelope waveform of the i component of the pulse."""
+
+        if self.pulse:
+            num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
+            x = np.arange(0, num_samples, 1)
+            waveform = Waveform(
+                self.pulse.amplitude * np.ones(num_samples)
+                + self.g * (1 - self.pulse.amplitude) * np.exp(-x / self.tau)
+            )
+            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            return waveform
+        else:
+            raise Exception(
+                "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
+            )
+
+    @property
+    def envelope_waveform_q(self) -> Waveform:
+        """The envelope waveform of the q component of the pulse."""
+
+        if self.pulse:
+            num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
+            waveform = Waveform(np.zeros(num_samples))
+            waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            return waveform
+        else:
+            raise Exception(
+                "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
+            )
+
+    def __repr__(self):
+        return f"{self.name}({format(self.tau, '.6f').rstrip('0').rstrip('.')})"
+
+
 class Gaussian(PulseShape):
     """
     Gaussian pulse shape.
@@ -517,6 +562,61 @@ class eCap(PulseShape):
 
     def __repr__(self):
         return f"{self.name}({format(self.alpha, '.6f').rstrip('0').rstrip('.')})"
+
+
+class Custom(PulseShape):
+    """
+    Arbitrary shape
+
+    """
+
+    def __init__(self, envelope):
+        self.name = "Custom"
+        self._pulse: Pulse = None
+        self.envelope: np.ndarray = np.array(envelope)
+
+    @property
+    def pulse(self):
+        return self._pulse
+
+    @pulse.setter
+    def pulse(self, value):
+        self._pulse = value
+
+    @property
+    def envelope_waveform_i(self) -> Waveform:
+        """The envelope waveform of the i component of the pulse."""
+
+        if self.pulse:
+            assert self.pulse.duration == len(self.envelope)
+            num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
+
+            waveform = Waveform(self.envelope * self.pulse.amplitude)
+            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            return waveform
+        else:
+            raise Exception(
+                "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
+            )
+
+    @property
+    def envelope_waveform_q(self) -> Waveform:
+        """The envelope waveform of the q component of the pulse."""
+
+        if self.pulse:
+            assert self.pulse.duration == len(self.envelope)
+            num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
+
+            waveform = Waveform(self.envelope * self.pulse.amplitude)
+            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            return waveform
+        else:
+            raise Exception(
+                "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
+            )
+
+    def __repr__(self):
+        return f"{self.name}({self.envelope[:3]}, ...)"
 
 
 class Pulse:
@@ -978,7 +1078,7 @@ class Pulse:
                 self.start,
                 self.duration,
                 self.amplitude,
-                repr(self._shape),  # self._shape,
+                self._shape,
                 self.channel,
                 self.qubit,
             )

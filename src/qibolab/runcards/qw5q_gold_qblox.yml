@@ -311,7 +311,7 @@ native_gates:
         3-2:
             CZ:
             - duration: 32
-              amplitude: 1 # -0.20371
+              amplitude: 0.5 # -0.20371
               shape: Rectangular()
               qubit: 3
               relative_start: 0

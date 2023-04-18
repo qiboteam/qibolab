@@ -1604,7 +1604,7 @@ class ClusterQRM_RF(AbstractInstrument):
                         data[acquisition_name] = (
                             shots_i,
                             shots_q,
-                            acquisition_results["demodulated_integrated_classified_binned"][acquisition_name],
+                            # acquisition_results["demodulated_integrated_classified_binned"][acquisition_name],
                         )
 
                         acquisition_results["probability"][pulse.serial] = np.mean(
@@ -3134,10 +3134,10 @@ class ClusterQCM(AbstractInstrument):
                     self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
 
                     # DEBUG: QCM Save sequence to file
-                    # filename = f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
-                    # with open(filename, "w", encoding="utf-8") as file:
-                    #     json.dump(qblox_dict[sequencer], file, indent=4)
-                    #     file.write(sequencer.program)
+                    filename = f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
+                    with open(filename, "w", encoding="utf-8") as file:
+                        json.dump(qblox_dict[sequencer], file, indent=4)
+                        file.write(sequencer.program)
 
         # Arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
