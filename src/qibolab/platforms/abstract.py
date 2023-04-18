@@ -269,7 +269,7 @@ class AbstractPlatform(ABC):
         return sequence
 
     @abstractmethod
-    def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None):
+    def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None, raw_adc=False):
         """Executes a pulse sequence.
 
         Args:
@@ -282,8 +282,8 @@ class AbstractPlatform(ABC):
             Readout results acquired by after execution.
         """
 
-    def __call__(self, sequence, nshots=1024, relaxation_time=None):
-        return self.execute_pulse_sequence(sequence, nshots, relaxation_time)
+    def __call__(self, sequence, nshots=1024, relaxation_time=None, raw_adc=False):
+        return self.execute_pulse_sequence(sequence, nshots, relaxation_time, raw_adc=raw_adc)
 
     def sweep(self, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
         """Executes a pulse sequence for different values of sweeped parameters.

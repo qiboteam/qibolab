@@ -64,14 +64,16 @@ class Transpiler:
         """Full transpilation, match connectivity and translation into native gates.
 
         Args:
-            circuit (qibo.Circuit): circuit to be transpiled.
+            circuit (:class:`qibo.models.Circuit`): circuit to be transpiled.
             fuse_one_qubit (bool): Fuse two or more one qubit gates in sequence
             fusion_algorithm (bool): Try to reduce the number of SWAP in the transpiler by using qibo fusion algorithm
 
         Returns:
             transpiled_circuit (qibo.Circuit): circut mapped to hardware topology with only native gates.
-            final_mapping (dict): final qubit mapping.
-            init_mapping (dict): initial qubit mapping.
+            final_mapping (dict): logical to physical qubit mapping after the execution of the circuit.
+                key (int) is the logical qubit, value (int) is the physical qubit.
+            init_mapping (dict): logical to physical qubit mapping before the execution of the circuit
+                key (int) is the logical qubit, value (int) is the physical qubit.
             added_swaps (int): number of swap gates added.
         """
 
@@ -105,7 +107,7 @@ class Transpiler:
         """Qubit mapping initialization and circuit connectivity matching.
 
         Args:
-            circuit (qibo.Circuit): circuit to be matched to hardware connectivity.
+            circuit (:class:`qibo.models.Circuit`): circuit to be matched to hardware connectivity.
 
         Returns:
             hardware_mapped_circuit (qibo.Circuit): circut mapped to hardware topology.
@@ -145,7 +147,7 @@ class Transpiler:
         """Transpilation step. Find new mapping, add swap gates and apply gates that can be run with this configuration.
 
         Args:
-            qibo_circuit (qibo.Circuit): circuit to be transpiled.
+            qibo_circuit (:class:`qibo.models.Circuit`): circuit to be transpiled.
         """
         len_2q_circuit = len(self._circuit_repr)
         path, meeting_point = self.relocate()
@@ -157,7 +159,7 @@ class Transpiler:
         """First transpilation step. Apply gates that can be run with the initial qubit mapping.
 
         Args:
-            qibo_circuit (qibo.Circuit): circuit to be transpiled.
+            qibo_circuit (:class:`qibo.models.Circuit`): circuit to be transpiled.
         """
         len_2q_circuit = len(self._circuit_repr)
         self._circuit_repr = self.reduce(self._graph)
@@ -263,7 +265,7 @@ class Transpiler:
         """Translate qibo circuit into a list of two qubit gates to be used by the transpiler.
 
         Args:
-            qibo_circuit (qibo.Circuit): circuit to be transpiled.
+            qibo_circuit (:class:`qibo.models.Circuit`): circuit to be transpiled.
         """
         translated_circuit = []
         for index, gate in enumerate(qibo_circuit.queue):
@@ -293,7 +295,7 @@ class Transpiler:
     def subgraph_init(self):
         # TODO fix networkx.GM.mapping for small subgraphs
         """Subgraph isomorphism initialization, NP-complete it can take a long time for large circuits.
-        NB: this ititialization method may fail for very short circuits
+        This initialization method may fail for very short circuits.
         """
         H = nx.Graph()
         H.add_nodes_from([i for i in range(self._connectivity.number_of_nodes())])
@@ -406,7 +408,7 @@ class Transpiler:
         """Initialize the transpiled circuit
 
         Args:
-            Args: qibo_circuit (qibo.Circuit): circuit to be transpiled.
+            Args: qibo_circuit (:class:`qibo.models.Circuit`): circuit to be transpiled.
         """
         nodes = self._connectivity.number_of_nodes()
         qubits = qibo_circuit.nqubits
@@ -425,11 +427,11 @@ class Transpiler:
         """Initial qubit mapping of the transpiled qibo circuit
 
         Args:
-            circuit (qibo.Circuit): transpiled qibo circuit.
+            circuit (:class:`qibo.models.Circuit`): transpiled qibo circuit.
             qubit_map (np.array): initial qubit mapping.
 
         Returns:
-            new_circuit (qibo.Circuit): transpiled circuit mapped with initial qubit mapping.
+            new_circuit (:class:`qibo.models.Circuit`): transpiled circuit mapped with initial qubit mapping.
         """
         new_circuit = Circuit(self._connectivity.number_of_nodes())
         for gate in circuit.queue:
@@ -440,7 +442,7 @@ class Transpiler:
         """Add one and two qubit gates to transpiled circuit until connectivity is matched
 
         Args:
-            qibo_circuit (qibo.Circuit): circuit to be transpiled.
+            qibo_circuit (:class:`qibo.models.Circuit`): circuit to be transpiled.
             matched_gates (int): number of two qubit gates that can be applied with the current qubit mapping
         """
         index = 0
