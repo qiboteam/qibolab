@@ -230,8 +230,8 @@ class AbstractPlatform(ABC):
                     self.qubits[qubit].T2 = float(value)
                 elif "t1" == par:
                     self.qubits[qubit].T1 = float(value)
-                elif "thresold" == par:
-                    self.qubits[qubit].thresold = float(value)
+                elif "threshold" == par:
+                    self.qubits[qubit].threshold = float(value)
                 elif "iq_angle" == par:
                     self.qubits[qubit].iq_angle = float(value)
                 elif "beta" in par:
