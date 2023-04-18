@@ -84,7 +84,7 @@ class QibolabBackend(NumpyBackend):
                 log.info("Transpiler test passed.")
 
         # Transpile the native circuit into a sequence of pulses ``PulseSequence``
-        sequence = self.compiler(native_circuit, self.platform)
+        sequence, measurement_map = self.compiler(native_circuit, self.platform)
 
         if not self.platform.is_connected:
             self.platform.connect()
@@ -94,12 +94,7 @@ class QibolabBackend(NumpyBackend):
         self.platform.start()
         readout = self.platform.execute_pulse_sequence(sequence, nshots)
         self.platform.stop()
-        result = CircuitResult(self, native_circuit, readout, nshots)
-
-        # Register measurement outcomes
-        if isinstance(readout, dict):
-            self.compiler.assign_measurements(self, readout)
-        return result
+        return measurement_map(self, native_circuit, readout, nshots)
 
     def circuit_result_tensor(self, result):
         raise_error(

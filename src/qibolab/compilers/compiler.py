@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 import numpy as np
 from qibo import gates
 from qibo.config import raise_error
+from qibo.states import CircuitResult
 
 from qibolab.compilers.default import (
     cz_rule,
@@ -14,6 +15,36 @@ from qibolab.compilers.default import (
     z_rule,
 )
 from qibolab.pulses import PulseSequence, ReadoutPulse
+
+
+class MeasurementMap(dict):
+    """Map from each measurement gate to the sequence of readout pulses implementing it."""
+
+    def __call__(self, backend, circuit, readout, nshots):
+        """Assign measurement outcomes to :class:`qibo.states.MeasurementResult` for each gate.
+
+        Args:
+            backend (:class:`qibo.backends.abstract.AbstractBackend`): Backend object to
+                be assigned in the result object.
+            circuit (:class:`qibo.models.Circuit`): Circuit object that the measurement map
+                was produced for. Needed
+            readout (dict): Dictionary containing acquisition results (:class:`qibolab.results.ExecutionResults`)
+                and shot values for the measurements performed on hardware.
+            nshots (int): Number of shots performed during the circuit execution.
+
+        Returns:
+            :class:`qibo.states.CircuitResult` object containing the results acquired from the circuit execution.
+        """
+        result = CircuitResult(backend, circuit, readout, nshots)
+        for gate, sequence in self.items():
+            samples = []
+            for pulse in sequence.pulses:
+                shots = readout[pulse.serial].shots
+                if shots is not None:
+                    samples.append(shots)
+            gate.result.backend = backend
+            gate.result.register_samples(np.array(samples).T)
+        return result
 
 
 @dataclass
@@ -37,8 +68,6 @@ class Compiler:
 
     rules: dict = field(default_factory=dict)
     """Map from gates to compilation rules."""
-    measurement_map: dict = field(default_factory=dict)
-    """Map from each measurement gate to the sequence of readout pulses implementing it."""
 
     @classmethod
     def default(cls):
@@ -105,6 +134,7 @@ class Compiler:
         # TODO: Implement a mapping between circuit qubit ids and platform ``Qubit``s
         virtual_z_phases = defaultdict(int)
 
+        measurement_map = MeasurementMap()
         # keep track of gates that were already added to avoid adding them twice
         already_processed = set()
         # process circuit gates
@@ -134,27 +164,8 @@ class Compiler:
                     # register readout sequences to ``measurement_map`` so that we can
                     # properly map acquisition results to measurement gates
                     if isinstance(gate, gates.M):
-                        self.measurement_map[gate] = gate_sequence
+                        measurement_map[gate] = gate_sequence
 
                     already_processed.add(gate)
 
-        return sequence
-
-    def assign_measurements(self, backend, readout):
-        """Assign measurement outcomes to ``CircuitResult`` object.
-
-        Args:
-            backend (:class:`qibo.backends.abstract.AbstractBackend`): Backend object to
-                be assigned in the result object.
-            readout (:class:`qibolab.results.ExecutionResults`): Acquisition results
-                containing shot values.
-        """
-        for gate, sequence in self.measurement_map.items():
-            samples = []
-            for pulse in sequence.pulses:
-                shots = readout[pulse.serial].shots
-                if shots is not None:
-                    samples.append(shots)
-            # TODO: Check in qibo why backend is needed to be assigned here
-            gate.result.backend = backend
-            gate.result.register_samples(np.array(samples).T)
+        return sequence, measurement_map
