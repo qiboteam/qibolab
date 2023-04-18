@@ -229,7 +229,7 @@ class TII_RFSOC4x2(AbstractInstrument):
                 serial = ro_pulse.serial
 
                 if average:
-                    results[ro_pulse.qubit] = results[serial] = AveragedResults(i_pulse, q_pulse)
+                    results[ro_pulse.qubit] = results[serial] = AveragedResults.from_components(i_pulse, q_pulse)
                 else:
                     shots = self.classify_shots(i_pulse, q_pulse, qubits[ro_pulse.qubit])
                     results[ro_pulse.qubit] = results[serial] = ExecutionResults.from_components(
@@ -426,7 +426,9 @@ class TII_RFSOC4x2(AbstractInstrument):
                     q_pulse = np.array(totq[k][i][j])
 
                     if average:
-                        results[sequence.ro_pulses[i].qubit] = results[serial] = AveragedResults(i_pulse, q_pulse)
+                        results[sequence.ro_pulses[i].qubit] = results[serial] = AveragedResults.from_components(
+                            i_pulse, q_pulse
+                        )
                     else:
                         qubit = qubits[sequence.ro_pulses[i].qubit]
                         shots = self.classify_shots(i_pulse, q_pulse, qubit)
@@ -475,7 +477,7 @@ class TII_RFSOC4x2(AbstractInstrument):
             if sweeper.parameter == Parameter.frequency:
                 sweeper.values += sweeper.pulses[0].frequency
             elif sweeper.parameter == Parameter.amplitude:
-                continue  # amp does not need modification, here for clarity
+                sweeper.values *= sweeper.pulses[0].amplitude
 
         sweepsequence = sequence.copy()
 
@@ -486,6 +488,6 @@ class TII_RFSOC4x2(AbstractInstrument):
             if sweeper.parameter == Parameter.frequency:
                 sweeper.values -= sweeper.pulses[0].frequency
             elif sweeper.parameter == Parameter.amplitude:
-                continue
+                sweeper.values /= sweeper.pulses[0].amplitude
 
         return results
