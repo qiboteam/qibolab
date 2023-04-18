@@ -38,8 +38,8 @@ characterization:
             readout_frequency: 7.3718e+9
             resonator_polycoef_flux: []
             drive_frequency: 5_542_000_000
-            threshold: -1.555234
-            rotation_angle: 324.276
+            threshold: 1.290668
+            rotation_angle: 246.659
             T1: 0.
             T2: 0.
             mean_gnd_states: (0+0j)
