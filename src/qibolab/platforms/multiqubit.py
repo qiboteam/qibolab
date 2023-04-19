@@ -334,6 +334,11 @@ class MultiqubitPlatform(AbstractPlatform):
             for qubit in sweeper.qubits:
                 initial[qubit] = self.get_attenuation(qubit)
 
+        elif sweeper.parameter is Parameter.relative_phase:
+            initial = {}
+            for pulse in sweeper.pulses:
+                initial[pulse.id] = pulse.relative_phase
+
         elif sweeper.parameter is Parameter.lo_frequency:
             initial = {}
             for pulse in sweeper.pulses:
@@ -359,7 +364,7 @@ class MultiqubitPlatform(AbstractPlatform):
         #     for pulse in sweeper.pulses:
         #         initial[pulse.id] = pulse.amplitude
 
-        for_loop_sweepers = [Parameter.attenuation, Parameter.lo_frequency]
+        for_loop_sweepers = [Parameter.attenuation, Parameter.lo_frequency, Parameter.relative_phase]
         rt_sweepers = [
             Parameter.frequency,
             Parameter.gain,
@@ -375,6 +380,9 @@ class MultiqubitPlatform(AbstractPlatform):
                 if sweeper.parameter is Parameter.attenuation:
                     for qubit in sweeper.qubits:
                         self.set_attenuation(qubit, initial[qubit] + value)
+                if sweeper.parameter is Parameter.relative_phase:
+                    for pulse in sweeper.pulses:
+                        pulse.relative_phase = initial[pulse.id] + value
                 elif sweeper.parameter is Parameter.lo_frequency:
                     for pulse in sweeper.pulses:
                         if pulse.type == PulseType.READOUT:
