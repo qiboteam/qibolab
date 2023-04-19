@@ -164,18 +164,17 @@ class AbstractPlatform(ABC):
         general_settings["qubits"] = list(self.qubits.keys())
         general_settings["resonator_type"] = self.resonator_type
         general_settings["topology"] = self.topology
+
         with open(path, "w") as file:
             yaml.dump(general_settings, file, sort_keys=False, indent=4, default_flow_style=None)
 
         settings = {}
         # settings
-        settings["settings"] = {}
-        settings["settings"]["repetition_duration"] = self.relaxation_time
-        settings["settings"]["sampling_rate"] = self.sampling_rate
+        settings["settings"] = self.settings["settings"]
 
         # native gates
         settings["native_gates"] = {}
-        settings["native_gates"]["single_qubits"] = self.native_single_qubit_gates
+        settings["native_gates"]["single_qubit"] = self.native_single_qubit_gates
         settings["native_gates"]["two_qubits"] = self.native_two_qubit_gates
 
         settings["characterization"] = {}
@@ -183,7 +182,7 @@ class AbstractPlatform(ABC):
         for qubit in general_settings["qubits"]:
             settings["characterization"]["single_qubit"][qubit] = {}
             for key, item in self.qubits[qubit].__dict__.items():
-                if isinstance(item, float) or isinstance(item, int) and not key == "name":
+                if isinstance(item, float) or isinstance(item, int) or isinstance(item, complex) and not key == "name":
                     settings["characterization"]["single_qubit"][qubit][key] = item
 
         with open(path, "a") as file:
@@ -243,7 +242,9 @@ class AbstractPlatform(ABC):
                     self.native_single_qubit_gates[qubit]["RX"]["duration"] = int(value)
                 elif par == "t2_spin_echo":
                     self.qubits[qubit].T2_spin_echo = int(value)
-
+                elif par == "mean_gnd_state":
+                    self.qubits[qubit].mean_gnd_states = complex(value)
+                    print(self.qubits[qubit])
                 else:
                     raise_error(ValueError, "Unknown parameter.")
 
