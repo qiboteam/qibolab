@@ -241,14 +241,18 @@ class TII_RFSOC4x2(AbstractInstrument):
     def classify_shots(self, i_values: List[float], q_values: List[float], qubit: Qubit) -> List[float]:
         """Classify IQ values using qubit threshold and rotation_angle if available in runcard"""
 
-        if qubit.rotation_angle is None or qubit.threshold is None:
+        if qubit.iq_angle is None or qubit.threshold is None:
             return None
-        angle = np.radians(qubit.rotation_angle)
+        angle = qubit.iq_angle
         threshold = qubit.threshold
+        iq_mean0 = qubit.mean_gnd_states
 
-        rotated = np.cos(angle) * np.array(i_values) - np.sin(angle) * np.array(q_values)
-        shots = np.heaviside(np.array(rotated) - threshold, 0)
-        return shots
+        iq_coordinates = i_values + 1.0j * q_values
+        translated = iq_coordinates - np.complex128(iq_mean0)
+
+        rotated = translated * np.exp(-1.0j * angle)
+
+        return (rotated.real > threshold).astype(int)
 
     def recursive_python_sweep(
         self,
