@@ -83,7 +83,7 @@ instruments:
                 i1:
                     channel                     : L2-5a
                     acquisition_hold_off        : 500                       # must be multiple of 4
-                    acquisition_duration        : 500
+                    acquisition_duration        : 900
 
             classification_parameters:
                 0:  # qubit id
@@ -109,7 +109,7 @@ instruments:
                 i1:
                     channel                     : L2-5b
                     acquisition_hold_off        : 500
-                    acquisition_duration        : 900
+                    acquisition_duration        : 500
 
             classification_parameters:
                 2:  # qubit id
@@ -225,7 +225,7 @@ native_gates:
                 shape: Gaussian(5)
                 type: qd                    # qubit drive
             MZ:
-                duration: 500
+                duration: 2000
                 amplitude: 0.4
                 frequency: 7_212_407_558     # resonator frequency
                 if_frequency: -37_592_442    # difference in resonator frequency
@@ -240,7 +240,7 @@ native_gates:
                 shape: Gaussian(5)
                 type: qd                    # qubit drive
             MZ:
-                duration: 500
+                duration: 2000
                 amplitude: 0.4
                 frequency: 7_453_190_140    # resonator frequency
                 if_frequency: 203_190_140    # difference in resonator frequency
@@ -255,7 +255,7 @@ native_gates:
                 shape: Gaussian(5)
                 type: qd                    # qubit drive
             MZ:
-                duration: 500
+                duration: 2000
                 amplitude: 0.2
                 frequency: 7_655_148_879    # resonator frequency
                 if_frequency: -194_851_121    # difference in resonator frequency
@@ -270,7 +270,7 @@ native_gates:
                 shape: Gaussian(5)
                 type: qd                    # qubit drive
             MZ:
-                duration: 500
+                duration: 2000
                 amplitude: 0.2
                 frequency: 7_803_437_704    # resonator frequency
                 if_frequency: -46_562_296    # difference in resonator frequency
@@ -285,7 +285,7 @@ native_gates:
                 shape: Gaussian(5)
                 type: qd                    # qubit drive
             MZ:
-                duration: 500
+                duration: 2000
                 amplitude: 0.4
                 frequency: 8_058_673_359      # resonator frequency
                 if_frequency: 208_673_359    # difference in resonator frequency
@@ -300,7 +300,7 @@ native_gates:
                 shape: Gaussian(5)
                 type: qd                    # qubit drive
             MZ:
-                duration: 500
+                duration: 2000
                 amplitude: 0.4
                 frequency: 7_118_680_035      # resonator frequency
                 if_frequency: -131_319_965    # difference in resonator frequency
