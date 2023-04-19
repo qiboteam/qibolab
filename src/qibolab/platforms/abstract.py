@@ -394,12 +394,6 @@ class AbstractPlatform(ABC):
         """
         raise_error(NotImplementedError, f"Platform {self.name} does not support sweeping.")
 
-    def get_qd_channel(self, qubit):
-        if self.qubits[qubit].drive:
-            return self.qubits[qubit].drive.name
-        else:
-            return self.settings["qubit_channel_map"][qubit][1]
-
     def create_RX90_pulse(self, qubit, start=0, relative_phase=0):
         return self.qubits[qubit].RX90_pulse(start, relative_phase)
 
@@ -433,10 +427,7 @@ class AbstractPlatform(ABC):
                 qf_amplitude = pulse_settings["amplitude"]
                 qf_shape = pulse_settings["shape"]
                 qubit = pulse_settings["qubit"]
-                if self.qubits[qubit].flux:
-                    qf_channel = self.qubits[qubit].flux.name
-                else:
-                    qf_channel = self.settings["qubit_channel_map"][qubit][2]
+                qf_channel = self.qubits[qubit].flux.name
                 sequence.add(
                     FluxPulse(
                         start + pulse_settings["relative_start"], qf_duration, qf_amplitude, qf_shape, qf_channel, qubit
@@ -452,14 +443,9 @@ class AbstractPlatform(ABC):
         return sequence, virtual_z_phases
 
     def create_MZ_pulse(self, qubit, start):
-        # if self.qubits[qubit].readout:
-        #    ro_channel = self.qubits[qubit].readout.name
-        # else:
-        #    ro_channel = self.settings["qubit_channel_map"][qubit][0]
         return self.qubits[qubit].MZ_pulse(start)
 
     def create_qubit_drive_pulse(self, qubit, start, duration, relative_phase=0):
-        # qd_channel = self.get_qd_channel(qubit)
         pulse = self.qubits[qubit].RX_pulse(start, relative_phase)
         pulse.duration = duration
         return pulse
