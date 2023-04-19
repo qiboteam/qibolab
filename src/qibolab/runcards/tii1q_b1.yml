@@ -33,18 +33,10 @@ characterization:
         0:
             readout_frequency: 5542418623
             drive_frequency: 5542418623
-            sweetspot: 0
-            peak_voltage: 0
-            pi_pulse_amplitude: 0
             T1: 0.0
             T2: 0.0
-            T2_spin_echo: 0
-            state0_voltage: 0
-            state1_voltage: 0
             mean_gnd_states: (2.4881945799457994+0.48354850948509487j)
+            mean_exc_states: (0+0j)
             threshold: 1.3743930264448407
             iq_angle: 3.1279343481307826
-            mixer_drive_g: 0.0
-            mixer_drive_phi: 0.0
-            mixer_readout_g: 0.0
-            mixer_readout_phi: 0.0
+            sweetspot: 0
