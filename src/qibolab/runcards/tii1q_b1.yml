@@ -31,7 +31,6 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            bare_resonator_frequency: 0
             readout_frequency: 5542418623
             drive_frequency: 5542418623
             sweetspot: 0
