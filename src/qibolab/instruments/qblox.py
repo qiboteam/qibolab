@@ -1188,7 +1188,7 @@ class ClusterQRM_RF(AbstractInstrument):
                                     program=program, type=QbloxSweeperType.duration, rel_values=idx_range
                                 )
                         else:
-                            sweeper.qs = QbloxSweeper(program=program, sweeper=sweeper, add_to=center)
+                            sweeper.qs = QbloxSweeper.from_sweeper(program=program, sweeper=sweeper, add_to=center)
 
                         # if sweeper.qubits and sequencer.qubit in sweeper.qubits:
                         #     sweeper.qs.update_parameters = True
@@ -2326,7 +2326,7 @@ class ClusterQCM_RF(AbstractInstrument):
                                     program=program, type=QbloxSweeperType.duration, rel_values=idx_range
                                 )
                         else:
-                            sweeper.qs = QbloxSweeper(program=program, sweeper=sweeper, add_to=center)
+                            sweeper.qs = QbloxSweeper.from_sweeper(program=program, sweeper=sweeper, add_to=center)
 
                         # if sweeper.qubits and sequencer.qubit in sweeper.qubits:
                         #     sweeper.qs.update_parameters = True
@@ -3046,7 +3046,7 @@ class ClusterQCM(AbstractInstrument):
                                     program=program, type=QbloxSweeperType.duration, rel_values=idx_range
                                 )
                         else:
-                            sweeper.qs = QbloxSweeper(program=program, sweeper=sweeper, add_to=center)
+                            sweeper.qs = QbloxSweeper.from_sweeper(program=program, sweeper=sweeper, add_to=center)
 
                         if sweeper.qubits and sequencer.qubit in sweeper.qubits:
                             sweeper.qs.update_parameters = True
