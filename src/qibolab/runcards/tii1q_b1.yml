@@ -1,47 +1,51 @@
 nqubits: 1
-description: TII's 1-qubit device controlled with the RFSoC4x2 (fpga board).
-
 qubits: [0]
-
+resonator_type: 3D
+topology:
+- [1]
 settings:
-    repetition_duration: 100_000
-    sampling_rate: 9_830_400_000 # DAC sampling rate
-    adc_trig_offset: 200 # [Clock ticks]
+    repetition_duration: 100000
+    sampling_rate: 9830400000
+    adc_trig_offset: 200
     max_gain: 32000
-
-topology: # qubit - qubit connections
--   [1]
-
 native_gates:
     single_qubit:
-        0: # qubit number
+        0:
             RX:
                 duration: 30
                 amplitude: 0.05
-                frequency: 5_542_000_000 #5_541_675_000
+                frequency: 5542418623
                 shape: Rectangular()
-                type: qd # qubit drive
+                type: qd
                 start: 0
                 phase: 0
             MZ:
                 duration: 600
-                amplitude: 0.030
-                frequency: 7371800000
+                amplitude: 0.03
+                frequency: 7371778855
                 shape: Rectangular()
-                type: ro # readout
+                type: ro
                 start: 0
                 phase: 0
-
+    two_qubits: {}
 characterization:
     single_qubit:
         0:
-            readout_frequency: 7.3718e+9
-            resonator_polycoef_flux: []
-            drive_frequency: 5_542_000_000
-            threshold: 1.290668
-            rotation_angle: 246.659
-            T1: 0.
-            T2: 0.
-            mean_gnd_states: (0+0j)
-            mean_exc_states: (0+0j)
+            bare_resonator_frequency: 0
+            readout_frequency: 5542418623
+            drive_frequency: 5542418623
             sweetspot: 0
+            peak_voltage: 0
+            pi_pulse_amplitude: 0
+            T1: 0.0
+            T2: 0.0
+            T2_spin_echo: 0
+            state0_voltage: 0
+            state1_voltage: 0
+            mean_gnd_states: (2.4881945799457994+0.48354850948509487j)
+            threshold: 1.3743930264448407
+            iq_angle: 3.1279343481307826
+            mixer_drive_g: 0.0
+            mixer_drive_phi: 0.0
+            mixer_readout_g: 0.0
+            mixer_readout_phi: 0.0
