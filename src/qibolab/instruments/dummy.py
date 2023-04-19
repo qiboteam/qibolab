@@ -39,7 +39,7 @@ class DummyInstrument(AbstractInstrument):
         log.info("Disconnecting dummy instrument.")
 
     def play(self, qubits, sequence, nshots, relaxation_time, raw_adc=False):
-        time.sleep(relaxation_time)
+        time.sleep(relaxation_time * 1e-9)
 
         ro_pulses = {pulse.qubit: pulse.serial for pulse in sequence.ro_pulses}
 
@@ -125,7 +125,7 @@ class DummyInstrument(AbstractInstrument):
 
                 # colllect result and append to original pulse
                 for original_pulse, new_serial in map_original_shifted.items():
-                    acquisition = result[new_serial].compute_average() if average else result[new_serial]
+                    acquisition = result[new_serial].average if average else result[new_serial]
                     if original_pulse.serial in results:
                         results[original_pulse.serial] += acquisition
                         results[original_pulse.qubit] += acquisition
