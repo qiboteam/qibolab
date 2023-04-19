@@ -83,7 +83,7 @@ instruments:
                 i1:
                     channel                     : L2-5a
                     acquisition_hold_off        : 500                       # must be multiple of 4
-                    acquisition_duration        : 900
+                    acquisition_duration        : 500
 
             classification_parameters:
                 0:  # qubit id
