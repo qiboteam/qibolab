@@ -37,11 +37,8 @@ class MeasurementMap(dict):
         """
         result = CircuitResult(backend, circuit, readout, nshots)
         for gate, sequence in self.items():
-            samples = []
-            for pulse in sequence.pulses:
-                shots = readout[pulse.serial].shots
-                if shots is not None:
-                    samples.append(shots)
+            _samples = map(lambda pulse: readout[pulse.serial].shots, sequence.pulses)
+            samples = list(filter(lambda x: x is not None, _samples))
             gate.result.backend = backend
             gate.result.register_samples(np.array(samples).T)
         return result
