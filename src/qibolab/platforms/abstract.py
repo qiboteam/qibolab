@@ -265,6 +265,18 @@ class AbstractPlatform(ABC):
                     iq_angle = float(value)
                     self.qubits[qubit].iq_angle = iq_angle
                     self.current_config["characterization"]["single_qubit"][qubit]["iq_angle"] = iq_angle
+                
+                # classification
+                elif par == "mean_gnd_state":
+                    mean_gnd_state = str(value)
+                    self.qubits[qubit].iq_angle = iq_angle
+                    self.current_config["characterization"]["single_qubit"][qubit]["mean_gnd_state"] = mean_gnd_state
+                
+                # classification
+                elif par == "mean_exc_state":
+                    mean_exc_state = str(value)
+                    self.qubits[qubit].iq_angle = iq_angle
+                    self.current_config["characterization"]["single_qubit"][qubit]["mean_exc_state"] = mean_exc_state
 
                 # drag pulse tunning
                 elif "beta" in par:
