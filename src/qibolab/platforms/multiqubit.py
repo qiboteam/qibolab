@@ -95,6 +95,8 @@ class MultiqubitPlatform(AbstractPlatform):
                     RuntimeError,
                     "Cannot establish connection to " f"{self.name} instruments. " f"Error captured: '{exception}'",
                 )
+                # TODO: check for exception 'The instrument qrm_rf0 does not have parameters in0_att' and reboot the cluster
+
             else:
                 log.info(f"All platform instruments connected.")
 
@@ -167,7 +169,12 @@ class MultiqubitPlatform(AbstractPlatform):
             self.is_connected = False
 
     def execute_pulse_sequence(
-        self, sequence: PulseSequence, nshots=None, navgs=None, relaxation_time=None, sweepers: list = []
+        self,
+        sequence: PulseSequence,
+        nshots=None,
+        navgs=None,
+        relaxation_time=None,
+        sweepers: list() = [],  # list(Sweeper) = []
     ):
         if not self.is_connected:
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
@@ -181,7 +188,13 @@ class MultiqubitPlatform(AbstractPlatform):
 
         if relaxation_time is None:
             relaxation_time = self.relaxation_time
-        repetition_duration = sequence.duration + relaxation_time
+        repetition_duration = sequence.finish + relaxation_time
+
+        num_bins = nshots
+        for sweeper in sweepers:
+            num_bins *= len(sweeper.values)
+        execution_time = navgs * num_bins * ((repetition_duration + 1000 * len(sweepers)) * 1e-9)
+        log.info(f"Estimated execution time: {int(execution_time)//60}m {int(execution_time) % 60}s")
 
         # DEBUG: Plot Pulse Sequence
         # sequence.plot('plot.png')
@@ -237,7 +250,7 @@ class MultiqubitPlatform(AbstractPlatform):
                             self.instruments[name].ports[port].lo_frequency = _los[0]
 
                 self.instruments[name].process_pulse_sequence(
-                    instrument_pulses[name], nshots, navgs, repetition_duration, sweepers
+                    instrument_pulses[name], navgs, nshots, repetition_duration, sweepers
                 )
                 self.instruments[name].upload()
         for name in self.instruments:
@@ -351,18 +364,17 @@ class MultiqubitPlatform(AbstractPlatform):
         #     initial = {}
         #     for pulse in sweeper.pulses:
         #         initial[pulse.id] = pulse.frequency
-        # elif sweeper.parameter is Parameter.gain:
-        #     initial = {}
-        #     for qubit in sweeper.qubits:
-        #         initial[qubit] = self.get_gain(qubit)
         # elif sweeper.parameter is Parameter.bias:
         #     initial = {}
         #     for qubit in sweeper.qubits:
         #         initial[qubit] = self.get_bias(qubit)
-        # elif sweeper.parameter is Parameter.amplitude:
-        #     initial = {}
-        #     for pulse in sweeper.pulses:
-        #         initial[pulse.id] = pulse.amplitude
+
+        elif sweeper.parameter is Parameter.gain:
+            for pulse in sweeper.pulses:
+                self.set_gain(pulse.qubit, 1)
+        elif sweeper.parameter is Parameter.amplitude:
+            for pulse in sweeper.pulses:
+                pulse.amplitude = 1
 
         for_loop_sweepers = [Parameter.attenuation, Parameter.lo_frequency, Parameter.relative_phase]
         rt_sweepers = [
@@ -379,7 +391,8 @@ class MultiqubitPlatform(AbstractPlatform):
             for value in sweeper.values:
                 if sweeper.parameter is Parameter.attenuation:
                     for qubit in sweeper.qubits:
-                        self.set_attenuation(qubit, initial[qubit] + value)
+                        # self.set_attenuation(qubit, initial[qubit] + value)
+                        self.set_attenuation(qubit, value)  # make att absolute
                 if sweeper.parameter is Parameter.relative_phase:
                     for pulse in sweeper.pulses:
                         pulse.relative_phase = initial[pulse.id] + value

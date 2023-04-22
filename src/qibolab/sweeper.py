@@ -21,7 +21,7 @@ class Parameter(Enum):
     lo_frequency = auto()
 
 
-QubitParameter = {Parameter.bias, Parameter.attenuation, Parameter.gain}
+QubitParameter = {Parameter.bias, Parameter.attenuation}
 
 
 @dataclass
