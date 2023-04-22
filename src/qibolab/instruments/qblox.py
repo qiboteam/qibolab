@@ -1472,10 +1472,10 @@ class ClusterQRM_RF(AbstractInstrument):
                 self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
 
                 # DEBUG: QRM RF Save sequence to file
-                # filename = f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
-                # with open(filename, "w", encoding="utf-8") as file:
-                #     json.dump(qblox_dict[sequencer], file, indent=4)
-                #     file.write(sequencer.program)
+                filename = f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
+                with open(filename, "w", encoding="utf-8") as file:
+                    json.dump(qblox_dict[sequencer], file, indent=4)
+                    file.write(sequencer.program)
 
         # Clear acquisition memory and arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
@@ -1784,8 +1784,9 @@ class ClusterQRM_RF(AbstractInstrument):
                     # import qibolab.instruments.debug.incomming_pulse_plotting as pp
                     # pp.plot(raw_results)
                     # DEBUG: QRM RF Plot Acquisition_results
-                    # from qibolab.debug.debug import plot_acquisition_results
-                    # plot_acquisition_results(acquisition_results, pulse, savefig_filename='acquisition_results.png')
+                    from qibolab.debug.debug import plot_acquisition_results
+
+                    plot_acquisition_results(acquisition_results, pulse, savefig_filename="acquisition_results.png")
         return data
 
     def _process_acquisition_results(self, acquisition_results, readout_pulse: Pulse, demodulate=True):
@@ -3270,10 +3271,10 @@ class ClusterQCM(AbstractInstrument):
                     self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
 
                     # DEBUG: QCM Save sequence to file
-                    filename = f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
-                    with open(filename, "w", encoding="utf-8") as file:
-                        json.dump(qblox_dict[sequencer], file, indent=4)
-                        file.write(sequencer.program)
+                    # filename = f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
+                    # with open(filename, "w", encoding="utf-8") as file:
+                    #     json.dump(qblox_dict[sequencer], file, indent=4)
+                    #     file.write(sequencer.program)
 
         # Arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
