@@ -1771,6 +1771,7 @@ class PulseSequence:
                 if not overlaps:
                     ps.add(new_pulse)
                     stored = True
+                    break
             if not stored:
                 separated_pulses.append(PulseSequence(new_pulse))
         return separated_pulses

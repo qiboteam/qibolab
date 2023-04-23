@@ -1784,9 +1784,8 @@ class ClusterQRM_RF(AbstractInstrument):
                     # import qibolab.instruments.debug.incomming_pulse_plotting as pp
                     # pp.plot(raw_results)
                     # DEBUG: QRM RF Plot Acquisition_results
-                    from qibolab.debug.debug import plot_acquisition_results
-
-                    plot_acquisition_results(acquisition_results, pulse, savefig_filename="acquisition_results.png")
+                    # from qibolab.debug.debug import plot_acquisition_results
+                    # plot_acquisition_results(acquisition_results, pulse, savefig_filename="acquisition_results.png")
         return data
 
     def _process_acquisition_results(self, acquisition_results, readout_pulse: Pulse, demodulate=True):
