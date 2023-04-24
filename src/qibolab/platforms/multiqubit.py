@@ -44,7 +44,7 @@ class MultiqubitPlatform(AbstractPlatform):
         self.characterization = self.settings["characterization"]
         self.qubit_channel_map = self.settings["qubit_channel_map"]
         self.hardware_avg = self.settings["settings"]["hardware_avg"]
-        self.repetition_duration = self.settings["settings"]["repetition_duration"]
+        self.relaxation_time = self.settings["settings"]["relaxation_time"]
 
     def set_lo_drive_frequency(self, qubit, freq):
         self.qd_port[qubit].lo_frequency = freq
@@ -199,7 +199,7 @@ class MultiqubitPlatform(AbstractPlatform):
                         if_frequency = self.native_gates["single_qubit"][pulse.qubit]["RX"]["if_frequency"]
                         self.set_lo_drive_frequency(pulse.qubit, pulse.frequency - if_frequency)
                     pulse.frequency = if_frequency
-            instrument.process_pulse_sequence(instrument_pulses[instrument.name], nshots, self.repetition_duration)
+            instrument.process_pulse_sequence(instrument_pulses[instrument.name], nshots, self.relaxation_time)
             instrument.upload()
 
         # STEP 2: play sequence

@@ -3,7 +3,7 @@ description: 5-qubit device at XLD fridge, controlled with qblox cluster rf.
 
 settings:
     hardware_avg: 1024
-    repetition_duration: 20_000 # 200_000
+    relaxation_time: 200_000 # 200_000
     sampling_rate: 1_000_000_000
 
 qubits: [0, 1, 2, 3, 4, 5]
@@ -336,6 +336,7 @@ characterization:
         0:
             readout_frequency: 7_212_407_558 # 7_225_820_798 # 7_218_000_000
             drive_frequency: 5_046_600_000
+            pi_pulse_amplitude: 0.5
             T1: 0
             T2: 0
             state0_voltage: 0.0
@@ -346,6 +347,7 @@ characterization:
         1:
             readout_frequency: 7_453_190_140
             drive_frequency: 4_852_013_000
+            pi_pulse_amplitude: 0.5
             T1: 1_283
             T2: 130
             state0_voltage: 0.0
@@ -356,6 +358,7 @@ characterization:
         2:
             readout_frequency: 7_655_148_879
             drive_frequency: 5_795_026_000
+            pi_pulse_amplitude: 0.5
             T1: 1_807
             T2: 0
             state0_voltage: 0.0
@@ -366,6 +369,7 @@ characterization:
         3:
             readout_frequency: 7_803_437_704
             drive_frequency: 6_761_250_000
+            pi_pulse_amplitude: 0.5
             T1: 3529
             T2: 0
             state0_voltage: 0.0
@@ -376,6 +380,7 @@ characterization:
         4:
             readout_frequency: 8_058_673_359
             drive_frequency: 6_588_003_000
+            pi_pulse_amplitude: 0.5
             T1: 469
             T2: 0
             state0_voltage: 0.0

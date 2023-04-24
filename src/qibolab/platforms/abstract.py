@@ -134,7 +134,7 @@ class AbstractPlatform(ABC):
 
         self.topology = settings["topology"]
 
-        self.relaxation_time = settings["settings"]["repetition_duration"]
+        self.relaxation_time = settings["settings"]["relaxation_time"]
         self.sampling_rate = settings["settings"]["sampling_rate"]
 
         # TODO: Create better data structures for native gates
@@ -242,9 +242,6 @@ class AbstractPlatform(ABC):
                     self.native_single_qubit_gates[qubit]["RX"]["duration"] = int(value)
                 elif par == "t2_spin_echo":
                     self.qubits[qubit].T2_spin_echo = int(value)
-                elif par == "mean_gnd_state":
-                    self.qubits[qubit].mean_gnd_states = complex(value)
-                    print(self.qubits[qubit])
                 else:
                     raise_error(ValueError, "Unknown parameter.")
 
