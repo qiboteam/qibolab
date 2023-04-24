@@ -206,8 +206,8 @@ instruments:
         address: 192.168.0.37
         roles: [other]
         settings:
-            frequency: 6_511_000_000 # Hz
-            power: 4.5 # dBm
+            frequency: 6_487_500_000 # Hz
+            power: 4.25 # dBm
 
 native_gates:
     single_qubit:
