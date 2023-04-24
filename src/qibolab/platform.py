@@ -163,10 +163,10 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
         if lo.name == "LO_01":
             lo.frequency = 6.1e9
             lo.power = 21
-        elif lo.name == "LO_03":
+        elif lo.name == "LO_04":
             lo.frequency = 7.1e9
             lo.power = 23
-        elif lo.name == "LO_04":
+        elif lo.name == "LO_03":
             lo.frequency = 7.75e9
             lo.power = 23
         elif lo.name == "LO_05":
@@ -213,10 +213,10 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
                     if "era" in qubits[q].drive.local_oscillator.name:
                         qubits[q].drive.local_oscillator.frequency = qubits[q].drive_frequency + 200e6
 
-    for q in ["A1", "A2", "A4", "B1", "B2", "B3", "C1", "C4"]:  # Qubits with LO around 7e9
+    for q in ["A3", "A5", "A6", "B4", "B5", "C2", "C3", "C5"]:  # Qubits with LO around 7e9
         qubits[q].readout = channels[wiring["readout"][q[0]][0]]
         qubits[q].feedback = channels[wiring["feedback"][q[0]][0]]
-    for q in ["A3", "A5", "A6", "B4", "B5", "C2", "C3", "C5"]:  # Qubits with LO around 7.5e9
+    for q in ["A1", "A2", "A4", "B1", "B2", "B3", "C1", "C4"]:  # Qubits with LO around 7.5e9
         qubits[q].readout = channels[wiring["readout"][q[0]][1]]
         qubits[q].feedback = channels[wiring["feedback"][q[0]][1]]
 
