@@ -6,12 +6,9 @@ qubits: [0, 1, 2]
 
 settings:
     sampling_rate: 6_144_000_000
-    repetition_duration: 50_000
-    time_of_flight: 200
+    repetition_duration: 100_000
     adc_trig_offset: 200
     max_gain: 32000
-    mixer_freq: 10
-    LO_freq: 7000000000
 
 
 topology: # qubit - qubit connections
@@ -33,7 +30,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.2
+                amplitude: 0.6
                 frequency: 7_111_265_000
                 shape: Rectangular()
                 type: ro # readout
