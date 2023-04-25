@@ -245,14 +245,10 @@ class TII_RFSOC4x2(AbstractInstrument):
             return None
         angle = qubit.iq_angle
         threshold = qubit.threshold
-        iq_mean0 = qubit.mean_gnd_states
 
-        iq_coordinates = i_values + 1.0j * q_values
-        translated = iq_coordinates - np.complex128(iq_mean0)
-
-        rotated = translated * np.exp(-1.0j * angle)
-
-        return (rotated.real > threshold).astype(int)
+        rotated = np.cos(angle) * np.array(i_values) - np.sin(angle) * np.array(q_values)
+        shots = np.heaviside(np.array(rotated) - threshold, 0)
+        return shots
 
     def recursive_python_sweep(
         self,

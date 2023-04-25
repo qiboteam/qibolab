@@ -39,7 +39,7 @@ def test_tii_rfsoc4x2_setup():
 
 def test_classify_shots():
     """Creates fake IQ values and check classification works as expected"""
-    qubit0 = Qubit(name="q0", threshold=1, rotation_angle=90)
+    qubit0 = Qubit(name="q0", threshold=1, iq_angle=np.pi / 2)
     qubit1 = Qubit(
         name="q1",
     )
