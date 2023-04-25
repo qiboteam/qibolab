@@ -61,10 +61,10 @@ class DesignPlatform(AbstractPlatform):
 
     def get_lo_twpa_frequency(self, qubit):
         return self.qubits[qubit].twpa.local_oscillator.frequency
-    
+
     def set_lo_twpa_power(self, qubit, power):
         self.qubits[qubit].twpa.local_oscillator.power = power
-        
+
     def set_attenuation(self, qubit, att):
         raise_error(NotImplementedError, f"{self.name} does not support attenuation.")
 
