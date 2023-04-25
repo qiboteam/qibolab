@@ -382,12 +382,14 @@ class AbstractPlatform(ABC):
 
     def create_RX90_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
         pulse = self.qubits[qubit].native_gates.RX90.pulse(start, relative_phase)
-        pulse.shape = "Drag(5," + str(beta) + ")"
+        if beta is not None:
+            pulse.shape = "Drag(5," + str(beta) + ")"
         return pulse
 
     def create_RX_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
         pulse = self.qubits[qubit].native_gates.RX.pulse(start, relative_phase)
-        pulse.shape = "Drag(5," + str(beta) + ")"
+        if beta is not None:
+            pulse.shape = "Drag(5," + str(beta) + ")"
         return pulse
 
     @abstractmethod
