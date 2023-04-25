@@ -61,7 +61,7 @@ class DesignPlatform(AbstractPlatform):
 
     def get_lo_twpa_frequency(self, qubit):
         return self.qubits[qubit].twpa.local_oscillator.frequency
-    
+
     def set_lo_twpa_power(self, qubit, power):
         self.qubits[qubit].twpa.local_oscillator.power = power
     
