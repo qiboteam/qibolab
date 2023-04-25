@@ -58,6 +58,26 @@ class MultiqubitPlatform(AbstractPlatform):
     def get_lo_readout_frequency(self, qubit):
         return self.ro_port[qubit].lo_frequency
 
+    def set_lo_twpa_frequency(self, qubit, freq):
+        for instrument in self.instruments:
+            if "twpa" in instrument.name:
+                instrument.frequency = freq
+
+    def get_lo_twpa_frequency(self, qubit):
+        for instrument in self.instruments:
+            if "twpa" in instrument.name:
+                return instrument.frequency
+            
+    def set_lo_twpa_power(self, qubit, power):
+        for instrument in self.instruments:
+            if "twpa" in instrument.name:
+                instrument.power = power
+
+    def get_lo_twpa_power(self, qubit):
+        for instrument in self.instruments:
+            if "twpa" in instrument.name:
+                return instrument.power
+            
     def set_attenuation(self, qubit, att):
         self.ro_port[qubit].attenuation = att
 
