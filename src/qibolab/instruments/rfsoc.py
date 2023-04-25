@@ -13,7 +13,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
-from qibolab.instruments.abstract import AbstractInstrument
+from qibolab.instruments.abstract import AbstractInstrument, LocalOscillator
 from qibolab.platforms.abstract import Qubit
 from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.result import AveragedResults, ExecutionResults
@@ -149,6 +149,55 @@ class RFSoC(AbstractInstrument):
         if max_gain is not None:
             self.cfg.max_gain = max_gain
 
+    def set_best_LO(self, sequence: PulseSequence):
+        fs = 3_072_000_000  # TODO parameter
+        limits = []
+        for qubit in sequence.qubits:
+            minfreq = 1e10
+            maxfreq = 0
+            for pulse in sequence.get_qubit_pulses(qubit):
+                freq = pulse.frequency
+                minfreq = freq if freq < minfreq else minfreq
+                maxfreq = freq if freq > maxfreq else maxfreq
+            limits.append((minfreq, maxfreq))
+
+        limits.sort()
+
+        lo_freq = max(limits[0][0] - 20_000_000, 0)
+
+        while limits[0][1] - lo_freq < (fs / 32.0):
+            if self.check_frequencies_conflicts(limits, lo_freq):
+                self.local_oscillator.frequency = lo_freq
+                return True
+            else:
+                lo_freq = lo_freq + 1_000_000
+
+        return False
+        # raise Error
+
+    def check_frequencies_conflicts(self, limits, lo_freq):
+        """Returns True if there are no conflicts"""
+
+        fs = 3_072_000_000  # TODO parameter
+
+        used_bands = []
+
+        for limit in limits:
+            for idx in range(8):
+                min_band = (fs / 32.0) * (2 * (idx - 1) + 1) if idx != 0 else 0
+                max_band = (fs / 32.0) * (2 * idx + 1)
+
+                if limit[0] - lo_freq > min_band and limit[1] - lo_freq < max_band:
+                    if idx in used_bands:
+                        return False
+                    else:
+                        used_bands.append(idx)
+                        break
+            else:
+                return False
+
+        return True
+
     def _execute_pulse_sequence(
         self,
         cfg: QickProgramConfig,
@@ -169,6 +218,10 @@ class RFSoC(AbstractInstrument):
         Returns:
             Lists of I and Q value measured
         """
+
+        if self.local_oscillator:
+            if not self.set_best_LO(sequence):
+                raise ValueError("Optimal LO frequency not found")
 
         server_commands = {
             "operation_code": "execute_pulse_sequence",
@@ -587,10 +640,12 @@ class TII_RFSOC4x2(RFSoC):  # Containes the main settings:
 
 
 class TII_ZCU111(RFSoC):  # Containes the main settings:
-    def __init__(self, name: str, address: str):
+    def __init__(self, name: str, address: str, local_oscillator: LocalOscillator = None):
         super().__init__(name, address=address)
         self.host, self.port = address.split(":")
         self.port = int(self.port)
+        self.local_oscillator = local_oscillator
+        # self.local_oscillator = None
         self.cfg = QickProgramConfig(
             sampling_rate=6_000_000_000,
             mixer_freq=0,
