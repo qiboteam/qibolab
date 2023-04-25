@@ -3,6 +3,7 @@ import pytest
 from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
+from qibo.states import CircuitResult
 
 from qibolab import Platform
 from qibolab.compilers import Compiler
@@ -25,7 +26,7 @@ def compile_circuit(circuit, platform):
         native_circuit, _ = transpile(circuit, platform.two_qubit_natives)
 
     compiler = Compiler.default()
-    sequence, _ = compiler(native_circuit, platform)
+    sequence, _ = compiler.compile(native_circuit, platform)
     return sequence
 
 

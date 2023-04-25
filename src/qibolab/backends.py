@@ -35,6 +35,30 @@ class QibolabBackend(NumpyBackend):
     def apply_gate_density_matrix(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
 
+    def create_circuit_result(self, measurement_map, circuit, readout, nshots):
+        """Create :class:`qibo.states.CircuitResult` by assigning measurement outcomes
+        to :class:`qibo.states.MeasurementResult` for each gate.
+
+        Args:
+            measurement_map (dict): Map from each measurement gate to the sequence of
+                readout pulses implementing it.
+            circuit (:class:`qibo.models.Circuit`): Circuit object that the measurement map
+                was produced for. Needed
+            readout (dict): Dictionary containing acquisition results (:class:`qibolab.results.ExecutionResults`)
+                and shot values for the measurements performed on hardware.
+            nshots (int): Number of shots performed during the circuit execution.
+
+        Returns:
+            :class:`qibo.states.CircuitResult` object containing the results acquired from the circuit execution.
+        """
+        result = CircuitResult(self, circuit, readout, nshots)
+        for gate, sequence in measurement_map.items():
+            _samples = map(lambda pulse: readout[pulse.serial].shots, sequence.pulses)
+            samples = list(filter(lambda x: x is not None, _samples))
+            gate.result.backend = self
+            gate.result.register_samples(np.array(samples).T)
+        return result
+
     def execute_circuit(
         self, circuit, initial_state=None, nshots=None, fuse_one_qubit=False, check_transpiled=False
     ):  # pragma: no cover
@@ -84,7 +108,7 @@ class QibolabBackend(NumpyBackend):
                 log.info("Transpiler test passed.")
 
         # Transpile the native circuit into a sequence of pulses ``PulseSequence``
-        sequence, measurement_map = self.compiler(native_circuit, self.platform)
+        sequence, measurement_map = self.compiler.compile(native_circuit, self.platform)
 
         if not self.platform.is_connected:
             self.platform.connect()
@@ -94,7 +118,7 @@ class QibolabBackend(NumpyBackend):
         self.platform.start()
         readout = self.platform.execute_pulse_sequence(sequence, nshots)
         self.platform.stop()
-        return measurement_map(self, native_circuit, readout, nshots)
+        return self.create_circuit_result(measurement_map, circuit, readout, nshots)
 
     def circuit_result_tensor(self, result):
         raise_error(

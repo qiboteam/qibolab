@@ -1,10 +1,8 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
 
-import numpy as np
 from qibo import gates
 from qibo.config import raise_error
-from qibo.states import CircuitResult
 
 from qibolab.compilers.default import (
     cz_rule,
@@ -15,33 +13,6 @@ from qibolab.compilers.default import (
     z_rule,
 )
 from qibolab.pulses import PulseSequence, ReadoutPulse
-
-
-class MeasurementMap(dict):
-    """Map from each measurement gate to the sequence of readout pulses implementing it."""
-
-    def __call__(self, backend, circuit, readout, nshots):
-        """Assign measurement outcomes to :class:`qibo.states.MeasurementResult` for each gate.
-
-        Args:
-            backend (:class:`qibo.backends.abstract.AbstractBackend`): Backend object to
-                be assigned in the result object.
-            circuit (:class:`qibo.models.Circuit`): Circuit object that the measurement map
-                was produced for. Needed
-            readout (dict): Dictionary containing acquisition results (:class:`qibolab.results.ExecutionResults`)
-                and shot values for the measurements performed on hardware.
-            nshots (int): Number of shots performed during the circuit execution.
-
-        Returns:
-            :class:`qibo.states.CircuitResult` object containing the results acquired from the circuit execution.
-        """
-        result = CircuitResult(backend, circuit, readout, nshots)
-        for gate, sequence in self.items():
-            _samples = map(lambda pulse: readout[pulse.serial].shots, sequence.pulses)
-            samples = list(filter(lambda x: x is not None, _samples))
-            gate.result.backend = backend
-            gate.result.register_samples(np.array(samples).T)
-        return result
 
 
 @dataclass
@@ -114,7 +85,7 @@ class Compiler:
 
         return inner
 
-    def __call__(self, circuit, platform):
+    def compile(self, circuit, platform):
         """Transforms a circuit to pulse sequence.
 
         Args:
@@ -125,13 +96,15 @@ class Compiler:
 
         Returns:
             sequence (qibolab.pulses.PulseSequence): Pulse sequence that implements the circuit.
+            measurement_map (dict): Map from each measurement gate to the sequence of  readout pulses
+                implementing it.
         """
         sequence = PulseSequence()
         # FIXME: This will not work with qubits that have string names
         # TODO: Implement a mapping between circuit qubit ids and platform ``Qubit``s
         virtual_z_phases = defaultdict(int)
 
-        measurement_map = MeasurementMap()
+        measurement_map = {}
         # keep track of gates that were already added to avoid adding them twice
         already_processed = set()
         # process circuit gates
