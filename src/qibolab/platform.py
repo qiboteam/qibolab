@@ -286,16 +286,14 @@ def create_tii_zcu111(runcard, address=None):
     controller = TII_ZCU111("tii_zcu111", address)
 
     # Instantiate local oscillators (HARDCODED)
-    """
     local_oscillators = [
-        ERA("ErasynthLO", "192.168.0.210", ethernet=False),
+        ERA("ErasynthLO", "192.168.0.210"),
     ]
     # Set ErasynthLO parameters
     local_oscillators[0].power = controller.cfg.LO_power
     local_oscillators[0].frequency = controller.cfg.LO_freq
 
     instruments = [controller] + local_oscillators
-    """
     instruments = [controller]
 
     design = InstrumentDesign(instruments, channels)

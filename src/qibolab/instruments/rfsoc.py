@@ -413,7 +413,7 @@ class RFSoC(AbstractInstrument):
         """
         for serial in dict_b:
             if serial in dict_a:
-                dict_a[serial] = dict_a[serial] + dict_b[serial]
+                dict_a[serial] = dict_b[serial] + dict_a[serial]
             else:
                 dict_a[serial] = dict_b[serial]
         return dict_a
