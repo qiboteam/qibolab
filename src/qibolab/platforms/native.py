@@ -1,5 +1,5 @@
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import Dict, List, Optional, Union
 
 from qibo.config import raise_error
@@ -34,7 +34,8 @@ class NativePulse:
             kwargs (dict): Dictionary containing the parameters of the pulse
                 implementing the gate.
         """
-        kwargs = {k: v for k, v in kwargs.items() if k in cls.__annotations__}  # pylint: disable=E1101
+        field_names = {field.name for field in fields(cls)}
+        kwargs = {k: v for k, v in kwargs.items() if k in field_names}
         return cls(name, **kwargs)
 
     def pulse(self, start, relative_phase=0.0):
