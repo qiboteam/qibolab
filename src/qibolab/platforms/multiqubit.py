@@ -128,7 +128,9 @@ class MultiqubitPlatform(AbstractPlatform):
                 # classification
                 if par == "iq_angle":
                     rotation_angle = float(value)
-                    rotation_angle = (- rotation_angle * 360 / (2 * np.pi)) % 360 #save rotation angle in degrees for qblox
+                    rotation_angle = (
+                        -rotation_angle * 360 / (2 * np.pi)
+                    ) % 360  # save rotation angle in degrees for qblox
                     # update Qblox qubit classification iq angle
                     instrument_name = self.qubit_instrument_map[qubit][0]
                     self.current_config["instruments"][instrument_name]["settings"]["classification_parameters"][qubit][
