@@ -54,7 +54,9 @@ jobs:
         virtualenvs-create: true
         virtualenvs-in-project: true
     - name: Disable modern installer
-      run: poetry config installer.modern-installation false
+      run: |
+        poetry config installer.modern-installation false
+        poetry config virtualenvs.create false
     - name: Load cached venv
       id: cached-pip-wheels
       uses: actions/cache@v3
@@ -64,11 +66,11 @@ jobs:
     - name: Install package
       shell: bash -l {0}
       run: |
+        python -m venv testenv
+        source testenv/bin/activate
         poetry install --with tests,tiiq
-        which srun
     - name: Test ${{ matrix.platform }}
       run: |
-        which pytest
         sed -i 's/$PLATFORM/'${{ matrix.platform }}'/' qputests.sh
         srun -p ${{ matrix.platform }} qputests.sh
         mkdir coverage
