@@ -63,9 +63,12 @@ jobs:
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
     - name: Install package
       shell: bash -l {0}
-      run: poetry install --with tests,tiiq
+      run: |
+        poetry install --with tests,tiiq
+        which pytest
     - name: Test ${{ matrix.platform }}
       run: |
+        which pytest
         sed -i 's/$PLATFORM/'${{ matrix.platform }}'/' qputests.sh
         srun -p ${{ matrix.platform }} qputests.sh
         mkdir coverage
