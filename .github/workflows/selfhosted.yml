@@ -64,12 +64,10 @@ jobs:
         path: ~/.cache
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
     - name: Install package
-      shell: bash -l {0}
       run: |
         python -m venv testenv
         source testenv/bin/activate
         poetry install --with tests,tiiq
-        which pytest
     - name: Test ${{ matrix.platform }}
       run: |
         sed -i 's/$PLATFORM/'${{ matrix.platform }}'/' qputests.sh
