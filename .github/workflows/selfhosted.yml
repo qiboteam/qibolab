@@ -47,13 +47,21 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: 3.9
+        python-version: "3.10"
+    - name: Install and configure poetry
+      uses: snok/install-poetry@v1
+      with:
+        virtualenvs-create: false
+    - name: Load cached venv
+      id: cached-pip-wheels
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
     - name: Install package
-      shell: bash -l {0}
       run: |
-        conda create --prefix=testenv python=${{ matrix.python-version }}
-        conda activate ./testenv
-        python -m pip install --upgrade pip
+        python -m venv testenv
+        source testenv/bin/activate
         poetry install --with tests,tiiq
     - name: Test ${{ matrix.platform }}
       run: |
