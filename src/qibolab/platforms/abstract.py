@@ -24,6 +24,8 @@ from qibolab.transpilers import can_execute, transpile
 
 @dataclass
 class NativeGate:
+    """Container with parameters required to generate a pulse implementing a native gate."""
+
     name: str
     duration: int
     amplitude: float
@@ -34,10 +36,27 @@ class NativeGate:
 
     @classmethod
     def from_dict(cls, name, **kwargs):
+        """Parse the dictionary provided by the runcard.
+
+        Args:
+            name (str): Name of the native gate (dictionary key).
+            kwargs (dict): Dictionary containing the parameters of the pulse
+                implementing the gate.
+        """
         kwargs = {k: v for k, v in kwargs.items() if k in cls.__annotations__}  # pylint: disable=E1101
         return cls(name, **kwargs)
 
-    def pulse(self, start, relative_phase=0):
+    def pulse(self, start, relative_phase=0.0):
+        """Construct the :class:`qibolab.pulses.Pulse` object implementing the gate.
+
+        Args:
+            start (int): Start time of the pulse in the sequence.
+            relative_phase (float): Relative phase of the pulse.
+
+        Returns:
+            A :class:`qibolab.pulses.DrivePulse` or :class:`qibolab.pulses.DrivePulse`
+            or :class:`qibolab.pulses.FluxPulse` with the pulse parameters of the gate.
+        """
         pulse_type = PulseType(self.type).name
         pulse_cls = PulseConstructor[pulse_type].value
         channel = getattr(self.qubit, pulse_type.lower()).name
@@ -55,12 +74,22 @@ class NativeGate:
 
 @dataclass
 class NativeGates:
+    """Container with the native gates of a qubit."""
+
     MZ: NativeGate
     RX: NativeGate
     RX90: NativeGate
 
     @classmethod
     def from_dict(cls, qubit, native_gates):
+        """Parse native gates of the qubit from the runcard.
+
+        Args:
+            qubit (:class:`qibolab.platforms.abstract.Qubit`): Qubit object that the
+                native gates are referring to.
+            native_gates (dict): Dictionary with native gate pulse parameters as loaded
+                from the runcard.
+        """
         mz = NativeGate.from_dict("MZ", **native_gates["MZ"], qubit=qubit)
         rx = NativeGate.from_dict("RX", **native_gates["RX"], qubit=qubit)
         rx90 = NativeGate.from_dict("RX90", **native_gates["RX"], qubit=qubit)
