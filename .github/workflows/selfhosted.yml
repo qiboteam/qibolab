@@ -65,7 +65,7 @@ jobs:
       shell: bash -l {0}
       run: |
         poetry install --with tests,tiiq
-        which pytest
+        which srun
     - name: Test ${{ matrix.platform }}
       run: |
         which pytest
