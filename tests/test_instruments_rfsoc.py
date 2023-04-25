@@ -43,14 +43,14 @@ def test_classify_shots():
     qubit1 = Qubit(
         name="q1",
     )
-    i_val = np.array([0] * 7)
-    q_val = np.array([-5, -1.5, -0.5, 0, 0.5, 1.5, 5])
+    i_val = [0] * 7
+    q_val = [-5, -1.5, -0.5, 0, 0.5, 1.5, 5]
 
     platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
     instrument = platform.design.instruments[0]
 
     shots = instrument.classify_shots(i_val, q_val, qubit0)
-    target_shots = np.array([0, 0, 0, 0, 0, 0, 0])
+    target_shots = np.array([1, 1, 0, 0, 0, 0, 0])
 
     assert (target_shots == shots).all()
     assert instrument.classify_shots(i_val, q_val, qubit1) is None
