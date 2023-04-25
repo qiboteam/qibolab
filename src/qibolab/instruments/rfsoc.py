@@ -389,8 +389,7 @@ class RFSoC(AbstractInstrument):
                                 sequence[sweeper.indexes[jdx]].amplitude = values[jdx][idx]
                     else:  # TODO elif
                         for kdx, jdx in enumerate(sweeper.indexes):
-                            print("jdx", jdx)
-                            print("idx", idx)
+                            print(values[kdx][idx])
                             qubits[jdx].flux.bias = values[kdx][idx]
 
                     res = self.recursive_python_sweep(qubits, sequence, original_ro, *sweepers[1:], average=average)
