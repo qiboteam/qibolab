@@ -35,29 +35,24 @@ class QibolabBackend(NumpyBackend):
     def apply_gate_density_matrix(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
 
-    def create_circuit_result(self, measurement_map, circuit, readout, nshots):
-        """Create :class:`qibo.states.CircuitResult` by assigning measurement outcomes
-        to :class:`qibo.states.MeasurementResult` for each gate.
+    def assign_measurements(self, measurement_map, circuit_result):
+        """Assigning measurement outcomes to :class:`qibo.states.MeasurementResult` for each gate.
+
+        This allows properly obtaining the measured shots from the :class:`qibo.states.CircuitResult`
+        object returned by the circuit execution.
 
         Args:
             measurement_map (dict): Map from each measurement gate to the sequence of
                 readout pulses implementing it.
-            circuit (:class:`qibo.models.Circuit`): Circuit object that the measurement map
-                was produced for. Needed
-            readout (dict): Dictionary containing acquisition results (:class:`qibolab.results.ExecutionResults`)
-                and shot values for the measurements performed on hardware.
-            nshots (int): Number of shots performed during the circuit execution.
-
-        Returns:
-            :class:`qibo.states.CircuitResult` object containing the results acquired from the circuit execution.
+            circuit_result (:class:`qibo.states.CircuitResult`): Circuit result object
+                containing the readout measurement shots. This is created in ``execute_circuit``.
         """
-        result = CircuitResult(self, circuit, readout, nshots)
+        readout = circuit_result.execution_result
         for gate, sequence in measurement_map.items():
             _samples = map(lambda pulse: readout[pulse.serial].shots, sequence.pulses)
             samples = list(filter(lambda x: x is not None, _samples))
             gate.result.backend = self
             gate.result.register_samples(np.array(samples).T)
-        return result
 
     def execute_circuit(
         self, circuit, initial_state=None, nshots=None, fuse_one_qubit=False, check_transpiled=False
@@ -118,7 +113,9 @@ class QibolabBackend(NumpyBackend):
         self.platform.start()
         readout = self.platform.execute_pulse_sequence(sequence, nshots)
         self.platform.stop()
-        return self.create_circuit_result(measurement_map, circuit, readout, nshots)
+        result = CircuitResult(self, circuit, readout, nshots)
+        self.assign_measurements(measurement_map, result)
+        return result
 
     def circuit_result_tensor(self, result):
         raise_error(
