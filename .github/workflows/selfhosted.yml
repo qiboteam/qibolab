@@ -62,6 +62,7 @@ jobs:
         path: ~/.cache
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
     - name: Install package
+      shell: bash -l {0}
       run: poetry install --with tests,tiiq
     - name: Test ${{ matrix.platform }}
       run: |
