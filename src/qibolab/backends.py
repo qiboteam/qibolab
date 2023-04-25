@@ -66,7 +66,7 @@ class QibolabBackend(NumpyBackend):
                 "Hardware backend only supports circuits as initial states.",
             )
 
-        two_qubit_natives = self.platform.two_qubit_natives
+        two_qubit_natives = self.platform.two_qubit_native_types
         if can_execute(circuit, two_qubit_natives, verbose=False):
             native_circuit = circuit
         else:

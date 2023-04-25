@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 import yaml
@@ -10,91 +10,9 @@ from qibo.config import log, raise_error
 from qibo.models import Circuit
 
 from qibolab.designs.channels import Channel
-from qibolab.pulses import (
-    DrivePulse,
-    FluxPulse,
-    Pulse,
-    PulseConstructor,
-    PulseSequence,
-    PulseType,
-    ReadoutPulse,
-)
+from qibolab.platforms.native import NativeSequence, NativeSingleQubitGates
+from qibolab.pulses import PulseSequence
 from qibolab.transpilers import can_execute, transpile
-
-
-@dataclass
-class NativeGate:
-    """Container with parameters required to generate a pulse implementing a native gate."""
-
-    name: str
-    duration: int
-    amplitude: float
-    frequency: int
-    shape: str
-    type: str
-    qubit: "Qubit"
-
-    @classmethod
-    def from_dict(cls, name, **kwargs):
-        """Parse the dictionary provided by the runcard.
-
-        Args:
-            name (str): Name of the native gate (dictionary key).
-            kwargs (dict): Dictionary containing the parameters of the pulse
-                implementing the gate.
-        """
-        kwargs = {k: v for k, v in kwargs.items() if k in cls.__annotations__}  # pylint: disable=E1101
-        return cls(name, **kwargs)
-
-    def pulse(self, start, relative_phase=0.0):
-        """Construct the :class:`qibolab.pulses.Pulse` object implementing the gate.
-
-        Args:
-            start (int): Start time of the pulse in the sequence.
-            relative_phase (float): Relative phase of the pulse.
-
-        Returns:
-            A :class:`qibolab.pulses.DrivePulse` or :class:`qibolab.pulses.DrivePulse`
-            or :class:`qibolab.pulses.FluxPulse` with the pulse parameters of the gate.
-        """
-        pulse_type = PulseType(self.type).name
-        pulse_cls = PulseConstructor[pulse_type].value
-        channel = getattr(self.qubit, pulse_type.lower()).name
-        return pulse_cls(
-            start,
-            self.duration,
-            self.amplitude,
-            self.frequency,
-            relative_phase,
-            self.shape,
-            channel,
-            qubit=self.qubit.name,
-        )
-
-
-@dataclass
-class NativeGates:
-    """Container with the native gates of a qubit."""
-
-    MZ: NativeGate
-    RX: NativeGate
-    RX90: NativeGate
-
-    @classmethod
-    def from_dict(cls, qubit, native_gates):
-        """Parse native gates of the qubit from the runcard.
-
-        Args:
-            qubit (:class:`qibolab.platforms.abstract.Qubit`): Qubit object that the
-                native gates are referring to.
-            native_gates (dict): Dictionary with native gate pulse parameters as loaded
-                from the runcard.
-        """
-        mz = NativeGate.from_dict("MZ", **native_gates["MZ"], qubit=qubit)
-        rx = NativeGate.from_dict("RX", **native_gates["RX"], qubit=qubit)
-        rx90 = NativeGate.from_dict("RX90", **native_gates["RX"], qubit=qubit)
-        rx90.amplitude /= 2.0
-        return cls(mz, rx, rx90)
 
 
 @dataclass
@@ -151,7 +69,7 @@ class Qubit:
     drive: Optional[Channel] = None
     flux: Optional[Channel] = None
 
-    native_gates: Optional[NativeGates] = None
+    native_gates: Optional[NativeSingleQubitGates] = None
 
     def __post_init__(self):
         # register qubit in ``flux`` channel so that we can access
@@ -190,8 +108,9 @@ class AbstractPlatform(ABC):
         self.relaxation_time = None
         self.sampling_rate = None
 
-        self.single_qubit_natives = {}
-        self.two_qubit_natives = set()
+        # TODO: Remove this (needed for the multiqubit platform)
+        self.native_gates = {}
+        self.two_qubit_natives: Dict[frozenset, Dict[str, NativeSequence]] = {}
         # Load platform settings
         self.reload_settings()
 
@@ -220,14 +139,6 @@ class AbstractPlatform(ABC):
 
         # Load native gates
         self.native_gates = settings["native_gates"]
-        self.single_qubit_natives = self.native_gates["single_qubit"]
-        if "two_qubit" in self.native_gates:
-            for gates in self.native_gates["two_qubit"].values():
-                self.two_qubit_natives |= set(gates.keys())
-        else:
-            # dummy value to avoid transpiler failure for single qubit devices
-            self.two_qubit_natives = {"CZ"}
-
         # Load characterization settings and create ``Qubit`` and ``Channel`` objects
         for q in settings["qubits"]:
             if q in self.qubits:
@@ -245,8 +156,28 @@ class AbstractPlatform(ABC):
                         qubit.drive = Channel(qd)
                     if qf is not None:
                         qubit.flux = Channel(qf)
-                # register native gates
-                qubit.native_gates = NativeGates.from_dict(qubit, self.single_qubit_natives[q])
+                # register single qubit native gates to Qubit objects
+                qubit.native_gates = NativeSingleQubitGates.from_dict(qubit, self.native_gates["single_qubit"][q])
+        if "two_qubit" in self.native_gates:
+            for pair, gatedict in self.native_gates["two_qubit"].items():
+                qubit1, qubit2 = pair.split("-")
+                if qubit1.isdigit():
+                    qubit1 = int(qubit1)
+                if qubit2.isdigit():
+                    qubit2 = int(qubit2)
+                sequences = {n: NativeSequence.from_dict(n, self.qubits, seq) for n, seq in gatedict.items()}
+                self.two_qubit_natives[frozenset((qubit1, qubit2))] = sequences
+
+    @property
+    def two_qubit_native_types(self):
+        """Set with names of all different two qubit native gates.
+
+        Used in the gate-to-gate transpiler.
+        """
+        native_types = {name for gates in self.two_qubit_natives.values() for name in gates.keys()}
+        if not native_types:
+            native_types = {"CZ"}
+        return native_types
 
     @abstractmethod
     def connect(self):
@@ -279,8 +210,8 @@ class AbstractPlatform(ABC):
             sequence (qibolab.pulses.PulseSequence): Pulse sequence that implements the
                 circuit on the qubit.
         """
-        if not can_execute(circuit, self.two_qubit_natives):
-            circuit, _ = transpile(circuit, self.two_qubit_natives)
+        if not can_execute(circuit, self.two_qubit_native_types):
+            circuit, _ = transpile(circuit, self.two_qubit_native_types)
 
         sequence = PulseSequence()
         virtual_z_phases = defaultdict(int)
@@ -428,45 +359,12 @@ class AbstractPlatform(ABC):
 
     def create_CZ_pulse_sequence(self, qubits, start=0):
         # Check in the settings if qubits[0]-qubits[1] is a key
-        if f"{qubits[0]}-{qubits[1]}" in self.settings["native_gates"]["two_qubit"]:
-            pulse_sequence_settings = self.settings["native_gates"]["two_qubit"][f"{qubits[0]}-{qubits[1]}"]["CZ"]
-        elif f"{qubits[1]}-{qubits[0]}" in self.settings["native_gates"]["two_qubit"]:
-            pulse_sequence_settings = self.settings["native_gates"]["two_qubit"][f"{qubits[1]}-{qubits[0]}"]["CZ"]
-        else:
+        if frozenset(qubits) not in self.two_qubit_natives:
             raise_error(
                 ValueError,
                 f"Calibration for CZ gate between qubits {qubits[0]} and {qubits[1]} not found.",
             )
-
-        # If settings contains only one pulse dictionary, convert it into a list that can be iterated below
-        if isinstance(pulse_sequence_settings, dict):
-            pulse_sequence_settings = [pulse_sequence_settings]
-
-        from qibolab.pulses import FluxPulse, PulseSequence
-
-        sequence = PulseSequence()
-        virtual_z_phases = defaultdict(int)
-
-        for pulse_settings in pulse_sequence_settings:
-            if pulse_settings["type"] == "qf":
-                qf_duration = pulse_settings["duration"]
-                qf_amplitude = pulse_settings["amplitude"]
-                qf_shape = pulse_settings["shape"]
-                qubit = pulse_settings["qubit"]
-                qf_channel = self.qubits[qubit].flux.name
-                sequence.add(
-                    FluxPulse(
-                        start + pulse_settings["relative_start"], qf_duration, qf_amplitude, qf_shape, qf_channel, qubit
-                    )
-                )
-            elif pulse_settings["type"] == "virtual_z":
-                virtual_z_phases[pulse_settings["qubit"]] += pulse_settings["phase"]
-            else:
-                raise NotImplementedError(
-                    "Implementation of CZ gates using pulses of types other than `qf` or `virtual_z` is not supported yet."
-                )
-
-        return sequence, virtual_z_phases
+        return self.two_qubit_natives[frozenset(qubits)]["CZ"].sequence(start)
 
     def create_MZ_pulse(self, qubit, start):
         return self.qubits[qubit].native_gates.MZ.pulse(start)
