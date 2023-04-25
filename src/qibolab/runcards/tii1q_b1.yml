@@ -14,7 +14,7 @@ native_gates:
             RX:
                 duration: 30
                 amplitude: 0.05
-                frequency: 5542418623
+                frequency: 5542438672
                 shape: Rectangular()
                 type: qd
                 start: 0
@@ -22,7 +22,7 @@ native_gates:
             MZ:
                 duration: 600
                 amplitude: 0.03
-                frequency: 7371778855
+                frequency: 7371818455
                 shape: Rectangular()
                 type: ro
                 start: 0
@@ -31,20 +31,10 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            readout_frequency: 5542418623
-            drive_frequency: 5542418623
-            sweetspot: 0
-            peak_voltage: 0
-            pi_pulse_amplitude: 0
-            T1: 0.0
-            T2: 0.0
-            T2_spin_echo: 0
-            state0_voltage: 0
-            state1_voltage: 0
-            mean_gnd_states: (2.4881945799457994+0.48354850948509487j)
-            threshold: 1.3743930264448407
-            iq_angle: 3.1279343481307826
-            mixer_drive_g: 0.0
-            mixer_drive_phi: 0.0
-            mixer_readout_g: 0.0
-            mixer_readout_phi: 0.0
+            readout_frequency: 5542438672
+            drive_frequency: 5542438672
+            pi_pulse_amplitude: 0.05
+            T1: 6526
+            T2: 8667
+            threshold: -1.186609150508747
+            iq_angle: 0.06731792842565974
