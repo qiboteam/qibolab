@@ -119,8 +119,8 @@ instruments:
 
             classification_parameters:
                 2:  # qubit id
-                    rotation_angle              : 296.887                    # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.001114                  # in V
+                    rotation_angle              : 171.44278897351776                    # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.04381767172346776                  # in V
                 3:  # qubit id
                     rotation_angle              : 306.039                    # in degrees 0.0<=v<=360.0
                     threshold                   : 0.000914                  # in V
@@ -360,9 +360,11 @@ characterization:
             T2: 0
             state0_voltage: 0.0
             state1_voltage: 0.0
-            mean_gnd_states: (-0.0+0.0j)
-            mean_exc_states: (0.0+0.0j)
+            mean_gnd_states: (-0.020369172217642346+0.002927849852468721j)
+            mean_exc_states: (-0.06380307802449722-0.003607735840135293j)
             sweetspot: -0.167
+            threshold: 0.04381767172346776,
+            iq_angle: -2.9922411463897145, 
         3:
             readout_frequency: 7_803_437_704
             drive_frequency: 6_761_250_000
