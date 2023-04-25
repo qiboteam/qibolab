@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
 import numpy as np
 import yaml
@@ -14,12 +14,12 @@ from qibolab.pulses import (
     DrivePulse,
     FluxPulse,
     Pulse,
+    PulseConstructor,
     PulseSequence,
     PulseType,
     ReadoutPulse,
 )
 from qibolab.transpilers import can_execute, transpile
-from qibolab.transpilers.gate_decompositions import TwoQubitNatives
 
 
 @dataclass
@@ -30,31 +30,42 @@ class NativeGate:
     frequency: int
     shape: str
     type: str
-    start: int
-    phase: float
+    qubit: "Qubit"
 
-    PULSE_CLS: dict = {"qd": DrivePulse, "qf": FluxPulse, "ro": ReadoutPulse}
+    @classmethod
+    def from_dict(cls, name, **kwargs):
+        kwargs = {k: v for k, v in kwargs.items() if k in cls.__annotations__}  # pylint: disable=E1101
+        return cls(name, **kwargs)
 
-    def to_pulse(self, qubit, channel, start, relative_phase=0):
-        pulse_cls = self.PULSE_CLS[self.type]
+    def pulse(self, start, relative_phase=0):
+        pulse_type = PulseType(self.type).name
+        pulse_cls = PulseConstructor[pulse_type].value
+        channel = getattr(self.qubit, pulse_type.lower()).name
         return pulse_cls(
-            start, self.duration, self.amplitude, self.frequency, relative_phase, self.shape, channel, qubit=qubit
+            start,
+            self.duration,
+            self.amplitude,
+            self.frequency,
+            relative_phase,
+            self.shape,
+            channel,
+            qubit=self.qubit.name,
         )
 
 
 @dataclass
 class NativeGates:
+    MZ: NativeGate
     RX: NativeGate
     RX90: NativeGate
-    MZ: NativeGate
 
     @classmethod
-    def from_dict(self, native_gates):
-        rx = NativeGate("RX", **native_gates["RX"])
-        mz = NativeGate("MZ", **native_gates["MZ"])
-        rx90 = NativeGate("RX90", **native_gates["RX"])
+    def from_dict(cls, qubit, native_gates):
+        mz = NativeGate.from_dict("MZ", **native_gates["MZ"], qubit=qubit)
+        rx = NativeGate.from_dict("RX", **native_gates["RX"], qubit=qubit)
+        rx90 = NativeGate.from_dict("RX90", **native_gates["RX"], qubit=qubit)
         rx90.amplitude /= 2.0
-        return cls(RX=rx, RX90=rx90, MZ=mz)
+        return cls(mz, rx, rx90)
 
 
 @dataclass
@@ -77,9 +88,7 @@ class Qubit:
         Other characterization parameters for the qubit, loaded from the runcard.
     """
 
-    name: str
-
-    native_gates: NativeGates
+    name: Union[str, int]
 
     readout_frequency: int = 0
     drive_frequency: int = 0
@@ -113,6 +122,8 @@ class Qubit:
     drive: Optional[Channel] = None
     flux: Optional[Channel] = None
 
+    native_gates: Optional[NativeGates] = None
+
     def __post_init__(self):
         # register qubit in ``flux`` channel so that we can access
         # ``sweetspot`` and ``filters`` at the channel level
@@ -124,21 +135,6 @@ class Qubit:
         for channel in [self.readout, self.feedback, self.drive, self.flux, self.twpa]:
             if channel is not None:
                 yield channel
-
-    def RX_pulse(self, start, relative_phase=0):
-        qubit = self.name
-        channel = self.drive.name
-        return self.native_gates.RX.to_pulse(qubit, channel, start, relative_phase)
-
-    def RX90_pulse(self, start, relative_phase=0):
-        qubit = self.name
-        channel = self.drive.name
-        return self.native_gates.RX90.to_pulse(qubit, channel, start, relative_phase)
-
-    def MZ_pulse(self, start, relative_phase=0):
-        qubit = self.name
-        channel = self.readout.name
-        return self.native_gates.MZ.to_pulse(qubit, channel, start, relative_phase)
 
 
 class AbstractPlatform(ABC):
@@ -166,7 +162,7 @@ class AbstractPlatform(ABC):
         self.sampling_rate = None
 
         self.single_qubit_natives = {}
-        self.two_qubit_natives = TwoQubitNatives(0)
+        self.two_qubit_natives = set()
         # Load platform settings
         self.reload_settings()
 
@@ -209,18 +205,19 @@ class AbstractPlatform(ABC):
                 for name, value in settings["characterization"]["single_qubit"][q].items():
                     setattr(self.qubits[q], name, value)
             else:
-                native_gates = NativeGates.from_dict(self.single_qubit_natives[q])
-                self.qubits[q] = Qubit(q, native_gates, **settings["characterization"]["single_qubit"][q])
+                self.qubits[q] = qubit = Qubit(q, **settings["characterization"]["single_qubit"][q])
                 # register channels to qubits when we are using the old format
                 # needed for ``NativeGates`` to work
                 if "qubit_channel_map" in self.settings:
-                    ro, qd, qf, _ = self.settings["qubit_channel_map"]
+                    ro, qd, qf, _ = self.settings["qubit_channel_map"][q]
                     if ro is not None:
-                        self.qubits[q].readout = Channel(ro)
+                        qubit.readout = Channel(ro)
                     if qd is not None:
-                        self.qubits[q].drive = Channel(qd)
+                        qubit.drive = Channel(qd)
                     if qf is not None:
-                        self.qubits[q].flux = Channel(qf)
+                        qubit.flux = Channel(qf)
+                # register native gates
+                qubit.native_gates = NativeGates.from_dict(qubit, self.single_qubit_natives[q])
 
     @abstractmethod
     def connect(self):
@@ -395,10 +392,10 @@ class AbstractPlatform(ABC):
         raise_error(NotImplementedError, f"Platform {self.name} does not support sweeping.")
 
     def create_RX90_pulse(self, qubit, start=0, relative_phase=0):
-        return self.qubits[qubit].RX90_pulse(start, relative_phase)
+        return self.qubits[qubit].native_gates.RX90.pulse(start, relative_phase)
 
     def create_RX_pulse(self, qubit, start=0, relative_phase=0):
-        return self.qubits[qubit].RX_pulse(start, relative_phase)
+        return self.qubits[qubit].native_gates.RX.pulse(start, relative_phase)
 
     def create_CZ_pulse_sequence(self, qubits, start=0):
         # Check in the settings if qubits[0]-qubits[1] is a key
@@ -443,26 +440,26 @@ class AbstractPlatform(ABC):
         return sequence, virtual_z_phases
 
     def create_MZ_pulse(self, qubit, start):
-        return self.qubits[qubit].MZ_pulse(start)
+        return self.qubits[qubit].native_gates.MZ.pulse(start)
 
     def create_qubit_drive_pulse(self, qubit, start, duration, relative_phase=0):
-        pulse = self.qubits[qubit].RX_pulse(start, relative_phase)
+        pulse = self.qubits[qubit].native_gates.RX.pulse(start, relative_phase)
         pulse.duration = duration
         return pulse
 
     def create_qubit_readout_pulse(self, qubit, start):
-        return self.qubits[qubit].MZ_pulse(start)
+        return self.create_MZ_pulse(qubit, start)
 
     # TODO Remove RX90_drag_pulse and RX_drag_pulse, replace them with create_qubit_drive_pulse
     # TODO Add RY90 and RY pulses
 
     def create_RX90_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
-        pulse = self.qubits[qubit].RX90_pulse(start, relative_phase)
+        pulse = self.qubits[qubit].native_gates.RX90.pulse(start, relative_phase)
         pulse.shape = "Drag(5," + str(beta) + ")"
         return pulse
 
     def create_RX_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
-        pulse = self.qubits[qubit].RX90_pulse(start, relative_phase)
+        pulse = self.qubits[qubit].native_gates.RX.pulse(start, relative_phase)
         pulse.shape = "Drag(5," + str(beta) + ")"
         return pulse
 

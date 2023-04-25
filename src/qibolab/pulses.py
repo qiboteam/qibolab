@@ -1331,6 +1331,14 @@ class SplitPulse(Pulse):
         return
 
 
+class PulseConstructor(Enum):
+    """An enumeration to map each ``PulseType`` to the proper constructor."""
+
+    READOUT = ReadoutPulse
+    DRIVE = DrivePulse
+    FLUX = FluxPulse
+
+
 class PulseSequence:
     """A collection of scheduled pulses.
 
