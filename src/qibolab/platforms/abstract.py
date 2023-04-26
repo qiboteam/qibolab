@@ -235,6 +235,7 @@ class AbstractPlatform(ABC):
                     if par == "drive_amplitude" or par == "amplitudes":
                         self.native_single_qubit_gates[qubit]["RX"]["amplitude"] = amplitude
                         self.current_config["native_gates"]["single_qubit"][qubit]["RX"]["amplitude"] = amplitude
+                        self.current_config["characterization"]["single_qubit"][qubit]["pi_pulse_amplitude"] = amplitude
 
                 # rabi_duration
                 elif par == "drive_length":
