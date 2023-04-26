@@ -121,23 +121,24 @@ class ERA(LocalOscillator):
             self.power = power
             self.frequency = frequency
 
-            if "reference_clock_source" in kwargs:
-                if not self.ethernet:
-                    if kwargs["reference_clock_source"] == "internal":
-                        self.device.ref_osc_source("int")
-                    elif kwargs["reference_clock_source"] == "external":
-                        self.device.ref_osc_source("ext")
-                    else:
-                        raise Exception(f"Invalid reference clock source {kwargs['reference_clock_source']}")
+            if not "reference_clock_source" in kwargs:
+                kwargs["reference_clock_source"] = self.reference_clock_source
+            if not self.ethernet:
+                if kwargs["reference_clock_source"] == "internal":
+                    self.device.ref_osc_source("int")
+                elif kwargs["reference_clock_source"] == "external":
+                    self.device.ref_osc_source("ext")
                 else:
-                    self._post("rfoutput", 0)
+                    raise Exception(f"Invalid reference clock source {kwargs['reference_clock_source']}")
+            else:
+                self._post("rfoutput", 0)
 
-                    if kwargs["reference_clock_source"] == "internal":
-                        self._post("reference_int_ext", 0)
-                    elif kwargs["reference_clock_source"] == "external":
-                        self._post("reference_int_ext", 1)
-                    else:
-                        raise Exception(f"Invalid reference clock source {kwargs['reference_clock_source']}")
+                if kwargs["reference_clock_source"] == "internal":
+                    self._post("reference_int_ext", 0)
+                elif kwargs["reference_clock_source"] == "external":
+                    self._post("reference_int_ext", 1)
+                else:
+                    raise Exception(f"Invalid reference clock source {kwargs['reference_clock_source']}")
         else:
             raise Exception("There is no connection to the instrument")
 
