@@ -34,7 +34,9 @@ class Channel:
     Not applicable for setups that do not use local oscillators because the controller
     can send sufficiently high frequencies.
     """
-    _bias: Optional[float] = None
+    power_range: Optional[float] = None
+    """Channel amplification or attenuation of the  selected on the device
+    """
     _bias: Optional[float] = None
     """DC offset that should be applied in the channel in order to shift the
     frequency of the qubit, usually to put it in its sweetspot.

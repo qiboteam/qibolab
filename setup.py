@@ -72,7 +72,7 @@ setup(
             "qm-qua>=1.0.1",
             "qualang-tools>=0.13.1",
             "zhinst-toolkit>=0.5.0",
-            "laboneq>=2.2.0",
+            "laboneq>=2.4.0",
             "laboneq-token>=1.0.0",
         ],
     },

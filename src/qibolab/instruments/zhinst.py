@@ -493,7 +493,8 @@ class Zurich(AbstractInstrument):
                 options.acquisition_type = lo.AcquisitionType.RAW
             elif options.acquisition_type is AcquisitionType.DISCRIMINATION:
                 options.acquisition_type = lo.AcquisitionType.DISCRIMINATION
-            elif self.acquisition_type == lo.AcquisitionType.SPECTROSCOPY:
+
+            if self.acquisition_type is lo.AcquisitionType.SPECTROSCOPY:
                 options.acquisition_type = lo.AcquisitionType.SPECTROSCOPY
 
         if options.averaging_mode is None:
@@ -799,6 +800,7 @@ class Zurich(AbstractInstrument):
 
         parameter = None
         print("sweep", sweeper.parameter.name.lower())
+        # print(qubits[sweeper.pulses[0].qubit])
 
         if sweeper.parameter is Parameter.frequency:
             for pulse in sweeper.pulses:
@@ -813,6 +815,8 @@ class Zurich(AbstractInstrument):
                         modulation_type=lo.ModulationType.HARDWARE,
                     )
                 )
+
+            print(ZhSweeper(pulse, sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper)
 
         if sweeper.parameter is Parameter.bias:
             for qubit in sweeper.qubits.values():
