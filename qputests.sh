@@ -8,7 +8,7 @@ cp pyproject.toml /tmp/
 cd /tmp/tests
 source /nfs/users/github/actions-runner/_work/qibolab/qibolab/testenv/bin/activate
 pytest -m qpu --platforms $PLATFORM
-pytest_status=0
+pytest_status=$?
 if [[ $pytest_status -ne 0 ]]
     then
         exit $pytest_status
