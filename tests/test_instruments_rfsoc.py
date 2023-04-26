@@ -3,13 +3,14 @@ import pytest
 
 from qibolab.instruments.rfsoc import QickProgramConfig, create_qick_sweeps
 from qibolab.paths import qibolab_folder
-from qibolab.platform import create_tii_rfsoc4x2
+from qibolab.platform import create_tii_rfsoc4x2, create_tii_zcu111
 from qibolab.platforms.abstract import Qubit
 from qibolab.pulses import PulseSequence
 from qibolab.result import AveragedResults, ExecutionResults
 from qibolab.sweeper import Parameter, Sweeper
 
 RUNCARD = qibolab_folder / "runcards" / "tii1q_b1.yml"
+RUNCARD_ZCU111 = qibolab_folder / "runcards" / "tii_zcu111.yml"
 DUMMY_ADDRESS = "0.0.0.0:0"
 
 
@@ -54,6 +55,55 @@ def test_classify_shots():
 
     assert (target_shots == shots).all()
     assert instrument.classify_shots(i_val, q_val, qubit1) is None
+
+
+def test_set_best_LO():
+    """d"""
+
+    platform = create_tii_zcu111(RUNCARD_ZCU111, DUMMY_ADDRESS)
+    instrument = platform.design.instruments[0]
+
+    sequence_1 = PulseSequence()
+    pulse = platform.create_MZ_pulse(qubit=0, start=0)
+    pulse.frequency = 11_000_000
+    sequence_1.add(pulse)
+    pulse = platform.create_MZ_pulse(qubit=0, start=0)
+    pulse.frequency = 70_000_000
+    sequence_1.add(pulse)
+    pulse = platform.create_MZ_pulse(qubit=1, start=0)
+    pulse.frequency = 100_000_000
+    sequence_1.add(pulse)
+    pulse = platform.create_MZ_pulse(qubit=2, start=0)
+    pulse.frequency = 300_000_000
+    sequence_1.add(pulse)
+
+    sequence_2 = PulseSequence()
+    pulse = platform.create_MZ_pulse(qubit=0, start=0)
+    sequence_2.add(pulse)
+    pulse = platform.create_MZ_pulse(qubit=1, start=0)
+    sequence_2.add(pulse)
+    pulse = platform.create_MZ_pulse(qubit=2, start=0)
+    sequence_2.add(pulse)
+
+    assert instrument.set_best_LO(sequence_1)
+    assert instrument.set_best_LO(sequence_2)
+
+
+def test_check_frequencies_conflicts():
+    """d"""
+
+    platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
+    instrument = platform.design.instruments[0]
+
+    limits1 = [(10_000_000, 80_000_000), (98_000_000, 178_000_000), (290_000_000, 390_000_000)]
+    limits2 = [(10_000_000, 97_000_000), (128_000_000, 178_000_000), (300_000_000, 390_000_000)]
+    lo_freq1 = 0
+    lo_freq2 = 9_000_000
+
+    assert instrument.check_frequencies_conflicts(limits1, lo_freq1)
+    assert not instrument.check_frequencies_conflicts(limits1, lo_freq2)
+    assert not instrument.check_frequencies_conflicts(limits2, lo_freq1)
+    assert instrument.check_frequencies_conflicts(limits2, lo_freq2)
 
 
 def test_merge_sweep_results():

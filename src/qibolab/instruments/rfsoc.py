@@ -13,7 +13,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
-from qibolab.instruments.abstract import AbstractInstrument
+from qibolab.instruments.abstract import AbstractInstrument, LocalOscillator
 from qibolab.platforms.abstract import Qubit
 from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.result import AveragedResults, ExecutionResults
@@ -31,6 +31,7 @@ class QickProgramConfig:
     mixer_freq: Optional[int] = None
     LO_freq: Optional[int] = None
     LO_power: Optional[float] = None
+    adc_sampling_frequency: int = None
 
 
 @dataclass
@@ -42,6 +43,13 @@ class QickSweep:
     starts: List[Union[int, float]] = None  # list of start values
     steps: List[Union[int, float]] = None  # single step
     expts: int = None  # single number of points
+
+    def get_idx_pulse(self, pulse: Pulse) -> Union[int, None]:
+        """Checks if a pulse is sweeped, if it is returns the index in self.pulses"""
+        try:
+            return self.pulses.index(pulse)
+        except ValueError:
+            return None
 
 
 def create_qick_sweeps(sweepers, sequence, qubits):
@@ -149,6 +157,84 @@ class RFSoC(AbstractInstrument):
         if max_gain is not None:
             self.cfg.max_gain = max_gain
 
+    @staticmethod
+    def find_frequency_limits(sequence: PulseSequence, sweeper: QickSweep = None) -> List[Tuple[int, int]]:
+        """Given a sequence (and a sweeper), finds the min and max pulse frequency for every qubit
+
+        Args:
+            sequence (PulseSequence): sequence to check
+            sweeper (QickSweep): sweeper related to the sequence
+        Returns:
+            List of tuples, one for each used qubit. Every tuple contains minimum and maximum
+            frequency used by the qubit. The list is ordered by the minimum frequency.
+        """
+
+        limits = []
+        for qubit in sequence.qubits:
+            minfreq = 1e10
+            maxfreq = 0
+            for pulse in sequence.get_qubit_pulses(qubit):
+                minmax_set = False
+                if sweeper is not None:
+                    idx = sweeper.get_idx_pulse(pulse)
+                    if idx is not None and sweeper.parameter is Parameter.frequency:
+                        minfreq = min(sweeper.values[idx])
+                        maxfreq = max(sweeper.values[idx])
+                        minmax_set = True
+                if not minmax_set:
+                    freq = pulse.frequency
+                    minfreq = freq if freq < minfreq else minfreq
+                    maxfreq = freq if freq > maxfreq else maxfreq
+            limits.append((minfreq, maxfreq))
+
+        limits.sort()
+        return limits
+
+    def set_best_LO(self, limits: List[Tuple[int, int]]):
+        """Given frequency limits for every used channel, finds and set a working LO
+
+        Raises:
+            ValueError: if a good LO frequency is not found
+        """
+
+        lo_freq = max(limits[0][0] - 20_000_000, 0)
+
+        while limits[0][1] - lo_freq < (self.cfg.adc_sampling_frequency / 32.0):
+            if self.check_not_frequencies_conflicts(limits, lo_freq):
+                self.local_oscillator.frequency = lo_freq
+                self.cfg.LO_freq = lo_freq
+                print(f"Setting LO {lo_freq}")
+                return
+            else:
+                lo_freq = lo_freq + 1_000_000
+
+        raise ValueError(f"Could not find a LO frequency without conflicts for limits {limits}")
+
+    def check_not_frequencies_conflicts(self, limits: List[Tuple[int, int]], lo_freq: int) -> bool:
+        """Given frequency limits and a value for LO, checks if there are conflicts
+
+        Returns:
+            bool: True if there are no conflicts, False if there are
+        """
+
+        used_bands = []
+
+        for limit in limits:
+            for idx in range(8):
+                min_band = (self.cfg.adc_sampling_frequency / 32.0) * (2 * (idx - 1) + 1) if idx != 0 else 0
+                max_band = (self.cfg.adc_sampling_frequency / 32.0) * (2 * idx + 1)
+
+                if limit[0] - lo_freq > min_band and limit[1] - lo_freq < max_band:
+                    if idx in used_bands:
+                        return False
+                    else:
+                        used_bands.append(idx)
+                        break
+            else:
+                return False
+
+        return True
+
     def _execute_pulse_sequence(
         self,
         cfg: QickProgramConfig,
@@ -169,6 +255,11 @@ class RFSoC(AbstractInstrument):
         Returns:
             Lists of I and Q value measured
         """
+
+        if self.local_oscillator:
+            limits = self.find_frequency_limits(sequence.ro_pulses)
+            if not self.check_not_frequencies_conflicts(limits, self.cfg.LO_freq):
+                self.set_best_LO(limits)
 
         server_commands = {
             "operation_code": "execute_pulse_sequence",
@@ -202,6 +293,11 @@ class RFSoC(AbstractInstrument):
         Returns:
             Lists of I and Q value measured
         """
+
+        if self.local_oscillator:
+            limits = self.find_frequency_limits(sequence.ro_pulses, sweeper)
+            if not self.check_not_frequencies_conflicts(limits, self.cfg.LO_freq):
+                self.set_best_LO(limits)
 
         server_commands = {
             "operation_code": "execute_single_sweep",
@@ -586,13 +682,16 @@ class TII_RFSOC4x2(RFSoC):  # Containes the main settings:
 
 
 class TII_ZCU111(RFSoC):  # Containes the main settings:
-    def __init__(self, name: str, address: str):
+    def __init__(self, name: str, address: str, local_oscillator: LocalOscillator = None):
         super().__init__(name, address=address)
         self.host, self.port = address.split(":")
         self.port = int(self.port)
+        self.local_oscillator = local_oscillator
+        # self.local_oscillator = None
         self.cfg = QickProgramConfig(
             sampling_rate=6_000_000_000,
             mixer_freq=0,
             LO_freq=6_800_000_000,
             LO_power=15.0,
+            adc_sampling_frequency=3_072_000_000,
         )
