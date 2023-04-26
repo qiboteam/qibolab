@@ -62,7 +62,7 @@ class MultiqubitPlatform(AbstractPlatform):
         for instrument in self.instruments:
             if "twpa" in instrument:
                 self.instruments[instrument].frequency = freq
-                break
+                return None
         raise_error(
             NotImplementedError,
             "No twpa instrument found in the platform. "
@@ -81,7 +81,7 @@ class MultiqubitPlatform(AbstractPlatform):
         for instrument in self.instruments:
             if "twpa" in instrument:
                 self.instruments[instrument].power = power
-                break
+                return None
         raise_error(
             NotImplementedError,
             "No twpa instrument found in the platform. "
