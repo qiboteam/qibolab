@@ -196,6 +196,7 @@ class RFSoC(AbstractInstrument):
         while limits[0][1] - lo_freq < (fs / 32.0):
             if self.check_frequencies_conflicts_limits(limits, lo_freq):
                 self.local_oscillator.frequency = lo_freq
+                self.cfg.LO_freq = lo_freq
                 return True
             else:
                 lo_freq = lo_freq + 1_000_000
@@ -285,6 +286,12 @@ class RFSoC(AbstractInstrument):
         Returns:
             Lists of I and Q value measured
         """
+
+        if self.local_oscillator:
+            limits = self.find_frequency_limits_sweep(sequence, sweeper)
+            if not self.check_frequencies_conflicts_limits(limits, self.cfg.LO_freq):
+                if not self.set_best_LO(limits):
+                    raise ValueError("Optimal LO frequency not found")
 
         server_commands = {
             "operation_code": "execute_single_sweep",
