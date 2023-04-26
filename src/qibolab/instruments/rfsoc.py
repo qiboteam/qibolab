@@ -456,7 +456,7 @@ class RFSoC(AbstractInstrument):
                     for idx, _ in enumerate(sweeper.pulses):
                         val = np.arange(0, sweeper.expts) * sweeper.steps[idx] + sweeper.starts[idx]
                         values.append(val)
-                else:
+                else:  # TODO elif
                     for idx, _ in enumerate(sweeper.indexes):
                         val = np.arange(0, sweeper.expts) * sweeper.steps[idx] + sweeper.starts[idx]
                         values.append(val)
@@ -470,9 +470,10 @@ class RFSoC(AbstractInstrument):
                                 sequence[sweeper.indexes[jdx]].frequency = values[jdx][idx]
                             elif sweeper.parameter is Parameter.amplitude:
                                 sequence[sweeper.indexes[jdx]].amplitude = values[jdx][idx]
-                    else:
-                        for jdx in sweeper.indexes:
-                            qubits[jdx].flux.bias = values[jdx][idx]
+                    else:  # TODO elif
+                        for kdx, jdx in enumerate(sweeper.indexes):
+                            print(values[kdx][idx])
+                            qubits[jdx].flux.bias = values[kdx][idx]
 
                     res = self.recursive_python_sweep(qubits, sequence, original_ro, *sweepers[1:], average=average)
                     results = self.merge_sweep_results(res, results)
@@ -496,7 +497,7 @@ class RFSoC(AbstractInstrument):
         """
         for serial in dict_b:
             if serial in dict_a:
-                dict_a[serial] = dict_a[serial] + dict_b[serial]
+                dict_a[serial] = dict_b[serial] + dict_a[serial]
             else:
                 dict_a[serial] = dict_b[serial]
         return dict_a
@@ -518,8 +519,6 @@ class RFSoC(AbstractInstrument):
             A boolean value true if the sweeper must be executed by python
             loop, false otherwise
         """
-
-        return True
 
         # if there isn't only a sweeper do a python sweep
         if len(sweepers) != 1:
@@ -679,6 +678,6 @@ class TII_ZCU111(RFSoC):  # Containes the main settings:
         self.cfg = QickProgramConfig(
             sampling_rate=6_000_000_000,
             mixer_freq=0,
-            LO_freq=6_930_000_000,
+            LO_freq=6_800_000_000,
             LO_power=15.0,
         )
