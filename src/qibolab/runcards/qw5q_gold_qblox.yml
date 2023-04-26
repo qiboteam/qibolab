@@ -365,7 +365,7 @@ characterization:
             mean_exc_states: (-0.06380307802449722-0.003607735840135293j)
             sweetspot: -0.167
             threshold: 0.04381767172346776,
-            iq_angle: -2.9922411463897145, 
+            iq_angle: -2.9922411463897145,
         3:
             readout_frequency: 7_803_437_704
             drive_frequency: 6_761_250_000
