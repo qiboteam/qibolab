@@ -1124,7 +1124,7 @@ class ClusterQRM_RF(AbstractInstrument):
             num_bins *= len(sweeper.values)
 
         if num_bins >= 2**17:
-            raise ValueError(f"The maximum number of bins required exceeds the maximum 131,072")
+            raise ValueError(f"The maximum number of bins required {num_bins} exceeds the maximum 131,072")
 
         # estimate the execution time
         self._execution_time = navgs * num_bins * ((repetition_duration + 1000 * len(sweepers)) * 1e-9)
@@ -1593,7 +1593,7 @@ class ClusterQRM_RF(AbstractInstrument):
                     pass
                 else:
                     if state.status == "STOPPED":
-                        log.info(f"{self.device.sequencers[sequencer_number].name} state: {state}")
+                        # log.info(f"{self.device.sequencers[sequencer_number].name} state: {state}")
                         # TODO: check flags for errors
                         break
                     elif time.time() - t > time_out:
@@ -2178,16 +2178,17 @@ class ClusterQCM_RF(AbstractInstrument):
                     self.ports[port].nco_freq = 0
                     self.ports[port].nco_phase_offs = 0
                 else:
-                    self.ports[port].attenuation = 60
-                    self.ports[port].lo_enabled = False
-                    self.ports[port].lo_frequency = 2e9
-                    self.ports[port].gain = 0
-                    self.ports[port].hardware_mod_en = False
-                    self.ports[port].nco_freq = 0
-                    self.ports[port].nco_phase_offs = 0
-                    self.ports.pop(port)
-                    self._output_ports_keys.remove(port)
-                    self._sequencers.pop(port)
+                    if port in self.ports:
+                        self.ports[port].attenuation = 60
+                        self.ports[port].lo_enabled = False
+                        self.ports[port].lo_frequency = 2e9
+                        self.ports[port].gain = 0
+                        self.ports[port].hardware_mod_en = False
+                        self.ports[port].nco_freq = 0
+                        self.ports[port].nco_phase_offs = 0
+                        self.ports.pop(port)
+                        self._output_ports_keys.remove(port)
+                        self._sequencers.pop(port)
 
             self._channel_port_map = {v: k for k, v in self._port_channel_map.items()}
             self.channels = list(self._channel_port_map.keys())
@@ -2551,10 +2552,10 @@ class ClusterQCM_RF(AbstractInstrument):
                     self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
 
                     # DEBUG: QCM RF Save sequence to file
-                    # filename = f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
-                    # with open(filename, "w", encoding="utf-8") as file:
-                    #     json.dump(qblox_dict[sequencer], file, indent=4)
-                    #     file.write(sequencer.program)
+                    filename = f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
+                    with open(filename, "w", encoding="utf-8") as file:
+                        json.dump(qblox_dict[sequencer], file, indent=4)
+                        file.write(sequencer.program)
 
         # Arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
@@ -2893,16 +2894,17 @@ class ClusterQCM(AbstractInstrument):
                     self.ports[port].nco_freq = 0
                     self.ports[port].nco_phase_offs = 0
                 else:
-                    self.ports[port].channel = None
-                    self.ports[port].gain = 0
-                    self.ports[port].offset = 0
-                    self.ports[port].hardware_mod_en = False
-                    self.ports[port].qubit = None
-                    self.ports[port].nco_freq = 0
-                    self.ports[port].nco_phase_offs = 0
-                    self.ports.pop(port)
-                    self._output_ports_keys.remove(port)
-                    self._sequencers.pop(port)
+                    if port in self.ports:
+                        self.ports[port].channel = None
+                        self.ports[port].gain = 0
+                        self.ports[port].offset = 0
+                        self.ports[port].hardware_mod_en = False
+                        self.ports[port].qubit = None
+                        self.ports[port].nco_freq = 0
+                        self.ports[port].nco_phase_offs = 0
+                        self.ports.pop(port)
+                        self._output_ports_keys.remove(port)
+                        self._sequencers.pop(port)
 
             self._channel_port_map = {v: k for k, v in self._port_channel_map.items()}
             self.channels = list(self._channel_port_map.keys())

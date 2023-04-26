@@ -47,6 +47,9 @@ class MultiqubitPlatform(AbstractPlatform):
         self.hardware_avg = self.settings["settings"]["hardware_avg"]
         self.relaxation_time = self.settings["settings"]["relaxation_time"]
 
+        if self.is_connected:
+            self.setup()
+
     def set_lo_drive_frequency(self, qubit, freq):
         self.qd_port[qubit].lo_frequency = freq
 
