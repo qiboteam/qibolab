@@ -43,6 +43,12 @@ class QickSweep:
     steps: List[Union[int, float]] = None  # single step
     expts: int = None  # single number of points
 
+    def get_idx_pulse(self, pulse: Pulse):
+        for idx, mypulse in self.pulses:
+            if mypulse == pulse:
+                return idx
+        return None
+
 
 def create_qick_sweeps(sweepers, sequence, qubits):
     sweeps = []
@@ -149,8 +155,7 @@ class RFSoC(AbstractInstrument):
         if max_gain is not None:
             self.cfg.max_gain = max_gain
 
-    def set_best_LO(self, sequence: PulseSequence):
-        fs = 3_072_000_000  # TODO parameter
+    def find_frequency_limits_sequence(self, sequence: PulseSequence):
         limits = []
         for qubit in sequence.qubits:
             minfreq = 1e10
@@ -162,11 +167,34 @@ class RFSoC(AbstractInstrument):
             limits.append((minfreq, maxfreq))
 
         limits.sort()
+        return limits
+
+    def find_frequency_limits_sweep(self, sequence: PulseSequence, sweep: QickSweep):
+        limits = []
+        for qubit in sequence.qubits:
+            minfreq = 1e10
+            maxfreq = 0
+            for pulse in sequence.get_qubit_pulses(qubit):
+                idx = sweep.get_idx_pulse(pulse)
+                if idx is None and sweep.parameter is not Parameter.frequency:
+                    freq = pulse.frequency
+                    minfreq = freq if freq < minfreq else minfreq
+                    maxfreq = freq if freq > maxfreq else maxfreq
+                else:
+                    minfreq = min(sweep.values[idx])
+                    maxfreq = max(sweep.values[idx])
+            limits.append((minfreq, maxfreq))
+
+        limits.sort()
+        return limits
+
+    def set_best_LO(self, limits: list):
+        fs = 3_072_000_000  # TODO parameter
 
         lo_freq = max(limits[0][0] - 20_000_000, 0)
 
         while limits[0][1] - lo_freq < (fs / 32.0):
-            if self.check_frequencies_conflicts(limits, lo_freq):
+            if self.check_frequencies_conflicts_limits(limits, lo_freq):
                 self.local_oscillator.frequency = lo_freq
                 return True
             else:
@@ -175,7 +203,7 @@ class RFSoC(AbstractInstrument):
         return False
         # raise Error
 
-    def check_frequencies_conflicts(self, limits, lo_freq):
+    def check_frequencies_conflicts_limits(self, limits, lo_freq):
         """Returns True if there are no conflicts"""
 
         fs = 3_072_000_000  # TODO parameter
@@ -220,8 +248,10 @@ class RFSoC(AbstractInstrument):
         """
 
         if self.local_oscillator:
-            if not self.set_best_LO(sequence):
-                raise ValueError("Optimal LO frequency not found")
+            limits = self.find_frequency_limits_sequence(sequence)
+            if not self.check_frequencies_conflicts_limits(limits, self.cfg.LO_freq):
+                if not self.set_best_LO(limits):
+                    raise ValueError("Optimal LO frequency not found")
 
         server_commands = {
             "operation_code": "execute_pulse_sequence",
