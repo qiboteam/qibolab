@@ -27,7 +27,7 @@ class ERA(LocalOscillator):
     @property
     def frequency(self):
         if self.ethernet:
-            return self._get("frequency")
+            return int(self._get("frequency"))
         else:
             self.device.get("frequency")
         return self._frequency
@@ -41,7 +41,7 @@ class ERA(LocalOscillator):
     @property
     def power(self):
         if self.ethernet:
-            return self._get("amplitude")
+            return int(self._get("amplitude"))
         else:
             self.device.get("power")
         return self._power
