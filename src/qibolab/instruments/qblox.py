@@ -1311,12 +1311,11 @@ class ClusterQRM_RF(AbstractInstrument):
                         # _if = self.get_if(pulses[n])
                         # pulses_block.append(f"set_freq {convert_frequency(_if)}", f"set intermediate frequency to {_if} Hz")
 
-                        if pulses[n].relative_phase != 0:
-                            # Set phase
-                            pulses_block.append(
-                                f"set_ph {convert_phase(pulses[n].relative_phase)}",
-                                comment=f"set relative phase {pulses[n].relative_phase} rads",
-                            )
+                        # Set phase
+                        pulses_block.append(
+                            f"set_ph {convert_phase(pulses[n].relative_phase)}",
+                            comment=f"set relative phase {pulses[n].relative_phase} rads",
+                        )
 
                     if pulses[n].type == PulseType.READOUT:
                         delay_after_play = self.ports["i1"].acquisition_hold_off
@@ -2433,12 +2432,11 @@ class ClusterQCM_RF(AbstractInstrument):
                             # _if = self.get_if(pulses[n])
                             # pulses_block.append(f"set_freq {convert_frequency(_if)}", f"set intermediate frequency to {_if} Hz")
 
-                            if pulses[n].relative_phase != 0:
-                                # Set phase
-                                pulses_block.append(
-                                    f"set_ph {convert_phase(pulses[n].relative_phase)}",
-                                    comment=f"set relative phase {pulses[n].relative_phase} rads",
-                                )
+                            # Set phase
+                            pulses_block.append(
+                                f"set_ph {convert_phase(pulses[n].relative_phase)}",
+                                comment=f"set relative phase {pulses[n].relative_phase} rads",
+                            )
 
                         # Calculate the delay_after_play that is to be used as an argument to the play instruction
                         if len(pulses) > n + 1:
@@ -3152,12 +3150,11 @@ class ClusterQCM(AbstractInstrument):
                             # _if = self.get_if(pulses[n])
                             # pulses_block.append(f"set_freq {convert_frequency(_if)}", f"set intermediate frequency to {_if} Hz")
 
-                            if pulses[n].relative_phase != 0:
-                                # Set phase
-                                pulses_block.append(
-                                    f"set_ph {convert_phase(pulses[n].relative_phase)}",
-                                    comment=f"set relative phase {pulses[n].relative_phase} rads",
-                                )
+                            # Set phase
+                            pulses_block.append(
+                                f"set_ph {convert_phase(pulses[n].relative_phase)}",
+                                comment=f"set relative phase {pulses[n].relative_phase} rads",
+                            )
 
                         # Calculate the delay_after_play that is to be used as an argument to the play instruction
                         if len(pulses) > n + 1:
