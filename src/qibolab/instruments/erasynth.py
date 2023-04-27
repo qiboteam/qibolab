@@ -5,8 +5,8 @@ Supports the ERAsynth ++.
 https://qcodes.github.io/Qcodes_contrib_drivers/_modules/qcodes_contrib_drivers/drivers/ERAInstruments/erasynth.html#ERASynthBase.clear_read_buffer
 """
 
+import json
 import time
-import json 
 
 import requests
 from qcodes_contrib_drivers.drivers.ERAInstruments import ERASynthPlusPlus
@@ -209,10 +209,10 @@ class ERA(LocalOscillator):
         """
         for _ in range(3):
             response = requests.post(f"http://{self.address}/", params={"readAll": 1}, timeout=1)
-                    
+
             if response.status_code == 200:
                 # reponse.text is a dictonary in string format, convert it to a dictonary
-                return json.loads(response.text)[name]    
+                return json.loads(response.text)[name]
             else:
                 time.sleep(0.1)
         raise InstrumentException(self, f"Unable to get {name} from {self.name}")
