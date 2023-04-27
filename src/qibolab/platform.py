@@ -189,7 +189,7 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
                 channels[wiring["feedback"][feedline][1]].local_oscillator = lo
         else:
             for feedline in drive_local_oscillators:
-                for i, name in enumerate(drive_local_oscillators[feedline]):                    
+                for i, name in enumerate(drive_local_oscillators[feedline]):
                     if lo.name == name:
                         channels[wiring["drive"][feedline][i]].local_oscillator = lo
 
@@ -276,7 +276,6 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
     return platform
 
 
-
 def Platform(name, runcard=None, design=None):
     """Platform for controlling quantum devices.
     Args:
@@ -301,7 +300,7 @@ def Platform(name, runcard=None, design=None):
     elif name == "icarusq":
         from qibolab.platforms.icplatform import ICPlatform as Device
     elif name == "qw25q":
-        return create_tii_qw25q(runcard)  
+        return create_tii_qw25q(runcard)
     else:
         from qibolab.platforms.multiqubit import MultiqubitPlatform as Device
 
