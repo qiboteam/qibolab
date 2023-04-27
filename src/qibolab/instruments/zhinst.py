@@ -26,12 +26,9 @@ laboneq._token.is_valid_token = lambda _token: True
 # FIXME: Handle on acquires for list of pulse sequences
 # FIXME: I think is a hardware limitation but I cant sweep multiple drive oscillator at the same time
 # FIXME: Docs & tests
-
-# TODO: Prepare Near time for higher 2D resolution scans
-# FIXME: lo.show_pulse_sheet not rendering properly
+# FIXME: Flux on Ramsey not incresing in lenght with the delat
 
 ###TEST
-# TODO: Fast Reset
 # TODO: Loops for multiple qubits [Parallel and Nested]
 
 
@@ -52,7 +49,7 @@ class ZhPulse:
         amplitude. LabOne Q will automatically rescale the sampler's output to the correct
         amplitude and length.
 
-        They don't even do tha on their notebooks
+        They don't even do that on their notebooks
         and just use lenght and amplitude but we have to check
 
         x = pulse.envelope_waveform_i.data  No need for q ???
@@ -98,6 +95,10 @@ class ZhPulse:
             )
         elif "Slepian" in str(pulse.shape):
             "Implement Slepian shaped flux pulse https://arxiv.org/pdf/0909.5368.pdf"
+
+        elif "Sampled" in str(pulse.shape):
+            "Implement Sampled pulses for Optimal control algorithms like GRAPE"
+
         return zh_pulse
 
 
@@ -115,7 +116,6 @@ class ZhSweeper:
         self.zhsweeper = self.select_sweeper(sweeper, sweeper.parameter.name, qubit)
         self.zhsweepers = [self.select_sweeper(sweeper, sweeper.parameter.name, qubit)]
 
-    # Does LinearSweepParameter vs SweepParameter provide any advantage ?
     def select_sweeper(self, sweeper, parameter, qubit):
         """Sweeper translation"""
         # TODO: Join if convinient(amplitude, duration)
@@ -164,7 +164,6 @@ class ZhSweeperLine:
         # Need something better to store multiple sweeps on the same pulse
         self.zhsweeper = self.select_sweeper(sweeper, sweeper.parameter.name)
 
-    # Does LinearSweepParameter vs SweepParameter provide any advantage ???
     def select_sweeper(self, sweeper, parameter):
         """Sweeper translation"""
         if parameter == "bias":
@@ -383,11 +382,10 @@ class Zurich(AbstractInstrument):
                     )
 
         if options.sim_time is not None:
-            self.run_sim(
-                round(options.sim_time * 1e-9, 9)
-            )  # FIXME: Cant sim on executions with multiple pulse sequences (ALLXY) without reconnection to the real devices which takes time.
-        # lo.show_pulse_sheet("pulses", self.exp) #FIXME: Wait until next LO release for bugs
-        # self.disconnect() #FIXME: Cant disconnect on executions with multiple pulse sequences (ALLXY)
+            self.run_sim(round(options.sim_time * 1e-9, 9))
+        # FIXME: Cant sim on executions with multiple pulse sequences (ALLXY) without reconnection to the real devices which takes time.
+        # lo.show_pulse_sheet("pulses", self.exp)
+        # self.disconnect()
         return results
 
     # TODO: Store the sweepers nice[Find a way to store nested vs parallel sweeps]
@@ -403,9 +401,9 @@ class Zurich(AbstractInstrument):
                 if pulse.qubit == qubit.name:
                     aux_sequence.add(pulse)
 
-            # TODO: Ths fixed the flux timing issue, but I saw that
+            # TODO: This fixed the flux timing issue, but I saw that
             # sending it before the drive got me better results
-            # (Maybe 1 time of fight earlier ?). Create calibration routine
+            # (Maybe 1 time of fight earlier ?). Create calibration routine ?
             pulse = FluxPulse(
                 start=aux_sequence.start,
                 duration=aux_sequence.duration,
@@ -481,6 +479,7 @@ class Zurich(AbstractInstrument):
 
         # Defaults
         if options.acquisition_type is None:
+            # TODO: Robust condition for DISCRIMINATION
             # if all(qubits[qubit].threshold != 0 for qubit in self.sequence_qibo.qubits):
             if 1 == 0:
                 options.acquisition_type = lo.AcquisitionType.DISCRIMINATION
@@ -565,7 +564,6 @@ class Zurich(AbstractInstrument):
         # This loop for when a pulse is swept with one or none parameters ???
         elif isinstance(pulse, ZhSweeperLine):
             parameters = pulse.zhsweeper.uid
-            print("parameters", parameters)
             if parameters == "bias":
                 # if any("bias" in param for param in parameters):
                 exp.play(
@@ -573,15 +571,13 @@ class Zurich(AbstractInstrument):
                     pulse=pulse.zhpulse,
                     amplitude=pulse.zhsweeper,
                 )
-                print("pulse", pulse.zhpulse)
 
         else:
             parameters = []
             for partial_sweep in pulse.zhsweepers:
                 parameters.append(partial_sweep.uid)
-            print("parameters", parameters)
             if any("amplitude" in param for param in parameters):
-                # Zurich is already mutyplying the pulse amplitude with the sweeper amplitude
+                # Zurich is already multiplying the pulse amplitude with the sweeper amplitude
                 pulse.zhpulse.amplitude = 1
                 exp.play(
                     signal=f"{section}{qubit.name}",
@@ -589,8 +585,6 @@ class Zurich(AbstractInstrument):
                     amplitude=pulse.zhsweeper,
                     phase=pulse.pulse.relative_phase,
                 )
-                print("pulse", pulse.zhpulse)
-                print("pulse", pulse.zhsweeper)
             elif any("duration" in param for param in parameters):
                 exp.play(
                     signal=f"{section}{qubit.name}",
@@ -612,11 +606,11 @@ class Zurich(AbstractInstrument):
                     pulse=pulse.zhpulse,
                     phase=pulse.pulse.relative_phase,
                 )
-                print("pulse", pulse.zhpulse)
 
     # TODO: If sweetspot != 0 you will send flux pulses for biasing
     # for the constant offset you need to use the platform
     # I use the first for sweeping flux, check if it works with the second althought is a line parameter.
+    # TODO: Conversion between flux pulse amplitude and voltage for offset
     def flux(self, exp, qubits):
         """qubit flux or qubit coupler flux for bias or pulses"""
         for qubit in qubits.values():
@@ -736,7 +730,7 @@ class Zurich(AbstractInstrument):
                                 measure_signal=f"measure{qubit.name}",
                                 measure_pulse=pulse.zhpulse,
                                 measure_pulse_length=round(pulse.pulse.duration * 1e-9, 9),
-                                measure_pulse_parameters=None,  # meter aqui el sweep ?
+                                measure_pulse_parameters=None,  # sweep here ?
                                 measure_pulse_amplitude=None,
                                 acquire_delay=self.time_of_flight,
                                 reset_delay=relaxation_time,
@@ -746,8 +740,6 @@ class Zurich(AbstractInstrument):
     def fast_reset(self, exp, qubits, fast_reset):
         """fast reset after readout - small delay for signal processing"""
         print("Im fast resetting")
-        print(fast_reset)
-        print(self.sequence_qibo.qubits)
         for qubit_name in self.sequence_qibo.qubits:
             qubit = qubits[qubit_name]
             if not qubit.flux_coupler:
@@ -782,25 +774,33 @@ class Zurich(AbstractInstrument):
                     )
 
         if options.sim_time is not None:
-            self.run_sim(
-                round(options.sim_time * 1e-9, 9)
-            )  # FIXME: Careful placement or reconnection to avoid messing with several executions
-        # lo.show_pulse_sheet("pulses", self.exp) #FIXME: Wait until next LO release for bugs
-        # self.disconnect() #FIXME: Careful placement or reconnection to avoid messing with several executions
+            self.run_sim(round(options.sim_time * 1e-9, 9))
+        # FIXME: Careful placement or reconnection to avoid messing with several executions
+        # lo.show_pulse_sheet("pulses", self.exp)
+        # self.disconnect()
         return results
 
     # TODO: Recursion tests and Better sweeps logic
     def sweep_recursion(self, qubits, exp, exp_calib, relaxation_time, acquisition_type, fast_reset):
         """Sweepers recursion for multiple nested sweepers"""
+
         # Ordered like this for how they defined the frequncy sweep on qibocal to be the last
         # and I need it to be the outer one
-        sweeper = self.sweepers[-1]
+
+        for sweep in self.sweepers:
+            if sweep.parameter is Parameter.frequency:
+                sweeper = sweep
+                break
+            sweeper = sweep
+
         i = len(self.sweepers) - 1
         self.sweepers.remove(sweeper)
 
+        # sweeper = self.sweepers[-1]
+        # i = len(self.sweepers) - 1
+        # self.sweepers.remove(sweeper)
+
         parameter = None
-        print("sweep", sweeper.parameter.name.lower())
-        # print(qubits[sweeper.pulses[0].qubit])
 
         if sweeper.parameter is Parameter.frequency:
             for pulse in sweeper.pulses:
@@ -815,8 +815,6 @@ class Zurich(AbstractInstrument):
                         modulation_type=lo.ModulationType.HARDWARE,
                     )
                 )
-
-            print(ZhSweeper(pulse, sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper)
 
         if sweeper.parameter is Parameter.bias:
             for qubit in sweeper.qubits.values():

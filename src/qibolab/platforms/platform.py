@@ -138,8 +138,8 @@ class ExecutionParameters:
     :averaging_mode: Data averaging mode
     """
 
-    nshots: Optional[np.uint32] = None
-    relaxation_time: Optional[np.uint32] = None
+    nshots: Optional[np.uint32] = 1024
+    relaxation_time: Optional[np.uint32] = 5e-9
     fast_reset: bool = False
     sim_time: Optional[int] = None
     acquisition_type: AcquisitionType = AcquisitionType.INTEGRATION
