@@ -6,6 +6,7 @@ https://qcodes.github.io/Qcodes_contrib_drivers/_modules/qcodes_contrib_drivers/
 """
 
 import time
+import json 
 
 import requests
 from qcodes_contrib_drivers.drivers.ERAInstruments import ERASynthPlusPlus
@@ -14,16 +15,21 @@ from qibolab.instruments.abstract import InstrumentException, LocalOscillator
 
 
 class ERA(LocalOscillator):
-    def __init__(self, name, address, ethernet=True):
+    def __init__(self, name, address, ethernet=True, reference_clock_source="internal"):
         super().__init__(name, address)
         self.device: ERASynthPlusPlus = None
         self._power: int = None
         self._frequency: int = None
         self.ethernet = ethernet
         self._device_parameters = {}
+        self.reference_clock_source = reference_clock_source
 
     @property
     def frequency(self):
+        if self.ethernet:
+            return self._get("frequency")
+        else:
+            self.device.get("frequency")
         return self._frequency
 
     @frequency.setter
@@ -34,6 +40,10 @@ class ERA(LocalOscillator):
 
     @property
     def power(self):
+        if self.ethernet:
+            return self._get("amplitude")
+        else:
+            self.device.get("power")
         return self._power
 
     @power.setter
@@ -120,6 +130,9 @@ class ERA(LocalOscillator):
             # Load settings
             self.power = power
             self.frequency = frequency
+
+            if not "reference_clock_source" in kwargs:
+                kwargs["reference_clock_source"] = self.reference_clock_source
             if not self.ethernet:
                 if kwargs["reference_clock_source"] == "internal":
                     self.device.ref_osc_source("int")
@@ -185,3 +198,22 @@ class ERA(LocalOscillator):
             else:
                 time.sleep(0.1)
         raise InstrumentException(self, f"Unable to post {name}={value} to {self.name}")
+
+    def _get(self, name):
+        """
+        Get a value from the instrument's web server.
+
+        Try to get three times, waiting for 0.1 seconds between each attempt.
+
+        Args:
+            name: str = The name of the value to get.
+        """
+        for _ in range(3):
+            response = requests.post(f"http://{self.address}/", params={"readAll": 1}, timeout=1)
+                    
+            if response.status_code == 200:
+                # reponse.text is a dictonary in string format, convert it to a dictonary
+                return json.loads(response.text)[name]    
+            else:
+                time.sleep(0.1)
+        raise InstrumentException(self, f"Unable to get {name} from {self.name}")
