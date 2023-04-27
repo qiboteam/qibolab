@@ -26,7 +26,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.001
-                frequency: 6.885375e+9
+                frequency: 6_885_351_885
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -34,7 +34,7 @@ native_gates:
         A2:
             RX:
                 duration: 40
-                amplitude: 0.2675163
+                amplitude: 0.299618256
                 frequency: 5847236333
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -43,7 +43,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.004111
-                frequency: 7.266869e+9
+                frequency: 7_267_173_583
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -60,7 +60,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.0072
-                frequency: 7.521337e+9
+                frequency: 7_521_355_035
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -68,7 +68,7 @@ native_gates:
         A4:
             RX:
                 duration: 40
-                amplitude: 0.1482108311931677
+                amplitude: 0.15858558937668943
                 frequency: 5254172241
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -77,7 +77,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.0035
-                frequency: 7.118757e+9
+                frequency: 7.118807e+9
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -94,7 +94,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.0025
-                frequency: 7.691649e+09
+                frequency: 7_691_616_492
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -111,7 +111,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.0025
-                frequency: 7.940802e+9
+                frequency: 7_940_682_732
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -119,7 +119,7 @@ native_gates:
         B1:
             RX:
                 duration: 40
-                amplitude: 0.5
+                amplitude: 0.055
                 frequency: 5.057380E+09
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -128,7 +128,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.005
-                frequency: 6.927829E+09
+                frequency: 6.927179e+9
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -136,7 +136,7 @@ native_gates:
         B2:
             RX:
                 duration: 40
-                amplitude: 0.5
+                amplitude: 0.075
                 frequency: 6.017959E+09
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -145,7 +145,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.005
-                frequency: 7.136028E+09
+                frequency: 7.135628e+9
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -153,7 +153,7 @@ native_gates:
         B3:
             RX:
                 duration: 40
-                amplitude: 0.5
+                amplitude: 0.1
                 frequency: 6.058000E+09
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -162,7 +162,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.005
-                frequency: 7.345083E+09
+                frequency: 7_344_993_496
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -170,7 +170,7 @@ native_gates:
         B4:
             RX:
                 duration: 40
-                amplitude: 0.5
+                amplitude: 0.1
                 frequency: 6.120616E+09
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -187,7 +187,7 @@ native_gates:
         B5:
             RX:
                 duration: 40
-                amplitude: 0.5
+                amplitude: 0.1
                 frequency: 6.101000E+09
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -196,7 +196,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.005
-                frequency: 7.598408E+09
+                frequency: 7.598609e+9
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -204,7 +204,7 @@ native_gates:
         C1:
             RX:
                 duration: 40
-                amplitude: 0.5
+                amplitude: 0.1
                 frequency: 5.405000E+09
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -213,7 +213,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.0025
-                frequency: 7.06359E+09
+                frequency: 7.06449e+9
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -221,7 +221,7 @@ native_gates:
         C2:
             RX:
                 duration: 40
-                amplitude: 0.5
+                amplitude: 0.1
                 frequency: 6.084000E+09
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -230,7 +230,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.005
-                frequency: 7.460670E+09
+                frequency: 7.46292E+09
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -238,7 +238,7 @@ native_gates:
         C3:
             RX:
                 duration: 40
-                amplitude: 0.5
+                amplitude: 0.1
                 frequency: 5.803000E+09
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -247,7 +247,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.005
-                frequency: 7.627060E+09
+                frequency: 7_626_754_644
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -255,7 +255,7 @@ native_gates:
         C4:
             RX:
                 duration: 40
-                amplitude: 0.5
+                amplitude: 0.1
                 frequency: 5.388000E+09
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -264,7 +264,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.0025
-                frequency: 7.220120E+09
+                frequency: 7_220_938_601
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -272,7 +272,7 @@ native_gates:
         C5:
             RX:
                 duration: 40
-                amplitude: 0.5
+                amplitude: 0.1
                 frequency: 5.822600E+09
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -281,7 +281,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.005
-                frequency: 7.830270E+09
+                frequency: 7_831_715_006
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -289,7 +289,7 @@ native_gates:
         D1:
             RX:
                 duration: 40
-                amplitude: 0.5
+                amplitude: 0.1
                 frequency: 4.967000E+09
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -306,7 +306,7 @@ native_gates:
         D2:
             RX:
                 duration: 40
-                amplitude: 0.5
+                amplitude: 0.1
                 frequency: 5.746000E+09
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -323,7 +323,7 @@ native_gates:
         D3:
             RX:
                 duration: 40
-                amplitude: 0.5
+                amplitude: 0.1
                 frequency: 6.036000E+09
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -340,7 +340,7 @@ native_gates:
         D4:
             RX:
                 duration: 40
-                amplitude: 0.5
+                amplitude: 0.1
                 frequency: 6.552000E+09
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -357,7 +357,7 @@ native_gates:
         D5:
             RX:
                 duration: 40
-                amplitude: 0.5
+                amplitude: 0.1
                 frequency: 5.983000E+09
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -411,7 +411,7 @@ characterization:
             drive_frequency: 5.06217e+9
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.365
+            sweetspot: -0.45
             filter: {}
             # parameters for single shot classification
             threshold: 0.000288842361133913
@@ -445,7 +445,7 @@ characterization:
             drive_frequency: 5.991311e+9
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.25
+            sweetspot: 0.4
             filter: {}
             # parameters for single shot classification
             threshold:  0.0002743498286988214
@@ -496,7 +496,7 @@ characterization:
             drive_frequency: 6.860000E+09
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.
+            sweetspot: 0.45
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
@@ -547,7 +547,7 @@ characterization:
             drive_frequency: 6.058000E+09
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.445
+            sweetspot: 0.45
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
@@ -564,7 +564,7 @@ characterization:
             drive_frequency: 6.120616E+09
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.39
+            sweetspot: 0.45
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
@@ -581,7 +581,7 @@ characterization:
             drive_frequency: 6.101000E+09
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.435
+            sweetspot: -0.45
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
@@ -598,7 +598,7 @@ characterization:
             drive_frequency: 5.405000E+09
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.325
+            sweetspot: -0.275
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
@@ -615,7 +615,7 @@ characterization:
             drive_frequency: 6.084000E+09
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.0
+            sweetspot: -0.45
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
@@ -632,7 +632,7 @@ characterization:
             drive_frequency: 5.803000E+09
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.0
+            sweetspot: 0.24
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
@@ -649,7 +649,7 @@ characterization:
             drive_frequency: 5.388000E+09
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.15
+            sweetspot: 0.07
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
@@ -666,7 +666,7 @@ characterization:
             drive_frequency: 5.822600E+09
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.215
+            sweetspot: 0.45
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
