@@ -41,7 +41,7 @@ class ERA(LocalOscillator):
     @property
     def power(self):
         if self.ethernet:
-            return int(self._get("amplitude"))
+            return float(self._get("amplitude"))
         else:
             self.device.get("power")
         return self._power
