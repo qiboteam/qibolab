@@ -7,7 +7,6 @@ from qibolab.platforms.platform import DesignPlatform
 
 def create_dummy(runcard):
     """Create a dummy platform using the dummy instrument.
-
     Useful for testing.
     """
     from qibolab.instruments.dummy import DummyInstrument
@@ -36,7 +35,6 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
     """Create platform using Quantum Machines (QM) OPXs and Rohde Schwarz/ERAsynth local oscillators.
 
     IPs and other instrument related parameters are hardcoded in ``__init__`` and ``setup``.
-
     Args:
         runcard (str): Path to the runcard file.
         simulation_duration (int): Duration for the simulation in ns.
@@ -281,13 +279,11 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
 
 def Platform(name, runcard=None, design=None):
     """Platform for controlling quantum devices.
-
     Args:
         name (str): name of the platform. Options are 'tiiq', 'qili' and 'icarusq'.
         runcard (str): path to the yaml file containing the platform setup.
         design (:class:`qibolab.designs.abstract.AbstractInstrumentDesign`): Instrument
             design to use for the platform.
-
     Returns:
         The plaform class.
     """
