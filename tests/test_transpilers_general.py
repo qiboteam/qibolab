@@ -4,14 +4,15 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 
-from qibolab.transpilers.general_connectivity import Transpiler
+from qibolab.transpilers.gate_decompositions import TwoQubitNatives
+from qibolab.transpilers.general_connectivity import Transpiler, can_execute
 
 
 def generate_random_circuit(nqubits, ngates, seed=42):
     """Generate a random circuit with RX and CZ gates."""
     np.random.seed(seed)
-    one_qubit_gates = [gates.RX]
-    two_qubit_gates = [gates.CZ]
+    one_qubit_gates = [gates.RX, gates.RY, gates.RZ]
+    two_qubit_gates = [gates.CZ, gates.CNOT, gates.SWAP]
     n1, n2 = len(one_qubit_gates), len(two_qubit_gates)
     n = n1 + n2 if nqubits > 1 else n1
     circuit = Circuit(nqubits)
@@ -33,19 +34,10 @@ def generate_random_circuit(nqubits, ngates, seed=42):
     return circuit
 
 
-def custom_circuit():
-    circuit = Circuit(5)
-    circuit.add(gates.CZ(0, 2))
-    circuit.add(gates.CZ(1, 2))
-    circuit.add(gates.CZ(1, 0))
-    circuit.add(gates.CZ(2, 1))
-    return circuit
-
-
 def special_connectivity(connectivity):
     """Return a TII harware chip connectivity as a networkx graph"""
     if connectivity == "21_qubits":
-        Q = [f"q{i}" for i in range(21)]
+        Q = [i for i in range(21)]
         chip = nx.Graph()
         chip.add_nodes_from(Q)
         graph_list_h = [
@@ -86,7 +78,7 @@ def special_connectivity(connectivity):
         ]
         chip.add_edges_from(graph_list_h + graph_list_v)
     elif connectivity == "5_qubits":
-        Q = [f"q{i}" for i in range(5)]
+        Q = [i for i in range(5)]
         chip = nx.Graph()
         chip.add_nodes_from(Q)
         graph_list = [
@@ -97,6 +89,46 @@ def special_connectivity(connectivity):
         ]
         chip.add_edges_from(graph_list)
     return chip
+
+
+def test_can_execute():
+    circuit = Circuit(5)
+    circuit.add(gates.CZ(0, 2))
+    circuit.add(gates.CZ(1, 2))
+    circuit.add(gates.Z(1))
+    circuit.add(gates.CZ(2, 1))
+    circuit.add(gates.M(0))
+    assert can_execute(circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits"))
+
+
+def test_cannot_execute_connectivity():
+    circuit = Circuit(5)
+    circuit.add(gates.CZ(0, 1))
+    assert not can_execute(circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits"))
+
+
+def test_cannot_execute_native2q():
+    circuit = Circuit(5)
+    circuit.add(gates.CNOT(0, 2))
+    assert not can_execute(circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits"))
+
+
+def test_cannot_execute_native1q():
+    circuit = Circuit(5)
+    circuit.add(gates.H(0))
+    assert not can_execute(circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits"))
+
+
+def test_cannot_execute_native3q():
+    circuit = Circuit(5)
+    circuit.add(gates.TOFFOLI(0, 1, 2))
+    assert not can_execute(circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits"))
+
+
+def test_cannot_execute_wrong_native():
+    circuit = Circuit(5)
+    circuit.add(gates.iSWAP(0, 2))
+    assert not can_execute(circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits"))
 
 
 def test_connectivity_and_samples():
@@ -126,35 +158,54 @@ def test_insufficient_qubits():
         transpiler.transpile(circ)
 
 
-def test_simple_circuit():
-    transpiler = Transpiler(connectivity=special_connectivity("21_qubits"), init_method="greedy", init_samples=0)
-    circ = custom_circuit()
-    transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
-    np.testing.assert_allclose(added_swaps, 2)
-
-
-@pytest.mark.parametrize("gates", [5, 20, 50])
-@pytest.mark.parametrize("qubits", [5, 10, 21])
-def test_random_circuit(gates, qubits):
-    transpiler = Transpiler(connectivity=special_connectivity("21_qubits"), init_method="greedy", init_samples=20)
+@pytest.mark.parametrize("gates", [1, 10, 50])
+@pytest.mark.parametrize("qubits", [5, 21])
+@pytest.mark.parametrize(
+    "natives", [TwoQubitNatives.CZ, TwoQubitNatives.iSWAP, TwoQubitNatives.CZ | TwoQubitNatives.iSWAP]
+)
+def test_random_circuits(gates, qubits, natives):
+    transpiler = Transpiler(
+        connectivity=special_connectivity("21_qubits"), init_method="greedy", init_samples=50, two_qubit_natives=natives
+    )
     circ = generate_random_circuit(nqubits=qubits, ngates=gates)
     transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
-
-
-@pytest.mark.parametrize("gates", [20, 50])
-def test_subgraph_init(gates):
-    transpiler = Transpiler(connectivity=special_connectivity("5_qubits"), init_method="subgraph")
-    circ = generate_random_circuit(5, gates)
-    transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
+    assert len(initial_map) == 21 and len(final_map) == 21
+    assert added_swaps >= 0
+    assert can_execute(transpiled_circuit, two_qubit_natives=natives, connectivity=special_connectivity("21_qubits"))
 
 
 def test_subgraph_init_simple():
     transpiler = Transpiler(connectivity=special_connectivity("5_qubits"), init_method="subgraph")
-    circ = Circuit(3)
+    circ = Circuit(5)
     circ.add(gates.CZ(0, 1))
     circ.add(gates.CZ(2, 1))
+    circ.add(gates.CZ(3, 1))
+    circ.add(gates.CZ(4, 1))
     transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
     assert added_swaps == 0
+    assert len(initial_map) == 5 and len(final_map) == 5
+    assert can_execute(
+        transpiled_circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits")
+    )
+
+
+def test_subgraph_init_fail():
+    transpiler = Transpiler(connectivity=special_connectivity("5_qubits"), init_method="subgraph")
+    circ = Circuit(5)
+    circ.add(gates.CZ(0, 1))
+    with pytest.raises(ValueError):
+        transpiler.transpile(circ)
+
+
+def test_subgraph_init():
+    transpiler = Transpiler(connectivity=special_connectivity("5_qubits"), init_method="subgraph")
+    circ = generate_random_circuit(5, 50)
+    transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
+    assert added_swaps >= 0
+    assert len(initial_map) == 5 and len(final_map) == 5
+    assert can_execute(
+        transpiled_circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits")
+    )
 
 
 def test_custom_mapping():
@@ -162,6 +213,11 @@ def test_custom_mapping():
     transpiler.custom_qubit_mapping([1, 2, 3, 4, 0])
     circ = generate_random_circuit(5, 20)
     transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
+    assert added_swaps >= 0
+    assert len(initial_map) == 5 and len(final_map) == 5
+    assert can_execute(
+        transpiled_circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits")
+    )
 
 
 def test_custom_connectivity():
@@ -179,3 +235,43 @@ def test_custom_connectivity():
     chip.add_edges_from(graph_list)
     transpiler.connectivity = chip
     transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
+    assert added_swaps >= 0
+    assert len(initial_map) == 5 and len(final_map) == 5
+    assert can_execute(
+        transpiled_circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("5_qubits")
+    )
+
+
+def test_split_setter():
+    with pytest.raises(ValueError):
+        transpiler = Transpiler(
+            connectivity=special_connectivity("5_qubits"), init_method="subgraph", sampling_split=2.0
+        )
+
+
+def test_split():
+    transpiler = Transpiler(
+        connectivity=special_connectivity("21_qubits"), init_method="greedy", init_samples=20, sampling_split=0.2
+    )
+    circ = generate_random_circuit(21, 50)
+    transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(circ)
+    assert added_swaps >= 0
+    assert len(initial_map) == 21 and len(final_map) == 21
+    assert can_execute(
+        transpiled_circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("21_qubits")
+    )
+
+
+@pytest.mark.parametrize("one_q", [True, False])
+@pytest.mark.parametrize("two_q", [True, False])
+def test_fusion_algorithms(one_q, two_q):
+    transpiler = Transpiler(connectivity=special_connectivity("21_qubits"), init_method="greedy", init_samples=20)
+    circ = generate_random_circuit(21, 50)
+    transpiled_circuit, final_map, initial_map, added_swaps = transpiler.transpile(
+        circ, fusion_algorithm=two_q, fuse_one_qubit=one_q
+    )
+    assert added_swaps >= 0
+    assert len(initial_map) == 21 and len(final_map) == 21
+    assert can_execute(
+        transpiled_circuit, two_qubit_natives=TwoQubitNatives.CZ, connectivity=special_connectivity("21_qubits")
+    )
