@@ -12,6 +12,7 @@ from qibo.models import Circuit
 from qibolab.designs.channels import Channel
 from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse
 from qibolab.transpilers import can_execute, transpile
+from qibolab.transpilers.gate_decompositions import TwoQubitNatives
 
 
 @dataclass
@@ -105,9 +106,8 @@ class AbstractPlatform(ABC):
         self.relaxation_time = None
         self.sampling_rate = None
 
-        self.native_single_qubit_gates = {}
-        self.native_two_qubit_gates = {}
-        self.two_qubit_natives = set()
+        self.single_qubit_natives = {}
+        self.two_qubit_natives = TwoQubitNatives(0)
         # Load platform settings
         self.reload_settings()
 
@@ -134,16 +134,15 @@ class AbstractPlatform(ABC):
         self.relaxation_time = settings["settings"]["repetition_duration"]
         self.sampling_rate = settings["settings"]["sampling_rate"]
 
-        # TODO: Create better data structures for native gates
+        # Load native gates
         self.native_gates = settings["native_gates"]
-        self.native_single_qubit_gates = self.native_gates["single_qubit"]
+        self.single_qubit_natives = self.native_gates["single_qubit"]
         if "two_qubit" in self.native_gates:
-            self.native_two_qubit_gates = self.native_gates["two_qubit"]
-            for gates in self.native_gates["two_qubit"].values():
-                self.two_qubit_natives |= set(gates.keys())
+            for gate in self.native_gates["two_qubit"].values():
+                self.two_qubit_natives |= TwoQubitNatives[list(gate)[0]]
         else:
             # dummy value to avoid transpiler failure for single qubit devices
-            self.two_qubit_natives = {"CZ"}
+            self.two_qubit_natives = TwoQubitNatives.CZ
 
         # Load characterization settings and create ``Qubit`` and ``Channel`` objects
         for q in settings["qubits"]:
@@ -270,7 +269,7 @@ class AbstractPlatform(ABC):
         return sequence
 
     @abstractmethod
-    def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None):
+    def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None, raw_adc=False):
         """Executes a pulse sequence.
 
         Args:
@@ -283,8 +282,8 @@ class AbstractPlatform(ABC):
             Readout results acquired by after execution.
         """
 
-    def __call__(self, sequence, nshots=1024, relaxation_time=None):
-        return self.execute_pulse_sequence(sequence, nshots, relaxation_time)
+    def __call__(self, sequence, nshots=1024, relaxation_time=None, raw_adc=False):
+        return self.execute_pulse_sequence(sequence, nshots, relaxation_time, raw_adc=raw_adc)
 
     def sweep(self, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
         """Executes a pulse sequence for different values of sweeped parameters.
@@ -329,9 +328,8 @@ class AbstractPlatform(ABC):
         else:
             return self.settings["qubit_channel_map"][qubit][1]
 
-    # TODO: Maybe create a dataclass for native gates
     def create_RX90_pulse(self, qubit, start=0, relative_phase=0):
-        pulse_kwargs = self.native_single_qubit_gates[qubit]["RX"]
+        pulse_kwargs = self.single_qubit_natives[qubit]["RX"]
         qd_duration = pulse_kwargs["duration"]
         qd_frequency = pulse_kwargs["frequency"]
         qd_amplitude = pulse_kwargs["amplitude"] / 2.0
@@ -340,7 +338,7 @@ class AbstractPlatform(ABC):
         return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
 
     def create_RX_pulse(self, qubit, start=0, relative_phase=0):
-        pulse_kwargs = self.native_single_qubit_gates[qubit]["RX"]
+        pulse_kwargs = self.single_qubit_natives[qubit]["RX"]
         qd_duration = pulse_kwargs["duration"]
         qd_frequency = pulse_kwargs["frequency"]
         qd_amplitude = pulse_kwargs["amplitude"]
@@ -394,7 +392,7 @@ class AbstractPlatform(ABC):
         return sequence, virtual_z_phases
 
     def create_MZ_pulse(self, qubit, start):
-        pulse_kwargs = self.native_single_qubit_gates[qubit]["MZ"]
+        pulse_kwargs = self.single_qubit_natives[qubit]["MZ"]
         ro_duration = pulse_kwargs["duration"]
         ro_frequency = pulse_kwargs["frequency"]
         ro_amplitude = pulse_kwargs["amplitude"]
@@ -406,7 +404,7 @@ class AbstractPlatform(ABC):
         return ReadoutPulse(start, ro_duration, ro_amplitude, ro_frequency, 0, ro_shape, ro_channel, qubit=qubit)
 
     def create_qubit_drive_pulse(self, qubit, start, duration, relative_phase=0):
-        pulse_kwargs = self.native_single_qubit_gates[qubit]["RX"]
+        pulse_kwargs = self.single_qubit_natives[qubit]["RX"]
         qd_frequency = pulse_kwargs["frequency"]
         qd_amplitude = pulse_kwargs["amplitude"]
         qd_shape = pulse_kwargs["shape"]
@@ -421,7 +419,7 @@ class AbstractPlatform(ABC):
 
     def create_RX90_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
         # create RX pi/2 pulse with drag shape
-        pulse_kwargs = self.native_single_qubit_gates[qubit]["RX"]
+        pulse_kwargs = self.single_qubit_natives[qubit]["RX"]
         qd_duration = pulse_kwargs["duration"]
         qd_frequency = pulse_kwargs["frequency"]
         qd_amplitude = pulse_kwargs["amplitude"] / 2.0
@@ -434,7 +432,7 @@ class AbstractPlatform(ABC):
 
     def create_RX_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
         # create RX pi pulse with drag shape
-        pulse_kwargs = self.native_single_qubit_gates[qubit]["RX"]
+        pulse_kwargs = self.single_qubit_natives[qubit]["RX"]
         qd_duration = pulse_kwargs["duration"]
         qd_frequency = pulse_kwargs["frequency"]
         qd_amplitude = pulse_kwargs["amplitude"]

@@ -67,7 +67,7 @@ instruments:
         settings:
             ports:
                 o1:
-                    attenuation                  : 0 # (dB)
+                    attenuation                  : 12 # (dB)
                     lo_enabled                   : true
                     lo_frequency                 : 5_179_856_329 # (Hz) from 2e9 to 18e9
                     gain                         : 0.35 # for path0 and path1 -1.0<=v<=1.0
@@ -83,9 +83,9 @@ instruments:
                 'L3-17_qd': o1 # IQ Port = out0 & out1
                 99: o2
     twpa_pump:
-        lib: rohde_schwarz
-        class: SGS100A
-        address: 192.168.0.37
+        lib: erasynth
+        class: ERA
+        address: /dev/ttyERA
         roles: [other]
         settings:
             frequency: 6.816e+9 # Hz
