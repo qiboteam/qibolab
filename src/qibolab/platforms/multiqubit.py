@@ -196,8 +196,6 @@ class MultiqubitPlatform(AbstractPlatform):
         num_bins = nshots
         for sweeper in sweepers:
             num_bins *= len(sweeper.values)
-        execution_time = navgs * num_bins * ((repetition_duration + 1000 * len(sweepers)) * 1e-9)
-        log.info(f"Estimated execution time: {int(execution_time)//60}m {int(execution_time) % 60}s")
 
         # DEBUG: Plot Pulse Sequence
         # sequence.plot('plot.png')
@@ -279,16 +277,21 @@ class MultiqubitPlatform(AbstractPlatform):
             data[ro_pulse.qubit] = copy.copy(data[ro_pulse.serial])
         return data
 
-    def sweep(self, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
+    def sweep(self, sequence, *sweepers, nshots=None, average=True, relaxation_time=None):
         id_results = {}
         map_id_serial = {}
         sequence_copy = sequence.copy()
 
+        if nshots is None:
+            nshots = self.hardware_avg
+        navgs = nshots
         if average:
-            navgs = nshots
             nshots = 1
         else:
             navgs = 1
+
+        if relaxation_time is None:
+            relaxation_time = self.relaxation_time
 
         sweepers_copy = []
         for sweeper in sweepers:
@@ -321,12 +324,6 @@ class MultiqubitPlatform(AbstractPlatform):
             relaxation_time=relaxation_time,
         )
 
-        # # rt-based only sweepers
-        # result = self.execute_pulse_sequence(sequence_copy, nshots, navgs, relaxation_time, sweepers_copy)
-        # for pulse in sequence_copy.ro_pulses:
-        #     id_results[pulse.id] += result[pulse.serial]
-        #     id_results[pulse.qubit] = id_results[pulse.id]
-
         serial_results = {}
         for pulse in sequence_copy.ro_pulses:
             serial_results[map_id_serial[pulse.id]] = id_results[pulse.id]
@@ -340,8 +337,8 @@ class MultiqubitPlatform(AbstractPlatform):
         results,
         nshots,
         navgs,
-        average=False,
-        relaxation_time=None,
+        relaxation_time,
+        average,
     ):
         sweeper = sweepers[0]
 
@@ -424,10 +421,71 @@ class MultiqubitPlatform(AbstractPlatform):
         else:
             if all(s.parameter in rt_sweepers for s in sweepers):
                 # rt-based sweepers
-                result = self.execute_pulse_sequence(sequence, nshots, navgs, relaxation_time, sweepers)
-                for pulse in sequence.ro_pulses:
-                    results[pulse.id] += result[pulse.serial]
-                    results[pulse.qubit] = results[pulse.id]
+                num_bins = nshots
+                for sweeper in sweepers:
+                    num_bins *= len(sweeper.values)
+
+                if num_bins < 2**17:
+                    repetition_duration = sequence.finish + relaxation_time
+                    execution_time = navgs * num_bins * ((repetition_duration + 1000 * len(sweepers)) * 1e-9)
+                    log.info(
+                        f"Real time sweeper execution time: {int(execution_time)//60}m {int(execution_time) % 60}s"
+                    )
+
+                    result = self.execute_pulse_sequence(sequence, nshots, navgs, relaxation_time, sweepers)
+                    for pulse in sequence.ro_pulses:
+                        results[pulse.id] += result[pulse.serial]
+                        results[pulse.qubit] = results[pulse.id]
+                else:
+                    sweepers_repetitions = 1
+                    for sweeper in sweepers:
+                        sweepers_repetitions *= len(sweeper.values)
+                    if sweepers_repetitions < 2**17:
+                        # split nshots
+                        max_rt_nshots = (2**17) // sweepers_repetitions
+                        num_full_sft_iterations = nshots // max_rt_nshots
+                        num_bins = max_rt_nshots * sweepers_repetitions
+
+                        for sft_iteration in range(num_full_sft_iterations + 1):
+                            _nshots = min(max_rt_nshots, nshots - sft_iteration * max_rt_nshots)
+                            self._sweep_recursion(
+                                sequence,
+                                *sweepers,
+                                results=results,
+                                nshots=_nshots,
+                                navgs=navgs,
+                                average=average,
+                                relaxation_time=relaxation_time,
+                            )
+                    else:
+                        for shot in range(nshots):
+                            num_bins = 1
+                            for sweeper in sweepers[1:]:
+                                num_bins *= len(sweeper.values)
+                            sweeper = sweepers[0]
+                            max_rt_iterations = (2**17) // num_bins
+                            num_full_sft_iterations = len(sweeper.values) // max_rt_iterations
+                            num_bins = nshots * max_rt_iterations
+                            for sft_iteration in range(num_full_sft_iterations + 1):
+                                _from = sft_iteration * max_rt_iterations
+                                _to = min((sft_iteration + 1) * max_rt_iterations, len(sweeper.values))
+                                _values = sweeper.values[_from:_to]
+                                split_sweeper = Sweeper(
+                                    parameter=sweeper.parameter,
+                                    values=_values,
+                                    pulses=sweeper.pulses,
+                                    qubits=sweeper.qubits,
+                                )
+
+                                self._sweep_recursion(
+                                    sequence,
+                                    *(tuple([split_sweeper]) + sweepers[1:]),
+                                    results=results,
+                                    nshots=nshots,
+                                    navgs=navgs,
+                                    average=average,
+                                    relaxation_time=relaxation_time,
+                                )
             else:
                 raise Exception("cannot execute a for-loop sweeper nested inside of a rt sweeper")
 

@@ -1123,9 +1123,6 @@ class ClusterQRM_RF(AbstractInstrument):
         for sweeper in sweepers:
             num_bins *= len(sweeper.values)
 
-        if num_bins >= 2**17:
-            raise ValueError(f"The maximum number of bins required {num_bins} exceeds the maximum 131,072")
-
         # estimate the execution time
         self._execution_time = navgs * num_bins * ((repetition_duration + 1000 * len(sweepers)) * 1e-9)
 
