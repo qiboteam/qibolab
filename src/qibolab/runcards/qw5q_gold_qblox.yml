@@ -87,11 +87,11 @@ instruments:
 
             classification_parameters:
                 0:  # qubit id
-                    rotation_angle              : 256.181                   # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.026666                  # in V
+                    rotation_angle              : 168.139                   # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.003562                  # in V
                 1:  # qubit id
-                    rotation_angle              : 246.328                   # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.059233                  # in V
+                    rotation_angle              : 346.654                   # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.001537                  # in V
 
     qrm_rf1: # ReadOut module 12: controlling qubits q2, q3, q4
         lib: qblox
@@ -113,14 +113,14 @@ instruments:
 
             classification_parameters:
                 2:  # qubit id
-                    rotation_angle              : 53.594                    # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.001843                  # in V
+                    rotation_angle              : 32.680                    # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.002829                  # in V
                 3:  # qubit id
-                    rotation_angle              : 47.991                    # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.002398                  # in V
+                    rotation_angle              : 313.176                    # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.000754                  # in V
                 4:  # qubit id
-                    rotation_angle              : 292.172                   # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.000440                  # in V
+                    rotation_angle              : 306.795                   # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.000253                  # in V
 
     qcm_rf2:
         lib: qblox
@@ -206,7 +206,7 @@ instruments:
         address: 192.168.0.37
         roles: [other]
         settings:
-            frequency: 6_477_500_000 # Hz
+            frequency: 6_478_250_000 # Hz
             power: 4.25 # dBm
 
 native_gates:
@@ -221,7 +221,7 @@ native_gates:
                 type: qd                    # qubit drive
             MZ:
                 duration: 2000
-                amplitude: 0.2
+                amplitude: 0.11
                 frequency: 7_212_292_160     # resonator frequency
                 if_frequency: -37_707_840    # difference in resonator frequency
                 shape: Rectangular()
@@ -236,9 +236,9 @@ native_gates:
                 type: qd                    # qubit drive
             MZ:
                 duration: 2000
-                amplitude: 0.2
-                frequency: 7_453_114_018    # resonator frequency
-                if_frequency: 203_114_018    # difference in resonator frequency
+                amplitude: 0.225
+                frequency: 7_452_954_018    # resonator frequency
+                if_frequency: 202_954_018    # difference in resonator frequency
                 shape: Rectangular()
                 type: ro                    # readout
         2: # qubit id
@@ -251,9 +251,9 @@ native_gates:
                 type: qd                    # qubit drive
             MZ:
                 duration: 2000
-                amplitude: 0.1
-                frequency: 7_655_176_931    # resonator frequency
-                if_frequency: -194_823_069    # difference in resonator frequency
+                amplitude: 0.24
+                frequency: 7_655_216_931    # resonator frequency
+                if_frequency: -194_783_069    # difference in resonator frequency
                 shape: Rectangular()
                 type: ro                    # readout
         3: # qubit id
@@ -266,9 +266,9 @@ native_gates:
                 type: qd                    # qubit drive
             MZ:
                 duration: 2000
-                amplitude: 0.1
-                frequency: 7_803_521_610    # resonator frequency
-                if_frequency: -46_478_390    # difference in resonator frequency
+                amplitude: 0.2
+                frequency: 7_803_081_610    # resonator frequency
+                if_frequency: -46_918_390    # difference in resonator frequency
                 shape: Rectangular()
                 type: ro                    # readout
         4: # qubit id
@@ -281,9 +281,9 @@ native_gates:
                 type: qd                    # qubit drive
             MZ:
                 duration: 2000
-                amplitude: 0.2
-                frequency: 8_058_844_635      # resonator frequency
-                if_frequency: 208_844_635    # difference in resonator frequency
+                amplitude: 0.32
+                frequency: 8_058_684_635      # resonator frequency
+                if_frequency: 208_684_635    # difference in resonator frequency
                 shape: Rectangular()
                 type: ro                    # readout
         5: # qubit id
@@ -331,7 +331,7 @@ characterization:
             mean_exc_states: (0.0+0.0j)
             sweetspot: 0.335
         1:
-            readout_frequency: 7_453_114_018
+            readout_frequency: 7_452_954_018
             drive_frequency: 4_851_980_321
             T1: 0
             T2: 0
@@ -341,7 +341,7 @@ characterization:
             mean_exc_states: (0.0+0.0j)
             sweetspot: -0.360
         2:
-            readout_frequency: 7_655_176_931
+            readout_frequency: 7_655_216_931
             drive_frequency: 5_793_526_000
             T1: 0
             T2: 0
@@ -351,7 +351,7 @@ characterization:
             mean_exc_states: (0.0+0.0j)
             sweetspot: -0.168
         3:
-            readout_frequency: 7_803_521_610
+            readout_frequency: 7_803_081_610
             drive_frequency: 6_760_361_111
             T1: 0
             T2: 0
@@ -361,7 +361,7 @@ characterization:
             mean_exc_states: (0.0+0.0j)
             sweetspot: 0.0925
         4:
-            readout_frequency: 8_058_844_635
+            readout_frequency: 8_058_684_635
             drive_frequency: 6_585_145_857
             T1: 0
             T2: 0
