@@ -2,7 +2,7 @@ from qibo import gates
 from qibo.config import log
 
 from qibolab.transpilers.connectivity import fix_connectivity
-from qibolab.transpilers.gate_decompositions import translate_gate
+from qibolab.transpilers.gate_decompositions import TwoQubitNatives, translate_gate
 
 
 def transpile(circuit, two_qubit_natives, fuse_one_qubit=False, middle_qubit=2):
@@ -96,7 +96,7 @@ def can_execute(circuit, two_qubit_natives, middle_qubit=2, verbose=True):
                 return False
 
         elif len(gate.qubits) == 2:
-            if gate.__class__.__name__ not in two_qubit_natives:
+            if not (TwoQubitNatives.from_gate(gate) in two_qubit_natives):
                 vlog(f"{gate.name} is not a two qubit native gate.")
                 return False
             if middle_qubit not in gate.qubits:
