@@ -9,8 +9,7 @@ settings:
     adc_trig_offset: 200 # [Clock ticks]
     max_gain: 32000
 
-topology: # qubit - qubit connections
--   [1]
+topology: []
 
 native_gates:
     single_qubit:

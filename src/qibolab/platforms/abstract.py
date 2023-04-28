@@ -3,6 +3,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Union
 
+import networkx as nx
 import numpy as np
 import yaml
 from qibo import gates
@@ -10,7 +11,11 @@ from qibo.config import log, raise_error
 from qibo.models import Circuit
 
 from qibolab.designs.channels import Channel
-from qibolab.platforms.native import NativeSequence, NativeSingleQubitGates
+from qibolab.platforms.native import (
+    SingleQubitNatives,
+    TwoQubitNatives,
+    TwoQubitNativeTypes,
+)
 from qibolab.pulses import PulseSequence
 from qibolab.transpilers import can_execute, transpile
 
@@ -69,7 +74,7 @@ class Qubit:
     drive: Optional[Channel] = None
     flux: Optional[Channel] = None
 
-    native_gates: Optional[NativeSingleQubitGates] = None
+    native_gates: Optional[SingleQubitNatives] = None
 
     def __post_init__(self):
         # register qubit in ``flux`` channel so that we can access
@@ -82,6 +87,13 @@ class Qubit:
         for channel in [self.readout, self.feedback, self.drive, self.flux, self.twpa]:
             if channel is not None:
                 yield channel
+
+
+@dataclass
+class QubitPair:
+    qubit1: Qubit
+    qubit2: Qubit
+    native_gates: TwoQubitNatives = field(default_factory=TwoQubitNatives)
 
 
 class AbstractPlatform(ABC):
@@ -97,20 +109,20 @@ class AbstractPlatform(ABC):
         self.name = name
         self.runcard = runcard
 
-        self.qubits = {}
+        self.qubits: Dict[Union[str, int], Qubit] = {}
+        self.pairs: Dict[Union[str, int], QubitPair] = {}
 
         # Values for the following are set from the runcard in ``reload_settings``
         self.settings = None
         self.is_connected = False
         self.nqubits = None
         self.resonator_type = None
-        self.topology = None
         self.relaxation_time = None
         self.sampling_rate = None
 
         # TODO: Remove this (needed for the multiqubit platform)
         self.native_gates = {}
-        self.two_qubit_natives: Dict[tuple, Dict[str, NativeSequence]] = {}
+        self.two_qubit_native_types = TwoQubitNativeTypes(0)
         # Load platform settings
         self.reload_settings()
 
@@ -132,13 +144,10 @@ class AbstractPlatform(ABC):
         else:
             self.resonator_type = "3D" if self.nqubits == 1 else "2D"
 
-        self.topology = settings["topology"]
-
         self.relaxation_time = settings["settings"]["repetition_duration"]
         self.sampling_rate = settings["settings"]["sampling_rate"]
-
-        # Load native gates
         self.native_gates = settings["native_gates"]
+
         # Load characterization settings and create ``Qubit`` and ``Channel`` objects
         for q in settings["qubits"]:
             if q in self.qubits:
@@ -157,27 +166,30 @@ class AbstractPlatform(ABC):
                     if qf is not None:
                         qubit.flux = Channel(qf)
                 # register single qubit native gates to Qubit objects
-                qubit.native_gates = NativeSingleQubitGates.from_dict(qubit, self.native_gates["single_qubit"][q])
+                qubit.native_gates = SingleQubitNatives.from_dict(qubit, self.native_gates["single_qubit"][q])
+
+        if len(self.qubits) > 1:
+            for pair in settings["topology"]:
+                pair = tuple(sorted(pair))
+                if pair not in self.pairs:
+                    self.pairs[pair] = QubitPair(self.qubits[pair[0]], self.qubits[pair[1]])
+
+        # Load native two-qubit gates
         if "two_qubit" in self.native_gates:
             for pair, gatedict in self.native_gates["two_qubit"].items():
-                qubit1, qubit2 = pair.split("-")
-                if qubit1.isdigit():
-                    qubit1 = int(qubit1)
-                if qubit2.isdigit():
-                    qubit2 = int(qubit2)
-                sequences = {n: NativeSequence.from_dict(n, self.qubits, seq) for n, seq in gatedict.items()}
-                self.two_qubit_natives[tuple(sorted((qubit1, qubit2)))] = sequences
+                pair = tuple(sorted(int(q) if q.isdigit() else q for q in pair.split("-")))
+                self.pairs[pair].native_gates = TwoQubitNatives.from_dict(self.qubits, gatedict)
+                self.two_qubit_native_types |= self.pairs[pair].native_gates.types
+        else:
+            # dummy value to avoid transpiler failure for single qubit devices
+            self.two_qubit_native_types = TwoQubitNativeTypes.CZ
 
     @property
-    def two_qubit_native_types(self):
-        """Set with names of all different two qubit native gates.
-
-        Used in the gate-to-gate transpiler.
-        """
-        native_types = {name for gates in self.two_qubit_natives.values() for name in gates.keys()}
-        if len(native_types) == 0:
-            native_types = {"CZ"}
-        return native_types
+    def topology(self):
+        chip = nx.Graph()
+        chip.add_nodes_from(self.qubits.keys())
+        chip.add_edges_from([(pair.qubit1.name, pair.qubit2.name) for pair in self.pairs])
+        return chip
 
     @abstractmethod
     def connect(self):
@@ -304,15 +316,13 @@ class AbstractPlatform(ABC):
             nshots (int): Number of shots to sample from the experiment. Default is 1024.
             relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
                 If ``None`` the default value provided as ``repetition_duration`` in the runcard will be used.
-            raw_adc (bool): If ``True`` it will return the raw ADC data instead of demodulating and integrating.
-                This is useful for some initial calibrations. Default is ``False``.
 
         Returns:
             Readout results acquired by after execution.
         """
 
     def __call__(self, sequence, nshots=1024, relaxation_time=None, raw_adc=False):
-        return self.execute_pulse_sequence(sequence, nshots, relaxation_time, raw_adc)
+        return self.execute_pulse_sequence(sequence, nshots, relaxation_time, raw_adc=raw_adc)
 
     def sweep(self, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
         """Executes a pulse sequence for different values of sweeped parameters.
@@ -359,13 +369,13 @@ class AbstractPlatform(ABC):
 
     def create_CZ_pulse_sequence(self, qubits, start=0):
         # Check in the settings if qubits[0]-qubits[1] is a key
-        qubits = tuple(sorted(qubits))
-        if qubits not in self.two_qubit_natives:
+        pair = tuple(sorted(qubits))
+        if pair not in self.pairs or self.pairs[pair].native_gates.CZ is None:
             raise_error(
                 ValueError,
                 f"Calibration for CZ gate between qubits {qubits[0]} and {qubits[1]} not found.",
             )
-        return self.two_qubit_natives[qubits]["CZ"].sequence(start)
+        return self.pairs[pair].native_gates.CZ.sequence(start)
 
     def create_MZ_pulse(self, qubit, start):
         return self.qubits[qubit].native_gates.MZ.pulse(start)
@@ -418,6 +428,32 @@ class AbstractPlatform(ABC):
     @abstractmethod
     def get_lo_readout_frequency(self, qubit):
         """Get frequency of the qubit readout local oscillator in Hz."""
+
+    @abstractmethod
+    def set_lo_twpa_frequency(self, qubit, freq):
+        """Set frequency of the local oscillator of the TWPA to which the qubit's feedline is connected to.
+
+        Args:
+            qubit (int): qubit whose local oscillator will be modified.
+            freq (int): new value of the frequency in Hz.
+        """
+
+    @abstractmethod
+    def get_lo_twpa_frequency(self, qubit):
+        """Get frequency of the local oscillator of the TWPA to which the qubit's feedline is connected to in Hz."""
+
+    @abstractmethod
+    def set_lo_twpa_power(self, qubit, power):
+        """Set power of the local oscillator of the TWPA to which the qubit's feedline is connected to.
+
+        Args:
+            qubit (int): qubit whose local oscillator will be modified.
+            power (int): new value of the power in dBm.
+        """
+
+    @abstractmethod
+    def get_lo_twpa_power(self, qubit):
+        """Get power of the local oscillator of the TWPA to which the qubit's feedline is connected to in dBm."""
 
     @abstractmethod
     def set_attenuation(self, qubit, att):

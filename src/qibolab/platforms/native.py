@@ -1,7 +1,9 @@
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
+from enum import Flag, auto
 from typing import Dict, List, Optional, Union
 
+from qibo import gates
 from qibo.config import raise_error
 
 from qibolab.pulses import FluxPulse, PulseConstructor, PulseSequence, PulseType
@@ -91,15 +93,15 @@ class NativeSequence:
     pulses: List[Union[NativePulse, VirtualPulse]] = field(default_factory=list)
 
     @classmethod
-    def from_dict(cls, name, qubits, sequence):
+    def from_dict(cls, name, sequence, qubits):
         """Constructs the native sequence from the dictionaries provided in the runcard.
 
         Args:
             name (str): Name of the gate the sequence is applying.
+            sequence (dict): Dictionary describing the sequence as provided in the runcard.
             qubits (list): List of :class:`qibolab.platforms.abstract.Qubit` object for all
                 qubits in the platform. All qubits are required because the sequence may be
                 acting on qubits that the implemented gate is not targeting.
-            sequence (dict): Dictionary describing the sequence as provided in the runcard.
         """
         pulses = []
 
@@ -134,8 +136,8 @@ class NativeSequence:
 
 
 @dataclass
-class NativeSingleQubitGates:
-    """Container with the native single qubit gates acting on a specific qubit."""
+class SingleQubitNatives:
+    """Container with the native single-qubit gates acting on a specific qubit."""
 
     MZ: NativePulse
     RX: NativePulse
@@ -155,3 +157,38 @@ class NativeSingleQubitGates:
         pulses["RX90"] = NativePulse.from_dict("RX90", **native_gates["RX"], qubit=qubit)
         pulses["RX90"].amplitude /= 2.0
         return cls(**pulses)
+
+
+class TwoQubitNativeTypes(Flag):
+    """A class to define available types of two-qubit native gates."""
+
+    CZ = auto()
+    iSWAP = auto()
+
+    @classmethod
+    def from_gate(cls, gate: gates.Gate):
+        try:
+            return getattr(cls, gate.__class__.__name__)
+        except AttributeError:
+            raise_error(ValueError, f"Gate {gate} cannot be used as native.")
+
+
+@dataclass
+class TwoQubitNatives:
+    """Container with the native two-qubit gates acting on a specific pair of qubits."""
+
+    CZ: Optional[NativeSequence] = None
+    iSWAP: Optional[NativeSequence] = None
+
+    @classmethod
+    def from_dict(cls, qubits, native_gates):
+        sequences = {n: NativeSequence.from_dict(n, seq, qubits) for n, seq in native_gates.items()}
+        return cls(**sequences)
+
+    @property
+    def types(self):
+        gate_types = TwoQubitNativeTypes(0)
+        for gate in ["CZ", "iSWAP"]:
+            if getattr(self, gate) is not None:
+                gate_types |= TwoQubitNativeTypes[gate]
+        return gate_types
