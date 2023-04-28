@@ -5,6 +5,7 @@ Supports the ERAsynth ++.
 https://qcodes.github.io/Qcodes_contrib_drivers/_modules/qcodes_contrib_drivers/drivers/ERAInstruments/erasynth.html#ERASynthBase.clear_read_buffer
 """
 
+import json
 import time
 
 import requests
@@ -25,6 +26,11 @@ class ERA(LocalOscillator):
 
     @property
     def frequency(self):
+        if self.is_connected:
+            if self.ethernet:
+                return int(self._get("frequency"))
+            else:
+                return self.device.get("frequency")
         return self._frequency
 
     @frequency.setter
@@ -35,6 +41,11 @@ class ERA(LocalOscillator):
 
     @property
     def power(self):
+        if self.is_connected:
+            if self.ethernet:
+                return float(self._get("amplitude"))
+            else:
+                return self.device.get("power")
         return self._power
 
     @power.setter
@@ -121,23 +132,24 @@ class ERA(LocalOscillator):
             self.power = power
             self.frequency = frequency
 
-            if "reference_clock_source" in kwargs:
-                if not self.ethernet:
-                    if kwargs["reference_clock_source"] == "internal":
-                        self.device.ref_osc_source("int")
-                    elif kwargs["reference_clock_source"] == "external":
-                        self.device.ref_osc_source("ext")
-                    else:
-                        raise Exception(f"Invalid reference clock source {kwargs['reference_clock_source']}")
+            if not "reference_clock_source" in kwargs:
+                kwargs["reference_clock_source"] = self.reference_clock_source
+            if not self.ethernet:
+                if kwargs["reference_clock_source"] == "internal":
+                    self.device.ref_osc_source("int")
+                elif kwargs["reference_clock_source"] == "external":
+                    self.device.ref_osc_source("ext")
                 else:
-                    self._post("rfoutput", 0)
+                    raise Exception(f"Invalid reference clock source {kwargs['reference_clock_source']}")
+            else:
+                self._post("rfoutput", 0)
 
-                    if kwargs["reference_clock_source"] == "internal":
-                        self._post("reference_int_ext", 0)
-                    elif kwargs["reference_clock_source"] == "external":
-                        self._post("reference_int_ext", 1)
-                    else:
-                        raise Exception(f"Invalid reference clock source {kwargs['reference_clock_source']}")
+                if kwargs["reference_clock_source"] == "internal":
+                    self._post("reference_int_ext", 0)
+                elif kwargs["reference_clock_source"] == "external":
+                    self._post("reference_int_ext", 1)
+                else:
+                    raise Exception(f"Invalid reference clock source {kwargs['reference_clock_source']}")
         else:
             raise Exception("There is no connection to the instrument")
 
@@ -180,7 +192,6 @@ class ERA(LocalOscillator):
             value: str = The value to post.
         """
         value = str(value)
-        print(f"posting {name}={value} to {self.name}")
         for _ in range(3):
             response = requests.post(f"http://{self.address}/", data={name: value}, timeout=1)
             if response.status_code == 200:
@@ -188,3 +199,22 @@ class ERA(LocalOscillator):
             else:
                 time.sleep(0.1)
         raise InstrumentException(self, f"Unable to post {name}={value} to {self.name}")
+
+    def _get(self, name):
+        """
+        Get a value from the instrument's web server.
+
+        Try to get three times, waiting for 0.1 seconds between each attempt.
+
+        Args:
+            name: str = The name of the value to get.
+        """
+        for _ in range(3):
+            response = requests.post(f"http://{self.address}/", params={"readAll": 1}, timeout=1)
+
+            if response.status_code == 200:
+                # reponse.text is a dictonary in string format, convert it to a dictonary
+                return json.loads(response.text)[name]
+            else:
+                time.sleep(0.1)
+        raise InstrumentException(self, f"Unable to get {name} from {self.name}")
