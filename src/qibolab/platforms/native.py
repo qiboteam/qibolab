@@ -1,5 +1,5 @@
 from collections import defaultdict
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field
 from enum import Flag, auto
 from typing import Dict, List, Optional, Union
 
@@ -23,19 +23,25 @@ class NativePulse:
     relative_start: int = 0
     """Relative start is relevant for two-qubit gate operations which correspond to a pulse sequence."""
 
+    # TODO: Remove these attributes if they are not useful, as they are not used anywhere
+    if_frequency: int = 0
+    start: int = 0
+    phase: float = 0.0
+
     @classmethod
-    def from_dict(cls, name, **kwargs):
+    def from_dict(cls, name, pulse, qubit):
         """Parse the dictionary provided by the runcard.
 
         Args:
             name (str): Name of the native gate (dictionary key).
-            kwargs (dict): Dictionary containing the parameters of the pulse
-                implementing the gate.
+            pulse (dict): Dictionary containing the parameters of the pulse implementing
+                the gate, as loaded from the runcard.
+            qubits (:class:`qibolab.platforms.abstract.Qubit`): Qubit that the
+                pulse is acting on
         """
-        field_names = {field.name for field in fields(cls)}
-        new_kwargs = {k: v for k, v in kwargs.items() if k in field_names}
-        new_kwargs["pulse_type"] = PulseType(kwargs["type"])
-        return cls(name, **new_kwargs)
+        kwargs = dict(pulse)
+        kwargs["pulse_type"] = PulseType(kwargs.pop("type"))
+        return cls(name, **kwargs, qubit=qubit)
 
     def pulse(self, start, relative_phase=0.0):
         """Construct the :class:`qibolab.pulses.Pulse` object implementing the gate.
@@ -110,14 +116,14 @@ class NativeSequence:
             sequence = [sequence]
 
         for i, pulse in enumerate(sequence):
-            pulse_type = pulse["type"]
-            kwargs = dict(pulse)
-            qubit = qubits[kwargs.pop("qubit")]
+            pulse = dict(pulse)
+            qubit = qubits[pulse.pop("qubit")]
+            pulse_type = pulse.pop("type")
             if pulse_type == "virtual_z":
-                phase = kwargs["phase"]
+                phase = pulse["phase"]
                 pulses.append(VirtualPulse(phase, qubit))
             else:
-                pulses.append(NativePulse.from_dict(f"{name}{i}", **kwargs, qubit=qubit))
+                pulses.append(NativePulse(f"{name}{i}", **pulse, pulse_type=PulseType(pulse_type), qubit=qubit))
         return cls(name, pulses)
 
     def sequence(self, start=0):
@@ -153,8 +159,8 @@ class SingleQubitNatives:
             native_gates (dict): Dictionary with native gate pulse parameters as loaded
                 from the runcard.
         """
-        pulses = {n: NativePulse.from_dict(n, **native_gates[n], qubit=qubit) for n in ["MZ", "RX"]}
-        pulses["RX90"] = NativePulse.from_dict("RX90", **native_gates["RX"], qubit=qubit)
+        pulses = {n: NativePulse.from_dict(n, native_gates[n], qubit=qubit) for n in ["MZ", "RX"]}
+        pulses["RX90"] = NativePulse.from_dict("RX90", native_gates["RX"], qubit=qubit)
         pulses["RX90"].amplitude /= 2.0
         return cls(**pulses)
 
