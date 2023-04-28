@@ -110,7 +110,7 @@ class AbstractPlatform(ABC):
 
         # TODO: Remove this (needed for the multiqubit platform)
         self.native_gates = {}
-        self.two_qubit_natives: Dict[frozenset, Dict[str, NativeSequence]] = {}
+        self.two_qubit_natives: Dict[tuple, Dict[str, NativeSequence]] = {}
         # Load platform settings
         self.reload_settings()
 
@@ -166,7 +166,7 @@ class AbstractPlatform(ABC):
                 if qubit2.isdigit():
                     qubit2 = int(qubit2)
                 sequences = {n: NativeSequence.from_dict(n, self.qubits, seq) for n, seq in gatedict.items()}
-                self.two_qubit_natives[frozenset((qubit1, qubit2))] = sequences
+                self.two_qubit_natives[tuple(sorted((qubit1, qubit2)))] = sequences
 
     @property
     def two_qubit_native_types(self):
@@ -175,7 +175,7 @@ class AbstractPlatform(ABC):
         Used in the gate-to-gate transpiler.
         """
         native_types = {name for gates in self.two_qubit_natives.values() for name in gates.keys()}
-        if not native_types:
+        if len(native_types) == 0:
             native_types = {"CZ"}
         return native_types
 
@@ -359,12 +359,13 @@ class AbstractPlatform(ABC):
 
     def create_CZ_pulse_sequence(self, qubits, start=0):
         # Check in the settings if qubits[0]-qubits[1] is a key
-        if frozenset(qubits) not in self.two_qubit_natives:
+        qubits = tuple(sorted(qubits))
+        if qubits not in self.two_qubit_natives:
             raise_error(
                 ValueError,
                 f"Calibration for CZ gate between qubits {qubits[0]} and {qubits[1]} not found.",
             )
-        return self.two_qubit_natives[frozenset(qubits)]["CZ"].sequence(start)
+        return self.two_qubit_natives[qubits]["CZ"].sequence(start)
 
     def create_MZ_pulse(self, qubit, start):
         return self.qubits[qubit].native_gates.MZ.pulse(start)
