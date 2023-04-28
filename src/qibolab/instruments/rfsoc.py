@@ -158,7 +158,7 @@ class RFSoC(AbstractInstrument):
             self.cfg.max_gain = max_gain
 
     @staticmethod
-    def find_frequency_limits(sequence: PulseSequence, sweeper: QickSweep = None) -> List[Tuple[int, int]]:
+    def find_frequency_limits(sequence: PulseSequence, sweepers: List[QickSweep] = None) -> List[Tuple[int, int]]:
         """Given a sequence (and a sweeper), finds the min and max pulse frequency for every qubit
 
         Args:
@@ -175,12 +175,14 @@ class RFSoC(AbstractInstrument):
             maxfreq = 0
             for pulse in sequence.get_qubit_pulses(qubit):
                 minmax_set = False
-                if sweeper is not None:
-                    idx = sweeper.get_idx_pulse(pulse)
-                    if idx is not None and sweeper.parameter is Parameter.frequency:
-                        minfreq = min(sweeper.values[idx])
-                        maxfreq = max(sweeper.values[idx])
-                        minmax_set = True
+                if sweepers is not None:
+                    for sweeper in sweepers:
+                        idx = sweeper.get_idx_pulse(pulse)
+                        if idx is not None and sweeper.parameter is Parameter.frequency:
+                            values = sweeper.starts[idx] + sweeper.steps[idx] * np.arange(sweeper.expts)
+                            minfreq = min(values)
+                            maxfreq = max(values)
+                            minmax_set = True
                 if not minmax_set:
                     freq = pulse.frequency
                     minfreq = freq if freq < minfreq else minfreq
@@ -256,10 +258,10 @@ class RFSoC(AbstractInstrument):
             Lists of I and Q value measured
         """
 
-        if self.local_oscillator:
-            limits = self.find_frequency_limits(sequence.ro_pulses)
-            if not self.check_not_frequencies_conflicts(limits, self.cfg.LO_freq):
-                self.set_best_LO(limits)
+        # if self.local_oscillator:
+        #    limits = self.find_frequency_limits(sequence.ro_pulses)
+        #    if not self.check_not_frequencies_conflicts(limits, self.cfg.LO_freq):
+        #        self.set_best_LO(limits)
 
         server_commands = {
             "operation_code": "execute_pulse_sequence",
@@ -294,10 +296,10 @@ class RFSoC(AbstractInstrument):
             Lists of I and Q value measured
         """
 
-        if self.local_oscillator:
-            limits = self.find_frequency_limits(sequence.ro_pulses, sweeper)
-            if not self.check_not_frequencies_conflicts(limits, self.cfg.LO_freq):
-                self.set_best_LO(limits)
+        # if self.local_oscillator:
+        #    limits = self.find_frequency_limits(sequence.ro_pulses, sweeper)
+        #    if not self.check_not_frequencies_conflicts(limits, self.cfg.LO_freq):
+        #        self.set_best_LO(limits)
 
         server_commands = {
             "operation_code": "execute_single_sweep",
@@ -485,7 +487,6 @@ class RFSoC(AbstractInstrument):
                                 sequence[sweeper.indexes[jdx]].amplitude = values[jdx][idx]
                     else:  # TODO elif
                         for kdx, jdx in enumerate(sweeper.indexes):
-                            print(values[kdx][idx])
                             qubits[jdx].flux.bias = values[kdx][idx]
 
                     res = self.recursive_python_sweep(qubits, sequence, original_ro, *sweepers[1:], average=average)
@@ -659,6 +660,11 @@ class RFSoC(AbstractInstrument):
 
         qick_sweepers = create_qick_sweeps(sweepers, sequence, qubits)
 
+        # if self.local_oscillator:
+        #    limits = self.find_frequency_limits(sequence.ro_pulses, qick_sweepers)
+        #    if not self.check_not_frequencies_conflicts(limits, self.cfg.LO_freq):
+        #        self.set_best_LO(limits)
+
         sweepsequence = sequence.copy()
         original_ro = [pulse.serial for pulse in sequence.ro_pulses]
         # deepcopy of the qubits
@@ -691,7 +697,7 @@ class TII_ZCU111(RFSoC):  # Containes the main settings:
         self.cfg = QickProgramConfig(
             sampling_rate=6_000_000_000,
             mixer_freq=0,
-            LO_freq=6_800_000_000,
-            LO_power=15.0,
+            LO_freq=6_900_000_000,
+            LO_power=10.0,
             adc_sampling_frequency=3_072_000_000,
         )
