@@ -142,7 +142,7 @@ class DummyInstrument(AbstractInstrument):
         pulses = sweeper_pulses[sweeper.parameter]
         # save original value of the parameter swept
         for pulse in pulses:
-            if sweeper.parameter not in [Parameter.attenuation, Parameter.gain, Parameter.bias]:
+            if sweeper.parameter not in [Parameter.attenuation, Parameter.gain, Parameter.bias, Parameter.delay]:
                 original_value[pulse] = getattr(pulses[pulse], sweeper.parameter.name)
         return original_value
 
@@ -150,7 +150,7 @@ class DummyInstrument(AbstractInstrument):
         """Helper method for _sweep_recursion"""
         pulses = sweeper_pulses[sweeper.parameter]
         for pulse in pulses:
-            if sweeper.parameter not in [Parameter.attenuation, Parameter.gain, Parameter.bias]:
+            if sweeper.parameter not in [Parameter.attenuation, Parameter.gain, Parameter.bias, Parameter.delay]:
                 setattr(pulses[pulse], sweeper.parameter.name, original_value[pulse])
 
     def _update_pulse_sequence_parameters(
@@ -169,6 +169,8 @@ class DummyInstrument(AbstractInstrument):
                 elif sweeper.parameter is Parameter.amplitude:
                     current_amplitude = pulses[pulse].amplitude
                     setattr(pulses[pulse], sweeper.parameter.name, float(current_amplitude * value))
+                elif sweeper.parameter is Parameter.delay:
+                    pulses[pulse].start += value
                 else:
                     setattr(pulses[pulse], sweeper.parameter.name, value)
                 if pulses[pulse].type is PulseType.READOUT:

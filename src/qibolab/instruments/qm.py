@@ -407,18 +407,36 @@ class QMPulse:
         May be overrident when sweeping phase."""
         self.duration: int = pulse.duration
         """Duration of the pulse. May be overrident when sweeping duration."""
-        self.wait_cycles: Optional[int] = None
-        """Instrument clock cycles (1 cycle = 4ns) to wait before playing the pulse.
-        Calculated and assigned by :meth:`qibolab.instruments.qm.Sequence.add`.
-        May be overriden when sweeping delay."""
-
+        self.wait_time: int = 0
+        """Time (in clock cycles) to wait before playing this pulse.
+        Calculated and assigned by :meth:`qibolab.instruments.qm.Sequence.add`."""
+        self.wait_time_variable: Optional[_Variable] = None
+        """Time (in clock cycles) to wait before playing this pulse when we are sweeping delay."""
         self.acquisition: AcquisitionVariables = None
         """Data class containing the variables required for data acquisition for the instrument."""
+
+        self.next: set = set()
+        """Pulses that will be played after the current pulse.
+        These pulses need to be re-aligned if we are sweeping the delay or duration."""
 
         self.baked = None
         """Baking object implementing the pulse when 1ns resolution is needed."""
         self.baked_amplitude = None
         """Amplitude of the baked pulse."""
+
+    @property
+    def wait_cycles(self):
+        """Instrument clock cycles (1 cycle = 4ns) to wait before playing the pulse.
+
+        This property will be used in the QUA ``wait`` command, so that it is compatible
+        with and without delay sweepers.
+        """
+        if self.wait_time_variable is not None:
+            return self.wait_time_variable + self.wait_time
+        elif self.wait_time >= 4:
+            return self.wait_time
+        else:
+            return None
 
     def declare_output(self, threshold=None, angle=None, raw_adc=False):
         self.acquisition = AcquisitionVariables(threshold=threshold, angle=angle, raw_adc=raw_adc)
@@ -463,6 +481,18 @@ class Sequence:
     """Map from qibolab pulses to QMPulses (useful when sweeping)."""
     clock: Dict[str, int] = field(default_factory=lambda: collections.defaultdict(int))
     """Dictionary used to keep track of times of each element, in order to calculate wait times."""
+    pulse_finish: Dict[int, List[QMPulse]] = field(default_factory=lambda: collections.defaultdict(list))
+    """Map to find all pulses that finish at a given time (useful for ``_find_previous``)."""
+
+    def _find_previous(self, pulse):
+        for finish in reversed(sorted(self.pulse_finish.keys())):
+            if finish <= pulse.start:
+                # first try to find a previous pulse targeting the same qubit
+                last_pulses = self.pulse_finish[finish]
+                for previous in reversed(last_pulses):
+                    if previous.pulse.qubit == pulse.qubit:
+                        return previous
+        return None
 
     def add(self, pulse: Pulse):
         if not isinstance(pulse, Pulse):
@@ -473,12 +503,17 @@ class Sequence:
         if pulse.type is PulseType.READOUT:
             self.ro_pulses.append(qmpulse)
 
+        previous = self._find_previous(pulse)
+        if previous is not None:
+            previous.next.add(qmpulse)
+
         wait_time = pulse.start - self.clock[qmpulse.element]
         if wait_time >= 12:
-            qmpulse.wait_cycles = wait_time // 4 + 1
-            self.clock[qmpulse.element] += 4 * qmpulse.wait_cycles
+            qmpulse.wait_time = wait_time // 4 + 1
+            self.clock[qmpulse.element] += 4 * qmpulse.wait_time
         self.clock[qmpulse.element] += qmpulse.duration
 
+        self.pulse_finish[pulse.finish].append(qmpulse)
         self.qmpulses.append(qmpulse)
         return qmpulse
 
@@ -889,11 +924,31 @@ class QMOPX(AbstractInstrument):
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
 
+    def sweep_delay(self, sweepers, qubits, qmsequence, relaxation_time):
+        sweeper = sweepers[0]
+        if min(sweeper.values) < 16:
+            raise_error(ValueError, "Cannot sweep delay less than 16ns.")
+
+        delay = declare(int)
+        values = np.array(sweeper.values) // 4
+        with for_(*from_array(delay, values.astype(int))):
+            for pulse in sweeper.pulses:
+                qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
+                # find all pulses that are connected to ``qmpulse`` and update their delays
+                to_process = {qmpulse}
+                while to_process:
+                    next_qmpulse = to_process.pop()
+                    to_process |= next_qmpulse.next
+                    next_qmpulse.wait_time_variable = delay
+
+            self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
+
     SWEEPERS = {
         Parameter.frequency: sweep_frequency,
         Parameter.amplitude: sweep_amplitude,
         Parameter.relative_phase: sweep_relative_phase,
         Parameter.bias: sweep_bias,
+        Parameter.delay: sweep_delay,
     }
 
     def sweep_recursion(self, sweepers, qubits, qmsequence, relaxation_time):
