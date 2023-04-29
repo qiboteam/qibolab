@@ -75,6 +75,9 @@ def create_qick_sweeps(sweepers, sequence, qubits):
                 starts.append(sweeper.values[0])
                 steps.append(sweeper.values[1] - sweeper.values[0])
 
+            if any(start + steps[idx] * len(sweeper.values) > 1 for idx, start in enumerate(starts)):
+                raise ValueError("Sweeper amplitude is set to reach values higher than 1")
+
         indexes = []
         if is_bias:
             for qubit in sweeper.qubits:
@@ -369,6 +372,8 @@ class RFSoC(AbstractInstrument):
             `qibolab.ExecutionResults` objects
         """
 
+        if any(pulse.duration < 10 for pulse in sequence):
+            raise ValueError("The minimum pulse length supported is 10 ns")
         if raw_adc:
             raise NotImplementedError("Raw data acquisition is not supported")
 
