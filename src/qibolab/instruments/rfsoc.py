@@ -164,6 +164,8 @@ class TII_RFSOC4x2(AbstractInstrument):
             * wait for response (arbitray number of bytes)
         Returns:
             Lists of I and Q value measured
+        Raise:
+            Exception: if the server encounters and error, the same error is raised here
         """
         # open a connection
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -181,7 +183,7 @@ class TII_RFSOC4x2(AbstractInstrument):
                 received.extend(tmp)
         results = pickle.loads(received)
         if isinstance(results, Exception):
-            raise RuntimeError(f"An error occured on the server side: {results}")
+            raise results
         return results["i"], results["q"]
 
     def play(
