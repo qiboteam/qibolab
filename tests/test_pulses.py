@@ -23,9 +23,8 @@ from qibolab.pulses import (
     Waveform,
     eCap,
 )
-from qibolab.symbolic import intSymbolicExpression as se_int
 from qibolab.symbolic import floatSymbolicExpression as se_float
-
+from qibolab.symbolic import intSymbolicExpression as se_int
 
 HERE = pathlib.Path(__file__).parent
 
@@ -920,8 +919,8 @@ def test_pulse_sequence_add_readout():
     assert len(sequence.qf_pulses) == 1
 
 
-@pytest.mark.parametrize('start', [0, 10, se_int(0, 't00'), se_int(10, 't10')])
-@pytest.mark.parametrize('duration', [100, 500, se_int(100, 'd100'), se_int(500, 'd500')])
+@pytest.mark.parametrize("start", [0, 10, se_int(0, "t00"), se_int(10, "t10")])
+@pytest.mark.parametrize("duration", [100, 500, se_int(100, "d100"), se_int(500, "d500")])
 def test_pulse_properties(start, duration):
     def check_properties(pulse):
         assert isinstance(pulse.start, int)
@@ -930,7 +929,7 @@ def test_pulse_properties(start, duration):
         assert isinstance(pulse.se_duration, se_int)
         assert isinstance(pulse.finish, int)
         assert isinstance(pulse.se_finish, se_int)
-    
+
     p0 = Pulse(start, duration, 0.9, 0, 0, Rectangular(), 0)
     # Check the getters
     check_properties(p0)
@@ -938,9 +937,10 @@ def test_pulse_properties(start, duration):
     p0.start = start + 10
     p0.duration = duration + 10
     check_properties(p0)
-    
-@pytest.mark.parametrize('faulty_start', [10. , 'hello'])
-@pytest.mark.parametrize('faulty_duration', [100., 'hello'])
+
+
+@pytest.mark.parametrize("faulty_start", [10.0, "hello"])
+@pytest.mark.parametrize("faulty_duration", [100.0, "hello"])
 def test_pulse_setter_errors(faulty_start, faulty_duration):
     with pytest.raises(TypeError):
         p0 = Pulse(faulty_start, 100, 0.9, 0, 0, Rectangular(), 0)
