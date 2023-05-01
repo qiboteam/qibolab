@@ -32,10 +32,10 @@ class DesignPlatform(AbstractPlatform):
         self.design.disconnect()
         self.is_connected = False
 
-    def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None):
+    def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None, raw_adc=False):
         if relaxation_time is None:
             relaxation_time = self.relaxation_time
-        return self.design.play(self.qubits, sequence, nshots=nshots, relaxation_time=relaxation_time)
+        return self.design.play(self.qubits, sequence, nshots=nshots, relaxation_time=relaxation_time, raw_adc=raw_adc)
 
     def sweep(self, sequence, *sweepers, nshots=1024, relaxation_time=None, average=True):
         if relaxation_time is None:
@@ -55,6 +55,18 @@ class DesignPlatform(AbstractPlatform):
 
     def get_lo_readout_frequency(self, qubit):
         return self.qubits[qubit].readout.local_oscillator.frequency
+
+    def set_lo_twpa_frequency(self, qubit, freq):
+        self.qubits[qubit].twpa.local_oscillator.frequency = freq
+
+    def get_lo_twpa_frequency(self, qubit):
+        return self.qubits[qubit].twpa.local_oscillator.frequency
+
+    def set_lo_twpa_power(self, qubit, power):
+        self.qubits[qubit].twpa.local_oscillator.power = power
+
+    def get_lo_twpa_power(self, qubit):
+        return self.qubits[qubit].twpa.local_oscillator.power
 
     def set_attenuation(self, qubit, att):
         raise_error(NotImplementedError, f"{self.name} does not support attenuation.")

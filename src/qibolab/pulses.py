@@ -1102,6 +1102,21 @@ class ReadoutPulse(Pulse):
         # calculate probabilities in the i-q plane
         return 0
 
+    def copy(self):  # -> Pulse|ReadoutPulse|DrivePulse|FluxPulse:
+        """Returns a new Pulse object with the same attributes."""
+
+        # return eval(self.serial)
+        return ReadoutPulse(
+            self.start,
+            self.duration,
+            self.amplitude,
+            self.frequency,
+            self.relative_phase,
+            repr(self._shape),  # self._shape,
+            self.channel,
+            self.qubit,
+        )
+
 
 class DrivePulse(Pulse):
     """Describes a qubit drive pulse.
