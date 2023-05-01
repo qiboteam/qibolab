@@ -32,6 +32,7 @@ class SymbolicExpression:
 
             external_ref_count = sys.getrefcount(item)
             import re
+
             internal_ref_count = 0
             for se in list(SymbolicExpression.instances):
                 if re.search(rf"\b{re.escape(symbol)}\b", SymbolicExpression.instances[se].expression):
