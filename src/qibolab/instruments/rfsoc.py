@@ -180,6 +180,8 @@ class TII_RFSOC4x2(AbstractInstrument):
                     break
                 received.extend(tmp)
         results = pickle.loads(received)
+        if isinstance(results, Exception):
+            raise RuntimeError(f"An error occured on the server side: {results}")
         return results["i"], results["q"]
 
     def play(
