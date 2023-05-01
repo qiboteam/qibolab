@@ -3,6 +3,7 @@ import os
 import pathlib
 
 import numpy as np
+import pytest
 
 from qibolab.paths import qibolab_folder
 from qibolab.pulses import (
@@ -23,6 +24,7 @@ from qibolab.pulses import (
     eCap,
 )
 from qibolab.symbolic import intSymbolicExpression as se_int
+from qibolab.symbolic import floatSymbolicExpression as se_float
 
 HERE = pathlib.Path(__file__).parent
 
@@ -176,6 +178,7 @@ def test_pulses_pulse_attributes():
     assert type(p10.start) == int and p10.start == 10
     assert type(p10.duration) == int and p10.duration == 50
     assert type(p10.amplitude) == float and p10.amplitude == 0.9
+    assert type(p10.phase) == float and p10.phase == 2 * np.pi * 10 / 1e9 
     assert type(p10.frequency) == int and p10.frequency == 20_000_000
     assert isinstance(p10.shape, PulseShape) and repr(p10.shape) == "Rectangular()"
     assert type(p10.channel) == type(channel) and p10.channel == channel
@@ -914,3 +917,31 @@ def test_pulse_sequence_add_readout():
     assert len(sequence.ro_pulses) == 1
     assert len(sequence.qd_pulses) == 1
     assert len(sequence.qf_pulses) == 1
+
+
+@pytest.mark.paramterize('start', [0, 10, se_int(0, 't0'), se_int(10, 't10')])
+@pytest.mark.paramterize('duration', [100, 500, se_int(100, 'd100'), se_int(500, 'd500')])
+def test_pulse_properties(start, duration):
+    def check_properties(pulse):
+        assert isinstance(pulse.start, int)
+        assert isinstance(pulse.se_start, se_int)
+        assert isinstance(pulse.duration, int)
+        assert isinstance(pulse.se_duration, se_int)
+        assert isinstance(pulse.finish, int)
+        assert isinstance(pulse.se_finish, se_int)
+
+    p0 = Pulse(start, duration, 0.9, 0, 0, Rectangular(), 0)
+    # Check the getters
+    check_properties(p0)
+    # Check the setters
+    p0.start = start + 10
+    p0.duration = duration + 10
+    check_properties(p0)
+    
+@pytest.mark.paramterize('start', [10., se_float(5., 't5'), 'hello'])
+@pytest.mark.paramterize('duration', [10., se_float(50., 'd50'), 'hello'])
+def test_pulse_setter_errors(start, duration):
+    with pytest.raises(TypeError):
+        p0 = Pulse(start, 100, 0.9, 0, 0, Rectangular(), 0)
+    with pytest.raises(TypeError):
+        p0 = Pulse(0, duration, 0.9, 0, 0, Rectangular(), 0)
