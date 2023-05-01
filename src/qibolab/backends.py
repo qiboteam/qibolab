@@ -10,7 +10,7 @@ from qibo.states import CircuitResult
 from qibolab import __version__ as qibolab_version
 from qibolab.platform import Platform
 from qibolab.platforms.abstract import AbstractPlatform
-from qibolab.transpilers import can_execute, transpile
+from qibolab.transpilers import SequentialTranspiler
 
 
 class QibolabBackend(NumpyBackend):
@@ -26,6 +26,7 @@ class QibolabBackend(NumpyBackend):
             "numpy": self.np.__version__,
             "qibolab": qibolab_version,
         }
+        self.transpiler = SequentialTranspiler.default(self.platform.two_qubit_natives)
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
@@ -71,15 +72,15 @@ class QibolabBackend(NumpyBackend):
             native_circuit = circuit
         else:
             # Transform a circuit into proper connectivity and native gates
-            log.info("Transpiling circuit.")
-            native_circuit, _ = transpile(circuit, two_qubit_natives)
+            native_circuit = self.transpiler.transpile(circuit)
             if check_transpiled:
                 backend = NumpyBackend()
                 target_state = backend.execute_circuit(circuit).state()
                 final_state = backend.execute_circuit(native_circuit).state()
                 fidelity = np.abs(np.dot(np.conj(target_state), final_state))
                 np.testing.assert_allclose(fidelity, 1.0)
-                log.info("Transpiler test passed.")
+                if self.transpiler.verbose:
+                    log.info("Transpiler test passed.")
 
         # Transpile the native circuit into a sequence of pulses ``PulseSequence``
         sequence = self.platform.transpile(native_circuit)

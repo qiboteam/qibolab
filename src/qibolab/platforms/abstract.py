@@ -11,7 +11,6 @@ from qibo.models import Circuit
 
 from qibolab.designs.channels import Channel
 from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse
-from qibolab.transpilers import can_execute, transpile
 from qibolab.transpilers.gate_decompositions import TwoQubitNatives
 
 
@@ -183,9 +182,6 @@ class AbstractPlatform(ABC):
             sequence (qibolab.pulses.PulseSequence): Pulse sequence that implements the
                 circuit on the qubit.
         """
-        if not can_execute(circuit, self.two_qubit_natives):
-            circuit, _ = transpile(circuit, self.two_qubit_natives)
-
         sequence = PulseSequence()
         virtual_z_phases = defaultdict(int)
 

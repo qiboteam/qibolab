@@ -1,1 +1,5 @@
-from qibolab.transpilers.transpile import can_execute, transpile
+from qibolab.transpilers.fusion import FusionTranspiler, RearrangeTranspiler
+from qibolab.transpilers.gate_decompositions import NativeGateTranspiler
+from qibolab.transpilers.general_connectivity import GeneralConnectivityTranspiler
+from qibolab.transpilers.sequential import SequentialTranspiler
+from qibolab.transpilers.star_connectivity import StarConnectivityTranspiler
