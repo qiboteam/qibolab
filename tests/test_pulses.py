@@ -178,8 +178,8 @@ def test_pulses_pulse_attributes():
     assert type(p10.start) == int and p10.start == 10
     assert type(p10.duration) == int and p10.duration == 50
     assert type(p10.amplitude) == float and p10.amplitude == 0.9
-    assert type(p10.phase) == float and p10.phase == 2 * np.pi * 10 / 1e9 
     assert type(p10.frequency) == int and p10.frequency == 20_000_000
+    assert type(p10.phase) == float and np.allclose(p10.phase, 2 * np.pi * p10.start * p10.frequency / 1e9)
     assert isinstance(p10.shape, PulseShape) and repr(p10.shape) == "Rectangular()"
     assert type(p10.channel) == type(channel) and p10.channel == channel
     assert type(p10.qubit) == type(qubit) and p10.qubit == qubit
