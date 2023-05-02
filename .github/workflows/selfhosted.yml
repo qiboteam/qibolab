@@ -74,13 +74,9 @@ jobs:
       with:
         name: coverage-from-self-hosted
         path: coverage/
-    - name: Notify the Pull Request
-      uses: thollander/actions-comment-pull-request@v2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Publish Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
       with:
-        message: |
-          Run on QPU `${{ matrix.platform }}` completed! :atom:
-
-          > *You can download the coverage report as an artifact, from the workflow summary page:*
-          > ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        files: |
+          coverage/coverage.xml
