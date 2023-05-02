@@ -344,6 +344,8 @@ class RFSoC(AbstractInstrument):
                     break
                 received.extend(tmp)
         results = pickle.loads(received)
+        if isinstance(results, Exception):
+            raise results
         return results["i"], results["q"]
 
     def play(
