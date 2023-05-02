@@ -74,8 +74,13 @@ jobs:
       with:
         name: coverage-from-self-hosted
         path: coverage/
-    - name: Publish Test Results
-      uses: mikepenz/action-junit-report@v3
-      if: always()
+    - name: Notify the Pull Request
+      uses: thollander/actions-comment-pull-request@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        report_paths: 'coverage/coverage.xml'
+        message: |
+          Run on QPU `${{ matrix.platform }}` completed! :atom:
+
+          > *You can download the coverage report as an artifact, from the workflow summary page:*
+          > ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
