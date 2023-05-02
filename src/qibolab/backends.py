@@ -49,7 +49,7 @@ class QibolabBackend(NumpyBackend):
         """
         readout = circuit_result.execution_result
         for gate, sequence in measurement_map.items():
-            _samples = map(lambda pulse: readout[pulse.serial].shots, sequence.pulses)
+            _samples = (readout[pulse.serial].shots for pulse in sequence.pulses)
             samples = list(filter(lambda x: x is not None, _samples))
             gate.result.backend = self
             gate.result.register_samples(np.array(samples).T)

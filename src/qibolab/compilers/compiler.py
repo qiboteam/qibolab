@@ -59,15 +59,17 @@ class Compiler:
 
     def __getitem__(self, item):
         """Get an existing rule for a given gate."""
-        if item not in self.rules:
+        try:
+            return self.rules[item]
+        except KeyError:
             raise_error(KeyError, f"Compiler rule not available for {item}.")
-        return self.rules[item]
 
     def __delitem__(self, item):
         """Remove rule for the given gate."""
-        if item not in self.rules:
+        try:
+            del self.rules[item]
+        except KeyError:
             raise_error(KeyError, f"Cannot remove {item} from compiler because it does not exist.")
-        del self.rules[item]
 
     def register(self, gate_cls):
         """Decorator for registering a function as a rule in the compiler.
