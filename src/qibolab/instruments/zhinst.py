@@ -479,31 +479,20 @@ class Zurich(AbstractInstrument):
         )
 
         # Defaults
-        if options.acquisition_type is None:
-            # TODO: Robust condition for DISCRIMINATION
-            # if all(qubits[qubit].threshold != 0 for qubit in self.sequence_qibo.qubits):
-            if 1 == 0:
-                options.acquisition_type = lo.AcquisitionType.DISCRIMINATION
-            else:
-                options.acquisition_type = lo.AcquisitionType.INTEGRATION
-        else:
-            if options.acquisition_type is AcquisitionType.INTEGRATION:
-                options.acquisition_type = lo.AcquisitionType.INTEGRATION
-            elif options.acquisition_type is AcquisitionType.RAW:
-                options.acquisition_type = lo.AcquisitionType.RAW
-            elif options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                options.acquisition_type = lo.AcquisitionType.DISCRIMINATION
+        if options.acquisition_type is AcquisitionType.INTEGRATION:
+            options.acquisition_type = lo.AcquisitionType.INTEGRATION
+        elif options.acquisition_type is AcquisitionType.RAW:
+            options.acquisition_type = lo.AcquisitionType.RAW
+        elif options.acquisition_type is AcquisitionType.DISCRIMINATION:
+            options.acquisition_type = lo.AcquisitionType.DISCRIMINATION
 
-            if self.acquisition_type is lo.AcquisitionType.SPECTROSCOPY:
-                options.acquisition_type = lo.AcquisitionType.SPECTROSCOPY
+        if self.acquisition_type is lo.AcquisitionType.SPECTROSCOPY:
+            options.acquisition_type = lo.AcquisitionType.SPECTROSCOPY
 
-        if options.averaging_mode is None:
+        if options.averaging_mode is AveragingMode.CYCLIC:
             options.averaging_mode = lo.AveragingMode.CYCLIC
-        else:
-            if options.averaging_mode is AveragingMode.CYCLIC:
-                options.averaging_mode = lo.AveragingMode.CYCLIC
-            elif options.averaging_mode is AveragingMode.SINGLESHOT:
-                options.averaging_mode = lo.AveragingMode.SINGLE_SHOT
+        elif options.averaging_mode is AveragingMode.SINGLESHOT:
+            options.averaging_mode = lo.AveragingMode.SINGLE_SHOT
 
         print(options.acquisition_type)
         print(options.averaging_mode)
@@ -726,6 +715,7 @@ class Zurich(AbstractInstrument):
                             measure_pulse_amplitude = None
                             if isinstance(pulse, ZhSweeper):
                                 measure_pulse_amplitude = pulse.zhsweeper
+                                print(measure_pulse_amplitude)
 
                             # FIXME: Introduce ro_sweeper here
                             exp.measure(
