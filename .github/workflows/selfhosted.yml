@@ -75,7 +75,7 @@ jobs:
         name: coverage-from-self-hosted
         path: coverage/
     - name: Publish Test Results
-      uses:
+      uses: dorny/test-reporter@v1
       if: always()
       with:
         name: QPU Tests Results
