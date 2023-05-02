@@ -233,7 +233,7 @@ def test_custom_connectivity():
         connectivity=special_connectivity("5_qubits"), init_method="greedy", init_samples=20
     )
     circ = generate_random_circuit(5, 20)
-    Q = [f"q{i}" for i in range(5)]
+    Q = list(range(5))
     chip = nx.Graph()
     chip.add_nodes_from(Q)
     graph_list = [
@@ -246,7 +246,7 @@ def test_custom_connectivity():
     transpiler.connectivity = chip
     transpiled_circuit, qubit_map = transpiler.transpile(circ)
     assert transpiler.added_swaps >= 0
-    assert len(initial_map) == 5 and len(final_map) == 5
+    assert len(transpiler.initial_map) == 5 and len(transpiler.final_map) == 5
     assert transpiler.is_satisfied(transpiled_circuit)
 
 
