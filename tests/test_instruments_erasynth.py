@@ -8,7 +8,7 @@ from .conftest import load_from_platform
 
 
 @pytest.mark.qpu
-def test_instruments_erasynth_init(instrument, platform_name):
+def test_instruments_erasynth_init(instrument):
     assert instrument.is_connected == True
     assert instrument.device
     assert instrument.data_folder == user_folder / "instruments" / "data" / instrument.tmp_folder.name.split("/")[-1]
@@ -34,7 +34,7 @@ def instrument_set_and_test_parameter_values(instrument, parameter, values):
 
 
 @pytest.mark.qpu
-def test_instruments_erasynth_set_device_paramter(instrument, platform_name):
+def test_instruments_erasynth_set_device_paramter(instrument):
     instrument_set_and_test_parameter_values(
         instrument, f"power", np.arange(-60, 0, 10)
     )  # Max power is 25dBm but to be safe testing only until 0dBm
@@ -42,7 +42,7 @@ def test_instruments_erasynth_set_device_paramter(instrument, platform_name):
 
 
 @pytest.mark.qpu
-def test_instruments_erasynth_start_stop_disconnect(instrument, platform_name):
+def test_instruments_erasynth_start_stop_disconnect(instrument):
     instrument.start()
     instrument.stop()
     instrument.disconnect()
