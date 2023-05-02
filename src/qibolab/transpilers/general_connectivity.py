@@ -24,7 +24,6 @@ class QubitInitMethod(Enum):
     custom = auto()
 
 
-@dataclass
 class GeneralConnectivityTranspiler(AbstractTranspiler):
     """A class to perform initial qubit mapping and connectivity matching.
 
@@ -32,7 +31,6 @@ class GeneralConnectivityTranspiler(AbstractTranspiler):
         connectivity (networkx.graph): chip connectivity.
         init_method (str or QubitInitMethod): initial qubit mapping method.
         init_samples (int): number of random qubit initializations for greedy initial qubit mapping.
-        two_qubit_natives (TwoQubitNatives or str): two qubit gate/s that can be implemented by the hardware.
         sampling_split (float): fraction of paths tested (between 0 and 1).
 
     Attributes:
@@ -44,38 +42,36 @@ class GeneralConnectivityTranspiler(AbstractTranspiler):
         _added_swaps (int): number of swaps added to the circuit to match connectivity.
     """
 
-    connectivity: nx.Graph
-    init_method: Union[str, QubitInitMethod] = QubitInitMethod["greedy"]
-    sampling_split: float = 1.0
-    verbose: bool = False
+    def __init__(self, connectivity, init_method="greedy", init_samples=None, sampling_split=1.0, verbose=False):
+        self.connectivity = connectivity
+        self.init_method = init_method
+        if self.init_method is QubitInitMethod.greedy and init_samples is None:
+            init_samples = DEFAULT_INIT_SAMPLES
+        self.init_samples = init_samples
+        self.sampling_split = sampling_split
+        self.verbose = verbose
 
-    # TODO: Add types here
-    _init_samples: Optional[int] = None
-    _circuit_repr = None
-    _mapping = None
-    _graph = None
-    _qubit_map = None
-    _transpiled_circuit = None
-    _circuit_position = 0
-    _added_swaps = 0
+        self._circuit_repr = None
+        self._mapping = None
+        self._graph = None
+        self._qubit_map = None
+        self._transpiled_circuit = None
+        self._circuit_position = 0
 
-    def __post_init__(self):
-        if isinstance(self.init_method, str):
-            self.init_method = QubitInitMethod[self.init_method]
-        if self.init_method is QubitInitMethod.greedy and self._init_samples is None:
-            self.init_samples = DEFAULT_INIT_SAMPLES
+        self._added_swaps = 0
+        self._initial_map = None
+        self._final_map = None
 
     def tlog(self, message):
         """Print messages only if ``verbose`` was set to ``True``."""
         if self.verbose:
             log.info(message)
 
-    def is_transpiled(self, circuit):
+    def is_satisfied(self, circuit):
         """Checks if a circuit can be executed on Hardware.
 
         Args:
             circuit (qibo.models.Circuit): Circuit model to check.
-            two_qubit_natives (TwoQubitNatives): two qubit gate/s that can be implemented by the hardware.
             connectivity (networkx.graph): chip connectivity.
             verbose (bool): If ``True`` it prints debugging log messages.
 
@@ -139,7 +135,21 @@ class GeneralConnectivityTranspiler(AbstractTranspiler):
 
         # TODO: Are all those returns needed?
         # return hardware_mapped_circuit, final_mapping, init_mapping, self._added_swaps
-        return hardware_mapped_circuit
+        self._initial_map = init_mapping
+        self._final_map = final_mapping
+        return hardware_mapped_circuit, [final_mapping[i] for i in range(circuit.nqubits)]
+
+    @property
+    def initial_map(self):
+        return self._initial_map
+
+    @property
+    def final_map(self):
+        return self._final_map
+
+    @property
+    def added_swaps(self):
+        return self._added_swaps
 
     def transpiler_step(self, qibo_circuit):
         """Transpilation step. Find new mapping, add swap gates and apply gates that can be run with this configuration.
@@ -180,7 +190,6 @@ class GeneralConnectivityTranspiler(AbstractTranspiler):
     @connectivity.setter
     def connectivity(self, connectivity):
         """Set the hardware chip connectivity.
-
         Args:
             connectivity (networkx graph): define connectivity.
         """
@@ -227,21 +236,6 @@ class GeneralConnectivityTranspiler(AbstractTranspiler):
         if isinstance(init_method, str):
             init_method = QubitInitMethod[init_method]
         self._init_method = init_method
-
-    @property
-    def two_qubit_natives(self):
-        return self._two_qubit_natives
-
-    @two_qubit_natives.setter
-    def two_qubit_natives(self, two_qubit_natives):
-        """Set the native hardware two qubit gates.
-
-        Args:
-            two_qubit_natives (TwoQubitNatives or str):
-        """
-        if isinstance(two_qubit_natives, str):
-            two_qubit_natives = TwoQubitNatives[two_qubit_natives]
-        self._two_qubit_natives = two_qubit_natives
 
     @property
     def init_samples(self):

@@ -444,4 +444,4 @@ class NativeGateTranspiler(AbstractTranspiler):
                 new.add(translate_gate(gate, self.two_qubit_natives))
             else:
                 new.add(gate)
-        return new
+        return new, list(range(circuit.nqubits))

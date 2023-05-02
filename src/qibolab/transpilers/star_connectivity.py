@@ -25,6 +25,7 @@ def find_connected_qubit(qubits, queue, hardware_qubits):
     return qubits[0]
 
 
+@dataclass
 class StarConnectivityTranspiler(AbstractTranspiler):
     """Transforms an arbitrary circuit to one that can be executed on hardware.
 
@@ -46,7 +47,7 @@ class StarConnectivityTranspiler(AbstractTranspiler):
         if self.verbose:
             log.info(message)
 
-    def is_satisfied(circuit, middle_qubit=2, verbose=True):
+    def is_satisfied(self, circuit, middle_qubit=2, verbose=True):
         """Checks if a circuit respects connectivity constraints.
 
         Args:
@@ -71,7 +72,7 @@ class StarConnectivityTranspiler(AbstractTranspiler):
         self.tlog("Circuit respects connectivity.")
         return True
 
-    def transpile(circuit):
+    def transpile(self, circuit):
         """Apply the transpiler transformation on a given circuit.
 
         Args:
@@ -87,6 +88,7 @@ class StarConnectivityTranspiler(AbstractTranspiler):
         # TODO: Change this to a more lightweight form that takes a list of pairs
         # instead of the whole circuit.
 
+        middle_qubit = self.middle_qubit
         # find the number of qubits for hardware circuit
         if circuit.nqubits == 1:
             nqubits = 1
@@ -151,4 +153,4 @@ class StarConnectivityTranspiler(AbstractTranspiler):
             if len(qubits) == 2:
                 add_swap = True
 
-        return new
+        return new, hardware_qubits

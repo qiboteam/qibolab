@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from qibo import gates
+
 from qibolab.transpilers.abstract import AbstractTranspiler
 
 
@@ -11,7 +13,7 @@ class FusionTranspiler(AbstractTranspiler):
         return True
 
     def transpile(self, circuit):
-        return circuit.fuse(max_qubits=self.max_qubits)
+        return circuit.fuse(max_qubits=self.max_qubits), list(range(circuit.nqubits))
 
 
 @dataclass
@@ -29,4 +31,4 @@ class RearrangeTranspiler(FusionTranspiler):
                 new.add(fgate.gates)
             else:
                 new.add(fgate)
-        return new
+        return new, list(range(circuit.nqubits))
