@@ -29,7 +29,7 @@ class Channel:
     """
     ports: List[tuple] = field(default_factory=list)
     """List of tuples (controller, port) connected to this channel."""
-    local_oscillator: Optional[LocalOscillator] = None
+    _local_oscillator: Optional[LocalOscillator] = None
     """Instrument object controlling the local oscillator connected to this channel.
     Not applicable for setups that do not use local oscillators because the controller
     can send sufficiently high frequencies
@@ -52,9 +52,24 @@ class Channel:
     """
 
     @property
+    def local_oscillator(self):
+        """LocalOscillator object connnected to this channel."""
+        if self._local_oscillator is None:
+            raise_error(NotImplementedError, f"Channel {name} does not have a local oscillator")
+        return self._local_oscillator
+
+    @local_oscillator.setter
+    def local_oscillator(self, local_oscillator):
+        if not isinstance(local_oscillator, LocalOscillator):
+            raise_error(TypeError, "Attempting to set LocalOscillator failed.")
+        self._local_oscillator = local_oscillator
+
+    @property
     def bias(self):
         """Bias offset for flux channels."""
         if self._bias is None:
+            if self.qubit.flux is None:
+                raise_error(NotImplementedError, f"Channel {name} is not connected to a flux qubit")
             # operate qubits at their sweetspot unless otherwise stated
             check_max_bias(self.qubit.sweetspot, self.max_bias)
             return self.qubit.sweetspot

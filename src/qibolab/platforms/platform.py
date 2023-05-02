@@ -45,23 +45,15 @@ class DesignPlatform(AbstractPlatform):
         )
 
     def set_lo_drive_frequency(self, qubit, freq):
-        if self.qubits[qubit].drive.local_oscillator is None:
-            raise_error(NotImplementedError, f"Qubit {qubit} drive does not have a local oscillator")
         self.qubits[qubit].drive.local_oscillator.frequency = freq
 
     def get_lo_drive_frequency(self, qubit):
-        if self.qubits[qubit].drive.local_oscillator is None:
-            raise_error(NotImplementedError, f"Qubit {qubit} drive does not have a local oscillator")
         return self.qubits[qubit].drive.local_oscillator.frequency
 
     def set_lo_readout_frequency(self, qubit, freq):
-        if self.qubits[qubit].readout.local_oscillator is None:
-            raise_error(NotImplementedError, f"Qubit {qubit} readout does not have a local oscillator")
         self.qubits[qubit].readout.local_oscillator.frequency = freq
 
     def get_lo_readout_frequency(self, qubit):
-        if self.qubits[qubit].readout.local_oscillator is None:
-            raise_error(NotImplementedError, f"Qubit {qubit} readout does not have a local oscillator")
         return self.qubits[qubit].readout.local_oscillator.frequency
 
     def set_lo_twpa_frequency(self, qubit, freq):
@@ -89,11 +81,7 @@ class DesignPlatform(AbstractPlatform):
         raise_error(NotImplementedError, f"{self.name} does not support gain.")
 
     def set_bias(self, qubit, bias):
-        if self.qubits[qubit].flux is None:
-            raise_error(NotImplementedError, f"Qubit {qubit} does not support flux")
         self.qubits[qubit].flux.bias = bias
 
     def get_bias(self, qubit):
-        if self.qubits[qubit].flux is None:
-            raise_error(NotImplementedError, f"Qubit {qubit} does not support flux")
         return self.qubits[qubit].flux.bias
