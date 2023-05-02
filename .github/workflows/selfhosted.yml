@@ -75,8 +75,7 @@ jobs:
         name: coverage-from-self-hosted
         path: coverage/
     - name: Publish Test Results
-      uses: dorny/test-reporter@v1
+      uses: mikepenz/action-junit-report@v3
       if: always()
       with:
-        name: QPU Tests Results
-        path: coverage/coverage.xml
+        report_paths: 'coverage/coverage.xml'
