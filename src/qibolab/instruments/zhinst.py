@@ -381,8 +381,9 @@ class Zurich(AbstractInstrument):
                         i, q
                     )
 
-        if options.sim_time is not None:
-            self.run_sim(round(options.sim_time * 1e-9, 9))
+        # FIXME: Simulation and sim_time
+        # if options.sim_time is not None:
+        #     self.run_sim(round(options.sim_time * 1e-9, 9))
         # FIXME: Cant sim on executions with multiple pulse sequences (ALLXY) without reconnection to the real devices which takes time.
         # lo.show_pulse_sheet("pulses", self.exp)
         # self.disconnect()
@@ -726,9 +727,6 @@ class Zurich(AbstractInstrument):
                             if isinstance(pulse, ZhSweeper):
                                 measure_pulse_amplitude = pulse.zhsweeper
 
-                            print(pulse.zhpulse)
-                            print(pulse.zhsweeper)
-
                             # FIXME: Introduce ro_sweeper here
                             exp.measure(
                                 acquire_signal=f"acquire{qubit.name}",
@@ -783,8 +781,9 @@ class Zurich(AbstractInstrument):
                         i, q
                     )
 
-        if options.sim_time is not None:
-            self.run_sim(round(options.sim_time * 1e-9, 9))
+        # FIXME: Simulation and sim_time
+        # if options.sim_time is not None:
+        #     self.run_sim(round(options.sim_time * 1e-9, 9))
         # FIXME: Careful placement or reconnection to avoid messing with several executions
         # lo.show_pulse_sheet("pulses", self.exp)
         # self.disconnect()
