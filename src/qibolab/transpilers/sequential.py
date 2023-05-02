@@ -11,6 +11,8 @@ from qibolab.transpilers.star_connectivity import StarConnectivityTranspiler
 
 @dataclass
 class SequentialTranspiler(AbstractTranspiler):
+    """Transpiler consisting of a list of smaller transpilers that are applied sequentially."""
+
     transpilers: List[AbstractTranspiler]
     verbose: bool = False
 
@@ -32,6 +34,7 @@ class SequentialTranspiler(AbstractTranspiler):
 
     @classmethod
     def default(cls, two_qubit_natives, middle_qubit=2, fuse_one_qubit=False, verbose=False):
+        """Default transpiler used by :class:`qibolab.backends.QibolabBackend`."""
         transpilers = [RearrangeTranspiler(max_qubits=2)]
         # add SWAPs to satisfy connectivity constraints
         transpilers.append(StarConnectivityTranspiler(middle_qubit))
