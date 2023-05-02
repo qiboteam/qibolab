@@ -75,8 +75,8 @@ jobs:
         name: coverage-from-self-hosted
         path: coverage/
     - name: Publish Test Results
-      uses: EnricoMi/publish-unit-test-result-action@v2
+      uses:
       if: always()
       with:
-        files: |
-          coverage/coverage.xml
+        name: QPU Tests Results
+        path: coverage/coverage.xml
