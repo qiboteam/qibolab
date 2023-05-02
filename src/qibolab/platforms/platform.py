@@ -56,6 +56,16 @@ class DesignPlatform(AbstractPlatform):
     def get_lo_readout_frequency(self, qubit):
         return self.qubits[qubit].readout.local_oscillator.frequency
 
+    def get_lo_drive_shared(self, qubits):
+        unique_lo = {}
+        for qubit in qubits:
+            if self.qubits[qubit].drive.local_oscillator.name in unique_lo:
+                unique_lo[self.qubits[qubit].drive.local_oscillator.name][1].append(qubit)
+            else:
+                unique_lo[self.qubits[qubit].drive.local_oscillator.name] = (self.qubits[qubit].drive.local_oscillator, [qubit]) 
+        return unique_lo
+        
+
     def set_attenuation(self, qubit, att):
         raise_error(NotImplementedError, f"{self.name} does not support attenuation.")
 

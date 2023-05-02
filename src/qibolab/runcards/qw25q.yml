@@ -34,16 +34,16 @@ native_gates:
         A2:
             RX:
                 duration: 40
-                amplitude: 0.299618256
-                frequency: 5847236333
+                amplitude: 0.29062970832
+                frequency: 5829887810
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.004111
-                frequency: 7_267_173_583
+                amplitude: 0.004
+                frequency: 7266573583.000 
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -51,16 +51,16 @@ native_gates:
         A3:
             RX:
                 duration: 40
-                amplitude: 0.396637767
-                frequency: 5.96e+9
+                amplitude: 0.36094036797
+                frequency: 5961729103
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0072
-                frequency: 7_521_355_035
+                amplitude: 0.009
+                frequency: 7520855035.000 
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -68,16 +68,16 @@ native_gates:
         A4:
             RX:
                 duration: 40
-                amplitude: 0.1665148688455239
-                frequency: 5.2351e+9
+                amplitude: 0.16151942278015818
+                frequency: 5228007462
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0035
-                frequency: 7.118807e+9
+                amplitude: 0.00483
+                frequency: 7118007000.000 
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -86,7 +86,7 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.1
-                frequency: 6.105e+9
+                frequency: 6.1264e+9
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -119,16 +119,16 @@ native_gates:
         B1:
             RX:
                 duration: 40
-                amplitude: 0.06709999999999999
-                frequency: 5.07138E+09
+                amplitude: 0.06508699999999999
+                frequency: 5067881796
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.005
-                frequency: 6.927179e+9
+                amplitude: 0.006
+                frequency: 6926879000.000 
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -137,15 +137,15 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.15
-                frequency: 6.017959E+09
+                frequency: 6017062942
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.005
-                frequency: 7.135628e+9
+                amplitude: 0.007
+                frequency: 7135128000.000 
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -187,16 +187,16 @@ native_gates:
         B5:
             RX:
                 duration: 40
-                amplitude: 0.1
-                frequency: 6.101000E+09
+                amplitude: 0.091
+                frequency: 6081400376
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.005
-                frequency: 7.598609e+9
+                amplitude: 0.00635
+                frequency: 7598509000.000 
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -204,16 +204,16 @@ native_gates:
         C1:
             RX:
                 duration: 40
-                amplitude: 0.118
-                frequency: 5.438E+09
+                amplitude: 0.1062
+                frequency: 5418770995
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.0025
-                frequency: 7.06449e+9
+                amplitude: 0.003775
+                frequency: 7063590000.000 
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -239,15 +239,15 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.2
-                frequency: 5.886E+09
+                frequency: 5874113935
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.005
-                frequency: 7_626_754_644
+                amplitude: 0.0065
+                frequency: 7626554644.000 
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -431,8 +431,8 @@ characterization:
             sweetspot: -0.446
             filter: {}
             # parameters for single shot classification
-            threshold: 0.000576042595836885
-            iq_angle: 1.8616077849009018
+            threshold: -0.0001181716630732158
+            iq_angle: 0.7050858273706471
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -448,8 +448,8 @@ characterization:
             sweetspot: 0.31
             filter: {}
             # parameters for single shot classification
-            threshold:  0.0002743498286988214
-            iq_angle:  4.84040150167509
+            threshold:  3.774117392424683e-05
+            iq_angle:  5.105843314826705
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -465,8 +465,8 @@ characterization:
             sweetspot: 0.015
             filter: {}
             # parameters for single shot classification
-            threshold: 0.0004609324422037786
-            iq_angle: 0.9633164563672447
+            threshold: -3.757486808545842e-05
+            iq_angle: 5.601439237418444
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -482,8 +482,8 @@ characterization:
             sweetspot: 0.355
             filter: {}
             # parameters for single shot classification
-            threshold: 0.0
-            iq_angle: 0.0
+            threshold: 2.8477393027487066e-05
+            iq_angle: 5.9024078604509445
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -516,8 +516,8 @@ characterization:
             sweetspot: -0.45
             filter: {}
             # parameters for single shot classification
-            threshold: 0.0
-            iq_angle: 0.0
+            threshold: -0.0012829707530760102
+            iq_angle: 1.4306003480740943
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -533,8 +533,8 @@ characterization:
             sweetspot: -0.45
             filter: {}
             # parameters for single shot classification
-            threshold: 0.0
-            iq_angle: 0.0
+            threshold: -0.003446505933489241
+            iq_angle: 5.409004218529808
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -584,8 +584,8 @@ characterization:
             sweetspot: -0.45
             filter: {}
             # parameters for single shot classification
-            threshold: 0.0
-            iq_angle: 0.0
+            threshold: 0.0012671677931934782
+            iq_angle: 3.7320210483344445
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -601,8 +601,8 @@ characterization:
             sweetspot: -0.25
             filter: {}
             # parameters for single shot classification
-            threshold: 0.0
-            iq_angle: 0.0
+            threshold: -0.0003132693727923263
+            iq_angle: 0.22681102811241027
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
@@ -635,8 +635,8 @@ characterization:
             sweetspot: 0.3
             filter: {}
             # parameters for single shot classification
-            threshold: 0.0
-            iq_angle: 0.0
+            threshold: 0.001297920492778046
+            iq_angle: 6.129063207844705
             # required for integration weights (not sure if it should be here)
             rotation_angle: 0.0
             # required for mixers (not sure if it should be here)

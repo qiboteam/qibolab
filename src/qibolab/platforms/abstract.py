@@ -470,6 +470,16 @@ class AbstractPlatform(ABC):
         """Get frequency of the qubit readout local oscillator in Hz."""
 
     @abstractmethod
+    def get_lo_drive_shared(self, qubits):
+        """Get the local oscillators shared by the qubits.
+        
+        Args:
+            qubits (list): list of qubits.
+        Returns:
+            dict: dictionary with keys being the local oscillators names and values being a tuple with (local_oscillator, qubits: list)
+        """
+        
+    @abstractmethod
     def set_attenuation(self, qubit, att):
         """Set attenuation value. Usefeul for calibration routines such as punchout.
 
