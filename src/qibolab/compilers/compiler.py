@@ -87,6 +87,25 @@ class Compiler:
 
         return inner
 
+    def _compile_gate(self, gate, platform, sequence, virtual_z_phases, moment_start):
+        """Adds a single gate to the pulse sequence."""
+        rule = self[gate.__class__]
+        # get local sequence and phases for the current gate
+        gate_sequence, gate_phases = rule(gate, platform)
+
+        # update global pulse sequence
+        # determine the right start time based on the availability of the qubits involved
+        all_qubits = {*gate_sequence.qubits, *gate.qubits}
+        start = max(sequence.get_qubit_pulses(*all_qubits).finish, moment_start)
+        # shift start time and phase according to the global sequence
+        for pulse in gate_sequence:
+            pulse.start += start
+            if not isinstance(pulse, ReadoutPulse):
+                pulse.relative_phase += virtual_z_phases[pulse.qubit]
+            sequence.add(pulse)
+
+        return gate_sequence, gate_phases
+
     def compile(self, circuit, platform):
         """Transforms a circuit to pulse sequence.
 
@@ -107,29 +126,13 @@ class Compiler:
         virtual_z_phases = defaultdict(int)
 
         measurement_map = {}
-        # keep track of gates that were already added to avoid adding them twice
-        already_processed = set()
         # process circuit gates
         for moment in circuit.queue.moments:
             moment_start = sequence.finish
-            for gate in moment:
-                if gate is None or gate in already_processed:
-                    continue
-
-                rule = self[gate.__class__]
-                # get local sequence and phases for the current gate
-                gate_sequence, gate_phases = rule(gate, platform)
-
-                # update global pulse sequence
-                # determine the right start time based on the availability of the qubits involved
-                all_qubits = {*gate_sequence.qubits, *gate.qubits}
-                start = max(sequence.get_qubit_pulses(*all_qubits).finish, moment_start)
-                # shift start time and phase according to the global sequence
-                for pulse in gate_sequence:
-                    pulse.start += start
-                    if not isinstance(pulse, ReadoutPulse):
-                        pulse.relative_phase += virtual_z_phases[pulse.qubit]
-                    sequence.add(pulse)
+            for gate in set(filter(lambda x: x is not None, moment)):
+                gate_sequence, gate_phases = self._compile_gate(
+                    gate, platform, sequence, virtual_z_phases, moment_start
+                )
 
                 # update virtual Z phases
                 for qubit, phase in gate_phases.items():
@@ -139,7 +142,5 @@ class Compiler:
                 # properly map acquisition results to measurement gates
                 if isinstance(gate, gates.M):
                     measurement_map[gate] = gate_sequence
-
-                already_processed.add(gate)
 
         return sequence, measurement_map
