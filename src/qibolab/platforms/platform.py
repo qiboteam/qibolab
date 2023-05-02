@@ -139,8 +139,7 @@ class ExecutionParameters:
     """
 
     nshots: Optional[np.uint32] = 1024
-    relaxation_time: Optional[np.uint32] = 5e-9
+    relaxation_time: Optional[np.uint32] = 100e-9
     fast_reset: bool = False
-    sim_time: Optional[int] = None
-    acquisition_type: AcquisitionType = AcquisitionType.INTEGRATION
-    averaging_mode: AveragingMode = AveragingMode.CYCLIC
+    acquisition_type: AcquisitionType = AcquisitionType.DISCRIMINATION
+    averaging_mode: AveragingMode = AveragingMode.SINGLESHOT

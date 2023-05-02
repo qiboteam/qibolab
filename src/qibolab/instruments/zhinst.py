@@ -600,7 +600,8 @@ class Zurich(AbstractInstrument):
                     amplitude=pulse.zhsweeper,
                     phase=pulse.pulse.relative_phase,
                 )
-            elif partial_sweep.uid == "frequency" or partial_sweep.uid == "delay":
+            # elif partial_sweep.uid == "frequency" or partial_sweep.uid == "delay":
+            elif "frequency" in partial_sweep.uid or partial_sweep.uid == "delay":
                 exp.play(
                     signal=f"{section}{qubit.name}",
                     pulse=pulse.zhpulse,
@@ -610,7 +611,6 @@ class Zurich(AbstractInstrument):
     # TODO: If sweetspot != 0 you will send flux pulses for biasing
     # for the constant offset you need to use the platform
     # I use the first for sweeping flux, check if it works with the second althought is a line parameter.
-    # TODO: Conversion between flux pulse amplitude and voltage for offset
     def flux(self, exp, qubits):
         """qubit flux or qubit coupler flux for bias or pulses"""
         for qubit in qubits.values():
@@ -690,6 +690,7 @@ class Zurich(AbstractInstrument):
                                 + f"/runcards/{self.chip}/weights/integration_weights_optimization_qubit_{qubit.name}.npy"
                             )
                             if weights_file.is_file():
+                                print("I'm using optimized IW")
                                 # Optimal weights
                                 samples = np.load(
                                     str(qibolab_folder)
@@ -721,6 +722,14 @@ class Zurich(AbstractInstrument):
                                         amplitude=1,
                                     )
 
+                            measure_pulse_amplitude = None
+                            if isinstance(pulse, ZhSweeper):
+                                measure_pulse_amplitude = pulse.zhsweeper
+
+                            print(pulse.zhpulse)
+                            print(pulse.zhsweeper)
+
+                            # FIXME: Introduce ro_sweeper here
                             exp.measure(
                                 acquire_signal=f"acquire{qubit.name}",
                                 handle=f"sequence{qubit.name}",
@@ -731,7 +740,7 @@ class Zurich(AbstractInstrument):
                                 measure_pulse=pulse.zhpulse,
                                 measure_pulse_length=round(pulse.pulse.duration * 1e-9, 9),
                                 measure_pulse_parameters=None,  # sweep here ?
-                                measure_pulse_amplitude=None,
+                                measure_pulse_amplitude=measure_pulse_amplitude,
                                 acquire_delay=self.time_of_flight,
                                 reset_delay=relaxation_time,
                             )
@@ -744,7 +753,8 @@ class Zurich(AbstractInstrument):
             qubit = qubits[qubit_name]
             if not qubit.flux_coupler:
                 with exp.section(uid=f"fast_reset{qubit.name}", play_after=f"sequence_measure{qubit.name}"):
-                    with exp.match_local(handle=f"acquire{qubit.name}"):
+                    # with exp.match_local(handle=f"acquire{qubit.name}"):
+                    with exp.match_local(handle=f"sequence{qubit.name}"):
                         with exp.case(state=0):
                             pass
                         with exp.case(state=1):
@@ -796,10 +806,7 @@ class Zurich(AbstractInstrument):
         i = len(self.sweepers) - 1
         self.sweepers.remove(sweeper)
 
-        # sweeper = self.sweepers[-1]
-        # i = len(self.sweepers) - 1
-        # self.sweepers.remove(sweeper)
-
+        print(sweeper.parameter)
         parameter = None
 
         if sweeper.parameter is Parameter.frequency:
@@ -809,9 +816,12 @@ class Zurich(AbstractInstrument):
                     line = "drive"
                 elif pulse.type is PulseType.READOUT:
                     line = "measure"
+                zhsweeper = ZhSweeper(pulse, sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
+                zhsweeper.uid = f"frequency"  # TODO: Changing the name from "frequency" breaks it
+                # print(zhsweeper)
                 exp_calib[f"{line}{qubit}"] = lo.SignalCalibration(
                     oscillator=lo.Oscillator(
-                        frequency=ZhSweeper(pulse, sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper,
+                        frequency=zhsweeper,
                         modulation_type=lo.ModulationType.HARDWARE,
                     )
                 )

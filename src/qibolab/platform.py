@@ -197,11 +197,11 @@ def create_tii_IQM5q(runcard, descriptor=None):
     channels["L3-31"].power_range = 10
     # readout
     channels["L2-7"].ports = [("device_shfqc", "[QACHANNELS/0/OUTPUT]")]
-    channels["L2-7"].power_range = -30  # -15[0] -20[1] -15[2] #-15 MAX for LP
+    channels["L2-7"].power_range = -25
     # drive
     for i in range(5, 10):
         channels[f"L4-1{i}"].ports = [("device_shfqc", f"SGCHANNELS/{i-5}/OUTPUT")]
-        channels[f"L4-1{i}"].power_range = -5
+        channels[f"L4-1{i}"].power_range = -10
     channels[f"L4-17"].power_range = -20  # For coupler slim peak
 
     # flux qubits (CAREFUL WITH THIS !!!)
@@ -209,7 +209,7 @@ def create_tii_IQM5q(runcard, descriptor=None):
         channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-6}")]
         channels[f"L4-{i}"].offset = 0.0
     channels[f"L4-8"].offset = 0.0  # 0.2 #0.35
-    channels[f"L4-10"].offset = 0.03  # 0.03
+    channels[f"L4-10"].offset = 0.00  # 0.03
 
     # flux couplers (CAREFUL WITH THIS !!!)
     for i in range(11, 14):
@@ -217,7 +217,7 @@ def create_tii_IQM5q(runcard, descriptor=None):
         channels[f"L4-{i}"].offset = 0.0
 
     channels[f"L4-14"].ports = [("device_hdawg2", f"SIGOUTS/0")]
-    channels[f"L4-14"].offset = 0.0  # 0.2
+    channels[f"L4-14"].offset = 0.0
 
     # Instantiate Zh set of instruments[They work as one]
     from qibolab.instruments.dummy_oscillator import (
@@ -312,7 +312,7 @@ def create_tii_IQM5q(runcard, descriptor=None):
 
     # Set Dummy LO parameters (Map only the two by two oscillators)
     local_oscillators[0].frequency = 5_500_000_000  # 5_500_000
-    local_oscillators[1].frequency = 4_000_000_000  # For SG1 and SG2
+    local_oscillators[1].frequency = 4_200_000_000  # For SG1 and SG2
     local_oscillators[2].frequency = 4_600_000_000  # For SG3 and SG4
     local_oscillators[3].frequency = 4_000_000_000  # 4_200_000_000  # For SG5 and SG6
 
