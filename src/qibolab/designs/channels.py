@@ -55,7 +55,7 @@ class Channel:
     def local_oscillator(self):
         """LocalOscillator object connnected to this channel."""
         if self._local_oscillator is None:
-            raise_error(NotImplementedError, f"Channel {name} does not have a local oscillator")
+            raise_error(NotImplementedError, f"Channel {self.name} does not have a local oscillator")
         return self._local_oscillator
 
     @local_oscillator.setter
@@ -69,7 +69,7 @@ class Channel:
         """Bias offset for flux channels."""
         if self._bias is None:
             if self.qubit.flux is None:
-                raise_error(NotImplementedError, f"Channel {name} is not connected to a flux qubit")
+                raise_error(NotImplementedError, f"Channel {self.name} is not connected to a flux qubit")
             # operate qubits at their sweetspot unless otherwise stated
             check_max_bias(self.qubit.sweetspot, self.max_bias)
             return self.qubit.sweetspot
