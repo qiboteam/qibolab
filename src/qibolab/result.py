@@ -10,7 +10,7 @@ iq_record_dtype = np.dtype([("i", np.float64), ("q", np.float64)])
 class ExecutionResults:
     """Data structure to deal with the output of :func:`qibolab.platforms.abstract.AbstractPlatform.execute_pulse_sequence`"""
 
-    def __init__(self, i:np.ndarray | list, q:np.ndarray | list, state:np.ndarray | list = None):
+    def __init__(self, i: np.ndarray | list, q: np.ndarray | list, state: np.ndarray | list = None):
         if not isinstance(i, np.ndarray):
             i = np.array(i)
         if not isinstance(q, np.ndarray):
@@ -48,16 +48,16 @@ class ExecutionResults:
     @cached_property
     def state_0_probability(self):
         return self.probability(0) if self.state else None
-            
+
     @cached_property
     def state_1_probability(self):
         return self.probability(1) if self.state else None
 
     def probability(self, state=0):
         """Returns the statistical frequency of the specified state (0 or 1)."""
-        return np.count_nonzero(self.state == state)/len(self.state)
+        return np.count_nonzero(self.state == state) / len(self.state)
 
-    def __add__(self, data):# __add__(self, data:ExecutionResults) -> ExecutionResults
+    def __add__(self, data):  # __add__(self, data:ExecutionResults) -> ExecutionResults
         axis = 0 if len(data.i.shape) > 0 else None
         i = np.append(self.i, data.i, axis=axis)
         q = np.append(self.q, data.q, axis=axis)
@@ -86,7 +86,7 @@ class ExecutionResults:
     def average(self):
         """Perform average over i and q"""
         return AveragedResults(np.mean(self.i), np.mean(self.q))
-    
+
 
 class AveragedResults(ExecutionResults):
     """Data structure containing averages of ``ExecutionResults``."""
