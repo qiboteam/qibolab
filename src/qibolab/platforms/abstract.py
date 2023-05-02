@@ -212,7 +212,6 @@ class AbstractPlatform(ABC):
                         self.native_single_qubit_gates[qubit]["RX"][
                             "if_frequency"
                         ] = freq - self.get_lo_drive_frequency(qubit)
-                    self.qubits[qubit].readout_frequency = freq
                     self.qubits[qubit].drive_frequency = freq
                 elif par == "bare_resonator_frequency":
                     freq = int(value * 1e9)

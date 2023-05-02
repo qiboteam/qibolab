@@ -31,7 +31,7 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            readout_frequency: 5542428973
+            readout_frequency: 7371829002
             drive_frequency: 5542428973
             T1: 11653.795459601864
             T2: 0.0
