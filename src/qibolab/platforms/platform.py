@@ -1,3 +1,8 @@
+from dataclasses import dataclass
+from enum import Enum, auto
+from typing import Optional
+
+import numpy as np
 from qibo.config import raise_error
 
 from qibolab.platforms.abstract import AbstractPlatform
@@ -32,16 +37,41 @@ class DesignPlatform(AbstractPlatform):
         self.design.disconnect()
         self.is_connected = False
 
-    def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None, raw_adc=False):
-        if relaxation_time is None:
-            relaxation_time = self.relaxation_time
-        return self.design.play(self.qubits, sequence, nshots=nshots, relaxation_time=relaxation_time, raw_adc=raw_adc)
+    def execute_pulse_sequence(self, sequence, **kwargs):
+        options = ExecutionParameters(**kwargs)
 
-    def sweep(self, sequence, *sweepers, nshots=1024, relaxation_time=None, average=True):
-        if relaxation_time is None:
-            relaxation_time = self.relaxation_time
+        if options.relaxation_time is None:
+            options.relaxation_time = self.relaxation_time
+        if options.fast_reset:
+            options.fast_reset = {
+                qubit.name: self.create_RX_pulse(qubit=qubit.name, start=sequence.finish)
+                for qubit in self.qubits.values()
+                if not qubit.flux_coupler
+            }
+
+        return self.design.play(
+            self.qubits,
+            sequence,
+            options=options,
+        )
+
+    def sweep(self, sequence, *sweepers, **kwargs):
+        options = ExecutionParameters(**kwargs)
+
+        if options.relaxation_time is None:
+            options.relaxation_time = self.relaxation_time
+        if options.fast_reset:
+            options.fast_reset = {
+                qubit.name: self.create_RX_pulse(qubit=qubit.name, start=sequence.finish)
+                for qubit in self.qubits.values()
+                if not qubit.flux_coupler
+            }
+
         return self.design.sweep(
-            self.qubits, sequence, *sweepers, nshots=nshots, relaxation_time=relaxation_time, average=average
+            self.qubits,
+            sequence,
+            *sweepers,
+            options=options,
         )
 
     def set_lo_drive_frequency(self, qubit, freq):
@@ -85,3 +115,51 @@ class DesignPlatform(AbstractPlatform):
 
     def get_bias(self, qubit):
         return self.qubits[qubit].flux.bias
+
+
+class AcquisitionType(Enum):
+    """
+    Types of data acquisition from hardware.
+    
+    SPECTROSCOPY: Zurich Integration mode for RO frequency sweeps, 
+    INTEGRATION: Demodulate and integrate the waveform, 
+    RAW: Acquire the waveform as it is, 
+    DISCRIMINATION: Demodulate, integrate the waveform and discriminate among states based on the voltages
+   
+    """
+
+    RAW = auto()
+    INTEGRATION = auto()
+    DISCRIMINATION = auto()
+
+
+class AveragingMode(Enum):
+    """
+    Types of data averaging from hardware.
+    
+    CYLIC: Better averaging for noise, 
+    SINGLESHOT: False averaging, 
+    [SEQUENTIAL: Worse averaging for noise]
+    
+    """
+
+    CYCLIC = auto()
+    SINGLESHOT = auto()
+
+
+@dataclass
+class ExecutionParameters:
+    """Data structure to deal with execution parameters
+
+    :nshots: Number of shots per point on the experiment
+    :relaxation_time: Relaxation time for the qubit
+    :fast_reset: Enable or disable fast reset
+    :acquisition_type: Data acquisition mode
+    :averaging_mode: Data averaging mode
+    """
+
+    nshots: Optional[np.uint32] = 1024
+    relaxation_time: Optional[np.uint32] = 100e-9
+    fast_reset: bool = False
+    acquisition_type: AcquisitionType = AcquisitionType.DISCRIMINATION
+    averaging_mode: AveragingMode = AveragingMode.SINGLESHOT
