@@ -120,12 +120,12 @@ class DesignPlatform(AbstractPlatform):
 class AcquisitionType(Enum):
     """
     Types of data acquisition from hardware.
-    
-    SPECTROSCOPY: Zurich Integration mode for RO frequency sweeps, 
-    INTEGRATION: Demodulate and integrate the waveform, 
-    RAW: Acquire the waveform as it is, 
+
+    SPECTROSCOPY: Zurich Integration mode for RO frequency sweeps,
+    INTEGRATION: Demodulate and integrate the waveform,
+    RAW: Acquire the waveform as it is,
     DISCRIMINATION: Demodulate, integrate the waveform and discriminate among states based on the voltages
-   
+
     """
 
     RAW = auto()
@@ -136,11 +136,11 @@ class AcquisitionType(Enum):
 class AveragingMode(Enum):
     """
     Types of data averaging from hardware.
-    
-    CYLIC: Better averaging for noise, 
-    SINGLESHOT: False averaging, 
+
+    CYLIC: Better averaging for noise,
+    SINGLESHOT: False averaging,
     [SEQUENTIAL: Worse averaging for noise]
-    
+
     """
 
     CYCLIC = auto()
