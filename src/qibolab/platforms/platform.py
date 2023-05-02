@@ -120,12 +120,12 @@ class DesignPlatform(AbstractPlatform):
 class AcquisitionType(Enum):
     """
     Types of data acquisition from hardware.
-    
-    SPECTROSCOPY: Zurich Integration mode for RO frequency sweeps, 
-    INTEGRATION: Demodulate and integrate the waveform, 
-    RAW: Acquire the waveform as it is, 
+
+    SPECTROSCOPY: Zurich Integration mode for RO frequency sweeps,
+    INTEGRATION: Demodulate and integrate the waveform,
+    RAW: Acquire the waveform as it is,
     DISCRIMINATION: Demodulate, integrate the waveform and discriminate among states based on the voltages
-   
+
     """
 
     RAW = auto()
@@ -136,11 +136,11 @@ class AcquisitionType(Enum):
 class AveragingMode(Enum):
     """
     Types of data averaging from hardware.
-    
-    CYLIC: Better averaging for noise, 
-    SINGLESHOT: False averaging, 
+
+    CYLIC: Better averaging for noise,
+    SINGLESHOT: False averaging,
     [SEQUENTIAL: Worse averaging for noise]
-    
+
     """
 
     CYCLIC = auto()
@@ -152,14 +152,14 @@ class ExecutionParameters:
     """Data structure to deal with execution parameters
 
     :nshots: Number of shots per point on the experiment
-    :relaxation_time: Relaxation time for the qubit
+    :relaxation_time: Relaxation time for the qubit [s]
     :fast_reset: Enable or disable fast reset
     :acquisition_type: Data acquisition mode
     :averaging_mode: Data averaging mode
     """
 
-    nshots: Optional[np.uint32] = 1024
-    relaxation_time: Optional[np.uint32] = 100e-9
+    nshots: Optional[int] = 1024
+    relaxation_time: Optional[float] = None
     fast_reset: bool = False
     acquisition_type: AcquisitionType = AcquisitionType.DISCRIMINATION
     averaging_mode: AveragingMode = AveragingMode.SINGLESHOT
