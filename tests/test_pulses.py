@@ -23,7 +23,6 @@ from qibolab.pulses import (
     Waveform,
     eCap,
 )
-
 from qibolab.symbolic import intSymbolicExpression as se_int
 
 HERE = pathlib.Path(__file__).parent
