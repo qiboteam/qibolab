@@ -41,12 +41,6 @@ class DesignPlatform(AbstractPlatform):
 
         if options.relaxation_time is None:
             options.relaxation_time = self.relaxation_time
-        if options.fast_reset:
-            options.fast_reset = {
-                qubit.name: self.create_RX_pulse(qubit=qubit.name, start=sequence.finish)
-                for qubit in self.qubits.values()
-                if not qubit.flux_coupler
-            }
 
         return self.design.play(
             self.qubits,
@@ -59,12 +53,6 @@ class DesignPlatform(AbstractPlatform):
 
         if options.relaxation_time is None:
             options.relaxation_time = self.relaxation_time
-        if options.fast_reset:
-            options.fast_reset = {
-                qubit.name: self.create_RX_pulse(qubit=qubit.name, start=sequence.finish)
-                for qubit in self.qubits.values()
-                if not qubit.flux_coupler
-            }
 
         return self.design.sweep(
             self.qubits,
