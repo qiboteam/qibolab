@@ -242,8 +242,10 @@ class AbstractPlatform(ABC):
                     self.native_single_qubit_gates[qubit]["RX"]["duration"] = int(value)
                 elif par == "t2_spin_echo":
                     self.qubits[qubit].T2_spin_echo = int(value)
+                elif par == "readout_attenuation":
+                    self.qubits[qubit].readout.attenuation = int(value)
                 else:
-                    raise_error(ValueError, "Unknown parameter.")
+                    raise_error(ValueError, f"Unknown parameter {par}.")
 
     @abstractmethod
     def connect(self):
