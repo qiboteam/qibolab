@@ -84,8 +84,8 @@ class MultiqubitPlatform(AbstractPlatform):
                 return self.instruments[instrument].power
         raise_error(NotImplementedError, "No twpa instrument found in the platform. ")
 
-    def set_attenuation(self, qubit, att):
-        self.ro_port[qubit].attenuation = att
+    def set_attenuation(self, qubit: Qubit, att):
+        self.ro_port[qubit.name].attenuation = att
 
     def set_gain(self, qubit, gain):
         self.qd_port[qubit].gain = gain
@@ -96,8 +96,8 @@ class MultiqubitPlatform(AbstractPlatform):
         elif qubit.name in self.qfm:
             self.qf_port[qubit.name].offset = bias
 
-    def get_attenuation(self, qubit):
-        return self.ro_port[qubit].attenuation
+    def get_attenuation(self, qubit: Qubit):
+        return self.ro_port[qubit.name].attenuation
 
     def get_bias(self, qubit: Qubit):
         if qubit.name in self.qbm:
@@ -257,7 +257,6 @@ class MultiqubitPlatform(AbstractPlatform):
     def sweep(self, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
         results = {}
         sweeper_pulses = {}
-
         # create copy of the sequence
         copy_sequence = copy.deepcopy(sequence)
         map_original_shifted = {pulse: pulse.serial for pulse in copy.deepcopy(copy_sequence).ro_pulses}
@@ -300,8 +299,7 @@ class MultiqubitPlatform(AbstractPlatform):
         sweeper = sweepers[0]
 
         # store values before starting to sweep
-        if sweeper.pulses is not None:
-            original_value = self._save_original_value(sweeper, sweeper_pulses)
+        original_value = self._save_original_value(sweeper, sweeper_pulses)
 
         # perform sweep recursively
         for value in sweeper.values:
@@ -323,7 +321,6 @@ class MultiqubitPlatform(AbstractPlatform):
             else:
                 new_sequence = copy.deepcopy(sequence)
                 result = self.execute_pulse_sequence(new_sequence, nshots)
-
                 # colllect result and append to original pulse
                 for original_pulse, new_serial in map_original_shifted.items():
                     acquisition = result[new_serial].average if average else result[new_serial]
@@ -336,38 +333,43 @@ class MultiqubitPlatform(AbstractPlatform):
                         results[original_pulse.qubit] = copy.copy(results[original_pulse.serial])
 
         # restore initial value of the pulse
-        if sweeper.pulses is not None:
-            self._restore_initial_value(sweeper, sweeper_pulses, original_value)
+        self._restore_initial_value(sweeper, sweeper_pulses, original_value)
 
     def _save_original_value(self, sweeper, sweeper_pulses):
         """Helper method for _sweep_recursion"""
         original_value = {}
-        pulses = sweeper_pulses[sweeper.parameter]
         # save original value of the parameter swept
-        for pulse in pulses:
-            if sweeper.parameter is Parameter.attenuation:
-                original_value[pulse] = self.get_attenuation(pulses[pulse].qubit)
-            elif sweeper.parameter is Parameter.gain:
-                original_value[pulse] = self.get_gain(pulses[pulse].qubit)
-            elif sweeper.parameter is Parameter.bias:
-                original_value[pulse] = self.get_bias(self.qubits[pulses[pulse].qubit])
-            else:
+        if sweeper.pulses is not None:
+            pulses = sweeper_pulses[sweeper.parameter]
+            for pulse in pulses:
                 original_value[pulse] = getattr(pulses[pulse], sweeper.parameter.name)
+
+        if sweeper.qubits is not None:
+            for qubit in sweeper.qubits:
+                if sweeper.parameter is Parameter.attenuation:
+                    original_value[qubit.name] = self.get_attenuation(qubit)
+                elif sweeper.parameter is Parameter.gain:
+                    original_value[qubit.name] = self.get_gain(qubit)
+                elif sweeper.parameter is Parameter.bias:
+                    original_value[qubit.name] = self.get_bias(qubit)
 
         return original_value
 
     def _restore_initial_value(self, sweeper, sweeper_pulses, original_value):
         """Helper method for _sweep_recursion"""
-        pulses = sweeper_pulses[sweeper.parameter]
-        for pulse in pulses:
-            if sweeper.parameter is Parameter.attenuation:
-                self.set_attenuation(pulses[pulse].qubit, original_value[pulse])
-            elif sweeper.parameter is Parameter.gain:
-                self.set_gain(pulses[pulse].qubit, original_value[pulse])
-            elif sweeper.parameter is Parameter.bias:
-                self.set_bias(self.qubits[pulses[pulse].qubit], original_value[pulse])
-            else:
+        if sweeper.pulses is not None:
+            pulses = sweeper_pulses[sweeper.parameter]
+            for pulse in pulses:
                 setattr(pulses[pulse], sweeper.parameter.name, original_value[pulse])
+
+        if sweeper.qubits is not None:
+            for qubit in sweeper.qubits:
+                if sweeper.parameter is Parameter.attenuation:
+                    self.set_attenuation(qubit, original_value[qubit.name])
+                elif sweeper.parameter is Parameter.gain:
+                    self.set_gain(qubit, original_value[qubit.name])
+                elif sweeper.parameter is Parameter.bias:
+                    self.set_bias(qubit, original_value[qubit.name])
 
     def _update_pulse_sequence_parameters(
         self, sweeper, sweeper_pulses, original_sequence, map_original_shifted, value
