@@ -43,7 +43,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.004
-                frequency: 7266573583.000 
+                frequency: 7.266974e+9 
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -60,7 +60,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.009
-                frequency: 7520855035.000 
+                frequency: 7.521205e+9 
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -77,7 +77,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.00483
-                frequency: 7118007000.000 
+                frequency: 7118457000.000 
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -86,7 +86,7 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.1
-                frequency: 6.1264e+9
+                frequency: 6081000000
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -145,7 +145,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.007
-                frequency: 7135128000.000 
+                frequency: 7.135578e+9 
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -196,7 +196,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.00635
-                frequency: 7598509000.000 
+                frequency: 7.598409e+9
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -213,7 +213,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.003775
-                frequency: 7063590000.000 
+                frequency: 7.06439e+9 
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -247,7 +247,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.0065
-                frequency: 7626554644.000 
+                frequency: 7.626692e+9
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -281,7 +281,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.005
-                frequency: 7_831_715_006
+                frequency: 7_833_055_006
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -411,7 +411,7 @@ characterization:
             drive_frequency: 5.06217e+9
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.45
+            sweetspot:   -0.5  
             filter: {}
             # parameters for single shot classification
             threshold: 0.000288842361133913
@@ -428,7 +428,7 @@ characterization:
             drive_frequency: 5.8513e+9
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.446
+            sweetspot:   -0.46
             filter: {}
             # parameters for single shot classification
             threshold: -0.0001181716630732158
@@ -445,7 +445,7 @@ characterization:
             drive_frequency: 5.991311e+9
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.31
+            sweetspot:   0.24  
             filter: {}
             # parameters for single shot classification
             threshold:  3.774117392424683e-05
@@ -462,7 +462,7 @@ characterization:
             drive_frequency: 5.239805e+9
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.015
+            sweetspot:   -0.005
             filter: {}
             # parameters for single shot classification
             threshold: -3.757486808545842e-05
@@ -479,7 +479,7 @@ characterization:
             drive_frequency: 6081000000
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.355
+            sweetspot:   0.4  
             filter: {}
             # parameters for single shot classification
             threshold: 2.8477393027487066e-05
@@ -496,7 +496,7 @@ characterization:
             drive_frequency: 6.860000E+09
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.495
+            sweetspot:   0.495 
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
@@ -513,7 +513,7 @@ characterization:
             drive_frequency: 5.057380E+09
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.45
+            sweetspot:   -0.38 
             filter: {}
             # parameters for single shot classification
             threshold: -0.0012829707530760102
@@ -530,7 +530,7 @@ characterization:
             drive_frequency: 6.017959E+09
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.45
+            sweetspot:   -0.47 
             filter: {}
             # parameters for single shot classification
             threshold: -0.003446505933489241
@@ -547,7 +547,7 @@ characterization:
             drive_frequency: 6.058000E+09
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.45
+            sweetspot:   0.455 
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
@@ -564,7 +564,7 @@ characterization:
             drive_frequency: 6.120616E+09
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.45
+            sweetspot:   0.304 
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
@@ -581,7 +581,7 @@ characterization:
             drive_frequency: 6.101000E+09
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.45
+            sweetspot:   -0.5
             filter: {}
             # parameters for single shot classification
             threshold: 0.0012671677931934782
@@ -598,7 +598,7 @@ characterization:
             drive_frequency: 5.405000E+09
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.25
+            sweetspot:   -0.375 
             filter: {}
             # parameters for single shot classification
             threshold: -0.0003132693727923263
@@ -615,7 +615,7 @@ characterization:
             drive_frequency: 6.084000E+09
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.45
+            sweetspot:   -0.49 
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
@@ -632,7 +632,7 @@ characterization:
             drive_frequency: 5.803000E+09
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.3
+            sweetspot:   0.225 
             filter: {}
             # parameters for single shot classification
             threshold: 0.001297920492778046
@@ -649,7 +649,7 @@ characterization:
             drive_frequency: 5.388000E+09
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.07
+            sweetspot:   -0.005
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
@@ -666,7 +666,7 @@ characterization:
             drive_frequency: 5.822600E+09
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.45
+            sweetspot:   -0.45 
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
