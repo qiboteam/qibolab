@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from qm import qua
 
-from qibolab.instruments.qm import QMOPX, QMPulse, QMSequence
+from qibolab.instruments.qm import QMOPX, QMPulse, Sequence
 from qibolab.paths import qibolab_folder
 from qibolab.platform import create_tii_qw5q_gold
 from qibolab.pulses import FluxPulse, Pulse, ReadoutPulse, Rectangular
@@ -23,26 +23,76 @@ def test_qmpulse_declare_output():
     qmpulse = QMPulse(pulse)
     with qua.program() as _:
         qmpulse.declare_output(0.1, 0.2)
-    assert qmpulse.threshold == 0.1
-    assert qmpulse.cos == np.cos(0.2)
-    assert qmpulse.sin == np.sin(0.2)
-    assert isinstance(qmpulse.I, qua._dsl._Variable)
-    assert isinstance(qmpulse.I_st, qua._dsl._ResultSource)
-    assert isinstance(qmpulse.shot, qua._dsl._Variable)
-    assert isinstance(qmpulse.shots, qua._dsl._ResultSource)
+    acquisition = qmpulse.acquisition
+    assert acquisition.threshold == 0.1
+    assert acquisition.cos == np.cos(0.2)
+    assert acquisition.sin == np.sin(0.2)
+    assert isinstance(acquisition.I, qua._dsl._Variable)
+    assert isinstance(acquisition.I_stream, qua._dsl._ResultSource)
+    assert isinstance(acquisition.shot, qua._dsl._Variable)
+    assert isinstance(acquisition.shots, qua._dsl._ResultSource)
 
 
 def test_qmsequence():
     qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
     ro_pulse = ReadoutPulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch1", qubit=0)
-    qmsequence = QMSequence()
+    qmsequence = Sequence()
     with pytest.raises(TypeError):
         qmsequence.add("test")
     qmsequence.add(qd_pulse)
     qmsequence.add(ro_pulse)
     assert len(qmsequence.pulse_to_qmpulse) == 2
-    assert len(qmsequence) == 2
+    assert len(qmsequence.qmpulses) == 2
     assert len(qmsequence.ro_pulses) == 1
+
+
+def test_qmpulse_previous_and_next():
+    nqubits = 5
+    qmsequence = Sequence()
+    qd_qmpulses = []
+    ro_qmpulses = []
+    for qubit in range(nqubits):
+        qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), f"drive{qubit}", qubit=qubit)
+        qd_qmpulses.append(qmsequence.add(qd_pulse))
+    for qubit in range(nqubits):
+        ro_pulse = ReadoutPulse(40, 100, 0.05, int(3e9), 0.0, Rectangular(), f"readout{qubit}", qubit=qubit)
+        ro_qmpulses.append(qmsequence.add(ro_pulse))
+
+    for qd_qmpulse, ro_qmpulse in zip(qd_qmpulses, ro_qmpulses):
+        assert len(qd_qmpulse.next) == 1
+        assert len(ro_qmpulse.next) == 0
+
+
+def test_qmpulse_previous_and_next_flux():
+    y90_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), f"drive1", qubit=1)
+    x_pulse_start = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), f"drive2", qubit=2)
+    flux_pulse = FluxPulse(
+        start=y90_pulse.se_finish,
+        duration=30,
+        amplitude=0.055,
+        shape=Rectangular(),
+        channel="flux2",
+        qubit=2,
+    )
+    theta_pulse = Pulse(70, 40, 0.05, int(3e9), 0.0, Rectangular(), f"drive1", qubit=1)
+    x_pulse_end = Pulse(70, 40, 0.05, int(3e9), 0.0, Rectangular(), f"drive2", qubit=2)
+
+    measure_lowfreq = ReadoutPulse(110, 100, 0.05, int(3e9), 0.0, Rectangular(), "readout1", qubit=1)
+    measure_highfreq = ReadoutPulse(110, 100, 0.05, int(3e9), 0.0, Rectangular(), "readout2", qubit=2)
+
+    qmsequence = Sequence()
+    drive11 = qmsequence.add(y90_pulse)
+    drive21 = qmsequence.add(x_pulse_start)
+    flux2 = qmsequence.add(flux_pulse)
+    drive12 = qmsequence.add(theta_pulse)
+    drive22 = qmsequence.add(x_pulse_end)
+    measure1 = qmsequence.add(measure_lowfreq)
+    measure2 = qmsequence.add(measure_highfreq)
+    assert drive11.next == {drive12}
+    assert drive21.next == {flux2}
+    assert flux2.next == {drive22}
+    assert drive12.next == {measure1}
+    assert drive22.next == {measure2}
 
 
 # TODO: Test connect/disconnect
