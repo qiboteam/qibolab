@@ -29,10 +29,19 @@ class SymbolicExpression:
         while len(SymbolicExpression.instances) > 0:
             symbol = list(SymbolicExpression.instances)[n]
             item = SymbolicExpression.instances[symbol]
-            if sys.getrefcount(item) < 4:
-                del SymbolicExpression.instances[symbol]
+
+            external_ref_count = sys.getrefcount(item)
+            import re
+
+            internal_ref_count = 0
+            for se in list(SymbolicExpression.instances):
+                if re.search(rf"\b{re.escape(symbol)}\b", SymbolicExpression.instances[se].expression):
+                    internal_ref_count += 1
+
+            if not internal_ref_count and external_ref_count < 4:
                 # DEBUG SymbolicExpression Garbage Collector Activity
-                # print(f'deleted {symbol}')
+                # print(f'deleting {symbol} with refcount {external_ref_count}')
+                del SymbolicExpression.instances[symbol]
                 num_items = len(SymbolicExpression.instances)
                 n = 0
             else:
