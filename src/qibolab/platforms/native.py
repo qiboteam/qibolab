@@ -14,6 +14,7 @@ class NativePulse:
     """Container with parameters required to generate a pulse implementing a native gate."""
 
     name: str
+    """Name of the gate that the pulse implements."""
     duration: int
     amplitude: float
     shape: str
@@ -23,8 +24,9 @@ class NativePulse:
     relative_start: int = 0
     """Relative start is relevant for two-qubit gate operations which correspond to a pulse sequence."""
 
-    # TODO: Remove these attributes if they are not useful, as they are not used anywhere
+    # used for qblox
     if_frequency: int = 0
+    # TODO: Note sure if the following parameters are useful to be in the runcard
     start: int = 0
     phase: float = 0.0
 

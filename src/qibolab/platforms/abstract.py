@@ -91,6 +91,15 @@ class Qubit:
 
 @dataclass
 class QubitPair:
+    """Data structure for holding the native two-qubit gates acting on a pair of qubits.
+
+    This is needed for symmetry to the single-qubit gates which are storred in the
+    :class:`qibolab.platforms.abstract.Qubit`.
+
+    Qubits are sorted according to ``qubit.name`` such that
+    ``qubit1.name < qubit2.name``.
+    """
+
     qubit1: Qubit
     qubit2: Qubit
     native_gates: TwoQubitNatives = field(default_factory=TwoQubitNatives)
