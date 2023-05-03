@@ -175,8 +175,8 @@ class AbstractPlatform(ABC):
 
         # native gates
         settings["native_gates"] = {}
-        settings["native_gates"]["single_qubit"] = self.native_single_qubit_gates
-        settings["native_gates"]["two_qubits"] = self.native_two_qubit_gates
+        settings["native_gates"]["single_qubit"] = self.single_qubit_natives#native_single_qubit_gates
+        settings["native_gates"]["two_qubits"] = self.two_qubit_natives#native_two_qubit_gates
 
         settings["characterization"] = {}
         settings["characterization"]["single_qubit"] = {}
