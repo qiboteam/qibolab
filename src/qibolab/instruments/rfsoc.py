@@ -180,6 +180,8 @@ class TII_RFSOC4x2(AbstractInstrument):
                     break
                 received.extend(tmp)
         results = pickle.loads(received)
+        if isinstance(results, Exception):
+            raise RuntimeError(f"An error occured on the server side: {results}")
         return results["i"], results["q"]
 
     def play(
@@ -229,7 +231,7 @@ class TII_RFSOC4x2(AbstractInstrument):
                 serial = ro_pulse.serial
 
                 if average:
-                    results[ro_pulse.qubit] = results[serial] = AveragedResults(i_pulse, q_pulse)
+                    results[ro_pulse.qubit] = results[serial] = AveragedResults.from_components(i_pulse, q_pulse)
                 else:
                     shots = self.classify_shots(i_pulse, q_pulse, qubits[ro_pulse.qubit])
                     results[ro_pulse.qubit] = results[serial] = ExecutionResults.from_components(
@@ -241,9 +243,9 @@ class TII_RFSOC4x2(AbstractInstrument):
     def classify_shots(self, i_values: List[float], q_values: List[float], qubit: Qubit) -> List[float]:
         """Classify IQ values using qubit threshold and rotation_angle if available in runcard"""
 
-        if qubit.rotation_angle is None or qubit.threshold is None:
+        if qubit.iq_angle is None or qubit.threshold is None:
             return None
-        angle = np.radians(qubit.rotation_angle)
+        angle = qubit.iq_angle
         threshold = qubit.threshold
 
         rotated = np.cos(angle) * np.array(i_values) - np.sin(angle) * np.array(q_values)
@@ -426,7 +428,9 @@ class TII_RFSOC4x2(AbstractInstrument):
                     q_pulse = np.array(totq[k][i][j])
 
                     if average:
-                        results[sequence.ro_pulses[i].qubit] = results[serial] = AveragedResults(i_pulse, q_pulse)
+                        results[sequence.ro_pulses[i].qubit] = results[serial] = AveragedResults.from_components(
+                            i_pulse, q_pulse
+                        )
                     else:
                         qubit = qubits[sequence.ro_pulses[i].qubit]
                         shots = self.classify_shots(i_pulse, q_pulse, qubit)
@@ -475,7 +479,7 @@ class TII_RFSOC4x2(AbstractInstrument):
             if sweeper.parameter == Parameter.frequency:
                 sweeper.values += sweeper.pulses[0].frequency
             elif sweeper.parameter == Parameter.amplitude:
-                continue  # amp does not need modification, here for clarity
+                sweeper.values *= sweeper.pulses[0].amplitude
 
         sweepsequence = sequence.copy()
 
@@ -486,6 +490,6 @@ class TII_RFSOC4x2(AbstractInstrument):
             if sweeper.parameter == Parameter.frequency:
                 sweeper.values -= sweeper.pulses[0].frequency
             elif sweeper.parameter == Parameter.amplitude:
-                continue
+                sweeper.values /= sweeper.pulses[0].amplitude
 
         return results

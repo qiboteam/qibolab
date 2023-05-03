@@ -33,22 +33,22 @@ def test_execution_result_properties():
 
 
 @pytest.mark.parametrize("state", [0, 1])
-def test_serial_probability(state):
-    """Testing serial_probability method"""
+def test_raw_probability(state):
+    """Testing raw_probability method"""
     results = generate_random_result(5)
     if state == 0:
         target_dict = {"probability": results.ground_state_probability}
     else:
         target_dict = {"probability": 1 - results.ground_state_probability}
 
-    assert target_dict == results.serial_probability(state=state)
+    assert target_dict == results.raw_probability(state=state)
 
 
 @pytest.mark.parametrize("average", [True, False])
-def test_serial(average):
+def test_raw(average):
     """Testing to_dict method"""
     results = generate_random_result(5)
-    output = results.serial
+    output = results.raw
     if not average:
         target_dict = {
             "MSR[V]": results.measurement,
@@ -67,7 +67,7 @@ def test_serial(average):
             "q[V]": avg.q,
             "phase[rad]": np.angle(avg.i + 1.0j * avg.q),
         }
-        assert avg.serial == target_dict
+        assert avg.raw == target_dict
 
 
 def test_results_add():
@@ -101,7 +101,7 @@ def test_averaged_results_add():
 def test_to_dict_averaged_results():
     """Testing to_dict method"""
     results = generate_random_avg_result(5)
-    output = results.serial
+    output = results.raw
 
     target_dict = {
         "MSR[V]": np.sqrt(results.i**2 + results.q**2),
