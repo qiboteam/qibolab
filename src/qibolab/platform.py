@@ -159,7 +159,7 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
     # Configure local oscillator's frequency and power
     for lo in local_oscillators:
         if lo.name == "LO_01":
-            lo.frequency = 6.1e9
+            lo.frequency = 6.15e9
             lo.power = 21
         elif lo.name == "LO_04":
             lo.frequency = 7.1e9

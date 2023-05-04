@@ -17,7 +17,7 @@ native_gates:
         A1:
             RX:
                 duration: 40
-                amplitude: 0.08312499999999999
+                amplitude: 0.09060625
                 frequency: 5063039565
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -35,7 +35,7 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.29062970832
-                frequency: 5829887810
+                frequency: 5.846888e+9
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -51,8 +51,8 @@ native_gates:
         A3:
             RX:
                 duration: 40
-                amplitude: 0.36094036797
-                frequency: 5961729103
+                amplitude: 0.3212369274933
+                frequency: 5.992729e+9
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -68,8 +68,8 @@ native_gates:
         A4:
             RX:
                 duration: 40
-                amplitude: 0.16151942278015818
-                frequency: 5228007462
+                amplitude: 0.17121058814696768
+                frequency: 5.239007e+9
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -187,8 +187,8 @@ native_gates:
         B5:
             RX:
                 duration: 40
-                amplitude: 0.091
-                frequency: 6081400376
+                amplitude: 0.101920
+                frequency: 6.1004e+9
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -204,8 +204,8 @@ native_gates:
         C1:
             RX:
                 duration: 40
-                amplitude: 0.1062
-                frequency: 5418770995
+                amplitude: 0.118944
+                frequency: 5.43771e+9
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -239,7 +239,7 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.2
-                frequency: 5874113935
+                frequency: 5.889114e+9
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -411,7 +411,7 @@ characterization:
             drive_frequency: 5.06217e+9
             T1: 0.0
             T2: 0.0
-            sweetspot:   -0.5  
+            sweetspot:   0 
             filter: {}
             # parameters for single shot classification
             threshold: 0.000288842361133913
@@ -428,7 +428,7 @@ characterization:
             drive_frequency: 5.8513e+9
             T1: 0.0
             T2: 0.0
-            sweetspot:   -0.46
+            sweetspot:   -0.47
             filter: {}
             # parameters for single shot classification
             threshold: -0.0001181716630732158
@@ -445,7 +445,7 @@ characterization:
             drive_frequency: 5.991311e+9
             T1: 0.0
             T2: 0.0
-            sweetspot:   0.24  
+            sweetspot:   0.245  
             filter: {}
             # parameters for single shot classification
             threshold:  3.774117392424683e-05
@@ -462,7 +462,7 @@ characterization:
             drive_frequency: 5.239805e+9
             T1: 0.0
             T2: 0.0
-            sweetspot:   -0.005
+            sweetspot:   0.005
             filter: {}
             # parameters for single shot classification
             threshold: -3.757486808545842e-05
@@ -496,7 +496,7 @@ characterization:
             drive_frequency: 6.860000E+09
             T1: 0.0
             T2: 0.0
-            sweetspot:   0.495 
+            sweetspot:   0 
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
@@ -513,7 +513,7 @@ characterization:
             drive_frequency: 5.057380E+09
             T1: 0.0
             T2: 0.0
-            sweetspot:   -0.38 
+            sweetspot:   0
             filter: {}
             # parameters for single shot classification
             threshold: -0.0012829707530760102
@@ -530,7 +530,7 @@ characterization:
             drive_frequency: 6.017959E+09
             T1: 0.0
             T2: 0.0
-            sweetspot:   -0.47 
+            sweetspot:   0 
             filter: {}
             # parameters for single shot classification
             threshold: -0.003446505933489241
@@ -547,7 +547,7 @@ characterization:
             drive_frequency: 6.058000E+09
             T1: 0.0
             T2: 0.0
-            sweetspot:   0.455 
+            sweetspot:  0
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
@@ -564,7 +564,7 @@ characterization:
             drive_frequency: 6.120616E+09
             T1: 0.0
             T2: 0.0
-            sweetspot:   0.304 
+            sweetspot:   0
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
@@ -581,7 +581,7 @@ characterization:
             drive_frequency: 6.101000E+09
             T1: 0.0
             T2: 0.0
-            sweetspot:   -0.5
+            sweetspot:   -0.48
             filter: {}
             # parameters for single shot classification
             threshold: 0.0012671677931934782
@@ -598,7 +598,7 @@ characterization:
             drive_frequency: 5.405000E+09
             T1: 0.0
             T2: 0.0
-            sweetspot:   -0.375 
+            sweetspot:   -0.355 
             filter: {}
             # parameters for single shot classification
             threshold: -0.0003132693727923263
@@ -632,7 +632,7 @@ characterization:
             drive_frequency: 5.803000E+09
             T1: 0.0
             T2: 0.0
-            sweetspot:   0.225 
+            sweetspot:   0.23
             filter: {}
             # parameters for single shot classification
             threshold: 0.001297920492778046
@@ -649,7 +649,7 @@ characterization:
             drive_frequency: 5.388000E+09
             T1: 0.0
             T2: 0.0
-            sweetspot:   -0.005
+            sweetspot:   0
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
@@ -666,7 +666,7 @@ characterization:
             drive_frequency: 5.822600E+09
             T1: 0.0
             T2: 0.0
-            sweetspot:   -0.45 
+            sweetspot:   0
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
