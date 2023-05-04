@@ -72,10 +72,10 @@ def create_qick_sweeps(sweepers, sequence, qubits):
                     steps.append((sweeper.values[1] - sweeper.values[0]) * pulse.amplitude)
         elif is_bias:
             for qubit in sweeper.qubits:
-                starts.append(sweeper.values[0])
+                starts.append(sweeper.values[0] + qubits[qubit].flux.bias)
                 steps.append(sweeper.values[1] - sweeper.values[0])
 
-            if any(start + steps[idx] * len(sweeper.values) > 1 for idx, start in enumerate(starts)):
+            if any(start + steps[idx] * (len(sweeper.values) - 1) > 1 for idx, start in enumerate(starts)):
                 raise ValueError("Sweeper amplitude is set to reach values higher than 1")
 
         indexes = []
