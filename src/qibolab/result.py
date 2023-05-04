@@ -103,6 +103,7 @@ class RawWaveformResults(IQResults):
     :func:`qibolab.platforms.abstract.AbstractPlatform.sweep`
 
     Associated with AcquisitionType.RAW and AveragingMode.SINGLESHOT
+    may also be used to store the integration weights ?
     """
 
 
@@ -188,7 +189,6 @@ class StateResults:
         return AveragedStateResults(average, std=std)
 
 
-# FIXME: Here I take the states from StateResult that are typed to be ints but those are not what would you do ?
 class AveragedStateResults(StateResults):
     """
     Data structure to deal with the output of
