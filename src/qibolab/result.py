@@ -12,56 +12,52 @@ class IQNotEqualLenght(Exception):
     def __init__(self, message="is_ and qs_ must have the same size"):
         super().__init__(message)
 
-
 @dataclass
 class IQResults:
     """Data structure to deal with the output of :func:`qibolab.platforms.abstract.AbstractPlatform.execute_pulse_sequence` and :func:`qibolab.platforms.abstract.AbstractPlatform.sweep`"""
 
-    def __init__(self, i: np.ndarray, q: np.ndarray):
-        self.voltage: npt.NDArray[iq_typing] = np.recarray(i.shape, dtype=iq_typing)
-        self.voltage["i"] = i
+    def __init__(self, i: np.ndarray, q: np.ndarray, shots = None):
+        self.voltage: npt.NDArray[iq_typing] = (
+            np.recarray((i.shape[0]//shots, shots), dtype=iq_typing) if shots else np.recarray(i.shape, dtype=iq_typing)
+        )
+        self.voltage["i"] = (
+            i.reshape(i.shape[0] // shots, shots) if shots else i
+        )
         try:
-            self.voltage["q"] = q
+            self.voltage["q"] = (
+            q.reshape(q.shape[0] // shots, shots) if shots else q
+        )
         except:
-            # FIXME : the two errors display
+            # FIXME: the two errors display
             raise IQNotEqualLenght
-
-    @property
-    def i(self):
-        return self.voltage.i
-
-    @property
-    def q(self):
-        return self.voltage.q
 
     @cached_property
     def lenght(self):
-        return len(self.states[0])
+        return len(self.voltage.i[0])
 
     @cached_property
     def magnitude(self):
         """Signal magnitude in volts."""
-        return np.sqrt(self.i**2 + self.q**2)
-
+        return np.sqrt(self.voltage.i**2 + self.voltage.q**2)
+    
     @cached_property
     def phase(self):
         """Signal phase in radians."""
-        phase = np.angle(self.i + 1.0j * self.q)
-        return phase
+        return np.angle(self.voltage.i + 1.0j * self.voltage.q)
 
     # We are asumming results from the same experiment so same number of shots
     def __add__(self, data):  # __add__(self, data:IQResults) -> IQResults
-        axis = 0 if len(data.i.shape) > 0 else None
-        i = np.append(self.i, data.i, axis=axis)
-        q = np.append(self.q, data.q, axis=axis)
+        axis = 0
+        i = np.append(self.voltage.i, data.voltage.i, axis=axis)
+        q = np.append(self.voltage.q, data.voltage.q, axis=axis)
         return IQResults(i, q)
 
     def serialize(self):
         """Serialize as a dictionary."""
         serialized_dict = {
             "magnitude[V]": self.magnitude,
-            "i[V]": self.i,
-            "q[V]": self.q,
+            "i[V]": self.voltage.i,
+            "q[V]": self.voltage.q,
             "phase[rad]": self.phase,
         }
         return serialized_dict
@@ -69,21 +65,21 @@ class IQResults:
     @property
     def average(self):
         """Perform average over i and q"""
-        return AveragedIQResults(np.mean(self.i), np.mean(self.q))
-
-    @property
-    def std(self):
-        """Perform standard deviation over i and q"""
-        return AveragedIQResults(np.std(self.i), np.std(self.q))
-
+        average_i, average_q = np.array([]), np.array([])
+        std_i, std_q = np.array([]), np.array([])
+        for is_, qs_ in zip(self.voltage.i, self.voltage.q):
+            average_i, average_q  = np.append(average_i, np.mean(is_)), np.append(average_q, np.mean(qs_))
+            std_i, std_q = np.append(std_i, np.std(is_)), np.append(std_q, np.std(qs_))
+        return AveragedIQResults(average_i, average_q, std_i = std_i, std_q = std_q)
 
 # FIXME: Here I take the states from IQResult that are typed to be ints but those are not what would you do ?
 class AveragedIQResults(IQResults):
     """Data structure containing averages of ``IQResults``."""
-
-    def __init__(self, i: np.ndarray, q: np.ndarray, shots=None, std=None):
+    def __init__(self, i: np.ndarray, q: np.ndarray, shots=None, std_i=None, std_q=None):
         IQResults.__init__(self, i, q, shots)
-        self.std: Optional[npt.NDArray[np.float64]] = std
+        self.std: Optional[npt.NDArray[np.float64]] = np.recarray(i.shape, dtype=iq_typing)
+        self.std["i"] = std_i
+        self.std["q"] = std_q
 
 
 # FIXME: If probabilities are out of range the error is displeyed weirdly
