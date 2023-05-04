@@ -237,18 +237,18 @@ def create_tii_zcu111(runcard, address=None):
     # feedback
     channels |= ChannelMap.from_names("L2-4-RO_1")  # adc1
     # drive
-    channels |= ChannelMap.from_names("L4-28_qd")  # dac4
+    channels |= ChannelMap.from_names("L4-30_qd")  # dac4
     # Flux
-    channels |= ChannelMap.from_names("L1-21_fl")  # dac0
+    channels |= ChannelMap.from_names("L1-23_fl")  # dac0
     # QUBIT 2 # D5
     # readout
     channels |= ChannelMap.from_names("L3-30_ro")
     # feedback
     channels |= ChannelMap.from_names("L2-4-RO_2")
     # drive
-    channels |= ChannelMap.from_names("L4-32_qd")
+    channels |= ChannelMap.from_names("L4-31_qd")
     # Flux
-    channels |= ChannelMap.from_names("L1-25_fl")
+    channels |= ChannelMap.from_names("L1-24_fl")
 
     # Map controllers to qubit channels (HARDCODED)
     # Qubit 0
@@ -264,20 +264,20 @@ def create_tii_zcu111(runcard, address=None):
     # Readout
     channels["L3-30_ro"].ports = [("dac3", 6)]
     # feedback
-    channels["L2-4-RO_1"].ports = [("adc0", 1)]
+    channels["L2-4-RO_1"].ports = [("adc0", 0)]
     # drive
-    channels["L4-28_qd"].ports = [("dac4", 4)]
+    channels["L4-30_qd"].ports = [("dac4", 4)]
     # Flux
-    channels["L1-21_fl"].ports = [("dac1", 1)]
+    channels["L1-23_fl"].ports = [("dac1", 1)]
     # Qubit +2
     # Readout
     channels["L3-30_ro"].ports = [("dac6", 6)]
     # feedback
-    channels["L2-4-RO_2"].ports = [("adc0", 2)]
+    channels["L2-4-RO_2"].ports = [("adc0", 0)]
     # drive
-    channels["L4-32_qd"].ports = [("dac5", 5)]
+    channels["L4-31_qd"].ports = [("dac5", 5)]
     # Flux
-    channels["L1-25_fl"].ports = [("dac2", 2)]
+    channels["L1-24_fl"].ports = [("dac2", 2)]
 
     # Instantiate local oscillators (HARDCODED)
     local_oscillators = [
@@ -307,16 +307,17 @@ def create_tii_zcu111(runcard, address=None):
 
     qubits[1].readout = channels["L3-30_ro"]
     qubits[1].feedback = channels["L2-4-RO_1"]
-    qubits[1].drive = channels["L4-28_qd"]
-    qubits[1].flux = channels["L1-21_fl"]
+    qubits[1].drive = channels["L4-30_qd"]
+    qubits[1].flux = channels["L1-23_fl"]
 
     qubits[2].readout = channels["L3-30_ro"]
     qubits[2].feedback = channels["L2-4-RO_2"]
-    qubits[2].drive = channels["L4-32_qd"]
-    qubits[2].flux = channels["L1-25_fl"]
+    qubits[2].drive = channels["L4-31_qd"]
+    qubits[2].flux = channels["L1-24_fl"]
 
-    qubits[0].flux.bias = 0
-    qubits[1].flux.bias = 0
+    # TODO this clearly should not be here, but I don't know where else
+    qubits[0].flux.bias = -0.07
+    qubits[1].flux.bias = 0.03
     qubits[2].flux.bias = 0
 
     return platform

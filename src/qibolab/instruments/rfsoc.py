@@ -494,10 +494,11 @@ class RFSoC(AbstractInstrument):
                                 sequence[sweeper.indexes[jdx]].amplitude = values[jdx][idx]
                     else:  # TODO elif
                         for kdx, jdx in enumerate(sweeper.indexes):
+                            print(f"setting {values[kdx][idx]} to qubit {jdx}")
                             qubits[jdx].flux.bias = values[kdx][idx]
 
                     res = self.recursive_python_sweep(qubits, sequence, original_ro, *sweepers[1:], average=average)
-                    results = self.merge_sweep_results(res, results)
+                    results = self.merge_sweep_results(results, res)
                 return results  # already in the right format
 
     @staticmethod
@@ -518,7 +519,7 @@ class RFSoC(AbstractInstrument):
         """
         for serial in dict_b:
             if serial in dict_a:
-                dict_a[serial] = dict_b[serial] + dict_a[serial]
+                dict_a[serial] = dict_a[serial] + dict_b[serial]
             else:
                 dict_a[serial] = dict_b[serial]
         return dict_a
@@ -704,7 +705,7 @@ class TII_ZCU111(RFSoC):  # Containes the main settings:
         self.cfg = QickProgramConfig(
             sampling_rate=6_000_000_000,
             mixer_freq=0,
-            LO_freq=6_900_000_000,
+            LO_freq=7_000_000_000,
             LO_power=10.0,
-            adc_sampling_frequency=3_072_000_000,
+            adc_sampling_frequency=6_000_000_000,  # 3_072_000_000,
         )
