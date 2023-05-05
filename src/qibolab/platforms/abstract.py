@@ -241,6 +241,8 @@ class AbstractPlatform(ABC):
                     self.single_qubit_natives[qubit]["RX"]["duration"] = int(value)
                 elif par == "t2_spin_echo":
                     self.qubits[qubit].T2_spin_echo = int(value)
+                elif par == "classifiers_hpars":
+                    self.qubits[qubit].classifiers_hpars = value
                 elif par == "readout_attenuation":
                     True
                 elif par == "classifiers_hpars":
