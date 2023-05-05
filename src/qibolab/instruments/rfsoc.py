@@ -14,6 +14,11 @@ import numpy as np
 
 from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.platforms.abstract import Qubit
+from qibolab.platforms.platform import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import AveragedResults, ExecutionResults
 from qibolab.sweeper import Parameter, Sweeper
@@ -188,10 +193,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         self,
         qubits: List[Qubit],
         sequence: PulseSequence,
-        relaxation_time: int = None,
-        nshots: int = None,
-        average: bool = False,
-        raw_adc: bool = False,
+        execution_parameters: ExecutionParameters,
     ) -> Dict[str, ExecutionResults]:
         """Executes the sequence of instructions and retrieves readout results.
            Each readout pulse generates a separate acquisition.
@@ -200,24 +202,27 @@ class TII_RFSOC4x2(AbstractInstrument):
         Args:
             qubits (list): List of `qibolab.platforms.utils.Qubit` objects
                            passed from the platform.
-            sequence (`qibolab.pulses.PulseSequence`). Pulse sequence to play.
-            nshots (int): Number of repetitions (shots) of the experiment.
-            relaxation_time (int): Time to wait for the qubit to relax to its
-                                   ground state between shots in ns.
-            raw_adc (bool): allows to acquire raw adc data
+            sequence (`qibolab.pulses.PulseSequence`): Pulse sequence to play.
+            execution_parameters (ExecutionParameters): Parameters (nshots,
+                                                        relaxation_time,
+                                                        fast_reset,
+                                                        acquisition_type,
+                                                        averaging_mode)
         Returns:
             A dictionary mapping the readout pulses serial and respective qubits to
             `qibolab.ExecutionResults` objects
         """
 
-        if raw_adc:
+        if execution_parameters.acquisition_type is AcquisitionType.RAW:
             raise NotImplementedError("Raw data acquisition is not supported")
-
+        if execution_parameters.fast_reset:
+            raise NotImplementedError("Fast reset is not supported")
         # if new value are passed, they are updated in the config obj
-        if nshots is not None:
+        if execution_parameters.nshots is not None:
             self.cfg.reps = nshots
-        if relaxation_time is not None:
+        if execution_parameters.relaxation_time is not None:
             self.cfg.repetition_duration = relaxation_time
+        average = True if execution_parameters.averaging_mode is AveragingMode.CYCLIC else False
 
         toti, totq = self._execute_pulse_sequence(self.cfg, sequence, qubits, len(sequence.ro_pulses), average)
 
@@ -446,9 +451,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         qubits: List[Qubit],
         sequence: PulseSequence,
         *sweepers: Sweeper,
-        relaxation_time: int,
-        nshots: int = 1000,
-        average: bool = True,
+        execution_parameters: ExecutionParameters,
     ) -> Dict[str, Union[AveragedResults, ExecutionResults]]:
         """Executes the sweep and retrieves the readout results.
         Each readout pulse generates a separate acquisition.
@@ -459,20 +462,26 @@ class TII_RFSOC4x2(AbstractInstrument):
                            passed from the platform.
             sequence (`qibolab.pulses.PulseSequence`). Pulse sequence to play.
             *sweepers (`qibolab.Sweeper`): Sweeper objects.
-            relaxation_time (int): Time to wait for the qubit to relax to its
-                                   ground state between shots in ns.
-            nshots (int): Number of repetitions (shots) of the experiment.
-            average (bool): if False returns single shot measurements
+            execution_parameters (ExecutionParameters): Parameters (nshots,
+                                                        relaxation_time,
+                                                        fast_reset,
+                                                        acquisition_type,
+                                                        averaging_mode)
         Returns:
             A dictionary mapping the readout pulses serial and respective qubits to
             results objects
         """
 
+        if execution_parameters.acquisition_type is AcquisitionType.RAW:
+            raise NotImplementedError("Raw data acquisition is not supported")
+        if execution_parameters.fast_reset:
+            raise NotImplementedError("Fast reset is not supported")
         # if new value are passed, they are updated in the config obj
-        if nshots is not None:
+        if execution_parameters.nshots is not None:
             self.cfg.reps = nshots
-        if relaxation_time is not None:
+        if execution_parameters.relaxation_time is not None:
             self.cfg.repetition_duration = relaxation_time
+        average = True if execution_parameters.averaging_mode is AveragingMode.CYCLIC else False
 
         # sweepers.values are modified to reflect actual sweeped values
         for sweeper in sweepers:
