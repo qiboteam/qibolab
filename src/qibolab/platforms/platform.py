@@ -138,7 +138,7 @@ class ExecutionParameters:
     :averaging_mode: Data averaging mode
     """
 
-    nshots: Optional[np.uint32] = 1024
+    nshots: Optional[int] = 1024
     relaxation_time: Optional[np.uint32] = 100e-9
     fast_reset: bool = False
     acquisition_type: AcquisitionType = AcquisitionType.DISCRIMINATION

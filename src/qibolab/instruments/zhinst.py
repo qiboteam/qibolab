@@ -421,6 +421,7 @@ class Zurich(AbstractInstrument):
         # For single qubit sweeps and some 2D for now with one pulse
         sweeps_all = {}
         sweeps = []
+        self.NT_sweeps = []
         nsweeps = 0
         for sweeper in sweepers:
             nsweeps += 1
@@ -429,6 +430,11 @@ class Zurich(AbstractInstrument):
                     aux_list = zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"]
                     if sweeper.parameter is Parameter.frequency and pulse.type is PulseType.READOUT:
                         self.acquisition_type = lo.AcquisitionType.SPECTROSCOPY
+                    if sweeper.parameter is Parameter.amplitude and pulse.type is PulseType.READOUT:
+                        self.acquisition_type = lo.AcquisitionType.SPECTROSCOPY
+                        self.NT_loop = True
+                        self.NT_sweeps.append(sweeper)
+                        self.sweepers.remove(sweeper)
                     for element in aux_list:
                         if pulse == element.pulse:
                             if isinstance(aux_list[aux_list.index(element)], ZhPulse):
@@ -456,7 +462,74 @@ class Zurich(AbstractInstrument):
         sweeps_all[nsweeps] = sweeps
         self.sequence = zhsequence
         self.nsweeps = nsweeps  # Should count the dimension of the sweep 1D, 2D etc
-        self.sweeps = sweeps_all
+
+    #     self.sweeps = sweeps_all
+
+    # def create_exp(self, qubits, options):
+    #     """Zurich experiment definition usig their Experiment class"""
+    #     signals = []
+    #     for qubit in qubits.values():
+    #         if qubit.flux_coupler:
+    #             signals.append(lo.ExperimentSignal(f"flux{qubit.name}"))
+    #         else:
+    #             if self.sequence[f"drive{qubit.name}"]:
+    #                 signals.append(lo.ExperimentSignal(f"drive{qubit.name}"))
+    #             if qubit.flux is not None:
+    #                 signals.append(lo.ExperimentSignal(f"flux{qubit.name}"))
+    #             if self.sequence[f"readout{qubit.name}"]:
+    #                 signals.append(lo.ExperimentSignal(f"measure{qubit.name}"))
+    #                 signals.append(lo.ExperimentSignal(f"acquire{qubit.name}"))
+
+    #     exp = lo.Experiment(
+    #         uid="Sequence",
+    #         signals=signals,
+    #     )
+
+    #     # Defaults
+    #     if options.acquisition_type is AcquisitionType.INTEGRATION:
+    #         options.acquisition_type = lo.AcquisitionType.INTEGRATION
+    #     elif options.acquisition_type is AcquisitionType.RAW:
+    #         options.acquisition_type = lo.AcquisitionType.RAW
+    #     elif options.acquisition_type is AcquisitionType.DISCRIMINATION:
+    #         options.acquisition_type = lo.AcquisitionType.DISCRIMINATION
+
+    #     if self.acquisition_type is lo.AcquisitionType.SPECTROSCOPY:
+    #         options.acquisition_type = lo.AcquisitionType.SPECTROSCOPY
+
+    #     if options.averaging_mode is AveragingMode.CYCLIC:
+    #         options.averaging_mode = lo.AveragingMode.CYCLIC
+    #     elif options.averaging_mode is AveragingMode.SINGLESHOT:
+    #         options.averaging_mode = lo.AveragingMode.SINGLE_SHOT
+
+    #     print(options.acquisition_type)
+    #     print(options.averaging_mode)
+
+    #     with exp.acquire_loop_rt(
+    #         uid="shots",
+    #         count=options.nshots,
+    #         # repetition_mode= lo.RepetitionMode.CONSTANT, #TODO: Does it provide any speed advantage ?
+    #         # repetition_time= None,
+    #         acquisition_type=options.acquisition_type,
+    #         averaging_mode=options.averaging_mode,
+    #     ):
+    #         if self.nsweeps > 0:
+    #             exp_calib = lo.Calibration()
+    #             self.sweep_recursion(
+    #                 qubits, exp, exp_calib, options.relaxation_time, options.acquisition_type, options.fast_reset
+    #             )
+    #             exp.set_calibration(exp_calib)
+
+    #         # TODO: Gate sweeps for flipping, AllXY (,RB ?):
+    #         elif self.nsweeps == "gate_sweep":
+    #             print("Estoy en ello")
+    #             # inner loop - sweep over sequence lengths
+    #             for pulse_sequences in pulse_sequences:
+    #                 self.select_exp(exp, qubits, options.relaxation_time, options.acquisition_type, options.fast_reset)
+    #                 # Careful with the definition of handel and their recovery
+    #         else:
+    #             self.select_exp(exp, qubits, options.relaxation_time, options.acquisition_type, options.fast_reset)
+    #         self.experiment = exp
+    #         exp.set_signal_map(self.signal_map)
 
     def create_exp(self, qubits, options):
         """Zurich experiment definition usig their Experiment class"""
@@ -497,6 +570,13 @@ class Zurich(AbstractInstrument):
         print(options.acquisition_type)
         print(options.averaging_mode)
 
+        exp_calib = lo.Calibration()
+        if self.NT_loop:
+            self.sweep_recursion_NT(qubits, options, exp, exp_calib)
+        else:
+            self.define_exp(qubits, options, exp, exp_calib)
+
+    def define_exp(self, qubits, options, exp, exp_calib):
         with exp.acquire_loop_rt(
             uid="shots",
             count=options.nshots,
@@ -506,7 +586,6 @@ class Zurich(AbstractInstrument):
             averaging_mode=options.averaging_mode,
         ):
             if self.nsweeps > 0:
-                exp_calib = lo.Calibration()
                 self.sweep_recursion(
                     qubits, exp, exp_calib, options.relaxation_time, options.acquisition_type, options.fast_reset
                 )
@@ -712,11 +791,6 @@ class Zurich(AbstractInstrument):
                                         amplitude=1,
                                     )
 
-                            measure_pulse_amplitude = None
-                            if isinstance(pulse, ZhSweeper):
-                                measure_pulse_amplitude = pulse.zhsweeper
-                                print(measure_pulse_amplitude)
-
                             # FIXME: Introduce ro_sweeper here
                             exp.measure(
                                 acquire_signal=f"acquire{qubit.name}",
@@ -727,8 +801,8 @@ class Zurich(AbstractInstrument):
                                 measure_signal=f"measure{qubit.name}",
                                 measure_pulse=pulse.zhpulse,
                                 measure_pulse_length=round(pulse.pulse.duration * 1e-9, 9),
-                                measure_pulse_parameters=None,  # sweep here ?
-                                measure_pulse_amplitude=measure_pulse_amplitude,
+                                measure_pulse_parameters=None,
+                                measure_pulse_amplitude=None,
                                 acquire_delay=self.time_of_flight,
                                 reset_delay=relaxation_time,
                             )
@@ -785,7 +859,6 @@ class Zurich(AbstractInstrument):
 
         # Ordered like this for how they defined the frequncy sweep on qibocal to be the last
         # and I need it to be the outer one
-
         for sweep in self.sweepers:
             if sweep.parameter is Parameter.frequency:
                 sweeper = sweep
@@ -807,7 +880,6 @@ class Zurich(AbstractInstrument):
                     line = "measure"
                 zhsweeper = ZhSweeper(pulse, sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
                 zhsweeper.uid = f"frequency"  # TODO: Changing the name from "frequency" breaks it
-                # print(zhsweeper)
                 exp_calib[f"{line}{qubit}"] = lo.SignalCalibration(
                     oscillator=lo.Oscillator(
                         frequency=zhsweeper,
@@ -819,7 +891,6 @@ class Zurich(AbstractInstrument):
             for qubit in sweeper.qubits.values():
                 # for qubit in sweeper.qubits.values():
                 #     qubit = sweeper.qubits[qubit]
-
                 parameter = ZhSweeperLine(sweeper, qubit, self.sequence_qibo).zhsweeper
 
         elif sweeper.parameter is Parameter.delay:
@@ -827,8 +898,66 @@ class Zurich(AbstractInstrument):
             qubit = pulse.qubit
             # for qubit in sweeper.qubits.values():
             #     qubit = sweeper.qubits[qubit]
-
             parameter = ZhSweeperLine(sweeper, qubit, self.sequence_qibo).zhsweeper
+
+        elif parameter is None:
+            parameter = ZhSweeper(sweeper.pulses[0], sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
+
+        with exp.sweep(
+            uid=f"sweep_{sweeper.parameter.name.lower()}_{i}",  # FIXME: This uid fro double freq ???
+            parameter=parameter,  # FIXME: This uid for double freq ???
+            reset_oscillator_phase=True,
+        ):
+            if len(self.sweepers) > 0:
+                self.sweep_recursion(qubits, exp, exp_calib, relaxation_time, acquisition_type, fast_reset)
+            else:
+                self.select_exp(exp, qubits, relaxation_time, acquisition_type, fast_reset)
+
+    def sweep_recursion_NT(self, qubits, options, exp, exp_calib):
+        """Sweepers recursion for multiple nested sweepers"""
+
+        for sweep in self.NT_sweeps:
+            sweeper = sweep
+
+        i = len(self.NT_sweeps) - 1
+        self.NT_sweeps.remove(sweeper)
+
+        print(sweeper.parameter)
+        parameter = None
+
+        if sweeper.parameter is Parameter.amplitude:
+            for pulse in sweeper.pulses:
+                qubit = pulse.qubit
+                if pulse.type is PulseType.DRIVE:
+                    line = "drive"
+                elif pulse.type is PulseType.READOUT:
+                    line = "measure"
+                zhsweeper = ZhSweeper(pulse, sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
+                zhsweeper.uid = f"amplitude"
+                path = "DEV12146"
+
+        # Leave it for dual freq if they dont work in RT
+        if sweeper.parameter is Parameter.frequency:
+            for pulse in sweeper.pulses:
+                qubit = pulse.qubit
+                if pulse.type is PulseType.DRIVE:
+                    line = "drive"
+                elif pulse.type is PulseType.READOUT:
+                    line = "measure"
+                zhsweeper = ZhSweeper(pulse, sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
+                zhsweeper.uid = f"frequency"  # TODO: Changing the name from "frequency" breaks it
+                exp_calib[f"{line}{qubit}"] = lo.SignalCalibration(
+                    oscillator=lo.Oscillator(
+                        frequency=zhsweeper,
+                        modulation_type=lo.ModulationType.HARDWARE,
+                    )
+                )
+
+        if sweeper.parameter is Parameter.bias:
+            for qubit in sweeper.qubits.values():
+                # for qubit in sweeper.qubits.values():
+                #     qubit = sweeper.qubits[qubit]
+                parameter = ZhSweeperLine(sweeper, qubit, self.sequence_qibo).zhsweeper
 
         elif parameter is None:
             parameter = ZhSweeper(sweeper.pulses[0], sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
@@ -836,12 +965,16 @@ class Zurich(AbstractInstrument):
         with exp.sweep(
             uid=f"sweep_{sweeper.parameter.name.lower()}_{i}",
             parameter=parameter,
-            reset_oscillator_phase=True,
         ):
-            if len(self.sweepers) > 0:
-                self.sweep_recursion(qubits, exp, exp_calib, relaxation_time, acquisition_type, fast_reset)
+            exp.set_node(
+                path=f"/{path}/qachannels/*/oscs/0/gain",  # FIXME: Hardcoded SHFQA device
+                value=parameter,
+            )
+
+            if len(self.NT_sweeps) > 0:
+                self.sweep_recursion_NT(qubits, options, exp, exp_calib)
             else:
-                self.select_exp(exp, qubits, relaxation_time, acquisition_type, fast_reset)
+                self.define_exp(qubits, options, exp, exp_calib)
 
     # -----------------------------------------------------------------------------
 

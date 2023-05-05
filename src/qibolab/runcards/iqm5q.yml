@@ -113,7 +113,7 @@ native_gates:
         4: # qubit number
             RX:
                 duration: 53 #110 #80
-                amplitude: 0.398 #0.8
+                amplitude: 1 #0.398 #0.8
                 frequency: 4_196_800_000 #Small detuning increase freq #4_248_775_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
