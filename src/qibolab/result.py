@@ -143,11 +143,6 @@ class StateResults:
         return probability
 
     @cached_property
-    def lenght(self):
-        """Returns the number of shots"""
-        return len(self.states[0])
-
-    @cached_property
     def state_0_probability(self):
         """Returns the 0 state statistical frequency."""
         return self.probability(0)
