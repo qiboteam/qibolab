@@ -57,11 +57,49 @@ def test_classify_shots():
     assert instrument.classify_shots(i_val, q_val, qubit1) is None
 
 
-def test_set_best_LO():
-    """d"""
-
+def test_find_frequency_limits():
     platform = create_tii_zcu111(RUNCARD_ZCU111, DUMMY_ADDRESS)
     instrument = platform.design.instruments[0]
+
+    sequence_1 = PulseSequence()
+    pulse = platform.create_MZ_pulse(qubit=0, start=0)
+    pulse.frequency = 11_000_000
+    sequence_1.add(pulse)
+    pulse = platform.create_MZ_pulse(qubit=0, start=0)
+    pulse.frequency = 70_000_000
+    sequence_1.add(pulse)
+    pulse = platform.create_MZ_pulse(qubit=1, start=0)
+    pulse.frequency = 100_000_000
+    sequence_1.add(pulse)
+    pulse = platform.create_MZ_pulse(qubit=2, start=0)
+    pulse.frequency = 300_000_000
+    sequence_1.add(pulse)
+
+    sequence_2 = PulseSequence()
+    pulse1 = platform.create_MZ_pulse(qubit=0, start=0)
+    sequence_2.add(pulse1)
+    pulse2 = platform.create_MZ_pulse(qubit=1, start=0)
+    sequence_2.add(pulse2)
+    pulse3 = platform.create_MZ_pulse(qubit=2, start=0)
+    sequence_2.add(pulse3)
+
+    assert instrument.find_frequency_limits(sequence_1) == [
+        (11_000_000, 70_000_000),
+        (100_000_000, 100_000_000),
+        (300_000_000, 300_000_000),
+    ]
+    assert instrument.find_frequency_limits(sequence_2) == [
+        (pulse1.frequency, pulse1.frequency),
+        (pulse2.frequency, pulse2.frequency),
+        (pulse3.frequency, pulse3.frequency),
+    ]
+
+
+def test_set_best_LO():
+    platform = create_tii_zcu111(RUNCARD_ZCU111, DUMMY_ADDRESS)
+    instrument = platform.design.instruments[0]
+
+    instrument.cfg.adc_sampling_frequency = 3_072_000_000
 
     sequence_1 = PulseSequence()
     pulse = platform.create_MZ_pulse(qubit=0, start=0)
@@ -85,25 +123,27 @@ def test_set_best_LO():
     pulse = platform.create_MZ_pulse(qubit=2, start=0)
     sequence_2.add(pulse)
 
-    assert instrument.set_best_LO(sequence_1)
-    assert instrument.set_best_LO(sequence_2)
+    instrument.set_best_LO(instrument.find_frequency_limits(sequence_1))
+    assert instrument.cfg.LO_freq == 0
+    instrument.set_best_LO(instrument.find_frequency_limits(sequence_2))
+    assert instrument.cfg.LO_freq == 7_091_151_000
 
 
-def test_check_frequencies_conflicts():
-    """d"""
-
+def test_check_not_frequencies_conflicts():
     platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
     instrument = platform.design.instruments[0]
+
+    instrument.cfg.adc_sampling_frequency = 3_072_000_000
 
     limits1 = [(10_000_000, 80_000_000), (98_000_000, 178_000_000), (290_000_000, 390_000_000)]
     limits2 = [(10_000_000, 97_000_000), (128_000_000, 178_000_000), (300_000_000, 390_000_000)]
     lo_freq1 = 0
     lo_freq2 = 9_000_000
 
-    assert instrument.check_frequencies_conflicts(limits1, lo_freq1)
-    assert not instrument.check_frequencies_conflicts(limits1, lo_freq2)
-    assert not instrument.check_frequencies_conflicts(limits2, lo_freq1)
-    assert instrument.check_frequencies_conflicts(limits2, lo_freq2)
+    assert instrument.check_not_frequencies_conflicts(limits1, lo_freq1)
+    assert not instrument.check_not_frequencies_conflicts(limits1, lo_freq2)
+    assert not instrument.check_not_frequencies_conflicts(limits2, lo_freq1)
+    assert instrument.check_not_frequencies_conflicts(limits2, lo_freq2)
 
 
 def test_merge_sweep_results():
@@ -146,21 +186,31 @@ def test_get_if_python_sweep():
     sequence_1 = PulseSequence()
     sequence_1.add(platform.create_RX_pulse(qubit=0, start=0))
     sequence_1.add(platform.create_MZ_pulse(qubit=0, start=100))
+
     sweep1 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 100, 10), pulses=[sequence_1[0]])
     sweep2 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 100, 10), pulses=[sequence_1[1]])
     sweep3 = Sweeper(parameter=Parameter.amplitude, values=np.arange(0.01, 0.5, 0.1), pulses=[sequence_1[1]])
     sweep1 = create_qick_sweeps([sweep1], sequence_1, platform.qubits)[0]
     sweep2 = create_qick_sweeps([sweep2], sequence_1, platform.qubits)[0]
     sweep3 = create_qick_sweeps([sweep3], sequence_1, platform.qubits)[0]
+
+    assert instrument.get_if_python_sweep(sequence_1, platform.qubits, sweep2)
+    assert not instrument.get_if_python_sweep(sequence_1, platform.qubits, sweep1)
+    assert not instrument.get_if_python_sweep(sequence_1, platform.qubits, sweep3)
+
     sequence_2 = PulseSequence()
     sequence_2.add(platform.create_RX_pulse(qubit=0, start=0))
     sequence_2.add(platform.create_RX_pulse(qubit=0, start=100))
 
-    assert instrument.get_if_python_sweep(sequence_1, platform.qubits, sweep2)
-    assert instrument.get_if_python_sweep(sequence_2, platform.qubits, sweep1)
+    sweep1 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 100, 10), pulses=[sequence_2[0]])
+    sweep2 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 100, 10), pulses=[sequence_2[1]])
+    sweep3 = Sweeper(parameter=Parameter.amplitude, values=np.arange(0.01, 0.5, 0.1), pulses=[sequence_2[1]])
+    sweep1 = create_qick_sweeps([sweep1], sequence_2, platform.qubits)[0]
+    sweep2 = create_qick_sweeps([sweep2], sequence_2, platform.qubits)[0]
+    sweep3 = create_qick_sweeps([sweep3], sequence_2, platform.qubits)[0]
+
+    assert not instrument.get_if_python_sweep(sequence_2, platform.qubits, sweep1)
     assert instrument.get_if_python_sweep(sequence_2, platform.qubits, sweep1, sweep1)
-    assert not instrument.get_if_python_sweep(sequence_1, platform.qubits, sweep1)
-    assert not instrument.get_if_python_sweep(sequence_1, platform.qubits, sweep3)
 
 
 def test_convert_av_sweep_results():
@@ -179,14 +229,14 @@ def test_convert_av_sweep_results():
     serial1 = sequence[1].serial
     serial2 = sequence[2].serial
 
-    avgi = [[[1, 2, 3], [0, 1, 2]]]
+    avgi = [[[1, 2, 3], [4, 1, 2]]]
     avgq = [[[7, 8, 9], [-1, -2, -3]]]
 
     ro_serials = [ro.serial for ro in sequence.ro_pulses]
     out_dict = instrument.convert_sweep_results(sweep1, ro_serials, sequence, platform.qubits, avgi, avgq, True)
     targ_dict = {
         serial1: AveragedResults.from_components(np.array([1, 2, 3]), np.array([7, 8, 9])),
-        serial2: AveragedResults.from_components(np.array([0, 1, 2]), np.array([-1, -2, -3])),
+        serial2: AveragedResults.from_components(np.array([4, 1, 2]), np.array([-1, -2, -3])),
     }
 
     assert (out_dict[serial1].i == targ_dict[serial1].i).all()
@@ -211,14 +261,14 @@ def test_convert_nav_sweep_results():
     serial1 = sequence[1].serial
     serial2 = sequence[2].serial
 
-    avgi = [[[[1, 1], [2, 2], [3, 3]], [[0, 0], [1, 1], [2, 2]]]]
+    avgi = [[[[1, 1], [2, 2], [3, 3]], [[4, 4], [1, 1], [2, 2]]]]
     avgq = [[[[7, 7], [8, 8], [9, 9]], [[-1, -1], [-2, -2], [-3, -3]]]]
 
     ro_serials = [ro.serial for ro in sequence.ro_pulses]
     out_dict = instrument.convert_sweep_results(sweep1, ro_serials, sequence, platform.qubits, avgi, avgq, False)
     targ_dict = {
         serial1: ExecutionResults.from_components(np.array([1, 1, 2, 2, 3, 3]), np.array([7, 7, 8, 8, 9, 9])),
-        serial2: ExecutionResults.from_components(np.array([0, 0, 1, 1, 2, 2]), np.array([-1, -1, -2, -2, -3, -3])),
+        serial2: ExecutionResults.from_components(np.array([4, 4, 1, 1, 2, 2]), np.array([-1, -1, -2, -2, -3, -3])),
     }
 
     assert (out_dict[serial1].i == targ_dict[serial1].i).all()
