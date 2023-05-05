@@ -181,9 +181,9 @@ class AbstractPlatform(ABC):
                     self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["frequency"] = freq
 
                     if "if_frequency" in self.single_qubit_natives[qubit]["MZ"]:
-                        self.single_qubit_natives[qubit]["MZ"][
-                            "if_frequency"
-                        ] = freq - self.get_lo_readout_frequency(qubit)
+                        self.single_qubit_natives[qubit]["MZ"]["if_frequency"] = freq - self.get_lo_readout_frequency(
+                            qubit
+                        )
                         self.settings["native_gates"]["single_qubit"][qubit]["MZ"][
                             "if_frequency"
                         ] = freq - self.get_lo_readout_frequency(qubit)
