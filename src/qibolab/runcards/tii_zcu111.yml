@@ -1,4 +1,3 @@
-
 nqubits: 3
 description: Unknown 3-qubit device controlled by a Xilinx ZCU111 boards
 
@@ -47,8 +46,8 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.016
-                frequency: 7_345_330_000
+                amplitude: 0.014
+                frequency: 7_345_130_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
