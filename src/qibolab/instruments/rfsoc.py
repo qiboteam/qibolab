@@ -192,8 +192,8 @@ class TII_RFSOC4x2(AbstractInstrument):
     def play(
         self,
         qubits: List[Qubit],
-        sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
+        sequence: PulseSequence,
     ) -> Dict[str, Union[IntegratedResults, StateResults]]:
         """Executes the sequence of instructions and retrieves readout results.
            Each readout pulse generates a separate acquisition.
@@ -202,12 +202,12 @@ class TII_RFSOC4x2(AbstractInstrument):
         Args:
             qubits (list): List of `qibolab.platforms.utils.Qubit` objects
                            passed from the platform.
-            sequence (`qibolab.pulses.PulseSequence`): Pulse sequence to play.
             execution_parameters (ExecutionParameters): Parameters (nshots,
                                                         relaxation_time,
                                                         fast_reset,
                                                         acquisition_type,
                                                         averaging_mode)
+            sequence (`qibolab.pulses.PulseSequence`): Pulse sequence to play.
         Returns:
             A dictionary mapping the readout pulses serial and respective qubits to
             qibolab results objects
@@ -467,9 +467,9 @@ class TII_RFSOC4x2(AbstractInstrument):
     def sweep(
         self,
         qubits: List[Qubit],
+        execution_parameters: ExecutionParameters,
         sequence: PulseSequence,
         *sweepers: Sweeper,
-        execution_parameters: ExecutionParameters,
     ) -> Dict[str, Union[IntegratedResults, StateResults]]:
         """Executes the sweep and retrieves the readout results.
         Each readout pulse generates a separate acquisition.
@@ -478,13 +478,13 @@ class TII_RFSOC4x2(AbstractInstrument):
         Args:
             qubits (list): List of `qibolab.platforms.utils.Qubit` objects
                            passed from the platform.
-            sequence (`qibolab.pulses.PulseSequence`). Pulse sequence to play.
-            *sweepers (`qibolab.Sweeper`): Sweeper objects.
             execution_parameters (ExecutionParameters): Parameters (nshots,
                                                         relaxation_time,
                                                         fast_reset,
                                                         acquisition_type,
                                                         averaging_mode)
+            sequence (`qibolab.pulses.PulseSequence`). Pulse sequence to play.
+            *sweepers (`qibolab.Sweeper`): Sweeper objects.
         Returns:
             A dictionary mapping the readout pulses serial and respective qubits to
             results objects

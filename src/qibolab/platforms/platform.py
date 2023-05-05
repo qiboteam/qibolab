@@ -5,6 +5,14 @@ from typing import Optional
 from qibo.config import raise_error
 
 from qibolab.platforms.abstract import AbstractPlatform
+from qibolab.result import (
+    AveragedIntegratedResults,
+    AveragedRawWaveformResults,
+    AveragedStateResults,
+    IntegratedResults,
+    RawWaveformResults,
+    StateResults,
+)
 
 
 class DesignPlatform(AbstractPlatform):
@@ -42,11 +50,7 @@ class DesignPlatform(AbstractPlatform):
         if options.relaxation_time is None:
             options.relaxation_time = self.relaxation_time
 
-        return self.design.play(
-            self.qubits,
-            sequence,
-            options=options,
-        )
+        return self.design.play(self.qubits, options, sequence)
 
     def sweep(self, sequence, *sweepers, **kwargs):
         options = ExecutionParameters(**kwargs)
@@ -56,9 +60,9 @@ class DesignPlatform(AbstractPlatform):
 
         return self.design.sweep(
             self.qubits,
+            options,
             sequence,
             *sweepers,
-            options=options,
         )
 
     def set_lo_drive_frequency(self, qubit, freq):
@@ -153,15 +157,6 @@ class ExecutionParameters:
 
     def get_results_type(self):
         """Returns corresponding results class"""
-
-        from qibolab.result import (
-            AveragedIntegratedResults,
-            AveragedRawWaveformResults,
-            AveragedStateResults,
-            IntegratedResults,
-            RawWaveformResults,
-            StateResults,
-        )
 
         if self.averaging_mode is AveragingMode.SINGLESHOT:
             if self.acquisition_type is AcquisitionType.INTEGRATION:
