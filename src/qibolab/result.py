@@ -8,13 +8,8 @@ import numpy.typing as npt
 iq_typing = np.dtype([("i", np.float64), ("q", np.float64)])
 
 
-class IQNotEqualLenght(Exception):
-    def __init__(self, message="is_ and qs_ must have the same size"):
-        super().__init__(message)
-
-
 @dataclass
-class IQResults:
+class IntegratedResults:
     """
     Data structure to deal with the output of
     :func:`qibolab.platforms.abstract.AbstractPlatform.execute_pulse_sequence`
@@ -32,13 +27,8 @@ class IQResults:
         self.voltage["i"] = i.reshape(i.shape[0] // shots, shots) if shots else i
         try:
             self.voltage["q"] = q.reshape(q.shape[0] // shots, shots) if shots else q
-        except:
-            # FIXME: the two errors display
-            raise IQNotEqualLenght
-
-    @cached_property
-    def lenght(self):
-        return len(self.voltage.i[0])
+        except ValueError:
+            raise ValueError(f"Given i has length {len(i)} which is different than q length {len(q)}.")
 
     @cached_property
     def magnitude(self):
@@ -51,11 +41,11 @@ class IQResults:
         return np.angle(self.voltage.i + 1.0j * self.voltage.q)
 
     # We are asumming results from the same experiment so same number of shots
-    def __add__(self, data):  # __add__(self, data:IQResults) -> IQResults
+    def __add__(self, data):  # __add__(self, data:IntegratedResults) -> IntegratedResults
         axis = 0
         i = np.append(self.voltage.i, data.voltage.i, axis=axis)
         q = np.append(self.voltage.q, data.voltage.q, axis=axis)
-        return IQResults(i, q)
+        return IntegratedResults(i, q)
 
     def serialize(self):
         """Serialize as a dictionary."""
@@ -75,28 +65,28 @@ class IQResults:
         for is_, qs_ in zip(self.voltage.i, self.voltage.q):
             average_i, average_q = np.append(average_i, np.mean(is_)), np.append(average_q, np.mean(qs_))
             std_i, std_q = np.append(std_i, np.std(is_)), np.append(std_q, np.std(qs_))
-        return AveragedIQResults(average_i, average_q, std_i=std_i, std_q=std_q)
+        return AveragedIntegratedResults(average_i, average_q, std_i=std_i, std_q=std_q)
 
 
-# FIXME: Here I take the states from IQResult that are typed to be ints but those are not what would you do ?
-class AveragedIQResults(IQResults):
+# FIXME: Here I take the states from IntegratedResult that are typed to be ints but those are not what would you do ?
+class AveragedIntegratedResults(IntegratedResults):
     """
     Data structure to deal with the output of
     :func:`qibolab.platforms.abstract.AbstractPlatform.execute_pulse_sequence`
     :func:`qibolab.platforms.abstract.AbstractPlatform.sweep`
 
     Associated with AcquisitionType.INTEGRATION and AveragingMode.CYCLIC
-    or the averages of ``IQResults``
+    or the averages of ``IntegratedResults``
     """
 
     def __init__(self, i: np.ndarray, q: np.ndarray, shots=None, std_i=None, std_q=None):
-        IQResults.__init__(self, i, q, shots)
+        IntegratedResults.__init__(self, i, q, shots)
         self.std: Optional[npt.NDArray[np.float64]] = np.recarray(i.shape, dtype=iq_typing)
         self.std["i"] = std_i
         self.std["q"] = std_q
 
 
-class RawWaveformResults(IQResults):
+class RawWaveformResults(IntegratedResults):
     """
     Data structure to deal with the output of
     :func:`qibolab.platforms.abstract.AbstractPlatform.execute_pulse_sequence`
@@ -107,7 +97,7 @@ class RawWaveformResults(IQResults):
     """
 
 
-class AveragedRawWaveformResults(AveragedIQResults):
+class AveragedRawWaveformResults(AveragedIntegratedResults):
     """
     Data structure to deal with the output of
     :func:`qibolab.platforms.abstract.AbstractPlatform.execute_pulse_sequence`
@@ -147,8 +137,9 @@ class StateResults:
     def probability(self, state=0):
         """Returns the statistical frequency of the specified state (0 or 1)."""
         probability = np.array([])
+        state = 1 - state
         for st in self.states:
-            probability = np.append(probability, np.count_nonzero(st == state) / self.lenght)
+            probability = np.append(probability, abs(state - np.mean(st)))
         return probability
 
     @cached_property
