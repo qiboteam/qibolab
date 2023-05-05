@@ -29,6 +29,7 @@ def create_dummy(runcard):
         platform.qubits[qubit].drive = channels["drive"]
         platform.qubits[qubit].flux = channels[f"flux-{qubit}"]
         channels[f"flux-{qubit}"].qubit = platform.qubits[qubit]
+        channels["readout"].qubit = platform.qubits[qubit]
 
     return platform
 
