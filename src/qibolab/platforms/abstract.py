@@ -111,7 +111,6 @@ class AbstractPlatform(ABC):
         self.single_qubit_natives = {}
         self.two_qubit_natives = TwoQubitNatives(0)
         # Load platform settings
-        self.current_config = {}
         self.reload_settings()
 
     def __repr__(self):
@@ -123,14 +122,13 @@ class AbstractPlatform(ABC):
 
     def reload_settings(self):
         # TODO: Remove ``self.settings``
-        if len(self.current_config) == 0:
+        if self.settings == None:
             # Load initial configuration
             with open(self.runcard) as file:
                 settings = self.settings = yaml.safe_load(file)
-                self.current_config = self.settings
         else:
             # Load current configuration
-            settings = self.settings = self.current_config
+            settings = self.settings
 
         self.nqubits = settings["nqubits"]
         if "resonator_type" in self.settings:
@@ -179,19 +177,19 @@ class AbstractPlatform(ABC):
                 # resonator_spectroscopy / resonator_spectroscopy_flux / resonator_punchout_attenuation
                 if par == "readout_frequency":
                     freq = int(value * 1e9)
-                    self.native_single_qubit_gates[qubit]["MZ"]["frequency"] = freq
-                    self.current_config["native_gates"]["single_qubit"][qubit]["MZ"]["frequency"] = freq
+                    self.single_qubit_natives[qubit]["MZ"]["frequency"] = freq
+                    self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["frequency"] = freq
 
-                    if "if_frequency" in self.native_single_qubit_gates[qubit]["MZ"]:
-                        self.native_single_qubit_gates[qubit]["MZ"][
+                    if "if_frequency" in self.single_qubit_natives[qubit]["MZ"]:
+                        self.single_qubit_natives[qubit]["MZ"][
                             "if_frequency"
                         ] = freq - self.get_lo_readout_frequency(qubit)
-                        self.current_config["native_gates"]["single_qubit"][qubit]["MZ"][
+                        self.settings["native_gates"]["single_qubit"][qubit]["MZ"][
                             "if_frequency"
                         ] = freq - self.get_lo_readout_frequency(qubit)
 
                     self.qubits[qubit].readout_frequency = freq
-                    self.current_config["characterization"]["single_qubit"][qubit]["readout_frequency"] = freq
+                    self.settings["characterization"]["single_qubit"][qubit]["readout_frequency"] = freq
 
                 # resonator_punchout_attenuation
                 elif par == "readout_attenuation":
@@ -203,84 +201,84 @@ class AbstractPlatform(ABC):
                 elif par == "bare_resonator_frequency":
                     freq = int(value * 1e9)
                     self.qubits[qubit].bare_resonator_frequency = freq
-                    self.current_config["characterization"]["single_qubit"][qubit]["bare_resonator_frequency"] = freq
+                    self.settings["characterization"]["single_qubit"][qubit]["bare_resonator_frequency"] = freq
 
                 # resonator_spectroscopy_flux / qubit_spectroscopy_flux
                 elif par == "sweetspot":
                     sweetspot = float(value)
                     self.qubits[qubit].sweetspot = sweetspot
-                    self.current_config["characterization"]["single_qubit"][qubit]["sweetspot"] = sweetspot
+                    self.settings["characterization"]["single_qubit"][qubit]["sweetspot"] = sweetspot
 
                 # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
                 elif par == "drive_frequency":
                     freq = int(value * 1e9)
-                    self.native_single_qubit_gates[qubit]["RX"]["frequency"] = freq
-                    self.current_config["native_gates"]["single_qubit"][qubit]["RX"]["frequency"] = freq
+                    self.single_qubit_natives[qubit]["RX"]["frequency"] = freq
+                    self.settings["native_gates"]["single_qubit"][qubit]["RX"]["frequency"] = freq
 
                     self.qubits[qubit].drive_frequency = freq
-                    self.current_config["characterization"]["single_qubit"][qubit]["drive_frequency"] = freq
+                    self.settings["characterization"]["single_qubit"][qubit]["drive_frequency"] = freq
 
                 elif "amplitude" in par:
                     amplitude = float(value)
                     # resonator_spectroscopy
                     if par == "readout_amplitude" and not math.isnan(amplitude):
-                        self.native_single_qubit_gates[qubit]["MZ"]["amplitude"] = amplitude
-                        self.current_config["native_gates"]["single_qubit"][qubit]["MZ"]["amplitude"] = amplitude
+                        self.single_qubit_natives[qubit]["MZ"]["amplitude"] = amplitude
+                        self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["amplitude"] = amplitude
 
                     # rabi_amplitude / flipping
                     if par == "drive_amplitude" or par == "amplitudes":
-                        self.native_single_qubit_gates[qubit]["RX"]["amplitude"] = amplitude
-                        self.current_config["native_gates"]["single_qubit"][qubit]["RX"]["amplitude"] = amplitude
-                        self.current_config["characterization"]["single_qubit"][qubit]["pi_pulse_amplitude"] = amplitude
+                        self.single_qubit_natives[qubit]["RX"]["amplitude"] = amplitude
+                        self.settings["native_gates"]["single_qubit"][qubit]["RX"]["amplitude"] = amplitude
+                        self.settings["characterization"]["single_qubit"][qubit]["pi_pulse_amplitude"] = amplitude
 
                 # rabi_duration
                 elif par == "drive_length":
                     duration = int(value)
-                    self.native_single_qubit_gates[qubit]["RX"]["duration"] = duration
-                    self.current_config["native_gates"]["single_qubit"][qubit]["RX"]["duration"] = duration
+                    self.single_qubit_natives[qubit]["RX"]["duration"] = duration
+                    self.settings["native_gates"]["single_qubit"][qubit]["RX"]["duration"] = duration
 
                 # ramsey / spin_echo
                 elif par == "t2" or par == "t2_spin_echo":
                     t2 = float(value)
                     self.qubits[qubit].T2 = t2
-                    self.current_config["characterization"]["single_qubit"][qubit]["T2"] = t2
+                    self.settings["characterization"]["single_qubit"][qubit]["T2"] = t2
 
                 # t1
                 elif par == "t1":
                     t1 = float(value)
                     self.qubits[qubit].T1 = t1
-                    self.current_config["characterization"]["single_qubit"][qubit]["T1"] = t1
+                    self.settings["characterization"]["single_qubit"][qubit]["T1"] = t1
 
                 # classification
                 elif par == "threshold":
                     threshold = float(value)
                     self.qubits[qubit].thresold = threshold
-                    self.current_config["characterization"]["single_qubit"][qubit]["threshold"] = threshold
+                    self.settings["characterization"]["single_qubit"][qubit]["threshold"] = threshold
 
                 # classification
                 elif par == "iq_angle":
                     iq_angle = float(value)
                     self.qubits[qubit].iq_angle = iq_angle
-                    self.current_config["characterization"]["single_qubit"][qubit]["iq_angle"] = iq_angle
+                    self.settings["characterization"]["single_qubit"][qubit]["iq_angle"] = iq_angle
 
                 # classification
                 elif par == "mean_gnd_states":
                     mean_gnd_states = str(value)
                     self.qubits[qubit].iq_angle = iq_angle
-                    self.current_config["characterization"]["single_qubit"][qubit]["mean_gnd_states"] = mean_gnd_states
+                    self.settings["characterization"]["single_qubit"][qubit]["mean_gnd_states"] = mean_gnd_states
 
                 # classification
                 elif par == "mean_exc_states":
                     mean_exc_states = str(value)
                     self.qubits[qubit].iq_angle = iq_angle
-                    self.current_config["characterization"]["single_qubit"][qubit]["mean_exc_states"] = mean_exc_states
+                    self.settings["characterization"]["single_qubit"][qubit]["mean_exc_states"] = mean_exc_states
 
                 # drag pulse tunning
                 elif "beta" in par:
                     shape = self.single_qubit_natives[qubit]["RX"]["shape"]
                     rel_sigma = re.findall(r"[\d]+[.\d]+|[\d]*[.][\d]+|[\d]+", shape)[0]
-                    self.native_single_qubit_gates[qubit]["RX"]["shape"] = f"Drag({rel_sigma}, {float(value)})"
-                    self.current_config["native_gates"]["single_qubit"][qubit]["RX"][
+                    self.single_qubit_natives[qubit]["RX"]["shape"] = f"Drag({rel_sigma}, {float(value)})"
+                    self.settings["native_gates"]["single_qubit"][qubit]["RX"][
                         "shape"
                     ] = f"Drag({rel_sigma}, {float(value)})"
 

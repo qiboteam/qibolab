@@ -51,7 +51,7 @@ class MultiqubitPlatform(AbstractPlatform):
             for qubit in range(self.nqubits):
                 instrument_name = self.qubit_instrument_map[qubit][0]
                 port = self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]
-                att = self.current_config["instruments"][instrument_name]["settings"]["ports"][port]["attenuation"]
+                att = self.settings["instruments"][instrument_name]["settings"]["ports"][port]["attenuation"]
                 self.ro_port[qubit].attenuation = att
 
     def update(self, updates: dict):
@@ -77,10 +77,10 @@ class MultiqubitPlatform(AbstractPlatform):
                 # resonator_punchout_attenuation
                 if par == "readout_attenuation":
                     attenuation = int(value)
-                    # save current_config
+                    # save settings
                     instrument_name = self.qubit_instrument_map[qubit][0]
                     port = self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]
-                    self.current_config["instruments"][instrument_name]["settings"]["ports"][port][
+                    self.settings["instruments"][instrument_name]["settings"]["ports"][port][
                         "attenuation"
                     ] = attenuation
                     # configure RO attenuation
@@ -89,10 +89,10 @@ class MultiqubitPlatform(AbstractPlatform):
                 # resonator_spectroscopy_flux / qubit_spectroscopy_flux
                 if par == "sweetspot":
                     sweetspot = float(value)
-                    # save current_config
+                    # save settings
                     instrument_name = self.qubit_instrument_map[qubit][2]
                     port = elf.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][2]]
-                    self.current_config["instruments"][instrument_name]["settings"]["ports"][port][offset] = sweetspot
+                    self.settings["instruments"][instrument_name]["settings"]["ports"][port][offset] = sweetspot
                     # configure instrument qcm_bb offset
                     self.qb_port[qubit].current = sweetspot
 
@@ -103,8 +103,8 @@ class MultiqubitPlatform(AbstractPlatform):
                     # update Qblox qubit LO drive frequency config
                     instrument_name = self.qubit_instrument_map[qubit][1]
                     port = self.qdm[qubit].channel_port_map[self.qubit_channel_map[qubit][1]]
-                    drive_if = self.native_single_qubit_gates[qubit]["RX"]["if_frequency"]
-                    self.current_config["instruments"][instrument_name]["settings"]["ports"][port]["lo_frequency"] = (
+                    drive_if = self.single_qubit_natives[qubit]["RX"]["if_frequency"]
+                    self.settings["instruments"][instrument_name]["settings"]["ports"][port]["lo_frequency"] = (
                         freq - drive_if
                     )
 
@@ -116,13 +116,13 @@ class MultiqubitPlatform(AbstractPlatform):
                     threshold = float(value)
                     # update Qblox qubit classification threshold
                     instrument_name = self.qubit_instrument_map[qubit][0]
-                    self.current_config["instruments"][instrument_name]["settings"]["classification_parameters"][qubit][
+                    self.settings["instruments"][instrument_name]["settings"]["classification_parameters"][qubit][
                         "threshold"
                     ] = threshold
 
                     self.instruments[instrument_name].setup(
-                        **self.current_config["settings"],
-                        **self.current_config["instruments"][instrument_name]["settings"],
+                        **self.settings["settings"],
+                        **self.settings["instruments"][instrument_name]["settings"],
                     )
 
                 # classification
@@ -133,13 +133,13 @@ class MultiqubitPlatform(AbstractPlatform):
                     ) % 360  # save rotation angle in degrees for qblox
                     # update Qblox qubit classification iq angle
                     instrument_name = self.qubit_instrument_map[qubit][0]
-                    self.current_config["instruments"][instrument_name]["settings"]["classification_parameters"][qubit][
+                    self.settings["instruments"][instrument_name]["settings"]["classification_parameters"][qubit][
                         "rotation_angle"
                     ] = rotation_angle
 
                     self.instruments[instrument_name].setup(
-                        **self.current_config["settings"],
-                        **self.current_config["instruments"][instrument_name]["settings"],
+                        **self.settings["settings"],
+                        **self.settings["instruments"][instrument_name]["settings"],
                     )
 
                 super().update(updates)
