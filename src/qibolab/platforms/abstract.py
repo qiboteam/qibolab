@@ -58,8 +58,6 @@ class Qubit:
     # parameters for single shot classification
     threshold: Optional[float] = None
     iq_angle: float = 0.0
-    # required for integration weights (not sure if it should be here)
-    rotation_angle: float = 0.0
     # required for mixers (not sure if it should be here)
     mixer_drive_g: float = 0.0
     mixer_drive_phi: float = 0.0
@@ -175,8 +173,8 @@ class AbstractPlatform(ABC):
 
         # native gates
         settings["native_gates"] = {}
-        settings["native_gates"]["single_qubit"] = self.single_qubit_natives#native_single_qubit_gates
-        settings["native_gates"]["two_qubits"] = self.two_qubit_natives#native_two_qubit_gates
+        settings["native_gates"]["single_qubit"] = self.single_qubit_natives
+        settings["native_gates"]["two_qubits"] = self.two_qubit_natives
 
         settings["characterization"] = {}
         settings["characterization"]["single_qubit"] = {}
@@ -202,21 +200,20 @@ class AbstractPlatform(ABC):
             for qubit, value in values.items():
                 if par == "readout_frequency":
                     freq = int(value * 1e9)
-                    self.native_single_qubit_gates[qubit]["MZ"]["frequency"] = freq
-                    if "if_frequency" in self.native_single_qubit_gates[qubit]["MZ"]:
-                        self.native_single_qubit_gates[qubit]["MZ"][
-                            "if_frequency"
-                        ] = freq - self.get_lo_readout_frequency(qubit)
+                    self.single_qubit_natives[qubit]["MZ"]["frequency"] = freq
+                    if "if_frequency" in self.single_qubit_natives[qubit]["MZ"]:
+                        self.single_qubit_natives[qubit]["MZ"]["if_frequency"] = freq - self.get_lo_readout_frequency(
+                            qubit
+                        )
                     self.qubits[qubit].readout_frequency = freq
 
                 elif par == "drive_frequency":
                     freq = int(value * 1e9)
-                    self.native_single_qubit_gates[qubit]["RX"]["frequency"] = freq
-                    if "if_frequency" in self.native_single_qubit_gates[qubit]["RX"]:
-                        self.native_single_qubit_gates[qubit]["RX"][
-                            "if_frequency"
-                        ] = freq - self.get_lo_drive_frequency(qubit)
-                    self.qubits[qubit].readout_frequency = freq
+                    self.single_qubit_natives[qubit]["RX"]["frequency"] = freq
+                    if "if_frequency" in self.single_qubit_natives[qubit]["RX"]:
+                        self.single_qubit_natives[qubit]["RX"]["if_frequency"] = freq - self.get_lo_drive_frequency(
+                            qubit
+                        )
                     self.qubits[qubit].drive_frequency = freq
                 elif par == "bare_resonator_frequency":
                     freq = int(value * 1e9)
@@ -224,9 +221,9 @@ class AbstractPlatform(ABC):
                 elif "amplitude" in par:
                     amplitude = float(value)
                     if par == "readout_amplitude":
-                        self.native_single_qubit_gates[qubit]["MZ"]["amplitude"] = amplitude
+                        self.single_qubit_natives[qubit]["MZ"]["amplitude"] = amplitude
                     if par == "drive_amplitude":
-                        self.native_single_qubit_gates[qubit]["RX"]["amplitude"] = amplitude
+                        self.single_qubit_natives[qubit]["RX"]["amplitude"] = amplitude
                 elif par == "t2":
                     self.qubits[qubit].T2 = float(value)
                 elif "t1" == par:
@@ -236,18 +233,18 @@ class AbstractPlatform(ABC):
                 elif "iq_angle" == par:
                     self.qubits[qubit].iq_angle = float(value)
                 elif "beta" in par:
-                    shape = self.native_single_qubit_gates[qubit]["RX"]["shape"]
+                    shape = self.single_qubit_natives[qubit]["RX"]["shape"]
                     rel_sigma = re.findall(r"[\d]+[.\d]+|[\d]*[.][\d]+|[\d]+", shape)[0]
-                    self.native_single_qubit_gates[qubit]["RX"]["shape"] = f"Drag({rel_sigma}, {float(value)})"
+                    self.single_qubit_natives[qubit]["RX"]["shape"] = f"Drag({rel_sigma}, {float(value)})"
 
                 elif "length" in par:  # assume only drive length
-                    self.native_single_qubit_gates[qubit]["RX"]["duration"] = int(value)
+                    self.single_qubit_natives[qubit]["RX"]["duration"] = int(value)
                 elif par == "t2_spin_echo":
                     self.qubits[qubit].T2_spin_echo = int(value)
                 elif par == "classifiers_hpars":
                     self.qubits[qubit].classifiers_hpars = value
                 elif par == "readout_attenuation":
-                    self.qubits[qubit].readout.attenuation = int(value)
+                    True
                 else:
                     raise_error(ValueError, f"Unknown parameter {par}.")
 
