@@ -237,11 +237,10 @@ class TII_RFSOC4x2(AbstractInstrument):
 
                 if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
                     shots = self.classify_shots(i_pulse, q_pulse, qubits[ro_pulse.qubit])
+                    result = execution_parameters.get_results_type(shots, execution_parameters.nshots)
                 else:
-                    shots = None
-                results[ro_pulse.qubit] = results[serial] = execution_parameters.get_results_type(
-                    i_pulse, q_pulse, shots
-                )
+                    result = execution_parameters.get_results_type(i_pulse, q_pulse, execution_parameters.nshots)
+                results[ro_pulse.qubit] = results[serial] = result
 
         return results
 
@@ -443,8 +442,6 @@ class TII_RFSOC4x2(AbstractInstrument):
         """
         sweep_results = {}
 
-        results_type = execution_parameters.get_results_type()
-
         adcs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
         for k in range(len(adcs)):
             for j in range(len(sweeper.values)):
@@ -457,9 +454,10 @@ class TII_RFSOC4x2(AbstractInstrument):
                     if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
                         qubit = qubits[sequence.ro_pulses[i].qubit]
                         shots = self.classify_shots(i_pulse, q_pulse, qubit)
+                        result = execution_parameters.get_results_type(shots, execution_parameters.nshots)
                     else:
-                        shots = None
-                    results[sequence.ro_pulses[i].qubit] = results[serial] = results_type(i_pulse, q_pulse, shots)
+                        result = execution_parameters.get_results_type(i_pulse, q_pulse, execution_parameters.nshots)
+                    results[sequence.ro_pulses[i].qubit] = results[serial] = result
                 # merge new result with already saved ones
                 sweep_results = self.merge_sweep_results(sweep_results, results)
         return sweep_results
