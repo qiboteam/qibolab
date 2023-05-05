@@ -150,3 +150,30 @@ class ExecutionParameters:
     fast_reset: bool = False
     acquisition_type: AcquisitionType = AcquisitionType.DISCRIMINATION
     averaging_mode: AveragingMode = AveragingMode.SINGLESHOT
+
+    def get_results_type(self):
+        """Returns corresponding results class"""
+
+        from qibolab.result import (
+            AveragedIntegratedResults,
+            AveragedRawWaveformResults,
+            AveragedStateResults,
+            IntegratedResults,
+            RawWaveformResults,
+            StateResults,
+        )
+
+        if self.averaging_mode is AveragingMode.SINGLESHOT:
+            if self.acquisition_type is AcquisitionType.INTEGRATION:
+                return IntegratedResults
+            elif self.acquisition_type is AcquisitionType.RAW:
+                return RawWaveformResults
+            else:
+                return StateResults
+        else:
+            if self.acquisition_type is AcquisitionType.INTEGRATION:
+                return AveragedIntegratedResults
+            elif self.acquisition_type is AcquisitionType.RAW:
+                return AveragedRawWaveformResults
+            else:
+                return AveragedStateResults
