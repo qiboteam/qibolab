@@ -22,8 +22,8 @@ native_gates:
         0: # qubit number
             RX:
                 duration: 40
-                amplitude: 0.005
-                frequency: 5_704_000_000
+                amplitude: 0.005 # TODO
+                frequency: 4_900_000_000 # TODO
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -31,17 +31,16 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.02
-                frequency: 7_111_100_509
+                frequency: 7_111_151_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
                 phase: 0
         1: # qubit number
             RX:
-                duration: 40
-                amplitude: 0.0484
+                duration: 40 # TODO
+                amplitude: 0.0484 # TODO
                 frequency: 5_400_000_000
-                #frequency: 4_718_515_000 # 02 transition (more likely)
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -49,7 +48,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.016
-                frequency: 7_345_180_000 # 7_450_000_000
+                frequency: 7_345_330_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -58,8 +57,8 @@ native_gates:
            # TODO for now we do not have flux here!
             RX:
                 duration: 40
-                amplitude: 0.0484
-                frequency: 6_866_663_000
+                amplitude: 0.0484 # TODO
+                frequency: 6_866_663_000 # TODO
                 #frequency: 4_718_515_000 # 02 transition (more likely)
                 shape: Gaussian(5)
                 type: qd # qubit drive
@@ -68,7 +67,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.3
-                frequency: 7_458_000_000 #7_050_000_000
+                frequency: 7_458_000_000 # TODO
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -95,11 +94,11 @@ native_gates:
 characterization:   #TODO No characterization yet
     single_qubit:
         0:
-            readout_frequency: 7_111_100_000
+            readout_frequency: 7_111_151_000
             drive_frequency: 0.0
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.25
+            sweetspot: -0.07
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
