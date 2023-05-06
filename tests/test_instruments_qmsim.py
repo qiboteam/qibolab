@@ -21,7 +21,7 @@ from qibo.models import Circuit
 
 from qibolab.backends import QibolabBackend
 from qibolab.paths import qibolab_folder
-from qibolab.platform import create_tii_qw5q_gold
+from qibolab.platform import create_tii_qw5q_gold_qm
 from qibolab.pulses import SNZ, FluxPulse, PulseSequence, Rectangular
 from qibolab.sweeper import Parameter, Sweeper
 
@@ -35,7 +35,7 @@ def simulator(request):
     """
     address, duration = request.param
     runcard = qibolab_folder / "runcards" / "qw5q_gold.yml"
-    platform = create_tii_qw5q_gold(runcard, simulation_duration=duration, address=address, cloud=True)
+    platform = create_tii_qw5q_gold_qm(runcard, simulation_duration=duration, address=address, cloud=True)
     platform.connect()
     platform.setup()
     yield platform

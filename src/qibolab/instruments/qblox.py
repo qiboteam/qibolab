@@ -65,7 +65,7 @@ class QbloxSweeperType(Enum):
     duration = auto()
 
     number = auto()  # internal
-    phase = auto()  # not implemented yet
+    relative_phase = auto()  # not implemented yet
     time = auto()  # not implemented yet
 
 
@@ -117,7 +117,7 @@ class QbloxSweeper:
             Parameter.bias: QbloxSweeperType.offset,
             Parameter.start: QbloxSweeperType.start,
             Parameter.duration: QbloxSweeperType.duration,
-            Parameter.relative_phase: QbloxSweeperType.phase,
+            Parameter.relative_phase: QbloxSweeperType.relative_phase,
         }
         if sweeper.parameter in type_c:
             type = type_c[sweeper.parameter]
@@ -206,7 +206,7 @@ class QbloxSweeper:
             ),
             QbloxSweeperType.gain: (lambda v: all((-1 <= x and x <= 1) for x in v)),
             QbloxSweeperType.offset: (lambda v: all((-1.25 * np.sqrt(2) <= x and x <= 1.25 * np.sqrt(2)) for x in v)),
-            QbloxSweeperType.phase: (lambda v: True),
+            QbloxSweeperType.relative_phase: (lambda v: True),
             QbloxSweeperType.start: (lambda v: all((4 <= x and x < 2**16) for x in v)),
             QbloxSweeperType.duration: (lambda v: all((0 <= x and x < 2**16) for x in v)),
             QbloxSweeperType.number: (lambda v: all((-(2**16) < x and x < 2**16) for x in v)),
@@ -220,7 +220,7 @@ class QbloxSweeper:
             QbloxSweeperType.frequency: convert_frequency,
             QbloxSweeperType.gain: convert_gain,
             QbloxSweeperType.offset: convert_offset,
-            QbloxSweeperType.phase: convert_phase,
+            QbloxSweeperType.relative_phase: convert_phase,
             QbloxSweeperType.start: (lambda x: int(x) % 2**16),
             QbloxSweeperType.duration: (lambda x: int(x) % 2**16),
             QbloxSweeperType.number: (lambda x: int(x) % 2**32),
@@ -274,6 +274,8 @@ class QbloxSweeper:
             if self.type == QbloxSweeperType.time:
                 pass
             if self.type == QbloxSweeperType.number:
+                pass
+            if self.type == QbloxSweeperType.relative_phase:
                 pass
             header_block += update_parameter_block
         header_block.append_spacer()
@@ -1312,10 +1314,13 @@ class ClusterQRM_RF(AbstractInstrument):
                         # pulses_block.append(f"set_freq {convert_frequency(_if)}", f"set intermediate frequency to {_if} Hz")
 
                         # Set phase
-                        pulses_block.append(
-                            f"set_ph {convert_phase(pulses[n].relative_phase)}",
-                            comment=f"set relative phase {pulses[n].relative_phase} rads",
-                        )
+                        if pulses[n].sweeper and pulses[n].sweeper.type == QbloxSweeperType.relative_phase:
+                            pulses_block.append(f"set_ph {pulses[n].sweeper.register}")
+                        else:
+                            pulses_block.append(
+                                f"set_ph {convert_phase(pulses[n].relative_phase)}",
+                                comment=f"set relative phase {pulses[n].relative_phase} rads",
+                            )
 
                     if pulses[n].type == PulseType.READOUT:
                         delay_after_play = self.ports["i1"].acquisition_hold_off
@@ -1373,7 +1378,7 @@ class ClusterQRM_RF(AbstractInstrument):
                             delay_after_play = sequence_total_duration - pulses[n].start
                         if delay_after_play < minimum_delay_between_instructions:
                             raise Exception(
-                                f"The minimum delay between pulses is {minimum_delay_between_instructions}ns."
+                                f"The minimum delay between the start of two pulses in the same channel is {minimum_delay_between_instructions}ns."
                             )
 
                         if pulses[n].sweeper and pulses[n].sweeper.type == QbloxSweeperType.duration:
@@ -1468,10 +1473,10 @@ class ClusterQRM_RF(AbstractInstrument):
                 self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
 
                 # DEBUG: QRM RF Save sequence to file
-                filename = f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
-                with open(filename, "w", encoding="utf-8") as file:
-                    json.dump(qblox_dict[sequencer], file, indent=4)
-                    file.write(sequencer.program)
+                # filename = f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
+                # with open(filename, "w", encoding="utf-8") as file:
+                #     json.dump(qblox_dict[sequencer], file, indent=4)
+                #     file.write(sequencer.program)
 
         # Clear acquisition memory and arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
@@ -2433,10 +2438,13 @@ class ClusterQCM_RF(AbstractInstrument):
                             # pulses_block.append(f"set_freq {convert_frequency(_if)}", f"set intermediate frequency to {_if} Hz")
 
                             # Set phase
-                            pulses_block.append(
-                                f"set_ph {convert_phase(pulses[n].relative_phase)}",
-                                comment=f"set relative phase {pulses[n].relative_phase} rads",
-                            )
+                            if pulses[n].sweeper and pulses[n].sweeper.type == QbloxSweeperType.relative_phase:
+                                pulses_block.append(f"set_ph {pulses[n].sweeper.register}")
+                            else:
+                                pulses_block.append(
+                                    f"set_ph {convert_phase(pulses[n].relative_phase)}",
+                                    comment=f"set relative phase {pulses[n].relative_phase} rads",
+                                )
 
                         # Calculate the delay_after_play that is to be used as an argument to the play instruction
                         if len(pulses) > n + 1:
@@ -2447,7 +2455,7 @@ class ClusterQCM_RF(AbstractInstrument):
 
                         if delay_after_play < minimum_delay_between_instructions:
                             raise Exception(
-                                f"The minimum delay between pulses is {minimum_delay_between_instructions}ns."
+                                f"The minimum delay between the start of two pulses in the same channel is {minimum_delay_between_instructions}ns."
                             )
 
                         if pulses[n].sweeper and pulses[n].sweeper.type == QbloxSweeperType.duration:
@@ -2547,10 +2555,10 @@ class ClusterQCM_RF(AbstractInstrument):
                     self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
 
                     # DEBUG: QCM RF Save sequence to file
-                    filename = f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
-                    with open(filename, "w", encoding="utf-8") as file:
-                        json.dump(qblox_dict[sequencer], file, indent=4)
-                        file.write(sequencer.program)
+                    # filename = f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
+                    # with open(filename, "w", encoding="utf-8") as file:
+                    #     json.dump(qblox_dict[sequencer], file, indent=4)
+                    #     file.write(sequencer.program)
 
         # Arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
@@ -3151,10 +3159,13 @@ class ClusterQCM(AbstractInstrument):
                             # pulses_block.append(f"set_freq {convert_frequency(_if)}", f"set intermediate frequency to {_if} Hz")
 
                             # Set phase
-                            pulses_block.append(
-                                f"set_ph {convert_phase(pulses[n].relative_phase)}",
-                                comment=f"set relative phase {pulses[n].relative_phase} rads",
-                            )
+                            if pulses[n].sweeper and pulses[n].sweeper.type == QbloxSweeperType.relative_phase:
+                                pulses_block.append(f"set_ph {pulses[n].sweeper.register}")
+                            else:
+                                pulses_block.append(
+                                    f"set_ph {convert_phase(pulses[n].relative_phase)}",
+                                    comment=f"set relative phase {pulses[n].relative_phase} rads",
+                                )
 
                         # Calculate the delay_after_play that is to be used as an argument to the play instruction
                         if len(pulses) > n + 1:
@@ -3165,7 +3176,7 @@ class ClusterQCM(AbstractInstrument):
 
                         if delay_after_play < minimum_delay_between_instructions:
                             raise Exception(
-                                f"The minimum delay between pulses is {minimum_delay_between_instructions}ns."
+                                f"The minimum delay between the start of two pulses in the same channel is {minimum_delay_between_instructions}ns."
                             )
 
                         if pulses[n].sweeper and pulses[n].sweeper.type == QbloxSweeperType.duration:

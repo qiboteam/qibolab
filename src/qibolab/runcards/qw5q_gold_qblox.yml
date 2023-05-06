@@ -267,8 +267,8 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.2
-                frequency: 7_803_081_610    # resonator frequency
-                if_frequency: -46_918_390    # difference in resonator frequency
+                frequency: 7_803_310_610    # resonator frequency
+                if_frequency: -46_689_390    # difference in resonator frequency
                 shape: Rectangular()
                 type: ro                    # readout
         4: # qubit id
@@ -306,17 +306,36 @@ native_gates:
         3-2:
             CZ:
             - duration: 32
-              amplitude: 0.5 # -0.20371
-              shape: Rectangular()
+              amplitude: -0.6015
+              shape: Exponential(12, 5000, 0.1)
               qubit: 3
               relative_start: 0
               type: qf
-            - type: virtual_z
-              phase: 0.4
-              qubit: 2
-            - type: virtual_z
-              phase: 1.0633
+            - duration: 20
+              amplitude: 0
+              shape: Rectangular())
               qubit: 3
+              relative_start: 32
+              type: qf
+            - type: virtual_z
+              phase: -3.613
+              qubit: 3
+
+            - duration: 32
+              amplitude: 0
+              shape: Rectangular())
+              qubit: 2
+              relative_start: 0
+              type: qf
+            - duration: 20
+              amplitude: 0
+              shape: Rectangular())
+              qubit: 2
+              relative_start: 32
+              type: qf
+            - type: virtual_z
+              phase: -0.496
+              qubit: 2
 
 characterization:
     single_qubit:
@@ -351,7 +370,7 @@ characterization:
             mean_exc_states: (0.0+0.0j)
             sweetspot: -0.168
         3:
-            readout_frequency: 7_803_081_610
+            readout_frequency: 7_803_310_610
             drive_frequency: 6_760_361_111
             T1: 0
             T2: 0

@@ -213,10 +213,11 @@ class Rectangular(PulseShape):
 class Exponential(PulseShape):
     """ """
 
-    def __init__(self, tau: float, g: float):
+    def __init__(self, tau: float, upsilon: float, g: float = 0.1):
         self.name = "Exponential"
         self.pulse: Pulse = None
         self.tau: float = float(tau)
+        self.upsilon: float = float(upsilon)
         self.g: float = float(g)
 
     @property
@@ -227,9 +228,11 @@ class Exponential(PulseShape):
             num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
             x = np.arange(0, num_samples, 1)
             waveform = Waveform(
-                self.pulse.amplitude * np.ones(num_samples)
-                + self.g * (1 - self.pulse.amplitude) * np.exp(-x / self.tau)
+                self.pulse.amplitude
+                * ((np.ones(num_samples) * np.exp(-x / self.upsilon)) + self.g * np.exp(-x / self.tau))
+                / (1 + self.g)
             )
+
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         else:
@@ -252,7 +255,7 @@ class Exponential(PulseShape):
             )
 
     def __repr__(self):
-        return f"{self.name}({format(self.tau, '.6f').rstrip('0').rstrip('.')})"
+        return f"{self.name}({format(self.tau, '.3f').rstrip('0').rstrip('.')}, {format(self.upsilon, '.3f').rstrip('0').rstrip('.')}, {format(self.g, '.3f').rstrip('0').rstrip('.')})"
 
 
 class Gaussian(PulseShape):

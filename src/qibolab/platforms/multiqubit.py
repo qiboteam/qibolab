@@ -40,6 +40,11 @@ class MultiqubitPlatform(AbstractPlatform):
                         if channel in self.qubit_channel_map[qubit]:
                             self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
 
+        from qibolab.designs import Channel, ChannelMap
+
+        # Create channel objects
+        self.channels = ChannelMap.from_names(*self.settings["channels"])
+
     def reload_settings(self):
         super().reload_settings()
         self.characterization = self.settings["characterization"]
@@ -156,6 +161,7 @@ class MultiqubitPlatform(AbstractPlatform):
         self.qd_port = {}
         self.qf_port = {}
         self.qb_port = {}
+
         for qubit in self.qubit_channel_map:
             self.ro_channel[qubit] = self.qubit_channel_map[qubit][0]
             self.qd_channel[qubit] = self.qubit_channel_map[qubit][1]
@@ -167,16 +173,19 @@ class MultiqubitPlatform(AbstractPlatform):
                 self.ro_port[qubit] = self.qrm[qubit].ports[
                     self.qrm[qubit]._channel_port_map[self.qubit_channel_map[qubit][0]]
                 ]
+                self.qubits[qubit].readout = self.channels[self.qubit_channel_map[qubit][0]]
             if not self.qubit_instrument_map[qubit][1] is None:
                 self.qdm[qubit] = self.instruments[self.qubit_instrument_map[qubit][1]]
                 self.qd_port[qubit] = self.qdm[qubit].ports[
                     self.qdm[qubit]._channel_port_map[self.qubit_channel_map[qubit][1]]
                 ]
+                self.qubits[qubit].drive = self.channels[self.qubit_channel_map[qubit][1]]
             if not self.qubit_instrument_map[qubit][2] is None:
                 self.qfm[qubit] = self.instruments[self.qubit_instrument_map[qubit][2]]
                 self.qf_port[qubit] = self.qfm[qubit].ports[
                     self.qfm[qubit]._channel_port_map[self.qubit_channel_map[qubit][2]]
                 ]
+                self.qubits[qubit].flux = self.channels[self.qubit_channel_map[qubit][2]]
             if not self.qubit_instrument_map[qubit][3] is None:
                 self.qbm[qubit] = self.instruments[self.qubit_instrument_map[qubit][3]]
                 self.qb_port[qubit] = self.qbm[qubit].dacs[self.qubit_channel_map[qubit][3]]
@@ -322,7 +331,10 @@ class MultiqubitPlatform(AbstractPlatform):
         sweepers_copy = []
         for sweeper in sweepers:
             if sweeper.pulses:
-                ps = [sequence_copy[sequence_copy.index(pulse)] for pulse in sweeper.pulses]
+                ps = []
+                for pulse in sweeper.pulses:
+                    if pulse in sequence_copy:
+                        ps.append(sequence_copy[sequence_copy.index(pulse)])
             else:
                 ps = None
             sweepers_copy.append(
@@ -373,10 +385,10 @@ class MultiqubitPlatform(AbstractPlatform):
             for qubit in sweeper.qubits:
                 initial[qubit] = self.get_attenuation(qubit)
 
-        elif sweeper.parameter is Parameter.relative_phase:
-            initial = {}
-            for pulse in sweeper.pulses:
-                initial[pulse.id] = pulse.relative_phase
+        # elif sweeper.parameter is Parameter.relative_phase:
+        #     initial = {}
+        #     for pulse in sweeper.pulses:
+        #         initial[pulse.id] = pulse.relative_phase
 
         elif sweeper.parameter is Parameter.lo_frequency:
             initial = {}
@@ -402,7 +414,7 @@ class MultiqubitPlatform(AbstractPlatform):
             for pulse in sweeper.pulses:
                 pulse.amplitude = 1
 
-        for_loop_sweepers = [Parameter.attenuation, Parameter.lo_frequency, Parameter.relative_phase]
+        for_loop_sweepers = [Parameter.attenuation, Parameter.lo_frequency]
         rt_sweepers = [
             Parameter.frequency,
             Parameter.gain,
@@ -410,6 +422,7 @@ class MultiqubitPlatform(AbstractPlatform):
             Parameter.amplitude,
             Parameter.start,
             Parameter.duration,
+            Parameter.relative_phase,
         ]
 
         if sweeper.parameter in for_loop_sweepers:
@@ -419,9 +432,9 @@ class MultiqubitPlatform(AbstractPlatform):
                     for qubit in sweeper.qubits:
                         # self.set_attenuation(qubit, initial[qubit] + value)
                         self.set_attenuation(qubit, value)  # make att absolute
-                if sweeper.parameter is Parameter.relative_phase:
-                    for pulse in sweeper.pulses:
-                        pulse.relative_phase = initial[pulse.id] + value
+                # if sweeper.parameter is Parameter.relative_phase:
+                #     for pulse in sweeper.pulses:
+                #         pulse.relative_phase = initial[pulse.id] + value
                 elif sweeper.parameter is Parameter.lo_frequency:
                     for pulse in sweeper.pulses:
                         if pulse.type == PulseType.READOUT:
@@ -445,75 +458,104 @@ class MultiqubitPlatform(AbstractPlatform):
                         results[pulse.id] += result[pulse.serial].average if average else result[pulse.serial]
                         results[pulse.qubit] = results[pulse.id]
         else:
-            if all(s.parameter in rt_sweepers for s in sweepers):
-                # rt-based sweepers
-                num_bins = nshots
-                for sweeper in sweepers:
-                    num_bins *= len(sweeper.values)
+            split_relative_phase = False
+            if sweeper.parameter == Parameter.relative_phase:
+                from qibolab.instruments.qblox_q1asm import convert_phase
 
-                if num_bins < 2**17:
-                    repetition_duration = sequence.finish + relaxation_time
-                    execution_time = navgs * num_bins * ((repetition_duration + 1000 * len(sweepers)) * 1e-9)
-                    log.info(
-                        f"Real time sweeper execution time: {int(execution_time)//60}m {int(execution_time) % 60}s"
-                    )
+                c_values = np.array([convert_phase(v) for v in sweeper.values])
+                if any(np.diff(c_values) < 0):
+                    split_relative_phase = True
+                    _from = 0
+                    for idx in np.append(np.where(np.diff(c_values) < 0), len(c_values) - 1):
+                        _to = idx + 1
+                        _values = sweeper.values[_from:_to]
+                        split_sweeper = Sweeper(
+                            parameter=sweeper.parameter,
+                            values=_values,
+                            pulses=sweeper.pulses,
+                            qubits=sweeper.qubits,
+                        )
+                        self._sweep_recursion(
+                            sequence,
+                            *(tuple([split_sweeper]) + sweepers[1:]),
+                            results=results,
+                            nshots=nshots,
+                            navgs=navgs,
+                            average=average,
+                            relaxation_time=relaxation_time,
+                        )
+                        _from = _to
 
-                    result = self.execute_pulse_sequence(sequence, nshots, navgs, relaxation_time, sweepers)
-                    for pulse in sequence.ro_pulses:
-                        results[pulse.id] += result[pulse.serial]
-                        results[pulse.qubit] = results[pulse.id]
-                else:
-                    sweepers_repetitions = 1
+            if not split_relative_phase:
+                if all(s.parameter in rt_sweepers for s in sweepers):
+                    # rt-based sweepers
+                    num_bins = nshots
                     for sweeper in sweepers:
-                        sweepers_repetitions *= len(sweeper.values)
-                    if sweepers_repetitions < 2**17:
-                        # split nshots
-                        max_rt_nshots = (2**17) // sweepers_repetitions
-                        num_full_sft_iterations = nshots // max_rt_nshots
-                        num_bins = max_rt_nshots * sweepers_repetitions
+                        num_bins *= len(sweeper.values)
 
-                        for sft_iteration in range(num_full_sft_iterations + 1):
-                            _nshots = min(max_rt_nshots, nshots - sft_iteration * max_rt_nshots)
-                            self._sweep_recursion(
-                                sequence,
-                                *sweepers,
-                                results=results,
-                                nshots=_nshots,
-                                navgs=navgs,
-                                average=average,
-                                relaxation_time=relaxation_time,
-                            )
+                    if num_bins < 2**17:
+                        repetition_duration = sequence.finish + relaxation_time
+                        execution_time = navgs * num_bins * ((repetition_duration + 1000 * len(sweepers)) * 1e-9)
+                        log.info(
+                            f"Real time sweeper execution time: {int(execution_time)//60}m {int(execution_time) % 60}s"
+                        )
+
+                        result = self.execute_pulse_sequence(sequence, nshots, navgs, relaxation_time, sweepers)
+                        for pulse in sequence.ro_pulses:
+                            results[pulse.id] += result[pulse.serial]
+                            results[pulse.qubit] = results[pulse.id]
                     else:
-                        for shot in range(nshots):
-                            num_bins = 1
-                            for sweeper in sweepers[1:]:
-                                num_bins *= len(sweeper.values)
-                            sweeper = sweepers[0]
-                            max_rt_iterations = (2**17) // num_bins
-                            num_full_sft_iterations = len(sweeper.values) // max_rt_iterations
-                            num_bins = nshots * max_rt_iterations
-                            for sft_iteration in range(num_full_sft_iterations + 1):
-                                _from = sft_iteration * max_rt_iterations
-                                _to = min((sft_iteration + 1) * max_rt_iterations, len(sweeper.values))
-                                _values = sweeper.values[_from:_to]
-                                split_sweeper = Sweeper(
-                                    parameter=sweeper.parameter,
-                                    values=_values,
-                                    pulses=sweeper.pulses,
-                                    qubits=sweeper.qubits,
-                                )
+                        sweepers_repetitions = 1
+                        for sweeper in sweepers:
+                            sweepers_repetitions *= len(sweeper.values)
+                        if sweepers_repetitions < 2**17:
+                            # split nshots
+                            max_rt_nshots = (2**17) // sweepers_repetitions
+                            num_full_sft_iterations = nshots // max_rt_nshots
+                            num_bins = max_rt_nshots * sweepers_repetitions
 
+                            for sft_iteration in range(num_full_sft_iterations + 1):
+                                _nshots = min(max_rt_nshots, nshots - sft_iteration * max_rt_nshots)
                                 self._sweep_recursion(
                                     sequence,
-                                    *(tuple([split_sweeper]) + sweepers[1:]),
+                                    *sweepers,
                                     results=results,
-                                    nshots=nshots,
+                                    nshots=_nshots,
                                     navgs=navgs,
                                     average=average,
                                     relaxation_time=relaxation_time,
                                 )
-            else:
-                raise Exception("cannot execute a for-loop sweeper nested inside of a rt sweeper")
+                        else:
+                            for shot in range(nshots):
+                                num_bins = 1
+                                for sweeper in sweepers[1:]:
+                                    num_bins *= len(sweeper.values)
+                                sweeper = sweepers[0]
+                                max_rt_iterations = (2**17) // num_bins
+                                num_full_sft_iterations = len(sweeper.values) // max_rt_iterations
+                                num_bins = nshots * max_rt_iterations
+                                for sft_iteration in range(num_full_sft_iterations + 1):
+                                    _from = sft_iteration * max_rt_iterations
+                                    _to = min((sft_iteration + 1) * max_rt_iterations, len(sweeper.values))
+                                    _values = sweeper.values[_from:_to]
+                                    split_sweeper = Sweeper(
+                                        parameter=sweeper.parameter,
+                                        values=_values,
+                                        pulses=sweeper.pulses,
+                                        qubits=sweeper.qubits,
+                                    )
+
+                                    self._sweep_recursion(
+                                        sequence,
+                                        *(tuple([split_sweeper]) + sweepers[1:]),
+                                        results=results,
+                                        nshots=nshots,
+                                        navgs=navgs,
+                                        average=average,
+                                        relaxation_time=relaxation_time,
+                                    )
+                else:
+                    raise Exception("cannot execute a for-loop sweeper nested inside of a rt sweeper")
 
     def measure_fidelity(self, qubits=None, nshots=None):
         self.reload_settings()

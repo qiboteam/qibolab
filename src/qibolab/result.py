@@ -40,7 +40,10 @@ class ExecutionResults:
         i = np.append(self.i, data.i, axis=axis)
         q = np.append(self.q, data.q, axis=axis)
         if data.shots is not None:
-            shots = np.append(self.shots, data.shots, axis=axis)
+            if self.shots is None:
+                shots = data.shots
+            else:
+                shots = np.append(self.shots, data.shots, axis=axis)
         else:
             shots = None
 

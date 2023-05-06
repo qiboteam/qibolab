@@ -236,7 +236,7 @@ def loop_block(start: int, stop: int, step: int, register: Register, block):  # 
 
 def convert_phase(phase_rad: float):
     phase_deg = (phase_rad * 360 / (2 * np.pi)) % 360
-    return int(phase_deg / 360 * 1e9)
+    return int(phase_deg * 1e9 / 360)
     """
     The phase is divided into 1e9 steps between 0° and 360°,
     expressed as an integer between 0 and 1e9 (e.g 45°=125e6).
