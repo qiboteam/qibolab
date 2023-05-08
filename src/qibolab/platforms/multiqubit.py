@@ -44,7 +44,7 @@ class MultiqubitPlatform(AbstractPlatform):
         self.characterization = self.settings["characterization"]
         self.qubit_channel_map = self.settings["qubit_channel_map"]
         self.hardware_avg = self.settings["settings"]["hardware_avg"]
-        self.relaxation_time = self.settings["settings"]["relaxation_time"]
+        self.relaxation_time = self.settings["settings"]["repetition_duration"]
 
         # FIX: Set attenuation again to the original value after sweep attenuation in punchout
         if hasattr(self, "qubit_instrument_map"):
@@ -63,17 +63,6 @@ class MultiqubitPlatform(AbstractPlatform):
         """
         for par, values in updates.items():
             for qubit, value in values.items():
-                # log.info(f"qubit readout instrument: {self.qubit_instrument_map[qubit][0]}")
-                # log.info(f"qubit drive instrument: {self.qubit_instrument_map[qubit][1]}")
-                # log.info(f"qubit bias instrument: {self.qubit_instrument_map[qubit][2]}")
-                # log.info(f"qubit flux instrument: {self.qubit_instrument_map[qubit][3]}")
-
-                # log.info(f"qubit read out channel: {self.ro_channel[qubit]}")
-                # log.info(f"qubit qubit drive channel: {self.qd_channel[qubit]}")
-                # log.info(f"qubit qubit bias channel: {self.qb_channel[qubit]}")
-                # log.info(f"qubit qubit flux channel: {self.qf_channel[qubit]}")
-                # log.info(f"attenuation before updating: {self.ro_port[qubit].attenuation}")
-
                 # resonator_punchout_attenuation
                 if par == "readout_attenuation":
                     attenuation = int(value)

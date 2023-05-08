@@ -138,7 +138,7 @@ class AbstractPlatform(ABC):
 
         self.topology = settings["topology"]
 
-        self.relaxation_time = settings["settings"]["relaxation_time"]
+        self.relaxation_time = settings["settings"]["repetition_duration"]
         self.sampling_rate = settings["settings"]["sampling_rate"]
 
         # Load native gates
