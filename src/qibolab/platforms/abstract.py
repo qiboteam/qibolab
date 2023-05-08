@@ -65,11 +65,16 @@ class Qubit:
     mixer_readout_g: float = 0.0
     mixer_readout_phi: float = 0.0
 
+    # Ask Stavros if it is iq_angle
+    rotation_angle: float = 0.0
+
     readout: Optional[Channel] = None
     feedback: Optional[Channel] = None
     twpa: Optional[Channel] = None
     drive: Optional[Channel] = None
     flux: Optional[Channel] = None
+
+
 
     def __post_init__(self):
         # register qubit in ``flux`` channel so that we can access

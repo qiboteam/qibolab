@@ -370,6 +370,10 @@ characterization:
             mean_exc_states: (0.0+0.0j)
             sweetspot: 0.335
             sweetspot: 0.335
+            threshold: 0.0
+            iq_angle: 0.0
+            # required for integration weights (not sure if it should be here)
+            rotation_angle: 0.0
         1:
             readout_frequency: 7_453_190_140
             drive_frequency: 4_852_013_000
@@ -380,6 +384,10 @@ characterization:
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
             sweetspot: -0.360
+            threshold: 0.0
+            iq_angle: 0.0
+            # required for integration weights (not sure if it should be here)
+            rotation_angle: 0.0
         2:
             readout_frequency: 7_655_148_879
             drive_frequency: 5_795_026_000
@@ -393,6 +401,8 @@ characterization:
             sweetspot: -0.167
             threshold: 0.04381767172346776,
             iq_angle: -2.9922411463897145,
+            # required for integration weights (not sure if it should be here)
+            rotation_angle: 0.            
         3:
             readout_frequency: 7_803_437_704
             drive_frequency: 6_761_250_000
@@ -403,7 +413,10 @@ characterization:
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
             sweetspot: 0.095
-            sweetspot: 0.095
+            threshold: 0.0
+            iq_angle: 0.0
+            # required for integration weights (not sure if it should be here)
+            rotation_angle: 0.0            
         4:
             readout_frequency: 8_058_673_359
             readout_frequency: 8_058_673_359
@@ -415,7 +428,10 @@ characterization:
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
             sweetspot: -0.329
-            sweetspot: -0.329
+            threshold: 0.0
+            iq_angle: 0.0
+            # required for integration weights (not sure if it should be here)
+            rotation_angle: 0.0
         5:
             readout_frequency: 7_118_680_035
             drive_frequency: 4_700_000_000
@@ -426,3 +442,7 @@ characterization:
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
             sweetspot: 0
+            threshold: 0.0
+            iq_angle: 0.0
+            # required for integration weights (not sure if it should be here)
+            rotation_angle: 0.0            
