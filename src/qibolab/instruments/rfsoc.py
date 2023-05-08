@@ -35,7 +35,7 @@ class QickProgramConfig:
 
 
 @dataclass
-class QickSweep:
+class QickSweep:  # TODO change name to avoid confusion
     parameter: Parameter = None  # parameter to sweep
     results: List[str] = None  # list of readout pulses serials
     pulses: List[Pulse] = None  # list of pulses
@@ -53,6 +53,7 @@ class QickSweep:
 
 
 def create_qick_sweeps(sweepers, sequence, qubits):
+    # TODO add phase
     sweeps = []
     for sweeper in sweepers:
         is_freq = sweeper.parameter is Parameter.frequency
@@ -543,7 +544,7 @@ class RFSoC(AbstractInstrument):
         """
 
         # if there isn't only a sweeper do a python sweep
-        if len(sweepers) != 1:
+        if len(sweepers) != 1:  # TODO this should not be the case
             return True
 
         is_amp = sweepers[0].parameter is Parameter.amplitude
@@ -556,7 +557,8 @@ class RFSoC(AbstractInstrument):
             if is_freq and is_ro:
                 return True
 
-            # check if the sweeped pulse is the first on the DAC channel
+            # check if the sweeped pulse is the first and only on the DAC channel
+            # TODO this also should be extended
             for sweep_pulse in sweepers[0].pulses:
                 already_pulsed = []
                 for pulse in sequence:
@@ -569,7 +571,7 @@ class RFSoC(AbstractInstrument):
                     else:
                         already_pulsed.append(pulse_ch)
         elif is_bias:
-            return True
+            return True  # TODO add support
             for sweep_qubit in sweepers[0].indexes:
                 for pulse in sequence.qf_pulses:
                     if pulse.qubit is sweep_qubit:
