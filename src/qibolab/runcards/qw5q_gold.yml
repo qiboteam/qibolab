@@ -262,7 +262,7 @@ characterization:
             threshold: 0.0
             iq_angle: 0.0
             # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
+            iq_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
