@@ -80,8 +80,8 @@ class MultiqubitPlatform(AbstractPlatform):
                     sweetspot = float(value)
                     # save settings
                     instrument_name = self.qubit_instrument_map[qubit][2]
-                    port = elf.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][2]]
-                    self.settings["instruments"][instrument_name]["settings"]["ports"][port][offset] = sweetspot
+                    port = self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][2]]
+                    self.settings["instruments"][instrument_name]["settings"]["ports"][port]["offset"] = sweetspot
                     # configure instrument qcm_bb offset
                     self.qb_port[qubit].current = sweetspot
 
