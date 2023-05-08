@@ -186,7 +186,7 @@ characterization:
             threshold: 0.00028502261712637096
             iq_angle: 1.283105298787488
             # required for integration weights (not sure if it should be here)
-            rotation_angle: 63.214
+            iq_angle: 63.214
             # Software classifier
             # classifier:
             #     type: "scikit"
