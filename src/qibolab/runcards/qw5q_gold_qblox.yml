@@ -402,7 +402,7 @@ characterization:
             threshold: 0.04381767172346776,
             iq_angle: -2.9922411463897145,
             # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.            
+            rotation_angle: 0.
         3:
             readout_frequency: 7_803_437_704
             drive_frequency: 6_761_250_000
@@ -416,7 +416,7 @@ characterization:
             threshold: 0.0
             iq_angle: 0.0
             # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0            
+            rotation_angle: 0.0
         4:
             readout_frequency: 8_058_673_359
             readout_frequency: 8_058_673_359
@@ -445,4 +445,4 @@ characterization:
             threshold: 0.0
             iq_angle: 0.0
             # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0            
+            rotation_angle: 0.0
