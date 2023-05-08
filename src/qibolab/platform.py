@@ -264,7 +264,7 @@ def create_tii_zcu111(runcard, address=None):
     # Readout
     channels["L3-30_ro"].ports = [("dac3", 6)]
     # feedback
-    channels["L2-4-RO_1"].ports = [("adc0", 0)]
+    channels["L2-4-RO_1"].ports = [("adc1", 1)]
     # drive
     channels["L4-30_qd"].ports = [("dac4", 4)]
     # Flux
@@ -273,7 +273,7 @@ def create_tii_zcu111(runcard, address=None):
     # Readout
     channels["L3-30_ro"].ports = [("dac6", 6)]
     # feedback
-    channels["L2-4-RO_2"].ports = [("adc0", 0)]
+    channels["L2-4-RO_2"].ports = [("adc2", 2)]
     # drive
     channels["L4-31_qd"].ports = [("dac5", 5)]
     # Flux
