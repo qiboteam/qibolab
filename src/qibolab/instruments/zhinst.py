@@ -216,6 +216,7 @@ class Zurich(AbstractInstrument):
         self.nsweeps = 0.0
         self.sweeps = None
         self.sweepers = None
+        self.NT_loop = False
 
         # Remove if able
         self.sequence_qibo = None
@@ -462,74 +463,7 @@ class Zurich(AbstractInstrument):
         sweeps_all[nsweeps] = sweeps
         self.sequence = zhsequence
         self.nsweeps = nsweeps  # Should count the dimension of the sweep 1D, 2D etc
-
-    #     self.sweeps = sweeps_all
-
-    # def create_exp(self, qubits, options):
-    #     """Zurich experiment definition usig their Experiment class"""
-    #     signals = []
-    #     for qubit in qubits.values():
-    #         if qubit.flux_coupler:
-    #             signals.append(lo.ExperimentSignal(f"flux{qubit.name}"))
-    #         else:
-    #             if self.sequence[f"drive{qubit.name}"]:
-    #                 signals.append(lo.ExperimentSignal(f"drive{qubit.name}"))
-    #             if qubit.flux is not None:
-    #                 signals.append(lo.ExperimentSignal(f"flux{qubit.name}"))
-    #             if self.sequence[f"readout{qubit.name}"]:
-    #                 signals.append(lo.ExperimentSignal(f"measure{qubit.name}"))
-    #                 signals.append(lo.ExperimentSignal(f"acquire{qubit.name}"))
-
-    #     exp = lo.Experiment(
-    #         uid="Sequence",
-    #         signals=signals,
-    #     )
-
-    #     # Defaults
-    #     if options.acquisition_type is AcquisitionType.INTEGRATION:
-    #         options.acquisition_type = lo.AcquisitionType.INTEGRATION
-    #     elif options.acquisition_type is AcquisitionType.RAW:
-    #         options.acquisition_type = lo.AcquisitionType.RAW
-    #     elif options.acquisition_type is AcquisitionType.DISCRIMINATION:
-    #         options.acquisition_type = lo.AcquisitionType.DISCRIMINATION
-
-    #     if self.acquisition_type is lo.AcquisitionType.SPECTROSCOPY:
-    #         options.acquisition_type = lo.AcquisitionType.SPECTROSCOPY
-
-    #     if options.averaging_mode is AveragingMode.CYCLIC:
-    #         options.averaging_mode = lo.AveragingMode.CYCLIC
-    #     elif options.averaging_mode is AveragingMode.SINGLESHOT:
-    #         options.averaging_mode = lo.AveragingMode.SINGLE_SHOT
-
-    #     print(options.acquisition_type)
-    #     print(options.averaging_mode)
-
-    #     with exp.acquire_loop_rt(
-    #         uid="shots",
-    #         count=options.nshots,
-    #         # repetition_mode= lo.RepetitionMode.CONSTANT, #TODO: Does it provide any speed advantage ?
-    #         # repetition_time= None,
-    #         acquisition_type=options.acquisition_type,
-    #         averaging_mode=options.averaging_mode,
-    #     ):
-    #         if self.nsweeps > 0:
-    #             exp_calib = lo.Calibration()
-    #             self.sweep_recursion(
-    #                 qubits, exp, exp_calib, options.relaxation_time, options.acquisition_type, options.fast_reset
-    #             )
-    #             exp.set_calibration(exp_calib)
-
-    #         # TODO: Gate sweeps for flipping, AllXY (,RB ?):
-    #         elif self.nsweeps == "gate_sweep":
-    #             print("Estoy en ello")
-    #             # inner loop - sweep over sequence lengths
-    #             for pulse_sequences in pulse_sequences:
-    #                 self.select_exp(exp, qubits, options.relaxation_time, options.acquisition_type, options.fast_reset)
-    #                 # Careful with the definition of handel and their recovery
-    #         else:
-    #             self.select_exp(exp, qubits, options.relaxation_time, options.acquisition_type, options.fast_reset)
-    #         self.experiment = exp
-    #         exp.set_signal_map(self.signal_map)
+        self.sweeps = sweeps
 
     def create_exp(self, qubits, options):
         """Zurich experiment definition usig their Experiment class"""
@@ -915,7 +849,7 @@ class Zurich(AbstractInstrument):
 
     def sweep_recursion_NT(self, qubits, options, exp, exp_calib):
         """Sweepers recursion for multiple nested sweepers"""
-
+        print("NT_loop")
         for sweep in self.NT_sweeps:
             sweeper = sweep
 
