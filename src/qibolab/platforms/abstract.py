@@ -173,7 +173,6 @@ class AbstractPlatform(ABC):
 
         for par, values in updates.items():
             for qubit, value in values.items():
-                log.info(f"qubit {qubit} - param {par} - values {value}")
                 # resonator_spectroscopy / resonator_spectroscopy_flux / resonator_punchout_attenuation
                 if par == "readout_frequency":
                     freq = int(value * 1e9)
@@ -237,11 +236,17 @@ class AbstractPlatform(ABC):
                     self.single_qubit_natives[qubit]["RX"]["duration"] = duration
                     self.settings["native_gates"]["single_qubit"][qubit]["RX"]["duration"] = duration
 
-                # ramsey / spin_echo
-                elif par == "t2" or par == "t2_spin_echo":
+                # ramsey
+                elif par == "t2":
                     t2 = float(value)
                     self.qubits[qubit].T2 = t2
                     self.settings["characterization"]["single_qubit"][qubit]["T2"] = t2
+
+                # spin_echo
+                elif par == "t2_spin_echo":
+                    t2_spin_echo = float(value)
+                    self.qubits[qubit].T2_spin_echo = t2_spin_echo
+                    self.settings["characterization"]["single_qubit"][qubit]["T2_spin_echo"] = t2_spin_echo
 
                 # t1
                 elif par == "t1":
