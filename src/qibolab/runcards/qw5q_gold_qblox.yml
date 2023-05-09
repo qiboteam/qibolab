@@ -90,11 +90,7 @@ instruments:
                 0:  # qubit id
                     rotation_angle              : 99.772                   # in degrees 0.0<=v<=360.0
                     threshold                   : 0.005800                  # in V
-                    rotation_angle              : 99.772                   # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.005800                  # in V
                 1:  # qubit id
-                    rotation_angle              : 109.202                   # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.023372                  # in V
                     rotation_angle              : 109.202                   # in degrees 0.0<=v<=360.0
                     threshold                   : 0.023372                  # in V
 
@@ -111,11 +107,9 @@ instruments:
             ports:
                 o1:
                     attenuation                 : 38 # should be multiple of 2
-                    attenuation                 : 38 # should be multiple of 2
                     lo_enabled                  : true
                     lo_frequency                : 7_850_000_000                   # (Hz) from 2e9 to 18e9
                     gain                        : 0.6                              # for path0 and path1 -1.0<=v<=1.0
-                    hardware_mod_en             : true
                     hardware_mod_en             : true
                 i1:
                     hardware_demod_en           : true
@@ -130,13 +124,9 @@ instruments:
                 3:  # qubit id
                     rotation_angle              : 306.039                    # in degrees 0.0<=v<=360.0
                     threshold                   : 0.000914                  # in V
-                    rotation_angle              : 306.039                    # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.000914                  # in V
                 4:  # qubit id
                     rotation_angle              : 63.762                   # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.000371                  # in V
-                    rotation_angle              : 63.762                   # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.000371                  # in V
+                    threshold                   : 0.000371                  # in V V
 
             channel_port_map:   # Refrigerator Channel : Instrument port
                 'L3-25b' : o1    # IQ Port = out0 & out1
@@ -155,13 +145,11 @@ instruments:
                     lo_frequency                 : 5_246_600_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.488 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : true
-                    hardware_mod_en              : true
                 o2: # not used
                     attenuation                  : 0 # (dB)
                     lo_enabled                   : false
                     lo_frequency                 : 2_000_000_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0 # for path0 and path1 -1.0<=v<=1.0
-                    hardware_mod_en              : true
                     hardware_mod_en              : true
 
             channel_port_map:
@@ -180,13 +168,11 @@ instruments:
                     lo_frequency                 : 5_052_013_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.56 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : true
-                    hardware_mod_en              : true
                 o2: # qubit q2
                     attenuation                  : 20 # (dB)
                     lo_enabled                   : true
                     lo_frequency                 : 5_995_026_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.647 # for path0 and path1 -1.0<=v<=1.0
-                    hardware_mod_en              : true
                     hardware_mod_en              : true
 
             channel_port_map:
@@ -205,13 +191,11 @@ instruments:
                     lo_frequency                 : 6_961_250_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.538 # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en              : true
-                    hardware_mod_en              : true
                 o2: # qubit q4
                     attenuation                  : 20 # (dB)
                     lo_enabled                   : true
                     lo_frequency                 : 6_788_003_000 # (Hz) from 2e9 to 18e9
                     gain                         : 0.645 # for path0 and path1 -1.0<=v<=1.0
-                    hardware_mod_en              : true
                     hardware_mod_en              : true
 
             channel_port_map:
@@ -298,7 +282,6 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.2
-                amplitude: 0.2
                 frequency: 7_655_148_879    # resonator frequency
                 if_frequency: -194_851_121    # difference in resonator frequency
                 shape: Rectangular()
@@ -313,7 +296,6 @@ native_gates:
                 type: qd                    # qubit drive
             MZ:
                 duration: 2000
-                amplitude: 0.2
                 amplitude: 0.2
                 frequency: 7_803_437_704    # resonator frequency
                 if_frequency: -46_562_296    # difference in resonator frequency
@@ -330,8 +312,6 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.4
-                frequency: 8_058_673_359      # resonator frequency
-                if_frequency: 208_673_359    # difference in resonator frequency
                 frequency: 8_058_673_359      # resonator frequency
                 if_frequency: 208_673_359    # difference in resonator frequency
                 shape: Rectangular()
@@ -403,7 +383,6 @@ characterization:
             threshold: 0.0
             iq_angle: 0.0
         4:
-            readout_frequency: 8_058_673_359
             readout_frequency: 8_058_673_359
             drive_frequency: 6_588_003_000
             T1: 469
