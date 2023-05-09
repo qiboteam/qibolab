@@ -269,13 +269,13 @@ class AbstractPlatform(ABC):
                 # classification
                 elif par == "mean_gnd_states":
                     mean_gnd_states = str(value)
-                    self.qubits[qubit].iq_angle = iq_angle
+                    self.qubits[qubit].mean_gnd_states = mean_gnd_states
                     self.settings["characterization"]["single_qubit"][qubit]["mean_gnd_states"] = mean_gnd_states
 
                 # classification
                 elif par == "mean_exc_states":
                     mean_exc_states = str(value)
-                    self.qubits[qubit].iq_angle = iq_angle
+                    self.qubits[qubit].mean_exc_states = mean_exc_states
                     self.settings["characterization"]["single_qubit"][qubit]["mean_exc_states"] = mean_exc_states
 
                 # drag pulse tunning
