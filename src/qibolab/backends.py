@@ -10,7 +10,7 @@ from qibo.states import CircuitResult
 from qibolab import __version__ as qibolab_version
 from qibolab.platform import Platform
 from qibolab.platforms.abstract import AbstractPlatform
-from qibolab.transpilers import SequentialTranspiler
+from qibolab.transpilers import Sequential
 
 
 class QibolabBackend(NumpyBackend):
@@ -26,7 +26,7 @@ class QibolabBackend(NumpyBackend):
             "numpy": self.np.__version__,
             "qibolab": qibolab_version,
         }
-        self.transpiler = SequentialTranspiler.default(self.platform.two_qubit_natives)
+        self.transpiler = Sequential.default(self.platform.two_qubit_natives)
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")

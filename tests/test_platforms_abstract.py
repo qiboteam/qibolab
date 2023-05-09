@@ -8,7 +8,7 @@ from qibolab.backends import QibolabBackend
 from qibolab.platform import Platform
 from qibolab.platforms.abstract import AbstractPlatform
 from qibolab.pulses import PulseSequence
-from qibolab.transpilers import SequentialTranspiler
+from qibolab.transpilers import Sequential
 
 
 def generate_circuit_with_gate(nqubits, gate, *params, **kwargs):
@@ -33,7 +33,7 @@ def test_u3_sim_agreement():
 
 def compile_circuit(circuit, platform):
     """Compile a circuit to a pulse sequence."""
-    transpiler = SequentialTranspiler.default(platform.two_qubit_natives)
+    transpiler = Sequential.default(platform.two_qubit_natives)
     if transpiler.is_satisfied(circuit):
         native_circuit = circuit
     else:

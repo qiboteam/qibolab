@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from qibo.models import Circuit
 
 
-class AbstractTranspiler(ABC):
+class Transpiler(ABC):
     """A transpiler is a transformation from a circuit to another circuit."""
 
     @abstractmethod

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from qibo import gates
 from qibo.config import log, raise_error
 
-from qibolab.transpilers.abstract import AbstractTranspiler
+from qibolab.transpilers.abstract import Transpiler
 
 
 def find_connected_qubit(qubits, queue, hardware_qubits):
@@ -26,7 +26,7 @@ def find_connected_qubit(qubits, queue, hardware_qubits):
 
 
 @dataclass
-class StarConnectivityTranspiler(AbstractTranspiler):
+class StarConnectivity(Transpiler):
     """Transforms an arbitrary circuit to one that can be executed on hardware.
 
     This transpiler produces a circuit that respects the following connectivity:

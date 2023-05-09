@@ -3,17 +3,17 @@ from typing import List
 
 from qibo.config import log
 
-from qibolab.transpilers.abstract import AbstractTranspiler
-from qibolab.transpilers.fusion import FusionTranspiler, RearrangeTranspiler
-from qibolab.transpilers.gate_decompositions import NativeGateTranspiler
-from qibolab.transpilers.star_connectivity import StarConnectivityTranspiler
+from qibolab.transpilers.abstract import Transpiler
+from qibolab.transpilers.fusion import Fusion, Rearrange
+from qibolab.transpilers.gate_decompositions import NativeGates
+from qibolab.transpilers.star_connectivity import StarConnectivity
 
 
 @dataclass
-class SequentialTranspiler(AbstractTranspiler):
+class Sequential(Transpiler):
     """Transpiler consisting of a list of smaller transpilers that are applied sequentially."""
 
-    transpilers: List[AbstractTranspiler]
+    transpilers: List[Transpiler]
     verbose: bool = False
 
     def is_satisfied(self, circuit):
@@ -35,14 +35,14 @@ class SequentialTranspiler(AbstractTranspiler):
     @classmethod
     def default(cls, two_qubit_natives, middle_qubit=2, fuse_one_qubit=False, verbose=False):
         """Default transpiler used by :class:`qibolab.backends.QibolabBackend`."""
-        transpilers = [RearrangeTranspiler(max_qubits=2)]
+        transpilers = [Rearrange(max_qubits=2)]
         # add SWAPs to satisfy connectivity constraints
-        transpilers.append(StarConnectivityTranspiler(middle_qubit))
+        transpilers.append(StarConnectivity(middle_qubit))
         # two-qubit gates to native
-        transpilers.append(NativeGateTranspiler(two_qubit_natives, translate_single_qubit=False, verbose=verbose))
+        transpilers.append(NativeGates(two_qubit_natives, translate_single_qubit=False, verbose=verbose))
         # Optional: fuse one-qubit gates to reduce circuit depth
         if fuse_one_qubit:
-            transpilers.append(FusionTranspiler(max_qubits=1))
+            transpilers.append(Fusion(max_qubits=1))
         # one-qubit gates to native
-        transpilers.append(NativeGateTranspiler(two_qubit_natives, translate_single_qubit=True, verbose=verbose))
+        transpilers.append(NativeGates(two_qubit_natives, translate_single_qubit=True, verbose=verbose))
         return cls(transpilers, verbose)

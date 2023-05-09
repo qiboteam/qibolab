@@ -2,11 +2,13 @@ from dataclasses import dataclass
 
 from qibo import gates
 
-from qibolab.transpilers.abstract import AbstractTranspiler
+from qibolab.transpilers.abstract import Transpiler
 
 
 @dataclass
-class FusionTranspiler(AbstractTranspiler):
+class Fusion(Transpiler):
+    """Apply gate fusion up to the given ``max_qubits``."""
+
     max_qubits: int = 1
 
     def is_satisfied(self, circuit):
@@ -17,10 +19,11 @@ class FusionTranspiler(AbstractTranspiler):
 
 
 @dataclass
-class RearrangeTranspiler(FusionTranspiler):
+class Rearrange(Fusion):
     """Rearranges gates using qibo's fusion algorithm.
 
-    May reduce number of SWAPs when fixing for connectivity.
+    May reduce number of SWAPs when fixing for connectivity
+    but this has not been tested.
     """
 
     def transpile(self, circuit):

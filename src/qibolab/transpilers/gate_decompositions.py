@@ -6,7 +6,7 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.config import log, raise_error
 
-from qibolab.transpilers.abstract import AbstractTranspiler
+from qibolab.transpilers.abstract import Transpiler
 from qibolab.transpilers.unitary_decompositions import (
     two_qubit_decomposition,
     u3_decomposition,
@@ -376,7 +376,7 @@ opt_dec.add(
 
 
 @dataclass
-class NativeGateTranspiler(AbstractTranspiler):
+class NativeGates(Transpiler):
     """Translates a circuit to native gates.
 
     Args:

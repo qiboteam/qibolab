@@ -6,7 +6,7 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 
-from qibolab.transpilers import SequentialTranspiler
+from qibolab.transpilers import Sequential
 from qibolab.transpilers.gate_decompositions import TwoQubitNatives
 
 from .test_transpilers_star_connectivity import transpose_qubits
@@ -65,7 +65,7 @@ def test_transpile(middle_qubit, nqubits, ngates, fuse_one_qubit, two_qubit_nati
         hardware_qubits = max(nqubits, middle_qubit + 1)
 
     circuit = generate_random_circuit(hardware_qubits, ngates)
-    transpiler = SequentialTranspiler.default(
+    transpiler = Sequential.default(
         two_qubit_natives=two_qubit_natives,
         middle_qubit=middle_qubit,
         fuse_one_qubit=fuse_one_qubit,
@@ -81,7 +81,7 @@ def test_transpile(middle_qubit, nqubits, ngates, fuse_one_qubit, two_qubit_nati
 
 
 def test_can_execute_false():
-    transpiler = SequentialTranspiler.default(two_qubit_natives=TwoQubitNatives.CZ | TwoQubitNatives.iSWAP)
+    transpiler = Sequential.default(two_qubit_natives=TwoQubitNatives.CZ | TwoQubitNatives.iSWAP)
     circuit1 = Circuit(1)
     circuit1.add(gates.H(0))
     assert not transpiler.is_satisfied(circuit1)
