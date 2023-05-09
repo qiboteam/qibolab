@@ -166,125 +166,6 @@ def create_tii_qw5q_gold_qm(runcard, simulation_duration=None, address=None, clo
 
     return platform
 
-
-def create_tii_qw5q_gold_qblox(runcard):
-    """Create platform using qblox instruments.
-
-    Args:
-        runcard (str): Path to the runcard file.
-    """
-    # Create channel objects
-    channels = ChannelMap()
-    # readout
-    channels |= ChannelMap.from_names("L3-25_a", "L3-25_b")
-    # feedback
-    channels |= ChannelMap.from_names("L2-5_a", "L2-5_b")
-    # drive
-    channels |= ChannelMap.from_names(*(f"L3-{i}" for i in range(11, 16)))
-    # flux
-    channels |= ChannelMap.from_names(*(f"L4-{i}" for i in range(1, 6)))
-    # TWPA
-    channels |= ChannelMap.from_names("L4-26")
-
-    # Instantiate instruments
-    from qibolab.instruments.qblox import (
-        Cluster,
-        ClusterQCM,
-        ClusterQCM_RF,
-        ClusterQRM_RF,
-    )
-    from qibolab.instruments.rohde_schwarz import SGS100A
-
-    cluster = Cluster("cluster", "192.168.0.6")
-    qrm_rf0 = ClusterQRM_RF("qrm_rf0", "192.168.0.6:10")
-    qrm_rf1 = ClusterQRM_RF("qrm_rf1", "192.168.0.6:12")
-    qcm_rf2 = ClusterQCM_RF("qcm_rf2", "192.168.0.6:8")
-    qcm_rf3 = ClusterQCM_RF("qcm_rf3", "192.168.0.6:3")
-    qcm_rf4 = ClusterQCM_RF("cluster", "192.168.0.6:4")
-    qcm_bb1 = ClusterQCM("cluster", "192.168.0.6:2")
-    qcm_bb2 = ClusterQCM("cluster", "192.168.0.6:5")
-    twpa_pump = SGS100A("twpa_pump", "192.168.0.37")
-
-    instruments = [cluster, qrm_rf0, qrm_rf1, qcm_rf2, qcm_rf3, qcm_rf4, qcm_bb1, qcm_bb2, twpa_pump]
-
-    # # Map controllers to qubit channels (HARDCODED)
-    # # readout
-    # channels["L3-25_a"].ports = [qrm_rf0.port['o1']]
-    # channels["L3-25_b"].ports = [qrm_rf1.port['o1']]
-    # # feedback
-    # channels["L2-5_a"].ports = [qrm_rf0.port['i1']]
-    # channels["L2-5_b"].ports = [qrm_rf1.port['i1']]
-    # # drive
-    # channels["L3-11"].ports = [qcm_rf3.port['o1']]
-    # channels["L3-12"].ports = [qcm_rf3.port['o2']]
-    # channels["L3-13"].ports = [qcm_rf4.port['o1']]
-    # channels["L3-14"].ports = [qcm_rf4.port['o2']]
-    # channels["L3-15"].ports = [qcm_rf2.port['o1']]
-
-    # # flux
-    # channels["L4-1"].ports = [qcm_bb1.port['o1']]
-    # channels["L4-2"].ports = [qcm_bb1.port['o2']]
-    # channels["L4-3"].ports = [qcm_bb1.port['o3']]
-    # channels["L4-4"].ports = [qcm_bb1.port['o4']]
-    # channels["L4-5"].ports = [qcm_bb2.port['o1']]
-
-    # Map controllers to qubit channels (HARDCODED)
-    # readout
-    channels["L3-25_a"].ports = [("qrm_rf0", "o1")]
-    channels["L3-25_b"].ports = [("qrm_rf1", "o1")]
-    # feedback
-    channels["L2-5_a"].ports = [("qrm_rf0", "i1")]
-    channels["L2-5_b"].ports = [("qrm_rf1", "i1")]
-    # drive
-    channels["L3-11"].ports = [("qcm_rf3", "o1")]
-    channels["L3-12"].ports = [("qcm_rf3", "o2")]
-    channels["L3-13"].ports = [("qcm_rf4", "o1")]
-    channels["L3-14"].ports = [("qcm_rf4", "o2")]
-    channels["L3-15"].ports = [("qcm_rf2", "o1")]
-
-    # flux
-    channels["L4-1"].ports = [("qcm_bb1", "o1")]
-    channels["L4-2"].ports = [("qcm_bb1", "o2")]
-    channels["L4-3"].ports = [("qcm_bb1", "o3")]
-    channels["L4-4"].ports = [("qcm_bb1", "o4")]
-    channels["L4-5"].ports = [("qcm_bb2", "o1")]
-
-    design = InstrumentDesign(instruments, channels)
-    platform = DesignPlatform("qw5q_gold", design, runcard)
-
-    # assign channels to qubits
-    qubits = platform.qubits
-    for q in [0, 1, 5]:
-        qubits[q].readout = channels["L3-25_a"]
-        qubits[q].feedback = channels["L2-5_a"]
-    for q in [2, 3, 4]:
-        qubits[q].readout = channels["L3-25_b"]
-        qubits[q].feedback = channels["L2-5_b"]
-
-    qubits[0].drive = channels["L3-15"]
-    qubits[0].flux = channels["L4-5"]
-    channels["L4-5"].qubit = qubits[0]
-    for q in range(1, 5):
-        qubits[q].drive = channels[f"L3-{10 + q}"]
-        qubits[q].flux = channels[f"L4-{q}"]
-        channels[f"L4-{q}"].qubit = qubits[q]
-
-    # set maximum allowed bias
-    for q in range(5):
-        platform.qubits[q].flux.max_bias = 2.5
-    # Platfom topology
-    Q = [f"q{i}" for i in range(5)]
-    chip = nx.Graph()
-    chip.add_nodes_from(Q)
-    graph_list = [
-        (Q[0], Q[2]),
-        (Q[1], Q[2]),
-        (Q[3], Q[2]),
-        (Q[4], Q[2]),
-    ]
-    chip.add_edges_from(graph_list)
-    platform.topology = chip
-
     return platform
 
 
@@ -349,8 +230,8 @@ def Platform(name, runcard=None, design=None):
         return create_dummy(runcard)
     elif name == "icarusq":
         from qibolab.platforms.icplatform import ICPlatform as Device
-    elif name == "qw5q_gold":
-        return create_tii_qw5q_gold_qblox(runcard)
+    elif name == "qw5q_gold_qm":
+        return create_tii_qw5q_gold_qm(runcard)
     elif name == "tii1q_b1":
         return create_tii_rfsoc4x2(runcard)
     else:
