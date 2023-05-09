@@ -176,20 +176,20 @@ class ExecutionParameters:
     acquisition_type: AcquisitionType = AcquisitionType.DISCRIMINATION
     averaging_mode: AveragingMode = AveragingMode.SINGLESHOT
 
-    def get_results_type(self):
+    @property
+    def results_type(self):
         """Returns corresponding results class"""
+        return RESULTS_TYPE[self.averaging_mode][self.acquisition_type]
 
-        if self.averaging_mode is AveragingMode.SINGLESHOT:
-            if self.acquisition_type is AcquisitionType.INTEGRATION:
-                return IntegratedResults
-            elif self.acquisition_type is AcquisitionType.RAW:
-                return RawWaveformResults
-            else:
-                return StateResults
-        else:
-            if self.acquisition_type is AcquisitionType.INTEGRATION:
-                return AveragedIntegratedResults
-            elif self.acquisition_type is AcquisitionType.RAW:
-                return AveragedRawWaveformResults
-            else:
-                return AveragedStateResults
+    RESULTS_TYPE = {
+        AveragingMode.CYCLIC: {
+            AcquisitionType.INTEGRATION: AveragedIntegratedResults,
+            AcquisitionType.RAW: AveragedRawWaveformResults,
+            AcquisitionType.DISCRIMINATION: AveragedStateResults,
+        },
+        AveragingMode.SINGLESHOT: {
+            AcquisitionType.INTEGRATION: IntegratedResults,
+            AcquisitionType.RAW: RawWaveformResults,
+            AcquisitionType.DISCRIMINATION: StateResults,
+        },
+    }
