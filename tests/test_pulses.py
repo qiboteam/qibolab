@@ -3,6 +3,7 @@ import os
 import pathlib
 
 import numpy as np
+import pytest
 
 from qibolab.paths import qibolab_folder
 from qibolab.pulses import (
@@ -177,6 +178,7 @@ def test_pulses_pulse_attributes():
     assert type(p10.duration) == int and p10.duration == 50
     assert type(p10.amplitude) == float and p10.amplitude == 0.9
     assert type(p10.frequency) == int and p10.frequency == 20_000_000
+    assert type(p10.phase) == float and np.allclose(p10.phase, 2 * np.pi * p10.start * p10.frequency / 1e9)
     assert isinstance(p10.shape, PulseShape) and repr(p10.shape) == "Rectangular()"
     assert type(p10.channel) == type(channel) and p10.channel == channel
     assert type(p10.qubit) == type(qubit) and p10.qubit == qubit
@@ -914,3 +916,32 @@ def test_pulse_sequence_add_readout():
     assert len(sequence.ro_pulses) == 1
     assert len(sequence.qd_pulses) == 1
     assert len(sequence.qf_pulses) == 1
+
+
+@pytest.mark.parametrize("start", [0, 10, se_int(0, "t00"), se_int(10, "t10")])
+@pytest.mark.parametrize("duration", [100, 500, se_int(100, "d100"), se_int(500, "d500")])
+def test_pulse_properties(start, duration):
+    def check_properties(pulse):
+        assert isinstance(pulse.start, int)
+        assert isinstance(pulse.se_start, se_int)
+        assert isinstance(pulse.duration, int)
+        assert isinstance(pulse.se_duration, se_int)
+        assert isinstance(pulse.finish, int)
+        assert isinstance(pulse.se_finish, se_int)
+
+    p0 = Pulse(start, duration, 0.9, 0, 0, Rectangular(), 0)
+    # Check the getters
+    check_properties(p0)
+    # Check the setters
+    p0.start = start + 10
+    p0.duration = duration + 10
+    check_properties(p0)
+
+
+@pytest.mark.parametrize("faulty_start", [10.0, "hello"])
+@pytest.mark.parametrize("faulty_duration", [100.0, "hello"])
+def test_pulse_setter_errors(faulty_start, faulty_duration):
+    with pytest.raises(TypeError):
+        p0 = Pulse(faulty_start, 100, 0.9, 0, 0, Rectangular(), 0)
+    with pytest.raises(TypeError):
+        p0 = Pulse(0, faulty_duration, 0.9, 0, 0, Rectangular(), 0)
