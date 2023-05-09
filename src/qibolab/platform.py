@@ -319,11 +319,6 @@ def create_tii_zcu111(runcard, address=None):
     qubits[2].flux = channels["L1-24_fl"]
     channels["L1-24_fl"].qubit = qubits[2]
 
-    # TODO this clearly should not be here, but I don't know where else
-    # qubits[0].flux.bias = -0.19
-    # qubits[1].flux.bias = -0.37
-    # qubits[2].flux.bias = 0
-
     return platform
 
 

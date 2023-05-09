@@ -98,7 +98,7 @@ characterization:   #TODO No characterization yet
             drive_frequency: 0.0
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.07
+            sweetspot: -0.19
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
@@ -115,7 +115,7 @@ characterization:   #TODO No characterization yet
             drive_frequency: 5_764_000_000
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.35
+            sweetspot: -0.37
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
