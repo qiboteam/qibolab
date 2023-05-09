@@ -23,7 +23,7 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.005 # TODO
-                frequency: 4_900_000_000 # TODO
+                frequency: 5_760_000_000 # TODO
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
