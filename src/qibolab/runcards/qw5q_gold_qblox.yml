@@ -80,7 +80,6 @@ instruments:
                     lo_frequency                : 7_250_000_000                    # (Hz) from 2e9 to 18e9
                     gain                        : 0.6                              # for path0 and path1 -1.0<=v<=1.0
                     hardware_mod_en             : true
-                    hardware_mod_en             : true
                 i1:
                     hardware_demod_en           : true
 
@@ -231,10 +230,6 @@ instruments:
                 o2: {gain: 1, offset: -0.167, hardware_mod_en: false} #q2
                 o3: {gain: 1, offset:  0.095, hardware_mod_en: false} #q3
                 o4: {gain: 1, offset: -0.329, hardware_mod_en: false} #q4
-                o1: {gain: 1, offset:  -0.360, hardware_mod_en: false} #q1
-                o2: {gain: 1, offset: -0.167, hardware_mod_en: false} #q2
-                o3: {gain: 1, offset:  0.095, hardware_mod_en: false} #q3
-                o4: {gain: 1, offset: -0.329, hardware_mod_en: false} #q4
             channel_port_map: {L4-1: o1, L4-2: o2, L4-3: o3, L4-4: o4}
 
     #Cluster QCM usado para bias mediante el offset
@@ -245,7 +240,6 @@ instruments:
         roles: [control]
         settings:
             ports:
-                o1: {gain: 1, offset: 0.335, hardware_mod_en: false} #q0
                 o1: {gain: 1, offset: 0.335, hardware_mod_en: false} #q0
                 o2: {gain: 0, offset: 0.0, hardware_mod_en: false} #not used
                 o3: {gain: 0, offset: 0.0, hardware_mod_en: false} #not used
@@ -368,7 +362,6 @@ characterization:
             state1_voltage: 0.0
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
-            sweetspot: 0.335
             sweetspot: 0.335
             threshold: 0.0
             iq_angle: 0.0
