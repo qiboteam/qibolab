@@ -82,7 +82,6 @@ class DesignPlatform(AbstractPlatform):
             self.qubits,
             options,
             sequence,
-            options,
             *sweepers,
         )
 
