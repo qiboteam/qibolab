@@ -5,7 +5,7 @@ from typing import Optional
 import numpy as np
 import numpy.typing as npt
 
-iq_typing = np.dtype([("i", np.float64), ("q", np.float64)])
+iq = np.dtype([("i", np.float64), ("q", np.float64)])
 
 
 @dataclass
@@ -19,16 +19,11 @@ class IntegratedResults:
     """
 
     def __init__(self, i: np.ndarray, q: np.ndarray, nshots=None):
-        self.voltage: npt.NDArray[iq_typing] = (
-            np.recarray((i.shape[0] // nshots, nshots), dtype=iq_typing)
-            if nshots
-            else np.recarray(i.shape, dtype=iq_typing)
+        self.voltage: npt.NDArray[iq] = (
+            np.recarray((i.shape[0] // nshots, nshots), dtype=iq) if nshots else np.recarray(i.shape, dtype=iq)
         )
         self.voltage["i"] = i.reshape(i.shape[0] // nshots, nshots) if nshots else i
-        try:
-            self.voltage["q"] = q.reshape(q.shape[0] // nshots, nshots) if nshots else q
-        except ValueError:
-            raise ValueError(f"Given i has length {len(i)} which is different than q length {len(q)}.")
+        self.voltage["q"] = q.reshape(q.shape[0] // nshots, nshots) if nshots else q
 
     @cached_property
     def magnitude(self):
@@ -81,7 +76,7 @@ class AveragedIntegratedResults(IntegratedResults):
 
     def __init__(self, i: np.ndarray, q: np.ndarray, nshots=None, std_i=None, std_q=None):
         IntegratedResults.__init__(self, i, q, nshots)
-        self.std: Optional[npt.NDArray[np.float64]] = np.recarray(i.shape, dtype=iq_typing)
+        self.std: Optional[npt.NDArray[np.float64]] = np.recarray(i.shape, dtype=iq)
         self.std["i"] = std_i
         self.std["q"] = std_q
 

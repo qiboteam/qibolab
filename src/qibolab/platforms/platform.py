@@ -5,6 +5,14 @@ from typing import Optional
 from qibo.config import raise_error
 
 from qibolab.platforms.abstract import AbstractPlatform
+from qibolab.result import (
+    AveragedIntegratedResults,
+    AveragedRawWaveformResults,
+    AveragedStateResults,
+    IntegratedResults,
+    RawWaveformResults,
+    StateResults,
+)
 
 
 class DesignPlatform(AbstractPlatform):
@@ -37,18 +45,34 @@ class DesignPlatform(AbstractPlatform):
         self.is_connected = False
 
     def execute_pulse_sequence(self, sequence, **kwargs):
+        """Executes a pulse sequence.
+
+        Args:
+            sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
+            **kwargs: Parameters to be passed to ExecutionParamters
+        Returns:
+            Readout results acquired by after execution.
+        """
         options = ExecutionParameters(**kwargs)
 
         if options.relaxation_time is None:
             options.relaxation_time = self.relaxation_time
 
-        return self.design.play(
-            self.qubits,
-            sequence,
-            options=options,
-        )
+        return self.design.play(self.qubits, options, sequence)
 
     def sweep(self, sequence, *sweepers, **kwargs):
+        """Executes a pulse sequence for different values of sweeped parameters.
+        Useful for performing chip characterization.
+
+        Args:
+            sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
+            sweepers (:class:`qibolab.sweeper.Sweeper`): Sweeper objects that specify which
+                parameters are being sweeped.
+            **kwargs: Parameters to be passed to ExecutionParameters
+
+        Returns:
+            Readout results acquired by after execution.
+        """
         options = ExecutionParameters(**kwargs)
 
         if options.relaxation_time is None:
@@ -57,8 +81,8 @@ class DesignPlatform(AbstractPlatform):
         return self.design.sweep(
             self.qubits,
             sequence,
+            options,
             *sweepers,
-            options=options,
         )
 
     def set_lo_drive_frequency(self, qubit, freq):
@@ -138,11 +162,12 @@ class AveragingMode(Enum):
 class ExecutionParameters:
     """Data structure to deal with execution parameters
 
-    :nshots: Number of shots per point on the experiment
-    :relaxation_time: Relaxation time for the qubit [s]
-    :fast_reset: Enable or disable fast reset
-    :acquisition_type: Data acquisition mode
-    :averaging_mode: Data averaging mode
+    :nshots: nshots (int): Number of shots to sample from the experiment. Default is 1024.
+    relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in s.
+                If ``None`` the default value provided as ``relaxation_time`` in the runcard will be used.
+    :fast_reset (bool): Enable or disable fast reset
+    :acquisition_type (AcquisitionType): Data acquisition mode
+    :averaging_mode (AveragingMode): Data averaging mode
     """
 
     nshots: Optional[int] = 1024
@@ -150,3 +175,21 @@ class ExecutionParameters:
     fast_reset: bool = False
     acquisition_type: AcquisitionType = AcquisitionType.DISCRIMINATION
     averaging_mode: AveragingMode = AveragingMode.SINGLESHOT
+
+    def get_results_type(self):
+        """Returns corresponding results class"""
+
+        if self.averaging_mode is AveragingMode.SINGLESHOT:
+            if self.acquisition_type is AcquisitionType.INTEGRATION:
+                return IntegratedResults
+            elif self.acquisition_type is AcquisitionType.RAW:
+                return RawWaveformResults
+            else:
+                return StateResults
+        else:
+            if self.acquisition_type is AcquisitionType.INTEGRATION:
+                return AveragedIntegratedResults
+            elif self.acquisition_type is AcquisitionType.RAW:
+                return AveragedRawWaveformResults
+            else:
+                return AveragedStateResults
