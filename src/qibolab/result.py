@@ -5,7 +5,7 @@ from typing import Optional
 import numpy as np
 import numpy.typing as npt
 
-iq_typing = np.dtype([("i", np.float64), ("q", np.float64)])
+iq = np.dtype([("i", np.float64), ("q", np.float64)])
 
 
 @dataclass
@@ -18,17 +18,12 @@ class IntegratedResults:
     Associated with AcquisitionType.INTEGRATION and AveragingMode.SINGLESHOT
     """
 
-    def __init__(self, i: np.ndarray, q: np.ndarray, shots=None):
-        self.voltage: npt.NDArray[iq_typing] = (
-            np.recarray((i.shape[0] // shots, shots), dtype=iq_typing)
-            if shots
-            else np.recarray(i.shape, dtype=iq_typing)
+    def __init__(self, i: np.ndarray, q: np.ndarray, nshots=None):
+        self.voltage: npt.NDArray[iq] = (
+            np.recarray((i.shape[0] // nshots, nshots), dtype=iq) if nshots else np.recarray(i.shape, dtype=iq)
         )
-        self.voltage["i"] = i.reshape(i.shape[0] // shots, shots) if shots else i
-        try:
-            self.voltage["q"] = q.reshape(q.shape[0] // shots, shots) if shots else q
-        except ValueError:
-            raise ValueError(f"Given i has length {len(i)} which is different than q length {len(q)}.")
+        self.voltage["i"] = i.reshape(i.shape[0] // nshots, nshots) if nshots else i
+        self.voltage["q"] = q.reshape(q.shape[0] // nshots, nshots) if nshots else q
 
     @cached_property
     def magnitude(self):
@@ -40,7 +35,7 @@ class IntegratedResults:
         """Signal phase in radians."""
         return np.angle(self.voltage.i + 1.0j * self.voltage.q)
 
-    # We are asumming results from the same experiment so same number of shots
+    # We are asumming results from the same experiment so same number of nshots
     def __add__(self, data):  # __add__(self, data:IntegratedResults) -> IntegratedResults
         axis = 0
         i = np.append(self.voltage.i, data.voltage.i, axis=axis)
@@ -79,9 +74,9 @@ class AveragedIntegratedResults(IntegratedResults):
     or the averages of ``IntegratedResults``
     """
 
-    def __init__(self, i: np.ndarray, q: np.ndarray, shots=None, std_i=None, std_q=None):
-        IntegratedResults.__init__(self, i, q, shots)
-        self.std: Optional[npt.NDArray[np.float64]] = np.recarray(i.shape, dtype=iq_typing)
+    def __init__(self, i: np.ndarray, q: np.ndarray, nshots=None, std_i=None, std_q=None):
+        IntegratedResults.__init__(self, i, q, nshots)
+        self.std: Optional[npt.NDArray[np.float64]] = np.recarray(i.shape, dtype=iq)
         self.std["i"] = std_i
         self.std["q"] = std_q
 
@@ -119,9 +114,9 @@ class StateResults:
     Associated with AcquisitionType.DISCRIMINATION and AveragingMode.SINGLESHOT
     """
 
-    def __init__(self, states: np.ndarray = np.array([]), shots=None):
+    def __init__(self, states: np.ndarray = np.array([]), nshots=None):
         self.states: Optional[npt.NDArray[np.uint32]] = (
-            states.reshape(states.shape[0] // shots, shots) if shots else states
+            states.reshape(states.shape[0] // nshots, nshots) if nshots else states
         )
 
     @property
@@ -152,7 +147,7 @@ class StateResults:
         """Returns the 1 state statistical frequency."""
         return self.probability(1)
 
-    # We are asumming results from the same experiment so same number of shots
+    # We are asumming results from the same experiment so same number of nshots
     def __add__(self, data):  # __add__(self, data:StateResults) -> StateResults
         states = np.append(self.states, data.states, axis=0)
         return StateResults(states)
@@ -185,6 +180,6 @@ class AveragedStateResults(StateResults):
     or the averages of ``StateResults``
     """
 
-    def __init__(self, states: np.ndarray = np.array([]), shots=None, std=None):
-        StateResults.__init__(self, states, shots)
+    def __init__(self, states: np.ndarray = np.array([]), nshots=None, std=None):
+        StateResults.__init__(self, states, nshots)
         self.std: Optional[npt.NDArray[np.float64]] = std

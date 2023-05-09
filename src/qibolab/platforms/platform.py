@@ -45,6 +45,14 @@ class DesignPlatform(AbstractPlatform):
         self.is_connected = False
 
     def execute_pulse_sequence(self, sequence, **kwargs):
+        """Executes a pulse sequence.
+
+        Args:
+            sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
+            **kwargs: Parameters to be passed to ExecutionParamters
+        Returns:
+            Readout results acquired by after execution.
+        """
         options = ExecutionParameters(**kwargs)
 
         if options.relaxation_time is None:
@@ -53,6 +61,18 @@ class DesignPlatform(AbstractPlatform):
         return self.design.play(self.qubits, options, sequence)
 
     def sweep(self, sequence, *sweepers, **kwargs):
+        """Executes a pulse sequence for different values of sweeped parameters.
+        Useful for performing chip characterization.
+
+        Args:
+            sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
+            sweepers (:class:`qibolab.sweeper.Sweeper`): Sweeper objects that specify which
+                parameters are being sweeped.
+            **kwargs: Parameters to be passed to ExecutionParameters
+
+        Returns:
+            Readout results acquired by after execution.
+        """
         options = ExecutionParameters(**kwargs)
 
         if options.relaxation_time is None:
@@ -62,6 +82,7 @@ class DesignPlatform(AbstractPlatform):
             self.qubits,
             options,
             sequence,
+            options,
             *sweepers,
         )
 
@@ -142,11 +163,12 @@ class AveragingMode(Enum):
 class ExecutionParameters:
     """Data structure to deal with execution parameters
 
-    :nshots: Number of shots per point on the experiment
-    :relaxation_time: Relaxation time for the qubit [s]
-    :fast_reset: Enable or disable fast reset
-    :acquisition_type: Data acquisition mode
-    :averaging_mode: Data averaging mode
+    :nshots: nshots (int): Number of shots to sample from the experiment. Default is 1024.
+    relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in s.
+                If ``None`` the default value provided as ``relaxation_time`` in the runcard will be used.
+    :fast_reset (bool): Enable or disable fast reset
+    :acquisition_type (AcquisitionType): Data acquisition mode
+    :averaging_mode (AveragingMode): Data averaging mode
     """
 
     nshots: Optional[int] = 1024
