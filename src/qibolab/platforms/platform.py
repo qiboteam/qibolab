@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import InitVar, dataclass
 from enum import Enum, auto
 from typing import Optional
 
@@ -171,6 +171,12 @@ class ExecutionParameters:
     fast_reset: bool = False
     acquisition_type: AcquisitionType = AcquisitionType.DISCRIMINATION
     averaging_mode: AveragingMode = AveragingMode.SINGLESHOT
+
+    def __post_init__(self):
+        if not isinstance(self.acquisition_type, AcquisitionType):
+            raise TypeError("acquisition_type is not valid")
+        if not isinstance(self.averaging_mode, AveragingMode):
+            raise TypeError("averaging mode is not valid")
 
     @property
     def results_type(self):
