@@ -32,6 +32,7 @@ class QickProgramConfig:
     LO_freq: Optional[int] = None
     LO_power: Optional[float] = None
     adc_sampling_frequency: int = None
+    mux_sampling_frequency: int = None
 
 
 @dataclass
@@ -710,4 +711,5 @@ class TII_ZCU111(RFSoC):  # Containes the main settings:
             LO_freq=7_000_000_000,
             LO_power=10.0,
             adc_sampling_frequency=6_000_000_000,  # 3_072_000_000,
+            mux_sampling_frequency=1_536_000_000,
         )
