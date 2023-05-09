@@ -172,8 +172,6 @@ characterization:
             mixer_drive_phi: 0.0
             mixer_readout_g: 0.0
             mixer_readout_phi: 0.0
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
         1:
             readout_frequency: 7_453_265_000
             drive_frequency: 4_855_663_000
@@ -193,8 +191,6 @@ characterization:
             mixer_drive_phi: 0.0
             mixer_readout_g: 0.0
             mixer_readout_phi: 0.0
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
         2:
             readout_frequency: 7_655_107_000
             drive_frequency: 5_799_876_000
@@ -216,8 +212,6 @@ characterization:
             mixer_drive_phi: 0.0
             mixer_readout_g: 0.0
             mixer_readout_phi: 0.0
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
         3:
             readout_frequency: 7_802_191_000
             drive_frequency: 6_760_700_000
@@ -236,9 +230,7 @@ characterization:
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
             mixer_readout_g: 0.0
-            mixer_readout_phi: 0.0
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
+            mixer_readout_phi: 0.00
         4:
             readout_frequency: 8_057_668_000
             drive_frequency: 6_585_053_000
@@ -258,8 +250,6 @@ characterization:
             mixer_drive_phi: 0.0
             mixer_readout_g: 0.0
             mixer_readout_phi: 0.0
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
         5:
             readout_frequency: 0.0
             drive_frequency: 0.0
@@ -275,5 +265,3 @@ characterization:
             mixer_drive_phi: 0.0
             mixer_readout_g: 0.0
             mixer_readout_phi: 0.0
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
