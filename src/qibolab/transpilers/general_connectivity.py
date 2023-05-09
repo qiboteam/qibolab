@@ -9,7 +9,8 @@ from qibo import gates
 from qibo.config import log, raise_error
 from qibo.models import Circuit
 
-from qibolab.transpilers.gate_decompositions import TwoQubitNativeTypes, translate_gate
+from qibolab.platforms.native import NativeTypes
+from qibolab.transpilers.gate_decompositions import translate_gate
 
 DEFAULT_INIT_SAMPLES = 100
 
@@ -29,7 +30,7 @@ class Transpiler:
         connectivity (networkx.graph): chip connectivity.
         init_method (str or QubitInitMethod): initial qubit mapping method.
         init_samples (int): number of random qubit initializations for greedy initial qubit mapping.
-        two_qubit_natives (TwoQubitNativeTypes or str): two qubit gate/s that can be implemented by the hardware.
+        two_qubit_natives (NativeTypes or str): two qubit gate/s that can be implemented by the hardware.
         sampling_split (float): fraction of paths tested (between 0 and 1).
 
     Attributes:
@@ -239,10 +240,10 @@ class Transpiler:
         """Set the native hardware two qubit gates.
 
         Args:
-            two_qubit_natives (TwoQubitNativeTypes or str):
+            two_qubit_natives (NativeTypes or str):
         """
         if isinstance(two_qubit_natives, str):
-            two_qubit_natives = TwoQubitNativeTypes[two_qubit_natives]
+            two_qubit_natives = NativeTypes[two_qubit_natives]
         self._two_qubit_natives = two_qubit_natives
 
     @property
@@ -510,12 +511,12 @@ def translate_circuit(circuit, two_qubit_natives, translate_single_qubit=False):
     return new
 
 
-def can_execute(circuit: Circuit, two_qubit_natives: TwoQubitNativeTypes, connectivity: nx.Graph, verbose=True):
+def can_execute(circuit: Circuit, two_qubit_natives: NativeTypes, connectivity: nx.Graph, verbose=True):
     """Checks if a circuit can be executed on Hardware.
 
     Args:
         circuit (qibo.models.Circuit): Circuit model to check.
-        two_qubit_natives (TwoQubitNativeTypes): two qubit gate/s that can be implemented by the hardware.
+        two_qubit_natives (NativeTypes): two qubit gate/s that can be implemented by the hardware.
         connectivity (networkx.graph): chip connectivity.
         verbose (bool): If ``True`` it prints debugging log messages.
 
@@ -540,7 +541,7 @@ def can_execute(circuit: Circuit, two_qubit_natives: TwoQubitNativeTypes, connec
 
         elif len(gate.qubits) == 2:
             try:
-                if not (TwoQubitNativeTypes.from_gate(gate) in two_qubit_natives):
+                if not (NativeTypes.from_gate(gate) in two_qubit_natives):
                     vlog(f"{gate.name} is not in two_qubit_native.")
                     return False
             except ValueError:

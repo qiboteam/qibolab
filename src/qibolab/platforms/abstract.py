@@ -11,11 +11,7 @@ from qibo.config import log, raise_error
 from qibo.models import Circuit
 
 from qibolab.designs.channels import Channel
-from qibolab.platforms.native import (
-    SingleQubitNatives,
-    TwoQubitNatives,
-    TwoQubitNativeTypes,
-)
+from qibolab.platforms.native import NativeTypes, SingleQubitNatives, TwoQubitNatives
 from qibolab.pulses import PulseSequence
 from qibolab.transpilers import can_execute, transpile
 
@@ -74,7 +70,7 @@ class Qubit:
     drive: Optional[Channel] = None
     flux: Optional[Channel] = None
 
-    native_gates: Optional[SingleQubitNatives] = None
+    native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
 
     def __post_init__(self):
         # register qubit in ``flux`` channel so that we can access
@@ -131,7 +127,7 @@ class AbstractPlatform(ABC):
 
         # TODO: Remove this (needed for the multiqubit platform)
         self.native_gates = {}
-        self.two_qubit_native_types = TwoQubitNativeTypes(0)
+        self.two_qubit_native_types = NativeTypes(0)
         # Load platform settings
         self.reload_settings()
 
@@ -191,7 +187,7 @@ class AbstractPlatform(ABC):
                 self.two_qubit_native_types |= self.pairs[pair].native_gates.types
         else:
             # dummy value to avoid transpiler failure for single qubit devices
-            self.two_qubit_native_types = TwoQubitNativeTypes.CZ
+            self.two_qubit_native_types = NativeTypes.CZ
 
     @property
     def topology(self):

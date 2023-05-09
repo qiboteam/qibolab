@@ -3,7 +3,7 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.config import raise_error
 
-from qibolab.platforms.native import TwoQubitNativeTypes
+from qibolab.platforms.native import NativeTypes
 from qibolab.transpilers.unitary_decompositions import (
     two_qubit_decomposition,
     u3_decomposition,
@@ -46,7 +46,7 @@ class GateDecompositions:
         return [g.on_qubits({i: q for i, q in enumerate(gate.qubits)}) for g in decomposition]
 
 
-def translate_gate(gate, native_gates: TwoQubitNativeTypes):
+def translate_gate(gate, native_gates: NativeTypes):
     """Maps Qibo gates to a hardware native implementation.
 
     Args:
@@ -63,7 +63,7 @@ def translate_gate(gate, native_gates: TwoQubitNativeTypes):
     if len(gate.qubits) == 1:
         return onequbit_dec(gate)
 
-    if native_gates is TwoQubitNativeTypes.CZ | TwoQubitNativeTypes.iSWAP:
+    if native_gates is NativeTypes.CZ | NativeTypes.iSWAP:
         # Check for a special optimized decomposition.
         if gate.__class__ in opt_dec.decompositions:
             return opt_dec(gate)
@@ -82,9 +82,9 @@ def translate_gate(gate, native_gates: TwoQubitNativeTypes):
                 return cz_dec(gate)
             else:  # pragma: no cover
                 return iswap_dec(gate)
-    elif native_gates is TwoQubitNativeTypes.CZ:
+    elif native_gates is NativeTypes.CZ:
         return cz_dec(gate)
-    elif native_gates is TwoQubitNativeTypes.iSWAP:
+    elif native_gates is NativeTypes.iSWAP:
         if gate.__class__ in iswap_dec.decompositions:
             return iswap_dec(gate)
         else:
@@ -94,7 +94,7 @@ def translate_gate(gate, native_gates: TwoQubitNativeTypes):
             iswap_decomposed = []
             for g in cz_decomposed:
                 # Need recursive function as gates.Unitary is not in iswap_dec
-                for g_translated in translate_gate(g, TwoQubitNativeTypes.iSWAP):
+                for g_translated in translate_gate(g, NativeTypes.iSWAP):
                     iswap_decomposed.append(g_translated)
             return iswap_decomposed
     else:  # pragma: no cover

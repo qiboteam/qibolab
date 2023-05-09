@@ -4,7 +4,7 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 
-from qibolab.transpilers.gate_decompositions import TwoQubitNativeTypes, translate_gate
+from qibolab.transpilers.gate_decompositions import NativeTypes, translate_gate
 
 
 def assert_matrices_allclose(gate, two_qubit_natives):
@@ -33,40 +33,40 @@ def assert_matrices_allclose(gate, two_qubit_natives):
 @pytest.mark.parametrize("gatename", ["H", "X", "Y", "I"])
 def test_pauli_to_native(gatename):
     gate = getattr(gates, gatename)(0)
-    assert_matrices_allclose(gate, two_qubit_natives=TwoQubitNativeTypes.CZ)
+    assert_matrices_allclose(gate, two_qubit_natives=NativeTypes.CZ)
 
 
 @pytest.mark.parametrize("gatename", ["RX", "RY", "RZ"])
 def test_rotations_to_native(gatename):
     gate = getattr(gates, gatename)(0, theta=0.1)
-    assert_matrices_allclose(gate, two_qubit_natives=TwoQubitNativeTypes.CZ)
+    assert_matrices_allclose(gate, two_qubit_natives=NativeTypes.CZ)
 
 
 @pytest.mark.parametrize("gatename", ["S", "SDG", "T", "TDG"])
 def test_special_single_qubit_to_native(gatename):
     gate = getattr(gates, gatename)(0)
-    assert_matrices_allclose(gate, two_qubit_natives=TwoQubitNativeTypes.CZ)
+    assert_matrices_allclose(gate, two_qubit_natives=NativeTypes.CZ)
 
 
 def test_u1_to_native():
     gate = gates.U1(0, theta=0.5)
-    assert_matrices_allclose(gate, two_qubit_natives=TwoQubitNativeTypes.CZ)
+    assert_matrices_allclose(gate, two_qubit_natives=NativeTypes.CZ)
 
 
 def test_u2_to_native():
     gate = gates.U2(0, phi=0.1, lam=0.3)
-    assert_matrices_allclose(gate, two_qubit_natives=TwoQubitNativeTypes.CZ)
+    assert_matrices_allclose(gate, two_qubit_natives=NativeTypes.CZ)
 
 
 def test_u3_to_native():
     gate = gates.U3(0, theta=0.2, phi=0.1, lam=0.3)
-    assert_matrices_allclose(gate, two_qubit_natives=TwoQubitNativeTypes.CZ)
+    assert_matrices_allclose(gate, two_qubit_natives=NativeTypes.CZ)
 
 
 @pytest.mark.parametrize("gatename", ["CNOT", "CZ", "SWAP", "iSWAP", "FSWAP"])
 @pytest.mark.parametrize(
     "natives",
-    [TwoQubitNativeTypes.CZ, TwoQubitNativeTypes.iSWAP, TwoQubitNativeTypes.iSWAP | TwoQubitNativeTypes.iSWAP],
+    [NativeTypes.CZ, NativeTypes.iSWAP, NativeTypes.iSWAP | NativeTypes.iSWAP],
 )
 def test_two_qubit_to_native(gatename, natives):
     gate = getattr(gates, gatename)(0, 1)
@@ -75,7 +75,7 @@ def test_two_qubit_to_native(gatename, natives):
 
 @pytest.mark.parametrize(
     "natives",
-    [TwoQubitNativeTypes.CZ, TwoQubitNativeTypes.iSWAP, TwoQubitNativeTypes.iSWAP | TwoQubitNativeTypes.iSWAP],
+    [NativeTypes.CZ, NativeTypes.iSWAP, NativeTypes.iSWAP | NativeTypes.iSWAP],
 )
 @pytest.mark.parametrize("gatename", ["CRX", "CRY", "CRZ"])
 def test_controlled_rotations_to_native(gatename, natives):
@@ -85,7 +85,7 @@ def test_controlled_rotations_to_native(gatename, natives):
 
 @pytest.mark.parametrize(
     "natives",
-    [TwoQubitNativeTypes.CZ, TwoQubitNativeTypes.iSWAP, TwoQubitNativeTypes.iSWAP | TwoQubitNativeTypes.iSWAP],
+    [NativeTypes.CZ, NativeTypes.iSWAP, NativeTypes.iSWAP | NativeTypes.iSWAP],
 )
 def test_cu1_to_native(natives):
     gate = gates.CU1(0, 1, theta=0.4)
@@ -94,7 +94,7 @@ def test_cu1_to_native(natives):
 
 @pytest.mark.parametrize(
     "natives",
-    [TwoQubitNativeTypes.CZ, TwoQubitNativeTypes.iSWAP, TwoQubitNativeTypes.iSWAP | TwoQubitNativeTypes.iSWAP],
+    [NativeTypes.CZ, NativeTypes.iSWAP, NativeTypes.iSWAP | NativeTypes.iSWAP],
 )
 def test_cu2_to_native(natives):
     gate = gates.CU2(0, 1, phi=0.2, lam=0.3)
@@ -103,7 +103,7 @@ def test_cu2_to_native(natives):
 
 @pytest.mark.parametrize(
     "natives",
-    [TwoQubitNativeTypes.CZ, TwoQubitNativeTypes.iSWAP, TwoQubitNativeTypes.iSWAP | TwoQubitNativeTypes.iSWAP],
+    [NativeTypes.CZ, NativeTypes.iSWAP, NativeTypes.iSWAP | NativeTypes.iSWAP],
 )
 def test_cu3_to_native(natives):
     gate = gates.CU3(0, 1, theta=0.2, phi=0.3, lam=0.4)
@@ -112,7 +112,7 @@ def test_cu3_to_native(natives):
 
 @pytest.mark.parametrize(
     "natives",
-    [TwoQubitNativeTypes.CZ, TwoQubitNativeTypes.iSWAP, TwoQubitNativeTypes.iSWAP | TwoQubitNativeTypes.iSWAP],
+    [NativeTypes.CZ, NativeTypes.iSWAP, NativeTypes.iSWAP | NativeTypes.iSWAP],
 )
 def test_fSim_to_native(natives):
     gate = gates.fSim(0, 1, theta=0.3, phi=0.1)
@@ -121,7 +121,7 @@ def test_fSim_to_native(natives):
 
 @pytest.mark.parametrize(
     "natives",
-    [TwoQubitNativeTypes.CZ, TwoQubitNativeTypes.iSWAP, TwoQubitNativeTypes.iSWAP | TwoQubitNativeTypes.iSWAP],
+    [NativeTypes.CZ, NativeTypes.iSWAP, NativeTypes.iSWAP | NativeTypes.iSWAP],
 )
 def test_GeneralizedfSim_to_native(natives):
     from .test_transpilers_unitary_decompositions import random_unitary
@@ -133,7 +133,7 @@ def test_GeneralizedfSim_to_native(natives):
 
 @pytest.mark.parametrize(
     "natives",
-    [TwoQubitNativeTypes.CZ, TwoQubitNativeTypes.iSWAP, TwoQubitNativeTypes.iSWAP | TwoQubitNativeTypes.iSWAP],
+    [NativeTypes.CZ, NativeTypes.iSWAP, NativeTypes.iSWAP | NativeTypes.iSWAP],
 )
 @pytest.mark.parametrize("gatename", ["RXX", "RZZ", "RYY"])
 def test_rnn_to_native(gatename, natives):
@@ -143,7 +143,7 @@ def test_rnn_to_native(gatename, natives):
 
 @pytest.mark.parametrize(
     "natives",
-    [TwoQubitNativeTypes.CZ, TwoQubitNativeTypes.iSWAP, TwoQubitNativeTypes.iSWAP | TwoQubitNativeTypes.iSWAP],
+    [NativeTypes.CZ, NativeTypes.iSWAP, NativeTypes.iSWAP | NativeTypes.iSWAP],
 )
 def test_TOFFOLI_to_native(natives):
     gate = gates.TOFFOLI(0, 1, 2)
@@ -152,7 +152,7 @@ def test_TOFFOLI_to_native(natives):
 
 @pytest.mark.parametrize(
     "natives",
-    [TwoQubitNativeTypes.CZ, TwoQubitNativeTypes.iSWAP, TwoQubitNativeTypes.iSWAP | TwoQubitNativeTypes.iSWAP],
+    [NativeTypes.CZ, NativeTypes.iSWAP, NativeTypes.iSWAP | NativeTypes.iSWAP],
 )
 @pytest.mark.parametrize("nqubits", [1, 2])
 def test_unitary_to_native(nqubits, natives):

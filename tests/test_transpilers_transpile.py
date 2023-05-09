@@ -6,7 +6,7 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 
-from qibolab.transpilers.gate_decompositions import TwoQubitNativeTypes
+from qibolab.platforms.native import NativeTypes
 from qibolab.transpilers.transpile import can_execute, transpile
 
 from .test_transpilers_connectivity import transpose_qubits
@@ -51,7 +51,7 @@ def generate_random_circuit(nqubits, ngates, seed=None):
 
 @pytest.mark.parametrize(
     "two_qubit_natives",
-    [TwoQubitNativeTypes.CZ, TwoQubitNativeTypes.iSWAP, TwoQubitNativeTypes.CZ | TwoQubitNativeTypes.iSWAP],
+    [NativeTypes.CZ, NativeTypes.iSWAP, NativeTypes.CZ | NativeTypes.iSWAP],
 )
 @pytest.mark.parametrize("middle_qubit", [0, 1, 2, 3, 4])
 @pytest.mark.parametrize("nqubits", [1, 2, 3, 4, 5])
@@ -88,11 +88,11 @@ def test_transpile(middle_qubit, nqubits, ngates, fuse_one_qubit, two_qubit_nati
 def test_can_execute_false():
     circuit1 = Circuit(1)
     circuit1.add(gates.H(0))
-    assert not can_execute(circuit1, two_qubit_natives=TwoQubitNativeTypes.CZ | TwoQubitNativeTypes.iSWAP)
+    assert not can_execute(circuit1, two_qubit_natives=NativeTypes.CZ | NativeTypes.iSWAP)
     circuit2 = Circuit(2)
     circuit2.add(gates.CNOT(0, 1))
     with pytest.raises(ValueError):
-        can_execute(circuit2, two_qubit_natives=TwoQubitNativeTypes.CZ | TwoQubitNativeTypes.iSWAP)
+        can_execute(circuit2, two_qubit_natives=NativeTypes.CZ | NativeTypes.iSWAP)
     circuit3 = Circuit(3)
     circuit3.add(gates.TOFFOLI(0, 1, 2))
-    assert not can_execute(circuit3, two_qubit_natives=TwoQubitNativeTypes.CZ | TwoQubitNativeTypes.iSWAP)
+    assert not can_execute(circuit3, two_qubit_natives=NativeTypes.CZ | NativeTypes.iSWAP)

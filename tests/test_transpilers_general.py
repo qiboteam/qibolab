@@ -4,7 +4,7 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 
-from qibolab.transpilers.gate_decompositions import TwoQubitNativeTypes
+from qibolab.transpilers.gate_decompositions import NativeTypes
 from qibolab.transpilers.general_connectivity import Transpiler, can_execute
 
 
@@ -98,47 +98,37 @@ def test_can_execute():
     circuit.add(gates.Z(1))
     circuit.add(gates.CZ(2, 1))
     circuit.add(gates.M(0))
-    assert can_execute(circuit, two_qubit_natives=TwoQubitNativeTypes.CZ, connectivity=special_connectivity("5_qubits"))
+    assert can_execute(circuit, two_qubit_natives=NativeTypes.CZ, connectivity=special_connectivity("5_qubits"))
 
 
 def test_cannot_execute_connectivity():
     circuit = Circuit(5)
     circuit.add(gates.CZ(0, 1))
-    assert not can_execute(
-        circuit, two_qubit_natives=TwoQubitNativeTypes.CZ, connectivity=special_connectivity("5_qubits")
-    )
+    assert not can_execute(circuit, two_qubit_natives=NativeTypes.CZ, connectivity=special_connectivity("5_qubits"))
 
 
 def test_cannot_execute_native2q():
     circuit = Circuit(5)
     circuit.add(gates.CNOT(0, 2))
-    assert not can_execute(
-        circuit, two_qubit_natives=TwoQubitNativeTypes.CZ, connectivity=special_connectivity("5_qubits")
-    )
+    assert not can_execute(circuit, two_qubit_natives=NativeTypes.CZ, connectivity=special_connectivity("5_qubits"))
 
 
 def test_cannot_execute_native1q():
     circuit = Circuit(5)
     circuit.add(gates.H(0))
-    assert not can_execute(
-        circuit, two_qubit_natives=TwoQubitNativeTypes.CZ, connectivity=special_connectivity("5_qubits")
-    )
+    assert not can_execute(circuit, two_qubit_natives=NativeTypes.CZ, connectivity=special_connectivity("5_qubits"))
 
 
 def test_cannot_execute_native3q():
     circuit = Circuit(5)
     circuit.add(gates.TOFFOLI(0, 1, 2))
-    assert not can_execute(
-        circuit, two_qubit_natives=TwoQubitNativeTypes.CZ, connectivity=special_connectivity("5_qubits")
-    )
+    assert not can_execute(circuit, two_qubit_natives=NativeTypes.CZ, connectivity=special_connectivity("5_qubits"))
 
 
 def test_cannot_execute_wrong_native():
     circuit = Circuit(5)
     circuit.add(gates.iSWAP(0, 2))
-    assert not can_execute(
-        circuit, two_qubit_natives=TwoQubitNativeTypes.CZ, connectivity=special_connectivity("5_qubits")
-    )
+    assert not can_execute(circuit, two_qubit_natives=NativeTypes.CZ, connectivity=special_connectivity("5_qubits"))
 
 
 def test_connectivity_and_samples():
@@ -170,9 +160,7 @@ def test_insufficient_qubits():
 
 @pytest.mark.parametrize("gates", [1, 10, 50])
 @pytest.mark.parametrize("qubits", [5, 21])
-@pytest.mark.parametrize(
-    "natives", [TwoQubitNativeTypes.CZ, TwoQubitNativeTypes.iSWAP, TwoQubitNativeTypes.CZ | TwoQubitNativeTypes.iSWAP]
-)
+@pytest.mark.parametrize("natives", [NativeTypes.CZ, NativeTypes.iSWAP, NativeTypes.CZ | NativeTypes.iSWAP])
 def test_random_circuits(gates, qubits, natives):
     transpiler = Transpiler(
         connectivity=special_connectivity("21_qubits"), init_method="greedy", init_samples=50, two_qubit_natives=natives
@@ -195,7 +183,7 @@ def test_subgraph_init_simple():
     assert added_swaps == 0
     assert len(initial_map) == 5 and len(final_map) == 5
     assert can_execute(
-        transpiled_circuit, two_qubit_natives=TwoQubitNativeTypes.CZ, connectivity=special_connectivity("5_qubits")
+        transpiled_circuit, two_qubit_natives=NativeTypes.CZ, connectivity=special_connectivity("5_qubits")
     )
 
 
@@ -214,7 +202,7 @@ def test_subgraph_init():
     assert added_swaps >= 0
     assert len(initial_map) == 5 and len(final_map) == 5
     assert can_execute(
-        transpiled_circuit, two_qubit_natives=TwoQubitNativeTypes.CZ, connectivity=special_connectivity("5_qubits")
+        transpiled_circuit, two_qubit_natives=NativeTypes.CZ, connectivity=special_connectivity("5_qubits")
     )
 
 
@@ -226,7 +214,7 @@ def test_custom_mapping():
     assert added_swaps >= 0
     assert len(initial_map) == 5 and len(final_map) == 5
     assert can_execute(
-        transpiled_circuit, two_qubit_natives=TwoQubitNativeTypes.CZ, connectivity=special_connectivity("5_qubits")
+        transpiled_circuit, two_qubit_natives=NativeTypes.CZ, connectivity=special_connectivity("5_qubits")
     )
 
 
@@ -248,7 +236,7 @@ def test_custom_connectivity():
     assert added_swaps >= 0
     assert len(initial_map) == 5 and len(final_map) == 5
     assert can_execute(
-        transpiled_circuit, two_qubit_natives=TwoQubitNativeTypes.CZ, connectivity=special_connectivity("5_qubits")
+        transpiled_circuit, two_qubit_natives=NativeTypes.CZ, connectivity=special_connectivity("5_qubits")
     )
 
 
@@ -268,7 +256,7 @@ def test_split():
     assert added_swaps >= 0
     assert len(initial_map) == 21 and len(final_map) == 21
     assert can_execute(
-        transpiled_circuit, two_qubit_natives=TwoQubitNativeTypes.CZ, connectivity=special_connectivity("21_qubits")
+        transpiled_circuit, two_qubit_natives=NativeTypes.CZ, connectivity=special_connectivity("21_qubits")
     )
 
 
@@ -283,5 +271,5 @@ def test_fusion_algorithms(one_q, two_q):
     assert added_swaps >= 0
     assert len(initial_map) == 21 and len(final_map) == 21
     assert can_execute(
-        transpiled_circuit, two_qubit_natives=TwoQubitNativeTypes.CZ, connectivity=special_connectivity("21_qubits")
+        transpiled_circuit, two_qubit_natives=NativeTypes.CZ, connectivity=special_connectivity("21_qubits")
     )
