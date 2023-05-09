@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import InitVar, dataclass, field
 from functools import cached_property
 from typing import Optional
 
@@ -8,7 +8,6 @@ import numpy.typing as npt
 iq = np.dtype([("i", np.float64), ("q", np.float64)])
 
 
-@dataclass
 class IntegratedResults:
     """
     Data structure to deal with the output of
@@ -19,6 +18,7 @@ class IntegratedResults:
     """
 
     def __init__(self, i: np.ndarray, q: np.ndarray, nshots=None):
+        self.nshots = nshots
         self.voltage: npt.NDArray[iq] = (
             np.recarray((i.shape[0] // nshots, nshots), dtype=iq) if nshots else np.recarray(i.shape, dtype=iq)
         )
@@ -40,7 +40,7 @@ class IntegratedResults:
         axis = 0
         i = np.append(self.voltage.i, data.voltage.i, axis=axis)
         q = np.append(self.voltage.q, data.voltage.q, axis=axis)
-        return IntegratedResults(i, q)
+        return IntegratedResults(i, q, nshots=None)
 
     def serialize(self):
         """Serialize as a dictionary."""
@@ -60,7 +60,7 @@ class IntegratedResults:
         for is_, qs_ in zip(self.voltage.i, self.voltage.q):
             average_i, average_q = np.append(average_i, np.mean(is_)), np.append(average_q, np.mean(qs_))
             std_i, std_q = np.append(std_i, np.std(is_)), np.append(std_q, np.std(qs_))
-        return AveragedIntegratedResults(average_i, average_q, std_i=std_i, std_q=std_q)
+        return AveragedIntegratedResults(average_i, average_q, None, std_i, std_q)
 
 
 # FIXME: Here I take the states from IntegratedResult that are typed to be ints but those are not what would you do ?
@@ -74,8 +74,8 @@ class AveragedIntegratedResults(IntegratedResults):
     or the averages of ``IntegratedResults``
     """
 
-    def __init__(self, i: np.ndarray, q: np.ndarray, nshots=None, std_i=None, std_q=None):
-        IntegratedResults.__init__(self, i, q, nshots)
+    def __init__(self, i: np.ndarray, q: np.ndarray, nshots: int, std_i: np.ndarray, std_q: np.ndarray):
+        super().__init__(i, q, nshots)
         self.std: Optional[npt.NDArray[np.float64]] = np.recarray(i.shape, dtype=iq)
         self.std["i"] = std_i
         self.std["q"] = std_q
@@ -181,5 +181,5 @@ class AveragedStateResults(StateResults):
     """
 
     def __init__(self, states: np.ndarray = np.array([]), nshots=None, std=None):
-        StateResults.__init__(self, states, nshots)
+        super().__init__(states, nshots)
         self.std: Optional[npt.NDArray[np.float64]] = std

@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import InitVar, dataclass
 from enum import Enum, auto
 from typing import Optional
 
@@ -44,37 +44,35 @@ class DesignPlatform(AbstractPlatform):
         self.design.disconnect()
         self.is_connected = False
 
-    def execute_pulse_sequence(self, sequence, **kwargs):
+    def execute_pulse_sequence(self, sequence, options, **kwargs):
         """Executes a pulse sequence.
 
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
-            **kwargs: Parameters to be passed to ExecutionParamters
+            options (:class:`qibolab.platforms.platform.ExecutionParameters`) Class holding the execution options.
+            **kwargs: May need them for something
         Returns:
             Readout results acquired by after execution.
         """
-        options = ExecutionParameters(**kwargs)
-
         if options.relaxation_time is None:
             options.relaxation_time = self.relaxation_time
 
         return self.design.play(self.qubits, options, sequence)
 
-    def sweep(self, sequence, *sweepers, **kwargs):
+    def sweep(self, sequence, options, *sweepers, **kwargs):
         """Executes a pulse sequence for different values of sweeped parameters.
         Useful for performing chip characterization.
 
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
-            sweepers (:class:`qibolab.sweeper.Sweeper`): Sweeper objects that specify which
+            options (:class:`qibolab.platforms.platform.ExecutionParameters`) Class holding the execution options.
+            *sweepers (:class:`qibolab.sweeper.Sweeper`): Sweeper objects that specify which
                 parameters are being sweeped.
-            **kwargs: Parameters to be passed to ExecutionParameters
+            **kwargs: May need them for something
 
         Returns:
             Readout results acquired by after execution.
         """
-        options = ExecutionParameters(**kwargs)
-
         if options.relaxation_time is None:
             options.relaxation_time = self.relaxation_time
 
@@ -158,7 +156,7 @@ class AveragingMode(Enum):
     SINGLESHOT = auto()
 
 
-@dataclass
+@dataclass(frozen=True)
 class ExecutionParameters:
     """Data structure to deal with execution parameters
 
@@ -176,21 +174,26 @@ class ExecutionParameters:
     acquisition_type: AcquisitionType = AcquisitionType.DISCRIMINATION
     averaging_mode: AveragingMode = AveragingMode.SINGLESHOT
 
+    def __post_init__(self):
+        if not isinstance(self.acquisition_type, AcquisitionType):
+            raise TypeError("acquisition_type is not valid")
+        if not isinstance(self.averaging_mode, AveragingMode):
+            raise TypeError("averaging mode is not valid")
+
     @property
     def results_type(self):
         """Returns corresponding results class"""
         return RESULTS_TYPE[self.averaging_mode][self.acquisition_type]
 
-
-RESULTS_TYPE = {
-    AveragingMode.CYCLIC: {
-        AcquisitionType.INTEGRATION: AveragedIntegratedResults,
-        AcquisitionType.RAW: AveragedRawWaveformResults,
-        AcquisitionType.DISCRIMINATION: AveragedStateResults,
-    },
-    AveragingMode.SINGLESHOT: {
-        AcquisitionType.INTEGRATION: IntegratedResults,
-        AcquisitionType.RAW: RawWaveformResults,
-        AcquisitionType.DISCRIMINATION: StateResults,
-    },
-}
+    RESULTS_TYPE = {
+        AveragingMode.CYCLIC: {
+            AcquisitionType.INTEGRATION: AveragedIntegratedResults,
+            AcquisitionType.RAW: AveragedRawWaveformResults,
+            AcquisitionType.DISCRIMINATION: AveragedStateResults,
+        },
+        AveragingMode.SINGLESHOT: {
+            AcquisitionType.INTEGRATION: IntegratedResults,
+            AcquisitionType.RAW: RawWaveformResults,
+            AcquisitionType.DISCRIMINATION: StateResults,
+        },
+    }
