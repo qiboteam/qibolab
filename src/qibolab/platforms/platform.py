@@ -44,7 +44,7 @@ class DesignPlatform(AbstractPlatform):
         self.design.disconnect()
         self.is_connected = False
 
-    def execute_pulse_sequence(self, sequence, **kwargs):
+    def execute_pulse_sequence(self, sequence, options, **kwargs):
         """Executes a pulse sequence.
 
         Args:
@@ -53,14 +53,12 @@ class DesignPlatform(AbstractPlatform):
         Returns:
             Readout results acquired by after execution.
         """
-        options = ExecutionParameters(**kwargs)
-
         if options.relaxation_time is None:
             options.relaxation_time = self.relaxation_time
 
         return self.design.play(self.qubits, options, sequence)
 
-    def sweep(self, sequence, *sweepers, **kwargs):
+    def sweep(self, sequence, options, *sweepers, **kwargs):
         """Executes a pulse sequence for different values of sweeped parameters.
         Useful for performing chip characterization.
 
@@ -73,8 +71,6 @@ class DesignPlatform(AbstractPlatform):
         Returns:
             Readout results acquired by after execution.
         """
-        options = ExecutionParameters(**kwargs)
-
         if options.relaxation_time is None:
             options.relaxation_time = self.relaxation_time
 
@@ -158,7 +154,7 @@ class AveragingMode(Enum):
     SINGLESHOT = auto()
 
 
-@dataclass
+@dataclass(frozen=True)
 class ExecutionParameters:
     """Data structure to deal with execution parameters
 
