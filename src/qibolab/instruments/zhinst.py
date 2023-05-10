@@ -415,7 +415,7 @@ class Zurich(AbstractInstrument):
                     pulse = FluxPulse(
                         start=aux_sequence.start,
                         duration=aux_sequence.duration,
-                        amplitude=qubit.sweetspot_pulse_amp,
+                        amplitude=1,
                         shape="Rectangular",
                         channel=qubit.flux.name,
                         qubit=qubit.name,
@@ -525,7 +525,7 @@ class Zurich(AbstractInstrument):
             acquisition_type=options.acquisition_type,
             averaging_mode=options.averaging_mode,
         ):
-            if self.sweepers > 0:
+            if len(self.sweepers) > 0:
                 self.sweep_recursion(
                     qubits, exp, exp_calib, options.relaxation_time, options.acquisition_type, options.fast_reset
                 )

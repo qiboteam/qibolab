@@ -206,15 +206,15 @@ def create_tii_IQM5q(runcard, descriptor=None):
     # flux qubits (CAREFUL WITH THIS !!!)
     for i in range(6, 11):
         channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-6}")]
-        channels[f"L4-{i}"].power_range = 0
+        # channels[f"L4-{i}"].power_range = 0
 
     # flux couplers (CAREFUL WITH THIS !!!)
     for i in range(11, 14):
         channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-11+5}")]
-        channels[f"L4-{i}"].power_range = 0
+        # channels[f"L4-{i}"].power_range = 0
 
     channels[f"L4-14"].ports = [("device_hdawg2", f"SIGOUTS/0")]
-    channels[f"L4-{i}"].power_range = 0
+    # channels[f"L4-{i}"].power_range = 0
 
     # Instantiate Zh set of instruments[They work as one]
     from qibolab.instruments.dummy_oscillator import (

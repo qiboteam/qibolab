@@ -22,9 +22,9 @@ native_gates:
     single_qubit:
         0: # qubit number
             RX:
-                duration: 75
-                amplitude: .58
-                frequency: 4_098_200_000 #doesnt do anything requiered for qibolab to work
+                duration: 40
+                amplitude: 0.566
+                frequency: 4_094_076_705 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.02)
                 type: qd # qubit drive
@@ -32,8 +32,8 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 2000 #2000.e-9
-                amplitude: .05 # .1
-                frequency: 5_228_700_000 #doesnt do anything requiered for qibolab to work
+                amplitude: .5 # .1
+                frequency: 5_233_200_000 #doesnt do anything requiered for qibolab to work
                 integration_time : 1.e-6
                 shape: Rectangular()
                 type: ro # readout
@@ -68,18 +68,18 @@ native_gates:
 
         2: # qubit number
             RX:
-                duration: 60 #200 #60
-                amplitude: 1 #0.54 # Multiplied by the sweeper ?
-                frequency: 4_471_650_000  #4_401_600_000 #4_505_500_000 #4_321_500_000 # 4_541_100_000 #doesnt do anything requiered for qibolab to work
+                duration: 40 #200 #60
+                amplitude: 0.544 #0.54 # Multiplied by the sweeper ?
+                frequency: 4_299_962_281  #4_401_600_000 #4_505_500_000 #4_321_500_000 # 4_541_100_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
-                duration: 1000
+                duration: 2000
                 amplitude: .54
-                frequency: 6_086_000_000  #6_112_000_000 #doesnt do anything requiered for qibolab to work
+                frequency: 6.109e+9 #6_086_000_000  #6_112_000_000 #doesnt do anything requiered for qibolab to work
                 integration_time : 2.0e-6
                 shape: Rectangular()
                 type: ro # readout
@@ -158,15 +158,15 @@ characterization:
         0:
             readout_frequency: 5_228_700_000 #5_228_000_000
             resonator_polycoef_flux: []
-            drive_frequency: 4_098_200_000
+            drive_frequency: 4_094_076_705
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.0 #Use this as an amplitude of the flux_bias
+            sweetspot: -0.025 #Use this as an amplitude of the flux_bias
             filter: {}
-            mean_gnd_states: (0+0j)
-            mean_exc_states: (0+0j)
+            mean_gnd_states: (-0.094589-0.205916j)
+            mean_exc_states: (-0.676446-1.370461j)
             # parameters for single shot classification
-            threshold: 0.0 #0.222844
+            threshold: 0.771699
             iq_angle: 6.637
             # To save power values on the runcard
             # ro_range_lp: -15
@@ -185,19 +185,19 @@ characterization:
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
         2:
-            readout_frequency: 6_086_000_000  #6_112_000_000
+            readout_frequency: 6.109e+9  #6_112_000_000
             resonator_polycoef_flux: []
-            drive_frequency: 4_471_650_000 # 4_401_600_000 #4_541_100_000
+            drive_frequency: 4_299_962_281 # 4_401_600_000 #4_541_100_000
             T1: 0.
             T2: 0.
-            sweetspot: 0.0 #0.5 #0.62 0.00
+            sweetspot: -0.2235 #0.5 #0.62 0.00
             # anharmonicity:Around 100MHz  4_400_500_000 #4_436_500_000
             filter: {}
-            mean_gnd_states: (0+0j)
-            mean_exc_states: (0+0j)
+            mean_gnd_states: (2.616697+0.166773j)
+            mean_exc_states: (2.481454-1.172653j)
             # parameters for single shot classification
-            threshold: 0.0 #0.350665
-            iq_angle: 0.0 #191.016
+            threshold: 0.102652
+            iq_angle: -1.647
         3:
             readout_frequency: 5_783_000_000
             resonator_polycoef_flux: []
