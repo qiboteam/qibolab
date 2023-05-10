@@ -3,7 +3,7 @@ import pytest
 
 from qibolab.instruments.rfsoc import QickProgramConfig, create_qick_sweeps
 from qibolab.paths import qibolab_folder
-from qibolab.platform import create_tii_rfsoc4x2, create_tii_zcu111
+from qibolab.platform import create_tii_rfsoc4x2
 from qibolab.platforms.abstract import Qubit
 from qibolab.pulses import PulseSequence
 from qibolab.result import AveragedResults, ExecutionResults
@@ -57,95 +57,6 @@ def test_classify_shots():
     assert instrument.classify_shots(i_val, q_val, qubit1) is None
 
 
-def test_find_frequency_limits():
-    platform = create_tii_zcu111(RUNCARD_ZCU111, DUMMY_ADDRESS)
-    instrument = platform.design.instruments[0]
-
-    sequence_1 = PulseSequence()
-    pulse = platform.create_MZ_pulse(qubit=0, start=0)
-    pulse.frequency = 11_000_000
-    sequence_1.add(pulse)
-    pulse = platform.create_MZ_pulse(qubit=0, start=0)
-    pulse.frequency = 70_000_000
-    sequence_1.add(pulse)
-    pulse = platform.create_MZ_pulse(qubit=1, start=0)
-    pulse.frequency = 100_000_000
-    sequence_1.add(pulse)
-    pulse = platform.create_MZ_pulse(qubit=2, start=0)
-    pulse.frequency = 300_000_000
-    sequence_1.add(pulse)
-
-    sequence_2 = PulseSequence()
-    pulse1 = platform.create_MZ_pulse(qubit=0, start=0)
-    sequence_2.add(pulse1)
-    pulse2 = platform.create_MZ_pulse(qubit=1, start=0)
-    sequence_2.add(pulse2)
-    pulse3 = platform.create_MZ_pulse(qubit=2, start=0)
-    sequence_2.add(pulse3)
-
-    assert instrument.find_frequency_limits(sequence_1) == [
-        (11_000_000, 70_000_000),
-        (100_000_000, 100_000_000),
-        (300_000_000, 300_000_000),
-    ]
-    assert instrument.find_frequency_limits(sequence_2) == [
-        (pulse1.frequency, pulse1.frequency),
-        (pulse2.frequency, pulse2.frequency),
-        (pulse3.frequency, pulse3.frequency),
-    ]
-
-
-def test_set_best_LO():
-    platform = create_tii_zcu111(RUNCARD_ZCU111, DUMMY_ADDRESS)
-    instrument = platform.design.instruments[0]
-
-    instrument.cfg.adc_sampling_frequency = 3_072_000_000
-
-    sequence_1 = PulseSequence()
-    pulse = platform.create_MZ_pulse(qubit=0, start=0)
-    pulse.frequency = 11_000_000
-    sequence_1.add(pulse)
-    pulse = platform.create_MZ_pulse(qubit=0, start=0)
-    pulse.frequency = 70_000_000
-    sequence_1.add(pulse)
-    pulse = platform.create_MZ_pulse(qubit=1, start=0)
-    pulse.frequency = 100_000_000
-    sequence_1.add(pulse)
-    pulse = platform.create_MZ_pulse(qubit=2, start=0)
-    pulse.frequency = 300_000_000
-    sequence_1.add(pulse)
-
-    sequence_2 = PulseSequence()
-    pulse = platform.create_MZ_pulse(qubit=0, start=0)
-    sequence_2.add(pulse)
-    pulse = platform.create_MZ_pulse(qubit=1, start=0)
-    sequence_2.add(pulse)
-    pulse = platform.create_MZ_pulse(qubit=2, start=0)
-    sequence_2.add(pulse)
-
-    instrument.set_best_LO(instrument.find_frequency_limits(sequence_1))
-    assert instrument.cfg.LO_freq == 0
-    instrument.set_best_LO(instrument.find_frequency_limits(sequence_2))
-    assert instrument.cfg.LO_freq == 7_091_151_000
-
-
-def test_check_not_frequencies_conflicts():
-    platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
-    instrument = platform.design.instruments[0]
-
-    instrument.cfg.adc_sampling_frequency = 3_072_000_000
-
-    limits1 = [(10_000_000, 80_000_000), (98_000_000, 178_000_000), (290_000_000, 390_000_000)]
-    limits2 = [(10_000_000, 97_000_000), (128_000_000, 178_000_000), (300_000_000, 390_000_000)]
-    lo_freq1 = 0
-    lo_freq2 = 9_000_000
-
-    assert instrument.check_not_frequencies_conflicts(limits1, lo_freq1)
-    assert not instrument.check_not_frequencies_conflicts(limits1, lo_freq2)
-    assert not instrument.check_not_frequencies_conflicts(limits2, lo_freq1)
-    assert instrument.check_not_frequencies_conflicts(limits2, lo_freq2)
-
-
 def test_merge_sweep_results():
     """Creates fake dictionary of results and check merging works as expected"""
     dict_a = {"serial1": AveragedResults.from_components(np.array([0]), np.array([1]))}
@@ -190,9 +101,9 @@ def test_get_if_python_sweep():
     sweep1 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 100, 10), pulses=[sequence_1[0]])
     sweep2 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 100, 10), pulses=[sequence_1[1]])
     sweep3 = Sweeper(parameter=Parameter.amplitude, values=np.arange(0.01, 0.5, 0.1), pulses=[sequence_1[1]])
-    sweep1 = create_qick_sweeps([sweep1], sequence_1, platform.qubits)[0]
-    sweep2 = create_qick_sweeps([sweep2], sequence_1, platform.qubits)[0]
-    sweep3 = create_qick_sweeps([sweep3], sequence_1, platform.qubits)[0]
+    sweep1 = create_qick_sweeps(sweep1, sequence_1, platform.qubits)
+    sweep2 = create_qick_sweeps(sweep2, sequence_1, platform.qubits)
+    sweep3 = create_qick_sweeps(sweep3, sequence_1, platform.qubits)
 
     assert instrument.get_if_python_sweep(sequence_1, platform.qubits, sweep2)
     assert not instrument.get_if_python_sweep(sequence_1, platform.qubits, sweep1)
@@ -205,9 +116,9 @@ def test_get_if_python_sweep():
     sweep1 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 100, 10), pulses=[sequence_2[0]])
     sweep2 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 100, 10), pulses=[sequence_2[1]])
     sweep3 = Sweeper(parameter=Parameter.amplitude, values=np.arange(0.01, 0.5, 0.1), pulses=[sequence_2[1]])
-    sweep1 = create_qick_sweeps([sweep1], sequence_2, platform.qubits)[0]
-    sweep2 = create_qick_sweeps([sweep2], sequence_2, platform.qubits)[0]
-    sweep3 = create_qick_sweeps([sweep3], sequence_2, platform.qubits)[0]
+    sweep1 = create_qick_sweeps(sweep1, sequence_2, platform.qubits)
+    sweep2 = create_qick_sweeps(sweep2, sequence_2, platform.qubits)
+    sweep3 = create_qick_sweeps(sweep3, sequence_2, platform.qubits)
 
     assert not instrument.get_if_python_sweep(sequence_2, platform.qubits, sweep1)
     assert instrument.get_if_python_sweep(sequence_2, platform.qubits, sweep1, sweep1)
@@ -225,7 +136,7 @@ def test_convert_av_sweep_results():
     sequence.add(platform.create_MZ_pulse(qubit=0, start=100))
     sequence.add(platform.create_MZ_pulse(qubit=0, start=200))
     sweep1 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 35, 10), pulses=[sequence[0]])
-    sweep1 = create_qick_sweeps([sweep1], sequence, platform.qubits)[0]
+    sweep1 = create_qick_sweeps(sweep1, sequence, platform.qubits)
     serial1 = sequence[1].serial
     serial2 = sequence[2].serial
 
@@ -257,7 +168,7 @@ def test_convert_nav_sweep_results():
     sequence.add(platform.create_MZ_pulse(qubit=0, start=100))
     sequence.add(platform.create_MZ_pulse(qubit=0, start=200))
     sweep1 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 35, 10), pulses=[sequence[0]])
-    sweep1 = create_qick_sweeps([sweep1], sequence, platform.qubits)[0]
+    sweep1 = create_qick_sweeps(sweep1, sequence, platform.qubits)
     serial1 = sequence[1].serial
     serial2 = sequence[2].serial
 
