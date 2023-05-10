@@ -39,6 +39,7 @@ class Qubit:
 
     readout_frequency: int = 0
     drive_frequency: int = 0
+    anharmonicity: int = 0
     sweetspot: float = 0
     peak_voltage: float = 0
     pi_pulse_amplitude: float = 0
