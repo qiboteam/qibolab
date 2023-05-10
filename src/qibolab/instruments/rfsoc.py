@@ -22,20 +22,21 @@ from qibolab.sweeper import Parameter, Sweeper
 
 @dataclass
 class QickProgramConfig:
+    """General RFSoC Configuration to send to the server"""
+
     sampling_rate: int = None
     repetition_duration: int = 100_000
     adc_trig_offset: int = 200
     max_gain: int = 32_000
     reps: int = 1000
-    expts: Optional[int] = None  # TODO remove
     mixer_freq: Optional[int] = None
-    LO_freq: Optional[int] = None
-    LO_power: Optional[float] = None
     adc_sampling_frequency: int = None
 
 
 @dataclass
 class QickSweep:  # TODO change name to avoid confusion
+    """Sweeper object intermediate between qibolab and qick interface"""
+
     parameter: Parameter = None  # parameter to sweep
     results: List[str] = None  # list of readout pulses serials
     pulses: List[Pulse] = None  # list of pulses
@@ -45,63 +46,57 @@ class QickSweep:  # TODO change name to avoid confusion
     expts: int = None  # single number of points
 
     def get_idx_pulse(self, pulse: Pulse) -> Union[int, None]:
-        """Checks if a pulse is sweeped, if it is returns the index in self.pulses"""
+        """Checks pulse is sweeped, returns the index in self.pulses or None"""
         try:
             return self.pulses.index(pulse)
         except ValueError:
             return None
 
 
-def create_qick_sweeps(sweepers, sequence, qubits):
+def create_qick_sweeps(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Qubit]) -> QickSweep:
+    """Create a QickSweep oject from a Sweeper objects"""
     # TODO add phase
-    sweeps = []
-    for sweeper in sweepers:
-        is_freq = sweeper.parameter is Parameter.frequency
-        is_amp = sweeper.parameter is Parameter.amplitude
-        is_bias = sweeper.parameter is Parameter.bias
+    is_freq = sweeper.parameter is Parameter.frequency
+    is_amp = sweeper.parameter is Parameter.amplitude
+    is_bias = sweeper.parameter is Parameter.bias
 
-        starts = []
-        steps = []
-        if is_freq or is_amp:
-            for pulse in sweeper.pulses:
-                if is_freq:
-                    starts.append(sweeper.values[0] + pulse.frequency)
-                    steps.append(sweeper.values[1] - sweeper.values[0])
-                elif is_amp:
-                    # starts.append(sweeper.values[0] * pulse.amplitude)
-                    starts.append(sweeper.values[0] * pulse.amplitude)
-                    steps.append((sweeper.values[1] - sweeper.values[0]) * pulse.amplitude)
-        elif is_bias:
-            for qubit in sweeper.qubits:
-                starts.append(sweeper.values[0] + qubits[qubit].flux.bias)
+    starts = []
+    steps = []
+    indexes = []
+
+    if is_freq or is_amp:
+        for pulse in sweeper.pulses:
+            for idx, seq_pulse in enumerate(sequence):
+                if pulse == seq_pulse:
+                    indexes.append(idx)
+            if is_freq:
+                starts.append(sweeper.values[0] + pulse.frequency)
                 steps.append(sweeper.values[1] - sweeper.values[0])
+            elif is_amp:
+                # starts.append(sweeper.values[0] * pulse.amplitude)
+                starts.append(sweeper.values[0] * pulse.amplitude)
+                steps.append((sweeper.values[1] - sweeper.values[0]) * pulse.amplitude)
+    elif is_bias:
+        for qubit in sweeper.qubits:
+            for idx, seq_qubit in enumerate(qubits):
+                if qubit == seq_qubit:
+                    indexes.append(idx)
+            starts.append(sweeper.values[0] + qubits[qubit].flux.bias)
+            steps.append(sweeper.values[1] - sweeper.values[0])
 
-            if any(start + steps[idx] * (len(sweeper.values) - 1) > 1 for idx, start in enumerate(starts)):
-                raise ValueError("Sweeper amplitude is set to reach values higher than 1")
+        if any(start + steps[idx] * (len(sweeper.values) - 1) > 1 for idx, start in enumerate(starts)):
+            raise ValueError("Sweeper amplitude is set to reach values higher than 1")
 
-        indexes = []
-        if is_bias:
-            for qubit in sweeper.qubits:
-                for idx, seq_qubit in enumerate(qubits):
-                    if qubit == seq_qubit:
-                        indexes.append(idx)
-        else:
-            for pulse in sweeper.pulses:
-                for idx, seq_pulse in enumerate(sequence):
-                    if pulse == seq_pulse:
-                        indexes.append(idx)
-
-        q = QickSweep(
-            parameter=sweeper.parameter,
-            results=[ro.serial for ro in sequence.ro_pulses],
-            pulses=sweeper.pulses,
-            indexes=indexes,
-            starts=starts,
-            steps=steps,
-            expts=len(sweeper.values),
-        )
-        sweeps.append(q)
-    return sweeps
+    new_sweep = QickSweep(
+        parameter=sweeper.parameter,
+        results=[ro.serial for ro in sequence.ro_pulses],
+        pulses=sweeper.pulses,
+        indexes=indexes,
+        starts=starts,
+        steps=steps,
+        expts=len(sweeper.values),
+    )
+    return new_sweep
 
 
 class RFSoC(AbstractInstrument):
@@ -142,7 +137,7 @@ class RFSoC(AbstractInstrument):
         repetition_duration: int = None,
         adc_trig_offset: int = None,
         max_gain: int = None,
-    ):
+    ):  # TODO rethink arguments
         """Changes the configuration of the instrument.
 
         Args:
@@ -160,86 +155,6 @@ class RFSoC(AbstractInstrument):
             self.cfg.adc_trig_offset = adc_trig_offset
         if max_gain is not None:
             self.cfg.max_gain = max_gain
-
-    @staticmethod
-    def find_frequency_limits(sequence: PulseSequence, sweepers: List[QickSweep] = None) -> List[Tuple[int, int]]:
-        """Given a sequence (and a sweeper), finds the min and max pulse frequency for every qubit
-
-        Args:
-            sequence (PulseSequence): sequence to check
-            sweeper (QickSweep): sweeper related to the sequence
-        Returns:
-            List of tuples, one for each used qubit. Every tuple contains minimum and maximum
-            frequency used by the qubit. The list is ordered by the minimum frequency.
-        """
-
-        limits = []
-        for qubit in sequence.qubits:
-            minfreq = 1e10
-            maxfreq = 0
-            for pulse in sequence.get_qubit_pulses(qubit):
-                minmax_set = False
-                if sweepers is not None:
-                    for sweeper in sweepers:
-                        idx = sweeper.get_idx_pulse(pulse)
-                        if idx is not None and sweeper.parameter is Parameter.frequency:
-                            values = sweeper.starts[idx] + sweeper.steps[idx] * np.arange(sweeper.expts)
-                            minfreq = min(values)
-                            maxfreq = max(values)
-                            minmax_set = True
-                if not minmax_set:
-                    freq = pulse.frequency
-                    minfreq = freq if freq < minfreq else minfreq
-                    maxfreq = freq if freq > maxfreq else maxfreq
-            limits.append((minfreq, maxfreq))
-
-        limits.sort()
-        return limits
-
-    def set_best_LO(self, limits: List[Tuple[int, int]]):
-        """Given frequency limits for every used channel, finds and set a working LO
-
-        Raises:
-            ValueError: if a good LO frequency is not found
-        """
-
-        lo_freq = max(limits[0][0] - 20_000_000, 0)
-
-        while limits[0][1] - lo_freq < (self.cfg.adc_sampling_frequency / 32.0):
-            if self.check_not_frequencies_conflicts(limits, lo_freq):
-                self.local_oscillator.frequency = lo_freq
-                self.cfg.LO_freq = lo_freq
-                print(f"Setting LO {lo_freq}")
-                return
-            else:
-                lo_freq = lo_freq + 1_000_000
-
-        raise ValueError(f"Could not find a LO frequency without conflicts for limits {limits}")
-
-    def check_not_frequencies_conflicts(self, limits: List[Tuple[int, int]], lo_freq: int) -> bool:
-        """Given frequency limits and a value for LO, checks if there are conflicts
-
-        Returns:
-            bool: True if there are no conflicts, False if there are
-        """
-
-        used_bands = []
-
-        for limit in limits:
-            for idx in range(8):
-                min_band = (self.cfg.adc_sampling_frequency / 32.0) * (2 * (idx - 1) + 1) if idx != 0 else 0
-                max_band = (self.cfg.adc_sampling_frequency / 32.0) * (2 * idx + 1)
-
-                if limit[0] - lo_freq > min_band and limit[1] - lo_freq < max_band:
-                    if idx in used_bands:
-                        return False
-                    else:
-                        used_bands.append(idx)
-                        break
-            else:
-                return False
-
-        return True
 
     def _execute_pulse_sequence(
         self,
@@ -471,35 +386,35 @@ class RFSoC(AbstractInstrument):
             )
             res = self.convert_sweep_results(sweeper, original_ro, sequence, qubits, toti, totq, average)
             return res
-        else:
-            sweeper = sweepers[0]
-            if self.get_if_python_sweep(sequence, qubits, *sweepers):  # TODO modify
-                values = []
+        # else:
+        sweeper = sweepers[0]
+        if self.get_if_python_sweep(sequence, qubits, *sweepers):
+            values = []
+            if sweeper.parameter is Parameter.frequency or sweeper.parameter is Parameter.amplitude:
+                for idx, _ in enumerate(sweeper.pulses):
+                    val = np.arange(0, sweeper.expts) * sweeper.steps[idx] + sweeper.starts[idx]
+                    values.append(val)
+            else:
+                for idx, _ in enumerate(sweeper.indexes):
+                    val = np.arange(0, sweeper.expts) * sweeper.steps[idx] + sweeper.starts[idx]
+                    values.append(val)
+
+            results = {}
+            for idx in range(sweeper.expts):
+                # update values
                 if sweeper.parameter is Parameter.frequency or sweeper.parameter is Parameter.amplitude:
-                    for idx, _ in enumerate(sweeper.pulses):
-                        val = np.arange(0, sweeper.expts) * sweeper.steps[idx] + sweeper.starts[idx]
-                        values.append(val)
-                else:  # TODO elif
-                    for idx, _ in enumerate(sweeper.indexes):
-                        val = np.arange(0, sweeper.expts) * sweeper.steps[idx] + sweeper.starts[idx]
-                        values.append(val)
+                    for jdx in range(len(sweeper.pulses)):
+                        if sweeper.parameter is Parameter.frequency:
+                            sequence[sweeper.indexes[jdx]].frequency = values[jdx][idx]
+                        elif sweeper.parameter is Parameter.amplitude:
+                            sequence[sweeper.indexes[jdx]].amplitude = values[jdx][idx]
+                else:
+                    for kdx, jdx in enumerate(sweeper.indexes):
+                        qubits[jdx].flux.bias = values[kdx][idx]
 
-                results = {}
-                for idx in range(sweeper.expts):
-                    # update values
-                    if sweeper.parameter is Parameter.frequency or sweeper.parameter is Parameter.amplitude:
-                        for jdx in range(len(sweeper.pulses)):
-                            if sweeper.parameter is Parameter.frequency:
-                                sequence[sweeper.indexes[jdx]].frequency = values[jdx][idx]
-                            elif sweeper.parameter is Parameter.amplitude:
-                                sequence[sweeper.indexes[jdx]].amplitude = values[jdx][idx]
-                    else:  # TODO elif
-                        for kdx, jdx in enumerate(sweeper.indexes):
-                            qubits[jdx].flux.bias = values[kdx][idx]
-
-                    res = self.recursive_python_sweep(qubits, sequence, original_ro, *sweepers[1:], average=average)
-                    results = self.merge_sweep_results(results, res)
-                return results  # already in the right format
+                res = self.recursive_python_sweep(qubits, sequence, original_ro, *sweepers[1:], average=average)
+                results = self.merge_sweep_results(results, res)
+            return results  # already in the right format
 
     @staticmethod
     def merge_sweep_results(
@@ -557,7 +472,6 @@ class RFSoC(AbstractInstrument):
                 return True
 
             # check if the sweeped pulse is the first and only on the DAC channel
-            # TODO this also should be extended
             for sweep_pulse in sweepers[0].pulses:
                 already_pulsed = []
                 for pulse in sequence:
@@ -567,14 +481,9 @@ class RFSoC(AbstractInstrument):
 
                     if pulse_ch in already_pulsed and pulse == sweep_pulse:
                         return True
-                    else:
-                        already_pulsed.append(pulse_ch)
+                    already_pulsed.append(pulse_ch)
         elif is_bias:
             return True  # TODO add support
-            for sweep_qubit in sweepers[0].indexes:
-                for pulse in sequence.qf_pulses:
-                    if pulse.qubit is sweep_qubit:
-                        return True
 
         # if all passed, do a firmware sweep
         return False
@@ -667,7 +576,7 @@ class RFSoC(AbstractInstrument):
         if relaxation_time is not None:
             self.cfg.repetition_duration = relaxation_time
 
-        qick_sweepers = create_qick_sweeps(sweepers, sequence, qubits)
+        qick_sweepers = [create_qick_sweeps(sweep, sequence, qubits) for sweep in sweepers]
 
         # if self.local_oscillator:
         #    limits = self.find_frequency_limits(sequence.ro_pulses, qick_sweepers)
@@ -686,8 +595,11 @@ class RFSoC(AbstractInstrument):
         return results
 
 
-class TII_RFSOC4x2(RFSoC):  # Containes the main settings:
+class TII_RFSOC4x2(RFSoC):
+    """RFSoC object for Xilinx RFSoC4x2"""
+
     def __init__(self, name: str, address: str):
+        """Define IP, port and QickProgramConfig"""
         super().__init__(name, address=address)
         self.host, self.port = address.split(":")
         self.port = int(self.port)
@@ -696,8 +608,11 @@ class TII_RFSOC4x2(RFSoC):  # Containes the main settings:
         )
 
 
-class TII_ZCU111(RFSoC):  # Containes the main settings:
+class TII_ZCU111(RFSoC):
+    """RFSoC object for Xilinx ZCU111"""
+
     def __init__(self, name: str, address: str, local_oscillator: LocalOscillator = None):
+        """Define IP, port and QickProgramConfig"""
         super().__init__(name, address=address)
         self.host, self.port = address.split(":")
         self.port = int(self.port)
@@ -706,7 +621,5 @@ class TII_ZCU111(RFSoC):  # Containes the main settings:
         self.cfg = QickProgramConfig(
             sampling_rate=6_000_000_000,
             mixer_freq=0,
-            LO_freq=7_000_000_000,  # TODO this is not needed anymore, info in channels
-            LO_power=10.0,
             adc_sampling_frequency=6_000_000_000,  # 3_072_000_000,
         )
