@@ -56,7 +56,7 @@ class MultiqubitPlatform(AbstractPlatform):
         if hasattr(self, "qubit_instrument_map"):
             for qubit in range(self.nqubits):
                 instrument_name = self.qubit_instrument_map[qubit][0]
-                port = self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]
+                port = self.qrm[qubit]._channel_port_map[self.qubit_channel_map[qubit][0]]
                 att = self.settings["instruments"][instrument_name]["settings"]["ports"][port]["attenuation"]
                 self.ro_port[qubit].attenuation = att
 
@@ -74,7 +74,7 @@ class MultiqubitPlatform(AbstractPlatform):
                     attenuation = int(value)
                     # save settings
                     instrument_name = self.qubit_instrument_map[qubit][0]
-                    port = self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]
+                    port = self.qrm[qubit]._channel_port_map[self.qubit_channel_map[qubit][0]]
                     self.settings["instruments"][instrument_name]["settings"]["ports"][port][
                         "attenuation"
                     ] = attenuation
@@ -86,7 +86,7 @@ class MultiqubitPlatform(AbstractPlatform):
                     sweetspot = float(value)
                     # save settings
                     instrument_name = self.qubit_instrument_map[qubit][2]
-                    port = self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][2]]
+                    port = self.qrm[qubit]._channel_port_map[self.qubit_channel_map[qubit][2]]
                     self.settings["instruments"][instrument_name]["settings"]["ports"][port]["offset"] = sweetspot
                     # configure instrument qcm_bb offset
                     self.qb_port[qubit].current = sweetspot
@@ -97,7 +97,7 @@ class MultiqubitPlatform(AbstractPlatform):
 
                     # update Qblox qubit LO drive frequency config
                     instrument_name = self.qubit_instrument_map[qubit][1]
-                    port = self.qdm[qubit].channel_port_map[self.qubit_channel_map[qubit][1]]
+                    port = self.qdm[qubit]._channel_port_map[self.qubit_channel_map[qubit][1]]
                     drive_if = self.single_qubit_natives[qubit]["RX"]["if_frequency"]
                     self.settings["instruments"][instrument_name]["settings"]["ports"][port]["lo_frequency"] = (
                         freq - drive_if
@@ -179,7 +179,7 @@ class MultiqubitPlatform(AbstractPlatform):
 
     def set_attenuation(self, qubit: Qubit, att):
         self.ro_port[qubit.name].attenuation = att
-
+    
     def set_gain(self, qubit, gain):
         self.qd_port[qubit].gain = gain
 
@@ -190,7 +190,7 @@ class MultiqubitPlatform(AbstractPlatform):
             self.qf_port[qubit.name].offset = bias
 
     def get_attenuation(self, qubit: Qubit):
-        return self.ro_port[qubit.name].attenuation
+        return self.ro_port[qubit.name].attenuation      
 
     def get_bias(self, qubit: Qubit):
         if qubit.name in self.qbm:
