@@ -7,23 +7,7 @@ from typing import Dict, List, Optional
 import numpy as np
 from qibo.config import log, raise_error
 from qm import qua
-from qm.qua import (
-    align,
-    assign,
-    declare,
-    declare_stream,
-    dual_demod,
-    fixed,
-    for_,
-    frame_rotation_2pi,
-    measure,
-    play,
-    program,
-    reset_frame,
-    reset_phase,
-    stream_processing,
-    wait,
-)
+from qm.qua import declare, declare_stream, fixed, for_
 from qm.qua._dsl import _ResultSource, _Variable  # for type declaration only
 from qm.QuantumMachinesManager import QuantumMachinesManager
 from qualang_tools.bakery import baking
@@ -361,22 +345,29 @@ class Acquisition(ABC):
     average: bool
 
     @abstractmethod
+    def measure(self, operation, element):
+        """Send measurement pulse and acquire results.
+
+        Args:
+            operation (str): Operation (from ``config``) corresponding to the pulse to be played.
+            element (str): Element (from ``config``) that the pulse will be applied on.
+        """
+
+    @abstractmethod
     def save(self):
-        """QUA instruction to save acquired results from variables to streams."""
+        """Save acquired results from variables to streams."""
 
     @abstractmethod
     def download(self, *dimensions):
-        """QUA instruction to save streams for fetching from host device."""
+        """Save streams to prepare for fetching from host device.
+
+        Args:
+            dimensions (int): Dimensions to use for buffer of data.
+        """
 
     @abstractmethod
     def fetch(self):
-        """TODO"""
-
-    def classify(self):
-        """QUA instruction to classify shots in real time and save the result to a variable.
-
-        Relevant only for ``ShotsAcquisition``.
-        """
+        """Fetch downloaded streams to host device."""
 
 
 @dataclass
@@ -385,6 +376,9 @@ class RawAcquisition(Acquisition):
 
     adc_stream: _ResultSource = field(default_factory=lambda: declare_stream(adc_trace=True))
     """Stream to collect raw ADC data."""
+
+    def measure(self, operation, element):
+        qua.measure(operation, element, self.adc_stream)
 
     def save(self):
         pass
@@ -420,6 +414,15 @@ class IntegratedAcquisition(Acquisition):
     I_stream: _ResultSource = field(default_factory=lambda: declare_stream())
     Q_stream: _ResultSource = field(default_factory=lambda: declare_stream())
     """Streams to collect the results of all shots."""
+
+    def measure(self, operation, element):
+        qua.measure(
+            operation,
+            element,
+            None,
+            qua.dual_demod.full("cos", "out1", "sin", "out2", self.I),
+            qua.dual_demod.full("minus_sin", "out1", "cos", "out2", self.Q),
+        )
 
     def save(self):
         qua.save(self.I, self.I_stream)
@@ -470,11 +473,18 @@ class ShotsAcquisition(Acquisition):
         self.cos = np.cos(self.angle)
         self.sin = np.sin(self.angle)
 
+    def measure(self, operation, element):
+        qua.measure(
+            operation,
+            element,
+            None,
+            qua.dual_demod.full("cos", "out1", "sin", "out2", self.I),
+            qua.dual_demod.full("minus_sin", "out1", "cos", "out2", self.Q),
+        )
+        qua.assign(self.shot, self.I * self.cos - self.Q * self.sin > self.threshold)
+
     def save(self):
         qua.save(self.shot, self.shots)
-
-    def classify(self):
-        assign(self.shot, self.I * self.cos - self.Q * self.sin > self.threshold)
 
     def download(self, *dimensions):
         shots = self.shots
@@ -750,26 +760,6 @@ class QMOPX(AbstractInstrument):
         return qmsequence
 
     @staticmethod
-    def readout(qmpulse):
-        """Plays a readout pulse and assigns the acquired results in QUA variables.
-
-        Args:
-            qmpulse (:class:`qibolab.instruments.qm.QMPulse`): Readout pulse to play.
-        """
-        acquisition = qmpulse.acquisition
-        if isinstance(acquisition, RawAcquisition):
-            measure(qmpulse.operation, qmpulse.element, acquisition.adc_stream)
-        else:
-            measure(
-                qmpulse.operation,
-                qmpulse.element,
-                None,
-                dual_demod.full("cos", "out1", "sin", "out2", acquisition.I),
-                dual_demod.full("minus_sin", "out1", "cos", "out2", acquisition.Q),
-            )
-            acquisition.classify()
-
-    @staticmethod
     def play_pulses(qmsequence, relaxation_time=0):
         """Part of QUA program that plays an arbitrary pulse sequence.
 
@@ -782,16 +772,16 @@ class QMOPX(AbstractInstrument):
                 each pulse, as defined in the QM config.
         """
         needs_reset = False
-        align()
+        qua.align()
         for qmpulse in qmsequence.qmpulses:
             pulse = qmpulse.pulse
             if qmpulse.wait_cycles is not None:
-                wait(qmpulse.wait_cycles, qmpulse.element)
+                qua.wait(qmpulse.wait_cycles, qmpulse.element)
             if pulse.type is PulseType.READOUT:
-                QMOPX.readout(qmpulse)
+                qmpulse.acquisition.measure(qmpulse.operation, qmpulse.element)
             else:
                 if not isinstance(qmpulse.relative_phase, float) or qmpulse.relative_phase != 0:
-                    frame_rotation_2pi(qmpulse.relative_phase, qmpulse.element)
+                    qua.frame_rotation_2pi(qmpulse.relative_phase, qmpulse.element)
                     needs_reset = True
                 if qmpulse.baked is not None:
                     if qmpulse.baked_amplitude is not None:
@@ -799,95 +789,31 @@ class QMOPX(AbstractInstrument):
                     else:
                         qmpulse.baked.run()
                 else:
-                    play(qmpulse.operation, qmpulse.element)
+                    qua.play(qmpulse.operation, qmpulse.element)
                 if needs_reset:
-                    reset_frame(qmpulse.element)
+                    qua.reset_frame(qmpulse.element)
                     needs_reset = False
 
         # for Rabi-length?
         if relaxation_time > 0:
-            wait(relaxation_time // 4)
+            qua.wait(relaxation_time // 4)
 
         # Save data to the stream processing
         for qmpulse in qmsequence.ro_pulses:
             qmpulse.acquisition.save()
 
     @staticmethod
-    def fetch_results(handles, ro_pulses):
+    def fetch_results(result, ro_pulses):
         """Fetches results from an executed experiment."""
         # TODO: Update result asynchronously instead of waiting
         # for all values, in order to allow live plotting
-        # import time
-        # for _ in range(5):
-        #    handles.is_processing()
-        #    time.sleep(1)
+        # using ``handles.is_processing()``
+        handles = result.result_handles
         handles.wait_for_all_values()
         results = {}
         for qmpulse in ro_pulses:
             results[pulse.qubit] = results[serial] = qmpulse.acquisition.fetch(handles)
         return results
-
-    def play(self, qubits, sequence, options):
-        """Plays an arbitrary pulse sequence using QUA program.
-
-        Args:
-            qubits (list): List of :class:`qibolab.platforms.utils.Qubit` objects
-                passed from the platform.
-            sequence (:class:`qibolab.pulses.PulseSequence`). Pulse sequence to play.
-            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
-        """
-        if not sequence:
-            return {}
-
-        buffer_dims = []
-        if options.averaging_mode is AveragingMode.SINGLESHOT:
-            buffer_dims.append(options.nshots)
-
-        qmsequence = self.create_qmsequence(qubits, sequence)
-        # play pulses using QUA
-        with program() as experiment:
-            n = declare(int)
-            for qmpulse in qmsequence.ro_pulses:
-                threshold = qubits[qmpulse.pulse.qubit].threshold
-                iq_angle = qubits[qmpulse.pulse.qubit].iq_angle
-                qmpulse.declare_output(options.acquisition_type, threshold, iq_angle)
-
-            with for_(n, 0, n < options.nshots, n + 1):
-                self.play_pulses(qmsequence, options.relaxation_time)
-
-            with stream_processing():
-                for qmpulse in qmsequence.ro_pulses:
-                    qmpulse.acquisition.download(*buffer_dims)
-
-        result = self.execute_program(experiment)
-        return self.fetch_results(result.result_handles, qmsequence.ro_pulses)
-
-    def sweep(self, qubits, sequence, options, *sweepers):
-        if not sequence:
-            return {}
-
-        buffer_dims = [len(sweeper.values) for sweeper in reversed(sweepers)]
-        if options.averaging_mode is AveragingMode.SINGLESHOT:
-            buffer_dims.append(options.nshots)
-
-        qmsequence = self.create_qmsequence(qubits, sequence)
-        # play pulses using QUA
-        with program() as experiment:
-            n = declare(int)
-            for qmpulse in qmsequence.ro_pulses:
-                threshold = qubits[qmpulse.pulse.qubit].threshold
-                iq_angle = qubits[qmpulse.pulse.qubit].iq_angle
-                qmpulse.declare_output(options.acquisition_type, threshold, iq_angle)
-
-            with for_(n, 0, n < options.nshots, n + 1):
-                self.sweep_recursion(list(sweepers), qubits, qmsequence, options.relaxation_time)
-
-            with stream_processing():
-                for qmpulse in qmsequence.ro_pulses:
-                    qmpulse.acquisition.download(*buffer_dims)
-
-        result = self.execute_program(experiment)
-        return self.fetch_results(result.result_handles, qmsequence.ro_pulses)
 
     @staticmethod
     def maximum_sweep_value(values, value0):
@@ -1019,3 +945,33 @@ class QMOPX(AbstractInstrument):
                 raise_error(NotImplementedError, f"Sweeper for {parameter} is not implemented.")
         else:
             self.play_pulses(qmsequence, relaxation_time)
+
+    def play(self, qubits, sequence, options):
+        return self.sweep(qubits, sequence, options)
+
+    def sweep(self, qubits, sequence, options, *sweepers):
+        if not sequence:
+            return {}
+
+        buffer_dims = [len(sweeper.values) for sweeper in reversed(sweepers)]
+        if options.averaging_mode is AveragingMode.SINGLESHOT:
+            buffer_dims.append(options.nshots)
+
+        qmsequence = self.create_qmsequence(qubits, sequence)
+        # play pulses using QUA
+        with qua.program() as experiment:
+            n = declare(int)
+            for qmpulse in qmsequence.ro_pulses:
+                threshold = qubits[qmpulse.pulse.qubit].threshold
+                iq_angle = qubits[qmpulse.pulse.qubit].iq_angle
+                qmpulse.declare_output(options.acquisition_type, threshold, iq_angle)
+
+            with for_(n, 0, n < options.nshots, n + 1):
+                self.sweep_recursion(list(sweepers), qubits, qmsequence, options.relaxation_time)
+
+            with qua.stream_processing():
+                for qmpulse in qmsequence.ro_pulses:
+                    qmpulse.acquisition.download(*buffer_dims)
+
+        result = self.execute_program(experiment)
+        return self.fetch_results(result, qmsequence.ro_pulses)
