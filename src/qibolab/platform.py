@@ -202,22 +202,19 @@ def create_tii_IQM5q(runcard, descriptor=None):
     for i in range(5, 10):
         channels[f"L4-1{i}"].ports = [("device_shfqc", f"SGCHANNELS/{i-5}/OUTPUT")]
         channels[f"L4-1{i}"].power_range = -10
-    channels[f"L4-17"].power_range = -20  # For coupler slim peak
 
     # flux qubits (CAREFUL WITH THIS !!!)
     for i in range(6, 11):
         channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-6}")]
-        channels[f"L4-{i}"].offset = 0.0
-    channels[f"L4-8"].offset = 0.0  # 0.2 #0.35
-    channels[f"L4-10"].offset = 0.00  # 0.03
+        channels[f"L4-{i}"].power_range = 0
 
     # flux couplers (CAREFUL WITH THIS !!!)
     for i in range(11, 14):
         channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-11+5}")]
-        channels[f"L4-{i}"].offset = 0.0
+        channels[f"L4-{i}"].power_range = 0
 
     channels[f"L4-14"].ports = [("device_hdawg2", f"SIGOUTS/0")]
-    channels[f"L4-14"].offset = 0.0
+    channels[f"L4-{i}"].power_range = 0
 
     # Instantiate Zh set of instruments[They work as one]
     from qibolab.instruments.dummy_oscillator import (
@@ -326,7 +323,7 @@ def create_tii_IQM5q(runcard, descriptor=None):
     platform = DesignPlatform("IQM5q", design, runcard)
     platform.resonator_type = "2D"
 
-    # assign channels to qubits
+    # assign channels to qubits and sweetspots(operating points)
     qubits = platform.qubits
     for q in range(0, 5):
         qubits[q].feedback = channels["L3-31"]
@@ -335,12 +332,15 @@ def create_tii_IQM5q(runcard, descriptor=None):
     for q in range(0, 5):
         qubits[q].drive = channels[f"L4-{15 + q}"]
         qubits[q].flux = channels[f"L4-{6 + q}"]
+        channels[f"L4-{6 + q}"].qubit = qubits[q]
 
-    # assign channels to couplers
+    # assign channels to couplers and sweetspots(operating points)
     for c in range(0, 2):
         qubits[f"c{c}"].flux = channels[f"L4-{11 + c}"]
+        channels[f"L4-{11 + c}"].qubit = qubits[f"c{c}"]
     for c in range(3, 5):
         qubits[f"c{c}"].flux = channels[f"L4-{10 + c}"]
+        channels[f"L4-{10 + c}"].qubit = qubits[f"c{c}"]
 
     # assign qubits to couplers
     for c in range(0, 2):

@@ -345,7 +345,7 @@ class Zurich(AbstractInstrument):
         q = qubit.name
         self.signal_map[f"flux{q}"] = self.device_setup.logical_signal_groups[f"q{q}"].logical_signals["flux_line"]
         self.calibration[f"/logical_signal_groups/q{q}/flux_line"] = lo.SignalCalibration(
-            range=qubit.flux.power_range, port_delay=None, delay_signal=0, voltage_offset=qubit.flux.offset
+            range=qubit.flux.power_range, port_delay=None, delay_signal=0, voltage_offset=qubit.flux.bias
         )
 
     def run_exp(self):
@@ -611,8 +611,8 @@ class Zurich(AbstractInstrument):
                     phase=pulse.pulse.relative_phase,
                 )
 
-    # TODO: If sweetspot != 0 you will send flux pulses for biasing
-    # for the constant offset you need to use the platform
+    # TODO: If sweeper.bias you will send flux pulses for biasing
+    # for the constant bias you need to use the platform
     # I use the first for sweeping flux, check if it works with the second althought is a line parameter.
     def flux(self, exp, qubits):
         """qubit flux or qubit coupler flux for bias or pulses"""
