@@ -215,7 +215,7 @@ native_gates:
             RX:
                 duration: 40                   # should be multiple of 4
                 amplitude: 0.5
-                frequency: 5_045_414_655    # qubit frequency
+                frequency: 4_900_600_000    # qubit frequency
                 if_frequency: -200_000_000    # difference in qubit frequency
                 shape: Gaussian(5)
                 type: qd                    # qubit drive
@@ -230,7 +230,7 @@ native_gates:
             RX:
                 duration: 40                  # should be multiple of 4
                 amplitude: 0.5
-                frequency: 4_851_980_321    # qubit frequency
+                frequency: 4_707_013_000    # qubit frequency
                 if_frequency: -200_000_000    # difference in qubit frequency
                 shape: Gaussian(5)
                 type: qd                    # qubit drive
@@ -245,7 +245,7 @@ native_gates:
             RX:
                 duration: 40                   # should be multiple of 4
                 amplitude: 0.5
-                frequency: 5_793_526_000    # qubit frequency
+                frequency: 5_657_026_000    # qubit frequency
                 if_frequency: -200_000_000    # difference in qubit frequency
                 shape: Gaussian(5)
                 type: qd                    # qubit drive
@@ -260,22 +260,22 @@ native_gates:
             RX:
                 duration: 40                   # should be multiple of 4
                 amplitude: 0.5
-                frequency: 6_760_361_111    # qubit frequency
+                frequency: 6_629_250_000    # qubit frequency
                 if_frequency: -200_000_000    # difference in qubit frequency
                 shape: Gaussian(5)
                 type: qd                    # qubit drive
             MZ:
                 duration: 2000
                 amplitude: 0.2
-                frequency: 7_803_310_610    # resonator frequency
-                if_frequency: -46_689_390    # difference in resonator frequency
+                frequency: 7_803_081_610    # resonator frequency
+                if_frequency: -46_918_390    # difference in resonator frequency
                 shape: Rectangular()
                 type: ro                    # readout
         4: # qubit id
             RX:
                 duration: 40                # should be multiple of 4
                 amplitude: 0.5
-                frequency: 6_585_145_857    # qubit frequency
+                frequency: 6_455_003_000    # qubit frequency
                 if_frequency: -200_000_000    # difference in qubit frequency
                 shape: Gaussian(5)
                 type: qd                    # qubit drive
@@ -306,42 +306,23 @@ native_gates:
         3-2:
             CZ:
             - duration: 32
-              amplitude: -0.6015
-              shape: Exponential(12, 5000, 0.1)
+              amplitude: 0.5 # -0.20371
+              shape: Rectangular()
               qubit: 3
               relative_start: 0
               type: qf
-            - duration: 20
-              amplitude: 0
-              shape: Rectangular())
-              qubit: 3
-              relative_start: 32
-              type: qf
             - type: virtual_z
-              phase: -3.613
-              qubit: 3
-
-            - duration: 32
-              amplitude: 0
-              shape: Rectangular())
+              phase: 0.4
               qubit: 2
-              relative_start: 0
-              type: qf
-            - duration: 20
-              amplitude: 0
-              shape: Rectangular())
-              qubit: 2
-              relative_start: 32
-              type: qf
             - type: virtual_z
-              phase: -0.496
-              qubit: 2
+              phase: 1.0633
+              qubit: 3
 
 characterization:
     single_qubit:
         0:
-            readout_frequency: 7_212_292_160
-            drive_frequency: 5_045_414_655
+            readout_frequency: 7_212_375_846
+            drive_frequency: 4_900_600_000
             T1: 0
             T2: 0
             state0_voltage: 0.0
@@ -350,39 +331,39 @@ characterization:
             mean_exc_states: (0.0+0.0j)
             sweetspot: 0.335
         1:
-            readout_frequency: 7_452_954_018
-            drive_frequency: 4_851_980_321
-            T1: 0
-            T2: 0
+            readout_frequency: 7_453_162_815
+            drive_frequency: 4_707_013_000
+            T1: 1_283
+            T2: 130
             state0_voltage: 0.0
             state1_voltage: 0.0
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
             sweetspot: -0.360
         2:
-            readout_frequency: 7_655_216_931
-            drive_frequency: 5_793_526_000
-            T1: 0
+            readout_frequency: 7_655_145_252
+            drive_frequency: 5_657_026_000
+            T1: 1_807
             T2: 0
             state0_voltage: 0.0
             state1_voltage: 0.0
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
-            sweetspot: -0.168
+            sweetspot: -0.167
         3:
-            readout_frequency: 7_803_310_610
-            drive_frequency: 6_760_361_111
-            T1: 0
+            readout_frequency: 7_803_523_557
+            drive_frequency: 6_629_250_000
+            T1: 3529
             T2: 0
             state0_voltage: 0.0
             state1_voltage: 0.0
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
-            sweetspot: 0.0925
+            sweetspot: 0.095
         4:
-            readout_frequency: 8_058_684_635
-            drive_frequency: 6_585_145_857
-            T1: 0
+            readout_frequency: 8_058_877_229
+            drive_frequency: 6_455_003_000
+            T1: 469
             T2: 0
             state0_voltage: 0.0
             state1_voltage: 0.0
@@ -390,8 +371,8 @@ characterization:
             mean_exc_states: (0.0+0.0j)
             sweetspot: -0.329
         5:
-            readout_frequency: 7_118_545_544
-            drive_frequency: 4_700_000_000
+            readout_frequency: 7_118_609_371
+            drive_frequency: 4_600_000_000
             T1: 0
             T2: 0
             state0_voltage: 0.0
@@ -399,5 +380,3 @@ characterization:
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
             sweetspot: 0
-            threshold: 0.0
-            iq_angle: 0.0

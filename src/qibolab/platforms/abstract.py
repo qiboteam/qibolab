@@ -13,7 +13,7 @@ from qibo.config import log, raise_error
 from qibo.models import Circuit
 
 from qibolab.designs.channels import Channel
-from qibolab.pulses import Drag, FluxPulse, Pulse, PulseSequence, ReadoutPulse
+from qibolab.pulses import Drag, DrivePulse, FluxPulse, Pulse, PulseSequence, ReadoutPulse
 from qibolab.transpilers import can_execute, transpile
 from qibolab.transpilers.gate_decompositions import TwoQubitNatives
 
@@ -138,6 +138,7 @@ class AbstractPlatform(ABC):
 
         self.topology = settings["topology"]
 
+        self.relaxation_time = settings["settings"]["relaxation_time"]
         self.relaxation_time = settings["settings"]["relaxation_time"]
         self.sampling_rate = settings["settings"]["sampling_rate"]
 
@@ -417,7 +418,9 @@ class AbstractPlatform(ABC):
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
             nshots (int): Number of shots to sample from the experiment. Default is 1024.
             relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
-                If ``None`` the default value provided as ``repetition_duration`` in the runcard will be used.
+                If ``None`` the default value provided as ``relaxation_time`` in the runcard will be used.
+            raw_adc (bool): If ``True`` it will return the raw ADC data instead of demodulating and integrating.
+                This is useful for some initial calibrations. Default is ``False``.
 
         Returns:
             Readout results acquired by after execution.
@@ -455,7 +458,7 @@ class AbstractPlatform(ABC):
                 parameters are being sweeped.
             nshots (int): Number of shots to sample from the experiment. Default is 1024.
             relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
-                If ``None`` the default value provided as ``repetition_duration`` in the runcard will be used.
+                If ``None`` the default value provided as ``relaxation_time`` in the runcard will be used.
             average (bool): If ``True`` the IQ results of individual shots are averaged on hardware.
 
         Returns:
@@ -476,7 +479,9 @@ class AbstractPlatform(ABC):
         qd_amplitude = pulse_kwargs["amplitude"] / 2.0
         qd_shape = pulse_kwargs["shape"]
         qd_channel = self.get_qd_channel(qubit)
-        return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
+        return DrivePulse(
+            start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit
+        )
 
     def create_RX_pulse(self, qubit, start=0, relative_phase=0):
         pulse_kwargs = self.single_qubit_natives[qubit]["RX"]
@@ -485,7 +490,9 @@ class AbstractPlatform(ABC):
         qd_amplitude = pulse_kwargs["amplitude"]
         qd_shape = pulse_kwargs["shape"]
         qd_channel = self.get_qd_channel(qubit)
-        return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
+        return DrivePulse(
+            start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit
+        )
 
     def create_CZ_pulse_sequence(self, qubits, start=0):
         # Check in the settings if qubits[0]-qubits[1] is a key
@@ -550,7 +557,9 @@ class AbstractPlatform(ABC):
         qd_amplitude = pulse_kwargs["amplitude"]
         qd_shape = pulse_kwargs["shape"]
         qd_channel = self.get_qd_channel(qubit)
-        return Pulse(start, duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
+        return DrivePulse(
+            start, duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit
+        )
 
     def create_qubit_readout_pulse(self, qubit, start):
         return self.create_MZ_pulse(qubit, start)
@@ -569,7 +578,9 @@ class AbstractPlatform(ABC):
             qd_shape = "Drag(5," + str(beta) + ")"
 
         qd_channel = self.get_qd_channel(qubit)
-        return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
+        return DrivePulse(
+            start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit
+        )
 
     def create_RX_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
         # create RX pi pulse with drag shape
@@ -582,7 +593,9 @@ class AbstractPlatform(ABC):
             qd_shape = "Drag(5," + str(beta) + ")"
 
         qd_channel = self.get_qd_channel(qubit)
-        return Pulse(start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit)
+        return DrivePulse(
+            start, qd_duration, qd_amplitude, qd_frequency, relative_phase, qd_shape, qd_channel, qubit=qubit
+        )
 
     @abstractmethod
     def set_lo_drive_frequency(self, qubit, freq):

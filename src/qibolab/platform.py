@@ -34,7 +34,7 @@ def create_dummy(runcard):
     return platform
 
 
-def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=False):
+def create_tii_qw5q_gold_qm(runcard, simulation_duration=None, address=None, cloud=False):
     """Create platform using Quantum Machines (QM) OPXs and Rohde Schwarz local oscillators.
     IPs and other instrument related parameters are hardcoded in ``__init__`` and ``setup``.
     Args:
@@ -169,6 +169,8 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
 
     return platform
 
+    return platform
+
 
 def create_tii_rfsoc4x2(runcard, address=None):
     """Create platform using QICK project on the RFSoC4x2 board
@@ -231,8 +233,8 @@ def Platform(name, runcard=None, design=None):
         return create_dummy(runcard)
     elif name == "icarusq":
         from qibolab.platforms.icplatform import ICPlatform as Device
-    elif name == "qw5q_gold":
-        return create_tii_qw5q_gold(runcard)
+    elif name == "qw5q_gold_qm":
+        return create_tii_qw5q_gold_qm(runcard)
     elif name == "tii1q_b1":
         return create_tii_rfsoc4x2(runcard)
     else:

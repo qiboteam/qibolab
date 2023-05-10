@@ -141,7 +141,7 @@ class PulseShape(ABC):
                 "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
             )
         pulse = self.pulse
-        if abs(pulse.frequency) * 2 > PulseShape.SAMPLING_RATE:
+        if abs(pulse._if) * 2 > PulseShape.SAMPLING_RATE:
             from qibo.config import log
 
             log.info(
@@ -150,8 +150,8 @@ class PulseShape(ABC):
         num_samples = int(np.rint(pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
         time = np.arange(num_samples) / PulseShape.SAMPLING_RATE
         global_phase = pulse.global_phase
-        cosalpha = np.cos(2 * np.pi * pulse.frequency * time + global_phase + pulse.relative_phase)
-        sinalpha = np.sin(2 * np.pi * pulse.frequency * time + global_phase + pulse.relative_phase)
+        cosalpha = np.cos(2 * np.pi * pulse._if * time + global_phase + pulse.relative_phase)
+        sinalpha = np.sin(2 * np.pi * pulse._if * time + global_phase + pulse.relative_phase)
 
         mod_matrix = np.array([[cosalpha, -sinalpha], [sinalpha, cosalpha]]) / np.sqrt(2)
 
@@ -162,9 +162,9 @@ class PulseShape(ABC):
         mod_signals = np.array(result)
 
         modulated_waveform_i = Waveform(mod_signals[:, 0])
-        modulated_waveform_i.serial = f"Modulated_Waveform_I(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse.frequency, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
+        modulated_waveform_i.serial = f"Modulated_Waveform_I(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse._if, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
         modulated_waveform_q = Waveform(mod_signals[:, 1])
-        modulated_waveform_q.serial = f"Modulated_Waveform_Q(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse.frequency, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
+        modulated_waveform_q.serial = f"Modulated_Waveform_Q(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse._if, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
         return (modulated_waveform_i, modulated_waveform_q)
 
 
@@ -208,6 +208,54 @@ class Rectangular(PulseShape):
 
     def __repr__(self):
         return f"{self.name}()"
+
+
+class Exponential(PulseShape):
+    """ """
+
+    def __init__(self, tau: float, upsilon: float, g: float = 0.1):
+        self.name = "Exponential"
+        self.pulse: Pulse = None
+        self.tau: float = float(tau)
+        self.upsilon: float = float(upsilon)
+        self.g: float = float(g)
+
+    @property
+    def envelope_waveform_i(self) -> Waveform:
+        """The envelope waveform of the i component of the pulse."""
+
+        if self.pulse:
+            num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
+            x = np.arange(0, num_samples, 1)
+            waveform = Waveform(
+                self.pulse.amplitude
+                * ((np.ones(num_samples) * np.exp(-x / self.upsilon)) + self.g * np.exp(-x / self.tau))
+                / (1 + self.g)
+            )
+
+            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            return waveform
+        else:
+            raise Exception(
+                "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
+            )
+
+    @property
+    def envelope_waveform_q(self) -> Waveform:
+        """The envelope waveform of the q component of the pulse."""
+
+        if self.pulse:
+            num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
+            waveform = Waveform(np.zeros(num_samples))
+            waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            return waveform
+        else:
+            raise Exception(
+                "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
+            )
+
+    def __repr__(self):
+        return f"{self.name}({format(self.tau, '.3f').rstrip('0').rstrip('.')}, {format(self.upsilon, '.3f').rstrip('0').rstrip('.')}, {format(self.g, '.3f').rstrip('0').rstrip('.')})"
 
 
 class Gaussian(PulseShape):
@@ -519,6 +567,61 @@ class eCap(PulseShape):
         return f"{self.name}({format(self.alpha, '.6f').rstrip('0').rstrip('.')})"
 
 
+class Custom(PulseShape):
+    """
+    Arbitrary shape
+
+    """
+
+    def __init__(self, envelope):
+        self.name = "Custom"
+        self._pulse: Pulse = None
+        self.envelope: np.ndarray = np.array(envelope)
+
+    @property
+    def pulse(self):
+        return self._pulse
+
+    @pulse.setter
+    def pulse(self, value):
+        self._pulse = value
+
+    @property
+    def envelope_waveform_i(self) -> Waveform:
+        """The envelope waveform of the i component of the pulse."""
+
+        if self.pulse:
+            assert self.pulse.duration == len(self.envelope)
+            num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
+
+            waveform = Waveform(self.envelope * self.pulse.amplitude)
+            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            return waveform
+        else:
+            raise Exception(
+                "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
+            )
+
+    @property
+    def envelope_waveform_q(self) -> Waveform:
+        """The envelope waveform of the q component of the pulse."""
+
+        if self.pulse:
+            assert self.pulse.duration == len(self.envelope)
+            num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
+
+            waveform = Waveform(self.envelope * self.pulse.amplitude)
+            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            return waveform
+        else:
+            raise Exception(
+                "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
+            )
+
+    def __repr__(self):
+        return f"{self.name}({self.envelope[:3]}, ...)"
+
+
 class Pulse:
     """A class to represent a pulse to be sent to the QPU.
 
@@ -594,6 +697,8 @@ class Pulse:
         self.channel = channel
         self.type = type
         self.qubit = qubit
+
+        self._if = 0
 
     def __del__(self):
         del self._start
@@ -917,6 +1022,10 @@ class Pulse:
         return f"Pulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {format(self.frequency, '_')}, {format(self.relative_phase, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.type}, {self.qubit})"
 
     @property
+    def id(self) -> int:
+        return id(self)
+
+    @property
     def envelope_waveform_i(self) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
 
@@ -985,18 +1094,51 @@ class Pulse:
     def copy(self):  # -> Pulse|ReadoutPulse|DrivePulse|FluxPulse:
         """Returns a new Pulse object with the same attributes."""
 
-        # return eval(self.serial)
-        return Pulse(
-            self.start,
-            self.duration,
-            self.amplitude,
-            self.frequency,
-            self.relative_phase,
-            repr(self._shape),  # self._shape,
-            self.channel,
-            self.type,
-            self.qubit,
-        )
+        if self.type == PulseType.READOUT:
+            return ReadoutPulse(
+                self.start,
+                self.duration,
+                self.amplitude,
+                self.frequency,
+                self.relative_phase,
+                repr(self._shape),  # self._shape,
+                self.channel,
+                self.qubit,
+            )
+        elif self.type == PulseType.DRIVE:
+            return DrivePulse(
+                self.start,
+                self.duration,
+                self.amplitude,
+                self.frequency,
+                self.relative_phase,
+                repr(self._shape),  # self._shape,
+                self.channel,
+                self.qubit,
+            )
+
+        elif self.type == PulseType.FLUX:
+            return FluxPulse(
+                self.start,
+                self.duration,
+                self.amplitude,
+                self._shape,
+                self.channel,
+                self.qubit,
+            )
+        else:
+            # return eval(self.serial)
+            return Pulse(
+                self.start,
+                self.duration,
+                self.amplitude,
+                self.frequency,
+                self.relative_phase,
+                repr(self._shape),  # self._shape,
+                self.channel,
+                self.type,
+                self.qubit,
+            )
 
     def shallow_copy(self):  # -> Pulse:
         return Pulse(
@@ -1673,6 +1815,7 @@ class PulseSequence:
                 if not overlaps:
                     ps.add(new_pulse)
                     stored = True
+                    break
             if not stored:
                 separated_pulses.append(PulseSequence(new_pulse))
         return separated_pulses
