@@ -207,9 +207,9 @@ def create_tii_IQM5q(runcard, descriptor=None):
     # flux qubits (CAREFUL WITH THIS !!!)
     for i in range(6, 11):
         channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-6}")]
-        channels[f"L4-{i}"].offset = 0.0
-    channels[f"L4-8"].offset = 0.0  # 0.2 #0.35
-    channels[f"L4-10"].offset = 0.00  # 0.03
+    #     channels[f"L4-{i}"].offset = 0.0
+    # channels[f"L4-8"].offset = 0.0  # 0.2 #0.35
+    # channels[f"L4-10"].offset = 0.00  # 0.03
 
     # flux couplers (CAREFUL WITH THIS !!!)
     for i in range(11, 14):
@@ -339,6 +339,9 @@ def create_tii_IQM5q(runcard, descriptor=None):
     # assign channels to couplers
     for c in range(0, 2):
         qubits[f"c{c}"].flux = channels[f"L4-{11 + c}"]
+        # add this to get sweetspot values from the runcard in the
+        # the channel qubit it reloads when you do .flux
+        # channels[f"L4-{q}"].qubit = qubits[q]
     for c in range(3, 5):
         qubits[f"c{c}"].flux = channels[f"L4-{10 + c}"]
 

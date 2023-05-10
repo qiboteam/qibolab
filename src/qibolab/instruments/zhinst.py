@@ -364,6 +364,8 @@ class Zurich(AbstractInstrument):
         if options.relaxation_time is None:
             options.relaxation_time = self.relaxation_time
 
+        self.sweepers = []
+
         self.sequence_zh(sequence, qubits, sweepers=[])
         self.calibration_step(qubits)
         self.create_exp(qubits, options)
@@ -405,15 +407,19 @@ class Zurich(AbstractInstrument):
             # TODO: This fixed the flux timing issue, but I saw that
             # sending it before the drive got me better results
             # (Maybe 1 time of fight earlier ?). Create calibration routine ?
-            pulse = FluxPulse(
-                start=aux_sequence.start,
-                duration=aux_sequence.duration,
-                amplitude=qubit.sweetspot,
-                shape="Rectangular",
-                channel=qubit.flux.name,
-                qubit=qubit.name,
-            )
-            zhsequence[f"flux{pulse.qubit}"].append(ZhPulse(pulse))
+            # Test
+
+            for sweeper in sweepers:
+                if sweeper.parameter is Parameter.bias:
+                    pulse = FluxPulse(
+                        start=aux_sequence.start,
+                        duration=aux_sequence.duration,
+                        amplitude=qubit.sweetspot_pulse_amp,
+                        shape="Rectangular",
+                        channel=qubit.flux.name,
+                        qubit=qubit.name,
+                    )
+                    zhsequence[f"flux{pulse.qubit}"].append(ZhPulse(pulse))
 
         for pulse in sequence:
             zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"].append(ZhPulse(pulse))
@@ -462,74 +468,7 @@ class Zurich(AbstractInstrument):
         sweeps_all[nsweeps] = sweeps
         self.sequence = zhsequence
         self.nsweeps = nsweeps  # Should count the dimension of the sweep 1D, 2D etc
-
-    #     self.sweeps = sweeps_all
-
-    # def create_exp(self, qubits, options):
-    #     """Zurich experiment definition usig their Experiment class"""
-    #     signals = []
-    #     for qubit in qubits.values():
-    #         if qubit.flux_coupler:
-    #             signals.append(lo.ExperimentSignal(f"flux{qubit.name}"))
-    #         else:
-    #             if self.sequence[f"drive{qubit.name}"]:
-    #                 signals.append(lo.ExperimentSignal(f"drive{qubit.name}"))
-    #             if qubit.flux is not None:
-    #                 signals.append(lo.ExperimentSignal(f"flux{qubit.name}"))
-    #             if self.sequence[f"readout{qubit.name}"]:
-    #                 signals.append(lo.ExperimentSignal(f"measure{qubit.name}"))
-    #                 signals.append(lo.ExperimentSignal(f"acquire{qubit.name}"))
-
-    #     exp = lo.Experiment(
-    #         uid="Sequence",
-    #         signals=signals,
-    #     )
-
-    #     # Defaults
-    #     if options.acquisition_type is AcquisitionType.INTEGRATION:
-    #         options.acquisition_type = lo.AcquisitionType.INTEGRATION
-    #     elif options.acquisition_type is AcquisitionType.RAW:
-    #         options.acquisition_type = lo.AcquisitionType.RAW
-    #     elif options.acquisition_type is AcquisitionType.DISCRIMINATION:
-    #         options.acquisition_type = lo.AcquisitionType.DISCRIMINATION
-
-    #     if self.acquisition_type is lo.AcquisitionType.SPECTROSCOPY:
-    #         options.acquisition_type = lo.AcquisitionType.SPECTROSCOPY
-
-    #     if options.averaging_mode is AveragingMode.CYCLIC:
-    #         options.averaging_mode = lo.AveragingMode.CYCLIC
-    #     elif options.averaging_mode is AveragingMode.SINGLESHOT:
-    #         options.averaging_mode = lo.AveragingMode.SINGLE_SHOT
-
-    #     print(options.acquisition_type)
-    #     print(options.averaging_mode)
-
-    #     with exp.acquire_loop_rt(
-    #         uid="shots",
-    #         count=options.nshots,
-    #         # repetition_mode= lo.RepetitionMode.CONSTANT, #TODO: Does it provide any speed advantage ?
-    #         # repetition_time= None,
-    #         acquisition_type=options.acquisition_type,
-    #         averaging_mode=options.averaging_mode,
-    #     ):
-    #         if self.nsweeps > 0:
-    #             exp_calib = lo.Calibration()
-    #             self.sweep_recursion(
-    #                 qubits, exp, exp_calib, options.relaxation_time, options.acquisition_type, options.fast_reset
-    #             )
-    #             exp.set_calibration(exp_calib)
-
-    #         # TODO: Gate sweeps for flipping, AllXY (,RB ?):
-    #         elif self.nsweeps == "gate_sweep":
-    #             print("Estoy en ello")
-    #             # inner loop - sweep over sequence lengths
-    #             for pulse_sequences in pulse_sequences:
-    #                 self.select_exp(exp, qubits, options.relaxation_time, options.acquisition_type, options.fast_reset)
-    #                 # Careful with the definition of handel and their recovery
-    #         else:
-    #             self.select_exp(exp, qubits, options.relaxation_time, options.acquisition_type, options.fast_reset)
-    #         self.experiment = exp
-    #         exp.set_signal_map(self.signal_map)
+        self.sweeps = sweeps_all
 
     def create_exp(self, qubits, options):
         """Zurich experiment definition usig their Experiment class"""
@@ -585,12 +524,10 @@ class Zurich(AbstractInstrument):
             acquisition_type=options.acquisition_type,
             averaging_mode=options.averaging_mode,
         ):
-            if self.nsweeps > 0:
+            if self.sweepers > 0:
                 self.sweep_recursion(
                     qubits, exp, exp_calib, options.relaxation_time, options.acquisition_type, options.fast_reset
                 )
-                exp.set_calibration(exp_calib)
-
             # TODO: Gate sweeps for flipping, AllXY (,RB ?):
             elif self.nsweeps == "gate_sweep":
                 print("Estoy en ello")
@@ -600,6 +537,7 @@ class Zurich(AbstractInstrument):
                     # Careful with the definition of handel and their recovery
             else:
                 self.select_exp(exp, qubits, options.relaxation_time, options.acquisition_type, options.fast_reset)
+            exp.set_calibration(exp_calib)
             self.experiment = exp
             exp.set_signal_map(self.signal_map)
 
@@ -826,6 +764,14 @@ class Zurich(AbstractInstrument):
         """Play pulse and sweepers sequence"""
         if options.relaxation_time is None:
             options.relaxation_time = self.relaxation_time
+
+        for qubit in qubits.values():
+            for pulse in sequence:
+                if pulse.qubit == qubit.name:
+                    if pulse.type is PulseType.READOUT:
+                        qubit.readout_frequency = pulse.frequency
+                    if pulse.type is PulseType.DRIVE:
+                        qubit.drive_frequency = pulse.frequency
 
         self.sweepers = list(sweepers)
         self.sequence_zh(sequence, qubits, sweepers)
