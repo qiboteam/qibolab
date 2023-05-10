@@ -19,11 +19,10 @@ class AcquisitionType(Enum):
     """
     Types of data acquisition from hardware.
 
-    SPECTROSCOPY: Zurich Integration mode for RO frequency sweeps,
-    INTEGRATION: Demodulate and integrate the waveform,
-    RAW: Acquire the waveform as it is,
-    DISCRIMINATION: Demodulate, integrate the waveform and discriminate among states based on the voltages
-
+    [SPECTROSCOPY: Zurich Integration mode for RO frequency sweeps.]
+    INTEGRATION: Demodulate and integrate the waveform.
+    RAW: Acquire the waveform as it is.
+    DISCRIMINATION: Demodulate, integrate the waveform and discriminate among states based on the voltages.
     """
 
     RAW = auto()
@@ -63,12 +62,12 @@ RESULTS_TYPE = {
 class ExecutionParameters:
     """Data structure to deal with execution parameters
 
-    :nshots: nshots (int): Number of shots to sample from the experiment. Default is 1024.
-    relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in s.
-                If ``None`` the default value provided as ``relaxation_time`` in the runcard will be used.
-    :fast_reset (bool): Enable or disable fast reset
-    :acquisition_type (AcquisitionType): Data acquisition mode
-    :averaging_mode (AveragingMode): Data averaging mode
+    nshots (int): Number of shots to sample from the experiment. Default is 1024.
+    relaxation_time (float): Time to wait for the qubit to relax to its ground state between shots.
+        If ``None`` the default value provided as ``relaxation_time`` in the runcard will be used.
+    fast_reset (bool): Enable or disable fast reset
+    acquisition_type (:class:`qibolab.platforms.platform.AcquisitionType`): Data acquisition mode.
+    averaging_mode (:class:`qibolab.platforms.platform.AveragingMode`): Data averaging mode.
     """
 
     nshots: Optional[int] = 1024
@@ -79,9 +78,9 @@ class ExecutionParameters:
 
     def __post_init__(self):
         if not isinstance(self.acquisition_type, AcquisitionType):
-            raise TypeError("acquisition_type is not valid")
+            raise TypeError("Acquisition type is not valid")
         if not isinstance(self.averaging_mode, AveragingMode):
-            raise TypeError("averaging mode is not valid")
+            raise TypeError("Averaging mode is not valid")
 
     @property
     def results_type(self):
@@ -123,7 +122,7 @@ class DesignPlatform(AbstractPlatform):
 
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
-            options (:class:`qibolab.platforms.platform.ExecutionParameters`) Class holding the execution options.
+            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
             **kwargs: May need them for something
         Returns:
             Readout results acquired by after execution.
@@ -139,7 +138,7 @@ class DesignPlatform(AbstractPlatform):
 
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
-            options (:class:`qibolab.platforms.platform.ExecutionParameters`) Class holding the execution options.
+            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
             *sweepers (:class:`qibolab.sweeper.Sweeper`): Sweeper objects that specify which
                 parameters are being sweeped.
             **kwargs: May need them for something
