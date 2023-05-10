@@ -104,7 +104,7 @@ class AveragedRawWaveformResults(AveragedIntegratedResults):
 
 
 # FIXME: If probabilities are out of range the error is displeyed weirdly
-@dataclass
+@dataclass(frozen=True)
 class StateResults:
     """
     Data structure to deal with the output of
@@ -114,20 +114,15 @@ class StateResults:
     Associated with AcquisitionType.DISCRIMINATION and AveragingMode.SINGLESHOT
     """
 
-    def __init__(self, states: np.ndarray = np.array([]), nshots=None):
-        self.states: Optional[npt.NDArray[np.uint32]] = (
-            states.reshape(states.shape[0] // nshots, nshots) if nshots else states
-        )
+    states: npt.NDArray[np.uint32]
+    nshots: Optional[int] = None
 
-    @property
-    def states(self):
-        return self._states
-
-    @states.setter
-    def states(self, values):
-        if not np.all((values >= 0) & (values <= 1)):
+    def __post_init__(self, states: np.ndarray = np.array([]), nshots=None):
+        if not np.all((self.states >= 0) & (self.states <= 1)):
             raise ValueError("Probability wrong")
-        self._states = values
+        if nshots is not None:
+            # TODO: Ask what is this reshape?
+            self.states = states.reshape(states.shape[0] // nshots, nshots)
 
     def probability(self, state=0):
         """Returns the statistical frequency of the specified state (0 or 1)."""
@@ -170,6 +165,7 @@ class StateResults:
         return AveragedStateResults(average, std=std)
 
 
+@dataclass(frozen=True)
 class AveragedStateResults(StateResults):
     """
     Data structure to deal with the output of
@@ -180,6 +176,4 @@ class AveragedStateResults(StateResults):
     or the averages of ``StateResults``
     """
 
-    def __init__(self, states: np.ndarray = np.array([]), nshots=None, std=None):
-        super().__init__(states, nshots)
-        self.std: Optional[npt.NDArray[np.float64]] = std
+    std: Optional[npt.NDArray[np.float64]] = None
