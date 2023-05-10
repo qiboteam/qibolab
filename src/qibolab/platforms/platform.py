@@ -193,6 +193,8 @@ class DesignPlatform(AbstractPlatform):
         raise_error(NotImplementedError, f"{self.name} does not support gain.")
 
     def set_bias(self, qubit, bias):
+        if self.qubits[qubit].flux is None:
+            raise_error(NotImplementedError, f"{self.name} does not have flux.")
         self.qubits[qubit].flux.bias = bias
 
     def get_bias(self, qubit):

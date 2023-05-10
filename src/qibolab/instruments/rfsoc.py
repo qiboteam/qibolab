@@ -169,6 +169,8 @@ class TII_RFSOC4x2(AbstractInstrument):
             * wait for response (arbitray number of bytes)
         Returns:
             Lists of I and Q value measured
+        Raise:
+            Exception: if the server encounters and error, the same error is raised here
         """
         # open a connection
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -186,7 +188,7 @@ class TII_RFSOC4x2(AbstractInstrument):
                 received.extend(tmp)
         results = pickle.loads(received)
         if isinstance(results, Exception):
-            raise RuntimeError(f"An error occured on the server side: {results}")
+            raise results
         return results["i"], results["q"]
 
     def play(
@@ -247,9 +249,9 @@ class TII_RFSOC4x2(AbstractInstrument):
     def classify_shots(self, i_values: List[float], q_values: List[float], qubit: Qubit) -> List[float]:
         """Classify IQ values using qubit threshold and rotation_angle if available in runcard"""
 
-        if qubit.rotation_angle is None or qubit.threshold is None:
+        if qubit.iq_angle is None or qubit.threshold is None:
             return None
-        angle = np.radians(qubit.rotation_angle)
+        angle = qubit.iq_angle
         threshold = qubit.threshold
 
         rotated = np.cos(angle) * np.array(i_values) - np.sin(angle) * np.array(q_values)
