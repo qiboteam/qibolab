@@ -78,8 +78,8 @@ class DesignPlatform(AbstractPlatform):
 
         return self.design.sweep(
             self.qubits,
-            sequence,
             options,
+            sequence,
             *sweepers,
         )
 
