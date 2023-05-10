@@ -197,7 +197,7 @@ def create_tii_IQM5q(runcard, descriptor=None):
     channels["L3-31"].power_range = 10
     # readout
     channels["L2-7"].ports = [("device_shfqc", "[QACHANNELS/0/OUTPUT]")]
-    channels["L2-7"].power_range = -25
+    channels["L2-7"].power_range = -25  # -5 for punchout
     # drive
     for i in range(5, 10):
         channels[f"L4-1{i}"].ports = [("device_shfqc", f"SGCHANNELS/{i-5}/OUTPUT")]

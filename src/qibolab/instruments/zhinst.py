@@ -216,6 +216,7 @@ class Zurich(AbstractInstrument):
         self.nsweeps = 0.0
         self.sweeps = None
         self.sweepers = None
+        self.NT_loop = False
 
         # Remove if able
         self.sequence_qibo = None
@@ -861,7 +862,7 @@ class Zurich(AbstractInstrument):
 
     def sweep_recursion_NT(self, qubits, options, exp, exp_calib):
         """Sweepers recursion for multiple nested sweepers"""
-
+        print("NT_loop")
         for sweep in self.NT_sweeps:
             sweeper = sweep
 
