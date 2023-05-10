@@ -1,3 +1,4 @@
+import math
 import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -121,8 +122,13 @@ class AbstractPlatform(ABC):
 
     def reload_settings(self):
         # TODO: Remove ``self.settings``
-        with open(self.runcard) as file:
-            settings = self.settings = yaml.safe_load(file)
+        if self.settings == None:
+            # Load initial configuration
+            with open(self.runcard) as file:
+                settings = self.settings = yaml.safe_load(file)
+        else:
+            # Load current configuration
+            settings = self.settings
 
         self.nqubits = settings["nqubits"]
         if "resonator_type" in self.settings:
@@ -154,39 +160,11 @@ class AbstractPlatform(ABC):
                 self.qubits[q] = Qubit(q, **settings["characterization"]["single_qubit"][q])
 
     def dump(self, path: Path):
-        general_settings = {}
-
-        # general informations
-        general_settings["nqubits"] = self.nqubits
-        general_settings["qubits"] = list(self.qubits.keys())
-        general_settings["resonator_type"] = self.resonator_type
-        general_settings["topology"] = self.topology
-
         with open(path, "w") as file:
-            yaml.dump(general_settings, file, sort_keys=False, indent=4, default_flow_style=None)
-
-        settings = {}
-        # settings
-        settings["settings"] = self.settings["settings"]
-
-        # native gates
-        settings["native_gates"] = {}
-        settings["native_gates"]["single_qubit"] = self.single_qubit_natives
-        settings["native_gates"]["two_qubits"] = self.two_qubit_natives
-
-        settings["characterization"] = {}
-        settings["characterization"]["single_qubit"] = {}
-        for qubit in general_settings["qubits"]:
-            settings["characterization"]["single_qubit"][qubit] = {}
-            for key, item in self.qubits[qubit].__dict__.items():
-                if isinstance(item, float) or isinstance(item, int) or isinstance(item, complex) and not key == "name":
-                    settings["characterization"]["single_qubit"][qubit][key] = item
-
-        with open(path, "a") as file:
-            yaml.dump(settings, file, sort_keys=False, indent=4, default_flow_style=False)
+            yaml.dump(self.settings, file, sort_keys=False, indent=4, default_flow_style=None)
 
     def update(self, updates: dict):
-        r"""Updates the runcard.
+        r"""Updates platform common runcard parameters after calibration actions.
 
         Args:
 
@@ -195,53 +173,125 @@ class AbstractPlatform(ABC):
 
         for par, values in updates.items():
             for qubit, value in values.items():
+                # resonator_spectroscopy / resonator_spectroscopy_flux / resonator_punchout_attenuation
                 if par == "readout_frequency":
                     freq = int(value * 1e9)
                     self.single_qubit_natives[qubit]["MZ"]["frequency"] = freq
+                    self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["frequency"] = freq
+
                     if "if_frequency" in self.single_qubit_natives[qubit]["MZ"]:
                         self.single_qubit_natives[qubit]["MZ"]["if_frequency"] = freq - self.get_lo_readout_frequency(
                             qubit
                         )
-                    self.qubits[qubit].readout_frequency = freq
+                        self.settings["native_gates"]["single_qubit"][qubit]["MZ"][
+                            "if_frequency"
+                        ] = freq - self.get_lo_readout_frequency(qubit)
 
-                elif par == "drive_frequency":
-                    freq = int(value * 1e9)
-                    self.single_qubit_natives[qubit]["RX"]["frequency"] = freq
-                    if "if_frequency" in self.single_qubit_natives[qubit]["RX"]:
-                        self.single_qubit_natives[qubit]["RX"]["if_frequency"] = freq - self.get_lo_drive_frequency(
-                            qubit
-                        )
-                    self.qubits[qubit].drive_frequency = freq
+                    self.qubits[qubit].readout_frequency = freq
+                    self.settings["characterization"]["single_qubit"][qubit]["readout_frequency"] = freq
+
+                # resonator_punchout_attenuation
+                elif par == "readout_attenuation":
+                    # TODO: Are we going to save the attenuation somwhere in the native_gates or characterization
+                    # in all platforms?
+                    True
+
+                # resonator_punchout_attenuation
                 elif par == "bare_resonator_frequency":
                     freq = int(value * 1e9)
                     self.qubits[qubit].bare_resonator_frequency = freq
+                    self.settings["characterization"]["single_qubit"][qubit]["bare_resonator_frequency"] = freq
+
+                # resonator_spectroscopy_flux / qubit_spectroscopy_flux
+                elif par == "sweetspot":
+                    sweetspot = float(value)
+                    self.qubits[qubit].sweetspot = sweetspot
+                    self.settings["characterization"]["single_qubit"][qubit]["sweetspot"] = sweetspot
+
+                # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
+                elif par == "drive_frequency":
+                    freq = int(value * 1e9)
+                    self.single_qubit_natives[qubit]["RX"]["frequency"] = freq
+                    self.settings["native_gates"]["single_qubit"][qubit]["RX"]["frequency"] = freq
+
+                    self.qubits[qubit].drive_frequency = freq
+                    self.settings["characterization"]["single_qubit"][qubit]["drive_frequency"] = freq
+
                 elif "amplitude" in par:
                     amplitude = float(value)
-                    if par == "readout_amplitude":
+                    # resonator_spectroscopy
+                    if par == "readout_amplitude" and not math.isnan(amplitude):
                         self.single_qubit_natives[qubit]["MZ"]["amplitude"] = amplitude
-                    if par == "drive_amplitude":
+                        self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["amplitude"] = amplitude
+
+                    # rabi_amplitude / flipping
+                    if par == "drive_amplitude" or par == "amplitudes":
                         self.single_qubit_natives[qubit]["RX"]["amplitude"] = amplitude
+                        self.settings["native_gates"]["single_qubit"][qubit]["RX"]["amplitude"] = amplitude
+                        self.settings["characterization"]["single_qubit"][qubit]["pi_pulse_amplitude"] = amplitude
+
+                # rabi_duration
+                elif par == "drive_length":
+                    duration = int(value)
+                    self.single_qubit_natives[qubit]["RX"]["duration"] = duration
+                    self.settings["native_gates"]["single_qubit"][qubit]["RX"]["duration"] = duration
+
+                # ramsey
                 elif par == "t2":
-                    self.qubits[qubit].T2 = float(value)
-                elif "t1" == par:
-                    self.qubits[qubit].T1 = float(value)
-                elif "threshold" == par:
-                    self.qubits[qubit].threshold = float(value)
-                elif "iq_angle" == par:
-                    self.qubits[qubit].iq_angle = float(value)
+                    t2 = float(value)
+                    self.qubits[qubit].T2 = t2
+                    self.settings["characterization"]["single_qubit"][qubit]["T2"] = t2
+
+                # spin_echo
+                elif par == "t2_spin_echo":
+                    t2_spin_echo = float(value)
+                    self.qubits[qubit].T2_spin_echo = t2_spin_echo
+                    self.settings["characterization"]["single_qubit"][qubit]["T2_spin_echo"] = t2_spin_echo
+
+                # t1
+                elif par == "t1":
+                    t1 = float(value)
+                    self.qubits[qubit].T1 = t1
+                    self.settings["characterization"]["single_qubit"][qubit]["T1"] = t1
+
+                # classification
+                elif par == "threshold":
+                    threshold = float(value)
+                    self.qubits[qubit].thresold = threshold
+                    self.settings["characterization"]["single_qubit"][qubit]["threshold"] = threshold
+
+                # classification
+                elif par == "iq_angle":
+                    iq_angle = float(value)
+                    self.qubits[qubit].iq_angle = iq_angle
+                    self.settings["characterization"]["single_qubit"][qubit]["iq_angle"] = iq_angle
+
+                # classification
+                elif par == "mean_gnd_states":
+                    mean_gnd_states = str(value)
+                    self.qubits[qubit].mean_gnd_states = mean_gnd_states
+                    self.settings["characterization"]["single_qubit"][qubit]["mean_gnd_states"] = mean_gnd_states
+
+                # classification
+                elif par == "mean_exc_states":
+                    mean_exc_states = str(value)
+                    self.qubits[qubit].mean_exc_states = mean_exc_states
+                    self.settings["characterization"]["single_qubit"][qubit]["mean_exc_states"] = mean_exc_states
+
+                # drag pulse tunning
                 elif "beta" in par:
                     shape = self.single_qubit_natives[qubit]["RX"]["shape"]
                     rel_sigma = re.findall(r"[\d]+[.\d]+|[\d]*[.][\d]+|[\d]+", shape)[0]
                     self.single_qubit_natives[qubit]["RX"]["shape"] = f"Drag({rel_sigma}, {float(value)})"
+                    self.settings["native_gates"]["single_qubit"][qubit]["RX"][
+                        "shape"
+                    ] = f"Drag({rel_sigma}, {float(value)})"
 
-                elif "length" in par:  # assume only drive length
-                    self.single_qubit_natives[qubit]["RX"]["duration"] = int(value)
-                elif par == "t2_spin_echo":
-                    self.qubits[qubit].T2_spin_echo = int(value)
-                elif par == "readout_attenuation":
-                    True
                 else:
-                    raise_error(ValueError, f"Unknown parameter {par}.")
+                    raise_error(ValueError, f"Unknown parameter {par} for qubit {qubit}")
+
+        # reload_settings after execute any calibration routine keeping fitted parameters
+        self.reload_settings()
 
     @abstractmethod
     def connect(self):
