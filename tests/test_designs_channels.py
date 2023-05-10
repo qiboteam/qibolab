@@ -7,7 +7,8 @@ def test_channel_init():
     channel = Channel("L1-test")
     channel.ports = [("c1", 0), ("c2", 1)]
     assert channel.name == "L1-test"
-    assert channel.local_oscillator is None
+    with pytest.raises(NotImplementedError):
+        _ = channel.local_oscillator
 
 
 def test_channel_errors():

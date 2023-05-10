@@ -80,7 +80,9 @@ def pytest_generate_tests(metafunc):
     if "instrument" in metafunc.fixturenames:
         if metafunc.module.__name__ == "tests.test_instruments_rohde_schwarz":
             metafunc.parametrize("instrument", [(p, "SGS100A") for p in platforms], indirect=True)
-        if metafunc.module.__name__ == "tests.test_instruments_qutech":
+        elif metafunc.module.__name__ == "tests.test_instruments_erasynth":
+            metafunc.parametrize("instrument", [(p, "ERA") for p in platforms], indirect=True)
+        elif metafunc.module.__name__ == "tests.test_instruments_qutech":
             metafunc.parametrize("instrument", [(p, "SPI") for p in platforms], indirect=True)
 
     elif "backend" in metafunc.fixturenames:
