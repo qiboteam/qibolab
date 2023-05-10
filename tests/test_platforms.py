@@ -83,14 +83,16 @@ def test_abstractplatform_setup_start_stop(platform):
 
 @pytest.mark.qpu
 def test_platform_lo_drive_frequency(platform):
-    platform.set_lo_drive_frequency(qubit, 1e9)
-    assert platform.get_lo_drive_frequency(qubit) == 1e9
+    with pytest.raises(NotImplementedError):
+        platform.set_lo_drive_frequency(qubit, 1e9)
+        assert platform.get_lo_drive_frequency(qubit) == 1e9
 
 
 @pytest.mark.qpu
 def test_platform_lo_readout_frequency(platform):
-    platform.set_lo_readout_frequency(qubit, 1e9)
-    assert platform.get_lo_readout_frequency(qubit) == 1e9
+    with pytest.raises(NotImplementedError):
+        platform.set_lo_readout_frequency(qubit, 1e9)
+        assert platform.get_lo_readout_frequency(qubit) == 1e9
 
 
 @pytest.mark.qpu
@@ -119,8 +121,9 @@ def test_platform_gain(platform):
 
 @pytest.mark.qpu
 def test_platform_bias(platform):
-    platform.set_bias(qubit, 0)
-    assert platform.get_bias(qubit) == 0
+    with pytest.raises(NotImplementedError):
+        platform.set_bias(qubit, 0)
+        assert platform.get_bias(qubit) == 0
 
 
 @pytest.mark.qpu

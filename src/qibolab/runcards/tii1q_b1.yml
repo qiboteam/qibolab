@@ -1,47 +1,40 @@
 nqubits: 1
-description: TII's 1-qubit device controlled with the RFSoC4x2 (fpga board).
-
 qubits: [0]
-
+resonator_type: 3D
+topology:
+- [1]
 settings:
-    repetition_duration: 100_000
-    sampling_rate: 9_830_400_000 # DAC sampling rate
-    adc_trig_offset: 200 # [Clock ticks]
+    repetition_duration: 100000
+    sampling_rate: 9830400000
+    adc_trig_offset: 200
     max_gain: 32000
-
-topology: # qubit - qubit connections
--   [1]
-
 native_gates:
     single_qubit:
-        0: # qubit number
+        0:
             RX:
                 duration: 30
-                amplitude: 0.05
-                frequency: 5_542_000_000 #5_541_675_000
+                amplitude: 0.05202077615028646
+                frequency: 5542358040
                 shape: Rectangular()
-                type: qd # qubit drive
+                type: qd
                 start: 0
                 phase: 0
             MZ:
                 duration: 600
-                amplitude: 0.040
-                frequency: 7371800000
+                amplitude: 0.027
+                frequency: 7371797810
                 shape: Rectangular()
-                type: ro # readout
+                type: ro
                 start: 0
                 phase: 0
-
+    two_qubits: {}
 characterization:
     single_qubit:
         0:
-            readout_frequency: 7.3718e+9
-            resonator_polycoef_flux: []
-            drive_frequency: 5_542_000_000
-            threshold: -1.555234
-            rotation_angle: 324.276
-            T1: 0.
-            T2: 0.
-            mean_gnd_states: (0+0j)
-            mean_exc_states: (0+0j)
-            sweetspot: 0
+            readout_frequency: 7371797810
+            drive_frequency: 5542358040
+            pi_pulse_amplitude: 0.052
+            T1: 5950.374891358031
+            T2: 3117.141967028255
+            threshold: -1.0614826586800015
+            iq_angle: 0.378264523650832
