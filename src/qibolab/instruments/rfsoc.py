@@ -192,8 +192,8 @@ class TII_RFSOC4x2(AbstractInstrument):
     def play(
         self,
         qubits: List[Qubit],
-        execution_parameters: ExecutionParameters,
         sequence: PulseSequence,
+        execution_parameters: ExecutionParameters,
     ) -> Dict[str, Union[IntegratedResults, StateResults]]:
         """Executes the sequence of instructions and retrieves readout results.
            Each readout pulse generates a separate acquisition.
@@ -467,8 +467,8 @@ class TII_RFSOC4x2(AbstractInstrument):
     def sweep(
         self,
         qubits: List[Qubit],
-        execution_parameters: ExecutionParameters,
         sequence: PulseSequence,
+        execution_parameters: ExecutionParameters,
         *sweepers: Sweeper,
     ) -> Dict[str, Union[IntegratedResults, StateResults]]:
         """Executes the sweep and retrieves the readout results.

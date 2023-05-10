@@ -131,7 +131,7 @@ class DesignPlatform(AbstractPlatform):
         if options.relaxation_time is None:
             options.relaxation_time = self.relaxation_time
 
-        return self.design.play(self.qubits, options, sequence)
+        return self.design.play(self.qubits, sequence, options)
 
     def sweep(self, sequence, options, *sweepers, **kwargs):
         """Executes a pulse sequence for different values of sweeped parameters.
@@ -152,8 +152,8 @@ class DesignPlatform(AbstractPlatform):
 
         return self.design.sweep(
             self.qubits,
-            options,
             sequence,
+            options,
             *sweepers,
         )
 
