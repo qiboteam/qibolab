@@ -356,7 +356,7 @@ class RFSoC(AbstractInstrument):
         self,
         qubits: List[Qubit],
         sequence: PulseSequence,
-        original_ro,
+        original_ro: PulseSequence,
         *sweepers: QickSweep,
         average: bool,
     ) -> Dict[str, Union[AveragedResults, ExecutionResults]]:
@@ -385,9 +385,10 @@ class RFSoC(AbstractInstrument):
         if len(sweepers) == 0:
             res = self.play(qubits, sequence, average=average)
             newres = {}
+            serials = [pulse.serial for pulse in original_ro]
             for idx, key in enumerate(res):
                 if idx % 2 == 1:
-                    newres[original_ro[idx // 2]] = res[key]
+                    newres[serials[idx // 2]] = res[key]
                 else:
                     newres[key] = res[key]
 
@@ -505,7 +506,7 @@ class RFSoC(AbstractInstrument):
     def convert_sweep_results(
         self,
         sweeper: QickSweep,
-        original_ro: List[str],
+        original_ro: PulseSequence,
         sequence: PulseSequence,
         qubits: List[Qubit],
         toti: List[float],
@@ -529,11 +530,12 @@ class RFSoC(AbstractInstrument):
         sweep_results = {}
 
         adcs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
-        for k in range(len(adcs)):
+        for k, k_val in enumerate(adcs):
             for j in range(sweeper.expts):
                 results = {}
                 # add a result for every readouts pulse
-                for i, serial in enumerate(original_ro):
+                serials = [pulse.serial for pulse in original_ro if qubits[pulse.qubit].feedback.ports[0][1] == k_val]
+                for i, serial in enumerate(serials):
                     i_pulse = np.array(toti[k][i][j])
                     q_pulse = np.array(totq[k][i][j])
 
@@ -598,7 +600,7 @@ class RFSoC(AbstractInstrument):
         #        self.set_best_LO(limits)
 
         sweepsequence = sequence.copy()
-        original_ro = [pulse.serial for pulse in sequence.ro_pulses]
+        original_ro = sequence.ro_pulses
         # deepcopy of the qubits
         sweepqubits = deepcopy(qubits)
 
