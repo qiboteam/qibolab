@@ -943,6 +943,9 @@ class Zurich(AbstractInstrument):
         self.sequence_zh(sequence, qubits, sweepers=[])
         self.calibration_step(qubits)
         self.create_exp(qubits, options)
+
+        self.exp = self.session.compile(self.experiment)
+
         self.run_sim(sim_time)
 
     # TODO: Implement further pulse viewing functions from 2.2.0
@@ -962,6 +965,8 @@ class Zurich(AbstractInstrument):
         from laboneq.contrib.example_helpers.plotting.plot_helpers import (
             plot_simulation,
         )
+
+        print(self.exp)
 
         # Plot simulated output signals with helper function
         plot_simulation(
