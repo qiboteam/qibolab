@@ -289,9 +289,10 @@ def create_tii_zcu111(runcard, address=None):
         address = "192.168.0.81:6000"
     controller = TII_ZCU111("tii_zcu111", address, local_oscillators[0])
 
-    # Set ErasynthLO parameters
-    local_oscillators[0].power = controller.cfg.LO_power
-    local_oscillators[0].frequency = controller.cfg.LO_freq
+    # Readout local oscillator
+    local_oscillators[0].frequency = 7_000_000_000
+    local_oscillators[0].power = 10
+    channels["L3-30_ro"].local_oscillator = local_oscillators[0]
 
     instruments = [controller] + local_oscillators
 
@@ -304,21 +305,19 @@ def create_tii_zcu111(runcard, address=None):
     qubits[0].feedback = channels["L2-4-RO_0"]
     qubits[0].drive = channels["L4-29_qd"]
     qubits[0].flux = channels["L1-22_fl"]
+    channels["L1-22_fl"].qubit = qubits[0]
 
     qubits[1].readout = channels["L3-30_ro"]
     qubits[1].feedback = channels["L2-4-RO_1"]
     qubits[1].drive = channels["L4-30_qd"]
     qubits[1].flux = channels["L1-23_fl"]
+    channels["L1-23_fl"].qubit = qubits[1]
 
     qubits[2].readout = channels["L3-30_ro"]
     qubits[2].feedback = channels["L2-4-RO_2"]
     qubits[2].drive = channels["L4-31_qd"]
     qubits[2].flux = channels["L1-24_fl"]
-
-    # TODO this clearly should not be here, but I don't know where else
-    qubits[0].flux.bias = -0.19
-    qubits[1].flux.bias = -0.37
-    qubits[2].flux.bias = 0
+    channels["L1-24_fl"].qubit = qubits[2]
 
     return platform
 
