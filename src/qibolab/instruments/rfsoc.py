@@ -622,13 +622,11 @@ class TII_RFSOC4x2(RFSoC):
 class TII_ZCU111(RFSoC):
     """RFSoC object for Xilinx ZCU111"""
 
-    def __init__(self, name: str, address: str, local_oscillator: LocalOscillator = None):
+    def __init__(self, name: str, address: str):
         """Define IP, port and QickProgramConfig"""
         super().__init__(name, address=address)
         self.host, self.port = address.split(":")
         self.port = int(self.port)
-        self.local_oscillator = local_oscillator
-        # self.local_oscillator = None
         self.cfg = QickProgramConfig(
             sampling_rate=6_000_000_000,
             mixer_freq=0,
