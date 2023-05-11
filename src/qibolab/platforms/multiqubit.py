@@ -467,7 +467,7 @@ class MultiqubitPlatform(AbstractPlatform):
         initial = {}
         if sweeper.parameter is Parameter.attenuation:
             for qubit in sweeper.qubits:
-                initial[qubit] = self.get_attenuation(qubit)
+                initial[qubit.name] = self.get_attenuation(qubit)
 
         # elif sweeper.parameter is Parameter.relative_phase:
         #     initial = {}
