@@ -921,6 +921,9 @@ class Zurich(AbstractInstrument):
                     )
                 )
 
+        elif parameter is None:
+            parameter = ZhSweeper(sweeper.pulses[0], sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
+
         with exp.sweep(
             uid=f"sweep_{sweeper.parameter.name.lower()}_{i}",
             parameter=parameter,
