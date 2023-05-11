@@ -39,7 +39,7 @@ def test_tii_rfsoc4x2_setup():
 
 def test_classify_shots():
     """Creates fake IQ values and check classification works as expected"""
-    qubit0 = Qubit(name="q0", threshold=1, rotation_angle=90)
+    qubit0 = Qubit(name="q0", threshold=1, iq_angle=np.pi / 2)
     qubit1 = Qubit(
         name="q1",
     )
@@ -184,8 +184,8 @@ def test_call_executepulsesequence():
     sequence.add(platform.create_RX_pulse(qubit=0, start=0))
     sequence.add(platform.create_MZ_pulse(qubit=0, start=100))
 
-    i_vals_nav, q_vals_nav = instrument.call_executepulsesequence(instrument.cfg, sequence, platform.qubits, 1, False)
-    i_vals_av, q_vals_av = instrument.call_executepulsesequence(instrument.cfg, sequence, platform.qubits, 1, True)
+    i_vals_nav, q_vals_nav = instrument._execute_pulse_sequence(instrument.cfg, sequence, platform.qubits, 1, False)
+    i_vals_av, q_vals_av = instrument._execute_pulse_sequence(instrument.cfg, sequence, platform.qubits, 1, True)
 
     assert np.shape(i_vals_nav) == (1, 1, 1000)
     assert np.shape(q_vals_nav) == (1, 1, 1000)
@@ -206,10 +206,10 @@ def test_call_executesinglesweep():
     sequence.add(platform.create_MZ_pulse(qubit=0, start=100))
     sweep = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 35, 10), pulses=[sequence[0]])
 
-    i_vals_nav, q_vals_nav = instrument.call_executesinglesweep(
+    i_vals_nav, q_vals_nav = instrument._execute_single_sweep(
         instrument.cfg, sequence, platform.qubits, sweep, 1, False
     )
-    i_vals_av, q_vals_av = instrument.call_executesinglesweep(instrument.cfg, sequence, platform.qubits, sweep, 1, True)
+    i_vals_av, q_vals_av = instrument._execute_single_sweep(instrument.cfg, sequence, platform.qubits, sweep, 1, True)
 
     assert np.shape(i_vals_nav) == (1, 1, len(sweep.values), 1000)
     assert np.shape(q_vals_nav) == (1, 1, len(sweep.values), 1000)
