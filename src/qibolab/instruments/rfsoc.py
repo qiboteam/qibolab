@@ -8,6 +8,7 @@ Supports the following FPGA:
 
 import pickle
 import socket
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -176,17 +177,23 @@ class RFSoC(AbstractInstrument):
         Returns:
             Lists of I and Q value measured
         """
+        # TODO typehint qubits is wrong, it's dictionary
 
-        # if self.local_oscillator:
-        #    limits = self.find_frequency_limits(sequence.ro_pulses)
-        #    if not self.check_not_frequencies_conflicts(limits, self.cfg.LO_freq):
-        #        self.set_best_LO(limits)
+        # TODO find a better solution
+        # option 1: create a new QickQubit object
+        # option 2: pass qubits in connect/setup and pass only updates
+        simplified_qubits = deepcopy(qubits)
+        for qubit in simplified_qubits:
+            for channel in simplified_qubits[qubit].channels:
+                if channel.local_oscillator is not None:
+                    if not isinstance(channel.local_oscillator, int):
+                        channel.local_oscillator = channel.local_oscillator.frequency
 
         server_commands = {
             "operation_code": "execute_pulse_sequence",
             "cfg": cfg,
             "sequence": sequence,
-            "qubits": qubits,
+            "qubits": simplified_qubits,
             "readouts_per_experiment": readouts_per_experiment,
             "average": average,
         }
@@ -214,17 +221,23 @@ class RFSoC(AbstractInstrument):
         Returns:
             Lists of I and Q value measured
         """
+        # TODO typehint qubits is wrong, it's dictionary
 
-        # if self.local_oscillator:
-        #    limits = self.find_frequency_limits(sequence.ro_pulses, sweeper)
-        #    if not self.check_not_frequencies_conflicts(limits, self.cfg.LO_freq):
-        #        self.set_best_LO(limits)
+        # TODO find a better solution
+        # option 1: create a new QickQubit object
+        # option 2: pass qubits in connect/setup and pass only updates
+        simplified_qubits = deepcopy(qubits)
+        for qubit in simplified_qubits:
+            for channel in simplified_qubits[qubit].channels:
+                if channel.local_oscillator is not None:
+                    if not isinstance(channel.local_oscillator, int):
+                        channel.local_oscillator = channel.local_oscillator.frequency
 
         server_commands = {
             "operation_code": "execute_single_sweep",
             "cfg": cfg,
             "sequence": sequence,
-            "qubits": qubits,
+            "qubits": simplified_qubits,
             "sweeper": sweeper,
             "readouts_per_experiment": readouts_per_experiment,
             "average": average,
@@ -586,8 +599,6 @@ class RFSoC(AbstractInstrument):
         sweepsequence = sequence.copy()
         original_ro = [pulse.serial for pulse in sequence.ro_pulses]
         # deepcopy of the qubits
-        from copy import deepcopy
-
         sweepqubits = deepcopy(qubits)
 
         results = self.recursive_python_sweep(sweepqubits, sweepsequence, original_ro, *qick_sweepers, average=average)
