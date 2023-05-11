@@ -24,6 +24,17 @@ class ERA(LocalOscillator):
         self._device_parameters = {}
         self.reference_clock_source = reference_clock_source
 
+    def __getstate__(self):
+        return self._frequency
+
+    def __setstate__(self, pars):
+        self.device: ERASynthPlusPlus = None
+        self._power: int = None
+        self._frequency: int = pars._frequency
+        self.ethernet = True
+        self._device_parameters = {}
+        self.reference_clock_source = "internal"
+
     @property
     def frequency(self):
         if self.is_connected:
