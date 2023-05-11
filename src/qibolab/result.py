@@ -17,13 +17,10 @@ class IntegratedResults:
     Associated with AcquisitionType.INTEGRATION and AveragingMode.SINGLESHOT
     """
 
-    def __init__(self, i: np.ndarray, q: np.ndarray, nshots=None):
-        self.nshots = nshots
-        self.voltage: npt.NDArray[iq] = (
-            np.recarray((i.shape[0] // nshots, nshots), dtype=iq) if nshots else np.recarray(i.shape, dtype=iq)
-        )
-        self.voltage["i"] = i.reshape(i.shape[0] // nshots, nshots) if nshots else i
-        self.voltage["q"] = q.reshape(q.shape[0] // nshots, nshots) if nshots else q
+    def __init__(self, i: np.ndarray, q: np.ndarray):
+        self.voltage: npt.NDArray[iq] = np.recarray(i.shape, dtype=iq)
+        self.voltage["i"] = i
+        self.voltage["q"] = q
 
     @cached_property
     def magnitude(self):
@@ -35,20 +32,20 @@ class IntegratedResults:
         """Signal phase in radians."""
         return np.angle(self.voltage.i + 1.0j * self.voltage.q)
 
-    # We are asumming results from the same experiment so same number of nshots
     def __add__(self, data):  # __add__(self, data:IntegratedResults) -> IntegratedResults
         axis = 0
         i = np.append(self.voltage.i, data.voltage.i, axis=axis)
         q = np.append(self.voltage.q, data.voltage.q, axis=axis)
-        return IntegratedResults(i, q, nshots=None)
+        return IntegratedResults(i, q)
 
+    @property
     def serialize(self):
         """Serialize as a dictionary."""
         serialized_dict = {
-            "magnitude[V]": self.magnitude,
-            "i[V]": self.voltage.i,
-            "q[V]": self.voltage.q,
-            "phase[rad]": self.phase,
+            "MSR[V]": self.magnitude.flatten(),
+            "i[V]": self.voltage.i.flatten(),
+            "q[V]": self.voltage.q.flatten(),
+            "phase[rad]": self.phase.flatten(),
         }
         return serialized_dict
 
@@ -74,8 +71,8 @@ class AveragedIntegratedResults(IntegratedResults):
     or the averages of ``IntegratedResults``
     """
 
-    def __init__(self, i: np.ndarray, q: np.ndarray, nshots: int, std_i: np.ndarray, std_q: np.ndarray):
-        super().__init__(i, q, nshots)
+    def __init__(self, i: np.ndarray, q: np.ndarray, std_i: np.ndarray = None, std_q: np.ndarray = None):
+        super().__init__(i, q)
         self.std: Optional[npt.NDArray[np.float64]] = np.recarray(i.shape, dtype=iq)
         self.std["i"] = std_i
         self.std["q"] = std_q
@@ -114,10 +111,8 @@ class StateResults:
     Associated with AcquisitionType.DISCRIMINATION and AveragingMode.SINGLESHOT
     """
 
-    def __init__(self, states: np.ndarray = np.array([]), nshots=None):
-        self.states: Optional[npt.NDArray[np.uint32]] = (
-            states.reshape(states.shape[0] // nshots, nshots) if nshots else states
-        )
+    def __init__(self, states: np.ndarray = np.array([])):
+        self.states: Optional[npt.NDArray[np.uint32]] = states
 
     @property
     def states(self):
@@ -147,7 +142,6 @@ class StateResults:
         """Returns the 1 state statistical frequency."""
         return self.probability(1)
 
-    # We are asumming results from the same experiment so same number of nshots
     def __add__(self, data):  # __add__(self, data:StateResults) -> StateResults
         states = np.append(self.states, data.states, axis=0)
         return StateResults(states)
@@ -180,6 +174,6 @@ class AveragedStateResults(StateResults):
     or the averages of ``StateResults``
     """
 
-    def __init__(self, states: np.ndarray = np.array([]), nshots=None, std=None):
-        super().__init__(states, nshots)
+    def __init__(self, states: np.ndarray = np.array([]), std=None):
+        super().__init__(states)
         self.std: Optional[npt.NDArray[np.float64]] = std
