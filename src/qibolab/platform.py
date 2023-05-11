@@ -304,6 +304,10 @@ def create_tii_IQM5q(runcard, descriptor=None):
 
     controller = Zurich("EL_ZURO", descriptor, use_emulation=False)
 
+    # set time of flight for readout integration (HARDCODED)
+    controller.time_of_flight = 280e-9
+    controller.smearing = 100e-9
+
     # Instantiate local oscillators
     local_oscillators = [LocalOscillator(f"lo_{kind}", None) for kind in ["readout"] + [f"drive_{n}" for n in range(4)]]
 

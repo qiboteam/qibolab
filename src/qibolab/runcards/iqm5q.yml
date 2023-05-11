@@ -6,6 +6,7 @@ settings:
     sampling_rate: 2.e+9
     relaxation_time: 300.e-6
     time_of_flight: 280.e-9
+    smearing: 0.e-9
     Fast_reset: False
     chip: iqm5q
 
@@ -24,7 +25,7 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.566
-                frequency: 4_094_076_705 #doesnt do anything requiered for qibolab to work
+                frequency: 4_093_813_547 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.02)
                 type: qd # qubit drive
@@ -158,7 +159,7 @@ characterization:
         0:
             readout_frequency: 5_228_700_000 #5_228_000_000
             resonator_polycoef_flux: []
-            drive_frequency: 4_094_076_705
+            drive_frequency: 4_093_813_547
             T1: 0.0
             T2: 0.0
             sweetspot: -0.025 #Use this as an amplitude of the flux_bias
