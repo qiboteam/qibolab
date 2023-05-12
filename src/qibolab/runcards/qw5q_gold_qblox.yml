@@ -374,7 +374,7 @@ characterization:
         0:
             readout_frequency: 7_212_278_226
             drive_frequency: 5_045_070_000
-            anharmonicity: 291_556_360
+            # anharmonicity: 291_556_360
             T1: 5_857
             T2: 0
             state0_voltage: 0.0
@@ -385,7 +385,7 @@ characterization:
         1:
             readout_frequency: 7_453_074_208
             drive_frequency: 4_851_980_321
-            anharmonicity: 290_805_429
+            # anharmonicity: 290_805_429
             T1: 1_253
             T2: 0
             state0_voltage: 0.0
@@ -396,7 +396,7 @@ characterization:
         2:
             readout_frequency: 7_655_139_987
             drive_frequency: 5_794_176_000
-            anharmonicity: 273_873_156
+            # anharmonicity: 273_873_156
             T1: 4_563
             T2: 0
             state0_voltage: 0.0
@@ -407,7 +407,7 @@ characterization:
         3:
             readout_frequency: 7_803_405_453
             drive_frequency: 6_760_050_000
-            anharmonicity: 262_218_536
+            # anharmonicity: 262_218_536
             T1: 4_232
             T2: 0
             state0_voltage: 0.0
@@ -418,7 +418,7 @@ characterization:
         4:
             readout_frequency: 8_058_816_253
             drive_frequency: 6_585_145_857
-            anharmonicity: 251_471_686
+            # anharmonicity: 251_471_686
             T1: 492
             T2: 0
             state0_voltage: 0.0
@@ -429,7 +429,7 @@ characterization:
         5:
             readout_frequency: 7_118_627_416
             drive_frequency: 4_700_000_000
-            anharmonicity: 300_000_000
+            # anharmonicity: 300_000_000
             T1: 0
             T2: 0
             state0_voltage: 0.0
