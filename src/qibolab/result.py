@@ -5,8 +5,6 @@ from typing import Optional
 import numpy as np
 import numpy.typing as npt
 
-iq = np.dtype([("i", np.float64), ("q", np.float64)])
-
 
 class IntegratedResults:
     """
@@ -17,34 +15,42 @@ class IntegratedResults:
     Associated with AcquisitionType.INTEGRATION and AveragingMode.SINGLESHOT
     """
 
-    def __init__(self, i: np.ndarray, q: np.ndarray):
-        self.voltage: npt.NDArray[iq] = np.recarray(i.shape, dtype=iq)
-        self.voltage["i"] = i
-        self.voltage["q"] = q
+    def __init__(self, data: np.ndarray):
+        self.voltage: npt.NDArray[np.complex128] = data
+
+    @cached_property
+    def voltage_i(self):
+        """Signal magnitude in volts."""
+        return self.voltage.real
+
+    @cached_property
+    def voltage_q(self):
+        """Signal magnitude in volts."""
+        return self.voltage.imag
 
     @cached_property
     def magnitude(self):
         """Signal magnitude in volts."""
-        return np.sqrt(self.voltage.i**2 + self.voltage.q**2)
+        return np.sqrt(self.voltage_i**2 + self.voltage_q**2)
 
     @cached_property
     def phase(self):
         """Signal phase in radians."""
-        return np.angle(self.voltage.i + 1.0j * self.voltage.q)
+        return np.angle(self.voltage_i + 1.0j * self.voltage_q)
 
-    def __add__(self, data):  # __add__(self, data:IntegratedResults) -> IntegratedResults
-        axis = 0
-        i = np.append(self.voltage.i, data.voltage.i, axis=axis)
-        q = np.append(self.voltage.q, data.voltage.q, axis=axis)
-        return IntegratedResults(i, q)
+    # #TODO: Check is adding as wanted, we may need some imput on what data is being added
+    # def __add__(self, data, axis):  # __add__(self, data:IntegratedResults) -> IntegratedResults
+    #     axis = 0
+    #     voltage = np.append(self.voltage, data.voltage, axis=axis)
+    #     return IntegratedResults(voltage)
 
     @property
     def serialize(self):
         """Serialize as a dictionary."""
         serialized_dict = {
             "MSR[V]": self.magnitude.flatten(),
-            "i[V]": self.voltage.i.flatten(),
-            "q[V]": self.voltage.q.flatten(),
+            "i[V]": self.voltage_i.flatten(),
+            "q[V]": self.voltage_q.flatten(),
             "phase[rad]": self.phase.flatten(),
         }
         return serialized_dict
@@ -52,15 +58,11 @@ class IntegratedResults:
     @property
     def average(self):
         """Perform average over i and q"""
-        average_i, average_q = np.array([]), np.array([])
-        std_i, std_q = np.array([]), np.array([])
-        for is_, qs_ in zip(self.voltage.i, self.voltage.q):
-            average_i, average_q = np.append(average_i, np.mean(is_)), np.append(average_q, np.mean(qs_))
-            std_i, std_q = np.append(std_i, np.std(is_)), np.append(std_q, np.std(qs_))
-        return AveragedIntegratedResults(average_i, average_q, None, std_i, std_q)
+        average_data = np.mean(self.voltage, axis=0)
+        std_data = np.std(self.voltage, axis=0, ddof=1) / np.sqrt(self.voltage.shape[0])
+        return AveragedIntegratedResults(average_data, std_data)
 
 
-# FIXME: Here I take the states from IntegratedResult that are typed to be ints but those are not what would you do ?
 class AveragedIntegratedResults(IntegratedResults):
     """
     Data structure to deal with the output of
@@ -71,11 +73,9 @@ class AveragedIntegratedResults(IntegratedResults):
     or the averages of ``IntegratedResults``
     """
 
-    def __init__(self, i: np.ndarray, q: np.ndarray, std_i: np.ndarray = None, std_q: np.ndarray = None):
-        super().__init__(i, q)
-        self.std: Optional[npt.NDArray[np.float64]] = np.recarray(i.shape, dtype=iq)
-        self.std["i"] = std_i
-        self.std["q"] = std_q
+    def __init__(self, data: np.ndarray, std: np.ndarray = np.array([])):
+        super().__init__(data)
+        self.std: Optional[npt.NDArray[np.float64]] = std
 
 
 class RawWaveformResults(IntegratedResults):
@@ -101,7 +101,6 @@ class AveragedRawWaveformResults(AveragedIntegratedResults):
 
 
 # FIXME: If probabilities are out of range the error is displeyed weirdly
-@dataclass
 class StateResults:
     """
     Data structure to deal with the output of
@@ -111,26 +110,12 @@ class StateResults:
     Associated with AcquisitionType.DISCRIMINATION and AveragingMode.SINGLESHOT
     """
 
-    def __init__(self, states: np.ndarray = np.array([])):
-        self.states: Optional[npt.NDArray[np.uint32]] = states
-
-    @property
-    def states(self):
-        return self._states
-
-    @states.setter
-    def states(self, values):
-        if not np.all((values >= 0) & (values <= 1)):
-            raise ValueError("Probability wrong")
-        self._states = values
+    def __init__(self, data: np.ndarray):
+        self.states: npt.NDArray[np.uint32] = data
 
     def probability(self, state=0):
         """Returns the statistical frequency of the specified state (0 or 1)."""
-        probability = np.array([])
-        state = 1 - state
-        for st in self.states:
-            probability = np.append(probability, abs(state - np.mean(st)))
-        return probability
+        return abs(1 - state - np.mean(self.states, axis=0))
 
     @cached_property
     def state_0_probability(self):
@@ -142,9 +127,10 @@ class StateResults:
         """Returns the 1 state statistical frequency."""
         return self.probability(1)
 
-    def __add__(self, data):  # __add__(self, data:StateResults) -> StateResults
-        states = np.append(self.states, data.states, axis=0)
-        return StateResults(states)
+    # #TODO: Check is adding as wanted, we may need some imput on what data is being added
+    # def __add__(self, data):  # __add__(self, data:StateResults) -> StateResults
+    #     states = np.append(self.states, data.states, axis=0)
+    #     return StateResults(states)
 
     def serialize(self):
         """Serialize as a dictionary."""
@@ -156,14 +142,12 @@ class StateResults:
     @property
     def average(self):
         """Perform states average"""
-        average = np.array([])
-        std = np.array([])
-        for st in self.states:
-            average = np.append(average, np.mean(st))
-            std = np.append(std, np.std(st))
+        average = self.state_1_probability
+        std = np.std(self.states, axis=0, ddof=1) / np.sqrt(self.states.shape[0])
         return AveragedStateResults(average, std=std)
 
 
+# FIXME: Here I take the states from StateResult that are typed to be ints but those are not what would you do ?
 class AveragedStateResults(StateResults):
     """
     Data structure to deal with the output of
@@ -174,6 +158,6 @@ class AveragedStateResults(StateResults):
     or the averages of ``StateResults``
     """
 
-    def __init__(self, states: np.ndarray = np.array([]), std=None):
+    def __init__(self, states: np.ndarray, std: np.ndarray = np.array([])):
         super().__init__(states)
         self.std: Optional[npt.NDArray[np.float64]] = std
