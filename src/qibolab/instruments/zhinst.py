@@ -345,8 +345,9 @@ class Zurich(AbstractInstrument):
         q = qubit.name
         self.signal_map[f"flux{q}"] = self.device_setup.logical_signal_groups[f"q{q}"].logical_signals["flux_line"]
         self.calibration[f"/logical_signal_groups/q{q}/flux_line"] = lo.SignalCalibration(
-            range=qubit.flux.power_range, port_delay=None, delay_signal=0, voltage_offset=qubit.flux.offset
+            range=qubit.flux.power_range, port_delay=None, delay_signal=0, voltage_offset=qubit.flux.bias
         )
+        print(f"QUbit: {qubit.name} flux bias: {qubit.flux.bias}")
 
     def run_exp(self):
         """Compilation settings, compilation step, execution step and data retrival"""
@@ -364,7 +365,7 @@ class Zurich(AbstractInstrument):
         """Play pulse sequence"""
         if options.relaxation_time is None:
             options.relaxation_time = self.relaxation_time
-
+        self.sweepers = []
         self.sequence_zh(sequence, qubits, sweepers=[])
         self.calibration_step(qubits)
         self.create_exp(qubits, options)
@@ -409,7 +410,7 @@ class Zurich(AbstractInstrument):
             pulse = FluxPulse(
                 start=aux_sequence.start,
                 duration=aux_sequence.duration,
-                amplitude=qubit.sweetspot,
+                amplitude=0,
                 shape="Rectangular",
                 channel=qubit.flux.name,
                 qubit=qubit.name,
@@ -519,11 +520,12 @@ class Zurich(AbstractInstrument):
             acquisition_type=options.acquisition_type,
             averaging_mode=options.averaging_mode,
         ):
-            if self.nsweeps > 0:
+            # if self.nsweeps > 0:
+            if len(self.sweepers) > 0:
                 self.sweep_recursion(
                     qubits, exp, exp_calib, options.relaxation_time, options.acquisition_type, options.fast_reset
                 )
-                exp.set_calibration(exp_calib)
+           
 
             # TODO: Gate sweeps for flipping, AllXY (,RB ?):
             elif self.nsweeps == "gate_sweep":
@@ -534,8 +536,10 @@ class Zurich(AbstractInstrument):
                     # Careful with the definition of handel and their recovery
             else:
                 self.select_exp(exp, qubits, options.relaxation_time, options.acquisition_type, options.fast_reset)
+            exp.set_calibration(exp_calib)
             self.experiment = exp
             exp.set_signal_map(self.signal_map)
+             
 
     def select_exp(self, exp, qubits, relaxation_time, acquisition_type, fast_reset=False):
         """Build Zurich Experiment selecting the relevant sections"""
@@ -582,6 +586,7 @@ class Zurich(AbstractInstrument):
             if any("amplitude" in param for param in parameters):
                 # Zurich is already multiplying the pulse amplitude with the sweeper amplitude
                 pulse.zhpulse.amplitude = 1
+                print("Juan doesn't know what he's doing")
                 exp.play(
                     signal=f"{section}{qubit.name}",
                     pulse=pulse.zhpulse,
@@ -760,7 +765,14 @@ class Zurich(AbstractInstrument):
         """Play pulse and sweepers sequence"""
         if options.relaxation_time is None:
             options.relaxation_time = self.relaxation_time
-
+        for qubit in qubits.values():
+            for pulse in sequence:
+                if pulse.qubit == qubit.name:
+                    if pulse.type is PulseType.READOUT:
+                        qubit.readout_frequency = pulse.frequency
+                    elif pulse.type is PulseType.DRIVE:
+                        qubit.drive_frequency = pulse.frequency
+                        
         self.sweepers = list(sweepers)
         self.sequence_zh(sequence, qubits, sweepers)
         self.calibration_step(qubits)
@@ -773,6 +785,9 @@ class Zurich(AbstractInstrument):
             if not qubit.flux_coupler:
                 if self.sequence[f"readout{qubit.name}"]:
                     exp_res = self.results.get_data(f"sequence{qubit.name}")
+                    if self.NT_loop and options.averaging_mode is lo.AveragingMode.SINGLE_SHOT:
+                        exp_res = np.moveaxis(exp_res, -1, 0)
+                    print(exp_res.shape)
                     i = exp_res.real
                     q = exp_res.imag
                     results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = ExecutionResults.from_components(

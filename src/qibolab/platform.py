@@ -202,22 +202,18 @@ def create_tii_IQM5q(runcard, descriptor=None):
     for i in range(5, 10):
         channels[f"L4-1{i}"].ports = [("device_shfqc", f"SGCHANNELS/{i-5}/OUTPUT")]
         channels[f"L4-1{i}"].power_range = -10
-    channels[f"L4-17"].power_range = -20  # For coupler slim peak
+    # channels[f"L4-17"].power_range = -20  # For coupler slim peak
 
     # flux qubits (CAREFUL WITH THIS !!!)
     for i in range(6, 11):
         channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-6}")]
-        channels[f"L4-{i}"].offset = 0.0
-    channels[f"L4-8"].offset = 0.0  # 0.2 #0.35
-    channels[f"L4-10"].offset = 0.00  # 0.03
 
     # flux couplers (CAREFUL WITH THIS !!!)
     for i in range(11, 14):
         channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-11+5}")]
-        channels[f"L4-{i}"].offset = 0.0
+  
 
     channels[f"L4-14"].ports = [("device_hdawg2", f"SIGOUTS/0")]
-    channels[f"L4-14"].offset = 0.0
 
     # Instantiate Zh set of instruments[They work as one]
     from qibolab.instruments.dummy_oscillator import (
@@ -314,7 +310,7 @@ def create_tii_IQM5q(runcard, descriptor=None):
     local_oscillators[0].frequency = 5_500_000_000  # 5_500_000
     local_oscillators[1].frequency = 4_200_000_000  # For SG1 and SG2
     local_oscillators[2].frequency = 4_600_000_000  # For SG3 and SG4
-    local_oscillators[3].frequency = 4_000_000_000  # 4_200_000_000  # For SG5 and SG6
+    local_oscillators[3].frequency = 4_800_000_000  # 4_200_000_000  # For SG5 and SG6
 
     # Map LOs to channels
     ch_to_lo = {"L2-7": 0, "L4-15": 1, "L4-16": 1, "L4-17": 2, "L4-18": 2, "L4-19": 3}
@@ -335,12 +331,15 @@ def create_tii_IQM5q(runcard, descriptor=None):
     for q in range(0, 5):
         qubits[q].drive = channels[f"L4-{15 + q}"]
         qubits[q].flux = channels[f"L4-{6 + q}"]
+        channels[f"L4-{6 + q}"].qubit = qubits[q]
 
     # assign channels to couplers
     for c in range(0, 2):
         qubits[f"c{c}"].flux = channels[f"L4-{11 + c}"]
+        channels[f"L4-{11 + c}"].qubit = qubits[f"c{c}"]
     for c in range(3, 5):
         qubits[f"c{c}"].flux = channels[f"L4-{10 + c}"]
+        channels[f"L4-{10 + c}"].qubit = qubits[f"c{c}"]
 
     # assign qubits to couplers
     for c in range(0, 2):
@@ -349,7 +348,10 @@ def create_tii_IQM5q(runcard, descriptor=None):
     for c in range(3, 5):
         qubits[f"c{c}"].flux_coupler = [qubits[c]]
         qubits[f"c{c}"].flux_coupler.append(qubits[2])
+    
+    import yaml
 
+    yaml.dump(qubits, open("qubits.yaml", "w"))
     return platform
 
 
