@@ -413,6 +413,8 @@ class Zurich(AbstractInstrument):
     def play(self, qubits, sequence, options):
         """Play pulse sequence"""
 
+        dimensions = [options.nshots]
+
         # TODO: Read frequency for pulses instead of qubit patch
         for qubit in qubits.values():
             for pulse in sequence:
@@ -443,14 +445,21 @@ class Zurich(AbstractInstrument):
                         if options.averaging_mode is AveragingMode.CYCLIC:
                             states = np.array([exp_res])
                         else:
-                            states = exp_res
+                            states = np.array(exp_res)
                         results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = options.results_type(
                             states=states
                         )
                     else:
                         results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = options.results_type(
-                            i=exp_res.real, q=exp_res.imag
+                            data=np.array(exp_res)
                         )
+
+        exp_dimensions = list(np.array(exp_res).shape)
+        if dimensions != exp_dimensions:
+            import warnings
+
+            print("dimensions", dimensions, "experiment", exp.dimensions)
+            warnings.warn("dimensions not properly ordered")
 
         # FIXME: Include this on the reports
         # html containing the pulse sequence schedule
@@ -782,6 +791,10 @@ class Zurich(AbstractInstrument):
     def sweep(self, qubits, sequence, options, *sweepers):
         """Play pulse and sweepers sequence"""
 
+        dimensions = [options.nshots]
+        for sweep in sweepers:
+            dimensions.append(len(sweep.values))
+
         # TODO: Read frequency for pulses instead of qubit patch
         for qubit in qubits.values():
             for pulse in sequence:
@@ -812,14 +825,21 @@ class Zurich(AbstractInstrument):
                         if options.averaging_mode is AveragingMode.CYCLIC:
                             states = np.array([exp_res])
                         else:
-                            states = exp_res
+                            states = np.array(exp_res)
                         results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = options.results_type(
                             states=states
                         )
                     else:
                         results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = options.results_type(
-                            i=exp_res.real, q=exp_res.imag
+                            data=np.array(exp_res)
                         )
+
+        exp_dimensions = list(np.array(exp_res).shape)
+        if dimensions != exp_dimensions:
+            import warnings
+
+            print("dimensions", dimensions, "experiment", exp.dimensions)
+            warnings.warn("dimensions not properly ordered")
 
         # FIXME: Include this on the reports
         # html containing the pulse sequence schedule
