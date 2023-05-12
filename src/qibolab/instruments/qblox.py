@@ -43,7 +43,7 @@ from qibolab.instruments.qblox_q1asm import (
 )
 from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType, Waveform
 from qibolab.sweeper import Parameter, Sweeper
-
+from qibo.config import log
 
 class QbloxSweeperType(Enum):
     """An enumeration for the different types of sweepers supported by qblox.
@@ -122,6 +122,8 @@ class QbloxSweeper:
         if sweeper.parameter in type_c:
             type = type_c[sweeper.parameter]
             rel_values = sweeper.values
+            # log.info(f"Qblox sweeper rel_values: {rel_values}") 
+
         else:
             raise ValueError(f"Sweeper parameter {sweeper.parameter} is not supported by qblox driver yet.")
         return cls(program=program, rel_values=rel_values, type=type, add_to=add_to, multiply_to=multiply_to, name=name)
@@ -230,6 +232,8 @@ class QbloxSweeper:
         self._con_step = convert[type](self._abs_step)
         self._con_stop = (self._con_start + self._con_step * (self._n) + 1) % 2**32
         self._con_values = np.array([(self._con_start + self._con_step * m) % 2**32 for m in range(self._n + 1)])
+        
+        # log.info(f"Qblox sweeper converted values: {self._con_values}") 
 
         if not (
             isinstance(self._con_start, int) and isinstance(self._con_stop, int) and isinstance(self._con_step, int)
@@ -3079,6 +3083,7 @@ class ClusterQCM(AbstractInstrument):
                     self._unused_sequencers_numbers.append(n)
 
             # generate and store the Waveforms dictionary, the Acquisitions dictionary, the Weights and the Program
+            # log.info(f"generating waveforms for ports for ClusterQCM: {self._output_ports_keys}")
             for port in self._output_ports_keys:
                 for sequencer in self._sequencers[port]:
                     pulses = sequencer.pulses
@@ -3105,10 +3110,15 @@ class ClusterQCM(AbstractInstrument):
                                 sweeper.qs = QbloxSweeper(
                                     program=program, type=QbloxSweeperType.duration, rel_values=idx_range
                                 )
+                            # log.info(f"Qblox sweeper genarated: {sweeper.qs.name}")
+                            # log.info(f"Qblox sweeper values: {sweeper.qs._con_values}")
                         else:
+                            # log.info(f"Qblox sweeper name: {sweeper.qs.name}") 
                             sweeper.qs = QbloxSweeper.from_sweeper(
                                 program=program, sweeper=sweeper, add_to=reference_value
                             )
+                            # log.info(f"Qblox sweeper genarated: {sweeper.qs.name}") 
+                            # log.info(f"Qblox sweeper values: {sweeper.qs._con_values}")
 
                         if sweeper.qubits and sequencer.qubit in sweeper.qubits:
                             sweeper.qs.update_parameters = True

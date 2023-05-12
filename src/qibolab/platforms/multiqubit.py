@@ -369,13 +369,20 @@ class MultiqubitPlatform(AbstractPlatform):
                         if len(_los) > 0:
                             self.instruments[name].ports[port].lo_frequency = _los[0]
 
+                
+                log.info(f"{self.instruments[name]}: Processing pulse sequence")
+
                 self.instruments[name].process_pulse_sequence(
                     instrument_pulses[name], navgs, nshots, repetition_duration, sweepers
                 )
+
+                # log.info(f"{self.instruments[name]}: Uploading pulse sequence")
                 self.instruments[name].upload()
+
         for name in self.instruments:
             if "control" in roles[name] or "readout" in roles[name]:
                 if True:  # not instrument_pulses[name].is_empty:
+                    # log.info(f"{self.instruments[name]}: Playing pulse sequence")
                     self.instruments[name].play_sequence()
 
         acquisition_results = {}
@@ -383,6 +390,7 @@ class MultiqubitPlatform(AbstractPlatform):
             if "readout" in roles[name]:
                 if not instrument_pulses[name].is_empty:
                     if not instrument_pulses[name].ro_pulses.is_empty:
+                        log.info(f"{self.instruments[name]}: Acquaring results")
                         results = self.instruments[name].acquire()
                         existing_keys = set(acquisition_results.keys()) & set(results.keys())
                         for key, value in results.items():
@@ -486,6 +494,7 @@ class MultiqubitPlatform(AbstractPlatform):
         #     initial = {}
         #     for pulse in sweeper.pulses:
         #         initial[pulse.id] = pulse.frequency
+        
         # elif sweeper.parameter is Parameter.bias:
         #     initial = {}
         #     for qubit in sweeper.qubits:
