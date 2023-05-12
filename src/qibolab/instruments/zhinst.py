@@ -458,7 +458,7 @@ class Zurich(AbstractInstrument):
         if dimensions != exp_dimensions:
             import warnings
 
-            print("dimensions", dimensions, "experiment", exp.dimensions)
+            print("dimensions", dimensions, "experiment", exp_dimensions)
             warnings.warn("dimensions not properly ordered")
 
         # FIXME: Include this on the reports
@@ -838,7 +838,7 @@ class Zurich(AbstractInstrument):
         if dimensions != exp_dimensions:
             import warnings
 
-            print("dimensions", dimensions, "experiment", exp.dimensions)
+            print("dimensions", dimensions, "experiment", exp_dimensions)
             warnings.warn("dimensions not properly ordered")
 
         # FIXME: Include this on the reports
