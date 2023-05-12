@@ -370,7 +370,6 @@ class MultiqubitPlatform(AbstractPlatform):
                             self.instruments[name].ports[port].lo_frequency = _los[0]
 
                 
-                log.info(f"{self.instruments[name]}: Processing pulse sequence")
 
                 self.instruments[name].process_pulse_sequence(
                     instrument_pulses[name], navgs, nshots, repetition_duration, sweepers
@@ -390,7 +389,6 @@ class MultiqubitPlatform(AbstractPlatform):
             if "readout" in roles[name]:
                 if not instrument_pulses[name].is_empty:
                     if not instrument_pulses[name].ro_pulses.is_empty:
-                        log.info(f"{self.instruments[name]}: Acquaring results")
                         results = self.instruments[name].acquire()
                         existing_keys = set(acquisition_results.keys()) & set(results.keys())
                         for key, value in results.items():
