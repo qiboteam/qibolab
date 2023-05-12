@@ -1990,10 +1990,11 @@ class ClusterQCM_RF(AbstractInstrument):
                     # Upload dictionary to the device sequencers
                     self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
 
-                    # DEBUG: Save sequence to file
-                    # filename = f"{self.name}_sequencer{sequencer.number}_sequence.json"
-                    # with open(self.data_folder / filename, "w", encoding="utf-8") as file:
+                    # DEBUG: QCM RF Save sequence to file
+                    # filename = f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
+                    # with open(filename, "w", encoding="utf-8") as file:
                     #     json.dump(qblox_dict[sequencer], file, indent=4)
+                    #     file.write(sequencer.program)
 
         # Arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
