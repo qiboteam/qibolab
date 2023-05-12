@@ -70,7 +70,7 @@ native_gates:
             RX:
                 duration: 40 #200 #60
                 amplitude: 0.544 #0.54 # Multiplied by the sweeper ?
-                frequency: 4_299_962_281  #4_401_600_000 #4_505_500_000 #4_321_500_000 # 4_541_100_000 #doesnt do anything requiered for qibolab to work
+                frequency: 4_300_587_281  #4_401_600_000 #4_505_500_000 #4_321_500_000 # 4_541_100_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
                 type: qd # qubit drive
@@ -163,8 +163,8 @@ characterization:
             T2: 0.0
             sweetspot: -0.025 #Use this as an amplitude of the flux_bias
             filter: {}
-            mean_gnd_states: (-0.097064-0.201771j)
-            mean_exc_states: (-0.726811-1.408046j)
+            mean_gnd_states: (-0.087944-0.199844j)
+            mean_exc_states: (-0.663559-1.451162j)
             # parameters for single shot classification
             threshold: 0.822580
             iq_angle: -2.052
@@ -188,13 +188,13 @@ characterization:
         2:
             readout_frequency: 6.109e+9  #6_112_000_000
             resonator_polycoef_flux: []
-            drive_frequency: 4_299_962_281 # 4_401_600_000 #4_541_100_000
+            drive_frequency: 4_300_587_281 # 4_401_600_000 #4_541_100_000
             T1: 0.
             T2: 0.
             sweetspot: -0.2235 #0.5 #0.62 0.00
             filter: {}
-            mean_gnd_states: (2.616697+0.166773j)
-            mean_exc_states: (2.481454-1.172653j)
+            mean_gnd_states: (2.574433+0.320793j)
+            mean_exc_states: (2.511983-1.038978j)
             # parameters for single shot classification
             threshold: 0.102652
             iq_angle: -1.647
