@@ -56,6 +56,18 @@ class DesignPlatform(AbstractPlatform):
     def get_lo_readout_frequency(self, qubit):
         return self.qubits[qubit].readout.local_oscillator.frequency
 
+    def set_lo_twpa_frequency(self, qubit, freq):
+        self.qubits[qubit].twpa.local_oscillator.frequency = freq
+
+    def get_lo_twpa_frequency(self, qubit):
+        return self.qubits[qubit].twpa.local_oscillator.frequency
+
+    def set_lo_twpa_power(self, qubit, power):
+        self.qubits[qubit].twpa.local_oscillator.power = power
+
+    def get_lo_twpa_power(self, qubit):
+        return self.qubits[qubit].twpa.local_oscillator.power
+
     def set_attenuation(self, qubit, att):
         raise_error(NotImplementedError, f"{self.name} does not support attenuation.")
 
@@ -69,6 +81,8 @@ class DesignPlatform(AbstractPlatform):
         raise_error(NotImplementedError, f"{self.name} does not support gain.")
 
     def set_bias(self, qubit, bias):
+        if self.qubits[qubit].flux is None:
+            raise_error(NotImplementedError, f"{self.name} does not have flux.")
         self.qubits[qubit].flux.bias = bias
 
     def get_bias(self, qubit):

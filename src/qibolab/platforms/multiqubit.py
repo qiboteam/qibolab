@@ -58,6 +58,32 @@ class MultiqubitPlatform(AbstractPlatform):
     def get_lo_readout_frequency(self, qubit):
         return self.ro_port[qubit].lo_frequency
 
+    def set_lo_twpa_frequency(self, qubit, freq):
+        for instrument in self.instruments:
+            if "twpa" in instrument:
+                self.instruments[instrument].frequency = freq
+                return None
+        raise_error(NotImplementedError, "No twpa instrument found in the platform. ")
+
+    def get_lo_twpa_frequency(self, qubit):
+        for instrument in self.instruments:
+            if "twpa" in instrument:
+                return self.instruments[instrument].frequency
+        raise_error(NotImplementedError, "No twpa instrument found in the platform. ")
+
+    def set_lo_twpa_power(self, qubit, power):
+        for instrument in self.instruments:
+            if "twpa" in instrument:
+                self.instruments[instrument].power = power
+                return None
+        raise_error(NotImplementedError, "No twpa instrument found in the platform. ")
+
+    def get_lo_twpa_power(self, qubit):
+        for instrument in self.instruments:
+            if "twpa" in instrument:
+                return self.instruments[instrument].power
+        raise_error(NotImplementedError, "No twpa instrument found in the platform. ")
+
     def set_attenuation(self, qubit, att):
         self.ro_port[qubit].attenuation = att
 
@@ -300,7 +326,7 @@ class MultiqubitPlatform(AbstractPlatform):
 
                 # colllect result and append to original pulse
                 for original_pulse, new_serial in map_original_shifted.items():
-                    acquisition = result[new_serial].compute_average() if average else result[new_serial]
+                    acquisition = result[new_serial].average if average else result[new_serial]
 
                     if original_pulse.serial in results:
                         results[original_pulse.serial] += acquisition
