@@ -1,4 +1,5 @@
 import copy
+import os
 
 import numpy as np
 import yaml
@@ -13,6 +14,7 @@ from qibolab.sweeper import Parameter, Sweeper
 class MultiqubitPlatform(AbstractPlatform):
     def __init__(self, name, runcard):
         super().__init__(name, runcard)
+
         self.instruments = {}
         # Instantiate instruments
         for name in self.settings["instruments"]:
@@ -24,6 +26,12 @@ class MultiqubitPlatform(AbstractPlatform):
             InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
             instance = InstrumentClass(name, address)
             self.instruments[name] = instance
+            # DEBUG: debug folder = report folder
+            if lib == "qblox":
+                folder = os.path.dirname(runcard) + "/debug/"
+                if not os.path.exists(folder):
+                    os.makedirs(folder)
+                self.instruments[name]._debug_folder = folder
 
         # Generate qubit_instrument_map from runcard
         self.qubit_instrument_map = {}
@@ -289,6 +297,7 @@ class MultiqubitPlatform(AbstractPlatform):
                     instrument_pulses[name], navgs, nshots, repetition_duration, sweepers
                 )
                 self.instruments[name].upload()
+
         for name in self.instruments:
             if "control" in roles[name] or "readout" in roles[name]:
                 if True:  # not instrument_pulses[name].is_empty:
