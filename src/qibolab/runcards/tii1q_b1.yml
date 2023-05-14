@@ -17,5 +17,5 @@ characterization:
     single_qubit:
         0: {readout_frequency: 7369909238, drive_frequency: 5542340056, pi_pulse_amplitude: 0.052468317399320084,
             T1: 8566.592123877203, T2: 4354.883038950118, threshold: 0.7202994672463129,
-            iq_angle: 2.933990683362248, T2_spin_echo: 5456.139729634096, mean_gnd_states: (0.19133062330623307+0.38825040650406506j),
+            iq_angle: 2.933990683362248, mean_gnd_states: (0.19133062330623307+0.38825040650406506j),
             mean_exc_states: (-1.7173663956639569-0.013791327913279134j)}
