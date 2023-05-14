@@ -8,16 +8,24 @@ Supports the following Instruments:
 Compatible with qblox-instruments driver 0.9.0 (28/2/2023).
 It supports:
     - multiplexed readout of up to 6 qubits
-    - hardware modulation, demodulation and classification
+    - hardware modulation, demodulation, and classification
     - software modulation, with support for arbitrary pulses
     - software demodulation
-    - binned acquisition (max bins 131_072)
-    - real-time sweepers of frequency, gain, offset, pulse start and pulse duration
+    - binned acquisition
+    - real-time sweepers of
+        - pulse frequency (requires hardware modulation)
+        - pulse relative phase (requires hardware modulation)
+        - pulse amplitude
+        - pulse start
+        - pulse duration
+        - port gain
+        - port offset
+    - multiple readouts for the same qubit (sequence unrolling)
     - max iq pulse length 8_192ns
     - waveforms cache, uses additional free sequencers if the memory of one sequencer (16384) is exhausted
-    - intrument parameters cache
+    - instrument parameters cache
 
-The operation of multiple clusters symultaneously is not supported yet.
+The operation of multiple clusters simultaneously is not supported yet.
 https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/
 """
 
@@ -70,12 +78,14 @@ class QbloxSweeperType(Enum):
 
 
 class QbloxSweeper:
-    """A custom sweeper object with the data and functionality required by qblox.
+    """A custom sweeper object with the data and functionality required by qblox instruments.
 
     It is responsible for generating the q1asm code required to execute sweeps in a sequencer. The object can be
-        initialised either with:
+        initialised with either:
             a :class:`qibolab.sweepers.Sweeper` using the :func:`qibolab.instruments.qblox.QbloxSweeper.from_sweeper`, or
             a range of values and a sweeper type (:class:`qibolab.instruments.qblox.QbloxSweeperType`)
+    Like most FPGAs, qblox FPGAs do not support floating point arithmetics. All parameters that can be manipulated in
+    real time within the FPGA are represented as two's complement integers.
 
     Attributes:
         type (:class:`qibolab.instruments.qblox.QbloxSweeperType`): the type of sweeper
@@ -93,39 +103,6 @@ class QbloxSweeper:
 
     FREQUENCY_LIMIT = 500e6
 
-    @classmethod
-    def from_sweeper(
-        cls, program: Program, sweeper: Sweeper, add_to: float = 0, multiply_to: float = 1, name: str = ""
-    ):
-        """Creates an instance form a :class:`qibolab.sweepers.Sweeper` object.
-
-        Args:
-            program (:class:`qibolab.instruments.qblox_q1asm.Program`): a program object representing the q1asm program of a
-                sequencer.
-            sweeper (:class:`qibolab.sweepers.Sweeper`): the original qibolab sweeper.
-                associated with the sweep. If no name is provided it uses the sweeper type as name.
-            add_to (float): a value to be added to each value of the range of values defined in `sweeper.values`,
-                `rel_values`.
-            multiply_to (float): a value to be multiplied by each value of the range of values defined in `sweeper.values`,
-                `rel_values`.
-            name (str): a name given for the sweep that is later used within the q1asm code to identify the loops.
-        """
-        type_c = {
-            Parameter.frequency: QbloxSweeperType.frequency,
-            Parameter.gain: QbloxSweeperType.gain,
-            Parameter.amplitude: QbloxSweeperType.gain,
-            Parameter.bias: QbloxSweeperType.offset,
-            Parameter.start: QbloxSweeperType.start,
-            Parameter.duration: QbloxSweeperType.duration,
-            Parameter.relative_phase: QbloxSweeperType.relative_phase,
-        }
-        if sweeper.parameter in type_c:
-            type = type_c[sweeper.parameter]
-            rel_values = sweeper.values
-        else:
-            raise ValueError(f"Sweeper parameter {sweeper.parameter} is not supported by qblox driver yet.")
-        return cls(program=program, rel_values=rel_values, type=type, add_to=add_to, multiply_to=multiply_to, name=name)
-
     def __init__(
         self,
         program: Program,
@@ -140,7 +117,7 @@ class QbloxSweeper:
         Args:
             program (:class:`qibolab.instruments.qblox_q1asm.Program`): a program object representing the q1asm program
                 of a sequencer.
-            rel_values (list): a list of values to iterate over. Currently qblox only supports a list of equaly spaced
+            rel_values (list): a list of values to iterate over. Currently qblox only supports a list of equally spaced
                 values, like those created with `np.arange(start, stop, step)`. These values are considered relative
                 values. They will later be added to the `add_to` parameter and multiplied to the `multiply_to`
                 parameter.
@@ -149,7 +126,7 @@ class QbloxSweeper:
                 `rel_values`.
             multiply_to (float): a value to be multiplied by each value of the range of values defined in
             `sweeper.values` or `rel_values`.
-            name (str): a name given for the sweep that is later used within the q1asm code to identify the loops.
+            name (str): a name given for the sweep that is later used within the q1as m code to identify the loops.
         """
 
         self.type: QbloxSweeperType = type
@@ -167,7 +144,7 @@ class QbloxSweeper:
         self._abs_stop = None
         self._abs_values: np.ndarray = None
 
-        # Converted values (converted to q1asm values)
+        # Converted values (converted to q1asm values, two's complement)
         self._con_start: int = None
         self._con_step: int = None
         self._con_stop: int = None
@@ -177,7 +154,7 @@ class QbloxSweeper:
         if not len(rel_values) > 1:
             raise ValueError("values must contain at least 2 elements.")
         elif rel_values[1] == rel_values[0]:
-            raise ValueError("values must contain at different elements.")
+            raise ValueError("values must contain different elements.")
 
         self._n = len(rel_values) - 1
         rel_start = rel_values[0]
@@ -236,8 +213,66 @@ class QbloxSweeper:
         ):
             raise ValueError("start, stop and step must be int")
 
+    @classmethod
+    def from_sweeper(
+        cls, program: Program, sweeper: Sweeper, add_to: float = 0, multiply_to: float = 1, name: str = ""
+    ):
+        """Creates an instance form a :class:`qibolab.sweepers.Sweeper` object.
+
+        Args:
+            program (:class:`qibolab.instruments.qblox_q1asm.Program`): a program object representing the q1asm program of a
+                sequencer.
+            sweeper (:class:`qibolab.sweepers.Sweeper`): the original qibolab sweeper.
+                associated with the sweep. If no name is provided it uses the sweeper type as name.
+            add_to (float): a value to be added to each value of the range of values defined in `sweeper.values`,
+                `rel_values`.
+            multiply_to (float): a value to be multiplied by each value of the range of values defined in `sweeper.values`,
+                `rel_values`.
+            name (str): a name given for the sweep that is later used within the q1asm code to identify the loops.
+        """
+        type_c = {
+            Parameter.frequency: QbloxSweeperType.frequency,
+            Parameter.gain: QbloxSweeperType.gain,
+            Parameter.amplitude: QbloxSweeperType.gain,
+            Parameter.bias: QbloxSweeperType.offset,
+            Parameter.start: QbloxSweeperType.start,
+            Parameter.duration: QbloxSweeperType.duration,
+            Parameter.relative_phase: QbloxSweeperType.relative_phase,
+        }
+        if sweeper.parameter in type_c:
+            type = type_c[sweeper.parameter]
+            rel_values = sweeper.values
+        else:
+            raise ValueError(f"Sweeper parameter {sweeper.parameter} is not supported by qblox driver yet.")
+        return cls(program=program, rel_values=rel_values, type=type, add_to=add_to, multiply_to=multiply_to, name=name)
+
     def block(self, inner_block: Block):
         """Generates the block of q1asm code that implements the sweep.
+
+        The q1asm code for a sweeper has the following structure:
+
+            # header_block
+            # initialise register with start value
+            move    0, R0           # 0 = start value, R0 = register name
+            nop                     # wait an instruction cycle (4ns) for the register to be updated with its value
+            loop_R0:                # loop label
+
+                # update_parameter_block
+                # update parameters, in this case pulse frequency
+                set_freq    R0      # sets the frequency of the sequencer nco to the value stored in R0
+                upd_param   100     # makes the change effective and wait 100ns
+
+                # inner block
+                play 0,1,4          # play waveforms with index 0 and 1 (i and q) and wait 4ns
+
+            # footer_block
+            # increment or decrement register with step value
+            add R0, 2500, R0        # R0 = R0 + 2500
+            nop                     # wait an instruction cycle (4ns) for the register to be updated with its value
+            # check condition and loop
+            jlt R0, 10001, @loop_R0 # while R0 is less than the stop value loop to loop_R0
+                                    # in this example it would loop 5 times
+                                    # with R0 values of 0, 2500, 5000, 7500 and 10000
 
         Args:
             inner_block (:class:`qibolab.instruments.qblox_q1asm.Block): the block of q1asm code to be repeated within
@@ -258,10 +293,10 @@ class QbloxSweeper:
             update_parameter_block = Block()
             update_time = 1000
             if self.type == QbloxSweeperType.frequency:
-                update_parameter_block.append(f"set_freq {self.register}")  # move to pulse
+                update_parameter_block.append(f"set_freq {self.register}")  # TODO: move to pulse
                 update_parameter_block.append(f"upd_param {update_time}")
             if self.type == QbloxSweeperType.gain:
-                update_parameter_block.append(f"set_awg_gain {self.register}, {self.register}")  # move to pulse
+                update_parameter_block.append(f"set_awg_gain {self.register}, {self.register}")  # TODO: move to pulse
                 update_parameter_block.append(f"upd_param {update_time}")
             if self.type == QbloxSweeperType.offset:
                 update_parameter_block.append(f"set_awg_offs {self.register}, {self.register}")
@@ -295,18 +330,26 @@ class QbloxSweeper:
         )
         footer_block.append("nop")
 
+        # Qblox fpgas implement negative numbers using two's complement however their conditional jump instructions
+        # (jlt and jge) only work with unsigned integers. Negative numbers (from 2**31 to 2**32) are greater than
+        # possitive numbers (0 to 2**31). There is therefore a discontinuity between negative and possitive numbers.
+        # Depending on whether the sweep increases or decreases the register, and on whether it crosses the
+        # discontinuity or not, there are 4 scenarios:
+
         if self._abs_step > 0:  # increasing
             if (self._abs_start < 0 and self._abs_stop < 0) or (
                 self._abs_stop > 0 and self._abs_start >= 0
-            ):  # no crossing
+            ):  # no crossing 0
                 footer_block.append(
                     f"jlt {self.register}, {self._con_stop}, @loop_{self.register}",
                     comment=f"{self.register.name} loop, stop: {round(self._abs_stop, 6):_}",
                 )
-            elif self._abs_start < 0 and self._abs_stop >= 0:  # crossing
+            elif self._abs_start < 0 and self._abs_stop >= 0:  # crossing 0
+                # wait until the register crosses 0 to possitive values
                 footer_block.append(
                     f"jge {self.register}, {2**31}, @loop_{self.register}",
                 )
+                # loop if the register is less than the stop value
                 footer_block.append(
                     f"jlt {self.register}, {self._con_stop}, @loop_{self.register}",
                     comment=f"{self.register.name} loop, stop: {round(self._abs_stop, 6):_}",
@@ -318,21 +361,23 @@ class QbloxSweeper:
         elif self._abs_step < 0:  # decreasing
             if (self._abs_start < 0 and self._abs_stop < 0) or (
                 self._abs_stop >= 0 and self._abs_start > 0
-            ):  # no crossing
+            ):  # no crossing 0
                 footer_block.append(
                     f"jge {self.register}, {self._con_stop + 1}, @loop_{self.register}",
                     comment=f"{self.register.name} loop, stop: {round(self._abs_stop, 6):_}",
                 )
-            elif self._abs_start >= 0 and self._abs_stop < 0:  # crossing
+            elif self._abs_start >= 0 and self._abs_stop < 0:  # crossing 0
                 if self._con_stop + 1 != 2**32:
+                    # wait until the register crosses 0 to negative values
                     footer_block.append(
                         f"jlt {self.register}, {2**31}, @loop_{self.register}",
                     )
+                    # loop if the register is greater than the stop value
                     footer_block.append(
                         f"jge {self.register}, {self._con_stop + 1}, @loop_{self.register}",
                         comment=f"{self.register.name} loop, stop: {round(self._abs_stop, 6):_}",
                     )
-                else:
+                else:  # special case when stopping at -1
                     footer_block.append(
                         f"jlt {self.register}, {2**31}, @loop_{self.register}",
                         comment=f"{self.register.name} loop, stop: {round(self._abs_stop, 6):_}",
@@ -410,13 +455,15 @@ class WaveformsBuffer:
         These waveforms are generated and stored in a predefined order so that they can later be retrieved within the
         sweeper q1asm code. It bakes pulses from as short as 1ns, padding them at the end with 0s if required so that
         their length is a multiple of 4ns. It also supports the modulation of the pulse both in hardware (default)
-            or software.
+        or software.
+        With no other pulses stored in the sequencer memory, it supports values up to range(1, 126) for regular pulses and
+        range(1, 180) for flux pulses.
 
         Args:
             pulse (:class:`qibolab.pulses.Pulse`): The pulse to be swept.
             values (list(int)): The list of values to sweep the pulse duration with.
             hardware_mod_en (bool): If set to True the pulses are assumed to be modulated in hardware and their
-                evelope waveforms are uploaded; if False, the software modulated waveforms are uploaded.
+                envelope waveforms are uploaded; if False, software modulated waveforms are uploaded.
 
         Returns:
             idx_range (numpy.ndarray): An array with the indices of the set of pulses. For each pulse duration in
@@ -426,12 +473,15 @@ class WaveformsBuffer:
         Raises:
             NotEnoughMemory: If the memory needed to store the waveforms in more than the memory avalible.
         """
-        # In order to generate waveforms for each duration value, the pulse duration will need to be modified.
-        # To avoid any conflict, make a copy of the pulse first
+        # In order to generate waveforms for each duration value, the pulse will need to be modified.
+        # To avoid any conflicts, make a copy of the pulse first.
         p = pulse.copy()
 
+        # there may be other waveforms stored already, set first index as the next available
         first_idx = len(self.unique_waveforms)
+
         if pulse.type == PulseType.FLUX:
+            # for flux pulses, store i waveforms
             idx_range = np.arange(first_idx, first_idx + len(values), 1)
 
             for duration in values:
@@ -452,6 +502,7 @@ class WaveformsBuffer:
                 else:
                     raise WaveformsBuffer.NotEnoughMemory
         else:
+            # for any other pulse type, store both i and q waveforms
             idx_range = np.arange(first_idx, first_idx + len(values) * 2, 2)
 
             for duration in values:
@@ -552,25 +603,34 @@ class Cluster(AbstractInstrument):
             or an external source.
     """
 
-    #
-    property_wrapper = lambda parent, *parameter: property(
-        lambda self: parent.device.get(parameter[0]),
-        lambda self, x: parent._set_device_parameter(parent.device, *parameter, value=x),
-    )
-    property_wrapper.__doc__ = """A lambda function used to create properties that wrap around device parameters and
-    caches their value using `_set_device_parameter()`.
-    """
-
     def __init__(self, name: str, address: str):
         """Initialises the instrument storing its name and address."""
         super().__init__(name, address)
-        # self.reference_clock_source: str
+        self.reference_clock_source: str
         self.device: QbloxCluster = None
 
         self._device_parameters = {}
 
+    @property
+    def reference_clock_source(self) -> str:
+        if self.is_connected:
+            return self.device.get("reference_source")
+        else:
+            raise Exception(
+                f"Parameter reference_source cannot be accessed, there is no connection to cluster {self.name}."
+            )
+
+    @reference_clock_source.setter
+    def reference_clock_source(self, value: str):
+        if self.is_connected:
+            self._set_device_parameter(self.device, "reference_source", value=value)
+        else:
+            raise Exception(
+                f"Parameter reference_source cannot be set up, there is no connection to cluster {self.name}."
+            )
+
     def connect(self):
-        """Connects to the instrument.
+        """Connects to the cluster.
 
         If the connection is successful, it saves a reference to the underlying object in the attribute `device`.
         The instrument is reset on each connection.
@@ -584,16 +644,10 @@ class Cluster(AbstractInstrument):
                     self.device.reset()
                     cluster = self.device
                     self.is_connected = True
-                    # DEBUG: Print Cluster Status
-                    # print(self.device.get_system_status())
-                    setattr(
-                        self.__class__,
-                        "reference_clock_source",
-                        self.property_wrapper("reference_source"),
-                    )  # FIXME: this will not work when using multiple instances, replace with explicit properties
                     break
                 except Exception as exc:
                     print(f"Unable to connect:\n{str(exc)}\nRetrying...")
+                # TODO: if not able to connect after 3 attempts, check for ping response and reboot
             if not self.is_connected:
                 raise InstrumentException(self, f"Unable to connect to {self.name}")
         else:
@@ -666,12 +720,12 @@ cluster: QbloxCluster = None
 class ClusterQRM_RF(AbstractInstrument):
     """Qblox Cluster Qubit Readout Module RF driver.
 
-    Qubit Readout Module RF (QRM-RF) is an instrument that integrates an arbitratry wave generator, a digitizer,
-    a local oscillator and a mixer. It has one output and one input ports. Each port has a path0 and path1 for the
+    Qubit Readout Module RF (QRM-RF) is an instrument that integrates an arbitrary wave generator, a digitizer,
+    a local oscillator and a mixer. It has one output and one input port. Each port has a path0 and path1 for the
     i(in-phase) and q(quadrature) components of the RF signal. The sampling rate of its ADC/DAC is 1 GSPS.
     https://www.qblox.com/cluster
 
-    The class aims to simplify the configuration of the instrument, exposing only those parameters most frequencly
+    The class aims to simplify the configuration of the instrument, exposing only those parameters most frequently
     used and hiding other more complex settings.
 
     A reference to the underlying `qblox_instruments.qcodes_drivers.qcm_qrm.QRM_QCM` object is provided via the
@@ -753,27 +807,27 @@ class ClusterQRM_RF(AbstractInstrument):
                 demodulation, integration and discretization of the pulse is done in real time at the FPGA of the
                 instrument.
 
-        classification_parameters (dict): A dictionary containing the paramters needed classify the state of each qubit.
+        classification_parameters (dict): A dictionary containing the parameters needed classify the state of each qubit.
             from a single shot measurement:
                 qubit_id (dict): the id of the qubit
                     rotation_angle (float): 0   # in degrees 0.0<=v<=360.0. The angle of the rotation applied at the
                         origin of the i q plane, that put the centroids of the state |0> and state |1> in a horizontal line.
                         The rotation puts the centroid of state |1> to the right side of centroid of state |0>.
-                    threshold (float): 0        # in V. The the real component of the point along the horizontal line
+                    threshold (float): 0        # in V. The real component of the point along the horizontal line
                         connecting both state centroids (after being rotated), that maximises the fidelity of the
                         classification.
 
         channels (list): A list of the channels to which the instrument is connected.
 
         Sequencer 0 is used always for acquisitions and it is the first sequencer used to synthesise pulses.
-        Sequencer 1 to 6 are used as needed to sinthesise simultaneous pulses on the same channel (required in
-        multipled readout) or when the memory of the default sequencers rans out.
+        Sequencer 1 to 6 are used as needed to synthesise simultaneous pulses on the same channel (required in
+        multiplexed readout) or when the memory of the default sequencers rans out.
 
     """
 
     DEFAULT_SEQUENCERS: dict = {"o1": 0, "i1": 0}
     SAMPLING_RATE: int = 1e9  # 1 GSPS
-    FREQUENCY_LIMIT = 500e6
+    FREQUENCY_LIMIT = 500e6  # 500 MHz
 
     property_wrapper = lambda parent, *parameter: property(
         lambda self: parent.device.get(parameter[0]),
@@ -802,6 +856,7 @@ class ClusterQRM_RF(AbstractInstrument):
         self.classification_parameters: dict = {}
         self.channels: list = []
 
+        self._debug_folder: str = ""
         self._cluster: QbloxCluster = None
         self._input_ports_keys = ["i1"]
         self._output_ports_keys = ["o1"]
@@ -827,6 +882,9 @@ class ClusterQRM_RF(AbstractInstrument):
             if cluster:
                 # save a reference to the underlying object
                 self.device: QbloxQrmQcm = cluster.modules[int(self.address.split(":")[1]) - 1]
+                # TODO: test connection with the module before continuing. Currently if there is no
+                # connection the instruction self._set_device_parameter(self.device, "in0_att", value=0)
+                # fails, providing a misleading error message
 
                 # create a class for each port with attributes mapped to the instrument parameters
                 self.ports["o1"] = type(
@@ -929,7 +987,7 @@ class ClusterQRM_RF(AbstractInstrument):
             if not key in self._device_parameters:
                 for parameter in parameters:
                     if not hasattr(target, parameter):
-                        raise Exception(f"The instrument {self.name} does not have parameters {parameter}")
+                        raise Exception(f"The instrument {self.name} does not have parameters {parameter}.")
                     target.set(parameter, value)
                 self._device_parameters[key] = value
             elif self._device_parameters[key] != value:
@@ -937,7 +995,7 @@ class ClusterQRM_RF(AbstractInstrument):
                     target.set(parameter, value)
                 self._device_parameters[key] = value
         else:
-            raise Exception("There is no connection to the instrument {self.name}")
+            raise Exception(f"There is no connection to the instrument {self.name}.")
 
     def _erase_device_parameters_cache(self):
         """Erases the cache of instrument parameters."""
@@ -1054,7 +1112,8 @@ class ClusterQRM_RF(AbstractInstrument):
                 # It assumes all pulses in non_overlapping_pulses set have the same frequency.
                 # Non-overlapping pulses of different frequencies on the same qubit channel, with hardware_demod_en
                 # would lead to wrong results.
-                # TODO: Throw error in that event or implement  non_overlapping_same_frequency_pulses
+                # TODO: Throw error in that event or implement non_overlapping_same_frequency_pulses
+                #       Even better, set the frequency before each pulse is played (would work with hardware modulation only)
             )
         if self.ports["i1"].hardware_demod_en and qubit in self.classification_parameters:
             self._set_device_parameter(
@@ -1079,7 +1138,7 @@ class ClusterQRM_RF(AbstractInstrument):
         _lo = self.ports[self._channel_port_map[pulse.channel]].lo_frequency
         _if = _rf - _lo
         if abs(_if) > self.FREQUENCY_LIMIT:
-            raise RuntimeError(
+            raise Exception(
                 f"""
             Pulse frequency {_rf} cannot be synthesised with current lo frequency {_lo}.
             The intermediate frequency {_if} would exceed the maximum frequency of {self.FREQUENCY_LIMIT}
@@ -1095,7 +1154,7 @@ class ClusterQRM_RF(AbstractInstrument):
         repetition_duration: int,
         sweepers: list() = [],  # sweepers: list(Sweeper) = []
     ):
-        """Processes a list of pulses, generating the waveforms and sequence program required by
+        """Processes a sequence of pulses and sweepers, generating the waveforms and program required by
         the instrument to synthesise them.
 
         The output of the process is a list of sequencers used for each port, configured with the information
@@ -1103,11 +1162,19 @@ class ClusterQRM_RF(AbstractInstrument):
         The following features are supported:
             - multiplexed readout of up to 6 qubits
             - overlapping pulses
-            - hardware modulation, demodulation and classification
+            - hardware modulation, demodulation, and classification
             - software modulation, with support for arbitrary pulses
             - software demodulation
-            - binned acquisition (max bins 131_072)
-            - real-time sweepers of frequency, gain, offset, pulse start and pulse duration
+            - binned acquisition
+            - real-time sweepers of
+                - pulse frequency (requires hardware modulation)
+                - pulse relative phase (requires hardware modulation)
+                - pulse amplitude
+                - pulse start
+                - pulse duration
+                - port gain
+                - port offset
+            - multiple readouts for the same qubit (sequence unrolling)
             - max iq pulse length 8_192ns
             - waveforms cache, uses additional free sequencers if the memory of one sequencer (16384) is exhausted
             - intrument parameters cache
@@ -1115,7 +1182,7 @@ class ClusterQRM_RF(AbstractInstrument):
         Args:
             instrument_pulses (PulseSequence): A collection of Pulse objects to be played by the instrument.
             navgs (int): The number of times the sequence of pulses should be executed averaging the results.
-            nshots (int): The number of times the sequence of pulses should be executed.
+            nshots (int): The number of times the sequence of pulses should be executed without averaging.
             repetition_duration (int): The total duration of the pulse sequence execution plus the reset/relaxation time.
             sweepers (list(Sweeper)): A list of Sweeper objects to be implemented.
         """
@@ -1203,6 +1270,7 @@ class ClusterQRM_RF(AbstractInstrument):
                 program = sequencer.program
 
                 ## pre-process sweepers ##
+                # TODO: move qibolab sweepers preprocessing to multiqubit (qblox manager)
 
                 # attach a sweeper attribute to the pulse so that it is easily accesible by the code that generates
                 # the pseudo-assembly program
@@ -1211,10 +1279,17 @@ class ClusterQRM_RF(AbstractInstrument):
                     pulse.sweeper = None
 
                 # define whether to sweep relative values or absolute values depending on the type of sweep
-                # TODO: incorporate add_to and multiply_to to qibolab.Sweeper so that the user can decide
+                # TODO: let qibocal user decice and the decision to be attached to qibolab.Sweeper
                 # until then:
-                #   frequency - relative values added to the pulse frequency
-                #   amplitude, gain, offset, start, duration - absolute values
+
+                #   frequency       - relative values added to the pulse frequency
+                #   amplitude(gain) - absolute values
+                #   relative_phase  - absolute values
+                #   gain            - absolute values
+                #   bias(offset)    - absolute values
+                #   start           - absolute values
+                #   duration        - absolute values
+
                 for sweeper in sweepers:
                     reference_value = 0
                     if sweeper.parameter == Parameter.frequency:
@@ -1237,11 +1312,10 @@ class ClusterQRM_RF(AbstractInstrument):
                         sweeper.qs = QbloxSweeper.from_sweeper(program=program, sweeper=sweeper, add_to=reference_value)
 
                     # FIXME: for qubit sweepers (Parameter.bias, Parameter.attenuation, Parameter.gain), the qubit
-                    # information alone is not enough to determine whether this sequencer should actively participate
-                    # in this sweep or not. One may want to change a parameter that is not associated with a pulse,
-                    # for example port gain, but knowing the qubit is not enough, as both the drive and readout ports
-                    # associated with one qubit, have a gain parameter.
-                    # until this is resolved, and since bias/offset is only implemented on QCMs, this instrument will
+                    # information alone is not enough to determine what instrument parameter is to be swept.
+                    # One may want to change a parameter that is not associated with a pulse,
+                    # For example port gain, both the drive and readout ports have gain parameters.
+                    # Until this is resolved, and since bias is only implemented with QCMs offset, this instrument will
                     # never take an active role in those sweeps:
 
                     # if sweeper.qubits and sequencer.qubit in sweeper.qubits:
@@ -1278,11 +1352,17 @@ class ClusterQRM_RF(AbstractInstrument):
                 sequence_total_duration = pulses.finish  # the minimum delay between instructions is 4ns
                 time_between_repetitions = repetition_duration - sequence_total_duration
                 assert time_between_repetitions > minimum_delay_between_instructions
-                # relaxation_time needs to be greater than acquisition_hold_off
+                # TODO: currently relaxation_time needs to be greater than acquisition_hold_off
+                # so that the time_between_repetitions is equal to the sequence_total_duration + relaxation_time
+                # to be compatible with th erest of the platforms, change it so that time_between_repetitions
+                # is equal to pulsesequence duration + acquisition_hold_off if relaxation_time < acquisition_hold_off
 
-                nshots_register = Register(program, "nshots")
-                navgs_register = Register(program, "navgs")
-                bin_n = Register(program, "bin_n")
+                # create registers for key variables
+                nshots_register = Register(
+                    program, "nshots"
+                )  # nshots is used in the loop that iterates over the number of shots
+                bin_n = Register(program, "bin_n")  # during a sweep, each shot is saved in the bin bin_n
+                navgs_register = Register(program, "navgs")  # navgs is used in the loop of hardware averages
 
                 header_block = Block("setup")
                 if active_reset:
@@ -1473,10 +1553,10 @@ class ClusterQRM_RF(AbstractInstrument):
                 self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
 
                 # DEBUG: QRM RF Save sequence to file
-                # filename = f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
-                # with open(filename, "w", encoding="utf-8") as file:
-                #     json.dump(qblox_dict[sequencer], file, indent=4)
-                #     file.write(sequencer.program)
+                filename = self._debug_folder + f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
+                with open(filename, "w", encoding="utf-8") as file:
+                    json.dump(qblox_dict[sequencer], file, indent=4)
+                    file.write(sequencer.program)
 
         # Clear acquisition memory and arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
@@ -1488,9 +1568,9 @@ class ClusterQRM_RF(AbstractInstrument):
         # self.device.print_readable_snapshot(update=True)
 
         # DEBUG: QRM RF Save Readable Snapshot
-        # filename = f"Z_{self.name}_snapshot.json"
-        # with open(filename, "w", encoding="utf-8") as file:
-        #     print_readable_snapshot(self.device, file, update=True)
+        filename = self._debug_folder + f"Z_{self.name}_snapshot.json"
+        with open(filename, "w", encoding="utf-8") as file:
+            print_readable_snapshot(self.device, file, update=True)
 
     def play_sequence(self):
         """Plays the sequence of pulses.
@@ -1982,6 +2062,7 @@ class ClusterQCM_RF(AbstractInstrument):
         self.ports: dict = {}
         self.channels: list = []
 
+        self._debug_folder: str = ""
         self._cluster: QbloxCluster = None
         self._output_ports_keys = ["o1", "o2"]
         self._sequencers: dict[Sequencer] = {"o1": [], "o2": []}
@@ -2244,7 +2325,7 @@ class ClusterQCM_RF(AbstractInstrument):
         _lo = self.ports[self._channel_port_map[pulse.channel]].lo_frequency
         _if = _rf - _lo
         if abs(_if) > self.FREQUENCY_LIMIT:
-            raise RuntimeError(
+            raise Exception(
                 f"""
             Pulse frequency {_rf} cannot be synthesised with current lo frequency {_lo}.
             The intermediate frequency {_if} would exceed the maximum frequency of {self.FREQUENCY_LIMIT}
@@ -2255,7 +2336,7 @@ class ClusterQCM_RF(AbstractInstrument):
     def process_pulse_sequence(
         self, instrument_pulses: PulseSequence, nshots: int, navgs: int, repetition_duration: int, sweepers: list = []
     ):
-        """Processes a list of pulses, generating the waveforms and sequence program required by
+        """Processes a sequence of pulses and sweepers, generating the waveforms and program required by
         the instrument to synthesise them.
 
         The output of the process is a list of sequencers used for each port, configured with the information
@@ -2555,10 +2636,10 @@ class ClusterQCM_RF(AbstractInstrument):
                     self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
 
                     # DEBUG: QCM RF Save sequence to file
-                    # filename = f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
-                    # with open(filename, "w", encoding="utf-8") as file:
-                    #     json.dump(qblox_dict[sequencer], file, indent=4)
-                    #     file.write(sequencer.program)
+                    filename = self._debug_folder + f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
+                    with open(filename, "w", encoding="utf-8") as file:
+                        json.dump(qblox_dict[sequencer], file, indent=4)
+                        file.write(sequencer.program)
 
         # Arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
@@ -2569,9 +2650,9 @@ class ClusterQCM_RF(AbstractInstrument):
         # self.device.print_readable_snapshot(update=True)
 
         # DEBUG: QCM RF Save Readable Snapshot
-        # filename = f"Z_{self.name}_snapshot.json"
-        # with open(filename, "w", encoding="utf-8") as file:
-        #     print_readable_snapshot(self.device, file, update=True)
+        filename = self._debug_folder + f"Z_{self.name}_snapshot.json"
+        with open(filename, "w", encoding="utf-8") as file:
+            print_readable_snapshot(self.device, file, update=True)
 
     def play_sequence(self):
         """Plays the sequence of pulses.
@@ -2708,6 +2789,7 @@ class ClusterQCM(AbstractInstrument):
         self.ports: dict = {}
         self.channels: list = []
 
+        self._debug_folder: str = ""
         self._cluster: QbloxCluster = None
         self._output_ports_keys = ["o1", "o2", "o3", "o4"]
         self._sequencers: dict[Sequencer] = {"o1": [], "o2": [], "o3": [], "o4": []}
@@ -3264,8 +3346,7 @@ class ClusterQCM(AbstractInstrument):
             sequencer: Sequencer
             for port in self._output_ports_keys:
                 for sequencer in self._sequencers[port]:
-                    # Add sequence program and waveforms to single dictionary and write to JSON file
-                    filename = f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
+                    # Add sequence program and waveforms to single dictionary
                     qblox_dict[sequencer] = {
                         "waveforms": sequencer.waveforms,
                         "weights": sequencer.weights,
@@ -3277,10 +3358,10 @@ class ClusterQCM(AbstractInstrument):
                     self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
 
                     # DEBUG: QCM Save sequence to file
-                    # filename = f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
-                    # with open(filename, "w", encoding="utf-8") as file:
-                    #     json.dump(qblox_dict[sequencer], file, indent=4)
-                    #     file.write(sequencer.program)
+                    filename = self._debug_folder + f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
+                    with open(filename, "w", encoding="utf-8") as file:
+                        json.dump(qblox_dict[sequencer], file, indent=4)
+                        file.write(sequencer.program)
 
         # Arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
@@ -3291,9 +3372,9 @@ class ClusterQCM(AbstractInstrument):
         # self.device.print_readable_snapshot(update=True)
 
         # DEBUG: QCM Save Readable Snapshot
-        # filename = f"Z_{self.name}_snapshot.json"
-        # with open(filename, "w", encoding="utf-8") as file:
-        #     print_readable_snapshot(self.device, file, update=True)
+        filename = self._debug_folder + f"Z_{self.name}_snapshot.json"
+        with open(filename, "w", encoding="utf-8") as file:
+            print_readable_snapshot(self.device, file, update=True)
 
     def play_sequence(self):
         """Executes the sequence of instructions."""
