@@ -435,7 +435,17 @@ class MultiqubitPlatform(AbstractPlatform):
                     qubits=sweeper.qubits,
                 )
             )
-        sweepers_copy.reverse()
+
+        #reverse sweepers exept for res punchout att
+        contains_attenuation_frequency = any(
+            sweepers_copy[i].parameter == Parameter.attenuation and
+            sweepers_copy[i + 1].parameter == Parameter.frequency
+            for i in range(len(sweepers_copy) - 1)
+        )
+
+        if not contains_attenuation_frequency:
+            sweepers_copy.reverse()
+
 
         for pulse in sequence_copy.ro_pulses:
             map_id_serial[pulse.id] = pulse.serial
