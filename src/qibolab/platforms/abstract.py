@@ -472,13 +472,38 @@ class AbstractPlatform(ABC):
     @abstractmethod
     def get_lo_drive_shared(self, qubits):
         """Get the local oscillators shared by the qubits.
-        
+
         Args:
             qubits (list): list of qubits.
         Returns:
             dict: dictionary with keys being the local oscillators names and values being a tuple with (local_oscillator, qubits: list)
         """
-        
+
+    def set_lo_twpa_frequency(self, qubit, freq):
+        """Set frequency of the local oscillator of the TWPA to which the qubit's feedline is connected to.
+
+        Args:
+            qubit (int): qubit whose local oscillator will be modified.
+            freq (int): new value of the frequency in Hz.
+        """
+
+    @abstractmethod
+    def get_lo_twpa_frequency(self, qubit):
+        """Get frequency of the local oscillator of the TWPA to which the qubit's feedline is connected to in Hz."""
+
+    @abstractmethod
+    def set_lo_twpa_power(self, qubit, power):
+        """Set power of the local oscillator of the TWPA to which the qubit's feedline is connected to.
+
+        Args:
+            qubit (int): qubit whose local oscillator will be modified.
+            power (int): new value of the power in dBm.
+        """
+
+    @abstractmethod
+    def get_lo_twpa_power(self, qubit):
+        """Get power of the local oscillator of the TWPA to which the qubit's feedline is connected to in dBm."""
+
     @abstractmethod
     def set_attenuation(self, qubit, att):
         """Set attenuation value. Usefeul for calibration routines such as punchout.
