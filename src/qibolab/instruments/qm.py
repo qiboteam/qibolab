@@ -13,12 +13,12 @@ from qm.qua import (
     declare,
     declare_stream,
     dual_demod,
-    fixed,
-    for_,
-    if_,
     elif_,
     else_,
+    fixed,
+    for_,
     frame_rotation_2pi,
+    if_,
     measure,
     play,
     program,
@@ -940,12 +940,12 @@ class QMOPX(AbstractInstrument):
         b = declare(fixed)
         with for_(*from_array(b, sweeper.values)):
             for q, b0 in zip(sweeper.qubits, bias0):
-                with if_((b + b0)>=0.49):
+                with if_((b + b0) >= 0.49):
                     set_dc_offset(f"flux{q}", "single", 0.49)
-                with elif_((b + b0)<=-0.49):
+                with elif_((b + b0) <= -0.49):
                     set_dc_offset(f"flux{q}", "single", -0.49)
                 with else_():
-                    set_dc_offset(f"flux{q}", "single", (b + b0))                
+                    set_dc_offset(f"flux{q}", "single", (b + b0))
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
 
