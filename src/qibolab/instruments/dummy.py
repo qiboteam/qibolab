@@ -5,6 +5,7 @@ import numpy as np
 from qibo.config import log, raise_error
 
 from qibolab.instruments.abstract import AbstractInstrument
+from qibolab.platforms.platform import AveragingMode, ExecutionParameters
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import ExecutionResults
 from qibolab.sweeper import Parameter
@@ -38,7 +39,9 @@ class DummyInstrument(AbstractInstrument):
     def disconnect(self):
         log.info("Disconnecting dummy instrument.")
 
-    def play(self, qubits, sequence, nshots, relaxation_time, raw_adc=False):
+    def play(self, qubits, sequence, options):
+        relaxation_time = options.relaxation_time
+        nshots = options.nshots
         time.sleep(relaxation_time * 1e-9)
 
         ro_pulses = {pulse.qubit: pulse.serial for pulse in sequence.ro_pulses}
@@ -51,7 +54,15 @@ class DummyInstrument(AbstractInstrument):
             results[qubit] = results[serial] = ExecutionResults.from_components(i, q, shots)
         return results
 
-    def sweep(self, qubits, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
+    def sweep(self, qubits, sequence, options, *sweepers, average=True):
+        relaxation_time = options.relaxation_time
+        nshots = options.nshots
+
+        if options.averaging_mode is AveragingMode.SINGLESHOT:
+            average = False
+        else:
+            average = True
+
         results = {}
         sweeper_pulses = {}
 
@@ -121,7 +132,11 @@ class DummyInstrument(AbstractInstrument):
                 )
             else:
                 new_sequence = copy.deepcopy(sequence)
-                result = self.play(qubits, new_sequence, nshots, relaxation_time)
+                options = ExecutionParameters(
+                    nshots=nshots,
+                    relaxation_time=relaxation_time,
+                )
+                result = self.play(qubits, new_sequence, options)
 
                 # colllect result and append to original pulse
                 for original_pulse, new_serial in map_original_shifted.items():
