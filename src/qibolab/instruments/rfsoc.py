@@ -30,7 +30,6 @@ class QickProgramConfig:
     adc_trig_offset: int = 200
     max_gain: int = 32_000
     reps: int = 1000
-    mixer_freq: Optional[int] = None
     adc_sampling_frequency: int = None
 
 
@@ -496,7 +495,8 @@ class RFSoC(AbstractInstrument):
                         return True
                     already_pulsed.append(pulse_ch)
         elif is_bias:
-            return True  # TODO add support
+            if len(sweepers[0].indexes) != 1:
+                return True
 
         # if all passed, do a firmware sweep
         return False
@@ -635,7 +635,6 @@ class TII_ZCU111(RFSoC):
         self.host, self.port = address.split(":")
         self.port = int(self.port)
         self.cfg = QickProgramConfig(
-            sampling_rate=6_000_000_000,
-            mixer_freq=0,
-            adc_sampling_frequency=6_000_000_000,  # 3_072_000_000,
+            sampling_rate=6_144_000_000,
+            adc_sampling_frequency=6_144_000_000,  # 3_072_000_000,
         )
