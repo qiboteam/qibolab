@@ -202,7 +202,7 @@ def create_tii_IQM5q(runcard, descriptor=None):
     for i in range(5, 10):
         channels[f"L4-1{i}"].ports = [("device_shfqc", f"SGCHANNELS/{i-5}/OUTPUT")]
         channels[f"L4-1{i}"].power_range = -10
-    # channels[f"L4-17"].power_range = -20  # For coupler slim peak
+    # channels[f"L4-15"].power_range = 20  # For coupler slim peak
 
     # flux qubits (CAREFUL WITH THIS !!!)
     for i in range(6, 11):

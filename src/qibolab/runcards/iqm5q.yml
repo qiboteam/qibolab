@@ -24,7 +24,7 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.566
-                frequency: 4_093_813_547 #doesnt do anything requiered for qibolab to work
+                frequency: 4_093_830_788 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.02)
                 type: qd # qubit drive
@@ -158,7 +158,7 @@ characterization:
         0:
             readout_frequency: 5_228_700_000 #5_228_000_000
             resonator_polycoef_flux: []
-            drive_frequency: 4_093_813_547
+            drive_frequency: 4_093_830_788
             T1: 0.0
             T2: 0.0
             sweetspot: -0.025 #Use this as an amplitude of the flux_bias
@@ -223,7 +223,7 @@ characterization:
             threshold: 0.233806 #0.370954 #0.350665
             iq_angle: 0.481 # -91.712 #191.016
         "c0":
-            sweetspot: 0.
+            sweetspot: 0.1
             filter: {}
             # To save power values on the runcard
             # flux_range: -0
@@ -247,7 +247,7 @@ characterization:
     two_qubit_couplers:
         0:
             # frequency: 3_753_000_000 or 3_503_000_000
-            sweetspot: 0.0
+            sweetspot: 0.1
             filter: {}
         1:
             sweetspot: 0.0
