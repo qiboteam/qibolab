@@ -128,7 +128,7 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
         from qibolab.instruments.qm import QMOPX
         from qibolab.instruments.rohde_schwarz import SGS100A as LO_RS_SGS100A
 
-        controller = QMOPX("qmopx", "192.168.0.100:80")
+        controller = QMOPX("qmopx", "192.168.0.101:80")
 
     else:
         from qibolab.instruments.dummy_oscillator import DummyLocalOscillator as LO_ERA
