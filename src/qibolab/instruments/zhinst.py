@@ -623,7 +623,8 @@ class Zurich(AbstractInstrument):
             if any("amplitude" in param for param in parameters):
                 # Zurich is already multiplying the pulse amplitude with the sweeper amplitude
                 # FIXME: Recheck and do relative amplitude sweeps by converting
-                pulse.zhpulse.amplitude = 1
+                # pulse.zhpulse.amplitude = 1
+
                 exp.play(
                     signal=f"{section}{qubit.name}",
                     pulse=pulse.zhpulse,
