@@ -414,7 +414,9 @@ class Zurich(AbstractInstrument):
     def play(self, qubits, sequence, options):
         """Play pulse sequence"""
 
-        dimensions = [options.nshots]
+        dimensions = []
+        if options.averaging_mode is AveragingMode.SINGLESHOT:
+            dimensions = [options.nshots]
 
         # TODO: Read frequency for pulses instead of qubit patch
         for qubit in qubits.values():
@@ -624,7 +626,13 @@ class Zurich(AbstractInstrument):
             if any("amplitude" in param for param in parameters):
                 # Zurich is already multiplying the pulse amplitude with the sweeper amplitude
                 # FIXME: Recheck and do relative amplitude sweeps by converting
-                pulse.zhpulse.amplitude = 1
+
+                pulse.zhpulse.amplitude = pulse.zhpulse.amplitude * max(pulse.zhsweeper.values)
+                pulse.zhsweeper.values = pulse.zhsweeper.values / max(pulse.zhsweeper.values)
+
+                # import warnings
+                # warnings.warn()
+
                 exp.play(
                     signal=f"{section}{qubit.name}",
                     pulse=pulse.zhpulse,
@@ -756,6 +764,8 @@ class Zurich(AbstractInstrument):
                                         amplitude=1,
                                     )
 
+                            measure_pulse_parameters = {"phase": 0}
+
                             exp.measure(
                                 acquire_signal=f"acquire{qubit.name}",
                                 handle=f"sequence{qubit.name}",
@@ -765,7 +775,7 @@ class Zurich(AbstractInstrument):
                                 measure_signal=f"measure{qubit.name}",
                                 measure_pulse=pulse.zhpulse,
                                 measure_pulse_length=round(pulse.pulse.duration * 1e-9, 9),
-                                measure_pulse_parameters=None,
+                                measure_pulse_parameters=measure_pulse_parameters,
                                 measure_pulse_amplitude=None,
                                 acquire_delay=self.time_of_flight * 1e-9,
                                 reset_delay=relaxation_time * 1e-9,
@@ -794,7 +804,7 @@ class Zurich(AbstractInstrument):
         """Play pulse and sweepers sequence"""
 
         dimensions = []
-        if options.averaging_mode == AveragingMode.SINGLESHOT:
+        if options.averaging_mode is AveragingMode.SINGLESHOT:
             dimensions = [options.nshots]
 
         for sweep in sweepers:
@@ -806,12 +816,12 @@ class Zurich(AbstractInstrument):
         sweepers = list(sweepers)
         rearranging_axes = [[], []]
         for sweeper in sweepers:
-            if sweeper.parameter == Parameter.frequency:
+            if sweeper.parameter is Parameter.frequency:
                 rearranging_axes[0] += [sweepers.index(sweeper)]
                 rearranging_axes[1] += [0]
                 sweepers.remove(sweeper)
                 sweepers.insert(0, sweeper)
-                warnings.warn("Frequency sweepers was moved first in the list of sweepers")
+                warnings.warn("Sweepers were reordered")
 
         # TODO: Read frequency for pulses instead of qubit patch
         for qubit in qubits.values():
@@ -899,6 +909,11 @@ class Zurich(AbstractInstrument):
                         modulation_type=lo.ModulationType.HARDWARE,
                     )
                 )
+        if sweeper.parameter is Parameter.amplitude:
+            for pulse in sweeper.pulses:
+                pulse.amplitude = pulse.amplitude * max(sweeper.values)
+                sweeper.values = sweeper.values / max(sweeper.values)
+                parameter = ZhSweeper(pulse, sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
 
         if sweeper.parameter is Parameter.bias:
             for qubit in sweeper.qubits:
