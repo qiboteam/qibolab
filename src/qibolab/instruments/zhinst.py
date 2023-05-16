@@ -414,7 +414,9 @@ class Zurich(AbstractInstrument):
     def play(self, qubits, sequence, options):
         """Play pulse sequence"""
 
-        dimensions = [options.nshots]
+        dimensions = []
+        if options.averaging_mode is AveragingMode.SINGLESHOT:
+            dimensions = [options.nshots]
 
         # TODO: Read frequency for pulses instead of qubit patch
         for qubit in qubits.values():
@@ -795,7 +797,7 @@ class Zurich(AbstractInstrument):
         """Play pulse and sweepers sequence"""
 
         dimensions = []
-        if options.averaging_mode == AveragingMode.SINGLESHOT:
+        if options.averaging_mode is AveragingMode.SINGLESHOT:
             dimensions = [options.nshots]
 
         for sweep in sweepers:
@@ -807,12 +809,12 @@ class Zurich(AbstractInstrument):
         sweepers = list(sweepers)
         rearranging_axes = [[], []]
         for sweeper in sweepers:
-            if sweeper.parameter == Parameter.frequency:
+            if sweeper.parameter is Parameter.frequency:
                 rearranging_axes[0] += [sweepers.index(sweeper)]
                 rearranging_axes[1] += [0]
                 sweepers.remove(sweeper)
                 sweepers.insert(0, sweeper)
-                warnings.warn("Frequency sweepers was moved first in the list of sweepers")
+                warnings.warn("Sweepers were reordered")
 
         # TODO: Read frequency for pulses instead of qubit patch
         for qubit in qubits.values():
