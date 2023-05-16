@@ -163,8 +163,8 @@ characterization:
             T2: 0.0
             sweetspot: -0.025 #Use this as an amplitude of the flux_bias
             filter: {}
-            mean_gnd_states: (-0.087944-0.199844j)
-            mean_exc_states: (-0.663559-1.451162j)
+            mean_gnd_states: (-0.047584-0.195823j)
+            mean_exc_states: (-0.457698-1.478323j)
             # parameters for single shot classification
             threshold: 0.822580
             iq_angle: -2.052
@@ -193,8 +193,8 @@ characterization:
             T2: 0.
             sweetspot: -0.2235 #0.5 #0.62 0.00
             filter: {}
-            mean_gnd_states: (2.574433+0.320793j)
-            mean_exc_states: (2.511983-1.038978j)
+            mean_gnd_states: (2.438327+0.687596j)
+            mean_exc_states: (2.556497-0.741942j)
             # parameters for single shot classification
             threshold: 0.102652
             iq_angle: -1.647
@@ -223,7 +223,7 @@ characterization:
             threshold: 0.233806 #0.370954 #0.350665
             iq_angle: 0.481 # -91.712 #191.016
         "c0":
-            sweetspot: 0.1
+            sweetspot: 0.
             filter: {}
             # To save power values on the runcard
             # flux_range: -0

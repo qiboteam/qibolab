@@ -199,7 +199,7 @@ class Zurich(AbstractInstrument):
         # From setup
         self.hardware_avg = 0.0
         self.Fast_reset = 0.0
-        self.relaxation_time = 0.0
+        self.relaxation_time = 300e6
         self.time_of_flight = 0.0
         self.smearing = 0.0
         self.chip = None
