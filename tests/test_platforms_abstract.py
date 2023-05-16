@@ -163,6 +163,7 @@ def test_add_measurement_to_sequence(platform_name):
 
 def test_update(platform_name):
     platform = Platform(platform_name)
+    platform.setup()
     readout_frequencies = np.ones(platform.nqubits)
     updates = {"t2": {platform.qubits[i].name: readout_frequencies[i] for i in range(platform.nqubits)}}
     platform.update(updates)
