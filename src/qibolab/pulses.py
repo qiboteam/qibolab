@@ -1454,7 +1454,7 @@ class PulseSequence:
                 ps = item
                 for pulse in ps.pulses:
                     self.pulses.append(pulse)
-        self.pulses.sort(key=lambda item: (item.channel, item.start))
+        self.pulses.sort(key=lambda item: (item.start, item.channel))
 
     def index(self, pulse):
         """Returns the index of a pulse in the sequence."""
