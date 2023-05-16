@@ -751,16 +751,16 @@ class Zurich(AbstractInstrument):
                             else:
                                 print("I'm using dumb IW")
                                 "We adjust for smearing and remove smearing/2 at the end"
-                                exp.delay(signal=f"measure{qubit.name}", time=self.smearing)
+                                exp.delay(signal=f"measure{qubit.name}", time=self.smearing * 1e-9)
                                 if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
                                     weight = lo.pulse_library.sampled_pulse_complex(
-                                        np.ones([int(pulse.pulse.duration * 2 - 3 * self.smearing)])
+                                        np.ones([int(pulse.pulse.duration * 2 - 3 * self.smearing * 1e-9)])
                                         * np.exp(1j * qubit.iq_angle)
                                     )
                                 else:
                                     weight = lo.pulse_library.const(
                                         uid="weight" + pulse.zhpulse.uid,
-                                        length=round(pulse.pulse.duration * 1e-9, 9) - 1.5 * self.smearing,
+                                        length=round(pulse.pulse.duration * 1e-9, 9) - 1.5 * self.smearing * 1e-9,
                                         amplitude=1,
                                     )
 
