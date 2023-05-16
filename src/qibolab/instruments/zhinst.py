@@ -178,7 +178,7 @@ class ZhSweeperLine:
     Near Time sweeps
     """
 
-    def __init__(self, sweeper, qubit, sequence):
+    def __init__(self, sweeper, qubit=None, sequence=None):
         """Qibolab sweeper"""
         self.sweeper = sweeper
 
@@ -509,6 +509,7 @@ class Zurich(AbstractInstrument):
                     if pulse == element.pulse:
                         if isinstance(aux_list[aux_list.index(element)], ZhPulse):
                             aux_list.insert(aux_list.index(element) + 1, ZhSweeperLine(sweeper, pulse.qubit, sequence))
+                            break  # TODO: Check it does not mess anything
 
         self.sequence = zhsequence
 
@@ -887,8 +888,7 @@ class Zurich(AbstractInstrument):
                 parameter = ZhSweeperLine(sweeper, qubit, self.sequence_qibo).zhsweeper
 
         elif sweeper.parameter is Parameter.delay:
-            for qubit in sweeper.qubits.values():
-                parameter = ZhSweeperLine(sweeper, qubit, self.sequence_qibo).zhsweeper
+            parameter = ZhSweeperLine(sweeper).zhsweeper
 
         elif parameter is None:
             parameter = ZhSweeper(sweeper.pulses[0], sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
