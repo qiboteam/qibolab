@@ -18,18 +18,6 @@ def generate_circuit_with_gate(nqubits, gate, *params, **kwargs):
     return circuit
 
 
-def compile_circuit(circuit, platform):
-    """Compile a circuit to a pulse sequence."""
-    if can_execute(circuit, platform.two_qubit_natives):
-        native_circuit = circuit
-    else:
-        native_circuit, _ = Pipeline.transpile(circuit, platform.two_qubit_natives)
-
-    compiler = Compiler.default()
-    sequence, _ = compiler.compile(native_circuit, platform)
-    return sequence
-
-
 def test_u3_sim_agreement():
     backend = NumpyBackend()
     theta, phi, lam = 0.1, 0.2, 0.3
@@ -46,12 +34,13 @@ def test_u3_sim_agreement():
 def compile_circuit(circuit, platform):
     """Compile a circuit to a pulse sequence."""
     transpiler = Pipeline.default(platform.two_qubit_natives)
+    compiler = Compiler.default()
     if transpiler.is_satisfied(circuit):
         native_circuit = circuit
     else:
         native_circuit, _ = transpiler.transpile(circuit)
 
-    sequence = platform.transpile(native_circuit)
+    sequence, _ = compiler.compile(native_circuit, platform)
     return sequence
 
 
