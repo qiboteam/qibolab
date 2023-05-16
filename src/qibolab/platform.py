@@ -291,7 +291,7 @@ def create_tii_zcu111(runcard, address=None):
     controller = TII_ZCU111("tii_zcu111", address)
 
     # Readout local oscillator
-    local_oscillators[0].frequency = 7_000_000_000
+    local_oscillators[0].frequency = 7_500_000_000
     local_oscillators[0].power = 10
     channels["L3-30_ro"].local_oscillator = local_oscillators[0]
 
