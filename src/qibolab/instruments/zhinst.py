@@ -370,7 +370,7 @@ class Zurich(AbstractInstrument):
                 frequency=int(qubit.readout.local_oscillator.frequency),
             ),
             range=qubit.feedback.power_range,
-            port_delay=self.time_of_flight*1e-9,
+            port_delay=self.time_of_flight * 1e-9,
             threshold=qubit.threshold,
         )
 
@@ -767,8 +767,8 @@ class Zurich(AbstractInstrument):
                                 measure_pulse_length=round(pulse.pulse.duration * 1e-9, 9),
                                 measure_pulse_parameters=None,
                                 measure_pulse_amplitude=None,
-                                acquire_delay=self.time_of_flight*1e-9,
-                                reset_delay=relaxation_time*1e-9,
+                                acquire_delay=self.time_of_flight * 1e-9,
+                                reset_delay=relaxation_time * 1e-9,
                             )
                             i += 1
 
