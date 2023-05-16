@@ -161,14 +161,28 @@ def test_add_measurement_to_sequence(platform_name):
     assert sequence.serial == s.serial
 
 
-def test_update(platform_name):
+@pytest.mark.parametrize(
+    "par",
+    [
+        "readout_frequency",
+        "sweetspot",
+        "threshold",
+        "bare_resonator_frequency",
+        "drive_frequency",
+        "iq_angle",
+        "mean_gnd_states",
+    ],
+)
+def test_update(platform_name, par):
     platform = Platform(platform_name)
     readout_frequencies = np.ones(platform.nqubits)
-    updates = {"t2": {platform.qubits[i].name: readout_frequencies[i] for i in range(platform.nqubits)}}
+    updates = {par: {platform.qubits[i].name: readout_frequencies[i] for i in range(platform.nqubits)}}
     # TODO: fix the reload settings for qili1q_os2
     if platform.name != "qili1q_os2":
         platform.update(updates)
         for i in range(platform.nqubits):
-            assert (
-                updates["t2"][i] == platform.settings["characterization"]["single_qubit"][platform.qubits[i].name]["T2"]
-            )
+            value = updates[par][i]
+            print(value)
+            if "frequency" in par:
+                value *= 1e9
+            assert value == float(platform.settings["characterization"]["single_qubit"][platform.qubits[i].name][par])
