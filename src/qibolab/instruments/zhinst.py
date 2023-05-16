@@ -767,7 +767,7 @@ class Zurich(AbstractInstrument):
                                 measure_pulse_parameters=None,
                                 measure_pulse_amplitude=None,
                                 acquire_delay=self.time_of_flight,
-                                reset_delay=relaxation_time,
+                                reset_delay=relaxation_time*1e-9,
                             )
                             i += 1
 
@@ -842,6 +842,8 @@ class Zurich(AbstractInstrument):
             if not qubit.flux_coupler:
                 if self.sequence[f"readout{qubit.name}"]:
                     exp_res = self.results.get_data(f"sequence{qubit.name}")
+                    # Reorder dimensions
+                    exp_res = np.moveaxis(exp_res, rearranging_axes[0], rearranging_axes[1])
                     if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                         if options.averaging_mode is AveragingMode.CYCLIC:
                             states = np.array([exp_res])
@@ -854,8 +856,6 @@ class Zurich(AbstractInstrument):
                         results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = options.results_type(
                             data=np.array(exp_res)
                         )
-        # Reorder dimensions
-        exp_res = np.moveaxis(exp_res, rearranging_axes[0], rearranging_axes[1])
 
         exp_dimensions = list(np.array(exp_res).shape)
         if dimensions != exp_dimensions:
