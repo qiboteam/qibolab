@@ -4,9 +4,9 @@ description: IQM 5-qubit device, controlled with Zurich Instruments.
 settings:
     nshots: 4096
     sampling_rate: 2.e+9
-    relaxation_time: 300.e-6
-    time_of_flight: 280.e-9
-    smearing: 0.e-9
+    relaxation_time: 300_000
+    time_of_flight: 280
+    smearing: 0
     Fast_reset: False
     chip: iqm5q
 
@@ -24,7 +24,7 @@ native_gates:
         0: # qubit number
             RX:
                 duration: 40
-                amplitude: 0.566
+                amplitude: 0.603
                 frequency: 4_093_830_788 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.02)
@@ -70,7 +70,7 @@ native_gates:
         2: # qubit number
             RX:
                 duration: 40 #200 #60
-                amplitude: 0.544 #0.54 # Multiplied by the sweeper ?
+                amplitude: 0.59
                 frequency: 4_300_587_281  #4_401_600_000 #4_505_500_000 #4_321_500_000 # 4_541_100_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
@@ -164,11 +164,11 @@ characterization:
             T2: 0.0
             sweetspot: -0.025 #Use this as an amplitude of the flux_bias
             filter: {}
-            mean_gnd_states: (-0.047584-0.195823j)
-            mean_exc_states: (-0.457698-1.478323j)
+            mean_gnd_states: 1.5420+0.1813j
+            mean_exc_states: 2.4499-0.5629j
             # parameters for single shot classification
-            threshold: 0.822580
-            iq_angle: -2.052
+            threshold: 1.4778
+            iq_angle: 0.687
             # alpha: 217.492 MHz
             # To save power values on the runcard
             # ro_range_lp: -15
@@ -194,11 +194,11 @@ characterization:
             T2: 0.
             sweetspot: -0.2235 #0.5 #0.62 0.00
             filter: {}
-            mean_gnd_states: (2.438327+0.687596j)
-            mean_exc_states: (2.556497-0.741942j)
+            mean_gnd_states: -1.8243+1.5926j
+            mean_exc_states: -0.8083+2.3929j
             # parameters for single shot classification
-            threshold: 0.102652
-            iq_angle: -1.647
+            threshold: -0.0593
+            iq_angle: -0.667
             # alpha: 208 MHz
         3:
             readout_frequency: 5_783_000_000

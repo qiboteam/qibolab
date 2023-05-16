@@ -349,6 +349,7 @@ class Zurich(AbstractInstrument):
                 modulation_type=lo.ModulationType.SOFTWARE,
             ),
             local_oscillator=lo.Oscillator(
+                uid="lo_shfqa",
                 frequency=int(qubit.readout.local_oscillator.frequency),
                 # frequency=0.0, # This and PortMode.LF allow debugging with and oscilloscope
             ),
@@ -367,6 +368,7 @@ class Zurich(AbstractInstrument):
                 modulation_type=lo.ModulationType.SOFTWARE,
             ),
             local_oscillator=lo.Oscillator(
+                uid="lo_shfqa",
                 frequency=int(qubit.readout.local_oscillator.frequency),
             ),
             range=qubit.feedback.power_range,
@@ -384,6 +386,7 @@ class Zurich(AbstractInstrument):
                 modulation_type=lo.ModulationType.HARDWARE,
             ),
             local_oscillator=lo.Oscillator(
+                uid="lo_shfqc",
                 frequency=int(qubit.drive.local_oscillator.frequency),
             ),
             range=qubit.drive.power_range,
@@ -481,8 +484,15 @@ class Zurich(AbstractInstrument):
         self.sequence_qibo = sequence
 
         "Fill the sequences with pulses according to their lines in temporal order"
+        # TODO: Check if they invert the order if this will still work
+        last_start = 0
         for pulse in sequence:
             zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"].append(ZhPulse(pulse))
+            if pulse.start > last_start:
+                import warnings
+
+                warnings.warn("Pulse timing translation")
+            last_start = pulse.start
 
         "Mess that gets the sweeper and substitutes the pulse it sweeps in the right place"
         for sweeper in sweepers:
