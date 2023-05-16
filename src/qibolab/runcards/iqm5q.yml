@@ -6,6 +6,7 @@ settings:
     sampling_rate: 2.e+9
     relaxation_time: 300.e-6
     time_of_flight: 280.e-9
+    smearing: 0.e-9
     Fast_reset: False
     chip: iqm5q
 

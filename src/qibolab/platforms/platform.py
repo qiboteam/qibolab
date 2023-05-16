@@ -1,11 +1,18 @@
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from enum import Enum, auto
 from typing import Optional
 
-import numpy as np
 from qibo.config import raise_error
 
 from qibolab.platforms.abstract import AbstractPlatform
+from qibolab.result import (
+    AveragedIntegratedResults,
+    AveragedRawWaveformResults,
+    AveragedStateResults,
+    IntegratedResults,
+    RawWaveformResults,
+    StateResults,
+)
 
 
 class DesignPlatform(AbstractPlatform):
@@ -37,41 +44,47 @@ class DesignPlatform(AbstractPlatform):
         self.design.disconnect()
         self.is_connected = False
 
-    def execute_pulse_sequence(self, sequence, **kwargs):
-        options = ExecutionParameters(**kwargs)
+    def execute_pulse_sequence(self, sequence, options, **kwargs):
+        """Executes a pulse sequence.
 
+        Args:
+            sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
+            options (:class:`qibolab.platforms.platform.ExecutionParameters`) Class holding the execution options.
+            **kwargs: May need them for something
+        Returns:
+            Readout results acquired by after execution.
+        """
         if options.relaxation_time is None:
-            options.relaxation_time = self.relaxation_time
-        if options.fast_reset:
-            options.fast_reset = {
-                qubit.name: self.create_RX_pulse(qubit=qubit.name, start=sequence.finish)
-                for qubit in self.qubits.values()
-                if not qubit.flux_coupler
-            }
+            kwargs = asdict(options)
+            kwargs["relaxation_time"] = self.relaxation_time
+            options = ExecutionParameters(**kwargs)
 
-        return self.design.play(
-            self.qubits,
-            sequence,
-            options=options,
-        )
+        return self.design.play(self.qubits, sequence, options)
 
-    def sweep(self, sequence, *sweepers, **kwargs):
-        options = ExecutionParameters(**kwargs)
+    def sweep(self, sequence, options, *sweepers, **kwargs):
+        """Executes a pulse sequence for different values of sweeped parameters.
+        Useful for performing chip characterization.
 
+        Args:
+            sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
+            options (:class:`qibolab.platforms.platform.ExecutionParameters`) Class holding the execution options.
+            *sweepers (:class:`qibolab.sweeper.Sweeper`): Sweeper objects that specify which
+                parameters are being sweeped.
+            **kwargs: May need them for something
+
+        Returns:
+            Readout results acquired by after execution.
+        """
         if options.relaxation_time is None:
-            options.relaxation_time = self.relaxation_time
-        if options.fast_reset:
-            options.fast_reset = {
-                qubit.name: self.create_RX_pulse(qubit=qubit.name, start=sequence.finish)
-                for qubit in self.qubits.values()
-                if not qubit.flux_coupler
-            }
+            kwargs = asdict(options)
+            kwargs["relaxation_time"] = self.relaxation_time
+            options = ExecutionParameters(**kwargs)
 
         return self.design.sweep(
             self.qubits,
             sequence,
+            options,
             *sweepers,
-            options=options,
         )
 
     def set_lo_drive_frequency(self, qubit, freq):
@@ -85,6 +98,18 @@ class DesignPlatform(AbstractPlatform):
 
     def get_lo_readout_frequency(self, qubit):
         return self.qubits[qubit].readout.local_oscillator.frequency
+
+    def set_lo_twpa_frequency(self, qubit, freq):
+        self.qubits[qubit].twpa.local_oscillator.frequency = freq
+
+    def get_lo_twpa_frequency(self, qubit):
+        return self.qubits[qubit].twpa.local_oscillator.frequency
+
+    def set_lo_twpa_power(self, qubit, power):
+        self.qubits[qubit].twpa.local_oscillator.power = power
+
+    def get_lo_twpa_power(self, qubit):
+        return self.qubits[qubit].twpa.local_oscillator.power
 
     def set_attenuation(self, qubit, att):
         raise_error(NotImplementedError, f"{self.name} does not support attenuation.")
@@ -108,38 +133,73 @@ class DesignPlatform(AbstractPlatform):
 class AcquisitionType(Enum):
     """
     Types of data acquisition from hardware.
-    (SPECTROSCOPY[Weird Zurich mode], INTEGRATION, RAW, DISCRIMINATION)
+
+    SPECTROSCOPY: Zurich Integration mode for RO frequency sweeps,
+    INTEGRATION: Demodulate and integrate the waveform,
+    RAW: Acquire the waveform as it is,
+    DISCRIMINATION: Demodulate, integrate the waveform and discriminate among states based on the voltages
+
     """
 
     RAW = auto()
     INTEGRATION = auto()
+    SPECTROSCOPY = auto()
     DISCRIMINATION = auto()
 
 
 class AveragingMode(Enum):
     """
     Types of data averaging from hardware.
-    (CYLIC[True averaging], SINGLESHOT[False averaging], [SEQUENTIAL, bad averaging])
+
+    CYLIC: Better averaging for noise,
+    SINGLESHOT: False averaging,
+    [SEQUENTIAL: Worse averaging for noise]
+
     """
 
     CYCLIC = auto()
     SINGLESHOT = auto()
 
 
-@dataclass
+RESULTS_TYPE = {
+    AveragingMode.CYCLIC: {
+        AcquisitionType.INTEGRATION: AveragedIntegratedResults,
+        AcquisitionType.RAW: AveragedRawWaveformResults,
+        AcquisitionType.DISCRIMINATION: AveragedStateResults,
+    },
+    AveragingMode.SINGLESHOT: {
+        AcquisitionType.INTEGRATION: IntegratedResults,
+        AcquisitionType.RAW: RawWaveformResults,
+        AcquisitionType.DISCRIMINATION: StateResults,
+    },
+}
+
+
+@dataclass(frozen=True)
 class ExecutionParameters:
     """Data structure to deal with execution parameters
 
-    :nshots: Number of shots per point on the experiment
-    :relaxation_time: Relaxation time for the qubit
-    :fast_reset: Enable or disable fast reset
-    :sim_time: Time for the simulation execution
-    :acquisition_type: Data acquisition mode
-    :averaging_mode: Data averaging mode
+    :nshots: nshots (int): Number of shots to sample from the experiment. Default is 1024.
+    relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in s.
+                If ``None`` the default value provided as ``relaxation_time`` in the runcard will be used.
+    :fast_reset (bool): Enable or disable fast reset
+    :acquisition_type (AcquisitionType): Data acquisition mode
+    :averaging_mode (AveragingMode): Data averaging mode
     """
 
     nshots: Optional[int] = 1024
-    relaxation_time: Optional[np.uint32] = 100e-9
+    relaxation_time: Optional[float] = None
     fast_reset: bool = False
     acquisition_type: AcquisitionType = AcquisitionType.DISCRIMINATION
     averaging_mode: AveragingMode = AveragingMode.SINGLESHOT
+
+    # def __post_init__(self):
+    #     if not isinstance(self.acquisition_type, AcquisitionType):
+    #         raise TypeError("acquisition_type is not valid")
+    #     if not isinstance(self.averaging_mode, AveragingMode):
+    #         raise TypeError("averaging mode is not valid")
+
+    @property
+    def results_type(self):
+        """Returns corresponding results class"""
+        return RESULTS_TYPE[self.averaging_mode][self.acquisition_type]

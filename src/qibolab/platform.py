@@ -303,6 +303,10 @@ def create_tii_IQM5q(runcard, descriptor=None):
 
     controller = Zurich("EL_ZURO", descriptor, use_emulation=False)
 
+    # set time of flight for readout integration (HARDCODED)
+    controller.time_of_flight = 280e-9
+    controller.smearing = 100e-9
+
     # Instantiate local oscillators
     local_oscillators = [LocalOscillator(f"lo_{kind}", None) for kind in ["readout"] + [f"drive_{n}" for n in range(4)]]
 
@@ -322,7 +326,7 @@ def create_tii_IQM5q(runcard, descriptor=None):
     platform = DesignPlatform("IQM5q", design, runcard)
     platform.resonator_type = "2D"
 
-    # assign channels to qubits
+    # assign channels to qubits and sweetspots(operating points)
     qubits = platform.qubits
     for q in range(0, 5):
         qubits[q].feedback = channels["L3-31"]
@@ -333,7 +337,7 @@ def create_tii_IQM5q(runcard, descriptor=None):
         qubits[q].flux = channels[f"L4-{6 + q}"]
         channels[f"L4-{6 + q}"].qubit = qubits[q]
 
-    # assign channels to couplers
+    # assign channels to couplers and sweetspots(operating points)
     for c in range(0, 2):
         qubits[f"c{c}"].flux = channels[f"L4-{11 + c}"]
         channels[f"L4-{11 + c}"].qubit = qubits[f"c{c}"]
