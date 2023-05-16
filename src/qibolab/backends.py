@@ -71,16 +71,10 @@ class QibolabBackend(NumpyBackend):
             native_circuit = circuit
         else:
             # Transform a circuit into proper connectivity and native gates
-            native_circuit = self.transpiler.transpile(circuit)
+            native_circuit, qubit_map = self.transpiler.transpile(circuit)
+            # TODO: Use the qubit map to properly map measurements
             if check_transpiled:
-                # TODO: Maybe move this to ``AbstractTranspiler``?
-                backend = NumpyBackend()
-                target_state = backend.execute_circuit(circuit).state()
-                final_state = backend.execute_circuit(native_circuit).state()
-                fidelity = np.abs(np.dot(np.conj(target_state), final_state))
-                np.testing.assert_allclose(fidelity, 1.0)
-                if self.transpiler.verbose:
-                    log.info("Transpiler test passed.")
+                self.transpiler.check_execution(circuit, native_circuit)
 
         # Transpile the native circuit into a sequence of pulses ``PulseSequence``
         sequence = self.platform.transpile(native_circuit)
