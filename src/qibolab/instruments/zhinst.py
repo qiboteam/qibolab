@@ -1,4 +1,5 @@
 import os
+import warnings
 from collections import defaultdict
 from dataclasses import asdict
 from pathlib import Path
@@ -499,7 +500,7 @@ class Zurich(AbstractInstrument):
                             elif isinstance(aux_list[aux_list.index(element)], ZhSweeper):
                                 aux_list[aux_list.index(element)].add_sweeper(sweeper, qubits[pulse.qubit])
             elif sweeper.parameter.name in {"bias"}:
-                for qubit in sweeper.qubits.values():
+                for qubit in sweeper.qubits:
                     zhsequence[f"flux{qubit.name}"] = [ZhSweeperLine(sweeper, qubit, sequence)]
             # FIXME: This may not place the Zhsweeper when the delay occurs among different sections or lines
             elif sweeper.parameter.name in {"delay"}:
@@ -767,7 +768,7 @@ class Zurich(AbstractInstrument):
                                 measure_pulse_parameters=None,
                                 measure_pulse_amplitude=None,
                                 acquire_delay=self.time_of_flight,
-                                reset_delay=relaxation_time,
+                                reset_delay=relaxation_time * 1e-9,
                             )
                             i += 1
 
@@ -792,9 +793,25 @@ class Zurich(AbstractInstrument):
     def sweep(self, qubits, sequence, options, *sweepers):
         """Play pulse and sweepers sequence"""
 
-        dimensions = [options.nshots]
+        dimensions = []
+        if options.averaging_mode == AveragingMode.SINGLESHOT:
+            dimensions = [options.nshots]
+
         for sweep in sweepers:
             dimensions.append(len(sweep.values))
+
+        # Re-arranging sweepers based on hardward limitations
+        # If Parameter.Frequency can only be swept in the first loop
+        # FIXME: Will not work for multiple frequency sweepers
+        sweepers = list(sweepers)
+        rearranging_axes = [[], []]
+        for sweeper in sweepers:
+            if sweeper.parameter == Parameter.frequency:
+                rearranging_axes[0] += [sweepers.index(sweeper)]
+                rearranging_axes[1] += [0]
+                sweepers.remove(sweeper)
+                sweepers.insert(0, sweeper)
+                warnings.warn("Frequency sweepers was moved first in the list of sweepers")
 
         # TODO: Read frequency for pulses instead of qubit patch
         for qubit in qubits.values():
@@ -808,7 +825,7 @@ class Zurich(AbstractInstrument):
         Play pulse sequence steps, one on each method:
         Translation, Calibration, Experiment Definition and Execution.
         """
-        self.sweepers = list(sweepers)
+        self.sweepers = sweepers
         self.sequence_zh(sequence, qubits, sweepers)
         self.calibration_step(qubits)
         self.create_exp(qubits, options)
@@ -822,6 +839,8 @@ class Zurich(AbstractInstrument):
             if not qubit.flux_coupler:
                 if self.sequence[f"readout{qubit.name}"]:
                     exp_res = self.results.get_data(f"sequence{qubit.name}")
+                    # Reorder dimensions
+                    exp_res = np.moveaxis(exp_res, rearranging_axes[0], rearranging_axes[1])
                     if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                         if options.averaging_mode is AveragingMode.CYCLIC:
                             states = np.array([exp_res])
@@ -837,8 +856,6 @@ class Zurich(AbstractInstrument):
 
         exp_dimensions = list(np.array(exp_res).shape)
         if dimensions != exp_dimensions:
-            import warnings
-
             print("dimensions", dimensions, "experiment", exp_dimensions)
             warnings.warn("dimensions not properly ordered")
 
@@ -884,7 +901,7 @@ class Zurich(AbstractInstrument):
                 )
 
         if sweeper.parameter is Parameter.bias:
-            for qubit in sweeper.qubits.values():
+            for qubit in sweeper.qubits:
                 parameter = ZhSweeperLine(sweeper, qubit, self.sequence_qibo).zhsweeper
 
         elif sweeper.parameter is Parameter.delay:
