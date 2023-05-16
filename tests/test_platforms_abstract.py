@@ -159,3 +159,13 @@ def test_add_measurement_to_sequence(platform_name):
     MZ_pulse = platform.create_MZ_pulse(0, start=RX90_pulse2.finish)
     s = PulseSequence(RX90_pulse1, RX90_pulse2, MZ_pulse)
     assert sequence.serial == s.serial
+
+
+def test_update(platform_name):
+    platform = Platform(platform_name)
+    readout_frequencies = np.ones(platform.nqubits)
+    updates = {"t2": {platform.qubits[i].name: readout_frequencies[i] for i in range(platform.nqubits)}}
+    platform.update(updates)
+
+    for i in range(platform.nqubits):
+        assert updates["t2"][i] == platform.settings["characterization"]["single_qubit"][platform.qubits[i].name]["T2"]
