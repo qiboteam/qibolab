@@ -2,10 +2,10 @@ nqubits: 5
 description: IQM 5-qubit device, controlled with Zurich Instruments.
 
 settings:
-    hardware_avg: 4096
+    hardware_avg: 1024
     sampling_rate: 2.e+9
-    relaxation_time: 300.e-6
-    time_of_flight: 280.e-9
+    relaxation_time: 300_000_000
+    time_of_flight: 280
     smearing: 0.e-9
     Fast_reset: False
     chip: iqm5q
@@ -24,7 +24,7 @@ native_gates:
         0: # qubit number
             RX:
                 duration: 40
-                amplitude: 0.566
+                amplitude: 0.603
                 frequency: 4_093_830_788 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.02)
@@ -70,7 +70,7 @@ native_gates:
         2: # qubit number
             RX:
                 duration: 40 #200 #60
-                amplitude: 0.544 #0.54 # Multiplied by the sweeper ?
+                amplitude: 0.59 
                 frequency: 4_300_587_281  #4_401_600_000 #4_505_500_000 #4_321_500_000 # 4_541_100_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
