@@ -238,10 +238,10 @@ class TII_RFSOC4x2(AbstractInstrument):
                 serial = ro_pulse.serial
 
                 if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
-                    shots = self.classify_shots(i_pulse, q_pulse, qubits[ro_pulse.qubit])
-                    result = execution_parameters.results_type(states=shots, shots=execution_parameters.nshots)
+                    discriminated_shots = self.classify_shots(i_pulse, q_pulse, qubits[ro_pulse.qubit])
+                    result = execution_parameters.results_type(discriminated_shots)
                 else:
-                    result = execution_parameters.results_type(i=i_pulse, q=q_pulse, shots=execution_parameters.nshots)
+                    result = execution_parameters.results_type(np.complex(i_pulse, q_pulse))
                 results[ro_pulse.qubit] = results[serial] = result
 
         return results
@@ -365,7 +365,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         """
         for serial in dict_b:
             if serial in dict_a:
-                dict_a[serial] = dict_a[serial] + dict_b[serial]
+                dict_a[serial] = np.append(dict_a[serial], dict_b[serial])
             else:
                 dict_a[serial] = dict_b[serial]
         return dict_a
@@ -442,29 +442,32 @@ class TII_RFSOC4x2(AbstractInstrument):
         Returns:
             A dict mapping the readout pulses serial to qibolab results objects
         """
-        sweep_results = {}
+        results = {}
 
         adcs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
         for k in range(len(adcs)):
-            for j in range(len(sweeper.values)):
-                results = {}
-                # add a result for every readouts pulse
-                for i, serial in enumerate(original_ro):
-                    i_pulse = np.array(toti[k][i][j])
-                    q_pulse = np.array(totq[k][i][j])
+            i_vals = []
+            q_vals = []
+            for i, serial in enumerate(original_ro):
+                i_pulse = np.array(toti[k][i])
+                q_pulse = np.array(totq[k][i])
 
-                    if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
-                        qubit = qubits[sequence.ro_pulses[i].qubit]
-                        shots = self.classify_shots(i_pulse, q_pulse, qubit)
-                        result = execution_parameters.results_type(states=shots, shots=execution_parameters.nshots)
-                    else:
-                        result = execution_parameters.results_type(
-                            i=i_pulse, q=q_pulse, shots=execution_parameters.nshots
-                        )
-                    results[sequence.ro_pulses[i].qubit] = results[serial] = result
-                # merge new result with already saved ones
-                sweep_results = self.merge_sweep_results(sweep_results, results)
-        return sweep_results
+                i_vals.append(i_pulse)
+                q_vals.append(q_pulse)
+
+            shape = i_vals.shape
+            np.reshape(i_vals, (execution_parameters.nshots, *shape[:-1]))
+            np.reshape(q_vals, (execution_parameters.nshots, *shape[:-1]))
+
+            if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
+                qubit = qubits[sequence.ro_pulses[i].qubit]
+                discrimated_shots = self.classify_shots(i_vals, q_vals, qubit)
+                result = execution_parameters.results_type(discrimated_shots)
+            else:
+                result = execution_parameters.results_type(np.complex(i_vals, q_vals))
+
+            results[sequence.ro_pulses[i].qubit] = results[serial] = result
+        return results
 
     def sweep(
         self,
