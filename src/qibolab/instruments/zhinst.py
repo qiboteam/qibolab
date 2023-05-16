@@ -626,7 +626,12 @@ class Zurich(AbstractInstrument):
             if any("amplitude" in param for param in parameters):
                 # Zurich is already multiplying the pulse amplitude with the sweeper amplitude
                 # FIXME: Recheck and do relative amplitude sweeps by converting
-                # pulse.zhpulse.amplitude = 1
+
+                pulse.zhpulse.amplitude = pulse.zhpulse.amplitude * max(pulse.zhsweeper.values)
+                pulse.zhsweeper.values = pulse.zhsweeper.values / max(pulse.zhsweeper.values)
+
+                # import warnings
+                # warnings.warn()
 
                 exp.play(
                     signal=f"{section}{qubit.name}",
@@ -902,6 +907,11 @@ class Zurich(AbstractInstrument):
                         modulation_type=lo.ModulationType.HARDWARE,
                     )
                 )
+        if sweeper.parameter is Parameter.amplitude:
+            for pulse in sweeper.pulses:
+                pulse.amplitude = pulse.amplitude * max(sweeper.values)
+                sweeper.values = sweeper.values / max(sweeper.values)
+                parameter = ZhSweeper(pulse, sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
 
         if sweeper.parameter is Parameter.bias:
             for qubit in sweeper.qubits:
