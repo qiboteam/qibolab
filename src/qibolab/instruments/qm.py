@@ -1,9 +1,11 @@
 import collections
 import math
 from dataclasses import dataclass, field
+from typing import Dict, List, Optional
 
 import numpy as np
 from qibo.config import log, raise_error
+from qm import qua
 from qm.qua import (
     align,
     assign,
@@ -18,10 +20,10 @@ from qm.qua import (
     program,
     reset_frame,
     reset_phase,
-    save,
     stream_processing,
     wait,
 )
+from qm.qua._dsl import _ResultSource, _Variable  # for type declaration only
 from qm.QuantumMachinesManager import QuantumMachinesManager
 from qualang_tools.bakery import baking
 from qualang_tools.loops import from_array
@@ -218,7 +220,7 @@ class QMConfig:
                 "drive0", "drive1", "flux0", "readout0", ...
         """
         if pulse.serial not in self.pulses:
-            if pulse.type.name == "DRIVE":
+            if pulse.type is PulseType.DRIVE:
                 serial_i = self.register_waveform(pulse, "i")
                 serial_q = self.register_waveform(pulse, "q")
                 self.pulses[pulse.serial] = {
@@ -235,7 +237,7 @@ class QMConfig:
                 # register drive pulse in elements
                 self.elements[f"drive{qubit.name}"]["operations"][pulse.serial] = pulse.serial
 
-            elif pulse.type.name == "FLUX":
+            elif pulse.type is PulseType.FLUX:
                 serial = self.register_waveform(pulse)
                 self.pulses[pulse.serial] = {
                     "operation": "control",
@@ -249,7 +251,7 @@ class QMConfig:
                 # register flux pulse in elements
                 self.elements[f"flux{qubit.name}"]["operations"][pulse.serial] = pulse.serial
 
-            elif pulse.type.name == "READOUT":
+            elif pulse.type is PulseType.READOUT:
                 serial_i = self.register_waveform(pulse, "i")
                 serial_q = self.register_waveform(pulse, "q")
                 self.register_integration_weights(qubit, pulse.duration)
@@ -318,64 +320,126 @@ class QMConfig:
                 object that the integration weights will be used for.
             readout_len (int): Duration of the readout pulse in ns.
         """
-        rotation_angle = qubit.rotation_angle
+        iq_angle = qubit.iq_angle
         self.integration_weights.update(
             {
                 f"cosine_weights{qubit.name}": {
-                    "cosine": [(np.cos(rotation_angle), readout_len)],
-                    "sine": [(-np.sin(rotation_angle), readout_len)],
+                    "cosine": [(np.cos(iq_angle), readout_len)],
+                    "sine": [(-np.sin(iq_angle), readout_len)],
                 },
                 f"sine_weights{qubit.name}": {
-                    "cosine": [(np.sin(rotation_angle), readout_len)],
-                    "sine": [(np.cos(rotation_angle), readout_len)],
+                    "cosine": [(np.sin(iq_angle), readout_len)],
+                    "sine": [(np.cos(iq_angle), readout_len)],
                 },
                 f"minus_sine_weights{qubit.name}": {
-                    "cosine": [(-np.sin(rotation_angle), readout_len)],
-                    "sine": [(-np.cos(rotation_angle), readout_len)],
+                    "cosine": [(-np.sin(iq_angle), readout_len)],
+                    "sine": [(-np.cos(iq_angle), readout_len)],
                 },
             }
         )
 
 
+@dataclass
+class AcquisitionVariables:
+    """QUA variables used for saving of acquisition results.
+    This class can be instantiated only within a QUA program scope.
+    Each readout pulse is associated with its own set of acquisition variables.
+    """
+
+    I: _Variable = field(default_factory=lambda: declare(fixed))
+    Q: _Variable = field(default_factory=lambda: declare(fixed))
+    """Variables to save the (I, Q) values acquired from a single shot."""
+    I_stream: _ResultSource = field(default_factory=lambda: declare_stream())
+    Q_stream: _ResultSource = field(default_factory=lambda: declare_stream())
+    """Streams to collect the results of all shots."""
+
+    raw_adc: bool = False
+    """Flag to select whether we are acquiring raw ADC data."""
+    adc_stream: Optional[_ResultSource] = None
+    """Stream to collect raw ADC data."""
+
+    threshold: Optional[float] = None
+    """Threshold to be used for classification of single shots."""
+    angle: Optional[float] = None
+    """Angle in the IQ plane to be used for classification of single shots."""
+    shot: Optional[_Variable] = None
+    shots: Optional[_ResultSource] = None
+    """Variable and stream to collect the classified shots.
+    Used only if a threshold and angle is given.
+    """
+
+    def __post_init__(self):
+        """Create QUA variables needed for single shot classification."""
+        if self.raw_adc:
+            self.adc_stream = declare_stream(adc_trace=True)
+
+        if self.threshold is not None and self.angle is not None:
+            self.shot = declare(bool)
+            self.shots = declare_stream()
+            self.cos = np.cos(self.angle)
+            self.sin = np.sin(self.angle)
+
+    def save(self):
+        """QUA instruction to save acquired results from variables to streams."""
+        qua.save(self.I, self.I_stream)
+        qua.save(self.Q, self.Q_stream)
+        if self.shot is not None:
+            qua.save(self.shot, self.shots)
+
+    def classify_shots(self):
+        """QUA instruction to classify shots in real time and save the result to a variable."""
+        if self.threshold is not None and self.angle is not None:
+            assign(self.shot, self.I * self.cos - self.Q * self.sin > self.threshold)
+
+
 class QMPulse:
-    def __init__(self, pulse):
-        self.pulse = pulse
-        self.element = f"{pulse.type.name.lower()}{pulse.qubit}"
-        self.operation = pulse.serial
-        self.relative_phase = pulse.relative_phase / (2 * np.pi)
-        self.duration = pulse.duration
+    """Wrapper around :class:`qibolab.pulses.Pulse` for easier translation to QUA program."""
 
-        # Stores the baking object (for pulses that need 1ns resolution)
+    def __init__(self, pulse: Pulse):
+        self.pulse: Pulse = pulse
+        """:class:`qibolab.pulses.Pulse` implemting the current pulse."""
+        self.element: str = f"{pulse.type.name.lower()}{pulse.qubit}"
+        """Element that the pulse will be played on, as defined in the QM config."""
+        self.operation: str = pulse.serial
+        """Name of the operation that is implementing the pulse in the QM config."""
+        self.relative_phase: float = pulse.relative_phase / (2 * np.pi)
+        """Relative phase of the pulse normalized to follow QM convention.
+        May be overrident when sweeping phase."""
+        self.duration: int = pulse.duration
+        """Duration of the pulse. May be overrident when sweeping duration."""
+        self.wait_time: int = 0
+        """Time (in clock cycles) to wait before playing this pulse.
+        Calculated and assigned by :meth:`qibolab.instruments.qm.Sequence.add`."""
+        self.wait_time_variable: Optional[_Variable] = None
+        """Time (in clock cycles) to wait before playing this pulse when we are sweeping delay."""
+        self.acquisition: AcquisitionVariables = None
+        """Data class containing the variables required for data acquisition for the instrument."""
+
+        self.next: set = set()
+        """Pulses that will be played after the current pulse.
+        These pulses need to be re-aligned if we are sweeping the delay or duration."""
+
         self.baked = None
+        """Baking object implementing the pulse when 1ns resolution is needed."""
         self.baked_amplitude = None
+        """Amplitude of the baked pulse."""
 
-        self.raw_adc = None
-        self.I = None
-        self.Q = None
-        self.shot = None
-        self.I_st = None
-        self.Q_st = None
-        self.shots = None
-        self.threshold = None
-        self.cos = None
-        self.sin = None
+    @property
+    def wait_cycles(self):
+        """Instrument clock cycles (1 cycle = 4ns) to wait before playing the pulse.
 
-    def declare_output(self, threshold=None, iq_angle=None, raw_adc=False):
-        if raw_adc:
-            self.raw_adc = declare_stream(adc_trace=True)
-
+        This property will be used in the QUA ``wait`` command, so that it is compatible
+        with and without delay sweepers.
+        """
+        if self.wait_time_variable is not None:
+            return self.wait_time_variable + self.wait_time
+        elif self.wait_time >= 4:
+            return self.wait_time
         else:
-            self.I = declare(fixed)
-            self.Q = declare(fixed)
-            self.I_st = declare_stream()
-            self.Q_st = declare_stream()
-            if threshold is not None:
-                # QUA variables used for single shot classification
-                self.shot = declare(bool)
-                self.shots = declare_stream()
-                self.threshold = threshold
-                self.cos = np.cos(iq_angle)
-                self.sin = np.sin(iq_angle)
+            return None
+
+    def declare_output(self, threshold=None, angle=None, raw_adc=False):
+        self.acquisition = AcquisitionVariables(threshold=threshold, angle=angle, raw_adc=raw_adc)
 
     def bake(self, config: QMConfig):
         if self.baked is not None:
@@ -401,23 +465,56 @@ class QMPulse:
         self.duration = self.baked.get_op_length()
 
 
-class QMSequence(list):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # keep track of readout pulses for registering outputs
-        self.ro_pulses = []
-        # map from qibolab pulses to QMPulses (useful when sweeping)
-        self.pulse_to_qmpulse = {}
+@dataclass
+class Sequence:
+    """Pulse sequence containing QM specific pulses (``qmpulse``).
+    Defined in :meth:`qibolab.instruments.qm.QMOPX.play`.
+    Holds attributes for the ``element`` and ``operation`` that
+    corresponds to each pulse, as defined in the QM config.
+    """
 
-    def add(self, pulse):
+    qmpulses: List[QMPulse] = field(default_factory=list)
+    """List of :class:`qibolab.instruments.qm.QMPulse` objects corresponding to the original pulses."""
+    ro_pulses: List[QMPulse] = field(default_factory=list)
+    """List of readout pulses used for registering outputs."""
+    pulse_to_qmpulse: Dict[Pulse, QMPulse] = field(default_factory=dict)
+    """Map from qibolab pulses to QMPulses (useful when sweeping)."""
+    clock: Dict[str, int] = field(default_factory=lambda: collections.defaultdict(int))
+    """Dictionary used to keep track of times of each element, in order to calculate wait times."""
+    pulse_finish: Dict[int, List[QMPulse]] = field(default_factory=lambda: collections.defaultdict(list))
+    """Map to find all pulses that finish at a given time (useful for ``_find_previous``)."""
+
+    def _find_previous(self, pulse):
+        for finish in reversed(sorted(self.pulse_finish.keys())):
+            if finish <= pulse.start:
+                # first try to find a previous pulse targeting the same qubit
+                last_pulses = self.pulse_finish[finish]
+                for previous in reversed(last_pulses):
+                    if previous.pulse.qubit == pulse.qubit:
+                        return previous
+        return None
+
+    def add(self, pulse: Pulse):
         if not isinstance(pulse, Pulse):
             raise_error(TypeError, f"Pulse {pulse} has invalid type {type(pulse)}.")
 
         qmpulse = QMPulse(pulse)
         self.pulse_to_qmpulse[pulse.serial] = qmpulse
-        if pulse.type.name == "READOUT":
+        if pulse.type is PulseType.READOUT:
             self.ro_pulses.append(qmpulse)
-        super().append(qmpulse)
+
+        previous = self._find_previous(pulse)
+        if previous is not None:
+            previous.next.add(qmpulse)
+
+        wait_time = pulse.start - self.clock[qmpulse.element]
+        if wait_time >= 12:
+            qmpulse.wait_time = wait_time // 4 + 1
+            self.clock[qmpulse.element] += 4 * qmpulse.wait_time
+        self.clock[qmpulse.element] += qmpulse.duration
+
+        self.pulse_finish[pulse.finish].append(qmpulse)
+        self.qmpulses.append(qmpulse)
         return qmpulse
 
 
@@ -507,6 +604,39 @@ class QMOPX(AbstractInstrument):
 
         return machine.execute(program)
 
+    def create_qmsequence(self, qubits, sequence):
+        """Translates a :class:`qibolab.pulses.PulseSequence` to a :class:`qibolab.instruments.qm.Sequence`.
+        Also register flux elements for all qubits (if applicable) so that all qubits are operated at their
+        sweetspot.
+        Args:
+            qubits (list): List of :class:`qibolab.platforms.abstract.Qubit` objects
+                passed from the platform.
+            sequence (:class:`qibolab.pulses.PulseSequence`). Pulse sequence to translate.
+        Returns:
+            (:class:`qibolab.instruments.qm.Sequence`) containing the pulses from given pulse sequence.
+        """
+        # register flux elements for all qubits so that they are
+        # always at sweetspot even when they are not used
+        for qubit in qubits.values():
+            if qubit.flux:
+                self.config.register_flux_element(qubit)
+
+        # Current driver cannot play overlapping pulses on drive and flux channels
+        # If we want to play overlapping pulses we need to define different elements on the same ports
+        # like we do for readout multiplex
+        qmsequence = Sequence()
+        for pulse in sorted(sequence.pulses, key=lambda pulse: (pulse.start, pulse.duration)):
+            qmpulse = qmsequence.add(pulse)
+            if pulse.type is PulseType.FLUX:
+                # register flux element (if it does not already exist)
+                self.config.register_flux_element(qubits[pulse.qubit], pulse.frequency)
+                qmpulse.bake(self.config)
+            else:
+                if pulse.duration % 4 != 0 or pulse.duration < 16:
+                    raise_error(NotImplementedError, "1ns resolution is available for flux pulses only.")
+                self.config.register_pulse(qubits[pulse.qubit], pulse, self.time_of_flight, self.smearing)
+        return qmsequence
+
     @staticmethod
     def readout(qmpulse, raw_adc):
         """Plays a readout pulse and assigns the acquired results in QUA variables.
@@ -515,22 +645,18 @@ class QMOPX(AbstractInstrument):
             qmpulse (:class:`qibolab.instruments.qm.QMPulse`): Readout pulse to play.
             raw_adc (bool): If ``True`` it captures the raw ADC signal, otherwise it integrates.
         """
+        acquisition = qmpulse.acquisition
         if raw_adc:
-            measure(
-                qmpulse.operation,
-                qmpulse.element,
-                qmpulse.raw_adc,
-            )
+            measure(qmpulse.operation, qmpulse.element, acquisition.adc_stream)
         else:
             measure(
                 qmpulse.operation,
                 qmpulse.element,
                 None,
-                dual_demod.full("cos", "out1", "sin", "out2", qmpulse.I),
-                dual_demod.full("minus_sin", "out1", "cos", "out2", qmpulse.Q),
+                dual_demod.full("cos", "out1", "sin", "out2", acquisition.I),
+                dual_demod.full("minus_sin", "out1", "cos", "out2", acquisition.Q),
             )
-            if qmpulse.threshold is not None:
-                assign(qmpulse.shot, qmpulse.I * qmpulse.cos - qmpulse.Q * qmpulse.sin > qmpulse.threshold)
+            acquisition.classify_shots()
 
     @staticmethod
     def play_pulses(qmsequence, relaxation_time=0, raw_adc=False):
@@ -546,15 +672,10 @@ class QMOPX(AbstractInstrument):
         """
         needs_reset = False
         align()
-        clock = collections.defaultdict(int)
-        for qmpulse in qmsequence:
+        for qmpulse in qmsequence.qmpulses:
             pulse = qmpulse.pulse
-            wait_time = pulse.start - clock[qmpulse.element]
-            if wait_time >= 12:
-                wait_cycles = wait_time // 4 + 1
-                wait(wait_cycles, qmpulse.element)
-                clock[qmpulse.element] += 4 * wait_cycles
-            clock[qmpulse.element] += qmpulse.duration
+            if qmpulse.wait_cycles is not None:
+                wait(qmpulse.wait_cycles, qmpulse.element)
             if pulse.type is PulseType.READOUT:
                 QMOPX.readout(qmpulse, raw_adc)
             else:
@@ -574,15 +695,12 @@ class QMOPX(AbstractInstrument):
 
         # for Rabi-length?
         if relaxation_time > 0:
-            wait(relaxation_time // 4, *clock.keys())
+            wait(relaxation_time // 4)
 
         # Save data to the stream processing
         if not raw_adc:
             for qmpulse in qmsequence.ro_pulses:
-                save(qmpulse.I, qmpulse.I_st)
-                save(qmpulse.Q, qmpulse.Q_st)
-                if qmpulse.threshold is not None:
-                    save(qmpulse.shot, qmpulse.shots)
+                qmpulse.acquisition.save()
 
     @staticmethod
     def fetch_results(result, ro_pulses, average, raw_adc=False):
@@ -621,14 +739,15 @@ class QMOPX(AbstractInstrument):
     def save_streams(qmpulse, nshots, raw_adc):
         """Saves streams acquired from readout."""
         serial = qmpulse.pulse.serial
+        acquisition = qmpulse.acquisition
         if raw_adc:
-            qmpulse.raw_adc.input1().average().save(f"{serial}_I")
-            qmpulse.raw_adc.input2().average().save(f"{serial}_Q")
+            acquisition.adc_stream.input1().average().save(f"{serial}_I")
+            acquisition.adc_stream.input2().average().save(f"{serial}_Q")
         else:
-            qmpulse.I_st.buffer(nshots).save(f"{serial}_I")
-            qmpulse.Q_st.buffer(nshots).save(f"{serial}_Q")
-            if qmpulse.threshold is not None:
-                qmpulse.shots.buffer(nshots).save(f"{serial}_shots")
+            acquisition.I_stream.buffer(nshots).save(f"{serial}_I")
+            acquisition.Q_stream.buffer(nshots).save(f"{serial}_Q")
+            if acquisition.threshold is not None:
+                acquisition.shots.buffer(nshots).save(f"{serial}_shots")
 
     def play(self, qubits, sequence, nshots, relaxation_time, average=False, raw_adc=False):
         """Plays an arbitrary pulse sequence using QUA program.
@@ -643,29 +762,10 @@ class QMOPX(AbstractInstrument):
                 averaged values of i and q. If False the return type is :class:`qibolab.result.ExecutionResults`
                 which includes i, q and shot for each shots.
         """
-        # register flux elements for all qubits so that they are
-        # always at sweetspot even when they are not used
-        for qubit in qubits.values():
-            if qubit.flux:
-                self.config.register_flux_element(qubit)
-
         if not sequence:
             return {}
-        # Current driver cannot play overlapping pulses on drive and flux channels
-        # If we want to play overlapping pulses we need to define different elements on the same ports
-        # like we do for readout multiplex
-        qmsequence = QMSequence()
-        for pulse in sequence:
-            qmpulse = qmsequence.add(pulse)
-            if pulse.duration % 4 or pulse.duration < 16:
-                if pulse.type.name != "FLUX":
-                    raise_error(NotImplementedError, "1ns resolution is available for flux pulses only.")
-                # register flux element (if it does not already exist)
-                self.config.register_flux_element(qubits[pulse.qubit], pulse.frequency)
-                qmpulse.bake(self.config)
-            else:
-                self.config.register_pulse(qubits[pulse.qubit], pulse, self.time_of_flight, self.smearing)
 
+        qmsequence = self.create_qmsequence(qubits, sequence)
         # play pulses using QUA
         with program() as experiment:
             n = declare(int)
@@ -685,24 +785,10 @@ class QMOPX(AbstractInstrument):
         return self.fetch_results(result, sequence.ro_pulses, average, raw_adc)
 
     def sweep(self, qubits, sequence, *sweepers, nshots, relaxation_time, average=True):
-        # register flux elements for all qubits so that they are
-        # always at sweetspot even when they are not used
-        for qubit in qubits.values():
-            if qubit.flux:
-                self.config.register_flux_element(qubit)
+        if not sequence:
+            return {}
 
-        qmsequence = QMSequence()
-        for pulse in sequence:
-            qmpulse = qmsequence.add(pulse)
-            if pulse.duration % 4 or pulse.duration < 16:
-                if pulse.type.name != "FLUX":
-                    raise_error(NotImplementedError, "1ns resolution is available for flux pulses only.")
-                # register flux element (if it does not already exist)
-                self.config.register_flux_element(qubits[pulse.qubit], pulse.frequency)
-                qmpulse.bake(self.config)
-            else:
-                self.config.register_pulse(qubits[pulse.qubit], pulse, self.time_of_flight, self.smearing)
-
+        qmsequence = self.create_qmsequence(qubits, sequence)
         # play pulses using QUA
         with program() as experiment:
             n = declare(int)
@@ -721,14 +807,15 @@ class QMOPX(AbstractInstrument):
 
             with stream_processing():
                 for qmpulse in qmsequence.ro_pulses:
-                    Ist_temp = qmpulse.I_st
-                    Qst_temp = qmpulse.Q_st
-                    if not average and qmpulse.threshold is not None:
-                        shots_temp = qmpulse.shots
+                    acquisition = qmpulse.acquisition
+                    Ist_temp = acquisition.I_stream
+                    Qst_temp = acquisition.Q_stream
+                    if not average and acquisition.threshold is not None:
+                        shots_temp = acquisition.shots
                     for sweeper in reversed(sweepers):
                         Ist_temp = Ist_temp.buffer(len(sweeper.values))
                         Qst_temp = Qst_temp.buffer(len(sweeper.values))
-                        if not average and qmpulse.threshold is not None:
+                        if not average and acquisition.threshold is not None:
                             shots_temp = shots_temp.buffer(len(sweeper.values))
                     serial = qmpulse.pulse.serial
                     if average:
@@ -737,7 +824,7 @@ class QMOPX(AbstractInstrument):
                     else:
                         Ist_temp.buffer(nshots).save(f"{serial}_I")
                         Qst_temp.buffer(nshots).save(f"{serial}_Q")
-                        if qmpulse.threshold is not None:
+                        if acquisition.threshold is not None:
                             shots_temp.buffer(nshots).save(f"{serial}_shots")
 
         result = self.execute_program(experiment)
@@ -837,11 +924,31 @@ class QMOPX(AbstractInstrument):
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
 
+    def sweep_delay(self, sweepers, qubits, qmsequence, relaxation_time):
+        sweeper = sweepers[0]
+        if min(sweeper.values) < 16:
+            raise_error(ValueError, "Cannot sweep delay less than 16ns.")
+
+        delay = declare(int)
+        values = np.array(sweeper.values) // 4
+        with for_(*from_array(delay, values.astype(int))):
+            for pulse in sweeper.pulses:
+                qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
+                # find all pulses that are connected to ``qmpulse`` and update their delays
+                to_process = {qmpulse}
+                while to_process:
+                    next_qmpulse = to_process.pop()
+                    to_process |= next_qmpulse.next
+                    next_qmpulse.wait_time_variable = delay
+
+            self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
+
     SWEEPERS = {
         Parameter.frequency: sweep_frequency,
         Parameter.amplitude: sweep_amplitude,
         Parameter.relative_phase: sweep_relative_phase,
         Parameter.bias: sweep_bias,
+        Parameter.delay: sweep_delay,
     }
 
     def sweep_recursion(self, sweepers, qubits, qmsequence, relaxation_time):

@@ -11,7 +11,7 @@ from qibolab import __version__ as qibolab_version
 from qibolab.compilers import Compiler
 from qibolab.platform import Platform
 from qibolab.platforms.abstract import AbstractPlatform
-from qibolab.transpilers import can_execute, transpile
+from qibolab.transpilers import Pipeline
 
 
 class QibolabBackend(NumpyBackend):
@@ -28,6 +28,7 @@ class QibolabBackend(NumpyBackend):
             "qibolab": qibolab_version,
         }
         self.compiler = Compiler.default()
+        self.transpiler = Pipeline.default(self.platform.two_qubit_natives)
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
@@ -87,20 +88,14 @@ class QibolabBackend(NumpyBackend):
                 "Hardware backend only supports circuits as initial states.",
             )
 
-        two_qubit_natives = self.platform.two_qubit_natives
-        if can_execute(circuit, two_qubit_natives, verbose=False):
+        if self.transpiler is None or self.transpiler.is_satisfied(circuit):
             native_circuit = circuit
         else:
             # Transform a circuit into proper connectivity and native gates
-            log.info("Transpiling circuit.")
-            native_circuit, _ = transpile(circuit, two_qubit_natives)
+            native_circuit, qubit_map = self.transpiler.transpile(circuit)
+            # TODO: Use the qubit map to properly map measurements
             if check_transpiled:
-                backend = NumpyBackend()
-                target_state = backend.execute_circuit(circuit).state()
-                final_state = backend.execute_circuit(native_circuit).state()
-                fidelity = np.abs(np.dot(np.conj(target_state), final_state))
-                np.testing.assert_allclose(fidelity, 1.0)
-                log.info("Transpiler test passed.")
+                self.transpiler.check_execution(circuit, native_circuit)
 
         # Transpile the native circuit into a sequence of pulses ``PulseSequence``
         sequence, measurement_map = self.compiler.compile(native_circuit, self.platform)

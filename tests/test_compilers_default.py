@@ -8,7 +8,7 @@ from qibo.states import CircuitResult
 from qibolab import Platform
 from qibolab.compilers import Compiler
 from qibolab.pulses import PulseSequence
-from qibolab.transpilers import can_execute, transpile
+from qibolab.transpilers import Pipeline
 
 
 def generate_circuit_with_gate(nqubits, gate, *params, **kwargs):
@@ -23,7 +23,7 @@ def compile_circuit(circuit, platform):
     if can_execute(circuit, platform.two_qubit_natives):
         native_circuit = circuit
     else:
-        native_circuit, _ = transpile(circuit, platform.two_qubit_natives)
+        native_circuit, _ = Pipeline.transpile(circuit, platform.two_qubit_natives)
 
     compiler = Compiler.default()
     sequence, _ = compiler.compile(native_circuit, platform)
@@ -41,6 +41,18 @@ def test_u3_sim_agreement():
     rx2 = gates.RX(0, np.pi / 2).asmatrix(backend)
     target_matrix = rz1 @ rx1 @ rz2 @ rx2 @ rz3
     np.testing.assert_allclose(u3_matrix, target_matrix)
+
+
+def compile_circuit(circuit, platform):
+    """Compile a circuit to a pulse sequence."""
+    transpiler = Pipeline.default(platform.two_qubit_natives)
+    if transpiler.is_satisfied(circuit):
+        native_circuit = circuit
+    else:
+        native_circuit, _ = transpiler.transpile(circuit)
+
+    sequence = platform.transpile(native_circuit)
+    return sequence
 
 
 @pytest.mark.parametrize(
@@ -172,3 +184,30 @@ def test_add_measurement_to_sequence(platform_name):
     MZ_pulse = platform.create_MZ_pulse(0, start=RX90_pulse2.finish)
     s = PulseSequence(RX90_pulse1, RX90_pulse2, MZ_pulse)
     assert sequence.serial == s.serial
+
+
+@pytest.mark.parametrize(
+    "par",
+    [
+        "readout_frequency",
+        "sweetspot",
+        "threshold",
+        "bare_resonator_frequency",
+        "drive_frequency",
+        "iq_angle",
+        "mean_gnd_states",
+    ],
+)
+def test_update(platform_name, par):
+    platform = Platform(platform_name)
+    new_values = np.ones(platform.nqubits)
+    updates = {par: {platform.qubits[i].name: new_values[i] for i in range(platform.nqubits)}}
+    # TODO: fix the reload settings for qili1q_os2
+    if platform.name != "qili1q_os2":
+        platform.update(updates)
+        for i in range(platform.nqubits):
+            value = updates[par][i]
+            if "frequency" in par:
+                value *= 1e9
+            assert value == float(platform.settings["characterization"]["single_qubit"][platform.qubits[i].name][par])
+            assert value == float(getattr(platform.qubits[i], par))
