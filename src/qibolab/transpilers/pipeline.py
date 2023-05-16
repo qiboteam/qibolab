@@ -10,7 +10,7 @@ from qibolab.transpilers.star_connectivity import StarConnectivity
 
 
 @dataclass
-class Sequential(Transpiler):
+class Pipeline(Transpiler):
     """Transpiler consisting of a list of smaller transpilers that are applied sequentially."""
 
     transpilers: List[Transpiler]

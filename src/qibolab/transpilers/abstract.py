@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import List, Tuple
 
 from qibo.models import Circuit
 
@@ -15,7 +16,7 @@ class Transpiler(ABC):
         """
 
     @abstractmethod
-    def transpile(self, circuit: Circuit) -> Circuit:
+    def transpile(self, circuit: Circuit) -> Tuple[Circuit, List[int]]:
         """Apply the transpiler transformation on a given circuit.
 
         Args:
