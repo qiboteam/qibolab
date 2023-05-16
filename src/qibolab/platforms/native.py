@@ -1,5 +1,5 @@
 from collections import defaultdict
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field, fields, replace
 from enum import Flag, auto
 from typing import Dict, List, Optional, Union
 
@@ -170,7 +170,11 @@ class SingleQubitNatives:
 
     MZ: Optional[NativePulse] = None
     RX: Optional[NativePulse] = None
-    RX90: Optional[NativePulse] = None
+
+    @property
+    def RX90(self) -> NativePulse:
+        """RX90 native pulse is inferred from RX by halving its amplitude."""
+        return replace(self.RX, name="RX90", amplitude=self.RX.amplitude / 2.0)
 
     @classmethod
     def from_dict(cls, qubit, native_gates):
@@ -183,8 +187,6 @@ class SingleQubitNatives:
                 from the runcard.
         """
         pulses = {n: NativePulse.from_dict(n, pulse, qubit=qubit) for n, pulse in native_gates.items()}
-        pulses["RX90"] = NativePulse.from_dict("RX90", native_gates["RX"], qubit=qubit)
-        pulses["RX90"].amplitude /= 2.0
         return cls(**pulses)
 
 
