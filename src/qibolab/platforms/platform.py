@@ -59,6 +59,11 @@ class DesignPlatform(AbstractPlatform):
             kwargs["relaxation_time"] = self.relaxation_time
             options = ExecutionParameters(**kwargs)
 
+        if options.nshots is None:
+            kwargs = asdict(options)
+            kwargs["nshots"] = self.settings["settings"]["nshots"]
+            options = ExecutionParameters(**kwargs)
+
         return self.design.play(self.qubits, sequence, options)
 
     def sweep(self, sequence, options, *sweepers, **kwargs):
@@ -78,6 +83,11 @@ class DesignPlatform(AbstractPlatform):
         if options.relaxation_time is None:
             kwargs = asdict(options)
             kwargs["relaxation_time"] = self.relaxation_time
+            options = ExecutionParameters(**kwargs)
+
+        if options.nshots is None:
+            kwargs = asdict(options)
+            kwargs["nshots"] = self.settings["settings"]["nshots"]
             options = ExecutionParameters(**kwargs)
 
         return self.design.sweep(

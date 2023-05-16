@@ -764,8 +764,6 @@ class Zurich(AbstractInstrument):
                                         amplitude=1,
                                     )
 
-                            print(pulse.zhpulse)
-
                             measure_pulse_parameters = {"phase": 0}
 
                             exp.measure(
