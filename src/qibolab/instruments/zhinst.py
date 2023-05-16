@@ -1,8 +1,8 @@
 import os
+import warnings
 from collections import defaultdict
 from dataclasses import asdict
 from pathlib import Path
-import warnings
 
 import laboneq._token
 import laboneq.simple as lo
@@ -792,11 +792,11 @@ class Zurich(AbstractInstrument):
 
     def sweep(self, qubits, sequence, options, *sweepers):
         """Play pulse and sweepers sequence"""
-        
+
         dimensions = []
         if options.averaging_mode == AveragingMode.SINGLESHOT:
             dimensions = [options.nshots]
-         
+
         for sweep in sweepers:
             dimensions.append(len(sweep.values))
 
