@@ -2,6 +2,7 @@ import os
 from collections import defaultdict
 from dataclasses import asdict
 from pathlib import Path
+import warnings
 
 import laboneq._token
 import laboneq.simple as lo
@@ -791,9 +792,29 @@ class Zurich(AbstractInstrument):
     def sweep(self, qubits, sequence, options, *sweepers):
         """Play pulse and sweepers sequence"""
 
-        dimensions = [options.nshots]
+        if options.averaging_mode == AveragingMode.SINGLESHOT:
+            dimensions = [options.nshots]
+        else:
+            dimensions = []
+
         for sweep in sweepers:
             dimensions.append(len(sweep.values))
+
+        # Re-arranging sweepers based on hardward limitations
+        # If Parameter.Frequency can only be swept in the first loop
+        # FIXME: Will not work for multiple frequency sweepers
+        sweepers = list(sweepers)
+        rearranging_axes = [[], []]
+        for sweeper in sweepers:
+            if sweeper.parameter == Parameter.frequency:
+                item = sweeper
+                rearranging_axes[0] += [sweepers.index(sweeper)]
+                rearranging_axes[1] += [0]
+                sweepers.remove(sweeper)
+                sweepers.insert(0, item)
+                warnings.warn("Frequency sweepers was moved first in the list of sweepers")
+
+        sweepers = tuple(sweepers)
 
         # TODO: Read frequency for pulses instead of qubit patch
         for qubit in qubits.values():
@@ -833,11 +854,11 @@ class Zurich(AbstractInstrument):
                         results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = options.results_type(
                             data=np.array(exp_res)
                         )
+        # Reorder dimensions
+        exp_res = np.moveaxis(exp_res, rearranging_axes[0], rearranging_axes[1])
 
         exp_dimensions = list(np.array(exp_res).shape)
         if dimensions != exp_dimensions:
-            import warnings
-
             print("dimensions", dimensions, "experiment", exp_dimensions)
             warnings.warn("dimensions not properly ordered")
 
