@@ -24,6 +24,7 @@ It supports:
     - max iq pulse length 8_192ns
     - waveforms cache, uses additional free sequencers if the memory of one sequencer (16384) is exhausted
     - instrument parameters cache
+    - safe disconnection of offsets on termination
 
 The operation of multiple clusters simultaneously is not supported yet.
 https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/
@@ -1072,9 +1073,6 @@ class ClusterQRM_RF(AbstractInstrument):
             self.channels = list(self._channel_port_map.keys())
             if "classification_parameters" in kwargs:
                 self.classification_parameters = kwargs["classification_parameters"]
-
-            self._last_pulsequence_hash = 0
-
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
 
@@ -1175,8 +1173,9 @@ class ClusterQRM_RF(AbstractInstrument):
                 - port gain
                 - port offset
             - multiple readouts for the same qubit (sequence unrolling)
-            - max iq pulse length 8_192ns
-            - waveforms cache, uses additional free sequencers if the memory of one sequencer (16384) is exhausted
+            - pulses of up to 8192 pairs of i, q samples
+            - sequencer memory optimisation (waveforms cache)
+            - extended waveform memory with the use of multiple sequencers
             - intrument parameters cache
 
         Args:
@@ -1282,6 +1281,8 @@ class ClusterQRM_RF(AbstractInstrument):
                 # TODO: let qibocal user decice and the decision to be attached to qibolab.Sweeper
                 # until then:
 
+                #   lo_frequency    - relative values added to the lo_frequency
+                #   attenuation     - absolute values
                 #   frequency       - relative values added to the pulse frequency
                 #   amplitude(gain) - absolute values
                 #   relative_phase  - absolute values
@@ -1358,11 +1359,12 @@ class ClusterQRM_RF(AbstractInstrument):
                 # is equal to pulsesequence duration + acquisition_hold_off if relaxation_time < acquisition_hold_off
 
                 # create registers for key variables
-                nshots_register = Register(
-                    program, "nshots"
-                )  # nshots is used in the loop that iterates over the number of shots
-                bin_n = Register(program, "bin_n")  # during a sweep, each shot is saved in the bin bin_n
-                navgs_register = Register(program, "navgs")  # navgs is used in the loop of hardware averages
+                # nshots is used in the loop that iterates over the number of shots
+                nshots_register = Register(program, "nshots")
+                # during a sweep, each shot is saved in the bin bin_n
+                bin_n = Register(program, "bin_n")
+                # navgs is used in the loop of hardware averages
+                navgs_register = Register(program, "navgs")
 
                 header_block = Block("setup")
                 if active_reset:
@@ -1456,6 +1458,7 @@ class ClusterQRM_RF(AbstractInstrument):
                             delay_after_play = pulses[n + 1].start - pulses[n].start
                         else:
                             delay_after_play = sequence_total_duration - pulses[n].start
+
                         if delay_after_play < minimum_delay_between_instructions:
                             raise Exception(
                                 f"The minimum delay between the start of two pulses in the same channel is {minimum_delay_between_instructions}ns."
@@ -1499,7 +1502,13 @@ class ClusterQRM_RF(AbstractInstrument):
                 footer_block = Block("cleaup")
                 footer_block.append(f"stop")
 
+                # wrap pulses block in sweepers loop blocks
                 for sweeper in sweepers:
+                    # if we wanted to make any of these sweepers relative:
+                    # Parameter.bias: sequencer.qubit in sweeper.qubits # + self.ports[port].offset
+                    # Parameter.amplitude: sequencer.pulses[0] in sweeper.pulses: # + self.ports[port].gain
+                    # Parameter.frequency: sequencer.pulses[0] in sweeper.pulses # + self.get_if(sequencer.pulses[0])
+
                     body_block = sweeper.qs.block(inner_block=body_block)
 
                 nshots_block: Block = loop_block(
@@ -1553,10 +1562,10 @@ class ClusterQRM_RF(AbstractInstrument):
                 self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
 
                 # DEBUG: QRM RF Save sequence to file
-                filename = self._debug_folder + f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
-                with open(filename, "w", encoding="utf-8") as file:
-                    json.dump(qblox_dict[sequencer], file, indent=4)
-                    file.write(sequencer.program)
+                # filename = self._debug_folder + f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
+                # with open(filename, "w", encoding="utf-8") as file:
+                #     json.dump(qblox_dict[sequencer], file, indent=4)
+                #     file.write(sequencer.program)
 
         # Clear acquisition memory and arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
@@ -1568,9 +1577,9 @@ class ClusterQRM_RF(AbstractInstrument):
         # self.device.print_readable_snapshot(update=True)
 
         # DEBUG: QRM RF Save Readable Snapshot
-        filename = self._debug_folder + f"Z_{self.name}_snapshot.json"
-        with open(filename, "w", encoding="utf-8") as file:
-            print_readable_snapshot(self.device, file, update=True)
+        # filename = self._debug_folder + f"Z_{self.name}_snapshot.json"
+        # with open(filename, "w", encoding="utf-8") as file:
+        #     print_readable_snapshot(self.device, file, update=True)
 
     def play_sequence(self):
         """Plays the sequence of pulses.
@@ -2068,8 +2077,6 @@ class ClusterQCM_RF(AbstractInstrument):
         self._sequencers: dict[Sequencer] = {"o1": [], "o2": []}
         self._port_channel_map: dict = {}
         self._channel_port_map: dict = {}
-        self._last_pulsequence_hash: int = 0
-        self._current_pulsesequence_hash: int
         self._device_parameters = {}
         self._device_num_output_ports = 2
         self._device_num_sequencers: int
@@ -2086,7 +2093,11 @@ class ClusterQCM_RF(AbstractInstrument):
         global cluster
         if not self.is_connected:
             if cluster:
+                # save a reference to the underlying object
                 self.device = cluster.modules[int(self.address.split(":")[1]) - 1]
+                # TODO: test connection with the module before continuing
+
+                # create a class for each port with attributes mapped to the instrument parameters
                 for n in range(2):
                     port = "o" + str(n + 1)
                     self.ports[port] = type(
@@ -2274,8 +2285,6 @@ class ClusterQCM_RF(AbstractInstrument):
 
             self._channel_port_map = {v: k for k, v in self._port_channel_map.items()}
             self.channels = list(self._channel_port_map.keys())
-
-            self._last_pulsequence_hash = 0
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
 
@@ -2312,6 +2321,7 @@ class ClusterQCM_RF(AbstractInstrument):
                 # have the same frequency. Non-overlapping pulses of different frequencies on the same
                 # qubit channel with hardware_demod_en would lead to wrong results.
                 # TODO: Throw error in that event or implement for non_overlapping_same_frequency_pulses
+                #       Even better, set the frequency before each pulse is played (would work with hardware modulation only)
             )
         # create sequencer wrapper
         sequencer = Sequencer(next_sequencer_number)
@@ -2334,7 +2344,7 @@ class ClusterQCM_RF(AbstractInstrument):
         return _if
 
     def process_pulse_sequence(
-        self, instrument_pulses: PulseSequence, nshots: int, navgs: int, repetition_duration: int, sweepers: list = []
+        self, instrument_pulses: PulseSequence, navgs: int, nshots: int, repetition_duration: int, sweepers: list = []
     ):
         """Processes a sequence of pulses and sweepers, generating the waveforms and program required by
         the instrument to synthesise them.
@@ -2342,254 +2352,285 @@ class ClusterQCM_RF(AbstractInstrument):
         The output of the process is a list of sequencers used for each port, configured with the information
         required to play the sequence.
         The following features are supported:
-            - Hardware modulation and demodulation.
-            - Multiplexed readout.
-            - Sequencer memory optimisation.
-            - Extended waveform memory with the use of multiple sequencers.
-            - Overlapping pulses.
-            - Waveform and Sequence Program cache.
-            - Pulses of up to 8192 pairs of i, q samples
+            - overlapping pulses
+            - hardware modulation
+            - software modulation, with support for arbitrary pulses
+            - real-time sweepers of
+                - pulse frequency (requires hardware modulation)
+                - pulse relative phase (requires hardware modulation)
+                - pulse amplitude
+                - pulse start
+                - pulse duration
+                - port gain
+                - port offset
+            - sequencer memory optimisation (waveforms cache)
+            - extended waveform memory with the use of multiple sequencers
+            - pulses of up to 8192 pairs of i, q samples
+            - intrument parameters cache
 
         Args:
             instrument_pulses (PulseSequence): A collection of Pulse objects to be played by the instrument.
-            nshots (int): The number of times the sequence of pulses should be executed.
+            navgs (int): The number of times the sequence of pulses should be executed averaging the results.
+            nshots (int): The number of times the sequence of pulses should be executed without averaging.
             repetition_duration (int): The total duration of the pulse sequence execution plus the reset/relaxation time.
+            sweepers (list(Sweeper)): A list of Sweeper objects to be implemented.
         """
 
-        # Save the hash of the current sequence of pulses.
-        self._current_pulsesequence_hash = hash(
-            (instrument_pulses, nshots, repetition_duration, (port.hardware_mod_en for port in self.ports))
-        )
+        self._free_sequencers_numbers = list(range(len(self.ports), 6))
 
-        # Check if the sequence to be processed is the same as the last one.
-        # If so, there is no need to generate new waveforms and program
-        if True:  # self._current_pulsesequence_hash != self._last_pulsequence_hash:
-            self._free_sequencers_numbers = list(range(len(self.ports), 6))
+        # process the pulses for every port
+        for port in self.ports:
+            # split the collection of instruments pulses by ports
+            port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(self._port_channel_map[port])
 
-            # process the pulses for every port
-            for port in self.ports:
-                # split the collection of instruments pulses by ports
-                port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(self._port_channel_map[port])
+            # initialise the list of sequencers required by the port
+            self._sequencers[port] = []
 
-                # initialise the list of sequencers required by the port
-                self._sequencers[port] = []
+            if not port_pulses.is_empty:
+                # initialise the list of free sequencer numbers to include the default for each port {'o1': 0, 'o2': 1}
+                self._free_sequencers_numbers = [self.DEFAULT_SEQUENCERS[port]] + self._free_sequencers_numbers
 
-                if not port_pulses.is_empty:
-                    # initialise the list of free sequencer numbers to include the default for each port {'o1': 0, 'o2': 1}
-                    self._free_sequencers_numbers = [self.DEFAULT_SEQUENCERS[port]] + self._free_sequencers_numbers
-
-                    # split the collection of port pulses in non overlapping pulses
-                    non_overlapping_pulses: PulseSequence
-                    for non_overlapping_pulses in port_pulses.separate_overlapping_pulses():
-                        # TODO: for non_overlapping_same_frequency_pulses in non_overlapping_pulses.separate_different_frequency_pulses():
-
-                        # each set of not overlapping pulses will be played by a separate sequencer
-                        # check sequencer availability
-                        if len(self._free_sequencers_numbers) == 0:
-                            raise Exception(
-                                f"The number of sequencers requried to play the sequence exceeds the number available {self._device_num_sequencers}."
-                            )
-
-                        # get next sequencer
-                        sequencer = self._get_next_sequencer(
-                            port=port,
-                            frequency=self.get_if(non_overlapping_pulses[0]),
-                            qubit=non_overlapping_pulses[0].qubit,
+                # split the collection of port pulses in non overlapping pulses
+                non_overlapping_pulses: PulseSequence
+                for non_overlapping_pulses in port_pulses.separate_overlapping_pulses():
+                    # each set of not overlapping pulses will be played by a separate sequencer
+                    # check sequencer availability
+                    if len(self._free_sequencers_numbers) == 0:
+                        raise Exception(
+                            f"The number of sequencers requried to play the sequence exceeds the number available {self._device_num_sequencers}."
                         )
-                        # add the sequencer to the list of sequencers required by the port
-                        self._sequencers[port].append(sequencer)
 
-                        # make a temporary copy of the pulses to be processed
-                        pulses_to_be_processed = non_overlapping_pulses.shallow_copy()
-                        while not pulses_to_be_processed.is_empty:
-                            pulse: Pulse = pulses_to_be_processed[0]
-                            # attempt to save the waveforms to the sequencer waveforms buffer
-                            try:
-                                sequencer.waveforms_buffer.add_waveforms(pulse, self.ports[port].hardware_mod_en)
-                                sequencer.pulses.add(pulse)
-                                pulses_to_be_processed.remove(pulse)
-
-                            # if there is not enough memory in the current sequencer, use another one
-                            except WaveformsBuffer.NotEnoughMemory:
-                                if len(pulse.waveform_i) + len(pulse.waveform_q) > WaveformsBuffer.SIZE:
-                                    raise NotImplementedError(
-                                        f"Pulses with waveforms longer than the memory of a sequencer ({WaveformsBuffer.SIZE // 2}) are not supported."
-                                    )
-                                if len(self._free_sequencers_numbers) == 0:
-                                    raise Exception(
-                                        f"The number of sequencers requried to play the sequence exceeds the number available {self._device_num_sequencers}."
-                                    )
-                                # get next sequencer
-                                sequencer = self._get_next_sequencer(
-                                    port=port,
-                                    frequency=self.get_if(non_overlapping_pulses[0]),
-                                    qubit=non_overlapping_pulses[0].qubit,
-                                )
-                                # add the sequencer to the list of sequencers required by the port
-                                self._sequencers[port].append(sequencer)
-
-            # update the lists of used and unused sequencers that will be needed later on
-            self._used_sequencers_numbers = []
-            for port in self._output_ports_keys:
-                for sequencer in self._sequencers[port]:
-                    self._used_sequencers_numbers.append(sequencer.number)
-            self._unused_sequencers_numbers = []
-            for n in range(self._device_num_sequencers):
-                if not n in self._used_sequencers_numbers:
-                    self._unused_sequencers_numbers.append(n)
-
-            # generate and store the Waveforms dictionary, the Acquisitions dictionary, the Weights and the Program
-            for port in self._output_ports_keys:
-                for sequencer in self._sequencers[port]:
-                    pulses = sequencer.pulses
-                    program = sequencer.program
-                    pulse = None
-                    for pulse in pulses:
-                        pulse.sweeper = None
-
-                    for sweeper in sweepers:
-                        reference_value = 0
-                        if sweeper.parameter == Parameter.frequency:
-                            if sequencer.pulses:
-                                reference_value = self.get_if(sequencer.pulses[0])
-                        # if sweeper.parameter == Parameter.amplitude:
-                        #     reference_value = self.ports[port].gain
-                        # if sweeper.parameter == Parameter.bias:
-                        #     reference_value = self.ports[port].offset
-
-                        if sweeper.parameter == Parameter.duration and pulse in sweeper.pulses:
-                            if pulse in sweeper.pulses:
-                                idx_range = sequencer.waveforms_buffer.bake_pulse_waveforms(
-                                    pulse, sweeper.values, self.ports[port].hardware_mod_en
-                                )
-                                sweeper.qs = QbloxSweeper(
-                                    program=program, type=QbloxSweeperType.duration, rel_values=idx_range
-                                )
-                        else:
-                            sweeper.qs = QbloxSweeper.from_sweeper(
-                                program=program, sweeper=sweeper, add_to=reference_value
-                            )
-
-                        # if sweeper.qubits and sequencer.qubit in sweeper.qubits:
-                        #     sweeper.qs.update_parameters = True
-                        if sweeper.pulses:
-                            for pulse in pulses:
-                                if pulse in sweeper.pulses:
-                                    sweeper.qs.update_parameters = True
-                                    pulse.sweeper = sweeper.qs
-
-                    # Waveforms
-                    for index, waveform in enumerate(sequencer.waveforms_buffer.unique_waveforms):
-                        sequencer.waveforms[waveform.serial] = {"data": waveform.data.tolist(), "index": index}
-
-                    # Program
-                    minimum_delay_between_instructions = 4
-
-                    sequence_total_duration = pulses.finish  # the minimum delay between instructions is 4ns
-                    time_between_repetitions = repetition_duration - sequence_total_duration
-                    assert time_between_repetitions > minimum_delay_between_instructions
-
-                    nshots_register = Register(program, "nshots")
-                    navgs_register = Register(program, "navgs")
-                    bin_n = Register(program, "bin_n")
-
-                    header_block = Block("setup")
-
-                    body_block = Block()
-
-                    body_block.append(f"wait_sync {minimum_delay_between_instructions}")
-                    if self.ports[port].hardware_mod_en:
-                        body_block.append("reset_ph")
-                        body_block.append_spacer()
-
-                    pulses_block = Block("play")
-                    # Add an initial wait instruction for the first pulse of the sequence
-                    initial_wait_block = wait_block(
-                        wait_time=pulses[0].start, register=Register(program), force_multiples_of_4=False
+                    # get next sequencer
+                    sequencer = self._get_next_sequencer(
+                        port=port,
+                        frequency=self.get_if(non_overlapping_pulses[0]),
+                        qubit=non_overlapping_pulses[0].qubit,
                     )
-                    pulses_block += initial_wait_block
+                    # add the sequencer to the list of sequencers required by the port
+                    self._sequencers[port].append(sequencer)
 
-                    for n in range(pulses.count):
-                        if pulses[n].sweeper and pulses[n].sweeper.type == QbloxSweeperType.start:
-                            pulses_block.append(f"wait {pulses[n].sweeper.register}")
+                    # make a temporary copy of the pulses to be processed
+                    pulses_to_be_processed = non_overlapping_pulses.shallow_copy()
+                    while not pulses_to_be_processed.is_empty:
+                        pulse: Pulse = pulses_to_be_processed[0]
+                        # attempt to save the waveforms to the sequencer waveforms buffer
+                        try:
+                            sequencer.waveforms_buffer.add_waveforms(pulse, self.ports[port].hardware_mod_en)
+                            sequencer.pulses.add(pulse)
+                            pulses_to_be_processed.remove(pulse)
 
-                        if self.ports[port].hardware_mod_en:
-                            # # Set frequency
-                            # _if = self.get_if(pulses[n])
-                            # pulses_block.append(f"set_freq {convert_frequency(_if)}", f"set intermediate frequency to {_if} Hz")
-
-                            # Set phase
-                            if pulses[n].sweeper and pulses[n].sweeper.type == QbloxSweeperType.relative_phase:
-                                pulses_block.append(f"set_ph {pulses[n].sweeper.register}")
-                            else:
-                                pulses_block.append(
-                                    f"set_ph {convert_phase(pulses[n].relative_phase)}",
-                                    comment=f"set relative phase {pulses[n].relative_phase} rads",
+                        # if there is not enough memory in the current sequencer, use another one
+                        except WaveformsBuffer.NotEnoughMemory:
+                            if len(pulse.waveform_i) + len(pulse.waveform_q) > WaveformsBuffer.SIZE:
+                                raise NotImplementedError(
+                                    f"Pulses with waveforms longer than the memory of a sequencer ({WaveformsBuffer.SIZE // 2}) are not supported."
                                 )
-
-                        # Calculate the delay_after_play that is to be used as an argument to the play instruction
-                        if len(pulses) > n + 1:
-                            # If there are more pulses to be played, the delay is the time between the pulse end and the next pulse start
-                            delay_after_play = pulses[n + 1].start - pulses[n].start
-                        else:
-                            delay_after_play = sequence_total_duration - pulses[n].start
-
-                        if delay_after_play < minimum_delay_between_instructions:
-                            raise Exception(
-                                f"The minimum delay between the start of two pulses in the same channel is {minimum_delay_between_instructions}ns."
+                            if len(self._free_sequencers_numbers) == 0:
+                                raise Exception(
+                                    f"The number of sequencers requried to play the sequence exceeds the number available {self._device_num_sequencers}."
+                                )
+                            # get next sequencer
+                            sequencer = self._get_next_sequencer(
+                                port=port,
+                                frequency=self.get_if(non_overlapping_pulses[0]),
+                                qubit=non_overlapping_pulses[0].qubit,
                             )
+                            # add the sequencer to the list of sequencers required by the port
+                            self._sequencers[port].append(sequencer)
 
-                        if pulses[n].sweeper and pulses[n].sweeper.type == QbloxSweeperType.duration:
-                            RI = pulses[n].sweeper.register
-                            if pulses[n].type == PulseType.FLUX:
-                                RQ = pulses[n].sweeper.register
-                            else:
-                                RQ = pulses[n].sweeper.aux_register
+        # update the lists of used and unused sequencers that will be needed later on
+        self._used_sequencers_numbers = []
+        for port in self._output_ports_keys:
+            for sequencer in self._sequencers[port]:
+                self._used_sequencers_numbers.append(sequencer.number)
+        self._unused_sequencers_numbers = []
+        for n in range(self._device_num_sequencers):
+            if not n in self._used_sequencers_numbers:
+                self._unused_sequencers_numbers.append(n)
 
-                            pulses_block.append(
-                                f"play  {RI},{RQ},{delay_after_play}",  # FIXME delay_after_play won't work as the duration increases
-                                comment=f"play pulse {pulses[n]} sweeping its duration",
+        # generate and store the Waveforms dictionary, the Acquisitions dictionary, the Weights and the Program
+        for port in self._output_ports_keys:
+            for sequencer in self._sequencers[port]:
+                pulses = sequencer.pulses
+                program = sequencer.program
+
+                ## pre-process sweepers ##
+                # TODO: move qibolab sweepers preprocessing to multiqubit (qblox manager)
+
+                # attach a sweeper attribute to the pulse so that it is easily accesible by the code that generates
+                # the pseudo-assembly program
+                pulse = None
+                for pulse in pulses:
+                    pulse.sweeper = None
+
+                # define whether to sweep relative values or absolute values depending on the type of sweep
+                # TODO: let qibocal user decice and the decision to be attached to qibolab.Sweeper
+                # until then:
+
+                #   lo_frequency    - relative values added to the lo_frequency
+                #   attenuation     - absolute values
+                #   frequency       - relative values added to the pulse frequency
+                #   amplitude(gain) - absolute values
+                #   relative_phase  - absolute values
+                #   gain            - absolute values
+                #   bias(offset)    - absolute values
+                #   start           - absolute values
+                #   duration        - absolute values
+
+                for sweeper in sweepers:
+                    reference_value = 0
+                    if sweeper.parameter == Parameter.frequency:
+                        if sequencer.pulses:
+                            reference_value = self.get_if(sequencer.pulses[0])
+                    # if sweeper.parameter == Parameter.amplitude:
+                    #     reference_value = self.ports[port].gain
+                    # if sweeper.parameter == Parameter.bias:
+                    #     reference_value = self.ports[port].offset
+
+                    # create QbloxSweepers and attach them to qibolab sweeper
+                    if sweeper.parameter == Parameter.duration and pulse in sweeper.pulses:
+                        if pulse in sweeper.pulses:
+                            # for duration sweepers bake waveforms
+                            idx_range = sequencer.waveforms_buffer.bake_pulse_waveforms(
+                                pulse, sweeper.values, self.ports[port].hardware_mod_en
                             )
-                        else:
-                            # Prepare play instruction: play wave_i_index, wave_q_index, delay_next_instruction
-                            pulses_block.append(
-                                f"play  {sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_i)},{sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_q)},{delay_after_play}",
-                                comment=f"play waveforms {pulses[n]}",
+                            sweeper.qs = QbloxSweeper(
+                                program=program, type=QbloxSweeperType.duration, rel_values=idx_range
                             )
+                    else:
+                        sweeper.qs = QbloxSweeper.from_sweeper(program=program, sweeper=sweeper, add_to=reference_value)
 
-                    body_block += pulses_block
+                    # FIXME: for qubit sweepers (Parameter.bias, Parameter.attenuation, Parameter.gain), the qubit
+                    # information alone is not enough to determine what instrument parameter is to be swept.
+                    # One may want to change a parameter that is not associated with a pulse,
+                    # For example port gain, both the drive and readout ports have gain parameters.
+                    # Until this is resolved, and since bias is only implemented with QCMs offset, this instrument will
+                    # never take an active role in those sweeps:
+
+                    # if sweeper.qubits and sequencer.qubit in sweeper.qubits:
+                    #     sweeper.qs.update_parameters = True
+
+                    # finally attach QbloxSweepers to the pulses being swept
+                    if sweeper.pulses:
+                        for pulse in pulses:
+                            if pulse in sweeper.pulses:
+                                sweeper.qs.update_parameters = True
+                                pulse.sweeper = sweeper.qs
+
+                # Waveforms
+                for index, waveform in enumerate(sequencer.waveforms_buffer.unique_waveforms):
+                    sequencer.waveforms[waveform.serial] = {"data": waveform.data.tolist(), "index": index}
+
+                # Program
+                minimum_delay_between_instructions = 4
+
+                sequence_total_duration = pulses.finish  # the minimum delay between instructions is 4ns
+                time_between_repetitions = repetition_duration - sequence_total_duration
+                assert time_between_repetitions > minimum_delay_between_instructions
+                # TODO: currently relaxation_time needs to be greater than acquisition_hold_off
+                # so that the time_between_repetitions is equal to the sequence_total_duration + relaxation_time
+                # to be compatible with th erest of the platforms, change it so that time_between_repetitions
+                # is equal to pulsesequence duration + acquisition_hold_off if relaxation_time < acquisition_hold_off
+
+                # create registers for key variables
+                # nshots is used in the loop that iterates over the number of shots
+                nshots_register = Register(program, "nshots")
+                # navgs is used in the loop of hardware averages
+                navgs_register = Register(program, "navgs")
+
+                header_block = Block("setup")
+
+                body_block = Block()
+
+                body_block.append(f"wait_sync {minimum_delay_between_instructions}")
+                if self.ports[port].hardware_mod_en:
+                    body_block.append("reset_ph")
                     body_block.append_spacer()
 
-                    final_reset_block = wait_block(
-                        wait_time=time_between_repetitions, register=Register(program), force_multiples_of_4=False
-                    )
+                pulses_block = Block("play")
+                # Add an initial wait instruction for the first pulse of the sequence
+                initial_wait_block = wait_block(
+                    wait_time=pulses[0].start, register=Register(program), force_multiples_of_4=False
+                )
+                pulses_block += initial_wait_block
 
-                    # final_reset_block.append_spacer()
-                    # final_reset_block.append(f"add {bin_n}, 1, {bin_n}", "not used")
+                for n in range(pulses.count):
+                    if pulses[n].sweeper and pulses[n].sweeper.type == QbloxSweeperType.start:
+                        pulses_block.append(f"wait {pulses[n].sweeper.register}")
 
-                    body_block += final_reset_block
+                    if self.ports[port].hardware_mod_en:
+                        # # Set frequency
+                        # _if = self.get_if(pulses[n])
+                        # pulses_block.append(f"set_freq {convert_frequency(_if)}", f"set intermediate frequency to {_if} Hz")
 
-                    footer_block = Block("cleaup")
-                    footer_block.append(f"stop")
+                        # Set phase
+                        if pulses[n].sweeper and pulses[n].sweeper.type == QbloxSweeperType.relative_phase:
+                            pulses_block.append(f"set_ph {pulses[n].sweeper.register}")
+                        else:
+                            pulses_block.append(
+                                f"set_ph {convert_phase(pulses[n].relative_phase)}",
+                                comment=f"set relative phase {pulses[n].relative_phase} rads",
+                            )
 
-                    for sweeper in sweepers:
-                        # Parameter.bias: sequencer.qubit in sweeper.qubits # + self.ports[port].offset
-                        # Parameter.amplitude: sequencer.pulses[0] in sweeper.pulses: # + self.ports[port].gain
-                        # Parameter.frequency: sequencer.pulses[0] in sweeper.pulses # + self.get_if(sequencer.pulses[0])
+                    # Calculate the delay_after_play that is to be used as an argument to the play instruction
+                    if len(pulses) > n + 1:
+                        # If there are more pulses to be played, the delay is the time between the pulse end and the next pulse start
+                        delay_after_play = pulses[n + 1].start - pulses[n].start
+                    else:
+                        delay_after_play = sequence_total_duration - pulses[n].start
 
-                        body_block = sweeper.qs.block(inner_block=body_block)
+                    if delay_after_play < minimum_delay_between_instructions:
+                        raise Exception(
+                            f"The minimum delay between the start of two pulses in the same channel is {minimum_delay_between_instructions}ns."
+                        )
 
-                    nshots_block: Block = loop_block(
-                        start=0, stop=nshots, step=1, register=nshots_register, block=body_block
-                    )
+                    if pulses[n].sweeper and pulses[n].sweeper.type == QbloxSweeperType.duration:
+                        RI = pulses[n].sweeper.register
+                        if pulses[n].type == PulseType.FLUX:
+                            RQ = pulses[n].sweeper.register
+                        else:
+                            RQ = pulses[n].sweeper.aux_register
 
-                    # nshots_block.prepend(f"move 0, {bin_n}", "not used")
-                    # nshots_block.append_spacer()
+                        pulses_block.append(
+                            f"play  {RI},{RQ},{delay_after_play}",  # FIXME delay_after_play won't work as the duration increases
+                            comment=f"play pulse {pulses[n]} sweeping its duration",
+                        )
+                    else:
+                        # Prepare play instruction: play wave_i_index, wave_q_index, delay_next_instruction
+                        pulses_block.append(
+                            f"play  {sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_i)},{sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_q)},{delay_after_play}",
+                            comment=f"play waveforms {pulses[n]}",
+                        )
 
-                    navgs_block = loop_block(start=0, stop=navgs, step=1, register=navgs_register, block=nshots_block)
-                    program.add_blocks(header_block, navgs_block, footer_block)
+                body_block += pulses_block
+                body_block.append_spacer()
 
-                    sequencer.program = repr(program)
+                final_reset_block = wait_block(
+                    wait_time=time_between_repetitions, register=Register(program), force_multiples_of_4=False
+                )
+
+                body_block += final_reset_block
+
+                footer_block = Block("cleaup")
+                footer_block.append(f"stop")
+
+                # wrap pulses block in sweepers loop blocks
+                for sweeper in sweepers:
+                    # if we wanted to make any of these sweepers relative:
+                    # Parameter.bias: sequencer.qubit in sweeper.qubits # + self.ports[port].offset
+                    # Parameter.amplitude: sequencer.pulses[0] in sweeper.pulses: # + self.ports[port].gain
+                    # Parameter.frequency: sequencer.pulses[0] in sweeper.pulses # + self.get_if(sequencer.pulses[0])
+
+                    body_block = sweeper.qs.block(inner_block=body_block)
+
+                nshots_block: Block = loop_block(
+                    start=0, stop=nshots, step=1, register=nshots_register, block=body_block
+                )
+
+                navgs_block = loop_block(start=0, stop=navgs, step=1, register=navgs_register, block=nshots_block)
+                program.add_blocks(header_block, navgs_block, footer_block)
+
+                sequencer.program = repr(program)
 
     def upload(self):
         """Uploads waveforms and programs of all sequencers and arms them in preparation for execution.
@@ -2598,48 +2639,45 @@ class ClusterQCM_RF(AbstractInstrument):
         It configures certain parameters of the instrument based on the needs of resources determined
         while processing the pulse sequence.
         """
-        if True:  # self._current_pulsesequence_hash != self._last_pulsequence_hash:
-            self._last_pulsequence_hash = self._current_pulsesequence_hash
+        # Setup
+        for sequencer_number in self._used_sequencers_numbers:
+            target = self.device.sequencers[sequencer_number]
+            self._set_device_parameter(target, "sync_en", value=True)
+            self._set_device_parameter(target, "marker_ovr_en", value=True)  # Default after reboot = False
+            self._set_device_parameter(target, "marker_ovr_value", value=15)  # Default after reboot = 0
 
-            # Setup
-            for sequencer_number in self._used_sequencers_numbers:
-                target = self.device.sequencers[sequencer_number]
-                self._set_device_parameter(target, "sync_en", value=True)
-                self._set_device_parameter(target, "marker_ovr_en", value=True)  # Default after reboot = False
-                self._set_device_parameter(target, "marker_ovr_value", value=15)  # Default after reboot = 0
+        for sequencer_number in self._unused_sequencers_numbers:
+            target = self.device.sequencers[sequencer_number]
+            self._set_device_parameter(target, "sync_en", value=False)
+            self._set_device_parameter(target, "marker_ovr_en", value=True)  # Default after reboot = False
+            self._set_device_parameter(target, "marker_ovr_value", value=0)  # Default after reboot = 0
+            if sequencer_number >= 2:  # Never disconnect default sequencers
+                self._set_device_parameter(target, "channel_map_path0_out0_en", value=False)
+                self._set_device_parameter(target, "channel_map_path0_out2_en", value=False)
+                self._set_device_parameter(target, "channel_map_path1_out1_en", value=False)
+                self._set_device_parameter(target, "channel_map_path1_out3_en", value=False)
 
-            for sequencer_number in self._unused_sequencers_numbers:
-                target = self.device.sequencers[sequencer_number]
-                self._set_device_parameter(target, "sync_en", value=False)
-                self._set_device_parameter(target, "marker_ovr_en", value=True)  # Default after reboot = False
-                self._set_device_parameter(target, "marker_ovr_value", value=0)  # Default after reboot = 0
-                if sequencer_number >= 2:  # Never disconnect default sequencers
-                    self._set_device_parameter(target, "channel_map_path0_out0_en", value=False)
-                    self._set_device_parameter(target, "channel_map_path0_out2_en", value=False)
-                    self._set_device_parameter(target, "channel_map_path1_out1_en", value=False)
-                    self._set_device_parameter(target, "channel_map_path1_out3_en", value=False)
+        # Upload waveforms and program
+        qblox_dict = {}
+        sequencer: Sequencer
+        for port in self._output_ports_keys:
+            for sequencer in self._sequencers[port]:
+                # Add sequence program and waveforms to single dictionary
+                qblox_dict[sequencer] = {
+                    "waveforms": sequencer.waveforms,
+                    "weights": sequencer.weights,
+                    "acquisitions": sequencer.acquisitions,
+                    "program": sequencer.program,
+                }
 
-            # Upload waveforms and program
-            qblox_dict = {}
-            sequencer: Sequencer
-            for port in self._output_ports_keys:
-                for sequencer in self._sequencers[port]:
-                    # Add sequence program and waveforms to single dictionary
-                    qblox_dict[sequencer] = {
-                        "waveforms": sequencer.waveforms,
-                        "weights": sequencer.weights,
-                        "acquisitions": sequencer.acquisitions,
-                        "program": sequencer.program,
-                    }
+                # Upload dictionary to the device sequencers
+                self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
 
-                    # Upload dictionary to the device sequencers
-                    self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
-
-                    # DEBUG: QCM RF Save sequence to file
-                    filename = self._debug_folder + f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
-                    with open(filename, "w", encoding="utf-8") as file:
-                        json.dump(qblox_dict[sequencer], file, indent=4)
-                        file.write(sequencer.program)
+                # DEBUG: QCM RF Save sequence to file
+                # filename = self._debug_folder + f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
+                # with open(filename, "w", encoding="utf-8") as file:
+                #     json.dump(qblox_dict[sequencer], file, indent=4)
+                #     file.write(sequencer.program)
 
         # Arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
@@ -2650,21 +2688,18 @@ class ClusterQCM_RF(AbstractInstrument):
         # self.device.print_readable_snapshot(update=True)
 
         # DEBUG: QCM RF Save Readable Snapshot
-        filename = self._debug_folder + f"Z_{self.name}_snapshot.json"
-        with open(filename, "w", encoding="utf-8") as file:
-            print_readable_snapshot(self.device, file, update=True)
+        # filename = self._debug_folder + f"Z_{self.name}_snapshot.json"
+        # with open(filename, "w", encoding="utf-8") as file:
+        #     print_readable_snapshot(self.device, file, update=True)
 
     def play_sequence(self):
         """Plays the sequence of pulses.
 
         Starts the sequencers needed to play the sequence of pulses."""
+
         for sequencer_number in self._used_sequencers_numbers:
             # Start used sequencers
             self.device.start_sequencer(sequencer_number)
-            # DEBUG sync_en
-            # print(
-            #     f"device: {self.name}, sequencer: {sequencer_number}, sync_en: {self.device.sequencers[sequencer_number].get('sync_en')}"
-            # )
 
     def start(self):
         """Empty method to comply with AbstractInstrument interface."""
@@ -2795,8 +2830,6 @@ class ClusterQCM(AbstractInstrument):
         self._sequencers: dict[Sequencer] = {"o1": [], "o2": [], "o3": [], "o4": []}
         self._port_channel_map: dict = {}
         self._channel_port_map: dict = {}
-        self._last_pulsequence_hash: int = 0
-        self._current_pulsesequence_hash: int
         self._device_parameters = {}
         self._device_num_output_ports = 2
         self._device_num_sequencers: int
@@ -2813,7 +2846,11 @@ class ClusterQCM(AbstractInstrument):
         global cluster
         if not self.is_connected:
             if cluster:
+                # save a reference to the underlying object
                 self.device = cluster.modules[int(self.address.split(":")[1]) - 1]
+                # TODO: test connection with the module before continuing
+
+                # create a class for each port with attributes mapped to the instrument parameters
                 for n in range(4):
                     port = "o" + str(n + 1)
                     self.ports[port] = type(
@@ -2844,6 +2881,9 @@ class ClusterQCM(AbstractInstrument):
                 self._set_device_parameter(self.device, "out2_offset", value=0)  # Default after reboot = 0
                 self._set_device_parameter(self.device, "out3_offset", value=0)  # Default after reboot = 0
 
+                # initialise the parameters of the default sequencers to the default values,
+                # the rest of the sequencers are not configured here, but will be configured
+                # with the same parameters as the default in process_pulse_sequence()
                 for target in [
                     self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]],
                     self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]],
@@ -2993,8 +3033,6 @@ class ClusterQCM(AbstractInstrument):
 
             self._channel_port_map = {v: k for k, v in self._port_channel_map.items()}
             self.channels = list(self._channel_port_map.keys())
-
-            self._last_pulsequence_hash = 0
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
 
@@ -3031,6 +3069,7 @@ class ClusterQCM(AbstractInstrument):
                 # have the same frequency. Non-overlapping pulses of different frequencies on the same
                 # qubit channel with hardware_demod_en would lead to wrong results.
                 # TODO: Throw error in that event or implement for non_overlapping_same_frequency_pulses
+                #       Even better, set the frequency before each pulse is played (would work with hardware modulation only)
             )
         # create sequencer wrapper
         sequencer = Sequencer(next_sequencer_number)
@@ -3041,19 +3080,17 @@ class ClusterQCM(AbstractInstrument):
         """Returns the intermediate frequency needed to synthesise a pulse based on the port lo frequency."""
 
         _rf = pulse.frequency
-        _lo = 0
+        _lo = 0  # QCMs do not have local oscillator
         _if = _rf - _lo
         if abs(_if) > self.FREQUENCY_LIMIT:
             raise RuntimeError(
                 f"""
-            Pulse frequency {_rf} cannot be synthesised with current lo frequency {_lo}.
-            The intermediate frequency {_if} would exceed the maximum frequency of {self.FREQUENCY_LIMIT}
-            """
+            Pulse frequency {_rf} cannot be synthesised, it exceeds the maximum frequency of {self.FREQUENCY_LIMIT}"""
             )
         return _if
 
     def process_pulse_sequence(
-        self, instrument_pulses: PulseSequence, nshots: int, navgs: int, repetition_duration: int, sweepers: list = []
+        self, instrument_pulses: PulseSequence, navgs: int, nshots: int, repetition_duration: int, sweepers: list = []
     ):
         """Processes a list of pulses, generating the waveforms and sequence program required by
         the instrument to synthesise them.
@@ -3061,249 +3098,285 @@ class ClusterQCM(AbstractInstrument):
         The output of the process is a list of sequencers used for each port, configured with the information
         required to play the sequence.
         The following features are supported:
-            - Hardware modulation and demodulation.
-            - Multiplexed readout.
-            - Sequencer memory optimisation.
-            - Extended waveform memory with the use of multiple sequencers.
-            - Overlapping pulses.
-            - Waveform and Sequence Program cache.
-            - Pulses of up to 8192 pairs of i, q samples
+            - overlapping pulses
+            - hardware modulation
+            - software modulation, with support for arbitrary pulses
+            - real-time sweepers of
+                - pulse frequency (requires hardware modulation)
+                - pulse relative phase (requires hardware modulation)
+                - pulse amplitude
+                - pulse start
+                - pulse duration
+                - port gain
+                - port offset
+            - sequencer memory optimisation (waveforms cache)
+            - extended waveform memory with the use of multiple sequencers
+            - pulses of up to 8192 pairs of i, q samples
+            - intrument parameters cache
 
         Args:
             instrument_pulses (PulseSequence): A collection of Pulse objects to be played by the instrument.
-            nshots (int): The number of times the sequence of pulses should be executed.
+            navgs (int): The number of times the sequence of pulses should be executed averaging the results.
+            nshots (int): The number of times the sequence of pulses should be executed without averaging.
             repetition_duration (int): The total duration of the pulse sequence execution plus the reset/relaxation time.
+            sweepers (list(Sweeper)): A list of Sweeper objects to be implemented.
         """
 
-        # Save the hash of the current sequence of pulses.
-        self._current_pulsesequence_hash = hash(
-            (instrument_pulses, nshots, repetition_duration, (port.hardware_mod_en for port in self.ports))
-        )
+        self._free_sequencers_numbers = list(range(len(self.ports), 6))
 
-        # Check if the sequence to be processed is the same as the last one.
-        # If so, there is no need to generate new waveforms and program
-        if True:  # self._current_pulsesequence_hash != self._last_pulsequence_hash:
-            self._free_sequencers_numbers = list(range(len(self.ports), 6))
+        # process the pulses for every port
+        for port in self.ports:
+            # split the collection of instruments pulses by ports
+            port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(self._port_channel_map[port])
 
-            # process the pulses for every port
-            for port in self.ports:
-                # split the collection of instruments pulses by ports
-                port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(self._port_channel_map[port])
+            # initialise the list of sequencers required by the port
+            self._sequencers[port] = []
 
-                # initialise the list of sequencers required by the port
-                self._sequencers[port] = []
+            # initialise the list of free sequencer numbers to include the default for each port {'o1': 0, 'o2': 1, 'o3': 2, 'o4': 3}
+            self._free_sequencers_numbers = [self.DEFAULT_SEQUENCERS[port]] + self._free_sequencers_numbers
 
-                # initialise the list of free sequencer numbers to include the default for each port {'o1': 0, 'o2': 1, 'o3': 2, 'o4': 3}
-                self._free_sequencers_numbers = [self.DEFAULT_SEQUENCERS[port]] + self._free_sequencers_numbers
+            if not port_pulses.is_empty:
+                # split the collection of port pulses in non overlapping pulses
+                non_overlapping_pulses: PulseSequence
+                for non_overlapping_pulses in port_pulses.separate_overlapping_pulses():
+                    # TODO: for non_overlapping_same_frequency_pulses in non_overlapping_pulses.separate_different_frequency_pulses():
 
-                if not port_pulses.is_empty:
-                    # split the collection of port pulses in non overlapping pulses
-                    non_overlapping_pulses: PulseSequence
-                    for non_overlapping_pulses in port_pulses.separate_overlapping_pulses():
-                        # TODO: for non_overlapping_same_frequency_pulses in non_overlapping_pulses.separate_different_frequency_pulses():
-
-                        # each set of not overlapping pulses will be played by a separate sequencer
-                        # check sequencer availability
-                        if len(self._free_sequencers_numbers) == 0:
-                            raise Exception(
-                                f"The number of sequencers requried to play the sequence exceeds the number available {self._device_num_sequencers}."
-                            )
-                        # get next sequencer
-                        sequencer = self._get_next_sequencer(
-                            port=port,
-                            frequency=self.get_if(non_overlapping_pulses[0]),
-                            qubit=non_overlapping_pulses[0].qubit,
+                    # each set of not overlapping pulses will be played by a separate sequencer
+                    # check sequencer availability
+                    if len(self._free_sequencers_numbers) == 0:
+                        raise Exception(
+                            f"The number of sequencers requried to play the sequence exceeds the number available {self._device_num_sequencers}."
                         )
-                        # add the sequencer to the list of sequencers required by the port
-                        self._sequencers[port].append(sequencer)
-
-                        # make a temporary copy of the pulses to be processed
-                        pulses_to_be_processed = non_overlapping_pulses.shallow_copy()
-                        while not pulses_to_be_processed.is_empty:
-                            pulse: Pulse = pulses_to_be_processed[0]
-                            # attempt to save the waveforms to the sequencer waveforms buffer
-                            try:
-                                sequencer.waveforms_buffer.add_waveforms(pulse, self.ports[port].hardware_mod_en)
-                                sequencer.pulses.add(pulse)
-                                pulses_to_be_processed.remove(pulse)
-
-                            # if there is not enough memory in the current sequencer, use another one
-                            except WaveformsBuffer.NotEnoughMemory:
-                                if len(pulse.waveform_i) + len(pulse.waveform_q) > WaveformsBuffer.SIZE:
-                                    raise NotImplementedError(
-                                        f"Pulses with waveforms longer than the memory of a sequencer ({WaveformsBuffer.SIZE // 2}) are not supported."
-                                    )
-                                if len(self._free_sequencers_numbers) == 0:
-                                    raise Exception(
-                                        f"The number of sequencers requried to play the sequence exceeds the number available {self._device_num_sequencers}."
-                                    )
-                                # get next sequencer
-                                sequencer = self._get_next_sequencer(
-                                    port=port,
-                                    frequency=self.get_if(non_overlapping_pulses[0]),
-                                    qubit=non_overlapping_pulses[0].qubit,
-                                )
-                                # add the sequencer to the list of sequencers required by the port
-                                self._sequencers[port].append(sequencer)
-                else:
-                    sequencer = self._get_next_sequencer(port=port, frequency=0, qubit=self.ports[port].qubit)
+                    # get next sequencer
+                    sequencer = self._get_next_sequencer(
+                        port=port,
+                        frequency=self.get_if(non_overlapping_pulses[0]),
+                        qubit=non_overlapping_pulses[0].qubit,
+                    )
                     # add the sequencer to the list of sequencers required by the port
                     self._sequencers[port].append(sequencer)
 
-            # update the lists of used and unused sequencers that will be needed later on
-            self._used_sequencers_numbers = []
-            for port in self._output_ports_keys:
-                for sequencer in self._sequencers[port]:
-                    self._used_sequencers_numbers.append(sequencer.number)
-            self._unused_sequencers_numbers = []
-            for n in range(self._device_num_sequencers):
-                if not n in self._used_sequencers_numbers:
-                    self._unused_sequencers_numbers.append(n)
+                    # make a temporary copy of the pulses to be processed
+                    pulses_to_be_processed = non_overlapping_pulses.shallow_copy()
+                    while not pulses_to_be_processed.is_empty:
+                        pulse: Pulse = pulses_to_be_processed[0]
+                        # attempt to save the waveforms to the sequencer waveforms buffer
+                        try:
+                            sequencer.waveforms_buffer.add_waveforms(pulse, self.ports[port].hardware_mod_en)
+                            sequencer.pulses.add(pulse)
+                            pulses_to_be_processed.remove(pulse)
 
-            # generate and store the Waveforms dictionary, the Acquisitions dictionary, the Weights and the Program
-            for port in self._output_ports_keys:
-                for sequencer in self._sequencers[port]:
-                    pulses = sequencer.pulses
-                    program = sequencer.program
-                    pulse = None
-                    for pulse in pulses:
-                        pulse.sweeper = None
+                        # if there is not enough memory in the current sequencer, use another one
+                        except WaveformsBuffer.NotEnoughMemory:
+                            if len(pulse.waveform_i) + len(pulse.waveform_q) > WaveformsBuffer.SIZE:
+                                raise NotImplementedError(
+                                    f"Pulses with waveforms longer than the memory of a sequencer ({WaveformsBuffer.SIZE // 2}) are not supported."
+                                )
+                            if len(self._free_sequencers_numbers) == 0:
+                                raise Exception(
+                                    f"The number of sequencers requried to play the sequence exceeds the number available {self._device_num_sequencers}."
+                                )
+                            # get next sequencer
+                            sequencer = self._get_next_sequencer(
+                                port=port,
+                                frequency=self.get_if(non_overlapping_pulses[0]),
+                                qubit=non_overlapping_pulses[0].qubit,
+                            )
+                            # add the sequencer to the list of sequencers required by the port
+                            self._sequencers[port].append(sequencer)
+            else:
+                sequencer = self._get_next_sequencer(port=port, frequency=0, qubit=self.ports[port].qubit)
+                # add the sequencer to the list of sequencers required by the port
+                self._sequencers[port].append(sequencer)
 
-                    for sweeper in sweepers:
-                        reference_value = 0
-                        if sweeper.parameter == Parameter.frequency:
-                            if sequencer.pulses:
-                                reference_value = self.get_if(sequencer.pulses[0])
-                        # if sweeper.parameter == Parameter.amplitude:
-                        #     reference_value = self.ports[port].gain
-                        # if sweeper.parameter == Parameter.bias: (this goes on top of the external offset)
-                        #     reference_value = self.ports[port].offset
+        # update the lists of used and unused sequencers that will be needed later on
+        self._used_sequencers_numbers = []
+        for port in self._output_ports_keys:
+            for sequencer in self._sequencers[port]:
+                self._used_sequencers_numbers.append(sequencer.number)
+        self._unused_sequencers_numbers = []
+        for n in range(self._device_num_sequencers):
+            if not n in self._used_sequencers_numbers:
+                self._unused_sequencers_numbers.append(n)
 
-                        if sweeper.parameter == Parameter.duration and pulse in sweeper.pulses:
+        # generate and store the Waveforms dictionary, the Acquisitions dictionary, the Weights and the Program
+        for port in self._output_ports_keys:
+            for sequencer in self._sequencers[port]:
+                pulses = sequencer.pulses
+                program = sequencer.program
+
+                ## pre-process sweepers ##
+                # TODO: move qibolab sweepers preprocessing to multiqubit (qblox manager)
+
+                # attach a sweeper attribute to the pulse so that it is easily accesible by the code that generates
+                # the pseudo-assembly program
+                pulse = None
+                for pulse in pulses:
+                    pulse.sweeper = None
+
+                # define whether to sweep relative values or absolute values depending on the type of sweep
+                # TODO: let qibocal user decice and the decision to be attached to qibolab.Sweeper
+                # until then:
+
+                #   lo_frequency    - relative values added to the lo_frequency
+                #   attenuation     - absolute values
+                #   frequency       - relative values added to the pulse frequency
+                #   amplitude(gain) - absolute values
+                #   relative_phase  - absolute values
+                #   gain            - absolute values
+                #   bias(offset)    - absolute values
+                #   start           - absolute values
+                #   duration        - absolute values
+
+                for sweeper in sweepers:
+                    reference_value = 0
+                    if sweeper.parameter == Parameter.frequency:
+                        if sequencer.pulses:
+                            reference_value = self.get_if(sequencer.pulses[0])
+                    # if sweeper.parameter == Parameter.amplitude:
+                    #     reference_value = self.ports[port].gain
+                    # if sweeper.parameter == Parameter.bias: (this goes on top of the external offset)
+                    #     reference_value = self.ports[port].offset
+
+                    if sweeper.parameter == Parameter.duration and pulse in sweeper.pulses:
+                        if pulse in sweeper.pulses:
+                            # for duration sweepers bake waveforms
+                            idx_range = sequencer.waveforms_buffer.bake_pulse_waveforms(
+                                pulse, sweeper.values, self.ports[port].hardware_mod_en
+                            )
+                            sweeper.qs = QbloxSweeper(
+                                program=program, type=QbloxSweeperType.duration, rel_values=idx_range
+                            )
+                    else:
+                        sweeper.qs = QbloxSweeper.from_sweeper(program=program, sweeper=sweeper, add_to=reference_value)
+
+                    # FIXME: for qubit sweepers (Parameter.bias, Parameter.attenuation, Parameter.gain), the qubit
+                    # information alone is not enough to determine what instrument parameter is to be swept.
+                    # One may want to change a parameter that is not associated with a pulse,
+                    # For example port gain, both the drive and readout ports have gain parameters.
+                    # Until this is resolved, and since bias is only implemented with QCMs offset, this instrument will
+                    # be the only one taking an active role in those sweeps:
+                    if sweeper.qubits and sequencer.qubit in sweeper.qubits:
+                        sweeper.qs.update_parameters = True
+
+                    if sweeper.pulses:
+                        for pulse in pulses:
                             if pulse in sweeper.pulses:
-                                idx_range = sequencer.waveforms_buffer.bake_pulse_waveforms(
-                                    pulse, sweeper.values, self.ports[port].hardware_mod_en
-                                )
-                                sweeper.qs = QbloxSweeper(
-                                    program=program, type=QbloxSweeperType.duration, rel_values=idx_range
-                                )
-                        else:
-                            sweeper.qs = QbloxSweeper.from_sweeper(
-                                program=program, sweeper=sweeper, add_to=reference_value
-                            )
+                                sweeper.qs.update_parameters = True
+                                pulse.sweeper = sweeper.qs
 
-                        if sweeper.qubits and sequencer.qubit in sweeper.qubits:
-                            sweeper.qs.update_parameters = True
-                        if sweeper.pulses:
-                            for pulse in pulses:
-                                if pulse in sweeper.pulses:
-                                    sweeper.qs.update_parameters = True
-                                    pulse.sweeper = sweeper.qs
+                # Waveforms
+                for index, waveform in enumerate(sequencer.waveforms_buffer.unique_waveforms):
+                    sequencer.waveforms[waveform.serial] = {"data": waveform.data.tolist(), "index": index}
 
-                    # Waveforms
-                    for index, waveform in enumerate(sequencer.waveforms_buffer.unique_waveforms):
-                        sequencer.waveforms[waveform.serial] = {"data": waveform.data.tolist(), "index": index}
+                # Program
+                minimum_delay_between_instructions = 4
 
-                    # Program
-                    minimum_delay_between_instructions = 4
+                sequence_total_duration = pulses.finish  # the minimum delay between instructions is 4ns
+                time_between_repetitions = repetition_duration - sequence_total_duration
+                assert time_between_repetitions > minimum_delay_between_instructions
+                # TODO: currently relaxation_time needs to be greater than acquisition_hold_off
+                # so that the time_between_repetitions is equal to the sequence_total_duration + relaxation_time
+                # to be compatible with th erest of the platforms, change it so that time_between_repetitions
+                # is equal to pulsesequence duration + acquisition_hold_off if relaxation_time < acquisition_hold_off
 
-                    sequence_total_duration = pulses.finish  # the minimum delay between instructions is 4ns
-                    time_between_repetitions = repetition_duration - sequence_total_duration
-                    assert time_between_repetitions > minimum_delay_between_instructions
+                # create registers for key variables
+                # nshots is used in the loop that iterates over the number of shots
+                nshots_register = Register(program, "nshots")
+                # navgs is used in the loop of hardware averages
+                navgs_register = Register(program, "navgs")
 
-                    nshots_register = Register(program, "nshots")
-                    navgs_register = Register(program, "navgs")
-                    bin_n = Register(program, "bin_n")
+                header_block = Block("setup")
 
-                    header_block = Block("setup")
+                body_block = Block()
 
-                    body_block = Block()
-
-                    body_block.append(f"wait_sync {minimum_delay_between_instructions}")
-                    if self.ports[port].hardware_mod_en:
-                        body_block.append("reset_ph")
-                        body_block.append_spacer()
-
-                    pulses_block = Block("play")
-                    # Add an initial wait instruction for the first pulse of the sequence
-                    initial_wait_block = wait_block(
-                        wait_time=pulses.start, register=Register(program), force_multiples_of_4=False
-                    )
-                    pulses_block += initial_wait_block
-
-                    for n in range(pulses.count):
-                        if pulses[n].sweeper and pulses[n].sweeper.type == QbloxSweeperType.start:
-                            pulses_block.append(f"wait {pulses[n].sweeper.register}")
-
-                        if self.ports[port].hardware_mod_en:
-                            # # Set frequency
-                            # _if = self.get_if(pulses[n])
-                            # pulses_block.append(f"set_freq {convert_frequency(_if)}", f"set intermediate frequency to {_if} Hz")
-
-                            # Set phase
-                            if pulses[n].sweeper and pulses[n].sweeper.type == QbloxSweeperType.relative_phase:
-                                pulses_block.append(f"set_ph {pulses[n].sweeper.register}")
-                            else:
-                                pulses_block.append(
-                                    f"set_ph {convert_phase(pulses[n].relative_phase)}",
-                                    comment=f"set relative phase {pulses[n].relative_phase} rads",
-                                )
-
-                        # Calculate the delay_after_play that is to be used as an argument to the play instruction
-                        if len(pulses) > n + 1:
-                            # If there are more pulses to be played, the delay is the time between the pulse end and the next pulse start
-                            delay_after_play = pulses[n + 1].start - pulses[n].start
-                        else:
-                            delay_after_play = sequence_total_duration - pulses[n].start
-
-                        if delay_after_play < minimum_delay_between_instructions:
-                            raise Exception(
-                                f"The minimum delay between the start of two pulses in the same channel is {minimum_delay_between_instructions}ns."
-                            )
-
-                        if pulses[n].sweeper and pulses[n].sweeper.type == QbloxSweeperType.duration:
-                            RI = pulses[n].sweeper.register
-                            if pulses[n].type == PulseType.FLUX:
-                                RQ = pulses[n].sweeper.register
-                            else:
-                                RQ = pulses[n].sweeper.aux_register
-
-                            pulses_block.append(
-                                f"play  {RI},{RQ},{delay_after_play}",  # FIXME delay_after_play won't work as the duration increases
-                                comment=f"play pulse {pulses[n]} sweeping its duration",
-                            )
-                        else:
-                            # Prepare play instruction: play wave_i_index, wave_q_index, delay_next_instruction
-                            pulses_block.append(
-                                f"play  {sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_i)},{sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_q)},{delay_after_play}",
-                                comment=f"play waveforms {pulses[n]}",
-                            )
-
-                    body_block += pulses_block
+                body_block.append(f"wait_sync {minimum_delay_between_instructions}")
+                if self.ports[port].hardware_mod_en:
+                    body_block.append("reset_ph")
                     body_block.append_spacer()
 
-                    final_reset_block = wait_block(
-                        wait_time=time_between_repetitions, register=Register(program), force_multiples_of_4=False
-                    )
-                    body_block += final_reset_block
+                pulses_block = Block("play")
+                # Add an initial wait instruction for the first pulse of the sequence
+                initial_wait_block = wait_block(
+                    wait_time=pulses.start, register=Register(program), force_multiples_of_4=False
+                )
+                pulses_block += initial_wait_block
 
-                    footer_block = Block("cleaup")
-                    footer_block.append(f"stop")
+                for n in range(pulses.count):
+                    if pulses[n].sweeper and pulses[n].sweeper.type == QbloxSweeperType.start:
+                        pulses_block.append(f"wait {pulses[n].sweeper.register}")
 
-                    for sweeper in sweepers:
-                        # Parameter.bias: sequencer.qubit in sweeper.qubits # + self.ports[port].offset
-                        # Parameter.amplitude: sequencer.pulses[0] in sweeper.pulses: # + self.ports[port].gain
-                        # Parameter.frequency: sequencer.pulses[0] in sweeper.pulses # + self.get_if(sequencer.pulses[0])
+                    if self.ports[port].hardware_mod_en:
+                        # # Set frequency
+                        # _if = self.get_if(pulses[n])
+                        # pulses_block.append(f"set_freq {convert_frequency(_if)}", f"set intermediate frequency to {_if} Hz")
 
-                        body_block = sweeper.qs.block(inner_block=body_block)
+                        # Set phase
+                        if pulses[n].sweeper and pulses[n].sweeper.type == QbloxSweeperType.relative_phase:
+                            pulses_block.append(f"set_ph {pulses[n].sweeper.register}")
+                        else:
+                            pulses_block.append(
+                                f"set_ph {convert_phase(pulses[n].relative_phase)}",
+                                comment=f"set relative phase {pulses[n].relative_phase} rads",
+                            )
 
-                    nshots_block: Block = loop_block(
-                        start=0, stop=nshots, step=1, register=nshots_register, block=body_block
-                    )
-                    navgs_block = loop_block(start=0, stop=navgs, step=1, register=navgs_register, block=nshots_block)
-                    program.add_blocks(header_block, navgs_block, footer_block)
+                    # Calculate the delay_after_play that is to be used as an argument to the play instruction
+                    if len(pulses) > n + 1:
+                        # If there are more pulses to be played, the delay is the time between the pulse end and the next pulse start
+                        delay_after_play = pulses[n + 1].start - pulses[n].start
+                    else:
+                        delay_after_play = sequence_total_duration - pulses[n].start
 
-                    sequencer.program = repr(program)
+                    if delay_after_play < minimum_delay_between_instructions:
+                        raise Exception(
+                            f"The minimum delay between the start of two pulses in the same channel is {minimum_delay_between_instructions}ns."
+                        )
+
+                    if pulses[n].sweeper and pulses[n].sweeper.type == QbloxSweeperType.duration:
+                        RI = pulses[n].sweeper.register
+                        if pulses[n].type == PulseType.FLUX:
+                            RQ = pulses[n].sweeper.register
+                        else:
+                            RQ = pulses[n].sweeper.aux_register
+
+                        pulses_block.append(
+                            f"play  {RI},{RQ},{delay_after_play}",  # FIXME delay_after_play won't work as the duration increases
+                            comment=f"play pulse {pulses[n]} sweeping its duration",
+                        )
+                    else:
+                        # Prepare play instruction: play wave_i_index, wave_q_index, delay_next_instruction
+                        pulses_block.append(
+                            f"play  {sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_i)},{sequencer.waveforms_buffer.unique_waveforms.index(pulses[n].waveform_q)},{delay_after_play}",
+                            comment=f"play waveforms {pulses[n]}",
+                        )
+
+                body_block += pulses_block
+                body_block.append_spacer()
+
+                final_reset_block = wait_block(
+                    wait_time=time_between_repetitions, register=Register(program), force_multiples_of_4=False
+                )
+                body_block += final_reset_block
+
+                footer_block = Block("cleaup")
+                footer_block.append(f"stop")
+
+                # wrap pulses block in sweepers loop blocks
+                for sweeper in sweepers:
+                    # if we wanted to make any of these sweepers relative:
+                    # Parameter.bias: sequencer.qubit in sweeper.qubits # + self.ports[port].offset
+                    # Parameter.amplitude: sequencer.pulses[0] in sweeper.pulses: # + self.ports[port].gain
+                    # Parameter.frequency: sequencer.pulses[0] in sweeper.pulses # + self.get_if(sequencer.pulses[0])
+
+                    body_block = sweeper.qs.block(inner_block=body_block)
+
+                nshots_block: Block = loop_block(
+                    start=0, stop=nshots, step=1, register=nshots_register, block=body_block
+                )
+                navgs_block = loop_block(start=0, stop=navgs, step=1, register=navgs_register, block=nshots_block)
+                program.add_blocks(header_block, navgs_block, footer_block)
+
+                sequencer.program = repr(program)
 
     def upload(self):
         """Uploads waveforms and programs of all sequencers and arms them in preparation for execution.
@@ -3312,56 +3385,53 @@ class ClusterQCM(AbstractInstrument):
         It configures certain parameters of the instrument based on the needs of resources determined
         while processing the pulse sequence.
         """
-        if True:  # self._current_pulsesequence_hash != self._last_pulsequence_hash:
-            self._last_pulsequence_hash = self._current_pulsesequence_hash
+        # Setup
+        for sequencer_number in self._used_sequencers_numbers:
+            target = self.device.sequencers[sequencer_number]
+            self._set_device_parameter(target, "sync_en", value=True)
+            self._set_device_parameter(target, "marker_ovr_en", value=True)  # Default after reboot = False
+            self._set_device_parameter(target, "marker_ovr_value", value=15)  # Default after reboot = 0
 
-            # Setup
-            for sequencer_number in self._used_sequencers_numbers:
-                target = self.device.sequencers[sequencer_number]
-                self._set_device_parameter(target, "sync_en", value=True)
-                self._set_device_parameter(target, "marker_ovr_en", value=True)  # Default after reboot = False
-                self._set_device_parameter(target, "marker_ovr_value", value=15)  # Default after reboot = 0
+        for sequencer_number in self._unused_sequencers_numbers:
+            target = self.device.sequencers[sequencer_number]
+            self._set_device_parameter(target, "sync_en", value=False)
+            self._set_device_parameter(target, "marker_ovr_en", value=True)  # Default after reboot = False
+            self._set_device_parameter(target, "marker_ovr_value", value=0)  # Default after reboot = 0
+            if sequencer_number >= 4:  # Never disconnect default sequencers
+                self._set_device_parameter(target, "channel_map_path0_out0_en", value=False)
+                self._set_device_parameter(target, "channel_map_path0_out2_en", value=False)
+                self._set_device_parameter(target, "channel_map_path1_out1_en", value=False)
+                self._set_device_parameter(target, "channel_map_path1_out3_en", value=False)
 
-            for sequencer_number in self._unused_sequencers_numbers:
-                target = self.device.sequencers[sequencer_number]
-                self._set_device_parameter(target, "sync_en", value=False)
-                self._set_device_parameter(target, "marker_ovr_en", value=True)  # Default after reboot = False
-                self._set_device_parameter(target, "marker_ovr_value", value=0)  # Default after reboot = 0
-                if sequencer_number >= 4:  # Never disconnect default sequencers
-                    self._set_device_parameter(target, "channel_map_path0_out0_en", value=False)
-                    self._set_device_parameter(target, "channel_map_path0_out2_en", value=False)
-                    self._set_device_parameter(target, "channel_map_path1_out1_en", value=False)
-                    self._set_device_parameter(target, "channel_map_path1_out3_en", value=False)
+        # There seems to be a bug in qblox that when any of the mappings between paths and outputs is set,
+        # the general offset goes to 0 (eventhou the parameter will still show the right value).
+        # Until that is fixed, I'm going to always set the offset just before playing (bypassing the cache):
+        self.device.out0_offset(self.device.get("out0_offset"))
+        self.device.out1_offset(self.device.get("out1_offset"))
+        self.device.out2_offset(self.device.get("out2_offset"))
+        self.device.out3_offset(self.device.get("out3_offset"))
 
-            # There seems to be a bug in qblox that when any of the mappings between paths and outputs is set,
-            # the general offset goes to 0 (eventhout the parameter will still show the right value).
-            # Until that is fixed, I'm going to always set the offset just before playing (bypassing the cache):
-            self.device.out0_offset(self.device.get("out0_offset"))
-            self.device.out1_offset(self.device.get("out1_offset"))
-            self.device.out2_offset(self.device.get("out2_offset"))
-            self.device.out3_offset(self.device.get("out3_offset"))
+        # Upload waveforms and program
+        qblox_dict = {}
+        sequencer: Sequencer
+        for port in self._output_ports_keys:
+            for sequencer in self._sequencers[port]:
+                # Add sequence program and waveforms to single dictionary
+                qblox_dict[sequencer] = {
+                    "waveforms": sequencer.waveforms,
+                    "weights": sequencer.weights,
+                    "acquisitions": sequencer.acquisitions,
+                    "program": sequencer.program,
+                }
 
-            # Upload waveforms and program
-            qblox_dict = {}
-            sequencer: Sequencer
-            for port in self._output_ports_keys:
-                for sequencer in self._sequencers[port]:
-                    # Add sequence program and waveforms to single dictionary
-                    qblox_dict[sequencer] = {
-                        "waveforms": sequencer.waveforms,
-                        "weights": sequencer.weights,
-                        "acquisitions": sequencer.acquisitions,
-                        "program": sequencer.program,
-                    }
+                # Upload dictionary to the device sequencers
+                self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
 
-                    # Upload dictionary to the device sequencers
-                    self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
-
-                    # DEBUG: QCM Save sequence to file
-                    filename = self._debug_folder + f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
-                    with open(filename, "w", encoding="utf-8") as file:
-                        json.dump(qblox_dict[sequencer], file, indent=4)
-                        file.write(sequencer.program)
+                # DEBUG: QCM Save sequence to file
+                # filename = self._debug_folder + f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
+                # with open(filename, "w", encoding="utf-8") as file:
+                #     json.dump(qblox_dict[sequencer], file, indent=4)
+                #     file.write(sequencer.program)
 
         # Arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
@@ -3372,9 +3442,9 @@ class ClusterQCM(AbstractInstrument):
         # self.device.print_readable_snapshot(update=True)
 
         # DEBUG: QCM Save Readable Snapshot
-        filename = self._debug_folder + f"Z_{self.name}_snapshot.json"
-        with open(filename, "w", encoding="utf-8") as file:
-            print_readable_snapshot(self.device, file, update=True)
+        # filename = self._debug_folder + f"Z_{self.name}_snapshot.json"
+        # with open(filename, "w", encoding="utf-8") as file:
+        #     print_readable_snapshot(self.device, file, update=True)
 
     def play_sequence(self):
         """Executes the sequence of instructions."""
@@ -3389,10 +3459,13 @@ class ClusterQCM(AbstractInstrument):
 
     def stop(self):
         """Stops all sequencers"""
+
+        from qibo.config import log
+
         try:
             self.device.stop_sequencer()
         except:
-            pass
+            log.warning("Unable to stop sequencers")
 
         try:
             self._set_device_parameter(self.device, "out0_offset", value=0)
@@ -3404,7 +3477,7 @@ class ClusterQCM(AbstractInstrument):
             # self.device.out2_offset(0)
             # self.device.out3_offset(0)
         except:
-            pass
+            log.warning("Unable to clear offsets")
 
     def disconnect(self):
         """Empty method to comply with AbstractInstrument interface."""

@@ -1,10 +1,12 @@
 import copy
 import os
+import signal
 
 import numpy as np
 import yaml
 from qibo.config import log, raise_error
 
+from qibolab.designs import Channel, ChannelMap
 from qibolab.platforms.abstract import AbstractPlatform
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import ExecutionResults
@@ -12,10 +14,53 @@ from qibolab.sweeper import Parameter, Sweeper
 
 
 class MultiqubitPlatform(AbstractPlatform):
-    def __init__(self, name, runcard):
-        super().__init__(name, runcard)
+    """Platform based on qblox instruments.
 
-        self.instruments = {}
+    The functionality of this class will soon be refactored to align it with DesignPlatform.
+
+    Attributes:
+        instruments (dict): A dictionay of instruments :class:`qibolab.instruments.abstract.AbstractInstrument` connected to the experiment.
+        qubit_instrument_map (dict): A dictionary mapping qubits to lists of instruments performing different roles for that qubit: [ReadOut, Drive, Flux, Bias].
+        channels (ChannelMap): A collection of :class:`qibolab.designs.channels.Channel` connected to the experiment.
+
+        Access dictionaries:
+        ro_channel (dict): maps qubits to their readout channel.
+        qd_channel (dict): maps qubits to their drive channel.
+        qf_channel (dict): maps qubits to their flux (RF) channel.
+        qb_channel (dict): maps qubits to their bias (DC) channel.
+        qrm (dict): maps qubits to their readout module.
+        qdm (dict): maps qubits to their drive module.
+        qfm (dict): maps qubits to their flux (RF) module.
+        qbm (dict): maps qubits to their bias (DC) module.
+        ro_port (dict): maps qubits to their readout port.
+        qd_port (dict): maps qubits to their drive port.
+        qf_port (dict): maps qubits to their flux (RF) port.
+        qb_port (dict): maps qubits to their bias (DC) port.
+
+    """
+
+    def __init__(self, name, runcard):
+        """Initialises the platform with its name and a platform runcard."""
+        self.instruments: dict = {}
+        self.qubit_instrument_map: dict = {}
+        self.channels: ChannelMap = None
+
+        self.ro_channel = {}
+        self.qd_channel = {}
+        self.qf_channel = {}
+        self.qb_channel = {}
+        self.qrm = {}
+        self.qdm = {}
+        self.qfm = {}
+        self.qbm = {}
+        self.ro_port = {}
+        self.qd_port = {}
+        self.qf_port = {}
+        self.qb_port = {}
+
+        super().__init__(name, runcard)
+        signal.signal(signal.SIGTERM, self._termination_handler)
+
         # Instantiate instruments
         for name in self.settings["instruments"]:
             lib = self.settings["instruments"][name]["lib"]
@@ -27,16 +72,15 @@ class MultiqubitPlatform(AbstractPlatform):
             instance = InstrumentClass(name, address)
             self.instruments[name] = instance
             # DEBUG: debug folder = report folder
-            if lib == "qblox":
-                folder = os.path.dirname(runcard) + "/debug/"
-                if not os.path.exists(folder):
-                    os.makedirs(folder)
-                self.instruments[name]._debug_folder = folder
+            # if lib == "qblox":
+            #     folder = os.path.dirname(runcard) + "/debug/"
+            #     if not os.path.exists(folder):
+            #         os.makedirs(folder)
+            #     self.instruments[name]._debug_folder = folder
 
         # Generate qubit_instrument_map from runcard
-        self.qubit_instrument_map = {}
         for qubit in self.qubit_channel_map:
-            self.qubit_instrument_map[qubit] = [None, None, None, None]
+            self.qubit_instrument_map[qubit] = [None, None, None, None]  # [ReadOut, Drive, Flux, Bias]
             for name in self.instruments:
                 if self.settings["instruments"][name]["class"] in ["ClusterQRM_RF", "ClusterQCM_RF", "ClusterQCM"]:
                     for port in self.settings["instruments"][name]["settings"]["ports"]:
@@ -48,12 +92,11 @@ class MultiqubitPlatform(AbstractPlatform):
                         if channel in self.qubit_channel_map[qubit]:
                             self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
 
-        from qibolab.designs import Channel, ChannelMap
-
         # Create channel objects
         self.channels = ChannelMap.from_names(*self.settings["channels"])
 
     def reload_settings(self):
+        """Reloads platform settings from runcard and sets all instruments up with them."""
         super().reload_settings()
         self.characterization = self.settings["characterization"]
         self.qubit_channel_map = self.settings["qubit_channel_map"]
@@ -63,70 +106,8 @@ class MultiqubitPlatform(AbstractPlatform):
         if self.is_connected:
             self.setup()
 
-    def set_lo_drive_frequency(self, qubit, freq):
-        self.qd_port[qubit].lo_frequency = freq
-
-    def get_lo_drive_frequency(self, qubit):
-        return self.qd_port[qubit].lo_frequency
-
-    def set_lo_readout_frequency(self, qubit, freq):
-        self.ro_port[qubit].lo_frequency = freq
-
-    def get_lo_readout_frequency(self, qubit):
-        return self.ro_port[qubit].lo_frequency
-
-    def set_lo_twpa_frequency(self, qubit, freq):
-        for instrument in self.instruments:
-            if "twpa" in instrument:
-                self.instruments[instrument].frequency = freq
-                return None
-        raise_error(NotImplementedError, "No twpa instrument found in the platform. ")
-
-    def get_lo_twpa_frequency(self, qubit):
-        for instrument in self.instruments:
-            if "twpa" in instrument:
-                return self.instruments[instrument].frequency
-        raise_error(NotImplementedError, "No twpa instrument found in the platform. ")
-
-    def set_lo_twpa_power(self, qubit, power):
-        for instrument in self.instruments:
-            if "twpa" in instrument:
-                self.instruments[instrument].power = power
-                return None
-        raise_error(NotImplementedError, "No twpa instrument found in the platform. ")
-
-    def get_lo_twpa_power(self, qubit):
-        for instrument in self.instruments:
-            if "twpa" in instrument:
-                return self.instruments[instrument].power
-        raise_error(NotImplementedError, "No twpa instrument found in the platform. ")
-
-    def set_attenuation(self, qubit, att):
-        self.ro_port[qubit].attenuation = att
-
-    def set_gain(self, qubit, gain):
-        self.qd_port[qubit].gain = gain
-
-    def set_bias(self, qubit, bias):
-        if qubit in self.qbm:
-            self.qb_port[qubit].current = bias
-        elif qubit in self.qfm:
-            self.qf_port[qubit].offset = bias
-
-    def get_attenuation(self, qubit):
-        return self.ro_port[qubit].attenuation
-
-    def get_bias(self, qubit):
-        if qubit in self.qbm:
-            return self.qb_port[qubit].current
-        elif qubit in self.qfm:
-            return self.qf_port[qubit].offset
-
-    def get_gain(self, qubit):
-        return self.qd_port[qubit].gain
-
     def connect(self):
-        """Connects to lab instruments using the details specified in the calibration settings."""
+        """Connects to the instruments."""
         if not self.is_connected:
             try:
                 for name in self.instruments:
@@ -143,6 +124,11 @@ class MultiqubitPlatform(AbstractPlatform):
                 log.info(f"All platform instruments connected.")
 
     def setup(self):
+        """Sets all instruments up.
+
+        Each instrument is set up calling its setup method, with the platform instruments and the specific intrument
+        settings. Additionally it generates dictionaries for accessing channels, instrument ports and modules.
+        """
         if not self.is_connected:
             raise_error(
                 RuntimeError,
@@ -156,20 +142,7 @@ class MultiqubitPlatform(AbstractPlatform):
                 **self.settings["instruments"][name]["settings"],
             )
 
-        # Generate ro_channel[qubit], qd_channel[qubit], qf_channel[qubit], qrm[qubit], qcm[qubit], lo_qrm[qubit], lo_qcm[qubit]
-        self.ro_channel = {}  # readout
-        self.qd_channel = {}  # qubit drive
-        self.qf_channel = {}  # qubit flux
-        self.qb_channel = {}  # qubit flux biassing
-        self.qrm = {}  # qubit readout module
-        self.qdm = {}  # qubit drive module
-        self.qfm = {}  # qubit flux module
-        self.qbm = {}  # qubit flux biassing module
-        self.ro_port = {}
-        self.qd_port = {}
-        self.qf_port = {}
-        self.qb_port = {}
-
+        # Generate access dictionaries
         for qubit in self.qubit_channel_map:
             self.ro_channel[qubit] = self.qubit_channel_map[qubit][0]
             self.qd_channel[qubit] = self.qubit_channel_map[qubit][1]
@@ -199,16 +172,32 @@ class MultiqubitPlatform(AbstractPlatform):
                 self.qb_port[qubit] = self.qbm[qubit].dacs[self.qubit_channel_map[qubit][3]]
 
     def start(self):
+        """Starts all platform instruments."""
+
         if self.is_connected:
             for name in self.instruments:
                 self.instruments[name].start()
 
     def stop(self):
+        """Stops all platform instruments."""
+
         if self.is_connected:
             for name in self.instruments:
                 self.instruments[name].stop()
 
+    def _termination_handler(self, signum, frame):
+        """Calls all instruments to stop if the program receives a termination signal."""
+
+        log.warning("Termination signal received, stopping instruments.")
+        if self.is_connected:
+            for name in self.instruments:
+                self.instruments[name].stop()
+        log.warning("All instruments stopped.")
+        exit(0)
+
     def disconnect(self):
+        """Disconnects all platform instruments."""
+
         if self.is_connected:
             for name in self.instruments:
                 self.instruments[name].disconnect()
@@ -222,8 +211,19 @@ class MultiqubitPlatform(AbstractPlatform):
         relaxation_time=None,
         sweepers: list() = [],  # list(Sweeper) = []
     ):
+        """Executes a sequence of pulses or a sweep.
+
+        Args:
+            sequence (:class:`qibolab.pulses.PulseSequence`): The sequence of pulses to execute.
+            nshots (int): The number of times the sequence of pulses should be executed without averaging.
+            navgs (int): The number of times the sequence of pulses should be executed averaging the results.
+            relaxation_time (int): The the time to wait between repetitions to allow the qubit relax to ground state.
+            sweepers (list(Sweeper)): A list of Sweeper objects defining parameter sweeps.
+        """
         if not self.is_connected:
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
+
+        # by default average results and use the value stored in the runcard (hardware_avg)
         if nshots is None and navgs is None:
             nshots = 1
             navgs = self.hardware_avg
@@ -232,10 +232,13 @@ class MultiqubitPlatform(AbstractPlatform):
         elif navgs and nshots is None:
             nshots = 1
 
+        # by default load the value from the runcard (relaxation_time)
         if relaxation_time is None:
             relaxation_time = self.relaxation_time
         repetition_duration = sequence.finish + relaxation_time
 
+        # shots results are stored in separate bins
+        # calculate number of shots
         num_bins = nshots
         for sweeper in sweepers:
             num_bins *= len(sweeper.values)
@@ -258,9 +261,10 @@ class MultiqubitPlatform(AbstractPlatform):
         for name in self.instruments:
             roles[name] = self.settings["instruments"][name]["roles"]
             if "control" in roles[name] or "readout" in roles[name]:
+                # from the pulse sequence, select those pulses to be synthesised by the instrument
                 instrument_pulses[name] = sequence.get_channel_pulses(*self.instruments[name].channels)
 
-                # until we have frequency planning use the ifs stored in the runcard to change the los
+                # until we have frequency planning use the ifs stored in the runcard to set the los
                 if self.instruments[name].__class__.__name__.split(".")[-1] in [
                     "ClusterQRM_RF",
                     "ClusterQCM_RF",
@@ -284,37 +288,43 @@ class MultiqubitPlatform(AbstractPlatform):
                                 _los.append(int(pulse.frequency - _if))
                                 _ifs.append(int(_if))
 
+                        # where multiple qubits share the same lo (for example on a readout line), check lo consistency
                         if len(_los) > 1:
                             for _ in range(1, len(_los)):
                                 if _los[0] != _los[_]:
                                     raise ValueError(
-                                        f"Pulses:\n{instrument_pulses[name]}\nsharing the lo at device: {name} - port: {port}\ncannot be synthesised with intermediate frequencies:\n{_ifs}"
+                                        f"""Pulses:
+                                        {instrument_pulses[name]}
+                                        sharing the lo at device: {name} - port: {port}
+                                        cannot be synthesised with intermediate frequencies:
+                                        {_ifs}"""
                                     )
                         if len(_los) > 0:
                             self.instruments[name].ports[port].lo_frequency = _los[0]
 
+                #  ask each instrument to generate waveforms & program and upload them to the device
                 self.instruments[name].process_pulse_sequence(
                     instrument_pulses[name], navgs, nshots, repetition_duration, sweepers
                 )
                 self.instruments[name].upload()
 
+        # play the sequence or sweep
         for name in self.instruments:
             if "control" in roles[name] or "readout" in roles[name]:
-                if True:  # not instrument_pulses[name].is_empty:
-                    self.instruments[name].play_sequence()
+                self.instruments[name].play_sequence()
 
+        # retrieve the results
         acquisition_results = {}
         for name in self.instruments:
             if "readout" in roles[name]:
-                if not instrument_pulses[name].is_empty:
-                    if not instrument_pulses[name].ro_pulses.is_empty:
-                        results = self.instruments[name].acquire()
-                        existing_keys = set(acquisition_results.keys()) & set(results.keys())
-                        for key, value in results.items():
-                            if key in existing_keys:
-                                acquisition_results[key].update(value)
-                            else:
-                                acquisition_results[key] = value
+                if not instrument_pulses[name].ro_pulses.is_empty:
+                    results = self.instruments[name].acquire()
+                    existing_keys = set(acquisition_results.keys()) & set(results.keys())
+                    for key, value in results.items():
+                        if key in existing_keys:
+                            acquisition_results[key].update(value)
+                        else:
+                            acquisition_results[key] = value
 
         for ro_pulse in sequence.ro_pulses:
             data[ro_pulse.serial] = ExecutionResults.from_components(*acquisition_results[ro_pulse.serial])
@@ -322,10 +332,20 @@ class MultiqubitPlatform(AbstractPlatform):
         return data
 
     def sweep(self, sequence, *sweepers, nshots=None, average=True, relaxation_time=None):
+        """Executes a sequence of pulses while sweeping one or more parameters.
+
+        The parameters to be swept are defined in :class:`qibolab.sweeper.Sweeper` object.
+        Args:
+            sequence (:class:`qibolab.pulses.PulseSequence`): The sequence of pulses to execute.
+            sweepers (list(Sweeper)): A list of Sweeper objects defining parameter sweeps.
+            nshots (int): The number of times the sequence of pulses should be executed.
+            average (bool): A flag to indicate if the results of the shots should be averaged.
+            relaxation_time (int): The the time to wait between repetitions to allow the qubit relax to ground state.
+        """
         id_results = {}
         map_id_serial = {}
-        sequence_copy = sequence.copy()
 
+        # by default use the value stored in the runcard (hardware_avg)
         if nshots is None:
             nshots = self.hardware_avg
         navgs = nshots
@@ -334,9 +354,14 @@ class MultiqubitPlatform(AbstractPlatform):
         else:
             navgs = 1
 
+        # by default load the value from the runcard (relaxation_time)
         if relaxation_time is None:
             relaxation_time = self.relaxation_time
 
+        # during the sweep, pulse parameters need to be changed
+        # to avoid affecting the user, make a copy of the pulse sequence
+        # and the sweepers, as they contain references to pulses
+        sequence_copy = sequence.copy()
         sweepers_copy = []
         for sweeper in sweepers:
             if sweeper.pulses:
@@ -356,11 +381,13 @@ class MultiqubitPlatform(AbstractPlatform):
             )
         sweepers_copy.reverse()
 
+        # create a map between the pulse id, which never changes, and the original serial
         for pulse in sequence_copy.ro_pulses:
             map_id_serial[pulse.id] = pulse.serial
             id_results[pulse.id] = ExecutionResults.from_components(np.array([]), np.array([]))
             id_results[pulse.qubit] = id_results[pulse.id]
 
+        # execute the each sweeper recursively
         self._sweep_recursion(
             sequence_copy,
             *tuple(sweepers_copy),
@@ -371,6 +398,7 @@ class MultiqubitPlatform(AbstractPlatform):
             relaxation_time=relaxation_time,
         )
 
+        # return the results using the original serials
         serial_results = {}
         for pulse in sequence_copy.ro_pulses:
             serial_results[map_id_serial[pulse.id]] = id_results[pulse.id]
@@ -387,19 +415,20 @@ class MultiqubitPlatform(AbstractPlatform):
         relaxation_time,
         average,
     ):
+        """Executes a sweep recursively.
+
+        Args:
+            sequence (:class:`qibolab.pulses.PulseSequence`): The sequence of pulses to execute.
+            sweepers (list(Sweeper)): A list of Sweeper objects defining parameter sweeps.
+            results (:class:`qibolab.results.ExecutionResults`): A results object to update with the reults of the execution.
+            nshots (int): The number of times the sequence of pulses should be executed.
+            average (bool): A flag to indicate if the results of the shots should be averaged.
+            relaxation_time (int): The the time to wait between repetitions to allow the qubit relax to ground state.
+        """
         sweeper = sweepers[0]
 
         initial = {}
-        if sweeper.parameter is Parameter.attenuation:
-            for qubit in sweeper.qubits:
-                initial[qubit] = self.get_attenuation(qubit)
-
-        # elif sweeper.parameter is Parameter.relative_phase:
-        #     initial = {}
-        #     for pulse in sweeper.pulses:
-        #         initial[pulse.id] = pulse.relative_phase
-
-        elif sweeper.parameter is Parameter.lo_frequency:
+        if sweeper.parameter is Parameter.lo_frequency:
             initial = {}
             for pulse in sweeper.pulses:
                 if pulse.type == PulseType.READOUT:
@@ -407,10 +436,23 @@ class MultiqubitPlatform(AbstractPlatform):
                 elif pulse.type == PulseType.DRIVE:
                     initial[pulse.id] = self.get_lo_readout_frequency(pulse.qubit)
 
+        # until sweeper contains the information to determine whether the sweep should be relative or
+        # absolute:
+
+        # elif sweeper.parameter is Parameter.attenuation:
+        #     for qubit in sweeper.qubits:
+        #         initial[qubit] = self.get_attenuation(qubit)
+
+        # elif sweeper.parameter is Parameter.relative_phase:
+        #     initial = {}
+        #     for pulse in sweeper.pulses:
+        #         initial[pulse.id] = pulse.relative_phase
+
         # elif sweeper.parameter is Parameter.frequency:
         #     initial = {}
         #     for pulse in sweeper.pulses:
         #         initial[pulse.id] = pulse.frequency
+
         # elif sweeper.parameter is Parameter.bias:
         #     initial = {}
         #     for qubit in sweeper.qubits:
@@ -418,8 +460,11 @@ class MultiqubitPlatform(AbstractPlatform):
 
         elif sweeper.parameter is Parameter.gain:
             for pulse in sweeper.pulses:
+                # qblox has an external and an internal gains
+                # when sweeping the internal, set the external to 1
                 self.set_gain(pulse.qubit, 1)
         elif sweeper.parameter is Parameter.amplitude:
+            # qblox cannot sweep amplitude in real time, but sweeping gain is quivalent
             for pulse in sweeper.pulses:
                 pulse.amplitude = 1
 
@@ -440,10 +485,7 @@ class MultiqubitPlatform(AbstractPlatform):
                 if sweeper.parameter is Parameter.attenuation:
                     for qubit in sweeper.qubits:
                         # self.set_attenuation(qubit, initial[qubit] + value)
-                        self.set_attenuation(qubit, value)  # make att absolute
-                # if sweeper.parameter is Parameter.relative_phase:
-                #     for pulse in sweeper.pulses:
-                #         pulse.relative_phase = initial[pulse.id] + value
+                        self.set_attenuation(qubit, value)
                 elif sweeper.parameter is Parameter.lo_frequency:
                     for pulse in sweeper.pulses:
                         if pulse.type == PulseType.READOUT:
@@ -467,6 +509,8 @@ class MultiqubitPlatform(AbstractPlatform):
                         results[pulse.id] += result[pulse.serial].average if average else result[pulse.serial]
                         results[pulse.qubit] = results[pulse.id]
         else:
+            # rt sweeps
+            # relative phase sweeps that cross 0 need to be split in two separate sweeps
             split_relative_phase = False
             if sweeper.parameter == Parameter.relative_phase:
                 from qibolab.instruments.qblox_q1asm import convert_phase
@@ -497,11 +541,11 @@ class MultiqubitPlatform(AbstractPlatform):
 
             if not split_relative_phase:
                 if all(s.parameter in rt_sweepers for s in sweepers):
-                    # rt-based sweepers
                     num_bins = nshots
                     for sweeper in sweepers:
                         num_bins *= len(sweeper.values)
 
+                    # split the sweep if the number of bins is larget than the memory of the sequencer (2**17)
                     if num_bins < 2**17:
                         repetition_duration = sequence.finish + relaxation_time
                         execution_time = navgs * num_bins * ((repetition_duration + 1000 * len(sweepers)) * 1e-9)
@@ -564,72 +608,87 @@ class MultiqubitPlatform(AbstractPlatform):
                                         relaxation_time=relaxation_time,
                                     )
                 else:
+                    # TODO: reorder the sequence of the sweepers and the results
                     raise Exception("cannot execute a for-loop sweeper nested inside of a rt sweeper")
 
-    def measure_fidelity(self, qubits=None, nshots=None):
-        self.reload_settings()
-        if not qubits:
-            qubits = self.qubits
-        results = {}
-        for qubit in qubits:
-            self.qrm[qubit].ports["i1"].hardware_demod_en = True  # required for binning
-            # create exc sequence
-            sequence_exc = PulseSequence()
-            RX_pulse = self.create_RX_pulse(qubit, start=0)
-            ro_pulse = self.create_qubit_readout_pulse(qubit, start=RX_pulse.duration)
-            sequence_exc.add(RX_pulse)
-            sequence_exc.add(ro_pulse)
-            amplitude, phase, i, q = self.execute_pulse_sequence(sequence_exc, nshots=nshots)[
-                "demodulated_integrated_binned"
-            ][ro_pulse.serial]
+    # proposed standard interfaces to access and modify instrument parameters
 
-            iq_exc = i + 1j * q
+    def set_lo_drive_frequency(self, qubit, freq):
+        """Sets the frequency of the local oscillator used to upconvert drive pulses for a qubit."""
+        self.qd_port[qubit].lo_frequency = freq
 
-            sequence_gnd = PulseSequence()
-            ro_pulse = self.create_qubit_readout_pulse(qubit, start=0)
-            sequence_gnd.add(ro_pulse)
+    def get_lo_drive_frequency(self, qubit):
+        """Gets the frequency of the local oscillator used to upconvert drive pulses for a qubit."""
+        return self.qd_port[qubit].lo_frequency
 
-            amplitude, phase, i, q = self.execute_pulse_sequence(sequence_gnd, nshots=nshots)[
-                "demodulated_integrated_binned"
-            ][ro_pulse.serial]
-            iq_gnd = i + 1j * q
+    def set_lo_readout_frequency(self, qubit, freq):
+        """Sets the frequency of the local oscillator used to upconvert readout pulses for a qubit."""
+        self.ro_port[qubit].lo_frequency = freq
 
-            iq_mean_exc = np.mean(iq_exc)
-            iq_mean_gnd = np.mean(iq_gnd)
-            origin = iq_mean_gnd
+    def get_lo_readout_frequency(self, qubit):
+        """Gets the frequency of the local oscillator used to upconvert readout pulses for a qubit."""
+        return self.ro_port[qubit].lo_frequency
 
-            iq_gnd_translated = iq_gnd - origin
-            iq_exc_translated = iq_exc - origin
-            rotation_angle = np.angle(np.mean(iq_exc_translated))
-            # rotation_angle = np.angle(iq_mean_exc - origin)
-            iq_exc_rotated = iq_exc_translated * np.exp(-1j * rotation_angle) + origin
-            iq_gnd_rotated = iq_gnd_translated * np.exp(-1j * rotation_angle) + origin
+    def set_attenuation(self, qubit, att):
+        """Sets the attenuation of the readout port for a qubit."""
+        self.ro_port[qubit].attenuation = att
 
-            # sort both lists of complex numbers by their real components
-            # combine all real number values into one list
-            # for each item in that list calculate the cumulative distribution
-            # (how many items above that value)
-            # the real value that renders the biggest difference between the two distributions is the threshold
-            # that is the one that maximises fidelity
+    def get_attenuation(self, qubit):
+        """Gets the attenuation of the readout port for a qubit."""
+        return self.ro_port[qubit].attenuation
 
-            real_values_exc = iq_exc_rotated.real
-            real_values_gnd = iq_gnd_rotated.real
-            real_values_combined = np.concatenate((real_values_exc, real_values_gnd))
-            real_values_combined.sort()
+    def set_gain(self, qubit, gain):
+        """Sets the gain of the drive port for a qubit."""
+        self.qd_port[qubit].gain = gain
 
-            cum_distribution_exc = [
-                sum(map(lambda x: x.real >= real_value, real_values_exc)) for real_value in real_values_combined
-            ]
-            cum_distribution_gnd = [
-                sum(map(lambda x: x.real >= real_value, real_values_gnd)) for real_value in real_values_combined
-            ]
-            cum_distribution_diff = np.abs(np.array(cum_distribution_exc) - np.array(cum_distribution_gnd))
-            argmax = np.argmax(cum_distribution_diff)
-            threshold = real_values_combined[argmax]
-            errors_exc = nshots - cum_distribution_exc[argmax]
-            errors_gnd = cum_distribution_gnd[argmax]
-            fidelity = cum_distribution_diff[argmax] / nshots
-            assignment_fidelity = 1 - (errors_exc + errors_gnd) / nshots / 2
-            # assignment_fidelity = 1/2 + (cum_distribution_exc[argmax] - cum_distribution_gnd[argmax])/nshots/2
-            results[qubit] = ((rotation_angle * 360 / (2 * np.pi)) % 360, threshold, fidelity, assignment_fidelity)
-        return results
+    def get_gain(self, qubit):
+        """Gets the gain of the drive port for a qubit."""
+        return self.qd_port[qubit].gain
+
+    def set_bias(self, qubit, bias):
+        """Sets the flux bias for a qubit.
+
+        It supports biasing the qubit with a current source (SPI) or with the offset of a QCM module.
+        """
+        if qubit in self.qbm:
+            self.qb_port[qubit].current = bias
+        elif qubit in self.qfm:
+            self.qf_port[qubit].offset = bias
+
+    def get_bias(self, qubit):
+        """Gets flux bias for a qubit."""
+        if qubit in self.qbm:
+            return self.qb_port[qubit].current
+        elif qubit in self.qfm:
+            return self.qf_port[qubit].offset
+
+    # TODO: implement a dictionary of qubit - twpas
+    def set_lo_twpa_frequency(self, qubit, freq):
+        """Sets the frequency of the local oscillator used to pump a qubit parametric amplifier."""
+        for instrument in self.instruments:
+            if "twpa" in instrument:
+                self.instruments[instrument].frequency = freq
+                return None
+        raise_error(NotImplementedError, "No twpa instrument found in the platform. ")
+
+    def get_lo_twpa_frequency(self, qubit):
+        """Gets the frequency of the local oscillator used to pump a qubit parametric amplifier."""
+        for instrument in self.instruments:
+            if "twpa" in instrument:
+                return self.instruments[instrument].frequency
+        raise_error(NotImplementedError, "No twpa instrument found in the platform. ")
+
+    def set_lo_twpa_power(self, qubit, power):
+        """Sets the power of the local oscillator used to pump a qubit parametric amplifier."""
+        for instrument in self.instruments:
+            if "twpa" in instrument:
+                self.instruments[instrument].power = power
+                return None
+        raise_error(NotImplementedError, "No twpa instrument found in the platform. ")
+
+    def get_lo_twpa_power(self, qubit):
+        """Gets the power of the local oscillator used to pump a qubit parametric amplifier."""
+        for instrument in self.instruments:
+            if "twpa" in instrument:
+                return self.instruments[instrument].power
+        raise_error(NotImplementedError, "No twpa instrument found in the platform. ")
