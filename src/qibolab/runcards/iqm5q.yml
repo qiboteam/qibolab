@@ -70,7 +70,7 @@ native_gates:
         2: # qubit number
             RX:
                 duration: 40 #200 #60
-                amplitude: 0.59 
+                amplitude: 0.59
                 frequency: 4_300_587_281  #4_401_600_000 #4_505_500_000 #4_321_500_000 # 4_541_100_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
