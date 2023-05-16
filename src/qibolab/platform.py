@@ -211,7 +211,6 @@ def create_tii_IQM5q(runcard, descriptor=None):
     # flux couplers (CAREFUL WITH THIS !!!)
     for i in range(11, 14):
         channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-11+5}")]
-  
 
     channels[f"L4-14"].ports = [("device_hdawg2", f"SIGOUTS/0")]
 
@@ -352,7 +351,7 @@ def create_tii_IQM5q(runcard, descriptor=None):
     for c in range(3, 5):
         qubits[f"c{c}"].flux_coupler = [qubits[c]]
         qubits[f"c{c}"].flux_coupler.append(qubits[2])
-    
+
     import yaml
 
     yaml.dump(qubits, open("qubits.yaml", "w"))
