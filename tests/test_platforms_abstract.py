@@ -159,3 +159,30 @@ def test_add_measurement_to_sequence(platform_name):
     MZ_pulse = platform.create_MZ_pulse(0, start=RX90_pulse2.finish)
     s = PulseSequence(RX90_pulse1, RX90_pulse2, MZ_pulse)
     assert sequence.serial == s.serial
+
+
+@pytest.mark.parametrize(
+    "par",
+    [
+        "readout_frequency",
+        "sweetspot",
+        "threshold",
+        "bare_resonator_frequency",
+        "drive_frequency",
+        "iq_angle",
+        "mean_gnd_states",
+    ],
+)
+def test_update(platform_name, par):
+    platform = Platform(platform_name)
+    new_values = np.ones(platform.nqubits)
+    updates = {par: {platform.qubits[i].name: new_values[i] for i in range(platform.nqubits)}}
+    # TODO: fix the reload settings for qili1q_os2
+    if platform.name != "qili1q_os2":
+        platform.update(updates)
+        for i in range(platform.nqubits):
+            value = updates[par][i]
+            if "frequency" in par:
+                value *= 1e9
+            assert value == float(platform.settings["characterization"]["single_qubit"][platform.qubits[i].name][par])
+            assert value == float(getattr(platform.qubits[i], par))
