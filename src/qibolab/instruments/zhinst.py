@@ -636,12 +636,8 @@ class Zurich(AbstractInstrument):
             if any("amplitude" in param for param in parameters):
                 # Zurich is already multiplying the pulse amplitude with the sweeper amplitude
                 # FIXME: Recheck and do relative amplitude sweeps by converting
-
                 pulse.zhpulse.amplitude = pulse.zhpulse.amplitude * max(pulse.zhsweeper.values)
                 pulse.zhsweeper.values = pulse.zhsweeper.values / max(pulse.zhsweeper.values)
-
-                # import warnings
-                # warnings.warn()
 
                 exp.play(
                     signal=f"{section}{qubit.name}",
@@ -761,16 +757,16 @@ class Zurich(AbstractInstrument):
                             else:
                                 print("I'm using dumb IW")
                                 "We adjust for smearing and remove smearing/2 at the end"
-                                exp.delay(signal=f"measure{qubit.name}", time=self.smearing)
+                                exp.delay(signal=f"measure{qubit.name}", time=self.smearing * 1e-9)
                                 if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
                                     weight = lo.pulse_library.sampled_pulse_complex(
-                                        np.ones([int(pulse.pulse.duration * 2 - 3 * self.smearing)])
+                                        np.ones([int(pulse.pulse.duration * 2 - 3 * self.smearing * 1e-9)])
                                         * np.exp(1j * qubit.iq_angle)
                                     )
                                 else:
                                     weight = lo.pulse_library.const(
                                         uid="weight" + pulse.zhpulse.uid,
-                                        length=round(pulse.pulse.duration * 1e-9, 9) - 1.5 * self.smearing,
+                                        length=round(pulse.pulse.duration * 1e-9, 9) - 1.5 * self.smearing * 1e-9,
                                         amplitude=1,
                                     )
 
@@ -906,6 +902,7 @@ class Zurich(AbstractInstrument):
         self.sweepers.remove(sweeper)
 
         print(sweeper.parameter)
+        print(sweeper.values)
         parameter = None
 
         if sweeper.parameter is Parameter.frequency:
