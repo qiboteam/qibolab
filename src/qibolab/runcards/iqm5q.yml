@@ -25,7 +25,7 @@ native_gates:
             RX:
                 duration: 40
                 amplitude: 0.566
-                frequency: 4_093_813_547 #doesnt do anything requiered for qibolab to work
+                frequency: 4_093_830_788 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.02)
                 type: qd # qubit drive
@@ -71,7 +71,7 @@ native_gates:
             RX:
                 duration: 40 #200 #60
                 amplitude: 0.544 #0.54 # Multiplied by the sweeper ?
-                frequency: 4_299_962_281  #4_401_600_000 #4_505_500_000 #4_321_500_000 # 4_541_100_000 #doesnt do anything requiered for qibolab to work
+                frequency: 4_300_587_281  #4_401_600_000 #4_505_500_000 #4_321_500_000 # 4_541_100_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
                 type: qd # qubit drive
@@ -159,16 +159,17 @@ characterization:
         0:
             readout_frequency: 5_228_700_000 #5_228_000_000
             resonator_polycoef_flux: []
-            drive_frequency: 4_093_813_547
+            drive_frequency: 4_093_830_788
             T1: 0.0
             T2: 0.0
             sweetspot: -0.025 #Use this as an amplitude of the flux_bias
             filter: {}
-            mean_gnd_states: (-0.094589-0.205916j)
-            mean_exc_states: (-0.676446-1.370461j)
+            mean_gnd_states: (-0.047584-0.195823j)
+            mean_exc_states: (-0.457698-1.478323j)
             # parameters for single shot classification
-            threshold: 0.771699
-            iq_angle: 6.637
+            threshold: 0.822580
+            iq_angle: -2.052
+            # alpha: 217.492 MHz
             # To save power values on the runcard
             # ro_range_lp: -15
             # ro_range_hp: -15
@@ -188,17 +189,17 @@ characterization:
         2:
             readout_frequency: 6.109e+9  #6_112_000_000
             resonator_polycoef_flux: []
-            drive_frequency: 4_299_962_281 # 4_401_600_000 #4_541_100_000
+            drive_frequency: 4_300_587_281 # 4_401_600_000 #4_541_100_000
             T1: 0.
             T2: 0.
             sweetspot: -0.2235 #0.5 #0.62 0.00
-            # anharmonicity:Around 100MHz  4_400_500_000 #4_436_500_000
             filter: {}
-            mean_gnd_states: (2.616697+0.166773j)
-            mean_exc_states: (2.481454-1.172653j)
+            mean_gnd_states: (2.438327+0.687596j)
+            mean_exc_states: (2.556497-0.741942j)
             # parameters for single shot classification
             threshold: 0.102652
             iq_angle: -1.647
+            # alpha: 208 MHz
         3:
             readout_frequency: 5_783_000_000
             resonator_polycoef_flux: []
@@ -223,22 +224,22 @@ characterization:
             threshold: 0.233806 #0.370954 #0.350665
             iq_angle: 0.481 # -91.712 #191.016
         "c0":
-            sweetspot: 0.0
+            sweetspot: 0.
             filter: {}
             # To save power values on the runcard
             # flux_range: -0
         "c1":
-            sweetspot: 0.0
+            sweetspot: 0.
             filter: {}
             # To save power values on the runcard
             # flux_range: -0
         "c3":
-            sweetspot: 0.0
+            sweetspot: 0.
             filter: {}
             # To save power values on the runcard
             # flux_range: -0
         "c4":
-            sweetspot: 0.0 #0.8 #0.16
+            sweetspot: 0. #0.8 #0.16
             filter: {}
             # To save power values on the runcard
             # flux_range: -0
@@ -247,7 +248,7 @@ characterization:
     two_qubit_couplers:
         0:
             # frequency: 3_753_000_000 or 3_503_000_000
-            sweetspot: 0.0
+            sweetspot: 0.1
             filter: {}
         1:
             sweetspot: 0.0
