@@ -764,6 +764,10 @@ class Zurich(AbstractInstrument):
                                         amplitude=1,
                                     )
 
+                            print(pulse.zhpulse)
+
+                            measure_pulse_parameters = {"phase": 0}
+
                             exp.measure(
                                 acquire_signal=f"acquire{qubit.name}",
                                 handle=f"sequence{qubit.name}",
@@ -773,7 +777,7 @@ class Zurich(AbstractInstrument):
                                 measure_signal=f"measure{qubit.name}",
                                 measure_pulse=pulse.zhpulse,
                                 measure_pulse_length=round(pulse.pulse.duration * 1e-9, 9),
-                                measure_pulse_parameters=None,
+                                measure_pulse_parameters=measure_pulse_parameters,
                                 measure_pulse_amplitude=None,
                                 acquire_delay=self.time_of_flight,
                                 reset_delay=relaxation_time * 1e-9,
