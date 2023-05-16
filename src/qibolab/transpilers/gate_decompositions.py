@@ -1,9 +1,12 @@
+from dataclasses import dataclass
+
 import numpy as np
 from qibo import gates
 from qibo.backends import NumpyBackend
-from qibo.config import raise_error
+from qibo.config import log, raise_error
 
 from qibolab.platforms.native import NativeTypes
+from qibolab.transpilers.abstract import Transpiler
 from qibolab.transpilers.unitary_decompositions import (
     two_qubit_decomposition,
     u3_decomposition,
@@ -356,3 +359,75 @@ opt_dec.add(
         gates.H(1),
     ],
 )
+
+
+@dataclass
+class NativeGates(Transpiler):
+    """Translates a circuit to native gates.
+
+    Args:
+        circuit (qibo.models.Circuit): Circuit model to translate into native gates.
+        two_qubit_natives (list): List of two qubit native gates
+            supported by the quantum hardware ("CZ" and/or "iSWAP").
+
+    Returns:
+        new (qibo.models.Circuit): Equivalent circuit with native gates.
+    """
+
+    two_qubit_natives: NativeTypes
+    translate_single_qubit: bool = True
+    verbose: bool = False
+
+    def tlog(self, message):
+        """Print messages only if ``verbose`` was set to ``True``."""
+        # TODO: Move this in ``AbstractTranspiler``
+        if self.verbose:
+            log.info(message)
+
+    def is_satisfied(self, circuit):
+        """Checks if a circuit can be executed on tii5q.
+
+        Args:
+            circuit (qibo.models.Circuit): Circuit model to check.
+            two_qubit_natives (list): List of two qubit native gates
+                supported by the quantum hardware ("CZ" and/or "iSWAP").
+            middle_qubit (int): Hardware middle qubit.
+            verbose (bool): If ``True`` it prints debugging log messages.
+
+        Returns ``True`` if the following conditions are satisfied:
+            - Circuit does not contain more than two-qubit gates.
+            - All one-qubit gates are I, Z, RZ or U3.
+            - All two-qubit gates are CZ or iSWAP based on two_qubit_natives.
+            - All two-qubit gates have qubit 0 as target or control.
+        otherwise returns ``False``.
+        """
+        for gate in circuit.queue:
+            if isinstance(gate, gates.M):
+                continue
+
+            if len(gate.qubits) == 1:
+                # TODO: Make setting single-qubit native gates more flexible
+                if not isinstance(gate, (gates.I, gates.Z, gates.RZ, gates.U3)):
+                    self.tlog(f"{gate.name} is not a single qubit native gate.")
+                    return False
+
+            elif len(gate.qubits) == 2:
+                if not (NativeTypes.from_gate(gate) in self.two_qubit_natives):
+                    self.tlog(f"{gate.name} is not a two qubit native gate.")
+                    return False
+
+            else:
+                self.tlog(f"{gate.name} acts on more than two qubits.")
+                return False
+
+        self.tlog("Circuit can be executed.")
+        return True
+
+    def transpile(self, circuit):
+        new = circuit.__class__(circuit.nqubits)
+        for gate in circuit.queue:
+            if len(gate.qubits) > 1 or self.translate_single_qubit:
+                new.add(translate_gate(gate, self.two_qubit_natives))
+            else:
+                new.add(gate)
+        return new, list(range(circuit.nqubits))
