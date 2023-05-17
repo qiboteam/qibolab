@@ -1045,7 +1045,7 @@ class Pulse:
             self._qubit,
         )
 
-    def is_equal(self, item) -> bool:
+    def is_equal_ignoring_start(self, item) -> bool:
         """Check if two pulses are equal, excepto from the start time"""
         return (
             self.duration == item.duration

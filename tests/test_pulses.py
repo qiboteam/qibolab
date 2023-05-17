@@ -275,24 +275,24 @@ def test_pulses_pulse_attributes():
     assert p0.finish == 100
 
 
-def test_pulses_is_equal():
+def test_pulses_is_equal_ignoring_start():
     """Checks if two pulses are equal, not looking at start time"""
 
     p1 = Pulse(0, 40, 0.9, 0, 0, Rectangular(), 0, PulseType.FLUX, 0)
     p2 = Pulse(100, 40, 0.9, 0, 0, Rectangular(), 0, PulseType.FLUX, 0)
     p3 = Pulse(0, 40, 0.9, 0, 0, Rectangular(), 0, PulseType.FLUX, 0)
     p4 = Pulse(200, 40, 0.9, 0, 0, Rectangular(), 2, PulseType.FLUX, 0)
-    assert p1.is_equal(p2)
-    assert p1.is_equal(p3)
-    assert not p1.is_equal(p4)
+    assert p1.is_equal_ignoring_start(p2)
+    assert p1.is_equal_ignoring_start(p3)
+    assert not p1.is_equal_ignoring_start(p4)
 
     p1 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(5), 0, PulseType.DRIVE, 2)
     p2 = Pulse(10, 40, 0.9, 50e6, 0, Gaussian(5), 0, PulseType.DRIVE, 2)
     p3 = Pulse(20, 50, 0.8, 50e6, 0, Gaussian(5), 0, PulseType.DRIVE, 2)
     p4 = Pulse(30, 40, 0.9, 50e6, 0, Gaussian(4), 0, PulseType.DRIVE, 2)
-    assert p1.is_equal(p2)
-    assert not p1.is_equal(p3)
-    assert not p1.is_equal(p4)
+    assert p1.is_equal_ignoring_start(p2)
+    assert not p1.is_equal_ignoring_start(p3)
+    assert not p1.is_equal_ignoring_start(p4)
 
 
 def test_pulses_pulse_serial():
