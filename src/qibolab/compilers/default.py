@@ -25,7 +25,7 @@ def rz_rule(gate, platform):
 
 
 def u3_rule(gate, platform):
-    """U3 applied as RZ-RX-RZ-RX-RZ."""
+    """U3 applied as RZ-RX90-RZ-RX90-RZ."""
     qubit = gate.target_qubits[0]
     # Transform gate to U3 and add pi/2-pulses
     theta, phi, lam = gate.parameters
