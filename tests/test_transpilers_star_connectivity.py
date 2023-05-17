@@ -6,7 +6,7 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 
-from qibolab.transpilers.connectivity import fix_connectivity, respects_connectivity
+from qibolab.transpilers.star_connectivity import StarConnectivity
 
 
 def generate_random_circuit(nqubits, depth, seed=None, middle_qubit=2):
@@ -52,9 +52,10 @@ def transpose_qubits(state, qubits):
 def test_fix_connectivity(run_number, nqubits, depth, middle_qubit):
     """Checks that the transpiled circuit can be executed and is equivalent to original."""
     original = generate_random_circuit(nqubits, depth, middle_qubit=middle_qubit)
-    transpiled, hardware_qubits = fix_connectivity(original, middle_qubit=middle_qubit)
+    transpiler = StarConnectivity(middle_qubit)
+    transpiled, hardware_qubits = transpiler.transpile(original)
     # check that transpiled circuit can be executed
-    assert respects_connectivity(transpiled, middle_qubit=middle_qubit)
+    assert transpiler.is_satisfied(transpiled)
     # check that execution results agree with original (using simulation)
     backend = NumpyBackend()
     final_state = backend.execute_circuit(transpiled).state()
@@ -83,9 +84,10 @@ def test_fix_connectivity_unitaries(run_number, nqubits, unitary_dim, depth, mid
         qubits = pairs[int(np.random.randint(len(pairs)))]
         original.add(gates.Unitary(random_unitary(unitary_dim), *qubits))
 
-    transpiled, hardware_qubits = fix_connectivity(original, middle_qubit=middle_qubit)
+    transpiler = StarConnectivity(middle_qubit)
+    transpiled, hardware_qubits = transpiler.transpile(original)
     # check that transpiled circuit can be executed
-    assert respects_connectivity(transpiled, middle_qubit=middle_qubit)
+    assert transpiler.is_satisfied(transpiled)
     # check that execution results agree with original (using simulation)
     backend = NumpyBackend()
     final_state = backend.execute_circuit(transpiled).state()
