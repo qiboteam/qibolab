@@ -13,7 +13,7 @@ from qibo.config import log, raise_error
 from qibo.models import Circuit
 
 from qibolab.designs.channels import Channel
-from qibolab.pulses import Drag, DrivePulse, FluxPulse, Pulse, PulseSequence, ReadoutPulse
+from qibolab.pulses import DrivePulse, FluxPulse, Pulse, PulseSequence, ReadoutPulse
 from qibolab.transpilers.gate_decompositions import TwoQubitNatives
 
 
@@ -41,6 +41,7 @@ class Qubit:
     bare_resonator_frequency: int = 0
     readout_frequency: int = 0  # this is the dressed frequency
     drive_frequency: int = 0
+    anharmonicity: int = 0
     sweetspot: float = 0
     peak_voltage: float = 0
     pi_pulse_amplitude: float = 0

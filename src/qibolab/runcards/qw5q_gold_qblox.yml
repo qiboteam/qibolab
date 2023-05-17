@@ -221,7 +221,7 @@ native_gates:
                 type: qd                    # qubit drive
             MZ:
                 duration: 2000
-                amplitude: 0.2
+                amplitude: 0.1
                 frequency: 7_212_278_226     # resonator frequency
                 if_frequency: -42_721_774    # difference in resonator frequency
                 shape: Rectangular()
@@ -236,7 +236,7 @@ native_gates:
                 type: qd                    # qubit drive
             MZ:
                 duration: 2000
-                amplitude: 0.2
+                amplitude: 0.36
                 frequency: 7_453_074_208    # resonator frequency
                 if_frequency: 198_074_208    # difference in resonator frequency
                 shape: Rectangular()
@@ -251,7 +251,7 @@ native_gates:
                 type: qd                    # qubit drive
             MZ:
                 duration: 2000
-                amplitude: 0.2
+                amplitude: 0.25
                 frequency: 7_655_139_987    # resonator frequency
                 if_frequency: -194_860_013    # difference in resonator frequency
                 shape: Rectangular()
@@ -281,7 +281,7 @@ native_gates:
                 type: qd                    # qubit drive
             MZ:
                 duration: 2000
-                amplitude: 0.2
+                amplitude: 0.4
                 frequency: 8_058_816_253      # resonator frequency
                 if_frequency: 208_816_253    # difference in resonator frequency
                 shape: Rectangular()
@@ -311,31 +311,31 @@ native_gates:
               qubit: 3
               relative_start: 0
               type: qf
-            - duration: 20
-              amplitude: 0
-              shape: Rectangular())
-              qubit: 3
-              relative_start: 32
-              type: qf
-            - type: virtual_z
-              phase: -3.862
-              qubit: 3
+            # - duration: 20
+            #   amplitude: 0
+            #   shape: Rectangular())
+            #   qubit: 3
+            #   relative_start: 32
+            #   type: qf
+            # - type: virtual_z
+            #   phase: -3.862
+            #   qubit: 3
 
-            - duration: 32
-              amplitude: 0
-              shape: Rectangular())
-              qubit: 2
-              relative_start: 0
-              type: qf
-            - duration: 20
-              amplitude: 0
-              shape: Rectangular())
-              qubit: 2
-              relative_start: 32
-              type: qf
-            - type: virtual_z
-              phase: -0.095
-              qubit: 2
+            # - duration: 32
+            #   amplitude: 0
+            #   shape: Rectangular())
+            #   qubit: 2
+            #   relative_start: 0
+            #   type: qf
+            # - duration: 20
+            #   amplitude: 0
+            #   shape: Rectangular())
+            #   qubit: 2
+            #   relative_start: 32
+            #   type: qf
+            # - type: virtual_z
+            #   phase: -0.095
+            #   qubit: 2
 
 characterization:
     single_qubit:

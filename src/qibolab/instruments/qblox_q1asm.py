@@ -1,12 +1,22 @@
+"""A library to support generating qblox q1asm programs."""
+
 import numpy as np
 
 END_OF_LINE = "\n"
 
 
 class Program:
+    """A class to represent a sequencer q1asm assembly program.
+
+    A q1asm program is made of blocks of code (:class:`qibolab.instruments.qblox.qblox_q1asm.Block`).
+    Real time registers (variables) are necessary to implement sweeps in real time.
+    This class keeps track of the registers used and has a method to provide the next available register.
+    """
+
     MAX_REGISTERS = 64
 
     def next_register(self):
+        """Provides the number of the next available register."""
         self._next_register_number += 1
         if self._next_register_number >= Program.MAX_REGISTERS:
             raise RuntimeError("There are no more registers available.")
@@ -17,10 +27,12 @@ class Program:
         self._next_register_number: int = -1
 
     def add_blocks(self, *blocks):
+        """Adds a :class:`qibolab.instruments.qblox.qblox_q1asm.Block` of code to the list of blocks."""
         for block in blocks:
             self._blocks.append(block)
 
     def __repr__(self) -> str:
+        """Returns the program."""
         block_str: str = ""
         for block in self._blocks:
             block_str += repr(block) + END_OF_LINE
@@ -28,6 +40,16 @@ class Program:
 
 
 class Block:
+    """A class to represent a block of q1asm assembly code.
+
+    A block is comprised of code lines.
+    Attributes:
+        name (str): A name for the block of code.
+        lines (list(tupple)): A list of lines of code (code, comment, indentation level).
+    """
+
+    # TODO: replace tupples used for code lines with a Line object
+
     GLOBAL_INDENTATION_LEVEL = 3
     SPACES_PER_LEVEL = 4
     SPACES_BEFORE_COMMENT = 4
@@ -63,6 +85,8 @@ class Block:
         self.lines = self.lines + [("", "", self._indentation)]
 
     def __repr__(self) -> str:
+        """Returns a string with the block of code, taking care of the indentation of instructions and comments."""
+
         def comment_col(line, level):
             col = Block.SPACES_PER_LEVEL * (level + Block.GLOBAL_INDENTATION_LEVEL)
             col += len(line)
@@ -122,6 +146,13 @@ class Block:
 
 
 class Register:
+    """A class to represent a q1asm program register.
+
+    Registers are used as variables in real time FPGA code.
+    Attributes:
+        name (str): a name to identify the register
+    """
+
     def __init__(self, program: Program, name: str = ""):
         self._number = program.next_register()
         self._name = name
@@ -140,6 +171,13 @@ class Register:
 
 
 def wait_block(wait_time: int, register: Register, force_multiples_of_4: bool = False):
+    """Generates blocks of code to implement long delays.
+
+    Arguments:
+        wait_time (int): the total time to wait.
+        register (:class:`qibolab.instruments.qblox.qblox_q1asm.Register`): the register used to loop
+        force_multiples_of_4 (bool): a flag that forces the delay to be a multiple of 4(ns)
+    """
     n_loops: int
     loop_wait: int
     wait: int
@@ -199,7 +237,19 @@ def wait_block(wait_time: int, register: Register, force_multiples_of_4: bool = 
     return block
 
 
-def loop_block(start: int, stop: int, step: int, register: Register, block):  # validate values
+def loop_block(start: int, stop: int, step: int, register: Register, block: Block):  # validate values
+    """Generates blocks of code to implement loops.
+
+    Its behaviour is similar to range(): it includes the first value, but never the last.
+
+    Arguments:
+        start (int): the initial value.
+        stop (int): the final value (excluded).
+        step (int): the step in which the register is incremented.
+        register (:class:`qibolab.instruments.qblox.qblox_q1asm.Register`): the register modified within the loop.
+        block (:class:`qibolab.instruments.qblox.qblox_q1asm.Register`): the block of code to be iterated.
+    """
+
     if not (isinstance(start, int) and isinstance(stop, int) and isinstance(step, int)):
         raise ValueError("begin, end and step must be int")
     if stop != start and step == 0:
@@ -235,36 +285,51 @@ def loop_block(start: int, stop: int, step: int, register: Register, block):  # 
 
 
 def convert_phase(phase_rad: float):
-    phase_deg = (phase_rad * 360 / (2 * np.pi)) % 360
-    return int(phase_deg * 1e9 / 360)
-    """
+    """Converts phase values in radiants to the encoding used in qblox FPGAs.
+
     The phase is divided into 1e9 steps between 0° and 360°,
     expressed as an integer between 0 and 1e9 (e.g 45°=125e6).
+    https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/api_reference/sequencer.html
     """
+    phase_deg = (phase_rad * 360 / (2 * np.pi)) % 360
+    return int(phase_deg * 1e9 / 360)
 
 
 def convert_frequency(freq: float):
+    """Converts frequency values to the encoding used in qblox FPGAs.
+
+    The frequency is divided into 4e9 steps between -500 and 500 MHz and
+    expressed as an integer between -2e9 and 2e9. (e.g. 1 MHz=4e6).
+    https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/api_reference/sequencer.html
+    """
     if not (freq >= -500e6 and freq <= 500e6):
         raise ValueError("frequency must be a float between -500e6 and 500e6 Hz")
     return int(freq * 4) % 2**32  # two's complement of 18? TODO: confirm with qblox
-    """
-    The frequency is divided into 4e9 steps between -500 and 500 MHz and
-    expressed as an integer between -2e9 and 2e9. (e.g. 1 MHz=4e6).
-    """
 
 
 def convert_gain(gain: float):
+    """Converts gain values to the encoding used in qblox FPGAs.
+
+    Both gain values are divided in 2**sample path width steps.
+    QCM DACs resolution 16bits, QRM DACs and ADCs 12 bit
+    https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/api_reference/sequencer.html
+    """
     if not (gain >= -1 and gain <= 1):
         raise ValueError("gain must be a float between -1 and 1")
     if gain == 1:
         return 2**15 - 1
     else:
         return int(np.floor(gain * 2**15)) % 2**32  # two's complement 32 bit number
-    """ Both gain values are divided in 2**sample path width steps."""
-    """ QCM DACs resolution 16bits, QRM DACs and ADCs 12 bit"""
 
 
 def convert_offset(offset: float):
+    """Converts offset values to the encoding used in qblox FPGAs.
+
+    Both offset values are divided in 2**sample path width steps.
+    QCM DACs resolution 16bits, QRM DACs and ADCs 12 bit
+    QCM 5Vpp, QRM 2Vpp
+    https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/api_reference/sequencer.html
+    """
     scale_factor = 1.25 * np.sqrt(2)
     normalised_offset = offset / scale_factor
 
@@ -274,24 +339,19 @@ def convert_offset(offset: float):
         return 2**15 - 1
     else:
         return int(np.floor(normalised_offset * 2**15)) % 2**32  # two's complement 32 bit number? or 12 or 24?
-    """ Both offset values are divided in 2**sample path width steps."""
-    """ QCM DACs resolution 16bits, QRM DACs and ADCs 12 bit"""
-    """ QCM 5Vpp, QRM 2Vpp"""
 
 
 # https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/tutorials/nco.html#Fast-chirped-pulses-using-Q1ASM
-"""
-The sequencer program can fundamentally only support integer values.
-However, the NCO has a frequency resolution of 0.25 Hz and supports 1e9 phase values.
-Therefore, frequencies in the sequencer program must be given as an integer multiple of 1/4 Hz,
-and phases as an integer multiple of 360/1e9 degrees.
+# The sequencer program can fundamentally only support integer values.
+# However, the NCO has a frequency resolution of 0.25 Hz and supports 1e9 phase values.
+# Therefore, frequencies in the sequencer program must be given as an integer multiple of 1/4 Hz,
+# and phases as an integer multiple of 360/1e9 degrees.
 
-Internally, the processor stores negative values using two’s complement.
-This has some implications for our program:
-- We cannot directly store a negative value in a register.
-   Substracting a larger value from a smaller one works as expected though.
-- Immediate values are handled by the compiler, i.e. set_freq-100 gives the expected result of -25 Hz.
-- Comparisons (jlt, jge) with registers storing a negative value do not work as expected,
-   as the smallest negative number is larger than the largest positive number.
-   To keep the program general we should therefore use loop instead.
-"""
+# Internally, the processor stores negative values using two’s complement.
+# This has some implications for our program:
+# - We cannot directly store a negative value in a register.
+#    Substracting a larger value from a smaller one works as expected though.
+# - Immediate values are handled by the compiler, i.e. set_freq-100 gives the expected result of -25 Hz.
+# - Comparisons (jlt, jge) with registers storing a negative value do not work as expected,
+#    as the smallest negative number is larger than the largest positive number.
+#    To keep the program general we should therefore use loop instead.
