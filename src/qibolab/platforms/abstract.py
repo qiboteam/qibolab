@@ -69,7 +69,6 @@ class Qubit:
     twpa: Optional[Channel] = None
     drive: Optional[Channel] = None
     flux: Optional[Channel] = None
-    flux_coupler: Optional[List["Qubit"]] = None
 
     def __post_init__(self):
         # register qubit in ``flux`` channel so that we can access
@@ -191,6 +190,8 @@ class AbstractPlatform(ABC):
 
 
         """
+
+        updates = {}
 
         for par, values in updates.items():
             for qubit, value in values.items():
@@ -428,7 +429,7 @@ class AbstractPlatform(ABC):
         return sequence
 
     @abstractmethod
-    def execute_pulse_sequence(self, sequence, **kwargs):
+    def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None, raw_adc=False):
         """Executes a pulse sequence.
 
         Args:
@@ -436,18 +437,15 @@ class AbstractPlatform(ABC):
             nshots (int): Number of shots to sample from the experiment. Default is 1024.
             relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
                 If ``None`` the default value provided as ``repetition_duration`` in the runcard will be used.
-            **kwargs: Variables for ExecutionParameters :class:`qibolab.platforms.platform.ExecutionParameters`
-            raw_adc (bool): If ``True`` it will return the raw ADC data instead of demodulating and integrating.
-                This is useful for some initial calibrations. Default is ``False``.
 
         Returns:
             Readout results acquired by after execution.
         """
 
-    def __call__(self, sequence, **kwargs):
-        return self.execute_pulse_sequence(sequence, **kwargs)
+    def __call__(self, sequence, nshots=1024, relaxation_time=None, raw_adc=False):
+        return self.execute_pulse_sequence(sequence, nshots, relaxation_time, raw_adc=raw_adc)
 
-    def sweep(self, sequence, *sweepers, **kwargs):
+    def sweep(self, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
         """Executes a pulse sequence for different values of sweeped parameters.
         Useful for performing chip characterization.
 
@@ -478,7 +476,6 @@ class AbstractPlatform(ABC):
             relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
                 If ``None`` the default value provided as ``repetition_duration`` in the runcard will be used.
             average (bool): If ``True`` the IQ results of individual shots are averaged on hardware.
-            **kwargs: Variables for ExecutionParameters :class:`qibolab.platforms.platform.ExecutionParameters`
 
         Returns:
             Readout results acquired by after execution.
@@ -631,6 +628,32 @@ class AbstractPlatform(ABC):
     @abstractmethod
     def get_lo_readout_frequency(self, qubit):
         """Get frequency of the qubit readout local oscillator in Hz."""
+
+    @abstractmethod
+    def set_lo_twpa_frequency(self, qubit, freq):
+        """Set frequency of the local oscillator of the TWPA to which the qubit's feedline is connected to.
+
+        Args:
+            qubit (int): qubit whose local oscillator will be modified.
+            freq (int): new value of the frequency in Hz.
+        """
+
+    @abstractmethod
+    def get_lo_twpa_frequency(self, qubit):
+        """Get frequency of the local oscillator of the TWPA to which the qubit's feedline is connected to in Hz."""
+
+    @abstractmethod
+    def set_lo_twpa_power(self, qubit, power):
+        """Set power of the local oscillator of the TWPA to which the qubit's feedline is connected to.
+
+        Args:
+            qubit (int): qubit whose local oscillator will be modified.
+            power (int): new value of the power in dBm.
+        """
+
+    @abstractmethod
+    def get_lo_twpa_power(self, qubit):
+        """Get power of the local oscillator of the TWPA to which the qubit's feedline is connected to in dBm."""
 
     @abstractmethod
     def set_attenuation(self, qubit, att):
