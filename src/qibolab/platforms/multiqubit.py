@@ -42,7 +42,6 @@ class MultiqubitPlatform(AbstractPlatform):
     def __init__(self, name, runcard):
         """Initialises the platform with its name and a platform runcard."""
         self.instruments: dict = {}
-        self.qubit_instrument_map: dict = {}
         self.channels: ChannelMap = None
 
         self.ro_channel = {}
@@ -60,6 +59,7 @@ class MultiqubitPlatform(AbstractPlatform):
 
         super().__init__(name, runcard)
         signal.signal(signal.SIGTERM, self._termination_handler)
+        self.qubit_instrument_map: dict = {}
 
         # Instantiate instruments
         for name in self.settings["instruments"]:
@@ -233,7 +233,7 @@ class MultiqubitPlatform(AbstractPlatform):
 
     def set_attenuation(self, qubit: Qubit, att):
         self.ro_port[qubit.name].attenuation = att
-    
+
     def set_gain(self, qubit, gain):
         self.qd_port[qubit].gain = gain
 
@@ -244,7 +244,7 @@ class MultiqubitPlatform(AbstractPlatform):
             self.qf_port[qubit.name].offset = bias
 
     def get_attenuation(self, qubit: Qubit):
-        return self.ro_port[qubit.name].attenuation      
+        return self.ro_port[qubit.name].attenuation
 
     def get_bias(self, qubit: Qubit):
         if qubit.name in self.qbm:
@@ -531,16 +531,15 @@ class MultiqubitPlatform(AbstractPlatform):
                 )
             )
 
-        #reverse sweepers exept for res punchout att
+        # reverse sweepers exept for res punchout att
         contains_attenuation_frequency = any(
-            sweepers_copy[i].parameter == Parameter.attenuation and
-            sweepers_copy[i + 1].parameter == Parameter.frequency
+            sweepers_copy[i].parameter == Parameter.attenuation
+            and sweepers_copy[i + 1].parameter == Parameter.frequency
             for i in range(len(sweepers_copy) - 1)
         )
 
         if not contains_attenuation_frequency:
             sweepers_copy.reverse()
-
 
         # create a map between the pulse id, which never changes, and the original serial
         for pulse in sequence_copy.ro_pulses:
