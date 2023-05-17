@@ -369,7 +369,7 @@ class IIR(PulseShape):
     def __eq__(self, item) -> bool:
         """Overloads == operator"""
         if type(item) is IIR:
-            return self.target == item.target and self.a == item.a and self.b == target.b
+            return self.target == item.target and self.a == item.a and self.b == item.b
         return False
 
     @property
