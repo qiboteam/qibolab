@@ -178,6 +178,10 @@ class Rectangular(PulseShape):
         self.name = "Rectangular"
         self.pulse: Pulse = None
 
+    def __eq__(self, item) -> bool:
+        """Overloads == operator"""
+        return type(item) is Rectangular
+
     @property
     def envelope_waveform_i(self) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
@@ -226,6 +230,12 @@ class Gaussian(PulseShape):
         self.name = "Gaussian"
         self.pulse: Pulse = None
         self.rel_sigma: float = float(rel_sigma)
+
+    def __eq__(self, item) -> bool:
+        """Overloads == operator"""
+        if type(item) is Gaussian:
+            return self.rel_sigma == item.rel_sigma
+        return False
 
     @property
     def envelope_waveform_i(self) -> Waveform:
@@ -280,6 +290,12 @@ class Drag(PulseShape):
         self.pulse: Pulse = None
         self.rel_sigma = float(rel_sigma)
         self.beta = float(beta)
+
+    def __eq__(self, item) -> bool:
+        """Overloads == operator"""
+        if type(item) is Drag:
+            return self.rel_sigma == item.rel_sigma and self.beta == item.beta
+        return False
 
     @property
     def envelope_waveform_i(self) -> Waveform:
@@ -349,6 +365,12 @@ class IIR(PulseShape):
         self.a: np.ndarray = np.array(a)
         self.b: np.ndarray = np.array(b)
         # Check len(a) = len(b) = 2
+
+    def __eq__(self, item) -> bool:
+        """Overloads == operator"""
+        if type(item) is IIR:
+            return self.target == item.target and self.a == item.a and self.b == target.b
+        return False
 
     @property
     def pulse(self):
@@ -422,6 +444,12 @@ class SNZ(PulseShape):
         self.t_half_flux_pulse: float = t_half_flux_pulse
         self.b_amplitude: float = b_amplitude
 
+    def __eq__(self, item) -> bool:
+        """Overloads == operator"""
+        if type(item) is SNZ:
+            return self.t_half_flux_pulse == item.t_half_flux_pulse
+        return False
+
     @property
     def envelope_waveform_i(self) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
@@ -484,6 +512,12 @@ class eCap(PulseShape):
         self.name = "eCap"
         self.pulse: Pulse = None
         self.alpha: float = float(alpha)
+
+    def __eq__(self, item) -> bool:
+        """Overloads == operator"""
+        if type(item) is eCap:
+            return self.alpha == item.alpha
+        return False
 
     @property
     def envelope_waveform_i(self) -> Waveform:
@@ -1011,6 +1045,19 @@ class Pulse:
             self._qubit,
         )
 
+    def is_equal(self, item: Pulse) -> bool:
+        """Check if two pulses are equal, excepto from the start time"""
+        return (
+            self.duration == item.duration
+            and self.amplitude == item.amplitude
+            and self.frequency == item.frequency
+            and self.relative_phase == item.relative_phase
+            and self.shape == item.shape
+            and self.channel == item.channel
+            and self.type == item.type
+            and self.qubit == item.qubit
+        )
+
     def plot(self, savefig_filename=None):
         """Plots the pulse envelope and modulated waveforms.
 
@@ -1495,7 +1542,7 @@ class PulseSequence:
                 ps = item
                 for pulse in ps.pulses:
                     self.pulses.append(pulse)
-        self.pulses.sort(key=lambda item: (item.channel, item.start))
+        self.pulses.sort(key=lambda item: (item.start, item.channel))
 
     def index(self, pulse):
         """Returns the index of a pulse in the sequence."""
