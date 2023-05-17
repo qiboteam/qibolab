@@ -285,7 +285,8 @@ class Zurich(AbstractInstrument):
                         server_port="8004",
                         setup_name=self.name,
                     )
-                    self.session = lo.Session(self.device_setup)
+                    # To fully remove logging #configure_logging=False
+                    self.session = lo.Session(self.device_setup, log_level=30)
                     self.device = self.session.connect(do_emulation=self.emulation)
                     self.is_connected = True
                     break

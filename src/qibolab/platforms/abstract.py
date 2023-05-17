@@ -69,6 +69,7 @@ class Qubit:
     twpa: Optional[Channel] = None
     drive: Optional[Channel] = None
     flux: Optional[Channel] = None
+    flux_coupler: Optional[List["Qubit"]] = None
 
     def __post_init__(self):
         # register qubit in ``flux`` channel so that we can access
