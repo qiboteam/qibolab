@@ -1046,7 +1046,7 @@ class Pulse:
         )
 
     def is_equal_ignoring_start(self, item) -> bool:
-        """Check if two pulses are equal, excepto from the start time"""
+        """Check if two pulses are equal ignoring start time"""
         return (
             self.duration == item.duration
             and self.amplitude == item.amplitude
