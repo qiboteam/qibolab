@@ -88,11 +88,11 @@ instruments:
 
             classification_parameters:
                 0:  # qubit id
-                    rotation_angle              : 250.885                   # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.003284                  # in V
+                    rotation_angle              : 251.990                   # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.003371                  # in V
                 1:  # qubit id
-                    rotation_angle              : 27.810                   # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.004327                  # in V
+                    rotation_angle              : 16.069                   # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.002124                  # in V
 
 
             channel_port_map:   # Refrigerator Channel : Instrument port
@@ -119,14 +119,14 @@ instruments:
 
             classification_parameters:
                 2:  # qubit id
-                    rotation_angle              : 351.561                    # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.002858                  # in V
+                    rotation_angle              : 349.485                    # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.002868                  # in V
                 3:  # qubit id
-                    rotation_angle              : 6.253                    # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.003575                  # in V
+                    rotation_angle              : 4.966                    # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.003655                  # in V
                 4:  # qubit id
-                    rotation_angle              : 302.921                   # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.001386                  # in V
+                    rotation_angle              : 302.555                   # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.001366                  # in V
 
             channel_port_map:   # Refrigerator Channel : Instrument port
                 'L3-25b' : o1    # IQ Port = out0 & out1
@@ -253,7 +253,7 @@ native_gates:
                 type: qd                    # qubit drive
             MZ:
                 duration: 2000
-                amplitude: 0.2
+                amplitude: 0.1
                 frequency: 7_212_278_226     # resonator frequency
                 if_frequency: -42_721_774    # difference in resonator frequency
                 shape: Rectangular()
@@ -283,7 +283,7 @@ native_gates:
                 type: qd                    # qubit drive
             MZ:
                 duration: 2000
-                amplitude: 0.2
+                amplitude: 0.25
                 frequency: 7_655_139_987    # resonator frequency
                 if_frequency: -194_860_013    # difference in resonator frequency
                 shape: Rectangular()
@@ -313,7 +313,7 @@ native_gates:
                 type: qd                    # qubit drive
             MZ:
                 duration: 2000
-                amplitude: 0.2
+                amplitude: 0.4
                 frequency: 8_058_816_253      # resonator frequency
                 if_frequency: 208_816_253    # difference in resonator frequency
                 shape: Rectangular()
@@ -373,7 +373,7 @@ characterization:
     single_qubit:
         0:
             readout_frequency: 7_212_278_226
-            drive_frequency: 5_045_070_000
+            drive_frequency: 5_045_414_655
             # anharmonicity: 291_556_360
             T1: 5_857
             T2: 0
