@@ -810,6 +810,8 @@ class Zurich(AbstractInstrument):
     def sweep(self, qubits, sequence, options, *sweepers):
         """Play pulse and sweepers sequence"""
 
+        self.signal_map = {}
+
         dimensions = []
         if options.averaging_mode is AveragingMode.SINGLESHOT:
             dimensions = [options.nshots]
