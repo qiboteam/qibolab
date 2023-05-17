@@ -76,7 +76,7 @@ class QibolabBackend(NumpyBackend):
             CircuitResult object containing the results acquired from the execution.
         """
         if isinstance(initial_state, type(circuit)):
-            self.execute_circuit(
+            return self.execute_circuit(
                 circuit=initial_state + circuit,
                 nshots=nshots,
                 fuse_one_qubit=fuse_one_qubit,
