@@ -99,8 +99,8 @@ def create_qick_sweeps(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Q
         results=[ro.serial for ro in sequence.ro_pulses],
         pulses=sweeper.pulses,
         indexes=indexes,
-        starts=starts,
-        steps=steps,
+        starts=np.array(starts),
+        steps=np.array(steps),
         expts=len(sweeper.values),
     )
     return new_sweep
