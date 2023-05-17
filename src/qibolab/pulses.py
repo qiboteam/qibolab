@@ -167,6 +167,10 @@ class PulseShape(ABC):
         modulated_waveform_q.serial = f"Modulated_Waveform_Q(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse.frequency, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
         return (modulated_waveform_i, modulated_waveform_q)
 
+    def __eq__(self, item) -> bool:
+        """Overloads == operator"""
+        return type(item) is self.__class__
+
 
 class Rectangular(PulseShape):
     """
@@ -177,10 +181,6 @@ class Rectangular(PulseShape):
     def __init__(self):
         self.name = "Rectangular"
         self.pulse: Pulse = None
-
-    def __eq__(self, item) -> bool:
-        """Overloads == operator"""
-        return type(item) is Rectangular
 
     @property
     def envelope_waveform_i(self) -> Waveform:
@@ -233,7 +233,7 @@ class Gaussian(PulseShape):
 
     def __eq__(self, item) -> bool:
         """Overloads == operator"""
-        if type(item) is Gaussian:
+        if super().__eq__(item):
             return self.rel_sigma == item.rel_sigma
         return False
 
@@ -293,7 +293,7 @@ class Drag(PulseShape):
 
     def __eq__(self, item) -> bool:
         """Overloads == operator"""
-        if type(item) is Drag:
+        if super().__eq__(item):
             return self.rel_sigma == item.rel_sigma and self.beta == item.beta
         return False
 
@@ -368,7 +368,7 @@ class IIR(PulseShape):
 
     def __eq__(self, item) -> bool:
         """Overloads == operator"""
-        if type(item) is IIR:
+        if super().__eq__(item):
             return self.target == item.target and (self.a == item.a).all() and (self.b == item.b).all()
         return False
 
@@ -446,7 +446,7 @@ class SNZ(PulseShape):
 
     def __eq__(self, item) -> bool:
         """Overloads == operator"""
-        if type(item) is SNZ:
+        if super().__eq__(item):
             return self.t_half_flux_pulse == item.t_half_flux_pulse and self.b_amplitude == item.b_amplitude
         return False
 
@@ -515,7 +515,7 @@ class eCap(PulseShape):
 
     def __eq__(self, item) -> bool:
         """Overloads == operator"""
-        if type(item) is eCap:
+        if super().__eq__(item):
             return self.alpha == item.alpha
         return False
 
