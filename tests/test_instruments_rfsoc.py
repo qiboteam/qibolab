@@ -32,7 +32,7 @@ def test_tii_rfsoc4x2_setup():
         sampling_rate=5_000_000_000, repetition_duration=1_000, adc_trig_offset=150, max_gain=30_000
     )
 
-    instrument.setup(sampling_rate=5_000_000_000, repetition_duration=1_000, adc_trig_offset=150, max_gain=30_000)
+    instrument.setup(sampling_rate=5_000_000_000, relaxation_time=1_000, adc_trig_offset=150, max_gain=30_000)
 
     assert instrument.cfg == target_cfg
 
