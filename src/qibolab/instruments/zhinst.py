@@ -489,9 +489,7 @@ class Zurich(AbstractInstrument):
         last_start = 0
         for pulse in sequence:
             zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"].append(ZhPulse(pulse))
-            if pulse.start > last_start:
-                import warnings
-
+            if pulse.start < last_start:
                 warnings.warn("Pulse timing translation")
             last_start = pulse.start
 
