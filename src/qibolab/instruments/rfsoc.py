@@ -60,13 +60,14 @@ def create_qick_sweeps(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Q
     # TODO add phase
     is_freq = sweeper.parameter is Parameter.frequency
     is_amp = sweeper.parameter is Parameter.amplitude
+    is_phase = sweeper.parameter is Parameter.relative_phase
     is_bias = sweeper.parameter is Parameter.bias
 
     starts = []
     steps = []
     indexes = []
 
-    if is_freq or is_amp:
+    if is_freq or is_amp or is_phase:
         for pulse in sweeper.pulses:
             for idx, seq_pulse in enumerate(sequence):
                 if pulse == seq_pulse:
@@ -78,6 +79,10 @@ def create_qick_sweeps(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Q
                 # starts.append(sweeper.values[0] * pulse.amplitude)
                 starts.append(sweeper.values[0] * pulse.amplitude)
                 steps.append((sweeper.values[1] - sweeper.values[0]) * pulse.amplitude)
+            elif is_phase:
+                starts.append(sweeper.values[0] + pulse.relative_phase)
+                steps.append(sweeper.values[1] - sweeper.values[0])
+
     elif is_bias:
         for qubit in sweeper.qubits:
             for idx, seq_qubit in enumerate(qubits):
@@ -385,7 +390,11 @@ class RFSoC(AbstractInstrument):
         sweeper = sweepers[0]
         if self.get_if_python_sweep(sequence, qubits, *sweepers):
             values = []
-            if sweeper.parameter is Parameter.frequency or sweeper.parameter is Parameter.amplitude:
+            if (
+                sweeper.parameter is Parameter.frequency
+                or sweeper.parameter is Parameter.amplitude
+                or sweeper.parameter is Parameter.relative_phase
+            ):
                 for idx, _ in enumerate(sweeper.pulses):
                     val = np.arange(0, sweeper.expts) * sweeper.steps[idx] + sweeper.starts[idx]
                     values.append(val)
@@ -397,12 +406,18 @@ class RFSoC(AbstractInstrument):
             results = {}
             for idx in range(sweeper.expts):
                 # update values
-                if sweeper.parameter is Parameter.frequency or sweeper.parameter is Parameter.amplitude:
+                if (
+                    sweeper.parameter is Parameter.frequency
+                    or sweeper.parameter is Parameter.amplitude
+                    or sweeper.parameter is Parameter.relative_phase
+                ):
                     for jdx in range(len(sweeper.pulses)):
                         if sweeper.parameter is Parameter.frequency:
                             sequence[sweeper.indexes[jdx]].frequency = values[jdx][idx]
                         elif sweeper.parameter is Parameter.amplitude:
                             sequence[sweeper.indexes[jdx]].amplitude = values[jdx][idx]
+                        elif sweeper.parameter is Parameter.relative_phase:
+                            sequence[sweeper.indexes[jdx]].relative_phase = values[jdx][idx]
                 else:
                     for kdx, jdx in enumerate(sweeper.indexes):
                         qubits[jdx].flux.bias = values[kdx][idx]
