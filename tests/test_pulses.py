@@ -401,9 +401,9 @@ def test_pulses_pulse_split_pulse():
 
 
 def test_pulses_pulsesequence_init():
-    p1 = Pulse(600, 40, 0.9, 100e6, 0, Drag(5, 1), 1, PulseType.DRIVE)
+    p1 = Pulse(400, 40, 0.9, 100e6, 0, Drag(5, 1), 3, PulseType.DRIVE)
     p2 = Pulse(500, 40, 0.9, 100e6, 0, Drag(5, 1), 2, PulseType.DRIVE)
-    p3 = Pulse(400, 40, 0.9, 100e6, 0, Drag(5, 1), 3, PulseType.DRIVE)
+    p3 = Pulse(600, 40, 0.9, 100e6, 0, Drag(5, 1), 1, PulseType.DRIVE)
 
     ps = PulseSequence()
     assert type(ps) == PulseSequence
@@ -433,9 +433,9 @@ def test_pulses_pulsesequence_operators():
     ps = ps + ReadoutPulse(800, 200, 0.9, 20e6, 0, Rectangular(), 2)
     ps = ReadoutPulse(800, 200, 0.9, 20e6, 0, Rectangular(), 3) + ps
 
-    p4 = Pulse(300, 40, 0.9, 50e6, 0, Gaussian(5), 1, PulseType.DRIVE)
+    p4 = Pulse(100, 40, 0.9, 50e6, 0, Gaussian(5), 3, PulseType.DRIVE)
     p5 = Pulse(200, 40, 0.9, 50e6, 0, Gaussian(5), 2, PulseType.DRIVE)
-    p6 = Pulse(100, 40, 0.9, 50e6, 0, Gaussian(5), 3, PulseType.DRIVE)
+    p6 = Pulse(300, 40, 0.9, 50e6, 0, Gaussian(5), 1, PulseType.DRIVE)
 
     another_ps = PulseSequence()
     another_ps.add(p4)
