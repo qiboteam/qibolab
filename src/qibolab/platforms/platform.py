@@ -82,7 +82,7 @@ class DesignPlatform(AbstractPlatform):
 
     def set_bias(self, qubit, bias):
         if self.qubits[qubit].flux is None:
-            raise_error(NotImplementedError, f"{self.name} does not have flux.")
+            raise_error(ValueError, f"{self.name} does not have flux.")
         self.qubits[qubit].flux.bias = bias
 
     def get_bias(self, qubit):
