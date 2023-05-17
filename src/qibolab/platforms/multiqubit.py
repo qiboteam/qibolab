@@ -7,7 +7,7 @@ import yaml
 from qibo.config import log, raise_error
 
 from qibolab.designs import Channel, ChannelMap
-from qibolab.platforms.abstract import AbstractPlatform
+from qibolab.platforms.abstract import AbstractPlatform, Qubit
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import ExecutionResults
 from qibolab.sweeper import Parameter, Sweeper
@@ -103,8 +103,157 @@ class MultiqubitPlatform(AbstractPlatform):
         self.hardware_avg = self.settings["settings"]["hardware_avg"]
         self.relaxation_time = self.settings["settings"]["relaxation_time"]
 
-        if self.is_connected:
-            self.setup()
+        # if self.is_connected:
+        #     self.setup()
+
+        # FIX: Set attenuation again to the original value after sweep attenuation in punchout
+        if hasattr(self, "qubit_instrument_map"):
+            for qubit in range(self.nqubits):
+                instrument_name = self.qubit_instrument_map[qubit][0]
+                port = self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]
+                att = self.settings["instruments"][instrument_name]["settings"]["ports"][port]["attenuation"]
+                self.ro_port[qubit].attenuation = att
+
+    def update(self, updates: dict):
+        r"""Updates platform dependent runcard parameters and set up platform instruments if needed.
+
+        Args:
+
+            updates (dict): Dictionary containing the parameters to update the runcard.
+        """
+        for par, values in updates.items():
+            for qubit, value in values.items():
+                # resonator_punchout_attenuation
+                if par == "readout_attenuation":
+                    attenuation = int(value)
+                    # save settings
+                    instrument_name = self.qubit_instrument_map[qubit][0]
+                    port = self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][0]]
+                    self.settings["instruments"][instrument_name]["settings"]["ports"][port][
+                        "attenuation"
+                    ] = attenuation
+                    # configure RO attenuation
+                    self.ro_port[qubit].attenuation = attenuation
+
+                # resonator_spectroscopy_flux / qubit_spectroscopy_flux
+                if par == "sweetspot":
+                    sweetspot = float(value)
+                    # save settings
+                    instrument_name = self.qubit_instrument_map[qubit][2]
+                    port = self.qrm[qubit].channel_port_map[self.qubit_channel_map[qubit][2]]
+                    self.settings["instruments"][instrument_name]["settings"]["ports"][port]["offset"] = sweetspot
+                    # configure instrument qcm_bb offset
+                    self.qb_port[qubit].current = sweetspot
+
+                # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
+                if par == "drive_frequency":
+                    freq = int(value * 1e9)
+
+                    # update Qblox qubit LO drive frequency config
+                    instrument_name = self.qubit_instrument_map[qubit][1]
+                    port = self.qdm[qubit].channel_port_map[self.qubit_channel_map[qubit][1]]
+                    drive_if = self.single_qubit_natives[qubit]["RX"]["if_frequency"]
+                    self.settings["instruments"][instrument_name]["settings"]["ports"][port]["lo_frequency"] = (
+                        freq - drive_if
+                    )
+
+                    # set Qblox qubit LO drive frequency
+                    self.qd_port[qubit].lo_frequency = freq - drive_if
+
+                # classification
+                if par == "threshold":
+                    threshold = float(value)
+                    # update Qblox qubit classification threshold
+                    instrument_name = self.qubit_instrument_map[qubit][0]
+                    self.settings["instruments"][instrument_name]["settings"]["classification_parameters"][qubit][
+                        "threshold"
+                    ] = threshold
+
+                    self.instruments[instrument_name].setup(
+                        **self.settings["settings"],
+                        **self.settings["instruments"][instrument_name]["settings"],
+                    )
+
+                # classification
+                if par == "iq_angle":
+                    rotation_angle = float(value)
+                    rotation_angle = (
+                        rotation_angle * 360 / (2 * np.pi)
+                    ) % 360  # save rotation angle in degrees for qblox
+                    # update Qblox qubit classification iq angle
+                    instrument_name = self.qubit_instrument_map[qubit][0]
+                    self.settings["instruments"][instrument_name]["settings"]["classification_parameters"][qubit][
+                        "rotation_angle"
+                    ] = rotation_angle
+
+                    self.instruments[instrument_name].setup(
+                        **self.settings["settings"],
+                        **self.settings["instruments"][instrument_name]["settings"],
+                    )
+
+                super().update(updates)
+
+    def set_lo_drive_frequency(self, qubit, freq):
+        self.qd_port[qubit].lo_frequency = freq
+
+    def get_lo_drive_frequency(self, qubit):
+        return self.qd_port[qubit].lo_frequency
+
+    def set_lo_readout_frequency(self, qubit, freq):
+        self.ro_port[qubit].lo_frequency = freq
+
+    def get_lo_readout_frequency(self, qubit):
+        return self.ro_port[qubit].lo_frequency
+
+    def set_lo_twpa_frequency(self, qubit, freq):
+        for instrument in self.instruments:
+            if "twpa" in instrument:
+                self.instruments[instrument].frequency = freq
+                return None
+        raise_error(NotImplementedError, "No twpa instrument found in the platform. ")
+
+    def get_lo_twpa_frequency(self, qubit):
+        for instrument in self.instruments:
+            if "twpa" in instrument:
+                return self.instruments[instrument].frequency
+        raise_error(NotImplementedError, "No twpa instrument found in the platform. ")
+
+    def set_lo_twpa_power(self, qubit, power):
+        for instrument in self.instruments:
+            if "twpa" in instrument:
+                self.instruments[instrument].power = power
+                return None
+        raise_error(NotImplementedError, "No twpa instrument found in the platform. ")
+
+    def get_lo_twpa_power(self, qubit):
+        for instrument in self.instruments:
+            if "twpa" in instrument:
+                return self.instruments[instrument].power
+        raise_error(NotImplementedError, "No twpa instrument found in the platform. ")
+
+    def set_attenuation(self, qubit: Qubit, att):
+        self.ro_port[qubit.name].attenuation = att
+
+    def set_gain(self, qubit, gain):
+        self.qd_port[qubit].gain = gain
+
+    def set_bias(self, qubit: Qubit, bias):
+        if qubit.name in self.qbm:
+            self.qb_port[qubit.name].current = bias
+        elif qubit.name in self.qfm:
+            self.qf_port[qubit.name].offset = bias
+
+    def get_attenuation(self, qubit: Qubit):
+        return self.ro_port[qubit.name].attenuation
+
+    def get_bias(self, qubit: Qubit):
+        if qubit.name in self.qbm:
+            return self.qb_port[qubit.name].current
+        elif qubit.name in self.qfm:
+            return self.qf_port[qubit.name].offset
+
+    def get_gain(self, qubit):
+        return self.qd_port[qubit].gain
 
     def connect(self):
         """Connects to the instruments."""
