@@ -180,21 +180,11 @@ class RFSoC(AbstractInstrument):
         """
         # TODO typehint qubits is wrong, it's dictionary
 
-        # TODO find a better solution
-        # option 1: create a new QickQubit object
-        # option 2: pass qubits in connect/setup and pass only updates
-        simplified_qubits = deepcopy(qubits)
-        for qubit in simplified_qubits:
-            for channel in simplified_qubits[qubit].channels:
-                if channel.local_oscillator is not None:
-                    if not isinstance(channel.local_oscillator, int):
-                        channel.local_oscillator = channel.local_oscillator.frequency
-
         server_commands = {
             "operation_code": "execute_pulse_sequence",
             "cfg": cfg,
             "sequence": sequence,
-            "qubits": simplified_qubits,
+            "qubits": qubits,
             "readouts_per_experiment": readouts_per_experiment,
             "average": average,
         }
@@ -224,21 +214,11 @@ class RFSoC(AbstractInstrument):
         """
         # TODO typehint qubits is wrong, it's dictionary
 
-        # TODO find a better solution
-        # option 1: create a new QickQubit object
-        # option 2: pass qubits in connect/setup and pass only updates
-        simplified_qubits = deepcopy(qubits)
-        for qubit in simplified_qubits:
-            for channel in simplified_qubits[qubit].channels:
-                if channel.local_oscillator is not None:
-                    if not isinstance(channel.local_oscillator, int):
-                        channel.local_oscillator = channel.local_oscillator.frequency
-
         server_commands = {
             "operation_code": "execute_single_sweep",
             "cfg": cfg,
             "sequence": sequence,
-            "qubits": simplified_qubits,
+            "qubits": qubits,
             "sweeper": sweeper,
             "readouts_per_experiment": readouts_per_experiment,
             "average": average,
@@ -600,11 +580,19 @@ class RFSoC(AbstractInstrument):
         #        self.set_best_LO(limits)
 
         sweepsequence = sequence.copy()
-        original_ro = sequence.ro_pulses
-        # deepcopy of the qubits
-        sweepqubits = deepcopy(qubits)
 
-        results = self.recursive_python_sweep(sweepqubits, sweepsequence, original_ro, *qick_sweepers, average=average)
+        original_ro = [pulse.serial for pulse in sequence.ro_pulses]
+
+        bias_change = any([sweep.parameter is Parameter.bias for sweep in sweepers])
+        if bias_change:
+            initial_biases = [qubits[idx].flux.bias if qubits[idx].flux is not None else None for idx in qubits]
+
+        results = self.recursive_python_sweep(qubits, sweepsequence, original_ro, *qick_sweepers, average=average)
+
+        if bias_change:
+            for idx in qubits:
+                if qubits[idx].flux is not None:
+                    qubits[idx].flux.bias = initial_biases[idx]
 
         return results
 
@@ -625,16 +613,14 @@ class TII_RFSOC4x2(RFSoC):
 class TII_ZCU111(RFSoC):
     """RFSoC object for Xilinx ZCU111"""
 
-    def __init__(self, name: str, address: str, local_oscillator: LocalOscillator = None):
+    def __init__(self, name: str, address: str):
         """Define IP, port and QickProgramConfig"""
         super().__init__(name, address=address)
         self.host, self.port = address.split(":")
         self.port = int(self.port)
-        self.local_oscillator = local_oscillator
-        # self.local_oscillator = None
         self.cfg = QickProgramConfig(
-            sampling_rate=6_000_000_000,
+            sampling_rate=6_500_000_000,
             mixer_freq=0,
-            adc_sampling_frequency=6_000_000_000,  # 3_072_000_000,
+            adc_sampling_frequency=3_072_000_000,
             mux_sampling_frequency=1_536_000_000,
         )
