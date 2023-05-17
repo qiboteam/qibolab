@@ -14,7 +14,6 @@ from qibo.models import Circuit
 
 from qibolab.designs.channels import Channel
 from qibolab.pulses import Drag, DrivePulse, FluxPulse, Pulse, PulseSequence, ReadoutPulse
-from qibolab.transpilers import can_execute, transpile
 from qibolab.transpilers.gate_decompositions import TwoQubitNatives
 
 
@@ -170,7 +169,28 @@ class AbstractPlatform(ABC):
 
         Args:
 
-            updates (dict): Dictionary containing the parameters to update the runcard.
+            updates (dict): Dictionary containing the parameters to update the runcard. A typical dictionary should be of the following form
+                            {`parameter_to_update_in_runcard`:{`qubit0`:`par_value_qubit0`, ..., `qubit_i`:`par_value_qubit_i`, ...}}.
+                            The parameters that can be updated by this method are:
+                                - readout_frequency (GHz)
+                                - readout_attenuation (dimensionless)
+                                - bare_resonator_frequency (GHz)
+                                - sweetspot(V)
+                                - drive_frequency (GHz)
+                                - readout_amplitude (dimensionless)
+                                - drive_amplitude (dimensionless)
+                                - drive_length
+                                - t2 (ns)
+                                - t2_spin_echo (ns)
+                                - t1 (ns)
+                                - thresold(V)
+                                - iq_angle(deg)
+                                - mean_gnd_states(V)
+                                - mean_exc_states(V)
+                                - beta(dimensionless)
+
+
+
         """
 
         for par, values in updates.items():
@@ -326,9 +346,6 @@ class AbstractPlatform(ABC):
             sequence (qibolab.pulses.PulseSequence): Pulse sequence that implements the
                 circuit on the qubit.
         """
-        if not can_execute(circuit, self.two_qubit_natives):
-            circuit, _ = transpile(circuit, self.two_qubit_natives)
-
         sequence = PulseSequence()
         virtual_z_phases = defaultdict(int)
 
