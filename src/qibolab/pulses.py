@@ -369,7 +369,7 @@ class IIR(PulseShape):
     def __eq__(self, item) -> bool:
         """Overloads == operator"""
         if type(item) is IIR:
-            return self.target == item.target and self.a == item.a and self.b == item.b
+            return self.target == item.target and (self.a == item.a).all() and (self.b == item.b).all()
         return False
 
     @property
@@ -447,7 +447,7 @@ class SNZ(PulseShape):
     def __eq__(self, item) -> bool:
         """Overloads == operator"""
         if type(item) is SNZ:
-            return self.t_half_flux_pulse == item.t_half_flux_pulse
+            return self.t_half_flux_pulse == item.t_half_flux_pulse and self.b_amplitude == item.b_amplitude
         return False
 
     @property

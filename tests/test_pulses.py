@@ -275,6 +275,26 @@ def test_pulses_pulse_attributes():
     assert p0.finish == 100
 
 
+def test_pulses_is_equal():
+    """Checks if two pulses are equal, not looking at start time"""
+
+    p1 = Pulse(0, 40, 0.9, 0, 0, Rectangular(), 0, PulseType.FLUX, 0)
+    p2 = Pulse(100, 40, 0.9, 0, 0, Rectangular(), 0, PulseType.FLUX, 0)
+    p3 = Pulse(0, 40, 0.9, 0, 0, Rectangular(), 0, PulseType.FLUX, 0)
+    p4 = Pulse(200, 40, 0.9, 0, 0, Rectangular(), 2, PulseType.FLUX, 0)
+    assert p1.is_equal(p2)
+    assert p1.is_equal(p3)
+    assert not p1.is_equal(p4)
+
+    p1 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(5), 0, PulseType.DRIVE, 2)
+    p2 = Pulse(10, 40, 0.9, 50e6, 0, Gaussian(5), 0, PulseType.DRIVE, 2)
+    p3 = Pulse(20, 50, 0.8, 50e6, 0, Gaussian(5), 0, PulseType.DRIVE, 2)
+    p4 = Pulse(30, 40, 0.9, 50e6, 0, Gaussian(4), 0, PulseType.DRIVE, 2)
+    assert p1.is_equal(p2)
+    assert not p1.is_equal(p3)
+    assert not p1.is_equal(p4)
+
+
 def test_pulses_pulse_serial():
     p11 = Pulse(0, 40, 0.9, 50_000_000, 0, Gaussian(5), 0, PulseType.DRIVE)
     assert p11.serial == "Pulse(0, 40, 0.9, 50_000_000, 0, Gaussian(5), 0, PulseType.DRIVE, 0)"
@@ -808,6 +828,60 @@ def test_pulses_pulseshape_drag():
         pulse.shape.modulated_waveform_q.serial
         == f"Modulated_Waveform_Q(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse.frequency, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
     )
+
+
+def test_pulses_pulseshape_eq():
+    """Checks == operator for pulse shapes"""
+
+    shape1 = Rectangular()
+    shape2 = Rectangular()
+    shape3 = Gaussian(5)
+    assert shape1 == shape2
+    assert not shape1 == shape3
+
+    shape1 = Gaussian(4)
+    shape2 = Gaussian(4)
+    shape3 = Gaussian(5)
+    assert shape1 == shape2
+    assert not shape1 == shape3
+
+    shape1 = Drag(4, 0.01)
+    shape2 = Drag(4, 0.01)
+    shape3 = Drag(5, 0.01)
+    shape4 = Drag(4, 0.05)
+    shape5 = Drag(5, 0.05)
+    assert shape1 == shape2
+    assert not shape1 == shape3
+    assert not shape1 == shape4
+    assert not shape1 == shape5
+
+    shape1 = IIR([-0.5, 2], [1], Rectangular())
+    shape2 = IIR([-0.5, 2], [1], Rectangular())
+    shape3 = IIR([-0.5, 4], [1], Rectangular())
+    shape4 = IIR([-0.4, 2], [1], Rectangular())
+    shape5 = IIR([-0.5, 2], [2], Rectangular())
+    shape6 = IIR([-0.5, 2], [2], Gaussian(5))
+    assert shape1 == shape2
+    assert not shape1 == shape3
+    assert not shape1 == shape4
+    assert not shape1 == shape5
+    assert not shape1 == shape6
+
+    shape1 = SNZ(17, 0.8)
+    shape2 = SNZ(17, 0.8)
+    shape3 = SNZ(18, 0.8)
+    shape4 = SNZ(17, 0.9)
+    shape5 = SNZ(18, 0.9)
+    assert shape1 == shape2
+    assert not shape1 == shape3
+    assert not shape1 == shape4
+    assert not shape1 == shape5
+
+    shape1 = eCap(4)
+    shape2 = eCap(4)
+    shape3 = eCap(5)
+    assert shape1 == shape2
+    assert not shape1 == shape3
 
 
 def test_pulse():
