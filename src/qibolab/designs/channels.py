@@ -105,8 +105,6 @@ class Channel:
 
     @attenuation.setter
     def attenuation(self, attenuation):
-        if not isinstance(attenuation, int):
-            raise_error(TypeError, f"Channel attenuation must be integer.")
         self._attenuation = attenuation
 
 
