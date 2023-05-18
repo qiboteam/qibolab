@@ -41,12 +41,6 @@ class IntegratedResults:
         """Signal phase in radians."""
         return np.angle(self.voltage_i + 1.0j * self.voltage_q)
 
-    # #TODO: Check is adding as wanted, we may need some imput on what data is being added
-    # def __add__(self, data, axis):  # __add__(self, data:IntegratedResults) -> IntegratedResults
-    #     axis = 0
-    #     voltage = np.append(self.voltage, data.voltage, axis=axis)
-    #     return IntegratedResults(voltage)
-
     @property
     def serialize(self):
         """Serialize as a dictionary."""
@@ -128,11 +122,6 @@ class StateResults:
     def probability(self, state=0):
         """Returns the statistical frequency of the specified state (0 or 1)."""
         return abs(1 - state - np.mean(self.states, axis=0))
-
-    # #TODO: Check is adding as wanted, we may need some imput on what data is being added
-    # def __add__(self, data):  # __add__(self, data:StateResults) -> StateResults
-    #     states = np.append(self.states, data.states, axis=0)
-    #     return StateResults(states)
 
     @property
     def serialize(self):
