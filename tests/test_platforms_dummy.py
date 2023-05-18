@@ -21,7 +21,7 @@ def test_dummy_execute_pulse_sequence():
     platform = Platform("dummy")
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_readout_pulse(0, 0))
-    options = ExecutionParameters(nshots=100)
+    options = ExecutionParameters(nshots=None)
     result = platform.execute_pulse_sequence(sequence, options)
 
 
@@ -46,10 +46,7 @@ def test_dummy_single_sweep(parameter, average, nshots):
         nshots=nshots,
         averaging_mode=average,
     )
-    if average is AveragingMode.SINGLESHOT:
-        average = False
-    else:
-        average = True
+    average = not options.averaging_mode is AveragingMode.SINGLESHOT
     results = platform.sweep(sequence, options, sweeper)
 
     assert pulse.serial and pulse.qubit in results
@@ -92,10 +89,7 @@ def test_dummy_double_sweep(parameter1, parameter2, average, nshots):
         nshots=nshots,
         averaging_mode=average,
     )
-    if average is AveragingMode.SINGLESHOT:
-        average = False
-    else:
-        average = True
+    average = not options.averaging_mode is AveragingMode.SINGLESHOT
     results = platform.sweep(sequence, options, sweeper1, sweeper2)
 
     assert ro_pulse.serial and ro_pulse.qubit in results
@@ -128,10 +122,7 @@ def test_dummy_single_sweep_multiplex(parameter, average, nshots):
         nshots=nshots,
         averaging_mode=average,
     )
-    if average is AveragingMode.SINGLESHOT:
-        average = False
-    else:
-        average = True
+    average = not options.averaging_mode is AveragingMode.SINGLESHOT
     results = platform.sweep(sequence, options, sweeper1)
 
     for ro_pulse in ro_pulses.values():

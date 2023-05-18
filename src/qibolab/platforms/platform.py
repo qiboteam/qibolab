@@ -1,4 +1,4 @@
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from enum import Enum, auto
 from typing import Optional
 
@@ -71,17 +71,17 @@ class ExecutionParameters:
     :averaging_mode (AveragingMode): Data averaging mode
     """
 
-    nshots: Optional[int] = 1024
+    nshots: Optional[int] = None
     relaxation_time: Optional[int] = None
     fast_reset: bool = False
     acquisition_type: AcquisitionType = AcquisitionType.DISCRIMINATION
     averaging_mode: AveragingMode = AveragingMode.SINGLESHOT
 
-    def __post_init__(self):
-        if not isinstance(self.acquisition_type, AcquisitionType):
-            raise TypeError("acquisition_type is not valid")
-        if not isinstance(self.averaging_mode, AveragingMode):
-            raise TypeError("averaging mode is not valid")
+    # def __post_init__(self):
+    #     if not isinstance(self.acquisition_type, AcquisitionType):
+    #         raise TypeError("acquisition_type is not valid")
+    #     if not isinstance(self.averaging_mode, AveragingMode):
+    #         raise TypeError("averaging mode is not valid")
 
     @property
     def results_type(self):
@@ -128,10 +128,11 @@ class DesignPlatform(AbstractPlatform):
         Returns:
             Readout results acquired by after execution.
         """
+        if options.nshots is None:
+            options = replace(options, nshots=self.settings["settings"]["nshots"])
+
         if options.relaxation_time is None:
-            kwargs = asdict(options)
-            kwargs["relaxation_time"] = self.relaxation_time
-            options = ExecutionParameters(**kwargs)
+            options = replace(options, relaxation_time=self.relaxation_time)
 
         return self.design.play(self.qubits, sequence, options)
 
@@ -149,10 +150,12 @@ class DesignPlatform(AbstractPlatform):
         Returns:
             Readout results acquired by after execution.
         """
+
+        if options.nshots is None:
+            options = replace(options, nshots=self.settings["settings"]["nshots"])
+
         if options.relaxation_time is None:
-            kwargs = asdict(options)
-            kwargs["relaxation_time"] = self.relaxation_time
-            options = ExecutionParameters(**kwargs)
+            options = replace(options, relaxation_time=self.relaxation_time)
 
         return self.design.sweep(
             self.qubits,

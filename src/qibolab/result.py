@@ -1,5 +1,5 @@
 from dataclasses import InitVar, dataclass, field
-from functools import cached_property
+from functools import cache, cached_property
 from typing import Optional
 
 import numpy as np
@@ -124,19 +124,10 @@ class StateResults:
     def __add__(self, data):
         return self.__class__(np.append(self.states, data.states))
 
+    @cache
     def probability(self, state=0):
         """Returns the statistical frequency of the specified state (0 or 1)."""
         return abs(1 - state - np.mean(self.states, axis=0))
-
-    @cached_property
-    def state_0_probability(self):
-        """Returns the 0 state statistical frequency."""
-        return self.probability(0)
-
-    @cached_property
-    def state_1_probability(self):
-        """Returns the 1 state statistical frequency."""
-        return self.probability(1)
 
     # #TODO: Check is adding as wanted, we may need some imput on what data is being added
     # def __add__(self, data):  # __add__(self, data:StateResults) -> StateResults

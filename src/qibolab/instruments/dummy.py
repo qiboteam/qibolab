@@ -40,9 +40,8 @@ class DummyInstrument(AbstractInstrument):
         log.info("Disconnecting dummy instrument.")
 
     def play(self, qubits, sequence, options):
-        relaxation_time = options.relaxation_time
         nshots = options.nshots
-        time.sleep(relaxation_time * 1e-9)
+        time.sleep(options.relaxation_time * 1e-9)
 
         ro_pulses = {pulse.qubit: pulse.serial for pulse in sequence.ro_pulses}
 
@@ -55,11 +54,6 @@ class DummyInstrument(AbstractInstrument):
         return results
 
     def sweep(self, qubits, sequence, options, *sweepers, average=True):
-        relaxation_time = options.relaxation_time
-        nshots = options.nshots
-
-        average = not options.averaging_mode is AveragingMode.SINGLESHOT
-
         results = {}
         sweeper_pulses = {}
 
@@ -80,10 +74,8 @@ class DummyInstrument(AbstractInstrument):
             qubits,
             copy_sequence,
             copy.deepcopy(sequence),
+            options,
             *sweepers,
-            nshots=nshots,
-            average=average,
-            relaxation_time=relaxation_time,
             results=results,
             sweeper_pulses=sweeper_pulses,
             map_original_shifted=map_original_shifted
@@ -95,10 +87,8 @@ class DummyInstrument(AbstractInstrument):
         qubits,
         sequence,
         original_sequence,
+        options,
         *sweepers,
-        nshots=1024,
-        average=True,
-        relaxation_time=None,
         results=None,
         sweeper_pulses=None,
         map_original_shifted=None
@@ -119,20 +109,15 @@ class DummyInstrument(AbstractInstrument):
                     qubits,
                     sequence,
                     original_sequence,
+                    options,
                     *sweepers[1:],
-                    nshots=nshots,
-                    average=average,
-                    relaxation_time=relaxation_time,
                     results=results,
                     sweeper_pulses=sweeper_pulses,
                     map_original_shifted=map_original_shifted
                 )
             else:
                 new_sequence = copy.deepcopy(sequence)
-                options = ExecutionParameters(
-                    nshots=nshots,
-                    relaxation_time=relaxation_time,
-                )
+                average = not options.averaging_mode is AveragingMode.SINGLESHOT
                 result = self.play(qubits, new_sequence, options)
 
                 # colllect result and append to original pulse
