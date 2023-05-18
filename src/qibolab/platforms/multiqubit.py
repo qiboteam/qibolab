@@ -100,6 +100,24 @@ class MultiqubitPlatform(AbstractPlatform):
                     # set Qblox qubit LO drive frequency
                     self.qd_port[qubit].lo_frequency = freq - drive_if
 
+                # ramsey
+                if par == "delta_frequency":
+                    delta_phys = int(value)
+                    qubit_freq = self.single_qubit_natives[qubit]["RX"]["frequency"]
+                    corrected_qubit_frequency = int(qubit_freq - delta_phys)
+
+                    # update Qblox qubit LO drive frequency config
+                    instrument_name = self.qubit_instrument_map[qubit][1]
+                    port = self.qdm[qubit].channel_port_map[self.qubit_channel_map[qubit][1]]
+                    drive_if = self.single_qubit_natives[qubit]["RX"]["if_frequency"]
+                    self.settings["instruments"][instrument_name]["settings"]["ports"][port]["lo_frequency"] = (
+                        corrected_qubit_frequency - drive_if
+                    )
+
+                    # set Qblox qubit LO drive frequency
+                    self.qd_port[qubit].lo_frequency = corrected_qubit_frequency - drive_if
+                    self._update_called_by_multiqubit = True
+
                 # classification
                 if par == "threshold":
                     threshold = float(value)

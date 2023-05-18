@@ -109,6 +109,8 @@ class AbstractPlatform(ABC):
 
         self.single_qubit_natives = {}
         self.two_qubit_natives = TwoQubitNatives(0)
+        self._update_called_by_multiqubit = False
+
         # Load platform settings
         self.reload_settings()
 
@@ -228,7 +230,7 @@ class AbstractPlatform(ABC):
                     self.qubits[qubit].sweetspot = sweetspot
                     self.settings["characterization"]["single_qubit"][qubit]["sweetspot"] = sweetspot
 
-                # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
+                # qubit_spectroscopy / qubit_spectroscopy_flux
                 elif par == "drive_frequency":
                     freq = int(value * 1e9)
                     self.single_qubit_natives[qubit]["RX"]["frequency"] = freq
@@ -236,6 +238,22 @@ class AbstractPlatform(ABC):
 
                     self.qubits[qubit].drive_frequency = freq
                     self.settings["characterization"]["single_qubit"][qubit]["drive_frequency"] = freq
+                
+                # ramsey
+                elif par == "delta_frequency":
+                    delta_phys = int(value)
+                    qubit_freq = self.single_qubit_natives[qubit]["RX"]["frequency"]
+
+                    if self._update_called_by_multiqubit:
+                        corrected_qubit_frequency = int(qubit_freq - delta_phys)
+                    else:
+                        corrected_qubit_frequency = int(qubit_freq + delta_phys)                        
+                    
+                    self.single_qubit_natives[qubit]["RX"]["frequency"] = corrected_qubit_frequency
+                    self.settings["native_gates"]["single_qubit"][qubit]["RX"]["frequency"] = corrected_qubit_frequency
+
+                    self.qubits[qubit].drive_frequency = corrected_qubit_frequency
+                    self.settings["characterization"]["single_qubit"][qubit]["drive_frequency"] = corrected_qubit_frequency
 
                 elif "amplitude" in par:
                     amplitude = float(value)
