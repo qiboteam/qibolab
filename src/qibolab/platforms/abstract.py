@@ -192,7 +192,7 @@ class AbstractPlatform(ABC):
 
         """
 
-        updates = {}
+        # updates = {}
 
         for par, values in updates.items():
             for qubit, value in values.items():
