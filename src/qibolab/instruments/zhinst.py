@@ -764,7 +764,7 @@ class Zurich(AbstractInstrument):
                                         amplitude=1,
                                     )
 
-                            measure_pulse_parameters = {"phase": 0}
+                            measure_pulse_parameters = None #{"phase": 0}
 
                             exp.measure(
                                 acquire_signal=f"acquire{qubit.name}",
