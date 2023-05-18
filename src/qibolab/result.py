@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from functools import cache, cached_property
+from functools import cached_property, lru_cache
 from typing import Optional
 
 import numpy as np
@@ -118,7 +118,7 @@ class StateResults:
     def __add__(self, data):
         return self.__class__(np.append(self.states, data.states))
 
-    @cache
+    @lru_cache
     def probability(self, state=0):
         """Returns the statistical frequency of the specified state (0 or 1)."""
         return abs(1 - state - np.mean(self.states, axis=0))
