@@ -18,6 +18,9 @@ class IntegratedResults:
     def __init__(self, data: np.ndarray):
         self.voltage: npt.NDArray[np.complex128] = data
 
+    def __add__(self, data):
+        return self.__class__(np.append(self.voltage, data.voltage))
+
     @property
     def voltage_i(self):
         """Signal magnitude in volts."""
@@ -77,6 +80,11 @@ class AveragedIntegratedResults(IntegratedResults):
         super().__init__(data)
         self.std: Optional[npt.NDArray[np.float64]] = std
 
+    def __add__(self, data):
+        new_res = super().__add__(data)
+        new_res.std = np.append(self.std, data.std)
+        return new_res
+
 
 class RawWaveformResults(IntegratedResults):
     """
@@ -112,6 +120,9 @@ class StateResults:
 
     def __init__(self, data: np.ndarray):
         self.states: npt.NDArray[np.uint32] = data
+
+    def __add__(self, data):
+        return self.__class__(np.append(self.states, data.states))
 
     def probability(self, state=0):
         """Returns the statistical frequency of the specified state (0 or 1)."""
@@ -162,6 +173,11 @@ class AveragedStateResults(StateResults):
     def __init__(self, states: np.ndarray, std: np.ndarray = np.array([])):
         super().__init__(states)
         self.std: Optional[npt.NDArray[np.float64]] = std
+
+    def __add__(self, data):
+        new_res = super().__add__(data)
+        new_res.std = np.append(self.std, data.std)
+        return new_res
 
 
 ExecRes = np.dtype([("i", np.float64), ("q", np.float64)])
