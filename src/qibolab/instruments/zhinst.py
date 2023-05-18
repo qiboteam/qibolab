@@ -877,6 +877,10 @@ class Zurich(AbstractInstrument):
             print("dimensions", dimensions, "experiment", exp_dimensions)
             warnings.warn("dimensions not properly ordered")
 
+        for sigout in range(0, 8):
+            self.session.devices["device_hdawg"].awgs[0].sigouts[sigout].offset = 0
+        self.session.devices["device_hdawg2"].awgs[0].sigouts[0].offset = 0
+
         # FIXME: Include this on the reports
         # html containing the pulse sequence schedule
         # lo.show_pulse_sheet("pulses", self.exp)
