@@ -68,11 +68,11 @@ class DesignPlatform(AbstractPlatform):
     def get_lo_twpa_power(self, qubit):
         return self.qubits[qubit].twpa.local_oscillator.power
 
-    def set_attenuation(self, qubit: Qubit, att):
-        self.qubits[qubit.name].attenuation = att
+    def set_attenuation(self, qubit, att):
+        self.qubits[qubit].readout.attenuation = att
 
-    def get_attenuation(self, qubit: Qubit):
-        return self.qubits[qubit.name].attenuation
+    def get_attenuation(self, qubit):
+        return self.qubits[qubit].readout.attenuation
 
     def set_gain(self, qubit, gain):
         raise_error(NotImplementedError, f"{self.name} does not support gain.")

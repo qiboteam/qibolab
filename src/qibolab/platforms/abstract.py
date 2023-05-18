@@ -58,8 +58,6 @@ class Qubit:
     # parameters for single shot classification
     threshold: Optional[float] = None
     iq_angle: float = 0.0
-    # attenuation
-    attenuation: int = 0
     # required for mixers (not sure if it should be here)
     mixer_drive_g: float = 0.0
     mixer_drive_phi: float = 0.0
