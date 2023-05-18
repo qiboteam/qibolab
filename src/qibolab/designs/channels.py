@@ -95,6 +95,20 @@ class Channel:
             raise_error(TypeError, f"Channel filter must be dict but is {type(filter)}.")
         self._filter = filter
 
+    @property
+    def attenuation(self):
+        """Attenuation for qblox devices."""
+        """LocalOscillator object connnected to this channel."""
+        if self._attenuation is None:
+            raise_error(NotImplementedError, f"Channel {self.name} does not support attenuation.")
+        return self._attenuation
+
+    @attenuation.setter
+    def attenuation(self, attenuation):
+        if not isinstance(attenuation, int) and attenuation % 2 == 0:
+            raise_error(TypeError, f"Channel attenuation must be even integer.")
+        self._attenuation = attenuation
+
 
 @dataclass
 class ChannelMap:
