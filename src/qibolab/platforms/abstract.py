@@ -454,6 +454,7 @@ class AbstractPlatform(ABC):
                 from qibolab.platform import Platform
                 from qibolab.sweeper import Sweeper, Parameter
                 from qibolab.pulses import PulseSequence
+                from qibolab.platforms.platform import ExecutionParameters
 
 
                 platform = Platform("dummy")
@@ -463,7 +464,8 @@ class AbstractPlatform(ABC):
                 sequence.add(pulse)
                 parameter_range = np.random.randint(10, size=10)
                 sweeper = Sweeper(parameter, parameter_range, [pulse])
-                platform.sweep(sequence, sweeper)
+                platform.sweep(sequence, ExecutionParameters(), sweeper)
+
 
 
         Args:
