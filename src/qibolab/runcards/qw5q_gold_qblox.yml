@@ -87,11 +87,11 @@ instruments:
 
             classification_parameters:
                 0:  # qubit id
-                    rotation_angle              : 201.009                   # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.006106                  # in V
+                    rotation_angle              : 251.990                   # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.003371                  # in V
                 1:  # qubit id
-                    rotation_angle              : 86.950                   # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.002728                  # in V
+                    rotation_angle              : 16.069                   # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.002124                  # in V
 
     qrm_rf2: # ReadOut module 12: controlling qubits q2, q3, q4
         lib: qblox
@@ -113,14 +113,14 @@ instruments:
 
             classification_parameters:
                 2:  # qubit id
-                    rotation_angle              : 313.463                    # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.001211                  # in V
+                    rotation_angle              : 349.485                    # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.002868                  # in V
                 3:  # qubit id
-                    rotation_angle              : 323.444                    # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.000766                  # in V
+                    rotation_angle              : 4.966                    # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.003655                  # in V
                 4:  # qubit id
-                    rotation_angle              : 277.062                   # in degrees 0.0<=v<=360.0
-                    threshold                   : -0.000021                  # in V
+                    rotation_angle              : 302.555                   # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.001366                  # in V
 
     qcm_rf1:
         lib: qblox
@@ -221,7 +221,7 @@ native_gates:
                 type: qd                    # qubit drive
             MZ:
                 duration: 2000
-                amplitude: 0.2
+                amplitude: 0.1
                 frequency: 7_212_278_226     # resonator frequency
                 if_frequency: -42_721_774    # difference in resonator frequency
                 shape: Rectangular()
@@ -245,13 +245,13 @@ native_gates:
             RX:
                 duration: 40                   # should be multiple of 4
                 amplitude: 0.4996
-                frequency: 5_794_176_000 # 5_793_526_000    # qubit frequency
+                frequency: 5_794_176_000   # qubit frequency
                 if_frequency: -200_000_000    # difference in qubit frequency
                 shape: Gaussian(5)
                 type: qd                    # qubit drive
             MZ:
                 duration: 2000
-                amplitude: 0.2
+                amplitude: 0.25
                 frequency: 7_655_139_987    # resonator frequency
                 if_frequency: -194_860_013    # difference in resonator frequency
                 shape: Rectangular()
@@ -260,7 +260,7 @@ native_gates:
             RX:
                 duration: 40                   # should be multiple of 4
                 amplitude: 0.5002
-                frequency: 6_760_050_000 # 6_760_361_111    # qubit frequency
+                frequency: 6_760_050_000    # qubit frequency
                 if_frequency: -200_000_000    # difference in qubit frequency
                 shape: Gaussian(5)
                 type: qd                    # qubit drive
@@ -281,7 +281,7 @@ native_gates:
                 type: qd                    # qubit drive
             MZ:
                 duration: 2000
-                amplitude: 0.2
+                amplitude: 0.4
                 frequency: 8_058_816_253      # resonator frequency
                 if_frequency: 208_816_253    # difference in resonator frequency
                 shape: Rectangular()
@@ -311,31 +311,31 @@ native_gates:
               qubit: 3
               relative_start: 0
               type: qf
-            - duration: 20
-              amplitude: 0
-              shape: Rectangular())
-              qubit: 3
-              relative_start: 32
-              type: qf
-            - type: virtual_z
-              phase: -3.862
-              qubit: 3
+            # - duration: 20
+            #   amplitude: 0
+            #   shape: Rectangular())
+            #   qubit: 3
+            #   relative_start: 32
+            #   type: qf
+            # - type: virtual_z
+            #   phase: -3.862
+            #   qubit: 3
 
-            - duration: 32
-              amplitude: 0
-              shape: Rectangular())
-              qubit: 2
-              relative_start: 0
-              type: qf
-            - duration: 20
-              amplitude: 0
-              shape: Rectangular())
-              qubit: 2
-              relative_start: 32
-              type: qf
-            - type: virtual_z
-              phase: -0.095
-              qubit: 2
+            # - duration: 32
+            #   amplitude: 0
+            #   shape: Rectangular())
+            #   qubit: 2
+            #   relative_start: 0
+            #   type: qf
+            # - duration: 20
+            #   amplitude: 0
+            #   shape: Rectangular())
+            #   qubit: 2
+            #   relative_start: 32
+            #   type: qf
+            # - type: virtual_z
+            #   phase: -0.095
+            #   qubit: 2
 
 characterization:
     single_qubit:
