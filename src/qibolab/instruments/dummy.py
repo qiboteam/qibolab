@@ -58,10 +58,7 @@ class DummyInstrument(AbstractInstrument):
         relaxation_time = options.relaxation_time
         nshots = options.nshots
 
-        if options.averaging_mode is AveragingMode.SINGLESHOT:
-            average = False
-        else:
-            average = True
+        average = not options.averaging_mode is AveragingMode.SINGLESHOT
 
         results = {}
         sweeper_pulses = {}
