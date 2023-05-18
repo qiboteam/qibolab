@@ -46,18 +46,18 @@ native_gates:
 
         1: # qubit number
             RX:
-                duration: 90 #80
+                duration: 40 #80
                 amplitude: 0.2 #0.2
-                frequency: 4_170_000_000 #doesnt do anything requiered for qibolab to work
+                frequency: 4.0942e+9 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
-                duration: 1000
-                amplitude: .1 # 1
-                frequency: 4_931_000_000 #doesnt do anything requiered for qibolab to work
+                duration: 2000
+                amplitude: .5 # 1
+                frequency: 4.9525e+9 #doesnt do anything requiered for qibolab to work
                 integration_time : 1.e-6 #I assume its the same as the ro_ pulse for now
                 shape: Rectangular()
                 type: ro # readout
@@ -91,9 +91,9 @@ native_gates:
                 shape: Rectangular()
         3: # qubit number
             RX:
-                duration: 90 #80
+                duration: 40 #80
                 amplitude: 0.75 #0.8
-                frequency: 4_100_000_000 #doesnt do anything requiered for qibolab to work
+                frequency: 4.0990e+9 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
                 type: qd # qubit drive
@@ -101,8 +101,8 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 2000
-                amplitude: .01 # 1
-                frequency: 5_783_000_000 #doesnt do anything requiered for qibolab to work
+                amplitude: .5 # 1
+                frequency: 5.8060e+9 #doesnt do anything requiered for qibolab to work
                 integration_time : 1.e-6
                 shape: Rectangular()
                 type: ro # readout
@@ -113,18 +113,18 @@ native_gates:
                 shape: Rectangular()
         4: # qubit number
             RX:
-                duration: 53 #110 #80
+                duration: 40 #110 #80
                 amplitude: 1 #0.398 #0.8
-                frequency: 4_196_800_000 #Small detuning increase freq #4_248_775_000 #doesnt do anything requiered for qibolab to work
+                frequency: 4.1017e+9 #Small detuning increase freq #4_248_775_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
-                duration: 1000
+                duration: 2000
                 amplitude: .5 #.50 # 1
-                frequency: 5_515_000_000 #doesnt do anything requiered for qibolab to work
+                frequency: 5.5240e+9 #doesnt do anything requiered for qibolab to work
                 integration_time : 2.e-6
                 shape: Rectangular()
                 type: ro # readout
@@ -248,7 +248,7 @@ characterization:
     two_qubit_couplers:
         0:
             # frequency: 3_753_000_000 or 3_503_000_000
-            sweetspot: 0.1
+            sweetspot: 0.
             filter: {}
         1:
             sweetspot: 0.0
