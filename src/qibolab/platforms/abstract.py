@@ -238,7 +238,7 @@ class AbstractPlatform(ABC):
 
                     self.qubits[qubit].drive_frequency = freq
                     self.settings["characterization"]["single_qubit"][qubit]["drive_frequency"] = freq
-                
+
                 # ramsey
                 elif par == "delta_frequency":
                     delta_phys = int(value)
@@ -247,13 +247,15 @@ class AbstractPlatform(ABC):
                     if self._update_called_by_multiqubit:
                         corrected_qubit_frequency = int(qubit_freq - delta_phys)
                     else:
-                        corrected_qubit_frequency = int(qubit_freq + delta_phys)                        
-                    
+                        corrected_qubit_frequency = int(qubit_freq + delta_phys)
+
                     self.single_qubit_natives[qubit]["RX"]["frequency"] = corrected_qubit_frequency
                     self.settings["native_gates"]["single_qubit"][qubit]["RX"]["frequency"] = corrected_qubit_frequency
 
                     self.qubits[qubit].drive_frequency = corrected_qubit_frequency
-                    self.settings["characterization"]["single_qubit"][qubit]["drive_frequency"] = corrected_qubit_frequency
+                    self.settings["characterization"]["single_qubit"][qubit][
+                        "drive_frequency"
+                    ] = corrected_qubit_frequency
 
                 elif "amplitude" in par:
                     amplitude = float(value)
