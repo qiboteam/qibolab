@@ -27,7 +27,6 @@ native_gates:
                 amplitude: 0.603
                 frequency: 4_093_830_788 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
-                # shape: Drag(5, 0.02)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
@@ -35,14 +34,10 @@ native_gates:
                 duration: 2000 #2000.e-9
                 amplitude: .5 # .1
                 frequency: 5_233_200_000 #doesnt do anything requiered for qibolab to work
-                integration_time : 1.e-6
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
-    #             phase: 0
-            Flux_bias:
-                amplitude: .0
-                shape: Rectangular()
+                phase: 0
 
         1: # qubit number
             RX:
@@ -50,22 +45,17 @@ native_gates:
                 amplitude: 0.2 #0.2
                 frequency: 4.0942e+9 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
-                # shape: Drag(5, 0.04)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 2000
-                amplitude: .5 # 1
-                frequency: 4.9525e+9 #doesnt do anything requiered for qibolab to work
-                integration_time : 1.e-6 #I assume its the same as the ro_ pulse for now
+                amplitude: .1 # 1
+                frequency: 4.9325e+9 #doesnt do anything requiered for qibolab to work
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
-    #             phase: 0
-            Flux_bias:
-                amplitude: .0
-                shape: Rectangular()
+                phase: 0
 
         2: # qubit number
             RX:
@@ -73,7 +63,6 @@ native_gates:
                 amplitude: 0.59
                 frequency: 4_300_587_281  #4_401_600_000 #4_505_500_000 #4_321_500_000 # 4_541_100_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
-                # shape: Drag(5, 0.04)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
@@ -81,58 +70,46 @@ native_gates:
                 duration: 2000
                 amplitude: .54
                 frequency: 6.109e+9 #6_086_000_000  #6_112_000_000 #doesnt do anything requiered for qibolab to work
-                integration_time : 2.0e-6
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
-    #             phase: 0
-            Flux_bias:
-                amplitude: .0
-                shape: Rectangular()
+                phase: 0
+
         3: # qubit number
             RX:
                 duration: 40 #80
                 amplitude: 0.75 #0.8
                 frequency: 4.0990e+9 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
-                # shape: Drag(5, 0.04)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 2000
-                amplitude: .5 # 1
+                amplitude: .1 # 1
                 frequency: 5.8060e+9 #doesnt do anything requiered for qibolab to work
-                integration_time : 1.e-6
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
-    #             phase: 0
-            Flux_bias:
-                amplitude: .0
-                shape: Rectangular()
+                phase: 0
+
         4: # qubit number
             RX:
                 duration: 40 #110 #80
                 amplitude: 1 #0.398 #0.8
                 frequency: 4.1017e+9 #Small detuning increase freq #4_248_775_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
-                # shape: Drag(5, 0.04)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 2000
-                amplitude: .5 #.50 # 1
+                amplitude: .1 #.50 # 1
                 frequency: 5.5240e+9 #doesnt do anything requiered for qibolab to work
-                integration_time : 2.e-6
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
-    #             phase: 0
-            Flux_bias:
-                amplitude: .1
-                shape: Rectangular()
+                phase: 0
 
     # two_qubit:
     #     0-2: # qubit numbers
@@ -177,9 +154,9 @@ characterization:
             # flux_range: -0
 
         1:
-            readout_frequency: 4_931_000_000
+            readout_frequency: 4.9525e+9
             resonator_polycoef_flux: []
-            drive_frequency: 4_170_000_000
+            drive_frequency: 4.0942e+9
             T1: 0.
             T2: 0.
             sweetspot: 0.0
@@ -201,19 +178,19 @@ characterization:
             iq_angle: -0.667
             # alpha: 208 MHz
         3:
-            readout_frequency: 5_783_000_000
+            readout_frequency: 5.8060e+9
             resonator_polycoef_flux: []
-            drive_frequency: 4_100_000_000
+            drive_frequency: 4.0990e+9
             T1: 0.
             T2: 0.
-            sweetspot: 0.0
+            sweetspot: 0
             filter: {}
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
         4:
-            readout_frequency: 5_515_000_000
+            readout_frequency: 5.5240e+9
             resonator_polycoef_flux: []
-            drive_frequency: 4_196_800_000
+            drive_frequency: 4.1017e+9
             T1: 0.
             T2: 0.
             sweetspot: 0.0
