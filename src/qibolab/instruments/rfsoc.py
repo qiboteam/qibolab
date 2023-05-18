@@ -596,7 +596,7 @@ class RFSoC(AbstractInstrument):
 
         sweepsequence = sequence.copy()
 
-        original_ro = [pulse.serial for pulse in sequence.ro_pulses]
+        original_ro = sequence.ro_pulses
 
         bias_change = any([sweep.parameter is Parameter.bias for sweep in sweepers])
         if bias_change:
