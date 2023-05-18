@@ -5,7 +5,7 @@ import numpy as np
 from qibo.config import log, raise_error
 
 from qibolab.instruments.abstract import AbstractInstrument
-from qibolab.platforms.platform import AveragingMode, ExecutionParameters
+from qibolab.platforms.platform import AveragingMode
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import ExecutionResults
 from qibolab.sweeper import Parameter
@@ -53,7 +53,7 @@ class DummyInstrument(AbstractInstrument):
             results[qubit] = results[serial] = ExecutionResults.from_components(i, q, shots)
         return results
 
-    def sweep(self, qubits, sequence, options, *sweepers, average=True):
+    def sweep(self, qubits, sequence, options, *sweepers):
         results = {}
         sweeper_pulses = {}
 
@@ -117,12 +117,15 @@ class DummyInstrument(AbstractInstrument):
                 )
             else:
                 new_sequence = copy.deepcopy(sequence)
-                average = not options.averaging_mode is AveragingMode.SINGLESHOT
                 result = self.play(qubits, new_sequence, options)
 
                 # colllect result and append to original pulse
                 for original_pulse, new_serial in map_original_shifted.items():
-                    acquisition = result[new_serial].average if average else result[new_serial]
+                    acquisition = (
+                        result[new_serial].average
+                        if options.averaging_mode is AveragingMode.CYCLIC
+                        else result[new_serial]
+                    )
                     if original_pulse.serial in results:
                         results[original_pulse.serial] += acquisition
                         results[original_pulse.qubit] += acquisition

@@ -29,6 +29,7 @@ class AcquisitionType(Enum):
     RAW = auto()
     INTEGRATION = auto()
     DISCRIMINATION = auto()
+    SPECTROSCOPY = auto()
 
 
 class AveragingMode(Enum):
@@ -43,6 +44,7 @@ class AveragingMode(Enum):
 
     CYCLIC = auto()
     SINGLESHOT = auto()
+    SEQUENTIAL = auto()
 
 
 RESULTS_TYPE = {

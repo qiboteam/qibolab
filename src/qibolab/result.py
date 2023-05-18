@@ -1,4 +1,4 @@
-from dataclasses import InitVar, dataclass, field
+from dataclasses import dataclass
 from functools import cache, cached_property
 from typing import Optional
 
@@ -127,14 +127,14 @@ class StateResults:
     def serialize(self):
         """Serialize as a dictionary."""
         serialized_dict = {
-            "state_0": self.state_0_probability.flatten(),
+            "state_0": self.probability(0).flatten(),
         }
         return serialized_dict
 
     @property
     def average(self):
         """Perform states average"""
-        average = self.state_1_probability
+        average = self.probability(1)
         std = np.std(self.states, axis=0, ddof=1) / np.sqrt(self.states.shape[0])
         return AveragedStateResults(average, std=std)
 
