@@ -79,18 +79,22 @@ class MultiqubitPlatform(AbstractPlatform):
             #     self.instruments[name]._debug_folder = folder
 
         # Generate qubit_instrument_map from runcard
-        for qubit in self.qubit_channel_map:
-            self.qubit_instrument_map[qubit] = [None, None, None, None]  # [ReadOut, Drive, Flux, Bias]
+        for qubit_name in self.qubit_channel_map:
+            self.qubit_instrument_map[qubit_name] = [None, None, None, None]  # [ReadOut, Drive, Flux, Bias]
             for name in self.instruments:
                 if self.settings["instruments"][name]["class"] in ["ClusterQRM_RF", "ClusterQCM_RF", "ClusterQCM"]:
                     for port in self.settings["instruments"][name]["settings"]["ports"]:
                         channel = self.settings["instruments"][name]["settings"]["ports"][port]["channel"]
-                        if channel in self.qubit_channel_map[qubit]:
-                            self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
+                        if channel in self.qubit_channel_map[qubit_name]:
+                            self.qubit_instrument_map[qubit_name][
+                                self.qubit_channel_map[qubit_name].index(channel)
+                            ] = name
                 if "s4g_modules" in self.settings["instruments"][name]["settings"]:
                     for channel in self.settings["instruments"][name]["settings"]["s4g_modules"]:
-                        if channel in self.qubit_channel_map[qubit]:
-                            self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
+                        if channel in self.qubit_channel_map[qubit_name]:
+                            self.qubit_instrument_map[qubit_name][
+                                self.qubit_channel_map[qubit_name].index(channel)
+                            ] = name
 
         # Create channel objects
         self.channels = ChannelMap.from_names(*self.settings["channels"])
@@ -108,11 +112,11 @@ class MultiqubitPlatform(AbstractPlatform):
 
         # FIX: Set attenuation again to the original value after sweep attenuation in punchout
         if hasattr(self, "qubit_instrument_map"):
-            for qubit in range(self.nqubits):
-                instrument_name = self.qubit_instrument_map[qubit][0]
-                port = self.qrm[qubit]._channel_port_map[self.qubit_channel_map[qubit][0]]
+            for qubit_name in self.qubits:
+                instrument_name = self.qubit_instrument_map[qubit_name][0]
+                port = self.qrm[qubit_name]._channel_port_map[self.qubit_channel_map[qubit_name][0]]
                 att = self.settings["instruments"][instrument_name]["settings"]["ports"][port]["attenuation"]
-                self.ro_port[qubit].attenuation = att
+                self.ro_port[qubit_name].attenuation = att
 
     def update(self, updates: dict):
         r"""Updates platform dependent runcard parameters and set up platform instruments if needed.
@@ -192,68 +196,6 @@ class MultiqubitPlatform(AbstractPlatform):
                     )
 
                 super().update(updates)
-
-    def set_lo_drive_frequency(self, qubit, freq):
-        self.qd_port[qubit].lo_frequency = freq
-
-    def get_lo_drive_frequency(self, qubit):
-        return self.qd_port[qubit].lo_frequency
-
-    def set_lo_readout_frequency(self, qubit, freq):
-        self.ro_port[qubit].lo_frequency = freq
-
-    def get_lo_readout_frequency(self, qubit):
-        return self.ro_port[qubit].lo_frequency
-
-    def set_lo_twpa_frequency(self, qubit, freq):
-        for instrument in self.instruments:
-            if "twpa" in instrument:
-                self.instruments[instrument].frequency = freq
-                return None
-        raise_error(NotImplementedError, "No twpa instrument found in the platform. ")
-
-    def get_lo_twpa_frequency(self, qubit):
-        for instrument in self.instruments:
-            if "twpa" in instrument:
-                return self.instruments[instrument].frequency
-        raise_error(NotImplementedError, "No twpa instrument found in the platform. ")
-
-    def set_lo_twpa_power(self, qubit, power):
-        for instrument in self.instruments:
-            if "twpa" in instrument:
-                self.instruments[instrument].power = power
-                return None
-        raise_error(NotImplementedError, "No twpa instrument found in the platform. ")
-
-    def get_lo_twpa_power(self, qubit):
-        for instrument in self.instruments:
-            if "twpa" in instrument:
-                return self.instruments[instrument].power
-        raise_error(NotImplementedError, "No twpa instrument found in the platform. ")
-
-    def set_attenuation(self, qubit: Qubit, att):
-        self.ro_port[qubit.name].attenuation = att
-
-    def set_gain(self, qubit, gain):
-        self.qd_port[qubit].gain = gain
-
-    def set_bias(self, qubit: Qubit, bias):
-        if qubit.name in self.qbm:
-            self.qb_port[qubit.name].current = bias
-        elif qubit.name in self.qfm:
-            self.qf_port[qubit.name].offset = bias
-
-    def get_attenuation(self, qubit: Qubit):
-        return self.ro_port[qubit.name].attenuation
-
-    def get_bias(self, qubit: Qubit):
-        if qubit.name in self.qbm:
-            return self.qb_port[qubit.name].current
-        elif qubit.name in self.qfm:
-            return self.qf_port[qubit.name].offset
-
-    def get_gain(self, qubit):
-        return self.qd_port[qubit].gain
 
     def connect(self):
         """Connects to the instruments."""
@@ -774,34 +716,42 @@ class MultiqubitPlatform(AbstractPlatform):
 
     def set_lo_drive_frequency(self, qubit, freq):
         """Sets the frequency of the local oscillator used to upconvert drive pulses for a qubit."""
+        qubit = qubit.name if isinstance(qubit, Qubit) else qubit
         self.qd_port[qubit].lo_frequency = freq
 
     def get_lo_drive_frequency(self, qubit):
         """Gets the frequency of the local oscillator used to upconvert drive pulses for a qubit."""
+        qubit = qubit.name if isinstance(qubit, Qubit) else qubit
         return self.qd_port[qubit].lo_frequency
 
     def set_lo_readout_frequency(self, qubit, freq):
         """Sets the frequency of the local oscillator used to upconvert readout pulses for a qubit."""
+        qubit = qubit.name if isinstance(qubit, Qubit) else qubit
         self.ro_port[qubit].lo_frequency = freq
 
     def get_lo_readout_frequency(self, qubit):
         """Gets the frequency of the local oscillator used to upconvert readout pulses for a qubit."""
+        qubit = qubit.name if isinstance(qubit, Qubit) else qubit
         return self.ro_port[qubit].lo_frequency
 
     def set_attenuation(self, qubit, att):
         """Sets the attenuation of the readout port for a qubit."""
+        qubit = qubit.name if isinstance(qubit, Qubit) else qubit
         self.ro_port[qubit].attenuation = att
 
     def get_attenuation(self, qubit):
         """Gets the attenuation of the readout port for a qubit."""
+        qubit = qubit.name if isinstance(qubit, Qubit) else qubit
         return self.ro_port[qubit].attenuation
 
     def set_gain(self, qubit, gain):
         """Sets the gain of the drive port for a qubit."""
+        qubit = qubit.name if isinstance(qubit, Qubit) else qubit
         self.qd_port[qubit].gain = gain
 
     def get_gain(self, qubit):
         """Gets the gain of the drive port for a qubit."""
+        qubit = qubit.name if isinstance(qubit, Qubit) else qubit
         return self.qd_port[qubit].gain
 
     def set_bias(self, qubit, bias):
@@ -809,6 +759,7 @@ class MultiqubitPlatform(AbstractPlatform):
 
         It supports biasing the qubit with a current source (SPI) or with the offset of a QCM module.
         """
+        qubit = qubit.name if isinstance(qubit, Qubit) else qubit
         if qubit in self.qbm:
             self.qb_port[qubit].current = bias
         elif qubit in self.qfm:
@@ -816,6 +767,7 @@ class MultiqubitPlatform(AbstractPlatform):
 
     def get_bias(self, qubit):
         """Gets flux bias for a qubit."""
+        qubit = qubit.name if isinstance(qubit, Qubit) else qubit
         if qubit in self.qbm:
             return self.qb_port[qubit].current
         elif qubit in self.qfm:
@@ -824,6 +776,7 @@ class MultiqubitPlatform(AbstractPlatform):
     # TODO: implement a dictionary of qubit - twpas
     def set_lo_twpa_frequency(self, qubit, freq):
         """Sets the frequency of the local oscillator used to pump a qubit parametric amplifier."""
+        qubit = qubit.name if isinstance(qubit, Qubit) else qubit
         for instrument in self.instruments:
             if "twpa" in instrument:
                 self.instruments[instrument].frequency = freq
@@ -832,6 +785,7 @@ class MultiqubitPlatform(AbstractPlatform):
 
     def get_lo_twpa_frequency(self, qubit):
         """Gets the frequency of the local oscillator used to pump a qubit parametric amplifier."""
+        qubit = qubit.name if isinstance(qubit, Qubit) else qubit
         for instrument in self.instruments:
             if "twpa" in instrument:
                 return self.instruments[instrument].frequency
@@ -839,6 +793,7 @@ class MultiqubitPlatform(AbstractPlatform):
 
     def set_lo_twpa_power(self, qubit, power):
         """Sets the power of the local oscillator used to pump a qubit parametric amplifier."""
+        qubit = qubit.name if isinstance(qubit, Qubit) else qubit
         for instrument in self.instruments:
             if "twpa" in instrument:
                 self.instruments[instrument].power = power
@@ -847,6 +802,7 @@ class MultiqubitPlatform(AbstractPlatform):
 
     def get_lo_twpa_power(self, qubit):
         """Gets the power of the local oscillator used to pump a qubit parametric amplifier."""
+        qubit = qubit.name if isinstance(qubit, Qubit) else qubit
         for instrument in self.instruments:
             if "twpa" in instrument:
                 return self.instruments[instrument].power
