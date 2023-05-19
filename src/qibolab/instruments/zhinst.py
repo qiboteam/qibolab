@@ -447,19 +447,22 @@ class Zurich(AbstractInstrument):
         for qubit in qubits.values():
             if not qubit.flux_coupler:
                 if self.sequence[f"readout{qubit.name}"]:
-                    exp_res = self.results.get_data(f"sequence{qubit.name}")
-                    if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                        if options.averaging_mode is AveragingMode.CYCLIC:
-                            states = np.array([exp_res])
+                    i = 0
+                    for pulse in self.sequence[f"readout{qubit.name}"]:
+                        exp_res = self.results.get_data(f"sequence{qubit.name}_{i}")
+                        i += 1
+
+                        if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+                            if options.averaging_mode is AveragingMode.CYCLIC:
+                                states = np.array([exp_res])
+                            else:
+                                states = np.array(exp_res)
+                            results[pulse.pulse.serial] = options.results_type(states=states)
+
+                            print(results)
+
                         else:
-                            states = np.array(exp_res)
-                        results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = options.results_type(
-                            states=states
-                        )
-                    else:
-                        results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = options.results_type(
-                            data=np.array(exp_res)
-                        )
+                            results[pulse.pulse.serial] = options.results_type(data=np.array(exp_res))
 
         exp_dimensions = list(np.array(exp_res).shape)
         if dimensions != exp_dimensions:
@@ -713,18 +716,19 @@ class Zurich(AbstractInstrument):
                 play_after = None
                 if self.sequence[f"drive{qubit.name}"]:
                     play_after = f"sequence_drive{qubit.name}"
-                with exp.section(uid=f"sequence_measure{qubit.name}", play_after=play_after):
-                    if self.sequence[f"drive{qubit.name}"]:
-                        last_drive_pulse = self.sequence[f"drive{qubit.name}"][-1]
-                        if isinstance(last_drive_pulse, ZhPulse):
-                            time = round(last_drive_pulse.pulse.finish * 1e-9, 9)
-                        else:
-                            time = 0
+
+                if self.sequence[f"drive{qubit.name}"]:
+                    last_drive_pulse = self.sequence[f"drive{qubit.name}"][-1]
+                    if isinstance(last_drive_pulse, ZhPulse):
+                        time = round(last_drive_pulse.pulse.finish * 1e-9, 9)
                     else:
                         time = 0
-                    i = 0
-                    if self.sequence[f"readout{qubit.name}"]:
-                        for pulse in self.sequence[f"readout{qubit.name}"]:
+                else:
+                    time = 0
+                i = 0
+                if self.sequence[f"readout{qubit.name}"]:
+                    for pulse in self.sequence[f"readout{qubit.name}"]:
+                        with exp.section(uid=f"sequence_measure{qubit.name}_{i}", play_after=play_after):
                             exp.delay(signal=f"measure{qubit.name}", time=0)
                             # FIXME: The delay between drive and measure needs to be revised
                             # This may be a problem for fixed sequences and not delay sweeps as T1
@@ -774,7 +778,7 @@ class Zurich(AbstractInstrument):
 
                             exp.measure(
                                 acquire_signal=f"acquire{qubit.name}",
-                                handle=f"sequence{qubit.name}",
+                                handle=f"sequence{qubit.name}_{i}",
                                 integration_kernel=weight,
                                 integration_kernel_parameters=None,
                                 integration_length=None,
@@ -876,10 +880,6 @@ class Zurich(AbstractInstrument):
         if dimensions != exp_dimensions:
             print("dimensions", dimensions, "experiment", exp_dimensions)
             warnings.warn("dimensions not properly ordered")
-
-        for sigout in range(0, 8):
-            self.session.devices["device_hdawg"].awgs[0].sigouts[sigout].offset = 0
-        self.session.devices["device_hdawg2"].awgs[0].sigouts[0].offset = 0
 
         # FIXME: Include this on the reports
         # html containing the pulse sequence schedule
