@@ -1,6 +1,6 @@
 import copy
 import time
-from typing import Dict, Union
+from typing import Dict, List, Union
 
 import numpy as np
 from qibo.config import log, raise_error
@@ -60,7 +60,7 @@ class DummyInstrument(AbstractInstrument):
         qubits: Dict[Union[str, int], Qubit],
         sequence: PulseSequence,
         options: ExecutionParameters,
-        *sweepers: list[Sweeper]
+        *sweepers: List[Sweeper]
     ):
         results = {}
         sweeper_pulses = {}
