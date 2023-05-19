@@ -285,7 +285,8 @@ class Zurich(AbstractInstrument):
                         server_port="8004",
                         setup_name=self.name,
                     )
-                    self.session = lo.Session(self.device_setup)
+                    # To fully remove logging #configure_logging=False
+                    self.session = lo.Session(self.device_setup, log_level=30)
                     self.device = self.session.connect(do_emulation=self.emulation)
                     self.is_connected = True
                     break
@@ -349,6 +350,7 @@ class Zurich(AbstractInstrument):
                 modulation_type=lo.ModulationType.SOFTWARE,
             ),
             local_oscillator=lo.Oscillator(
+                uid="lo_shfqa",
                 frequency=int(qubit.readout.local_oscillator.frequency),
                 # frequency=0.0, # This and PortMode.LF allow debugging with and oscilloscope
             ),
@@ -367,6 +369,7 @@ class Zurich(AbstractInstrument):
                 modulation_type=lo.ModulationType.SOFTWARE,
             ),
             local_oscillator=lo.Oscillator(
+                uid="lo_shfqa",
                 frequency=int(qubit.readout.local_oscillator.frequency),
             ),
             range=qubit.feedback.power_range,
@@ -384,6 +387,7 @@ class Zurich(AbstractInstrument):
                 modulation_type=lo.ModulationType.HARDWARE,
             ),
             local_oscillator=lo.Oscillator(
+                uid="lo_shfqc",
                 frequency=int(qubit.drive.local_oscillator.frequency),
             ),
             range=qubit.drive.power_range,
@@ -481,8 +485,13 @@ class Zurich(AbstractInstrument):
         self.sequence_qibo = sequence
 
         "Fill the sequences with pulses according to their lines in temporal order"
+        # TODO: Check if they invert the order if this will still work
+        last_start = 0
         for pulse in sequence:
             zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"].append(ZhPulse(pulse))
+            if pulse.start < last_start:
+                warnings.warn("Pulse timing translation")
+            last_start = pulse.start
 
         "Mess that gets the sweeper and substitutes the pulse it sweeps in the right place"
         for sweeper in sweepers:
@@ -626,12 +635,8 @@ class Zurich(AbstractInstrument):
             if any("amplitude" in param for param in parameters):
                 # Zurich is already multiplying the pulse amplitude with the sweeper amplitude
                 # FIXME: Recheck and do relative amplitude sweeps by converting
-
                 pulse.zhpulse.amplitude = pulse.zhpulse.amplitude * max(pulse.zhsweeper.values)
                 pulse.zhsweeper.values = pulse.zhsweeper.values / max(pulse.zhsweeper.values)
-
-                # import warnings
-                # warnings.warn()
 
                 exp.play(
                     signal=f"{section}{qubit.name}",
@@ -666,6 +671,7 @@ class Zurich(AbstractInstrument):
                         time += round(pulse.pulse.duration * 1e-9, 9) + round(pulse.pulse.start * 1e-9, 9) - time
                     if isinstance(pulse, ZhSweeperLine):
                         self.play_sweep(exp, qubit, pulse, section="flux")
+                        print(pulse.zhsweeper, qubit)
                     else:
                         exp.play(signal=f"flux{qubit.name}", pulse=pulse.zhpulse)
                     i += 1
@@ -871,6 +877,10 @@ class Zurich(AbstractInstrument):
             print("dimensions", dimensions, "experiment", exp_dimensions)
             warnings.warn("dimensions not properly ordered")
 
+        for sigout in range(0, 8):
+            self.session.devices["device_hdawg"].awgs[0].sigouts[sigout].offset = 0
+        self.session.devices["device_hdawg2"].awgs[0].sigouts[0].offset = 0
+
         # FIXME: Include this on the reports
         # html containing the pulse sequence schedule
         # lo.show_pulse_sheet("pulses", self.exp)
@@ -898,6 +908,7 @@ class Zurich(AbstractInstrument):
         self.sweepers.remove(sweeper)
 
         print(sweeper.parameter)
+        print(sweeper.values)
         parameter = None
 
         if sweeper.parameter is Parameter.frequency:
