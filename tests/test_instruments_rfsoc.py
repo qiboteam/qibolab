@@ -1,3 +1,5 @@
+"""Tests for RFSoC driver"""
+
 import numpy as np
 import pytest
 
@@ -111,17 +113,14 @@ def test_get_if_python_sweep():
 
     sequence_2 = PulseSequence()
     sequence_2.add(platform.create_RX_pulse(qubit=0, start=0))
-    sequence_2.add(platform.create_RX_pulse(qubit=0, start=100))
 
     sweep1 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 100, 10), pulses=[sequence_2[0]])
-    sweep2 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 100, 10), pulses=[sequence_2[1]])
-    sweep3 = Sweeper(parameter=Parameter.amplitude, values=np.arange(0.01, 0.5, 0.1), pulses=[sequence_2[1]])
+    sweep2 = Sweeper(parameter=Parameter.amplitude, values=np.arange(0.01, 0.5, 0.1), pulses=[sequence_2[0]])
     sweep1 = create_qick_sweeps(sweep1, sequence_2, platform.qubits)
     sweep2 = create_qick_sweeps(sweep2, sequence_2, platform.qubits)
-    sweep3 = create_qick_sweeps(sweep3, sequence_2, platform.qubits)
 
     assert not instrument.get_if_python_sweep(sequence_2, platform.qubits, sweep1)
-    assert instrument.get_if_python_sweep(sequence_2, platform.qubits, sweep1, sweep1)
+    assert not instrument.get_if_python_sweep(sequence_2, platform.qubits, sweep1, sweep2)
 
 
 def test_convert_av_sweep_results():
@@ -143,8 +142,8 @@ def test_convert_av_sweep_results():
     avgi = [[[1, 2, 3], [4, 1, 2]]]
     avgq = [[[7, 8, 9], [-1, -2, -3]]]
 
-    ro_serials = [ro.serial for ro in sequence.ro_pulses]
-    out_dict = instrument.convert_sweep_results(sweep1, ro_serials, sequence, platform.qubits, avgi, avgq, True)
+    ro_pulses = sequence.ro_pulses
+    out_dict = instrument.convert_sweep_results(ro_pulses, sequence, platform.qubits, avgi, avgq, True)
     targ_dict = {
         serial1: AveragedResults.from_components(np.array([1, 2, 3]), np.array([7, 8, 9])),
         serial2: AveragedResults.from_components(np.array([4, 1, 2]), np.array([-1, -2, -3])),
@@ -175,8 +174,8 @@ def test_convert_nav_sweep_results():
     avgi = [[[[1, 1], [2, 2], [3, 3]], [[4, 4], [1, 1], [2, 2]]]]
     avgq = [[[[7, 7], [8, 8], [9, 9]], [[-1, -1], [-2, -2], [-3, -3]]]]
 
-    ro_serials = [ro.serial for ro in sequence.ro_pulses]
-    out_dict = instrument.convert_sweep_results(sweep1, ro_serials, sequence, platform.qubits, avgi, avgq, False)
+    ro_pulses = sequence.ro_pulses
+    out_dict = instrument.convert_sweep_results(ro_pulses, sequence, platform.qubits, avgi, avgq, False)
     targ_dict = {
         serial1: ExecutionResults.from_components(np.array([1, 1, 2, 2, 3, 3]), np.array([7, 7, 8, 8, 9, 9])),
         serial2: ExecutionResults.from_components(np.array([4, 4, 1, 1, 2, 2]), np.array([-1, -1, -2, -2, -3, -3])),

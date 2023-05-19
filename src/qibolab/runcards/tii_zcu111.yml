@@ -29,25 +29,25 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.016
-                frequency: 7_111_290_000
+                amplitude: 0.06
+                frequency: 7_111_151_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
                 phase: 0
         1: # qubit number this qubit does not have drive LO!
             RX:
-                duration: 42
-                amplitude: 0.7
-                frequency: 6_085_931_000
-                shape: Rectangular()
+                duration: 40 # TODO
+                amplitude: 0.0484 # TODO
+                frequency: 6_070_000_000
+                shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.02
-                frequency: 7_345_317_000
+                amplitude: 0.042
+                frequency: 7_345_330_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -65,7 +65,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.015
+                amplitude: 0.045
                 frequency: 7_459_250_000
                 shape: Rectangular()
                 type: ro # readout
