@@ -358,6 +358,9 @@ def create_tii_IQM5q(runcard, descriptor=None):
     import yaml
 
     yaml.dump(qubits, open("qubits.yaml", "w"))
+
+    # More power for my qubits
+    platform.qubits[3].drive.power_range = 10
     return platform
 
 
