@@ -547,32 +547,6 @@ class RFSoC(AbstractInstrument):
                     )
             sweep_results = self.merge_sweep_results(sweep_results, results)
 
-            # for j in range(sweeper.expts):
-            #    results = {}
-            #    # add a result for every readouts pulse
-            #    serials = [pulse.serial for pulse in original_ro if qubits[pulse.qubit].feedback.ports[0][1] == k_val]
-            #    for i, serial in enumerate(serials):
-            #        i_pulse = np.array(toti[k][i][j])
-            #        q_pulse = np.array(totq[k][i][j])
-
-            #        # this removes all zero elements from the array since qick
-            #        # gives zero as a result when adc is off in mux ro
-            #        # maybe this could be done better in qibosoq
-            #        i_pulse = i_pulse[i_pulse != 0]
-            #        q_pulse = q_pulse[q_pulse != 0]
-
-            #        if average:
-            #            results[sequence.ro_pulses[i].qubit] = results[serial] = AveragedResults.from_components(
-            #                i_pulse, q_pulse
-            #            )
-            #        else:
-            #            qubit = qubits[sequence.ro_pulses[i].qubit]
-            #            shots = self.classify_shots(i_pulse, q_pulse, qubit)
-            #            results[sequence.ro_pulses[i].qubit] = results[serial] = ExecutionResults.from_components(
-            #                i_pulse, q_pulse, shots
-            #            )
-            #    # merge new result with already saved ones
-            #    sweep_results = self.merge_sweep_results(sweep_results, results)
         return sweep_results
 
     def sweep(
