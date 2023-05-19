@@ -45,13 +45,6 @@ class QickSweep:  # TODO change name to avoid confusion
     steps: List[Union[int, float]] = None  # single step
     expts: int = None  # single number of points
 
-    def get_idx_pulse(self, pulse: Pulse) -> Union[int, None]:
-        """Checks pulse is sweeped, returns the index in self.pulses or None"""
-        try:
-            return self.pulses.index(pulse)
-        except ValueError:
-            return None
-
 
 def create_qick_sweeps(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Qubit]) -> QickSweep:
     """Create a QickSweep oject from a Sweeper objects"""
@@ -620,7 +613,6 @@ class TII_ZCU111(RFSoC):
         self.port = int(self.port)
         self.cfg = QickProgramConfig(
             sampling_rate=6_500_000_000,
-            mixer_freq=0,
             adc_sampling_frequency=3_072_000_000,
             mux_sampling_frequency=1_536_000_000,
         )

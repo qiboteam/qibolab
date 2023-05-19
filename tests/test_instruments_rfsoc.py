@@ -5,7 +5,7 @@ import pytest
 
 from qibolab.instruments.rfsoc import QickProgramConfig, create_qick_sweeps
 from qibolab.paths import qibolab_folder
-from qibolab.platform import create_tii_rfsoc4x2
+from qibolab.platform import create_tii_rfsoc4x2, create_tii_zcu111
 from qibolab.platforms.abstract import Qubit
 from qibolab.pulses import PulseSequence
 from qibolab.result import AveragedResults, ExecutionResults
@@ -121,6 +121,24 @@ def test_get_if_python_sweep():
 
     assert not instrument.get_if_python_sweep(sequence_2, platform.qubits, sweep1)
     assert not instrument.get_if_python_sweep(sequence_2, platform.qubits, sweep1, sweep2)
+
+    platform = create_tii_zcu111(RUNCARD_ZCU111, DUMMY_ADDRESS)
+    instrument = platform.design.instruments[0]
+
+    sequence_1 = PulseSequence()
+    sequence_1.add(platform.create_RX_pulse(qubit=0, start=0))
+    sweep1 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 100, 10), pulses=[sequence_1[0]])
+    sweep2 = Sweeper(parameter=Parameter.relative_phase, values=np.arange(0, 1, 0.01), pulses=[sequence_1[0]])
+    sweep3 = Sweeper(parameter=Parameter.bias, values=np.arange(-0.1, 0.1, 0.001), qubits=[0])
+    sweep1 = create_qick_sweeps(sweep1, sequence_1, platform.qubits)
+    sweep2 = create_qick_sweeps(sweep2, sequence_1, platform.qubits)
+    sweep3 = create_qick_sweeps(sweep3, sequence_1, platform.qubits)
+    assert not instrument.get_if_python_sweep(sequence_1, platform.qubits, sweep1, sweep2, sweep3)
+
+    platform.qubits[0].flux.bias = 0.5
+    sweep1 = Sweeper(parameter=Parameter.bias, values=np.arange(-1, 1, 0.1), qubits=[0])
+    with pytest.raises(ValueError):
+        sweep1 = create_qick_sweeps(sweep1, sequence_1, platform.qubits)
 
 
 def test_convert_av_sweep_results():

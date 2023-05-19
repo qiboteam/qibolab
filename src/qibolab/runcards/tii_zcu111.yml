@@ -5,7 +5,7 @@ qubits: [0, 1, 2]
 
 settings:
     sampling_rate: 6_144_000_000
-    repetition_duration: 100_000
+    relaxation_time: 100_000
     adc_trig_offset: 200
     max_gain: 32000
 
@@ -103,8 +103,6 @@ characterization:   #TODO No characterization yet
             threshold: 0.0
             iq_angle: 0.0
             # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
-            # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
             mixer_readout_g: 0.0
@@ -120,8 +118,6 @@ characterization:   #TODO No characterization yet
             threshold: 0.0
             iq_angle: 0.0
             # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
-            # Software classifier
             # classifier:
             #     type: "scikit"
             #     model: "qw5q_gold/RBF_SVM_1.pkl"
@@ -141,7 +137,6 @@ characterization:   #TODO No characterization yet
             threshold: 0.0
             iq_angle: 0.0
             # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # Software classifier
             # classifier:
             #     type: "scikit"
