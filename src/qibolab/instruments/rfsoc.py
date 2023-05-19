@@ -8,13 +8,12 @@ Supports the following FPGA:
 
 import pickle
 import socket
-from copy import deepcopy
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 
-from qibolab.instruments.abstract import AbstractInstrument, LocalOscillator
+from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.platforms.abstract import Qubit
 from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.result import AveragedResults, ExecutionResults
@@ -56,33 +55,12 @@ class QickSweep:  # TODO change name to avoid confusion
 
 def create_qick_sweeps(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Qubit]) -> QickSweep:
     """Create a QickSweep oject from a Sweeper objects"""
-    # TODO add phase
-    is_freq = sweeper.parameter is Parameter.frequency
-    is_amp = sweeper.parameter is Parameter.amplitude
-    is_phase = sweeper.parameter is Parameter.relative_phase
-    is_bias = sweeper.parameter is Parameter.bias
 
     starts = []
     steps = []
     indexes = []
 
-    if is_freq or is_amp or is_phase:
-        for pulse in sweeper.pulses:
-            for idx, seq_pulse in enumerate(sequence):
-                if pulse == seq_pulse:
-                    indexes.append(idx)
-            if is_freq:
-                starts.append(sweeper.values[0] + pulse.frequency)
-                steps.append(sweeper.values[1] - sweeper.values[0])
-            elif is_amp:
-                # starts.append(sweeper.values[0] * pulse.amplitude)
-                starts.append(sweeper.values[0] * pulse.amplitude)
-                steps.append((sweeper.values[1] - sweeper.values[0]) * pulse.amplitude)
-            elif is_phase:
-                starts.append(sweeper.values[0] + pulse.relative_phase)
-                steps.append(sweeper.values[1] - sweeper.values[0])
-
-    elif is_bias:
+    if sweeper.parameter is Parameter.bias:
         for qubit in sweeper.qubits:
             for idx, seq_qubit in enumerate(qubits):
                 if qubit == seq_qubit:
@@ -92,8 +70,23 @@ def create_qick_sweeps(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Q
 
         if any(start + steps[idx] * (len(sweeper.values) - 1) > 1 for idx, start in enumerate(starts)):
             raise ValueError("Sweeper amplitude is set to reach values higher than 1")
+    else:
+        for pulse in sweeper.pulses:
+            for idx, seq_pulse in enumerate(sequence):
+                if pulse == seq_pulse:
+                    indexes.append(idx)
+            if sweeper.parameter is Parameter.frequency:
+                starts.append(sweeper.values[0] + pulse.frequency)
+                steps.append(sweeper.values[1] - sweeper.values[0])
+            elif sweeper.parameter is Parameter.amplitude:
+                # starts.append(sweeper.values[0] * pulse.amplitude)
+                starts.append(sweeper.values[0] * pulse.amplitude)
+                steps.append((sweeper.values[1] - sweeper.values[0]) * pulse.amplitude)
+            elif sweeper.parameter is Parameter.relative_phase:
+                starts.append(sweeper.values[0] + pulse.relative_phase)
+                steps.append(sweeper.values[1] - sweeper.values[0])
 
-    new_sweep = QickSweep(
+    return QickSweep(
         parameter=sweeper.parameter,
         results=[ro.serial for ro in sequence.ro_pulses],
         pulses=sweeper.pulses,
@@ -102,7 +95,6 @@ def create_qick_sweeps(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Q
         steps=np.array(steps),
         expts=len(sweeper.values),
     )
-    return new_sweep
 
 
 class RFSoC(AbstractInstrument):
@@ -378,51 +370,51 @@ class RFSoC(AbstractInstrument):
 
             return newres
 
-        elif not self.get_if_python_sweep(sequence, qubits, *sweepers):
+        if not self.get_if_python_sweep(sequence, qubits, *sweepers):
             toti, totq = self._execute_single_sweep(
                 self.cfg, sequence, qubits, sweepers, len(sequence.ro_pulses), average
             )
-            res = self.convert_sweep_results(sweepers, original_ro, sequence, qubits, toti, totq, average)
+            res = self.convert_sweep_results(original_ro, sequence, qubits, toti, totq, average)
             return res
         # else:
+        # if self.get_if_python_sweep(sequence, qubits, *sweepers):
         sweeper = sweepers[0]
-        if self.get_if_python_sweep(sequence, qubits, *sweepers):
-            values = []
+        values = []
+        if (
+            sweeper.parameter is Parameter.frequency
+            or sweeper.parameter is Parameter.amplitude
+            or sweeper.parameter is Parameter.relative_phase
+        ):
+            for idx, _ in enumerate(sweeper.pulses):
+                val = np.arange(0, sweeper.expts) * sweeper.steps[idx] + sweeper.starts[idx]
+                values.append(val)
+        else:
+            for idx, _ in enumerate(sweeper.indexes):
+                val = np.arange(0, sweeper.expts) * sweeper.steps[idx] + sweeper.starts[idx]
+                values.append(val)
+
+        results = {}
+        for idx in range(sweeper.expts):
+            # update values
             if (
                 sweeper.parameter is Parameter.frequency
                 or sweeper.parameter is Parameter.amplitude
                 or sweeper.parameter is Parameter.relative_phase
             ):
-                for idx, _ in enumerate(sweeper.pulses):
-                    val = np.arange(0, sweeper.expts) * sweeper.steps[idx] + sweeper.starts[idx]
-                    values.append(val)
+                for jdx in range(len(sweeper.pulses)):
+                    if sweeper.parameter is Parameter.frequency:
+                        sequence[sweeper.indexes[jdx]].frequency = values[jdx][idx]
+                    elif sweeper.parameter is Parameter.amplitude:
+                        sequence[sweeper.indexes[jdx]].amplitude = values[jdx][idx]
+                    elif sweeper.parameter is Parameter.relative_phase:
+                        sequence[sweeper.indexes[jdx]].relative_phase = values[jdx][idx]
             else:
-                for idx, _ in enumerate(sweeper.indexes):
-                    val = np.arange(0, sweeper.expts) * sweeper.steps[idx] + sweeper.starts[idx]
-                    values.append(val)
+                for kdx, jdx in enumerate(sweeper.indexes):
+                    qubits[jdx].flux.bias = values[kdx][idx]
 
-            results = {}
-            for idx in range(sweeper.expts):
-                # update values
-                if (
-                    sweeper.parameter is Parameter.frequency
-                    or sweeper.parameter is Parameter.amplitude
-                    or sweeper.parameter is Parameter.relative_phase
-                ):
-                    for jdx in range(len(sweeper.pulses)):
-                        if sweeper.parameter is Parameter.frequency:
-                            sequence[sweeper.indexes[jdx]].frequency = values[jdx][idx]
-                        elif sweeper.parameter is Parameter.amplitude:
-                            sequence[sweeper.indexes[jdx]].amplitude = values[jdx][idx]
-                        elif sweeper.parameter is Parameter.relative_phase:
-                            sequence[sweeper.indexes[jdx]].relative_phase = values[jdx][idx]
-                else:
-                    for kdx, jdx in enumerate(sweeper.indexes):
-                        qubits[jdx].flux.bias = values[kdx][idx]
-
-                res = self.recursive_python_sweep(qubits, sequence, original_ro, *sweepers[1:], average=average)
-                results = self.merge_sweep_results(results, res)
-            return results  # already in the right format
+            res = self.recursive_python_sweep(qubits, sequence, original_ro, *sweepers[1:], average=average)
+            results = self.merge_sweep_results(results, res)
+        return results  # already in the right format
 
     @staticmethod
     def merge_sweep_results(
@@ -472,7 +464,6 @@ class RFSoC(AbstractInstrument):
         for sweeper in sweepers:
             is_amp = sweeper.parameter is Parameter.amplitude
             is_freq = sweeper.parameter is Parameter.frequency
-            is_bias = sweeper.parameter is Parameter.bias
 
             if is_freq or is_amp:
                 is_ro = sweeper.pulses[0].type == PulseType.READOUT
@@ -496,7 +487,6 @@ class RFSoC(AbstractInstrument):
 
     def convert_sweep_results(
         self,
-        sweepers: List[QickSweep],
         original_ro: PulseSequence,
         sequence: PulseSequence,
         qubits: List[Qubit],
@@ -507,7 +497,6 @@ class RFSoC(AbstractInstrument):
         """Convert sweep res to qibolab dict res
 
         Args:
-            *sweepers (`qibolab.Sweeper`): Sweeper objects.
             original_ro (list): list of ro serials of the original sequence
             sequence (`qibolab.pulses.PulseSequence`). Pulse sequence to play.
             qubits (list): List of `qibolab.platforms.utils.Qubit` objects
