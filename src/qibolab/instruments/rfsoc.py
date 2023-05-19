@@ -132,7 +132,7 @@ class RFSoC(AbstractInstrument):
     def setup(
         self,
         sampling_rate: int = None,
-        repetition_duration: int = None,
+        relaxation_time: int = None,
         adc_trig_offset: int = None,
         max_gain: int = None,
     ):  # TODO rethink arguments
@@ -140,15 +140,15 @@ class RFSoC(AbstractInstrument):
 
         Args:
             sampling_rate (int): sampling rate of the RFSoC (Hz).
-            repetition_duration (int): delay before readout (ns).
+            relaxation_time (int): delay before readout (ns).
             adc_trig_offset (int): single offset for all adc triggers
                                    (tproc CLK ticks).
             max_gain (int): maximum output power of the DAC (DAC units).
         """
         if sampling_rate is not None:
             self.cfg.sampling_rate = sampling_rate
-        if repetition_duration is not None:
-            self.cfg.repetition_duration = repetition_duration
+        if relaxation_time is not None:
+            self.cfg.repetition_duration = relaxation_time
         if adc_trig_offset is not None:
             self.cfg.adc_trig_offset = adc_trig_offset
         if max_gain is not None:
@@ -234,6 +234,8 @@ class RFSoC(AbstractInstrument):
             * wait for response (arbitray number of bytes)
         Returns:
             Lists of I and Q value measured
+        Raise:
+            Exception: if the server encounters and error, the same error is raised here
         """
         # open a connection
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -319,9 +321,9 @@ class RFSoC(AbstractInstrument):
     def classify_shots(self, i_values: List[float], q_values: List[float], qubit: Qubit) -> List[float]:
         """Classify IQ values using qubit threshold and rotation_angle if available in runcard"""
 
-        if qubit.rotation_angle is None or qubit.threshold is None:
+        if qubit.iq_angle is None or qubit.threshold is None:
             return None
-        angle = np.radians(qubit.rotation_angle)
+        angle = qubit.iq_angle
         threshold = qubit.threshold
 
         rotated = np.cos(angle) * np.array(i_values) - np.sin(angle) * np.array(q_values)

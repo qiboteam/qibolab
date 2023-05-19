@@ -13,7 +13,8 @@ def create_dummy(runcard):
 
     # Create channel objects
     channels = ChannelMap()
-    channels |= ChannelMap.from_names("readout", "drive", "flux")
+    channels |= ChannelMap.from_names("readout", "drive")
+    channels |= ChannelMap.from_names(*(f"flux-{i}" for i in range(6)))
 
     # Create dummy controller
     instrument = DummyInstrument("dummy", 0)
@@ -26,7 +27,9 @@ def create_dummy(runcard):
     for qubit in platform.qubits:
         platform.qubits[qubit].readout = channels["readout"]
         platform.qubits[qubit].drive = channels["drive"]
-        platform.qubits[qubit].flux = channels["flux"]
+        platform.qubits[qubit].flux = channels[f"flux-{qubit}"]
+        channels[f"flux-{qubit}"].qubit = platform.qubits[qubit]
+        channels["readout"].qubit = platform.qubits[qubit]
 
     return platform
 
@@ -176,6 +179,7 @@ def create_tii_rfsoc4x2(runcard, address=None):
             If ``None`` it will attempt to connect to TII instruments.
     """
     from qibolab.instruments.rfsoc import TII_RFSOC4x2
+    from qibolab.instruments.rohde_schwarz import SGS100A as LocalOscillator
 
     # Create channel objects
     channels = ChannelMap()
@@ -188,11 +192,17 @@ def create_tii_rfsoc4x2(runcard, address=None):
     channels["L2-RO"].ports = [("i0", 0)]  # feedback
     channels["L3-18_qd"].ports = [("o1", 1)]  # drive
 
+    local_oscillators = [
+        LocalOscillator("twpa_a", "192.168.0.32"),
+    ]
+    local_oscillators[0].frequency = 6_200_000_000
+    local_oscillators[0].power = -1
+
     # Instantiate QICK instruments
     if address is None:
         address = "192.168.0.72:6000"
     controller = TII_RFSOC4x2("tii_rfsoc4x2", address)
-    design = InstrumentDesign([controller], channels)
+    design = InstrumentDesign([controller] + local_oscillators, channels)
 
     platform = DesignPlatform("tii_rfsoc4x2", design, runcard)
 
