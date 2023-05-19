@@ -1,3 +1,5 @@
+"""Tests for RFSoC driver"""
+
 import numpy as np
 import pytest
 
