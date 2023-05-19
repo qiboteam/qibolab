@@ -4,6 +4,7 @@ resonator_type: 3D
 topology:
 - [1]
 settings:
+    nshots: 1024
     relaxation_time: 100000
     sampling_rate: 9830400000
     adc_trig_offset: 200
