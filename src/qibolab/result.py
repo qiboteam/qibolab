@@ -23,12 +23,12 @@ class IntegratedResults:
 
     @property
     def voltage_i(self):
-        """Signal magnitude in volts."""
+        """Signal component i in volts."""
         return self.voltage.real
 
     @property
     def voltage_q(self):
-        """Signal magnitude in volts."""
+        """Signal component q in volts."""
         return self.voltage.imag
 
     @cached_property
@@ -102,7 +102,6 @@ class AveragedRawWaveformResults(AveragedIntegratedResults):
     """
 
 
-# FIXME: If probabilities are out of range the error is displeyed weirdly
 class StateResults:
     """
     Data structure to deal with the output of

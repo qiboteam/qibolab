@@ -104,6 +104,7 @@ class AbstractPlatform(ABC):
         self.nqubits = None
         self.resonator_type = None
         self.topology = None
+        self.nshots = None
         self.relaxation_time = None
         self.sampling_rate = None
 
@@ -138,6 +139,7 @@ class AbstractPlatform(ABC):
         self.topology = settings["topology"]
 
         self.relaxation_time = settings["settings"]["relaxation_time"]
+        self.nshots = settings["settings"]["nshots"]
         self.sampling_rate = settings["settings"]["sampling_rate"]
 
         # Load native gates

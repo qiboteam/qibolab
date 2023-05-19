@@ -1,14 +1,16 @@
 import copy
 import time
+from typing import Dict, Union
 
 import numpy as np
 from qibo.config import log, raise_error
 
 from qibolab.instruments.abstract import AbstractInstrument
-from qibolab.platforms.platform import AveragingMode
+from qibolab.platforms.abstract import Qubit
+from qibolab.platforms.platform import AveragingMode, ExecutionParameters
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import ExecutionResults
-from qibolab.sweeper import Parameter
+from qibolab.sweeper import Parameter, Sweeper
 
 
 class DummyInstrument(AbstractInstrument):
@@ -39,7 +41,7 @@ class DummyInstrument(AbstractInstrument):
     def disconnect(self):
         log.info("Disconnecting dummy instrument.")
 
-    def play(self, qubits, sequence, options):
+    def play(self, qubits: Dict[Union[str, int], Qubit], sequence: PulseSequence, options: ExecutionParameters):
         nshots = options.nshots
         time.sleep(options.relaxation_time * 1e-9)
 
@@ -53,7 +55,13 @@ class DummyInstrument(AbstractInstrument):
             results[qubit] = results[serial] = ExecutionResults.from_components(i, q, shots)
         return results
 
-    def sweep(self, qubits, sequence, options, *sweepers):
+    def sweep(
+        self,
+        qubits: Dict[Union[str, int], Qubit],
+        sequence: PulseSequence,
+        options: ExecutionParameters,
+        *sweepers: list[Sweeper]
+    ):
         results = {}
         sweeper_pulses = {}
 
