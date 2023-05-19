@@ -860,7 +860,7 @@ class Zurich(AbstractInstrument):
         for qubit in qubits.values():
             if not qubit.flux_coupler:
                 if self.sequence[f"readout{qubit.name}"]:
-                    exp_res = self.results.get_data(f"sequence{qubit.name}")
+                    exp_res = self.results.get_data(f"sequence{qubit.name}_{0}")
                     # Reorder dimensions
                     exp_res = np.moveaxis(exp_res, rearranging_axes[0], rearranging_axes[1])
                     if options.acquisition_type is AcquisitionType.DISCRIMINATION:
