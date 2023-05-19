@@ -30,7 +30,6 @@ class QickProgramConfig:
     adc_trig_offset: int = 200
     max_gain: int = 32_000
     reps: int = 1000
-    mixer_freq: Optional[int] = None
     adc_sampling_frequency: int = None
     mux_sampling_frequency: int = None
 

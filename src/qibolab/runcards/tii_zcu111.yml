@@ -20,10 +20,10 @@ native_gates:
     single_qubit:
         0: # qubit number
             RX:
-                duration: 40
-                amplitude: 0.005 # TODO
-                frequency: 5_760_000_000
-                shape: Gaussian(5)
+                duration: 43
+                amplitude: 0.02
+                frequency: 5_722_860_285
+                shape: Rectangular()
                 type: qd # qubit drive
                 start: 0
                 phase: 0
@@ -35,7 +35,7 @@ native_gates:
                 type: ro # readout
                 start: 0
                 phase: 0
-        1: # qubit number
+        1: # qubit number this qubit does not have drive LO!
             RX:
                 duration: 40 # TODO
                 amplitude: 0.0484 # TODO
@@ -93,11 +93,11 @@ native_gates:
 characterization:   #TODO No characterization yet
     single_qubit:
         0:
-            readout_frequency: 7_111_151_000
-            drive_frequency: 0.0
+            readout_frequency: 7_111_290_000
+            drive_frequency: 5_722_860_285
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.19
+            sweetspot: -0.1
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
@@ -110,11 +110,11 @@ characterization:   #TODO No characterization yet
             mixer_readout_g: 0.0
             mixer_readout_phi: 0.0
         1:
-            readout_frequency: 7_345_180_000
-            drive_frequency: 5_764_000_000
+            readout_frequency: 7_345_317_000
+            drive_frequency: 6_085_931_000
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.37
+            sweetspot: -0.41
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
