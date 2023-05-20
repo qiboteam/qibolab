@@ -2,7 +2,11 @@ import numpy as np
 import pytest
 
 from qibolab.platform import Platform
-from qibolab.platforms.platform import AveragingMode, ExecutionParameters
+from qibolab.platforms.platform import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
 from qibolab.pulses import PulseSequence
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 
@@ -27,8 +31,9 @@ def test_dummy_execute_pulse_sequence():
 
 @pytest.mark.parametrize("parameter", Parameter)
 @pytest.mark.parametrize("average", [AveragingMode.SINGLESHOT, AveragingMode.CYCLIC])
+@pytest.mark.parametrize("acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION])
 @pytest.mark.parametrize("nshots", [100, 200])
-def test_dummy_single_sweep(parameter, average, nshots):
+def test_dummy_single_sweep(parameter, average, acquisition, nshots):
     swept_points = 5
     platform = Platform("dummy")
     sequence = PulseSequence()
@@ -45,19 +50,26 @@ def test_dummy_single_sweep(parameter, average, nshots):
     options = ExecutionParameters(
         nshots=nshots,
         averaging_mode=average,
+        acquisition_type=acquisition,
     )
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
     results = platform.sweep(sequence, options, sweeper)
 
     assert pulse.serial and pulse.qubit in results
-    assert len(results[pulse.qubit]) == swept_points if average else int(nshots * swept_points)
+    results_len = (
+        len(results[pulse.qubit].magnitude)
+        if acquisition is AcquisitionType.INTEGRATION
+        else len(results[pulse.qubit].states)
+    )
+    assert results_len == swept_points if average else int(nshots * swept_points)
 
 
 @pytest.mark.parametrize("parameter1", Parameter)
 @pytest.mark.parametrize("parameter2", Parameter)
 @pytest.mark.parametrize("average", [AveragingMode.SINGLESHOT, AveragingMode.CYCLIC])
+@pytest.mark.parametrize("acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION])
 @pytest.mark.parametrize("nshots", [100, 1000])
-def test_dummy_double_sweep(parameter1, parameter2, average, nshots):
+def test_dummy_double_sweep(parameter1, parameter2, average, acquisition, nshots):
     swept_points = 5
     platform = Platform("dummy")
     sequence = PulseSequence()
@@ -88,18 +100,26 @@ def test_dummy_double_sweep(parameter1, parameter2, average, nshots):
     options = ExecutionParameters(
         nshots=nshots,
         averaging_mode=average,
+        acquisition_type=acquisition,
     )
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
     results = platform.sweep(sequence, options, sweeper1, sweeper2)
 
     assert ro_pulse.serial and ro_pulse.qubit in results
-    assert len(results[ro_pulse.serial]) == swept_points**2 if average else int(nshots * swept_points**2)
+
+    results_len = (
+        len(results[pulse.qubit].magnitude)
+        if acquisition is AcquisitionType.INTEGRATION
+        else len(results[pulse.qubit].states)
+    )
+    assert results_len == swept_points**2 if average else int(nshots * swept_points**2)
 
 
 @pytest.mark.parametrize("parameter", Parameter)
 @pytest.mark.parametrize("average", [AveragingMode.SINGLESHOT, AveragingMode.CYCLIC])
+@pytest.mark.parametrize("acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION])
 @pytest.mark.parametrize("nshots", [100, 1000])
-def test_dummy_single_sweep_multiplex(parameter, average, nshots):
+def test_dummy_single_sweep_multiplex(parameter, average, acquisition, nshots):
     swept_points = 5
     platform = Platform("dummy")
     sequence = PulseSequence()
@@ -121,13 +141,19 @@ def test_dummy_single_sweep_multiplex(parameter, average, nshots):
     options = ExecutionParameters(
         nshots=nshots,
         averaging_mode=average,
+        acquisition_type=acquisition,
     )
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
     results = platform.sweep(sequence, options, sweeper1)
 
     for ro_pulse in ro_pulses.values():
         assert ro_pulse.serial and ro_pulse.qubit in results
-        assert len(results[ro_pulse.qubit]) == swept_points if average else int(nshots * swept_points)
+        results_len = (
+            len(results[ro_pulse.qubit].magnitude)
+            if acquisition is AcquisitionType.INTEGRATION
+            else len(results[ro_pulse.qubit].states)
+        )
+        assert results_len == swept_points if average else int(nshots * swept_points)
 
 
 # TODO: add test_dummy_double_sweep_multiplex

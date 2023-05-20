@@ -7,7 +7,11 @@ from qibo.config import log, raise_error
 
 from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.platforms.abstract import Qubit
-from qibolab.platforms.platform import AveragingMode, ExecutionParameters
+from qibolab.platforms.platform import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import ExecutionResults
 from qibolab.sweeper import Parameter, Sweeper
@@ -49,10 +53,18 @@ class DummyInstrument(AbstractInstrument):
 
         results = {}
         for qubit, serial in ro_pulses.items():
-            i = np.random.rand(nshots)
-            q = np.random.rand(nshots)
-            shots = np.random.rand(nshots)
-            results[qubit] = results[serial] = ExecutionResults.from_components(i, q, shots)
+            if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+                states = np.random.rand(1) if options.averaging_mode is AveragingMode.CYCLIC else np.random.rand(nshots)
+                results[qubit] = results[serial] = options.results_type(states)
+
+            else:
+                i = np.random.rand(1) if options.averaging_mode is AveragingMode.CYCLIC else np.random.rand(nshots)
+                q = np.random.rand(1) if options.averaging_mode is AveragingMode.CYCLIC else np.random.rand(nshots)
+                exp_res = i + 1j * q
+                results[qubit] = results[serial] = options.results_type(data=exp_res)
+
+            # results[qubit] = results[serial] = ExecutionResults.from_components(i, q, shots)
+
         return results
 
     def sweep(
@@ -129,11 +141,12 @@ class DummyInstrument(AbstractInstrument):
 
                 # colllect result and append to original pulse
                 for original_pulse, new_serial in map_original_shifted.items():
-                    acquisition = (
-                        result[new_serial].average
-                        if options.averaging_mode is AveragingMode.CYCLIC
-                        else result[new_serial]
-                    )
+                    # acquisition = (
+                    #     result[new_serial].average
+                    #     if options.averaging_mode is AveragingMode.CYCLIC
+                    #     else result[new_serial]
+                    # )
+                    acquisition = result[new_serial]
                     if original_pulse.serial in results:
                         results[original_pulse.serial] += acquisition
                         results[original_pulse.qubit] += acquisition
