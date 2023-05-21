@@ -393,15 +393,15 @@ class RawAcquisition(Acquisition):
         q_stream.save(f"{self.serial}_Q")
 
     def fetch(self, handles):
-        ires = handles.get(f"{serial}_I").fetch_all()
-        qres = handles.get(f"{serial}_Q").fetch_all()
+        ires = handles.get(f"{self.serial}_I").fetch_all()
+        qres = handles.get(f"{self.serial}_Q").fetch_all()
         # convert raw ADC signal to volts
         u = unit()
         ires = u.raw2volts(ires)
         qres = u.raw2volts(qres)
         if self.average:
-            return AveragedRawWaveformResults(ires, qres)
-        return RawWaveformResults(ires, qres)
+            return AveragedRawWaveformResults(ires + 1j * qres)
+        return RawWaveformResults(ires + 1j * qres)
 
 
 @dataclass
@@ -441,12 +441,12 @@ class IntegratedAcquisition(Acquisition):
         Qstream.save(f"{self.serial}_Q")
 
     def fetch(self, handles):
-        ires = handles.get(f"{serial}_I").fetch_all()
-        qres = handles.get(f"{serial}_Q").fetch_all()
+        ires = handles.get(f"{self.serial}_I").fetch_all()
+        qres = handles.get(f"{self.serial}_Q").fetch_all()
         if self.average:
             # TODO: calculate std
-            return AveragedIntegratedResults(ires, qres)
-        return IntegratedResults(ires, qres)
+            return AveragedIntegratedResults(ires + 1j * qres)
+        return IntegratedResults(ires + 1j * qres)
 
 
 @dataclass
@@ -492,10 +492,10 @@ class ShotsAcquisition(Acquisition):
             shots = shots.buffer(dim)
         if self.average:
             shots = shots.average()
-        shots.save(f"{serial}_shots")
+        shots.save(f"{self.serial}_shots")
 
-    def fetch(self):
-        shots = handles.get(f"{serial}_shots").fetch_all().astype(int)
+    def fetch(self, handles):
+        shots = handles.get(f"{self.serial}_shots").fetch_all().astype(int)
         if self.average:
             # TODO: calculate std
             return AveragedStateResults(shots)
@@ -550,11 +550,12 @@ class QMPulse:
 
     def declare_output(self, options, threshold=None, angle=None):
         average = options.averaging_mode is AveragingMode.CYCLIC
-        if options.acquisition_type is AcquisitionType.RAW:
+        acquisition_type = options.acquisition_type
+        if acquisition_type is AcquisitionType.RAW:
             self.acquisition = RawAcquisition(self.pulse.serial, average)
-        elif options.acquisition_type is AcquisitionType.INTEGRATION:
+        elif acquisition_type is AcquisitionType.INTEGRATION:
             self.acquisition = IntegratedAcquisition(self.pulse.serial, average)
-        elif options.acquisition_type is AcquisitionType.DISCRIMINATION:
+        elif acquisition_type is AcquisitionType.DISCRIMINATION:
             if threshold is None or angle is None:
                 raise_error(
                     ValueError, "Cannot use ``AcquisitionType.DISCRIMINATION`` " "if threshold and angle are not given."
@@ -812,7 +813,8 @@ class QMOPX(AbstractInstrument):
         handles.wait_for_all_values()
         results = {}
         for qmpulse in ro_pulses:
-            results[pulse.qubit] = results[serial] = qmpulse.acquisition.fetch(handles)
+            pulse = qmpulse.pulse
+            results[pulse.qubit] = results[pulse.serial] = qmpulse.acquisition.fetch(handles)
         return results
 
     @staticmethod
