@@ -93,7 +93,7 @@ class ICPlatform(MultiqubitPlatform):
 
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
         if nshots is None:
-            nshots = self.hardware_avg
+            nshots = self.nshots
 
         from qibolab.pulses import ReadoutPulse
 
