@@ -4,8 +4,9 @@ description: QuantWare 5-qubit device.
 qubits: [0, 1, 2, 3, 4, 5]
 
 settings:
+    nshots: 1024
     sampling_rate: 1000000000
-    repetition_duration: 50_000
+    relaxation_time: 50_000
 
 resonator_type: 2D
 
@@ -167,9 +168,7 @@ characterization:
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
-            iq_angle: 0.0
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
+            iq_angle: 0.00
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -185,8 +184,6 @@ characterization:
             # parameters for single shot classification
             threshold: 0.00028502261712637096
             iq_angle: 1.283105298787488
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 63.214
             # Software classifier
             # classifier:
             #     type: "scikit"
@@ -212,8 +209,6 @@ characterization:
             # classifier:
             #     type: "scikit"
             #     model: "qw5q_gold/RBF_SVM_2.pkl"
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -229,8 +224,6 @@ characterization:
             # parameters for single shot classification
             threshold: 0.0003363427381347193
             iq_angle: 1.6124890998581591
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # Software classifier
             # classifier:
             #     type: "scikit"
@@ -250,8 +243,6 @@ characterization:
             # parameters for single shot classification
             threshold: 0.00013079660165463033
             iq_angle: 5.6303684840135
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # Software classifier
             # classifier:
             #     type: "scikit"
@@ -271,8 +262,6 @@ characterization:
             # parameters for single shot classification
             threshold: 0.0
             iq_angle: 0.0
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0

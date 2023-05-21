@@ -1,4 +1,4 @@
-from dataclasses import InitVar, dataclass
+from dataclasses import dataclass, replace
 from enum import Enum, auto
 from typing import Optional
 
@@ -16,32 +16,27 @@ from qibolab.result import (
 
 
 class AcquisitionType(Enum):
-    """
-    Types of data acquisition from hardware.
+    """Data acquisition from hardware"""
 
-    [SPECTROSCOPY: Zurich Integration mode for RO frequency sweeps.]
-    INTEGRATION: Demodulate and integrate the waveform.
-    RAW: Acquire the waveform as it is.
-    DISCRIMINATION: Demodulate, integrate the waveform and discriminate among states based on the voltages.
-    """
-
-    RAW = auto()
-    INTEGRATION = auto()
     DISCRIMINATION = auto()
+    """Demodulate, integrate the waveform and discriminate among states based on the voltages"""
+    INTEGRATION = auto()
+    """Demodulate and integrate the waveform"""
+    RAW = auto()
+    """Acquire the waveform as it is"""
+    SPECTROSCOPY = auto()
+    """Zurich Integration mode for RO frequency sweeps"""
 
 
 class AveragingMode(Enum):
-    """
-    Types of data averaging from hardware.
-
-    CYLIC: Better averaging for noise,
-    SINGLESHOT: False averaging,
-    [SEQUENTIAL: Worse averaging for noise]
-
-    """
+    """Data averaging modes from hardware"""
 
     CYCLIC = auto()
+    """Better averaging for short timescale noise"""
     SINGLESHOT = auto()
+    """SINGLESHOT: No averaging"""
+    SEQUENTIAL = auto()
+    """SEQUENTIAL: Worse averaging for noise[Avoid]"""
 
 
 RESULTS_TYPE = {
@@ -60,27 +55,24 @@ RESULTS_TYPE = {
 
 @dataclass(frozen=True)
 class ExecutionParameters:
-    """Data structure to deal with execution parameters
+    """Data structure to deal with execution parameters"""
 
-    nshots (int): Number of shots to sample from the experiment. Default is 1024.
-    relaxation_time (float): Time to wait for the qubit to relax to its ground state between shots.
-        If ``None`` the default value provided as ``relaxation_time`` in the runcard will be used.
-    fast_reset (bool): Enable or disable fast reset
-    acquisition_type (:class:`qibolab.platforms.platform.AcquisitionType`): Data acquisition mode.
-    averaging_mode (:class:`qibolab.platforms.platform.AveragingMode`): Data averaging mode.
-    """
-
-    nshots: Optional[int] = 1024
-    relaxation_time: Optional[float] = None
+    nshots: Optional[int] = None
+    """Number of shots to sample from the experiment. Default is the runcard value."""
+    relaxation_time: Optional[int] = None
+    """Time to wait for the qubit to relax to its ground state between shots in ns. Default is the runcard value."""
     fast_reset: bool = False
+    """Enable or disable fast reset"""
     acquisition_type: AcquisitionType = AcquisitionType.DISCRIMINATION
+    """Data acquisition type"""
     averaging_mode: AveragingMode = AveragingMode.SINGLESHOT
+    """Data averaging mode"""
 
     def __post_init__(self):
         if not isinstance(self.acquisition_type, AcquisitionType):
-            raise TypeError("Acquisition type is not valid")
+            raise TypeError(f"acquisition_type: {self.acquisition_type} is not valid as acquisition")
         if not isinstance(self.averaging_mode, AveragingMode):
-            raise TypeError("Averaging mode is not valid")
+            raise TypeError(f"averaging mode: {self.averaging_mode} is not valid as averaging")
 
     @property
     def results_type(self):
@@ -127,8 +119,11 @@ class DesignPlatform(AbstractPlatform):
         Returns:
             Readout results acquired by after execution.
         """
+        if options.nshots is None:
+            options = replace(options, nshots=self.nshots)
+
         if options.relaxation_time is None:
-            options.relaxation_time = self.relaxation_time
+            options = replace(options, relaxation_time=self.relaxation_time)
 
         return self.design.play(self.qubits, sequence, options)
 
@@ -146,8 +141,12 @@ class DesignPlatform(AbstractPlatform):
         Returns:
             Readout results acquired by after execution.
         """
+
+        if options.nshots is None:
+            options = replace(options, nshots=self.nshots)
+
         if options.relaxation_time is None:
-            options.relaxation_time = self.relaxation_time
+            options = replace(options, relaxation_time=self.relaxation_time)
 
         return self.design.sweep(
             self.qubits,

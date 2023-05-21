@@ -5,8 +5,13 @@ from qibolab.instruments.rfsoc import QickProgramConfig
 from qibolab.paths import qibolab_folder
 from qibolab.platform import create_tii_rfsoc4x2
 from qibolab.platforms.abstract import Qubit
+from qibolab.platforms.platform import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
 from qibolab.pulses import PulseSequence
-from qibolab.result import AveragedResults, ExecutionResults
+from qibolab.result import AveragedIntegratedResults, IntegratedResults, StateResults
 from qibolab.sweeper import Parameter, Sweeper
 
 RUNCARD = qibolab_folder / "runcards" / "tii1q_b1.yml"
@@ -32,7 +37,7 @@ def test_tii_rfsoc4x2_setup():
         sampling_rate=5_000_000_000, repetition_duration=1_000, adc_trig_offset=150, max_gain=30_000
     )
 
-    instrument.setup(sampling_rate=5_000_000_000, repetition_duration=1_000, adc_trig_offset=150, max_gain=30_000)
+    instrument.setup(sampling_rate=5_000_000_000, relaxation_time=1_000, adc_trig_offset=150, max_gain=30_000)
 
     assert instrument.cfg == target_cfg
 
@@ -58,15 +63,15 @@ def test_classify_shots():
 
 def test_merge_sweep_results():
     """Creates fake dictionary of results and check merging works as expected"""
-    dict_a = {"serial1": AveragedResults.from_components(np.array([0]), np.array([1]))}
+    dict_a = {"serial1": AveragedIntegratedResults(np.array([0 + 1j * 1]))}
     dict_b = {
-        "serial1": AveragedResults.from_components(np.array([4]), np.array([4])),
-        "serial2": AveragedResults.from_components(np.array([5]), np.array([5])),
+        "serial1": AveragedIntegratedResults(np.array([4 + 1j * 4])),
+        "serial2": AveragedIntegratedResults(np.array([5 + 1j * 5])),
     }
     dict_c = {}
     targ_dict = {
-        "serial1": AveragedResults.from_components(np.array([0, 4]), np.array([1, 4])),
-        "serial2": AveragedResults.from_components(np.array([5]), np.array([5])),
+        "serial1": AveragedIntegratedResults(np.array([0 + 1j * 1, 4 + 1j * 4])),
+        "serial2": AveragedIntegratedResults(np.array([5 + 1j * 5])),
     }
 
     platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
@@ -75,12 +80,12 @@ def test_merge_sweep_results():
     out_dict2 = instrument.merge_sweep_results(dict_c, dict_a)
 
     assert targ_dict.keys() == out_dict1.keys()
-    assert (out_dict1["serial1"].i == targ_dict["serial1"].i).all()
-    assert (out_dict1["serial1"].q == targ_dict["serial1"].q).all()
+    assert (out_dict1["serial1"].serialize["MSR[V]"] == targ_dict["serial1"].serialize["MSR[V]"]).all()
+    assert (out_dict1["serial1"].serialize["MSR[V]"] == targ_dict["serial1"].serialize["MSR[V]"]).all()
 
     assert dict_a.keys() == out_dict2.keys()
-    assert (out_dict2["serial1"].i == dict_a["serial1"].i).all()
-    assert (out_dict2["serial1"].q == dict_a["serial1"].q).all()
+    assert (out_dict2["serial1"].serialize["MSR[V]"] == dict_a["serial1"].serialize["MSR[V]"]).all()
+    assert (out_dict2["serial1"].serialize["MSR[V]"] == dict_a["serial1"].serialize["MSR[V]"]).all()
 
 
 def test_get_if_python_sweep():
@@ -129,16 +134,21 @@ def test_convert_av_sweep_results():
     avgq = [[[7, 8, 9], [-1, -2, -3]]]
 
     ro_serials = [ro.serial for ro in sequence.ro_pulses]
-    out_dict = instrument.convert_sweep_results(sweep1, ro_serials, sequence, platform.qubits, avgi, avgq, True)
+    execution_parameters = ExecutionParameters(
+        acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+    )
+    out_dict = instrument.convert_sweep_results(
+        sweep1, ro_serials, sequence, platform.qubits, avgi, avgq, execution_parameters
+    )
     targ_dict = {
-        serial1: AveragedResults.from_components(np.array([1, 2, 3]), np.array([7, 8, 9])),
-        serial2: AveragedResults.from_components(np.array([0, 1, 2]), np.array([-1, -2, -3])),
+        serial1: AveragedIntegratedResults(np.array([1, 2, 3]) + 1j * np.array([7, 8, 9])),
+        serial2: AveragedIntegratedResults(np.array([0, 1, 2]) + 1j * np.array([-1, -2, -3])),
     }
 
-    assert (out_dict[serial1].i == targ_dict[serial1].i).all()
-    assert (out_dict[serial1].q == targ_dict[serial1].q).all()
-    assert (out_dict[serial2].i == targ_dict[serial2].i).all()
-    assert (out_dict[serial2].q == targ_dict[serial2].q).all()
+    assert (out_dict[serial1].serialize["i[V]"] == targ_dict[serial1].serialize["i[V]"]).all()
+    assert (out_dict[serial1].serialize["q[V]"] == targ_dict[serial1].serialize["q[V]"]).all()
+    assert (out_dict[serial2].serialize["i[V]"] == targ_dict[serial2].serialize["i[V]"]).all()
+    assert (out_dict[serial2].serialize["q[V]"] == targ_dict[serial2].serialize["q[V]"]).all()
 
 
 def test_convert_nav_sweep_results():
@@ -160,16 +170,21 @@ def test_convert_nav_sweep_results():
     avgq = [[[[7, 7], [8, 8], [9, 9]], [[-1, -1], [-2, -2], [-3, -3]]]]
 
     ro_serials = [ro.serial for ro in sequence.ro_pulses]
-    out_dict = instrument.convert_sweep_results(sweep1, ro_serials, sequence, platform.qubits, avgi, avgq, False)
+    execution_parameters = ExecutionParameters(
+        acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+    )
+    out_dict = instrument.convert_sweep_results(
+        sweep1, ro_serials, sequence, platform.qubits, avgi, avgq, execution_parameters
+    )
     targ_dict = {
-        serial1: ExecutionResults.from_components(np.array([1, 1, 2, 2, 3, 3]), np.array([7, 7, 8, 8, 9, 9])),
-        serial2: ExecutionResults.from_components(np.array([0, 0, 1, 1, 2, 2]), np.array([-1, -1, -2, -2, -3, -3])),
+        serial1: AveragedIntegratedResults(np.array([1, 1, 2, 2, 3, 3]) + 1j * np.array([7, 7, 8, 8, 9, 9])),
+        serial2: AveragedIntegratedResults(np.array([0, 0, 1, 1, 2, 2]) + 1j * np.array([-1, -1, -2, -2, -3, -3])),
     }
 
-    assert (out_dict[serial1].i == targ_dict[serial1].i).all()
-    assert (out_dict[serial1].q == targ_dict[serial1].q).all()
-    assert (out_dict[serial2].i == targ_dict[serial2].i).all()
-    assert (out_dict[serial2].q == targ_dict[serial2].q).all()
+    assert (out_dict[serial1].serialize["i[V]"] == targ_dict[serial1].serialize["i[V]"]).all()
+    assert (out_dict[serial1].serialize["q[V]"] == targ_dict[serial1].serialize["q[V]"]).all()
+    assert (out_dict[serial2].serialize["i[V]"] == targ_dict[serial2].serialize["i[V]"]).all()
+    assert (out_dict[serial2].serialize["q[V]"] == targ_dict[serial2].serialize["q[V]"]).all()
 
 
 @pytest.mark.qpu
