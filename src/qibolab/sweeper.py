@@ -13,7 +13,6 @@ class Parameter(Enum):
     duration = auto()
     relative_phase = auto()
     delay = auto()
-    duration = auto()
 
     attenuation = auto()
     gain = auto()
