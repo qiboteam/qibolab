@@ -470,7 +470,7 @@ class Zurich(AbstractInstrument):
 
         # FIXME: Include this on the reports
         # html containing the pulse sequence schedule
-        # lo.show_pulse_sheet("pulses", self.exp)
+        lo.show_pulse_sheet("pulses", self.exp)
 
         # There is no reason for disconnection and it prevents reconnection
         # for a period of time making the software loops with execute_play_sequence crash
@@ -883,7 +883,7 @@ class Zurich(AbstractInstrument):
 
         # FIXME: Include this on the reports
         # html containing the pulse sequence schedule
-        # lo.show_pulse_sheet("pulses", self.exp)
+        lo.show_pulse_sheet("pulses", self.exp)
 
         # There is no reason for disconnection and it prevents reconnection
         # for a period of time making the software loops with execute_play_sequence crash
