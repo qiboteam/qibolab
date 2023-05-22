@@ -10,7 +10,7 @@ import numpy as np
 
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.paths import qibolab_folder
-from qibolab.platforms.platform import (
+from qibolab.executionparameters import (
     AcquisitionType,
     AveragingMode,
     ExecutionParameters,
