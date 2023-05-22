@@ -8,13 +8,13 @@ import laboneq._token
 import laboneq.simple as lo
 import numpy as np
 
-from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
-from qibolab.paths import qibolab_folder
 from qibolab.executionparameters import (
     AcquisitionType,
     AveragingMode,
     ExecutionParameters,
 )
+from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
+from qibolab.paths import qibolab_folder
 from qibolab.pulses import FluxPulse, PulseSequence, PulseType
 from qibolab.result import (
     AveragedIntegratedResults,
