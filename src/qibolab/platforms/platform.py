@@ -1,18 +1,8 @@
-from dataclasses import asdict, dataclass, replace
-from enum import Enum, auto
-from typing import Optional
+from dataclasses import replace
 
 from qibo.config import raise_error
 
 from qibolab.platforms.abstract import AbstractPlatform
-from qibolab.result import (
-    AveragedIntegratedResults,
-    AveragedRawWaveformResults,
-    AveragedStateResults,
-    IntegratedResults,
-    RawWaveformResults,
-    StateResults,
-)
 
 
 class DesignPlatform(AbstractPlatform):
