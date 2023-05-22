@@ -292,7 +292,6 @@ def create_tii_zcu111(runcard, address=None):
     # Instantiate local oscillators (HARDCODED)
     local_oscillators = [
         ERA("ErasynthLO", "192.168.0.212", ethernet=True),
-        ERA("ErasynthLO", "192.168.0.210", ethernet=True),
     ]
 
     # Instantiate QICK instruments
@@ -304,11 +303,6 @@ def create_tii_zcu111(runcard, address=None):
     local_oscillators[0].frequency = 7_500_000_000
     local_oscillators[0].power = 10
     channels["L3-30_ro"].local_oscillator = local_oscillators[0]
-
-    # Drive local oscillator
-    local_oscillators[1].frequency = 5_000_000_000
-    local_oscillators[1].power = 10
-    channels["L4-29_qd"].local_oscillator = local_oscillators[1]
 
     instruments = [controller] + local_oscillators
 

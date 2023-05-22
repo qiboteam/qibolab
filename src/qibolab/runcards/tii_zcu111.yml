@@ -18,24 +18,24 @@ topology: # qubit - qubit connections
 
 native_gates:
     single_qubit:
-        0: # qubit number
+        0: # D1
             RX:
                 duration: 43
                 amplitude: 0.02
-                frequency: 5_722_860_285
+                frequency: 4_939_000_000
                 shape: Rectangular()
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.06
-                frequency: 7_111_151_000
+                amplitude: 0.076
+                frequency: 6_951_000_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
                 phase: 0
-        1: # qubit number this qubit does not have drive LO!
+        1: # D3
             RX:
                 duration: 40 # TODO
                 amplitude: 0.0484 # TODO
@@ -46,27 +46,25 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.042
+                amplitude: 0.184
                 frequency: 7_345_330_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
                 phase: 0
-        2: # qubit number
-           # TODO for now we do not have flux here!
+        2: # D2
             RX:
                 duration: 40
-                amplitude: 0.0484 # TODO
-                frequency: 6_070_000_000
-                #frequency: 4_718_515_000 # 02 transition (more likely)
+                amplitude: 0.01
+                frequency: 5_760_000_000
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.045
-                frequency: 7_459_250_000
+                amplitude: 0.1
+                frequency: 7_111_000_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
