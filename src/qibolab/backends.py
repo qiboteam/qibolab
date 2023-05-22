@@ -10,6 +10,7 @@ from qibo.states import CircuitResult
 from qibolab import __version__ as qibolab_version
 from qibolab.platform import Platform
 from qibolab.platforms.abstract import AbstractPlatform
+from qibolab.platforms.platform import ExecutionParameters
 from qibolab.transpilers import Pipeline
 
 
@@ -85,8 +86,12 @@ class QibolabBackend(NumpyBackend):
 
         # Execute the pulse sequence on the platform
         self.platform.start()
-        readout = self.platform.execute_pulse_sequence(sequence, nshots)
+        readout = self.platform.execute_pulse_sequence(
+            sequence,
+            ExecutionParameters(nshots=nshots),
+        )
         self.platform.stop()
+
         result = CircuitResult(self, native_circuit, readout, nshots)
 
         # Register measurement outcomes
@@ -95,7 +100,7 @@ class QibolabBackend(NumpyBackend):
                 if isinstance(gate, gates.M):
                     samples = []
                     for serial in gate.pulses:
-                        shots = readout[serial].shots
+                        shots = readout[serial].states
                         if shots is not None:
                             samples.append(shots)
                     gate.result.backend = self
@@ -123,7 +128,7 @@ class QibolabBackend(NumpyBackend):
         for qubit in qubits:
             # execution_result[qubit] provides the latest acquisition data for the corresponding qubit
             qubit_result = result.execution_result[qubit]
-            if qubit_result.shots is None:
+            if qubit_result.states is None:
                 mean_state0 = complex(self.platform.qubits[qubit].mean_gnd_states)
                 mean_state1 = complex(self.platform.qubits[qubit].mean_exc_states)
                 measurement = complex(qubit_result.I, qubit_result.Q)
@@ -133,7 +138,7 @@ class QibolabBackend(NumpyBackend):
                 p = (d1**2 + d01**2 - d0**2) / 2 / d01**2
                 probabilities.append([p, 1 - p])
             else:
-                outcomes, counts = np.unique(qubit_result.shots, return_counts=True)
+                outcomes, counts = np.unique(qubit_result.states, return_counts=True)
                 probabilities.append([0, 0])
                 for i, c in zip(outcomes.astype(int), counts):
                     probabilities[-1][i] = c / result.nshots

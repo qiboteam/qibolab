@@ -256,6 +256,8 @@ class TII_RFSOC4x2(AbstractInstrument):
 
         rotated = np.cos(angle) * np.array(i_values) - np.sin(angle) * np.array(q_values)
         shots = np.heaviside(np.array(rotated) - threshold, 0)
+        if isinstance(shots, float):
+            return [shots]
         return shots
 
     def recursive_python_sweep(
@@ -452,8 +454,6 @@ class TII_RFSOC4x2(AbstractInstrument):
 
                 i_vals = i_pulse
                 q_vals = q_pulse
-
-                print(i_vals)
 
                 if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
                     shape = i_vals.shape
