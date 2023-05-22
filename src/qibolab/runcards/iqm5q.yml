@@ -60,15 +60,15 @@ native_gates:
         2: # qubit number
             RX:
                 duration: 40 #200 #60
-                amplitude: 0.5740540540540541
-                frequency: 4298501915  #4_401_600_000 #4_505_500_000 #4_321_500_000 # 4_541_100_000 #doesnt do anything requiered for qibolab to work
+                amplitude: 0.5684
+                frequency: 4436831286  #4_401_600_000 #4_505_500_000 #4_321_500_000 # 4_541_100_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
                 phase: 0
             MZ:
                 duration: 2000
-                amplitude: .54
+                amplitude: .34
                 frequency: 6.109e+9 #6_086_000_000  #6_112_000_000 #doesnt do anything requiered for qibolab to work
                 shape: Rectangular()
                 type: ro # readout
@@ -96,8 +96,8 @@ native_gates:
         4: # qubit number
             RX:
                 duration: 40 #110 #80
-                amplitude: 0.6087529411764706 #0.398 #0.8
-                frequency: 4107119075 #Small detuning increase freq #4_248_775_000 #doesnt do anything requiered for qibolab to work
+                amplitude: 0.5096
+                frequency: 4_281_006_479
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -166,13 +166,13 @@ characterization:
         2:
             readout_frequency: 6.109e+9  #6_112_000_000
             resonator_polycoef_flux: []
-            drive_frequency: 4_300_587_281 # 4_401_600_000 #4_541_100_000
+            drive_frequency: 4.432e+9 # 4_401_600_000 #4_541_100_000
             T1: 8_969
             T2: 3_285
-            sweetspot: 0 #-0.2235 #0.5 #0.62 0.00
+            sweetspot: 0. #-0.2235 #0.5 #0.62 0.00
             filter: {}
-            mean_gnd_states: -1.5996+1.3015j
-            mean_exc_states: -1.2151+1.9592j
+            mean_gnd_states: -0.9935+0.9602j
+            mean_exc_states: -0.4239+1.5514j
             # parameters for single shot classification
             threshold: 0.4721
             iq_angle: -0.981
@@ -190,16 +190,17 @@ characterization:
         4:
             readout_frequency: 5.5240e+9
             resonator_polycoef_flux: []
-            drive_frequency: 4.10744e+9
+            drive_frequency: 4_281_006_479
             T1: 3_292
             T2: 2_054
-            sweetspot: 0 #-0.125
+            sweetspot: 0.17 #-0.125
             filter: {}
-            mean_gnd_states: -1.9927-1.9086j
-            mean_exc_states: -3.3760-0.8162j
+            mean_gnd_states: -0.9255-1.7125j
+            mean_exc_states: -2.9220-1.3302j
             # parameters for single shot classification
             threshold: 1.0268 #0.370954 #0.350665
             iq_angle: -2.473 # -91.712 #191.016
+            # alpha: 212.012958 MHz
         "c0":
             sweetspot: 0.
             filter: {}
