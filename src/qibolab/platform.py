@@ -358,6 +358,7 @@ def create_tii_IQM5q(runcard, descriptor=None):
         qubits[f"c{c}"].flux_coupler = [qubits[c]]
         qubits[f"c{c}"].flux_coupler.append(qubits[2])
 
+    # platform.qubits[4].drive.power_range = 10
     return platform
 
 
