@@ -454,7 +454,7 @@ class Zurich(AbstractInstrument):
                         else:
                             states = np.array(exp_res)
                         results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = options.results_type(
-                            states=states
+                            data=states
                         )
                         results[self.sequence[f"readout{qubit.name}"][0].pulse.qubit] = options.results_type(
                             data=states
