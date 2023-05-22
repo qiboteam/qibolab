@@ -20,13 +20,13 @@ from qibo import gates
 from qibo.models import Circuit
 
 from qibolab.backends import QibolabBackend
-from qibolab.paths import qibolab_folder
-from qibolab.platform import create_tii_qw5q_gold
-from qibolab.platforms.platform import (
+from qibolab.executionparameters import (
     AcquisitionType,
     AveragingMode,
     ExecutionParameters,
 )
+from qibolab.paths import qibolab_folder
+from qibolab.platform import create_tii_qw5q_gold
 from qibolab.pulses import SNZ, FluxPulse, PulseSequence, Rectangular
 from qibolab.sweeper import Parameter, Sweeper
 

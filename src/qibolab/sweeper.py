@@ -10,9 +10,9 @@ class Parameter(Enum):
 
     frequency = auto()
     amplitude = auto()
+    duration = auto()
     relative_phase = auto()
     delay = auto()
-    duration = auto()
 
     attenuation = auto()
     gain = auto()
@@ -37,7 +37,7 @@ class Sweeper:
             from qibolab.platform import Platform
             from qibolab.sweeper import Sweeper, Parameter
             from qibolab.pulses import PulseSequence
-            from qibolab.platforms.platform import ExecutionParameters
+            from qibolab.executionparameters import ExecutionParameters
 
 
             platform = Platform("dummy")

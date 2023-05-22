@@ -16,8 +16,8 @@ from qualang_tools.loops import from_array
 from qualang_tools.units import unit
 
 from qibolab.designs.channels import check_max_bias
+from qibolab.executionparameters import AcquisitionType, AveragingMode
 from qibolab.instruments.abstract import AbstractInstrument
-from qibolab.platforms.platform import AcquisitionType, AveragingMode
 from qibolab.pulses import Pulse, PulseType, Rectangular
 from qibolab.result import (
     AveragedIntegratedResults,
@@ -346,6 +346,16 @@ class Acquisition(ABC):
     average: bool
 
     @abstractmethod
+    def assign_element(self, element):
+        """Assign acquisition variables to the corresponding QM controlled.
+
+        Proposed to do by QM to avoid crashes.
+
+        Args:
+            element (str): Element (from ``config``) that the pulse will be applied on.
+        """
+
+    @abstractmethod
     def measure(self, operation, element):
         """Send measurement pulse and acquire results.
 
@@ -377,6 +387,9 @@ class RawAcquisition(Acquisition):
 
     adc_stream: _ResultSource = field(default_factory=lambda: declare_stream(adc_trace=True))
     """Stream to collect raw ADC data."""
+
+    def assign_element(self, element):
+        pass
 
     def measure(self, operation, element):
         qua.measure(operation, element, self.adc_stream)
@@ -415,6 +428,9 @@ class IntegratedAcquisition(Acquisition):
     I_stream: _ResultSource = field(default_factory=lambda: declare_stream())
     Q_stream: _ResultSource = field(default_factory=lambda: declare_stream())
     """Streams to collect the results of all shots."""
+
+    def assign_element(self, element):
+        assign_variables_to_element(element, self.I, self.Q)
 
     def measure(self, operation, element):
         qua.measure(
@@ -473,6 +489,9 @@ class ShotsAcquisition(Acquisition):
     def __post_init__(self):
         self.cos = np.cos(self.angle)
         self.sin = np.sin(self.angle)
+
+    def assign_element(self, element):
+        assign_variables_to_element(element, self.I, self.Q, self.shot)
 
     def measure(self, operation, element):
         qua.measure(
@@ -564,7 +583,7 @@ class QMPulse:
             self.acquisition = ShotsAcquisition(self.pulse.serial, average, threshold, angle)
         else:
             raise_error(ValueError, f"Invalid acquisition type {acquisition_type}.")
-        assign_variables_to_element(self.element, self.acquisition.I, self.acquisition.Q)
+        self.acquisition.assign_element(self.element)
 
     def bake(self, config: QMConfig):
         if self.baked is not None:
