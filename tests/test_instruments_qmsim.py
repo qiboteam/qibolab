@@ -22,7 +22,11 @@ from qibo.models import Circuit
 from qibolab.backends import QibolabBackend
 from qibolab.paths import qibolab_folder
 from qibolab.platform import create_tii_qw5q_gold
-from qibolab.platforms.platform import ExecutionParameters
+from qibolab.platforms.platform import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
 from qibolab.pulses import SNZ, FluxPulse, PulseSequence, Rectangular
 from qibolab.sweeper import Parameter, Sweeper
 
@@ -151,7 +155,9 @@ def test_qmsim_sweep(simulator, folder, parameter, values):
         sequence.add(ro_pulses[qubit])
     pulses = [qd_pulses[qubit] for qubit in qubits]
     sweeper = Sweeper(parameter, values, pulses)
-    options = ExecutionParameters(nshots=1, relaxation_time=20)
+    options = ExecutionParameters(
+        nshots=1, relaxation_time=20, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+    )
     result = simulator.sweep(sequence, options, sweeper)
     samples = result.get_simulated_samples()
     assert_regression(samples, folder, f"sweep_{parameter.name}")
@@ -166,7 +172,9 @@ def test_qmsim_sweep_bias(simulator, folder):
         sequence.add(ro_pulses[qubit])
     values = [0, 0.005]
     sweeper = Sweeper(Parameter.bias, values, qubits=qubits)
-    options = ExecutionParameters(nshots=1, relaxation_time=20)
+    options = ExecutionParameters(
+        nshots=1, relaxation_time=20, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+    )
     result = simulator.sweep(sequence, options, sweeper)
     samples = result.get_simulated_samples()
     assert_regression(samples, folder, "sweep_bias")
@@ -185,7 +193,9 @@ def test_qmsim_sweep_delay(simulator, folder):
     values = [20, 40]
     pulses = [ro_pulses[qubit] for qubit in qubits]
     sweeper = Sweeper(Parameter.delay, values, pulses=pulses)
-    options = ExecutionParameters(nshots=1, relaxation_time=0)
+    options = ExecutionParameters(
+        nshots=1, relaxation_time=0, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+    )
     result = simulator.sweep(sequence, options, sweeper)
     samples = result.get_simulated_samples()
     assert_regression(samples, folder, "sweep_delay")
@@ -207,7 +217,9 @@ def test_qmsim_sweep_delay_two_pulses(simulator, folder):
     values = [20, 60]
     pulses = [qd_pulses2[qubit] for qubit in qubits]
     sweeper = Sweeper(Parameter.delay, values, pulses=pulses)
-    options = ExecutionParameters(nshots=1, relaxation_time=0)
+    options = ExecutionParameters(
+        nshots=1, relaxation_time=0, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+    )
     result = simulator.sweep(sequence, options, sweeper)
     samples = result.get_simulated_samples()
     assert_regression(samples, folder, "sweep_delay_two_pulses")
