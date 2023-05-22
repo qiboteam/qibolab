@@ -469,7 +469,6 @@ class Zurich(AbstractInstrument):
 
         exp_dimensions = list(np.array(exp_res).shape)
         if dimensions != exp_dimensions:
-
             print("dimensions", dimensions, "experiment", exp_dimensions)
             warnings.warn("dimensions not properly ordered")
 
@@ -494,8 +493,8 @@ class Zurich(AbstractInstrument):
         last_start = 0
         for pulse in sequence:
             zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"].append(ZhPulse(pulse))
-            if pulse.start < last_start:
-                # warnings.warn("Pulse timing translation")
+            # if pulse.start < last_start:
+            # warnings.warn("Pulse timing translation")
             last_start = pulse.start
 
         "Mess that gets the sweeper and substitutes the pulse it sweeps in the right place"
