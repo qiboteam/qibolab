@@ -473,7 +473,7 @@ class Zurich(AbstractInstrument):
 
         # FIXME: Include this on the reports
         # html containing the pulse sequence schedule
-        # lo.show_pulse_sheet("pulses", self.exp)
+        lo.show_pulse_sheet("pulses", self.exp)
 
         # There is no reason for disconnection and it prevents reconnection
         # for a period of time making the software loops with execute_play_sequence crash
@@ -706,6 +706,8 @@ class Zurich(AbstractInstrument):
                             elif isinstance(pulse, ZhSweeperLine):
                                 exp.delay(signal=f"drive{qubit.name}", time=pulse.zhsweeper)
 
+                                # exp.delay(signal=f"measure{qubit.name}", time=pulse.zhsweeper)
+
     # For pulsed spectroscopy, set integration_length and either measure_pulse or measure_pulse_length.
     # For CW spectroscopy, set only integration_length and do not specify the measure signal.
     # For all other measurements, set either length or pulse for both the measure pulse and integration kernel.
@@ -714,8 +716,8 @@ class Zurich(AbstractInstrument):
         for qubit in qubits.values():
             if not qubit.flux_coupler:
                 play_after = None
-                if self.sequence[f"drive{qubit.name}"]:
-                    play_after = f"sequence_drive{qubit.name}"
+                # if self.sequence[f"drive{qubit.name}"]:
+                #     play_after = f"sequence_drive{qubit.name}"
 
                 if self.sequence[f"drive{qubit.name}"]:
                     last_drive_pulse = self.sequence[f"drive{qubit.name}"][-1]
@@ -732,7 +734,10 @@ class Zurich(AbstractInstrument):
                             exp.delay(signal=f"measure{qubit.name}", time=0)
                             # FIXME: The delay between drive and measure needs to be revised
                             # This may be a problem for fixed sequences and not delay sweeps as T1
+
                             # exp.delay(signal=f"measure{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
+                            # exp.delay(signal=f"acquire{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
+
                             time += round(pulse.pulse.duration * 1e-9, 9) + round(pulse.pulse.start * 1e-9, 9) - time
                             pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
 
