@@ -98,7 +98,6 @@ class Channel:
     @property
     def attenuation(self):
         """Attenuation for qblox devices."""
-        """LocalOscillator object connnected to this channel."""
         if self._attenuation is None:
             raise_error(NotImplementedError, f"Channel {self.name} does not support attenuation.")
         return self._attenuation

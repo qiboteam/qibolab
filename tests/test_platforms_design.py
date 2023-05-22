@@ -25,8 +25,8 @@ def test_platform_lo_readout_frequency(platform):
 
 
 def test_platform_attenuation(platform):
-    platform.set_lo_readout_frequency(qubit, 10)
-    assert platform.get_lo_readout_frequency(qubit) == 10
+    platform.set_attenuation(qubit, 10)
+    assert platform.get_attenuation(qubit) == 10
 
 
 def test_platform_gain(platform):
