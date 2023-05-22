@@ -466,7 +466,7 @@ class TII_RFSOC4x2(AbstractInstrument):
                 else:
                     average = execution_parameters.averaging_mode is AveragingMode.CYCLIC
 
-                if average:
+                if not average:
                     shape = i_vals.shape
                     np.reshape(i_vals, (execution_parameters.nshots, *shape[:-1]))
                     np.reshape(q_vals, (execution_parameters.nshots, *shape[:-1]))
