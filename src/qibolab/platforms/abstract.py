@@ -456,7 +456,7 @@ class AbstractPlatform(ABC):
                 from qibolab.platform import Platform
                 from qibolab.sweeper import Sweeper, Parameter
                 from qibolab.pulses import PulseSequence
-                from qibolab.executeparameters import ExecutionParameters
+                from qibolab.executionparameters import ExecutionParameters
 
 
                 platform = Platform("dummy")
