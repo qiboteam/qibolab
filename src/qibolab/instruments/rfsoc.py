@@ -12,13 +12,13 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
-from qibolab.instruments.abstract import AbstractInstrument
-from qibolab.platforms.abstract import Qubit
-from qibolab.platforms.platform import (
+from qibolab.executionparameters import (
     AcquisitionType,
     AveragingMode,
     ExecutionParameters,
 )
+from qibolab.instruments.abstract import AbstractInstrument
+from qibolab.platforms.abstract import Qubit
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import IntegratedResults, StateResults
 from qibolab.sweeper import Parameter, Sweeper
@@ -224,7 +224,11 @@ class TII_RFSOC4x2(AbstractInstrument):
             self.cfg.reps = execution_parameters.nshots
         if execution_parameters.relaxation_time is not None:
             self.cfg.repetition_duration = execution_parameters.relaxation_time
-        average = execution_parameters.averaging_mode is AveragingMode.CYCLIC
+
+        if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
+            average = False
+        else:
+            average = execution_parameters.averaging_mode is AveragingMode.CYCLIC
 
         toti, totq = self._execute_pulse_sequence(self.cfg, sequence, qubits, len(sequence.ro_pulses), average)
 
@@ -239,6 +243,8 @@ class TII_RFSOC4x2(AbstractInstrument):
 
                 if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
                     discriminated_shots = self.classify_shots(i_pulse, q_pulse, qubits[ro_pulse.qubit])
+                    if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
+                        discriminated_shots = np.mean(discriminated_shots, keepdims=True)
                     result = execution_parameters.results_type(discriminated_shots)
                 else:
                     result = execution_parameters.results_type(i_pulse + 1j * q_pulse)
@@ -455,7 +461,12 @@ class TII_RFSOC4x2(AbstractInstrument):
                 i_vals = i_pulse
                 q_vals = q_pulse
 
-                if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
+                if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
+                    average = False
+                else:
+                    average = execution_parameters.averaging_mode is AveragingMode.CYCLIC
+
+                if not average:
                     shape = i_vals.shape
                     np.reshape(i_vals, (execution_parameters.nshots, *shape[:-1]))
                     np.reshape(q_vals, (execution_parameters.nshots, *shape[:-1]))
@@ -463,6 +474,8 @@ class TII_RFSOC4x2(AbstractInstrument):
                 if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
                     qubit = qubits[sequence.ro_pulses[i].qubit]
                     discrimated_shots = self.classify_shots(i_vals, q_vals, qubit)
+                    if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
+                        discriminated_shots = np.mean(discriminated_shots, keepdims=True)
                     result = execution_parameters.results_type(discrimated_shots)
                 else:
                     result = execution_parameters.results_type(i_vals + 1j * q_vals)
@@ -505,7 +518,11 @@ class TII_RFSOC4x2(AbstractInstrument):
             self.cfg.reps = execution_parameters.nshots
         if execution_parameters.relaxation_time is not None:
             self.cfg.repetition_duration = execution_parameters.relaxation_time
-        average = execution_parameters.averaging_mode is AveragingMode.CYCLIC
+
+        if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
+            average = False
+        else:
+            average = execution_parameters.averaging_mode is AveragingMode.CYCLIC
 
         # sweepers.values are modified to reflect actual sweeped values
         for sweeper in sweepers:
