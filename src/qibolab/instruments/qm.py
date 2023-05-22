@@ -10,6 +10,7 @@ from qm import qua
 from qm.qua import declare, declare_stream, fixed, for_
 from qm.qua._dsl import _ResultSource, _Variable  # for type declaration only
 from qm.QuantumMachinesManager import QuantumMachinesManager
+from qualang_tools.addons.variables import assign_variables_to_element
 from qualang_tools.bakery import baking
 from qualang_tools.loops import from_array
 from qualang_tools.units import unit
