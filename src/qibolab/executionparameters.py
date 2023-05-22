@@ -65,11 +65,11 @@ class ExecutionParameters:
     averaging_mode: AveragingMode = AveragingMode.SINGLESHOT
     """Data averaging mode"""
 
-    def __post_init__(self):
-        if not isinstance(self.acquisition_type, AcquisitionType):
-            raise TypeError(f"acquisition_type: {self.acquisition_type} is not valid as acquisition")
-        if not isinstance(self.averaging_mode, AveragingMode):
-            raise TypeError(f"averaging mode: {self.averaging_mode} is not valid as averaging")
+    # def __post_init__(self):
+    #     if not isinstance(self.acquisition_type, AcquisitionType):
+    #         raise TypeError(f"acquisition_type: {self.acquisition_type} is not valid as acquisition")
+    #     if not isinstance(self.averaging_mode, AveragingMode):
+    #         raise TypeError(f"averaging mode: {self.averaging_mode} is not valid as averaging")
 
     @property
     def results_type(self):
