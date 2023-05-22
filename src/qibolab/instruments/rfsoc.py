@@ -244,7 +244,7 @@ class TII_RFSOC4x2(AbstractInstrument):
                 if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
                     discriminated_shots = self.classify_shots(i_pulse, q_pulse, qubits[ro_pulse.qubit])
                     if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
-                        discriminated_shots = np.mean(discriminated_shots)
+                        discriminated_shots = np.mean(discriminated_shots, keepdims=True)
                     result = execution_parameters.results_type(discriminated_shots)
                 else:
                     result = execution_parameters.results_type(i_pulse + 1j * q_pulse)
@@ -475,7 +475,7 @@ class TII_RFSOC4x2(AbstractInstrument):
                     qubit = qubits[sequence.ro_pulses[i].qubit]
                     discrimated_shots = self.classify_shots(i_vals, q_vals, qubit)
                     if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
-                        discriminated_shots = np.mean(discriminated_shots)
+                        discriminated_shots = np.mean(discriminated_shots, keepdims=True)
                     result = execution_parameters.results_type(discrimated_shots)
                 else:
                     result = execution_parameters.results_type(i_vals + 1j * q_vals)
