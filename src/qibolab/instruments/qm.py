@@ -563,6 +563,7 @@ class QMPulse:
             self.acquisition = ShotsAcquisition(self.pulse.serial, average, threshold, angle)
         else:
             raise_error(ValueError, f"Invalid acquisition type {acquisition_type}.")
+        assign_variables_to_element(self.element, self.acquisition.I, self.acquisition.Q)
 
     def bake(self, config: QMConfig):
         if self.baked is not None:
@@ -966,7 +967,7 @@ class QMOPX(AbstractInstrument):
             for qmpulse in qmsequence.ro_pulses:
                 threshold = qubits[qmpulse.pulse.qubit].threshold
                 iq_angle = qubits[qmpulse.pulse.qubit].iq_angle
-                qmpulse.declare_output(options.acquisition_type, threshold, iq_angle)
+                qmpulse.declare_output(options, threshold, iq_angle)
 
             with for_(n, 0, n < options.nshots, n + 1):
                 self.sweep_recursion(list(sweepers), qubits, qmsequence, options.relaxation_time)
