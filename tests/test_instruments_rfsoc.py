@@ -1,15 +1,15 @@
 import numpy as np
 import pytest
 
-from qibolab.instruments.rfsoc import QickProgramConfig
-from qibolab.paths import qibolab_folder
-from qibolab.platform import create_tii_rfsoc4x2
-from qibolab.platforms.abstract import Qubit
-from qibolab.platforms.platform import (
+from qibolab.executionparameters import (
     AcquisitionType,
     AveragingMode,
     ExecutionParameters,
 )
+from qibolab.instruments.rfsoc import QickProgramConfig
+from qibolab.paths import qibolab_folder
+from qibolab.platform import create_tii_rfsoc4x2
+from qibolab.platforms.abstract import Qubit
 from qibolab.pulses import PulseSequence
 from qibolab.result import AveragedIntegratedResults, IntegratedResults, StateResults
 from qibolab.sweeper import Parameter, Sweeper
