@@ -7,8 +7,8 @@ from qibo.backends import NumpyBackend
 from qibo.config import log, raise_error
 from qibo.states import CircuitResult
 
+from qibolab import ExecutionParameters
 from qibolab import __version__ as qibolab_version
-from qibolab.executionparameters import ExecutionParameters
 from qibolab.platform import Platform
 from qibolab.platforms.abstract import AbstractPlatform
 from qibolab.transpilers import Pipeline
