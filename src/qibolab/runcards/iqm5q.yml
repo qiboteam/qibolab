@@ -68,7 +68,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 2000
-                amplitude: .34
+                amplitude: .4
                 frequency: 6.109e+9 #6_086_000_000  #6_112_000_000 #doesnt do anything requiered for qibolab to work
                 shape: Rectangular()
                 type: ro # readout
@@ -171,8 +171,8 @@ characterization:
             T2: 3_285
             sweetspot: 0. #-0.2235 #0.5 #0.62 0.00
             filter: {}
-            mean_gnd_states: -0.9935+0.9602j
-            mean_exc_states: -0.4239+1.5514j
+            mean_gnd_states: -1.1634+1.0631j
+            mean_exc_states: -0.5808+1.7487j
             # parameters for single shot classification
             threshold: 0.4721
             iq_angle: -0.981
@@ -195,8 +195,8 @@ characterization:
             T2: 2_054
             sweetspot: 0.17 #-0.125
             filter: {}
-            mean_gnd_states: -0.9255-1.7125j
-            mean_exc_states: -2.9220-1.3302j
+            mean_gnd_states: -0.9635-1.7011j
+            mean_exc_states: -2.9675-1.3421j
             # parameters for single shot classification
             threshold: 1.0268 #0.370954 #0.350665
             iq_angle: -2.473 # -91.712 #191.016
