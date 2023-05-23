@@ -453,8 +453,8 @@ class Zurich(AbstractInstrument):
                                 states = np.array([exp_res])
                             else:
                                 states = np.array(exp_res)
-                            results[pulse.pulse.serial] = options.results_type(data=states)
-                            results[pulse.pulse.serial] = options.results_type(data=states)
+                            results[pulse.pulse.serial] = options.results_type(states)
+                            results[pulse.pulse.serial] = options.results_type(states)
                         else:
                             results[pulse.pulse.serial] = options.results_type(data=np.array(exp_res))
                             results[pulse.pulse.serial] = options.results_type(data=np.array(exp_res))
@@ -679,7 +679,6 @@ class Zurich(AbstractInstrument):
             if not qubit.flux_coupler:
                 if self.sequence[f"drive{qubit.name}"]:
                     time = 0
-
                     sequences_drive = defaultdict(list)
                     last_pulse = 0
                     sequence_aux = []
@@ -692,8 +691,8 @@ class Zurich(AbstractInstrument):
                             i += 1
                         sequence_aux.append(pulse)
                         last_pulse = pulse_qibo.start
-                    sequences_drive[i] = sequence_aux
-
+                    sequences_drive[i] = sequence_aux 
+                        
                     i = 0
                     for sequence in sequences_drive.values():
                         j = 0
