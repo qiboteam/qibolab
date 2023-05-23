@@ -178,12 +178,12 @@ class RFSoC(AbstractInstrument):
         }
         return self._open_connection(self.host, self.port, server_commands)
 
-    def _execute_single_sweep(
+    def _execute_sweeps(
         self,
         cfg: QickProgramConfig,
         sequence: PulseSequence,
         qubits: List[Qubit],
-        sweeper: RfsocSweep,  # TODO send list
+        sweepers: List[RfsocSweep],
         readouts_per_experiment: int,
         average: bool,
     ) -> Tuple[list, list]:
@@ -203,11 +203,11 @@ class RFSoC(AbstractInstrument):
         # TODO typehint qubits is wrong, it's dictionary
 
         server_commands = {
-            "operation_code": "execute_single_sweep",
+            "operation_code": "execute_sweeps",
             "cfg": cfg,
             "sequence": sequence,
             "qubits": qubits,
-            "sweeper": sweeper,
+            "sweepers": sweepers,
             "readouts_per_experiment": readouts_per_experiment,
             "average": average,
         }
@@ -366,9 +366,7 @@ class RFSoC(AbstractInstrument):
             return newres
 
         if not self.get_if_python_sweep(sequence, qubits, *sweepers):
-            toti, totq = self._execute_single_sweep(
-                self.cfg, sequence, qubits, sweepers, len(sequence.ro_pulses), average
-            )
+            toti, totq = self._execute_sweeps(self.cfg, sequence, qubits, sweepers, len(sequence.ro_pulses), average)
             res = self.convert_sweep_results(original_ro, sequence, qubits, toti, totq, average)
             return res
         sweeper = sweepers[0]
