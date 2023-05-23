@@ -133,7 +133,7 @@ instruments:
                     channel             : L3-15
                     attenuation         : 20                        # (dB) # should be multiple of 2
                     lo_enabled          : true
-                    lo_frequency        : 5_245_414_655             # (Hz) from 2e9 to 18e9
+                    lo_frequency        : 5_245_070_000             # (Hz) from 2e9 to 18e9
                     gain                : 0.470                     # for path0 and path1 -1.0<=v<=1.0
 
     qcm_rf2:
@@ -147,7 +147,7 @@ instruments:
                     channel             : L3-11
                     attenuation         : 20                        # (dB)
                     lo_enabled          : true
-                    lo_frequency        : 5_051_980_321             # (Hz) from 2e9 to 18e9
+                    lo_frequency        : 5_052_280_321             # (Hz) from 2e9 to 18e9
                     gain                : 0.570                      # for path0 and path1 -1.0<=v<=1.0
                 o2: # qubit q2
                     channel             : L3-12
@@ -184,7 +184,7 @@ instruments:
         roles: [control]
         settings:
             ports:
-                o1: {channel: L4-5,gain: 0.5, offset: 0.1477, qubit: 0} #q0
+                o1: {channel: L4-5,gain: 0.5, offset: -0.0884, qubit: 0} #q0
                 # o4: {channel: L4-3, gain: 0.5, offset:  0.0925, qubit: 3} #q3 oscilloscope
 
     #Cluster QCM usado para bias mediante el offset
@@ -195,10 +195,10 @@ instruments:
         roles: [control]
         settings:
             ports:
-                o1: {channel: L4-1, gain: 0.5, offset:  -0.5832, qubit: 1} #q1
-                o2: {channel: L4-2, gain: 0.5, offset: 0.1958, qubit: 2} #q2
-                o3: {channel: L4-3, gain: 0.5, offset:  -0.7291, qubit: 3} #q3
-                o4: {channel: L4-4, gain: 0.5, offset: -0.5958, qubit: 4} #q4
+                o1: {channel: L4-1, gain: 0.5, offset:  0.5592, qubit: 1} #q1
+                o2: {channel: L4-2, gain: 0.5, offset: 0.1967, qubit: 2} #q2
+                o3: {channel: L4-3, gain: 0.5, offset:  0.7557, qubit: 3} #q3
+                o4: {channel: L4-4, gain: 0.5, offset: 0.4555, qubit: 4} #q4
 
     twpa_pump:
         lib: rohde_schwarz
@@ -214,7 +214,7 @@ native_gates:
         0: # qubit id
             RX:
                 duration: 40                   # should be multiple of 4
-                amplitude: 0.5010
+                amplitude: 0.5106
                 frequency: 5_045_070_000    # qubit frequency
                 if_frequency: -200_000_000    # difference in qubit frequency
                 shape: Gaussian(5)
@@ -222,23 +222,23 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.1
-                frequency: 7_212_278_226     # resonator frequency
-                if_frequency: -42_721_774    # difference in resonator frequency
+                frequency: 7_212_362_551     # resonator frequency
+                if_frequency: -42_637_449    # difference in resonator frequency
                 shape: Rectangular()
                 type: ro                    # readout
         1: # qubit id
             RX:
                 duration: 40                  # should be multiple of 4
-                amplitude: 0.5052
-                frequency: 4_851_980_321    # qubit frequency
+                amplitude: 0.5078
+                frequency: 4_852_280_321    # qubit frequency
                 if_frequency: -200_000_000    # difference in qubit frequency
                 shape: Gaussian(5)
                 type: qd                    # qubit drive
             MZ:
                 duration: 2000
                 amplitude: 0.2
-                frequency: 7_453_074_208    # resonator frequency
-                if_frequency: 198_074_208    # difference in resonator frequency
+                frequency: 7_453_149_599    # resonator frequency
+                if_frequency: 198_149_599    # difference in resonator frequency
                 shape: Rectangular()
                 type: ro                    # readout
         2: # qubit id
@@ -252,14 +252,14 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.25
-                frequency: 7_655_139_987    # resonator frequency
-                if_frequency: -194_860_013    # difference in resonator frequency
+                frequency: 7_655_110_446    # resonator frequency
+                if_frequency: -194_889_554    # difference in resonator frequency
                 shape: Rectangular()
                 type: ro                    # readout
         3: # qubit id
             RX:
                 duration: 40                   # should be multiple of 4
-                amplitude: 0.5002
+                amplitude: 0.5026
                 frequency: 6_760_050_000    # qubit frequency
                 if_frequency: -200_000_000    # difference in qubit frequency
                 shape: Gaussian(5)
@@ -267,14 +267,14 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.2
-                frequency: 7_803_405_453    # resonator frequency
-                if_frequency: -46_594_547    # difference in resonator frequency
+                frequency: 7_803_377_426    # resonator frequency
+                if_frequency: -46_622_574    # difference in resonator frequency
                 shape: Rectangular()
                 type: ro                    # readout
         4: # qubit id
             RX:
                 duration: 40                # should be multiple of 4
-                amplitude: 0.5098
+                amplitude: 0.5172
                 frequency: 6_585_145_857    # qubit frequency
                 if_frequency: -200_000_000    # difference in qubit frequency
                 shape: Gaussian(5)
@@ -282,8 +282,8 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.4
-                frequency: 8_058_816_253      # resonator frequency
-                if_frequency: 208_816_253    # difference in resonator frequency
+                frequency: 8_058_739_833      # resonator frequency
+                if_frequency: 208_739_833    # difference in resonator frequency
                 shape: Rectangular()
                 type: ro                    # readout
         5: # qubit id
@@ -340,8 +340,8 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            readout_frequency: 7_212_278_226
-            drive_frequency: 5_045_414_655
+            readout_frequency: 7_212_362_551
+            drive_frequency: 5_045_070_000
             anharmonicity: 291_556_360
             T1: 5_857
             T2: 0
@@ -349,10 +349,10 @@ characterization:
             state1_voltage: 0.0
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
-            sweetspot: 0.1477
+            sweetspot: -0.0884
         1:
-            readout_frequency: 7_453_074_208
-            drive_frequency: 4_851_980_321
+            readout_frequency: 7_453_149_599
+            drive_frequency: 4_852_280_321
             anharmonicity: 290_805_429
             T1: 1_253
             T2: 0
@@ -360,9 +360,9 @@ characterization:
             state1_voltage: 0.0
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
-            sweetspot: -0.5832
+            sweetspot: 0.5592
         2:
-            readout_frequency: 7_655_139_987
+            readout_frequency: 7_655_110_446
             drive_frequency: 5_794_176_000
             anharmonicity: 273_873_156
             T1: 4_563
@@ -371,9 +371,9 @@ characterization:
             state1_voltage: 0.0
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
-            sweetspot: 0.1958
+            sweetspot: 0.1967
         3:
-            readout_frequency: 7_803_405_453
+            readout_frequency: 7_803_377_426
             drive_frequency: 6_760_050_000
             anharmonicity: 262_218_536
             T1: 4_232
@@ -382,9 +382,9 @@ characterization:
             state1_voltage: 0.0
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
-            sweetspot: -0.7291
+            sweetspot: 0.7557
         4:
-            readout_frequency: 8_058_816_253
+            readout_frequency: 8_058_739_833
             drive_frequency: 6_585_145_857
             anharmonicity: 251_471_686
             T1: 492
@@ -393,7 +393,7 @@ characterization:
             state1_voltage: 0.0
             mean_gnd_states: (-0.0+0.0j)
             mean_exc_states: (0.0+0.0j)
-            sweetspot: -0.5958
+            sweetspot: 0.4555
         5:
             readout_frequency: 7_118_627_416
             drive_frequency: 4_700_000_000
