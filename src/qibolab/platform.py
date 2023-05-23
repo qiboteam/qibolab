@@ -13,8 +13,8 @@ from qibo import gates
 from qibo.config import log, raise_error
 from qibo.models import Circuit
 
-from qibolab.designs import Channel, ChannelMap, InstrumentDesign
-from qibolab.designs.channels import Channel
+from qibolab.channels import Channel, ChannelMap
+from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse
 from qibolab.transpilers.gate_decompositions import TwoQubitNatives
 
@@ -23,8 +23,8 @@ from qibolab.transpilers.gate_decompositions import TwoQubitNatives
 class Qubit:
     """Representation of a physical qubit.
 
-    Qubit objects are instantiated by :class:`qibolab.platforms.platform.Platform`
-    but they are passed to instrument designs in order to play pulses.
+    Qubit objects are instantiated by :class:`qibolab.platform.Platform`
+    but they are passed to instruments in order to play pulses.
 
     Args:
         name (int, str): Qubit number or name.
@@ -90,16 +90,17 @@ class Platform:
 
     Args:
         name (str): name of the platform.
-        design(InstrumentDesign):
         runcard (str): path to the yaml file containing the platform setup.
-
+        instruments:
+        channels:
     """
 
-    def __init__(self, name, runcard, design=None):
+    def __init__(self, name, runcard, instruments, channels):
         log.info(f"Loading platform {name} from runcard {runcard}")
         self.name = name
         self.runcard = runcard
-        self.design = design
+        self.instruments: List[AbstractInstrument] = instruments
+        self.channels: ChannelMap = channels
         self.qubits = {}
 
         # Values for the following are set from the runcard in ``reload_settings``
@@ -316,25 +317,41 @@ class Platform:
         self.reload_settings()
 
     def connect(self):
-        """Connects to instruments."""
-        self.design.connect()
+        """Connect to all instruments."""
+        if not self._is_connected:
+            for instrument in self.instruments:
+                try:
+                    log.info(f"Connecting to instrument {instrument}.")
+                    instrument.connect()
+                except Exception as exception:
+                    raise_error(
+                        RuntimeError,
+                        f"Cannot establish connection to {instrument} instruments. Error captured: '{exception}'",
+                    )
         self.is_connected = True
 
     def setup(self):
         """Prepares instruments to execute experiments."""
-        self.design.setup()
+        for instrument in self.instruments:
+            instrument.setup()
 
     def start(self):
         """Starts all the instruments."""
-        self.design.start()
+        if self.is_connected:
+            for instrument in self.instruments:
+                instrument.start()
 
     def stop(self):
         """Starts all the instruments."""
-        self.design.stop()
+        if self.is_connected:
+            for instrument in self.instruments:
+                instrument.stop()
 
     def disconnect(self):
-        """Disconnects to instruments."""
-        self.design.disconnect()
+        """Disconnects from instruments."""
+        if self._is_connected:
+            for instrument in self.instruments:
+                instrument.disconnect()
         self.is_connected = False
 
     def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None, raw_adc=False):
@@ -351,7 +368,18 @@ class Platform:
         """
         if relaxation_time is None:
             relaxation_time = self.relaxation_time
-        return self.design.play(self.qubits, sequence, nshots=nshots, relaxation_time=relaxation_time, raw_adc=raw_adc)
+
+        result = {}
+        for instrument in self.instruments:
+            new_result = instrument.play(
+                self.qubits, sequence, nshots=nshots, relaxation_time=relaxation_time, raw_adc=raw_adc
+            )
+            if isinstance(new_result, dict):
+                result.update(new_result)
+            elif new_result is not None:
+                # currently the result of QMSim is not a dict
+                result = new_result
+        return result
 
     def sweep(self, sequence, *sweepers, nshots=1024, relaxation_time=None, average=True):
         """Executes a pulse sequence for different values of sweeped parameters.
@@ -390,9 +418,18 @@ class Platform:
         """
         if relaxation_time is None:
             relaxation_time = self.relaxation_time
-        return self.design.sweep(
-            self.qubits, sequence, *sweepers, nshots=nshots, relaxation_time=relaxation_time, average=average
-        )
+
+        result = {}
+        for instrument in self.instruments:
+            new_result = instrument.sweep(
+                self.qubits, sequence, *sweepers, nshots=nshots, relaxation_time=relaxation_time, average=average
+            )
+            if isinstance(new_result, dict):
+                result.update(new_result)
+            elif new_result is not None:
+                # currently the result of QMSim is not a dict
+                result = new_result
+        return result
 
     def transpile(self, circuit: Circuit):
         """Transforms a circuit to pulse sequence.
@@ -727,10 +764,8 @@ def create_dummy(runcard):
 
     # Create dummy controller
     instrument = DummyInstrument("dummy", 0)
-    # Create design
-    design = InstrumentDesign([instrument], channels)
     # Create platform
-    platform = create_platform("dummy", design, runcard)
+    platform = Platform("dummy", runcard, [instrument], channels)
 
     # map channels to qubits
     for qubit in platform.qubits:
@@ -743,14 +778,20 @@ def create_dummy(runcard):
     return platform
 
 
-def build_platform(name, profiles=None):
+def create_platform(name, profiles=None):
     """Platform for controlling quantum devices.
+
     Args:
         name (str): name of the platform. Options are 'tiiq', 'qili' and 'icarusq'.
         profiles (str): path to the yaml file containing the platforms setup.
     Returns:
         The plaform class.
     """
+    if name == "dummy":
+        from qibolab.paths import qibolab_folder
+
+        return create_dummy(qibolab_folder / "runcards/dummy.yml")
+
     if not profiles:
         from os.path import exists
 
