@@ -34,7 +34,7 @@ class QickProgramConfig:
 
 
 @dataclass
-class RfsocSweep:  # TODO change name to avoid confusion
+class RfsocSweep:
     """Sweeper object intermediate between qibolab and qick interface"""
 
     parameter: Parameter = None  # parameter to sweep
@@ -447,10 +447,6 @@ class RFSoC(AbstractInstrument):
             A boolean value true if the sweeper must be executed by python
             loop, false otherwise
         """
-
-        # if there isn't only a sweeper do a python sweep
-        # if len(sweepers) != 1:  # TODO this should not be the case
-        #    return True
 
         for sweeper in sweepers:
             is_amp = sweeper.parameter is Parameter.amplitude
