@@ -61,7 +61,8 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Qubit]
             starts.append(sweeper.values[0] + qubits[qubit].flux.bias)
             stops.append(sweeper.values[-1] + qubits[qubit].flux.bias)
 
-        if any(stops) > 1:
+        print(stops, any(np.abs(stops)) > 1)
+        if max(np.abs(starts)) > 1 or max(np.abs(stops)) > 1:
             raise ValueError("Sweeper amplitude is set to reach values higher than 1")
     else:
         for pulse in sweeper.pulses:
