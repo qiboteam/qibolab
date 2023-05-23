@@ -13,9 +13,10 @@ import yaml
 from qibo.models import Circuit
 from qibo.states import CircuitResult
 
-from qibolab import Platform, create_platform
+from qibolab import create_platform
 from qibolab.backends import QibolabBackend
 from qibolab.paths import qibolab_folder
+from qibolab.platform import Platform
 from qibolab.platforms.multiqubit import MultiqubitPlatform
 from qibolab.pulses import PulseSequence
 
@@ -40,18 +41,18 @@ def platform(platform_name):
 
 def test_platform_multiqubit(platform_name):
     platform = create_platform(platform_name)
-    assert isinstance(platform, create_platform)
+    assert isinstance(platform, Platform)
 
 
 def test_platform():
-    with pytest.raises(RuntimeError):
+    with pytest.raises(KeyError):
         platform = create_platform("nonexistent")
 
 
 def test_multiqubitplatform_init(platform_name):
-    with open(qibolab_folder / "runcards" / f"{platform_name}.yml") as file:
-        settings = yaml.safe_load(file)
     platform = create_platform(platform_name)
+    with open(platform.runcard) as file:
+        settings = yaml.safe_load(file)
     if not isinstance(platform, MultiqubitPlatform):
         pytest.skip(f"Skipping MultiqubitPlatform specific test for {platform_name}.")
     assert platform.name == platform_name

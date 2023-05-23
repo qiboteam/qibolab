@@ -2,9 +2,9 @@ import numpy as np
 import pytest
 from qm import qua
 
+from qibolab import create_platform
 from qibolab.instruments.qm import QMOPX, QMPulse, Sequence
 from qibolab.paths import qibolab_folder
-from qibolab.platform import create_tii_qw5q_gold
 from qibolab.pulses import FluxPulse, Pulse, ReadoutPulse, Rectangular
 
 RUNCARD = qibolab_folder / "runcards" / "qw5q_gold.yml"

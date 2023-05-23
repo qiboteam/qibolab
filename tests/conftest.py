@@ -2,7 +2,7 @@ from importlib import import_module
 
 import pytest
 
-from qibolab.platform import create_platform
+from qibolab import create_platform
 from qibolab.platforms.multiqubit import MultiqubitPlatform
 
 
@@ -61,6 +61,11 @@ def instrument(request):
 def pytest_generate_tests(metafunc):
     platforms = metafunc.config.option.platforms
     platforms = [] if platforms is None else platforms.split(",")
+
+    if metafunc.module.__name__ == "tests.test_instruments_qm":
+        pytest.skip()
+    if metafunc.module.__name__ == "tests.test_instruments_rfsoc":
+        pytest.skip()
 
     if "simulator" in metafunc.fixturenames:
         address = metafunc.config.option.address

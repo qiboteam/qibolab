@@ -8,7 +8,8 @@ from qibo.config import log, raise_error
 from qibo.states import CircuitResult
 
 from qibolab import __version__ as qibolab_version
-from qibolab.platform import Platform, create_platform
+from qibolab import create_platform
+from qibolab.platform import Platform
 from qibolab.transpilers import Pipeline
 
 

@@ -1,7 +1,7 @@
 import pytest
 
 from qibolab import create_platform
-from qibolab.platforms.platform import DesignPlatform
+from qibolab.platform import Platform
 
 qubit = 0
 
@@ -9,7 +9,7 @@ qubit = 0
 @pytest.fixture
 def platform(platform_name):
     _platform = create_platform(platform_name)
-    if not isinstance(_platform, DesignPlatform):
+    if not isinstance(_platform, Platform):
         pytest.skip(f"Skipping DesignPlatform test for {_platform.name}")
     return _platform
 

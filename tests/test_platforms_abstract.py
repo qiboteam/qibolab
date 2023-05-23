@@ -4,8 +4,9 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 
+from qibolab import create_platform
 from qibolab.backends import QibolabBackend
-from qibolab.platform import Platform, create_platform
+from qibolab.platform import Platform
 from qibolab.pulses import PulseSequence
 from qibolab.transpilers import Pipeline
 

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from qibolab.platform import create_platform
+from qibolab import create_platform
 from qibolab.pulses import PulseSequence
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 

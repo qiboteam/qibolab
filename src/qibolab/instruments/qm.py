@@ -29,7 +29,7 @@ from qualang_tools.bakery import baking
 from qualang_tools.loops import from_array
 from qualang_tools.units import unit
 
-from qibolab.designs.channels import check_max_bias
+from qibolab.channels import check_max_bias
 from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.pulses import Pulse, PulseType, Rectangular
 from qibolab.result import AveragedResults, ExecutionResults

@@ -13,7 +13,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 
 from qibolab.instruments.abstract import AbstractInstrument
-from qibolab.platforms.abstract import Qubit
+from qibolab.platform import Qubit
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import AveragedResults, ExecutionResults
 from qibolab.sweeper import Parameter, Sweeper

@@ -1,4 +1,3 @@
-import importlib.util
 import math
 import re
 from collections import defaultdict
@@ -318,7 +317,7 @@ class Platform:
 
     def connect(self):
         """Connect to all instruments."""
-        if not self._is_connected:
+        if not self.is_connected:
             for instrument in self.instruments:
                 try:
                     log.info(f"Connecting to instrument {instrument}.")
@@ -349,7 +348,7 @@ class Platform:
 
     def disconnect(self):
         """Disconnects from instruments."""
-        if self._is_connected:
+        if self.is_connected:
             for instrument in self.instruments:
                 instrument.disconnect()
         self.is_connected = False
@@ -526,9 +525,6 @@ class Platform:
 
     def __call__(self, sequence, nshots=1024, relaxation_time=None, raw_adc=False):
         return self.execute_pulse_sequence(sequence, nshots, relaxation_time, raw_adc=raw_adc)
-
-    def sweep(self, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
-        raise_error(NotImplementedError, f"Platform {self.name} does not support sweeping.")
 
     def get_qd_channel(self, qubit):
         if self.qubits[qubit].drive:
@@ -776,42 +772,3 @@ def create_dummy(runcard):
         channels["readout"].qubit = platform.qubits[qubit]
 
     return platform
-
-
-def create_platform(name, profiles=None):
-    """Platform for controlling quantum devices.
-
-    Args:
-        name (str): name of the platform. Options are 'tiiq', 'qili' and 'icarusq'.
-        profiles (str): path to the yaml file containing the platforms setup.
-    Returns:
-        The plaform class.
-    """
-    if name == "dummy":
-        from qibolab.paths import qibolab_folder
-
-        return create_dummy(qibolab_folder / "runcards/dummy.yml")
-
-    if not profiles:
-        from os.path import exists
-
-        from qibolab.paths import qibolab_folder
-
-        profiles = qibolab_folder / "profiles.yml"
-        if not exists(profiles):
-            raise_error(RuntimeError, f"Profile file {profiles} does not exist.")
-
-    with open(profiles) as stream:
-        try:
-            setup = yaml.safe_load(stream)
-            platform = setup[name]
-        except yaml.YAMLError:
-            raise_error(yaml.YAMLError, f"Error loading {profiles} yaml file.")
-        except KeyError:
-            raise_error(KeyError, f"Platform {name} not found.")
-
-    spec = importlib.util.spec_from_file_location("platform", platform)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    return module.create()

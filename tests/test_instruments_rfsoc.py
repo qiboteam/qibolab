@@ -3,8 +3,7 @@ import pytest
 
 from qibolab.instruments.rfsoc import QickProgramConfig
 from qibolab.paths import qibolab_folder
-from qibolab.platform import create_tii_rfsoc4x2
-from qibolab.platforms.abstract import Qubit
+from qibolab.platform import Qubit
 from qibolab.pulses import PulseSequence
 from qibolab.result import AveragedResults, ExecutionResults
 from qibolab.sweeper import Parameter, Sweeper
