@@ -61,7 +61,9 @@ optional = true
 pylint = ">=2.16.0"
 
 [tool.poetry.extras]
-tiiq = ["qblox-instruments", "qcodes", "qcodes_contrib_drivers", "pyvisa-py", "qm-qua", "qualang-tools"]
+qblox  = ["qblox-instruments", "qcodes", "qcodes_contrib_drivers", "pyvisa-py"]
+qm = ["qm-qua", "qualang-tools"]
+
 
 [tool.poe.tasks]
 test = "pytest"
