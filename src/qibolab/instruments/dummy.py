@@ -5,11 +5,7 @@ from typing import Dict, List, Union
 import numpy as np
 from qibo.config import log, raise_error
 
-from qibolab.executionparameters import (
-    AcquisitionType,
-    AveragingMode,
-    ExecutionParameters,
-)
+from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.platforms.abstract import Qubit
 from qibolab.pulses import PulseSequence, PulseType
