@@ -26,6 +26,12 @@ qibo = "^0.1.12"
 networkx = "^3.0"
 more-itertools = "^9.1.0"
 pyyaml = "^6.0"
+qblox-instruments = {version = "0.9.0", optional = true}
+qcodes = {version ="^0.37.0", optional = true}
+qcodes_contrib_drivers = {version ="0.18.0", optional = true}
+pyvisa-py = {version ="0.5.3", optional = true}
+qm-qua = {version ="==1.1.1", optional = true}
+qualang-tools = {version ="==0.14.0", optional = true}
 
 [tool.poetry.group.docs]
 optional = true
@@ -54,16 +60,8 @@ optional = true
 [tool.poetry.group.analysis.dependencies]
 pylint = ">=2.16.0"
 
-[tool.poetry.group.tiiq]
-optional = true
-
-[tool.poetry.group.tiiq.dependencies]
-qblox-instruments = "0.9.0"
-qcodes = "^0.37.0"
-qcodes_contrib_drivers = "0.18.0"
-pyvisa-py = "0.5.3"
-qm-qua = "==1.1.1"
-qualang-tools = "==0.14.0"
+[tool.poetry.extras]
+tiiq = ["qblox-instruments", "qcodes", "qcodes_contrib_drivers", "pyvisa-py", "qm-qua", "qualang-tools"]
 
 [tool.poe.tasks]
 test = "pytest"
