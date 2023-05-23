@@ -99,7 +99,7 @@ def test_excited_state_probabilities_circuit(backend):
 
 @pytest.mark.qpu
 @pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
-def test_superposition_forall_qubits(backend):
+def test_superposition_for_all_qubits(backend):
     """Applies an H gate to each qubit of the circuit and measures the probabilities."""
     nqubits = backend.platform.nqubits
     probs = []
