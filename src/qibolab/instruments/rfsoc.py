@@ -34,7 +34,7 @@ class QickProgramConfig:
 
 
 @dataclass
-class QickSweep:  # TODO change name to avoid confusion
+class RfsocSweep:  # TODO change name to avoid confusion
     """Sweeper object intermediate between qibolab and qick interface"""
 
     parameter: Parameter = None  # parameter to sweep
@@ -46,8 +46,8 @@ class QickSweep:  # TODO change name to avoid confusion
     expts: int = None  # single number of points
 
 
-def create_qick_sweeps(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Qubit]) -> QickSweep:
-    """Create a QickSweep oject from a Sweeper objects"""
+def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Qubit]) -> RfsocSweep:
+    """Create a RfsocSweep oject from a Sweeper objects"""
 
     starts = []
     steps = []
@@ -79,7 +79,7 @@ def create_qick_sweeps(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Q
                 starts.append(sweeper.values[0] + pulse.relative_phase)
                 steps.append(sweeper.values[1] - sweeper.values[0])
 
-    return QickSweep(
+    return RfsocSweep(
         parameter=sweeper.parameter,
         results=[ro.serial for ro in sequence.ro_pulses],
         pulses=sweeper.pulses,
@@ -184,7 +184,7 @@ class RFSoC(AbstractInstrument):
         cfg: QickProgramConfig,
         sequence: PulseSequence,
         qubits: List[Qubit],
-        sweeper: QickSweep,
+        sweeper: RfsocSweep,  # TODO send list
         readouts_per_experiment: int,
         average: bool,
     ) -> Tuple[list, list]:
@@ -195,7 +195,7 @@ class RFSoC(AbstractInstrument):
             cfg: QickProgramConfig object with general settings for Qick programs
             sequence: arbitrary PulseSequence object to execute
             qubits: list of qubits of the platform
-            sweeper: Sweeper object
+            sweeper: RfsocSweep object
             readouts_per_experiment: number of readout pulse to execute
             average: if True returns averaged results, otherwise single shots
         Returns:
@@ -328,7 +328,7 @@ class RFSoC(AbstractInstrument):
         qubits: List[Qubit],
         sequence: PulseSequence,
         original_ro: PulseSequence,
-        *sweepers: QickSweep,
+        *sweepers: RfsocSweep,
         average: bool,
     ) -> Dict[str, Union[AveragedResults, ExecutionResults]]:
         """Execute a sweep of an arbitrary number of Sweepers via recursion.
@@ -434,7 +434,7 @@ class RFSoC(AbstractInstrument):
                 dict_a[serial] = dict_b[serial]
         return dict_a
 
-    def get_if_python_sweep(self, sequence: PulseSequence, qubits: List[Qubit], *sweepers: QickSweep) -> bool:
+    def get_if_python_sweep(self, sequence: PulseSequence, qubits: List[Qubit], *sweepers: RfsocSweep) -> bool:
         """Check if a sweeper must be run with python loop or on hardware.
 
         To be run on qick internal loop a sweep must:
@@ -565,12 +565,7 @@ class RFSoC(AbstractInstrument):
         if relaxation_time is not None:
             self.cfg.repetition_duration = relaxation_time
 
-        qick_sweepers = [create_qick_sweeps(sweep, sequence, qubits) for sweep in sweepers]
-
-        # if self.local_oscillator:
-        #    limits = self.find_frequency_limits(sequence.ro_pulses, qick_sweepers)
-        #    if not self.check_not_frequencies_conflicts(limits, self.cfg.LO_freq):
-        #        self.set_best_LO(limits)
+        rfsoc_sweepers = [convert_sweep(sweep, sequence, qubits) for sweep in sweepers]
 
         sweepsequence = sequence.copy()
 
@@ -580,7 +575,7 @@ class RFSoC(AbstractInstrument):
         if bias_change:
             initial_biases = [qubits[idx].flux.bias if qubits[idx].flux is not None else None for idx in qubits]
 
-        results = self.recursive_python_sweep(qubits, sweepsequence, original_ro, *qick_sweepers, average=average)
+        results = self.recursive_python_sweep(qubits, sweepsequence, original_ro, *rfsoc_sweepers, average=average)
 
         if bias_change:
             for idx in qubits:
