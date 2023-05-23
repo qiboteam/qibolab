@@ -378,11 +378,11 @@ class RFSoC(AbstractInstrument):
             or sweeper.parameter is Parameter.relative_phase
         ):
             for idx, _ in enumerate(sweeper.pulses):
-                val = np.arange(sweeper.starts[idx], sweeper.stops[idx], sweeper.expts)
+                val = np.linspace(sweeper.starts[idx], sweeper.stops[idx], sweeper.expts)
                 values.append(val)
         else:
             for idx, _ in enumerate(sweeper.indexes):
-                val = np.arange(sweeper.starts[idx], sweeper.stops[idx], sweeper.expts)
+                val = np.linspace(sweeper.starts[idx], sweeper.stops[idx], sweeper.expts)
                 values.append(val)
 
         results = {}
