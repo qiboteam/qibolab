@@ -60,6 +60,7 @@ class ICPlatform(Platform):
         self._lo = []
         self._adc = []
         self._last_sequence = None
+        self.hardware_avg = 1024
         super().__init__(name, runcard)
         self.qubits = []
         qubits = self.settings.get("qubits")
