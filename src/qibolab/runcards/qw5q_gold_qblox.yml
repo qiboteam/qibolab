@@ -87,11 +87,11 @@ instruments:
 
             classification_parameters:
                 0:  # qubit id
-                    rotation_angle              : 251.990                   # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.003371                  # in V
+                    rotation_angle              : 268.023                   # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.003503                  # in V
                 1:  # qubit id
-                    rotation_angle              : 16.069                   # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.002124                  # in V
+                    rotation_angle              : 30.478                   # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.002465                  # in V
 
     qrm_rf2: # ReadOut module 12: controlling qubits q2, q3, q4
         lib: qblox
@@ -113,14 +113,14 @@ instruments:
 
             classification_parameters:
                 2:  # qubit id
-                    rotation_angle              : 349.485                    # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.002868                  # in V
+                    rotation_angle              : 343.894                    # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.002606                  # in V
                 3:  # qubit id
-                    rotation_angle              : 4.966                    # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.003655                  # in V
+                    rotation_angle              : 359.065                    # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.003387                  # in V
                 4:  # qubit id
-                    rotation_angle              : 302.555                   # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.001366                  # in V
+                    rotation_angle              : 283.970                   # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.000889                  # in V
 
     qcm_rf1:
         lib: qblox
@@ -214,7 +214,7 @@ native_gates:
         0: # qubit id
             RX:
                 duration: 40                   # should be multiple of 4
-                amplitude: 0.5106
+                amplitude: 0.5028
                 frequency: 5_045_070_000    # qubit frequency
                 if_frequency: -200_000_000    # difference in qubit frequency
                 shape: Gaussian(5)
@@ -244,7 +244,7 @@ native_gates:
         2: # qubit id
             RX:
                 duration: 40                   # should be multiple of 4
-                amplitude: 0.4996
+                amplitude: 0.5016
                 frequency: 5_794_176_000   # qubit frequency
                 if_frequency: -200_000_000    # difference in qubit frequency
                 shape: Gaussian(5)
@@ -337,12 +337,22 @@ native_gates:
             #   phase: -0.095
             #   qubit: 2
 
+        2-0:
+            CZ:
+            - duration: 28
+              amplitude: -0.142
+              shape: Exponential(12, 5000, 0.1)
+              qubit: 2
+              relative_start: 0
+              type: qf
+
+
 characterization:
     single_qubit:
         0:
             readout_frequency: 7_212_362_551
             drive_frequency: 5_045_070_000
-            anharmonicity: 291_556_360
+            anharmonicity: 291_451_184
             T1: 5_857
             T2: 0
             state0_voltage: 0.0
@@ -353,7 +363,7 @@ characterization:
         1:
             readout_frequency: 7_453_149_599
             drive_frequency: 4_852_280_321
-            anharmonicity: 290_805_429
+            anharmonicity: 291_965_010
             T1: 1_253
             T2: 0
             state0_voltage: 0.0
@@ -364,7 +374,7 @@ characterization:
         2:
             readout_frequency: 7_655_110_446
             drive_frequency: 5_794_176_000
-            anharmonicity: 273_873_156
+            anharmonicity: 275_392_460
             T1: 4_563
             T2: 0
             state0_voltage: 0.0
@@ -375,7 +385,7 @@ characterization:
         3:
             readout_frequency: 7_803_377_426
             drive_frequency: 6_760_050_000
-            anharmonicity: 262_218_536
+            anharmonicity: 261_797_410
             T1: 4_232
             T2: 0
             state0_voltage: 0.0
@@ -386,7 +396,7 @@ characterization:
         4:
             readout_frequency: 8_058_739_833
             drive_frequency: 6_585_145_857
-            anharmonicity: 251_471_686
+            anharmonicity: 253_106_666
             T1: 492
             T2: 0
             state0_voltage: 0.0
