@@ -2,7 +2,7 @@ from importlib import import_module
 
 import pytest
 
-from qibolab.platform import Platform
+from qibolab.platform import create_platform
 from qibolab.platforms.multiqubit import MultiqubitPlatform
 
 
@@ -51,7 +51,7 @@ def load_from_platform(platform, name):
 
 @pytest.fixture(scope="module")
 def instrument(request):
-    platform = Platform(request.param[0])
+    platform = create_platform(request.param[0])
     inst, _ = load_from_platform(platform, request.param[1])
     inst.connect()
     yield inst
@@ -74,7 +74,7 @@ def pytest_generate_tests(metafunc):
 
     if metafunc.module.__name__ == "tests.test_instruments_qblox":
         for platform_name in platforms:
-            if not isinstance(Platform(platform_name), MultiqubitPlatform):
+            if not isinstance(create_platform(platform_name), MultiqubitPlatform):
                 pytest.skip("Skipping qblox tests because no platform is available.")
 
     if "instrument" in metafunc.fixturenames:
@@ -97,7 +97,7 @@ def pytest_generate_tests(metafunc):
                     # exclude witness qubit 5 because it is not connected to drive channel
                     qubits.extend((platform_name, q) for q in range(5))
                 else:
-                    qubits.extend((platform_name, q) for q in Platform(platform_name).qubits)
+                    qubits.extend((platform_name, q) for q in create_platform(platform_name).qubits)
 
             metafunc.parametrize("platform_name,qubit", qubits)
         else:

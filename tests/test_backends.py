@@ -6,7 +6,7 @@ from qibo import gates
 from qibo.models import Circuit
 
 from qibolab.backends import QibolabBackend
-from qibolab.platforms.abstract import AbstractPlatform
+from qibolab.platform import Platform
 
 
 @pytest.fixture(scope="module")

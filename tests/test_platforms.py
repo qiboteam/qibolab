@@ -13,10 +13,9 @@ import yaml
 from qibo.models import Circuit
 from qibo.states import CircuitResult
 
-from qibolab import Platform
+from qibolab import Platform, create_platform
 from qibolab.backends import QibolabBackend
 from qibolab.paths import qibolab_folder
-from qibolab.platforms.abstract import AbstractPlatform
 from qibolab.platforms.multiqubit import MultiqubitPlatform
 from qibolab.pulses import PulseSequence
 
@@ -29,7 +28,7 @@ def platform(platform_name):
     test_runcard = pathlib.Path(__file__).parent / "test_platforms_multiqubit.yml"
     original_runcard = qibolab_folder / "runcards" / f"{platform_name}.yml"
     shutil.copyfile(str(original_runcard), test_runcard)
-    _platform = Platform(platform_name, test_runcard)
+    _platform = create_platform(platform_name, test_runcard)
     _platform.connect()
     _platform.setup()
     _platform.start()
@@ -40,19 +39,19 @@ def platform(platform_name):
 
 
 def test_platform_multiqubit(platform_name):
-    platform = Platform(platform_name)
-    assert isinstance(platform, AbstractPlatform)
+    platform = create_platform(platform_name)
+    assert isinstance(platform, create_platform)
 
 
 def test_platform():
     with pytest.raises(RuntimeError):
-        platform = Platform("nonexistent")
+        platform = create_platform("nonexistent")
 
 
 def test_multiqubitplatform_init(platform_name):
     with open(qibolab_folder / "runcards" / f"{platform_name}.yml") as file:
         settings = yaml.safe_load(file)
-    platform = Platform(platform_name)
+    platform = create_platform(platform_name)
     if not isinstance(platform, MultiqubitPlatform):
         pytest.skip(f"Skipping MultiqubitPlatform specific test for {platform_name}.")
     assert platform.name == platform_name
@@ -67,7 +66,7 @@ def test_multiqubitplatform_init(platform_name):
 
 
 def test_abstractplatform_pickle(platform_name):
-    platform = Platform(platform_name)
+    platform = create_platform(platform_name)
     serial = pickle.dumps(platform)
     new_platform = pickle.loads(serial)
     assert new_platform.name == platform.name
