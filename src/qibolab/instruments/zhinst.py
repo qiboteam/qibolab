@@ -729,6 +729,7 @@ class Zurich(AbstractInstrument):
     def measure_relax(self, exp, qubits, relaxation_time, acquisition_type):
         """qubit readout pulse, data acquisition and qubit relaxation"""
         play_after = None
+        play_after_aux = None
         longest = 0
         if self.sequence_qibo.qf_pulses and self.sequence_qibo.qd_pulses:
             if self.sequence_qibo.qf_pulses.finish > self.sequence_qibo.qd_pulses.finish:
