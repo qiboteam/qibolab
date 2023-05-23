@@ -1,92 +1,8 @@
-from dataclasses import asdict, dataclass
-from enum import Enum, auto
-from typing import Optional
+from dataclasses import asdict, replace
 
 from qibo.config import raise_error
 
 from qibolab.platforms.abstract import AbstractPlatform
-from qibolab.result import (
-    AveragedIntegratedResults,
-    AveragedRawWaveformResults,
-    AveragedStateResults,
-    IntegratedResults,
-    RawWaveformResults,
-    StateResults,
-)
-
-
-class AcquisitionType(Enum):
-    """
-    Types of data acquisition from hardware.
-
-    SPECTROSCOPY: Zurich Integration mode for RO frequency sweeps,
-    INTEGRATION: Demodulate and integrate the waveform,
-    RAW: Acquire the waveform as it is,
-    DISCRIMINATION: Demodulate, integrate the waveform and discriminate among states based on the voltages
-
-    """
-
-    RAW = auto()
-    INTEGRATION = auto()
-    DISCRIMINATION = auto()
-
-
-class AveragingMode(Enum):
-    """
-    Types of data averaging from hardware.
-
-    CYLIC: Better averaging for noise,
-    SINGLESHOT: False averaging,
-    [SEQUENTIAL: Worse averaging for noise]
-
-    """
-
-    CYCLIC = auto()
-    SINGLESHOT = auto()
-
-
-RESULTS_TYPE = {
-    AveragingMode.CYCLIC: {
-        AcquisitionType.INTEGRATION: AveragedIntegratedResults,
-        AcquisitionType.RAW: AveragedRawWaveformResults,
-        AcquisitionType.DISCRIMINATION: AveragedStateResults,
-    },
-    AveragingMode.SINGLESHOT: {
-        AcquisitionType.INTEGRATION: IntegratedResults,
-        AcquisitionType.RAW: RawWaveformResults,
-        AcquisitionType.DISCRIMINATION: StateResults,
-    },
-}
-
-
-@dataclass(frozen=True)
-class ExecutionParameters:
-    """Data structure to deal with execution parameters
-
-    :nshots: nshots (int): Number of shots to sample from the experiment. Default is 1024.
-    relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in s.
-                If ``None`` the default value provided as ``relaxation_time`` in the runcard will be used.
-    :fast_reset (bool): Enable or disable fast reset
-    :acquisition_type (AcquisitionType): Data acquisition mode
-    :averaging_mode (AveragingMode): Data averaging mode
-    """
-
-    nshots: Optional[int] = 1024
-    relaxation_time: Optional[float] = None
-    fast_reset: bool = False
-    acquisition_type: AcquisitionType = AcquisitionType.DISCRIMINATION
-    averaging_mode: AveragingMode = AveragingMode.SINGLESHOT
-
-    def __post_init__(self):
-        if not isinstance(self.acquisition_type, AcquisitionType):
-            raise TypeError("acquisition_type is not valid")
-        if not isinstance(self.averaging_mode, AveragingMode):
-            raise TypeError("averaging mode is not valid")
-
-    @property
-    def results_type(self):
-        """Returns corresponding results class"""
-        return RESULTS_TYPE[self.averaging_mode][self.acquisition_type]
 
 
 class DesignPlatform(AbstractPlatform):
@@ -128,15 +44,11 @@ class DesignPlatform(AbstractPlatform):
         Returns:
             Readout results acquired by after execution.
         """
-        if options.relaxation_time is None:
-            kwargs = asdict(options)
-            kwargs["relaxation_time"] = self.relaxation_time
-            options = ExecutionParameters(**kwargs)
-
         if options.nshots is None:
-            kwargs = asdict(options)
-            kwargs["nshots"] = self.settings["settings"]["nshots"]
-            options = ExecutionParameters(**kwargs)
+            options = replace(options, nshots=self.nshots)
+
+        if options.relaxation_time is None:
+            options = replace(options, relaxation_time=self.relaxation_time)
 
         return self.design.play(self.qubits, sequence, options)
 
@@ -154,15 +66,12 @@ class DesignPlatform(AbstractPlatform):
         Returns:
             Readout results acquired by after execution.
         """
-        if options.relaxation_time is None:
-            kwargs = asdict(options)
-            kwargs["relaxation_time"] = self.relaxation_time
-            options = ExecutionParameters(**kwargs)
 
         if options.nshots is None:
-            kwargs = asdict(options)
-            kwargs["nshots"] = self.settings["settings"]["nshots"]
-            options = ExecutionParameters(**kwargs)
+            options = replace(options, nshots=self.nshots)
+
+        if options.relaxation_time is None:
+            options = replace(options, relaxation_time=self.relaxation_time)
 
         return self.design.sweep(
             self.qubits,
@@ -214,78 +123,3 @@ class DesignPlatform(AbstractPlatform):
 
     def get_bias(self, qubit):
         return self.qubits[qubit].flux.bias
-
-
-class AcquisitionType(Enum):
-    """
-    Types of data acquisition from hardware.
-
-    SPECTROSCOPY: Zurich Integration mode for RO frequency sweeps,
-    INTEGRATION: Demodulate and integrate the waveform,
-    RAW: Acquire the waveform as it is,
-    DISCRIMINATION: Demodulate, integrate the waveform and discriminate among states based on the voltages
-
-    """
-
-    RAW = auto()
-    INTEGRATION = auto()
-    SPECTROSCOPY = auto()
-    DISCRIMINATION = auto()
-
-
-class AveragingMode(Enum):
-    """
-    Types of data averaging from hardware.
-
-    CYLIC: Better averaging for noise,
-    SINGLESHOT: False averaging,
-    [SEQUENTIAL: Worse averaging for noise]
-
-    """
-
-    CYCLIC = auto()
-    SINGLESHOT = auto()
-
-
-RESULTS_TYPE = {
-    AveragingMode.CYCLIC: {
-        AcquisitionType.INTEGRATION: AveragedIntegratedResults,
-        AcquisitionType.RAW: AveragedRawWaveformResults,
-        AcquisitionType.DISCRIMINATION: AveragedStateResults,
-    },
-    AveragingMode.SINGLESHOT: {
-        AcquisitionType.INTEGRATION: IntegratedResults,
-        AcquisitionType.RAW: RawWaveformResults,
-        AcquisitionType.DISCRIMINATION: StateResults,
-    },
-}
-
-
-@dataclass(frozen=True)
-class ExecutionParameters:
-    """Data structure to deal with execution parameters
-
-    :nshots: nshots (int): Number of shots to sample from the experiment. Default is 1024.
-    relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in s.
-                If ``None`` the default value provided as ``relaxation_time`` in the runcard will be used.
-    :fast_reset (bool): Enable or disable fast reset
-    :acquisition_type (AcquisitionType): Data acquisition mode
-    :averaging_mode (AveragingMode): Data averaging mode
-    """
-
-    nshots: Optional[int] = 1024
-    relaxation_time: Optional[float] = None
-    fast_reset: bool = False
-    acquisition_type: AcquisitionType = AcquisitionType.DISCRIMINATION
-    averaging_mode: AveragingMode = AveragingMode.SINGLESHOT
-
-    # def __post_init__(self):
-    #     if not isinstance(self.acquisition_type, AcquisitionType):
-    #         raise TypeError("acquisition_type is not valid")
-    #     if not isinstance(self.averaging_mode, AveragingMode):
-    #         raise TypeError("averaging mode is not valid")
-
-    @property
-    def results_type(self):
-        """Returns corresponding results class"""
-        return RESULTS_TYPE[self.averaging_mode][self.acquisition_type]

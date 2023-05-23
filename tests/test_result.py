@@ -118,9 +118,9 @@ def test_state_probability(state):
     """Testing raw_probability method"""
     results = generate_random_state_result(5)
     if state == 0:
-        target_dict = {"probability": results.state_0_probability}
+        target_dict = {"probability": results.probability(0)}
     else:
-        target_dict = {"probability": 1 - results.state_0_probability}
+        target_dict = {"probability": results.probability(1)}
 
     assert np.allclose(target_dict["probability"], results.probability(state=state), atol=1e-08)
 

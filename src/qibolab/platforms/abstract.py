@@ -105,6 +105,7 @@ class AbstractPlatform(ABC):
         self.nqubits = None
         self.resonator_type = None
         self.topology = None
+        self.nshots = None
         self.relaxation_time = None
         self.sampling_rate = None
 
@@ -139,6 +140,7 @@ class AbstractPlatform(ABC):
         self.topology = settings["topology"]
 
         self.relaxation_time = settings["settings"]["relaxation_time"]
+        self.nshots = settings["settings"]["nshots"]
         self.sampling_rate = settings["settings"]["sampling_rate"]
 
         # Load native gates
@@ -457,6 +459,7 @@ class AbstractPlatform(ABC):
                 from qibolab.platform import Platform
                 from qibolab.sweeper import Sweeper, Parameter
                 from qibolab.pulses import PulseSequence
+                from qibolab import ExecutionParameters
 
 
                 platform = Platform("dummy")
@@ -466,7 +469,8 @@ class AbstractPlatform(ABC):
                 sequence.add(pulse)
                 parameter_range = np.random.randint(10, size=10)
                 sweeper = Sweeper(parameter, parameter_range, [pulse])
-                platform.sweep(sequence, sweeper)
+                platform.sweep(sequence, ExecutionParameters(), sweeper)
+
 
 
         Args:

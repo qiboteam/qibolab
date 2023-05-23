@@ -1,5 +1,5 @@
-from dataclasses import InitVar, dataclass, field
-from functools import cached_property
+from dataclasses import dataclass
+from functools import cached_property, lru_cache
 from typing import Optional
 
 import numpy as np
@@ -18,14 +18,17 @@ class IntegratedResults:
     def __init__(self, data: np.ndarray):
         self.voltage: npt.NDArray[np.complex128] = data
 
+    def __add__(self, data):
+        return self.__class__(np.append(self.voltage, data.voltage))
+
     @property
     def voltage_i(self):
-        """Signal magnitude in volts."""
+        """Signal component i in volts."""
         return self.voltage.real
 
     @property
     def voltage_q(self):
-        """Signal magnitude in volts."""
+        """Signal component q in volts."""
         return self.voltage.imag
 
     @cached_property
@@ -37,12 +40,6 @@ class IntegratedResults:
     def phase(self):
         """Signal phase in radians."""
         return np.angle(self.voltage_i + 1.0j * self.voltage_q)
-
-    # #TODO: Check is adding as wanted, we may need some imput on what data is being added
-    # def __add__(self, data, axis):  # __add__(self, data:IntegratedResults) -> IntegratedResults
-    #     axis = 0
-    #     voltage = np.append(self.voltage, data.voltage, axis=axis)
-    #     return IntegratedResults(voltage)
 
     @property
     def serialize(self):
@@ -77,6 +74,11 @@ class AveragedIntegratedResults(IntegratedResults):
         super().__init__(data)
         self.std: Optional[npt.NDArray[np.float64]] = std
 
+    def __add__(self, data):
+        new_res = super().__add__(data)
+        new_res.std = np.append(self.std, data.std)
+        return new_res
+
 
 class RawWaveformResults(IntegratedResults):
     """
@@ -100,7 +102,6 @@ class AveragedRawWaveformResults(AveragedIntegratedResults):
     """
 
 
-# FIXME: If probabilities are out of range the error is displeyed weirdly
 class StateResults:
     """
     Data structure to deal with the output of
@@ -113,37 +114,26 @@ class StateResults:
     def __init__(self, data: np.ndarray):
         self.states: npt.NDArray[np.uint32] = data
 
+    def __add__(self, data):
+        return self.__class__(np.append(self.states, data.states))
+
+    @lru_cache
     def probability(self, state=0):
         """Returns the statistical frequency of the specified state (0 or 1)."""
         return abs(1 - state - np.mean(self.states, axis=0))
-
-    @cached_property
-    def state_0_probability(self):
-        """Returns the 0 state statistical frequency."""
-        return self.probability(0)
-
-    @cached_property
-    def state_1_probability(self):
-        """Returns the 1 state statistical frequency."""
-        return self.probability(1)
-
-    # #TODO: Check is adding as wanted, we may need some imput on what data is being added
-    # def __add__(self, data):  # __add__(self, data:StateResults) -> StateResults
-    #     states = np.append(self.states, data.states, axis=0)
-    #     return StateResults(states)
 
     @property
     def serialize(self):
         """Serialize as a dictionary."""
         serialized_dict = {
-            "state_0": self.state_0_probability.flatten(),
+            "state_0": self.probability(0).flatten(),
         }
         return serialized_dict
 
     @property
     def average(self):
         """Perform states average"""
-        average = self.state_1_probability
+        average = self.probability(1)
         std = np.std(self.states, axis=0, ddof=1) / np.sqrt(self.states.shape[0])
         return AveragedStateResults(average, std=std)
 
@@ -162,6 +152,11 @@ class AveragedStateResults(StateResults):
     def __init__(self, states: np.ndarray, std: np.ndarray = np.array([])):
         super().__init__(states)
         self.std: Optional[npt.NDArray[np.float64]] = std
+
+    def __add__(self, data):
+        new_res = super().__add__(data)
+        new_res.std = np.append(self.std, data.std)
+        return new_res
 
 
 ExecRes = np.dtype([("i", np.float64), ("q", np.float64)])
