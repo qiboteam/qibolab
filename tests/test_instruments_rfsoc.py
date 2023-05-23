@@ -1,11 +1,7 @@
 import numpy as np
 import pytest
 
-from qibolab.executionparameters import (
-    AcquisitionType,
-    AveragingMode,
-    ExecutionParameters,
-)
+from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.rfsoc import QickProgramConfig
 from qibolab.paths import qibolab_folder
 from qibolab.platform import create_tii_rfsoc4x2
