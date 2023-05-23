@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from qm import qua
 
-from qibolab.executionparameters import AcquisitionType, ExecutionParameters
+from qibolab import AcquisitionType, ExecutionParameters
 from qibolab.instruments.qm import QMOPX, Acquisition, QMPulse, Sequence
 from qibolab.paths import qibolab_folder
 from qibolab.platform import create_tii_qw5q_gold
