@@ -42,7 +42,7 @@ class RfsocSweep:  # TODO change name to avoid confusion
     pulses: List[Pulse] = None  # list of pulses
     indexes: List[int] = None  # list of the indexes of the sweeped pulses
     starts: List[Union[int, float]] = None  # list of start values
-    steps: List[Union[int, float]] = None  # single step
+    stops: List[Union[int, float]] = None  # single stop
     expts: int = None  # single number of points
 
 
@@ -50,7 +50,7 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Qubit]
     """Create a RfsocSweep oject from a Sweeper objects"""
 
     starts = []
-    steps = []
+    stops = []
     indexes = []
 
     if sweeper.parameter is Parameter.bias:
@@ -59,9 +59,9 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Qubit]
                 if qubit == seq_qubit:
                     indexes.append(idx)
             starts.append(sweeper.values[0] + qubits[qubit].flux.bias)
-            steps.append(sweeper.values[1] - sweeper.values[0])
+            stops.append(sweeper.values[-1] + qubits[qubit].flux.bias)
 
-        if any(start + steps[idx] * (len(sweeper.values) - 1) > 1 for idx, start in enumerate(starts)):
+        if any(stops) > 1:
             raise ValueError("Sweeper amplitude is set to reach values higher than 1")
     else:
         for pulse in sweeper.pulses:
@@ -70,22 +70,21 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Qubit]
                     indexes.append(idx)
             if sweeper.parameter is Parameter.frequency:
                 starts.append(sweeper.values[0] + pulse.frequency)
-                steps.append(sweeper.values[1] - sweeper.values[0])
+                stops.append(sweeper.values[-1] + pulse.frequency)
             elif sweeper.parameter is Parameter.amplitude:
-                # starts.append(sweeper.values[0] * pulse.amplitude)
                 starts.append(sweeper.values[0] * pulse.amplitude)
-                steps.append((sweeper.values[1] - sweeper.values[0]) * pulse.amplitude)
+                stops.append(sweeper.values[-1] * pulse.amplitude)
             elif sweeper.parameter is Parameter.relative_phase:
                 starts.append(sweeper.values[0] + pulse.relative_phase)
-                steps.append(sweeper.values[1] - sweeper.values[0])
+                stops.append(sweeper.values[-1] + pulse.relative_phase)
 
     return RfsocSweep(
         parameter=sweeper.parameter,
         results=[ro.serial for ro in sequence.ro_pulses],
-        pulses=sweeper.pulses,
+        pulses=sweeper.pulses,  # TODO the idea of indexes was to avoid pulses... check if needed
         indexes=indexes,
         starts=np.array(starts),
-        steps=np.array(steps),
+        stops=np.array(stops),
         expts=len(sweeper.values),
     )
 
@@ -313,6 +312,7 @@ class RFSoC(AbstractInstrument):
 
     def classify_shots(self, i_values: List[float], q_values: List[float], qubit: Qubit) -> List[float]:
         """Classify IQ values using qubit threshold and rotation_angle if available in runcard"""
+        # TODO maybe move to qibosoq
 
         if qubit.iq_angle is None or qubit.threshold is None:
             return None
@@ -371,8 +371,6 @@ class RFSoC(AbstractInstrument):
             )
             res = self.convert_sweep_results(original_ro, sequence, qubits, toti, totq, average)
             return res
-        # else:
-        # if self.get_if_python_sweep(sequence, qubits, *sweepers):
         sweeper = sweepers[0]
         values = []
         if (
@@ -381,11 +379,11 @@ class RFSoC(AbstractInstrument):
             or sweeper.parameter is Parameter.relative_phase
         ):
             for idx, _ in enumerate(sweeper.pulses):
-                val = np.arange(0, sweeper.expts) * sweeper.steps[idx] + sweeper.starts[idx]
+                val = np.arange(sweeper.starts[idx], sweeper.stops[idx], sweeper.expts)
                 values.append(val)
         else:
             for idx, _ in enumerate(sweeper.indexes):
-                val = np.arange(0, sweeper.expts) * sweeper.steps[idx] + sweeper.starts[idx]
+                val = np.arange(sweeper.starts[idx], sweeper.stops[idx], sweeper.expts)
                 values.append(val)
 
         results = {}
