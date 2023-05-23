@@ -98,6 +98,7 @@ instruments:
             channel_port_map:   # Refrigerator Channel : Instrument port
                 'L3-25a' : o1    # IQ Port = out0 & out1
                 'L2-5a' : i1     # Labeled but not used
+
     qrm_rf2: # ReadOut module 12: controlling qubits q2, q3, q4
         lib: qblox
         class: ClusterQRM_RF
@@ -127,6 +128,10 @@ instruments:
                 4:  # qubit id
                     rotation_angle              : 283.970                   # in degrees 0.0<=v<=360.0
                     threshold                   : 0.000889                  # in V
+
+            channel_port_map:   # Refrigerator Channel : Instrument port
+                'L3-25b' : o1    # IQ Port = out0 & out1
+                'L2-5b' : i1     # Labeled but not used
 
     qcm_rf1:
         lib: qblox
@@ -406,7 +411,7 @@ characterization:
         0:
             readout_frequency: 7_212_362_551
             drive_frequency: 5_045_070_000
-            anharmonicity: 291_451_184
+            # anharmonicity: 291_451_184
             T1: 5_857
             T2: 0
             state0_voltage: 0.0
@@ -417,7 +422,7 @@ characterization:
         1:
             readout_frequency: 7_453_149_599
             drive_frequency: 4_852_280_321
-            anharmonicity: 291_965_010
+            # anharmonicity: 291_965_010
             T1: 1_253
             T2: 0
             state0_voltage: 0.0
@@ -428,7 +433,7 @@ characterization:
         2:
             readout_frequency: 7_655_110_446
             drive_frequency: 5_794_176_000
-            anharmonicity: 275_392_460
+            # anharmonicity: 275_392_460
             T1: 4_563
             T2: 0
             state0_voltage: 0.0
@@ -439,7 +444,7 @@ characterization:
         3:
             readout_frequency: 7_803_377_426
             drive_frequency: 6_760_050_000
-            anharmonicity: 261_797_410
+            # anharmonicity: 261_797_410
             T1: 4_232
             T2: 0
             state0_voltage: 0.0
@@ -450,7 +455,7 @@ characterization:
         4:
             readout_frequency: 8_058_739_833
             drive_frequency: 6_585_145_857
-            anharmonicity: 253_106_666
+            # anharmonicity: 253_106_666
             T1: 492
             T2: 0
             state0_voltage: 0.0
@@ -461,7 +466,7 @@ characterization:
         5:
             readout_frequency: 7_118_627_416
             drive_frequency: 4_700_000_000
-            anharmonicity: 300_000_000
+            # anharmonicity: 300_000_000
             T1: 0
             T2: 0
             state0_voltage: 0.0
