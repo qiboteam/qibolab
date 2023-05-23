@@ -12,13 +12,13 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
-from qibolab.instruments.abstract import AbstractInstrument
-from qibolab.platforms.abstract import Qubit
-from qibolab.platforms.platform import (
+from qibolab.executionparameters import (
     AcquisitionType,
     AveragingMode,
     ExecutionParameters,
 )
+from qibolab.instruments.abstract import AbstractInstrument
+from qibolab.platforms.abstract import Qubit
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import IntegratedResults, StateResults
 from qibolab.sweeper import Parameter, Sweeper
@@ -194,8 +194,8 @@ class TII_RFSOC4x2(AbstractInstrument):
     def play(
         self,
         qubits: List[Qubit],
-        execution_parameters: ExecutionParameters,
         sequence: PulseSequence,
+        execution_parameters: ExecutionParameters,
     ) -> Dict[str, Union[IntegratedResults, StateResults]]:
         """Executes the sequence of instructions and retrieves readout results.
            Each readout pulse generates a separate acquisition.
@@ -224,7 +224,11 @@ class TII_RFSOC4x2(AbstractInstrument):
             self.cfg.reps = execution_parameters.nshots
         if execution_parameters.relaxation_time is not None:
             self.cfg.repetition_duration = execution_parameters.relaxation_time
-        average = execution_parameters.averaging_mode is AveragingMode.CYCLIC
+
+        if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
+            average = False
+        else:
+            average = execution_parameters.averaging_mode is AveragingMode.CYCLIC
 
         toti, totq = self._execute_pulse_sequence(self.cfg, sequence, qubits, len(sequence.ro_pulses), average)
 
@@ -238,10 +242,12 @@ class TII_RFSOC4x2(AbstractInstrument):
                 serial = ro_pulse.serial
 
                 if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
-                    shots = self.classify_shots(i_pulse, q_pulse, qubits[ro_pulse.qubit])
-                    result = execution_parameters.results_type(states=shots, shots=execution_parameters.nshots)
+                    discriminated_shots = self.classify_shots(i_pulse, q_pulse, qubits[ro_pulse.qubit])
+                    if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
+                        discriminated_shots = np.mean(discriminated_shots, keepdims=True)
+                    result = execution_parameters.results_type(discriminated_shots)
                 else:
-                    result = execution_parameters.results_type(i=i_pulse, q=q_pulse, shots=execution_parameters.nshots)
+                    result = execution_parameters.results_type(i_pulse + 1j * q_pulse)
                 results[ro_pulse.qubit] = results[serial] = result
 
         return results
@@ -256,6 +262,8 @@ class TII_RFSOC4x2(AbstractInstrument):
 
         rotated = np.cos(angle) * np.array(i_values) - np.sin(angle) * np.array(q_values)
         shots = np.heaviside(np.array(rotated) - threshold, 0)
+        if isinstance(shots, float):
+            return [shots]
         return shots
 
     def recursive_python_sweep(
@@ -442,35 +450,44 @@ class TII_RFSOC4x2(AbstractInstrument):
         Returns:
             A dict mapping the readout pulses serial to qibolab results objects
         """
-        sweep_results = {}
+        results = {}
 
         adcs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
         for k in range(len(adcs)):
-            for j in range(len(sweeper.values)):
-                results = {}
-                # add a result for every readouts pulse
-                for i, serial in enumerate(original_ro):
-                    i_pulse = np.array(toti[k][i][j])
-                    q_pulse = np.array(totq[k][i][j])
+            for i, serial in enumerate(original_ro):
+                i_pulse = np.array(toti[k][i])
+                q_pulse = np.array(totq[k][i])
 
-                    if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
-                        qubit = qubits[sequence.ro_pulses[i].qubit]
-                        shots = self.classify_shots(i_pulse, q_pulse, qubit)
-                        result = execution_parameters.results_type(states=shots, shots=execution_parameters.nshots)
-                    else:
-                        result = execution_parameters.results_type(
-                            i=i_pulse, q=q_pulse, shots=execution_parameters.nshots
-                        )
-                    results[sequence.ro_pulses[i].qubit] = results[serial] = result
-                # merge new result with already saved ones
-                sweep_results = self.merge_sweep_results(sweep_results, results)
-        return sweep_results
+                i_vals = i_pulse
+                q_vals = q_pulse
+
+                if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
+                    average = False
+                else:
+                    average = execution_parameters.averaging_mode is AveragingMode.CYCLIC
+
+                if not average:
+                    shape = i_vals.shape
+                    np.reshape(i_vals, (execution_parameters.nshots, *shape[:-1]))
+                    np.reshape(q_vals, (execution_parameters.nshots, *shape[:-1]))
+
+                if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
+                    qubit = qubits[sequence.ro_pulses[i].qubit]
+                    discrimated_shots = self.classify_shots(i_vals, q_vals, qubit)
+                    if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
+                        discriminated_shots = np.mean(discriminated_shots, keepdims=True)
+                    result = execution_parameters.results_type(discrimated_shots)
+                else:
+                    result = execution_parameters.results_type(i_vals + 1j * q_vals)
+
+                results[sequence.ro_pulses[i].qubit] = results[serial] = result
+        return results
 
     def sweep(
         self,
         qubits: List[Qubit],
-        execution_parameters: ExecutionParameters,
         sequence: PulseSequence,
+        execution_parameters: ExecutionParameters,
         *sweepers: Sweeper,
     ) -> Dict[str, Union[IntegratedResults, StateResults]]:
         """Executes the sweep and retrieves the readout results.
@@ -501,7 +518,11 @@ class TII_RFSOC4x2(AbstractInstrument):
             self.cfg.reps = execution_parameters.nshots
         if execution_parameters.relaxation_time is not None:
             self.cfg.repetition_duration = execution_parameters.relaxation_time
-        average = execution_parameters.averaging_mode is AveragingMode.CYCLIC
+
+        if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
+            average = False
+        else:
+            average = execution_parameters.averaging_mode is AveragingMode.CYCLIC
 
         # sweepers.values are modified to reflect actual sweeped values
         for sweeper in sweepers:

@@ -1,14 +1,20 @@
 import copy
 import time
+from typing import Dict, List, Union
 
 import numpy as np
 from qibo.config import log, raise_error
 
+from qibolab.executionparameters import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
 from qibolab.instruments.abstract import AbstractInstrument
-from qibolab.platforms.platform import AveragingMode, ExecutionParameters
+from qibolab.platforms.abstract import Qubit
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import ExecutionResults
-from qibolab.sweeper import Parameter
+from qibolab.sweeper import Parameter, Sweeper
 
 
 class DummyInstrument(AbstractInstrument):
@@ -39,30 +45,35 @@ class DummyInstrument(AbstractInstrument):
     def disconnect(self):
         log.info("Disconnecting dummy instrument.")
 
-    def play(self, qubits, sequence, options):
-        relaxation_time = options.relaxation_time
+    def play(self, qubits: Dict[Union[str, int], Qubit], sequence: PulseSequence, options: ExecutionParameters):
         nshots = options.nshots
-        time.sleep(relaxation_time * 1e-9)
+        time.sleep(options.relaxation_time * 1e-9)
 
         ro_pulses = {pulse.qubit: pulse.serial for pulse in sequence.ro_pulses}
 
         results = {}
         for qubit, serial in ro_pulses.items():
-            i = np.random.rand(nshots)
-            q = np.random.rand(nshots)
-            shots = np.random.rand(nshots)
-            results[qubit] = results[serial] = ExecutionResults.from_components(i, q, shots)
+            if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+                states = np.random.rand(1) if options.averaging_mode is AveragingMode.CYCLIC else np.random.rand(nshots)
+                results[qubit] = results[serial] = options.results_type(states)
+
+            else:
+                i = np.random.rand(1) if options.averaging_mode is AveragingMode.CYCLIC else np.random.rand(nshots)
+                q = np.random.rand(1) if options.averaging_mode is AveragingMode.CYCLIC else np.random.rand(nshots)
+                exp_res = i + 1j * q
+                results[qubit] = results[serial] = options.results_type(data=exp_res)
+
+            # results[qubit] = results[serial] = ExecutionResults.from_components(i, q, shots)
+
         return results
 
-    def sweep(self, qubits, sequence, options, *sweepers, average=True):
-        relaxation_time = options.relaxation_time
-        nshots = options.nshots
-
-        if options.averaging_mode is AveragingMode.SINGLESHOT:
-            average = False
-        else:
-            average = True
-
+    def sweep(
+        self,
+        qubits: Dict[Union[str, int], Qubit],
+        sequence: PulseSequence,
+        options: ExecutionParameters,
+        *sweepers: List[Sweeper]
+    ):
         results = {}
         sweeper_pulses = {}
 
@@ -83,10 +94,8 @@ class DummyInstrument(AbstractInstrument):
             qubits,
             copy_sequence,
             copy.deepcopy(sequence),
+            options,
             *sweepers,
-            nshots=nshots,
-            average=average,
-            relaxation_time=relaxation_time,
             results=results,
             sweeper_pulses=sweeper_pulses,
             map_original_shifted=map_original_shifted
@@ -98,10 +107,8 @@ class DummyInstrument(AbstractInstrument):
         qubits,
         sequence,
         original_sequence,
+        options,
         *sweepers,
-        nshots=1024,
-        average=True,
-        relaxation_time=None,
         results=None,
         sweeper_pulses=None,
         map_original_shifted=None
@@ -122,25 +129,24 @@ class DummyInstrument(AbstractInstrument):
                     qubits,
                     sequence,
                     original_sequence,
+                    options,
                     *sweepers[1:],
-                    nshots=nshots,
-                    average=average,
-                    relaxation_time=relaxation_time,
                     results=results,
                     sweeper_pulses=sweeper_pulses,
                     map_original_shifted=map_original_shifted
                 )
             else:
                 new_sequence = copy.deepcopy(sequence)
-                options = ExecutionParameters(
-                    nshots=nshots,
-                    relaxation_time=relaxation_time,
-                )
                 result = self.play(qubits, new_sequence, options)
 
                 # colllect result and append to original pulse
                 for original_pulse, new_serial in map_original_shifted.items():
-                    acquisition = result[new_serial].average if average else result[new_serial]
+                    # acquisition = (
+                    #     result[new_serial].average
+                    #     if options.averaging_mode is AveragingMode.CYCLIC
+                    #     else result[new_serial]
+                    # )
+                    acquisition = result[new_serial]
                     if original_pulse.serial in results:
                         results[original_pulse.serial] += acquisition
                         results[original_pulse.qubit] += acquisition

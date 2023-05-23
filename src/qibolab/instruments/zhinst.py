@@ -8,13 +8,13 @@ import laboneq._token
 import laboneq.simple as lo
 import numpy as np
 
-from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
-from qibolab.paths import qibolab_folder
-from qibolab.platforms.platform import (
+from qibolab.executionparameters import (
     AcquisitionType,
     AveragingMode,
     ExecutionParameters,
 )
+from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
+from qibolab.paths import qibolab_folder
 from qibolab.pulses import FluxPulse, PulseSequence, PulseType
 from qibolab.result import (
     AveragedIntegratedResults,
@@ -454,17 +454,21 @@ class Zurich(AbstractInstrument):
                         else:
                             states = np.array(exp_res)
                         results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = options.results_type(
-                            states=states
+                            data=states
+                        )
+                        results[self.sequence[f"readout{qubit.name}"][0].pulse.qubit] = options.results_type(
+                            data=states
                         )
                     else:
                         results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = options.results_type(
                             data=np.array(exp_res)
                         )
+                        results[self.sequence[f"readout{qubit.name}"][0].pulse.qubit] = options.results_type(
+                            data=np.array(exp_res)
+                        )
 
         exp_dimensions = list(np.array(exp_res).shape)
         if dimensions != exp_dimensions:
-            import warnings
-
             print("dimensions", dimensions, "experiment", exp_dimensions)
             warnings.warn("dimensions not properly ordered")
 
@@ -489,8 +493,8 @@ class Zurich(AbstractInstrument):
         last_start = 0
         for pulse in sequence:
             zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"].append(ZhPulse(pulse))
-            if pulse.start < last_start:
-                warnings.warn("Pulse timing translation")
+            # if pulse.start < last_start:
+            # warnings.warn("Pulse timing translation")
             last_start = pulse.start
 
         "Mess that gets the sweeper and substitutes the pulse it sweeps in the right place"
@@ -708,28 +712,40 @@ class Zurich(AbstractInstrument):
     # For all other measurements, set either length or pulse for both the measure pulse and integration kernel.
     def measure_relax(self, exp, qubits, relaxation_time, acquisition_type):
         """qubit readout pulse, data acquisition and qubit relaxation"""
+        play_after = None
+        longest = 0
+        if self.sequence_qibo.qf_pulses and self.sequence_qibo.qd_pulses:
+            if self.sequence_qibo.qf_pulses.finish > self.sequence_qibo.qd_pulses.finish:
+                for pulse in self.sequence_qibo.qf_pulses:
+                    if longest < pulse.finish:
+                        longest = pulse.finish
+                        qubit_after = pulse.qubit
+                play_after = f"sequence_bias{qubit_after}"
+            else:
+                for pulse in self.sequence_qibo.qd_pulses:
+                    if longest < pulse.finish:
+                        longest = pulse.finish
+                        qubit_after = pulse.qubit
+                play_after = f"sequence_drive{qubit_after}"
+        elif self.sequence_qibo.qf_pulses:
+            for pulse in self.sequence_qibo.qf_pulses:
+                if longest < pulse.finish:
+                    longest = pulse.finish
+                    qubit_after = pulse.qubit
+            play_after = f"sequence_bias{qubit_after}"
+        elif self.sequence_qibo.qd_pulses:
+            for pulse in self.sequence_qibo.qd_pulses:
+                if longest < pulse.finish:
+                    longest = pulse.finish
+                    qubit_after = pulse.qubit
+            play_after = f"sequence_drive{qubit_after}"
+
         for qubit in qubits.values():
             if not qubit.flux_coupler:
-                play_after = None
-                if self.sequence[f"drive{qubit.name}"]:
-                    play_after = f"sequence_drive{qubit.name}"
-                with exp.section(uid=f"sequence_measure{qubit.name}", play_after=play_after):
-                    if self.sequence[f"drive{qubit.name}"]:
-                        last_drive_pulse = self.sequence[f"drive{qubit.name}"][-1]
-                        if isinstance(last_drive_pulse, ZhPulse):
-                            time = round(last_drive_pulse.pulse.finish * 1e-9, 9)
-                        else:
-                            time = 0
-                    else:
-                        time = 0
-                    i = 0
-                    if self.sequence[f"readout{qubit.name}"]:
-                        for pulse in self.sequence[f"readout{qubit.name}"]:
-                            exp.delay(signal=f"measure{qubit.name}", time=0)
-                            # FIXME: The delay between drive and measure needs to be revised
-                            # This may be a problem for fixed sequences and not delay sweeps as T1
-                            # exp.delay(signal=f"measure{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time)
-                            time += round(pulse.pulse.duration * 1e-9, 9) + round(pulse.pulse.start * 1e-9, 9) - time
+                if self.sequence[f"readout{qubit.name}"]:
+                    for pulse in self.sequence[f"readout{qubit.name}"]:
+                        i = 0
+                        with exp.section(uid=f"sequence_measure{qubit.name}", play_after=play_after):
                             pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
 
                             """Integration weights definition or load from the chip folder"""

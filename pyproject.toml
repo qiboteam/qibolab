@@ -21,7 +21,7 @@ packages = [{ include = "qibolab", from = "src" }]
 include = ["*.out", "*.yml"]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.12"
+python = ">=3.9,<3.12"
 qibo = "^0.1.12"
 networkx = "^3.0"
 more-itertools = "^9.1.0"
@@ -64,7 +64,7 @@ qcodes_contrib_drivers = "0.18.0"
 pyvisa-py = "0.5.3"
 qm-qua = "==1.1.1"
 qualang-tools = "==0.14.0"
-#laboneq = "2.4.0"
+laboneq = "2.4.0"
 
 [tool.poe.tasks]
 test = "pytest"
