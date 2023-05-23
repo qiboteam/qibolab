@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from qibolab.platforms.abstract import Qubit
+from qibolab.platform import Qubit
 from qibolab.pulses import Pulse, Rectangular
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 
