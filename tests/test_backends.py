@@ -106,7 +106,7 @@ def test_superposition_for_all_qubits(backend):
     for q in range(nqubits):
         circuit = Circuit(nqubits)
         circuit.add(gates.H(q=q))
-        circuit.add(gates.M(q=q))
+        circuit.add(gates.M(q))
         probs.append(backend.execute_circuit(circuit, nshots=5000).probabilities())
         warnings.warn(f"Probabilities after an Hadamard gate applied to qubit {q}: {probs[-1]}")
     probs = np.asarray(probs)
