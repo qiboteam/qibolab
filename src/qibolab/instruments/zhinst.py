@@ -8,11 +8,7 @@ import laboneq._token
 import laboneq.simple as lo
 import numpy as np
 
-from qibolab.executionparameters import (
-    AcquisitionType,
-    AveragingMode,
-    ExecutionParameters,
-)
+from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.paths import qibolab_folder
 from qibolab.pulses import FluxPulse, PulseSequence, PulseType
@@ -48,6 +44,7 @@ class ZhPulse:
     # FIXME: Either implement more or create and arbitrary one
     def select_pulse(self, pulse, pulse_type):
         """Pulse translation"""
+        zh_pulse = None
 
         if str(pulse.shape) == "Rectangular()":
             zh_pulse = lo.pulse_library.const(

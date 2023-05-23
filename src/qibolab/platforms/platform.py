@@ -1,7 +1,8 @@
-from dataclasses import replace
+from dataclasses import asdict, replace
 
 from qibo.config import raise_error
 
+from qibolab import ExecutionParameters
 from qibolab.platforms.abstract import AbstractPlatform
 
 
