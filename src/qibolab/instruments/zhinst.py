@@ -466,7 +466,7 @@ class Zurich(AbstractInstrument):
 
         # FIXME: Include this on the reports
         # html containing the pulse sequence schedule
-        lo.show_pulse_sheet("pulses", self.exp)
+        # lo.show_pulse_sheet("pulses", self.exp)
 
         # There is no reason for disconnection and it prevents reconnection
         # for a period of time making the software loops with execute_play_sequence crash
@@ -697,7 +697,6 @@ class Zurich(AbstractInstrument):
                     for sequence in sequences_drive.values():
                         j = 0
                         with exp.section(uid=f"sequence_drive{qubit.name}_{i}"):
-                            print(f"sequence_drive{qubit.name}_{i}")
                             for pulse in sequence:
                                 if not isinstance(pulse, ZhSweeperLine):
                                     exp.delay(
@@ -764,7 +763,6 @@ class Zurich(AbstractInstrument):
                     for pulse in self.sequence[f"readout{qubit.name}"]:
                         if play_after is not None:
                             play_after_aux = play_after + f"_{i}"
-                            print(play_after_aux)
                         with exp.section(uid=f"sequence_measure{qubit.name}_{i}", play_after=play_after_aux):
                             pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
 
@@ -774,7 +772,7 @@ class Zurich(AbstractInstrument):
                                 + f"/runcards/{self.chip}/weights/integration_weights_optimization_qubit_{qubit.name}.npy"
                             )
                             if weights_file.is_file():
-                                print("I'm using optimized IW")
+                                optimized = True
                                 samples = np.load(
                                     str(qibolab_folder)
                                     + f"/runcards/{self.chip}/weights/integration_weights_optimization_qubit_{qubit.name}.npy",
@@ -791,7 +789,7 @@ class Zurich(AbstractInstrument):
                                         samples=samples[0],
                                     )
                             else:
-                                print("I'm using dumb IW")
+                                optimized = False
                                 "We adjust for smearing and remove smearing/2 at the end"
                                 exp.delay(signal=f"measure{qubit.name}", time=self.smearing * 1e-9)
                                 if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
@@ -823,6 +821,10 @@ class Zurich(AbstractInstrument):
                                 reset_delay=relaxation_time * 1e-9,
                             )
                             i += 1
+        if optimized:
+            print("I'm using optimized IW")
+        else:
+            print("I'm using dumb IW")
 
     def fast_reset(self, exp, qubits, fast_reset):
         """
