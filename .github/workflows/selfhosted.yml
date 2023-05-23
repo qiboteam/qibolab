@@ -62,7 +62,7 @@ jobs:
       run: |
         python -m venv testenv
         source testenv/bin/activate
-        poetry install --with tests,tiiq
+        poetry install --with tests --all-extras
     - name: Test ${{ matrix.platform }}
       run: |
         sed -i 's/$PLATFORM/'${{ matrix.platform }}'/' qputests.sh
