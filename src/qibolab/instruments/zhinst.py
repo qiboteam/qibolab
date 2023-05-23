@@ -691,8 +691,8 @@ class Zurich(AbstractInstrument):
                             i += 1
                         sequence_aux.append(pulse)
                         last_pulse = pulse_qibo.start
-                    sequences_drive[i] = sequence_aux 
-                        
+                    sequences_drive[i] = sequence_aux
+
                     i = 0
                     for sequence in sequences_drive.values():
                         j = 0
