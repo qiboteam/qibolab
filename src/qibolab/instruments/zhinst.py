@@ -823,14 +823,22 @@ class Zurich(AbstractInstrument):
         rearranging_axes = [[], []]
         if len(sweepers) == 2:
             if sweepers[1].parameter is Parameter.frequency:
-                if (
+                if sweepers[0].parameter is Parameter.bias:
+                    rearranging_axes[0] += [sweepers.index(sweepers[1])]
+                    rearranging_axes[1] += [0]
+                    sweeper_changed = sweepers[1]
+                    sweepers.remove(sweeper_changed)
+                    sweepers.insert(0, sweeper_changed)
+                    warnings.warn("Sweepers were reordered")
+                elif (
                     not sweepers[0].parameter is Parameter.amplitude
                     and sweepers[0].pulses.type is not PulseType.READOUT
                 ):
                     rearranging_axes[0] += [sweepers.index(sweepers[1])]
                     rearranging_axes[1] += [0]
-                    sweepers.remove(sweepers[1])
-                    sweepers.insert(0, sweepers[1])
+                    sweeper_changed = sweepers[1]
+                    sweepers.remove(sweeper_changed)
+                    sweepers.insert(0, sweeper_changed)
                     warnings.warn("Sweepers were reordered")
 
         # TODO: Read frequency for pulses instead of qubit patch

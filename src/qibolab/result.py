@@ -112,15 +112,15 @@ class StateResults:
     """
 
     def __init__(self, data: np.ndarray):
-        self.states: npt.NDArray[np.uint32] = data
+        self.samples: npt.NDArray[np.uint32] = data
 
     def __add__(self, data):
-        return self.__class__(np.append(self.states, data.states))
+        return self.__class__(np.append(self.samples, data.samples))
 
     @lru_cache
     def probability(self, state=0):
         """Returns the statistical frequency of the specified state (0 or 1)."""
-        return abs(1 - state - np.mean(self.states, axis=0))
+        return abs(1 - state - np.mean(self.samples, axis=0))
 
     @property
     def serialize(self):
@@ -134,8 +134,8 @@ class StateResults:
     def average(self):
         """Perform states average"""
         average = self.probability(1)
-        std = np.std(self.states, axis=0, ddof=1) / np.sqrt(self.states.shape[0])
-        return AveragedStateResults(average, std=std)
+        std = np.std(self.samples, axis=0, ddof=1) / np.sqrt(self.samples.shape[0])
+        return AveragedStateResults(average, self.samples, std=std)
 
 
 # FIXME: Here I take the states from StateResult that are typed to be ints but those are not what would you do ?
@@ -149,12 +149,16 @@ class AveragedStateResults(StateResults):
     or the averages of ``StateResults``
     """
 
-    def __init__(self, states: np.ndarray, std: np.ndarray = np.array([])):
-        super().__init__(states)
+    def __init__(
+        self, statistical_frequency: np.ndarray, samples: np.ndarray = np.array([]), std: np.ndarray = np.array([])
+    ):
+        super().__init__(samples)
+        self.statistical_frequency: npt.NDArray[np.float64] = statistical_frequency
         self.std: Optional[npt.NDArray[np.float64]] = std
 
     def __add__(self, data):
         new_res = super().__add__(data)
+        new_res.statistical_frequency = np.append(self.statistical_frequency, data.statistical_frequency)
         new_res.std = np.append(self.std, data.std)
         return new_res
 

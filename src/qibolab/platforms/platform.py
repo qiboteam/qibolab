@@ -2,7 +2,7 @@ from dataclasses import asdict, replace
 
 from qibo.config import raise_error
 
-from qibolab.platforms.abstract import AbstractPlatform
+from qibolab.platforms.abstract import AbstractPlatform, Qubit
 
 
 class DesignPlatform(AbstractPlatform):
@@ -39,7 +39,7 @@ class DesignPlatform(AbstractPlatform):
 
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
-            options (:class:`qibolab.platforms.platform.ExecutionParameters`) Class holding the execution options.
+            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
             **kwargs: May need them for something
         Returns:
             Readout results acquired by after execution.
@@ -58,7 +58,7 @@ class DesignPlatform(AbstractPlatform):
 
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
-            options (:class:`qibolab.platforms.platform.ExecutionParameters`) Class holding the execution options.
+            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
             *sweepers (:class:`qibolab.sweeper.Sweeper`): Sweeper objects that specify which
                 parameters are being sweeped.
             **kwargs: May need them for something
@@ -105,10 +105,10 @@ class DesignPlatform(AbstractPlatform):
         return self.qubits[qubit].twpa.local_oscillator.power
 
     def set_attenuation(self, qubit, att):
-        raise_error(NotImplementedError, f"{self.name} does not support attenuation.")
+        self.qubits[qubit].readout.attenuation = att
 
     def get_attenuation(self, qubit):
-        raise_error(NotImplementedError, f"{self.name} does not support attenuation.")
+        return self.qubits[qubit].readout.attenuation
 
     def set_gain(self, qubit, gain):
         raise_error(NotImplementedError, f"{self.name} does not support gain.")

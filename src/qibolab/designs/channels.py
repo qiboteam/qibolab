@@ -98,6 +98,17 @@ class Channel:
             raise_error(TypeError, f"Channel filter must be dict but is {type(filter)}.")
         self._filter = filter
 
+    @property
+    def attenuation(self):
+        """Attenuation for qblox devices."""
+        if self._attenuation is None:
+            raise_error(NotImplementedError, f"Channel {self.name} does not support attenuation.")
+        return self._attenuation
+
+    @attenuation.setter
+    def attenuation(self, attenuation):
+        self._attenuation = attenuation
+
 
 @dataclass
 class ChannelMap:
