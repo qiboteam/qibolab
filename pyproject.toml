@@ -64,6 +64,7 @@ qcodes_contrib_drivers = "0.18.0"
 pyvisa-py = "0.5.3"
 qm-qua = "==1.1.1"
 qualang-tools = "==0.14.0"
+qibosoq = { git = "https://github.com/qiboteam/qibosoq.git", branch = "invert-dependancy" }
 
 [tool.poe.tasks]
 test = "pytest"
