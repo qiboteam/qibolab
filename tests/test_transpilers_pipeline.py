@@ -6,10 +6,10 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 
+from qibolab.transpilers import Pipeline
 from qibolab.transpilers.gate_decompositions import TwoQubitNatives
-from qibolab.transpilers.transpile import can_execute, transpile
 
-from .test_transpilers_connectivity import transpose_qubits
+from .test_transpilers_star_connectivity import transpose_qubits
 
 
 def generate_random_circuit(nqubits, ngates, seed=None):
@@ -65,17 +65,13 @@ def test_transpile(middle_qubit, nqubits, ngates, fuse_one_qubit, two_qubit_nati
         hardware_qubits = max(nqubits, middle_qubit + 1)
 
     circuit = generate_random_circuit(hardware_qubits, ngates)
-    transpiled_circuit, hardware_qubits = transpile(
-        circuit,
+    transpiler = Pipeline.default(
         two_qubit_natives=two_qubit_natives,
+        middle_qubit=middle_qubit,
         fuse_one_qubit=fuse_one_qubit,
-        middle_qubit=middle_qubit,
     )
-    assert can_execute(
-        transpiled_circuit,
-        two_qubit_natives=two_qubit_natives,
-        middle_qubit=middle_qubit,
-    )
+    transpiled_circuit, hardware_qubits = transpiler.transpile(circuit)
+    assert transpiler.is_satisfied(transpiled_circuit)
 
     final_state = backend.execute_circuit(transpiled_circuit).state()
     target_state = backend.execute_circuit(circuit).state()
@@ -85,13 +81,13 @@ def test_transpile(middle_qubit, nqubits, ngates, fuse_one_qubit, two_qubit_nati
 
 
 def test_can_execute_false():
+    transpiler = Pipeline.default(two_qubit_natives=TwoQubitNatives.CZ | TwoQubitNatives.iSWAP)
     circuit1 = Circuit(1)
     circuit1.add(gates.H(0))
-    assert not can_execute(circuit1, two_qubit_natives=TwoQubitNatives.CZ | TwoQubitNatives.iSWAP)
+    assert not transpiler.is_satisfied(circuit1)
     circuit2 = Circuit(2)
     circuit2.add(gates.CNOT(0, 1))
-    with pytest.raises(ValueError):
-        can_execute(circuit2, two_qubit_natives=TwoQubitNatives.CZ | TwoQubitNatives.iSWAP)
+    assert not transpiler.is_satisfied(circuit2)
     circuit3 = Circuit(3)
     circuit3.add(gates.TOFFOLI(0, 1, 2))
-    assert not can_execute(circuit3, two_qubit_natives=TwoQubitNatives.CZ | TwoQubitNatives.iSWAP)
+    assert not transpiler.is_satisfied(circuit3)
