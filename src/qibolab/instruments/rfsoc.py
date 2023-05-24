@@ -192,7 +192,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         qubits: List[Qubit],
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
-    ) -> Dict[str, Union[IntegratedResults, StateResults]]:
+    ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
         """Executes the sequence of instructions and retrieves readout results.
            Each readout pulse generates a separate acquisition.
            The relaxation_time and the number of shots have default values.
@@ -270,7 +270,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         *sweepers: Sweeper,
         average: bool,
         execution_parameters: ExecutionParameters,
-    ) -> Dict[str, Union[IntegratedResults, StateResults]]:
+    ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
         """Execute a sweep of an arbitrary number of Sweepers via recursion.
 
         Args:
@@ -354,9 +354,9 @@ class TII_RFSOC4x2(AbstractInstrument):
 
     @staticmethod
     def merge_sweep_results(
-        dict_a: Dict[str, Union[IntegratedResults, StateResults]],
-        dict_b: Dict[str, Union[IntegratedResults, StateResults]],
-    ) -> Dict[str, Union[IntegratedResults, StateResults]]:
+        dict_a: Dict[str, Union[IntegratedResults, SampleResults]],
+        dict_b: Dict[str, Union[IntegratedResults, SampleResults]],
+    ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
         """Merge two dictionary mapping pulse serial to Results object.
         If dict_b has a key (serial) that dict_a does not have, simply add it,
         otherwise sum the two results
@@ -426,7 +426,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         toti: List[float],
         totq: List[float],
         execution_parameters: ExecutionParameters,
-    ) -> Dict[str, Union[IntegratedResults, StateResults]]:
+    ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
         """Convert sweep res to qibolab dict res
 
         Args:
@@ -485,7 +485,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
         *sweepers: Sweeper,
-    ) -> Dict[str, Union[IntegratedResults, StateResults]]:
+    ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
         """Executes the sweep and retrieves the readout results.
         Each readout pulse generates a separate acquisition.
         The relaxation_time and the number of shots have default values.
