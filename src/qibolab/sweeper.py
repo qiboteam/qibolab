@@ -33,7 +33,7 @@ class Sweeper:
         .. testcode::
 
             import numpy as np
-            from qibolab.platform import create_platform
+            from qibolab import create_platform
             from qibolab.sweeper import Sweeper, Parameter
             from qibolab.pulses import PulseSequence
 
