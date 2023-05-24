@@ -169,6 +169,10 @@ class PulseShape(ABC):
         modulated_waveform_q.serial = f"Modulated_Waveform_Q(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse.frequency, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
         return (modulated_waveform_i, modulated_waveform_q)
 
+    def __eq__(self, item) -> bool:
+        """Overloads == operator"""
+        return type(item) is self.__class__
+
 
 class Rectangular(PulseShape):
     """
@@ -229,6 +233,12 @@ class Gaussian(PulseShape):
         self.pulse: Pulse = None
         self.rel_sigma: float = float(rel_sigma)
 
+    def __eq__(self, item) -> bool:
+        """Overloads == operator"""
+        if super().__eq__(item):
+            return self.rel_sigma == item.rel_sigma
+        return False
+
     @property
     def envelope_waveform_i(self) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
@@ -282,6 +292,12 @@ class Drag(PulseShape):
         self.pulse: Pulse = None
         self.rel_sigma = float(rel_sigma)
         self.beta = float(beta)
+
+    def __eq__(self, item) -> bool:
+        """Overloads == operator"""
+        if super().__eq__(item):
+            return self.rel_sigma == item.rel_sigma and self.beta == item.beta
+        return False
 
     @property
     def envelope_waveform_i(self) -> Waveform:
@@ -351,6 +367,12 @@ class IIR(PulseShape):
         self.a: np.ndarray = np.array(a)
         self.b: np.ndarray = np.array(b)
         # Check len(a) = len(b) = 2
+
+    def __eq__(self, item) -> bool:
+        """Overloads == operator"""
+        if super().__eq__(item):
+            return self.target == item.target and (self.a == item.a).all() and (self.b == item.b).all()
+        return False
 
     @property
     def pulse(self):
@@ -424,6 +446,12 @@ class SNZ(PulseShape):
         self.t_half_flux_pulse: float = t_half_flux_pulse
         self.b_amplitude: float = b_amplitude
 
+    def __eq__(self, item) -> bool:
+        """Overloads == operator"""
+        if super().__eq__(item):
+            return self.t_half_flux_pulse == item.t_half_flux_pulse and self.b_amplitude == item.b_amplitude
+        return False
+
     @property
     def envelope_waveform_i(self) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
@@ -486,6 +514,12 @@ class eCap(PulseShape):
         self.name = "eCap"
         self.pulse: Pulse = None
         self.alpha: float = float(alpha)
+
+    def __eq__(self, item) -> bool:
+        """Overloads == operator"""
+        if super().__eq__(item):
+            return self.alpha == item.alpha
+        return False
 
     @property
     def envelope_waveform_i(self) -> Waveform:
@@ -1013,6 +1047,19 @@ class Pulse:
             self._qubit,
         )
 
+    def is_equal_ignoring_start(self, item) -> bool:
+        """Check if two pulses are equal ignoring start time"""
+        return (
+            self.duration == item.duration
+            and self.amplitude == item.amplitude
+            and self.frequency == item.frequency
+            and self.relative_phase == item.relative_phase
+            and self.shape == item.shape
+            and self.channel == item.channel
+            and self.type == item.type
+            and self.qubit == item.qubit
+        )
+
     def plot(self, savefig_filename=None):
         """Plots the pulse envelope and modulated waveforms.
 
@@ -1497,7 +1544,7 @@ class PulseSequence:
                 ps = item
                 for pulse in ps.pulses:
                     self.pulses.append(pulse)
-        self.pulses.sort(key=lambda item: (item.channel, item.start))
+        self.pulses.sort(key=lambda item: (item.start, item.channel))
 
     def index(self, pulse):
         """Returns the index of a pulse in the sequence."""
