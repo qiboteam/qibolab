@@ -171,8 +171,8 @@ class MultiqubitPlatform(Platform):
                 return self.instruments[instrument].power
         raise_error(NotImplementedError, "No twpa instrument found in the platform. ")
 
-    def set_attenuation(self, qubit: Qubit, att):
-        self.ro_port[qubit.name].attenuation = att
+    def set_attenuation(self, qubit, att):
+        self.ro_port[qubit].attenuation = att
 
     def set_gain(self, qubit, gain):
         self.qd_port[qubit].gain = gain
@@ -183,8 +183,8 @@ class MultiqubitPlatform(Platform):
         elif qubit.name in self.qfm:
             self.qf_port[qubit.name].offset = bias
 
-    def get_attenuation(self, qubit: Qubit):
-        return self.ro_port[qubit.name].attenuation
+    def get_attenuation(self, qubit):
+        return self.ro_port[qubit].attenuation
 
     def get_bias(self, qubit: Qubit):
         if qubit.name in self.qbm:
@@ -434,7 +434,7 @@ class MultiqubitPlatform(Platform):
         if sweeper.qubits is not None:
             for qubit in sweeper.qubits:
                 if sweeper.parameter is Parameter.attenuation:
-                    original_value[qubit.name] = self.get_attenuation(qubit)
+                    original_value[qubit.name] = self.get_attenuation(qubit.name)
                 elif sweeper.parameter is Parameter.gain:
                     original_value[qubit.name] = self.get_gain(qubit)
                 elif sweeper.parameter is Parameter.bias:
@@ -452,7 +452,7 @@ class MultiqubitPlatform(Platform):
         if sweeper.qubits is not None:
             for qubit in sweeper.qubits:
                 if sweeper.parameter is Parameter.attenuation:
-                    self.set_attenuation(qubit, original_value[qubit.name])
+                    self.set_attenuation(qubit.name, original_value[qubit.name])
                 elif sweeper.parameter is Parameter.gain:
                     self.set_gain(qubit, original_value[qubit.name])
                 elif sweeper.parameter is Parameter.bias:
@@ -488,7 +488,7 @@ class MultiqubitPlatform(Platform):
         if sweeper.qubits is not None:
             for qubit in sweeper.qubits:
                 if sweeper.parameter is Parameter.attenuation:
-                    self.set_attenuation(qubit, value)
+                    self.set_attenuation(qubit.name, value)
                 elif sweeper.parameter is Parameter.gain:
                     self.set_gain(qubit, value)
                 elif sweeper.parameter is Parameter.bias:

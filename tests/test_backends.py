@@ -97,6 +97,24 @@ def test_excited_state_probabilities_circuit(backend):
     np.testing.assert_allclose(probs, target_probs, atol=0.05)
 
 
+@pytest.mark.qpu
+@pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
+def test_superposition_for_all_qubits(backend):
+    """Applies an H gate to each qubit of the circuit and measures the probabilities."""
+    nqubits = backend.platform.nqubits
+    probs = []
+    for q in range(nqubits):
+        circuit = Circuit(nqubits)
+        circuit.add(gates.H(q=q))
+        circuit.add(gates.M(q))
+        probs.append(backend.execute_circuit(circuit, nshots=5000).probabilities())
+        warnings.warn(f"Probabilities after an Hadamard gate applied to qubit {q}: {probs[-1]}")
+    probs = np.asarray(probs)
+    target_probs = np.repeat(a=0.5, repeats=nqubits)
+    np.testing.assert_allclose(probs.T[0], target_probs, atol=0.05)
+    np.testing.assert_allclose(probs.T[1], target_probs, atol=0.05)
+
+
 # TODO: test other platforms (qili, icarusq)
 # TODO: test_circuit_result_tensor
 # TODO: test_circuit_result_representation
