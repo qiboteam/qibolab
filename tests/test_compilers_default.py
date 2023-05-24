@@ -191,8 +191,8 @@ def test_update(platform_name, par):
     platform = create_platform(platform_name)
     new_values = np.ones(platform.nqubits)
     updates = {par: {platform.qubits[i].name: new_values[i] for i in range(platform.nqubits)}}
-    # TODO: fix the reload settings for qili1q_os2
-    if platform.name != "qili1q_os2":
+    # TODO: fix the reload settings for qblox
+    if platform.name != "qblox":
         platform.update(updates)
         for i in range(platform.nqubits):
             value = updates[par][i]

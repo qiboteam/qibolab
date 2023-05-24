@@ -13,7 +13,7 @@ def pytest_addoption(parser):
         "--platforms",
         type=str,
         action="store",
-        default="qm",
+        default="qm,qblox",
         help="qpu platforms to test on",
     )
     parser.addoption("--address", type=str, action="store", default=None, help="address for the QM simulator")
@@ -106,13 +106,7 @@ def pytest_generate_tests(metafunc):
         if "qubit" in metafunc.fixturenames:
             qubits = []
             for platform_name in platforms:
-                if platform_name == "qw5q_gold":
-                    # TODO: Find a better way to handle this instead of hardcoding
-                    # exclude witness qubit 5 because it is not connected to drive channel
-                    qubits.extend((platform_name, q) for q in range(5))
-                else:
-                    qubits.extend((platform_name, q) for q in create_platform(platform_name).qubits)
-
+                qubits.extend((platform_name, q) for q in create_platform(platform_name).qubits)
             metafunc.parametrize("platform_name,qubit", qubits)
         else:
             metafunc.parametrize("platform_name", platforms)

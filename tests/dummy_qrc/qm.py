@@ -11,7 +11,7 @@ RUNCARD = pathlib.Path(__file__).parent / "qm.yml"
 
 
 def create(runcard=RUNCARD):
-    """Create dummy platform using Quantum Machines (QM) OPXs and Rohde Schwarz local oscillators.
+    """Dummy platform using Quantum Machines (QM) OPXs and Rohde Schwarz local oscillators.
 
     Used in ``test_instruments_qm.py`` and ``test_instruments_qmsim.py``
     """

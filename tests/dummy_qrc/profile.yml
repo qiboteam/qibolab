@@ -1,3 +1,4 @@
 paths:
   qm: qm.py
+  qblox: qblox.py
   rfsoc: rfsoc.py
