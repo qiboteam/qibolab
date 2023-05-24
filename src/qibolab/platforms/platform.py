@@ -39,7 +39,7 @@ class DesignPlatform(AbstractPlatform):
 
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
-            options (:class:`qibolab.platforms.platform.ExecutionParameters`) Class holding the execution options.
+            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
             **kwargs: May need them for something
         Returns:
             Readout results acquired by after execution.
@@ -58,7 +58,7 @@ class DesignPlatform(AbstractPlatform):
 
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
-            options (:class:`qibolab.platforms.platform.ExecutionParameters`) Class holding the execution options.
+            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
             *sweepers (:class:`qibolab.sweeper.Sweeper`): Sweeper objects that specify which
                 parameters are being sweeped.
             **kwargs: May need them for something

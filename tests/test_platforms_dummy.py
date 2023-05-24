@@ -52,11 +52,18 @@ def test_dummy_single_sweep(parameter, average, acquisition, nshots):
     results = platform.sweep(sequence, options, sweeper)
 
     assert pulse.serial and pulse.qubit in results
-    results_len = (
-        len(results[pulse.qubit].magnitude)
-        if acquisition is AcquisitionType.INTEGRATION
-        else len(results[pulse.qubit].states)
-    )
+    if average:
+        results_len = (
+            len(results[pulse.qubit].magnitude)
+            if acquisition is AcquisitionType.INTEGRATION
+            else len(results[pulse.qubit].statistical_frequency)
+        )
+    else:
+        results_len = (
+            len(results[pulse.qubit].magnitude)
+            if acquisition is AcquisitionType.INTEGRATION
+            else len(results[pulse.qubit].samples)
+        )
     assert results_len == swept_points if average else int(nshots * swept_points)
 
 
@@ -103,11 +110,19 @@ def test_dummy_double_sweep(parameter1, parameter2, average, acquisition, nshots
 
     assert ro_pulse.serial and ro_pulse.qubit in results
 
-    results_len = (
-        len(results[pulse.qubit].magnitude)
-        if acquisition is AcquisitionType.INTEGRATION
-        else len(results[pulse.qubit].states)
-    )
+    if average:
+        results_len = (
+            len(results[pulse.qubit].magnitude)
+            if acquisition is AcquisitionType.INTEGRATION
+            else len(results[pulse.qubit].statistical_frequency)
+        )
+    else:
+        results_len = (
+            len(results[pulse.qubit].magnitude)
+            if acquisition is AcquisitionType.INTEGRATION
+            else len(results[pulse.qubit].samples)
+        )
+
     assert results_len == swept_points**2 if average else int(nshots * swept_points**2)
 
 
@@ -144,11 +159,18 @@ def test_dummy_single_sweep_multiplex(parameter, average, acquisition, nshots):
 
     for ro_pulse in ro_pulses.values():
         assert ro_pulse.serial and ro_pulse.qubit in results
-        results_len = (
-            len(results[ro_pulse.qubit].magnitude)
-            if acquisition is AcquisitionType.INTEGRATION
-            else len(results[ro_pulse.qubit].states)
-        )
+        if average:
+            results_len = (
+                len(results[ro_pulse.qubit].magnitude)
+                if acquisition is AcquisitionType.INTEGRATION
+                else len(results[ro_pulse.qubit].statistical_frequency)
+            )
+        else:
+            results_len = (
+                len(results[ro_pulse.qubit].magnitude)
+                if acquisition is AcquisitionType.INTEGRATION
+                else len(results[ro_pulse.qubit].samples)
+            )
         assert results_len == swept_points if average else int(nshots * swept_points)
 
 
