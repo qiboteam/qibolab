@@ -134,7 +134,7 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            readout_frequency: 5_228_700_000 #5_228_000_000
+            readout_frequency: 5_229_200_000 #5_233_200_000
             resonator_polycoef_flux: []
             drive_frequency: 4_093_830_788
             T1: 22_288
@@ -144,8 +144,8 @@ characterization:
             mean_gnd_states: 1.5953+0.1489j
             mean_exc_states: 2.5276-0.6716j
             # parameters for single shot classification
-            threshold: 1.4778
-            iq_angle: 0.687
+            threshold: 0.8836
+            iq_angle: -1.551
             # alpha: 217.492 MHz
             # To save power values on the runcard
             # ro_range_lp: -15

@@ -8,22 +8,10 @@ import laboneq._token
 import laboneq.simple as lo
 import numpy as np
 
-from qibolab.executionparameters import (
-    AcquisitionType,
-    AveragingMode,
-    ExecutionParameters,
-)
+from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.paths import qibolab_folder
 from qibolab.pulses import FluxPulse, PulseSequence, PulseType
-from qibolab.result import (
-    AveragedIntegratedResults,
-    AveragedRawWaveformResults,
-    AveragedStateResults,
-    IntegratedResults,
-    RawWaveformResults,
-    StateResults,
-)
 from qibolab.sweeper import Parameter
 
 os.environ["LABONEQ_TOKEN"] = "ciao come va?"  # or other random text
@@ -48,6 +36,7 @@ class ZhPulse:
     # FIXME: Either implement more or create and arbitrary one
     def select_pulse(self, pulse, pulse_type):
         """Pulse translation"""
+        zh_pulse = None
 
         if str(pulse.shape) == "Rectangular()":
             zh_pulse = lo.pulse_library.const(
@@ -450,15 +439,11 @@ class Zurich(AbstractInstrument):
                     exp_res = self.results.get_data(f"sequence{qubit.name}")
                     if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                         if options.averaging_mode is AveragingMode.CYCLIC:
-                            states = np.array([exp_res])
+                            data = np.array([exp_res])
                         else:
-                            states = np.array(exp_res)
-                        results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = options.results_type(
-                            data=states
-                        )
-                        results[self.sequence[f"readout{qubit.name}"][0].pulse.qubit] = options.results_type(
-                            data=states
-                        )
+                            data = np.array(exp_res)
+                        results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = options.results_type(data)
+                        results[self.sequence[f"readout{qubit.name}"][0].pulse.qubit] = options.results_type(data)
                     else:
                         results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = options.results_type(
                             data=np.array(exp_res)
@@ -490,12 +475,8 @@ class Zurich(AbstractInstrument):
 
         "Fill the sequences with pulses according to their lines in temporal order"
         # TODO: Check if they invert the order if this will still work
-        last_start = 0
         for pulse in sequence:
             zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"].append(ZhPulse(pulse))
-            # if pulse.start < last_start:
-            # warnings.warn("Pulse timing translation")
-            last_start = pulse.start
 
         "Mess that gets the sweeper and substitutes the pulse it sweeps in the right place"
         for sweeper in sweepers:
@@ -570,9 +551,6 @@ class Zurich(AbstractInstrument):
             kwargs["acquisition_type"] = ACQUISITION_TYPE[options.acquisition_type]
         kwargs["averaging_mode"] = AVERAGING_MODE[options.averaging_mode]
         exp_options = ExecutionParameters(**kwargs)
-
-        print(exp_options.acquisition_type)
-        print(exp_options.averaging_mode)
 
         exp_calib = lo.Calibration()
         """Near Time recursion loop or directly to Real Time recursion loop"""
@@ -675,7 +653,6 @@ class Zurich(AbstractInstrument):
                         time += round(pulse.pulse.duration * 1e-9, 9) + round(pulse.pulse.start * 1e-9, 9) - time
                     if isinstance(pulse, ZhSweeperLine):
                         self.play_sweep(exp, qubit, pulse, section="flux")
-                        print(pulse.zhsweeper, qubit)
                     else:
                         exp.play(signal=f"flux{qubit.name}", pulse=pulse.zhpulse)
                     i += 1
@@ -754,7 +731,7 @@ class Zurich(AbstractInstrument):
                                 + f"/runcards/{self.chip}/weights/integration_weights_optimization_qubit_{qubit.name}.npy"
                             )
                             if weights_file.is_file():
-                                print("I'm using optimized IW")
+                                optimized = True
                                 samples = np.load(
                                     str(qibolab_folder)
                                     + f"/runcards/{self.chip}/weights/integration_weights_optimization_qubit_{qubit.name}.npy",
@@ -771,7 +748,7 @@ class Zurich(AbstractInstrument):
                                         samples=samples[0],
                                     )
                             else:
-                                print("I'm using dumb IW")
+                                optimized = False
                                 "We adjust for smearing and remove smearing/2 at the end"
                                 exp.delay(signal=f"measure{qubit.name}", time=self.smearing * 1e-9)
                                 if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
@@ -804,6 +781,11 @@ class Zurich(AbstractInstrument):
                             )
                             i += 1
 
+        if optimized:
+            print("I'm using optimized IW")
+        else:
+            print("I'm using dumb IW")
+
     def fast_reset(self, exp, qubits, fast_reset):
         """
         Conditional fast reset after readout - small delay for signal processing
@@ -827,25 +809,29 @@ class Zurich(AbstractInstrument):
 
         self.signal_map = {}
 
+        sweepers = list(sweepers)
+
         dimensions = []
         if options.averaging_mode is AveragingMode.SINGLESHOT:
             dimensions = [options.nshots]
 
-        for sweep in sweepers:
-            dimensions.append(len(sweep.values))
-
-        # Re-arranging sweepers based on hardward limitations
-        # If Parameter.Frequency can only be swept in the first loop
-        # FIXME: Will not work for multiple frequency sweepers
-        sweepers = list(sweepers)
-        rearranging_axes = [[], []]
         for sweeper in sweepers:
-            if sweeper.parameter is Parameter.frequency:
-                rearranging_axes[0] += [sweepers.index(sweeper)]
-                rearranging_axes[1] += [0]
-                sweepers.remove(sweeper)
-                sweepers.insert(0, sweeper)
-                warnings.warn("Sweepers were reordered")
+            dimensions.append(len(sweeper.values))
+
+        # Re-arranging sweepers based on hardware limitations
+        # FIXME: Punchout and frequency case
+        rearranging_axes = [[], []]
+        if len(sweepers) == 2:
+            if sweepers[1].parameter is Parameter.frequency:
+                if (
+                    not sweepers[0].parameter is Parameter.amplitude
+                    and sweepers[0].pulses.type is not PulseType.READOUT
+                ):
+                    rearranging_axes[0] += [sweepers.index(sweepers[1])]
+                    rearranging_axes[1] += [0]
+                    sweepers.remove(sweepers[1])
+                    sweepers.insert(0, sweepers[1])
+                    warnings.warn("Sweepers were reordered")
 
         # TODO: Read frequency for pulses instead of qubit patch
         for qubit in qubits.values():
@@ -877,12 +863,10 @@ class Zurich(AbstractInstrument):
                     exp_res = np.moveaxis(exp_res, rearranging_axes[0], rearranging_axes[1])
                     if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                         if options.averaging_mode is AveragingMode.CYCLIC:
-                            states = np.array([exp_res])
+                            data = np.array([exp_res])
                         else:
-                            states = np.array(exp_res)
-                        results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = options.results_type(
-                            states=states
-                        )
+                            data = np.array(exp_res)
+                        results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = options.results_type(data)
                     else:
                         results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = options.results_type(
                             data=np.array(exp_res)
@@ -908,7 +892,6 @@ class Zurich(AbstractInstrument):
 
     def sweep_recursion(self, qubits, exp, exp_calib, exp_options):
         """Sweepers recursion for multiple nested Real Time sweepers"""
-        print("RT_loop")
 
         # This would reorder sweepers without the user knowing. I would like to avoid
         # it as we should keep qibocal ordering.
@@ -922,9 +905,6 @@ class Zurich(AbstractInstrument):
 
         i = len(self.sweepers) - 1
         self.sweepers.remove(sweeper)
-
-        print(sweeper.parameter)
-        print(sweeper.values)
         parameter = None
 
         if sweeper.parameter is Parameter.frequency:
@@ -972,14 +952,13 @@ class Zurich(AbstractInstrument):
         You want to avoid them so for now they are implement for a specific sweep.
         """
 
-        print("NT_loop")
+        print("NT Loop")
 
         sweeper = self.NT_sweeps[0]
 
         i = len(self.NT_sweeps) - 1
         self.NT_sweeps.remove(sweeper)
 
-        print(sweeper.parameter)
         parameter = None
 
         if sweeper.parameter is Parameter.amplitude:
@@ -1049,8 +1028,6 @@ class Zurich(AbstractInstrument):
         from laboneq.contrib.example_helpers.plotting.plot_helpers import (
             plot_simulation,
         )
-
-        print(self.exp)
 
         # Plot simulated output signals with helper function
         plot_simulation(

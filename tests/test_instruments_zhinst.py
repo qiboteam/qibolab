@@ -2,14 +2,10 @@ import laboneq.simple as lo
 import numpy as np
 import pytest
 
+from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.zhinst import ZhPulse, ZhSweeper, ZhSweeperLine, Zurich
 from qibolab.paths import qibolab_folder
 from qibolab.platform import create_tii_IQM5q
-from qibolab.platforms.platform import (
-    AcquisitionType,
-    AveragingMode,
-    ExecutionParameters,
-)
 from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse, Rectangular
 from qibolab.sweeper import Parameter, Sweeper
 
@@ -93,7 +89,7 @@ def test_zhinst_setup():
     platform = create_tii_IQM5q(RUNCARD)
     platform.setup()
     IQM5q = platform.design.instruments[0]
-    assert IQM5q.time_of_flight == 280e-9
+    assert IQM5q.time_of_flight == 280
 
 
 def test_zhsequence():
@@ -159,7 +155,7 @@ def test_experiment_execute_pulse_sequence():
     IQM5q = platform.design.instruments[0]
     IQM5q.device_setup = create_offline_device_setup()
 
-    IQM5q.emulate = True
+    # IQM5q.emulate = True
     # IQM5q.session = True
 
     sequence = PulseSequence()
@@ -178,10 +174,9 @@ def test_experiment_execute_pulse_sequence():
         relaxation_time=300e-6, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
     )
 
-    platform.execute_pulse_sequence(
-        sequence,
-        options,
-    )
+    IQM5q.sequence_zh(sequence, qubits, [])
+    IQM5q.calibration_step(qubits)
+    IQM5q.create_exp(qubits, options)
 
     # assert
     # AcquisitionType.SPECTROSCOPY

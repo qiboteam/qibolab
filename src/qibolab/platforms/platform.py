@@ -1,4 +1,4 @@
-from dataclasses import replace
+from dataclasses import asdict, replace
 
 from qibo.config import raise_error
 
@@ -50,11 +50,6 @@ class DesignPlatform(AbstractPlatform):
         if options.relaxation_time is None:
             options = replace(options, relaxation_time=self.relaxation_time)
 
-        if options.nshots is None:
-            kwargs = asdict(options)
-            kwargs["nshots"] = self.settings["settings"]["nshots"]
-            options = ExecutionParameters(**kwargs)
-
         return self.design.play(self.qubits, sequence, options)
 
     def sweep(self, sequence, options, *sweepers, **kwargs):
@@ -77,11 +72,6 @@ class DesignPlatform(AbstractPlatform):
 
         if options.relaxation_time is None:
             options = replace(options, relaxation_time=self.relaxation_time)
-
-        if options.nshots is None:
-            kwargs = asdict(options)
-            kwargs["nshots"] = self.settings["settings"]["nshots"]
-            options = ExecutionParameters(**kwargs)
 
         return self.design.sweep(
             self.qubits,
