@@ -22,10 +22,10 @@ from qibolab.pulses import Pulse, PulseType, Rectangular
 from qibolab.result import (
     AveragedIntegratedResults,
     AveragedRawWaveformResults,
-    AveragedStateResults,
+    AveragedSampleResults,
     IntegratedResults,
     RawWaveformResults,
-    StateResults,
+    SampleResults,
 )
 from qibolab.sweeper import Parameter
 
@@ -518,8 +518,8 @@ class ShotsAcquisition(Acquisition):
         shots = handles.get(f"{self.serial}_shots").fetch_all().astype(int)
         if self.average:
             # TODO: calculate std
-            return AveragedStateResults(shots)
-        return StateResults(shots)
+            return AveragedSampleResults(shots)
+        return SampleResults(shots)
 
 
 class QMPulse:
