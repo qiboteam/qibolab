@@ -37,6 +37,7 @@ import numpy as np
 from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
 from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qblox_instruments.qcodes_drivers.sequencer import Sequencer as QbloxSequencer
+from qibo.config import log
 
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.instruments.qblox_q1asm import (
@@ -52,7 +53,7 @@ from qibolab.instruments.qblox_q1asm import (
 )
 from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType, Waveform
 from qibolab.sweeper import Parameter, Sweeper
-from qibo.config import log
+
 
 class QbloxSweeperType(Enum):
     """An enumeration for the different types of sweepers supported by qblox.
@@ -208,8 +209,8 @@ class QbloxSweeper:
         self._con_step = convert[type](self._abs_step)
         self._con_stop = (self._con_start + self._con_step * (self._n) + 1) % 2**32
         self._con_values = np.array([(self._con_start + self._con_step * m) % 2**32 for m in range(self._n + 1)])
-        
-        # log.info(f"Qblox sweeper converted values: {self._con_values}") 
+
+        # log.info(f"Qblox sweeper converted values: {self._con_values}")
 
         if not (
             isinstance(self._con_start, int) and isinstance(self._con_stop, int) and isinstance(self._con_step, int)
@@ -1564,10 +1565,10 @@ class ClusterQRM_RF(AbstractInstrument):
                 self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
 
                 # DEBUG: QRM RF Save sequence to file
-                # filename = self._debug_folder + f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
-                # with open(filename, "w", encoding="utf-8") as file:
-                #     json.dump(qblox_dict[sequencer], file, indent=4)
-                #     file.write(sequencer.program)
+                filename = self._debug_folder + f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
+                with open(filename, "w", encoding="utf-8") as file:
+                    json.dump(qblox_dict[sequencer], file, indent=4)
+                    file.write(sequencer.program)
 
         # Clear acquisition memory and arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
@@ -1579,9 +1580,9 @@ class ClusterQRM_RF(AbstractInstrument):
         # self.device.print_readable_snapshot(update=True)
 
         # DEBUG: QRM RF Save Readable Snapshot
-        # filename = self._debug_folder + f"Z_{self.name}_snapshot.json"
-        # with open(filename, "w", encoding="utf-8") as file:
-        #     print_readable_snapshot(self.device, file, update=True)
+        filename = self._debug_folder + f"Z_{self.name}_snapshot.json"
+        with open(filename, "w", encoding="utf-8") as file:
+            print_readable_snapshot(self.device, file, update=True)
 
     def play_sequence(self):
         """Plays the sequence of pulses.
@@ -2676,10 +2677,10 @@ class ClusterQCM_RF(AbstractInstrument):
                 self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
 
                 # DEBUG: QCM RF Save sequence to file
-                # filename = self._debug_folder + f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
-                # with open(filename, "w", encoding="utf-8") as file:
-                #     json.dump(qblox_dict[sequencer], file, indent=4)
-                #     file.write(sequencer.program)
+                filename = self._debug_folder + f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
+                with open(filename, "w", encoding="utf-8") as file:
+                    json.dump(qblox_dict[sequencer], file, indent=4)
+                    file.write(sequencer.program)
 
         # Arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
@@ -2690,9 +2691,9 @@ class ClusterQCM_RF(AbstractInstrument):
         # self.device.print_readable_snapshot(update=True)
 
         # DEBUG: QCM RF Save Readable Snapshot
-        # filename = self._debug_folder + f"Z_{self.name}_snapshot.json"
-        # with open(filename, "w", encoding="utf-8") as file:
-        #     print_readable_snapshot(self.device, file, update=True)
+        filename = self._debug_folder + f"Z_{self.name}_snapshot.json"
+        with open(filename, "w", encoding="utf-8") as file:
+            print_readable_snapshot(self.device, file, update=True)
 
     def play_sequence(self):
         """Plays the sequence of pulses.
@@ -3430,10 +3431,10 @@ class ClusterQCM(AbstractInstrument):
                 self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
 
                 # DEBUG: QCM Save sequence to file
-                # filename = self._debug_folder + f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
-                # with open(filename, "w", encoding="utf-8") as file:
-                #     json.dump(qblox_dict[sequencer], file, indent=4)
-                #     file.write(sequencer.program)
+                filename = self._debug_folder + f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
+                with open(filename, "w", encoding="utf-8") as file:
+                    json.dump(qblox_dict[sequencer], file, indent=4)
+                    file.write(sequencer.program)
 
         # Arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
@@ -3444,9 +3445,9 @@ class ClusterQCM(AbstractInstrument):
         # self.device.print_readable_snapshot(update=True)
 
         # DEBUG: QCM Save Readable Snapshot
-        # filename = self._debug_folder + f"Z_{self.name}_snapshot.json"
-        # with open(filename, "w", encoding="utf-8") as file:
-        #     print_readable_snapshot(self.device, file, update=True)
+        filename = self._debug_folder + f"Z_{self.name}_snapshot.json"
+        with open(filename, "w", encoding="utf-8") as file:
+            print_readable_snapshot(self.device, file, update=True)
 
     def play_sequence(self):
         """Executes the sequence of instructions."""

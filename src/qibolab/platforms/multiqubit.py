@@ -72,11 +72,11 @@ class MultiqubitPlatform(AbstractPlatform):
             instance = InstrumentClass(name, address)
             self.instruments[name] = instance
             # DEBUG: debug folder = report folder
-            # if lib == "qblox":
-            #     folder = os.path.dirname(runcard) + "/debug/"
-            #     if not os.path.exists(folder):
-            #         os.makedirs(folder)
-            #     self.instruments[name]._debug_folder = folder
+            if lib == "qblox":
+                folder = os.path.dirname(runcard) + "/debug/"
+                if not os.path.exists(folder):
+                    os.makedirs(folder)
+                self.instruments[name]._debug_folder = folder
 
         # Generate qubit_instrument_map from runcard
         for qubit_name in self.qubit_channel_map:
