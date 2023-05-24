@@ -35,13 +35,6 @@ def convert_qubit(qubit: Qubit) -> rfsoc.Qubit:
 
 
 def convert_pulse(pulse: Pulse, qubits: Dict) -> rfsoc.Pulse:
-    if pulse.shape is Rectangular:
-        shape = rfsoc.Rectangular()
-    elif pulse.shape is Gaussian:
-        shape = rfsoc.Gaussian(pulse.shape.rel_sigma)
-    elif pulse.shape is Drag:
-        shape = rfsoc.Drag(pulse.shape.rel_sigma, pulse.shape.beta)
-
     adc = None
     if pulse.type is PulseType.DRIVE:
         type = "drive"
@@ -58,18 +51,34 @@ def convert_pulse(pulse: Pulse, qubits: Dict) -> rfsoc.Pulse:
     except NotImplementedError:
         lo_frequency = 0
 
-    return rfsoc.Pulse(
+    if isinstance(pulse.shape, Rectangular):
+        shape = rfsoc.Rectangular
+        shape_name = "rectangular"
+    elif isinstance(pulse.shape, Gaussian):
+        shape = rfsoc.Gaussian
+        shape_name = "gaussian"
+    elif isinstance(pulse.shape, Drag):
+        shape = rfsoc.Drag
+        shape_name = "drag"
+
+    rfsoc_pulse = shape(
         frequency=(pulse.frequency - lo_frequency) * HZ_TO_MHZ,
         amplitude=pulse.amplitude,
         relative_phase=np.degrees(pulse.relative_phase),
         start=pulse.start * NS_TO_US,
         duration=pulse.duration * NS_TO_US,
-        shape=shape,
         dac=dac,
         adc=adc,
         name=pulse.serial,
         type=type,
+        shape=shape_name,
     )
+    if isinstance(pulse.shape, Gaussian):
+        rfsoc_pulse.rel_sigma = pulse.shape.rel_sigma
+    elif isinstance(pulse.shape, Drag):
+        rfsoc_pulse.rel_sigma = pulse.shape.rel_sigma
+        rfsoc_pulse.beta = pulse.shape.beta
+    return rfsoc_pulse
 
 
 def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Qubit]) -> rfsoc.Sweeper:
@@ -406,7 +415,7 @@ class RFSoC(AbstractInstrument):
             or sweeper.parameter is Parameter.amplitude
             or sweeper.parameter is Parameter.relative_phase
         ):
-            for (idx,) in range(len(sweeper.indexes)):
+            for idx, _ in enumerate(sweeper.indexes):
                 val = np.linspace(sweeper.starts[idx], sweeper.stops[idx], sweeper.expts)
                 values.append(val)
         else:
