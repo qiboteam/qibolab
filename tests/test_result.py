@@ -195,7 +195,7 @@ def test_serialize_state(average):
         results = generate_random_state_result(5)
         output = results.serialize
         target_dict = {
-            "state_0": abs(1 - np.mean(results.samples, axis=0)),
+            "0": abs(1 - np.mean(results.samples, axis=0)),
         }
         assert output.keys() == target_dict.keys()
         for key in output:
@@ -205,7 +205,7 @@ def test_serialize_state(average):
         output = results.serialize
         avg = results
         target_dict = {
-            "state_0": abs(1 - np.mean(results.samples, axis=0)),
+            "0": abs(1 - np.mean(results.samples, axis=0)),
         }
         assert avg.serialize.keys() == target_dict.keys()
         for key in output:
@@ -280,7 +280,7 @@ def test_serialize_averaged_state_results():
     results = generate_random_avg_state_result(5)
     output = results.serialize
     target_dict = {
-        "state_0": abs(1 - np.mean(results.samples, axis=0)),
+        "0": abs(1 - np.mean(results.samples, axis=0)),
     }
     assert output.keys() == target_dict.keys()
     for key in output:
