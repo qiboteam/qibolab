@@ -1,6 +1,7 @@
 import importlib.metadata as im
 import importlib.util
 import os
+from pathlib import Path
 
 import yaml
 from qibo.config import raise_error
@@ -8,6 +9,17 @@ from qibo.config import raise_error
 __version__ = im.version(__package__)
 
 PROFILE = "QIBOLAB_PLATFORMS_FILE"
+
+
+class Profile:
+    def __init__(self, path: Path):
+        profile = yaml.safe_load(path.read_text(encoding="utf-8"))
+
+        paths = {}
+        for name, p in profile["paths"].items():
+            paths[name] = path.parent / Path(p)
+
+        self.paths = paths
 
 
 def create_platform(name, runcard=None):
@@ -22,25 +34,17 @@ def create_platform(name, runcard=None):
         from qibolab.paths import qibolab_folder
         from qibolab.platform import create_dummy
 
-        return create_dummy(qibolab_folder / "runcards/dummy.yml")
+        return create_dummy(qibolab_folder / "runcards" / "dummy.yml")
 
-    profiles = os.environ.get(PROFILE)
-    if profiles:
-        if not os.path.exists(profiles):
-            raise_error(RuntimeError, f"Profile file {profiles} does not exist.")
-    else:
-        raise_error(RuntimeError, "Please set the QIBOLAB_PLATFORMS_FILE environment variable.")
+    profiles = Path(os.environ.get(PROFILE))
+    if not os.path.exists(profiles):
+        raise_error(RuntimeError, f"Profile file {profiles} does not exist.")
 
-    with open(profiles) as stream:
-        try:
-            setup = yaml.safe_load(stream)
-            platform = setup[name]
-        except yaml.YAMLError:
-            raise_error(yaml.YAMLError, f"Error loading {profiles} yaml file.")
-        except KeyError:
-            raise_error(KeyError, f"Platform {name} not found.")
+    platform = Profile(profiles).paths[name]
 
     spec = importlib.util.spec_from_file_location("platform", platform)
+    if spec is None:
+        raise ModuleNotFoundError
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 

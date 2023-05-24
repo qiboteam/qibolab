@@ -1,4 +1,3 @@
-#qm: qm.py
-#rfsoc: rfsoc.py
-qm: /home/stavros/qiboteam/qibolab/tests/dummy_qrc/qm.py
-rfsoc: /home/stavros/qiboteam/qibolab/tests/dummy_qrc/rfsoc.py
+paths:
+  qm: qm.py
+  rfsoc: rfsoc.py
