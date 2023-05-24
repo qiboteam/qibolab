@@ -51,7 +51,7 @@ class QibolabBackend(NumpyBackend):
         """
         readout = circuit_result.execution_result
         for gate, sequence in measurement_map.items():
-            _samples = (readout[pulse.serial].shots for pulse in sequence.pulses)
+            _samples = (readout[pulse.serial].samples for pulse in sequence.pulses)
             samples = list(filter(lambda x: x is not None, _samples))
             gate.result.backend = self
             gate.result.register_samples(np.array(samples).T)
@@ -137,7 +137,7 @@ class QibolabBackend(NumpyBackend):
         for qubit in qubits:
             # execution_result[qubit] provides the latest acquisition data for the corresponding qubit
             qubit_result = result.execution_result[qubit]
-            if qubit_result.states is None:
+            if qubit_result.samples is None:
                 mean_state0 = complex(self.platform.qubits[qubit].mean_gnd_states)
                 mean_state1 = complex(self.platform.qubits[qubit].mean_exc_states)
                 measurement = complex(qubit_result.I, qubit_result.Q)
@@ -147,7 +147,7 @@ class QibolabBackend(NumpyBackend):
                 p = (d1**2 + d01**2 - d0**2) / 2 / d01**2
                 probabilities.append([p, 1 - p])
             else:
-                outcomes, counts = np.unique(qubit_result.states, return_counts=True)
+                outcomes, counts = np.unique(qubit_result.samples, return_counts=True)
                 probabilities.append([0, 0])
                 for i, c in zip(outcomes.astype(int), counts):
                     probabilities[-1][i] = c / result.nshots
