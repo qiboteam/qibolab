@@ -1,0 +1,25 @@
+nqubits: 1
+qubits: [0]
+resonator_type: 3D
+topology:
+- [1]
+settings:
+    relaxation_time: 100000
+    sampling_rate: 9830400000
+    adc_trig_offset: 200
+    max_gain: 32000
+
+native_gates:
+    single_qubit:
+        0:
+            RX: {duration: 30, amplitude: 0.052326117418228534, frequency: 5542351373,
+                shape: Rectangular(), type: qd, start: 0, phase: 0}
+            MZ: {duration: 600, amplitude: 0.027, frequency: 7371342578, shape: Rectangular(),
+                type: ro, start: 0, phase: 0}
+    two_qubits: {}
+characterization:
+    single_qubit:
+        0: {readout_frequency: 7371342578, drive_frequency: 5542351373, pi_pulse_amplitude: 0.052326117418228534,
+            T1: 12649.629158599057, T2: 4610.783737888784, threshold: -0.7844653066298679,
+            iq_angle: 0.8230259423352915, mean_gnd_states: (-1.8355447154471543+1.2579772357723578j),
+            mean_exc_states: (-0.13880975609756097-0.5715040650406505j)}

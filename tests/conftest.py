@@ -1,8 +1,10 @@
+import os
+import pathlib
 from importlib import import_module
 
 import pytest
 
-from qibolab import create_platform
+from qibolab import PROFILE, create_platform
 from qibolab.platforms.multiqubit import MultiqubitPlatform
 
 
@@ -11,7 +13,7 @@ def pytest_addoption(parser):
         "--platforms",
         type=str,
         action="store",
-        default="qili1q_os2,qw5q_gold",
+        default="qm",
         help="qpu platforms to test on",
     )
     parser.addoption("--address", type=str, action="store", default=None, help="address for the QM simulator")
@@ -29,6 +31,15 @@ def pytest_addoption(parser):
         default=None,
         help="folder to save QM simulator test regressions",
     )
+
+
+def set_platform_profile():
+    os.environ[PROFILE] = str(pathlib.Path(__file__).parent / "dummy_qrc" / "profile.yml")
+
+
+@pytest.fixture
+def dummy_qrc():
+    set_platform_profile()
 
 
 def load_from_platform(platform, name):
@@ -51,6 +62,7 @@ def load_from_platform(platform, name):
 
 @pytest.fixture(scope="module")
 def instrument(request):
+    set_platform_profile()
     platform = create_platform(request.param[0])
     inst, _ = load_from_platform(platform, request.param[1])
     inst.connect()
@@ -61,11 +73,6 @@ def instrument(request):
 def pytest_generate_tests(metafunc):
     platforms = metafunc.config.option.platforms
     platforms = [] if platforms is None else platforms.split(",")
-
-    if metafunc.module.__name__ == "tests.test_instruments_qm":
-        pytest.skip()
-    if metafunc.module.__name__ == "tests.test_instruments_rfsoc":
-        pytest.skip()
 
     if "simulator" in metafunc.fixturenames:
         address = metafunc.config.option.address
@@ -78,6 +85,7 @@ def pytest_generate_tests(metafunc):
             metafunc.parametrize("folder", [folder], indirect=True)
 
     if metafunc.module.__name__ == "tests.test_instruments_qblox":
+        set_platform_profile()
         for platform_name in platforms:
             if not isinstance(create_platform(platform_name), MultiqubitPlatform):
                 pytest.skip("Skipping qblox tests because no platform is available.")
@@ -94,6 +102,7 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize("backend", platforms, indirect=True)
 
     elif "platform_name" in metafunc.fixturenames:
+        set_platform_profile()
         if "qubit" in metafunc.fixturenames:
             qubits = []
             for platform_name in platforms:

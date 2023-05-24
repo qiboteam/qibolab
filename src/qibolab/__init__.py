@@ -7,8 +7,10 @@ from qibo.config import raise_error
 
 __version__ = im.version(__package__)
 
+PROFILE = "QIBOLAB_PLATFORMS_FILE"
 
-def create_platform(name):
+
+def create_platform(name, runcard=None):
     """Platform for controlling quantum devices.
 
     Args:
@@ -22,7 +24,7 @@ def create_platform(name):
 
         return create_dummy(qibolab_folder / "runcards/dummy.yml")
 
-    profiles = os.environ.get("QIBOLAB_PLATFORMS_FILE")
+    profiles = os.environ.get(PROFILE)
     if profiles:
         if not os.path.exists(profiles):
             raise_error(RuntimeError, f"Profile file {profiles} does not exist.")
@@ -42,4 +44,6 @@ def create_platform(name):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
-    return module.create()
+    if runcard is None:
+        return module.create()
+    return module.create(runcard)

@@ -7,9 +7,6 @@ from qibolab.instruments.qm import QMOPX, QMPulse, Sequence
 from qibolab.paths import qibolab_folder
 from qibolab.pulses import FluxPulse, Pulse, ReadoutPulse, Rectangular
 
-RUNCARD = qibolab_folder / "runcards" / "qw5q_gold.yml"
-DUMMY_ADDRESS = "0.0.0.0:0"
-
 
 def test_qmpulse():
     pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
@@ -98,10 +95,10 @@ def test_qmpulse_previous_and_next_flux():
 # TODO: Test connect/disconnect
 
 
-def test_qmopx_setup():
-    platform = create_tii_qw5q_gold(RUNCARD, simulation_duration=1000, address=DUMMY_ADDRESS)
+def test_qmopx_setup(dummy_qrc):
+    platform = create_platform("qm")
     platform.setup()
-    opx = platform.design.instruments[0]
+    opx = platform.instruments[0]
     assert opx.time_of_flight == 280
 
 
@@ -109,17 +106,17 @@ def test_qmopx_setup():
 
 
 def test_qmopx_register_analog_output_controllers():
-    opx = QMOPX("test", DUMMY_ADDRESS)
+    opx = QMOPX("test", "0.0.0.0:0")
     opx.config.register_analog_output_controllers([("con1", 1), ("con1", 2)])
     controllers = opx.config.controllers
     assert controllers == {"con1": {"analog_outputs": {1: {"offset": 0.0}, 2: {"offset": 0.0}}}}
 
-    opx = QMOPX("test", DUMMY_ADDRESS)
+    opx = QMOPX("test", "0.0.0.0:0")
     opx.config.register_analog_output_controllers([("con1", 1), ("con1", 2)], offset=0.005)
     controllers = opx.config.controllers
     assert controllers == {"con1": {"analog_outputs": {1: {"offset": 0.005}, 2: {"offset": 0.005}}}}
 
-    opx = QMOPX("test", DUMMY_ADDRESS)
+    opx = QMOPX("test", "0.0.0.0:0")
     filters = {"feedforward": [1, -1], "feedback": [0.95]}
     opx.config.register_analog_output_controllers(
         [
@@ -134,9 +131,9 @@ def test_qmopx_register_analog_output_controllers():
     }
 
 
-def test_qmopx_register_drive_element():
-    platform = create_tii_qw5q_gold(RUNCARD, simulation_duration=1000, address=DUMMY_ADDRESS)
-    opx = platform.design.instruments[0]
+def test_qmopx_register_drive_element(dummy_qrc):
+    platform = create_platform("qm")
+    opx = platform.instruments[0]
     opx.config.register_drive_element(platform.qubits[0], intermediate_frequency=int(1e6))
     assert "drive0" in opx.config.elements
     target_element = {
@@ -149,9 +146,9 @@ def test_qmopx_register_drive_element():
     assert opx.config.mixers["mixer_drive0"] == target_mixer
 
 
-def test_qmopx_register_readout_element():
-    platform = create_tii_qw5q_gold(RUNCARD, simulation_duration=1000, address=DUMMY_ADDRESS)
-    opx = platform.design.instruments[0]
+def test_qmopx_register_readout_element(dummy_qrc):
+    platform = create_platform("qm")
+    opx = platform.instruments[0]
     opx.config.register_readout_element(platform.qubits[2], int(1e6), opx.time_of_flight, opx.smearing)
     assert "readout2" in opx.config.elements
     target_element = {
@@ -171,9 +168,9 @@ def test_qmopx_register_readout_element():
 
 
 @pytest.mark.parametrize("pulse_type,qubit", [("drive", 2), ("readout", 1)])
-def test_qmopx_register_pulse(pulse_type, qubit):
-    platform = create_tii_qw5q_gold(RUNCARD, simulation_duration=1000, address=DUMMY_ADDRESS)
-    opx = platform.design.instruments[0]
+def test_qmopx_register_pulse(dummy_qrc, pulse_type, qubit):
+    platform = create_platform("qm")
+    opx = platform.instruments[0]
     if pulse_type == "drive":
         pulse = platform.create_RX_pulse(qubit, start=0)
         target_pulse = {
@@ -203,10 +200,10 @@ def test_qmopx_register_pulse(pulse_type, qubit):
     assert opx.config.elements[f"{pulse_type}{qubit}"]["operations"][pulse.serial] == pulse.serial
 
 
-def test_qmopx_register_flux_pulse():
+def test_qmopx_register_flux_pulse(dummy_qrc):
     qubit = 2
-    platform = create_tii_qw5q_gold(RUNCARD, simulation_duration=1000, address=DUMMY_ADDRESS)
-    opx = platform.design.instruments[0]
+    platform = create_platform("qm")
+    opx = platform.instruments[0]
     pulse = FluxPulse(0, 30, 0.005, Rectangular(), platform.qubits[qubit].flux.name, qubit)
     target_pulse = {
         "operation": "control",
@@ -221,10 +218,10 @@ def test_qmopx_register_flux_pulse():
 
 
 @pytest.mark.parametrize("duration", [0, 30])
-def test_qmopx_register_baked_pulse(duration):
-    platform = create_tii_qw5q_gold(RUNCARD, simulation_duration=1000, address=DUMMY_ADDRESS)
+def test_qmopx_register_baked_pulse(dummy_qrc, duration):
+    platform = create_platform("qm")
     qubit = platform.qubits[3]
-    opx = platform.design.instruments[0]
+    opx = platform.instruments[0]
     opx.config.register_flux_element(qubit)
     pulse = FluxPulse(3, duration, 0.05, Rectangular(), qubit.flux.name, qubit=qubit.name)
     qmpulse = QMPulse(pulse)
