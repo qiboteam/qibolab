@@ -25,6 +25,7 @@ NS_TO_US = 1e-3
 
 
 def convert_qubit(qubit: Qubit) -> rfsoc.Qubit:
+    """Convert `qibolab.platforms.abstract.Qubit` to `qibosoq.abstract.Qubit`"""
     if qubit.flux:
         dac = qubit.flux.ports[0][1]
         bias = qubit.flux.bias
@@ -35,6 +36,8 @@ def convert_qubit(qubit: Qubit) -> rfsoc.Qubit:
 
 
 def convert_pulse(pulse: Pulse, qubits: Dict) -> rfsoc.Pulse:
+    """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`"""
+
     adc = None
     if pulse.type is PulseType.DRIVE:
         type = "drive"
@@ -82,7 +85,7 @@ def convert_pulse(pulse: Pulse, qubits: Dict) -> rfsoc.Pulse:
 
 
 def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Qubit]) -> rfsoc.Sweeper:
-    """Create a RfsocSweep oject from a Sweeper objects"""
+    """Convert `qibolab.sweeper.Sweeper` to `qibosoq.abstract.Sweeper`"""
 
     parameters = []
     starts = []
@@ -98,7 +101,6 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Qubit]
             starts.append(sweeper.values[0] + qubits[qubit].flux.bias)
             stops.append(sweeper.values[-1] + qubits[qubit].flux.bias)
 
-        print(stops, any(np.abs(stops)) > 1)
         if max(np.abs(starts)) > 1 or max(np.abs(stops)) > 1:
             raise ValueError("Sweeper amplitude is set to reach values higher than 1")
     else:
@@ -146,7 +148,7 @@ class RFSoC(AbstractInstrument):
         super().__init__(name, address=address)
         self.host, self.port = address.split(":")
         self.port = int(self.port)
-        self.cfg = rfsoc.Config()  # Containes the main settings
+        self.cfg = rfsoc.Config()
 
     def connect(self):
         """Empty method to comply with AbstractInstrument interface."""
@@ -162,28 +164,20 @@ class RFSoC(AbstractInstrument):
 
     def setup(
         self,
-        sampling_rate: int = None,
         relaxation_time: int = None,
         adc_trig_offset: int = None,
-        max_gain: int = None,
-    ):  # TODO rethink arguments
+    ):
         """Changes the configuration of the instrument.
 
         Args:
-            sampling_rate (int): sampling rate of the RFSoC (Hz).
             relaxation_time (int): delay before readout (ns).
             adc_trig_offset (int): single offset for all adc triggers
                                    (tproc CLK ticks).
-            max_gain (int): maximum output power of the DAC (DAC units).
         """
-        if sampling_rate is not None:
-            self.cfg.sampling_rate = sampling_rate
         if relaxation_time is not None:
             self.cfg.repetition_duration = relaxation_time
         if adc_trig_offset is not None:
             self.cfg.adc_trig_offset = adc_trig_offset
-        if max_gain is not None:
-            self.cfg.max_gain = max_gain
 
     def _execute_pulse_sequence(
         self,
@@ -205,7 +199,6 @@ class RFSoC(AbstractInstrument):
         Returns:
             Lists of I and Q value measured
         """
-        # TODO typehint qubits is wrong, it's dictionary
 
         server_commands = {
             "operation_code": "execute_pulse_sequence",
@@ -239,7 +232,6 @@ class RFSoC(AbstractInstrument):
         Returns:
             Lists of I and Q value measured
         """
-        # TODO typehint qubits is wrong, it's dictionary
 
         server_commands = {
             "operation_code": "execute_sweeps",
@@ -301,7 +293,7 @@ class RFSoC(AbstractInstrument):
            The relaxation_time and the number of shots have default values.
 
         Args:
-            qubits (list): List of `qibolab.platforms.utils.Qubit` objects
+            qubits (dict): List of `qibolab.platforms.utils.Qubit` objects
                            passed from the platform.
             sequence (`qibolab.pulses.PulseSequence`). Pulse sequence to play.
             nshots (int): Number of repetitions (shots) of the experiment.
@@ -615,25 +607,3 @@ class RFSoC(AbstractInstrument):
                     qubits[idx].flux.bias = initial_biases[idx]
 
         return results
-
-
-class TII_RFSOC4x2(RFSoC):
-    """RFSoC object for Xilinx RFSoC4x2"""
-
-    def __init__(self, name: str, address: str):
-        """Define IP, port and rfsoc.Config"""
-        super().__init__(name, address=address)
-        self.host, self.port = address.split(":")
-        self.port = int(self.port)
-        self.cfg = rfsoc.Config()
-
-
-class TII_ZCU111(RFSoC):
-    """RFSoC object for Xilinx ZCU111"""
-
-    def __init__(self, name: str, address: str):
-        """Define IP, port and rfsoc.Config"""
-        super().__init__(name, address=address)
-        self.host, self.port = address.split(":")
-        self.port = int(self.port)
-        self.cfg = rfsoc.Config()
