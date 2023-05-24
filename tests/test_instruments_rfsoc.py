@@ -2,8 +2,9 @@
 
 import numpy as np
 import pytest
+from qibosoq.abstracts import Config as QickProgramConfig
 
-from qibolab.instruments.rfsoc import QickProgramConfig, convert_sweep
+from qibolab.instruments.rfsoc import convert_sweep
 from qibolab.paths import qibolab_folder
 from qibolab.platform import create_tii_rfsoc4x2, create_tii_zcu111
 from qibolab.platforms.abstract import Qubit
@@ -31,9 +32,7 @@ def test_tii_rfsoc4x2_setup():
     platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
     instrument = platform.design.instruments[0]
 
-    target_cfg = QickProgramConfig(
-        sampling_rate=5_000_000_000, repetition_duration=1_000, adc_trig_offset=150, max_gain=30_000
-    )
+    target_cfg = QickProgramConfig(repetition_duration=1_000, adc_trig_offset=150)
 
     instrument.setup(sampling_rate=5_000_000_000, relaxation_time=1_000, adc_trig_offset=150, max_gain=30_000)
 
