@@ -5092,8 +5092,9 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [extras]
 qblox = ["qblox-instruments", "qcodes", "qcodes_contrib_drivers", "pyvisa-py"]
 qm = ["qm-qua", "qualang-tools"]
+zh = ["laboneq"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "817fb5e2af3d81b5c9d1878d3e754175e12aa351a191361d855ce7d20e113315"
+content-hash = "b143f287247a4a638395f3f8e1f12bbd3a33d76e0ef026b757750c0a2d60cb1a"
