@@ -175,7 +175,7 @@ characterization:
             mean_exc_states: -1.2034+2.1979j
             # parameters for single shot classification
             threshold: 0.4527
-            iq_angle: -0.962 
+            iq_angle: -0.962
             # alpha: 208 MHz
         3:
             readout_frequency: 5.8060e+9
