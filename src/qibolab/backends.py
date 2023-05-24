@@ -8,6 +8,7 @@ from qibo.config import log, raise_error
 from qibo.states import CircuitResult
 
 from qibolab import __version__ as qibolab_version
+from qibolab.compilers import Compiler
 from qibolab.platform import Platform
 from qibolab.platforms.abstract import AbstractPlatform
 from qibolab.transpilers import Pipeline
@@ -26,6 +27,7 @@ class QibolabBackend(NumpyBackend):
             "numpy": self.np.__version__,
             "qibolab": qibolab_version,
         }
+        self.compiler = Compiler.default()
         self.transpiler = Pipeline.default(self.platform.two_qubit_natives)
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
@@ -33,6 +35,25 @@ class QibolabBackend(NumpyBackend):
 
     def apply_gate_density_matrix(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
+
+    def assign_measurements(self, measurement_map, circuit_result):
+        """Assigning measurement outcomes to :class:`qibo.states.MeasurementResult` for each gate.
+
+        This allows properly obtaining the measured shots from the :class:`qibo.states.CircuitResult`
+        object returned by the circuit execution.
+
+        Args:
+            measurement_map (dict): Map from each measurement gate to the sequence of
+                readout pulses implementing it.
+            circuit_result (:class:`qibo.states.CircuitResult`): Circuit result object
+                containing the readout measurement shots. This is created in ``execute_circuit``.
+        """
+        readout = circuit_result.execution_result
+        for gate, sequence in measurement_map.items():
+            _samples = (readout[pulse.serial].shots for pulse in sequence.pulses)
+            samples = list(filter(lambda x: x is not None, _samples))
+            gate.result.backend = self
+            gate.result.register_samples(np.array(samples).T)
 
     def execute_circuit(
         self, circuit, initial_state=None, nshots=None, fuse_one_qubit=False, check_transpiled=False
@@ -55,7 +76,7 @@ class QibolabBackend(NumpyBackend):
             CircuitResult object containing the results acquired from the execution.
         """
         if isinstance(initial_state, type(circuit)):
-            self.execute_circuit(
+            return self.execute_circuit(
                 circuit=initial_state + circuit,
                 nshots=nshots,
                 fuse_one_qubit=fuse_one_qubit,
@@ -77,7 +98,7 @@ class QibolabBackend(NumpyBackend):
                 self.transpiler.check_execution(circuit, native_circuit)
 
         # Transpile the native circuit into a sequence of pulses ``PulseSequence``
-        sequence = self.platform.transpile(native_circuit)
+        sequence, measurement_map = self.compiler.compile(native_circuit, self.platform)
 
         if not self.platform.is_connected:
             self.platform.connect()
@@ -87,19 +108,8 @@ class QibolabBackend(NumpyBackend):
         self.platform.start()
         readout = self.platform.execute_pulse_sequence(sequence, nshots)
         self.platform.stop()
-        result = CircuitResult(self, native_circuit, readout, nshots)
-
-        # Register measurement outcomes
-        if isinstance(readout, dict):
-            for gate in native_circuit.queue:
-                if isinstance(gate, gates.M):
-                    samples = []
-                    for serial in gate.pulses:
-                        shots = readout[serial].shots
-                        if shots is not None:
-                            samples.append(shots)
-                    gate.result.backend = self
-                    gate.result.register_samples(np.array(samples).T)
+        result = CircuitResult(self, circuit, readout, nshots)
+        self.assign_measurements(measurement_map, result)
         return result
 
     def circuit_result_tensor(self, result):
