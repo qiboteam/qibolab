@@ -1,0 +1,141 @@
+import random
+
+import networkx as nx
+from qibo.config import log, raise_error
+from qibo.models import Circuit
+
+from qibolab.transpilers.abstract import Placer
+from qibolab.transpilers.routing import ShortestPathsRouting
+
+
+class Trivial(Placer):
+    """Place qubits trivially, same logical and physical placement"""
+
+    def __init__(self, connectivity=None):
+        self.connectivity = connectivity
+
+    def place(self, circuit: Circuit):
+        return dict(zip(range(circuit.nqubits)), range(circuit.nqubits))
+
+
+class Custom(Placer):
+    """Define a custom initial qubit mapping.
+    Attr:
+        map (list): List reporting the circuit to chip qubit mapping,
+        example [1,2,0] to assign the logical to physical qubit mapping.
+    """
+
+    def __init__(self, map, connectivity=None):
+        self.connectivity = connectivity
+        self._map = map
+        # Keep connectivity so that it can be used to check if the custom mapping is compatible
+
+    def place(self, circuit=None):
+        return dict(zip(range(len(self._map)), self._map))
+
+
+class Subgraph(Placer):
+    """
+    Subgraph isomorphism qubit placer,
+        NP-complete it can take a long time for large circuits.
+        This initialization method may fail for very short circuits.
+    """
+
+    def __init__(self, connectivity):
+        self.connectivity = connectivity
+
+    def place(self, circuit: Circuit):
+        # TODO fix networkx.GM.mapping for small subgraphs
+        circuit_repr = self.create_circuit_repr(circuit)
+        if len(circuit_repr) < 3:
+            raise_error(ValueError, "Circuit must contain at least two two qubit gates to implement subgraph placement")
+        H = nx.Graph()
+        H.add_nodes_from([i for i in range(self._connectivity.number_of_nodes())])
+        GM = nx.algorithms.isomorphism.GraphMatcher(self._connectivity, H)
+        i = 0
+        H.add_edge(circuit_repr[i][0], circuit_repr[i][1])
+        while GM.subgraph_is_monomorphic() == True:
+            i += 1
+            H.add_edge(circuit_repr[i][0], circuit_repr[i][1])
+            GM = nx.algorithms.isomorphism.GraphMatcher(self._connectivity, H)
+            if self._connectivity.number_of_edges() == H.number_of_edges() or i == len(self._circuit_repr) - 1:
+                keys = list(GM.mapping.keys())
+                keys.sort()
+                return {i: GM.mapping[i] for i in keys}
+        keys = list(GM.mapping.keys())
+        keys.sort()
+        return {i: GM.mapping[i] for i in keys}
+
+
+class Random(Placer):
+    """
+    Random initialization with greedy policy, let a maximum number of 2-qubit
+        gates can be applied without introducing any SWAP gate
+    """
+
+    def __init__(self, connectivity, samples=100):
+        self.connectivity = connectivity
+        self._samples = samples
+        self._circuit_repr = None
+
+    def place(self, circuit):
+        self._circuit_repr = self.create_circuit_repr(circuit)
+        nodes = self._connectivity.number_of_nodes()
+        keys = list(self._connectivity.nodes())
+        final_mapping = dict(zip(keys, list(range(nodes))))
+        final_graph = nx.relabel_nodes(self._connectivity, final_mapping)
+        final_cost = self.cost(final_graph)
+        for _ in range(self._samples):
+            mapping = dict(zip(keys, random.sample(range(nodes), nodes)))
+            graph = nx.relabel_nodes(self._connectivity, mapping)
+            cost = self.cost(graph)
+            if cost == 0:
+                return mapping
+            if cost < final_cost:
+                final_graph = graph
+                final_mapping = mapping
+                final_cost = cost
+        return final_mapping
+
+    def cost(self, graph):
+        """
+        Args:
+            graph (networkx.Graph): current hardware qubit mapping.
+
+        Returns:
+            (int): lengh of the reduced circuit.
+        """
+        new_circuit = self._circuit_repr.copy()
+        while new_circuit != [] and (new_circuit[0][0], new_circuit[0][1]) in graph.edges():
+            del new_circuit[0]
+        return len(new_circuit)
+
+
+class Backpropagation(Placer):
+    """
+    Place qubits based on the algorithm proposed in
+    https://doi.org/10.48550/arXiv.1809.02573
+    """
+
+    def __init__(self, connectivity, routing_algorithm, iterations=1, max_lookahead_gates=None):
+        self.connectivity = connectivity
+        self._routing = routing_algorithm
+        self._iterations = iterations
+        self._max_gates = max_lookahead_gates
+
+    def place(self, circuit):
+        # Start with trivial placement
+        self._circuit_repr = self.create_circuit_repr(circuit)
+        initial_placement = dict(zip(range(circuit.nqubits)), range(circuit.nqubits))
+        for _ in range(self._iterations):
+            final_placement = self.forward_step(initial_placement)
+            initial_placement = self.backward_step(final_placement)
+        return initial_placement
+
+    def forward_step(initial_placement):
+        # TODO: requires block circuit
+        pass
+
+    def backward_step(final_placement):
+        # TODO: requires block circuit
+        pass

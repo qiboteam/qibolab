@@ -5,7 +5,7 @@ from qibo import gates
 from qibo.models import Circuit
 
 from qibolab.transpilers.gate_decompositions import TwoQubitNatives
-from qibolab.transpilers.general_connectivity import GeneralConnectivity
+from qibolab.transpilers.routing import GeneralConnectivity
 
 
 def generate_random_circuit(nqubits, ngates, seed=42):

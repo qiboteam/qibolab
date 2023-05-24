@@ -1,8 +1,3 @@
-import random
-from dataclasses import dataclass
-from enum import Enum, auto
-from typing import Optional, Union
-
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
@@ -13,18 +8,29 @@ from qibo.models import Circuit
 
 from qibolab.transpilers.abstract import Transpiler
 
-DEFAULT_INIT_SAMPLES = 100
+
+def create_circuit_repr(circuit):
+    """Translate qibo circuit into a list of two qubit gates to be used by the transpiler.
+
+    Args:
+        circuit (:class:`qibo.models.Circuit`): circuit to be transpiled.
+
+    Returns:
+        translated_circuit (list): list containing qubits targeted by two qubit gates
+    """
+    translated_circuit = []
+    for index, gate in enumerate(circuit.queue):
+        if len(gate.qubits) == 2:
+            gate_qubits = list(gate.qubits)
+            gate_qubits.sort()
+            gate_qubits.append(index)
+            translated_circuit.append(gate_qubits)
+        if len(gate.qubits) >= 3:
+            raise_error(ValueError, "Gates targeting more than 2 qubits are not supported")
+    return translated_circuit
 
 
-class QubitInitMethod(Enum):
-    """A class to define the initial qubit mapping methods."""
-
-    greedy = auto()
-    subgraph = auto()
-    custom = auto()
-
-
-class GeneralConnectivity(Transpiler):
+class ShortestPaths(Transpiler):
     """A class to perform initial qubit mapping and connectivity matching.
 
     Properties:
@@ -42,12 +48,8 @@ class GeneralConnectivity(Transpiler):
         _added_swaps (int): number of swaps added to the circuit to match connectivity.
     """
 
-    def __init__(self, connectivity, init_method="greedy", init_samples=None, sampling_split=1.0, verbose=False):
+    def __init__(self, connectivity, sampling_split=1.0, verbose=False):
         self.connectivity = connectivity
-        self.init_method = init_method
-        if self.init_method is QubitInitMethod.greedy and init_samples is None:
-            init_samples = DEFAULT_INIT_SAMPLES
-        self.init_samples = init_samples
         self.sampling_split = sampling_split
         self.verbose = verbose
 
@@ -94,34 +96,23 @@ class GeneralConnectivity(Transpiler):
         self.tlog("Circuit respects connectivity.")
         return True
 
-    def transpile(self, circuit):
-        """Qubit mapping initialization and circuit connectivity matching.
+    def transpile(self, circuit, initial_layout):
+        """Circuit connectivity matching.
 
         Args:
             circuit (:class:`qibo.models.Circuit`): circuit to be matched to hardware connectivity.
+            initial_layout (dict): initial qubit mapping.
 
         Returns:
             hardware_mapped_circuit (qibo.Circuit): circut mapped to hardware topology.
             final_mapping (dict): final qubit mapping.
-            init_mapping (dict): initial qubit mapping.
-            added_swaps (int): number of swap gates added.
         """
         self._circuit_position = 0
         self._added_swaps = 0
-        self.create_circuit_repr(circuit)
+        self._circuit_repr = create_circuit_repr(circuit)
         keys = list(self._connectivity.nodes())
-        if self._init_method is QubitInitMethod.greedy:
-            self.greedy_init()
-        elif self._init_method is QubitInitMethod.subgraph:
-            if len(self._circuit_repr) < 2:
-                raise_error(
-                    ValueError,
-                    "The circuit must contain at least two two-qubit gates in order to apply subgraph initialization",
-                )
-            self.subgraph_init()
-        elif self._init_method is QubitInitMethod.custom:
-            self._mapping = dict(zip(keys, self._mapping.values()))
-            self._graph = nx.relabel_nodes(self._connectivity, self._mapping)
+        self._mapping = dict(zip(keys, initial_layout.values()))
+        self._graph = nx.relabel_nodes(self._connectivity, self._mapping)
         # Inverse permutation
         init_qubit_map = np.argsort(list(self._mapping.values()))
         init_mapping = dict(zip(keys, init_qubit_map))
@@ -133,23 +124,9 @@ class GeneralConnectivity(Transpiler):
         final_mapping = {key: init_qubit_map[self._qubit_map[i]] for i, key in enumerate(keys)}
         hardware_mapped_circuit = self.init_mapping_circuit(self._transpiled_circuit, init_qubit_map)
 
-        # TODO: Are all those returns needed?
-        # return hardware_mapped_circuit, final_mapping, init_mapping, self._added_swaps
         self._initial_map = init_mapping
         self._final_map = final_mapping
         return hardware_mapped_circuit, [final_mapping[i] for i in range(circuit.nqubits)]
-
-    @property
-    def initial_map(self):
-        return self._initial_map
-
-    @property
-    def final_map(self):
-        return self._final_map
-
-    @property
-    def added_swaps(self):
-        return self._added_swaps
 
     def transpiler_step(self, qibo_circuit):
         """Transpilation step. Find new mapping, add swap gates and apply gates that can be run with this configuration.
@@ -173,31 +150,17 @@ class GeneralConnectivity(Transpiler):
         self._circuit_repr = self.reduce(self._graph)
         self.add_gates(qibo_circuit, len_2q_circuit - len(self._circuit_repr))
 
-    def custom_qubit_mapping(self, map):
-        """Define a custom initial qubit mapping.
-
-        Args:
-            map (list): List reporting the circuit to chip qubit mapping,
-            example [1,2,0] to assign the logical to physical qubit mapping.
-        """
-        self.init_method = QubitInitMethod.custom
-        self._mapping = dict(zip(range(len(map)), map))
+    @property
+    def initial_map(self):
+        return self._initial_map
 
     @property
-    def connectivity(self):
-        return self._connectivity
+    def final_map(self):
+        return self._final_map
 
-    @connectivity.setter
-    def connectivity(self, connectivity):
-        """Set the hardware chip connectivity.
-        Args:
-            connectivity (networkx graph): define connectivity.
-        """
-
-        if isinstance(connectivity, nx.Graph):
-            self._connectivity = connectivity
-        else:
-            raise_error(TypeError, "Use networkx graph for custom connectivity")
+    @property
+    def added_swaps(self):
+        return self._added_swaps
 
     @property
     def sampling_split(self):
@@ -222,54 +185,6 @@ class GeneralConnectivity(Transpiler):
         nx.draw(self._connectivity, pos=pos, with_labels=True)
         plt.show()
 
-    @property
-    def init_method(self):
-        return self._init_method
-
-    @init_method.setter
-    def init_method(self, init_method):
-        """Set the initial mapping method for the transpiler.
-
-        Args:
-            init_method (str): Initial mapping method ("greedy" or "subgraph").
-        """
-        if isinstance(init_method, str):
-            init_method = QubitInitMethod[init_method]
-        self._init_method = init_method
-
-    @property
-    def init_samples(self):
-        return self._init_samples
-
-    @init_samples.setter
-    def init_samples(self, init_samples):
-        """Set the initial mapping method for the transpiler.
-
-        Args:
-            init_samples (int): Number of random qubit mapping samples to be tested
-            (required only for "greedy" initialization).
-        """
-        if init_samples is not None:
-            self.init_method = QubitInitMethod.greedy
-        self._init_samples = init_samples
-
-    def create_circuit_repr(self, qibo_circuit):
-        """Translate qibo circuit into a list of two qubit gates to be used by the transpiler.
-
-        Args:
-            qibo_circuit (:class:`qibo.models.Circuit`): circuit to be transpiled.
-        """
-        translated_circuit = []
-        for index, gate in enumerate(qibo_circuit.queue):
-            if len(gate.qubits) == 2:
-                gate_qubits = list(gate.qubits)
-                gate_qubits.sort()
-                gate_qubits.append(index)
-                translated_circuit.append(gate_qubits)
-            if len(gate.qubits) >= 3:
-                raise_error(ValueError, "ERROR do not use gates acting on more than 2 qubits")
-        self._circuit_repr = translated_circuit
-
     def reduce(self, graph):
         """Reduce the circuit, delete a 2-qubit gate if it can be applied on the current configuration.
 
@@ -284,56 +199,8 @@ class GeneralConnectivity(Transpiler):
             del new_circuit[0]
         return new_circuit
 
-    def subgraph_init(self):
-        # TODO fix networkx.GM.mapping for small subgraphs
-        """Subgraph isomorphism initialization, NP-complete it can take a long time for large circuits.
-        This initialization method may fail for very short circuits.
-        """
-        H = nx.Graph()
-        H.add_nodes_from([i for i in range(self._connectivity.number_of_nodes())])
-        GM = nx.algorithms.isomorphism.GraphMatcher(self._connectivity, H)
-        i = 0
-        H.add_edge(self._circuit_repr[i][0], self._circuit_repr[i][1])
-        while GM.subgraph_is_monomorphic() == True:
-            result = GM
-            i += 1
-            H.add_edge(self._circuit_repr[i][0], self._circuit_repr[i][1])
-            GM = nx.algorithms.isomorphism.GraphMatcher(self._connectivity, H)
-            if self._connectivity.number_of_edges() == H.number_of_edges() or i == len(self._circuit_repr) - 1:
-                G = nx.relabel_nodes(self._connectivity, result.mapping)
-                keys = list(result.mapping.keys())
-                keys.sort()
-                self._graph = G
-                self._mapping = {i: result.mapping[i] for i in keys}
-                return
-        G = nx.relabel_nodes(self._connectivity, result.mapping)
-        keys = list(result.mapping.keys())
-        keys.sort()
-        self._graph = G
-        self._mapping = {i: result.mapping[i] for i in keys}
-
     def greedy_init(self):
-        """Initialize the circuit with greedy algorithm let a maximum number of 2-qubit
-        gates can be applied without introducing any SWAP gate"""
-        nodes = self._connectivity.number_of_nodes()
-        keys = list(self._connectivity.nodes())
-        final_mapping = dict(zip(keys, list(range(nodes))))
-        final_graph = nx.relabel_nodes(self._connectivity, final_mapping)
-        final_cost = len(self.reduce(final_graph))
-        for _ in range(self._init_samples):
-            mapping = dict(zip(keys, random.sample(range(nodes), nodes)))
-            graph = nx.relabel_nodes(self._connectivity, mapping)
-            cost = len(self.reduce(graph))
-            if cost == 0:
-                self._graph = graph
-                self._mapping = mapping
-                return
-            if cost < final_cost:
-                final_graph = graph
-                final_mapping = mapping
-                final_cost = cost
-        self._graph = final_graph
-        self._mapping = final_mapping
+        """Initialize the circuit with greedy algorithm"""
 
     def map_list(self, path):
         """Return all possible walks of qubits, or a fraction, for a given path.
@@ -479,3 +346,14 @@ class GeneralConnectivity(Transpiler):
         old_mapping = self._qubit_map.copy()
         for key, value in self._mapping.items():
             self._qubit_map[value] = old_mapping[key]
+
+
+class Sabre(Transpiler):
+    # TODO: requires block circuit
+    """
+    Routing algorithm proposed in
+    https://doi.org/10.48550/arXiv.1809.02573
+    """
+
+    def __init__(self):
+        super().__init__()
