@@ -50,8 +50,10 @@ class DummyInstrument(AbstractInstrument):
         results = {}
         for qubit, serial in ro_pulses.items():
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                states = np.random.rand(1) if options.averaging_mode is AveragingMode.CYCLIC else np.random.rand(nshots)
-                results[qubit] = results[serial] = options.results_type(states)
+                samples = (
+                    np.random.rand(1) if options.averaging_mode is AveragingMode.CYCLIC else np.random.rand(nshots)
+                )
+                results[qubit] = results[serial] = options.results_type(samples)
 
             else:
                 i = np.random.rand(1) if options.averaging_mode is AveragingMode.CYCLIC else np.random.rand(nshots)
