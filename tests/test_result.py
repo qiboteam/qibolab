@@ -6,12 +6,12 @@ from qibolab.result import (
     AveragedIntegratedResults,
     AveragedRawWaveformResults,
     AveragedResults,
-    AveragedStateResults,
+    AveragedSampleResults,
     ExecRes,
     ExecutionResults,
     IntegratedResults,
     RawWaveformResults,
-    StateResults,
+    SampleResults,
 )
 
 
@@ -34,7 +34,7 @@ def generate_random_raw_result(length=5):
 
 def generate_random_state_result(length=5):
     data = np.random.randint(low=2, size=(length, length, length))
-    return StateResults(data)
+    return SampleResults(data)
 
 
 def generate_random_avg_result(length=5):
@@ -55,7 +55,7 @@ def generate_random_avg_raw_result(length=5):
 
 def generate_random_avg_state_result(length=5):
     data = np.random.randint(low=2, size=(length, length, length))
-    return AveragedStateResults(data)
+    return AveragedSampleResults(data)
 
 
 def test_standard_constructor():
@@ -80,7 +80,7 @@ def test_raw_constructor():
 def test_state_constructor():
     """Testing ExecutionResults constructor"""
     test = np.array([1, 1, 0])
-    StateResults(test)
+    SampleResults(test)
 
 
 def test_execution_result_properties():
