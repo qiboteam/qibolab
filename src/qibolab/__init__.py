@@ -1,5 +1,6 @@
 import importlib.metadata as im
 import importlib.util
+import os
 
 import yaml
 from qibo.config import raise_error
@@ -7,12 +8,11 @@ from qibo.config import raise_error
 __version__ = im.version(__package__)
 
 
-def create_platform(name, profiles=None):
+def create_platform(name):
     """Platform for controlling quantum devices.
 
     Args:
         name (str): name of the platform. Options are 'tiiq', 'qili' and 'icarusq'.
-        profiles (str): path to the yaml file containing the platforms setup.
     Returns:
         The plaform class.
     """
@@ -22,14 +22,12 @@ def create_platform(name, profiles=None):
 
         return create_dummy(qibolab_folder / "runcards/dummy.yml")
 
-    if not profiles:
-        from os.path import exists
-
-        from qibolab.paths import qibolab_folder
-
-        profiles = qibolab_folder / "profiles.yml"
-        if not exists(profiles):
+    profiles = os.environ.get("QIBOLAB_PLATFORMS_FILE")
+    if profiles:
+        if not os.path.exists(profiles):
             raise_error(RuntimeError, f"Profile file {profiles} does not exist.")
+    else:
+        raise_error(RuntimeError, "Please set the QIBOLAB_PLATFORMS_FILE environment variable.")
 
     with open(profiles) as stream:
         try:
