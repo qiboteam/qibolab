@@ -12,14 +12,6 @@ from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
 from qibolab.paths import qibolab_folder
 from qibolab.pulses import FluxPulse, PulseSequence, PulseType
-from qibolab.result import (
-    AveragedIntegratedResults,
-    AveragedRawWaveformResults,
-    AveragedStateResults,
-    IntegratedResults,
-    RawWaveformResults,
-    StateResults,
-)
 from qibolab.sweeper import Parameter
 
 os.environ["LABONEQ_TOKEN"] = "ciao come va?"  # or other random text
@@ -447,11 +439,11 @@ class Zurich(AbstractInstrument):
                     exp_res = self.results.get_data(f"sequence{qubit.name}")
                     if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                         if options.averaging_mode is AveragingMode.CYCLIC:
-                            states = np.array([exp_res])
+                            data = np.array([exp_res])
                         else:
-                            states = np.array(exp_res)
-                        results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = options.results_type(states)
-                        results[self.sequence[f"readout{qubit.name}"][0].pulse.qubit] = options.results_type(states)
+                            data = np.array(exp_res)
+                        results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = options.results_type(data)
+                        results[self.sequence[f"readout{qubit.name}"][0].pulse.qubit] = options.results_type(data)
                     else:
                         results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = options.results_type(
                             data=np.array(exp_res)
@@ -871,12 +863,10 @@ class Zurich(AbstractInstrument):
                     exp_res = np.moveaxis(exp_res, rearranging_axes[0], rearranging_axes[1])
                     if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                         if options.averaging_mode is AveragingMode.CYCLIC:
-                            states = np.array([exp_res])
+                            data = np.array([exp_res])
                         else:
-                            states = np.array(exp_res)
-                        results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = options.results_type(
-                            states=states
-                        )
+                            data = np.array(exp_res)
+                        results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = options.results_type(data)
                     else:
                         results[self.sequence[f"readout{qubit.name}"][0].pulse.serial] = options.results_type(
                             data=np.array(exp_res)
