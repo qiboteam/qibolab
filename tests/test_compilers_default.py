@@ -3,10 +3,10 @@ import pytest
 from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
+from qibo.states import CircuitResult
 
-from qibolab.backends import QibolabBackend
-from qibolab.platform import Platform
-from qibolab.platforms.abstract import AbstractPlatform
+from qibolab import Platform
+from qibolab.compilers import Compiler
 from qibolab.pulses import PulseSequence
 from qibolab.transpilers import Pipeline
 
@@ -34,12 +34,13 @@ def test_u3_sim_agreement():
 def compile_circuit(circuit, platform):
     """Compile a circuit to a pulse sequence."""
     transpiler = Pipeline.default(platform.two_qubit_natives)
+    compiler = Compiler.default()
     if transpiler.is_satisfied(circuit):
         native_circuit = circuit
     else:
         native_circuit, _ = transpiler.transpile(circuit)
 
-    sequence = platform.transpile(native_circuit)
+    sequence, _ = compiler.compile(native_circuit, platform)
     return sequence
 
 
@@ -83,7 +84,7 @@ def test_transpile_two_gates(platform_name):
 
 
 def test_measurement(platform_name):
-    platform: AbstractPlatform = Platform(platform_name)
+    platform = Platform(platform_name)
     nqubits = platform.nqubits
     circuit = Circuit(nqubits)
     qubits = [qubit for qubit in range(nqubits)]
