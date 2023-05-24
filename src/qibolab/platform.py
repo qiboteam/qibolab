@@ -317,9 +317,9 @@ def create_tii_IQM5q(runcard, descriptor=None):
 
     # Set Dummy LO parameters (Map only the two by two oscillators)
     local_oscillators[0].frequency = 5_500_000_000  # 5_500_000
-    local_oscillators[1].frequency = 4_200_000_000  # For SG1 and SG2
-    local_oscillators[2].frequency = 4_600_000_000  # For SG3 and SG4
-    local_oscillators[3].frequency = 4_800_000_000  # 4_200_000_000  # For SG5 and SG6
+    local_oscillators[1].frequency = 4_000_000_000  # For SG1 and SG2
+    local_oscillators[2].frequency = 4_000_000_000  # For SG3 and SG4
+    local_oscillators[3].frequency = 4_000_000_000  # 4_200_000_000  # For SG5 and SG6
 
     # Map LOs to channels
     ch_to_lo = {"L2-7": 0, "L4-15": 1, "L4-16": 1, "L4-17": 2, "L4-18": 2, "L4-19": 3}

@@ -286,7 +286,7 @@ class Zurich(AbstractInstrument):
                         setup_name=self.name,
                     )
                     # To fully remove logging #configure_logging=False
-                    self.session = lo.Session(self.device_setup, log_level=30)
+                    self.session = lo.Session(self.device_setup, log_level=20)
                     self.device = self.session.connect(do_emulation=self.emulation)
                     self.is_connected = True
                     break

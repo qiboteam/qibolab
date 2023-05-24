@@ -156,10 +156,10 @@ characterization:
         1:
             readout_frequency: 4.9525e+9
             resonator_polycoef_flux: []
-            drive_frequency: 4.0942e+9
-            T1: 0
-            T2: 0
-            sweetspot: 0 #-0.5
+            drive_frequency: 4.3055e+9
+            T1: 14_985
+            T2: 349
+            sweetspot: 0. #-0.5
             filter: {}
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
