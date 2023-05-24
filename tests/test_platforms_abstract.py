@@ -184,6 +184,7 @@ def test_add_measurement_to_sequence(platform_name):
         "drive_frequency",
         "iq_angle",
         "mean_gnd_states",
+        "classifiers_hpars",
     ],
 )
 def test_update(platform_name, par):
@@ -197,5 +198,8 @@ def test_update(platform_name, par):
             value = updates[par][i]
             if "frequency" in par:
                 value *= 1e9
-            assert value == float(platform.settings["characterization"]["single_qubit"][platform.qubits[i].name][par])
+            if par != "classifiers_hpars":
+                assert value == float(
+                    platform.settings["characterization"]["single_qubit"][platform.qubits[i].name][par]
+                )
             assert value == float(getattr(platform.qubits[i], par))
