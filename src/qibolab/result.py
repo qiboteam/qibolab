@@ -102,7 +102,7 @@ class AveragedRawWaveformResults(AveragedIntegratedResults):
     """
 
 
-class StateResults:
+class SampleResults:
     """
     Data structure to deal with the output of
     :func:`qibolab.platforms.abstract.AbstractPlatform.execute_pulse_sequence`
@@ -126,27 +126,26 @@ class StateResults:
     def serialize(self):
         """Serialize as a dictionary."""
         serialized_dict = {
-            "state_0": self.probability(0).flatten(),
+            "0": self.probability(0).flatten(),
         }
         return serialized_dict
 
     @property
     def average(self):
-        """Perform states average"""
+        """Perform samples average"""
         average = self.probability(1)
         std = np.std(self.samples, axis=0, ddof=1) / np.sqrt(self.samples.shape[0])
-        return AveragedStateResults(average, self.samples, std=std)
+        return AveragedSampleResults(average, self.samples, std=std)
 
 
-# FIXME: Here I take the states from StateResult that are typed to be ints but those are not what would you do ?
-class AveragedStateResults(StateResults):
+class AveragedSampleResults(SampleResults):
     """
     Data structure to deal with the output of
     :func:`qibolab.platforms.abstract.AbstractPlatform.execute_pulse_sequence`
     :func:`qibolab.platforms.abstract.AbstractPlatform.sweep`
 
     Associated with AcquisitionType.DISCRIMINATION and AveragingMode.CYCLIC
-    or the averages of ``StateResults``
+    or the averages of ``SampleResults``
     """
 
     def __init__(

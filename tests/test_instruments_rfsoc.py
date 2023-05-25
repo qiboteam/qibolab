@@ -7,7 +7,7 @@ from qibolab.paths import qibolab_folder
 from qibolab.platform import create_tii_rfsoc4x2
 from qibolab.platforms.abstract import Qubit
 from qibolab.pulses import PulseSequence
-from qibolab.result import AveragedIntegratedResults, IntegratedResults, StateResults
+from qibolab.result import AveragedIntegratedResults, IntegratedResults, SampleResults
 from qibolab.sweeper import Parameter, Sweeper
 
 RUNCARD = qibolab_folder / "runcards" / "tii1q_b1.yml"
