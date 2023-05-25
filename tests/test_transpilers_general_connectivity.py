@@ -4,7 +4,7 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 
-from qibolab.transpilers.gate_decompositions import NativeTypes
+from qibolab.transpilers.gate_decompositions import NativeType
 from qibolab.transpilers.general_connectivity import GeneralConnectivity
 
 
@@ -174,7 +174,7 @@ def test_insufficient_qubits():
 
 @pytest.mark.parametrize("gates", [1, 10, 50])
 @pytest.mark.parametrize("qubits", [5, 21])
-@pytest.mark.parametrize("natives", [NativeTypes.CZ, NativeTypes.iSWAP, NativeTypes.CZ | NativeTypes.iSWAP])
+@pytest.mark.parametrize("natives", [NativeType.CZ, NativeType.iSWAP, NativeType.CZ | NativeType.iSWAP])
 def test_random_circuits(gates, qubits, natives):
     transpiler = GeneralConnectivity(
         connectivity=special_connectivity("21_qubits"), init_method="greedy", init_samples=50

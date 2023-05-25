@@ -9,7 +9,7 @@ from qibo.config import raise_error
 from qibolab.pulses import FluxPulse, PulseConstructor, PulseSequence, PulseType
 
 
-class NativeTypes(Flag):
+class NativeType(Flag):
     """Define available types of native gates.
 
     Should have the same names with qibo gates.
@@ -46,7 +46,7 @@ class NativePulse:
     """Relative start is relevant for two-qubit gate operations which correspond to a pulse sequence."""
 
     # used for qblox
-    if_frequency: int = 0
+    if_frequency: Optional[int] = None
     # TODO: Note sure if the following parameters are useful to be in the runcard
     start: int = 0
     phase: float = 0.0
@@ -62,7 +62,7 @@ class NativePulse:
             qubits (:class:`qibolab.platforms.abstract.Qubit`): Qubit that the
                 pulse is acting on
         """
-        kwargs = dict(pulse)
+        kwargs = pulse.copy()
         kwargs["pulse_type"] = PulseType(kwargs.pop("type"))
         return cls(name, **kwargs, qubit=qubit)
 
@@ -87,23 +87,22 @@ class NativePulse:
                 qubit=self.qubit.name,
             )
 
-        else:
-            pulse_cls = PulseConstructor[self.pulse_type.name].value
-            channel = getattr(self.qubit, self.pulse_type.name.lower()).name
-            return pulse_cls(
-                start + self.relative_start,
-                self.duration,
-                self.amplitude,
-                self.frequency,
-                relative_phase,
-                self.shape,
-                channel,
-                qubit=self.qubit.name,
-            )
+        pulse_cls = PulseConstructor[self.pulse_type.name].value
+        channel = getattr(self.qubit, self.pulse_type.name.lower()).name
+        return pulse_cls(
+            start + self.relative_start,
+            self.duration,
+            self.amplitude,
+            self.frequency,
+            relative_phase,
+            self.shape,
+            channel,
+            qubit=self.qubit.name,
+        )
 
 
 @dataclass
-class VirtualPulse:
+class VirtualZPulse:
     """Container with parameters required to add a virtual Z phase in a pulse sequence."""
 
     phase: float
@@ -119,7 +118,7 @@ class NativeSequence:
     """
 
     name: str
-    pulses: List[Union[NativePulse, VirtualPulse]] = field(default_factory=list)
+    pulses: List[Union[NativePulse, VirtualZPulse]] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, name, sequence, qubits):
@@ -139,12 +138,12 @@ class NativeSequence:
             sequence = [sequence]
 
         for i, pulse in enumerate(sequence):
-            pulse = dict(pulse)
+            pulse = pulse.copy()
             qubit = qubits[pulse.pop("qubit")]
             pulse_type = pulse.pop("type")
             if pulse_type == "virtual_z":
                 phase = pulse["phase"]
-                pulses.append(VirtualPulse(phase, qubit))
+                pulses.append(VirtualZPulse(phase, qubit))
             else:
                 pulses.append(NativePulse(f"{name}{i}", **pulse, pulse_type=PulseType(pulse_type), qubit=qubit))
         return cls(name, pulses)
@@ -204,9 +203,9 @@ class TwoQubitNatives:
 
     @property
     def types(self):
-        gate_types = NativeTypes(0)
+        gate_types = NativeType(0)
         for fld in fields(self):
             gate = fld.name
             if getattr(self, gate) is not None:
-                gate_types |= NativeTypes[gate]
+                gate_types |= NativeType[gate]
         return gate_types

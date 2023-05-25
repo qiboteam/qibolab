@@ -1,20 +1,16 @@
 import math
 import re
-from collections import defaultdict
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Dict, List, Tuple
 
 import networkx as nx
-import numpy as np
 import yaml
-from qibo import gates
 from qibo.config import log, raise_error
-from qibo.models import Circuit
 
 from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.abstract import AbstractInstrument
-from qibolab.native import NativeTypes, SingleQubitNatives, TwoQubitNatives
+from qibolab.native import NativeType, SingleQubitNatives, TwoQubitNatives
 from qibolab.pulses import PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPair
 
@@ -42,15 +38,18 @@ class Platform:
         # Values for the following are set from the runcard in ``reload_settings``
         self.settings = None
         self.is_connected = False
+
         self.nqubits = None
         self.resonator_type = None
+        self.topology = None
+
         self.nshots = None
         self.relaxation_time = None
         self.sampling_rate = None
 
         # TODO: Remove this (needed for the multiqubit platform)
         self.native_gates = {}
-        self.two_qubit_native_types = NativeTypes(0)
+        self.two_qubit_native_types = NativeType(0)
         # Load platform settings
         self.reload_settings()
 
@@ -102,11 +101,10 @@ class Platform:
                 # register single qubit native gates to Qubit objects
                 qubit.native_gates = SingleQubitNatives.from_dict(qubit, self.native_gates["single_qubit"][q])
 
-        if len(self.qubits) > 1:
-            for pair in settings["topology"]:
-                pair = tuple(sorted(pair))
-                if pair not in self.pairs:
-                    self.pairs[pair] = QubitPair(self.qubits[pair[0]], self.qubits[pair[1]])
+        for pair in settings["topology"]:
+            pair = tuple(sorted(pair))
+            if pair not in self.pairs:
+                self.pairs[pair] = QubitPair(self.qubits[pair[0]], self.qubits[pair[1]])
 
         # Load native two-qubit gates
         if "two_qubit" in self.native_gates:
@@ -116,14 +114,12 @@ class Platform:
                 self.two_qubit_native_types |= self.pairs[pair].native_gates.types
         else:
             # dummy value to avoid transpiler failure for single qubit devices
-            self.two_qubit_native_types = NativeTypes.CZ
+            self.two_qubit_native_types = NativeType.CZ
 
-    @property
-    def topology(self):
-        chip = nx.Graph()
-        chip.add_nodes_from(self.qubits.keys())
-        chip.add_edges_from([(pair.qubit1.name, pair.qubit2.name) for pair in self.pairs])
-        return chip
+        if self.topology is None:
+            self.topology = nx.Graph()
+            self.topology.add_nodes_from(self.qubits.keys())
+            self.topology.add_edges_from([(pair.qubit1.name, pair.qubit2.name) for pair in self.pairs.values()])
 
     def dump(self, path: Path):
         with open(path, "w") as file:
@@ -167,7 +163,7 @@ class Platform:
 
                     mz = self.qubits[qubit].native_gates.MZ
                     mz.frequency = freq
-                    if hasattr(mz, "if_frequency"):
+                    if mz.if_frequency is not None:
                         mz.if_frequency = freq - self.get_lo_readout_frequency(qubit)
                         self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["if_frequency"] = mz.if_frequency
 
