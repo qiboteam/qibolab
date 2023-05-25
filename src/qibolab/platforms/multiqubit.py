@@ -6,7 +6,7 @@ from qibo.config import log, raise_error
 
 from qibolab.platforms.abstract import AbstractPlatform, Qubit
 from qibolab.pulses import PulseSequence, PulseType
-from qibolab.result import ExecutionResults
+from qibolab.result import IntegratedResults
 from qibolab.sweeper import Parameter
 
 
@@ -92,7 +92,7 @@ class MultiqubitPlatform(AbstractPlatform):
                     # update Qblox qubit LO drive frequency config
                     instrument_name = self.qubit_instrument_map[qubit][1]
                     port = self.qdm[qubit].channel_port_map[self.qubit_channel_map[qubit][1]]
-                    drive_if = self.single_qubit_natives[qubit]["RX"]["if_frequency"]
+                    drive_if = self.qubits[qubit].native_gates.RX.if_frequency
                     self.settings["instruments"][instrument_name]["settings"]["ports"][port]["lo_frequency"] = (
                         freq - drive_if
                     )
@@ -335,9 +335,7 @@ class MultiqubitPlatform(AbstractPlatform):
         for serial in acquisition_results:
             for if_pulse, original in changed.items():
                 if serial == if_pulse.serial:
-                    data[original] = data[if_pulse.qubit] = ExecutionResults.from_components(
-                        *acquisition_results[serial]
-                    )
+                    data[original] = data[if_pulse.qubit] = IntegratedResults(acquisition_results[serial])
 
         return data
 
