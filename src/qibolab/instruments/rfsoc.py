@@ -464,15 +464,17 @@ class TII_RFSOC4x2(AbstractInstrument):
 
                 if not average:
                     shape = i_vals.shape
-                    np.reshape(i_vals, (execution_parameters.nshots, *shape[:-1]))
-                    np.reshape(q_vals, (execution_parameters.nshots, *shape[:-1]))
+                    print(shape)
+                    print((execution_parameters.nshots, *shape[:-1]))
+                    np.reshape(i_vals, (self.cfg.reps, *shape[:-1]))
+                    np.reshape(q_vals, (self.cfg.reps, *shape[:-1]))
 
                 if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
                     qubit = qubits[sequence.ro_pulses[i].qubit]
-                    discrimated_shots = self.classify_shots(i_vals, q_vals, qubit)
+                    discriminated_shots = self.classify_shots(i_vals, q_vals, qubit)
                     if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
                         discriminated_shots = np.mean(discriminated_shots, keepdims=True)
-                    result = execution_parameters.results_type(discrimated_shots)
+                    result = execution_parameters.results_type(discriminated_shots)
                 else:
                     result = execution_parameters.results_type(i_vals + 1j * q_vals)
 
