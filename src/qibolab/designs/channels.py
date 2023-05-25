@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Optional, Type
+from typing import List, Optional
 
 from qibo.config import raise_error
 
