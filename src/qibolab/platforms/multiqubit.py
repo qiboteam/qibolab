@@ -6,7 +6,6 @@ from qibo.config import log, raise_error
 
 from qibolab.platforms.abstract import AbstractPlatform, Qubit
 from qibolab.pulses import PulseSequence, PulseType
-from qibolab.result import ExecutionResults
 from qibolab.sweeper import Parameter
 
 
@@ -43,7 +42,7 @@ class MultiqubitPlatform(AbstractPlatform):
         super().reload_settings()
         self.characterization = self.settings["characterization"]
         self.qubit_channel_map = self.settings["qubit_channel_map"]
-        self.hardware_avg = self.settings["settings"]["hardware_avg"]
+        self.nshots = self.settings["settings"]["nshots"]
         self.relaxation_time = self.settings["settings"]["relaxation_time"]
 
         # FIX: Set attenuation again to the original value after sweep attenuation in punchout
@@ -92,7 +91,7 @@ class MultiqubitPlatform(AbstractPlatform):
                     # update Qblox qubit LO drive frequency config
                     instrument_name = self.qubit_instrument_map[qubit][1]
                     port = self.qdm[qubit].channel_port_map[self.qubit_channel_map[qubit][1]]
-                    drive_if = self.single_qubit_natives[qubit]["RX"]["if_frequency"]
+                    drive_if = self.qubits[qubit].native_gates.RX.if_frequency
                     self.settings["instruments"][instrument_name]["settings"]["ports"][port]["lo_frequency"] = (
                         freq - drive_if
                     )
@@ -281,7 +280,7 @@ class MultiqubitPlatform(AbstractPlatform):
         if not self.is_connected:
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
         if nshots is None:
-            nshots = self.hardware_avg
+            nshots = self.nshots
 
         instrument_pulses = {}
         changed = {}
