@@ -212,12 +212,6 @@ class AbstractPlatform(ABC):
                     self.settings["characterization"]["single_qubit"][qubit]["readout_frequency"] = freq
 
                 # resonator_punchout_attenuation
-                elif par == "readout_attenuation":
-                    # TODO: Are we going to save the attenuation somwhere in the native_gates or characterization
-                    # in all platforms?
-                    True
-
-                # resonator_punchout_attenuation
                 elif par == "bare_resonator_frequency":
                     freq = int(value * 1e9)
                     self.qubits[qubit].bare_resonator_frequency = freq
@@ -313,7 +307,7 @@ class AbstractPlatform(ABC):
                 elif par == "classifiers_hpars":
                     self.qubits[qubit].classifiers_hpars = value
                 elif par == "readout_attenuation":
-                    self.set_attenuation(self.qubits[qubit], value)
+                    self.set_attenuation(qubit, value)
                 else:
                     raise_error(ValueError, f"Unknown parameter {par} for qubit {qubit}")
 
