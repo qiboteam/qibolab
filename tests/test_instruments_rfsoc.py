@@ -244,7 +244,7 @@ def test_play():
 
     assert sequence[1].serial in out_dict
     assert isinstance(out_dict[sequence[1].serial], IntegratedResults)
-    assert np.shape(out_dict[sequence[1].serial].i) == (1000,)
+    assert np.shape(out_dict[sequence[1].serial].voltage_i) == (1000,)
 
 
 @pytest.mark.qpu
@@ -275,8 +275,8 @@ def test_sweep():
     assert sequence[1].serial in out_dict2
     assert isinstance(out_dict1[sequence[1].serial], AveragedIntegratedResults)
     assert isinstance(out_dict2[sequence[1].serial], IntegratedResults)
-    assert np.shape(out_dict1[sequence[1].serial].i) == (len(sweep.values),)
-    assert np.shape(out_dict2[sequence[1].serial].i) == (len(sweep.values) * 1000,)
+    assert np.shape(out_dict1[sequence[1].serial].voltage_i) == (len(sweep.values),)
+    assert np.shape(out_dict2[sequence[1].serial].voltage_i) == (len(sweep.values) * 1000,)
 
 
 @pytest.mark.qpu
