@@ -238,10 +238,12 @@ def test_play():
     sequence.add(platform.create_RX_pulse(qubit=0, start=0))
     sequence.add(platform.create_MZ_pulse(qubit=0, start=100))
 
-    out_dict = instrument.play(platform.qubits, sequence)
+    out_dict = instrument.play(
+        platform.qubits, sequence, ExecutionParameters(acquisition_type=AcquisitionType.INTEGRATION)
+    )
 
     assert sequence[1].serial in out_dict
-    assert isinstance(out_dict[sequence[1].serial], ExecutionResults)
+    assert isinstance(out_dict[sequence[1].serial], IntegratedResults)
     assert np.shape(out_dict[sequence[1].serial].i) == (1000,)
 
 
@@ -256,13 +258,23 @@ def test_sweep():
     sequence.add(platform.create_MZ_pulse(qubit=0, start=100))
     sweep = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 35, 10), pulses=[sequence[0]])
 
-    out_dict1 = instrument.sweep(platform.qubits, sequence, sweep, average=True, relaxation_time=100_000)
-    out_dict2 = instrument.sweep(platform.qubits, sequence, sweep, average=False, relaxation_time=100_000)
+    out_dict1 = instrument.sweep(
+        platform.qubits,
+        sequence,
+        ExecutionParameters(relaxation_time=100_000, averaging_mode=AveragingMode.CYCLIC),
+        sweep,
+    )
+    out_dict2 = instrument.sweep(
+        platform.qubits,
+        sequence,
+        ExecutionParameters(relaxation_time=100_000, averaging_mode=AveragingMode.SINGLESHOT),
+        sweep,
+    )
 
     assert sequence[1].serial in out_dict1
     assert sequence[1].serial in out_dict2
-    assert isinstance(out_dict1[sequence[1].serial], AveragedResults)
-    assert isinstance(out_dict2[sequence[1].serial], ExecutionResults)
+    assert isinstance(out_dict1[sequence[1].serial], AveragedIntegratedResults)
+    assert isinstance(out_dict2[sequence[1].serial], IntegratedResults)
     assert np.shape(out_dict1[sequence[1].serial].i) == (len(sweep.values),)
     assert np.shape(out_dict2[sequence[1].serial].i) == (len(sweep.values) * 1000,)
 
@@ -279,6 +291,12 @@ def test_python_reqursive_sweep():
     sweep1 = Sweeper(parameter=Parameter.amplitude, values=np.arange(0.01, 0.03, 10), pulses=[sequence[0]])
     sweep2 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 35, 10), pulses=[sequence[0]])
 
-    out_dict = instrument.sweep(platform.qubits, sequence, sweep1, sweep2, average=True, relaxation_time=100_000)
+    out_dict = instrument.sweep(
+        platform.qubits,
+        sequence,
+        ExecutionParameters(relaxation_time=100_000, averaging_mode=AveragingMode.CYCLIC),
+        sweep1,
+        sweep2,
+    )
 
     assert sequence[1].serial in out_dict

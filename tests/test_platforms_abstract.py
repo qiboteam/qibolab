@@ -86,12 +86,13 @@ def test_abstractplatform_pickle(platform_name):
         "drive_frequency",
         "iq_angle",
         "mean_gnd_states",
+        "classifiers_hpars",
     ],
 )
 def test_update(platform_name, par):
     platform = Platform(platform_name)
     new_values = np.ones(platform.nqubits)
-    updates = {par: {platform.qubits[i].name: new_values[i] for i in range(platform.nqubits)}}
+    updates = {par: {i: new_values[i] for i in range(platform.nqubits)}}
     # TODO: fix the reload settings for qili1q_os2
     if platform.name != "qili1q_os2":
         platform.update(updates)
@@ -99,7 +100,7 @@ def test_update(platform_name, par):
             value = updates[par][i]
             if "frequency" in par:
                 value *= 1e9
-            assert value == float(platform.settings["characterization"]["single_qubit"][platform.qubits[i].name][par])
+            assert value == float(platform.settings["characterization"]["single_qubit"][i][par])
             assert value == float(getattr(platform.qubits[i], par))
 
 
