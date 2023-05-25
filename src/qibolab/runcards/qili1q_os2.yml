@@ -2,7 +2,7 @@ nqubits: 1
 description: 1-qubit device OS2 in XLD fridge, controlled with qblox cluster rf.
 
 settings:
-    hardware_avg: 1024
+    nshots: 1024
     relaxation_time: 200_000
     sampling_rate: 1_000_000_000
 
@@ -10,8 +10,7 @@ qubits: [0]
 
 resonator_type: 3D
 
-topology: # qubit - qubit connections
--   [1]
+topology: []
 
 channels: ['L3-17_qd', 'L3-17_ro', 'L2-4', null]
 

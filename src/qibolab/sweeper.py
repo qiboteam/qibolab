@@ -10,9 +10,9 @@ class Parameter(Enum):
 
     frequency = auto()
     amplitude = auto()
+    duration = auto()
     relative_phase = auto()
     delay = auto()
-    duration = auto()
 
     attenuation = auto()
     gain = auto()
@@ -37,6 +37,7 @@ class Sweeper:
             from qibolab.platform import Platform
             from qibolab.sweeper import Sweeper, Parameter
             from qibolab.pulses import PulseSequence
+            from qibolab import ExecutionParameters
 
 
             platform = Platform("dummy")
@@ -46,7 +47,7 @@ class Sweeper:
             sequence.add(pulse)
             parameter_range = np.random.randint(10, size=10)
             sweeper = Sweeper(parameter, parameter_range, [pulse])
-            platform.sweep(sequence, sweeper)
+            platform.sweep(sequence, ExecutionParameters(), sweeper)
 
     Args:
         parameter (`qibolab.sweeper.Parameter`): parameter to be swept, possible choices are frequency, attenuation, amplitude, current and gain.

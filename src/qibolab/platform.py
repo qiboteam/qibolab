@@ -1,4 +1,3 @@
-import networkx as nx
 from qibo.config import raise_error
 
 from qibolab.designs import Channel, ChannelMap, InstrumentDesign
@@ -29,7 +28,7 @@ def create_dummy(runcard):
         platform.qubits[qubit].drive = channels["drive"]
         platform.qubits[qubit].flux = channels[f"flux-{qubit}"]
         channels[f"flux-{qubit}"].qubit = platform.qubits[qubit]
-        channels["readout"].qubit = platform.qubits[qubit]
+        channels["readout"].attenuation = 0
 
     return platform
 
@@ -220,61 +219,6 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
     for q in ["A1", "A2", "A4", "B1", "B2", "B3", "C1", "C4"]:  # Qubits with LO around 7.5e9
         qubits[q].readout = channels[wiring["readout"][q[0]][1]]
         qubits[q].feedback = channels[wiring["feedback"][q[0]][1]]
-
-    # Save temporarely the qubits as a yaml file
-    import yaml
-
-    yaml.dump(qubits, open("qubits.yaml", "w"))
-
-    # Platfom topology
-    Q = []
-    for i in range(1, 7):
-        Q += ["A{i}"]
-    for i in range(1, 6):
-        Q += ["B{i}"]
-    for i in range(1, 6):
-        Q += ["C{i}"]
-    for i in range(1, 6):
-        Q += ["D{i}"]
-    chip = nx.Graph()
-    chip.add_nodes_from(Q)
-    graph_list = [
-        (Q[0], Q[1]),
-        (Q[0], Q[2]),
-        (Q[0], Q[20]),
-        (Q[1], Q[3]),
-        (Q[2], Q[4]),
-        (Q[2], Q[19]),
-        (Q[3], Q[4]),
-        (Q[3], Q[8]),
-        (Q[4], Q[6]),
-        (Q[5], Q[2]),
-        (Q[5], Q[8]),
-        (Q[5], Q[18]),
-        (Q[5], Q[13]),
-        (Q[6], Q[8]),
-        (Q[6], Q[7]),
-        (Q[7], Q[9]),
-        (Q[8], Q[9]),
-        (Q[9], Q[10]),
-        (Q[9], Q[13]),
-        (Q[10], Q[11]),
-        (Q[11], Q[13]),
-        (Q[11], Q[12]),
-        (Q[12], Q[14]),
-        (Q[13], Q[14]),
-        (Q[14], Q[18]),
-        (Q[14], Q[15]),
-        (Q[15], Q[16]),
-        (Q[16], Q[18]),
-        (Q[16], Q[17]),
-        (Q[17], Q[19]),
-        (Q[18], Q[19]),
-        (Q[19], Q[20]),
-    ]
-    chip.add_edges_from(graph_list)
-
-    platform.topology = chip
 
     return platform
 

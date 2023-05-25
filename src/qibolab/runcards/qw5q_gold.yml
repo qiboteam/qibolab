@@ -1,12 +1,12 @@
 nqubits: 5
 description: QuantWare 5-qubit device.
 
-qubits: [0, 1, 2, 3, 4]
+qubits: [0, 1, 2, 3, 4, 5]
 
 settings:
-    sampling_rate: 1000000000
-    relaxation_time: 0
     nshots: 1024
+    sampling_rate: 1000000000
+    relaxation_time: 50_000
 
 resonator_type: 2D
 
@@ -154,7 +154,7 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            readout_frequency: 7_226_500_000
+            readout_frequency: 0.0
             drive_frequency: 0.0
             T1: 0.0
             T2: 0.0
@@ -162,7 +162,7 @@ characterization:
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
-            iq_angle: 0.0
+            iq_angle: 0.00
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -209,7 +209,7 @@ characterization:
             mixer_readout_g: 0.0
             mixer_readout_phi: 0.0
         3:
-            readout_frequency: 7_802_191_000
+            readout_frequency: 7_802_391_000
             drive_frequency: 6_760_700_000
             T1: 0.0
             T2: 0.0
@@ -226,7 +226,7 @@ characterization:
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
             mixer_readout_g: 0.0
-            mixer_readout_phi: 0.00
+            mixer_readout_phi: 0.0
         4:
             readout_frequency: 8_057_668_000
             drive_frequency: 6_585_053_000
