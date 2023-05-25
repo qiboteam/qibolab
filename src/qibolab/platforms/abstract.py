@@ -313,7 +313,7 @@ class AbstractPlatform(ABC):
                 elif par == "classifiers_hpars":
                     self.qubits[qubit].classifiers_hpars = value
                 elif par == "readout_attenuation":
-                    True
+                    self.set_attenuation(self.qubits[qubit], value)
                 else:
                     raise_error(ValueError, f"Unknown parameter {par} for qubit {qubit}")
 
