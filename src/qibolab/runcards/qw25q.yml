@@ -3,8 +3,8 @@ description: QuantWare 25-qubit device with 4 witness removed. qw25q_v3_e10
 
 settings:
     nshots: 1024
+    relaxation_time: 100_000
     sampling_rate: 1000000000
-    repetition_duration: 100_000
 
 qubits: [A1, A2, A3, A4, A5, A6,
         B1, B2, B3, B4, B5,
@@ -384,15 +384,15 @@ native_gates:
             - duration: 20
               amplitude: 0.0055
               shape: Rectangular()
-              qubit: 2
+              qubit: A2
               relative_start: 0
               type: qf
             - type: virtual_z
               phase: -1.5707963267948966
-              qubit: 1
+              qubit: A1
             - type: virtual_z
               phase: -1.5707963267948966
-              qubit: 2
+              qubit: A2
         A3-A4:
             CZ:
             - duration: 20
@@ -422,8 +422,6 @@ characterization:
             # parameters for single shot classification
             threshold: 0.000288842361133913
             iq_angle: 0.3303038506310445
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -439,8 +437,6 @@ characterization:
             # parameters for single shot classification
             threshold: 0.00031560006787954647
             iq_angle: 1.9919151514426674
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -456,8 +452,6 @@ characterization:
             # parameters for single shot classification
             threshold:  0.000253824457112318
             iq_angle:  5.307493519332263
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -473,8 +467,6 @@ characterization:
             # parameters for single shot classification
             threshold: 0.0005704866316357044
             iq_angle: 0.6485151176256205
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -490,8 +482,6 @@ characterization:
             # parameters for single shot classification
             threshold: 7.210173850141511e-05
             iq_angle: 5.884396412526421
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -507,8 +497,6 @@ characterization:
             # parameters for single shot classification
             threshold: 0.0
             iq_angle: 0.0
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -524,8 +512,6 @@ characterization:
             # parameters for single shot classification
             threshold: -0.0012829707530760102
             iq_angle: 1.4306003480740943
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -541,8 +527,6 @@ characterization:
             # parameters for single shot classification
             threshold: -0.003446505933489241
             iq_angle: 5.409004218529808
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -558,8 +542,6 @@ characterization:
             # parameters for single shot classification
             threshold: 0.0
             iq_angle: 0.0
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -575,8 +557,6 @@ characterization:
             # parameters for single shot classification
             threshold: 0.0
             iq_angle: 0.0
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -592,8 +572,6 @@ characterization:
             # parameters for single shot classification
             threshold: 0.0009597380015034596
             iq_angle: 3.330673312911072
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -609,8 +587,6 @@ characterization:
             # parameters for single shot classification
             threshold: 0.00031384816695217467
             iq_angle: 3.217366652143714
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -626,8 +602,6 @@ characterization:
             # parameters for single shot classification
             threshold: 0.00010808753410035694
             iq_angle: 5.069603506402022
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -643,8 +617,6 @@ characterization:
             # parameters for single shot classification
             threshold: 0.0015968256455689796
             iq_angle: 0.34193055438791875
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -660,8 +632,6 @@ characterization:
             # parameters for single shot classification
             threshold: 0.0
             iq_angle: 0.0
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -677,8 +647,6 @@ characterization:
             # parameters for single shot classification
             threshold: 0.0
             iq_angle: 0.0
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -694,8 +662,6 @@ characterization:
             # parameters for single shot classification
             threshold: 0.0
             iq_angle: 0.0
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -711,8 +677,6 @@ characterization:
             # parameters for single shot classification
             threshold: 0.0
             iq_angle: 0.0
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -728,8 +692,6 @@ characterization:
             # parameters for single shot classification
             threshold: 0.0
             iq_angle: 0.0
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
@@ -745,9 +707,7 @@ characterization:
             # parameters for single shot classification
             threshold: 0.0
             iq_angle: 0.0
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
-            # required for mixers (not sure if it should be here)
+                        # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
             mixer_readout_g: 0.0
@@ -762,8 +722,6 @@ characterization:
             # parameters for single shot classification
             threshold: 0.0
             iq_angle: 0.0
-            # required for integration weights (not sure if it should be here)
-            rotation_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
