@@ -28,6 +28,7 @@ def convert_qubit(qubit: Qubit) -> rfsoc.Qubit:
     if qubit.flux:
         dac = qubit.flux.ports[0][1]
         bias = qubit.flux.bias
+        bias = qubit.sweetspot
     else:
         dac = None
         bias = 0.0
@@ -51,17 +52,7 @@ def convert_pulse(pulse: Pulse, qubits: Dict) -> rfsoc.Pulse:
     except NotImplementedError:
         lo_frequency = 0
 
-    if isinstance(pulse.shape, Rectangular):
-        shape = rfsoc.Rectangular
-        shape_name = "rectangular"
-    elif isinstance(pulse.shape, Gaussian):
-        shape = rfsoc.Gaussian
-        shape_name = "gaussian"
-    elif isinstance(pulse.shape, Drag):
-        shape = rfsoc.Drag
-        shape_name = "drag"
-
-    rfsoc_pulse = shape(
+    rfsoc_pulse = rfsoc.Pulse(
         frequency=(pulse.frequency - lo_frequency) * HZ_TO_MHZ,
         amplitude=pulse.amplitude,
         relative_phase=np.degrees(pulse.relative_phase),
@@ -71,13 +62,15 @@ def convert_pulse(pulse: Pulse, qubits: Dict) -> rfsoc.Pulse:
         adc=adc,
         name=pulse.serial,
         type=type,
-        shape=shape_name,
     )
-    if isinstance(pulse.shape, Gaussian):
+    if isinstance(pulse.shape, Rectangular):
+        rfsoc_pulse.shape = "rectangular"
+    elif isinstance(pulse.shape, Gaussian):
+        rfsoc_pulse.shape = "gaussian"
         rfsoc_pulse.rel_sigma = pulse.shape.rel_sigma
     elif isinstance(pulse.shape, Drag):
+        rfsoc_pulse.shape = "drag"
         rfsoc_pulse.rel_sigma = pulse.shape.rel_sigma
-        rfsoc_pulse.beta = pulse.shape.beta
     return rfsoc_pulse
 
 
@@ -98,7 +91,6 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Qubit]
             starts.append(sweeper.values[0] + qubits[qubit].flux.bias)
             stops.append(sweeper.values[-1] + qubits[qubit].flux.bias)
 
-        print(stops, any(np.abs(stops)) > 1)
         if max(np.abs(starts)) > 1 or max(np.abs(stops)) > 1:
             raise ValueError("Sweeper amplitude is set to reach values higher than 1")
     else:
@@ -108,19 +100,38 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Qubit]
                     indexes.append(idx)
             if sweeper.parameter is Parameter.frequency:
                 parameters.append(rfsoc.Parameter.frequency)
-                starts.append(sweeper.values[0] + pulse.frequency)
-                stops.append(sweeper.values[-1] + pulse.frequency)
-            elif sweeper.parameter is Parameter.amplitude:
+
+                if pulse.type is PulseType.DRIVE:
+                    type = "drive"
+                elif pulse.type is PulseType.READOUT:
+                    type = "readout"
+                    adc = qubits[pulse.qubit].feedback.ports[0][1]
+                elif pulse.type is PulseType.FLUX:
+                    type = "flux"
+                dac = getattr(qubits[pulse.qubit], type).ports[0][1]
+                try:
+                    lo_frequency = getattr(qubits[pulse.qubit], type).local_oscillator._frequency
+                except NotImplementedError:
+                    lo_frequency = 0
+
+            if sweeper.parameter is Parameter.amplitude:
                 parameters.append(rfsoc.Parameter.amplitude)
                 starts.append(sweeper.values[0] * pulse.amplitude)
                 stops.append(sweeper.values[-1] * pulse.amplitude)
             elif sweeper.parameter is Parameter.relative_phase:
                 parameters.append(rfsoc.Parameter.relative_phase)
-                starts.append(sweeper.values[0] + pulse.relative_phase)
-                stops.append(sweeper.values[-1] + pulse.relative_phase)
+                starts.append(np.degrees(sweeper.values[0] + pulse.relative_phase))
+                stops.append(np.degrees(sweeper.values[-1] + pulse.relative_phase))
+            elif sweeper.parameter is Parameter.frequency:
+                if type == "readout":
+                    starts.append(sweeper.values[0] + pulse.frequency)
+                    stops.append(sweeper.values[-1] + pulse.frequency)
+                else:
+                    starts.append((sweeper.values[0] + pulse.frequency - lo_frequency) * HZ_TO_MHZ)
+                    stops.append((sweeper.values[-1] + pulse.frequency - lo_frequency) * HZ_TO_MHZ)
 
     return rfsoc.Sweeper(
-        parameter=sweeper.parameter,
+        parameter=parameters,
         indexes=indexes,
         starts=np.array(starts),
         stops=np.array(stops),
@@ -162,28 +173,20 @@ class RFSoC(AbstractInstrument):
 
     def setup(
         self,
-        sampling_rate: int = None,
         relaxation_time: int = None,
         adc_trig_offset: int = None,
-        max_gain: int = None,
     ):  # TODO rethink arguments
         """Changes the configuration of the instrument.
 
         Args:
-            sampling_rate (int): sampling rate of the RFSoC (Hz).
             relaxation_time (int): delay before readout (ns).
             adc_trig_offset (int): single offset for all adc triggers
                                    (tproc CLK ticks).
-            max_gain (int): maximum output power of the DAC (DAC units).
         """
-        if sampling_rate is not None:
-            self.cfg.sampling_rate = sampling_rate
         if relaxation_time is not None:
             self.cfg.repetition_duration = relaxation_time
         if adc_trig_offset is not None:
             self.cfg.adc_trig_offset = adc_trig_offset
-        if max_gain is not None:
-            self.cfg.max_gain = max_gain
 
     def _execute_pulse_sequence(
         self,
@@ -207,11 +210,15 @@ class RFSoC(AbstractInstrument):
         """
         # TODO typehint qubits is wrong, it's dictionary
 
+        new_qubits = []
+        for qubit in qubits:
+            new_qubits.append(asdict(convert_qubit(qubits[qubit])))
+
         server_commands = {
             "operation_code": "execute_pulse_sequence",
             "cfg": asdict(cfg),
             "sequence": [asdict(convert_pulse(pulse, qubits)) for pulse in sequence],
-            "qubits": [asdict(convert_qubit(qubits[idx])) for idx in qubits],
+            "qubits": new_qubits,
             "readouts_per_experiment": readouts_per_experiment,
             "average": average,
         }
@@ -411,9 +418,9 @@ class RFSoC(AbstractInstrument):
         sweeper = sweepers[0]
         values = []
         if (
-            sweeper.parameter is Parameter.frequency
-            or sweeper.parameter is Parameter.amplitude
-            or sweeper.parameter is Parameter.relative_phase
+            sweeper.parameter[0] is rfsoc.Parameter.frequency
+            or sweeper.parameter[0] is rfsoc.Parameter.amplitude
+            or sweeper.parameter[0] is rfsoc.Parameter.relative_phase
         ):
             for idx, _ in enumerate(sweeper.indexes):
                 val = np.linspace(sweeper.starts[idx], sweeper.stops[idx], sweeper.expts)
@@ -427,16 +434,16 @@ class RFSoC(AbstractInstrument):
         for idx in range(sweeper.expts):
             # update values
             if (
-                sweeper.parameter is Parameter.frequency
-                or sweeper.parameter is Parameter.amplitude
-                or sweeper.parameter is Parameter.relative_phase
+                sweeper.parameter[0] is rfsoc.Parameter.frequency
+                or sweeper.parameter[0] is rfsoc.Parameter.amplitude
+                or sweeper.parameter[0] is rfsoc.Parameter.relative_phase
             ):
                 for jdx in range(len(sweeper.indexes)):
-                    if sweeper.parameter is Parameter.frequency:
+                    if sweeper.parameter[jdx] is rfsoc.Parameter.frequency:
                         sequence[sweeper.indexes[jdx]].frequency = values[jdx][idx]
-                    elif sweeper.parameter is Parameter.amplitude:
+                    elif sweeper.parameter[jdx] is rfsoc.Parameter.amplitude:
                         sequence[sweeper.indexes[jdx]].amplitude = values[jdx][idx]
-                    elif sweeper.parameter is Parameter.relative_phase:
+                    elif sweeper.parameter[jdx] is rfsoc.Parameter.relative_phase:
                         sequence[sweeper.indexes[jdx]].relative_phase = values[jdx][idx]
             else:
                 for kdx, jdx in enumerate(sweeper.indexes):
@@ -488,10 +495,12 @@ class RFSoC(AbstractInstrument):
         """
 
         for sweeper in sweepers:
-            is_amp = sweeper.parameter is Parameter.amplitude
-            is_freq = sweeper.parameter is Parameter.frequency
+            # TODO
+            is_amp = sweeper.parameter[0] is rfsoc.Parameter.amplitude
+            is_freq = sweeper.parameter[0] is rfsoc.Parameter.frequency
 
             if is_freq or is_amp:
+                # TODO
                 is_ro = sequence[sweeper.indexes[0]].type == PulseType.READOUT
                 # if it's a sweep on the readout freq do a python sweep
                 if is_freq and is_ro:
@@ -625,7 +634,6 @@ class TII_RFSOC4x2(RFSoC):
         super().__init__(name, address=address)
         self.host, self.port = address.split(":")
         self.port = int(self.port)
-        self.cfg = rfsoc.Config()
 
 
 class TII_ZCU111(RFSoC):
@@ -636,4 +644,3 @@ class TII_ZCU111(RFSoC):
         super().__init__(name, address=address)
         self.host, self.port = address.split(":")
         self.port = int(self.port)
-        self.cfg = rfsoc.Config()
