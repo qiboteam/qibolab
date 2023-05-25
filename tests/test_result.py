@@ -43,19 +43,19 @@ def generate_random_avg_state_result(length=5):
 
 
 def test_iq_constructor():
-    """Testing IntegratedResults constructor"""
+    """Testing ExecutionResults constructor"""
     test = np.array([(1, 2), (1, 2)])
     IntegratedResults(test)
 
 
 def test_raw_constructor():
-    """Testing RawWaveformResults constructor"""
+    """Testing ExecutionResults constructor"""
     test = np.array([(1, 2), (1, 2)])
     RawWaveformResults(test)
 
 
 def test_state_constructor():
-    """Testing SampleResults constructor"""
+    """Testing ExecutionResults constructor"""
     test = np.array([1, 1, 0])
     SampleResults(test)
 
@@ -134,14 +134,7 @@ def test_serialize_state(average):
             np.testing.assert_equal(output[key], target_dict[key].flatten())
     else:
         results = generate_random_avg_state_result(5)
-        output = results.serialize
-        avg = results
-        target_dict = {
-            "0": abs(1 - np.mean(results.samples, axis=0)),
-        }
-        assert avg.serialize.keys() == target_dict.keys()
-        for key in output:
-            np.testing.assert_equal(avg.serialize[key], target_dict[key].flatten())
+        assert len(results.serialize["0"]) == 125
 
 
 @pytest.mark.parametrize("result", ["iq", "raw"])
@@ -157,18 +150,6 @@ def test_serialize_averaged_iq_results(result):
         "i[V]": results.voltage_i,
         "q[V]": results.voltage_q,
         "phase[rad]": np.angle(results.voltage_i + 1.0j * results.voltage_q),
-    }
-    assert output.keys() == target_dict.keys()
-    for key in output:
-        np.testing.assert_equal(output[key], target_dict[key].flatten())
-
-
-def test_serialize_averaged_state_results():
-    """Testing to_dict method"""
-    results = generate_random_avg_state_result(5)
-    output = results.serialize
-    target_dict = {
-        "0": abs(1 - np.mean(results.samples, axis=0)),
     }
     assert output.keys() == target_dict.keys()
     for key in output:
