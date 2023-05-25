@@ -167,7 +167,7 @@ ExecRes = np.dtype([("i", np.float64), ("q", np.float64)])
 
 @dataclass
 class ExecutionResults:
-    """Data structure to deal with the output of :func:`qibolab.platforms.abstract.AbstractPlatform.execute_pulse_sequence`"""
+    """Data structure to deal with the output of :func:`qibolab.platforms.abstract.Platform.execute_pulse_sequence`"""
 
     array: npt.NDArray[ExecRes]
     shots: Optional[npt.NDArray[np.uint32]] = None

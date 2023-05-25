@@ -1,8 +1,10 @@
+import os
+import pathlib
 from importlib import import_module
 
 import pytest
 
-from qibolab.platform import Platform
+from qibolab import Profile, create_platform
 from qibolab.platforms.multiqubit import MultiqubitPlatform
 
 
@@ -11,10 +13,16 @@ def pytest_addoption(parser):
         "--platforms",
         type=str,
         action="store",
-        default="qili1q_os2,qw5q_gold",
+        default="qm,qblox",
         help="qpu platforms to test on",
     )
-    parser.addoption("--address", type=str, action="store", default=None, help="address for the QM simulator")
+    parser.addoption(
+        "--address",
+        type=str,
+        action="store",
+        default=None,
+        help="address for the QM simulator",
+    )
     parser.addoption(
         "--simulation-duration",
         type=int,
@@ -29,6 +37,15 @@ def pytest_addoption(parser):
         default=None,
         help="folder to save QM simulator test regressions",
     )
+
+
+def set_platform_profile():
+    os.environ[Profile.envvar] = str(pathlib.Path(__file__).parent / "dummy_qrc")
+
+
+@pytest.fixture
+def dummy_qrc():
+    set_platform_profile()
 
 
 def load_from_platform(platform, name):
@@ -51,7 +68,8 @@ def load_from_platform(platform, name):
 
 @pytest.fixture(scope="module")
 def instrument(request):
-    platform = Platform(request.param[0])
+    set_platform_profile()
+    platform = create_platform(request.param[0])
     inst, _ = load_from_platform(platform, request.param[1])
     inst.connect()
     yield inst
@@ -73,8 +91,9 @@ def pytest_generate_tests(metafunc):
             metafunc.parametrize("folder", [folder], indirect=True)
 
     if metafunc.module.__name__ == "tests.test_instruments_qblox":
+        set_platform_profile()
         for platform_name in platforms:
-            if not isinstance(Platform(platform_name), MultiqubitPlatform):
+            if not isinstance(create_platform(platform_name), MultiqubitPlatform):
                 pytest.skip("Skipping qblox tests because no platform is available.")
 
     if "instrument" in metafunc.fixturenames:
@@ -89,16 +108,11 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize("backend", platforms, indirect=True)
 
     elif "platform_name" in metafunc.fixturenames:
+        set_platform_profile()
         if "qubit" in metafunc.fixturenames:
             qubits = []
             for platform_name in platforms:
-                if platform_name == "qw5q_gold":
-                    # TODO: Find a better way to handle this instead of hardcoding
-                    # exclude witness qubit 5 because it is not connected to drive channel
-                    qubits.extend((platform_name, q) for q in range(5))
-                else:
-                    qubits.extend((platform_name, q) for q in Platform(platform_name).qubits)
-
+                qubits.extend((platform_name, q) for q in create_platform(platform_name).qubits)
             metafunc.parametrize("platform_name,qubit", qubits)
         else:
             metafunc.parametrize("platform_name", platforms)

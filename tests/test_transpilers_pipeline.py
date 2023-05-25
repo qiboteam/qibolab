@@ -6,7 +6,7 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 
-from qibolab.platforms.native import NativeTypes
+from qibolab.native import NativeTypes
 from qibolab.transpilers import Pipeline
 
 from .test_transpilers_star_connectivity import transpose_qubits
