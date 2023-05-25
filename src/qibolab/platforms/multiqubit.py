@@ -5,8 +5,9 @@ import yaml
 from qibo.config import log, raise_error
 
 from qibolab.channels import ChannelMap
-from qibolab.platform import Platform, Qubit
+from qibolab.platform import Platform
 from qibolab.pulses import PulseSequence, PulseType
+from qibolab.qubits import Qubit
 from qibolab.result import ExecutionResults
 from qibolab.sweeper import Parameter
 
