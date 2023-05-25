@@ -335,12 +335,12 @@ class Zurich(AbstractInstrument):
             else:
                 if qubit.flux is not None:
                     self.register_flux_line(qubit)
-                if self.sequence[f"drive{qubit.name}"] is not None:
+                if self.sequence[f"drive{qubit.name}"]:  # is not None:
                     self.register_drive_line(
                         qubit=qubit,
                         intermediate_frequency=qubit.drive_frequency - qubit.drive.local_oscillator.frequency,
                     )
-                if self.sequence[f"readout{qubit.name}"] is not None:
+                if self.sequence[f"readout{qubit.name}"]:  # is not None:
                     self.register_readout_line(
                         qubit=qubit,
                         intermediate_frequency=qubit.readout_frequency - qubit.readout.local_oscillator.frequency,
@@ -453,7 +453,7 @@ class Zurich(AbstractInstrument):
             if qubit.flux_coupler:
                 continue
             q = qubit.name
-            if self.sequence[f"readout{q}"] is not None:
+            if self.sequence[f"readout{q}"]:  # is not None:
                 exp_res = self.results.get_data(f"sequence{q}")
                 if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                     data = np.array([exp_res]) if options.averaging_mode is AveragingMode.CYCLIC else np.array(exp_res)
@@ -529,11 +529,11 @@ class Zurich(AbstractInstrument):
             if qubit.flux_coupler:
                 signals.append(lo.ExperimentSignal(f"flux{q}"))
             else:
-                if self.sequence[f"drive{q}"] is not None:
+                if self.sequence[f"drive{q}"]:  # is not None:
                     signals.append(lo.ExperimentSignal(f"drive{q}"))
                 if qubit.flux is not None:
                     signals.append(lo.ExperimentSignal(f"flux{q}"))
-                if self.sequence[f"readout{q}"] is not None:
+                if self.sequence[f"readout{q}"]:  # is not None:
                     signals.append(lo.ExperimentSignal(f"measure{q}"))
                     signals.append(lo.ExperimentSignal(f"acquire{q}"))
 
@@ -666,7 +666,7 @@ class Zurich(AbstractInstrument):
             q = qubit.name
             time = 0
             i = 0
-            if self.sequence[f"drive{q}"] is not None:
+            if self.sequence[f"drive{q}"]:  # is not None:
                 with exp.section(uid=f"sequence_drive{q}"):
                     for pulse in self.sequence[f"drive{q}"]:
                         if not isinstance(pulse, ZhSweeperLine):
@@ -717,10 +717,10 @@ class Zurich(AbstractInstrument):
             play_after = self.play_after_set(self.sequence_qibo.qd_pulses, "drive")
 
         for qubit in qubits.values():
-            if not qubit.flux_coupler:
+            if qubit.flux_coupler:
                 continue
             q = qubit.name
-            if self.sequence[f"readout{q}"] is not None:
+            if self.sequence[f"readout{q}"]:  # is not None:
                 for pulse in self.sequence[f"readout{q}"]:
                     i = 0
                     with exp.section(uid=f"sequence_measure{q}", play_after=play_after):
@@ -732,7 +732,7 @@ class Zurich(AbstractInstrument):
                             + f"/runcards/{self.chip}/weights/integration_weights_optimization_qubit_{q}.npy"
                         )
                         if weights_file.is_file():
-                            optimized = True
+                            logging.info("I'm using optimized IW")
                             samples = np.load(
                                 str(qibolab_folder)
                                 + f"/runcards/{self.chip}/weights/integration_weights_optimization_qubit_{q}.npy",
@@ -749,7 +749,7 @@ class Zurich(AbstractInstrument):
                                     samples=samples[0],
                                 )
                         else:
-                            optimized = False
+                            logging.info("I'm using dumb IW")
                             "We adjust for smearing and remove smearing/2 at the end"
                             exp.delay(signal=f"measure{q}", time=self.smearing * NANO_TO_SECONDS)
                             if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
@@ -782,8 +782,6 @@ class Zurich(AbstractInstrument):
                             reset_delay=relaxation_time * NANO_TO_SECONDS,
                         )
                         i += 1
-
-            logging.info("I'm using optimized IW") if optimized else logging.info("I'm using dumb IW")
 
     def fast_reset(self, exp, qubits, fast_reset):
         """
@@ -863,10 +861,10 @@ class Zurich(AbstractInstrument):
         "Get the results back"
         results = {}
         for qubit in qubits.values():
-            if not qubit.flux_coupler:
+            if qubit.flux_coupler:
                 continue
             q = qubit.name
-            if self.sequence[f"readout{q}"] is not None:
+            if self.sequence[f"readout{q}"]:  # is not None:
                 exp_res = self.results.get_data(f"sequence{q}")
                 # Reorder dimensions
                 exp_res = np.moveaxis(exp_res, rearranging_axes[0], rearranging_axes[1])
