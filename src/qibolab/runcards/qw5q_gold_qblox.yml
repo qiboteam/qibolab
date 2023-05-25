@@ -87,11 +87,11 @@ instruments:
 
             classification_parameters:
                 0:  # qubit id
-                    rotation_angle              : 268.023                   # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.003503                  # in V
+                    rotation_angle              : 260.1103128487776                   # in degrees 0.0<=v<=360.0
+                    threshold                   : -0.0008331625223710456                # in V
                 1:  # qubit id
-                    rotation_angle              : 30.478                   # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.002465                  # in V
+                    rotation_angle              : 104.93777549274867                   # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.002098590158790465                  # in V
 
     qrm_rf2: # ReadOut module 12: controlling qubits q2, q3, q4
         lib: qblox
@@ -113,14 +113,14 @@ instruments:
 
             classification_parameters:
                 2:  # qubit id
-                    rotation_angle              : 343.894                    # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.002606                  # in V
+                    rotation_angle              : 126.40758119574879                    # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.0021172257761740937                  # in V
                 3:  # qubit id
-                    rotation_angle              : 359.065                    # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.003387                  # in V
+                    rotation_angle              : 5.171244173054017                    # in degrees 0.0<=v<=360.0
+                    threshold                   : -0.0034279042133790226                  # in V
                 4:  # qubit id
-                    rotation_angle              : 283.970                   # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.000889                  # in V
+                    rotation_angle              : 196.0380592548256                   # in degrees 0.0<=v<=360.0
+                    threshold                   : -0.0033897846745947905                  # in V
 
     qcm_rf1:
         lib: qblox
@@ -222,8 +222,8 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.1
-                frequency: 7_212_362_551     # resonator frequency
-                if_frequency: -42_637_449    # difference in resonator frequency
+                frequency: 7211762551     # resonator frequency
+                if_frequency: -47837449    # difference in resonator frequency
                 shape: Rectangular()
                 type: ro                    # readout
         1: # qubit id
@@ -237,8 +237,8 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.2
-                frequency: 7_453_149_599    # resonator frequency
-                if_frequency: 198_149_599    # difference in resonator frequency
+                frequency: 7452949599    # resonator frequency
+                if_frequency: 193349599    # difference in resonator frequency
                 shape: Rectangular()
                 type: ro                    # readout
         2: # qubit id
@@ -252,8 +252,8 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.25
-                frequency: 7_655_110_446    # resonator frequency
-                if_frequency: -194_889_554    # difference in resonator frequency
+                frequency: 7654910446    # resonator frequency
+                if_frequency: -199689554    # difference in resonator frequency
                 shape: Rectangular()
                 type: ro                    # readout
         3: # qubit id
@@ -267,8 +267,8 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.2
-                frequency: 7_803_377_426    # resonator frequency
-                if_frequency: -46_622_574    # difference in resonator frequency
+                frequency: 7802777426    # resonator frequency
+                if_frequency: -51822574    # difference in resonator frequency
                 shape: Rectangular()
                 type: ro                    # readout
         4: # qubit id
@@ -282,8 +282,8 @@ native_gates:
             MZ:
                 duration: 2000
                 amplitude: 0.4
-                frequency: 8_058_739_833      # resonator frequency
-                if_frequency: 208_739_833    # difference in resonator frequency
+                frequency: 8058139833      # resonator frequency
+                if_frequency: 203539833    # difference in resonator frequency
                 shape: Rectangular()
                 type: ro                    # readout
         5: # qubit id
@@ -311,31 +311,31 @@ native_gates:
               qubit: 3
               relative_start: 0
               type: qf
-            # - duration: 20
-            #   amplitude: 0
-            #   shape: Rectangular())
-            #   qubit: 3
-            #   relative_start: 32
-            #   type: qf
-            # - type: virtual_z
-            #   phase: -3.862
-            #   qubit: 3
+            - duration: 20
+              amplitude: 0
+              shape: Rectangular())
+              qubit: 3
+              relative_start: 32
+              type: qf
+            - type: virtual_z
+              phase: -3.862
+              qubit: 3
 
-            # - duration: 32
-            #   amplitude: 0
-            #   shape: Rectangular())
-            #   qubit: 2
-            #   relative_start: 0
-            #   type: qf
-            # - duration: 20
-            #   amplitude: 0
-            #   shape: Rectangular())
-            #   qubit: 2
-            #   relative_start: 32
-            #   type: qf
-            # - type: virtual_z
-            #   phase: -0.095
-            #   qubit: 2
+            - duration: 32
+              amplitude: 0
+              shape: Rectangular())
+              qubit: 2
+              relative_start: 0
+              type: qf
+            - duration: 20
+              amplitude: 0
+              shape: Rectangular())
+              qubit: 2
+              relative_start: 32
+              type: qf
+            - type: virtual_z
+              phase: -0.095
+              qubit: 2
 
         2-0:
             CZ:
@@ -350,7 +350,7 @@ native_gates:
 characterization:
     single_qubit:
         0:
-            readout_frequency: 7_212_362_551
+            readout_frequency: 7211762551
             drive_frequency: 5_045_070_000
             anharmonicity: 291_451_184
             T1: 5_857
@@ -361,7 +361,7 @@ characterization:
             mean_exc_states: (0.0+0.0j)
             sweetspot: -0.0884
         1:
-            readout_frequency: 7_453_149_599
+            readout_frequency: 7452949599
             drive_frequency: 4_852_280_321
             anharmonicity: 291_965_010
             T1: 1_253
@@ -372,7 +372,7 @@ characterization:
             mean_exc_states: (0.0+0.0j)
             sweetspot: 0.5592
         2:
-            readout_frequency: 7_655_110_446
+            readout_frequency: 7654910446
             drive_frequency: 5_794_176_000
             anharmonicity: 275_392_460
             T1: 4_563
@@ -383,7 +383,7 @@ characterization:
             mean_exc_states: (0.0+0.0j)
             sweetspot: 0.1967
         3:
-            readout_frequency: 7_803_377_426
+            readout_frequency: 7802777426
             drive_frequency: 6_760_050_000
             anharmonicity: 261_797_410
             T1: 4_232
@@ -394,7 +394,7 @@ characterization:
             mean_exc_states: (0.0+0.0j)
             sweetspot: 0.7557
         4:
-            readout_frequency: 8_058_739_833
+            readout_frequency: 8058139833
             drive_frequency: 6_585_145_857
             anharmonicity: 253_106_666
             T1: 492
