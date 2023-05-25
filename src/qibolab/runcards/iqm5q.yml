@@ -12,12 +12,7 @@ settings:
 
 qubits: [0, 1, 2, 3, 4, "c0", "c1", "c3", "c4"]
 
-topology:
-- [1, 0, 1, 0, 0]
-- [0, 1, 1, 0, 0]
-- [1, 1, 1, 1, 1]
-- [0, 0, 1, 1, 0]
-- [0, 0, 1, 0, 1]
+topology: [[0, 2], [1, 2], [2, 3], [2, 4]]
 
 native_gates:
     single_qubit:
@@ -35,14 +30,13 @@ native_gates:
                 duration: 2000 #2000.e-9
                 amplitude: .5 # .1
                 frequency: 5_229_200_000 #5_233_200_000 #doesnt do anything requiered for qibolab to work
-                integration_time : 1.e-6
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
     #             phase: 0
-            Flux_bias:
-                amplitude: .0
-                shape: Rectangular()
+            # Flux_bias:
+            #     amplitude: .0
+            #     shape: Rectangular()
 
         1: # qubit number
             RX:
@@ -58,14 +52,13 @@ native_gates:
                 duration: 1000
                 amplitude: .1 # 1
                 frequency: 4_931_000_000 #doesnt do anything requiered for qibolab to work
-                integration_time : 1.e-6 #I assume its the same as the ro_ pulse for now
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
     #             phase: 0
-            Flux_bias:
-                amplitude: .0
-                shape: Rectangular()
+            # Flux_bias:
+            #     amplitude: .0
+            #     shape: Rectangular()
 
         2: # qubit number
             RX:
@@ -81,14 +74,13 @@ native_gates:
                 duration: 2000
                 amplitude: .54
                 frequency: 6.109e+9 #6_086_000_000  #6_112_000_000 #doesnt do anything requiered for qibolab to work
-                integration_time : 2.0e-6
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
     #             phase: 0
-            Flux_bias:
-                amplitude: .0
-                shape: Rectangular()
+            # Flux_bias:
+            #     amplitude: .0
+            #     shape: Rectangular()
         3: # qubit number
             RX:
                 duration: 90 #80
@@ -103,14 +95,13 @@ native_gates:
                 duration: 2000
                 amplitude: .01 # 1
                 frequency: 5_783_000_000 #doesnt do anything requiered for qibolab to work
-                integration_time : 1.e-6
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
     #             phase: 0
-            Flux_bias:
-                amplitude: .0
-                shape: Rectangular()
+            # Flux_bias:
+            #     amplitude: .0
+            #     shape: Rectangular()
         4: # qubit number
             RX:
                 duration: 53 #110 #80
@@ -125,14 +116,13 @@ native_gates:
                 duration: 1000
                 amplitude: .5 #.50 # 1
                 frequency: 5_515_000_000 #doesnt do anything requiered for qibolab to work
-                integration_time : 2.e-6
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
     #             phase: 0
-            Flux_bias:
-                amplitude: .1
-                shape: Rectangular()
+            # Flux_bias:
+            #     amplitude: .1
+            #     shape: Rectangular()
 
     # two_qubit:
     #     0-2: # qubit numbers
@@ -243,19 +233,19 @@ characterization:
             filter: {}
             # To save power values on the runcard
             # flux_range: -0
-    two_qubit:
+    # two_qubit:
 
-    two_qubit_couplers:
-        0:
-            # frequency: 3_753_000_000 or 3_503_000_000
-            sweetspot: 0.1
-            filter: {}
-        1:
-            sweetspot: 0.0
-            filter: {}
-        3:
-            sweetspot: 0.0
-            filter: {}
-        4:
-            sweetspot: 0.0
-            filter: {}
+    # two_qubit_couplers:
+    #     0:
+    #         # frequency: 3_753_000_000 or 3_503_000_000
+    #         sweetspot: 0.1
+    #         filter: {}
+    #     1:
+    #         sweetspot: 0.0
+    #         filter: {}
+    #     3:
+    #         sweetspot: 0.0
+    #         filter: {}
+    #     4:
+    #         sweetspot: 0.0
+    #         filter: {}
