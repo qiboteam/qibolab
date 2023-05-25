@@ -93,12 +93,12 @@ def create_tii_qw25q(runcard, simulation_duration=None, address=None, cloud=Fals
 
     for feedline in connections:
         channels[wiring["feedback"][feedline][0]].ports = [
-            (f"con{connections[feedline][0]}", 1),
             (f"con{connections[feedline][0]}", 2),
+            (f"con{connections[feedline][0]}", 1),
         ]
         channels[wiring["feedback"][feedline][1]].ports = [
-            (f"con{connections[feedline][1]}", 1),
             (f"con{connections[feedline][1]}", 2),
+            (f"con{connections[feedline][1]}", 1),
         ]
         channels[wiring["readout"][feedline][0]].ports = [
             (f"con{connections[feedline][0]}", 10),
