@@ -14,7 +14,7 @@ __version__ = im.version(__package__)
 
 
 class Profile:
-    envvar = "QIBOLAB_PLATFORMS_FILE"
+    envvar = "QIBOLAB_PLATFORMS"
     filename = "platforms.toml"
 
     def __init__(self, path: Path):
