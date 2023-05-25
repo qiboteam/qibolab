@@ -12,16 +12,17 @@ from qibo.config import raise_error
 
 __version__ = im.version(__package__)
 
-PROFILE = "QIBOLAB_PLATFORMS_FILE"
-
 
 class Profile:
+    envvar = "QIBOLAB_PLATFORMS_FILE"
+    filename = "platforms.toml"
+
     def __init__(self, path: Path):
-        profile = tomllib.loads(path.read_text(encoding="utf-8"))
+        profile = tomllib.loads((path / self.filename).read_text(encoding="utf-8"))
 
         paths = {}
         for name, p in profile["paths"].items():
-            paths[name] = path.parent / Path(p)
+            paths[name] = path / Path(p)
 
         self.paths = paths
 
@@ -40,7 +41,7 @@ def create_platform(name, runcard=None):
 
         return create_dummy(qibolab_folder / "runcards" / "dummy.yml")
 
-    profiles = Path(os.environ.get(PROFILE))
+    profiles = Path(os.environ.get(Profile.envvar))
     if not os.path.exists(profiles):
         raise_error(RuntimeError, f"Profile file {profiles} does not exist.")
 
