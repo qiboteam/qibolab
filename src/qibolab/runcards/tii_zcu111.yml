@@ -22,7 +22,7 @@ native_gates:
             RX:
                 duration: 43
                 amplitude: 0.02
-                frequency: 4_939_000_000
+                frequency: 4_942_000_000
                 shape: Rectangular()
                 type: qd # qubit drive
                 start: 0
@@ -30,7 +30,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.038
-                frequency: 6_951_000_000
+                frequency: 6_953_200_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
@@ -47,7 +47,7 @@ native_gates:
             MZ:
                 duration: 1000
                 amplitude: 0.15
-                frequency: 7_345_330_000
+                frequency: 7_345_300_000
                 shape: Rectangular()
                 type: ro # readout
                 start: 0
