@@ -3,7 +3,11 @@ import importlib.util
 import os
 from pathlib import Path
 
-import yaml
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
+
 from qibo.config import raise_error
 
 __version__ = im.version(__package__)
@@ -13,7 +17,7 @@ PROFILE = "QIBOLAB_PLATFORMS_FILE"
 
 class Profile:
     def __init__(self, path: Path):
-        profile = yaml.safe_load(path.read_text(encoding="utf-8"))
+        profile = tomllib.loads(path.read_text(encoding="utf-8"))
 
         paths = {}
         for name, p in profile["paths"].items():

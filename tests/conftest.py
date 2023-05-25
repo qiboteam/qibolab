@@ -16,7 +16,13 @@ def pytest_addoption(parser):
         default="qm,qblox",
         help="qpu platforms to test on",
     )
-    parser.addoption("--address", type=str, action="store", default=None, help="address for the QM simulator")
+    parser.addoption(
+        "--address",
+        type=str,
+        action="store",
+        default=None,
+        help="address for the QM simulator",
+    )
     parser.addoption(
         "--simulation-duration",
         type=int,
@@ -34,7 +40,7 @@ def pytest_addoption(parser):
 
 
 def set_platform_profile():
-    os.environ[PROFILE] = str(pathlib.Path(__file__).parent / "dummy_qrc" / "profile.yml")
+    os.environ[PROFILE] = str(pathlib.Path(__file__).parent / "dummy_qrc" / "profile.toml")
 
 
 @pytest.fixture
