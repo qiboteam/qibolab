@@ -92,7 +92,7 @@ class MultiqubitPlatform(AbstractPlatform):
                     # update Qblox qubit LO drive frequency config
                     instrument_name = self.qubit_instrument_map[qubit][1]
                     port = self.qdm[qubit].channel_port_map[self.qubit_channel_map[qubit][1]]
-                    drive_if = self.single_qubit_natives[qubit]["RX"]["if_frequency"]
+                    drive_if = self.qubits[qubit].native_gates.RX.if_frequency
                     self.settings["instruments"][instrument_name]["settings"]["ports"][port]["lo_frequency"] = (
                         freq - drive_if
                     )
