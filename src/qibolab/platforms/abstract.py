@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import networkx as nx
 import yaml
@@ -15,6 +15,9 @@ from qibo.models import Circuit
 from qibolab.designs.channels import Channel
 from qibolab.platforms.native import NativeTypes, SingleQubitNatives, TwoQubitNatives
 from qibolab.pulses import PulseSequence
+
+QubitId = Union[str, int]
+"""Type for qubit names."""
 
 
 @dataclass
@@ -37,7 +40,7 @@ class Qubit:
         Other characterization parameters for the qubit, loaded from the runcard.
     """
 
-    name: Union[str, int]
+    name: QubitId
 
     bare_resonator_frequency: int = 0
     readout_frequency: int = 0  # this is the dressed frequency
@@ -115,8 +118,8 @@ class AbstractPlatform(ABC):
         self.name = name
         self.runcard = runcard
 
-        self.qubits: Dict[Union[str, int], Qubit] = {}
-        self.pairs: Dict[Union[str, int], QubitPair] = {}
+        self.qubits: Dict[QubitId, Qubit] = {}
+        self.pairs: Dict[Tuple[QubitId, QubitId], QubitPair] = {}
 
         # Values for the following are set from the runcard in ``reload_settings``
         self.settings = None
