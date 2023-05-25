@@ -5,7 +5,7 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.config import log, raise_error
 
-from qibolab.platforms.native import NativeTypes
+from qibolab.platforms.native import NativeType
 from qibolab.transpilers.abstract import Transpiler
 from qibolab.transpilers.unitary_decompositions import (
     two_qubit_decomposition,
@@ -49,7 +49,7 @@ class GateDecompositions:
         return [g.on_qubits({i: q for i, q in enumerate(gate.qubits)}) for g in decomposition]
 
 
-def translate_gate(gate, native_gates: NativeTypes):
+def translate_gate(gate, native_gates: NativeType):
     """Maps Qibo gates to a hardware native implementation.
 
     Args:
@@ -66,7 +66,7 @@ def translate_gate(gate, native_gates: NativeTypes):
     if len(gate.qubits) == 1:
         return onequbit_dec(gate)
 
-    if native_gates is NativeTypes.CZ | NativeTypes.iSWAP:
+    if native_gates is NativeType.CZ | NativeType.iSWAP:
         # Check for a special optimized decomposition.
         if gate.__class__ in opt_dec.decompositions:
             return opt_dec(gate)
@@ -85,9 +85,9 @@ def translate_gate(gate, native_gates: NativeTypes):
                 return cz_dec(gate)
             else:  # pragma: no cover
                 return iswap_dec(gate)
-    elif native_gates is NativeTypes.CZ:
+    elif native_gates is NativeType.CZ:
         return cz_dec(gate)
-    elif native_gates is NativeTypes.iSWAP:
+    elif native_gates is NativeType.iSWAP:
         if gate.__class__ in iswap_dec.decompositions:
             return iswap_dec(gate)
         else:
@@ -97,7 +97,7 @@ def translate_gate(gate, native_gates: NativeTypes):
             iswap_decomposed = []
             for g in cz_decomposed:
                 # Need recursive function as gates.Unitary is not in iswap_dec
-                for g_translated in translate_gate(g, NativeTypes.iSWAP):
+                for g_translated in translate_gate(g, NativeType.iSWAP):
                     iswap_decomposed.append(g_translated)
             return iswap_decomposed
     else:  # pragma: no cover
@@ -374,7 +374,7 @@ class NativeGates(Transpiler):
         new (qibo.models.Circuit): Equivalent circuit with native gates.
     """
 
-    two_qubit_natives: NativeTypes
+    two_qubit_natives: NativeType
     translate_single_qubit: bool = True
     verbose: bool = False
 
@@ -412,7 +412,7 @@ class NativeGates(Transpiler):
                     return False
 
             elif len(gate.qubits) == 2:
-                if not (NativeTypes.from_gate(gate) in self.two_qubit_natives):
+                if not (NativeType.from_gate(gate) in self.two_qubit_natives):
                     self.tlog(f"{gate.name} is not a two qubit native gate.")
                     return False
 

@@ -6,7 +6,7 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 
-from qibolab.platforms.native import NativeTypes
+from qibolab.platforms.native import NativeType
 from qibolab.transpilers import Pipeline
 
 from .test_transpilers_star_connectivity import transpose_qubits
@@ -51,7 +51,7 @@ def generate_random_circuit(nqubits, ngates, seed=None):
 
 @pytest.mark.parametrize(
     "two_qubit_natives",
-    [NativeTypes.CZ, NativeTypes.iSWAP, NativeTypes.CZ | NativeTypes.iSWAP],
+    [NativeType.CZ, NativeType.iSWAP, NativeType.CZ | NativeType.iSWAP],
 )
 @pytest.mark.parametrize("middle_qubit", [0, 1, 2, 3, 4])
 @pytest.mark.parametrize("nqubits", [1, 2, 3, 4, 5])
@@ -82,7 +82,7 @@ def test_transpile(middle_qubit, nqubits, ngates, fuse_one_qubit, two_qubit_nati
 
 
 def test_can_execute_false():
-    transpiler = Pipeline.default(two_qubit_natives=NativeTypes.CZ | NativeTypes.iSWAP)
+    transpiler = Pipeline.default(two_qubit_natives=NativeType.CZ | NativeType.iSWAP)
     circuit1 = Circuit(1)
     circuit1.add(gates.H(0))
     assert not transpiler.is_satisfied(circuit1)

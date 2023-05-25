@@ -1,7 +1,6 @@
 from qibo.config import raise_error
 
 from qibolab.designs import Channel, ChannelMap, InstrumentDesign
-from qibolab.platforms.abstract import QubitPair
 from qibolab.platforms.platform import DesignPlatform
 
 
