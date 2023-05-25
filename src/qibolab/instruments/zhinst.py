@@ -406,7 +406,7 @@ class Zurich(AbstractInstrument):
     # TODO: Play taking a big sequence with several acquire steps
     def play(self, qubits, sequence, options):
         """Play pulse sequence"""
-
+        self.signal_map = {}
         dimensions = []
         if options.averaging_mode is AveragingMode.SINGLESHOT:
             dimensions = [options.nshots]
@@ -547,6 +547,7 @@ class Zurich(AbstractInstrument):
         kwargs = asdict(options)
         if self.acquisition_type:
             kwargs["acquisition_type"] = self.acquisition_type
+            self.acquisition_type = None
         else:
             kwargs["acquisition_type"] = ACQUISITION_TYPE[options.acquisition_type]
         kwargs["averaging_mode"] = AVERAGING_MODE[options.averaging_mode]
