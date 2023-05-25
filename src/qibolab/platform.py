@@ -1,7 +1,7 @@
 import math
 import re
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, List, Optional
 
@@ -108,6 +108,7 @@ class Platform:
         self.nqubits = None
         self.resonator_type = None
         self.topology = None
+        self.nshots = None
         self.relaxation_time = None
         self.sampling_rate = None
 
@@ -141,6 +142,7 @@ class Platform:
 
         self.topology = settings["topology"]
 
+        self.nshots = settings["settings"]["nshots"]
         self.relaxation_time = settings["settings"]["relaxation_time"]
         self.sampling_rate = settings["settings"]["sampling_rate"]
 
@@ -353,26 +355,26 @@ class Platform:
                 instrument.disconnect()
         self.is_connected = False
 
-    def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None, raw_adc=False):
+    def execute_pulse_sequence(self, sequence, options, **kwargs):
         """Executes a pulse sequence.
 
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
-            nshots (int): Number of shots to sample from the experiment. Default is 1024.
-            relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
-                If ``None`` the default value provided as ``repetition_duration`` in the runcard will be used.
+            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
+            **kwargs: May need them for something
 
         Returns:
             Readout results acquired by after execution.
         """
-        if relaxation_time is None:
-            relaxation_time = self.relaxation_time
+        if options.nshots is None:
+            options = replace(options, nshots=self.nshots)
+
+        if options.relaxation_time is None:
+            options = replace(options, relaxation_time=self.relaxation_time)
 
         result = {}
         for instrument in self.instruments:
-            new_result = instrument.play(
-                self.qubits, sequence, nshots=nshots, relaxation_time=relaxation_time, raw_adc=raw_adc
-            )
+            new_result = instrument.play(self.qubits, sequence, options)
             if isinstance(new_result, dict):
                 result.update(new_result)
             elif new_result is not None:
@@ -380,7 +382,7 @@ class Platform:
                 result = new_result
         return result
 
-    def sweep(self, sequence, *sweepers, nshots=1024, relaxation_time=None, average=True):
+    def sweep(self, sequence, options, *sweepers):
         """Executes a pulse sequence for different values of sweeped parameters.
         Useful for performing chip characterization.
 
@@ -391,6 +393,7 @@ class Platform:
                 from qibolab.platform import create_platform
                 from qibolab.sweeper import Sweeper, Parameter
                 from qibolab.pulses import PulseSequence
+                from qibolab import ExecutionParameters
 
 
                 platform = create_platform("dummy")
@@ -400,29 +403,27 @@ class Platform:
                 sequence.add(pulse)
                 parameter_range = np.random.randint(10, size=10)
                 sweeper = Sweeper(parameter, parameter_range, [pulse])
-                platform.sweep(sequence, sweeper)
-
+                platform.sweep(sequence, ExecutionParameters(), sweeper)
 
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
-            sweepers (:class:`qibolab.sweeper.Sweeper`): Sweeper objects that specify which
+            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
+            *sweepers (:class:`qibolab.sweeper.Sweeper`): Sweeper objects that specify which
                 parameters are being sweeped.
-            nshots (int): Number of shots to sample from the experiment. Default is 1024.
-            relaxation_time (int): Time to wait for the qubit to relax to its ground state between shots in ns.
-                If ``None`` the default value provided as ``repetition_duration`` in the runcard will be used.
-            average (bool): If ``True`` the IQ results of individual shots are averaged on hardware.
+            **kwargs: May need them for something
 
         Returns:
             Readout results acquired by after execution.
         """
-        if relaxation_time is None:
-            relaxation_time = self.relaxation_time
+        if options.nshots is None:
+            options = replace(options, nshots=self.nshots)
+
+        if options.relaxation_time is None:
+            options = replace(options, relaxation_time=self.relaxation_time)
 
         result = {}
         for instrument in self.instruments:
-            new_result = instrument.sweep(
-                self.qubits, sequence, *sweepers, nshots=nshots, relaxation_time=relaxation_time, average=average
-            )
+            new_result = instrument.sweep(self.qubits, sequence, options, *sweepers)
             if isinstance(new_result, dict):
                 result.update(new_result)
             elif new_result is not None:
@@ -430,8 +431,8 @@ class Platform:
                 result = new_result
         return result
 
-    def __call__(self, sequence, nshots=1024, relaxation_time=None, raw_adc=False):
-        return self.execute_pulse_sequence(sequence, nshots, relaxation_time, raw_adc=raw_adc)
+    def __call__(self, sequence, options):
+        return self.execute_pulse_sequence(sequence, options)
 
     def get_qd_channel(self, qubit):
         if self.qubits[qubit].drive:

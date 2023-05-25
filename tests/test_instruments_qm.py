@@ -2,8 +2,8 @@ import numpy as np
 import pytest
 from qm import qua
 
-from qibolab import create_platform
-from qibolab.instruments.qm import QMOPX, QMPulse, Sequence
+from qibolab import AcquisitionType, ExecutionParameters, create_platform
+from qibolab.instruments.qm import QMOPX, Acquisition, QMPulse, Sequence
 from qibolab.paths import qibolab_folder
 from qibolab.pulses import FluxPulse, Pulse, ReadoutPulse, Rectangular
 
@@ -15,19 +15,33 @@ def test_qmpulse():
     assert qmpulse.relative_phase == 0
 
 
-def test_qmpulse_declare_output():
+@pytest.mark.parametrize("acquisition_type", AcquisitionType)
+def test_qmpulse_declare_output(acquisition_type):
+    options = ExecutionParameters(acquisition_type=acquisition_type)
     pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
     qmpulse = QMPulse(pulse)
-    with qua.program() as _:
-        qmpulse.declare_output(0.1, 0.2)
-    acquisition = qmpulse.acquisition
-    assert acquisition.threshold == 0.1
-    assert acquisition.cos == np.cos(0.2)
-    assert acquisition.sin == np.sin(0.2)
-    assert isinstance(acquisition.I, qua._dsl._Variable)
-    assert isinstance(acquisition.I_stream, qua._dsl._ResultSource)
-    assert isinstance(acquisition.shot, qua._dsl._Variable)
-    assert isinstance(acquisition.shots, qua._dsl._ResultSource)
+    if acquisition_type is AcquisitionType.SPECTROSCOPY:
+        with pytest.raises(ValueError):
+            with qua.program() as _:
+                qmpulse.declare_output(options, 0.1, 0.2)
+    else:
+        with qua.program() as _:
+            qmpulse.declare_output(options, 0.1, 0.2)
+        acquisition = qmpulse.acquisition
+        assert isinstance(acquisition, Acquisition)
+        if acquisition_type is AcquisitionType.DISCRIMINATION:
+            assert acquisition.threshold == 0.1
+            assert acquisition.cos == np.cos(0.2)
+            assert acquisition.sin == np.sin(0.2)
+            assert isinstance(acquisition.shot, qua._dsl._Variable)
+            assert isinstance(acquisition.shots, qua._dsl._ResultSource)
+        elif acquisition_type is AcquisitionType.INTEGRATION:
+            assert isinstance(acquisition.I, qua._dsl._Variable)
+            assert isinstance(acquisition.Q, qua._dsl._Variable)
+            assert isinstance(acquisition.I_stream, qua._dsl._ResultSource)
+            assert isinstance(acquisition.Q_stream, qua._dsl._ResultSource)
+        elif acquisition_type is AcquisitionType.RAW:
+            assert isinstance(acquisition.adc_stream, qua._dsl._ResultSource)
 
 
 def test_qmsequence():

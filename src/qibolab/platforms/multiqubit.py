@@ -44,7 +44,7 @@ class MultiqubitPlatform(Platform):
         super().reload_settings()
         self.characterization = self.settings["characterization"]
         self.qubit_channel_map = self.settings["qubit_channel_map"]
-        self.hardware_avg = self.settings["settings"]["hardware_avg"]
+        self.nshots = self.settings["settings"]["nshots"]
         self.relaxation_time = self.settings["settings"]["relaxation_time"]
 
         # FIX: Set attenuation again to the original value after sweep attenuation in punchout
@@ -282,7 +282,7 @@ class MultiqubitPlatform(Platform):
         if not self.is_connected:
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
         if nshots is None:
-            nshots = self.hardware_avg
+            nshots = self.nshots
 
         instrument_pulses = {}
         changed = {}
