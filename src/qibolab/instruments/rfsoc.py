@@ -267,7 +267,6 @@ class RFSoC(AbstractInstrument):
         # open a connection
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect((host, port))
-            print(server_commands)
             msg_encoded = pickle.dumps(server_commands)
             # first send 4 bytes with the length of the message
             sock.send(len(msg_encoded).to_bytes(4, "big"))
@@ -319,7 +318,7 @@ class RFSoC(AbstractInstrument):
         if nshots is not None:
             self.cfg.reps = nshots
         if relaxation_time is not None:
-            self.cfg.repetition_duration = relaxation_time
+            self.cfg.repetition_duration = relaxation_time * NS_TO_US
 
         toti, totq = self._execute_pulse_sequence(self.cfg, sequence, qubits, len(sequence.ro_pulses), average)
 
@@ -594,7 +593,7 @@ class RFSoC(AbstractInstrument):
         if nshots is not None:
             self.cfg.reps = nshots
         if relaxation_time is not None:
-            self.cfg.repetition_duration = relaxation_time
+            self.cfg.repetition_duration = relaxation_time * NS_TO_US
 
         rfsoc_sweepers = [convert_sweep(sweep, sequence, qubits) for sweep in sweepers]
 
