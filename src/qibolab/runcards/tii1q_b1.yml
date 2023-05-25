@@ -7,9 +7,9 @@ settings: {nshots: 1024, relaxation_time: 100000, sampling_rate: 9830400000, adc
 native_gates:
     single_qubit:
         0:
-            RX: {duration: 30, amplitude: 0.052773520525260714, frequency: 5542348611,
-                shape: Rectangular(), type: qd, start: 0, phase: 0}
-            MZ: {duration: 600, amplitude: 0.025, frequency: 7371286590, shape: Rectangular(),
+            RX: {duration: 29, amplitude: 0.0527, frequency: 5542348611, shape: Rectangular(),
+                type: qd, start: 0, phase: 0}
+            MZ: {duration: 600, amplitude: 0.06, frequency: 7370129300, shape: Rectangular(),
                 type: ro, start: 0, phase: 0}
     two_qubits: {}
 characterization:

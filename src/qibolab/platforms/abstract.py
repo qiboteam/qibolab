@@ -74,6 +74,7 @@ class Qubit:
     drive: Optional[Channel] = None
     flux: Optional[Channel] = None
 
+    classifiers_hpars: dict = field(default_factory=dict)
     native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
 
     def __post_init__(self):
@@ -257,12 +258,6 @@ class AbstractPlatform(ABC):
                     self.settings["characterization"]["single_qubit"][qubit]["readout_frequency"] = freq
 
                 # resonator_punchout_attenuation
-                elif par == "readout_attenuation":
-                    # TODO: Are we going to save the attenuation somwhere in the native_gates or characterization
-                    # in all platforms?
-                    True
-
-                # resonator_punchout_attenuation
                 elif par == "bare_resonator_frequency":
                     freq = int(value * 1e9)
                     self.qubits[qubit].bare_resonator_frequency = freq
@@ -352,6 +347,13 @@ class AbstractPlatform(ABC):
                     rx.shape = f"Drag({rel_sigma}, {float(value)})"
                     self.settings["native_gates"]["single_qubit"][qubit]["RX"]["shape"] = rx.shape
 
+                elif "length" in par:  # assume only drive length
+                    self.qubits[qubit].native_gates.RX.duration = int(value)
+                elif par == "classifiers_hpars":
+                    self.qubits[qubit].classifiers_hpars = value
+                    self.settings["characterization"]["single_qubit"][qubit]["classifiers_hpars"] = value
+                elif par == "readout_attenuation":
+                    self.set_attenuation(qubit, value)
                 else:
                     raise_error(ValueError, f"Unknown parameter {par} for qubit {qubit}")
 
