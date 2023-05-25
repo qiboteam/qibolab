@@ -193,8 +193,6 @@ class AbstractPlatform(ABC):
 
         """
 
-        # updates = {}
-
         for par, values in updates.items():
             for qubit, value in values.items():
                 # resonator_spectroscopy / resonator_spectroscopy_flux / resonator_punchout_attenuation

@@ -1,4 +1,4 @@
-from dataclasses import asdict, replace
+from dataclasses import replace
 
 from qibo.config import raise_error
 

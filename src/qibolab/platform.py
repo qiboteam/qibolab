@@ -191,8 +191,6 @@ def create_tii_IQM5q(runcard, descriptor=None):
     channels |= ChannelMap.from_names(*(f"L4-{i}" for i in range(6, 11)))
     # flux couplers
     channels |= ChannelMap.from_names(*(f"L4-{i}" for i in range(11, 15)))
-    # TWPA
-    # channels |= ChannelMap.from_names("L3-10")
 
     # Map controllers to qubit channels
     # feedback
@@ -205,20 +203,19 @@ def create_tii_IQM5q(runcard, descriptor=None):
     for i in range(5, 10):
         channels[f"L4-1{i}"].ports = [("device_shfqc", f"SGCHANNELS/{i-5}/OUTPUT")]
         channels[f"L4-1{i}"].power_range = -10
-    # channels[f"L4-15"].power_range = 20  # For coupler slim peak
 
     # flux qubits (CAREFUL WITH THIS !!!)
     for i in range(6, 11):
         channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-6}")]
-        # channels[f"L4-{i}"].power_range = 0
+        channels[f"L4-{i}"].power_range = 0
 
     # flux couplers (CAREFUL WITH THIS !!!)
     for i in range(11, 14):
         channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-11+5}")]
-        # channels[f"L4-{i}"].power_range = 0
+        channels[f"L4-{i}"].power_range = 0
 
     channels[f"L4-14"].ports = [("device_hdawg2", f"SIGOUTS/0")]
-    # channels["L4-{14}"].power_range = 0
+    channels["L4-14"].power_range = 0
 
     # Instantiate Zh set of instruments[They work as one]
     from qibolab.instruments.dummy_oscillator import (
