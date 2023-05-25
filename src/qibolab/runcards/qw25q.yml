@@ -1,15 +1,21 @@
 nqubits: 21
-description: QuantWare 25-qubit device with 4 witness removed because. qw25q_v3_e10
+description: QuantWare 25-qubit device with 4 witness removed. qw25q_v3_e10
+
+settings:
+    nshots: 1024
+    sampling_rate: 1000000000
+    repetition_duration: 100_000
 
 qubits: [A1, A2, A3, A4, A5, A6,
         B1, B2, B3, B4, B5,
         C1, C2, C3, C4, C5,
         D1, D2, D3, D4, D5]
 
-settings:
-    sampling_rate: 1000000000
-    repetition_duration: 100_000
-topology: "Simone to fix"
+topology: [[A1, A2], [A1, A3], [A1, D5], [A2, A4], [A3, A4], [A3, A6], [A3, D4], [A4, A5], [A6, B3], [A6, C3], [A6, D3],
+            [B1, B2], [B1, B3], [B2, B4], [B3, B4], [B4, B5], [B4, C3], [B5, C1],
+            [C1, C2], [C1, C3], [C2, C4], [C3, C4], [C5, D1],
+            [D1, D2], [D1, D3], [D2, D4], [D3, D4], [D4, D5]]
+
 resonator_type: 2D
 
 native_gates:
