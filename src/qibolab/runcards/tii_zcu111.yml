@@ -29,7 +29,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.076
+                amplitude: 0.038
                 frequency: 6_951_000_000
                 shape: Rectangular()
                 type: ro # readout
@@ -46,7 +46,7 @@ native_gates:
                 phase: 0
             MZ:
                 duration: 1000
-                amplitude: 0.184
+                amplitude: 0.15
                 frequency: 7_345_330_000
                 shape: Rectangular()
                 type: ro # readout
@@ -95,7 +95,7 @@ characterization:   #TODO No characterization yet
             drive_frequency: 5_722_860_285
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.1
+            sweetspot: 0.35
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
@@ -110,7 +110,7 @@ characterization:   #TODO No characterization yet
             drive_frequency: 6_085_931_000
             T1: 0.0
             T2: 0.0
-            sweetspot: -0.41
+            sweetspot: -0.40
             filter: {}
             # parameters for single shot classification
             threshold: 0.0
@@ -129,7 +129,7 @@ characterization:   #TODO No characterization yet
             drive_frequency: 0.0
             T1: 0.0
             T2: 0.0
-            sweetspot: 0.0
+            sweetspot: -0.15
             filter: {}
             # parameters for single shot classification
             threshold: 0.0

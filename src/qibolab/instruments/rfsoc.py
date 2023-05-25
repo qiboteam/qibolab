@@ -29,7 +29,6 @@ def convert_qubit(qubit: Qubit) -> rfsoc.Qubit:
     if qubit.flux:
         dac = qubit.flux.ports[0][1]
         bias = qubit.flux.bias
-        bias = qubit.sweetspot
     else:
         dac = None
         bias = 0.0
