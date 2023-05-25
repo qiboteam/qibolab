@@ -187,7 +187,8 @@ class AbstractPlatform(ABC):
                     if qf is not None:
                         qubit.flux = Channel(qf)
                 # register single qubit native gates to Qubit objects
-                qubit.native_gates = SingleQubitNatives.from_dict(qubit, self.native_gates["single_qubit"][q])
+                if q in self.native_gates["single_qubit"]:
+                    qubit.native_gates = SingleQubitNatives.from_dict(qubit, self.native_gates["single_qubit"][q])
 
         for pair in settings["topology"]:
             pair = tuple(sorted(pair))
