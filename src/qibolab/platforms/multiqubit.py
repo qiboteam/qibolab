@@ -6,7 +6,7 @@ from qibo.config import log, raise_error
 
 from qibolab.platforms.abstract import AbstractPlatform, Qubit
 from qibolab.pulses import PulseSequence, PulseType
-from qibolab.result import ExecutionResults
+from qibolab.result import IntegratedResults
 from qibolab.sweeper import Parameter
 
 
@@ -335,9 +335,7 @@ class MultiqubitPlatform(AbstractPlatform):
         for serial in acquisition_results:
             for if_pulse, original in changed.items():
                 if serial == if_pulse.serial:
-                    data[original] = data[if_pulse.qubit] = ExecutionResults.from_components(
-                        *acquisition_results[serial]
-                    )
+                    data[original] = data[if_pulse.qubit] = IntegratedResults(acquisition_results[serial])
 
         return data
 
