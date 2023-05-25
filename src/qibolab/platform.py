@@ -29,7 +29,7 @@ def create_dummy(runcard):
         platform.qubits[qubit].drive = channels["drive"]
         platform.qubits[qubit].flux = channels[f"flux-{qubit}"]
         channels[f"flux-{qubit}"].qubit = platform.qubits[qubit]
-        channels["readout"].qubit = platform.qubits[qubit]
+        channels["readout"].attenuation = 0
 
     return platform
 
@@ -178,7 +178,7 @@ def create_tii_rfsoc4x2(runcard, address=None):
         address (str): Address and port for the QICK board.
             If ``None`` it will attempt to connect to TII instruments.
     """
-    from qibolab.instruments.rfsoc import TII_RFSOC4x2
+    from qibolab.instruments.rfsoc import RFSoC as TII_RFSOC4x2
     from qibolab.instruments.rohde_schwarz import SGS100A as LocalOscillator
 
     # Create channel objects
@@ -227,7 +227,7 @@ def create_tii_zcu111(runcard, address=None):
     #    DummyLocalOscillator as LocalOscillator,
     # )
     from qibolab.instruments.erasynth import ERA
-    from qibolab.instruments.rfsoc import TII_ZCU111
+    from qibolab.instruments.rfsoc import RFSoC as TII_ZCU111
 
     # Create channel objects
     channels = ChannelMap()

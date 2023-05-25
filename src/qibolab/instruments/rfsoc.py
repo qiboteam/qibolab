@@ -25,6 +25,7 @@ NS_TO_US = 1e-3
 
 
 def convert_qubit(qubit: Qubit) -> rfsoc.Qubit:
+    """Convert `qibolab.platforms.abstract.Qubit` to `qibosoq.abstract.Qubit`"""
     if qubit.flux:
         dac = qubit.flux.ports[0][1]
         bias = qubit.flux.bias
@@ -36,6 +37,8 @@ def convert_qubit(qubit: Qubit) -> rfsoc.Qubit:
 
 
 def convert_pulse(pulse: Pulse, qubits: Dict) -> rfsoc.Pulse:
+    """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`"""
+
     adc = None
     if pulse.type is PulseType.DRIVE:
         type = "drive"
@@ -75,7 +78,7 @@ def convert_pulse(pulse: Pulse, qubits: Dict) -> rfsoc.Pulse:
 
 
 def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Qubit]) -> rfsoc.Sweeper:
-    """Create a RfsocSweep oject from a Sweeper objects"""
+    """Convert `qibolab.sweeper.Sweeper` to `qibosoq.abstract.Sweeper`"""
 
     parameters = []
     starts = []
@@ -157,7 +160,7 @@ class RFSoC(AbstractInstrument):
         super().__init__(name, address=address)
         self.host, self.port = address.split(":")
         self.port = int(self.port)
-        self.cfg = rfsoc.Config()  # Containes the main settings
+        self.cfg = rfsoc.Config()
 
     def connect(self):
         """Empty method to comply with AbstractInstrument interface."""
@@ -175,7 +178,7 @@ class RFSoC(AbstractInstrument):
         self,
         relaxation_time: int = None,
         adc_trig_offset: int = None,
-    ):  # TODO rethink arguments
+    ):
         """Changes the configuration of the instrument.
 
         Args:
@@ -208,7 +211,6 @@ class RFSoC(AbstractInstrument):
         Returns:
             Lists of I and Q value measured
         """
-        # TODO typehint qubits is wrong, it's dictionary
 
         new_qubits = []
         for qubit in qubits:
@@ -246,7 +248,6 @@ class RFSoC(AbstractInstrument):
         Returns:
             Lists of I and Q value measured
         """
-        # TODO typehint qubits is wrong, it's dictionary
 
         server_commands = {
             "operation_code": "execute_sweeps",
@@ -308,7 +309,7 @@ class RFSoC(AbstractInstrument):
            The relaxation_time and the number of shots have default values.
 
         Args:
-            qubits (list): List of `qibolab.platforms.utils.Qubit` objects
+            qubits (dict): List of `qibolab.platforms.utils.Qubit` objects
                            passed from the platform.
             sequence (`qibolab.pulses.PulseSequence`). Pulse sequence to play.
             nshots (int): Number of repetitions (shots) of the experiment.
@@ -624,23 +625,3 @@ class RFSoC(AbstractInstrument):
                     qubits[idx].flux.bias = initial_biases[idx]
 
         return results
-
-
-class TII_RFSOC4x2(RFSoC):
-    """RFSoC object for Xilinx RFSoC4x2"""
-
-    def __init__(self, name: str, address: str):
-        """Define IP, port and rfsoc.Config"""
-        super().__init__(name, address=address)
-        self.host, self.port = address.split(":")
-        self.port = int(self.port)
-
-
-class TII_ZCU111(RFSoC):
-    """RFSoC object for Xilinx ZCU111"""
-
-    def __init__(self, name: str, address: str):
-        """Define IP, port and rfsoc.Config"""
-        super().__init__(name, address=address)
-        self.host, self.port = address.split(":")
-        self.port = int(self.port)
