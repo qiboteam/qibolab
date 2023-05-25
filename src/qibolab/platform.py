@@ -13,8 +13,8 @@ def create_dummy(runcard):
 
     # Create channel objects
     channels = ChannelMap()
-    channels |= ChannelMap.from_names("readout", "drive")
-    channels |= ChannelMap.from_names(*(f"flux-{i}" for i in range(6)))
+    channels |= ("readout", "drive")
+    channels |= (f"flux-{i}" for i in range(6))
 
     # Create dummy controller
     instrument = DummyInstrument("dummy", 0)
@@ -50,15 +50,15 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
     # Create channel objects
     channels = ChannelMap()
     # readout
-    channels |= ChannelMap.from_names("L3-25_a", "L3-25_b")
+    channels |= ("L3-25_a", "L3-25_b")
     # feedback
-    channels |= ChannelMap.from_names("L2-5_a", "L2-5_b")
+    channels |= ("L2-5_a", "L2-5_b")
     # drive
-    channels |= ChannelMap.from_names(*(f"L3-{i}" for i in range(11, 16)))
+    channels |= (f"L3-{i}" for i in range(11, 16))
     # flux
-    channels |= ChannelMap.from_names(*(f"L4-{i}" for i in range(1, 6)))
+    channels |= (f"L4-{i}" for i in range(1, 6))
     # TWPA
-    channels |= ChannelMap.from_names("L4-26")
+    channels |= "L4-26"
 
     # Map controllers to qubit channels (HARDCODED)
     # readout
@@ -182,15 +182,15 @@ def create_tii_IQM5q(runcard, descriptor=None):
     # Create channel objects
     channels = ChannelMap()
     # readout
-    channels |= ChannelMap.from_names("L3-31")
+    channels |= "L3-31"
     # feedback
-    channels |= ChannelMap.from_names("L2-7")
+    channels |= "L2-7"
     # drive
-    channels |= ChannelMap.from_names(*(f"L4-{i}" for i in range(15, 20)))
+    channels |= (f"L4-{i}" for i in range(15, 20))
     # flux qubits
-    channels |= ChannelMap.from_names(*(f"L4-{i}" for i in range(6, 11)))
+    channels |= (f"L4-{i}" for i in range(6, 11))
     # flux couplers
-    channels |= ChannelMap.from_names(*(f"L4-{i}" for i in range(11, 15)))
+    channels |= (f"L4-{i}" for i in range(11, 15))
     # TWPA
     # channels |= ChannelMap.from_names("L3-10")
 
