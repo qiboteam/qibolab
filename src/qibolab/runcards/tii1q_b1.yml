@@ -14,7 +14,7 @@ native_gates:
     two_qubits: {}
 characterization:
     single_qubit:
-        0: {readout_frequency: 7370129300, drive_frequency: 5542348611, pi_pulse_amplitude: 0.0527,
-            T1: 10441.64173639732, T2: 4083.4697338939845, threshold: 0.8912072924247192,
-            iq_angle: -2.3586722314132644, mean_gnd_states: (1.3717046070460706-0.4902433604336044j),
-            mean_exc_states: (-1.8789609756097563+2.7443533875338755j), T2_spin_echo: 5425.5448969467925}
+        0: {readout_frequency: 7371286590, drive_frequency: 5542348611, pi_pulse_amplitude: 0.052773520525260714,
+            T1: 10441.64173639732, T2: 4083.4697338939845, threshold: -0.6007090385982343,
+            iq_angle: -0.5168787976031852, mean_gnd_states: (-1.3913457994579945-1.262239024390244j),
+            mean_exc_states: (0.5099504065040651-0.18149512195121953j), T2_spin_echo: 5425.5448969467925}
