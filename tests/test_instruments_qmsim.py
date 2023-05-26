@@ -22,7 +22,6 @@ from qibo.models import Circuit
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.backends import QibolabBackend
 from qibolab.instruments.qmsim import QMSim
-from qibolab.paths import qibolab_folder
 from qibolab.pulses import SNZ, FluxPulse, PulseSequence, Rectangular
 from qibolab.sweeper import Parameter, Sweeper
 
@@ -38,9 +37,10 @@ def simulator(request):
     """
     set_platform_profile()
     address, duration = request.param
-    runcard = qibolab_folder / "runcards" / "qw5q_gold.yml"
     platform = create_platform("qm")
-    platform.instruments[0] = QMSim("qmopx", address, simulation_duration=duration, cloud=True)
+    controller = QMSim("qmopx", address, simulation_duration=duration, cloud=True)
+    controller.time_of_flight = 280
+    platform.instruments[0] = controller
     platform.connect()
     platform.setup()
     yield platform
