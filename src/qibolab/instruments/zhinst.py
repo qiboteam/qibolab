@@ -918,6 +918,7 @@ class Zurich(AbstractInstrument):
                 )
         if sweeper.parameter is Parameter.amplitude:
             for pulse in sweeper.pulses:
+                sweeper.values = sweeper.values.copy()
                 pulse.amplitude *= max(sweeper.values)
                 sweeper.values /= max(sweeper.values)
                 parameter = ZhSweeper(pulse, sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper

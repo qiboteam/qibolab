@@ -55,8 +55,8 @@ native_gates:
         2: # qubit number
             RX:
                 duration: 40 #200 #60
-                amplitude: 0.48257
-                frequency: 4340928777  #4_401_600_000 #4_505_500_000 #4_321_500_000 # 4_541_100_000 #doesnt do anything requiered for qibolab to work
+                amplitude: 0.495
+                frequency: 4336702148  #4_401_600_000 #4_505_500_000 #4_321_500_000 # 4_541_100_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -161,30 +161,30 @@ characterization:
         2:
             readout_frequency: 6.109e+9  #6_112_000_000
             resonator_polycoef_flux: []
-            drive_frequency: 4.340928777e+9 # 4342127125
+            drive_frequency: 4336702148 
             T1: 0.
             T2: 0.
-            sweetspot: -0.17 #0.5 #0.62 0.00
+            sweetspot: -0.176 #0.5 #0.62 0.00
             filter: {}
-            mean_gnd_states: 2.0107-0.7826j
-            mean_exc_states: -0.8959+1.0264j
+            mean_gnd_states: -1.6625+0.8661j
+            mean_exc_states: -0.9162+1.0201j
             # parameters for single shot classification
-            threshold: -0.9525
-            iq_angle: -0.243
-            alpha: 208_000 
+            threshold: -0.9644
+            iq_angle: -0.204
+            alpha: 208_000_000 
         3:
             readout_frequency: 5.8060e+9
             resonator_polycoef_flux: []
             drive_frequency: 4.128127125e+9
             T1: 0.
             T2: 0.
-            sweetspot: 0 #-0.08
+            sweetspot: 0. #-0.08
             filter: {}
-            mean_gnd_states: -2.7137-2.3361j
-            mean_exc_states: -4.2015-0.6696j
+            mean_gnd_states: -2.7121-2.3369j
+            mean_exc_states: -4.1080-0.7602j
             threshold: 0.8192
             iq_angle: -2.3
-            alpha: 214_000
+            alpha: 214_000_000
         4:
             readout_frequency: 5.5240e+9
             resonator_polycoef_flux: []
