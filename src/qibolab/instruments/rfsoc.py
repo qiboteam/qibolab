@@ -1,7 +1,7 @@
 """ RFSoC FPGA driver.
 
-This driver needs the library Qick installed
-Supports the following FPGA:
+This driver needs a Qibosoq server installed and running
+Tested on the following FPGA:
  *   RFSoC 4x2
  *   ZCU111
 """
@@ -28,23 +28,19 @@ NS_TO_US = 1e-3
 def convert_qubit(qubit: Qubit) -> rfsoc.Qubit:
     """Convert `qibolab.platforms.abstract.Qubit` to `qibosoq.abstract.Qubit`"""
     if qubit.flux:
-        dac = qubit.flux.ports[0][1]
-        bias = qubit.flux.bias
-    else:
-        dac = None
-        bias = 0.0
-    return rfsoc.Qubit(bias, dac)
+        return rfsoc.Qubit(qubit.flux.bias, qubit.flux.ports[0][1])
+    return rfsoc.Qubit(0.0, None)
 
 
 def convert_pulse(pulse: Pulse, qubits: Dict) -> rfsoc.Pulse:
     """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`"""
 
-    type = pulse.type.name.lower()
-    dac = getattr(qubits[pulse.qubit], type).ports[0][1]
-    adc = qubits[pulse.qubit].feedback.ports[0][1] if type == "readout" else None
+    pulse_type = pulse.type.name.lower()
+    dac = getattr(qubits[pulse.qubit], pulse_type).ports[0][1]
+    adc = qubits[pulse.qubit].feedback.ports[0][1] if pulse_type == "readout" else None
 
     try:
-        lo_frequency = getattr(qubits[pulse.qubit], type).local_oscillator._frequency
+        lo_frequency = getattr(qubits[pulse.qubit], pulse_type).local_oscillator._frequency
     except NotImplementedError:
         lo_frequency = 0
 
@@ -58,7 +54,7 @@ def convert_pulse(pulse: Pulse, qubits: Dict) -> rfsoc.Pulse:
         adc=adc,
         shape=None,
         name=pulse.serial,
-        type=type,
+        type=pulse_type,
     )
     if isinstance(pulse.shape, Rectangular):
         rfsoc_pulse.shape = "rectangular"
@@ -72,10 +68,10 @@ def convert_pulse(pulse: Pulse, qubits: Dict) -> rfsoc.Pulse:
 
 
 def convert_frequency_sweeper(sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubits: Dict[int, Qubit]):
+    """Converts frequencies for `rfsoc.Sweeper` considering LO and HZ_TO_MHZ"""
     for idx, jdx in enumerate(sweeper.indexes):
         if sweeper.parameter[idx] is rfsoc.Parameter.frequency:
             pulse = sequence[jdx]
-            dac = getattr(qubits[pulse.qubit], pulse.type.name.lower()).ports[0][1]
             try:
                 lo_frequency = getattr(qubits[pulse.qubit], pulse.type.name.lower()).local_oscillator._frequency
             except NotImplementedError:
@@ -119,6 +115,7 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Qubit]
                 starts.append(np.degrees(sweeper.values[0] + pulse.relative_phase))
                 stops.append(np.degrees(sweeper.values[-1] + pulse.relative_phase))
             elif sweeper.parameter is Parameter.frequency:
+                # frequency are not convertet yet and LO is not accounted for
                 parameters.append(rfsoc.Parameter.frequency)
                 starts.append(sweeper.values[0] + pulse.frequency)
                 stops.append(sweeper.values[-1] + pulse.frequency)
@@ -133,20 +130,22 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Qubit]
 
 
 class RFSoC(AbstractInstrument):
-    """Instrument object for controlling the RFSoC4x2 FPGA.
-    Playing pulses requires first the execution of the ``setup`` function.
+    """Instrument object for controlling RFSoC FPGAs.
     The two way of executing pulses are with ``play`` (for arbitrary
     qibolab ``PulseSequence``) or with ``sweep`` that execute a
     ``PulseSequence`` object with one or more ``Sweeper``.
 
-    Args:
-        name (str): Name of the instrument instance.
     Attributes:
         cfg (rfsoc.Config): Configuration dictionary required for pulse execution.
-        soc (QickSoc): ``Qick`` object needed to access system blocks.
     """
 
     def __init__(self, name: str, address: str):
+        """__init__
+        Args:
+            name (str): Name of the instrument instance.
+            address (str): IP and port of the server (ex. 192.168.0.10:6000)
+        """
+
         super().__init__(name, address=address)
         self.host, self.port = address.split(":")
         self.port = int(self.port)
@@ -195,7 +194,7 @@ class RFSoC(AbstractInstrument):
         Args:
             cfg: rfsoc.Config object with general settings for Qick programs
             sequence: arbitrary PulseSequence object to execute
-            qubits: list of qubits of the platform
+            qubits: list of qubits of the platform in the form of a dictionary
             readouts_per_experiment: number of readout pulse to execute
             average: if True returns averaged results, otherwise single shots
         Returns:
@@ -227,8 +226,8 @@ class RFSoC(AbstractInstrument):
         Args:
             cfg: rfsoc.Config object with general settings for Qick programs
             sequence: arbitrary PulseSequence object to execute
-            qubits: list of qubits of the platform
-            sweeper: rfsoc.Sweeper object
+            qubits: list of qubits of the platform in the form of a dictionary
+            sweepers: list of rfsoc.Sweeper objects
             readouts_per_experiment: number of readout pulse to execute
             average: if True returns averaged results, otherwise single shots
         Returns:
@@ -314,6 +313,7 @@ class RFSoC(AbstractInstrument):
             raise NotImplementedError("Raw data acquisition is not supported")
         if execution_parameters.fast_reset:
             raise NotImplementedError("Fast reset is not supported")
+
         # if new value are passed, they are updated in the config obj
         if execution_parameters.nshots is not None:
             self.cfg.reps = execution_parameters.nshots
@@ -351,7 +351,6 @@ class RFSoC(AbstractInstrument):
 
     def classify_shots(self, i_values: List[float], q_values: List[float], qubit: Qubit) -> List[float]:
         """Classify IQ values using qubit threshold and rotation_angle if available in runcard"""
-        # TODO maybe move to qibosoq
 
         if qubit.iq_angle is None or qubit.threshold is None:
             return None
@@ -417,6 +416,7 @@ class RFSoC(AbstractInstrument):
             toti, totq = self._execute_sweeps(self.cfg, sequence, qubits, sweepers, len(sequence.ro_pulses), average)
             res = self.convert_sweep_results(or_sequence, sequence, qubits, toti, totq, execution_parameters)
             return res
+
         sweeper = sweepers[0]
         values = []
         if (
@@ -484,8 +484,7 @@ class RFSoC(AbstractInstrument):
 
         To be run on qick internal loop a sweep must:
             * not be on the readout frequency
-            * be just one sweeper
-            * only one pulse per channel supported (for now)
+            * only one pulse per channel supported
 
         Args:
             sequence (`qibolab.pulses.PulseSequence`). Pulse sequence to play.
@@ -498,12 +497,10 @@ class RFSoC(AbstractInstrument):
         """
 
         for sweeper in sweepers:
-            # TODO
             is_amp = sweeper.parameter[0] is rfsoc.Parameter.amplitude
             is_freq = sweeper.parameter[0] is rfsoc.Parameter.frequency
 
             if is_freq or is_amp:
-                # TODO
                 is_ro = sequence[sweeper.indexes[0]].type == PulseType.READOUT
                 # if it's a sweep on the readout freq do a python sweep
                 if is_freq and is_ro:
@@ -536,8 +533,8 @@ class RFSoC(AbstractInstrument):
         """Convert sweep res to qibolab dict res
 
         Args:
-            original_ro (list): list of ro serials of the original sequence
-            sequence (`qibolab.pulses.PulseSequence`). Pulse sequence to play.
+            original_ro (`qibolab.pulses.PulseSequence`): Original PulseSequence
+            sequence (`qibolab.pulses.PulseSequence`): Pulse sequence to play.
             qubits (list): List of `qibolab.platforms.utils.Qubit` objects
                  passed from the platform.
             toti (list): i values
@@ -554,16 +551,10 @@ class RFSoC(AbstractInstrument):
         results = {}
 
         adcs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
-        for k, k_val in enumerate(adcs):
+        for k, _ in enumerate(adcs):
             for i, ro_pulse in enumerate(original_ro):
-                i_pulse = np.array(toti[k][i])
-                q_pulse = np.array(totq[k][i])
-
-                # i_pulse = i_pulse[i_pulse != 0]
-                # q_pulse = q_pulse[q_pulse != 0]
-
-                i_vals = i_pulse
-                q_vals = q_pulse
+                i_vals = np.array(toti[k][i])
+                q_vals = np.array(totq[k][i])
 
                 if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
                     average = False
@@ -617,6 +608,7 @@ class RFSoC(AbstractInstrument):
             raise NotImplementedError("Raw data acquisition is not supported")
         if execution_parameters.fast_reset:
             raise NotImplementedError("Fast reset is not supported")
+
         # if new value are passed, they are updated in the config obj
         if execution_parameters.nshots is not None:
             self.cfg.reps = execution_parameters.nshots
@@ -632,8 +624,6 @@ class RFSoC(AbstractInstrument):
 
         sweepsequence = sequence.copy()
 
-        original_ro = sequence.ro_pulses
-
         bias_change = any([sweep.parameter is Parameter.bias for sweep in sweepers])
         if bias_change:
             initial_biases = [qubits[idx].flux.bias if qubits[idx].flux is not None else None for idx in qubits]
@@ -641,7 +631,7 @@ class RFSoC(AbstractInstrument):
         results = self.recursive_python_sweep(
             qubits,
             sweepsequence,
-            original_ro,
+            sequence.ro_pulses,
             *rfsoc_sweepers,
             average=average,
             execution_parameters=execution_parameters,
