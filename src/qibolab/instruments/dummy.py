@@ -9,7 +9,6 @@ from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.platforms.abstract import Qubit
 from qibolab.pulses import PulseSequence, PulseType
-from qibolab.result import ExecutionResults
 from qibolab.sweeper import Parameter, Sweeper
 
 
@@ -139,11 +138,6 @@ class DummyInstrument(AbstractInstrument):
 
                 # colllect result and append to original pulse
                 for original_pulse, new_serial in map_original_shifted.items():
-                    # acquisition = (
-                    #     result[new_serial].average
-                    #     if options.averaging_mode is AveragingMode.CYCLIC
-                    #     else result[new_serial]
-                    # )
                     acquisition = result[new_serial]
                     if original_pulse.serial in results:
                         results[original_pulse.serial] += acquisition

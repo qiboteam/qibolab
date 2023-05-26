@@ -7,10 +7,10 @@ from qibolab.platform import Platform
 from qibolab.result import (
     AveragedIntegratedResults,
     AveragedRawWaveformResults,
-    AveragedStateResults,
+    AveragedSampleResults,
     IntegratedResults,
     RawWaveformResults,
-    StateResults,
+    SampleResults,
 )
 
 __version__ = im.version(__package__)
@@ -44,12 +44,12 @@ RESULTS_TYPE = {
     AveragingMode.CYCLIC: {
         AcquisitionType.INTEGRATION: AveragedIntegratedResults,
         AcquisitionType.RAW: AveragedRawWaveformResults,
-        AcquisitionType.DISCRIMINATION: AveragedStateResults,
+        AcquisitionType.DISCRIMINATION: AveragedSampleResults,
     },
     AveragingMode.SINGLESHOT: {
         AcquisitionType.INTEGRATION: IntegratedResults,
         AcquisitionType.RAW: RawWaveformResults,
-        AcquisitionType.DISCRIMINATION: StateResults,
+        AcquisitionType.DISCRIMINATION: SampleResults,
     },
 }
 
@@ -61,7 +61,7 @@ class ExecutionParameters:
     nshots: Optional[int] = None
     """Number of shots to sample from the experiment. Default is the runcard value."""
     relaxation_time: Optional[int] = None
-    """Time to wait for the qubit to relax to its ground state between shots in ns. Default is the runcard value."""
+    """Time to wait for the qubit to relax to its ground Sample between shots in ns. Default is the runcard value."""
     fast_reset: bool = False
     """Enable or disable fast reset"""
     acquisition_type: AcquisitionType = AcquisitionType.DISCRIMINATION

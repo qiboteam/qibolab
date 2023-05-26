@@ -12,12 +12,7 @@ settings:
 
 qubits: [0, 1, 2, 3, 4, "c0", "c1", "c3", "c4"]
 
-topology:
-- [1, 0, 1, 0, 0]
-- [0, 1, 1, 0, 0]
-- [1, 1, 1, 1, 1]
-- [0, 0, 1, 1, 0]
-- [0, 0, 1, 0, 1]
+topology: [[0, 2], [1, 2], [2, 3], [2, 4]]
 
 native_gates:
     single_qubit:
@@ -223,7 +218,7 @@ characterization:
             filter: {}
             # To save power values on the runcard
             # flux_range: -0
-    two_qubit:
+    # two_qubit:
 
     two_qubit_couplers:
         0:

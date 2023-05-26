@@ -102,7 +102,7 @@ class AveragedRawWaveformResults(AveragedIntegratedResults):
     """
 
 
-class StateResults:
+class SampleResults:
     """
     Data structure to deal with the output of
     :func:`qibolab.platforms.abstract.AbstractPlatform.execute_pulse_sequence`
@@ -126,27 +126,26 @@ class StateResults:
     def serialize(self):
         """Serialize as a dictionary."""
         serialized_dict = {
-            "state_0": self.probability(0).flatten(),
+            "0": self.probability(0).flatten(),
         }
         return serialized_dict
 
     @property
     def average(self):
-        """Perform states average"""
+        """Perform samples average"""
         average = self.probability(1)
         std = np.std(self.samples, axis=0, ddof=1) / np.sqrt(self.samples.shape[0])
-        return AveragedStateResults(average, self.samples, std=std)
+        return AveragedSampleResults(average, self.samples, std=std)
 
 
-# FIXME: Here I take the states from StateResult that are typed to be ints but those are not what would you do ?
-class AveragedStateResults(StateResults):
+class AveragedSampleResults(SampleResults):
     """
     Data structure to deal with the output of
     :func:`qibolab.platforms.abstract.AbstractPlatform.execute_pulse_sequence`
     :func:`qibolab.platforms.abstract.AbstractPlatform.sweep`
 
     Associated with AcquisitionType.DISCRIMINATION and AveragingMode.CYCLIC
-    or the averages of ``StateResults``
+    or the averages of ``SampleResults``
     """
 
     def __init__(
@@ -162,98 +161,7 @@ class AveragedStateResults(StateResults):
         new_res.std = np.append(self.std, data.std)
         return new_res
 
-
-ExecRes = np.dtype([("i", np.float64), ("q", np.float64)])
-
-
-@dataclass
-class ExecutionResults:
-    """Data structure to deal with the output of :func:`qibolab.platforms.abstract.AbstractPlatform.execute_pulse_sequence`"""
-
-    array: npt.NDArray[ExecRes]
-    shots: Optional[npt.NDArray[np.uint32]] = None
-
-    @classmethod
-    def from_components(cls, is_, qs_, shots=None):
-        ar = np.empty(is_.shape, dtype=ExecRes)
-        ar["i"] = is_
-        ar["q"] = qs_
-        ar = np.rec.array(ar)
-        return cls(ar, shots)
-
-    @property
-    def i(self):
-        return self.array.i
-
-    @property
-    def q(self):
-        return self.array.q
-
-    def __add__(self, data):
-        assert len(data.i.shape) == len(data.q.shape)
-        if data.shots is not None:
-            assert len(data.i.shape) == len(data.shots.shape)
-        # concatenate on first dimension; if a scalar is passed, just append it
-        axis = 0 if len(data.i.shape) > 0 else None
-        i = np.append(self.i, data.i, axis=axis)
-        q = np.append(self.q, data.q, axis=axis)
-        if data.shots is not None:
-            shots = np.append(self.shots, data.shots, axis=axis)
-        else:
-            shots = None
-
-        new_execution_results = self.__class__.from_components(i, q, shots)
-
-        return new_execution_results
-
-    @cached_property
-    def measurement(self):
-        """Resonator signal voltage mesurement (MSR) in volts."""
-        return np.sqrt(self.i**2 + self.q**2)
-
-    @cached_property
-    def phase(self):
-        """Computes phase value."""
-        phase = np.angle(self.i + 1.0j * self.q)
-        return phase
-        # return signal.detrend(np.unwrap(phase))
-
-    @cached_property
-    def ground_state_probability(self):
-        """Computes ground state probability"""
-        return 1 - np.mean(self.shots)
-
-    def raw_probability(self, state=1):
-        """Serialize probabilities in dict.
-        Args:
-            state (int): if 0 stores the probabilities of finding
-                        the ground state. If 1 stores the
-                        probabilities of finding the excited state.
-        """
-        if state == 1:
-            return {"probability": 1 - self.ground_state_probability}
-        elif state == 0:
-            return {"probability": self.ground_state_probability}
-
-    @property
-    def average(self):
-        """Perform average over i and q"""
-        return AveragedResults.from_components(np.mean(self.i), np.mean(self.q))
-
-    @property
-    def raw(self):
-        """Serialize output in dict."""
-
-        return {
-            "MSR[V]": self.measurement,
-            "i[V]": self.i,
-            "q[V]": self.q,
-            "phase[rad]": self.phase,
-        }
-
-    def __len__(self):
-        return len(self.i)
-
-
-class AveragedResults(ExecutionResults):
-    """Data structure containing averages of ``ExecutionResults``."""
+    @lru_cache
+    def probability(self, state=0):
+        """Returns the statistical frequency of the specified state (0 or 1)."""
+        return abs(1 - state - self.statistical_frequency)
