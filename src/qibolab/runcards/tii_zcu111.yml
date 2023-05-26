@@ -8,12 +8,10 @@ settings:
     relaxation_time: 100_000
     adc_trig_offset: 200
     max_gain: 32000
+    nshots: 1000
 
 
-topology: # qubit - qubit connections
--   [ 1, 0, 0]
--   [ 0, 1, 0]
--   [ 0, 0, 1]
+topology: [[2, 1]]
 
 
 native_gates:

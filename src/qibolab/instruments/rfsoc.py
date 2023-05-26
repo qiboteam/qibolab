@@ -318,7 +318,7 @@ class RFSoC(AbstractInstrument):
         if execution_parameters.nshots is not None:
             self.cfg.reps = execution_parameters.nshots
         if execution_parameters.relaxation_time is not None:
-            self.cfg.repetition_duration = execution_parameters.relaxation_time
+            self.cfg.repetition_duration = execution_parameters.relaxation_time * NS_TO_US
 
         if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
             average = False
@@ -415,7 +415,7 @@ class RFSoC(AbstractInstrument):
 
         if not self.get_if_python_sweep(sequence, qubits, *sweepers):
             toti, totq = self._execute_sweeps(self.cfg, sequence, qubits, sweepers, len(sequence.ro_pulses), average)
-            res = self.convert_sweep_results(original_ro, sequence, qubits, toti, totq, average)
+            res = self.convert_sweep_results(original_ro, sequence, qubits, toti, totq, execution_parameters)
             return res
         sweeper = sweepers[0]
         values = []
@@ -554,39 +554,11 @@ class RFSoC(AbstractInstrument):
         results = {}
 
         adcs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
-        # for k, k_val in enumerate(adcs):
-        #    results = {}
-        #    serials = [pulse.serial for pulse in original_ro if qubits[pulse.qubit].feedback.ports[0][1] == k_val]
-        #    for i, serial in enumerate(serials):
-        #        i_pulse = np.array(toti[k][i])
-        #        q_pulse = np.array(totq[k][i])
-
-        #        # TODO new results
-        #        i_pulse = i_pulse.flatten()
-        #        q_pulse = q_pulse.flatten()
-        #        i_pulse = i_pulse[i_pulse != 0]
-        #        q_pulse = q_pulse[q_pulse != 0]
-
-        #        if average:
-        #            results[sequence.ro_pulses[i].qubit] = results[serial] = AveragedResults.from_components(
-        #                i_pulse, q_pulse
-        #            )
-        #        else:
-        #            qubit = qubits[sequence.ro_pulses[i].qubit]
-        #            shots = self.classify_shots(i_pulse, q_pulse, qubit)
-        #            results[sequence.ro_pulses[i].qubit] = results[serial] = ExecutionResults.from_components(
-        #                i_pulse, q_pulse, shots
-        #            )
-        #    sweep_results = self.merge_sweep_results(sweep_results, results)
-
-        # return sweep_results
         for k, k_val in enumerate(adcs):
             for i, serial in enumerate(original_ro):
                 i_pulse = np.array(toti[k][i])
                 q_pulse = np.array(totq[k][i])
 
-                i_pulse = i_pulse.flatten()
-                q_pulse = q_pulse.flatten()
                 i_pulse = i_pulse[i_pulse != 0]
                 q_pulse = q_pulse[q_pulse != 0]
 
@@ -649,7 +621,7 @@ class RFSoC(AbstractInstrument):
         if execution_parameters.nshots is not None:
             self.cfg.reps = execution_parameters.nshots
         if execution_parameters.relaxation_time is not None:
-            self.cfg.repetition_duration = execution_parameters.relaxation_time
+            self.cfg.repetition_duration = execution_parameters.relaxation_time * NS_TO_US
 
         if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
             average = False
@@ -666,7 +638,14 @@ class RFSoC(AbstractInstrument):
         if bias_change:
             initial_biases = [qubits[idx].flux.bias if qubits[idx].flux is not None else None for idx in qubits]
 
-        results = self.recursive_python_sweep(qubits, sweepsequence, original_ro, *rfsoc_sweepers, average=average)
+        results = self.recursive_python_sweep(
+            qubits,
+            sweepsequence,
+            original_ro,
+            *rfsoc_sweepers,
+            average=average,
+            execution_parameters=execution_parameters,
+        )
 
         if bias_change:
             for idx in qubits:
