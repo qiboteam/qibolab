@@ -1,4 +1,3 @@
-import networkx as nx
 from qibo.config import raise_error
 
 from qibolab.designs import Channel, ChannelMap, InstrumentDesign
@@ -154,18 +153,6 @@ def create_tii_qw5q_gold(runcard, simulation_duration=None, address=None, cloud=
     # relevant only for qubits where an amplifier is used
     for q in range(5):
         platform.qubits[q].flux.max_bias = 0.2
-    # Platfom topology
-    Q = [f"q{i}" for i in range(5)]
-    chip = nx.Graph()
-    chip.add_nodes_from(Q)
-    graph_list = [
-        (Q[0], Q[2]),
-        (Q[1], Q[2]),
-        (Q[3], Q[2]),
-        (Q[4], Q[2]),
-    ]
-    chip.add_edges_from(graph_list)
-    platform.topology = chip
 
     return platform
 
