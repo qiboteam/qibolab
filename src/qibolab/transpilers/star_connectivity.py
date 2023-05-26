@@ -72,7 +72,7 @@ class StarConnectivity(Transpiler):
         self.tlog("Circuit respects connectivity.")
         return True
 
-    def transpile(self, circuit):
+    def __call__(self, circuit):
         """Apply the transpiler transformation on a given circuit.
 
         Args:

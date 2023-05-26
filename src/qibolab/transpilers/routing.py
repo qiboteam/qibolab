@@ -6,28 +6,37 @@ from qibo import gates
 from qibo.config import log, raise_error
 from qibo.models import Circuit
 
-from qibolab.transpilers.abstract import Transpiler
+from qibolab.transpilers.abstract import Transpiler, create_circuit_repr
+from qibolab.transpilers.placer import Trivial
 
 
-def create_circuit_repr(circuit):
-    """Translate qibo circuit into a list of two qubit gates to be used by the transpiler.
+def respect_connectivity(connectivity, circuit, verbose=False):
+    """Checks if a circuit can be executed on Hardware.
 
     Args:
-        circuit (:class:`qibo.models.Circuit`): circuit to be transpiled.
+        circuit (qibo.models.Circuit): Circuit model to check.
+        connectivity (networkx.graph): chip connectivity.
+        verbose (bool): If ``True`` it prints debugging log messages.
 
-    Returns:
-        translated_circuit (list): list containing qubits targeted by two qubit gates
+    Returns ``True`` if the following conditions are satisfied:
+        - Circuit does not contain more than two-qubit gates.
+        - Circuit matches connectivity.
+    otherwise returns ``False``.
     """
-    translated_circuit = []
-    for index, gate in enumerate(circuit.queue):
-        if len(gate.qubits) == 2:
-            gate_qubits = list(gate.qubits)
-            gate_qubits.sort()
-            gate_qubits.append(index)
-            translated_circuit.append(gate_qubits)
-        if len(gate.qubits) >= 3:
-            raise_error(ValueError, "Gates targeting more than 2 qubits are not supported")
-    return translated_circuit
+
+    for gate in circuit.queue:
+        if len(gate.qubits) > 2 and not isinstance(gate, gates.M):
+            if verbose:
+                log.info(f"{gate.name} acts on more than two qubits.")
+            return False
+        elif len(gate.qubits) == 2:
+            if ("q" + str(gate.qubits[0]), "q" + str(gate.qubits[1])) not in connectivity.edges:
+                if verbose:
+                    log.info("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
+                return False
+    if verbose:
+        log.info("Circuit respects connectivity.")
+    return True
 
 
 class ShortestPaths(Transpiler):
@@ -35,17 +44,18 @@ class ShortestPaths(Transpiler):
 
     Properties:
         connectivity (networkx.graph): chip connectivity.
-        init_method (str or QubitInitMethod): initial qubit mapping method.
-        init_samples (int): number of random qubit initializations for greedy initial qubit mapping.
         sampling_split (float): fraction of paths tested (between 0 and 1).
 
     Attributes:
+        verbose(bool)
+        initial_layout (dict): initial physical to logical qubit mapping
+        added_swaps (int): number of swaps added to the circuit to match connectivity.
         _circuit_repr (list): quantum circuit represented as a list (only 2 qubit gates).
         _mapping (dict): circuit to physical qubit mapping during transpiling.
         _graph (networkx.graph): qubit mapped as nodes of the connectivity graph.
         _qubit_map (np.array): circuit to physical qubit mapping during transpiling as vector.
         _circuit_position (int): position in the circuit.
-        _added_swaps (int): number of swaps added to the circuit to match connectivity.
+
     """
 
     def __init__(self, connectivity, sampling_split=1.0, verbose=False):
@@ -53,50 +63,36 @@ class ShortestPaths(Transpiler):
         self.sampling_split = sampling_split
         self.verbose = verbose
 
+        self.initial_layout = None
         self._circuit_repr = None
         self._mapping = None
         self._graph = None
         self._qubit_map = None
         self._transpiled_circuit = None
         self._circuit_position = 0
-
-        self._added_swaps = 0
-        self._initial_map = None
-        self._final_map = None
+        self.added_swaps = 0
+        self.final_map = None
 
     def tlog(self, message):
         """Print messages only if ``verbose`` was set to ``True``."""
         if self.verbose:
             log.info(message)
 
+    # TODO: This may become a stand alone function
     def is_satisfied(self, circuit):
         """Checks if a circuit can be executed on Hardware.
 
         Args:
             circuit (qibo.models.Circuit): Circuit model to check.
-            connectivity (networkx.graph): chip connectivity.
-            verbose (bool): If ``True`` it prints debugging log messages.
 
         Returns ``True`` if the following conditions are satisfied:
             - Circuit does not contain more than two-qubit gates.
-            - All one-qubit gates are I, Z, RZ or U3.
-            - All two-qubit gates are CZ or iSWAP based on two_qubit_natives.
             - Circuit matches connectivity.
-        otherwise returns ``False``.
+            otherwise returns ``False``.
         """
-        for gate in circuit.queue:
-            if len(gate.qubits) > 2 and not isinstance(gate, gates.M):
-                self.tlog(f"{gate.name} acts on more than two qubits.")
-                return False
-            elif len(gate.qubits) == 2:
-                if gate.qubits not in self.connectivity.edges:
-                    self.tlog("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
-                    return False
+        return respect_connectivity(connectivity=self.connectivity, circuit=circuit, verbose=self.verbose)
 
-        self.tlog("Circuit respects connectivity.")
-        return True
-
-    def transpile(self, circuit, initial_layout):
+    def __call__(self, circuit, initial_layout):
         """Circuit connectivity matching.
 
         Args:
@@ -108,11 +104,11 @@ class ShortestPaths(Transpiler):
             final_mapping (dict): final qubit mapping.
         """
         self._circuit_position = 0
-        self._added_swaps = 0
+        self.added_swaps = 0
         self._circuit_repr = create_circuit_repr(circuit)
-        keys = list(self._connectivity.nodes())
+        keys = list(self.connectivity.nodes())
         self._mapping = dict(zip(keys, initial_layout.values()))
-        self._graph = nx.relabel_nodes(self._connectivity, self._mapping)
+        self._graph = nx.relabel_nodes(self.connectivity, self._mapping)
         # Inverse permutation
         init_qubit_map = np.argsort(list(self._mapping.values()))
         init_mapping = dict(zip(keys, init_qubit_map))
@@ -125,7 +121,7 @@ class ShortestPaths(Transpiler):
         hardware_mapped_circuit = self.init_mapping_circuit(self._transpiled_circuit, init_qubit_map)
 
         self._initial_map = init_mapping
-        self._final_map = final_mapping
+        self.final_map = final_mapping
         return hardware_mapped_circuit, [final_mapping[i] for i in range(circuit.nqubits)]
 
     def transpiler_step(self, qibo_circuit):
@@ -151,18 +147,6 @@ class ShortestPaths(Transpiler):
         self.add_gates(qibo_circuit, len_2q_circuit - len(self._circuit_repr))
 
     @property
-    def initial_map(self):
-        return self._initial_map
-
-    @property
-    def final_map(self):
-        return self._final_map
-
-    @property
-    def added_swaps(self):
-        return self._added_swaps
-
-    @property
     def sampling_split(self):
         return self._sampling_split
 
@@ -177,7 +161,7 @@ class ShortestPaths(Transpiler):
         if sampling_split > 0.0 and 1.0 >= sampling_split:
             self._sampling_split = sampling_split
         else:
-            raise_error(ValueError, "Sampling_split must be set greater than 0 and less or equal 1")
+            raise_error(ValueError, "Sampling_split must be in (0:1]")
 
     def draw_connectivity(self):  # pragma: no cover
         """Show connectivity graph."""
@@ -198,9 +182,6 @@ class ShortestPaths(Transpiler):
         while new_circuit != [] and (new_circuit[0][0], new_circuit[0][1]) in graph.edges():
             del new_circuit[0]
         return new_circuit
-
-    def greedy_init(self):
-        """Initialize the circuit with greedy algorithm"""
 
     def map_list(self, path):
         """Return all possible walks of qubits, or a fraction, for a given path.
@@ -243,7 +224,7 @@ class ShortestPaths(Transpiler):
         final_mapping = dict(zip(keys, keys))
         # Consider all shortest paths
         path_list = [p for p in nx.all_shortest_paths(self._graph, source=circuit[0][0], target=circuit[0][1])]
-        self._added_swaps += len(path_list[0]) - 2
+        self.added_swaps += len(path_list[0]) - 2
         # Here test all paths
         for path in path_list:
             # map_list uses self.sampling_split

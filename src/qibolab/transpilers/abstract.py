@@ -8,11 +8,40 @@ from qibo.config import log, raise_error
 from qibo.models import Circuit
 
 
+# TODO update circuit representation
+def create_circuit_repr(circuit):
+    """Translate qibo circuit into a list of two qubit gates to be used by the transpiler.
+
+    Args:
+        circuit (:class:`qibo.models.Circuit`): circuit to be transpiled.
+
+    Returns:
+        translated_circuit (list): list containing qubits targeted by two qubit gates
+    """
+    translated_circuit = []
+    index = 0
+    for gate in circuit.queue:
+        if len(gate.qubits) == 2:
+            gate_qubits = list(gate.qubits)
+            gate_qubits.sort()
+            gate_qubits.append(index)
+            translated_circuit.append(gate_qubits)
+            index += 1
+        if len(gate.qubits) >= 3:
+            raise_error(ValueError, "Gates targeting more than 2 qubits are not supported")
+    return translated_circuit
+
+
 class Placer(ABC):
     """A placer implments the initial logical-physical qubit mapping"""
 
     @abstractmethod
-    def place(self, circuit: Circuit) -> dict:
+    def __init__(self, connectivity: nx.Graph, *args):
+        """"""
+        self.connectivity = connectivity
+
+    @abstractmethod
+    def __call__(self, circuit: Circuit) -> dict:
         """Find initial qubit mapping
 
         Args:
@@ -21,42 +50,6 @@ class Placer(ABC):
         Returns:
             initial_layout (dict): dictionary containing the initial logical to physical qubit mapping
         """
-
-    @property
-    def connectivity(self):
-        return self._connectivity
-
-    @connectivity.setter
-    def connectivity(self, connectivity):
-        """Set the hardware chip connectivity.
-        Args:
-            connectivity (networkx graph): define connectivity.
-        """
-
-        if isinstance(connectivity, nx.Graph):
-            self._connectivity = connectivity
-        else:
-            raise_error(TypeError, "Use networkx graph for custom connectivity")
-
-    def create_circuit_repr(self, circuit):
-        """Translate qibo circuit into a list of two qubit gates to be used by the transpiler.
-
-        Args:
-            circuit (:class:`qibo.models.Circuit`): circuit to be transpiled.
-
-        Returns:
-            translated_circuit (list): list containing qubits targeted by two qubit gates
-        """
-        translated_circuit = []
-        for index, gate in enumerate(circuit.queue):
-            if len(gate.qubits) == 2:
-                gate_qubits = list(gate.qubits)
-                gate_qubits.sort()
-                gate_qubits.append(index)
-                translated_circuit.append(gate_qubits)
-            if len(gate.qubits) >= 3:
-                raise_error(ValueError, "Gates targeting more than 2 qubits are not supported")
-        return translated_circuit
 
 
 class Transpiler(ABC):
@@ -90,7 +83,7 @@ class Transpiler(ABC):
         log.info("Transpiler test passed.")
 
     @abstractmethod
-    def transpile(self, circuit: Circuit) -> Tuple[Circuit, List[int]]:
+    def __call__(self, circuit: Circuit) -> Tuple[Circuit, List[int]]:
         """Apply the transpiler transformation on a given circuit.
 
         Args:
@@ -100,20 +93,3 @@ class Transpiler(ABC):
             circuit (:class:`qibo.models.Circuit`): Circuit after transpilation.
             qubit_map (list): Order of qubits in the transpiled circuit.
         """
-        # TODO: Maybe use __call__? (simone: seems a good idea)
-
-    @property
-    def connectivity(self):
-        return self._connectivity
-
-    @connectivity.setter
-    def connectivity(self, connectivity):
-        """Set the hardware chip connectivity.
-        Args:
-            connectivity (networkx graph): define connectivity.
-        """
-
-        if isinstance(connectivity, nx.Graph):
-            self._connectivity = connectivity
-        else:
-            raise_error(TypeError, "Use networkx graph for custom connectivity")

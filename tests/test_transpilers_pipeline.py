@@ -70,7 +70,7 @@ def test_transpile(middle_qubit, nqubits, ngates, fuse_one_qubit, two_qubit_nati
         middle_qubit=middle_qubit,
         fuse_one_qubit=fuse_one_qubit,
     )
-    transpiled_circuit, hardware_qubits = transpiler.transpile(circuit)
+    transpiled_circuit, hardware_qubits = transpiler(circuit)
     assert transpiler.is_satisfied(transpiled_circuit)
 
     final_state = backend.execute_circuit(transpiled_circuit).state()

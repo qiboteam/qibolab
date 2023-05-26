@@ -437,7 +437,7 @@ class NativeGates(Transpiler):
         self.tlog("Circuit can be executed.")
         return True
 
-    def transpile(self, circuit):
+    def __call__(self, circuit):
         new = circuit.__class__(circuit.nqubits)
         for gate in circuit.queue:
             if len(gate.qubits) > 1 or self.translate_single_qubit:
