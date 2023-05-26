@@ -709,15 +709,18 @@ class Zurich(AbstractInstrument):
     def measure_relax(self, exp, qubits, relaxation_time, acquisition_type):
         """qubit readout pulse, data acquisition and qubit relaxation"""
         play_after = None
-        if self.sequence_qibo.qf_pulses is not None and self.sequence_qibo.qd_pulses is not None:
+        # if self.sequence_qibo.qf_pulses is not None and self.sequence_qibo.qd_pulses is not None:
+        if self.sequence_qibo.qf_pulses and self.sequence_qibo.qd_pulses:
             play_after = (
                 self.play_after_set(self.sequence_qibo.qf_pulses, "bias")
                 if self.sequence_qibo.qf_pulses.finish > self.sequence_qibo.qd_pulses.finish
                 else self.play_after_set(self.sequence_qibo.qd_pulses, "drive")
             )
-        elif self.sequence_qibo.qf_pulses is not None:
+        # elif self.sequence_qibo.qf_pulses is not None:
+        elif self.sequence_qibo.qf_pulses:
             play_after = self.play_after_set(self.sequence_qibo.qf_pulses, "bias")
-        elif self.sequence_qibo.qd_pulses is not None:
+        # elif self.sequence_qibo.qd_pulses is not None:
+        elif self.sequence_qibo.qd_pulses:
             play_after = self.play_after_set(self.sequence_qibo.qd_pulses, "drive")
 
         for qubit in qubits.values():
