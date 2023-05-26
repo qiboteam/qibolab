@@ -153,6 +153,8 @@ class ChannelMap:
     def __ior__(self, channel_map):
         if not isinstance(channel_map, type(self)):
             try:
+                if isinstance(channel_map, str):
+                    raise TypeError
                 channel_map = type(self).from_names(*channel_map)
             except TypeError:
                 channel_map = type(self).from_names(channel_map)
