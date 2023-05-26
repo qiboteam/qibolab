@@ -3603,8 +3603,8 @@ qick = "^0.2"
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qibosoq.git"
-reference = "invert-dependancy"
-resolved_reference = "796ffce04525892aaa903f901ab53aaad87c644e"
+reference = "zcu111-flux-single-q"
+resolved_reference = "695a2d0a1c402f506da565e9dad494e8c00e038f"
 
 [[package]]
 name = "qick"
@@ -4738,4 +4738,4 @@ qm = ["qm-qua", "qualang-tools"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.12"
-content-hash = "29de84dc5e03ecc752206555bed6c486bd72dcd0f355b73dc4afbf7ccfc2c66b"
+content-hash = "8c6c69c96305a3f8ec020d8d1f83d80c73432bb49f85ef0f0fef2c99d749ff8b"
