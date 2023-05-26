@@ -368,7 +368,7 @@ class RFSoC(AbstractInstrument):
         self,
         qubits: List[Qubit],
         sequence: PulseSequence,
-        original_ro: PulseSequence,
+        or_sequence: PulseSequence,
         *sweepers: rfsoc.Sweeper,
         average: bool,
         execution_parameters: ExecutionParameters,
@@ -404,7 +404,7 @@ class RFSoC(AbstractInstrument):
         if len(sweepers) == 0:
             res = self.play(qubits, sequence, execution_parameters)
             newres = {}
-            serials = [pulse.serial for pulse in original_ro]
+            serials = [pulse.serial for pulse in or_sequence.ro_pulses]
             for idx, key in enumerate(res):
                 if idx % 2 == 1:
                     newres[serials[idx // 2]] = res[key]
