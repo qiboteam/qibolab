@@ -2,7 +2,7 @@ nqubits: 5
 description: 5-qubit device at XLD fridge, controlled with qblox cluster rf.
 
 settings:
-    hardware_avg: 1024
+    nshots: 1024
     relaxation_time: 20_000
     sampling_rate: 1_000_000_000
 
@@ -10,13 +10,7 @@ qubits: [0, 1, 2, 3, 4, 5]
 
 resonator_type: 2D
 
-topology: # qubit - qubit connections
--   [ 1, 0, 1, 0, 0, 0]
--   [ 0, 1, 1, 0, 0, 0]
--   [ 1, 1, 1, 1, 1, 0]
--   [ 0, 0, 1, 1, 0, 0]
--   [ 0, 0, 1, 0, 1, 0]
--   [ 0, 0, 0, 0, 0, 1]
+topology: [[0, 2], [1, 2], [2, 3], [2, 4]]
 
 # Drive:
 # L3-15:mod8-o1 q0

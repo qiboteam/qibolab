@@ -14,10 +14,11 @@ from typing import Dict, List, Tuple, Union
 import numpy as np
 import qibosoq.abstracts as rfsoc
 
+from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.platforms.abstract import Qubit
 from qibolab.pulses import Drag, Gaussian, Pulse, PulseSequence, PulseType, Rectangular
-from qibolab.result import AveragedResults, ExecutionResults
+from qibolab.result import IntegratedResults, SampleResults
 from qibolab.sweeper import Parameter, Sweeper
 
 HZ_TO_MHZ = 1e-6
@@ -287,11 +288,8 @@ class RFSoC(AbstractInstrument):
         self,
         qubits: Dict[int, Qubit],
         sequence: PulseSequence,
-        relaxation_time: int = None,
-        nshots: int = None,
-        average: bool = False,
-        raw_adc: bool = False,
-    ) -> Dict[str, ExecutionResults]:
+        execution_parameters: ExecutionParameters,
+    ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
         """Executes the sequence of instructions and retrieves readout results.
            Each readout pulse generates a separate acquisition.
            The relaxation_time and the number of shots have default values.
@@ -299,26 +297,33 @@ class RFSoC(AbstractInstrument):
         Args:
             qubits (dict): List of `qibolab.platforms.utils.Qubit` objects
                            passed from the platform.
-            sequence (`qibolab.pulses.PulseSequence`). Pulse sequence to play.
-            nshots (int): Number of repetitions (shots) of the experiment.
-            relaxation_time (int): Time to wait for the qubit to relax to its
-                                   ground state between shots in ns.
-            raw_adc (bool): allows to acquire raw adc data
+            execution_parameters (ExecutionParameters): Parameters (nshots,
+                                                        relaxation_time,
+                                                        fast_reset,
+                                                        acquisition_type,
+                                                        averaging_mode)
+            sequence (`qibolab.pulses.PulseSequence`): Pulse sequence to play.
         Returns:
             A dictionary mapping the readout pulses serial and respective qubits to
-            `qibolab.ExecutionResults` objects
+            qibolab results objects
         """
 
         if any(pulse.duration < 10 for pulse in sequence):
             raise ValueError("The minimum pulse length supported is 10 ns")
-        if raw_adc:
+        if execution_parameters.acquisition_type is AcquisitionType.RAW:
             raise NotImplementedError("Raw data acquisition is not supported")
-
+        if execution_parameters.fast_reset:
+            raise NotImplementedError("Fast reset is not supported")
         # if new value are passed, they are updated in the config obj
-        if nshots is not None:
-            self.cfg.reps = nshots
-        if relaxation_time is not None:
-            self.cfg.repetition_duration = relaxation_time * NS_TO_US
+        if execution_parameters.nshots is not None:
+            self.cfg.reps = execution_parameters.nshots
+        if execution_parameters.relaxation_time is not None:
+            self.cfg.repetition_duration = execution_parameters.relaxation_time
+
+        if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
+            average = False
+        else:
+            average = execution_parameters.averaging_mode is AveragingMode.CYCLIC
 
         toti, totq = self._execute_pulse_sequence(self.cfg, sequence, qubits, len(sequence.ro_pulses), average)
 
@@ -333,15 +338,14 @@ class RFSoC(AbstractInstrument):
 
                 serial = ro_pulse.serial
 
-                if average:
-                    results[ro_pulse.qubit] = results[serial] = AveragedResults.from_components(
-                        np.array([i_pulse]), np.array([q_pulse])
-                    )
+                if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
+                    discriminated_shots = self.classify_shots(i_pulse, q_pulse, qubits[ro_pulse.qubit])
+                    if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
+                        discriminated_shots = np.mean(discriminated_shots, keepdims=True)
+                    result = execution_parameters.results_type(discriminated_shots)
                 else:
-                    shots = self.classify_shots(i_pulse, q_pulse, qubits[ro_pulse.qubit])
-                    results[ro_pulse.qubit] = results[serial] = ExecutionResults.from_components(
-                        i_pulse, q_pulse, shots
-                    )
+                    result = execution_parameters.results_type(i_pulse + 1j * q_pulse)
+                results[ro_pulse.qubit] = results[serial] = result
 
         return results
 
@@ -356,6 +360,8 @@ class RFSoC(AbstractInstrument):
 
         rotated = np.cos(angle) * np.array(i_values) - np.sin(angle) * np.array(q_values)
         shots = np.heaviside(np.array(rotated) - threshold, 0)
+        if isinstance(shots, float):
+            return [shots]
         return shots
 
     def recursive_python_sweep(
@@ -365,7 +371,8 @@ class RFSoC(AbstractInstrument):
         original_ro: PulseSequence,
         *sweepers: rfsoc.Sweeper,
         average: bool,
-    ) -> Dict[str, Union[AveragedResults, ExecutionResults]]:
+        execution_parameters: ExecutionParameters,
+    ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
         """Execute a sweep of an arbitrary number of Sweepers via recursion.
 
         Args:
@@ -377,6 +384,12 @@ class RFSoC(AbstractInstrument):
             or_sequence (`qibolab.pulses.PulseSequence`): Reference to original
                     sequence to not modify.
             *sweepers (`qibolab.Sweeper`): Sweeper objects.
+            average (bool): if True averages on nshots
+            execution_parameters (ExecutionParameters): Parameters (nshots,
+                                                        relaxation_time,
+                                                        fast_reset,
+                                                        acquisition_type,
+                                                        averaging_mode)
         Returns:
             A dictionary mapping the readout pulses serial and respective qubits to
             results objects
@@ -389,7 +402,7 @@ class RFSoC(AbstractInstrument):
         # Last layer for recursion.
 
         if len(sweepers) == 0:
-            res = self.play(qubits, sequence, average=average)
+            res = self.play(qubits, sequence, execution_parameters)
             newres = {}
             serials = [pulse.serial for pulse in original_ro]
             for idx, key in enumerate(res):
@@ -438,19 +451,20 @@ class RFSoC(AbstractInstrument):
                 for kdx, jdx in enumerate(sweeper.indexes):
                     qubits[jdx].flux.bias = values[kdx][idx]
 
-            res = self.recursive_python_sweep(qubits, sequence, original_ro, *sweepers[1:], average=average)
+            res = self.recursive_python_sweep(
+                qubits, sequence, or_sequence, *sweepers[1:], average=average, execution_parameters=execution_parameters
+            )
             results = self.merge_sweep_results(results, res)
         return results  # already in the right format
 
     @staticmethod
     def merge_sweep_results(
-        dict_a: Dict[str, Union[AveragedResults, ExecutionResults]],
-        dict_b: Dict[str, Union[AveragedResults, ExecutionResults]],
-    ) -> Dict[str, Union[AveragedResults, ExecutionResults]]:
+        dict_a: Dict[str, Union[IntegratedResults, SampleResults]],
+        dict_b: Dict[str, Union[IntegratedResults, SampleResults]],
+    ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
         """Merge two dictionary mapping pulse serial to Results object.
         If dict_b has a key (serial) that dict_a does not have, simply add it,
-        otherwise sum the two results (`qibolab.result.ExecutionResults`
-        or `qibolab.result.AveragedResults`)
+        otherwise sum the two results
 
         Args:
             dict_a (dict): dict mapping ro pulses serial to qibolab res objects
@@ -517,8 +531,8 @@ class RFSoC(AbstractInstrument):
         qubits: List[Qubit],
         toti: List[float],
         totq: List[float],
-        average: bool,
-    ) -> Dict[str, Union[ExecutionResults, AveragedResults]]:
+        execution_parameters: ExecutionParameters,
+    ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
         """Convert sweep res to qibolab dict res
 
         Args:
@@ -528,49 +542,86 @@ class RFSoC(AbstractInstrument):
                  passed from the platform.
             toti (list): i values
             totq (list): q values
-            average (bool): true if the result is from averaged acquisition
+            results_type: qibolab results object
+            execution_parameters (ExecutionParameters): Parameters (nshots,
+                                                        relaxation_time,
+                                                        fast_reset,
+                                                        acquisition_type,
+                                                        averaging_mode)
         Returns:
             A dict mapping the readout pulses serial to qibolab results objects
         """
-        sweep_results = {}
+        results = {}
 
         adcs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
+        # for k, k_val in enumerate(adcs):
+        #    results = {}
+        #    serials = [pulse.serial for pulse in original_ro if qubits[pulse.qubit].feedback.ports[0][1] == k_val]
+        #    for i, serial in enumerate(serials):
+        #        i_pulse = np.array(toti[k][i])
+        #        q_pulse = np.array(totq[k][i])
+
+        #        # TODO new results
+        #        i_pulse = i_pulse.flatten()
+        #        q_pulse = q_pulse.flatten()
+        #        i_pulse = i_pulse[i_pulse != 0]
+        #        q_pulse = q_pulse[q_pulse != 0]
+
+        #        if average:
+        #            results[sequence.ro_pulses[i].qubit] = results[serial] = AveragedResults.from_components(
+        #                i_pulse, q_pulse
+        #            )
+        #        else:
+        #            qubit = qubits[sequence.ro_pulses[i].qubit]
+        #            shots = self.classify_shots(i_pulse, q_pulse, qubit)
+        #            results[sequence.ro_pulses[i].qubit] = results[serial] = ExecutionResults.from_components(
+        #                i_pulse, q_pulse, shots
+        #            )
+        #    sweep_results = self.merge_sweep_results(sweep_results, results)
+
+        # return sweep_results
         for k, k_val in enumerate(adcs):
-            results = {}
-            serials = [pulse.serial for pulse in original_ro if qubits[pulse.qubit].feedback.ports[0][1] == k_val]
-            for i, serial in enumerate(serials):
+            for i, serial in enumerate(original_ro):
                 i_pulse = np.array(toti[k][i])
                 q_pulse = np.array(totq[k][i])
 
-                # TODO new results
                 i_pulse = i_pulse.flatten()
                 q_pulse = q_pulse.flatten()
                 i_pulse = i_pulse[i_pulse != 0]
                 q_pulse = q_pulse[q_pulse != 0]
 
-                if average:
-                    results[sequence.ro_pulses[i].qubit] = results[serial] = AveragedResults.from_components(
-                        i_pulse, q_pulse
-                    )
-                else:
-                    qubit = qubits[sequence.ro_pulses[i].qubit]
-                    shots = self.classify_shots(i_pulse, q_pulse, qubit)
-                    results[sequence.ro_pulses[i].qubit] = results[serial] = ExecutionResults.from_components(
-                        i_pulse, q_pulse, shots
-                    )
-            sweep_results = self.merge_sweep_results(sweep_results, results)
+                i_vals = i_pulse
+                q_vals = q_pulse
 
-        return sweep_results
+                if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
+                    average = False
+                else:
+                    average = execution_parameters.averaging_mode is AveragingMode.CYCLIC
+
+                if not average:
+                    shape = i_vals.shape
+                    np.reshape(i_vals, (execution_parameters.nshots, *shape[:-1]))
+                    np.reshape(q_vals, (execution_parameters.nshots, *shape[:-1]))
+
+                if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
+                    qubit = qubits[sequence.ro_pulses[i].qubit]
+                    discrimated_shots = self.classify_shots(i_vals, q_vals, qubit)
+                    if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
+                        discriminated_shots = np.mean(discriminated_shots, keepdims=True)
+                    result = execution_parameters.results_type(discrimated_shots)
+                else:
+                    result = execution_parameters.results_type(i_vals + 1j * q_vals)
+
+                results[sequence.ro_pulses[i].qubit] = results[serial] = result
+        return results
 
     def sweep(
         self,
         qubits: List[Qubit],
         sequence: PulseSequence,
+        execution_parameters: ExecutionParameters,
         *sweepers: Sweeper,
-        relaxation_time: int,
-        nshots: int = 1000,
-        average: bool = True,
-    ) -> Dict[str, Union[AveragedResults, ExecutionResults]]:
+    ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
         """Executes the sweep and retrieves the readout results.
         Each readout pulse generates a separate acquisition.
         The relaxation_time and the number of shots have default values.
@@ -578,22 +629,32 @@ class RFSoC(AbstractInstrument):
         Args:
             qubits (list): List of `qibolab.platforms.utils.Qubit` objects
                            passed from the platform.
+            execution_parameters (ExecutionParameters): Parameters (nshots,
+                                                        relaxation_time,
+                                                        fast_reset,
+                                                        acquisition_type,
+                                                        averaging_mode)
             sequence (`qibolab.pulses.PulseSequence`). Pulse sequence to play.
             *sweepers (`qibolab.Sweeper`): Sweeper objects.
-            relaxation_time (int): Time to wait for the qubit to relax to its
-                                   ground state between shots in ns.
-            nshots (int): Number of repetitions (shots) of the experiment.
-            average (bool): if False returns single shot measurements
         Returns:
             A dictionary mapping the readout pulses serial and respective qubits to
             results objects
         """
 
+        if execution_parameters.acquisition_type is AcquisitionType.RAW:
+            raise NotImplementedError("Raw data acquisition is not supported")
+        if execution_parameters.fast_reset:
+            raise NotImplementedError("Fast reset is not supported")
         # if new value are passed, they are updated in the config obj
-        if nshots is not None:
-            self.cfg.reps = nshots
-        if relaxation_time is not None:
-            self.cfg.repetition_duration = relaxation_time * NS_TO_US
+        if execution_parameters.nshots is not None:
+            self.cfg.reps = execution_parameters.nshots
+        if execution_parameters.relaxation_time is not None:
+            self.cfg.repetition_duration = execution_parameters.relaxation_time
+
+        if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
+            average = False
+        else:
+            average = execution_parameters.averaging_mode is AveragingMode.CYCLIC
 
         rfsoc_sweepers = [convert_sweep(sweep, sequence, qubits) for sweep in sweepers]
 
