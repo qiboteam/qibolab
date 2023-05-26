@@ -514,13 +514,13 @@ class Zurich(AbstractInstrument):
             zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"].append(ZhPulse(pulse))
 
         "Mess that gets the sweeper and substitutes the pulse it sweeps in the right place"
+
+        SWEEPER_SET = {"amplitude", "frequency", "duration", "relative_phase"}
+        SWEEPER_BIAS = {"bias"}
+        SWEEPER_DELAY = {"delay"}
+
         for sweeper in sweepers:
-            if sweeper.parameter.name in {
-                "amplitude",
-                "frequency",
-                "duration",
-                "relative_phase",
-            }:
+            if sweeper.parameter.name in SWEEPER_SET:
                 for pulse in sweeper.pulses:
                     aux_list = zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"]
                     if sweeper.parameter is Parameter.frequency and pulse.type is PulseType.READOUT:
@@ -536,12 +536,12 @@ class Zurich(AbstractInstrument):
                             elif isinstance(aux_list[aux_list.index(element)], ZhSweeper):
                                 aux_list[aux_list.index(element)].add_sweeper(sweeper, qubits[pulse.qubit])
 
-            if sweeper.parameter.name in {"bias"}:
+            if sweeper.parameter.name in SWEEPER_BIAS:
                 for qubit in sweeper.qubits:
                     zhsequence[f"flux{qubit.name}"] = [ZhSweeperLine(sweeper, qubit, sequence)]
 
             # FIXME: This may not place the Zhsweeper when the delay occurs among different sections or lines
-            if sweeper.parameter.name in {"delay"}:
+            if sweeper.parameter.name in SWEEPER_DELAY:
                 pulse = sweeper.pulses[0]
                 aux_list = zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"]
                 for element in aux_list:
@@ -551,7 +551,7 @@ class Zurich(AbstractInstrument):
                                 aux_list.index(element) + 1,
                                 ZhSweeperLine(sweeper, pulse.qubit, sequence),
                             )
-                            break  # TODO: Check it does not mess anything
+                            break
 
         self.sequence = zhsequence
 
