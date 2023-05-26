@@ -4,7 +4,7 @@ from importlib import import_module
 
 import pytest
 
-from qibolab import Profile, create_platform
+from qibolab import PLATFORMS, create_platform
 from qibolab.platforms.multiqubit import MultiqubitPlatform
 
 
@@ -40,7 +40,7 @@ def pytest_addoption(parser):
 
 
 def set_platform_profile():
-    os.environ[Profile.envvar] = str(pathlib.Path(__file__).parent / "dummy_qrc")
+    os.environ[PLATFORMS] = str(pathlib.Path(__file__).parent / "dummy_qrc")
 
 
 @pytest.fixture

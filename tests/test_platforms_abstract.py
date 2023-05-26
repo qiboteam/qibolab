@@ -45,7 +45,7 @@ def test_platform_multiqubit(platform_name):
 
 
 def test_platform():
-    with pytest.raises(KeyError):
+    with pytest.raises(ValueError):
         platform = create_platform("nonexistent")
 
 

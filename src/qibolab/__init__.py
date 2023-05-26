@@ -1,15 +1,9 @@
 import importlib.metadata as im
 import importlib.util
 import os
-from pathlib import Path
-
-try:
-    import tomllib
-except ModuleNotFoundError:
-    import tomli as tomllib
-
 from dataclasses import dataclass
 from enum import Enum, auto
+from pathlib import Path
 from typing import Optional
 
 from qibo.config import raise_error
@@ -26,19 +20,7 @@ from qibolab.result import (
 
 __version__ = im.version(__package__)
 
-
-class Profile:
-    envvar = "QIBOLAB_PLATFORMS"
-    filename = "platforms.toml"
-
-    def __init__(self, path: Path):
-        profile = tomllib.loads((path / self.filename).read_text(encoding="utf-8"))
-
-        paths = {}
-        for name, p in profile["paths"].items():
-            paths[name] = path / Path(p)
-
-        self.paths = paths
+PLATFORMS = "QIBOLAB_PLATFORMS"
 
 
 def create_platform(name, runcard=None):
@@ -55,15 +37,15 @@ def create_platform(name, runcard=None):
 
         return create_dummy(qibolab_folder / "runcards" / "dummy.yml")
 
-    profiles = Path(os.environ.get(Profile.envvar))
-    if not os.path.exists(profiles):
+    profiles = Path(os.environ.get(PLATFORMS))
+    if not profiles.exists():
         raise_error(RuntimeError, f"Profile file {profiles} does not exist.")
 
-    platform = Profile(profiles).paths[name]
+    platform = profiles / f"{name}.py"
+    if not platform.exists():
+        raise_error(ValueError, f"Platform {name} does not exist.")
 
     spec = importlib.util.spec_from_file_location("platform", platform)
-    if spec is None:
-        raise_error(ModuleNotFoundError, f"Platform {platform} does not exist.")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
