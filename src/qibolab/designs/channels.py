@@ -35,7 +35,7 @@ class Channel:
     can send sufficiently high frequencies.
     """
     power_range: Optional[float] = None
-    """Channel amplification or attenuation of the  selected on the device
+    """Channel amplification or attenuation of the selected on the device
     """
     _bias: Optional[float] = None
     """DC offset that should be applied in the channel in order to shift the

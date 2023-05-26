@@ -102,7 +102,6 @@ class PulseShape(ABC):
         pulse (Pulse): the pulse associated with it. Its parameters are used to generate pulse waveforms.
     """
 
-    SAMPLING_RATE = 1e9  # 1e9  # 1GSaPS
     SAMPLING_RATE = 1e9  # 1GSaPS
     pulse = None
 
@@ -1419,6 +1418,14 @@ class SplitPulse(Pulse):
             plt.show()
         plt.close()
         return
+
+
+class PulseConstructor(Enum):
+    """An enumeration to map each ``PulseType`` to the proper pulse constructor."""
+
+    READOUT = ReadoutPulse
+    DRIVE = DrivePulse
+    FLUX = FluxPulse
 
 
 class PulseSequence:
