@@ -348,7 +348,24 @@ class Zurich(AbstractInstrument):
         self.device_setup.set_calibration(self.calibration)
 
     def register_readout_line(self, qubit, intermediate_frequency):
-        """Registers qubit measure and acquire lines to calibration and signal map."""
+        """Registers qubit measure and acquire lines to calibration and signal map.
+
+        Note
+        ----
+        To allow debugging with and oscilloscope, just set the following::
+
+            self.calibration[f"/logical_signal_groups/q{q}/measure_line"] = lo.SignalCalibration(
+                ...,
+                local_oscillator=lo.Oscillator(
+                    ...
+                    frequency=0.0,
+                ),
+                ...,
+                port_mode=lo.PortMode.LF,
+                ...,
+            )
+
+        """
 
         q = qubit.name
         self.signal_map[f"measure{q}"] = self.device_setup.logical_signal_groups[f"q{q}"].logical_signals[
@@ -362,10 +379,9 @@ class Zurich(AbstractInstrument):
             local_oscillator=lo.Oscillator(
                 uid="lo_shfqa",
                 frequency=int(qubit.readout.local_oscillator.frequency),
-                # frequency=0.0, # This and PortMode.LF allow debugging with and oscilloscope
             ),
             range=qubit.readout.power_range,
-            port_delay=None,  # port_mode= lo.PortMode.LF,
+            port_delay=None,
             delay_signal=0,
         )
 
