@@ -205,18 +205,6 @@ webencodings = "*"
 css = ["tinycss2 (>=1.1.0,<1.2)"]
 
 [[package]]
-name = "blinker"
-version = "1.6.2"
-description = "Fast, simple object-to-object and broadcast signaling"
-category = "main"
-optional = true
-python-versions = ">=3.7"
-files = [
-    {file = "blinker-1.6.2-py3-none-any.whl", hash = "sha256:c3d739772abb7bc2860abf5f2ec284223d9ad5c76da018234f6f50d6f31ab1f0"},
-    {file = "blinker-1.6.2.tar.gz", hash = "sha256:4afd3de66ef3a9f8067559fb7a1cbe555c17dcbe15971b05d1b625c3e7abe213"},
-]
-
-[[package]]
 name = "broadbean"
 version = "0.11.0"
 description = "Package for easily generating and manipulating signal"
@@ -714,22 +702,23 @@ files = [
 
 [[package]]
 name = "dash"
-version = "2.9.3"
+version = "2.10.0"
 description = "A Python framework for building reactive web-apps. Developed by Plotly."
 category = "main"
 optional = true
 python-versions = ">=3.6"
 files = [
-    {file = "dash-2.9.3-py3-none-any.whl", hash = "sha256:a749ae1ea9de3fe7b785353a818ec9b629d39c6b7e02462954203bd1e296fd0e"},
-    {file = "dash-2.9.3.tar.gz", hash = "sha256:47392f8d6455dc989a697407eb5941f3bad80604df985ab1ac9d4244568ffb34"},
+    {file = "dash-2.10.0-py3-none-any.whl", hash = "sha256:2a010cd593f952041ab1737ea8af574b19be54584f52665f269eb0bcfef765fa"},
+    {file = "dash-2.10.0.tar.gz", hash = "sha256:33abd550733a609247b792d29d5b8fc9663e5161409a3179ec24551f4b74f2a6"},
 ]
 
 [package.dependencies]
 dash-core-components = "2.0.0"
 dash-html-components = "2.0.0"
 dash-table = "5.0.0"
-Flask = ">=1.0.4"
+Flask = ">=1.0.4,<=2.2.3"
 plotly = ">=5.0.0"
+Werkzeug = "<=2.2.3"
 
 [package.extras]
 celery = ["celery[redis] (>=5.1.2)", "importlib-metadata (<5)", "redis (>=3.5.3)"]
@@ -1073,23 +1062,22 @@ devel = ["colorama", "json-spec", "jsonschema", "pylint", "pytest", "pytest-benc
 
 [[package]]
 name = "flask"
-version = "2.3.2"
+version = "2.2.3"
 description = "A simple framework for building complex web applications."
 category = "main"
 optional = true
-python-versions = ">=3.8"
+python-versions = ">=3.7"
 files = [
-    {file = "Flask-2.3.2-py3-none-any.whl", hash = "sha256:77fd4e1249d8c9923de34907236b747ced06e5467ecac1a7bb7115ae0e9670b0"},
-    {file = "Flask-2.3.2.tar.gz", hash = "sha256:8c2f9abd47a9e8df7f0c3f091ce9497d011dc3b31effcf4c85a6e2b50f4114ef"},
+    {file = "Flask-2.2.3-py3-none-any.whl", hash = "sha256:c0bec9477df1cb867e5a67c9e1ab758de9cb4a3e52dd70681f59fa40a62b3f2d"},
+    {file = "Flask-2.2.3.tar.gz", hash = "sha256:7eb373984bf1c770023fce9db164ed0c3353cd0b53f130f4693da0ca756a2e6d"},
 ]
 
 [package.dependencies]
-blinker = ">=1.6.2"
-click = ">=8.1.3"
+click = ">=8.0"
 importlib-metadata = {version = ">=3.6.0", markers = "python_version < \"3.10\""}
-itsdangerous = ">=2.1.2"
-Jinja2 = ">=3.1.2"
-Werkzeug = ">=2.3.3"
+itsdangerous = ">=2.0"
+Jinja2 = ">=3.0"
+Werkzeug = ">=2.2.2"
 
 [package.extras]
 async = ["asgiref (>=3.2)"]
@@ -2349,14 +2337,14 @@ test = ["pep440", "pre-commit", "pytest", "testpath"]
 
 [[package]]
 name = "nbsphinx"
-version = "0.9.1"
+version = "0.9.2"
 description = "Jupyter Notebook Tools for Sphinx"
 category = "dev"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "nbsphinx-0.9.1-py3-none-any.whl", hash = "sha256:c2991a2c497715f52f6c727f8a633e309f097fe9bb794538011ca1ddb6b698fa"},
-    {file = "nbsphinx-0.9.1.tar.gz", hash = "sha256:59bbfb7bc676a6647805fb3ca83490338ae7f96c1674a9e5e707f055c272c59d"},
+    {file = "nbsphinx-0.9.2-py3-none-any.whl", hash = "sha256:2746680ece5ad3b0e980639d717a5041a1c1aafb416846b72dfaeecc306bc351"},
+    {file = "nbsphinx-0.9.2.tar.gz", hash = "sha256:540db7f4066347f23d0650c4ae8e7d85334c69adf749e030af64c12e996ff88e"},
 ]
 
 [package.dependencies]
@@ -3214,14 +3202,14 @@ testing = ["argcomplete", "attrs (>=19.2.0)", "hypothesis (>=3.56)", "mock", "no
 
 [[package]]
 name = "pytest-cov"
-version = "4.0.0"
+version = "4.1.0"
 description = "Pytest plugin for measuring coverage."
 category = "dev"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.7"
 files = [
-    {file = "pytest-cov-4.0.0.tar.gz", hash = "sha256:996b79efde6433cdbd0088872dbc5fb3ed7fe1578b68cdbba634f14bb8dd0470"},
-    {file = "pytest_cov-4.0.0-py3-none-any.whl", hash = "sha256:2feb1b751d66a8bd934e5edfa2e961d11309dc37b73b0eabe73b5945fee20f6b"},
+    {file = "pytest-cov-4.1.0.tar.gz", hash = "sha256:3904b13dfbfec47f003b8e77fd5b589cd11904a21ddf1ab38a64f204d6a10ef6"},
+    {file = "pytest_cov-4.1.0-py3-none-any.whl", hash = "sha256:6ba70b9e97e69fcc3fb45bfeab2d0a138fb65c4d0d6a41ef33983ad114be8c3a"},
 ]
 
 [package.dependencies]
@@ -3616,24 +3604,27 @@ qick = "^0.2"
 type = "git"
 url = "https://github.com/qiboteam/qibosoq.git"
 reference = "invert-dependancy"
-resolved_reference = "e909ecfe1dd75aceb908e737271e2224d7242e06"
+resolved_reference = "796ffce04525892aaa903f901ab53aaad87c644e"
 
 [[package]]
 name = "qick"
-version = "0.2.138"
+version = "0.2.147"
 description = "Quantum Instrumentation Controller Kit software library"
 category = "main"
 optional = false
 python-versions = ">=3.6, <4"
 files = [
-    {file = "qick-0.2.138-py3-none-any.whl", hash = "sha256:8a093d5ea9b0003e8372e0756287252cf5b9275933d346b44c5625ad1122c9fa"},
-    {file = "qick-0.2.138.tar.gz", hash = "sha256:5edb3adf79587bdbcf228312d54815430d4508434231f651e3225388abe08f05"},
+    {file = "qick-0.2.147-py3-none-any.whl", hash = "sha256:a60ba12408ea326e341c56250774051f7d607d7b341bce2d0f2313d2b913e3ac"},
+    {file = "qick-0.2.147.tar.gz", hash = "sha256:3d1437be8b7467e1615d2e18dd7c904ea909f83d1b39a0f0c7b744c8a60f7386"},
 ]
 
 [package.dependencies]
 numpy = "*"
 pynq = {version = ">=2.6", markers = "platform_machine == \"aarch64\" or platform_machine == \"armv7l\""}
 tqdm = "*"
+
+[package.extras]
+full = ["pyro4"]
 
 [[package]]
 name = "qm-octave"
@@ -3774,14 +3765,14 @@ pyasn1 = ">=0.1.3"
 
 [[package]]
 name = "ruamel-yaml"
-version = "0.17.26"
+version = "0.17.27"
 description = "ruamel.yaml is a YAML parser/emitter that supports roundtrip preservation of comments, seq/map flow style, and map key order"
 category = "main"
 optional = true
 python-versions = ">=3"
 files = [
-    {file = "ruamel.yaml-0.17.26-py3-none-any.whl", hash = "sha256:25d0ee82a0a9a6f44683dcf8c282340def4074a4562f3a24f55695bb254c1693"},
-    {file = "ruamel.yaml-0.17.26.tar.gz", hash = "sha256:baa2d0a5aad2034826c439ce61c142c07082b76f4791d54145e131206e998059"},
+    {file = "ruamel.yaml-0.17.27-py3-none-any.whl", hash = "sha256:c4ffffc972d35927e715683fe1e2e47fa2aebb26ce67fe75e599fb84f115f20b"},
+    {file = "ruamel.yaml-0.17.27.tar.gz", hash = "sha256:cad7e3917da5c321658479f417320443b073e7b272033c799ba52e441d561ae5"},
 ]
 
 [package.dependencies]
@@ -4397,14 +4388,14 @@ test = ["argcomplete (>=2.0)", "pre-commit", "pytest", "pytest-mock"]
 
 [[package]]
 name = "typing-extensions"
-version = "4.6.1"
+version = "4.6.2"
 description = "Backported and Experimental Type Hints for Python 3.7+"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "typing_extensions-4.6.1-py3-none-any.whl", hash = "sha256:6bac751f4789b135c43228e72de18637e9a6c29d12777023a703fd1a6858469f"},
-    {file = "typing_extensions-4.6.1.tar.gz", hash = "sha256:558bc0c4145f01e6405f4a5fdbd82050bd221b119f4bf72a961a1cfd471349d6"},
+    {file = "typing_extensions-4.6.2-py3-none-any.whl", hash = "sha256:3a8b36f13dd5fdc5d1b16fe317f5668545de77fa0b8e02006381fd49d731ab98"},
+    {file = "typing_extensions-4.6.2.tar.gz", hash = "sha256:06006244c70ac8ee83fa8282cb188f697b8db25bc8b4df07be1873c43897060c"},
 ]
 
 [[package]]
@@ -4585,21 +4576,21 @@ files = [
 
 [[package]]
 name = "werkzeug"
-version = "2.3.4"
+version = "2.2.3"
 description = "The comprehensive WSGI web application library."
 category = "main"
 optional = true
-python-versions = ">=3.8"
+python-versions = ">=3.7"
 files = [
-    {file = "Werkzeug-2.3.4-py3-none-any.whl", hash = "sha256:48e5e61472fee0ddee27ebad085614ebedb7af41e88f687aaf881afb723a162f"},
-    {file = "Werkzeug-2.3.4.tar.gz", hash = "sha256:1d5a58e0377d1fe39d061a5de4469e414e78ccb1e1e59c0f5ad6fa1c36c52b76"},
+    {file = "Werkzeug-2.2.3-py3-none-any.whl", hash = "sha256:56433961bc1f12533306c624f3be5e744389ac61d722175d543e1751285da612"},
+    {file = "Werkzeug-2.2.3.tar.gz", hash = "sha256:2e1ccc9417d4da358b9de6f174e3ac094391ea1d4fbef2d667865d819dfd0afe"},
 ]
 
 [package.dependencies]
 MarkupSafe = ">=2.1.1"
 
 [package.extras]
-watchdog = ["watchdog (>=2.3)"]
+watchdog = ["watchdog"]
 
 [[package]]
 name = "widgetsnbextension"
@@ -4741,10 +4732,10 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 
 [extras]
 qblox = ["pyvisa-py", "qblox-instruments", "qcodes", "qcodes_contrib_drivers"]
-qibosoq = ["qibosoq"]
+qibosoq = ["qcodes", "qcodes_contrib_drivers", "qibosoq"]
 qm = ["qm-qua", "qualang-tools"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.12"
-content-hash = "1af688d23eff8fb7661355375f2816cbe7eb20e8f619d10a7942a4fc206cfd03"
+content-hash = "29de84dc5e03ecc752206555bed6c486bd72dcd0f355b73dc4afbf7ccfc2c66b"
