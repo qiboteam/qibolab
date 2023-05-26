@@ -555,12 +555,12 @@ class RFSoC(AbstractInstrument):
 
         adcs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
         for k, k_val in enumerate(adcs):
-            for i, serial in enumerate(original_ro):
+            for i, ro_pulse in enumerate(original_ro):
                 i_pulse = np.array(toti[k][i])
                 q_pulse = np.array(totq[k][i])
 
-                i_pulse = i_pulse[i_pulse != 0]
-                q_pulse = q_pulse[q_pulse != 0]
+                # i_pulse = i_pulse[i_pulse != 0]
+                # q_pulse = q_pulse[q_pulse != 0]
 
                 i_vals = i_pulse
                 q_vals = q_pulse
@@ -584,7 +584,7 @@ class RFSoC(AbstractInstrument):
                 else:
                     result = execution_parameters.results_type(i_vals + 1j * q_vals)
 
-                results[sequence.ro_pulses[i].qubit] = results[serial] = result
+                results[sequence.ro_pulses[i].qubit] = results[ro_pulse.serial] = result
         return results
 
     def sweep(
