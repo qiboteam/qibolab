@@ -160,3 +160,8 @@ class AveragedSampleResults(SampleResults):
         new_res.statistical_frequency = np.append(self.statistical_frequency, data.statistical_frequency)
         new_res.std = np.append(self.std, data.std)
         return new_res
+
+    @lru_cache
+    def probability(self, state=0):
+        """Returns the statistical frequency of the specified state (0 or 1)."""
+        return abs(1 - state - self.statistical_frequency)
