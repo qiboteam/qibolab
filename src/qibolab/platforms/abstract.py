@@ -73,6 +73,7 @@ class Qubit:
     twpa: Optional[Channel] = None
     drive: Optional[Channel] = None
     flux: Optional[Channel] = None
+    flux_coupler: Optional[List["Qubit"]] = None
 
     classifiers_hpars: dict = field(default_factory=dict)
     native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
@@ -186,7 +187,8 @@ class AbstractPlatform(ABC):
                     if qf is not None:
                         qubit.flux = Channel(qf)
                 # register single qubit native gates to Qubit objects
-                qubit.native_gates = SingleQubitNatives.from_dict(qubit, self.native_gates["single_qubit"][q])
+                if q in self.native_gates["single_qubit"]:
+                    qubit.native_gates = SingleQubitNatives.from_dict(qubit, self.native_gates["single_qubit"][q])
 
         for pair in settings["topology"]:
             pair = tuple(sorted(pair))
