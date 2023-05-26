@@ -447,13 +447,12 @@ class Zurich(AbstractInstrument):
             dimensions = [options.nshots]
 
         # TODO: Read frequency for pulses instead of qubit patch
-        for qubit in qubits.values():
-            for pulse in sequence:
-                if pulse.qubit == qubit.name:
-                    if pulse.type is PulseType.READOUT:
-                        qubit.readout_frequency = pulse.frequency
-                    if pulse.type is PulseType.DRIVE:
-                        qubit.drive_frequency = pulse.frequency
+        for pulse in sequence:
+            q = qubit.name
+            if pulse.type is PulseType.READOUT:
+                qubits[q].readout_frequency = pulse.frequency
+            if pulse.type is PulseType.DRIVE:
+                qubits[q].drive_frequency = pulse.frequency
 
         """
         Play pulse sequence steps, one on each method:
