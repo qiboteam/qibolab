@@ -8,6 +8,8 @@ from qibolab.platforms.abstract import AbstractPlatform, Qubit
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import IntegratedResults
 from qibolab.sweeper import Parameter
+from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
+
 
 
 class MultiqubitPlatform(AbstractPlatform):
@@ -43,7 +45,7 @@ class MultiqubitPlatform(AbstractPlatform):
         super().reload_settings()
         self.characterization = self.settings["characterization"]
         self.qubit_channel_map = self.settings["qubit_channel_map"]
-        self.nshots = self.settings["settings"]["nshots"]
+        # self.nshots = self.settings["settings"]["nshots"]
         self.relaxation_time = self.settings["settings"]["relaxation_time"]
 
         # FIX: Set attenuation again to the original value after sweep attenuation in punchout
@@ -277,11 +279,31 @@ class MultiqubitPlatform(AbstractPlatform):
                 self.instruments[name].disconnect()
             self.is_connected = False
 
-    def execute_pulse_sequence(self, sequence: PulseSequence, nshots=None):
+    def execute_pulse_sequence(self, sequence, options, **kwargs):
+    # def execute_pulse_sequence(self, sequence: PulseSequence, nshots=None):
         if not self.is_connected:
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
-        if nshots is None:
-            nshots = self.nshots
+
+            print(options.averaging_mode)
+            print(options.nshots)
+
+        if options.nshots is None:
+            nshots = 1024
+            
+        if options.averaging_mode == AveragingMode.SINGLESHOT:
+            nshots = 1
+            # navgs = options.nshots
+        elif options.averaging_mode == AveragingMode.CYCLIC:
+            nshots = options.nshots
+            # navgs = 1
+
+        if options.nshots is None:
+            nshots = 1024
+            
+        print(options.averaging_mode)
+        print(nshots)
+
+        relaxation_time = options.relaxation_time
 
         instrument_pulses = {}
         changed = {}
@@ -335,11 +357,12 @@ class MultiqubitPlatform(AbstractPlatform):
         for serial in acquisition_results:
             for if_pulse, original in changed.items():
                 if serial == if_pulse.serial:
-                    data[original] = data[if_pulse.qubit] = IntegratedResults(acquisition_results[serial])
+                    data[original] = data[if_pulse.qubit] = IntegratedResults(np.array(complex(acquisition_results[serial][0][0], acquisition_results[serial][1][0])))
 
         return data
 
-    def sweep(self, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
+    def sweep(self, sequence, options, *sweepers, **kwargs):
+    # def sweep(self, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
         results = {}
         sweeper_pulses = {}
         # create copy of the sequence
@@ -358,14 +381,16 @@ class MultiqubitPlatform(AbstractPlatform):
         self._sweep_recursion(
             copy_sequence,
             copy.deepcopy(sequence),
+            options,
             *sweepers,
-            nshots=nshots,
-            average=average,
-            relaxation_time=relaxation_time,
+            # nshots=nshots,
+            # average=average,
+            # relaxation_time=relaxation_time,
             results=results,
             sweeper_pulses=sweeper_pulses,
             map_original_shifted=map_original_shifted,
         )
+    
 
         return results
 
@@ -373,10 +398,11 @@ class MultiqubitPlatform(AbstractPlatform):
         self,
         sequence,
         original_sequence,
+        options,
         *sweepers,
-        nshots=1024,
-        average=True,
-        relaxation_time=None,
+        # nshots=1024,
+        # average=True,
+        # relaxation_time=None,
         results=None,
         sweeper_pulses=None,
         map_original_shifted=None,
@@ -395,20 +421,24 @@ class MultiqubitPlatform(AbstractPlatform):
                 self._sweep_recursion(
                     sequence,
                     original_sequence,
+                    options,
                     *sweepers[1:],
-                    nshots=nshots,
-                    average=average,
-                    relaxation_time=relaxation_time,
+                    # nshots=nshots,
+                    # average=average,
+                    # relaxation_time=relaxation_time,
                     results=results,
                     sweeper_pulses=sweeper_pulses,
                     map_original_shifted=map_original_shifted,
                 )
             else:
                 new_sequence = copy.deepcopy(sequence)
-                result = self.execute_pulse_sequence(new_sequence, nshots)
+                result = self.execute_pulse_sequence(new_sequence, options)
                 # colllect result and append to original pulse
                 for original_pulse, new_serial in map_original_shifted.items():
-                    acquisition = result[new_serial].average if average else result[new_serial]
+                    #acquisition = result[new_serial].average if average else result[new_serial]
+                    #acquisition = result[new_serial].average if (options.averaging_mode == AveragingMode.CYCLIC) else result[new_serial]
+                    print(result[new_serial].voltage)
+                    acquisition = result[new_serial]
 
                     if original_pulse.serial in results:
                         results[original_pulse.serial] += acquisition

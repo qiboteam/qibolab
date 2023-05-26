@@ -863,9 +863,10 @@ class ClusterQRM_RF(AbstractInstrument):
                     body += initial_wait_instruction
 
                     for n in range(pulses.count):
-                        if (self.ports["i1"].hardware_demod_en or self.ports["o1"].hardware_mod_en) and pulses[
-                            n
-                        ].relative_phase != 0:
+                        # if (self.ports["i1"].hardware_demod_en or self.ports["o1"].hardware_mod_en) and pulses[
+                        #     n
+                        # ].relative_phase != 0:
+                        if self.ports["i1"].hardware_demod_en or self.ports["o1"].hardware_mod_en:
                             # Set phase
                             phase = (pulses[n].relative_phase * 360 / (2 * np.pi)) % 360
                             phase = int(phase / 360 * 1e9)
@@ -1927,7 +1928,7 @@ class ClusterQCM_RF(AbstractInstrument):
                             raise Exception(
                                 f"The minimum delay between pulses is {minimum_delay_between_instructions}ns."
                             )
-                        if self.ports[port].hardware_mod_en and pulses[n].relative_phase != 0:
+                        if self.ports[port].hardware_mod_en:
                             # Set phase
                             phase = (pulses[n].relative_phase * 360 / (2 * np.pi)) % 360
                             phase = int(phase / 360 * 1e9)
@@ -2629,7 +2630,7 @@ class ClusterQCM(AbstractInstrument):
                             raise Exception(
                                 f"The minimum delay between pulses is {minimum_delay_between_instructions}ns."
                             )
-                        if self.ports[port].hardware_mod_en and pulses[n].relative_phase != 0:
+                        if self.ports[port].hardware_mod_en:
                             # Set phase
                             phase = (pulses[n].relative_phase * 360 / (2 * np.pi)) % 360
                             phase = int(phase / 360 * 1e9)

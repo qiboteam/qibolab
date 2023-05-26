@@ -130,7 +130,7 @@ class AbstractPlatform(ABC):
         self.resonator_type = None
         self.topology = None
 
-        self.nshots = None
+        # self.nshots = None
         self.relaxation_time = None
         self.sampling_rate = None
 
@@ -164,7 +164,7 @@ class AbstractPlatform(ABC):
             self.resonator_type = "3D" if self.nqubits == 1 else "2D"
 
         self.relaxation_time = settings["settings"]["relaxation_time"]
-        self.nshots = settings["settings"]["nshots"]
+        # self.nshots = settings["settings"]["nshots"]
         self.sampling_rate = settings["settings"]["sampling_rate"]
         self.native_gates = settings["native_gates"]
 
@@ -381,7 +381,8 @@ class AbstractPlatform(ABC):
         """Disconnects to instruments."""
 
     @abstractmethod
-    def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None, raw_adc=False):
+    def execute_pulse_sequence(self, sequence, options, **kwargs):
+    # def execute_pulse_sequence(self, sequence, nshots=1024, relaxation_time=None, raw_adc=False):
         """Executes a pulse sequence.
 
         Args:
@@ -394,10 +395,12 @@ class AbstractPlatform(ABC):
             Readout results acquired by after execution.
         """
 
-    def __call__(self, sequence, nshots=1024, relaxation_time=None, raw_adc=False):
-        return self.execute_pulse_sequence(sequence, nshots, relaxation_time, raw_adc=raw_adc)
+    def __call__(self, sequence, options, **kwargs):
+        # return self.execute_pulse_sequence(sequence, nshots, relaxation_time, raw_adc=raw_adc)
+        return self.execute_pulse_sequence(self, sequence, options, **kwargs)
 
-    def sweep(self, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
+    def sweep(self, sequence, options, *sweepers, **kwargs):
+    #def sweep(self, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None)::
         """Executes a pulse sequence for different values of sweeped parameters.
         Useful for performing chip characterization.
 
