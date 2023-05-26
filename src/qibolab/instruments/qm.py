@@ -934,21 +934,21 @@ class QMOPX(AbstractInstrument):
 
         sweeper = sweepers[0]
         bias0 = []
-        for q in sweeper.qubits:
-            b0 = qubits[q].flux.bias
-            max_bias = qubits[q].flux.max_bias
+        for qubit in sweeper.qubits:
+            b0 = qubit.flux.bias
+            max_bias = qubit.flux.max_bias
             max_value = self.maximum_sweep_value(sweeper.values, b0)
             check_max_bias(max_value, max_bias)
             bias0.append(declare(fixed, value=b0))
         b = declare(fixed)
         with for_(*from_array(b, sweeper.values)):
-            for q, b0 in zip(sweeper.qubits, bias0):
-                with if_((b + b0) >= 0.49):
-                    set_dc_offset(f"flux{q}", "single", 0.49)
-                with elif_((b + b0) <= -0.49):
-                    set_dc_offset(f"flux{q}", "single", -0.49)
-                with else_():
-                    set_dc_offset(f"flux{q}", "single", (b + b0))
+            for qubit, b0 in zip(sweeper.qubits, bias0):
+                with qua.if_((b + b0) >= 0.49):
+                    set_dc_offset(f"flux{qubit.name}", "single", 0.49)
+                with qua.elif_((b + b0) <= -0.49):
+                    set_dc_offset(f"flux{qubit.name}", "single", -0.49)
+                with qua.else_():
+                    set_dc_offset(f"flux{qubit.name}", "single", (b + b0))
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
 
