@@ -61,7 +61,9 @@ class Qubit:
     twpa: Optional[Channel] = None
     drive: Optional[Channel] = None
     flux: Optional[Channel] = None
+    flux_coupler: Optional[List["Qubit"]] = None
 
+    classifiers_hpars: dict = field(default_factory=dict)
     native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
 
     def __post_init__(self):

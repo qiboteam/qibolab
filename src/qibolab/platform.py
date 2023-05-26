@@ -99,7 +99,8 @@ class Platform:
                     if qf is not None:
                         qubit.flux = Channel(qf)
                 # register single qubit native gates to Qubit objects
-                qubit.native_gates = SingleQubitNatives.from_dict(qubit, self.native_gates["single_qubit"][q])
+                if q in self.native_gates["single_qubit"]:
+                    qubit.native_gates = SingleQubitNatives.from_dict(qubit, self.native_gates["single_qubit"][q])
 
         for pair in settings["topology"]:
             pair = tuple(sorted(pair))
@@ -265,6 +266,16 @@ class Platform:
                     rel_sigma = re.findall(r"[\d]+[.\d]+|[\d]*[.][\d]+|[\d]+", shape)[0]
                     rx.shape = f"Drag({rel_sigma}, {float(value)})"
                     self.settings["native_gates"]["single_qubit"][qubit]["RX"]["shape"] = rx.shape
+
+                elif "length" in par:  # assume only drive length
+                    self.qubits[qubit].native_gates.RX.duration = int(value)
+
+                elif par == "classifiers_hpars":
+                    self.qubits[qubit].classifiers_hpars = value
+                    self.settings["characterization"]["single_qubit"][qubit]["classifiers_hpars"] = value
+
+                elif par == "readout_attenuation":
+                    self.set_attenuation(qubit, value)
 
                 else:
                     raise_error(ValueError, f"Unknown parameter {par} for qubit {qubit}")
@@ -539,8 +550,8 @@ def create_dummy(runcard):
 
     # Create channel objects
     channels = ChannelMap()
-    channels |= ChannelMap.from_names("readout", "drive")
-    channels |= ChannelMap.from_names(*(f"flux-{i}" for i in range(6)))
+    channels |= ("readout", "drive")
+    channels |= (f"flux-{i}" for i in range(6))
 
     # Create dummy controller
     instrument = DummyInstrument("dummy", 0)

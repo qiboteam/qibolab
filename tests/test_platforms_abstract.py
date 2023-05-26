@@ -86,20 +86,21 @@ def test_abstractplatform_pickle(platform_name):
         "drive_frequency",
         "iq_angle",
         "mean_gnd_states",
+        "classifiers_hpars",
     ],
 )
 def test_update(platform_name, par):
     platform = create_platform(platform_name)
     new_values = np.ones(platform.nqubits)
-    updates = {par: {platform.qubits[i].name: new_values[i] for i in range(platform.nqubits)}}
-    # TODO: fix the reload settings for MultiqubitPlatform
+    updates = {par: {i: new_values[i] for i in range(platform.nqubits)}}
+    # TODO: fix the reload settings for qili1q_os2
     if not isinstance(platform, MultiqubitPlatform):
         platform.update(updates)
         for i in range(platform.nqubits):
             value = updates[par][i]
             if "frequency" in par:
                 value *= 1e9
-            assert value == float(platform.settings["characterization"]["single_qubit"][platform.qubits[i].name][par])
+            assert value == float(platform.settings["characterization"]["single_qubit"][i][par])
             assert value == float(getattr(platform.qubits[i], par))
 
 
@@ -157,7 +158,7 @@ def test_platform_bias(platform):
 def test_multiqubitplatform_execute_empty(platform):
     # an empty pulse sequence
     sequence = PulseSequence()
-    platform.execute_pulse_sequence(sequence, nshots)
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
 
 
 @pytest.mark.qpu
@@ -165,7 +166,7 @@ def test_multiqubitplatform_execute_one_drive_pulse(platform):
     # One drive pulse
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
-    platform.execute_pulse_sequence(sequence, nshots)
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
 
 
 @pytest.mark.qpu
@@ -176,7 +177,7 @@ def test_multiqubitplatform_execute_one_long_drive_pulse(platform):
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=8192 + 200))
     with pytest.raises(NotImplementedError):
-        platform.execute_pulse_sequence(sequence, nshots)
+        platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
 
 
 @pytest.mark.qpu
@@ -187,7 +188,7 @@ def test_multiqubitplatform_execute_one_extralong_drive_pulse(platform):
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=2 * 8192 + 200))
     with pytest.raises(NotImplementedError):
-        platform.execute_pulse_sequence(sequence, nshots)
+        platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
 
 
 @pytest.mark.qpu
@@ -196,7 +197,7 @@ def test_multiqubitplatform_execute_one_drive_one_readout(platform):
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
     sequence.add(platform.create_qubit_readout_pulse(qubit, start=200))
-    platform.execute_pulse_sequence(sequence, nshots)
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
 
 
 @pytest.mark.qpu
@@ -207,7 +208,7 @@ def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout(platform):
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=204, duration=200))
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=408, duration=400))
     sequence.add(platform.create_qubit_readout_pulse(qubit, start=808))
-    platform.execute_pulse_sequence(sequence, nshots)
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
 
 
 @pytest.mark.qpu
@@ -220,7 +221,7 @@ def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout_no_spacing
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=200, duration=200))
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=400, duration=400))
     sequence.add(platform.create_qubit_readout_pulse(qubit, start=800))
-    platform.execute_pulse_sequence(sequence, nshots)
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
 
 
 @pytest.mark.qpu
@@ -233,7 +234,7 @@ def test_multiqubitplatform_execute_multiple_overlaping_drive_pulses_one_readout
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=200, duration=200))
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=50, duration=400))
     sequence.add(platform.create_qubit_readout_pulse(qubit, start=800))
-    platform.execute_pulse_sequence(sequence, nshots)
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
 
 
 @pytest.mark.qpu
@@ -248,7 +249,7 @@ def test_multiqubitplatform_execute_multiple_readout_pulses(platform):
     sequence.add(ro_pulse1)
     sequence.add(qd_pulse2)
     sequence.add(ro_pulse2)
-    platform.execute_pulse_sequence(sequence, nshots)
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
 
 
 @pytest.mark.qpu
@@ -260,7 +261,7 @@ def test_excited_state_probabilities_pulses(platform, qubit):
     sequence = PulseSequence()
     sequence.add(qd_pulse)
     sequence.add(ro_pulse)
-    result = platform.execute_pulse_sequence(sequence, nshots=5000)
+    result = platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=5000))
 
     cr = CircuitResult(backend, Circuit(platform.nqubits), result, nshots=5000)
     probs = backend.circuit_result_probabilities(cr, qubits=[qubit])
@@ -280,7 +281,7 @@ def test_ground_state_probabilities_pulses(platform, qubit, start_zero):
         ro_pulse = platform.create_MZ_pulse(qubit, start=qd_pulse.duration)
     sequence = PulseSequence()
     sequence.add(ro_pulse)
-    result = platform.execute_pulse_sequence(sequence, nshots=5000)
+    result = platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=5000))
 
     cr = CircuitResult(backend, Circuit(platform.nqubits), result, nshots=5000)
     probs = backend.circuit_result_probabilities(cr, qubits=[qubit])
