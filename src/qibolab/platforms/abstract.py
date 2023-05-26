@@ -69,7 +69,8 @@ class Qubit:
     drive: Optional[Channel] = None
     flux: Optional[Channel] = None
     flux_coupler: Optional[List["Qubit"]] = None
-
+    alpha: Optional[float] = None
+    
     def __post_init__(self):
         # register qubit in ``flux`` channel so that we can access
         # ``sweetspot`` and ``filters`` at the channel level
