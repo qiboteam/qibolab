@@ -32,6 +32,7 @@ qcodes_contrib_drivers = {version ="0.18.0", optional = true}
 pyvisa-py = {version ="0.5.3", optional = true}
 qm-qua = {version ="==1.1.1", optional = true}
 qualang-tools = {version ="==0.14.0", optional = true}
+qibosoq = { git = "https://github.com/qiboteam/qibosoq.git", branch = "invert-dependancy" }
 
 [tool.poetry.group.docs]
 optional = true
@@ -63,6 +64,7 @@ pylint = ">=2.16.0"
 [tool.poetry.extras]
 qblox  = ["qblox-instruments", "qcodes", "qcodes_contrib_drivers", "pyvisa-py"]
 qm = ["qm-qua", "qualang-tools"]
+qibosoq = ["qibosoq", "qcodes", "qcodes_contrib_drivers"]
 
 
 [tool.poe.tasks]
