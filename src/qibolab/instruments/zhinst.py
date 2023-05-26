@@ -510,7 +510,6 @@ class Zurich(AbstractInstrument):
         "Fill the sequences with pulses according to their lines in temporal order"
         # TODO: Check if they invert the order if this will still work
         for pulse in sequence:
-            print(sequence)
             zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"].append(ZhPulse(pulse))
 
         "Mess that gets the sweeper and substitutes the pulse it sweeps in the right place"
@@ -624,6 +623,33 @@ class Zurich(AbstractInstrument):
         if exp_options.fast_reset is not False:
             self.fast_reset(exp, qubits, exp_options.fast_reset)
 
+    @staticmethod
+    def play_sweep_select(exp, qubit, pulse, section, parameters, partial_sweep):
+        if any("amplitude" in param for param in parameters):
+            pulse.zhpulse.amplitude *= max(pulse.zhsweeper.values)
+            pulse.zhsweeper.values /= max(pulse.zhsweeper.values)
+            exp.play(
+                signal=f"{section}{qubit.name}",
+                pulse=pulse.zhpulse,
+                amplitude=pulse.zhsweeper,
+                phase=pulse.pulse.relative_phase,
+            )
+        elif any("duration" in param for param in parameters):
+            exp.play(
+                signal=f"{section}{qubit.name}",
+                pulse=pulse.zhpulse,
+                length=pulse.zhsweeper,
+                phase=pulse.pulse.relative_phase,
+            )
+        elif "frequency" in partial_sweep.uid or partial_sweep.uid == "delay":
+            # see if below also works for consistency
+            # elif any("frequency" in param for param in parameters) or any("delay" in param for param in parameters):
+            exp.play(
+                signal=f"{section}{qubit.name}",
+                pulse=pulse.zhpulse,
+                phase=pulse.pulse.relative_phase,
+            )
+
     def play_sweep(self, exp, qubit, pulse, section):
         """Play Zurich pulse when a sweeper is involved"""
 
@@ -634,36 +660,12 @@ class Zurich(AbstractInstrument):
                     pulse=pulse.zhpulse,
                     amplitude=pulse.zhsweeper,
                 )
-
         else:
             parameters = []
             for partial_sweep in pulse.zhsweepers:
                 parameters.append(partial_sweep.uid)
-            if any("amplitude" in param for param in parameters):
-                # Zurich is already multiplying the pulse amplitude with the sweeper amplitude
-                # FIXME: Recheck and do relative amplitude sweeps by converting
-                pulse.zhpulse.amplitude *= max(pulse.zhsweeper.values)
-                pulse.zhsweeper.values /= max(pulse.zhsweeper.values)
-
-                exp.play(
-                    signal=f"{section}{qubit.name}",
-                    pulse=pulse.zhpulse,
-                    amplitude=pulse.zhsweeper,
-                    phase=pulse.pulse.relative_phase,
-                )
-            elif any("duration" in param for param in parameters):
-                exp.play(
-                    signal=f"{section}{qubit.name}",
-                    pulse=pulse.zhpulse,
-                    length=pulse.zhsweeper,
-                    phase=pulse.pulse.relative_phase,
-                )
-            elif "frequency" in partial_sweep.uid or partial_sweep.uid == "delay":
-                exp.play(
-                    signal=f"{section}{qubit.name}",
-                    pulse=pulse.zhpulse,
-                    phase=pulse.pulse.relative_phase,
-                )
+            # Recheck partial sweeps
+            self.play_sweep_select(exp, qubit, pulse, section, parameters, partial_sweep)
 
     def flux(self, exp, qubits):
         """qubit flux or qubit coupler flux for bias sweep or pulses"""
