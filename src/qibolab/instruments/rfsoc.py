@@ -69,7 +69,7 @@ def convert_pulse(pulse: Pulse, qubits: Dict) -> rfsoc.Pulse:
 
 
 def convert_frequency_sweeper(sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubits: Dict[int, Qubit]):
-    """Converts frequencies for `rfsoc.Sweeper` considering LO and HZ_TO_MHZ"""
+    """Converts frequencies for `qibosoq.abstract.Sweeper` considering LO and HZ_TO_MHZ"""
     for idx, jdx in enumerate(sweeper.indexes):
         if sweeper.parameter[idx] is rfsoc.Parameter.frequency:
             pulse = sequence[jdx]
@@ -193,9 +193,9 @@ class RFSoC(AbstractInstrument):
            to execute a PulseSequence.
 
         Args:
-            cfg: rfsoc.Config object with general settings for Qick programs
-            sequence: arbitrary PulseSequence object to execute
-            qubits: list of qubits of the platform in the form of a dictionary
+            cfg (`qibosoq.abstract.Config`): general settings for Qick programs
+            sequence (`qibolab.pulses.PulseSequence`): arbitrary PulseSequence object to execute
+            qubits: list of qubits (`qibolab.platforms.abstract.Qubit`) of the platform in the form of a dictionary
             readouts_per_experiment: number of readout pulse to execute
             average: if True returns averaged results, otherwise single shots
         Returns:
@@ -225,10 +225,10 @@ class RFSoC(AbstractInstrument):
            to execute a sweep.
 
         Args:
-            cfg: rfsoc.Config object with general settings for Qick programs
-            sequence: arbitrary PulseSequence object to execute
-            qubits: list of qubits of the platform in the form of a dictionary
-            sweepers: list of rfsoc.Sweeper objects
+            cfg (`qibosoq.abstract.Config`): general settings for Qick programs
+            sequence (`qibolab.pulses.PulseSequence`): arbitrary PulseSequence object to execute
+            qubits: list of qubits (`qibolab.platforms.abstract.Qubit`) of the platform in the form of a dictionary
+            sweepers: list of `qibosoq.abstract.Sweeper` objects
             readouts_per_experiment: number of readout pulse to execute
             average: if True returns averaged results, otherwise single shots
         Returns:
@@ -251,6 +251,7 @@ class RFSoC(AbstractInstrument):
 
     @staticmethod
     def _open_connection(host: str, port: int, server_commands: dict):
+        # TODO remove pickle
         """Sends to the server on board all the objects and information needed for
            executing a sweep or a pulse sequence.
 
@@ -297,7 +298,7 @@ class RFSoC(AbstractInstrument):
         Args:
             qubits (dict): List of `qibolab.platforms.utils.Qubit` objects
                            passed from the platform.
-            execution_parameters (ExecutionParameters): Parameters (nshots,
+            execution_parameters (`qibolab.ExecutionParameters`): Parameters (nshots,
                                                         relaxation_time,
                                                         fast_reset,
                                                         acquisition_type,
@@ -385,7 +386,7 @@ class RFSoC(AbstractInstrument):
                     sequence to not modify.
             *sweepers (`qibolab.Sweeper`): Sweeper objects.
             average (bool): if True averages on nshots
-            execution_parameters (ExecutionParameters): Parameters (nshots,
+            execution_parameters (`qibolab.ExecutionParameters`): Parameters (nshots,
                                                         relaxation_time,
                                                         fast_reset,
                                                         acquisition_type,
@@ -491,7 +492,7 @@ class RFSoC(AbstractInstrument):
             sequence (`qibolab.pulses.PulseSequence`). Pulse sequence to play.
             qubits (list): List of `qibolab.platforms.utils.Qubit` objects
                            passed from the platform.
-            *sweepers (`qibolab.Sweeper`): Sweeper objects.
+            *sweepers (`qibosoq.abstract.Sweeper`): Sweeper objects.
         Returns:
             A boolean value true if the sweeper must be executed by python
             loop, false otherwise
@@ -541,7 +542,7 @@ class RFSoC(AbstractInstrument):
             toti (list): i values
             totq (list): q values
             results_type: qibolab results object
-            execution_parameters (ExecutionParameters): Parameters (nshots,
+            execution_parameters (`qibolab.ExecutionParameters`): Parameters (nshots,
                                                         relaxation_time,
                                                         fast_reset,
                                                         acquisition_type,
@@ -593,7 +594,7 @@ class RFSoC(AbstractInstrument):
         Args:
             qubits (list): List of `qibolab.platforms.utils.Qubit` objects
                            passed from the platform.
-            execution_parameters (ExecutionParameters): Parameters (nshots,
+            execution_parameters (`qibolab.ExecutionParameters`): Parameters (nshots,
                                                         relaxation_time,
                                                         fast_reset,
                                                         acquisition_type,
