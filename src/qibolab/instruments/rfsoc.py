@@ -415,7 +415,7 @@ class RFSoC(AbstractInstrument):
 
         if not self.get_if_python_sweep(sequence, qubits, *sweepers):
             toti, totq = self._execute_sweeps(self.cfg, sequence, qubits, sweepers, len(sequence.ro_pulses), average)
-            res = self.convert_sweep_results(original_ro, sequence, qubits, toti, totq, execution_parameters)
+            res = self.convert_sweep_results(or_sequence, sequence, qubits, toti, totq, execution_parameters)
             return res
         sweeper = sweepers[0]
         values = []
