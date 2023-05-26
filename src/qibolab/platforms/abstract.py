@@ -75,7 +75,6 @@ class Qubit:
     flux: Optional[Channel] = None
     flux_coupler: Optional[List["Qubit"]] = None
     alpha: Optional[float] = None
-    
 
     classifiers_hpars: dict = field(default_factory=dict)
     native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
