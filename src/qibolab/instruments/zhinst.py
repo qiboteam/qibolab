@@ -440,13 +440,12 @@ class Zurich(AbstractInstrument):
 
     @staticmethod
     def frequency_from_pulses(qubits, sequence):
-        for qubit in qubits.values():
-            for pulse in sequence:
-                qubit = qubits[pulse.qubit]
-                if pulse.type is PulseType.READOUT:
-                    qubit.readout_frequency = pulse.frequency
-                if pulse.type is PulseType.DRIVE:
-                    qubit.drive_frequency = pulse.frequency
+        for pulse in sequence:
+            qubit = qubits[pulse.qubit]
+            if pulse.type is PulseType.READOUT:
+                qubit.readout_frequency = pulse.frequency
+            if pulse.type is PulseType.DRIVE:
+                qubit.drive_frequency = pulse.frequency
 
     def experiment_flow(self, qubits, sequence, options, sweepers=[]):
         self.sequence_zh(sequence, qubits, sweepers)
