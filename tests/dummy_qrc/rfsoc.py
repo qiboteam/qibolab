@@ -1,6 +1,6 @@
 import pathlib
 
-from qibolab.channels import Channel, ChannelMap
+from qibolab.channels import ChannelMap
 from qibolab.platform import Platform
 
 RUNCARD = pathlib.Path(__file__).parent / "rfsoc.yml"
@@ -16,9 +16,9 @@ def create(runcard=RUNCARD):
 
     # Create channel objects
     channels = ChannelMap()
-    channels |= ChannelMap.from_names("L3-18_ro")  # readout (DAC)
-    channels |= ChannelMap.from_names("L2-RO")  # feedback (readout DAC)
-    channels |= ChannelMap.from_names("L3-18_qd")  # drive
+    channels |= "L3-18_ro"  # readout (DAC)
+    channels |= "L2-RO"  # feedback (readout DAC)
+    channels |= "L3-18_qd"  # drive
 
     # Map controllers to qubit channels (HARDCODED)
     channels["L3-18_ro"].ports = [("o0", 0)]  # readout

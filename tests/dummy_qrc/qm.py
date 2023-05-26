@@ -1,6 +1,6 @@
 import pathlib
 
-from qibolab.channels import Channel, ChannelMap
+from qibolab.channels import ChannelMap
 from qibolab.instruments.dummy_oscillator import DummyLocalOscillator as LocalOscillator
 from qibolab.instruments.qmsim import QMSim
 from qibolab.platform import Platform
@@ -16,15 +16,15 @@ def create(runcard=RUNCARD):
     # Create channel objects
     channels = ChannelMap()
     # readout
-    channels |= ChannelMap.from_names("L3-25_a", "L3-25_b")
+    channels |= ("L3-25_a", "L3-25_b")
     # feedback
-    channels |= ChannelMap.from_names("L2-5_a", "L2-5_b")
+    channels |= ("L2-5_a", "L2-5_b")
     # drive
-    channels |= ChannelMap.from_names(*(f"L3-{i}" for i in range(11, 16)))
+    channels |= (f"L3-{i}" for i in range(11, 16))
     # flux
-    channels |= ChannelMap.from_names(*(f"L4-{i}" for i in range(1, 6)))
+    channels |= (f"L4-{i}" for i in range(1, 6))
     # TWPA
-    channels |= ChannelMap.from_names("L4-26")
+    channels |= "L4-26"
 
     # Map controllers to qubit channels (HARDCODED)
     # readout
