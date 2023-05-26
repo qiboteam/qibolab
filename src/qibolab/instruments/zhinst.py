@@ -335,12 +335,12 @@ class Zurich(AbstractInstrument):
             else:
                 if qubit.flux is not None:
                     self.register_flux_line(qubit)
-                if len(self.sequence[f"drive{qubit.name}"]) == 0:
+                if len(self.sequence[f"drive{qubit.name}"]) != 0:
                     self.register_drive_line(
                         qubit=qubit,
                         intermediate_frequency=qubit.drive_frequency - qubit.drive.local_oscillator.frequency,
                     )
-                if len(self.sequence[f"readout{qubit.name}"]) == 0:
+                if len(self.sequence[f"readout{qubit.name}"]) != 0:
                     self.register_readout_line(
                         qubit=qubit,
                         intermediate_frequency=qubit.readout_frequency - qubit.readout.local_oscillator.frequency,
@@ -456,7 +456,7 @@ class Zurich(AbstractInstrument):
             if qubit.flux_coupler:
                 continue
             q = qubit.name
-            if len(self.sequence[f"readout{q}"]) == 0:
+            if len(self.sequence[f"readout{q}"]) != 0:
                 exp_res = self.results.get_data(f"sequence{q}")
                 if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                     data = np.array([exp_res]) if options.averaging_mode is AveragingMode.CYCLIC else np.array(exp_res)
@@ -540,11 +540,11 @@ class Zurich(AbstractInstrument):
             if qubit.flux_coupler:
                 signals.append(lo.ExperimentSignal(f"flux{q}"))
             else:
-                if len(self.sequence[f"drive{q}"]) == 0:
+                if len(self.sequence[f"drive{q}"]) != 0:
                     signals.append(lo.ExperimentSignal(f"drive{q}"))
                 if qubit.flux is not None:
                     signals.append(lo.ExperimentSignal(f"flux{q}"))
-                if len(self.sequence[f"readout{q}"]) == 0:
+                if len(self.sequence[f"readout{q}"]) != 0:
                     signals.append(lo.ExperimentSignal(f"measure{q}"))
                     signals.append(lo.ExperimentSignal(f"acquire{q}"))
 
@@ -680,7 +680,7 @@ class Zurich(AbstractInstrument):
             q = qubit.name
             time = 0
             i = 0
-            if len(self.sequence[f"drive{q}"]) == 0:
+            if len(self.sequence[f"drive{q}"]) != 0:
                 with exp.section(uid=f"sequence_drive{q}"):
                     for pulse in self.sequence[f"drive{q}"]:
                         if not isinstance(pulse, ZhSweeperLine):
@@ -719,22 +719,22 @@ class Zurich(AbstractInstrument):
     def measure_relax(self, exp, qubits, relaxation_time, acquisition_type):
         """qubit readout pulse, data acquisition and qubit relaxation"""
         play_after = None
-        if len(self.sequence_qibo.qf_pulses) == 0 and len(self.sequence_qibo.qd_pulses) == 0:
+        if len(self.sequence_qibo.qf_pulses) != 0 and len(self.sequence_qibo.qd_pulses) != 0:
             play_after = (
                 self.play_after_set(self.sequence_qibo.qf_pulses, "bias")
                 if self.sequence_qibo.qf_pulses.finish > self.sequence_qibo.qd_pulses.finish
                 else self.play_after_set(self.sequence_qibo.qd_pulses, "drive")
             )
-        elif len(self.sequence_qibo.qf_pulses) == 0:
+        elif len(self.sequence_qibo.qf_pulses) != 0:
             play_after = self.play_after_set(self.sequence_qibo.qf_pulses, "bias")
-        elif len(self.sequence_qibo.qd_pulses) == 0:
+        elif len(self.sequence_qibo.qd_pulses) != 0:
             play_after = self.play_after_set(self.sequence_qibo.qd_pulses, "drive")
 
         for qubit in qubits.values():
             if qubit.flux_coupler:
                 continue
             q = qubit.name
-            if len(self.sequence[f"readout{q}"]) == 0:
+            if len(self.sequence[f"readout{q}"]) != 0:
                 for pulse in self.sequence[f"readout{q}"]:
                     i = 0
                     with exp.section(uid=f"sequence_measure{q}", play_after=play_after):
@@ -881,7 +881,7 @@ class Zurich(AbstractInstrument):
             if qubit.flux_coupler:
                 continue
             q = qubit.name
-            if len(self.sequence[f"readout{q}"]) == 0:
+            if len(self.sequence[f"readout{q}"]) != 0:
                 exp_res = self.results.get_data(f"sequence{q}")
                 # Reorder dimensions
                 exp_res = np.moveaxis(exp_res, rearranging_axes[0], rearranging_axes[1])
