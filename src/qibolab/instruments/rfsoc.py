@@ -240,7 +240,7 @@ class TII_RFSOC4x2(AbstractInstrument):
                 if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
                     discriminated_shots = self.classify_shots(i_pulse, q_pulse, qubits[ro_pulse.qubit])
                     if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
-                        discriminated_shots = np.mean(discriminated_shots, keepdims=True)
+                        discriminated_shots = np.mean(discriminated_shots, axis=0)
                     result = execution_parameters.results_type(discriminated_shots)
                 else:
                     result = execution_parameters.results_type(i_pulse + 1j * q_pulse)
@@ -464,16 +464,14 @@ class TII_RFSOC4x2(AbstractInstrument):
 
                 if not average:
                     shape = i_vals.shape
-                    print(shape)
-                    print((execution_parameters.nshots, *shape[:-1]))
-                    np.reshape(i_vals, (self.cfg.reps, *shape[:-1]))
-                    np.reshape(q_vals, (self.cfg.reps, *shape[:-1]))
+                    i_vals = np.reshape(i_vals, (self.cfg.reps, *shape[:-1]))
+                    q_vals = np.reshape(q_vals, (self.cfg.reps, *shape[:-1]))
 
                 if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
                     qubit = qubits[sequence.ro_pulses[i].qubit]
                     discriminated_shots = self.classify_shots(i_vals, q_vals, qubit)
                     if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
-                        discriminated_shots = np.mean(discriminated_shots, keepdims=True)
+                        discriminated_shots = np.mean(discriminated_shots, axis=0)
                     result = execution_parameters.results_type(discriminated_shots)
                 else:
                     result = execution_parameters.results_type(i_vals + 1j * q_vals)

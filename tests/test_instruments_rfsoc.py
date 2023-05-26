@@ -7,7 +7,12 @@ from qibolab.paths import qibolab_folder
 from qibolab.platform import create_tii_rfsoc4x2
 from qibolab.platforms.abstract import Qubit
 from qibolab.pulses import PulseSequence
-from qibolab.result import AveragedIntegratedResults, IntegratedResults, SampleResults
+from qibolab.result import (
+    AveragedIntegratedResults,
+    AveragedSampleResults,
+    IntegratedResults,
+    SampleResults,
+)
 from qibolab.sweeper import Parameter, Sweeper
 
 RUNCARD = qibolab_folder / "runcards" / "tii1q_b1.yml"
@@ -267,18 +272,20 @@ def test_sweep():
     out_dict2 = instrument.sweep(
         platform.qubits,
         sequence,
-        ExecutionParameters(relaxation_time=100_000, averaging_mode=AveragingMode.SINGLESHOT),
+        ExecutionParameters(
+            relaxation_time=100_000,
+            acquisition_type=AcquisitionType.INTEGRATION,
+            averaging_mode=AveragingMode.SINGLESHOT,
+        ),
         sweep,
     )
 
-    assert True
-
-    # assert sequence[1].serial in out_dict1
-    # assert sequence[1].serial in out_dict2
-    # assert isinstance(out_dict1[sequence[1].serial], AveragedIntegratedResults)
-    # assert isinstance(out_dict2[sequence[1].serial], IntegratedResults)
-    # assert np.shape(out_dict1[sequence[1].serial].voltage_i) == (len(sweep.values),)
-    # assert np.shape(out_dict2[sequence[1].serial].voltage_i) == (len(sweep.values) * 1000,)
+    assert sequence[1].serial in out_dict1
+    assert sequence[1].serial in out_dict2
+    assert isinstance(out_dict1[sequence[1].serial], AveragedSampleResults)
+    assert isinstance(out_dict2[sequence[1].serial], IntegratedResults)
+    assert np.shape(out_dict2[sequence[1].serial].voltage_i) == (1000, len(sweep.values))
+    assert np.shape(out_dict1[sequence[1].serial].statistical_frequency) == (len(sweep.values),)
 
 
 @pytest.mark.qpu
