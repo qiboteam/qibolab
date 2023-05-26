@@ -2,14 +2,19 @@
 
 import numpy as np
 import pytest
-from qibosoq.abstracts import Config as RfsocConfig
+import qibosoq.abstracts as rfsoc
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.instruments.rfsoc import convert_sweep
+from qibolab.instruments.rfsoc import (
+    convert_frequency_sweeper,
+    convert_pulse,
+    convert_qubit,
+    convert_sweep,
+)
 from qibolab.paths import qibolab_folder
 from qibolab.platform import create_tii_rfsoc4x2, create_tii_zcu111
 from qibolab.platforms.abstract import Qubit
-from qibolab.pulses import PulseSequence
+from qibolab.pulses import Drag, Gaussian, Pulse, PulseSequence, PulseType, Rectangular
 from qibolab.result import (
     AveragedIntegratedResults,
     AveragedSampleResults,
@@ -23,6 +28,71 @@ RUNCARD_ZCU111 = qibolab_folder / "runcards" / "tii_zcu111.yml"
 DUMMY_ADDRESS = "0.0.0.0:0"
 
 
+def test_convert_qubit():
+    """Tests conversion from `qibolab.platforms.abstract.Qubit` to `rfsoc.Qubit`"""
+
+    platform = create_tii_zcu111(RUNCARD_ZCU111)
+    qubit = platform.qubits[0]
+    qubit.flux.bias = 0.05
+    qubit.flux.ports = [("name", 4)]
+    qubit = convert_qubit(qubit)
+    targ = rfsoc.Qubit(0.05, 4)
+
+    assert qubit == targ
+
+    platform = create_tii_rfsoc4x2(RUNCARD)
+    qubit = platform.qubits[0]
+    qubit = convert_qubit(qubit)
+    targ = rfsoc.Qubit(0.0, None)
+
+    assert qubit == targ
+
+
+def test_convert_pulse():
+    """Tests conversion from `qibolab.pulses.Pulse` to `rfsoc.Pulse`"""
+
+    platform = create_tii_zcu111(RUNCARD_ZCU111)
+    qubit = platform.qubits[0]
+    qubit.drive.ports = [("name", 4)]
+    qubit.readout.ports = [("name", 2)]
+    qubit.feedback.ports = [("name", 1)]
+    qubit.readout.local_oscillator._frequency = 1e6
+
+    pulse = Pulse(0, 40, 0.9, 50e6, 0, Drag(5, 2), 0, PulseType.DRIVE, 0)
+    targ = rfsoc.Pulse(50, 0.9, 0, 0, 0.04, pulse.serial, "drive", 4, None, "drag", 5, 2)
+    assert convert_pulse(pulse, platform.qubits) == targ
+
+    pulse = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(2), 0, PulseType.DRIVE, 0)
+    targ = rfsoc.Pulse(50, 0.9, 0, 0, 0.04, pulse.serial, "drive", 4, None, "gaussian", 2)
+    assert convert_pulse(pulse, platform.qubits) == targ
+
+    pulse = Pulse(0, 40, 0.9, 50e6, 0, Rectangular(), 0, PulseType.READOUT, 0)
+    targ = rfsoc.Pulse(49, 0.9, 0, 0, 0.04, pulse.serial, "readout", 2, 1, "rectangular")
+    assert convert_pulse(pulse, platform.qubits) == targ
+
+
+def test_convert_frequency_sweeper():
+    """Tests frequency conversion for `rfsoc.Sweeper` objects"""
+    platform = create_tii_zcu111(RUNCARD_ZCU111)
+    qubit = platform.qubits[0]
+    qubit.drive.ports = [("name", 4)]
+    qubit.readout.ports = [("name", 2)]
+    qubit.feedback.ports = [("name", 1)]
+    qubit.readout.local_oscillator._frequency = 1e6
+
+    seq = PulseSequence()
+    pulse0 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(2), 0, PulseType.DRIVE, 0)
+    pulse1 = Pulse(0, 40, 0.9, 50e6, 0, Rectangular(), 0, PulseType.READOUT, 0)
+    seq.add(pulse0)
+    seq.add(pulse1)
+
+    sweeper = rfsoc.Sweeper(10, [rfsoc.Parameter.frequency], [0], [10e6], [1])
+    convert_frequency_sweeper(sweeper, seq, platform.qubits)
+
+    assert sweeper.starts == [-1]
+    assert sweeper.stops == [9]
+
+
 def test_tii_rfsoc4x2_init():
     """Tests instrument can initilize and its attribute are assigned"""
     platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
@@ -30,15 +100,15 @@ def test_tii_rfsoc4x2_init():
 
     assert instrument.host == "0.0.0.0"
     assert instrument.port == 0
-    assert isinstance(instrument.cfg, RfsocConfig)
+    assert isinstance(instrument.cfg, rfsoc.Config)
 
 
 def test_tii_rfsoc4x2_setup():
-    """Modify the RfsocConfig object using `setup` and check that it changes accordingly"""
+    """Modify the rfsoc.Config object using `setup` and check that it changes accordingly"""
     platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
     instrument = platform.design.instruments[0]
 
-    target_cfg = RfsocConfig(repetition_duration=1, adc_trig_offset=150)
+    target_cfg = rfsoc.Config(repetition_duration=1, adc_trig_offset=150)
 
     instrument.setup(relaxation_time=1_000, adc_trig_offset=150)
 
@@ -223,20 +293,15 @@ def test_call_executepulsesequence():
     """Executes a PulseSequence and check if result shape is as expected.
     Both for averaged results and not averaged results.
     """
-    print("12")
     platform = create_tii_zcu111(RUNCARD_ZCU111)
     instrument = platform.design.instruments[0]
 
-    print("12")
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(qubit=0, start=0))
     sequence.add(platform.create_MZ_pulse(qubit=0, start=100))
 
-    print("12")
     i_vals_nav, q_vals_nav = instrument._execute_pulse_sequence(instrument.cfg, sequence, platform.qubits, 1, False)
-    print("12")
     i_vals_av, q_vals_av = instrument._execute_pulse_sequence(instrument.cfg, sequence, platform.qubits, 1, True)
-    print("12")
 
     assert np.shape(i_vals_nav) == (1, 1, 1000)
     assert np.shape(q_vals_nav) == (1, 1, 1000)

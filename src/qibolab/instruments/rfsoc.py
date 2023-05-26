@@ -64,6 +64,7 @@ def convert_pulse(pulse: Pulse, qubits: Dict) -> rfsoc.Pulse:
     elif isinstance(pulse.shape, Drag):
         rfsoc_pulse.shape = "drag"
         rfsoc_pulse.rel_sigma = pulse.shape.rel_sigma
+        rfsoc_pulse.beta = pulse.shape.beta
     return rfsoc_pulse
 
 
