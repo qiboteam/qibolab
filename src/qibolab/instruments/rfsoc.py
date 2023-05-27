@@ -101,12 +101,12 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: Dict[int, Q
             raise ValueError("Sweeper amplitude is set to reach values higher than 1")
     else:
         for pulse in sweeper.pulses:
-            indexes.append(sequences.index(pulse))
+            indexes.append(sequence.index(pulse))
 
             name = sweeper.parameter.name
             parameters.append(getattr(rfsoc.Parameter, name))
             value = getattr(pulse, name)
-            if sweeper.parameter in {Parameter.freuency, Parameter.relative_phase}:
+            if sweeper.parameter in {Parameter.frequency, Parameter.relative_phase}:
                 starts.append(sweeper.values[0] + value)
             elif sweeper.parameter is Parameter.amplitude:
                 starts.append(sweeper.values[0] * value)
@@ -132,16 +132,17 @@ class RFSoC(AbstractInstrument):
         cfg (rfsoc.Config): Configuration dictionary required for pulse execution.
     """
 
-    def __init__(self, name: str, address: str):
+    def __init__(self, name: str, address: str, port: int):
         """__init__
         Args:
             name (str): Name of the instrument instance.
-            address (str): IP and port of the server (ex. 192.168.0.10:6000)
+            address (str): IP and port of the server (ex. 192.168.0.10)
+            port (int): Port of the server (ex.6000)
         """
 
         super().__init__(name, address=address)
-        self.host, self.port = address.split(":")
-        self.port = int(self.port)
+        self.host = address
+        self.port = port
         self.cfg = rfsoc.Config()
 
     def connect(self):

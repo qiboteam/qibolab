@@ -307,13 +307,14 @@ def create_tii_IQM5q(runcard, descriptor=None):
     return platform
 
 
-def create_tii_rfsoc4x2(runcard, address=None):
+def create_tii_rfsoc4x2(runcard, address=None, port=None):
     """Create platform using QICK project on the RFSoC4x2 board
     IPs and other instrument related parameters are hardcoded in ``__init__`` and ``setup``.
     Args:
         runcard (str): Path to the runcard file.
-        address (str): Address and port for the QICK board.
+        address (str): Address for the QICK board.
             If ``None`` it will attempt to connect to TII instruments.
+        port (int): Port for the QICK board.
     """
     from qibolab.instruments.rfsoc import RFSoC as TII_RFSOC4x2
     from qibolab.instruments.rohde_schwarz import SGS100A as LocalOscillator
@@ -337,8 +338,9 @@ def create_tii_rfsoc4x2(runcard, address=None):
 
     # Instantiate QICK instruments
     if address is None:
-        address = "192.168.0.72:6000"
-    controller = TII_RFSOC4x2("tii_rfsoc4x2", address)
+        address = "192.168.0.72"
+        port = 6000
+    controller = TII_RFSOC4x2("tii_rfsoc4x2", address, port)
     design = InstrumentDesign([controller] + local_oscillators, channels)
 
     platform = DesignPlatform("tii_rfsoc4x2", design, runcard)
@@ -352,13 +354,14 @@ def create_tii_rfsoc4x2(runcard, address=None):
     return platform
 
 
-def create_tii_zcu111(runcard, address=None):
+def create_tii_zcu111(runcard, address=None, port=None):
     """Create platform using QICK project on the ZCU111 board and EraSynth local oscillator for the Readout
     IPs and other instrument related parameters are hardcoded in ``__init__`` and ``setup``.
     Args:
         runcard (str): Path to the runcard file.
-        address (str): Address and port for the QICK board.
+        address (str): Address for the QICK board.
             If ``None`` it will attempt to connect to TII instruments.
+        port (int): Port for the QICK board.
     """
     # from qibolab.instruments.dummy_oscillator import (
     #    DummyLocalOscillator as LocalOscillator,
@@ -433,8 +436,9 @@ def create_tii_zcu111(runcard, address=None):
 
     # Instantiate QICK instruments
     if address is None:
-        address = "192.168.0.81:6000"
-    controller = TII_ZCU111("tii_zcu111", address)
+        address = "192.168.0.81"
+        port = 6000
+    controller = TII_ZCU111("tii_zcu111", address, port)
 
     # Readout local oscillator
     local_oscillators[0].frequency = 7_500_000_000
