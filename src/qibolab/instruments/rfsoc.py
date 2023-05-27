@@ -34,7 +34,6 @@ def convert_qubit(qubit: Qubit) -> rfsoc.Qubit:
 
 def convert_pulse(pulse: Pulse, qubits: Dict[int, Qubit]) -> rfsoc.Pulse:
     """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`"""
-
     pulse_type = pulse.type.name.lower()
     dac = getattr(qubits[pulse.qubit], pulse_type).ports[0][1]
     adc = qubits[pulse.qubit].feedback.ports[0][1] if pulse_type == "readout" else None
@@ -93,9 +92,7 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: Dict[int, Q
     if sweeper.parameter is Parameter.bias:
         for qubit in sweeper.qubits:
             parameters.append(rfsoc.Parameter.bias)
-            for idx, seq_qubit in enumerate(qubits):
-                if qubit == qubits[seq_qubit]:
-                    indexes.append(idx)
+            indexes.append(list(qubits.values().index(qubit)))
 
             starts.append(sweeper.values[0] + qubit.flux.bias)
             stops.append(sweeper.values[-1] + qubit.flux.bias)
@@ -104,23 +101,17 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: Dict[int, Q
             raise ValueError("Sweeper amplitude is set to reach values higher than 1")
     else:
         for pulse in sweeper.pulses:
-            for idx, seq_pulse in enumerate(sequence):
-                if pulse == seq_pulse:
-                    indexes.append(idx)
+            indexes.append(sequences.index(pulse))
 
-            if sweeper.parameter is Parameter.amplitude:
-                parameters.append(rfsoc.Parameter.amplitude)
-                starts.append(sweeper.values[0] * pulse.amplitude)
-                stops.append(sweeper.values[-1] * pulse.amplitude)
-            elif sweeper.parameter is Parameter.relative_phase:
-                parameters.append(rfsoc.Parameter.relative_phase)
-                starts.append(np.degrees(sweeper.values[0] + pulse.relative_phase))
-                stops.append(np.degrees(sweeper.values[-1] + pulse.relative_phase))
-            elif sweeper.parameter is Parameter.frequency:
-                # frequency are not convertet yet and LO is not accounted for
-                parameters.append(rfsoc.Parameter.frequency)
-                starts.append(sweeper.values[0] + pulse.frequency)
-                stops.append(sweeper.values[-1] + pulse.frequency)
+            name = sweeper.parameter.name
+            parameters.append(getattr(rfsoc.Parameter, name))
+            value = getattr(pulse, name)
+            if sweeper.parameter in {Parameter.freuency, Parameter.relative_phase}:
+                starts.append(sweeper.values[0] + value)
+            elif sweeper.parameter is Parameter.amplitude:
+                starts.append(sweeper.values[0] * value)
+            else:
+                raise NotImplementedError(f"Sweep parameter {sweeper.parameter} not implemented")
 
     return rfsoc.Sweeper(
         parameter=parameters,
@@ -427,11 +418,11 @@ class RFSoC(AbstractInstrument):
         results = {}
         for idx in range(sweeper.expts):
             # update values
-            if (
-                sweeper.parameter[0] is rfsoc.Parameter.frequency
-                or sweeper.parameter[0] is rfsoc.Parameter.amplitude
-                or sweeper.parameter[0] is rfsoc.Parameter.relative_phase
-            ):
+            if sweeper.parameter[0] in {
+                rfsoc.Parameter.amplitude,
+                rfsoc.Parameter.frequency,
+                rfsoc.Parameter.relative_phase,
+            }:
                 for jdx, _ in enumerate(sweeper.indexes):
                     if sweeper.parameter[jdx] is rfsoc.Parameter.frequency:
                         sequence[sweeper.indexes[jdx]].frequency = values[jdx][idx]
