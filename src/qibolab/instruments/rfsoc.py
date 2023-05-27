@@ -32,6 +32,16 @@ def convert_qubit(qubit: Qubit) -> rfsoc.Qubit:
     return rfsoc.Qubit(0.0, None)
 
 
+def set_rfsoc_pulse_shape(pulse: Pulse, rfsoc_pulse: rfsoc.Pulse):
+    """Set pulse shape parameters in rfsoc pulse object"""
+
+    rfsoc_pulse.shape = pulse.shape.name.lower()
+    if rfsoc_pulse.shape in {"gaussian", "drag"}:
+        rfsoc_pulse.rel_sigma = pulse.shape.rel_sigma
+        if rfsoc_pulse.shape == "drag":
+            rfsoc_pulse.beta = pulse.shape.beta
+
+
 def convert_pulse(pulse: Pulse, qubits: Dict[int, Qubit]) -> rfsoc.Pulse:
     """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`"""
     pulse_type = pulse.type.name.lower()
@@ -55,15 +65,7 @@ def convert_pulse(pulse: Pulse, qubits: Dict[int, Qubit]) -> rfsoc.Pulse:
         name=pulse.serial,
         type=pulse_type,
     )
-    if isinstance(pulse.shape, Rectangular):
-        rfsoc_pulse.shape = "rectangular"
-    elif isinstance(pulse.shape, Gaussian):
-        rfsoc_pulse.shape = "gaussian"
-        rfsoc_pulse.rel_sigma = pulse.shape.rel_sigma
-    elif isinstance(pulse.shape, Drag):
-        rfsoc_pulse.shape = "drag"
-        rfsoc_pulse.rel_sigma = pulse.shape.rel_sigma
-        rfsoc_pulse.beta = pulse.shape.beta
+    set_rfsoc_pulse_shape(pulse, rfsoc_pulse)
     return rfsoc_pulse
 
 
@@ -92,7 +94,7 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: Dict[int, Q
     if sweeper.parameter is Parameter.bias:
         for qubit in sweeper.qubits:
             parameters.append(rfsoc.Parameter.bias)
-            indexes.append(list(qubits.values().index(qubit)))
+            indexes.append(list(qubits.values()).index(qubit))
 
             starts.append(sweeper.values[0] + qubit.flux.bias)
             stops.append(sweeper.values[-1] + qubit.flux.bias)

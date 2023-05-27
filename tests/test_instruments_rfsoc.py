@@ -25,7 +25,8 @@ from qibolab.sweeper import Parameter, Sweeper
 
 RUNCARD = qibolab_folder / "runcards" / "tii1q_b1.yml"
 RUNCARD_ZCU111 = qibolab_folder / "runcards" / "tii_zcu111.yml"
-DUMMY_ADDRESS = "0.0.0.0:0"
+DUMMY_ADDRESS = "0.0.0.0"
+DUMMY_PORT = 0
 
 
 def test_convert_qubit():
@@ -95,7 +96,7 @@ def test_convert_frequency_sweeper():
 
 def test_tii_rfsoc4x2_init():
     """Tests instrument can initilize and its attribute are assigned"""
-    platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
+    platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS, DUMMY_PORT)
     instrument = platform.design.instruments[0]
 
     assert instrument.host == "0.0.0.0"
@@ -105,7 +106,7 @@ def test_tii_rfsoc4x2_init():
 
 def test_tii_rfsoc4x2_setup():
     """Modify the rfsoc.Config object using `setup` and check that it changes accordingly"""
-    platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
+    platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS, DUMMY_PORT)
     instrument = platform.design.instruments[0]
 
     target_cfg = rfsoc.Config(repetition_duration=1, adc_trig_offset=150)
@@ -124,7 +125,7 @@ def test_classify_shots():
     i_val = [0] * 7
     q_val = [-5, -1.5, -0.5, 0, 0.5, 1.5, 5]
 
-    platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
+    platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS, DUMMY_PORT)
     instrument = platform.design.instruments[0]
 
     shots = instrument.classify_shots(i_val, q_val, qubit0)
@@ -147,7 +148,7 @@ def test_merge_sweep_results():
         "serial2": AveragedIntegratedResults(np.array([5 + 1j * 5])),
     }
 
-    platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
+    platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS, DUMMY_PORT)
     instrument = platform.design.instruments[0]
     out_dict1 = instrument.merge_sweep_results(dict_a, dict_b)
     out_dict2 = instrument.merge_sweep_results(dict_c, dict_a)
@@ -168,7 +169,7 @@ def test_get_if_python_sweep():
     at the same time, sweep on channels where multiple pulses are sent.
     If Qibosoq does not support the sweep, the driver will use a python loop
     """
-    platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
+    platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS, DUMMY_PORT)
     instrument = platform.design.instruments[0]
 
     sequence_1 = PulseSequence()
@@ -197,14 +198,14 @@ def test_get_if_python_sweep():
     assert not instrument.get_if_python_sweep(sequence_2, platform.qubits, sweep1)
     assert not instrument.get_if_python_sweep(sequence_2, platform.qubits, sweep1, sweep2)
 
-    platform = create_tii_zcu111(RUNCARD_ZCU111, DUMMY_ADDRESS)
+    platform = create_tii_zcu111(RUNCARD_ZCU111, DUMMY_ADDRESS, DUMMY_PORT)
     instrument = platform.design.instruments[0]
 
     sequence_1 = PulseSequence()
     sequence_1.add(platform.create_RX_pulse(qubit=0, start=0))
     sweep1 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 100, 10), pulses=[sequence_1[0]])
     sweep2 = Sweeper(parameter=Parameter.relative_phase, values=np.arange(0, 1, 0.01), pulses=[sequence_1[0]])
-    sweep3 = Sweeper(parameter=Parameter.bias, values=np.arange(-0.1, 0.1, 0.001), qubits=[0])
+    sweep3 = Sweeper(parameter=Parameter.bias, values=np.arange(-0.1, 0.1, 0.001), qubits=[platform.qubits[0]])
     sweep1 = convert_sweep(sweep1, sequence_1, platform.qubits)
     sweep2 = convert_sweep(sweep2, sequence_1, platform.qubits)
     sweep3 = convert_sweep(sweep3, sequence_1, platform.qubits)
@@ -220,7 +221,7 @@ def test_convert_av_sweep_results():
     """Qibosoq sends results using nested lists, check if the conversion
     to dictionary of AveragedResults, for averaged sweep, works as expected
     """
-    platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
+    platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS, DUMMY_PORT)
     instrument = platform.design.instruments[0]
 
     sequence = PulseSequence()
@@ -256,7 +257,7 @@ def test_convert_nav_sweep_results():
     """Qibosoq sends results using nested lists, check if the conversion
     to dictionary of ExecutionResults, for not averaged sweep, works as expected
     """
-    platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS)
+    platform = create_tii_rfsoc4x2(RUNCARD, DUMMY_ADDRESS, DUMMY_PORT)
     instrument = platform.design.instruments[0]
 
     sequence = PulseSequence()
