@@ -32,7 +32,7 @@ def convert_qubit(qubit: Qubit) -> rfsoc.Qubit:
     return rfsoc.Qubit(0.0, None)
 
 
-def convert_pulse(pulse: Pulse, qubits: Dict) -> rfsoc.Pulse:
+def convert_pulse(pulse: Pulse, qubits: Dict[int, Qubit]) -> rfsoc.Pulse:
     """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`"""
 
     pulse_type = pulse.type.name.lower()
@@ -82,7 +82,7 @@ def convert_frequency_sweeper(sweeper: rfsoc.Sweeper, sequence: PulseSequence, q
             sweeper.stops[idx] = (sweeper.stops[idx] - lo_frequency) * HZ_TO_MHZ
 
 
-def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Qubit]) -> rfsoc.Sweeper:
+def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: Dict[int, Qubit]) -> rfsoc.Sweeper:
     """Convert `qibolab.sweeper.Sweeper` to `qibosoq.abstract.Sweeper`"""
 
     parameters = []
@@ -94,10 +94,11 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Qubit]
         for qubit in sweeper.qubits:
             parameters.append(rfsoc.Parameter.bias)
             for idx, seq_qubit in enumerate(qubits):
-                if qubit == seq_qubit:
+                if qubit == qubits[seq_qubit]:
                     indexes.append(idx)
-            starts.append(sweeper.values[0] + qubits[qubit].flux.bias)
-            stops.append(sweeper.values[-1] + qubits[qubit].flux.bias)
+
+            starts.append(sweeper.values[0] + qubit.flux.bias)
+            stops.append(sweeper.values[-1] + qubit.flux.bias)
 
         if max(np.abs(starts)) > 1 or max(np.abs(stops)) > 1:
             raise ValueError("Sweeper amplitude is set to reach values higher than 1")
@@ -124,8 +125,8 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: List[Qubit]
     return rfsoc.Sweeper(
         parameter=parameters,
         indexes=indexes,
-        starts=np.array(starts),
-        stops=np.array(stops),
+        starts=starts,
+        stops=stops,
         expts=len(sweeper.values),
     )
 
@@ -237,7 +238,6 @@ class RFSoC(AbstractInstrument):
 
         for sweeper in sweepers:
             convert_frequency_sweeper(sweeper, sequence, qubits)
-
         server_commands = {
             "operation_code": "execute_sweeps",
             "cfg": asdict(cfg),
@@ -420,18 +420,9 @@ class RFSoC(AbstractInstrument):
 
         sweeper = sweepers[0]
         values = []
-        if (
-            sweeper.parameter[0] is rfsoc.Parameter.frequency
-            or sweeper.parameter[0] is rfsoc.Parameter.amplitude
-            or sweeper.parameter[0] is rfsoc.Parameter.relative_phase
-        ):
-            for idx, _ in enumerate(sweeper.indexes):
-                val = np.linspace(sweeper.starts[idx], sweeper.stops[idx], sweeper.expts)
-                values.append(val)
-        else:
-            for idx, _ in enumerate(sweeper.indexes):
-                val = np.linspace(sweeper.starts[idx], sweeper.stops[idx], sweeper.expts)
-                values.append(val)
+        for idx, _ in enumerate(sweeper.indexes):
+            val = np.linspace(sweeper.starts[idx], sweeper.stops[idx], sweeper.expts)
+            values.append(val)
 
         results = {}
         for idx in range(sweeper.expts):
@@ -552,8 +543,9 @@ class RFSoC(AbstractInstrument):
         results = {}
 
         adcs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
-        for k, _ in enumerate(adcs):
-            for i, ro_pulse in enumerate(original_ro):
+        for k, k_val in enumerate(adcs):
+            adc_ro = [pulse for pulse in sequence.ro_pulses if qubits[pulse.qubit].feedback.ports[0][1] == k_val]
+            for i, ro_pulse in enumerate(adc_ro):
                 i_vals = np.array(toti[k][i])
                 q_vals = np.array(totq[k][i])
 
@@ -581,7 +573,7 @@ class RFSoC(AbstractInstrument):
 
     def sweep(
         self,
-        qubits: List[Qubit],
+        qubits: Dict[int, Qubit],
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
         *sweepers: Sweeper,
