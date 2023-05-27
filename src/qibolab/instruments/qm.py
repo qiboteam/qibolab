@@ -935,8 +935,6 @@ class QMOPX(AbstractInstrument):
                 with qua.else_():
                     set_dc_offset(f"flux{qubit.name}", "single", (b + b0))
 
-                set_dc_offset(f"flux{qubit.name}", "single", b + b0)
-
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
 
     def sweep_delay(self, sweepers, qubits, qmsequence, relaxation_time):
