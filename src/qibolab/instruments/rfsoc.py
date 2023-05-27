@@ -110,8 +110,10 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: Dict[int, Q
             value = getattr(pulse, name)
             if sweeper.parameter in {Parameter.frequency, Parameter.relative_phase}:
                 starts.append(sweeper.values[0] + value)
+                stops.append(sweeper.values[-1] + value)
             elif sweeper.parameter is Parameter.amplitude:
                 starts.append(sweeper.values[0] * value)
+                stops.append(sweeper.values[-1] + value)
             else:
                 raise NotImplementedError(f"Sweep parameter {sweeper.parameter} not implemented")
 
@@ -122,6 +124,16 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: Dict[int, Q
         stops=stops,
         expts=len(sweeper.values),
     )
+
+
+class QibosoqError(RuntimeError):
+    """Exception raised when qibosoq server encounters an error
+
+    Attributes:
+    message -- The error message received from the server (qibosoq)
+    """
+
+    pass
 
 
 class RFSoC(AbstractInstrument):
@@ -274,8 +286,8 @@ class RFSoC(AbstractInstrument):
                     break
                 received.extend(tmp)
         results = json.loads(received)
-        if isinstance(results, str):
-            raise RuntimeError(results)
+        if isinstance(results, str) and "Error" in results:
+            raise QibosoqError(results)
         return results["i"], results["q"]
 
     def play(
