@@ -6,7 +6,7 @@ Tested on the following FPGA:
  *   ZCU111
 """
 
-import pickle
+import json
 import socket
 from dataclasses import asdict
 from typing import Dict, List, Tuple, Union
@@ -251,15 +251,14 @@ class RFSoC(AbstractInstrument):
 
     @staticmethod
     def _open_connection(host: str, port: int, server_commands: dict):
-        # TODO remove pickle
         """Sends to the server on board all the objects and information needed for
            executing a sweep or a pulse sequence.
 
            The communication protocol is:
-            * pickle the dictionary containing all needed information
-            * send to the server the length in byte of the pickled dictionary
+            * convert the dictionary containing all needed information in json
+            * send to the server the length in byte of the encoded dictionary
             * the server now will wait for that number of bytes
-            * send the  pickled dictionary
+            * send the  encoded dictionary
             * wait for response (arbitray number of bytes)
         Returns:
             Lists of I and Q value measured
@@ -269,7 +268,7 @@ class RFSoC(AbstractInstrument):
         # open a connection
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect((host, port))
-            msg_encoded = pickle.dumps(server_commands)
+            msg_encoded = bytes(json.dumps(server_commands), "utf-8")
             # first send 4 bytes with the length of the message
             sock.send(len(msg_encoded).to_bytes(4, "big"))
             sock.send(msg_encoded)
@@ -280,9 +279,9 @@ class RFSoC(AbstractInstrument):
                 if not tmp:
                     break
                 received.extend(tmp)
-        results = pickle.loads(received)
-        if isinstance(results, Exception):
-            raise results
+        results = json.loads(received)
+        if isinstance(results, str):
+            raise RuntimeError(results)
         return results["i"], results["q"]
 
     def play(
