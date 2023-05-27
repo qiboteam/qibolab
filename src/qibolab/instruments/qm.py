@@ -144,7 +144,7 @@ class QMConfig:
                     }
                 if "analog_inputs" not in controllers[con]:
                     controllers[con]["analog_inputs"] = {}
-                controllers[con]["analog_inputs"][port] = {"offset": 0.0, "gain_db": 0}
+                controllers[con]["analog_inputs"][port] = {"offset": 0.0, "gain_db": qubit.feedback.gain}
 
             # register element
             lo_frequency = math.floor(qubit.readout.local_oscillator.frequency)
@@ -928,6 +928,13 @@ class QMOPX(AbstractInstrument):
         b = declare(fixed)
         with for_(*from_array(b, sweeper.values)):
             for q, b0 in zip(sweeper.qubits, bias0):
+                with qua.if_((b + b0) >= 0.49):
+                    set_dc_offset(f"flux{q}", "single", 0.49)
+                with qua.elif_((b + b0) <= -0.49):
+                    set_dc_offset(f"flux{q}", "single", -0.49)
+                with qua.else_():
+                    set_dc_offset(f"flux{q}", "single", (b + b0))
+
                 set_dc_offset(f"flux{q}", "single", b + b0)
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)

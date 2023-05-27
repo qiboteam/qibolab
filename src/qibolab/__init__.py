@@ -23,6 +23,17 @@ __version__ = im.version(__package__)
 PLATFORMS = "QIBOLAB_PLATFORMS"
 
 
+def get_platforms_path():
+    """Get path to repository containing the platforms.
+
+    Path is specified using the environment variable QIBOLAB_PLATFORMS.
+    """
+    profiles = os.environ.get(PLATFORMS)
+    if profiles is None or not os.path.exists(profiles):
+        raise_error(RuntimeError, f"Profile directory {profiles} does not exist.")
+    return Path(profiles)
+
+
 def create_platform(name, runcard=None):
     """Platform for controlling quantum devices.
 
@@ -37,11 +48,7 @@ def create_platform(name, runcard=None):
 
         return create_dummy(qibolab_folder / "runcards" / "dummy.yml")
 
-    profiles = Path(os.environ.get(PLATFORMS))
-    if not profiles.exists():
-        raise_error(RuntimeError, f"Profile file {profiles} does not exist.")
-
-    platform = profiles / f"{name}.py"
+    platform = get_platforms_path() / f"{name}.py"
     if not platform.exists():
         raise_error(ValueError, f"Platform {name} does not exist.")
 
