@@ -16,7 +16,7 @@ import qibosoq.components as rfsoc
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import AbstractInstrument
-from qibolab.platforms.abstract import Qubit
+from qibolab.platform import Qubit
 from qibolab.pulses import Drag, Gaussian, Pulse, PulseSequence, PulseType, Rectangular
 from qibolab.result import IntegratedResults, SampleResults
 from qibolab.sweeper import Parameter, Sweeper
@@ -74,8 +74,9 @@ def convert_frequency_sweeper(sweeper: rfsoc.Sweeper, sequence: PulseSequence, q
     for idx, jdx in enumerate(sweeper.indexes):
         if sweeper.parameter[idx] is rfsoc.Parameter.FREQUENCY:
             pulse = sequence[jdx]
+            pulse_type = pulse.type.name.lower()
             try:
-                lo_frequency = getattr(qubits[pulse.qubit], pulse.type.name.lower()).local_oscillator._frequency
+                lo_frequency = getattr(qubits[pulse.qubit], pulse_type).local_oscillator._frequency
             except NotImplementedError:
                 lo_frequency = 0
 

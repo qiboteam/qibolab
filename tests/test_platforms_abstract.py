@@ -13,10 +13,10 @@ import yaml
 from qibo.models import Circuit
 from qibo.states import CircuitResult
 
-from qibolab import ExecutionParameters, Platform
+from qibolab import create_platform
 from qibolab.backends import QibolabBackend
 from qibolab.paths import qibolab_folder
-from qibolab.platforms.abstract import AbstractPlatform
+from qibolab.platform import Platform
 from qibolab.platforms.multiqubit import MultiqubitPlatform
 from qibolab.pulses import PulseSequence
 
@@ -29,7 +29,7 @@ def platform(platform_name):
     test_runcard = pathlib.Path(__file__).parent / "test_platforms_multiqubit.yml"
     original_runcard = qibolab_folder / "runcards" / f"{platform_name}.yml"
     shutil.copyfile(str(original_runcard), test_runcard)
-    _platform = Platform(platform_name, test_runcard)
+    _platform = create_platform(platform_name, test_runcard)
     _platform.connect()
     _platform.setup()
     _platform.start()
@@ -40,19 +40,19 @@ def platform(platform_name):
 
 
 def test_platform_multiqubit(platform_name):
-    platform = Platform(platform_name)
-    assert isinstance(platform, AbstractPlatform)
+    platform = create_platform(platform_name)
+    assert isinstance(platform, Platform)
 
 
 def test_platform():
-    with pytest.raises(RuntimeError):
-        platform = Platform("nonexistent")
+    with pytest.raises(ValueError):
+        platform = create_platform("nonexistent")
 
 
 def test_multiqubitplatform_init(platform_name):
-    with open(qibolab_folder / "runcards" / f"{platform_name}.yml") as file:
+    platform = create_platform(platform_name)
+    with open(platform.runcard) as file:
         settings = yaml.safe_load(file)
-    platform = Platform(platform_name)
     if not isinstance(platform, MultiqubitPlatform):
         pytest.skip(f"Skipping MultiqubitPlatform specific test for {platform_name}.")
     assert platform.name == platform_name
@@ -67,7 +67,7 @@ def test_multiqubitplatform_init(platform_name):
 
 
 def test_abstractplatform_pickle(platform_name):
-    platform = Platform(platform_name)
+    platform = create_platform(platform_name)
     serial = pickle.dumps(platform)
     new_platform = pickle.loads(serial)
     assert new_platform.name == platform.name
@@ -90,11 +90,11 @@ def test_abstractplatform_pickle(platform_name):
     ],
 )
 def test_update(platform_name, par):
-    platform = Platform(platform_name)
+    platform = create_platform(platform_name)
     new_values = np.ones(platform.nqubits)
     updates = {par: {i: new_values[i] for i in range(platform.nqubits)}}
     # TODO: fix the reload settings for qili1q_os2
-    if platform.name != "qili1q_os2":
+    if not isinstance(platform, MultiqubitPlatform):
         platform.update(updates)
         for i in range(platform.nqubits):
             value = updates[par][i]

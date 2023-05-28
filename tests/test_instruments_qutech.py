@@ -1,6 +1,6 @@
 import pytest
 
-from qibolab import Platform
+from qibolab import create_platform
 from qibolab.paths import user_folder
 
 from .conftest import load_from_platform
@@ -17,7 +17,7 @@ def test_instruments_qutech_init(instrument):
 @pytest.mark.qpu
 @pytest.mark.parametrize("name", ["SPI"])
 def test_instruments_qutech_setup(platform_name, name):
-    platform = Platform(platform_name)
+    platform = create_platform(platform_name)
     settings = platform.settings
     instrument, instrument_settings = load_from_platform(platform, name)
     instrument.setup(**settings["settings"], **instrument_settings)

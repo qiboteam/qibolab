@@ -9,9 +9,9 @@ from qibo.states import CircuitResult
 
 from qibolab import ExecutionParameters
 from qibolab import __version__ as qibolab_version
+from qibolab import create_platform
 from qibolab.compilers import Compiler
 from qibolab.platform import Platform
-from qibolab.platforms.abstract import AbstractPlatform
 from qibolab.transpilers import Pipeline
 
 
@@ -19,10 +19,10 @@ class QibolabBackend(NumpyBackend):
     def __init__(self, platform, runcard=None):
         super().__init__()
         self.name = "qibolab"
-        if isinstance(platform, AbstractPlatform):
+        if isinstance(platform, Platform):
             self.platform = platform
         else:
-            self.platform = Platform(platform, runcard)
+            self.platform = create_platform(platform, runcard)
         self.versions = {
             "qibo": qibo_version,
             "numpy": self.np.__version__,

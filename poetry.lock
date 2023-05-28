@@ -3958,7 +3958,7 @@ qick = "^0.2"
 type = "git"
 url = "https://github.com/qiboteam/qibosoq.git"
 reference = "zcu111-flux-single-q"
-resolved_reference = "1cfcd1c37b37f1345fb4b72ab26a7a675e34af63"
+resolved_reference = "f829e6f9726fba9ed2bb0ec4b3cefc29f693adcf"
 
 [[package]]
 name = "qick"
@@ -5253,11 +5253,11 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 
 [extras]
 qblox = ["pyvisa-py", "qblox-instruments", "qcodes", "qcodes_contrib_drivers"]
-qibosoq = ["qcodes", "qcodes_contrib_drivers", "qibosoq"]
 qm = ["qm-qua", "qualang-tools"]
+rfsoc = ["qcodes", "qcodes_contrib_drivers", "qibosoq"]
 zh = ["laboneq"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "8de3ff7b9beb8f25a55b6715cc3caaf63957b4813d53140708bed7edcc4e052a"
+content-hash = "65cbb383bdb5c77cac4e90daa0c705f55f367c347fb30ec6eeab27d58df7f43c"

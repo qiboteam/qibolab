@@ -2,15 +2,10 @@ import laboneq.simple as lo
 import numpy as np
 import pytest
 
-from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
+from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.instruments.zhinst import ZhPulse, ZhSweeper, ZhSweeperLine, Zurich
-from qibolab.paths import qibolab_folder
-from qibolab.platform import create_tii_IQM5q
 from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse, Rectangular
 from qibolab.sweeper import Parameter, Sweeper
-
-RUNCARD = qibolab_folder / "runcards" / "iqm5q.yml"
-DUMMY_ADDRESS = "0.0.0.0:0"
 
 
 # Function returning a calibrated device setup
@@ -86,9 +81,9 @@ def test_zhpulse():
 
 
 def test_zhinst_setup():
-    platform = create_tii_IQM5q(RUNCARD)
+    platform = create_platform("zurich")
     platform.setup()
-    IQM5q = platform.design.instruments[0]
+    IQM5q = platform.instruments[0]
     assert IQM5q.time_of_flight == 280
 
 
@@ -98,14 +93,14 @@ def test_zhsequence():
     sequence = PulseSequence()
     sequence.add(qd_pulse)
     sequence.add(ro_pulse)
-    IQM5q = create_tii_IQM5q(RUNCARD)
+    IQM5q = create_platform("zurich")
 
-    IQM5q.design.instruments[0].sequence_zh(sequence, IQM5q.qubits, sweepers=[])
-    zhsequence = IQM5q.design.instruments[0].sequence
+    IQM5q.instruments[0].sequence_zh(sequence, IQM5q.qubits, sweepers=[])
+    zhsequence = IQM5q.instruments[0].sequence
 
     with pytest.raises(AttributeError):
-        IQM5q.design.instruments[0].sequence_zh("sequence", IQM5q.qubits, sweepers=[])
-        zhsequence = IQM5q.design.instruments[0].sequence
+        IQM5q.instruments[0].sequence_zh("sequence", IQM5q.qubits, sweepers=[])
+        zhsequence = IQM5q.instruments[0].sequence
 
     assert len(zhsequence) == 2
     assert len(zhsequence["readout0"]) == 1
@@ -116,9 +111,9 @@ def test_zhsequence():
 
 
 def test_zhinst_register_readout_line():
-    platform = create_tii_IQM5q(RUNCARD)
+    platform = create_platform("zurich")
     platform.setup()
-    IQM5q = platform.design.instruments[0]
+    IQM5q = platform.instruments[0]
     IQM5q.device_setup = create_offline_device_setup()
     IQM5q.register_readout_line(platform.qubits[0], intermediate_frequency=int(1e6))
 
@@ -128,9 +123,9 @@ def test_zhinst_register_readout_line():
 
 
 def test_zhinst_register_drive_line():
-    platform = create_tii_IQM5q(RUNCARD)
+    platform = create_platform("zurich")
     platform.setup()
-    IQM5q = platform.design.instruments[0]
+    IQM5q = platform.instruments[0]
     IQM5q.device_setup = create_offline_device_setup()
     IQM5q.register_drive_line(platform.qubits[0], intermediate_frequency=int(1e6))
 
@@ -139,9 +134,9 @@ def test_zhinst_register_drive_line():
 
 
 def test_zhinst_register_flux_line():
-    platform = create_tii_IQM5q(RUNCARD)
+    platform = create_platform("zurich")
     platform.setup()
-    IQM5q = platform.design.instruments[0]
+    IQM5q = platform.instruments[0]
     IQM5q.device_setup = create_offline_device_setup()
     IQM5q.register_flux_line(platform.qubits[0])
 
@@ -150,9 +145,9 @@ def test_zhinst_register_flux_line():
 
 
 def test_experiment_execute_pulse_sequence():
-    platform = create_tii_IQM5q(RUNCARD)
+    platform = create_platform("zurich")
     platform.setup()
-    IQM5q = platform.design.instruments[0]
+    IQM5q = platform.instruments[0]
     IQM5q.device_setup = create_offline_device_setup()
 
     # IQM5q.emulate = True
@@ -182,8 +177,8 @@ def test_experiment_execute_pulse_sequence():
     # AcquisitionType.SPECTROSCOPY
     # AveragingMode.CYCLIC
     # I'm using dumb IW
-
     assert 1 == 1
+    # indeed it is dumb
 
     # assert "drive0" in IQM5q.experiment.signals
     # assert "flux0" in IQM5q.experiment.signals
@@ -193,9 +188,9 @@ def test_experiment_execute_pulse_sequence():
 
 # TODO: Parametrize like in test_dummy and run with multiple sweeps
 def test_experiment_sweep():
-    platform = create_tii_IQM5q(RUNCARD)
+    platform = create_platform("zurich")
     platform.setup()
-    IQM5q = platform.design.instruments[0]
+    IQM5q = platform.instruments[0]
     IQM5q.device_setup = create_offline_device_setup()
 
     sequence = PulseSequence()
@@ -246,7 +241,7 @@ def test_experiment_sweep():
 # def test_qmopx_register_flux_pulse():
 #     qubit = 2
 #     platform = create_tii_qw5q_gold(RUNCARD, simulation_duration=1000, address=DUMMY_ADDRESS)
-#     opx = platform.design.instruments[0]
+#     opx = platform.instruments[0]
 #     pulse = FluxPulse(0, 30, 0.005, Rectangular(), platform.qubits[qubit].flux.name, qubit)
 #     target_pulse = {
 #         "operation": "control",
