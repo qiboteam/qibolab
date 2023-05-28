@@ -2,7 +2,7 @@
 
 import numpy as np
 import pytest
-import qibosoq.abstracts as rfsoc
+import qibosoq.components as rfsoc
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.rfsoc import (
@@ -87,7 +87,7 @@ def test_convert_frequency_sweeper():
     seq.add(pulse0)
     seq.add(pulse1)
 
-    sweeper = rfsoc.Sweeper(10, [rfsoc.Parameter.frequency], [0], [10e6], [1])
+    sweeper = rfsoc.Sweeper(10, [rfsoc.Parameter.FREQUENCY], [0], [10e6], [1])
     convert_frequency_sweeper(sweeper, seq, platform.qubits)
 
     assert sweeper.starts == [-1]
