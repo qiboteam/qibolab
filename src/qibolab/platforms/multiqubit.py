@@ -359,7 +359,7 @@ class MultiqubitPlatform(AbstractPlatform):
                     
                     ires = acquisition_results[serial][0][0]
                     qres = acquisition_results[serial][1][0]
-                    aquisition = IntegratedResults(ires + 1j * qres)
+                    aquisition = IntegratedResults(ires + 1j * qres) #FIXME: Integrated results has no property "probability" and then some Qibocal methods are not working
 
                     if options.acquisition_type is AcquisitionType.RAW:
                         if self.average:
@@ -370,10 +370,14 @@ class MultiqubitPlatform(AbstractPlatform):
                         if self.average:
                             acquisition =  AveragedIntegratedResults(ires + 1j * qres)
                         acquisition =  IntegratedResults(ires + 1j * qres)
-                    
-                    #if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                    #     #TODO: Implement discrimination method
-                    #     raise_error(NotImplementedError, f"No acquisition_type {options.acquisition_type} implented")
+
+                    #TODO: Implement discrimination method. Ask Alvaro (qblox already has dictionaries with discriminated data)
+                    if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+                        raise_error(NotImplementedError, f"No acquisition_type {options.acquisition_type} implented")
+                        # discriminated_shots = self.classify_shots(i_pulse, q_pulse, self.qubits)
+                        # if self.average:
+                        #     acquisition =  AveragedSampleResults(discriminated_shots)
+                        # acquisition =  SampleResults(discriminated_shots)
                                           
 
                     data[original] = data[if_pulse.qubit] = aquisition      
