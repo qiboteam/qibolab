@@ -55,8 +55,8 @@ native_gates:
         2: # qubit number
             RX:
                 duration: 40 #200 #60
-                amplitude: 0.495
-                frequency: 4336702148  #4_401_600_000 #4_505_500_000 #4_321_500_000 # 4_541_100_000 #doesnt do anything requiered for qibolab to work
+                amplitude: 0.5
+                frequency: 4339731421  #4_401_600_000 #4_505_500_000 #4_321_500_000 # 4_541_100_000 #doesnt do anything requiered for qibolab to work
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -161,17 +161,17 @@ characterization:
         2:
             readout_frequency: 6.109e+9  #6_112_000_000
             resonator_polycoef_flux: []
-            drive_frequency: 4336702148 
+            drive_frequency: 4339731421 
             T1: 0.
             T2: 0.
-            sweetspot: -0.176 #0.5 #0.62 0.00
+            sweetspot: -0.17155 #0.5 #0.62 0.00
             filter: {}
-            mean_gnd_states: -1.6625+0.8661j
-            mean_exc_states: -0.9162+1.0201j
+            mean_gnd_states: -1.6796+0.8384j
+            mean_exc_states: -0.9080+1.0200j
             # parameters for single shot classification
-            threshold: -0.9644
-            iq_angle: -0.204
-            alpha: 208_000_000 
+            threshold: -0.9222
+            iq_angle: -0.231
+            alpha: 211604296 
         3:
             readout_frequency: 5.8060e+9
             resonator_polycoef_flux: []
