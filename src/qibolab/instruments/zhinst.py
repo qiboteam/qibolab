@@ -289,8 +289,8 @@ class Zurich(AbstractInstrument):
         if not self.is_connected:
             for _ in range(3):
                 try:
-                    self.device_setup = lo.DeviceSetup.from_descriptor(
-                        yaml_text=self.descriptor,
+                    self.device_setup = lo.DeviceSetup.from_dict(
+                        data=self.descriptor,
                         server_host="localhost",
                         server_port=SERVER_PORT,
                         setup_name=self.name,
