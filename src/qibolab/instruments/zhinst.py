@@ -649,7 +649,6 @@ class Zurich(AbstractInstrument):
             exp.play(
                 signal=f"{section}{qubit.name}",
                 pulse=pulse.zhpulse,
-                length=pulse.zhpulse,
                 phase=pulse.zhsweeper,
             )
         elif "frequency" in partial_sweep.uid or partial_sweep.uid == "delay":
