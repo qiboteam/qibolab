@@ -202,7 +202,7 @@ ATS9371
    :member-order: bysource
 
 RFSoC
----------
+-----
 
 .. autoclass:: qibolab.instruments.rfsoc.RFSoC
    :members:
