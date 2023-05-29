@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from qibo.config import raise_error
 
@@ -122,9 +122,14 @@ class Channel:
 
 @dataclass
 class ChannelMap:
-    """Collection of :class:`qibolab.designs.channel.Channel` objects identified by name."""
+    """Collection of :class:`qibolab.designs.channel.Channel` objects identified by name.
 
-    _channels: dict = field(default_factory=dict)
+    Essentially, it allows creating a mapping of names to channels just
+    specifying the names.
+
+    """
+
+    _channels: Dict[str, Channel] = field(default_factory=dict)
 
     @classmethod
     def from_names(cls, *names):

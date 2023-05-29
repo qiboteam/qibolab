@@ -1852,13 +1852,13 @@ files = [
 
 [[package]]
 name = "laboneq"
-version = "2.4.0"
+version = "2.5.0"
 description = "Zurich Instruments LabOne Q software framework for quantum computing control"
 category = "main"
 optional = true
 python-versions = ">=3.9"
 files = [
-    {file = "laboneq-2.4.0-py3-none-any.whl", hash = "sha256:27d435e57fcf2ed0d62fff0a25d7532231a98778a0733b279f375bf927467ca4"},
+    {file = "laboneq-2.5.0-py3-none-any.whl", hash = "sha256:e30f3af03e537ff89583e0b9d0d57874b950a47c8c52aea777357ae510ca328e"},
 ]
 
 [package.dependencies]
@@ -3958,7 +3958,7 @@ qick = "^0.2"
 type = "git"
 url = "https://github.com/qiboteam/qibosoq.git"
 reference = "zcu111-flux-single-q"
-resolved_reference = "f829e6f9726fba9ed2bb0ec4b3cefc29f693adcf"
+resolved_reference = "274639f9e31e842416035292a3612500051dbb78"
 
 [[package]]
 name = "qick"
@@ -5260,4 +5260,4 @@ zh = ["laboneq"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "65cbb383bdb5c77cac4e90daa0c705f55f367c347fb30ec6eeab27d58df7f43c"
+content-hash = "c9a1cfcee0edc9c1fbc8d8388458389c71c16f512afa6381bdc961a4f29021a6"
