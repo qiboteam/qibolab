@@ -7,30 +7,35 @@ from qibo.models import Circuit
 from qibolab.transpilers.abstract import Placer, create_circuit_repr
 
 
-def check_placement(circuit: Circuit, layout: dict) -> bool:
-    if not check_mapping_consistency(layout):
+def check_placement(circuit: Circuit, layout: dict, verbose=False) -> bool:
+    if not check_mapping_consistency(layout, verbose=verbose):
         return False
     if circuit.nqubits == len(layout):
-        log.info("Layout can be used on circuit.")
+        if verbose:
+            log.info("Layout can be used on circuit.")
         return True
     elif circuit.nqubits > len(layout):
-        log.info("Layout can't be used on circuit. The circuit requires more qubits.")
+        if verbose:
+            log.info("Layout can't be used on circuit. The circuit requires more qubits.")
         return False
     else:
-        log.info("Layout can't be used on circuit. Ancillary extra qubits need to be added to the circuit.")
+        if verbose:
+            log.info("Layout can't be used on circuit. Ancillary extra qubits need to be added to the circuit.")
         return False
 
 
-def check_mapping_consistency(layout):
+def check_mapping_consistency(layout, verbose=False):
     values = list(layout.values())
     values.sort()
     keys = list(layout.keys())
     ref_keys = list("q" + str(i) for i in range(len(keys)))
     if values != list(range(len(values))):
-        log.info("Some logical qubits may be missing or duplicated")
+        if verbose:
+            log.info("Some logical qubits in the layout may be missing or duplicated")
         return False
     if keys != ref_keys:
-        log.info("Some physical qubits may be missing or duplicated")
+        if verbose:
+            log.info("Some physical qubits in the layout may be missing or duplicated")
         return False
     return True
 
@@ -93,7 +98,6 @@ class Subgraph(Placer):
             H.add_edge(circuit_repr[i][0], circuit_repr[i][1])
             GM = nx.algorithms.isomorphism.GraphMatcher(self.connectivity, H)
             if self.connectivity.number_of_edges() == H.number_of_edges() or i == len(circuit_repr) - 1:
-                print(result.mapping)
                 keys = list(result.mapping.keys())
                 keys.sort()
                 return {i: result.mapping[i] for i in keys}
