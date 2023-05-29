@@ -161,6 +161,11 @@ class ZhSweeper:
                 uid=sweeper.parameter.name,
                 values=sweeper.values * NANO_TO_SECONDS,
             )
+        if sweeper.parameter is Parameter.relative_phase:
+            return lo.SweepParameter(
+                uid=sweeper.parameter.name,
+                values=sweeper.values,
+            )
         # TODO: take intermediate frequency from the pulses
         if sweeper.parameter is Parameter.frequency:
             if ptype is PulseType.READOUT:
@@ -643,6 +648,12 @@ class Zurich(AbstractInstrument):
                 pulse=pulse.zhpulse,
                 length=pulse.zhsweeper,
                 phase=pulse.pulse.relative_phase,
+            )
+        elif any("relative_phase" in param for param in parameters):
+            exp.play(
+                signal=f"{section}{qubit.name}",
+                pulse=pulse.zhpulse,
+                phase=pulse.zhsweeper,
             )
         elif "frequency" in partial_sweep.uid or partial_sweep.uid == "delay":
             # see if below also works for consistency
