@@ -344,7 +344,6 @@ class MultiqubitPlatform(AbstractPlatform):
         acquisition_results = {}
         for instrument in readout_instruments:
             if instrument_pulses[instrument.name] and instrument_pulses[instrument.name].ro_pulses:
-                #TODO: Pass discrimination parameter to return data from instrument already discriminated
                 results = instrument.acquire()
                 existing_keys = set(acquisition_results.keys()) & set(results.keys())
                 for key, value in results.items():
@@ -356,31 +355,22 @@ class MultiqubitPlatform(AbstractPlatform):
         for serial in acquisition_results:
             for if_pulse, original in changed.items():
                 if serial == if_pulse.serial:
-                    
-                    ires = acquisition_results[serial][0][0]
-                    qres = acquisition_results[serial][1][0]
-                    aquisition = IntegratedResults(ires + 1j * qres) #FIXME: Integrated results has no property "probability" and then some Qibocal methods are not working
-
-                    if options.acquisition_type is AcquisitionType.RAW:
-                        if self.average:
-                            aquisition = AveragedRawWaveformResults(ires + 1j * qres)
-                        aquisition = RawWaveformResults(ires + 1j * qres)
-
-                    if options.acquisition_type is AcquisitionType.INTEGRATION:
-                        if self.average:
-                            acquisition =  AveragedIntegratedResults(ires + 1j * qres)
-                        acquisition =  IntegratedResults(ires + 1j * qres)
-
-                    #TODO: Implement discrimination method. Ask Alvaro (qblox already has dictionaries with discriminated data)
                     if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                        raise_error(NotImplementedError, f"No acquisition_type {options.acquisition_type} implented")
-                        # discriminated_shots = self.classify_shots(i_pulse, q_pulse, self.qubits)
-                        # if self.average:
-                        #     acquisition =  AveragedSampleResults(discriminated_shots)
-                        # acquisition =  SampleResults(discriminated_shots)
-                                          
+                        if self.average:
+                            acquisition =  AveragedSampleResults(acquisition_results[serial][2])
+                        acquisition =  SampleResults(acquisition_results[serial][2]) 
+                    else:
+                        if options.acquisition_type is AcquisitionType.RAW:
+                            if self.average:
+                                acquisition = AveragedRawWaveformResults(ires + 1j * qres)
+                            acquisition = RawWaveformResults(ires + 1j * qres)
 
-                    data[original] = data[if_pulse.qubit] = aquisition      
+                        if options.acquisition_type is AcquisitionType.INTEGRATION:
+                            if self.average:
+                                acquisition =  AveragedIntegratedResults(ires + 1j * qres)
+                            acquisition =  IntegratedResults(ires + 1j * qres)                                         
+
+                    data[original] = data[if_pulse.qubit] = acquisition      
 
         return data
 
