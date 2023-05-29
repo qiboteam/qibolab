@@ -897,6 +897,7 @@ class Zurich(AbstractInstrument):
         self.sweepers = sweepers
 
         self.experiment_flow(qubits, sequence, options, sweepers)
+
         self.run_exp()
 
         # TODO: General, several readouts and qubits
