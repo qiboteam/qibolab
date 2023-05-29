@@ -201,9 +201,9 @@ ATS9371
    :members:
    :member-order: bysource
 
-RFSoC 4x2
+RFSoC
 ---------
 
-.. autoclass:: qibolab.instruments.rfsoc.TII_RFSOC4x2
+.. autoclass:: qibolab.instruments.rfsoc.RFSoC
    :members:
    :member-order: bysource
