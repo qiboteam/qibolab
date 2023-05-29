@@ -1015,8 +1015,8 @@ class Zurich(AbstractInstrument):
     # TODO: Implement further pulse viewing functions from 2.2.0
     # should this be added in a way so the user can check how the sequence looks like ?
     def run_sim(self, sim_time):
-        self.device_setup = lo.DeviceSetup.from_descriptor(
-            yaml_text=self.descriptor,
+        self.device_setup = lo.DeviceSetup.from_dict(
+            data=self.descriptor,
             server_host="localhost",
             server_port=SERVER_PORT,
             setup_name=self.name,
