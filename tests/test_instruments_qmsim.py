@@ -19,12 +19,13 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 
-from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
+from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.backends import QibolabBackend
-from qibolab.paths import qibolab_folder
-from qibolab.platform import create_tii_qw5q_gold
+from qibolab.instruments.qmsim import QMSim
 from qibolab.pulses import SNZ, FluxPulse, PulseSequence, Rectangular
 from qibolab.sweeper import Parameter, Sweeper
+
+from .conftest import set_platform_profile
 
 
 @pytest.fixture(scope="module")
@@ -34,9 +35,12 @@ def simulator(request):
     Args:
         address (str): Address for connecting to the simulator. Provided via command line.
     """
+    set_platform_profile()
     address, duration = request.param
-    runcard = qibolab_folder / "runcards" / "qw5q_gold.yml"
-    platform = create_tii_qw5q_gold(runcard, simulation_duration=duration, address=address, cloud=True)
+    platform = create_platform("qm")
+    controller = QMSim("qmopx", address, simulation_duration=duration, cloud=True)
+    controller.time_of_flight = 280
+    platform.instruments[0] = controller
     platform.connect()
     platform.setup()
     yield platform

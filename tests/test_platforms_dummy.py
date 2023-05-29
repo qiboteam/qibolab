@@ -1,14 +1,13 @@
 import numpy as np
 import pytest
 
-from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.platform import Platform
+from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.pulses import PulseSequence
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 
 
 def test_dummy_initialization():
-    platform = Platform("dummy")
+    platform = create_platform("dummy")
     platform.reload_settings()
     platform.connect()
     platform.setup()
@@ -18,7 +17,7 @@ def test_dummy_initialization():
 
 
 def test_dummy_execute_pulse_sequence():
-    platform = Platform("dummy")
+    platform = create_platform("dummy")
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_readout_pulse(0, 0))
     options = ExecutionParameters(nshots=None)
@@ -31,7 +30,7 @@ def test_dummy_execute_pulse_sequence():
 @pytest.mark.parametrize("nshots", [100, 200])
 def test_dummy_single_sweep(parameter, average, acquisition, nshots):
     swept_points = 5
-    platform = Platform("dummy")
+    platform = create_platform("dummy")
     sequence = PulseSequence()
     pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
     if parameter is Parameter.amplitude:
@@ -74,7 +73,7 @@ def test_dummy_single_sweep(parameter, average, acquisition, nshots):
 @pytest.mark.parametrize("nshots", [100, 1000])
 def test_dummy_double_sweep(parameter1, parameter2, average, acquisition, nshots):
     swept_points = 5
-    platform = Platform("dummy")
+    platform = create_platform("dummy")
     sequence = PulseSequence()
     pulse = platform.create_qubit_drive_pulse(qubit=0, start=0, duration=1000)
     ro_pulse = platform.create_qubit_readout_pulse(qubit=0, start=pulse.finish)
@@ -132,7 +131,7 @@ def test_dummy_double_sweep(parameter1, parameter2, average, acquisition, nshots
 @pytest.mark.parametrize("nshots", [100, 1000])
 def test_dummy_single_sweep_multiplex(parameter, average, acquisition, nshots):
     swept_points = 5
-    platform = Platform("dummy")
+    platform = create_platform("dummy")
     sequence = PulseSequence()
     ro_pulses = {}
     for qubit in platform.qubits:
