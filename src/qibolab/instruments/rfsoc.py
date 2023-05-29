@@ -114,7 +114,7 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: Dict[int, Q
                 stops.append(sweeper.values[-1] + value)
             elif sweeper.parameter is Parameter.amplitude:
                 starts.append(sweeper.values[0] * value)
-                stops.append(sweeper.values[-1] + value)
+                stops.append(sweeper.values[-1] * value)
             else:
                 raise NotImplementedError(f"Sweep parameter {sweeper.parameter} not implemented")
 
