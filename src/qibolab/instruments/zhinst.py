@@ -640,6 +640,13 @@ class Zurich(AbstractInstrument):
                 length=pulse.zhsweeper,
                 phase=pulse.pulse.relative_phase,
             )
+        elif any("relative_phase" in param for param in parameters):
+            exp.play(
+                signal=f"{section}{qubit.name}",
+                pulse=pulse.zhpulse,
+                length=pulse.zhpulse,
+                phase=pulse.zhsweeper,
+            )
         elif "frequency" in partial_sweep.uid or partial_sweep.uid == "delay":
             # see if below also works for consistency
             # elif any("frequency" in param for param in parameters) or any("delay" in param for param in parameters):
