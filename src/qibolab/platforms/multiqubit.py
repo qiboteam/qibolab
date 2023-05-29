@@ -359,7 +359,7 @@ class MultiqubitPlatform(AbstractPlatform):
                     
                     ires = acquisition_results[serial][0][0]
                     qres = acquisition_results[serial][1][0]
-                    aquisition = RawWaveformResults(ires + 1j * qres)
+                    aquisition = IntegratedResults(ires + 1j * qres)
 
                     if options.acquisition_type is AcquisitionType.RAW:
                         if self.average:
