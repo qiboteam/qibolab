@@ -267,7 +267,7 @@ class Zurich(AbstractInstrument):
 
         self.exp = None
         self.experiment = None
-        self.exp_options = ExecutionParameters
+        self.exp_options = ExecutionParameters()
         self.exp_calib = lo.Calibration()
         self.results = None
         "Zurich experiment definitions"
@@ -525,8 +525,12 @@ class Zurich(AbstractInstrument):
                         self.acquisition_type = lo.AcquisitionType.SPECTROSCOPY
                     if sweeper.parameter is Parameter.amplitude and pulse.type is PulseType.READOUT:
                         self.acquisition_type = lo.AcquisitionType.SPECTROSCOPY
-                        self.nt_sweeps.append(sweeper)
-                        self.sweepers.remove(sweeper)
+                        if len(sweepers) == 2:
+                            if not self.nt_sweeps:
+                                self.nt_sweeps = [sweeper]
+                            else:
+                                self.nt_sweeps.append(sweeper)
+                            self.sweepers.remove(sweeper)
                     for element in aux_list:
                         if pulse == element.pulse:
                             if isinstance(aux_list[aux_list.index(element)], ZhPulse):
@@ -1008,7 +1012,7 @@ class Zurich(AbstractInstrument):
     def play_sim(self, qubits, sequence, options, sim_time):
         """Play pulse sequence"""
 
-        self.experiment_flow(sequence, qubits, options)
+        self.experiment_flow(qubits, sequence, options)
         self.exp = self.session.compile(self.experiment)
         self.run_sim(sim_time)
 

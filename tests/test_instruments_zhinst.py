@@ -1,3 +1,5 @@
+import itertools
+
 import laboneq.simple as lo
 import numpy as np
 import pytest
@@ -7,7 +9,7 @@ from qibolab.instruments.zhinst import ZhPulse, ZhSweeper, ZhSweeperLine, Zurich
 from qibolab.paths import qibolab_folder
 from qibolab.platform import create_tii_IQM5q
 from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse, Rectangular
-from qibolab.sweeper import Parameter, Sweeper
+from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 
 RUNCARD = qibolab_folder / "runcards" / "iqm5q.yml"
 DUMMY_ADDRESS = "0.0.0.0:0"
@@ -19,49 +21,50 @@ def create_offline_device_setup():
     Function returning a device setup
     """
 
-    descriptor = """\
-        instruments:
-            SHFQC:
-            - address: DEV12146
-              uid: device_shfqc
-            HDAWG:
-            - address: DEV8660
-              uid: device_hdawg
-            PQSC:
-            - address: DEV10055
-              uid: device_pqsc
+    # Instantiate Zh set of instruments[They work as one]
+    instruments = {
+        "SHFQC": [{"address": "DEV12146", "uid": "device_shfqc"}],
+        "HDAWG": [
+            {"address": "DEV8660", "uid": "device_hdawg"},
+            {"address": "DEV8673", "uid": "device_hdawg2"},
+        ],
+        "PQSC": [{"address": "DEV10055", "uid": "device_pqsc"}],
+    }
 
-        connections:
-            device_shfqc:
-                - iq_signal: q0/drive_line
-                  ports: SGCHANNELS/0/OUTPUT
-                - iq_signal: q1/drive_line
-                  ports: SGCHANNELS/1/OUTPUT
-                - iq_signal: q0/measure_line
-                  ports: [QACHANNELS/0/OUTPUT]
-                - acquire_signal: q0/acquire_line
-                  ports: [QACHANNELS/0/INPUT]
-                - iq_signal: q1/measure_line
-                  ports: [QACHANNELS/0/OUTPUT]
-                - acquire_signal: q1/acquire_line
-                  ports: [QACHANNELS/0/INPUT]
+    shfqc = []
+    for i in range(5):
+        shfqc.append({"iq_signal": f"q{i}/drive_line", "ports": f"SGCHANNELS/{i}/OUTPUT"})
+        shfqc.append({"iq_signal": f"q{i}/measure_line", "ports": ["QACHANNELS/0/OUTPUT"]})
+        shfqc.append({"acquire_signal": f"q{i}/acquire_line", "ports": ["QACHANNELS/0/INPUT"]})
 
+    hdawg = []
+    for i in range(5):
+        hdawg.append({"rf_signal": f"q{i}/flux_line", "ports": f"SIGOUTS/{i}"})
+    for c, i in zip(itertools.chain(range(0, 2), range(3, 4)), range(5, 8)):
+        hdawg.append({"rf_signal": f"qc{c}/flux_line", "ports": f"SIGOUTS/{i}"})
 
-            device_hdawg:
-                - rf_signal: q0/flux_line
-                  ports: SIGOUTS/0
-                - rf_signal: q1/flux_line
-                  ports: SIGOUTS/1
+    hdawg2 = [{"rf_signal": "qc4/flux_line", "ports": f"SIGOUTS/0"}]
 
-            device_pqsc:
-                - internal_clock_signal
-                - to: device_hdawg
-                  port: ZSYNCS/4
-                - to: device_shfqc
-                  port: ZSYNCS/0
-        """
+    pqsc = [
+        "internal_clock_signal",
+        {"to": "device_hdawg2", "port": "ZSYNCS/4"},
+        {"to": "device_hdawg", "port": "ZSYNCS/2"},
+        {"to": "device_shfqc", "port": "ZSYNCS/0"},
+    ]
 
-    device_setup = lo.DeviceSetup.from_descriptor(
+    connections = {
+        "device_shfqc": shfqc,
+        "device_hdawg": hdawg,
+        "device_hdawg2": hdawg2,
+        "device_pqsc": pqsc,
+    }
+
+    descriptor = {
+        "instruments": instruments,
+        "connections": connections,
+    }
+
+    device_setup = lo.DeviceSetup.from_dict(
         descriptor,
         server_host="my_ip_address",
         server_port="8004",
@@ -164,31 +167,36 @@ def test_experiment_execute_pulse_sequence():
 
     ro_pulses = {}
     qd_pulses = {}
+    qf_pulses = {}
     for qubit in qubits:
         qd_pulses[qubit] = platform.create_RX_pulse(qubit, start=0)
         sequence.add(qd_pulses[qubit])
         ro_pulses[qubit] = platform.create_qubit_readout_pulse(qubit, start=qd_pulses[qubit].finish)
         sequence.add(ro_pulses[qubit])
+        qf_pulses[qubit] = FluxPulse(
+            start=0,
+            duration=ro_pulses[qubit].se_start,
+            amplitude=1,
+            shape=Rectangular(),
+            channel=platform.qubits[qubit].flux.name,
+            qubit=qubit,
+        )
+        sequence.add(qf_pulses[qubit])
 
     options = ExecutionParameters(
         relaxation_time=300e-6, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
     )
 
-    IQM5q.sequence_zh(sequence, qubits, [])
-    IQM5q.calibration_step(qubits)
-    IQM5q.create_exp(qubits, options)
+    IQM5q.experiment_flow(qubits, sequence, options)
 
     # assert
     # AcquisitionType.SPECTROSCOPY
     # AveragingMode.CYCLIC
-    # I'm using dumb IW
 
-    assert 1 == 1
-
-    # assert "drive0" in IQM5q.experiment.signals
-    # assert "flux0" in IQM5q.experiment.signals
-    # assert "measure0" in IQM5q.experiment.signals
-    # assert "acquire0" in IQM5q.experiment.signals
+    assert "drive0" in IQM5q.experiment.signals
+    assert "flux0" in IQM5q.experiment.signals
+    assert "measure0" in IQM5q.experiment.signals
+    assert "acquire0" in IQM5q.experiment.signals
 
 
 # TODO: Parametrize like in test_dummy and run with multiple sweeps
@@ -225,14 +233,7 @@ def test_experiment_sweep():
         relaxation_time=300e-6, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
     )
 
-    IQM5q.sequence_zh(sequence, qubits, [freq_sweeper])
-    IQM5q.calibration_step(qubits)
-    IQM5q.create_exp(qubits, options)
-
-    # assert
-    # AcquisitionType.SPECTROSCOPY
-    # AveragingMode.CYCLIC
-    # I'm using dumb IW
+    IQM5q.experiment_flow(qubits, sequence, options, [freq_sweeper])
 
     assert "drive0" in IQM5q.experiment.signals
     assert "flux0" in IQM5q.experiment.signals
@@ -240,7 +241,56 @@ def test_experiment_sweep():
     assert "acquire0" in IQM5q.experiment.signals
 
 
-# target_element = sections=[AcquireLoopRt(uid='shots', alignment=SectionAlignment.LEFT, execution_type=ExecutionType.REAL_TIME, length=None, play_after=None, children=[Section(uid='sequence_drive0', alignment=SectionAlignment.LEFT, execution_type=ExecutionType.REAL_TIME, length=None, play_after=None, children=[Delay(signal='drive0', time=0.0, precompensation_clear=None), PlayPulse(signal='drive0', pulse=PulseFunctional(function='gaussian', uid='drive_0_0', amplitude=0.566, length=4e-08, pulse_parameters={'sigma': 0.4, 'zero_boundaries': False}), amplitude=None, increment_oscillator_phase=None, phase=0.0, set_oscillator_phase=None, length=None, pulse_parameters=None, precompensation_clear=None, marker=None)], trigger={}, on_system_grid=False), Section(uid='sequence_measure0', alignment=SectionAlignment.LEFT, execution_type=ExecutionType.REAL_TIME, length=None, play_after='sequence_drive0', children=[Delay(signal='measure0', time=0, precompensation_clear=None), Delay(signal='measure0', time=1e-07, precompensation_clear=None), PlayPulse(signal='measure0', pulse=PulseFunctional(function='const', uid='readout_0_0', amplitude=0.5, length=2e-06, pulse_parameters=None), amplitude=None, increment_oscillator_phase=None, phase=None, set_oscillator_phase=None, length=2e-06, pulse_parameters={'phase': 0}, precompensation_clear=None, marker=None), Delay(signal='acquire0', time=2.8e-16, precompensation_clear=None), Acquire(signal='acquire0', handle='sequence0', kernel=PulseFunctional(function='const', uid='weightreadout_0_0', amplitude=1, length=1.8499999999999999e-06, pulse_parameters=None), length=None, pulse_parameters=None), Delay(signal='acquire0', time=3e-13, precompensation_clear=None)], trigger={}, on_system_grid=False)], trigger={}, on_system_grid=False, acquisition_type=AcquisitionType.SPECTROSCOPY, averaging_mode=AveragingMode.CYCLIC, count=1024, repetition_mode=RepetitionMode.FASTEST, repetition_time=None, reset_oscillator_phase=False)])
+@pytest.mark.parametrize("parameter1", Parameter)
+@pytest.mark.parametrize("parameter2", Parameter)
+def test_experiment_sweep(parameter1, parameter2):
+    platform = create_tii_IQM5q(RUNCARD)
+    platform.setup()
+    IQM5q = platform.design.instruments[0]
+    IQM5q.device_setup = create_offline_device_setup()
+
+    sequence = PulseSequence()
+    qubits = {0: platform.qubits[0]}
+
+    swept_points = 5
+    sequence = PulseSequence()
+    ro_pulses = {}
+    qd_pulses = {}
+    for qubit in qubits:
+        qd_pulses[qubit] = platform.create_RX_pulse(qubit, start=0)
+        sequence.add(qd_pulses[qubit])
+        ro_pulses[qubit] = platform.create_qubit_readout_pulse(qubit, start=qd_pulses[qubit].finish)
+        sequence.add(ro_pulses[qubit])
+
+    parameter_range_1 = (
+        np.random.rand(swept_points)
+        if parameter1 is Parameter.amplitude
+        else np.random.randint(swept_points, size=swept_points)
+    )
+
+    parameter_range_2 = (
+        np.random.rand(swept_points)
+        if parameter2 is Parameter.amplitude
+        else np.random.randint(swept_points, size=swept_points)
+    )
+
+    sweepers = []
+    if parameter1 not in QubitParameter:
+        if parameter1 is not Parameter.delay:
+            sweepers.append(Sweeper(parameter1, parameter_range_1, pulses=[ro_pulses[qubit]]))
+    if parameter2 not in QubitParameter:
+        if parameter2 is not Parameter.delay:
+            sweepers.append(Sweeper(parameter2, parameter_range_2, pulses=[qd_pulses[qubit]]))
+
+    options = ExecutionParameters(
+        relaxation_time=300e-6, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+    )
+
+    IQM5q.experiment_flow(qubits, sequence, options, sweepers)
+
+    assert "drive0" in IQM5q.experiment.signals
+    assert "measure0" in IQM5q.experiment.signals
+    assert "acquire0" in IQM5q.experiment.signals
 
 
 # def test_qmopx_register_flux_pulse():
