@@ -14,7 +14,6 @@ class Parameter(Enum):
     relative_phase = auto()
     delay = auto()
     start = auto()
-    duration = auto()
 
     attenuation = auto()
     gain = auto()
