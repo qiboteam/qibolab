@@ -101,16 +101,19 @@ def test_subgraph_perfect():
 def test_subgraph_non_perfect():
     connectivity = star_connectivity()
     placer = Subgraph(connectivity=connectivity)
-    circuit = star_circuit()
+    circuit = Circuit(5)
     circuit.add(gates.CNOT(1, 3))
-    circuit.add(gates.CNOT(0, 4))
+    circuit.add(gates.CNOT(2, 4))
     circuit.add(gates.CNOT(2, 1))
     circuit.add(gates.CNOT(4, 3))
-    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.CNOT(3, 2))
+    circuit.add(gates.CNOT(2, 1))
+    circuit.add(gates.CNOT(4, 3))
+    circuit.add(gates.CNOT(1, 2))
     circuit.add(gates.CNOT(3, 1))
     layout = placer(circuit)
-    assert layout["q2"] == 0
     assert check_placement(circuit, layout)
+    assert False
 
 
 def test_subgraph_error():
