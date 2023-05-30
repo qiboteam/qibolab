@@ -29,13 +29,13 @@ def check_mapping_consistency(layout, verbose=False):
     values.sort()
     keys = list(layout.keys())
     ref_keys = list("q" + str(i) for i in range(len(keys)))
-    if values != list(range(len(values))):
-        if verbose:
-            log.info("Some logical qubits in the layout may be missing or duplicated")
-        return False
     if keys != ref_keys:
         if verbose:
             log.info("Some physical qubits in the layout may be missing or duplicated")
+        return False
+    if values != list(range(len(values))):
+        if verbose:
+            log.info("Some logical qubits in the layout may be missing or duplicated")
         return False
     return True
 
