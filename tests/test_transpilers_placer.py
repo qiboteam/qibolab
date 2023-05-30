@@ -113,7 +113,6 @@ def test_subgraph_non_perfect():
     circuit.add(gates.CNOT(3, 1))
     layout = placer(circuit)
     assert check_placement(circuit, layout)
-    assert False
 
 
 def test_subgraph_error():
