@@ -25,12 +25,7 @@ class Platform:
     """
 
     def __init__(self, name, runcard, instruments, channels):
-        # TODO: convert to single log. This is just to avoid to
-        # print the all dictionary
-        if name == "dummy":
-            log.info(f"Loading platform {name}")
-        else:
-            log.info(f"Loading platform {name} from runcard {runcard}")
+        log.info(f"Loading platform {name}")
 
         self.name = name
         self.runcard = runcard
