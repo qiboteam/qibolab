@@ -98,7 +98,7 @@ RUNCARD = {
 }
 
 
-def create_dummy(runcard=RUNCARD):
+def create_dummy():
     """Create a dummy platform using the dummy instrument."""
 
     # Create channel objects
@@ -109,7 +109,7 @@ def create_dummy(runcard=RUNCARD):
     # Create dummy controller
     instrument = DummyInstrument(NAME, 0)
     # Create platform
-    platform = Platform(NAME, runcard, [instrument], channels)
+    platform = Platform(NAME, RUNCARD, [instrument], channels)
 
     # map channels to qubits
     for qubit in platform.qubits:
