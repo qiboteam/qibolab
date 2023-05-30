@@ -2,14 +2,13 @@ import itertools
 
 import numpy as np
 from qibo import __version__ as qibo_version
-from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.config import log, raise_error
 from qibo.states import CircuitResult
 
 from qibolab import ExecutionParameters
 from qibolab import __version__ as qibolab_version
-from qibolab import create_platform
+from qibolab import create_platform, dummy
 from qibolab.compilers import Compiler
 from qibolab.platform import Platform
 from qibolab.transpilers import Pipeline
@@ -21,6 +20,8 @@ class QibolabBackend(NumpyBackend):
         self.name = "qibolab"
         if isinstance(platform, Platform):
             self.platform = platform
+        elif platform == dummy.NAME:
+            self.platform = dummy.create_dummy()
         else:
             self.platform = create_platform(platform, runcard)
         self.versions = {
