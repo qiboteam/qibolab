@@ -4,15 +4,17 @@ import numpy as np
 import yaml
 from qibo.config import log, raise_error
 
-from qibolab.platforms.abstract import AbstractPlatform, Qubit
+from qibolab.channels import ChannelMap
+from qibolab.platform import Platform
 from qibolab.pulses import PulseSequence, PulseType
+from qibolab.qubits import Qubit
 from qibolab.result import IntegratedResults
 from qibolab.sweeper import Parameter
 
 
-class MultiqubitPlatform(AbstractPlatform):
+class MultiqubitPlatform(Platform):
     def __init__(self, name, runcard):
-        super().__init__(name, runcard)
+        super().__init__(name, runcard, [], ChannelMap())
         self.instruments = {}
         # Instantiate instruments
         for name in self.settings["instruments"]:
