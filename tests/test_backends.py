@@ -5,8 +5,9 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 
+from qibolab import ExecutionParameters
 from qibolab.backends import QibolabBackend
-from qibolab.platforms.abstract import AbstractPlatform
+from qibolab.platform import Platform
 
 
 @pytest.fixture(scope="module")
@@ -55,7 +56,7 @@ def test_execute_circuit_initial_state(backend):
 def test_execute_circuit(backend, gate, kwargs):
     nqubits = backend.platform.nqubits
     circuit = generate_circuit_with_gate(nqubits, gate, **kwargs)
-    result = backend.execute_circuit(circuit, nshots=100)
+    result = backend.execute_circuit(circuit, ExecutionParameters(nshots=100))
 
 
 @pytest.mark.qpu
@@ -63,7 +64,7 @@ def test_measurement_samples(backend):
     nqubits = backend.platform.nqubits
     circuit = Circuit(nqubits)
     circuit.add(gates.M(*range(nqubits)))
-    result = backend.execute_circuit(circuit, nshots=100)
+    result = backend.execute_circuit(circuit, ExecutionParameters(nshots=100))
     assert result.samples().shape == (100, nqubits)
     assert sum(result.frequencies().values()) == 100
 
@@ -74,7 +75,7 @@ def test_ground_state_probabilities_circuit(backend):
     nqubits = backend.platform.nqubits
     circuit = Circuit(nqubits)
     circuit.add(gates.M(*range(nqubits)))
-    result = backend.execute_circuit(circuit, nshots=5000)
+    result = backend.execute_circuit(circuit, ExecutionParameters(nshots=5000))
     probs = result.probabilities()
     warnings.warn(f"Ground state probabilities: {probs}")
     target_probs = np.zeros(2**nqubits)
@@ -89,7 +90,7 @@ def test_excited_state_probabilities_circuit(backend):
     circuit = Circuit(nqubits)
     circuit.add(gates.X(q) for q in range(nqubits))
     circuit.add(gates.M(*range(nqubits)))
-    result = backend.execute_circuit(circuit, nshots=5000)
+    result = backend.execute_circuit(circuit, ExecutionParameters(nshots=5000))
     probs = result.probabilities()
     warnings.warn(f"Excited state probabilities: {probs}")
     target_probs = np.zeros(2**nqubits)
@@ -107,7 +108,7 @@ def test_superposition_for_all_qubits(backend):
         circuit = Circuit(nqubits)
         circuit.add(gates.H(q=q))
         circuit.add(gates.M(q))
-        probs.append(backend.execute_circuit(circuit, nshots=5000).probabilities())
+        probs.append(backend.execute_circuit(circuit, ExecutionParameters(nshots=5000)).probabilities())
         warnings.warn(f"Probabilities after an Hadamard gate applied to qubit {q}: {probs[-1]}")
     probs = np.asarray(probs)
     target_probs = np.repeat(a=0.5, repeats=nqubits)

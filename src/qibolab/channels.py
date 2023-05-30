@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from qibo.config import raise_error
 
@@ -32,8 +32,12 @@ class Channel:
     _local_oscillator: Optional[LocalOscillator] = None
     """Instrument object controlling the local oscillator connected to this channel.
     Not applicable for setups that do not use local oscillators because the controller
-    can send sufficiently high frequencies
+    can send sufficiently high frequencies.
     """
+    gain: Optional[int] = 0
+    """Channel amplification in dB."""
+    power_range: Optional[float] = None
+    """Channel amplification or attenuation of the selected on the device."""
     _bias: Optional[float] = None
     """DC offset that should be applied in the channel in order to shift the
     frequency of the qubit, usually to put it in its sweetspot.
@@ -55,7 +59,10 @@ class Channel:
     def local_oscillator(self):
         """LocalOscillator object connnected to this channel."""
         if self._local_oscillator is None:
-            raise_error(NotImplementedError, f"Channel {self.name} does not have a local oscillator")
+            raise_error(
+                NotImplementedError,
+                f"Channel {self.name} does not have a local oscillator",
+            )
         return self._local_oscillator
 
     @local_oscillator.setter
@@ -69,7 +76,10 @@ class Channel:
         """Bias offset for flux channels."""
         if self._bias is None:
             if self.qubit.flux is None:
-                raise_error(NotImplementedError, f"Channel {self.name} is not connected to a flux qubit")
+                raise_error(
+                    NotImplementedError,
+                    f"Channel {self.name} is not connected to a flux qubit",
+                )
             # operate qubits at their sweetspot unless otherwise stated
             check_max_bias(self.qubit.sweetspot, self.max_bias)
             return self.qubit.sweetspot
@@ -99,7 +109,10 @@ class Channel:
     def attenuation(self):
         """Attenuation for qblox devices."""
         if self._attenuation is None:
-            raise_error(NotImplementedError, f"Channel {self.name} does not support attenuation.")
+            raise_error(
+                NotImplementedError,
+                f"Channel {self.name} does not support attenuation.",
+            )
         return self._attenuation
 
     @attenuation.setter
@@ -109,9 +122,14 @@ class Channel:
 
 @dataclass
 class ChannelMap:
-    """Collection of :class:`qibolab.designs.channel.Channel` objects identified by name."""
+    """Collection of :class:`qibolab.designs.channel.Channel` objects identified by name.
 
-    _channels: dict = field(default_factory=dict)
+    Essentially, it allows creating a mapping of names to channels just
+    specifying the names.
+
+    """
+
+    _channels: Dict[str, Channel] = field(default_factory=dict)
 
     @classmethod
     def from_names(cls, *names):
@@ -139,5 +157,12 @@ class ChannelMap:
         return self.__class__(channels)
 
     def __ior__(self, channel_map):
+        if not isinstance(channel_map, type(self)):
+            try:
+                if isinstance(channel_map, str):
+                    raise TypeError
+                channel_map = type(self).from_names(*channel_map)
+            except TypeError:
+                channel_map = type(self).from_names(channel_map)
         self._channels.update(channel_map._channels)
         return self

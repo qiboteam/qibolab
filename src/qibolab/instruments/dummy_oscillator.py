@@ -4,7 +4,7 @@ from qibolab.instruments.abstract import LocalOscillator
 class DummyLocalOscillator(LocalOscillator):
     """Dummy local oscillator driver.
 
-    Useful for using with the Quantum Machines simulator.
+    Useful for using with the Quantum Machines simulator and Zurich instruments internal local oscillator.
     """
 
     def __init__(self, name, address):
