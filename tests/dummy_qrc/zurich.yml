@@ -1,0 +1,251 @@
+nqubits: 5
+description: IQM 5-qubit device, controlled with Zurich Instruments.
+
+settings:
+    nshots: 4096
+    sampling_rate: 2.e+9
+    relaxation_time: 300_000
+    time_of_flight: 280
+    smearing: 0
+    Fast_reset: False
+    chip: iqm5q
+
+qubits: [0, 1, 2, 3, 4, "c0", "c1", "c3", "c4"]
+
+topology: [[0, 2], [1, 2], [2, 3], [2, 4]]
+
+native_gates:
+    single_qubit:
+        0: # qubit number
+            RX:
+                duration: 40
+                amplitude: 0.625 #0.45
+                frequency: 4_095_830_788 #doesnt do anything requiered for qibolab to work
+                # shape: Gaussian(5)
+                shape: Drag(5, 0.04)
+                type: qd # qubit drive
+                start: 0
+                phase: 0
+            MZ:
+                duration: 2000 #2000.e-9
+                amplitude: .5 # .1
+                frequency: 5_229_200_000 #5_233_200_000 #doesnt do anything requiered for qibolab to work
+                shape: Rectangular()
+                type: ro # readout
+                start: 0
+    #             phase: 0
+            # Flux_bias:
+            #     amplitude: .0
+            #     shape: Rectangular()
+
+        1: # qubit number
+            RX:
+                duration: 90 #80
+                amplitude: 0.2 #0.2
+                frequency: 4_170_000_000 #doesnt do anything requiered for qibolab to work
+                shape: Gaussian(5)
+                # shape: Drag(5, 0.04)
+                type: qd # qubit drive
+                start: 0
+                phase: 0
+            MZ:
+                duration: 1000
+                amplitude: .1 # 1
+                frequency: 4_931_000_000 #doesnt do anything requiered for qibolab to work
+                shape: Rectangular()
+                type: ro # readout
+                start: 0
+    #             phase: 0
+            # Flux_bias:
+            #     amplitude: .0
+            #     shape: Rectangular()
+
+        2: # qubit number
+            RX:
+                duration: 40 #200 #60
+                amplitude: 0.59
+                frequency: 4_300_587_281  #4_401_600_000 #4_505_500_000 #4_321_500_000 # 4_541_100_000 #doesnt do anything requiered for qibolab to work
+                shape: Gaussian(5)
+                # shape: Drag(5, 0.04)
+                type: qd # qubit drive
+                start: 0
+                phase: 0
+            MZ:
+                duration: 2000
+                amplitude: .54
+                frequency: 6.109e+9 #6_086_000_000  #6_112_000_000 #doesnt do anything requiered for qibolab to work
+                shape: Rectangular()
+                type: ro # readout
+                start: 0
+    #             phase: 0
+            # Flux_bias:
+            #     amplitude: .0
+            #     shape: Rectangular()
+        3: # qubit number
+            RX:
+                duration: 90 #80
+                amplitude: 0.75 #0.8
+                frequency: 4_100_000_000 #doesnt do anything requiered for qibolab to work
+                shape: Gaussian(5)
+                # shape: Drag(5, 0.04)
+                type: qd # qubit drive
+                start: 0
+                phase: 0
+            MZ:
+                duration: 2000
+                amplitude: .01 # 1
+                frequency: 5_783_000_000 #doesnt do anything requiered for qibolab to work
+                shape: Rectangular()
+                type: ro # readout
+                start: 0
+    #             phase: 0
+            # Flux_bias:
+            #     amplitude: .0
+            #     shape: Rectangular()
+        4: # qubit number
+            RX:
+                duration: 53 #110 #80
+                amplitude: 1 #0.398 #0.8
+                frequency: 4_196_800_000 #Small detuning increase freq #4_248_775_000 #doesnt do anything requiered for qibolab to work
+                shape: Gaussian(5)
+                # shape: Drag(5, 0.04)
+                type: qd # qubit drive
+                start: 0
+                phase: 0
+            MZ:
+                duration: 1000
+                amplitude: .5 #.50 # 1
+                frequency: 5_515_000_000 #doesnt do anything requiered for qibolab to work
+                shape: Rectangular()
+                type: ro # readout
+                start: 0
+    #             phase: 0
+            # Flux_bias:
+            #     amplitude: .1
+            #     shape: Rectangular()
+
+    # two_qubit:
+    #     0-2: # qubit numbers
+    #         CZ:
+    #             pulse_sequence:
+    #                 -   start: 0
+    #                     duration: 20
+    #                     amplitude: 0.5
+    #                     frequency: 0
+    #                     shape: RTZ()
+    #                     phase: null
+    #                     channel: 2
+    #                     type: qf # qubit flux
+    #                 -   start: 0
+    #                     duration: 4
+    #                     amplitude: 0.01
+    #                     frequency: 0
+    #                     shape: RTZ()
+    #                     phase: null
+    #                     channel: 2
+    #                     type: qf # qubit flux
+characterization:
+    single_qubit:
+        0:
+            readout_frequency: 5_229_200_000 #5_233_200_000
+            resonator_polycoef_flux: []
+            drive_frequency: 4_095_830_788 #4_093_830_788
+            T1: 0.0
+            T2: 0.0
+            sweetspot: 0.05 #Use this as an amplitude of the flux_bias
+            filter: {}
+            mean_gnd_states: 1.5420+0.1813j
+            mean_exc_states: 2.4499-0.5629j
+            # parameters for single shot classification
+            threshold: 0.8836
+            iq_angle: -1.551
+            # alpha: 217.492 MHz
+            # To save power values on the runcard
+            # ro_range_lp: -15
+            # ro_range_hp: -15
+            # qd_range: 0
+            # flux_range: -0
+
+        1:
+            readout_frequency: 4_931_000_000
+            resonator_polycoef_flux: []
+            drive_frequency: 4_170_000_000
+            T1: 0.
+            T2: 0.
+            sweetspot: 0.0
+            filter: {}
+            mean_gnd_states: (0+0j)
+            mean_exc_states: (0+0j)
+        2:
+            readout_frequency: 6.109e+9  #6_112_000_000
+            resonator_polycoef_flux: []
+            drive_frequency: 4_300_587_281 # 4_401_600_000 #4_541_100_000
+            T1: 0.
+            T2: 0.
+            sweetspot: 0.0 #0.5 #0.62 0.00
+            filter: {}
+            mean_gnd_states: -1.8243+1.5926j
+            mean_exc_states: -0.8083+2.3929j
+            # parameters for single shot classification
+            threshold: -0.0593
+            iq_angle: -0.667
+            # alpha: 208 MHz
+        3:
+            readout_frequency: 5_783_000_000
+            resonator_polycoef_flux: []
+            drive_frequency: 4_100_000_000
+            T1: 0.
+            T2: 0.
+            sweetspot: 0.0
+            filter: {}
+            mean_gnd_states: (0+0j)
+            mean_exc_states: (0+0j)
+        4:
+            readout_frequency: 5_515_000_000
+            resonator_polycoef_flux: []
+            drive_frequency: 4_196_800_000
+            T1: 0.
+            T2: 0.
+            sweetspot: 0.0
+            filter: {}
+            mean_gnd_states: (0+0j)
+            mean_exc_states: (0+0j)
+            # parameters for single shot classification
+            threshold: 0.233806 #0.370954 #0.350665
+            iq_angle: 0.481 # -91.712 #191.016
+        "c0":
+            sweetspot: 0.
+            filter: {}
+            # To save power values on the runcard
+            # flux_range: -0
+        "c1":
+            sweetspot: 0.
+            filter: {}
+            # To save power values on the runcard
+            # flux_range: -0
+        "c3":
+            sweetspot: 0.
+            filter: {}
+            # To save power values on the runcard
+            # flux_range: -0
+        "c4":
+            sweetspot: 0. #0.8 #0.16
+            filter: {}
+            # To save power values on the runcard
+            # flux_range: -0
+    # two_qubit:
+
+    # two_qubit_couplers:
+    #     0:
+    #         # frequency: 3_753_000_000 or 3_503_000_000
+    #         sweetspot: 0.1
+    #         filter: {}
+    #     1:
+    #         sweetspot: 0.0
+    #         filter: {}
+    #     3:
+    #         sweetspot: 0.0
+    #         filter: {}
+    #     4:
+    #         sweetspot: 0.0
+    #         filter: {}
