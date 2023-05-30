@@ -359,13 +359,13 @@ class Platform:
             .. testcode::
 
                 import numpy as np
-                from qibolab.platform import create_dummy
+                from qibolab.dummy import create_dummy
                 from qibolab.sweeper import Sweeper, Parameter
                 from qibolab.pulses import PulseSequence
                 from qibolab import ExecutionParameters
 
 
-                platform = create_dummy("dummy")
+                platform = create_dummy()
                 sequence = PulseSequence()
                 parameter = Parameter.frequency
                 pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
