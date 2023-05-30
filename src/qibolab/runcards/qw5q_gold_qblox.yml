@@ -87,11 +87,11 @@ instruments:
 
             classification_parameters:
                 0:  # qubit id
-                    rotation_angle              : 268.023                   # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.003503                  # in V
+                    rotation_angle              : 272.173                   # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.003373                  # in V
                 1:  # qubit id
-                    rotation_angle              : 30.478                   # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.002465                  # in V
+                    rotation_angle              : 36.232                   # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.002601                  # in V
 
     qrm_rf2: # ReadOut module 12: controlling qubits q2, q3, q4
         lib: qblox
@@ -113,14 +113,14 @@ instruments:
 
             classification_parameters:
                 2:  # qubit id
-                    rotation_angle              : 343.894                    # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.002606                  # in V
+                    rotation_angle              : 58.699                    # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.003068                  # in V
                 3:  # qubit id
-                    rotation_angle              : 359.065                    # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.003387                  # in V
+                    rotation_angle              : 23.717                    # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.003702                  # in V
                 4:  # qubit id
-                    rotation_angle              : 283.970                   # in degrees 0.0<=v<=360.0
-                    threshold                   : 0.000889                  # in V
+                    rotation_angle              : 214.316                   # in degrees 0.0<=v<=360.0
+                    threshold                   : 0.001211                  # in V
 
     qcm_rf1:
         lib: qblox
