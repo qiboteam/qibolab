@@ -11,7 +11,6 @@ from qibo.config import log, raise_error
 from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.native import NativeType, SingleQubitNatives, TwoQubitNatives
-from qibolab.pulses import PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPair
 
 
@@ -26,7 +25,8 @@ class Platform:
     """
 
     def __init__(self, name, runcard, instruments, channels):
-        log.info(f"Loading platform {name} from runcard {runcard}")
+        log.info(f"Loading platform {name}")
+
         self.name = name
         self.runcard = runcard
         self.instruments: List[AbstractInstrument] = instruments
@@ -64,8 +64,11 @@ class Platform:
         # TODO: Remove ``self.settings``
         if self.settings == None:
             # Load initial configuration
-            with open(self.runcard) as file:
-                settings = self.settings = yaml.safe_load(file)
+            if isinstance(self.runcard, dict):
+                settings = self.settings = self.runcard
+            else:
+                with open(self.runcard) as file:
+                    settings = self.settings = yaml.safe_load(file)
         else:
             # Load current configuration
             settings = self.settings
@@ -106,7 +109,6 @@ class Platform:
             pair = tuple(sorted(pair))
             if pair not in self.pairs:
                 self.pairs[pair] = QubitPair(self.qubits[pair[0]], self.qubits[pair[1]])
-
         # Load native two-qubit gates
         if "two_qubit" in self.native_gates:
             for pair, gatedict in self.native_gates["two_qubit"].items():
