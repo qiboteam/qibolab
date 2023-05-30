@@ -698,7 +698,9 @@ class Zurich(AbstractInstrument):
                         )
                     if isinstance(pulse, ZhSweeperLine):
                         self.play_sweep(exp, qubit, pulse, section="flux")
-                    else:
+                    elif isinstance(pulse, ZhSweeper):
+                        self.play_sweep(exp, qubit, pulse, section="drive")
+                    elif isinstance(pulse, ZhPulse):
                         exp.play(signal=f"flux{q}", pulse=pulse.zhpulse)
                     i += 1
 
