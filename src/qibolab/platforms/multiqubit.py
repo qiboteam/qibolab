@@ -4,13 +4,11 @@ import numpy as np
 import yaml
 from qibo.config import log, raise_error
 
+from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.channels import ChannelMap
 from qibolab.platform import Platform
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.qubits import Qubit
-from qibolab.result import IntegratedResults
-from qibolab.sweeper import Parameter
-from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.result import (
     AveragedIntegratedResults,
     AveragedRawWaveformResults,
@@ -19,7 +17,7 @@ from qibolab.result import (
     RawWaveformResults,
     SampleResults,
 )
-
+from qibolab.sweeper import Parameter
 
 
 class MultiqubitPlatform(Platform):
@@ -292,7 +290,7 @@ class MultiqubitPlatform(Platform):
     def execute_pulse_sequence(self, sequence, options, **kwargs):
         if not self.is_connected:
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
-           
+
         if options.averaging_mode == AveragingMode.SINGLESHOT:
             nshots = 1
             self.average = False
@@ -351,15 +349,15 @@ class MultiqubitPlatform(Platform):
                     if key in existing_keys:
                         acquisition_results[key].update(value)
                     else:
-                        acquisition_results[key] = value   
+                        acquisition_results[key] = value
         data = {}
         for serial in acquisition_results:
             for if_pulse, original in changed.items():
                 if serial == if_pulse.serial:
                     if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                         if self.average:
-                            acquisition =  AveragedSampleResults(acquisition_results[serial][2])
-                        acquisition =  SampleResults(acquisition_results[serial][2]) 
+                            acquisition = AveragedSampleResults(acquisition_results[serial][2])
+                        acquisition = SampleResults(acquisition_results[serial][2])
                     else:
                         ires = acquisition_results[serial][0][0]
                         qres = acquisition_results[serial][1][0]
@@ -370,10 +368,10 @@ class MultiqubitPlatform(Platform):
 
                         if options.acquisition_type is AcquisitionType.INTEGRATION:
                             if self.average:
-                                acquisition =  AveragedIntegratedResults(ires + 1j * qres)
-                            acquisition =  IntegratedResults(ires + 1j * qres)                                         
+                                acquisition = AveragedIntegratedResults(ires + 1j * qres)
+                            acquisition = IntegratedResults(ires + 1j * qres)
 
-                    data[original] = data[if_pulse.qubit] = acquisition      
+                    data[original] = data[if_pulse.qubit] = acquisition
 
         return data
 
@@ -402,7 +400,6 @@ class MultiqubitPlatform(Platform):
             sweeper_pulses=sweeper_pulses,
             map_original_shifted=map_original_shifted,
         )
-    
 
         return results
 
@@ -439,9 +436,9 @@ class MultiqubitPlatform(Platform):
             else:
                 new_sequence = copy.deepcopy(sequence)
                 result = self.execute_pulse_sequence(new_sequence, options)
-                
+
                 # colllect result and append to original pulse
-                for original_pulse, new_serial in map_original_shifted.items():   
+                for original_pulse, new_serial in map_original_shifted.items():
                     acquisition = result[new_serial]
 
                     if original_pulse.serial in results:
