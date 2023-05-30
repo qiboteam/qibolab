@@ -103,8 +103,9 @@ def create_dummy():
 
     # Create channel objects
     channels = ChannelMap()
-    channels |= ("readout", "drive")
-    channels |= (f"flux-{i}" for i in range(6))
+    channels |= "readout"
+    channels |= (f"drive-{i}" for i in range(RUNCARD["nqubits"]))
+    channels |= (f"flux-{i}" for i in range(RUNCARD["nqubits"]))
 
     # Create dummy controller
     instrument = DummyInstrument(NAME, 0)
@@ -114,7 +115,7 @@ def create_dummy():
     # map channels to qubits
     for qubit in platform.qubits:
         platform.qubits[qubit].readout = channels["readout"]
-        platform.qubits[qubit].drive = channels["drive"]
+        platform.qubits[qubit].drive = channels[f"drive-{qubit}"]
         platform.qubits[qubit].flux = channels[f"flux-{qubit}"]
         channels[f"flux-{qubit}"].qubit = platform.qubits[qubit]
         channels["readout"].attenuation = 0
