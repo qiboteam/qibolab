@@ -77,7 +77,7 @@ class Platform:
             self.resonator_type = "3D" if self.nqubits == 1 else "2D"
 
         self.relaxation_time = settings["settings"]["relaxation_time"]
-        self.nshots = settings["settings"]["hardware_avg"]
+        self.nshots = settings["settings"]["nshots"]
         self.sampling_rate = settings["settings"]["sampling_rate"]
         self.native_gates = settings["native_gates"]
 
