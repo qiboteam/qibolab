@@ -5,10 +5,18 @@ import numpy as np
 import pytest
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.instruments.zhinst import ZhPulse, ZhSweeper, ZhSweeperLine, Zurich
+from qibolab.instruments.zhinst import ZhPulse, ZhSweeperLine, Zurich
 from qibolab.paths import qibolab_folder
 from qibolab.platform import create_tii_IQM5q
-from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse, Rectangular
+from qibolab.pulses import (
+    Drag,
+    FluxPulse,
+    Gaussian,
+    Pulse,
+    PulseSequence,
+    ReadoutPulse,
+    Rectangular,
+)
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 
 RUNCARD = qibolab_folder / "runcards" / "iqm5q.yml"
@@ -74,18 +82,59 @@ def create_offline_device_setup():
     return device_setup
 
 
-def test_zhpulse():
-    pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
+def test_random_functions():
+    platform = create_tii_IQM5q(RUNCARD)
+    IQM5q = platform.design.instruments[0]
+    IQM5q.start()
+    IQM5q.stop()
+    IQM5q.disconnect()
+
+
+def test_connections():
+    platform = create_tii_IQM5q(RUNCARD)
+    IQM5q = platform.design.instruments[0]
+    # IQM5q.connect()
+
+
+@pytest.mark.parametrize("shape", ["Rectangular", "Gaussian", "GaussianSquare", "Drag"])
+def test_zhpulse(shape):
+    if shape == "Rectangular":
+        pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
+    if shape == "Gaussian":
+        pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Gaussian(5), "ch0", qubit=0)
+    if shape == "GaussianSquare":
+        pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Gaussian(5), "ch0", qubit=0)
+    if shape == "Drag":
+        pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Drag(5, 0.4), "ch0", qubit=0)
+
     zhpulse = ZhPulse(pulse)
     assert zhpulse.pulse.serial == pulse.serial
     assert zhpulse.zhpulse.length == 40e-9
 
 
-# def test_zhsweeper():
-#     select & add sweeper
+@pytest.mark.parametrize("parameter", [Parameter.bias, Parameter.delay])
+def test_select_sweeper(parameter):
+    swept_points = 5
+    platform = create_tii_IQM5q(RUNCARD)
+    qubits = {0: platform.qubits[0]}
+    sequence = PulseSequence()
+    ro_pulses = {}
+    qd_pulses = {}
+    for qubit in qubits.values():
+        q = qubit.name
+        qd_pulses[q] = platform.create_RX_pulse(q, start=0)
+        sequence.add(qd_pulses[q])
+        ro_pulses[q] = platform.create_qubit_readout_pulse(q, start=qd_pulses[q].finish)
+        sequence.add(ro_pulses[q])
 
-# def test_zhsweeper_line():
-#     select sweeper
+        parameter_range = np.random.randint(swept_points, size=swept_points)
+        if parameter is Parameter.delay:
+            sweeper = Sweeper(parameter, parameter_range, pulses=[qd_pulses[q]])
+        if parameter is Parameter.bias:
+            sweeper = Sweeper(parameter, parameter_range, qubits=q)
+
+        ZhSweeper = ZhSweeperLine(sweeper, qubit, sequence)
+        assert ZhSweeper.sweeper == sweeper
 
 
 def test_zhinst_setup():
@@ -112,10 +161,6 @@ def test_zhsequence():
 
     assert len(zhsequence) == 2
     assert len(zhsequence["readout0"]) == 1
-
-
-# def test_calibration_step():
-# sequence with coupler qubits and check signal map
 
 
 def test_zhinst_register_readout_line():
@@ -152,15 +197,15 @@ def test_zhinst_register_flux_line():
     assert "/logical_signal_groups/q0/flux_line" in IQM5q.calibration.calibration_items
 
 
-def test_experiment_execute_pulse_sequence():
+def test_frequency_from_pulses():
     platform = create_tii_IQM5q(RUNCARD)
-    platform.setup()
     IQM5q = platform.design.instruments[0]
-    IQM5q.device_setup = create_offline_device_setup()
 
     sequence = PulseSequence()
     qubits = {0: platform.qubits[0]}
     platform.qubits = qubits
+
+    qubits[0].readout_frequency = 5_000_000_000
 
     ro_pulses = {}
     qd_pulses = {}
@@ -180,18 +225,137 @@ def test_experiment_execute_pulse_sequence():
         )
         sequence.add(qf_pulses[qubit])
 
+    IQM5q.frequency_from_pulses(qubits, sequence)
+    assert qubits[0].readout_frequency != 5_000_000_000
+
+
+def test_experiment_execute_pulse_sequence_flux():
+    platform = create_tii_IQM5q(RUNCARD)
+    platform.setup()
+    IQM5q = platform.design.instruments[0]
+    IQM5q.device_setup = create_offline_device_setup()
+
+    sequence = PulseSequence()
+    qubits = {0: platform.qubits[0], "c0": platform.qubits["c0"]}
+    platform.qubits = qubits
+
+    ro_pulses = {}
+    qf_pulses = {}
+    for qubit in qubits.values():
+        q = qubit.name
+        qf_pulses[q] = FluxPulse(
+            start=0,
+            duration=500,
+            amplitude=1,
+            shape=Rectangular(),
+            channel=platform.qubits[q].flux.name,
+            qubit=q,
+        )
+        sequence.add(qf_pulses[q])
+        if qubit.flux_coupler:
+            continue
+        ro_pulses[q] = platform.create_qubit_readout_pulse(q, start=qf_pulses[q].finish)
+        sequence.add(ro_pulses[q])
+
     options = ExecutionParameters(
         relaxation_time=300e-6, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
     )
 
     IQM5q.experiment_flow(qubits, sequence, options)
 
-    # assert
-    # AcquisitionType.SPECTROSCOPY
-    # AveragingMode.CYCLIC
+    assert "flux0" in IQM5q.experiment.signals
+    assert "measure0" in IQM5q.experiment.signals
+    assert "acquire0" in IQM5q.experiment.signals
+
+
+@pytest.mark.parametrize("fast_reset", [True, False])
+def test_experiment_execute_pulse_sequence(fast_reset):
+    platform = create_tii_IQM5q(RUNCARD)
+    platform.setup()
+    IQM5q = platform.design.instruments[0]
+    IQM5q.device_setup = create_offline_device_setup()
+
+    sequence = PulseSequence()
+    qubits = {0: platform.qubits[0]}
+    platform.qubits = qubits
+
+    ro_pulses = {}
+    qd_pulses = {}
+    qf_pulses = {}
+    fr_pulses = {}
+    for qubit in qubits:
+        if fast_reset:
+            fr_pulses[qubit] = platform.create_RX_pulse(qubit, start=0)
+        qd_pulses[qubit] = platform.create_RX_pulse(qubit, start=0)
+        sequence.add(qd_pulses[qubit])
+        ro_pulses[qubit] = platform.create_qubit_readout_pulse(qubit, start=qd_pulses[qubit].finish)
+        sequence.add(ro_pulses[qubit])
+        qf_pulses[qubit] = FluxPulse(
+            start=0,
+            duration=ro_pulses[qubit].se_start,
+            amplitude=1,
+            shape=Rectangular(),
+            channel=platform.qubits[qubit].flux.name,
+            qubit=qubit,
+        )
+        sequence.add(qf_pulses[qubit])
+
+    if fast_reset:
+        fast_reset = fr_pulses
+
+    options = ExecutionParameters(
+        relaxation_time=300e-6,
+        fast_reset=fast_reset,
+        acquisition_type=AcquisitionType.INTEGRATION,
+        averaging_mode=AveragingMode.CYCLIC,
+    )
+
+    IQM5q.experiment_flow(qubits, sequence, options)
 
     assert "drive0" in IQM5q.experiment.signals
     assert "flux0" in IQM5q.experiment.signals
+    assert "measure0" in IQM5q.experiment.signals
+    assert "acquire0" in IQM5q.experiment.signals
+
+
+@pytest.mark.parametrize("parameter1", [Parameter.delay, Parameter.duration])
+def test_experiment_sweep_single(parameter1):
+    platform = create_tii_IQM5q(RUNCARD)
+    platform.setup()
+    IQM5q = platform.design.instruments[0]
+    IQM5q.device_setup = create_offline_device_setup()
+
+    sequence = PulseSequence()
+    qubits = {0: platform.qubits[0]}
+
+    swept_points = 5
+    sequence = PulseSequence()
+    ro_pulses = {}
+    qd_pulses = {}
+    for qubit in qubits:
+        qd_pulses[qubit] = platform.create_RX_pulse(qubit, start=0)
+        sequence.add(qd_pulses[qubit])
+        ro_pulses[qubit] = platform.create_qubit_readout_pulse(qubit, start=qd_pulses[qubit].finish)
+        sequence.add(ro_pulses[qubit])
+
+    parameter_range_1 = (
+        np.random.rand(swept_points)
+        if parameter1 is Parameter.amplitude
+        else np.random.randint(swept_points, size=swept_points)
+    )
+
+    sweepers = []
+    sweepers.append(Sweeper(parameter1, parameter_range_1, pulses=[qd_pulses[qubit]]))
+
+    options = ExecutionParameters(
+        relaxation_time=300e-6, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+    )
+
+    IQM5q.sweepers = sweepers
+
+    IQM5q.experiment_flow(qubits, sequence, options, sweepers)
+
+    assert "drive0" in IQM5q.experiment.signals
     assert "measure0" in IQM5q.experiment.signals
     assert "acquire0" in IQM5q.experiment.signals
 
@@ -207,7 +371,7 @@ SweeperParameter = {
 
 @pytest.mark.parametrize("parameter1", Parameter)
 @pytest.mark.parametrize("parameter2", Parameter)
-def test_experiment_sweep(parameter1, parameter2):
+def test_experiment_sweep_2d_general(parameter1, parameter2):
     platform = create_tii_IQM5q(RUNCARD)
     platform.setup()
     IQM5q = platform.design.instruments[0]
@@ -252,6 +416,7 @@ def test_experiment_sweep(parameter1, parameter2):
     )
 
     IQM5q.sweepers = sweepers
+    rearranging_axes, sweepers = IQM5q.rearrange_sweepers(sweepers)
     IQM5q.experiment_flow(qubits, sequence, options, sweepers)
 
     assert "drive0" in IQM5q.experiment.signals
@@ -259,7 +424,7 @@ def test_experiment_sweep(parameter1, parameter2):
     assert "acquire0" in IQM5q.experiment.signals
 
 
-def test_experiment_sweep_punchout():
+def test_experiment_sweep_2d_specific():
     platform = create_tii_IQM5q(RUNCARD)
     platform.setup()
     IQM5q = platform.design.instruments[0]
@@ -268,8 +433,67 @@ def test_experiment_sweep_punchout():
     sequence = PulseSequence()
     qubits = {0: platform.qubits[0]}
 
-    parameter1 = Parameter.frequency
-    parameter2 = Parameter.amplitude
+    swept_points = 5
+    sequence = PulseSequence()
+    ro_pulses = {}
+    qd_pulses = {}
+    for qubit in qubits:
+        qd_pulses[qubit] = platform.create_RX_pulse(qubit, start=0)
+        sequence.add(qd_pulses[qubit])
+        ro_pulses[qubit] = platform.create_qubit_readout_pulse(qubit, start=qd_pulses[qubit].finish)
+        sequence.add(ro_pulses[qubit])
+
+    parameter1 = Parameter.relative_phase
+    parameter2 = Parameter.frequency
+
+    parameter_range_1 = (
+        np.random.rand(swept_points)
+        if parameter1 is Parameter.amplitude
+        else np.random.randint(swept_points, size=swept_points)
+    )
+
+    parameter_range_2 = (
+        np.random.rand(swept_points)
+        if parameter2 is Parameter.amplitude
+        else np.random.randint(swept_points, size=swept_points)
+    )
+
+    sweepers = []
+    sweepers.append(Sweeper(parameter1, parameter_range_1, pulses=[qd_pulses[qubit]]))
+    sweepers.append(Sweeper(parameter2, parameter_range_2, pulses=[qd_pulses[qubit]]))
+
+    options = ExecutionParameters(
+        relaxation_time=300e-6, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+    )
+
+    IQM5q.sweepers = sweepers
+    rearranging_axes, sweepers = IQM5q.rearrange_sweepers(sweepers)
+    IQM5q.experiment_flow(qubits, sequence, options, sweepers)
+
+    assert "drive0" in IQM5q.experiment.signals
+    assert "measure0" in IQM5q.experiment.signals
+    assert "acquire0" in IQM5q.experiment.signals
+
+
+@pytest.mark.parametrize("parameter", [Parameter.frequency, Parameter.amplitude, Parameter.bias])
+def test_experiment_sweep_punchouts(parameter):
+    platform = create_tii_IQM5q(RUNCARD)
+    platform.setup()
+    IQM5q = platform.design.instruments[0]
+    IQM5q.device_setup = create_offline_device_setup()
+
+    sequence = PulseSequence()
+    qubits = {0: platform.qubits[0]}
+
+    if parameter is Parameter.frequency:
+        parameter1 = Parameter.frequency
+        parameter2 = Parameter.amplitude
+    if parameter is Parameter.amplitude:
+        parameter1 = Parameter.amplitude
+        parameter2 = Parameter.frequency
+    if parameter is Parameter.bias:
+        parameter1 = Parameter.bias
+        parameter2 = Parameter.frequency
 
     swept_points = 5
     sequence = PulseSequence()
@@ -291,69 +515,61 @@ def test_experiment_sweep_punchout():
     )
 
     sweepers = []
-    if parameter1 in SweeperParameter:
-        if parameter1 is not Parameter.delay:
-            sweepers.append(Sweeper(parameter1, parameter_range_1, pulses=[ro_pulses[qubit]]))
-    if parameter2 in SweeperParameter:
-        if parameter2 is Parameter.amplitude:
-            if parameter1 is not Parameter.amplitude:
-                sweepers.append(Sweeper(parameter2, parameter_range_2, pulses=[ro_pulses[qubit]]))
+    if parameter1 is Parameter.bias:
+        sweepers.append(Sweeper(parameter1, parameter_range_1, qubits=[qubits[qubit]]))
+    else:
+        sweepers.append(Sweeper(parameter1, parameter_range_1, pulses=[ro_pulses[qubit]]))
+    sweepers.append(Sweeper(parameter2, parameter_range_2, pulses=[ro_pulses[qubit]]))
 
     options = ExecutionParameters(
         relaxation_time=300e-6, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
     )
 
     IQM5q.sweepers = sweepers
+    rearranging_axes, sweepers = IQM5q.rearrange_sweepers(sweepers)
     IQM5q.experiment_flow(qubits, sequence, options, sweepers)
 
     assert "measure0" in IQM5q.experiment.signals
     assert "acquire0" in IQM5q.experiment.signals
 
 
-# def test_rearrange_sweep():
-#   platform = create_tii_IQM5q(RUNCARD)
-#   platform.setup()
-#   IQM5q = platform.design.instruments[0]
-#   IQM5q.device_setup = create_offline_device_setup()
-#   assert IQM5q.is_connected == False
+# TODO: SIM NOT WORKING
+# def test_sim():
+#     platform = create_tii_IQM5q(RUNCARD)
+#     platform.setup()
+#     IQM5q = platform.design.instruments[0]
+#     IQM5q.device_setup = create_offline_device_setup()
 
-#   sequence = PulseSequence()
-#   qubits = {0: platform.qubits[0]}
+#     sequence = PulseSequence()
+#     qubits = {0: platform.qubits[0]}
+#     platform.qubits = qubits
 
-#   parameter1 = Parameter.frequency
-#   parameter2 = Parameter.amplitude
+#     ro_pulses = {}
+#     qd_pulses = {}
+#     qf_pulses = {}
+#     for qubit in qubits:
+#         qd_pulses[qubit] = platform.create_RX_pulse(qubit, start=0)
+#         sequence.add(qd_pulses[qubit])
+#         ro_pulses[qubit] = platform.create_qubit_readout_pulse(qubit, start=qd_pulses[qubit].finish)
+#         sequence.add(ro_pulses[qubit])
+#         qf_pulses[qubit] = FluxPulse(
+#             start=0,
+#             duration=500,
+#             amplitude=1,
+#             shape=Rectangular(),
+#             channel=platform.qubits[qubit].flux.name,
+#             qubit=qubit,
+#         )
+#         sequence.add(qf_pulses[qubit])
 
-#   swept_points = 5
-#   sequence = PulseSequence()
-#   ro_pulses = {}
-#   for qubit in qubits:
-#       ro_pulses[qubit] = platform.create_qubit_readout_pulse(qubit, start=0)
-#       sequence.add(ro_pulses[qubit])
 
+#     options = ExecutionParameters(
+#         relaxation_time=300e-6, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+#     )
 
-#   parameter_range_1 = (
-#       np.random.rand(swept_points)
-#       if parameter1 is Parameter.amplitude
-#       else np.random.randint(swept_points, size=swept_points)
-#   )
+#     IQM5q.play_sim(qubits, sequence, options, sim_time = 10e-6)
 
-#   parameter_range_2 = (
-#       np.random.rand(swept_points)
-#       if parameter2 is Parameter.amplitude
-#       else np.random.randint(swept_points, size=swept_points)
-#   )
-
-#   sweepers = []
-#   if parameter1 in SweeperParameter:
-#       if parameter1 is not Parameter.delay:
-#           sweepers.append(Sweeper(parameter1, parameter_range_1, pulses=[ro_pulses[qubit]]))
-#   if parameter2 in SweeperParameter:
-#       if parameter2 is Parameter.amplitude:
-#         if parameter1 is not Parameter.amplitude:
-#           sweepers.append(Sweeper(parameter2, parameter_range_2, pulses=[ro_pulses[qubit]]))
-
-#   options = ExecutionParameters(
-#       relaxation_time=300e-6, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
-#   )
-
-#   assert IQM5q.sweep(qubits, sequence, options, sweepers[0], sweepers[1]) == AttributeError
+#     assert "drive0" in IQM5q.experiment.signals
+#     assert "flux0" in IQM5q.experiment.signals
+#     assert "measure0" in IQM5q.experiment.signals
+#     assert "acquire0" in IQM5q.experiment.signals

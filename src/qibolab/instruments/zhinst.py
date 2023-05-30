@@ -438,9 +438,7 @@ class Zurich(AbstractInstrument):
 
     def run_exp(self):
         """Compilation settings, compilation step, execution step and data retrival"""
-        compiler_settings = COMPILER_SETTINGS
-
-        self.exp = self.session.compile(self.experiment, compiler_settings=compiler_settings)
+        self.exp = self.session.compile(self.experiment, compiler_settings=COMPILER_SETTINGS)
         self.results = self.session.run(self.exp)
 
     @staticmethod
@@ -798,7 +796,7 @@ class Zurich(AbstractInstrument):
                             logging.info("I'm using dumb IW")
                             "We adjust for smearing and remove smearing/2 at the end"
                             exp.delay(
-                                signal=f"measure{q}",
+                                signal=f"acquire{q}",
                                 time=self.smearing * NANO_TO_SECONDS,
                             )
                             if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
@@ -850,22 +848,8 @@ class Zurich(AbstractInstrument):
                     with exp.case(state=1):
                         exp.play(signal=f"drive{q}", pulse=ZhPulse(fast_reset[q]).zhpulse)
 
-    def sweep(self, qubits, sequence: PulseSequence, options, *sweepers):
-        """Play pulse and sweepers sequence"""
-
-        self.signal_map = {}
-
-        sweepers = list(sweepers)
-
-        dimensions = []
-        if options.averaging_mode is AveragingMode.SINGLESHOT:
-            dimensions = [options.nshots]
-
-        for sweeper in sweepers:
-            dimensions.append(len(sweeper.values))
-
-        # Re-arranging sweepers based on hardware limitations
-        # FIXME: Punchout and frequency case
+    @staticmethod
+    def rearrange_sweepers(sweepers):
         rearranging_axes = [[], []]
         if len(sweepers) == 2:
             if sweepers[1].parameter is Parameter.frequency:
@@ -878,7 +862,7 @@ class Zurich(AbstractInstrument):
                     warnings.warn("Sweepers were reordered")
                 elif (
                     not sweepers[0].parameter is Parameter.amplitude
-                    and sweepers[0].pulses.type is not PulseType.READOUT
+                    and sweepers[0].pulses[0].type is not PulseType.READOUT
                 ):
                     rearranging_axes[0] += [sweepers.index(sweepers[1])]
                     rearranging_axes[1] += [0]
@@ -886,23 +870,9 @@ class Zurich(AbstractInstrument):
                     sweepers.remove(sweeper_changed)
                     sweepers.insert(0, sweeper_changed)
                     warnings.warn("Sweepers were reordered")
+        return rearranging_axes, sweepers
 
-        # TODO: Read frequency for pulses instead of qubit patch
-        self.frequency_from_pulses(qubits, sequence)
-
-        """
-        Play pulse sequence steps, one on each method:
-        Translation, Calibration, Experiment Definition and Execution.
-        """
-        self.sweepers = sweepers
-
-        self.experiment_flow(qubits, sequence, options, sweepers)
-
-        self.run_exp()
-
-        # TODO: General, several readouts and qubits
-        # TODO: Implement the new results!
-        "Get the results back"
+    def get_results(self, exp_res, qubits, options, dimensions, rearranging_axes=[[], []]):
         results = {}
         for qubit in qubits.values():
             if qubit.flux_coupler:
@@ -923,9 +893,44 @@ class Zurich(AbstractInstrument):
             logging.warn("dimensions {: d} , exp_dimensions {: d}".format(dimensions, exp_dimensions))
             warnings.warn("dimensions not properly ordered")
 
+    def offsets_off(self):
         for sigout in range(0, 8):
             self.session.devices["device_hdawg"].awgs[0].sigouts[sigout].offset = 0
         self.session.devices["device_hdawg2"].awgs[0].sigouts[0].offset = 0
+
+    def sweep(self, qubits, sequence: PulseSequence, options, *sweepers):
+        """Play pulse and sweepers sequence"""
+
+        self.signal_map = {}
+
+        sweepers = list(sweepers)
+
+        dimensions = []
+        if options.averaging_mode is AveragingMode.SINGLESHOT:
+            dimensions = [options.nshots]
+
+        for sweeper in sweepers:
+            dimensions.append(len(sweeper.values))
+
+        # Re-arranging sweepers based on hardware limitations
+        # FIXME: Punchout and frequency case
+        rearranging_axes, sweepers = self.rearrange_sweepers(sweepers)
+        self.sweepers = sweepers
+        # TODO: Read frequency for pulses instead of qubit patch
+        self.frequency_from_pulses(qubits, sequence)
+
+        """
+        Play pulse sequence steps, one on each method:
+        Translation, Calibration, Experiment Definition and Execution.
+        """
+        self.experiment_flow(qubits, sequence, options, sweepers)
+        self.run_exp()
+
+        # TODO: General, several readouts and qubits
+        "Get the results back"
+        results = self.get_results(self, qubits, options, dimensions, rearranging_axes)
+
+        self.offsets_off()
 
         # FIXME: Include this on the reports
         # html containing the pulse sequence schedule
@@ -1025,7 +1030,6 @@ class Zurich(AbstractInstrument):
         """Play pulse sequence"""
 
         self.experiment_flow(qubits, sequence, options)
-        self.exp = self.session.compile(self.experiment)
         self.run_sim(sim_time)
 
     # TODO: Implement further pulse viewing functions from 2.2.0
@@ -1040,15 +1044,15 @@ class Zurich(AbstractInstrument):
         # create a session
         self.sim_session = lo.Session(self.device_setup)
         # connect to session
-        self.sim_device = self.session.connect(do_emulation=True)
+        self.sim_device = self.sim_session.connect(do_emulation=True)
+        self.exp = self.sim_session.compile(self.experiment, compiler_settings=COMPILER_SETTINGS)
+        # self.offsets_off()
 
         # Plot simulated output signals with helper function
         plot_simulation(
             self.exp,
             start_time=0,
             length=sim_time,
-            xaxis_label="Time (s)",
-            yaxis_label="Amplitude",
             plot_width=10,
             plot_height=3,
         )
