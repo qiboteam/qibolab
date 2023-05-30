@@ -288,7 +288,6 @@ class MultiqubitPlatform(AbstractPlatform):
             self.is_connected = False
 
     def execute_pulse_sequence(self, sequence, options, **kwargs):
-    # def execute_pulse_sequence(self, sequence: PulseSequence, nshots=None):
         if not self.is_connected:
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
            
@@ -300,7 +299,7 @@ class MultiqubitPlatform(AbstractPlatform):
             self.average = True
 
         if options.nshots is None:
-            nshots = 1024
+            nshots = self.hardware_avg
 
         relaxation_time = options.relaxation_time
 
@@ -360,6 +359,8 @@ class MultiqubitPlatform(AbstractPlatform):
                             acquisition =  AveragedSampleResults(acquisition_results[serial][2])
                         acquisition =  SampleResults(acquisition_results[serial][2]) 
                     else:
+                        ires = acquisition_results[serial][0][0]
+                        qres = acquisition_results[serial][1][0]
                         if options.acquisition_type is AcquisitionType.RAW:
                             if self.average:
                                 acquisition = AveragedRawWaveformResults(ires + 1j * qres)
@@ -375,7 +376,6 @@ class MultiqubitPlatform(AbstractPlatform):
         return data
 
     def sweep(self, sequence, options, *sweepers, **kwargs):
-    # def sweep(self, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
         results = {}
         sweeper_pulses = {}
         # create copy of the sequence

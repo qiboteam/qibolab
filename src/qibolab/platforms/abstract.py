@@ -130,9 +130,9 @@ class AbstractPlatform(ABC):
         self.resonator_type = None
         self.topology = None
 
-        # self.nshots = None
         self.relaxation_time = None
         self.sampling_rate = None
+        self.hardware_avg = None
 
         # TODO: Remove this (needed for the multiqubit platform)
         self.native_gates = {}
@@ -164,7 +164,7 @@ class AbstractPlatform(ABC):
             self.resonator_type = "3D" if self.nqubits == 1 else "2D"
 
         self.relaxation_time = settings["settings"]["relaxation_time"]
-        # self.nshots = settings["settings"]["nshots"]
+        self.hardware_avg = settings["settings"]["hardware_avg"]
         self.sampling_rate = settings["settings"]["sampling_rate"]
         self.native_gates = settings["native_gates"]
 
