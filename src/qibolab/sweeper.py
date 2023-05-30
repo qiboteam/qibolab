@@ -1,5 +1,7 @@
+import operator
 from dataclasses import dataclass
 from enum import Enum, auto
+from functools import partial
 from typing import Optional
 
 import numpy.typing as npt
@@ -17,6 +19,14 @@ class Parameter(Enum):
     attenuation = auto()
     gain = auto()
     bias = auto()
+
+
+class SweeperType(Enum):
+    """Type of the Sweeper"""
+
+    ABSOLUTE = partial(lambda x, y=None: x)
+    FACTOR = operator.mul
+    OFFSET = operator.add
 
 
 QubitParameter = {Parameter.bias, Parameter.attenuation, Parameter.gain}
@@ -62,6 +72,7 @@ class Sweeper:
     values: npt.NDArray
     pulses: Optional[list] = None
     qubits: Optional[list] = None
+    type: Optional[SweeperType] = SweeperType.ABSOLUTE
 
     def __post_init__(self):
         if self.pulses is not None and self.qubits is not None:
