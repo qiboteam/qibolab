@@ -5,12 +5,21 @@ import signal
 import numpy as np
 import yaml
 from qibo.config import log, raise_error
-from qibolab.pulses import PulseSequence, PulseType
-from qibolab.sweeper import Parameter, Sweeper
+
+from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.channels import ChannelMap
 from qibolab.platform import Platform
+from qibolab.pulses import PulseSequence, PulseType
 from qibolab.qubits import Qubit
-from qibolab.result import IntegratedResults
+from qibolab.result import (
+    AveragedIntegratedResults,
+    AveragedRawWaveformResults,
+    AveragedSampleResults,
+    IntegratedResults,
+    RawWaveformResults,
+    SampleResults,
+)
+from qibolab.sweeper import Parameter, Sweeper
 
 
 class MultiqubitPlatform(Platform):
@@ -297,35 +306,33 @@ class MultiqubitPlatform(Platform):
     def execute_pulse_sequence(
         self,
         sequence: PulseSequence,
-        nshots=None,
-        navgs=None,
-        relaxation_time=None,
+        options: ExecutionParameters,
         sweepers: list() = [],  # list(Sweeper) = []
+        **kwargs
+        # nshots=None,
+        # navgs=None,
+        # relaxation_time=None,
     ):
         """Executes a sequence of pulses or a sweep.
 
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): The sequence of pulses to execute.
-            nshots (int): The number of times the sequence of pulses should be executed without averaging.
-            navgs (int): The number of times the sequence of pulses should be executed averaging the results.
-            relaxation_time (int): The the time to wait between repetitions to allow the qubit relax to ground state.
+            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
             sweepers (list(Sweeper)): A list of Sweeper objects defining parameter sweeps.
         """
         if not self.is_connected:
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
 
-        # by default average results and use the value stored in the runcard (hardware_avg)
-        if nshots is None and navgs is None:
-            nshots = 1
-            navgs = self.nshots
-        elif nshots and navgs is None:
+        if options.averaging_mode == AveragingMode.SINGLESHOT:
+            nshots = options.nshots if options.nshots is not None else self.nshots
             navgs = 1
-        elif navgs and nshots is None:
+            self.average = False
+        else:
+            navgs = options.nshots if options.nshots is not None else self.nshots
             nshots = 1
+            self.average = True
 
-        # by default load the value from the runcard (relaxation_time)
-        if relaxation_time is None:
-            relaxation_time = self.relaxation_time
+        relaxation_time = options.relaxation_time if options.relaxation_time is not None else self.relaxation_time
         repetition_duration = sequence.finish + relaxation_time
 
         # shots results are stored in separate bins
@@ -419,39 +426,37 @@ class MultiqubitPlatform(Platform):
                         else:
                             acquisition_results[key] = value
 
+        # TODO: move to QRM_RF.acquire()
         for ro_pulse in sequence.ro_pulses:
+            if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+                acquisition = SampleResults(acquisition_results[ro_pulse.serial][2])
+            else:
+                ires = acquisition_results[ro_pulse.serial][0]
+                qres = acquisition_results[ro_pulse.serial][1]
+                if options.acquisition_type is AcquisitionType.RAW:
+                    acquisition = RawWaveformResults(ires + 1j * qres)
+                if options.acquisition_type is AcquisitionType.INTEGRATION:
+                    acquisition = IntegratedResults(ires + 1j * qres)
+            if self.average:
+                acquisition = acquisition.average
+            data[ro_pulse.serial] = data[ro_pulse.serial] = acquisition
+
             # data[ro_pulse.serial] = ExecutionResults.from_components(*acquisition_results[ro_pulse.serial])
-            data[ro_pulse.serial] = IntegratedResults(acquisition_results[ro_pulse.serial])
-            data[ro_pulse.qubit] = copy.copy(data[ro_pulse.serial])
+            # data[ro_pulse.serial] = IntegratedResults(acquisition_results[ro_pulse.serial])
+            # data[ro_pulse.qubit] = copy.copy(data[ro_pulse.serial])
         return data
 
-
-    def sweep(self, sequence, *sweepers, nshots=None, average=True, relaxation_time=None):
+    def sweep(self, sequence: PulseSequence, options: ExecutionParameters, *sweepers):
         """Executes a sequence of pulses while sweeping one or more parameters.
 
         The parameters to be swept are defined in :class:`qibolab.sweeper.Sweeper` object.
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): The sequence of pulses to execute.
+            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
             sweepers (list(Sweeper)): A list of Sweeper objects defining parameter sweeps.
-            nshots (int): The number of times the sequence of pulses should be executed.
-            average (bool): A flag to indicate if the results of the shots should be averaged.
-            relaxation_time (int): The the time to wait between repetitions to allow the qubit relax to ground state.
         """
         id_results = {}
         map_id_serial = {}
-
-        # by default use the value stored in the runcard (hardware_avg)
-        if nshots is None:
-            nshots = self.hardware_avg
-        navgs = nshots
-        if average:
-            nshots = 1
-        else:
-            navgs = 1
-
-        # by default load the value from the runcard (relaxation_time)
-        if relaxation_time is None:
-            relaxation_time = self.relaxation_time
 
         # during the sweep, pulse parameters need to be changed
         # to avoid affecting the user, make a copy of the pulse sequence
@@ -488,18 +493,15 @@ class MultiqubitPlatform(Platform):
         # create a map between the pulse id, which never changes, and the original serial
         for pulse in sequence_copy.ro_pulses:
             map_id_serial[pulse.id] = pulse.serial
-            id_results[pulse.id] = ExecutionResults.from_components(np.array([]), np.array([]))
-            id_results[pulse.qubit] = id_results[pulse.id]
+            id_results[pulse.id] = None
+            id_results[pulse.qubit] = None
 
         # execute the each sweeper recursively
         self._sweep_recursion(
             sequence_copy,
+            options=options,
             *tuple(sweepers_copy),
             results=id_results,
-            nshots=nshots,
-            navgs=navgs,
-            average=average,
-            relaxation_time=relaxation_time,
         )
 
         # return the results using the original serials
@@ -512,12 +514,9 @@ class MultiqubitPlatform(Platform):
     def _sweep_recursion(
         self,
         sequence,
+        options: ExecutionParameters,
         *sweepers,
         results,
-        nshots,
-        navgs,
-        relaxation_time,
-        average,
     ):
         """Executes a sweep recursively.
 
@@ -599,17 +598,14 @@ class MultiqubitPlatform(Platform):
                 if len(sweepers) > 1:
                     self._sweep_recursion(
                         sequence,
+                        options=options,
                         *sweepers[1:],
                         results=results,
-                        nshots=nshots,
-                        navgs=navgs,
-                        average=average,
-                        relaxation_time=relaxation_time,
                     )
                 else:
-                    result = self.execute_pulse_sequence(sequence, nshots, navgs, relaxation_time)
+                    result = self.execute_pulse_sequence(sequence=sequence, options=options)
                     for pulse in sequence.ro_pulses:
-                        results[pulse.id] += result[pulse.serial].average if average else result[pulse.serial]
+                        results[pulse.id] += result[pulse.serial]
                         results[pulse.qubit] = results[pulse.id]
         else:
             # rt sweeps
@@ -633,30 +629,29 @@ class MultiqubitPlatform(Platform):
                         )
                         self._sweep_recursion(
                             sequence,
+                            options=options,
                             *(tuple([split_sweeper]) + sweepers[1:]),
                             results=results,
-                            nshots=nshots,
-                            navgs=navgs,
-                            average=average,
-                            relaxation_time=relaxation_time,
                         )
                         _from = _to
 
             if not split_relative_phase:
                 if all(s.parameter in rt_sweepers for s in sweepers):
+                    nshots = options.nshots if options.averaging_mode == AveragingMode.SINGLESHOT else 1
+                    navgs = options.nshots if options.averaging_mode != AveragingMode.SINGLESHOT else 1
                     num_bins = nshots
                     for sweeper in sweepers:
                         num_bins *= len(sweeper.values)
 
                     # split the sweep if the number of bins is larget than the memory of the sequencer (2**17)
                     if num_bins < 2**17:
-                        repetition_duration = sequence.finish + relaxation_time
+                        repetition_duration = sequence.finish + options.relaxation_time
                         execution_time = navgs * num_bins * ((repetition_duration + 1000 * len(sweepers)) * 1e-9)
                         log.info(
                             f"Real time sweeper execution time: {int(execution_time)//60}m {int(execution_time) % 60}s"
                         )
 
-                        result = self.execute_pulse_sequence(sequence, nshots, navgs, relaxation_time, sweepers)
+                        result = self.execute_pulse_sequence(sequence, options, sweepers)
                         for pulse in sequence.ro_pulses:
                             results[pulse.id] += result[pulse.serial]
                             results[pulse.qubit] = results[pulse.id]
@@ -674,12 +669,9 @@ class MultiqubitPlatform(Platform):
                                 _nshots = min(max_rt_nshots, nshots - sft_iteration * max_rt_nshots)
                                 self._sweep_recursion(
                                     sequence,
+                                    options,
                                     *sweepers,
                                     results=results,
-                                    nshots=_nshots,
-                                    navgs=navgs,
-                                    average=average,
-                                    relaxation_time=relaxation_time,
                                 )
                         else:
                             for shot in range(nshots):
@@ -703,12 +695,9 @@ class MultiqubitPlatform(Platform):
 
                                     self._sweep_recursion(
                                         sequence,
+                                        options,
                                         *(tuple([split_sweeper]) + sweepers[1:]),
                                         results=results,
-                                        nshots=nshots,
-                                        navgs=navgs,
-                                        average=average,
-                                        relaxation_time=relaxation_time,
                                     )
                 else:
                     # TODO: reorder the sequence of the sweepers and the results
