@@ -1,6 +1,6 @@
 import copy
 
-from qibolab.platforms.multiqubit import MultiqubitPlatform
+from qibolab.platform import Platform
 
 
 class Qubit:
@@ -43,15 +43,15 @@ class Qubit:
         self.readout_channels = readout_channels
 
 
-class ICPlatform(MultiqubitPlatform):
+class ICPlatform(Platform):
     """Platform for controlling quantum devices with IC.
 
     Example:
         .. code-block:: python
 
-            from qibolab import Platform
+            from qibolab import create_platform
 
-            platform = Platform("icarusq")
+            platform = create_platform("icarusq")
 
     """
 
@@ -60,6 +60,7 @@ class ICPlatform(MultiqubitPlatform):
         self._lo = []
         self._adc = []
         self._last_sequence = None
+        self.hardware_avg = 1024
         super().__init__(name, runcard)
         self.qubits = []
         qubits = self.settings.get("qubits")
@@ -93,7 +94,7 @@ class ICPlatform(MultiqubitPlatform):
 
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
         if nshots is None:
-            nshots = self.hardware_avg
+            nshots = self.nshots
 
         from qibolab.pulses import ReadoutPulse
 

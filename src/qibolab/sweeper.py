@@ -10,6 +10,7 @@ class Parameter(Enum):
 
     frequency = auto()
     amplitude = auto()
+    duration = auto()
     relative_phase = auto()
     delay = auto()
     start = auto()
@@ -28,27 +29,28 @@ QubitParameter = {Parameter.bias, Parameter.attenuation}
 class Sweeper:
     """Data structure for Sweeper object.
 
-    This object is passed as an argument to the method :func:`qibolab.platforms.abstract.AbstractPlatform.sweep`
+    This object is passed as an argument to the method :func:`qibolab.platforms.abstract.Platform.sweep`
     which enables the user to sweep a specific parameter for one or more pulses. For information on how to
-    perform sweeps see :func:`qibolab.platforms.abstract.AbstractPlatform.sweep`.
+    perform sweeps see :func:`qibolab.platforms.abstract.Platform.sweep`.
 
     Example:
         .. testcode::
 
             import numpy as np
-            from qibolab.platform import Platform
+            from qibolab import create_platform
             from qibolab.sweeper import Sweeper, Parameter
             from qibolab.pulses import PulseSequence
+            from qibolab import ExecutionParameters
 
 
-            platform = Platform("dummy")
+            platform = create_platform("dummy")
             sequence = PulseSequence()
             parameter = Parameter.frequency
             pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
             sequence.add(pulse)
             parameter_range = np.random.randint(10, size=10)
             sweeper = Sweeper(parameter, parameter_range, [pulse])
-            platform.sweep(sequence, sweeper)
+            platform.sweep(sequence, ExecutionParameters(), sweeper)
 
     Args:
         parameter (`qibolab.sweeper.Parameter`): parameter to be swept, possible choices are frequency, attenuation, amplitude, current and gain.

@@ -5,15 +5,15 @@ import signal
 import numpy as np
 import yaml
 from qibo.config import log, raise_error
-
-from qibolab.designs import Channel, ChannelMap
-from qibolab.platforms.abstract import AbstractPlatform, Qubit
 from qibolab.pulses import PulseSequence, PulseType
-from qibolab.result import ExecutionResults
 from qibolab.sweeper import Parameter, Sweeper
+from qibolab.channels import ChannelMap
+from qibolab.platform import Platform
+from qibolab.qubits import Qubit
+from qibolab.result import IntegratedResults
 
 
-class MultiqubitPlatform(AbstractPlatform):
+class MultiqubitPlatform(Platform):
     """Platform based on qblox instruments.
 
     The functionality of this class will soon be refactored to align it with DesignPlatform.
@@ -57,7 +57,7 @@ class MultiqubitPlatform(AbstractPlatform):
         self.qf_port = {}
         self.qb_port = {}
 
-        super().__init__(name, runcard)
+        super().__init__(name, runcard, [], ChannelMap())
         signal.signal(signal.SIGTERM, self._termination_handler)
         self.qubit_instrument_map: dict = {}
 
@@ -104,7 +104,7 @@ class MultiqubitPlatform(AbstractPlatform):
         super().reload_settings()
         self.characterization = self.settings["characterization"]
         self.qubit_channel_map = self.settings["qubit_channel_map"]
-        self.hardware_avg = self.settings["settings"]["hardware_avg"]
+        self.nshots = self.settings["settings"]["nshots"]
         self.relaxation_time = self.settings["settings"]["relaxation_time"]
 
         # if self.is_connected:
@@ -156,7 +156,7 @@ class MultiqubitPlatform(AbstractPlatform):
                     # update Qblox qubit LO drive frequency config
                     instrument_name = self.qubit_instrument_map[qubit][1]
                     port = self.qdm[qubit]._channel_port_map[self.qubit_channel_map[qubit][1]]
-                    drive_if = self.single_qubit_natives[qubit]["RX"]["if_frequency"]
+                    drive_if = self.qubits[qubit].native_gates.RX.if_frequency
                     self.settings["instruments"][instrument_name]["settings"]["ports"][port]["lo_frequency"] = (
                         freq - drive_if
                     )
@@ -317,7 +317,7 @@ class MultiqubitPlatform(AbstractPlatform):
         # by default average results and use the value stored in the runcard (hardware_avg)
         if nshots is None and navgs is None:
             nshots = 1
-            navgs = self.hardware_avg
+            navgs = self.nshots
         elif nshots and navgs is None:
             navgs = 1
         elif navgs and nshots is None:
@@ -420,9 +420,11 @@ class MultiqubitPlatform(AbstractPlatform):
                             acquisition_results[key] = value
 
         for ro_pulse in sequence.ro_pulses:
-            data[ro_pulse.serial] = ExecutionResults.from_components(*acquisition_results[ro_pulse.serial])
+            # data[ro_pulse.serial] = ExecutionResults.from_components(*acquisition_results[ro_pulse.serial])
+            data[ro_pulse.serial] = IntegratedResults(acquisition_results[ro_pulse.serial])
             data[ro_pulse.qubit] = copy.copy(data[ro_pulse.serial])
         return data
+
 
     def sweep(self, sequence, *sweepers, nshots=None, average=True, relaxation_time=None):
         """Executes a sequence of pulses while sweeping one or more parameters.
