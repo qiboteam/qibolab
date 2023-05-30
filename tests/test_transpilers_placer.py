@@ -63,20 +63,32 @@ def test_trivial():
 
 
 @pytest.mark.parametrize("custom_layout", [[4, 3, 2, 1, 0], {"q0": 4, "q1": 3, "q2": 2, "q3": 1, "q4": 0}])
-def test_custom(custom_layout):
-    circuit = Circuit(5)
+@pytest.mark.parametrize("give_circuit", [True, False])
+def test_custom(custom_layout, give_circuit):
+    if give_circuit:
+        circuit = Circuit(5)
+    else:
+        circuit = None
     connectivity = star_connectivity()
     placer = Custom(connectivity=connectivity, map=custom_layout)
     layout = placer(circuit)
     assert layout == {"q0": 4, "q1": 3, "q2": 2, "q3": 1, "q4": 0}
-    assert check_placement(circuit, layout)
 
 
-def test_custom_error_value():
+def test_custom_error_circuit():
+    circuit = Circuit(3)
+    custom_layout = [4, 3, 2, 1, 0]
+    connectivity = star_connectivity()
+    placer = Custom(connectivity=connectivity, map=custom_layout)
+    with pytest.raises(ValueError):
+        layout = placer(circuit)
+
+
+def test_custom_error_no_circuit():
     circuit = Circuit(5)
     connectivity = star_connectivity()
-    layout = {"q0": 4, "q1": 3, "q2": 2, "q3": 0, "q4": 0}
-    placer = Custom(connectivity=connectivity, map=layout)
+    custom_layout = {"q0": 4, "q1": 3, "q2": 2, "q3": 0, "q4": 0}
+    placer = Custom(connectivity=connectivity, map=custom_layout)
     with pytest.raises(ValueError):
         layout = placer(circuit)
 

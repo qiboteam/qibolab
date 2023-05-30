@@ -8,6 +8,18 @@ from qibolab.transpilers.abstract import Placer, create_circuit_repr
 
 
 def check_placement(circuit: Circuit, layout: dict, verbose=False) -> bool:
+    """Checks if layout is correct and matches the number of qubits of the circuit.
+
+    Args:
+        circuit (qibo.models.Circuit): Circuit model to check.
+        layout (dict): physical to logical qubit mapping.
+        verbose (bool): If ``True`` it prints info messages.
+
+    Returns ``True`` if the following conditions are satisfied:
+        - layout is written in the correct form.
+        - layout matches the number of qubits in the circuit.
+    otherwise returns ``False``.
+    """
     if not check_mapping_consistency(layout, verbose=verbose):
         return False
     if circuit.nqubits == len(layout):
@@ -25,6 +37,15 @@ def check_placement(circuit: Circuit, layout: dict, verbose=False) -> bool:
 
 
 def check_mapping_consistency(layout, verbose=False):
+    """Checks if layout is correct.
+
+    Args:
+        layout (dict): physical to logical qubit mapping.
+        verbose (bool): If ``True`` it prints info messages.
+
+    Returns: ``True`` if layout is written in the correct form.
+    otherwise returns ``False``.
+    """
     values = list(layout.values())
     values.sort()
     keys = list(layout.keys())
@@ -41,48 +62,90 @@ def check_mapping_consistency(layout, verbose=False):
 
 
 class Trivial(Placer):
-    """Place qubits trivially, same logical and physical placement"""
+    """Place qubits trivially, same logical and physical placement
+
+    Attributes:
+        connectivity (networkx.Graph): chip connectivity.
+    """
 
     def __init__(self, connectivity=None):
+        """Args:
+        connectivity (networkx.graph): chip connectivity.
+        """
         self.connectivity = connectivity
 
     def __call__(self, circuit: Circuit):
+        """Find the trivial placement for the circuit.
+
+        Args:
+            circuit (qibo.models.Circuit): Circuit model to check.
+        """
         return dict(zip(list("q" + str(i) for i in range(circuit.nqubits)), range(circuit.nqubits)))
 
 
 class Custom(Placer):
     """Define a custom initial qubit mapping.
-    Attr:
-        map (list or dict): List reporting or dict the circuit to chip qubit mapping,
-        example [1,2,0] or {"q0":1, "q1":2, "q2":0} to assign the logical to physical qubit mapping.
+
+    Attributes:
+        map (list or dict): Physical to logical qubit mapping,
+        example [1,2,0] or {"q0":1, "q1":2, "q2":0} to assign the
+        physical qubits 0;1;2 to the logical qubits 1;2;0 respectively.
+        connectivity (networkx.Graph): chip connectivity.
     """
 
-    def __init__(self, map, connectivity=None):
+    def __init__(self, map, connectivity=None, verbose=False):
+        """Args:
+        map (list or dict): Physical to logical qubit mapping,
+        example [1,2,0] or {"q0":1, "q1":2, "q2":0} to assign the
+        physical qubits 0;1;2 to the logical qubits 1;2;0 respectively.
+        connectivity (networkx.Graph): chip connectivity.
+        verbose (Bool): if "True" print info messages.
+        """
         self.connectivity = connectivity
         self.map = map
+        self.verbose = verbose
 
     def __call__(self, circuit=None):
+        """Return the custom placement if it can be applied to the given circuit (if given).
+
+        Args:
+            circuit (qibo.models.Circuit): Circuit to be transpiled.
+        """
         if isinstance(self.map, dict):
-            if not check_mapping_consistency(self.map):
-                raise_error(ValueError)
-            return self.map
+            pass
         elif isinstance(self.map, list):
-            return dict(zip(list("q" + str(i) for i in range(len(self.map))), self.map))
+            self.map = dict(zip(list("q" + str(i) for i in range(len(self.map))), self.map))
         else:
             raise_error(TypeError, "Use dict or list to define mapping.")
+        if circuit is not None:
+            if not check_placement(circuit, self.map, self.verbose):
+                raise_error(ValueError)
+        elif not check_mapping_consistency(self.map, self.verbose):
+            raise_error(ValueError)
+        return self.map
 
 
 class Subgraph(Placer):
     """
-    Subgraph isomorphism qubit placer,
-        NP-complete it can take a long time for large circuits.
-        This initialization method may fail for very short circuits.
+    Subgraph isomorphism qubit placer, NP-complete it can take a long time
+    for large circuits. This initialization method may fail for very short circuits.
+
+    Attributes:
+        connectivity (networkx.Graph): chip connectivity.
     """
 
     def __init__(self, connectivity):
+        """Args:
+        connectivity (networkx.graph): chip connectivity.
+        """
         self.connectivity = connectivity
 
     def __call__(self, circuit: Circuit):
+        """Find the initial layout of the given circuit using subgraph isomorphism.
+
+        Args:
+            circuit (qibo.models.Circuit): Circuit to be transpiled.
+        """
         # TODO fix networkx.GM.mapping for small subgraphs
         circuit_repr = create_circuit_repr(circuit)
         if len(circuit_repr) < 3:
@@ -109,14 +172,27 @@ class Subgraph(Placer):
 class Random(Placer):
     """
     Random initialization with greedy policy, let a maximum number of 2-qubit
-        gates can be applied without introducing any SWAP gate
+    gates can be applied without introducing any SWAP gate
+
+    Attributes:
+        connectivity (networkx.Graph): chip connectivity.
+        samples (int): number of initial random layouts tested.
     """
 
     def __init__(self, connectivity, samples=100):
+        """Args:
+        connectivity (networkx.graph): chip connectivity.
+        samples (int): number of initial random layouts tested.
+        """
         self.connectivity = connectivity
         self.samples = samples
 
     def __call__(self, circuit):
+        """Find an initial layout of the given circuit using random greedy algorithm.
+
+        Args:
+            circuit (qibo.models.Circuit): Circuit to be transpiled.
+        """
         circuit_repr = create_circuit_repr(circuit)
         nodes = self.connectivity.number_of_nodes()
         keys = list(self.connectivity.nodes())
@@ -138,6 +214,8 @@ class Random(Placer):
     @staticmethod
     def cost(graph, circuit_repr):
         """
+        Compute the cost associated to an initial layout as the lengh of the reduced circuit.
+
         Args:
             graph (networkx.Graph): current hardware qubit mapping.
             circuit_repr (list): circuit representation.
@@ -151,7 +229,7 @@ class Random(Placer):
         return len(new_circuit)
 
 
-# TODO
+# TODO: requires block decomposition
 class Backpropagation(Placer):
     """
     Place qubits based on the algorithm proposed in

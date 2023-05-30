@@ -16,7 +16,7 @@ def respect_connectivity(connectivity, circuit, verbose=False):
     Args:
         circuit (qibo.models.Circuit): Circuit model to check.
         connectivity (networkx.graph): chip connectivity.
-        verbose (bool): If ``True`` it prints debugging log messages.
+        verbose (bool): If ``True`` it prints info messages.
 
     Returns ``True`` if the following conditions are satisfied:
         - Circuit does not contain more than two-qubit gates.
@@ -40,7 +40,7 @@ def respect_connectivity(connectivity, circuit, verbose=False):
 
 
 def remap_circuit(circuit, qubit_map):
-    """Initial qubit mapping of the transpiled qibo circuit
+    """Map logical to physical qubits in a circuit
 
     Args:
         circuit (:class:`qibo.models.Circuit`): qibo circuit to be remapped.
@@ -59,11 +59,11 @@ class ShortestPaths(Transpiler):
     """A class to perform initial qubit mapping and connectivity matching.
 
     Properties:
-        connectivity (networkx.graph): chip connectivity.
         sampling_split (float): fraction of paths tested (between 0 and 1).
 
     Attributes:
-        verbose(bool)
+        connectivity (networkx.Graph): chip connectivity.
+        verbose (bool): print info messages.
         initial_layout (dict): initial physical to logical qubit mapping
         added_swaps (int): number of swaps added to the circuit to match connectivity.
         _circuit_repr (list): quantum circuit represented as a list (only 2 qubit gates).
@@ -75,6 +75,12 @@ class ShortestPaths(Transpiler):
     """
 
     def __init__(self, connectivity: nx.Graph, sampling_split=1.0, verbose=False):
+        """Args:
+        connectivity (networkx.graph): chip connectivity.
+        sampling_split (float): fraction of paths tested (between 0 and 1).
+        verbose(bool): print info messages.
+
+        """
         self.connectivity = connectivity
         self.sampling_split = sampling_split
         self.verbose = verbose
@@ -170,7 +176,7 @@ class ShortestPaths(Transpiler):
             raise_error(ValueError, "Sampling_split must be in (0:1]")
 
     def draw_connectivity(self):  # pragma: no cover
-        """Show connectivity graph."""
+        """Draw connectivity graph."""
         pos = nx.spectral_layout(self.connectivity)
         nx.draw(self.connectivity, pos=pos, with_labels=True)
         plt.show()
@@ -251,7 +257,7 @@ class ShortestPaths(Transpiler):
         return final_path, meeting_point
 
     def initial_checks(self, qubits):
-        """Initialize the transpiled circuit
+        """Initialize the transpiled circuit and check if it can be mapped to the defined connectivity.
 
         Args:
             Args: qubits (int): number of qubits in the circuit to be transpiled.
