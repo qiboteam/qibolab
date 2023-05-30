@@ -37,7 +37,7 @@ def compile_circuit(circuit, platform):
     if transpiler.is_satisfied(circuit):
         native_circuit = circuit
     else:
-        native_circuit, _ = transpiler.transpile(circuit)
+        native_circuit, _ = transpiler(circuit)
 
     sequence = platform.transpile(native_circuit)
     return sequence

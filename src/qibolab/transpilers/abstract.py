@@ -73,7 +73,7 @@ class Transpiler(ABC):
                 :meth:`qibolab.transpilers.abstract.Transpiler.transpile`.
         """
         if transpiled_circuit is None:
-            transpiled_circuit, _ = self.transpile(original_circuit)
+            transpiled_circuit, _ = self.__call__(original_circuit)
 
         backend = NumpyBackend()
         target_state = backend.execute_circuit(original_circuit).state()
