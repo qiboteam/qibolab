@@ -31,26 +31,27 @@ def star_circuit():
 def test_check_placement_true():
     layout = {"q0": 0, "q1": 1, "q2": 2, "q3": 3, "q4": 4}
     circuit = Circuit(5)
-    assert check_placement(circuit, layout)
+    assert check_placement(circuit, layout, verbose=True)
 
 
 @pytest.mark.parametrize("qubits", [5, 3])
-def test_check_placement_false(qubits):
+@pytest.mark.parametrize("layout", [{"q0": 0, "q1": 1, "q2": 2, "q3": 3}, {"q0": 0, "q1": 0, "q2": 2, "q3": 3}])
+def test_check_placement_false(qubits, layout):
     layout = {"q0": 0, "q1": 1, "q2": 2, "q3": 3}
     circuit = Circuit(qubits)
-    assert not check_placement(circuit, layout)
+    assert not check_placement(circuit, layout, verbose=True)
 
 
 def test_mapping_consistency_true():
     layout = {"q0": 0, "q1": 2, "q2": 1, "q3": 4, "q4": 3}
-    assert check_mapping_consistency(layout)
+    assert check_mapping_consistency(layout, verbose=True)
 
 
 @pytest.mark.parametrize(
     "layout", [{"q0": 0, "q1": 0, "q2": 1, "q3": 4, "q4": 3}, {"q0": 0, "q1": 2, "q0": 1, "q3": 4, "q4": 3}]
 )
 def test_mapping_consistency_false(layout):
-    assert not check_mapping_consistency(layout)
+    assert not check_mapping_consistency(layout, verbose=True)
 
 
 def test_trivial():
@@ -72,12 +73,48 @@ def test_custom(custom_layout):
     assert check_placement(circuit, layout)
 
 
-def test_subgraph():
+def test_custom_error_value():
+    circuit = Circuit(5)
+    connectivity = star_connectivity()
+    layout = {"q0": 4, "q1": 3, "q2": 2, "q3": 0, "q4": 0}
+    placer = Custom(connectivity=connectivity, map=layout)
+    with pytest.raises(ValueError):
+        layout = placer(circuit)
+
+
+def test_custom_error_type():
+    circuit = Circuit(5)
+    connectivity = star_connectivity()
+    layout = 1
+    placer = Custom(connectivity=connectivity, map=layout)
+    with pytest.raises(TypeError):
+        layout = placer(circuit)
+
+
+def test_subgraph_perfect():
     connectivity = star_connectivity()
     placer = Subgraph(connectivity=connectivity)
     layout = placer(star_circuit())
     assert layout["q2"] == 0
     assert check_placement(star_circuit(), layout)
+
+
+def test_subgraph_non_perfect():
+    connectivity = star_connectivity()
+    placer = Subgraph(connectivity=connectivity)
+    circuit = star_circuit()
+    circuit.add(gates.CNOT(1, 3))
+    layout = placer(circuit)
+    assert layout["q2"] == 0
+    assert check_placement(circuit, layout)
+
+
+def test_subgraph_error():
+    connectivity = star_connectivity()
+    placer = Subgraph(connectivity=connectivity)
+    circuit = Circuit(5)
+    with pytest.raises(ValueError):
+        layout = placer(circuit)
 
 
 @pytest.mark.parametrize("reps", [1, 10, 100])

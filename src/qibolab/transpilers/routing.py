@@ -88,11 +88,6 @@ class ShortestPaths(Transpiler):
         self._transpiled_circuit = None
         self._circuit_position = 0
 
-    def tlog(self, message):
-        """Print messages only if ``verbose`` was set to ``True``."""
-        if self.verbose:
-            log.info(message)
-
     # TODO: This may become a stand alone function
     def is_satisfied(self, circuit):
         """Checks if a circuit can be executed on Hardware.
@@ -267,9 +262,10 @@ class ShortestPaths(Transpiler):
         elif qubits == nodes:
             new_circuit = Circuit(nodes)
         else:
-            self.tlog(
-                "You are using more physical qubits than required by the circuit, some qubits will be added to the circuit"
-            )
+            if self.verbose:
+                log.info(
+                    "You are using more physical qubits than required by the circuit, some qubits will be added to the circuit"
+                )
             new_circuit = Circuit(nodes)
         if not check_placement(new_circuit, self._mapping, verbose=False):
             raise_error(ValueError, "The provided initial layout can't be used on this connectivity.")
@@ -333,5 +329,5 @@ class Sabre(Transpiler):
     https://doi.org/10.48550/arXiv.1809.02573
     """
 
-    def __init__(self):
+    def __init__(self):  # pragma: no cover
         super().__init__()

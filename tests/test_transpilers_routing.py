@@ -132,7 +132,7 @@ def test_incorrect_initial_layout():
 
 @pytest.mark.parametrize("gates", [1, 10, 50])
 @pytest.mark.parametrize("qubits", [3, 5])
-def test_random_circuits(gates, qubits):
+def test_random_circuits_5q(gates, qubits):
     placer = Trivial()
     layout_circ = Circuit(5)
     initial_layout = placer(layout_circ)
@@ -142,6 +142,66 @@ def test_random_circuits(gates, qubits):
     assert transpiler.added_swaps >= 0
     assert transpiler.is_satisfied(transpiled_circuit)
     assert respect_connectivity(star_connectivity(), transpiled_circuit)
+    assert check_placement(transpiled_circuit, final_qubit_map)
+
+
+def q21_connectivity():
+    Q = ["q" + str(i) for i in range(21)]
+    chip = nx.Graph()
+    chip.add_nodes_from(Q)
+    graph_list_h = [
+        (Q[0], Q[1]),
+        (Q[1], Q[2]),
+        (Q[3], Q[4]),
+        (Q[4], Q[5]),
+        (Q[5], Q[6]),
+        (Q[6], Q[7]),
+        (Q[8], Q[9]),
+        (Q[9], Q[10]),
+        (Q[10], Q[11]),
+        (Q[11], Q[12]),
+        (Q[13], Q[14]),
+        (Q[14], Q[15]),
+        (Q[15], Q[16]),
+        (Q[16], Q[17]),
+        (Q[18], Q[19]),
+        (Q[19], Q[20]),
+    ]
+    graph_list_v = [
+        (Q[3], Q[8]),
+        (Q[8], Q[13]),
+        (Q[0], Q[4]),
+        (Q[4], Q[9]),
+        (Q[9], Q[14]),
+        (Q[14], Q[18]),
+        (Q[1], Q[5]),
+        (Q[5], Q[10]),
+        (Q[10], Q[15]),
+        (Q[15], Q[19]),
+        (Q[2], Q[6]),
+        (Q[6], Q[11]),
+        (Q[11], Q[16]),
+        (Q[16], Q[20]),
+        (Q[7], Q[12]),
+        (Q[12], Q[17]),
+    ]
+    chip.add_edges_from(graph_list_h + graph_list_v)
+    return chip
+
+
+@pytest.mark.parametrize("gates", [5, 30])
+@pytest.mark.parametrize("qubits", [10, 21])
+@pytest.mark.parametrize("split", [1.0, 0.5, 0.1])
+def test_random_circuits_21q(gates, qubits, split):
+    placer = Trivial()
+    layout_circ = Circuit(21)
+    initial_layout = placer(layout_circ)
+    transpiler = ShortestPaths(connectivity=q21_connectivity(), sampling_split=split)
+    circuit = generate_random_circuit(nqubits=qubits, ngates=gates)
+    transpiled_circuit, final_qubit_map = transpiler(circuit, initial_layout)
+    assert transpiler.added_swaps >= 0
+    assert transpiler.is_satisfied(transpiled_circuit)
+    assert respect_connectivity(q21_connectivity(), transpiled_circuit)
     assert check_placement(transpiled_circuit, final_qubit_map)
 
 
