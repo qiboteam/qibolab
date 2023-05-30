@@ -335,6 +335,61 @@ SweeperParameter = {
 }
 
 
+@pytest.mark.parametrize("parameter1", Parameter)
+@pytest.mark.parametrize("parameter2", Parameter)
+def test_experiment_sweep_2d_general(parameter1, parameter2):
+    platform = create_platform("iqm5q")
+    platform.setup()
+    IQM5q = platform.instruments[0]
+    IQM5q.device_setup = create_offline_device_setup()
+
+    sequence = PulseSequence()
+    qubits = {0: platform.qubits[0]}
+
+    swept_points = 5
+    sequence = PulseSequence()
+    ro_pulses = {}
+    qd_pulses = {}
+    for qubit in qubits:
+        qd_pulses[qubit] = platform.create_RX_pulse(qubit, start=0)
+        sequence.add(qd_pulses[qubit])
+        ro_pulses[qubit] = platform.create_qubit_readout_pulse(qubit, start=qd_pulses[qubit].finish)
+        sequence.add(ro_pulses[qubit])
+
+    parameter_range_1 = (
+        np.random.rand(swept_points)
+        if parameter1 is Parameter.amplitude
+        else np.random.randint(swept_points, size=swept_points)
+    )
+
+    parameter_range_2 = (
+        np.random.rand(swept_points)
+        if parameter2 is Parameter.amplitude
+        else np.random.randint(swept_points, size=swept_points)
+    )
+
+    sweepers = []
+    if parameter1 in SweeperParameter:
+        if parameter1 is not Parameter.delay:
+            sweepers.append(Sweeper(parameter1, parameter_range_1, pulses=[ro_pulses[qubit]]))
+    if parameter2 in SweeperParameter:
+        if parameter2 is Parameter.amplitude:
+            if parameter1 is not Parameter.amplitude:
+                sweepers.append(Sweeper(parameter2, parameter_range_2, pulses=[qd_pulses[qubit]]))
+
+    options = ExecutionParameters(
+        relaxation_time=300e-6, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+    )
+
+    IQM5q.sweepers = sweepers
+    rearranging_axes, sweepers = IQM5q.rearrange_sweepers(sweepers)
+    IQM5q.experiment_flow(qubits, sequence, options, sweepers)
+
+    assert "drive0" in IQM5q.experiment.signals
+    assert "measure0" in IQM5q.experiment.signals
+    assert "acquire0" in IQM5q.experiment.signals
+
+
 def test_experiment_sweep_2d_specific():
     platform = create_platform("iqm5q")
     platform.setup()
