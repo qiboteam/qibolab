@@ -35,9 +35,8 @@ def test_check_placement_true():
 
 
 @pytest.mark.parametrize("qubits", [5, 3])
-@pytest.mark.parametrize("layout", [{"q0": 0, "q1": 1, "q2": 2, "q3": 3}, {"q0": 0, "q1": 0, "q2": 2, "q3": 3}])
+@pytest.mark.parametrize("layout", [{"q0": 0, "q1": 1, "q2": 2, "q3": 3}, {"q0": 0, "q0": 1, "q2": 2}])
 def test_check_placement_false(qubits, layout):
-    layout = {"q0": 0, "q1": 1, "q2": 2, "q3": 3}
     circuit = Circuit(qubits)
     assert not check_placement(circuit, layout, verbose=True)
 
@@ -104,6 +103,11 @@ def test_subgraph_non_perfect():
     placer = Subgraph(connectivity=connectivity)
     circuit = star_circuit()
     circuit.add(gates.CNOT(1, 3))
+    circuit.add(gates.CNOT(0, 4))
+    circuit.add(gates.CNOT(2, 1))
+    circuit.add(gates.CNOT(4, 3))
+    circuit.add(gates.CNOT(0, 2))
+    circuit.add(gates.CNOT(3, 1))
     layout = placer(circuit)
     assert layout["q2"] == 0
     assert check_placement(circuit, layout)

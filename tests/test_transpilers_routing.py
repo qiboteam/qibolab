@@ -136,7 +136,7 @@ def test_random_circuits_5q(gates, qubits):
     placer = Trivial()
     layout_circ = Circuit(5)
     initial_layout = placer(layout_circ)
-    transpiler = ShortestPaths(connectivity=star_connectivity())
+    transpiler = ShortestPaths(connectivity=star_connectivity(), verbose=True)
     circuit = generate_random_circuit(nqubits=qubits, ngates=gates)
     transpiled_circuit, final_qubit_map = transpiler(circuit, initial_layout)
     assert transpiler.added_swaps >= 0
