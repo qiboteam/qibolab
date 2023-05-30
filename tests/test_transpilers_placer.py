@@ -85,12 +85,11 @@ def test_custom_error_circuit():
 
 
 def test_custom_error_no_circuit():
-    circuit = Circuit(5)
     connectivity = star_connectivity()
     custom_layout = {"q0": 4, "q1": 3, "q2": 2, "q3": 0, "q4": 0}
     placer = Custom(connectivity=connectivity, map=custom_layout)
     with pytest.raises(ValueError):
-        layout = placer(circuit)
+        layout = placer()
 
 
 def test_custom_error_type():
