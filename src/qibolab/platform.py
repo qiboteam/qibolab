@@ -11,7 +11,6 @@ from qibo.config import log, raise_error
 from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.native import NativeType, SingleQubitNatives, TwoQubitNatives
-from qibolab.pulses import PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPair
 
 
@@ -26,6 +25,8 @@ class Platform:
     """
 
     def __init__(self, name, runcard, instruments, channels):
+        # TODO: convert to single log. This is just to avoid to
+        # print the all dictionary
         if name == "dummy":
             log.info(f"Loading platform {name}")
         else:

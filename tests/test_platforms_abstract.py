@@ -13,9 +13,8 @@ import yaml
 from qibo.models import Circuit
 from qibo.states import CircuitResult
 
-from qibolab import create_platform
+from qibolab import create_platform, get_platforms_path
 from qibolab.backends import QibolabBackend
-from qibolab.paths import qibolab_folder
 from qibolab.platform import Platform
 from qibolab.platforms.multiqubit import MultiqubitPlatform
 from qibolab.pulses import PulseSequence
@@ -27,7 +26,7 @@ nshots = 1024
 @pytest.fixture
 def platform(platform_name):
     test_runcard = pathlib.Path(__file__).parent / "test_platforms_multiqubit.yml"
-    original_runcard = qibolab_folder / "runcards" / f"{platform_name}.yml"
+    original_runcard = get_platforms_path()
     shutil.copyfile(str(original_runcard), test_runcard)
     _platform = create_platform(platform_name, test_runcard)
     _platform.connect()
