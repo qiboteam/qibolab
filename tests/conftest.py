@@ -5,7 +5,7 @@ from importlib import import_module
 import pytest
 
 from qibolab import PLATFORMS, create_platform
-from qibolab.platforms.multiqubit import MultiqubitPlatform
+from qibolab.instruments.qblox.controller import QbloxController
 
 
 def pytest_addoption(parser):
@@ -53,7 +53,7 @@ def load_from_platform(platform, name):
 
     Useful only for testing :class:`qibolab.platforms.multiqubit.MultiqubitPlatform`.
     """
-    if not isinstance(platform, MultiqubitPlatform):
+    if not isinstance(platform, QbloxController):
         pytest.skip(f"Skipping MultiqubitPlatform test for {platform}.")
     settings = platform.settings
     for instrument in settings["instruments"].values():
@@ -93,7 +93,7 @@ def pytest_generate_tests(metafunc):
     if metafunc.module.__name__ == "tests.test_instruments_qblox":
         set_platform_profile()
         for platform_name in platforms:
-            if not isinstance(create_platform(platform_name), MultiqubitPlatform):
+            if not isinstance(create_platform(platform_name), QbloxController):
                 pytest.skip("Skipping qblox tests because no platform is available.")
 
     if "instrument" in metafunc.fixturenames:

@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from qibolab import create_platform
-from qibolab.instruments.qblox import Cluster, ClusterQCM_RF, ClusterQRM_RF
+from qibolab.instruments.qblox.cluster import Cluster, ClusterQCM_RF, ClusterQRM_RF
 from qibolab.paths import user_folder
 from qibolab.pulses import Pulse, PulseSequence, ReadoutPulse
 

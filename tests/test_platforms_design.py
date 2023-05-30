@@ -1,8 +1,8 @@
 import pytest
 
 from qibolab import create_platform
+from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.platform import Platform
-from qibolab.platforms.multiqubit import MultiqubitPlatform
 
 qubit = 0
 
@@ -10,7 +10,7 @@ qubit = 0
 @pytest.fixture
 def platform(platform_name):
     _platform = create_platform(platform_name)
-    if isinstance(_platform, MultiqubitPlatform):
+    if isinstance(_platform, QbloxController):
         pytest.skip(f"Skipping Platform test for {_platform.name}")
     return _platform
 

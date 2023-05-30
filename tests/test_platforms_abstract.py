@@ -15,9 +15,9 @@ from qibo.states import CircuitResult
 
 from qibolab import create_platform
 from qibolab.backends import QibolabBackend
+from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.paths import qibolab_folder
 from qibolab.platform import Platform
-from qibolab.platforms.multiqubit import MultiqubitPlatform
 from qibolab.pulses import PulseSequence
 
 qubit = 0
@@ -53,15 +53,15 @@ def test_multiqubitplatform_init(platform_name):
     platform = create_platform(platform_name)
     with open(platform.runcard) as file:
         settings = yaml.safe_load(file)
-    if not isinstance(platform, MultiqubitPlatform):
+    if not isinstance(platform, QbloxController):
         pytest.skip(f"Skipping MultiqubitPlatform specific test for {platform_name}.")
     assert platform.name == platform_name
     assert platform.is_connected == False
-    assert len(platform.instruments) == len(settings["instruments"])
+    assert len(platform.modules) == len(settings["instruments"])
     for name in settings["instruments"]:
-        assert name in platform.instruments
+        assert name in platform.modules
         assert (
-            str(type(platform.instruments[name]))
+            str(type(platform.modules[name]))
             == f"<class 'qibolab.instruments.{settings['instruments'][name]['lib']}.{settings['instruments'][name]['class']}'>"
         )
 
@@ -94,7 +94,7 @@ def test_update(platform_name, par):
     new_values = np.ones(platform.nqubits)
     updates = {par: {i: new_values[i] for i in range(platform.nqubits)}}
     # TODO: fix the reload settings for qili1q_os2
-    if not isinstance(platform, MultiqubitPlatform):
+    if not isinstance(platform, QbloxController):
         platform.update(updates)
         for i in range(platform.nqubits):
             value = updates[par][i]
@@ -125,7 +125,7 @@ def test_platform_lo_readout_frequency(platform):
 
 @pytest.mark.qpu
 def test_platform_attenuation(platform):
-    if isinstance(platform, MultiqubitPlatform):
+    if isinstance(platform, QbloxController):
         platform.set_attenuation(qubit, 0)
         assert platform.get_attenuation(qubit) == 0
     else:
@@ -137,7 +137,7 @@ def test_platform_attenuation(platform):
 
 @pytest.mark.qpu
 def test_platform_gain(platform):
-    if isinstance(platform, MultiqubitPlatform):
+    if isinstance(platform, QbloxController):
         platform.set_gain(qubit, 0)
         assert platform.get_gain(qubit) == 0
     else:
@@ -172,7 +172,7 @@ def test_multiqubitplatform_execute_one_drive_pulse(platform):
 @pytest.mark.qpu
 def test_multiqubitplatform_execute_one_long_drive_pulse(platform):
     # Long duration
-    if not isinstance(platform, MultiqubitPlatform):
+    if not isinstance(platform, QbloxController):
         pytest.skip(f"Skipping extra long pulse test for {platform}.")
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=8192 + 200))
@@ -183,7 +183,7 @@ def test_multiqubitplatform_execute_one_long_drive_pulse(platform):
 @pytest.mark.qpu
 def test_multiqubitplatform_execute_one_extralong_drive_pulse(platform):
     # Extra Long duration
-    if not isinstance(platform, MultiqubitPlatform):
+    if not isinstance(platform, QbloxController):
         pytest.skip(f"Skipping extra long pulse test for {platform}.")
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=2 * 8192 + 200))
