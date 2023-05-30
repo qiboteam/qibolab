@@ -5,7 +5,7 @@ Platforms
 
 Qibolab provides support to different quantum laboratories.
 
-Each lab is implemented using a :class:`qibolab.platform.platform` object which implements basic features and connects instruments, qubits and channels.
+Each lab is implemented using a :class:`qibolab.platform.Platform` object which implements basic features and connects instruments, qubits and channels.
 Therefore, the ``Platform`` enables the user to interface with all
 the required lab instruments at the same time with minimum effort.
 
@@ -13,7 +13,7 @@ the required lab instruments at the same time with minimum effort.
 Platform
 """"""""
 
-.. autoclass:: qibolab.platform
+.. autoclass:: qibolab.platform.Platform
     :members:
     :member-order: bysource
 
@@ -44,7 +44,7 @@ which enables the user to code a pulse with specific parameters. We provide
 also a special object for the ``ReadoutPulse`` given its importance when dealing
 with a quantum hardware. Moreover, we supports different kinds of :ref:`pulseshape`.
 
-The :class:`qibolab.circuit.PulseSequence` class enables to combine different pulses
+The :class:`qibolab.pulses.PulseSequence` class enables to combine different pulses
 into a sequence through the ``add`` method.
 
 Basic Pulse
@@ -151,7 +151,18 @@ Data structures and sweeping
    :members:
    :member-order: bysource
 
+.. automodule:: qibolab.native
+   :members:
+   :member-order: bysource
+
 .. autoclass:: qibolab.sweeper.Sweeper
+   :members:
+   :member-order: bysource
+
+Symbolic Expression
+===================
+
+.. automodule:: qibolab.symbolic
    :members:
    :member-order: bysource
 
@@ -207,35 +218,7 @@ Qblox
 Quantum Machines
 """"""""""""""""
 
-%.. autoclass:: qibolab.instruments.qm.QMOPX
-%   :members:
-%   :member-order: bysource
-%
-%.. autoclass:: qibolab.instruments.qm.QMConfig
-%   :members:
-%   :member-order: bysource
-%
-%.. autoclass:: qibolab.instruments.qm.Acquisition
-%   :members:
-%   :member-order: bysource
-%
-%.. autoclass:: qibolab.instruments.qm.RawAcquisition
-%   :members:
-%   :member-order: bysource
-%
-.. autoclass:: qibolab.instruments.qm.IntegratedAcquisition
-   :members:
-   :member-order: bysource
-
-.. autoclass:: qibolab.instruments.qm.ShotsAcquisition
-   :members:
-   :member-order: bysource
-
-%.. autoclass:: qibolab.instruments.qm.QMPulse
-%   :members:
-%   :member-order: bysource
-%
-.. autoclass:: qibolab.instruments.qm.Sequence
+.. automodule:: qibolab.instruments.qm
    :members:
    :member-order: bysource
 
@@ -287,14 +270,10 @@ Erasynth
 FPGA
 """"
 
-ATS9371
--------
+IcarusQFPGA
+-----------
 
-.. autoclass:: qibolab.instruments.ATS9371.AlazarTech_ATS9371
-   :members:
-   :member-order: bysource
-
-.. autoclass:: qibolab.instruments.icarusq.AlazarADC
+.. autoclass:: qibolab.instruments.icarusqfpga.IcarusQFPGA
    :members:
    :member-order: bysource
 
@@ -302,5 +281,36 @@ RFSoC 4x2
 ---------
 
 .. autoclass:: qibolab.instruments.rfsoc.TII_RFSOC4x2
+   :members:
+   :member-order: bysource
+
+Transpiler
+==========
+
+.. automodule:: qibolab.transpilers.abstract
+   :members:
+   :member-order: bysource
+
+.. automodule:: qibolab.transpilers.fusion
+   :members:
+   :member-order: bysource
+
+.. automodule:: qibolab.transpilers.gate_decompositions
+   :members:
+   :member-order: bysource
+
+.. automodule:: qibolab.transpilers.unitary_decompositions
+   :members:
+   :member-order: bysource
+
+.. automodule:: qibolab.transpilers.pipeline
+   :members:
+   :member-order: bysource
+
+.. automodule:: qibolab.transpilers.general_connectivity
+   :members:
+   :member-order: bysource
+
+.. automodule:: qibolab.transpilers.star_connectivity
    :members:
    :member-order: bysource

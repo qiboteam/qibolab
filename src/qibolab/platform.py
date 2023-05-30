@@ -350,6 +350,7 @@ class Platform:
 
     def sweep(self, sequence, options, *sweepers):
         """Executes a pulse sequence for different values of sweeped parameters.
+
         Useful for performing chip characterization.
 
         Example:
@@ -544,6 +545,7 @@ class Platform:
 
 def create_dummy(runcard):
     """Create a dummy platform using the dummy instrument.
+
     Useful for testing.
     """
     from qibolab.instruments.dummy import DummyInstrument
