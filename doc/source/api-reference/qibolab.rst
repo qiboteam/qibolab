@@ -5,25 +5,22 @@ Platforms
 
 Qibolab provides support to different quantum laboratories.
 
-Each lab is implemented using a custom ``Platform`` class
-which inherits the :class:`qibolab.platforms.abstract.AbstractPlatform`
-which implements basic features including how to connect to the platform,
-how to start the instruments and how to run your model on the platform.
+Each lab is implemented using a :class:`qibolab.platform.platform` object which implements basic features and connects instruments, qubits and channels.
 Therefore, the ``Platform`` enables the user to interface with all
 the required lab instruments at the same time with minimum effort.
 
 
-Abstract platform
-"""""""""""""""""
+Platform
+""""""""
 
-.. autoclass:: qibolab.platforms.abstract.AbstractPlatform
+.. autoclass:: qibolab.platform
     :members:
     :member-order: bysource
 
-QBloxPlatform
-"""""""""""""
+MultiqubitPlatform (Qblox)
+""""""""""""""""""""""""""
 
-.. autoclass:: qibolab.platforms.qbloxplatform.QBloxPlatform
+.. autoclass:: qibolab.platforms.multiqubit.MultiqubitPlatform
    :members:
    :member-order: bysource
 
@@ -57,6 +54,14 @@ Basic Pulse
    :members:
    :member-order: bysource
 
+.. autoclass:: qibolab.pulses.Waveform
+   :members:
+   :member-order: bysource
+
+.. autoclass:: qibolab.pulses.PulseType
+   :members:
+   :member-order: bysource
+
 Readout Pulse
 """""""""""""
 
@@ -65,10 +70,26 @@ Readout Pulse
    :show-inheritance:
    :member-order: bysource
 
+Drive Pulse
+"""""""""""
+
+.. autoclass:: qibolab.pulses.DrivePulse
+   :members:
+   :show-inheritance:
+   :member-order: bysource
+
+Flux Pulse
+""""""""""
+
+.. autoclass:: qibolab.pulses.FluxPulse
+   :members:
+   :show-inheritance:
+   :member-order: bysource
+
 Pulse Sequence
 """"""""""""""
 
-.. autoclass:: qibolab.circuit.PulseSequence
+.. autoclass:: qibolab.pulses.PulseSequence
    :members:
    :member-order: bysource
 
@@ -80,51 +101,94 @@ Pulse shape
 Rectangular
 -----------
 
-.. autoclass:: qibolab.pulse_shapes.Rectangular
+.. autoclass:: qibolab.pulses.Rectangular
    :members:
    :member-order: bysource
 
 Gaussian
 --------
 
-.. autoclass:: qibolab.pulse_shapes.Gaussian
+.. autoclass:: qibolab.pulses.Gaussian
    :members:
    :member-order: bysource
 
 Drag
 ----
 
-.. autoclass:: qibolab.pulse_shapes.Drag
+.. autoclass:: qibolab.pulses.Drag
    :members:
    :member-order: bysource
 
-SWIPHT
-------
+IIR
+---
 
-.. autoclass:: qibolab.pulse_shapes.SWIPHT
+.. autoclass:: qibolab.pulses.IIR
+   :members:
+   :member-order: bysource
+
+SNZ
+---
+
+.. autoclass:: qibolab.pulses.SNZ
+   :members:
+   :member-order: bysource
+
+eCap
+----
+
+.. autoclass:: qibolab.pulses.eCap
    :members:
    :member-order: bysource
 
 Data structures and sweeping
 ============================
 
-.. TODO: Add documentation
-
-.. autoclass:: qibolab.platforms.abstract.Qubit
+.. autoclass:: qibolab.qubits.Qubit
    :members:
    :member-order: bysource
 
-.. autoclass:: qibolab.result.ExecutionResults
-   :members:
-   :member-order: bysource
-
-
-.. autoclass:: qibolab.result.AveragedResults
+.. autoclass:: qibolab.qubits.QubitPair
    :members:
    :member-order: bysource
 
 .. autoclass:: qibolab.sweeper.Sweeper
    :members:
+   :member-order: bysource
+
+Results
+=======
+
+.. autoclass:: qibolab.result.IntegratedResults
+   :members:
+   :show-inheritance:
+   :member-order: bysource
+
+
+.. autoclass:: qibolab.result.AveragedIntegratedResults
+   :members:
+   :show-inheritance:
+   :member-order: bysource
+
+.. autoclass:: qibolab.result.RawWaveformResults
+   :members:
+   :show-inheritance:
+   :member-order: bysource
+
+
+.. autoclass:: qibolab.result.AveragedRawWaveformResults
+   :members:
+   :show-inheritance:
+   :member-order: bysource
+
+.. autoclass:: qibolab.result.SampleResults
+   :members:
+   :show-inheritance:
+   :member-order: bysource
+
+
+.. autoclass:: qibolab.result.AveragedSampleResults
+   :members:
+   :show-inheritance:
    :member-order: bysource
 
 Instruments supported
@@ -136,24 +200,49 @@ local oscillators, qblox and FPGAs.
 Qblox
 """""
 
-GenericPulsar
--------------
-
-.. autoclass:: qibolab.instruments.qblox.GenericPulsar
+.. automodule:: qibolab.instruments.qblox
    :members:
    :member-order: bysource
 
-PulsarQCM
----------
+Quantum Machines
+""""""""""""""""
 
-.. autoclass:: qibolab.instruments.qblox.PulsarQCM
+%.. autoclass:: qibolab.instruments.qm.QMOPX
+%   :members:
+%   :member-order: bysource
+%
+%.. autoclass:: qibolab.instruments.qm.QMConfig
+%   :members:
+%   :member-order: bysource
+%
+%.. autoclass:: qibolab.instruments.qm.Acquisition
+%   :members:
+%   :member-order: bysource
+%
+%.. autoclass:: qibolab.instruments.qm.RawAcquisition
+%   :members:
+%   :member-order: bysource
+%
+.. autoclass:: qibolab.instruments.qm.IntegratedAcquisition
    :members:
    :member-order: bysource
 
-PulsarQRM
----------
+.. autoclass:: qibolab.instruments.qm.ShotsAcquisition
+   :members:
+   :member-order: bysource
 
-.. autoclass:: qibolab.instruments.qblox.PulsarQRM
+%.. autoclass:: qibolab.instruments.qm.QMPulse
+%   :members:
+%   :member-order: bysource
+%
+.. autoclass:: qibolab.instruments.qm.Sequence
+   :members:
+   :member-order: bysource
+
+Zurich Instruments
+""""""""""""""""""
+
+.. automodule:: qibolab.instruments.zhinst
    :members:
    :member-order: bysource
 
@@ -161,14 +250,6 @@ QuicSyn
 """""""
 
 .. autoclass:: qibolab.instruments.icarusq.QuicSyn
-   :members:
-   :undoc-members:
-   :member-order: bysource
-
-RohdeSchwarz SGS100A
-""""""""""""""""""""
-
-.. autoclass:: qibolab.instruments.rohde_schwarz.SGS100A
    :members:
    :undoc-members:
    :member-order: bysource
@@ -185,6 +266,22 @@ MiniCircuit RCDAT-8000-30
 
 .. autoclass:: qibolab.instruments.icarusq.MCAttenuator
    :members:
+   :member-order: bysource
+
+RohdeSchwarz SGS100A
+""""""""""""""""""""
+
+.. autoclass:: qibolab.instruments.rohde_schwarz.SGS100A
+   :members:
+   :undoc-members:
+   :member-order: bysource
+
+Erasynth
+""""""""
+
+.. autoclass:: qibolab.instruments.erasynth.ERA
+   :members:
+   :undoc-members:
    :member-order: bysource
 
 FPGA
