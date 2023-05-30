@@ -74,7 +74,7 @@ class ShortestPaths(Transpiler):
 
     """
 
-    def __init__(self, connectivity: nx.graph, sampling_split=1.0, verbose=False):
+    def __init__(self, connectivity: nx.Graph, sampling_split=1.0, verbose=False):
         self.connectivity = connectivity
         self.sampling_split = sampling_split
         self.verbose = verbose
