@@ -36,9 +36,10 @@ class QbloxController:
         modules (dict): A dictionay with the qblox modules connected to the experiment.
     """
 
-    def __init__(self, name, modules):
+    def __init__(self, name, cluster, modules):
         """Initialises the controller."""
         self.is_connected = False
+        self.cluster: Cluster = cluster
         self.modules: dict = modules
         signal.signal(signal.SIGTERM, self._termination_handler)
 
@@ -47,6 +48,7 @@ class QbloxController:
 
         if not self.is_connected:
             try:
+                self.cluster.connect()
                 for name in self.modules:
                     self.modules[name].connect()
                 self.is_connected = True
@@ -99,7 +101,7 @@ class QbloxController:
         if self.is_connected:
             for name in self.modules:
                 self.modules[name].stop()
-        log.warning("All modules stopped.")
+        log.warning("QbloxController: all modules stopped.")
         exit(0)
 
     def disconnect(self):
@@ -108,6 +110,7 @@ class QbloxController:
         if self.is_connected:
             for name in self.modules:
                 self.modules[name].disconnect()
+            self.cluster.disconnect()
             self.is_connected = False
 
     def execute_pulse_sequence(
@@ -133,11 +136,9 @@ class QbloxController:
         if options.averaging_mode == AveragingMode.SINGLESHOT:
             nshots = options.nshots if options.nshots is not None else self.nshots
             navgs = 1
-            self.average = False
         else:
             navgs = options.nshots if options.nshots is not None else self.nshots
             nshots = 1
-            self.average = True
 
         relaxation_time = options.relaxation_time if options.relaxation_time is not None else self.relaxation_time
         repetition_duration = sequence.finish + relaxation_time
@@ -238,8 +239,6 @@ class QbloxController:
                     acquisition = RawWaveformResults(ires + 1j * qres)
                 if options.acquisition_type is AcquisitionType.INTEGRATION:
                     acquisition = IntegratedResults(ires + 1j * qres)
-            if self.average:
-                acquisition = acquisition.average
             data[ro_pulse.serial] = data[ro_pulse.serial] = acquisition
 
             # data[ro_pulse.serial] = ExecutionResults.from_components(*acquisition_results[ro_pulse.serial])
