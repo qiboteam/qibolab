@@ -177,7 +177,7 @@ def test_multiqubitplatform_execute_one_long_drive_pulse(platform):
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=8192 + 200))
     with pytest.raises(NotImplementedError):
-        platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+        platform._execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
 
 
 @pytest.mark.qpu
@@ -188,7 +188,7 @@ def test_multiqubitplatform_execute_one_extralong_drive_pulse(platform):
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=2 * 8192 + 200))
     with pytest.raises(NotImplementedError):
-        platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+        platform._execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
 
 
 @pytest.mark.qpu
