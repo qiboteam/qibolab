@@ -209,7 +209,7 @@ characterization:
             # To save power values on the runcard
             # flux_range: -0
         "c3":
-            sweetspot: 0.
+            sweetspot: 0.065
             filter: {}
             # To save power values on the runcard
             # flux_range: -0

@@ -632,11 +632,10 @@ class Zurich(AbstractInstrument):
             self.fast_reset(exp, qubits, exp_options.fast_reset)
 
     @staticmethod
-    def play_sweep_select(exp, qubit, pulse, section, parameters, partial_sweep):
+    def play_sweep_select_single(exp, qubit, pulse, section, parameters, partial_sweep):
         if any("amplitude" in param for param in parameters):
-            pulse.zhsweeper.values = pulse.zhsweeper.values.copy()
-            pulse.zhpulse.amplitude *= max(abs(pulse.zhsweeper.values))
-            pulse.zhsweeper.values /= max(abs(pulse.zhsweeper.values))
+            pulse.zhpulse.amplitude *= max(pulse.zhsweeper.values)
+            pulse.zhsweeper.values /= max(pulse.zhsweeper.values)
             exp.play(
                 signal=f"{section}{qubit.name}",
                 pulse=pulse.zhpulse,
@@ -665,6 +664,25 @@ class Zurich(AbstractInstrument):
                 phase=pulse.pulse.relative_phase,
             )
 
+    @staticmethod
+    def play_sweep_select_dual(exp, qubit, pulse, section, parameters):
+        if "amplitude" in parameters and "duration" in parameters:
+            for sweeper in pulse.zhsweepers:
+                if sweeper.uid == "amplitude":
+                    sweeper_amp_index = pulse.zhsweepers.index(sweeper)
+                    sweeper.values = sweeper.values.copy()
+                    pulse.zhpulse.amplitude *= max(abs(sweeper.values))
+                    sweeper.values /= max(abs(sweeper.values))
+                else:
+                    sweeper_dur_index = pulse.zhsweepers.index(sweeper)
+
+            exp.play(
+                signal=f"{section}{qubit.name}",
+                pulse=pulse.zhpulse,
+                amplitude=pulse.zhsweepers[sweeper_amp_index],
+                length=pulse.zhsweepers[sweeper_dur_index],
+            )
+
     def play_sweep(self, exp, qubit, pulse, section):
         """Play Zurich pulse when a sweeper is involved"""
 
@@ -680,7 +698,10 @@ class Zurich(AbstractInstrument):
             for partial_sweep in pulse.zhsweepers:
                 parameters.append(partial_sweep.uid)
             # Recheck partial sweeps
-            self.play_sweep_select(exp, qubit, pulse, section, parameters, partial_sweep)
+            if len(parameters) == 2:
+                self.play_sweep_select_dual(exp, qubit, pulse, section, parameters)
+            else:
+                self.play_sweep_select_single(exp, qubit, pulse, section, parameters, partial_sweep)
 
     def flux(self, exp, qubits):
         """qubit flux or qubit coupler flux for bias sweep or pulses"""
