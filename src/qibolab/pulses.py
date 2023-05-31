@@ -1,10 +1,12 @@
 """Pulse and PulseSequence classes."""
+import re
 from abc import ABC, abstractmethod
 from enum import Enum
 
 import numpy as np
+from qibo.config import log
+from scipy.signal import lfilter
 
-from qibolab.symbolic import floatSymbolicExpression as se_float
 from qibolab.symbolic import intSymbolicExpression as se_int
 
 
@@ -75,7 +77,6 @@ class Waveform:
         """
 
         import matplotlib.pyplot as plt
-        import numpy as np
 
         plt.figure(figsize=(14, 5), dpi=200)
         plt.plot(self.data, c="C0", linestyle="dashed")
@@ -138,13 +139,11 @@ class PulseShape(ABC):
         """A tuple with the i and q waveforms of the pulse, modulated with its frequency."""
 
         if not self.pulse:
-            raise Exception(
+            raise RuntimeError(
                 "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
             )
         pulse = self.pulse
         if abs(pulse.frequency) * 2 > PulseShape.SAMPLING_RATE:
-            from qibo.config import log
-
             log.info(
                 f"WARNING: The frequency of pulse {pulse.serial} is higher than the nyqusit frequency ({int(PulseShape.SAMPLING_RATE // 2)}) for the device sampling rate: {int(PulseShape.SAMPLING_RATE)}"
             )
@@ -170,7 +169,7 @@ class PulseShape(ABC):
 
     def __eq__(self, item) -> bool:
         """Overloads == operator"""
-        return type(item) is self.__class__
+        return isinstance(item, self.__class__)
 
 
 class Rectangular(PulseShape):
@@ -192,10 +191,9 @@ class Rectangular(PulseShape):
             waveform = Waveform(self.pulse.amplitude * np.ones(num_samples))
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
-        else:
-            raise Exception(
-                "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
-            )
+        raise RuntimeError(
+            "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
+        )
 
     @property
     def envelope_waveform_q(self) -> Waveform:
@@ -206,10 +204,9 @@ class Rectangular(PulseShape):
             waveform = Waveform(np.zeros(num_samples))
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
-        else:
-            raise Exception(
-                "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
-            )
+        raise RuntimeError(
+            "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
+        )
 
     def __repr__(self):
         return f"{self.name}()"
@@ -251,10 +248,9 @@ class Gaussian(PulseShape):
             )
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
-        else:
-            raise Exception(
-                "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
-            )
+        raise RuntimeError(
+            "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
+        )
 
     @property
     def envelope_waveform_q(self) -> Waveform:
@@ -265,10 +261,9 @@ class Gaussian(PulseShape):
             waveform = Waveform(np.zeros(num_samples))
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
-        else:
-            raise Exception(
-                "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
-            )
+        raise RuntimeError(
+            "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
+        )
 
     def __repr__(self):
         return f"{self.name}({format(self.rel_sigma, '.6f').rstrip('0').rstrip('.')})"
@@ -311,10 +306,9 @@ class Drag(PulseShape):
             waveform = Waveform(i)
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
-        else:
-            raise Exception(
-                "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
-            )
+        raise RuntimeError(
+            "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
+        )
 
     @property
     def envelope_waveform_q(self) -> Waveform:
@@ -336,16 +330,12 @@ class Drag(PulseShape):
             waveform = Waveform(q)
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
-        else:
-            raise Exception(
-                "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
-            )
+        raise RuntimeError(
+            "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
+        )
 
     def __repr__(self):
         return f"{self.name}({format(self.rel_sigma, '.6f').rstrip('0').rstrip('.')}, {format(self.beta, '.6f').rstrip('0').rstrip('.')})"
-
-
-from scipy.signal import lfilter
 
 
 class IIR(PulseShape):
@@ -399,10 +389,9 @@ class IIR(PulseShape):
             waveform = Waveform(data)
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
-        else:
-            raise Exception(
-                "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
-            )
+        raise RuntimeError(
+            "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
+        )
 
     @property
     def envelope_waveform_q(self) -> Waveform:
@@ -421,10 +410,9 @@ class IIR(PulseShape):
             waveform = Waveform(data)
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
-        else:
-            raise Exception(
-                "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
-            )
+        raise RuntimeError(
+            "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
+        )
 
     def __repr__(self):
         formatted_b = [round(b, 3) for b in self.b]
@@ -459,7 +447,7 @@ class SNZ(PulseShape):
             if not self.t_half_flux_pulse:
                 self.t_half_flux_pulse = self.pulse.duration / 2
             elif 2 * self.t_half_flux_pulse > self.pulse.duration:
-                raise Exception("Pulse shape parameter error: pulse.t_half_flux_pulse <= pulse.duration")
+                raise ValueError("Pulse shape parameter error: pulse.t_half_flux_pulse <= pulse.duration")
             num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
             half_flux_pulse_samples = int(np.rint(num_samples * self.t_half_flux_pulse / self.pulse.duration))
             iding_samples = num_samples - 2 * half_flux_pulse_samples
@@ -477,7 +465,7 @@ class SNZ(PulseShape):
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         else:
-            raise Exception(
+            raise RuntimeError(
                 "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
             )
 
@@ -491,7 +479,7 @@ class SNZ(PulseShape):
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         else:
-            raise Exception(
+            raise RuntimeError(
                 "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
             )
 
@@ -533,10 +521,9 @@ class eCap(PulseShape):
             )
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
-        else:
-            raise Exception(
-                "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
-            )
+        raise RuntimeError(
+            "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
+        )
 
     @property
     def envelope_waveform_q(self) -> Waveform:
@@ -545,10 +532,9 @@ class eCap(PulseShape):
             waveform = Waveform(np.zeros(num_samples))
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
-        else:
-            raise Exception(
-                "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
-            )
+        raise RuntimeError(
+            "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
+        )
 
     def __repr__(self):
         return f"{self.name}({format(self.alpha, '.6f').rstrip('0').rstrip('.')})"
@@ -641,8 +627,7 @@ class Pulse:
         """Returns the time when the pulse is scheduled to be played, in ns."""
         if isinstance(self._start, se_int):
             return self._start.value
-        else:
-            return self._start
+        return self._start
 
     @start.setter
     def start(self, value):
@@ -654,7 +639,7 @@ class Pulse:
 
         if not isinstance(value, (se_int, int, np.integer)):
             raise TypeError(f"start argument type should be intSymbolicExpression or int, got {type(value).__name__}")
-        elif not value >= 0:
+        if not value >= 0:
             raise ValueError(f"start argument must be >= 0, got {value}")
 
         if isinstance(value, se_int):
@@ -686,8 +671,7 @@ class Pulse:
         """Returns the duration of the pulse, in ns."""
         if isinstance(self._duration, se_int):
             return self._duration.value
-        else:
-            return self._duration
+        return self._duration
 
     @duration.setter
     def duration(self, value):
@@ -701,7 +685,7 @@ class Pulse:
             raise TypeError(
                 f"duration argument type should be intSymbolicExpression or int, got {type(value).__name__}"
             )
-        elif not value >= 0:
+        if not value >= 0:
             raise ValueError(f"duration argument must be >= 0, got {value}")
         if isinstance(value, se_int):
             self._duration = se_int(value.symbol)["_p" + str(self._id) + "_duration"]
@@ -735,8 +719,7 @@ class Pulse:
         """
         if isinstance(self._finish, se_int):
             return self._finish.value
-        else:
-            return self._finish
+        return self._finish
 
     @property
     def se_start(self) -> se_int:
@@ -783,7 +766,7 @@ class Pulse:
             value = float(value)
         if not isinstance(value, (float, np.floating)):
             raise TypeError(f"amplitude argument type should be float, got {type(value).__name__}")
-        elif not ((value >= -1) & (value <= 1)):
+        if not ((value >= -1) & (value <= 1)):
             raise ValueError(f"amplitude argument must be >= -1 & <= 1, got {value}")
         if isinstance(value, np.floating):
             self._amplitude = float(value)
@@ -869,8 +852,6 @@ class Pulse:
         if isinstance(value, PulseShape):
             self._shape = value
         elif isinstance(value, str):
-            import re
-
             shape_name = re.findall(r"(\w+)", value)[0]
             if shape_name not in globals():
                 raise ValueError(f"shape {value} not found")
@@ -996,21 +977,19 @@ class Pulse:
     def __eq__(self, other):
         if isinstance(other, Pulse):
             return self.serial == other.serial
-        else:
-            return False
+        return False
 
     def __add__(self, other):
         if isinstance(other, Pulse):
             return PulseSequence(self, other)
-        elif isinstance(other, PulseSequence):
+        if isinstance(other, PulseSequence):
             return PulseSequence(self, *other.pulses)
-        else:
-            raise TypeError(f"Expected Pulse or PulseSequence; got {type(other).__name__}")
+        raise TypeError(f"Expected Pulse or PulseSequence; got {type(other).__name__}")
 
     def __mul__(self, n):
         if not isinstance(n, int):
             raise TypeError(f"Expected int; got {type(n).__name__}")
-        elif n < 0:
+        if n < 0:
             raise TypeError(f"argument n should be >=0, got {n}")
         return PulseSequence(*([self.copy()] * n))
 
@@ -1067,7 +1046,6 @@ class Pulse:
         """
 
         import matplotlib.pyplot as plt
-        import numpy as np
         from matplotlib import gridspec
 
         num_samples = int(np.rint(self.duration / 1e9 * PulseShape.SAMPLING_RATE))
@@ -1124,7 +1102,6 @@ class Pulse:
         else:
             plt.show()
         plt.close()
-        return
 
 
 class ReadoutPulse(Pulse):
@@ -1336,7 +1313,6 @@ class SplitPulse(Pulse):
 
     def plot(self, savefig_filename=None):
         import matplotlib.pyplot as plt
-        import numpy as np
         from matplotlib import gridspec
 
         time = (
@@ -1417,7 +1393,6 @@ class SplitPulse(Pulse):
         else:
             plt.show()
         plt.close()
-        return
 
 
 class PulseConstructor(Enum):
@@ -1488,18 +1463,16 @@ class PulseSequence:
     def __add__(self, other):
         if isinstance(other, PulseSequence):
             return PulseSequence(*self.pulses, *other.pulses)
-        elif isinstance(other, Pulse):
+        if isinstance(other, Pulse):
             return PulseSequence(*self.pulses, other)
-        else:
-            raise TypeError(f"Expected PulseSequence or Pulse; got {type(other).__name__}")
+        raise TypeError(f"Expected PulseSequence or Pulse; got {type(other).__name__}")
 
     def __radd__(self, other):
         if isinstance(other, PulseSequence):
             return PulseSequence(*other.pulses, *self.pulses)
-        elif isinstance(other, Pulse):
+        if isinstance(other, Pulse):
             return PulseSequence(other, *self.pulses)
-        else:
-            raise TypeError(f"Expected PulseSequence or Pulse; got {type(other).__name__}")
+        raise TypeError(f"Expected PulseSequence or Pulse; got {type(other).__name__}")
 
     def __iadd__(self, other):
         if isinstance(other, PulseSequence):
@@ -1513,21 +1486,21 @@ class PulseSequence:
     def __mul__(self, n):
         if not isinstance(n, int):
             raise TypeError(f"Expected int; got {type(n).__name__}")
-        elif n < 0:
+        if n < 0:
             raise TypeError(f"argument n should be >=0, got {n}")
         return PulseSequence(*(self.pulses * n))
 
     def __rmul__(self, n):
         if not isinstance(n, int):
             raise TypeError(f"Expected int; got {type(n).__name__}")
-        elif n < 0:
+        if n < 0:
             raise TypeError(f"argument n should be >=0, got {n}")
         return PulseSequence(*(self.pulses * n))
 
     def __imul__(self, n):
         if not isinstance(n, int):
             raise TypeError(f"Expected int; got {type(n).__name__}")
-        elif n < 1:
+        if n < 1:
             raise TypeError(f"argument n should be >=1, got {n}")
         original_set = self.shallow_copy()
         for x in range(n - 1):
@@ -1754,7 +1727,6 @@ class PulseSequence:
 
         if not self.is_empty:
             import matplotlib.pyplot as plt
-            import numpy as np
             from matplotlib import gridspec
 
             fig = plt.figure(figsize=(14, 2 * self.count), dpi=200)
