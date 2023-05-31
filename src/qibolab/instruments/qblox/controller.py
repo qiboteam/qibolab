@@ -135,9 +135,11 @@ class QbloxController:
         if options.averaging_mode == AveragingMode.SINGLESHOT:
             nshots = options.nshots if options.nshots is not None else self.nshots
             navgs = 1
+            average = False
         else:
             navgs = options.nshots if options.nshots is not None else self.nshots
             nshots = 1
+            average = True
 
         relaxation_time = options.relaxation_time if options.relaxation_time is not None else self.relaxation_time
         repetition_duration = sequence.finish + relaxation_time
@@ -163,13 +165,13 @@ class QbloxController:
         module_pulses = {}
         data = {}
         for name in self.modules:
-            if isinstance(self.modules[name], (ClusterQRM_RF, ClusterQCM_RF, ClusterQCM_BB)):
+            if isinstance(self.modules[name], (ClusterQRM_RF, ClusterQCM_RF)):
                 # from the pulse sequence, select those pulses to be synthesised by the module
                 module_pulses[name] = sequence.get_channel_pulses(*self.modules[name].channels)
 
                 for port in self.modules[name].ports:
-                    _los = []
-                    _ifs = []
+                    # _los = []
+                    # _ifs = []
                     port_pulses = module_pulses[name].get_channel_pulses(self.modules[name]._port_channel_map[port])
                     # for pulse in port_pulses:
                     #     if pulse.type == PulseType.READOUT:
@@ -230,15 +232,24 @@ class QbloxController:
         # TODO: move to QRM_RF.acquire()
         for ro_pulse in sequence.ro_pulses:
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                acquisition = SampleResults(acquisition_results[ro_pulse.serial][2])
+                sample_res = acquisition_results[ro_pulse.serial][2]
+                acquisition = options.results_type(sample_res)
             else:
                 ires = acquisition_results[ro_pulse.serial][0]
                 qres = acquisition_results[ro_pulse.serial][1]
-                if options.acquisition_type is AcquisitionType.RAW:
-                    acquisition = RawWaveformResults(ires + 1j * qres)
-                if options.acquisition_type is AcquisitionType.INTEGRATION:
-                    acquisition = IntegratedResults(ires + 1j * qres)
-            data[ro_pulse.serial] = data[ro_pulse.serial] = acquisition
+                acquisition = options.results_type(ires + 1j * qres)
+
+                # if options.acquisition_type is AcquisitionType.RAW:
+                #     if average:
+                #         acquisition = AveragedRawWaveformResults(ires + 1j * qres)
+                #     else:
+                #         acquisition = RawWaveformResults(ires + 1j * qres)
+                # if options.acquisition_type is AcquisitionType.INTEGRATION:
+                #     if average:
+                #         acquisition = AveragedIntegratedResults(ires + 1j * qres)
+                #     else:
+                #         acquisition = IntegratedResults(ires + 1j * qres)
+            data[ro_pulse.serial] = data[ro_pulse.qubit] = acquisition
 
             # data[ro_pulse.serial] = ExecutionResults.from_components(*acquisition_results[ro_pulse.serial])
             # data[ro_pulse.serial] = IntegratedResults(acquisition_results[ro_pulse.serial])
