@@ -997,8 +997,6 @@ class Zurich(AbstractInstrument):
         elif parameter is None:
             parameter = ZhSweeper(sweeper.pulses[0], sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
 
-        print(parameter)
-
         with exp.sweep(
             uid=f"sweep_{sweeper.parameter.name.lower()}_{i}",  # FIXME: This uid trouble double freq ???
             parameter=parameter,  # FIXME: This uid for double freq ???
