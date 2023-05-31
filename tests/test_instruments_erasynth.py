@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from qibolab import create_platform
-from qibolab.paths import user_folder
+from qibolab.instruments.abstract import INSTRUMENTS_DATA_FOLDER
 
 from .conftest import load_from_platform
 
@@ -11,7 +11,7 @@ from .conftest import load_from_platform
 def test_instruments_erasynth_init(instrument):
     assert instrument.is_connected == True
     assert instrument.device
-    assert instrument.data_folder == user_folder / "instruments" / "data" / instrument.tmp_folder.name.split("/")[-1]
+    assert instrument.data_folder == INSTRUMENTS_DATA_FOLDER / instrument.tmp_folder.name.split("/")[-1]
 
 
 @pytest.mark.qpu
