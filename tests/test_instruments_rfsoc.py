@@ -238,9 +238,7 @@ def test_convert_av_sweep_results():
     execution_parameters = ExecutionParameters(
         acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
     )
-    out_dict = instrument.convert_sweep_results(
-        sequence.ro_pulses, sequence, platform.qubits, avgi, avgq, execution_parameters
-    )
+    out_dict = instrument.convert_sweep_results(sequence.ro_pulses, platform.qubits, avgi, avgq, execution_parameters)
     targ_dict = {
         serial1: AveragedIntegratedResults(np.array([1, 2, 3]) + 1j * np.array([7, 8, 9])),
         serial2: AveragedIntegratedResults(np.array([4, 1, 2]) + 1j * np.array([-1, -2, -3])),
@@ -274,9 +272,7 @@ def test_convert_nav_sweep_results():
     execution_parameters = ExecutionParameters(
         acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
     )
-    out_dict = instrument.convert_sweep_results(
-        sequence.ro_pulses, sequence, platform.qubits, avgi, avgq, execution_parameters
-    )
+    out_dict = instrument.convert_sweep_results(sequence.ro_pulses, platform.qubits, avgi, avgq, execution_parameters)
     targ_dict = {
         serial1: AveragedIntegratedResults(np.array([1, 1, 2, 2, 3, 3]) + 1j * np.array([7, 7, 8, 8, 9, 9])),
         serial2: AveragedIntegratedResults(np.array([4, 4, 1, 1, 2, 2]) + 1j * np.array([-1, -1, -2, -2, -3, -3])),
