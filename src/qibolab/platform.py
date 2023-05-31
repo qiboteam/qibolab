@@ -543,31 +543,3 @@ class Platform:
     def get_bias(self, qubit):
         """Get bias value. Usefeul for calibration routines involving flux."""
         return self.qubits[qubit].flux.bias
-
-
-def create_dummy(runcard):
-    """Create a dummy platform using the dummy instrument.
-
-    Useful for testing.
-    """
-    from qibolab.instruments.dummy import DummyInstrument
-
-    # Create channel objects
-    channels = ChannelMap()
-    channels |= ("readout", "drive")
-    channels |= (f"flux-{i}" for i in range(6))
-
-    # Create dummy controller
-    instrument = DummyInstrument("dummy", 0)
-    # Create platform
-    platform = Platform("dummy", runcard, [instrument], channels)
-
-    # map channels to qubits
-    for qubit in platform.qubits:
-        platform.qubits[qubit].readout = channels["readout"]
-        platform.qubits[qubit].drive = channels["drive"]
-        platform.qubits[qubit].flux = channels[f"flux-{qubit}"]
-        channels[f"flux-{qubit}"].qubit = platform.qubits[qubit]
-        channels["readout"].attenuation = 0
-
-    return platform
