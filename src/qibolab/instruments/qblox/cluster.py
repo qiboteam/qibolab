@@ -1325,7 +1325,7 @@ class ClusterQRM_RF(AbstractInstrument):
                     # Until this is resolved, and since bias is only implemented with QCMs offset, this instrument will
                     # never take an active role in those sweeps:
 
-                    # if sweeper.qubits and sequencer.qubit in sweeper.qubits:
+                    # if sweeper.qubits and sequencer.qubit in [_.name for _ in sweeper.qubits]:
                     #     sweeper.qs.update_parameters = True
 
                     # finally attach QbloxSweepers to the pulses being swept
@@ -1511,7 +1511,7 @@ class ClusterQRM_RF(AbstractInstrument):
                 # wrap pulses block in sweepers loop blocks
                 for sweeper in sweepers:
                     # if we wanted to make any of these sweepers relative:
-                    # Parameter.bias: sequencer.qubit in sweeper.qubits # + self.ports[port].offset
+                    # Parameter.bias: sequencer.qubit in [_.name for _ in sweeper.qubits] # + self.ports[port].offset
                     # Parameter.amplitude: sequencer.pulses[0] in sweeper.pulses: # + self.ports[port].gain
                     # Parameter.frequency: sequencer.pulses[0] in sweeper.pulses # + self.get_if(sequencer.pulses[0])
 
@@ -2514,7 +2514,7 @@ class ClusterQCM_RF(AbstractInstrument):
                     # Until this is resolved, and since bias is only implemented with QCMs offset, this instrument will
                     # never take an active role in those sweeps:
 
-                    # if sweeper.qubits and sequencer.qubit in sweeper.qubits:
+                    # if sweeper.qubits and sequencer.qubit in [_.name for _ in sweeper.qubits]:
                     #     sweeper.qs.update_parameters = True
 
                     # finally attach QbloxSweepers to the pulses being swept
@@ -2624,7 +2624,7 @@ class ClusterQCM_RF(AbstractInstrument):
                 # wrap pulses block in sweepers loop blocks
                 for sweeper in sweepers:
                     # if we wanted to make any of these sweepers relative:
-                    # Parameter.bias: sequencer.qubit in sweeper.qubits # + self.ports[port].offset
+                    # Parameter.bias: sequencer.qubit in [_.name for _ in sweeper.qubits] # + self.ports[port].offset
                     # Parameter.amplitude: sequencer.pulses[0] in sweeper.pulses: # + self.ports[port].gain
                     # Parameter.frequency: sequencer.pulses[0] in sweeper.pulses # + self.get_if(sequencer.pulses[0])
 
@@ -3264,7 +3264,7 @@ class ClusterQCM(AbstractInstrument):
                     # For example port gain, both the drive and readout ports have gain parameters.
                     # Until this is resolved, and since bias is only implemented with QCMs offset, this instrument will
                     # be the only one taking an active role in those sweeps:
-                    if sweeper.qubits and sequencer.qubit in sweeper.qubits:
+                    if sweeper.qubits and sequencer.qubit in [_.name for _ in sweeper.qubits]:
                         sweeper.qs.update_parameters = True
 
                     if sweeper.pulses:
@@ -3372,7 +3372,7 @@ class ClusterQCM(AbstractInstrument):
                 # wrap pulses block in sweepers loop blocks
                 for sweeper in sweepers:
                     # if we wanted to make any of these sweepers relative:
-                    # Parameter.bias: sequencer.qubit in sweeper.qubits # + self.ports[port].offset
+                    # Parameter.bias: sequencer.qubit in [_.name for _ in sweeper.qubits] # + self.ports[port].offset
                     # Parameter.amplitude: sequencer.pulses[0] in sweeper.pulses: # + self.ports[port].gain
                     # Parameter.frequency: sequencer.pulses[0] in sweeper.pulses # + self.get_if(sequencer.pulses[0])
 
