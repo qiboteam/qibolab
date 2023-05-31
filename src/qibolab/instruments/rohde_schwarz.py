@@ -6,6 +6,7 @@ Supports the following Instruments:
 https://qcodes.github.io/Qcodes/api/generated/qcodes.instrument_drivers.rohde_schwarz.html#module-qcodes.instrument_drivers.rohde_schwarz.SGS100A
 """
 import qcodes.instrument_drivers.rohde_schwarz.SGS100A as LO_SGS100A
+from qibo.config import log
 
 from qibolab.instruments.abstract import InstrumentException, LocalOscillator
 
@@ -67,14 +68,14 @@ class SGS100A(LocalOscillator):
                     self.is_connected = True
                     break
                 except KeyError as exc:
-                    print(f"Unable to connect:\n{str(exc)}\nRetrying...")
+                    log.info(f"Unable to connect:\n{str(exc)}\nRetrying...")
                     self.name += "_" + str(attempt)
-                except Exception as exc:
-                    print(f"Unable to connect:\n{str(exc)}\nRetrying...")
+                except ConnectionError as exc:
+                    log.info(f"Unable to connect:\n{str(exc)}\nRetrying...")
             if not self.is_connected:
                 raise InstrumentException(self, f"Unable to connect to {self.name}")
         else:
-            raise Exception("There is an open connection to the instrument already")
+            raise RuntimeError("There is an open connection to the instrument already")
         # set proper frequency and power if they were changed before connecting
         if self._frequency is not None:
             self._set_device_parameter("frequency", self._frequency)
@@ -95,14 +96,14 @@ class SGS100A(LocalOscillator):
             if self.is_connected:
                 if not parameter in self._device_parameters:
                     if not hasattr(self.device, parameter):
-                        raise Exception(f"The instrument {self.name} does not have parameter {parameter}")
+                        raise ValueError(f"The instrument {self.name} does not have parameter {parameter}")
                     self.device.set(parameter, value)
                     self._device_parameters[parameter] = value
                 elif self._device_parameters[parameter] != value:
                     self.device.set(parameter, value)
                     self._device_parameters[parameter] = value
             else:
-                raise Exception("There is no connection to the instrument {self.name}")
+                raise ConnectionError("There is no connection to the instrument {self.name}")
 
     def _erase_device_parameters_cache(self):
         """Erases the cache of instrument parameters."""
@@ -132,7 +133,7 @@ class SGS100A(LocalOscillator):
             self.frequency = frequency
             self.ref_osc_source = ref_osc_source
         else:
-            raise Exception("There is no connection to the instrument")
+            raise ConnectionError("There is no connection to the instrument")
 
     def start(self):
         self.device.on()
