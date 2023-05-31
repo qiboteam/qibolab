@@ -634,8 +634,9 @@ class Zurich(AbstractInstrument):
     @staticmethod
     def play_sweep_select(exp, qubit, pulse, section, parameters, partial_sweep):
         if any("amplitude" in param for param in parameters):
-            pulse.zhpulse.amplitude *= max(pulse.zhsweeper.values)
-            pulse.zhsweeper.values /= max(pulse.zhsweeper.values)
+            pulse.zhsweeper.values = pulse.zhsweeper.values.copy()
+            pulse.zhpulse.amplitude *= max(abs(pulse.zhsweeper.values))
+            pulse.zhsweeper.values /= max(abs(pulse.zhsweeper.values))
             exp.play(
                 signal=f"{section}{qubit.name}",
                 pulse=pulse.zhpulse,
@@ -700,7 +701,9 @@ class Zurich(AbstractInstrument):
                         )
                     if isinstance(pulse, ZhSweeperLine):
                         self.play_sweep(exp, qubit, pulse, section="flux")
-                    else:
+                    elif isinstance(pulse, ZhSweeper):
+                        self.play_sweep(exp, qubit, pulse, section="flux")
+                    elif isinstance(pulse, ZhPulse):
                         exp.play(signal=f"flux{q}", pulse=pulse.zhpulse)
                     i += 1
 
@@ -955,8 +958,8 @@ class Zurich(AbstractInstrument):
         if sweeper.parameter is Parameter.amplitude:
             for pulse in sweeper.pulses:
                 sweeper.values = sweeper.values.copy()
-                pulse.amplitude *= max(sweeper.values)
-                sweeper.values /= max(sweeper.values)
+                pulse.amplitude *= max(abs(sweeper.values))
+                sweeper.values /= max(abs(sweeper.values))
                 parameter = ZhSweeper(pulse, sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
 
         if sweeper.parameter is Parameter.bias:
