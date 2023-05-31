@@ -161,7 +161,7 @@ characterization:
         2:
             readout_frequency: 6.109e+9  #6_112_000_000
             resonator_polycoef_flux: []
-            drive_frequency: 4339731421 
+            drive_frequency: 4339731421
             T1: 0.
             T2: 0.
             sweetspot: -0.17155 #0.5 #0.62 0.00
@@ -171,7 +171,7 @@ characterization:
             # parameters for single shot classification
             threshold: -0.9222
             iq_angle: -0.231
-            alpha: 211604296 
+            alpha: 211604296
         3:
             readout_frequency: 5.8060e+9
             resonator_polycoef_flux: []

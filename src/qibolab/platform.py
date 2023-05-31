@@ -259,7 +259,7 @@ def create_tii_IQM5q(runcard, descriptor=None):
 
     # set time of flight for readout integration (HARDCODED)
     controller.time_of_flight = 280
-    controller.smearing = 100 
+    controller.smearing = 100
 
     # Instantiate local oscillators
     local_oscillators = [LocalOscillator(f"lo_{kind}", None) for kind in ["readout"] + [f"drive_{n}" for n in range(4)]]
