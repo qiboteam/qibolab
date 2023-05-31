@@ -13,8 +13,7 @@ class PulseType(Enum):
 
     READOUT pulses triger acquisitions.
     DRIVE pulses are used to control qubit states.
-    FLUX pulses are used to shift the frequency of flux tunable qubits and with it implement
-        two-qubit gates.
+    FLUX pulses are used to shift the frequency of flux tunable qubits and with it implement two-qubit gates.
     """
 
     READOUT = "ro"
@@ -500,13 +499,16 @@ class SNZ(PulseShape):
 
 
 class eCap(PulseShape):
-    """
-    eCap pulse shape.
+    """eCap pulse shape.
+
     Args:
         alpha (float):
+
     .. math::
+
         e_\\cap(t,\\alpha) &=& A[1 + \\tanh(\\alpha t/t_\\theta)][1 + \\tanh(\\alpha (1 - t/t_\\theta))]\\\\
-&\\times& [1 + \\tanh(\\alpha/2)]^{-2}
+        &\\times& [1 + \\tanh(\\alpha/2)]^{-2}
+
     """
 
     def __init__(self, alpha: float):

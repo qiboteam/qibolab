@@ -352,19 +352,20 @@ class Platform:
 
     def sweep(self, sequence, options, *sweepers):
         """Executes a pulse sequence for different values of sweeped parameters.
+
         Useful for performing chip characterization.
 
         Example:
             .. testcode::
 
                 import numpy as np
-                from qibolab.platform import create_platform
+                from qibolab.dummy import create_dummy
                 from qibolab.sweeper import Sweeper, Parameter
                 from qibolab.pulses import PulseSequence
                 from qibolab import ExecutionParameters
 
 
-                platform = create_platform("dummy")
+                platform = create_dummy()
                 sequence = PulseSequence()
                 parameter = Parameter.frequency
                 pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
@@ -546,6 +547,7 @@ class Platform:
 
 def create_dummy(runcard):
     """Create a dummy platform using the dummy instrument.
+
     Useful for testing.
     """
     from qibolab.instruments.dummy import DummyInstrument
