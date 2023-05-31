@@ -449,11 +449,11 @@ class Platform:
             qubit (int): qubit whose local oscillator will be modified.
             freq (int): new value of the frequency in Hz.
         """
-        self.qubits[qubit].drive.local_oscillator.frequency = freq
+        self.qubits[qubit].drive.lo_frequency = freq
 
     def get_lo_drive_frequency(self, qubit):
         """Get frequency of the qubit drive local oscillator in Hz."""
-        return self.qubits[qubit].drive.local_oscillator.frequency
+        return self.qubits[qubit].drive.lo_frequency
 
     def set_lo_readout_frequency(self, qubit, freq):
         """Set frequency of the qubit drive local oscillator.
@@ -462,11 +462,11 @@ class Platform:
             qubit (int): qubit whose local oscillator will be modified.
             freq (int): new value of the frequency in Hz.
         """
-        self.qubits[qubit].readout.local_oscillator.frequency = freq
+        self.qubits[qubit].readout.lo_frequency = freq
 
     def get_lo_readout_frequency(self, qubit):
         """Get frequency of the qubit readout local oscillator in Hz."""
-        return self.qubits[qubit].readout.local_oscillator.frequency
+        return self.qubits[qubit].readout.lo_frequency
 
     def set_lo_twpa_frequency(self, qubit, freq):
         """Set frequency of the local oscillator of the TWPA to which the qubit's feedline is connected to.
@@ -475,11 +475,11 @@ class Platform:
             qubit (int): qubit whose local oscillator will be modified.
             freq (int): new value of the frequency in Hz.
         """
-        self.qubits[qubit].twpa.local_oscillator.frequency = freq
+        self.qubits[qubit].twpa.lo_frequency = freq
 
     def get_lo_twpa_frequency(self, qubit):
         """Get frequency of the local oscillator of the TWPA to which the qubit's feedline is connected to in Hz."""
-        return self.qubits[qubit].twpa.local_oscillator.frequency
+        return self.qubits[qubit].twpa.lo_frequency
 
     def set_lo_twpa_power(self, qubit, power):
         """Set power of the local oscillator of the TWPA to which the qubit's feedline is connected to.
@@ -487,12 +487,12 @@ class Platform:
         Args:
             qubit (int): qubit whose local oscillator will be modified.
             power (int): new value of the power in dBm.
-        self.qubits[qubit].twpa.local_oscillator.power = power
         """
+        self.qubits[qubit].twpa.lo_power = power
 
     def get_lo_twpa_power(self, qubit):
         """Get power of the local oscillator of the TWPA to which the qubit's feedline is connected to in dBm."""
-        return self.qubits[qubit].twpa.local_oscillator.power
+        return self.qubits[qubit].twpa.lo_power
 
     def set_attenuation(self, qubit, att):
         """Set attenuation value. Usefeul for calibration routines such as punchout.

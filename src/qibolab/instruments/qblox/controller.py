@@ -8,6 +8,12 @@ from qibo.config import log, raise_error
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.channels import ChannelMap
+from qibolab.instruments.qblox.cluster import (
+    Cluster,
+    ClusterQCM,
+    ClusterQCM_RF,
+    ClusterQRM_RF,
+)
 from qibolab.platform import Platform
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.qubits import Qubit
@@ -23,192 +29,22 @@ from qibolab.sweeper import Parameter, Sweeper
 
 
 class QbloxController:
-    """Platform based on qblox instruments.
-
-    The functionality of this class will soon be refactored to align it with DesignPlatform.
+    """A controller to manage qblox devices.
 
     Attributes:
-        instruments (dict): A dictionay of instruments :class:`qibolab.instruments.abstract.AbstractInstrument` connected to the experiment.
-        qubit_instrument_map (dict): A dictionary mapping qubits to lists of instruments performing different roles for that qubit: [ReadOut, Drive, Flux, Bias].
-        channels (ChannelMap): A collection of :class:`qibolab.designs.channels.Channel` connected to the experiment.
-
-        Access dictionaries:
-        ro_channel (dict): maps qubits to their readout channel.
-        qd_channel (dict): maps qubits to their drive channel.
-        qf_channel (dict): maps qubits to their flux (RF) channel.
-        qb_channel (dict): maps qubits to their bias (DC) channel.
-        qrm (dict): maps qubits to their readout module.
-        qdm (dict): maps qubits to their drive module.
-        qfm (dict): maps qubits to their flux (RF) module.
-        qbm (dict): maps qubits to their bias (DC) module.
-        ro_port (dict): maps qubits to their readout port.
-        qd_port (dict): maps qubits to their drive port.
-        qf_port (dict): maps qubits to their flux (RF) port.
-        qb_port (dict): maps qubits to their bias (DC) port.
-
+        is_connected (bool): .
+        modules (dict): A dictionay with the qblox modules connected to the experiment.
     """
 
-    def __init__(self, name, runcard):
-        """Initialises the platform with its name and a platform runcard."""
-        self.modules: dict = {}
-        self.channels: ChannelMap = None
-
-        # self.ro_channel = {}
-        # self.qd_channel = {}
-        # self.qf_channel = {}
-        # self.qb_channel = {}
-        # self.qrm = {}
-        # self.qdm = {}
-        # self.qfm = {}
-        # self.qbm = {}
-        # self.ro_port = {}
-        # self.qd_port = {}
-        # self.qf_port = {}
-        # self.qb_port = {}
-
+    def __init__(self, name, modules):
+        """Initialises the controller."""
+        self.is_connected = False
+        self.modules: dict = modules
         signal.signal(signal.SIGTERM, self._termination_handler)
-        self.qubit_instrument_map: dict = {}
-
-        # Instantiate instruments
-        for name in self.settings["instruments"]:
-            lib = self.settings["instruments"][name]["lib"]
-            i_class = self.settings["instruments"][name]["class"]
-            address = self.settings["instruments"][name]["address"]
-            from importlib import import_module
-
-            InstrumentClass = getattr(import_module(f"qibolab.instruments.{lib}"), i_class)
-            instance = InstrumentClass(name, address)
-            self.modules[name] = instance
-            # DEBUG: debug folder = report folder
-            if lib == "qblox":
-                folder = os.path.dirname(runcard) + "/debug/"
-                if not os.path.exists(folder):
-                    os.makedirs(folder)
-                self.modules[name]._debug_folder = folder
-
-        # Generate qubit_instrument_map from runcard
-        for qubit_name in self.qubit_channel_map:
-            self.qubit_instrument_map[qubit_name] = [None, None, None, None]  # [ReadOut, Drive, Flux, Bias]
-            for name in self.modules:
-                if self.settings["instruments"][name]["class"] in ["ClusterQRM_RF", "ClusterQCM_RF", "ClusterQCM"]:
-                    for port in self.settings["instruments"][name]["settings"]["ports"]:
-                        channel = self.settings["instruments"][name]["settings"]["ports"][port]["channel"]
-                        if channel in self.qubit_channel_map[qubit_name]:
-                            self.qubit_instrument_map[qubit_name][
-                                self.qubit_channel_map[qubit_name].index(channel)
-                            ] = name
-                if "s4g_modules" in self.settings["instruments"][name]["settings"]:
-                    for channel in self.settings["instruments"][name]["settings"]["s4g_modules"]:
-                        if channel in self.qubit_channel_map[qubit_name]:
-                            self.qubit_instrument_map[qubit_name][
-                                self.qubit_channel_map[qubit_name].index(channel)
-                            ] = name
-
-        # Create channel objects
-        self.channels = ChannelMap.from_names(*self.settings["channels"])
-
-        super().__init__(name, runcard, self.modules, self.channels)
-
-    def reload_settings(self):
-        """Reloads platform settings from runcard and sets all instruments up with them."""
-        super().reload_settings()
-        self.characterization = self.settings["characterization"]
-        self.qubit_channel_map = self.settings["qubit_channel_map"]
-        self.nshots = self.settings["settings"]["nshots"]
-        self.relaxation_time = self.settings["settings"]["relaxation_time"]
-
-        # if self.is_connected:
-        #     self.setup()
-
-        # FIX: Set attenuation again to the original value after sweep attenuation in punchout
-        if hasattr(self, "qubit_instrument_map"):
-            for qubit_name in self.qubits:
-                instrument_name = self.qubit_instrument_map[qubit_name][0]
-                port = self.qrm[qubit_name]._channel_port_map[self.qubit_channel_map[qubit_name][0]]
-                att = self.settings["instruments"][instrument_name]["settings"]["ports"][port]["attenuation"]
-                self.ro_port[qubit_name].attenuation = att
-
-    def update(self, updates: dict):
-        r"""Updates platform dependent runcard parameters and set up platform instruments if needed.
-
-        Args:
-
-            updates (dict): Dictionary containing the parameters to update the runcard.
-        """
-        for par, values in updates.items():
-            for qubit, value in values.items():
-                # resonator_punchout_attenuation
-                if par == "readout_attenuation":
-                    attenuation = int(value)
-                    # save settings
-                    instrument_name = self.qubit_instrument_map[qubit][0]
-                    port = self.qrm[qubit]._channel_port_map[self.qubit_channel_map[qubit][0]]
-                    self.settings["instruments"][instrument_name]["settings"]["ports"][port][
-                        "attenuation"
-                    ] = attenuation
-                    # configure RO attenuation
-                    self.ro_port[qubit].attenuation = attenuation
-
-                # resonator_spectroscopy_flux / qubit_spectroscopy_flux
-                if par == "sweetspot":
-                    sweetspot = float(value)
-                    # save settings
-                    instrument_name = self.qubit_instrument_map[qubit][2]
-                    port = self.qrm[qubit]._channel_port_map[self.qubit_channel_map[qubit][2]]
-                    self.settings["instruments"][instrument_name]["settings"]["ports"][port]["offset"] = sweetspot
-                    # configure instrument qcm_bb offset
-                    self.qb_port[qubit].current = sweetspot
-
-                # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
-                if par == "drive_frequency":
-                    freq = int(value * 1e9)
-
-                    # update Qblox qubit LO drive frequency config
-                    instrument_name = self.qubit_instrument_map[qubit][1]
-                    port = self.qdm[qubit]._channel_port_map[self.qubit_channel_map[qubit][1]]
-                    drive_if = self.qubits[qubit].native_gates.RX.if_frequency
-                    self.settings["instruments"][instrument_name]["settings"]["ports"][port]["lo_frequency"] = (
-                        freq - drive_if
-                    )
-
-                    # set Qblox qubit LO drive frequency
-                    self.qd_port[qubit].lo_frequency = freq - drive_if
-
-                # classification
-                if par == "threshold":
-                    threshold = float(value)
-                    # update Qblox qubit classification threshold
-                    instrument_name = self.qubit_instrument_map[qubit][0]
-                    self.settings["instruments"][instrument_name]["settings"]["classification_parameters"][qubit][
-                        "threshold"
-                    ] = threshold
-
-                    self.modules[instrument_name].setup(
-                        **self.settings["settings"],
-                        **self.settings["instruments"][instrument_name]["settings"],
-                    )
-
-                # classification
-                if par == "iq_angle":
-                    rotation_angle = float(value)
-                    rotation_angle = (
-                        rotation_angle * 360 / (2 * np.pi)
-                    ) % 360  # save rotation angle in degrees for qblox
-                    # update Qblox qubit classification iq angle
-                    instrument_name = self.qubit_instrument_map[qubit][0]
-                    self.settings["instruments"][instrument_name]["settings"]["classification_parameters"][qubit][
-                        "rotation_angle"
-                    ] = rotation_angle
-
-                    self.modules[instrument_name].setup(
-                        **self.settings["settings"],
-                        **self.settings["instruments"][instrument_name]["settings"],
-                    )
-
-                super().update(updates)
 
     def connect(self):
-        """Connects to the instruments."""
+        """Connects to the modules."""
+
         if not self.is_connected:
             try:
                 for name in self.modules:
@@ -217,87 +53,57 @@ class QbloxController:
             except Exception as exception:
                 raise_error(
                     RuntimeError,
-                    "Cannot establish connection to " f"{self.name} instruments. " f"Error captured: '{exception}'",
+                    "Cannot establish connection to " f"{self.modules[name]} module. " f"Error captured: '{exception}'",
                 )
-                # TODO: check for exception 'The instrument qrm_rf0 does not have parameters in0_att' and reboot the cluster
+                # TODO: check for exception 'The module qrm_rf0 does not have parameters in0_att' and reboot the cluster
 
             else:
-                log.info(f"All platform instruments connected.")
+                log.info(f"QbloxController: all modules connected.")
 
     def setup(self):
-        """Sets all instruments up.
+        """Sets all modules up."""
 
-        Each instrument is set up calling its setup method, with the platform instruments and the specific intrument
-        settings. Additionally it generates dictionaries for accessing channels, instrument ports and modules.
-        """
         if not self.is_connected:
             raise_error(
                 RuntimeError,
-                "There is no connection to the instruments, the setup cannot be completed",
+                "There is no connection to the modules, the setup cannot be completed",
             )
 
         for name in self.modules:
-            # Set up every with the platform settings and the instrument settings
-            self.modules[name].setup(
-                **self.settings["settings"],
-                **self.settings["instruments"][name]["settings"],
-            )
+            self.modules[name].setup()
 
-        # Generate access dictionaries
-        for qubit in self.qubit_channel_map:
-            self.ro_channel[qubit] = self.qubit_channel_map[qubit][0]
-            self.qd_channel[qubit] = self.qubit_channel_map[qubit][1]
-            self.qb_channel[qubit] = self.qubit_channel_map[qubit][2]
-            self.qf_channel[qubit] = self.qubit_channel_map[qubit][3]
+    def reload_settings(self):
+        """Reloads initial settings."""
 
-            if not self.qubit_instrument_map[qubit][0] is None:
-                self.qrm[qubit] = self.modules[self.qubit_instrument_map[qubit][0]]
-                self.ro_port[qubit] = self.qrm[qubit].ports[
-                    self.qrm[qubit]._channel_port_map[self.qubit_channel_map[qubit][0]]
-                ]
-                self.qubits[qubit].readout = self.channels[self.qubit_channel_map[qubit][0]]
-            if not self.qubit_instrument_map[qubit][1] is None:
-                self.qdm[qubit] = self.modules[self.qubit_instrument_map[qubit][1]]
-                self.qd_port[qubit] = self.qdm[qubit].ports[
-                    self.qdm[qubit]._channel_port_map[self.qubit_channel_map[qubit][1]]
-                ]
-                self.qubits[qubit].drive = self.channels[self.qubit_channel_map[qubit][1]]
-            if not self.qubit_instrument_map[qubit][2] is None:
-                self.qfm[qubit] = self.modules[self.qubit_instrument_map[qubit][2]]
-                self.qf_port[qubit] = self.qfm[qubit].ports[
-                    self.qfm[qubit]._channel_port_map[self.qubit_channel_map[qubit][2]]
-                ]
-                self.qubits[qubit].flux = self.channels[self.qubit_channel_map[qubit][2]]
-            if not self.qubit_instrument_map[qubit][3] is None:
-                self.qbm[qubit] = self.modules[self.qubit_instrument_map[qubit][3]]
-                self.qb_port[qubit] = self.qbm[qubit].dacs[self.qubit_channel_map[qubit][3]]
+        if self.is_connected:
+            self.setup()
 
     def start(self):
-        """Starts all platform instruments."""
+        """Starts all modules."""
 
         if self.is_connected:
             for name in self.modules:
                 self.modules[name].start()
 
     def stop(self):
-        """Stops all platform instruments."""
+        """Stops all modules."""
 
         if self.is_connected:
             for name in self.modules:
                 self.modules[name].stop()
 
     def _termination_handler(self, signum, frame):
-        """Calls all instruments to stop if the program receives a termination signal."""
+        """Calls all modules to stop if the program receives a termination signal."""
 
-        log.warning("Termination signal received, stopping instruments.")
+        log.warning("Termination signal received, stopping modules.")
         if self.is_connected:
             for name in self.modules:
                 self.modules[name].stop()
-        log.warning("All instruments stopped.")
+        log.warning("All modules stopped.")
         exit(0)
 
     def disconnect(self):
-        """Disconnects all platform instruments."""
+        """Disconnects all modules."""
 
         if self.is_connected:
             for name in self.modules:
@@ -322,7 +128,7 @@ class QbloxController:
             sweepers (list(Sweeper)): A list of Sweeper objects defining parameter sweeps.
         """
         if not self.is_connected:
-            raise_error(RuntimeError, "Execution failed because instruments are not connected.")
+            raise_error(RuntimeError, "Execution failed because modules are not connected.")
 
         if options.averaging_mode == AveragingMode.SINGLESHOT:
             nshots = options.nshots if options.nshots is not None else self.nshots
@@ -346,79 +152,73 @@ class QbloxController:
         # sequence.plot('plot.png')
         # DEBUG: sync_en
         # from qblox_instruments.qcodes_drivers.cluster import Cluster
-        # cluster:Cluster = self.instruments['cluster'].device
+        # cluster:Cluster = self.modules['cluster'].device
         # for module in cluster.modules:
         #     if module.get("present"):
         #         for sequencer in module.sequencers:
         #             if sequencer.get('sync_en'):
         #                 print(f"type: {module.module_type}, sequencer: {sequencer.name}, sync_en: True")
 
-        # Process Pulse Sequence. Assign pulses to instruments and generate waveforms & program
-        instrument_pulses = {}
-        roles = {}
+        # Process Pulse Sequence. Assign pulses to modules and generate waveforms & program
+        module_pulses = {}
         data = {}
         for name in self.modules:
-            roles[name] = self.settings["instruments"][name]["roles"]
-            if "control" in roles[name] or "readout" in roles[name]:
-                # from the pulse sequence, select those pulses to be synthesised by the instrument
-                instrument_pulses[name] = sequence.get_channel_pulses(*self.modules[name].channels)
+            if isinstance(self.modules[name], (ClusterQRM_RF, ClusterQCM_RF, ClusterQCM)):
+                # from the pulse sequence, select those pulses to be synthesised by the module
+                module_pulses[name] = sequence.get_channel_pulses(*self.modules[name].channels)
 
-                # until we have frequency planning use the ifs stored in the runcard to set the los
-                if self.modules[name].__class__.__name__.split(".")[-1] in [
-                    "ClusterQRM_RF",
-                    "ClusterQCM_RF",
-                    "ClusterQCM",
-                ]:
-                    for port in self.modules[name].ports:
-                        _los = []
-                        _ifs = []
-                        port_pulses = instrument_pulses[name].get_channel_pulses(
-                            self.modules[name]._port_channel_map[port]
-                        )
-                        for pulse in port_pulses:
-                            if pulse.type == PulseType.READOUT:
-                                _if = int(self.native_gates["single_qubit"][pulse.qubit]["MZ"]["if_frequency"])
-                                pulse._if = _if
-                                _los.append(int(pulse.frequency - _if))
-                                _ifs.append(int(_if))
-                            elif pulse.type == PulseType.DRIVE:
-                                _if = int(self.native_gates["single_qubit"][pulse.qubit]["RX"]["if_frequency"])
-                                pulse._if = _if
-                                _los.append(int(pulse.frequency - _if))
-                                _ifs.append(int(_if))
+                for port in self.modules[name].ports:
+                    _los = []
+                    _ifs = []
+                    port_pulses = module_pulses[name].get_channel_pulses(self.modules[name]._port_channel_map[port])
+                    # for pulse in port_pulses:
+                    #     if pulse.type == PulseType.READOUT:
+                    #         _if = int(self.native_gates["single_qubit"][pulse.qubit]["MZ"]["if_frequency"])
+                    #         pulse._if = _if
+                    #         _los.append(int(pulse.frequency - _if))
+                    #         _ifs.append(int(_if))
+                    #     elif pulse.type == PulseType.DRIVE:
+                    #         _if = int(self.native_gates["single_qubit"][pulse.qubit]["RX"]["if_frequency"])
+                    #         pulse._if = _if
+                    #         _los.append(int(pulse.frequency - _if))
+                    #         _ifs.append(int(_if))
 
-                        # where multiple qubits share the same lo (for example on a readout line), check lo consistency
-                        if len(_los) > 1:
-                            for _ in range(1, len(_los)):
-                                if _los[0] != _los[_]:
-                                    raise ValueError(
-                                        f"""Pulses:
-                                        {instrument_pulses[name]}
-                                        sharing the lo at device: {name} - port: {port}
-                                        cannot be synthesised with intermediate frequencies:
-                                        {_ifs}"""
-                                    )
-                        if len(_los) > 0:
-                            self.modules[name].ports[port].lo_frequency = _los[0]
+                    # # where multiple qubits share the same lo (for example on a readout line), check lo consistency
+                    # if len(_los) > 1:
+                    #     for _ in range(1, len(_los)):
+                    #         if _los[0] != _los[_]:
+                    #             raise ValueError(
+                    #                 f"""Pulses:
+                    #                 {module_pulses[name]}
+                    #                 sharing the lo at device: {name} - port: {port}
+                    #                 cannot be synthesised with intermediate frequencies:
+                    #                 {_ifs}"""
+                    #             )
+                    # if len(_los) > 0:
+                    #     self.modules[name].ports[port].lo_frequency = _los[0]
 
-                #  ask each instrument to generate waveforms & program and upload them to the device
+                    # without access to _ifs _los cannot be set ^^^^^^
+                    for pulse in port_pulses:
+                        pulse._if = int(pulse.frequency - self.modules[name].ports[port].lo_frequency)
+
+                #  ask each module to generate waveforms & program and upload them to the device
                 self.modules[name].process_pulse_sequence(
-                    instrument_pulses[name], navgs, nshots, repetition_duration, sweepers
+                    module_pulses[name], navgs, nshots, repetition_duration, sweepers
                 )
 
-                # log.info(f"{self.instruments[name]}: Uploading pulse sequence")
+                # log.info(f"{self.modules[name]}: Uploading pulse sequence")
                 self.modules[name].upload()
 
         # play the sequence or sweep
         for name in self.modules:
-            if "control" in roles[name] or "readout" in roles[name]:
+            if isinstance(self.modules[name], (ClusterQRM_RF, ClusterQCM_RF, ClusterQCM)):
                 self.modules[name].play_sequence()
 
         # retrieve the results
         acquisition_results = {}
         for name in self.modules:
-            if "readout" in roles[name]:
-                if not instrument_pulses[name].ro_pulses.is_empty:
+            if isinstance(self.modules[name], ClusterQRM_RF):
+                if not module_pulses[name].ro_pulses.is_empty:
                     results = self.modules[name].acquire()
                     existing_keys = set(acquisition_results.keys()) & set(results.keys())
                     for key, value in results.items():
@@ -447,7 +247,7 @@ class QbloxController:
             # data[ro_pulse.qubit] = copy.copy(data[ro_pulse.serial])
         return data
 
-    def sweep(self, sequence: PulseSequence, options: ExecutionParameters, *sweepers):
+    def sweep(self, qubits: dict, sequence: PulseSequence, options: ExecutionParameters, *sweepers):
         """Executes a sequence of pulses while sweeping one or more parameters.
 
         The parameters to be swept are defined in :class:`qibolab.sweeper.Sweeper` object.
@@ -500,7 +300,7 @@ class QbloxController:
         # execute the each sweeper recursively
         self._sweep_recursion(
             sequence_copy,
-            options=options,
+            options,
             *tuple(sweepers_copy),
             results=id_results,
         )
@@ -606,7 +406,10 @@ class QbloxController:
                 else:
                     result = self.execute_pulse_sequence(sequence=sequence, options=options)
                     for pulse in sequence.ro_pulses:
-                        results[pulse.id] += result[pulse.serial]
+                        if results[pulse.id]:
+                            results[pulse.id] += result[pulse.serial]
+                        else:
+                            results[pulse.id] = result[pulse.serial]
                         results[pulse.qubit] = results[pulse.id]
         else:
             # rt sweeps
@@ -654,7 +457,10 @@ class QbloxController:
 
                         result = self.execute_pulse_sequence(sequence, options, sweepers)
                         for pulse in sequence.ro_pulses:
-                            results[pulse.id] += result[pulse.serial]
+                            if results[pulse.id]:
+                                results[pulse.id] += result[pulse.serial]
+                            else:
+                                results[pulse.id] = result[pulse.serial]
                             results[pulse.qubit] = results[pulse.id]
                     else:
                         sweepers_repetitions = 1
@@ -703,3 +509,82 @@ class QbloxController:
                 else:
                     # TODO: reorder the sequence of the sweepers and the results
                     raise Exception("cannot execute a for-loop sweeper nested inside of a rt sweeper")
+
+    # def update(self, updates: dict):
+    #     r"""Updates platform dependent runcard parameters and set up modules if needed.
+
+    #     Args:
+
+    #         updates (dict): Dictionary containing the parameters to update the runcard.
+    #     """
+    #     for par, values in updates.items():
+    #         for qubit, value in values.items():
+    #             # resonator_punchout_attenuation
+    #             if par == "readout_attenuation":
+    #                 attenuation = int(value)
+    #                 # save settings
+    #                 instrument_name = self.qubit_instrument_map[qubit][0]
+    #                 port = self.qrm[qubit]._channel_port_map[self.qubit_channel_map[qubit][0]]
+    #                 self.settings["instruments"][instrument_name]["settings"]["ports"][port][
+    #                     "attenuation"
+    #                 ] = attenuation
+    #                 # configure RO attenuation
+    #                 self.ro_port[qubit].attenuation = attenuation
+
+    #             # resonator_spectroscopy_flux / qubit_spectroscopy_flux
+    #             if par == "sweetspot":
+    #                 sweetspot = float(value)
+    #                 # save settings
+    #                 instrument_name = self.qubit_instrument_map[qubit][2]
+    #                 port = self.qrm[qubit]._channel_port_map[self.qubit_channel_map[qubit][2]]
+    #                 self.settings["instruments"][instrument_name]["settings"]["ports"][port]["offset"] = sweetspot
+    #                 # configure module qcm_bb offset
+    #                 self.qb_port[qubit].current = sweetspot
+
+    #             # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
+    #             if par == "drive_frequency":
+    #                 freq = int(value * 1e9)
+
+    #                 # update Qblox qubit LO drive frequency config
+    #                 instrument_name = self.qubit_instrument_map[qubit][1]
+    #                 port = self.qdm[qubit]._channel_port_map[self.qubit_channel_map[qubit][1]]
+    #                 drive_if = self.qubits[qubit].native_gates.RX.if_frequency
+    #                 self.settings["instruments"][instrument_name]["settings"]["ports"][port]["lo_frequency"] = (
+    #                     freq - drive_if
+    #                 )
+
+    #                 # set Qblox qubit LO drive frequency
+    #                 self.qd_port[qubit].lo_frequency = freq - drive_if
+
+    #             # classification
+    #             if par == "threshold":
+    #                 threshold = float(value)
+    #                 # update Qblox qubit classification threshold
+    #                 instrument_name = self.qubit_instrument_map[qubit][0]
+    #                 self.settings["instruments"][instrument_name]["settings"]["classification_parameters"][qubit][
+    #                     "threshold"
+    #                 ] = threshold
+
+    #                 self.modules[instrument_name].setup(
+    #                     **self.settings["settings"],
+    #                     **self.settings["instruments"][instrument_name]["settings"],
+    #                 )
+
+    #             # classification
+    #             if par == "iq_angle":
+    #                 rotation_angle = float(value)
+    #                 rotation_angle = (
+    #                     rotation_angle * 360 / (2 * np.pi)
+    #                 ) % 360  # save rotation angle in degrees for qblox
+    #                 # update Qblox qubit classification iq angle
+    #                 instrument_name = self.qubit_instrument_map[qubit][0]
+    #                 self.settings["instruments"][instrument_name]["settings"]["classification_parameters"][qubit][
+    #                     "rotation_angle"
+    #                 ] = rotation_angle
+
+    #                 self.modules[instrument_name].setup(
+    #                     **self.settings["settings"],
+    #                     **self.settings["instruments"][instrument_name]["settings"],
+    #                 )
+
+    #             super().update(updates)

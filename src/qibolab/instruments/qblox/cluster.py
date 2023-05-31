@@ -607,9 +607,10 @@ class Cluster(AbstractInstrument):
             or an external source.
     """
 
-    def __init__(self, name: str, address: str):
+    def __init__(self, name: str, address: str, settings: dict):
         """Initialises the instrument storing its name and address."""
         super().__init__(name, address)
+        self.settings: dict = settings
         self.reference_clock_source: str
         self.device: QbloxCluster = None
 
@@ -687,15 +688,16 @@ class Cluster(AbstractInstrument):
         """Erases the cache of instrument parameters."""
         self._device_parameters = {}
 
-    def setup(self, **kwargs):
+    def setup(self):
         """Configures the instrument with the settings saved in the runcard.
 
         Args:
             **kwargs: A dictionary with the settings:
                 reference_clock_source
         """
+        settings = self.settings
         if self.is_connected:
-            self.reference_clock_source = kwargs["reference_clock_source"]
+            self.reference_clock_source = settings["reference_clock_source"]
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
 
@@ -848,13 +850,14 @@ class ClusterQRM_RF(AbstractInstrument):
     sequencer parameters and caches their value using `_set_device_parameter()`.
     """
 
-    def __init__(self, name: str, address: str):
+    def __init__(self, name: str, address: str, settings: dict):
         """Initialises the instance.
 
         All class attributes are defined and initialised.
         """
 
         super().__init__(name, address)
+        self.settings: dict = settings
         self.device: QbloxQrmQcm = None
         self.ports: dict = {}
         self.classification_parameters: dict = {}
@@ -1005,7 +1008,7 @@ class ClusterQRM_RF(AbstractInstrument):
         """Erases the cache of instrument parameters."""
         self._device_parameters = {}
 
-    def setup(self, **kwargs):
+    def setup(self):
         """Configures the instrument with the settings of the runcard.
 
         A connection to the instrument needs to be established beforehand.
@@ -1044,38 +1047,38 @@ class ClusterQRM_RF(AbstractInstrument):
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
-
+        settings = self.settings
         if self.is_connected:
             # Load settings
-            self.ports["o1"].channel = kwargs["ports"]["o1"]["channel"]
+            self.ports["o1"].channel = settings["ports"]["o1"]["channel"]
             self._port_channel_map["o1"] = self.ports["o1"].channel
-            self.ports["o1"].attenuation = kwargs["ports"]["o1"]["attenuation"]
-            self.ports["o1"].lo_enabled = kwargs["ports"]["o1"]["lo_enabled"]
-            self.ports["o1"].lo_frequency = kwargs["ports"]["o1"]["lo_frequency"]
-            self.ports["o1"].gain = kwargs["ports"]["o1"]["gain"]
+            self.ports["o1"].attenuation = settings["ports"]["o1"]["attenuation"]
+            self.ports["o1"].lo_enabled = settings["ports"]["o1"]["lo_enabled"]
+            self.ports["o1"].lo_frequency = settings["ports"]["o1"]["lo_frequency"]
+            self.ports["o1"].gain = settings["ports"]["o1"]["gain"]
 
-            if "hardware_mod_en" in kwargs["ports"]["o1"]:
-                self.ports["o1"].hardware_mod_en = kwargs["ports"]["o1"]["hardware_mod_en"]
+            if "hardware_mod_en" in settings["ports"]["o1"]:
+                self.ports["o1"].hardware_mod_en = settings["ports"]["o1"]["hardware_mod_en"]
             else:
                 self.ports["o1"].hardware_mod_en = True
 
             self.ports["o1"].nco_freq = 0
             self.ports["o1"].nco_phase_offs = 0
 
-            self.ports["i1"].channel = kwargs["ports"]["i1"]["channel"]
+            self.ports["i1"].channel = settings["ports"]["i1"]["channel"]
             self._port_channel_map["i1"] = self.ports["i1"].channel
-            if "hardware_demod_en" in kwargs["ports"]["i1"]:
-                self.ports["i1"].hardware_demod_en = kwargs["ports"]["i1"]["hardware_demod_en"]
+            if "hardware_demod_en" in settings["ports"]["i1"]:
+                self.ports["i1"].hardware_demod_en = settings["ports"]["i1"]["hardware_demod_en"]
             else:
                 self.ports["i1"].hardware_demod_en = True
 
-            self.ports["i1"].acquisition_hold_off = kwargs["ports"]["i1"]["acquisition_hold_off"]
-            self.ports["i1"].acquisition_duration = kwargs["ports"]["i1"]["acquisition_duration"]
+            self.ports["i1"].acquisition_hold_off = settings["ports"]["i1"]["acquisition_hold_off"]
+            self.ports["i1"].acquisition_duration = settings["ports"]["i1"]["acquisition_duration"]
 
             self._channel_port_map = {v: k for k, v in self._port_channel_map.items()}
             self.channels = list(self._channel_port_map.keys())
-            if "classification_parameters" in kwargs:
-                self.classification_parameters = kwargs["classification_parameters"]
+            if "classification_parameters" in settings:
+                self.classification_parameters = settings["classification_parameters"]
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
 
@@ -2064,12 +2067,13 @@ class ClusterQCM_RF(AbstractInstrument):
     parameters and caches their value using `_set_device_parameter()`.
     """
 
-    def __init__(self, name: str, address: str):
+    def __init__(self, name: str, address: str, settings: dict):
         """Initialises the instance.
 
         All class attributes are defined and initialised.
         """
         super().__init__(name, address)
+        self.settings: dict = settings
         self.device: QbloxQrmQcm = None
         self.ports: dict = {}
         self.channels: list = []
@@ -2227,7 +2231,7 @@ class ClusterQCM_RF(AbstractInstrument):
         """Erases the cache of instrument parameters."""
         self._device_parameters = {}
 
-    def setup(self, **kwargs):
+    def setup(self):
         """Configures the instrument with the settings of the runcard.
 
         A connection to the instrument needs to be established beforehand.
@@ -2256,19 +2260,19 @@ class ClusterQCM_RF(AbstractInstrument):
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
-
+        settings = self.settings
         if self.is_connected:
             # Load settings
             for port in ["o1", "o2"]:
-                if port in kwargs["ports"]:
-                    self.ports[port].channel = kwargs["ports"][port]["channel"]
+                if port in settings["ports"]:
+                    self.ports[port].channel = settings["ports"][port]["channel"]
                     self._port_channel_map[port] = self.ports[port].channel
-                    self.ports[port].attenuation = kwargs["ports"][port]["attenuation"]
-                    self.ports[port].lo_enabled = kwargs["ports"][port]["lo_enabled"]
-                    self.ports[port].lo_frequency = kwargs["ports"][port]["lo_frequency"]
-                    self.ports[port].gain = kwargs["ports"][port]["gain"]
-                    if "hardware_mod_en" in kwargs["ports"][port]:
-                        self.ports[port].hardware_mod_en = kwargs["ports"][port]["hardware_mod_en"]
+                    self.ports[port].attenuation = settings["ports"][port]["attenuation"]
+                    self.ports[port].lo_enabled = settings["ports"][port]["lo_enabled"]
+                    self.ports[port].lo_frequency = settings["ports"][port]["lo_frequency"]
+                    self.ports[port].gain = settings["ports"][port]["gain"]
+                    if "hardware_mod_en" in settings["ports"][port]:
+                        self.ports[port].hardware_mod_en = settings["ports"][port]["hardware_mod_en"]
                     else:
                         self.ports[port].hardware_mod_en = True
                     self.ports[port].nco_freq = 0
@@ -2817,12 +2821,13 @@ class ClusterQCM(AbstractInstrument):
         lambda self, x: parent._set_device_parameter(parent.device.sequencers[sequencer], *parameter, value=x),
     )
 
-    def __init__(self, name: str, address: str):
-        super().__init__(name, address)
+    def __init__(self, name: str, address: str, settings: dict):
         """Initialises the instance.
 
         All class attributes are defined and initialised.
         """
+        super().__init__(name, address)
+        self.settings: dict = settings
         self.device: QbloxQrmQcm = None
         self.ports: dict = {}
         self.channels: list = []
@@ -2987,7 +2992,7 @@ class ClusterQCM(AbstractInstrument):
         """Erases the cache of instrument parameters."""
         self._device_parameters = {}
 
-    def setup(self, **kwargs):
+    def setup(self):
         """Configures the instrument with the settings of the runcard.
 
         A connection to the instrument needs to be established beforehand.
@@ -3005,20 +3010,20 @@ class ClusterQCM(AbstractInstrument):
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
-
+        settings = self.settings
         if self.is_connected:
             # Load settings
             for port in ["o1", "o2", "o3", "o4"]:
-                if port in kwargs["ports"]:
-                    self.ports[port].channel = kwargs["ports"][port]["channel"]
+                if port in settings["ports"]:
+                    self.ports[port].channel = settings["ports"][port]["channel"]
                     self._port_channel_map[port] = self.ports[port].channel
-                    self.ports[port].gain = kwargs["ports"][port]["gain"]
-                    self.ports[port].offset = kwargs["ports"][port]["offset"]
-                    if "hardware_mod_en" in kwargs["ports"][port]:
-                        self.ports[port].hardware_mod_en = kwargs["ports"][port]["hardware_mod_en"]
+                    self.ports[port].gain = settings["ports"][port]["gain"]
+                    self.ports[port].offset = settings["ports"][port]["offset"]
+                    if "hardware_mod_en" in settings["ports"][port]:
+                        self.ports[port].hardware_mod_en = settings["ports"][port]["hardware_mod_en"]
                     else:
                         self.ports[port].hardware_mod_en = True
-                    self.ports[port].qubit = kwargs["ports"][port]["qubit"]
+                    self.ports[port].qubit = settings["ports"][port]["qubit"]
                     self.ports[port].nco_freq = 0
                     self.ports[port].nco_phase_offs = 0
                 else:
