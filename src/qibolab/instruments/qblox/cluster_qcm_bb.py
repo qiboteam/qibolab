@@ -744,10 +744,10 @@ class ClusterQCM_BB(AbstractInstrument):
         # There seems to be a bug in qblox that when any of the mappings between paths and outputs is set,
         # the general offset goes to 0 (eventhou the parameter will still show the right value).
         # Until that is fixed, I'm going to always set the offset just before playing (bypassing the cache):
-        self.device.out0_offset(self.device.get("out0_offset"))
-        self.device.out1_offset(self.device.get("out1_offset"))
-        self.device.out2_offset(self.device.get("out2_offset"))
-        self.device.out3_offset(self.device.get("out3_offset"))
+        self.device.out0_offset(self._device_parameters[self.device.name + "." + "out0_offset"])
+        self.device.out1_offset(self._device_parameters[self.device.name + "." + "out1_offset"])
+        self.device.out2_offset(self._device_parameters[self.device.name + "." + "out2_offset"])
+        self.device.out3_offset(self._device_parameters[self.device.name + "." + "out3_offset"])
 
         # Upload waveforms and program
         qblox_dict = {}
