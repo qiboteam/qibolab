@@ -793,7 +793,17 @@ class ClusterQCM_BB(AbstractInstrument):
 
     def start(self):
         """Empty method to comply with AbstractInstrument interface."""
-        pass
+
+        from qibo.config import log
+
+        settings = self.settings
+        if self.is_connected:
+            try:
+                for port in ["o1", "o2", "o3", "o4"]:
+                    if port in settings["ports"]:
+                        self.ports[port].offset = settings["ports"][port]["offset"]
+            except:
+                log.warning("Unable to set offsets")
 
     def stop(self):
         """Stops all sequencers"""
@@ -806,10 +816,13 @@ class ClusterQCM_BB(AbstractInstrument):
             log.warning("Unable to stop sequencers")
 
         try:
-            self._set_device_parameter(self.device, "out0_offset", value=0)
-            self._set_device_parameter(self.device, "out1_offset", value=0)
-            self._set_device_parameter(self.device, "out2_offset", value=0)
-            self._set_device_parameter(self.device, "out3_offset", value=0)
+            for port in ["o1", "o2", "o3", "o4"]:
+                self.ports[port].offset = 0
+
+            # self._set_device_parameter(self.device, "out0_offset", value=0)
+            # self._set_device_parameter(self.device, "out1_offset", value=0)
+            # self._set_device_parameter(self.device, "out2_offset", value=0)
+            # self._set_device_parameter(self.device, "out3_offset", value=0)
             # self.device.out0_offset(0)
             # self.device.out1_offset(0)
             # self.device.out2_offset(0)
