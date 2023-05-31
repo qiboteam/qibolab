@@ -1,5 +1,7 @@
 from qibolab.channels import Channel
-from qibolab.instruments.qblox.cluster import ClusterQCM, ClusterQCM_RF, ClusterQRM_RF
+from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
+from qibolab.instruments.qblox.cluster_qcm_rf import ClusterQCM_RF
+from qibolab.instruments.qblox.cluster_qrm_rf import ClusterQRM_RF
 from qibolab.instruments.rohde_schwarz import SGS100A
 
 
@@ -8,7 +10,7 @@ class QbloxChannel(Channel):
         self.name: str = name
 
         self.instrument = instrument
-        if isinstance(instrument, (ClusterQRM_RF, ClusterQCM_RF, ClusterQCM)):
+        if isinstance(instrument, (ClusterQRM_RF, ClusterQCM_RF, ClusterQCM_BB)):
             if not port_name:
                 raise ValueError(f"port_name argument is required for channels connected to qblox modules")
 
@@ -16,7 +18,7 @@ class QbloxChannel(Channel):
 
     @property
     def lo_frequency(self):
-        if isinstance(self.instrument, (ClusterQRM_RF, ClusterQCM_RF, ClusterQCM)):
+        if isinstance(self.instrument, (ClusterQRM_RF, ClusterQCM_RF, ClusterQCM_BB)):
             return self.instrument.ports[self.port_name].lo_frequency
         elif isinstance(self.instrument, SGS100A):
             return self.instrument.frequency
@@ -25,7 +27,7 @@ class QbloxChannel(Channel):
 
     @lo_frequency.setter
     def lo_frequency(self, value):
-        if isinstance(self.instrument, (ClusterQRM_RF, ClusterQCM_RF, ClusterQCM)):
+        if isinstance(self.instrument, (ClusterQRM_RF, ClusterQCM_RF, ClusterQCM_BB)):
             self.instrument.ports[self.port_name].lo_frequency = value
         elif isinstance(self.instrument, SGS100A):
             self.instrument.frequency = value

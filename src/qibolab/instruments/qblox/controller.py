@@ -8,12 +8,10 @@ from qibo.config import log, raise_error
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.channels import ChannelMap
-from qibolab.instruments.qblox.cluster import (
-    Cluster,
-    ClusterQCM,
-    ClusterQCM_RF,
-    ClusterQRM_RF,
-)
+from qibolab.instruments.qblox.cluster import Cluster
+from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
+from qibolab.instruments.qblox.cluster_qcm_rf import ClusterQCM_RF
+from qibolab.instruments.qblox.cluster_qrm_rf import ClusterQRM_RF
 from qibolab.platform import Platform
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.qubits import Qubit
@@ -50,7 +48,7 @@ class QbloxController:
             try:
                 self.cluster.connect()
                 for name in self.modules:
-                    self.modules[name].connect()
+                    self.modules[name].connect(self.cluster.device)
                 self.is_connected = True
             except Exception as exception:
                 raise_error(
@@ -70,7 +68,7 @@ class QbloxController:
                 RuntimeError,
                 "There is no connection to the modules, the setup cannot be completed",
             )
-
+        self.cluster.setup()
         for name in self.modules:
             self.modules[name].setup()
 
@@ -82,7 +80,7 @@ class QbloxController:
 
     def start(self):
         """Starts all modules."""
-
+        self.cluster.start()
         if self.is_connected:
             for name in self.modules:
                 self.modules[name].start()
@@ -93,6 +91,7 @@ class QbloxController:
         if self.is_connected:
             for name in self.modules:
                 self.modules[name].stop()
+        self.cluster.stop()
 
     def _termination_handler(self, signum, frame):
         """Calls all modules to stop if the program receives a termination signal."""
@@ -164,7 +163,7 @@ class QbloxController:
         module_pulses = {}
         data = {}
         for name in self.modules:
-            if isinstance(self.modules[name], (ClusterQRM_RF, ClusterQCM_RF, ClusterQCM)):
+            if isinstance(self.modules[name], (ClusterQRM_RF, ClusterQCM_RF, ClusterQCM_BB)):
                 # from the pulse sequence, select those pulses to be synthesised by the module
                 module_pulses[name] = sequence.get_channel_pulses(*self.modules[name].channels)
 
@@ -212,7 +211,7 @@ class QbloxController:
 
         # play the sequence or sweep
         for name in self.modules:
-            if isinstance(self.modules[name], (ClusterQRM_RF, ClusterQCM_RF, ClusterQCM)):
+            if isinstance(self.modules[name], (ClusterQRM_RF, ClusterQCM_RF, ClusterQCM_BB)):
                 self.modules[name].play_sequence()
 
         # retrieve the results
