@@ -630,7 +630,7 @@ class Zurich(AbstractInstrument):
             self.fast_reset(exp, qubits, exp_options.fast_reset)
 
     @staticmethod
-    def play_sweep_select(exp, qubit, pulse, section, parameters, partial_sweep):
+    def play_sweep_select_single(exp, qubit, pulse, section, parameters, partial_sweep):
         if any("amplitude" in param for param in parameters):
             pulse.zhpulse.amplitude *= max(pulse.zhsweeper.values)
             pulse.zhsweeper.values /= max(pulse.zhsweeper.values)
@@ -662,6 +662,25 @@ class Zurich(AbstractInstrument):
                 phase=pulse.pulse.relative_phase,
             )
 
+    @staticmethod
+    def play_sweep_select_dual(exp, qubit, pulse, section, parameters):
+        if "amplitude" in parameters and "duration" in parameters:
+            for sweeper in pulse.zhsweepers:
+                if sweeper.uid == "amplitude":
+                    sweeper_amp_index = pulse.zhsweepers.index(sweeper)
+                    sweeper.values = sweeper.values.copy()
+                    sweeper.amplitude *= max(abs(sweeper.values))
+                    sweeper.values /= max(abs(sweeper.values))
+                else:
+                    sweeper_dur_index = pulse.zhsweepers.index(sweeper)
+
+            exp.play(
+                signal=f"{section}{qubit.name}",
+                pulse=pulse.zhpulse,
+                amplitude=pulse.zhsweeper[sweeper_amp_index],
+                length=pulse.zhsweeper[sweeper_dur_index],
+            )
+
     def play_sweep(self, exp, qubit, pulse, section):
         """Play Zurich pulse when a sweeper is involved"""
 
@@ -677,7 +696,10 @@ class Zurich(AbstractInstrument):
             for partial_sweep in pulse.zhsweepers:
                 parameters.append(partial_sweep.uid)
             # Recheck partial sweeps
-            self.play_sweep_select(exp, qubit, pulse, section, parameters, partial_sweep)
+            if len(parameters) > 2:
+                self.play_sweep_select_dual(exp, qubit, pulse, section, parameters)
+            else:
+                self.play_sweep_select_single(exp, qubit, pulse, section, parameters, partial_sweep)
 
     def flux(self, exp, qubits):
         """qubit flux or qubit coupler flux for bias sweep or pulses"""
@@ -961,8 +983,9 @@ class Zurich(AbstractInstrument):
                 )
         if sweeper.parameter is Parameter.amplitude:
             for pulse in sweeper.pulses:
-                pulse.amplitude *= max(sweeper.values)
-                sweeper.values /= max(sweeper.values)
+                sweeper.values = sweeper.values.copy()
+                pulse.amplitude *= max(abs(sweeper.values))
+                sweeper.values /= max(abs(sweeper.values))
                 parameter = ZhSweeper(pulse, sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
 
         if sweeper.parameter is Parameter.bias:
@@ -974,6 +997,8 @@ class Zurich(AbstractInstrument):
 
         elif parameter is None:
             parameter = ZhSweeper(sweeper.pulses[0], sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
+
+        print(parameter)
 
         with exp.sweep(
             uid=f"sweep_{sweeper.parameter.name.lower()}_{i}",  # FIXME: This uid trouble double freq ???
