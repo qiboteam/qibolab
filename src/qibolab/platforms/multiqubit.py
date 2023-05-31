@@ -300,9 +300,6 @@ class MultiqubitPlatform(Platform):
             nshots = options.nshots
             self.average = True
 
-        if options.nshots is None:
-            nshots = self.nshots
-
         relaxation_time = options.relaxation_time
 
         instrument_pulses = {}
@@ -357,23 +354,11 @@ class MultiqubitPlatform(Platform):
             for if_pulse, original in changed.items():
                 if serial == if_pulse.serial:
                     if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                        if self.average:
-                            acquisition =  AveragedSampleResults(acquisition_results[serial][2])
-                        acquisition =  SampleResults(acquisition_results[serial][2]) 
+                        results = acquisition_results[serial][2]
                     else:
-                        ires = acquisition_results[serial][0][0]
-                        qres = acquisition_results[serial][1][0]
-                        if options.acquisition_type is AcquisitionType.RAW:
-                            if self.average:
-                                acquisition = AveragedRawWaveformResults(ires + 1j * qres)
-                            acquisition = RawWaveformResults(ires + 1j * qres)
+                        results = acquisition_results[serial][0][0] + 1j * acquisition_results[serial][1][0]
 
-                        if options.acquisition_type is AcquisitionType.INTEGRATION:
-                            if self.average:
-                                acquisition =  AveragedIntegratedResults(ires + 1j * qres)
-                            acquisition =  IntegratedResults(ires + 1j * qres)                                         
-
-                    data[original] = data[if_pulse.qubit] = acquisition      
+                    data[original] = data[if_pulse.qubit] = options.results_type(results)
 
         return data
 
