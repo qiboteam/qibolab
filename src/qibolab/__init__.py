@@ -43,10 +43,9 @@ def create_platform(name, runcard=None):
         The plaform class.
     """
     if name == "dummy":
-        from qibolab.paths import qibolab_folder
-        from qibolab.platform import create_dummy
+        from qibolab.dummy import create_dummy
 
-        return create_dummy(qibolab_folder / "runcards" / "dummy.yml")
+        return create_dummy()
 
     platform = get_platforms_path() / f"{name}.py"
     if not platform.exists():

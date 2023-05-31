@@ -27,7 +27,8 @@ class Platform:
     """
 
     def __init__(self, name, runcard, instruments, channels):
-        log.info("Loading platform %s {name} from runcard %s{runcard}", name, runcard)
+        log.info("Loading platform %s", name)
+
         self.name = name
         self.runcard = runcard
         self.instruments: List[AbstractInstrument] = instruments
@@ -65,8 +66,11 @@ class Platform:
         # TODO: Remove ``self.settings``
         if self.settings is None:
             # Load initial configuration
-            with open(self.runcard) as file:
-                settings = self.settings = yaml.safe_load(file)
+            if isinstance(self.runcard, dict):
+                settings = self.settings = self.runcard
+            else:
+                with open(self.runcard) as file:
+                    settings = self.settings = yaml.safe_load(file)
         else:
             # Load current configuration
             settings = self.settings
@@ -107,7 +111,6 @@ class Platform:
             pair = tuple(sorted(pair))
             if pair not in self.pairs:
                 self.pairs[pair] = QubitPair(self.qubits[pair[0]], self.qubits[pair[1]])
-
         # Load native two-qubit gates
         if "two_qubit" in self.native_gates:
             for pair, gatedict in self.native_gates["two_qubit"].items():
@@ -351,19 +354,20 @@ class Platform:
 
     def sweep(self, sequence, options, *sweepers):
         """Executes a pulse sequence for different values of sweeped parameters.
+
         Useful for performing chip characterization.
 
         Example:
             .. testcode::
 
                 import numpy as np
-                from qibolab.platform import create_platform
+                from qibolab.dummy import create_dummy
                 from qibolab.sweeper import Sweeper, Parameter
                 from qibolab.pulses import PulseSequence
                 from qibolab import ExecutionParameters
 
 
-                platform = create_platform("dummy")
+                platform = create_dummy()
                 sequence = PulseSequence()
                 parameter = Parameter.frequency
                 pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
@@ -541,30 +545,3 @@ class Platform:
     def get_bias(self, qubit):
         """Get bias value. Usefeul for calibration routines involving flux."""
         return self.qubits[qubit].flux.bias
-
-
-def create_dummy(runcard):
-    """Create a dummy platform using the dummy instrument.
-    Useful for testing.
-    """
-    from qibolab.instruments.dummy import DummyInstrument
-
-    # Create channel objects
-    channels = ChannelMap()
-    channels |= ("readout", "drive")
-    channels |= (f"flux-{i}" for i in range(6))
-
-    # Create dummy controller
-    instrument = DummyInstrument("dummy", 0)
-    # Create platform
-    platform = Platform("dummy", runcard, [instrument], channels)
-
-    # map channels to qubits
-    for qubit in platform.qubits:
-        platform.qubits[qubit].readout = channels["readout"]
-        platform.qubits[qubit].drive = channels["drive"]
-        platform.qubits[qubit].flux = channels[f"flux-{qubit}"]
-        channels[f"flux-{qubit}"].qubit = platform.qubits[qubit]
-        channels["readout"].attenuation = 0
-
-    return platform

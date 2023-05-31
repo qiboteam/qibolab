@@ -8,7 +8,7 @@ from qibo.states import CircuitResult
 
 from qibolab import ExecutionParameters
 from qibolab import __version__ as qibolab_version
-from qibolab import create_platform
+from qibolab import create_platform, dummy
 from qibolab.compilers import Compiler
 from qibolab.platform import Platform
 from qibolab.transpilers import Pipeline
