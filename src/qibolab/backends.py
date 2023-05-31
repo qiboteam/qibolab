@@ -20,8 +20,6 @@ class QibolabBackend(NumpyBackend):
         self.name = "qibolab"
         if isinstance(platform, Platform):
             self.platform = platform
-        elif platform == dummy.NAME:
-            self.platform = dummy.create_dummy()
         else:
             self.platform = create_platform(platform, runcard)
         self.versions = {
