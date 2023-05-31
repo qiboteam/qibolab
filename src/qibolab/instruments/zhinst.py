@@ -669,7 +669,7 @@ class Zurich(AbstractInstrument):
                 if sweeper.uid == "amplitude":
                     sweeper_amp_index = pulse.zhsweepers.index(sweeper)
                     sweeper.values = sweeper.values.copy()
-                    sweeper.amplitude *= max(abs(sweeper.values))
+                    pulse.zhpulse.amplitude *= max(abs(sweeper.values))
                     sweeper.values /= max(abs(sweeper.values))
                 else:
                     sweeper_dur_index = pulse.zhsweepers.index(sweeper)
@@ -677,8 +677,8 @@ class Zurich(AbstractInstrument):
             exp.play(
                 signal=f"{section}{qubit.name}",
                 pulse=pulse.zhpulse,
-                amplitude=pulse.zhsweeper[sweeper_amp_index],
-                length=pulse.zhsweeper[sweeper_dur_index],
+                amplitude=pulse.zhsweepers[sweeper_amp_index],
+                length=pulse.zhsweepers[sweeper_dur_index],
             )
 
     def play_sweep(self, exp, qubit, pulse, section):
@@ -696,7 +696,7 @@ class Zurich(AbstractInstrument):
             for partial_sweep in pulse.zhsweepers:
                 parameters.append(partial_sweep.uid)
             # Recheck partial sweeps
-            if len(parameters) > 2:
+            if len(parameters) == 2:
                 self.play_sweep_select_dual(exp, qubit, pulse, section, parameters)
             else:
                 self.play_sweep_select_single(exp, qubit, pulse, section, parameters, partial_sweep)
@@ -896,27 +896,6 @@ class Zurich(AbstractInstrument):
                     warnings.warn("Sweepers were reordered")
         return rearranging_axes, sweepers
 
-    def get_results(self, exp_res, qubits, options, dimensions, rearranging_axes=[[], []]):
-        results = {}
-        for qubit in qubits.values():
-            if qubit.flux_coupler:
-                continue
-            q = qubit.name
-            if len(self.sequence[f"readout{q}"]) != 0:
-                exp_res = self.results.get_data(f"sequence{q}")
-                # Reorder dimensions
-                exp_res = np.moveaxis(exp_res, rearranging_axes[0], rearranging_axes[1])
-                if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                    data = np.array([exp_res]) if options.averaging_mode is AveragingMode.CYCLIC else np.array(exp_res)
-                    results[self.sequence[f"readout{q}"][0].pulse.serial] = options.results_type(data)
-                else:
-                    results[self.sequence[f"readout{q}"][0].pulse.serial] = options.results_type(data=np.array(exp_res))
-
-        exp_dimensions = list(np.array(exp_res).shape)
-        if dimensions != exp_dimensions:
-            logging.warn("dimensions {: d} , exp_dimensions {: d}".format(dimensions, exp_dimensions))
-            warnings.warn("dimensions not properly ordered")
-
     def offsets_off(self):
         for sigout in range(0, 8):
             self.session.devices["device_hdawg"].awgs[0].sigouts[sigout].offset = 0
@@ -952,7 +931,27 @@ class Zurich(AbstractInstrument):
 
         # TODO: General, several readouts and qubits
         "Get the results back"
-        results = self.get_results(self, qubits, options, dimensions, rearranging_axes)
+        # results = self.get_results(self, qubits, options, dimensions, rearranging_axes)
+
+        results = {}
+        for qubit in qubits.values():
+            if qubit.flux_coupler:
+                continue
+            q = qubit.name
+            if len(self.sequence[f"readout{q}"]) != 0:
+                exp_res = self.results.get_data(f"sequence{q}")
+                # Reorder dimensions
+                exp_res = np.moveaxis(exp_res, rearranging_axes[0], rearranging_axes[1])
+                if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+                    data = np.array([exp_res]) if options.averaging_mode is AveragingMode.CYCLIC else np.array(exp_res)
+                    results[self.sequence[f"readout{q}"][0].pulse.serial] = options.results_type(data)
+                else:
+                    results[self.sequence[f"readout{q}"][0].pulse.serial] = options.results_type(data=np.array(exp_res))
+
+        exp_dimensions = list(np.array(exp_res).shape)
+        if dimensions != exp_dimensions:
+            logging.warn("dimensions {: d} , exp_dimensions {: d}".format(dimensions, exp_dimensions))
+            warnings.warn("dimensions not properly ordered")
 
         self.offsets_off()
 
