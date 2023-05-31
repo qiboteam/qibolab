@@ -20,6 +20,8 @@ from qibolab.sweeper import Parameter
 os.environ["LABONEQ_TOKEN"] = "not required"
 laboneq._token.is_valid_token = lambda _token: True
 
+# TODO: From amplitude sweep to voltage *0.2 Volts if you didnt change DB on the HDAWG
+
 # FIXME: Multiplex (For readout). Workaround integration weights padding with zeros.
 # FIXME: Handle on acquires for list of pulse sequences
 # FIXME: I think is a hardware limitation but I cant sweep multiple drive oscillator at the same time
@@ -784,14 +786,14 @@ class Zurich(AbstractInstrument):
         elif len(self.sequence_qibo.qd_pulses) != 0:
             play_after = self.play_after_set(self.sequence_qibo.qd_pulses, "drive")
 
-        for qubit in qubits.values():
-            if qubit.flux_coupler:
-                continue
-            q = qubit.name
-            if len(self.sequence[f"readout{q}"]) != 0:
-                for pulse in self.sequence[f"readout{q}"]:
-                    i = 0
-                    with exp.section(uid=f"sequence_measure{q}", play_after=play_after):
+        with exp.section(uid=f"sequence_measure", play_after=play_after):
+            for qubit in qubits.values():
+                if qubit.flux_coupler:
+                    continue
+                q = qubit.name
+                if len(self.sequence[f"readout{q}"]) != 0:
+                    for pulse in self.sequence[f"readout{q}"]:
+                        i = 0
                         pulse.zhpulse.uid += str(i)
 
                         """Integration weights definition or load from the chip folder"""
