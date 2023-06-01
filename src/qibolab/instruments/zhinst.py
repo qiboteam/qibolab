@@ -605,6 +605,7 @@ class Zurich(AbstractInstrument):
             count=exp_options.nshots,
             acquisition_type=exp_options.acquisition_type,
             averaging_mode=exp_options.averaging_mode,
+            reset_oscillator_phase=True,
         ):
             """Recursion loop for sweepers or just play a sequence"""
             if len(self.sweepers) > 0:
@@ -720,6 +721,7 @@ class Zurich(AbstractInstrument):
                     i = 0
                     for sequence in sequences_drive.values():
                         j = 0
+
                         with exp.section(uid=f"sequence_drive{qubit.name}_{i}"):
                             for pulse in sequence:
                                 if not isinstance(pulse, ZhSweeperLine):
@@ -743,6 +745,7 @@ class Zurich(AbstractInstrument):
                                         j += 1
                                 elif isinstance(pulse, ZhSweeperLine):
                                     exp.delay(signal=f"drive{qubit.name}", time=pulse.zhsweeper)
+                        i += 1
 
     @staticmethod
     def play_after_set(sequence, type):
@@ -775,10 +778,12 @@ class Zurich(AbstractInstrument):
                 continue
             q = qubit.name
             if len(self.sequence[f"readout{q}"]) != 0:
-                for pulse in self.sequence[f"readout{q}"]:
-                    i = 0
-                    with exp.section(uid=f"sequence_measure{q}", play_after=play_after):
-                        pulse.zhpulse.uid += str(i)
+                i = 0
+                for pulse in self.sequence[f"readout{qubit.name}"]:
+                    if play_after is not None:
+                        play_after_aux = play_after + f"_{i}"
+                    with exp.section(uid=f"sequence_measure{qubit.name}_{i}", play_after=play_after_aux):
+                        pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
 
                         """Integration weights definition or load from the chip folder"""
                         weights_file = (
