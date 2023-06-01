@@ -1,6 +1,6 @@
 import pytest
 
-from qibolab.designs.channels import Channel, ChannelMap
+from qibolab.channels import Channel, ChannelMap
 
 
 def test_channel_init():

@@ -1,177 +1,78 @@
+"""Tests :class:`qibolab.platforms.multiqubit.MultiqubitPlatform` and
+:class:`qibolab.platforms.platform.DesignPlatform`.
+"""
+import os
+import pathlib
+import pickle
+import shutil
+import warnings
+
 import numpy as np
 import pytest
-from qibo import gates
-from qibo.backends import NumpyBackend
+import yaml
 from qibo.models import Circuit
+from qibo.states import CircuitResult
 
+from qibolab import create_platform, get_platforms_path
 from qibolab.backends import QibolabBackend
 from qibolab.platform import Platform
-from qibolab.platforms.abstract import AbstractPlatform
+from qibolab.platforms.multiqubit import MultiqubitPlatform
 from qibolab.pulses import PulseSequence
-from qibolab.transpilers import Pipeline
+
+qubit = 0
+nshots = 1024
 
 
-def generate_circuit_with_gate(nqubits, gate, *params, **kwargs):
-    circuit = Circuit(nqubits)
-    circuit.add(gate(q, *params, **kwargs) for q in range(nqubits))
-    circuit.add(gates.M(*range(nqubits)))
-    return circuit
+@pytest.fixture
+def platform(platform_name):
+    test_runcard = pathlib.Path(__file__).parent / "test_platforms_multiqubit.yml"
+    original_runcard = get_platforms_path()
+    shutil.copyfile(str(original_runcard), test_runcard)
+    _platform = create_platform(platform_name, test_runcard)
+    _platform.connect()
+    _platform.setup()
+    _platform.start()
+    yield _platform
+    _platform.stop()
+    _platform.disconnect()
+    os.remove(test_runcard)
 
 
-def test_u3_sim_agreement():
-    backend = NumpyBackend()
-    theta, phi, lam = 0.1, 0.2, 0.3
-    u3_matrix = gates.U3(0, theta, phi, lam).asmatrix(backend)
-    rz1 = gates.RZ(0, phi).asmatrix(backend)
-    rz2 = gates.RZ(0, theta).asmatrix(backend)
-    rz3 = gates.RZ(0, lam).asmatrix(backend)
-    rx1 = gates.RX(0, -np.pi / 2).asmatrix(backend)
-    rx2 = gates.RX(0, np.pi / 2).asmatrix(backend)
-    target_matrix = rz1 @ rx1 @ rz2 @ rx2 @ rz3
-    np.testing.assert_allclose(u3_matrix, target_matrix)
+def test_platform_multiqubit(platform_name):
+    platform = create_platform(platform_name)
+    assert isinstance(platform, Platform)
 
 
-def compile_circuit(circuit, platform):
-    """Compile a circuit to a pulse sequence."""
-    transpiler = Pipeline.default(platform.two_qubit_natives)
-    if transpiler.is_satisfied(circuit):
-        native_circuit = circuit
-    else:
-        native_circuit, _ = transpiler.transpile(circuit)
-
-    sequence = platform.transpile(native_circuit)
-    return sequence
+def test_platform():
+    with pytest.raises(ValueError):
+        platform = create_platform("nonexistent")
 
 
-@pytest.mark.parametrize(
-    "gateargs",
-    [
-        (gates.I,),
-        (gates.X,),
-        (gates.Y,),
-        (gates.Z,),
-        (gates.RX, np.pi / 8),
-        (gates.RY, -np.pi / 8),
-        (gates.RZ, np.pi / 4),
-        (gates.U3, 0.1, 0.2, 0.3),
-    ],
-)
-def test_transpile(platform_name, gateargs):
-    platform = Platform(platform_name)
-    nqubits = platform.nqubits
-    if gateargs[0] in (gates.I, gates.Z, gates.RZ):
-        nseq = 0
-    else:
-        nseq = 2
-    circuit = generate_circuit_with_gate(nqubits, *gateargs)
-    sequence = compile_circuit(circuit, platform)
-    assert len(sequence) == (nseq + 1) * nqubits
+def test_multiqubitplatform_init(platform_name):
+    platform = create_platform(platform_name)
+    with open(platform.runcard) as file:
+        settings = yaml.safe_load(file)
+    if not isinstance(platform, MultiqubitPlatform):
+        pytest.skip(f"Skipping MultiqubitPlatform specific test for {platform_name}.")
+    assert platform.name == platform_name
+    assert platform.is_connected == False
+    assert len(platform.instruments) == len(settings["instruments"])
+    for name in settings["instruments"]:
+        assert name in platform.instruments
+        assert (
+            str(type(platform.instruments[name]))
+            == f"<class 'qibolab.instruments.{settings['instruments'][name]['lib']}.{settings['instruments'][name]['class']}'>"
+        )
 
 
-def test_transpile_two_gates(platform_name):
-    platform = Platform(platform_name)
-    circuit = Circuit(1)
-    circuit.add(gates.RX(0, theta=0.1))
-    circuit.add(gates.RY(0, theta=0.2))
-    circuit.add(gates.M(0))
-
-    sequence = compile_circuit(circuit, platform)
-
-    assert len(sequence.pulses) == 5
-    assert len(sequence.qd_pulses) == 4
-    assert len(sequence.ro_pulses) == 1
-
-
-def test_measurement(platform_name):
-    platform: AbstractPlatform = Platform(platform_name)
-    nqubits = platform.nqubits
-    circuit = Circuit(nqubits)
-    qubits = [qubit for qubit in range(nqubits)]
-    circuit.add(gates.M(*qubits))
-    sequence = compile_circuit(circuit, platform)
-
-    assert len(sequence) == 1 * nqubits
-    assert len(sequence.qd_pulses) == 0 * nqubits
-    assert len(sequence.qf_pulses) == 0 * nqubits
-    assert len(sequence.ro_pulses) == 1 * nqubits
-
-
-def test_rz_to_sequence(platform_name):
-    platform = Platform(platform_name)
-    circuit = Circuit(1)
-    circuit.add(gates.RZ(0, theta=0.2))
-    circuit.add(gates.Z(0))
-    sequence = compile_circuit(circuit, platform)
-    assert len(sequence) == 0
-
-
-def test_u3_to_sequence(platform_name):
-    platform = Platform(platform_name)
-    circuit = Circuit(1)
-    circuit.add(gates.U3(0, 0.1, 0.2, 0.3))
-
-    sequence = compile_circuit(circuit, platform)
-    assert len(sequence.pulses) == 2
-    assert len(sequence.qd_pulses) == 2
-
-    RX90_pulse1 = platform.create_RX90_pulse(0, start=0, relative_phase=0.3)
-    RX90_pulse2 = platform.create_RX90_pulse(0, start=RX90_pulse1.finish, relative_phase=0.4 - np.pi)
-    s = PulseSequence(RX90_pulse1, RX90_pulse2)
-
-    np.testing.assert_allclose(sequence.duration, RX90_pulse1.duration + RX90_pulse2.duration)
-    assert sequence.serial == s.serial
-
-
-def test_two_u3_to_sequence(platform_name):
-    platform = Platform(platform_name)
-    circuit = Circuit(1)
-    circuit.add(gates.U3(0, 0.1, 0.2, 0.3))
-    circuit.add(gates.U3(0, 0.4, 0.6, 0.5))
-
-    sequence = compile_circuit(circuit, platform)
-    assert len(sequence.pulses) == 4
-    assert len(sequence.qd_pulses) == 4
-
-    RX90_pulse = platform.create_RX90_pulse(0)
-
-    np.testing.assert_allclose(sequence.duration, 2 * 2 * RX90_pulse.duration)
-
-    RX90_pulse1 = platform.create_RX90_pulse(0, start=0, relative_phase=0.3)
-    RX90_pulse2 = platform.create_RX90_pulse(0, start=RX90_pulse1.finish, relative_phase=0.4 - np.pi)
-    RX90_pulse3 = platform.create_RX90_pulse(0, start=RX90_pulse2.finish, relative_phase=1.1)
-    RX90_pulse4 = platform.create_RX90_pulse(0, start=RX90_pulse3.finish, relative_phase=1.5 - np.pi)
-    s = PulseSequence(RX90_pulse1, RX90_pulse2, RX90_pulse3, RX90_pulse4)
-    assert sequence.serial == s.serial
-
-
-def test_CZ_to_sequence(platform_name):
-    platform = Platform(platform_name)
-    if platform.nqubits > 1:
-        circuit = Circuit(2)
-        circuit.add(gates.X(0))
-        circuit.add(gates.CZ(0, 1))
-
-        sequence = compile_circuit(circuit, platform)
-        test_sequence, virtual_z_phases = platform.create_CZ_pulse_sequence((2, 1))
-        assert len(sequence.pulses) == len(test_sequence) + 2
-
-
-def test_add_measurement_to_sequence(platform_name):
-    platform = Platform(platform_name)
-    circuit = Circuit(1)
-    circuit.add(gates.U3(0, 0.1, 0.2, 0.3))
-    circuit.add(gates.M(0))
-
-    sequence = compile_circuit(circuit, platform)
-    assert len(sequence.pulses) == 3
-    assert len(sequence.qd_pulses) == 2
-    assert len(sequence.ro_pulses) == 1
-
-    RX90_pulse1 = platform.create_RX90_pulse(0, start=0, relative_phase=0.3)
-    RX90_pulse2 = platform.create_RX90_pulse(0, start=RX90_pulse1.finish, relative_phase=0.4 - np.pi)
-    MZ_pulse = platform.create_MZ_pulse(0, start=RX90_pulse2.finish)
-    s = PulseSequence(RX90_pulse1, RX90_pulse2, MZ_pulse)
-    assert sequence.serial == s.serial
+def test_abstractplatform_pickle(platform_name):
+    platform = create_platform(platform_name)
+    serial = pickle.dumps(platform)
+    new_platform = pickle.loads(serial)
+    assert new_platform.name == platform.name
+    assert new_platform.runcard == platform.runcard
+    assert new_platform.settings == platform.settings
+    assert new_platform.is_connected == platform.is_connected
 
 
 @pytest.mark.parametrize(
@@ -184,18 +85,204 @@ def test_add_measurement_to_sequence(platform_name):
         "drive_frequency",
         "iq_angle",
         "mean_gnd_states",
+        "classifiers_hpars",
     ],
 )
 def test_update(platform_name, par):
-    platform = Platform(platform_name)
+    platform = create_platform(platform_name)
     new_values = np.ones(platform.nqubits)
-    updates = {par: {platform.qubits[i].name: new_values[i] for i in range(platform.nqubits)}}
+    updates = {par: {i: new_values[i] for i in range(platform.nqubits)}}
     # TODO: fix the reload settings for qili1q_os2
-    if platform.name != "qili1q_os2":
+    if not isinstance(platform, MultiqubitPlatform):
         platform.update(updates)
         for i in range(platform.nqubits):
             value = updates[par][i]
             if "frequency" in par:
                 value *= 1e9
-            assert value == float(platform.settings["characterization"]["single_qubit"][platform.qubits[i].name][par])
+            assert value == float(platform.settings["characterization"]["single_qubit"][i][par])
             assert value == float(getattr(platform.qubits[i], par))
+
+
+@pytest.mark.qpu
+def test_abstractplatform_setup_start_stop(platform):
+    pass
+
+
+@pytest.mark.qpu
+def test_platform_lo_drive_frequency(platform):
+    with pytest.raises(NotImplementedError):
+        platform.set_lo_drive_frequency(qubit, 1e9)
+        assert platform.get_lo_drive_frequency(qubit) == 1e9
+
+
+@pytest.mark.qpu
+def test_platform_lo_readout_frequency(platform):
+    with pytest.raises(NotImplementedError):
+        platform.set_lo_readout_frequency(qubit, 1e9)
+        assert platform.get_lo_readout_frequency(qubit) == 1e9
+
+
+@pytest.mark.qpu
+def test_platform_attenuation(platform):
+    if isinstance(platform, MultiqubitPlatform):
+        platform.set_attenuation(qubit, 0)
+        assert platform.get_attenuation(qubit) == 0
+    else:
+        with pytest.raises(NotImplementedError):
+            platform.set_attenuation(qubit, 0)
+        with pytest.raises(NotImplementedError):
+            platform.get_attenuation(qubit)
+
+
+@pytest.mark.qpu
+def test_platform_gain(platform):
+    if isinstance(platform, MultiqubitPlatform):
+        platform.set_gain(qubit, 0)
+        assert platform.get_gain(qubit) == 0
+    else:
+        with pytest.raises(NotImplementedError):
+            platform.set_gain(qubit, 0)
+        with pytest.raises(NotImplementedError):
+            platform.get_gain(qubit)
+
+
+@pytest.mark.qpu
+def test_platform_bias(platform):
+    with pytest.raises(NotImplementedError):
+        platform.set_bias(qubit, 0)
+        assert platform.get_bias(qubit) == 0
+
+
+@pytest.mark.qpu
+def test_multiqubitplatform_execute_empty(platform):
+    # an empty pulse sequence
+    sequence = PulseSequence()
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+
+
+@pytest.mark.qpu
+def test_multiqubitplatform_execute_one_drive_pulse(platform):
+    # One drive pulse
+    sequence = PulseSequence()
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+
+
+@pytest.mark.qpu
+def test_multiqubitplatform_execute_one_long_drive_pulse(platform):
+    # Long duration
+    if not isinstance(platform, MultiqubitPlatform):
+        pytest.skip(f"Skipping extra long pulse test for {platform}.")
+    sequence = PulseSequence()
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=8192 + 200))
+    with pytest.raises(NotImplementedError):
+        platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+
+
+@pytest.mark.qpu
+def test_multiqubitplatform_execute_one_extralong_drive_pulse(platform):
+    # Extra Long duration
+    if not isinstance(platform, MultiqubitPlatform):
+        pytest.skip(f"Skipping extra long pulse test for {platform}.")
+    sequence = PulseSequence()
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=2 * 8192 + 200))
+    with pytest.raises(NotImplementedError):
+        platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+
+
+@pytest.mark.qpu
+def test_multiqubitplatform_execute_one_drive_one_readout(platform):
+    # One drive pulse and one readout pulse
+    sequence = PulseSequence()
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
+    sequence.add(platform.create_qubit_readout_pulse(qubit, start=200))
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+
+
+@pytest.mark.qpu
+def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout(platform):
+    # Multiple qubit drive pulses and one readout pulse
+    sequence = PulseSequence()
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=204, duration=200))
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=408, duration=400))
+    sequence.add(platform.create_qubit_readout_pulse(qubit, start=808))
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+
+
+@pytest.mark.qpu
+def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout_no_spacing(
+    platform,
+):
+    # Multiple qubit drive pulses and one readout pulse with no spacing between them
+    sequence = PulseSequence()
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=200, duration=200))
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=400, duration=400))
+    sequence.add(platform.create_qubit_readout_pulse(qubit, start=800))
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+
+
+@pytest.mark.qpu
+def test_multiqubitplatform_execute_multiple_overlaping_drive_pulses_one_readout(
+    platform,
+):
+    # Multiple overlapping qubit drive pulses and one readout pulse
+    sequence = PulseSequence()
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=200, duration=200))
+    sequence.add(platform.create_qubit_drive_pulse(qubit, start=50, duration=400))
+    sequence.add(platform.create_qubit_readout_pulse(qubit, start=800))
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+
+
+@pytest.mark.qpu
+def test_multiqubitplatform_execute_multiple_readout_pulses(platform):
+    # Multiple readout pulses
+    sequence = PulseSequence()
+    qd_pulse1 = platform.create_qubit_drive_pulse(qubit, start=0, duration=200)
+    ro_pulse1 = platform.create_qubit_readout_pulse(qubit, start=200)
+    qd_pulse2 = platform.create_qubit_drive_pulse(qubit, start=(ro_pulse1.start + ro_pulse1.duration), duration=400)
+    ro_pulse2 = platform.create_qubit_readout_pulse(qubit, start=(ro_pulse1.start + ro_pulse1.duration + 400))
+    sequence.add(qd_pulse1)
+    sequence.add(ro_pulse1)
+    sequence.add(qd_pulse2)
+    sequence.add(ro_pulse2)
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+
+
+@pytest.mark.qpu
+@pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
+def test_excited_state_probabilities_pulses(platform, qubit):
+    backend = QibolabBackend(platform)
+    qd_pulse = platform.create_RX_pulse(qubit)
+    ro_pulse = platform.create_MZ_pulse(qubit, start=qd_pulse.duration)
+    sequence = PulseSequence()
+    sequence.add(qd_pulse)
+    sequence.add(ro_pulse)
+    result = platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=5000))
+
+    cr = CircuitResult(backend, Circuit(platform.nqubits), result, nshots=5000)
+    probs = backend.circuit_result_probabilities(cr, qubits=[qubit])
+    warnings.warn(f"Excited state probabilities: {probs}")
+    np.testing.assert_allclose(probs, [0, 1], atol=0.05)
+
+
+@pytest.mark.qpu
+@pytest.mark.parametrize("start_zero", [False, True])
+@pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
+def test_ground_state_probabilities_pulses(platform, qubit, start_zero):
+    backend = QibolabBackend(platform)
+    if start_zero:
+        ro_pulse = platform.create_MZ_pulse(qubit, start=0)
+    else:
+        qd_pulse = platform.create_RX_pulse(qubit)
+        ro_pulse = platform.create_MZ_pulse(qubit, start=qd_pulse.duration)
+    sequence = PulseSequence()
+    sequence.add(ro_pulse)
+    result = platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=5000))
+
+    cr = CircuitResult(backend, Circuit(platform.nqubits), result, nshots=5000)
+    probs = backend.circuit_result_probabilities(cr, qubits=[qubit])
+    warnings.warn(f"Ground state probabilities: {probs}")
+    np.testing.assert_allclose(probs, [1, 0], atol=0.05)

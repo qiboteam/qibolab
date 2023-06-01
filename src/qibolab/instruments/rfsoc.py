@@ -14,9 +14,9 @@ import numpy as np
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import AbstractInstrument
-from qibolab.platforms.abstract import Qubit
+from qibolab.platform import Qubit
 from qibolab.pulses import PulseSequence, PulseType
-from qibolab.result import IntegratedResults, StateResults
+from qibolab.result import IntegratedResults, SampleResults
 from qibolab.sweeper import Parameter, Sweeper
 
 
@@ -192,7 +192,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         qubits: List[Qubit],
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
-    ) -> Dict[str, Union[IntegratedResults, StateResults]]:
+    ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
         """Executes the sequence of instructions and retrieves readout results.
            Each readout pulse generates a separate acquisition.
            The relaxation_time and the number of shots have default values.
@@ -240,7 +240,7 @@ class TII_RFSOC4x2(AbstractInstrument):
                 if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
                     discriminated_shots = self.classify_shots(i_pulse, q_pulse, qubits[ro_pulse.qubit])
                     if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
-                        discriminated_shots = np.mean(discriminated_shots, keepdims=True)
+                        discriminated_shots = np.mean(discriminated_shots, axis=0)
                     result = execution_parameters.results_type(discriminated_shots)
                 else:
                     result = execution_parameters.results_type(i_pulse + 1j * q_pulse)
@@ -270,7 +270,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         *sweepers: Sweeper,
         average: bool,
         execution_parameters: ExecutionParameters,
-    ) -> Dict[str, Union[IntegratedResults, StateResults]]:
+    ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
         """Execute a sweep of an arbitrary number of Sweepers via recursion.
 
         Args:
@@ -354,9 +354,9 @@ class TII_RFSOC4x2(AbstractInstrument):
 
     @staticmethod
     def merge_sweep_results(
-        dict_a: Dict[str, Union[IntegratedResults, StateResults]],
-        dict_b: Dict[str, Union[IntegratedResults, StateResults]],
-    ) -> Dict[str, Union[IntegratedResults, StateResults]]:
+        dict_a: Dict[str, Union[IntegratedResults, SampleResults]],
+        dict_b: Dict[str, Union[IntegratedResults, SampleResults]],
+    ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
         """Merge two dictionary mapping pulse serial to Results object.
         If dict_b has a key (serial) that dict_a does not have, simply add it,
         otherwise sum the two results
@@ -426,7 +426,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         toti: List[float],
         totq: List[float],
         execution_parameters: ExecutionParameters,
-    ) -> Dict[str, Union[IntegratedResults, StateResults]]:
+    ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
         """Convert sweep res to qibolab dict res
 
         Args:
@@ -464,15 +464,15 @@ class TII_RFSOC4x2(AbstractInstrument):
 
                 if not average:
                     shape = i_vals.shape
-                    np.reshape(i_vals, (execution_parameters.nshots, *shape[:-1]))
-                    np.reshape(q_vals, (execution_parameters.nshots, *shape[:-1]))
+                    i_vals = np.reshape(i_vals, (self.cfg.reps, *shape[:-1]))
+                    q_vals = np.reshape(q_vals, (self.cfg.reps, *shape[:-1]))
 
                 if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
                     qubit = qubits[sequence.ro_pulses[i].qubit]
-                    discrimated_shots = self.classify_shots(i_vals, q_vals, qubit)
+                    discriminated_shots = self.classify_shots(i_vals, q_vals, qubit)
                     if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
-                        discriminated_shots = np.mean(discriminated_shots, keepdims=True)
-                    result = execution_parameters.results_type(discrimated_shots)
+                        discriminated_shots = np.mean(discriminated_shots, axis=0)
+                    result = execution_parameters.results_type(discriminated_shots)
                 else:
                     result = execution_parameters.results_type(i_vals + 1j * q_vals)
 
@@ -485,7 +485,7 @@ class TII_RFSOC4x2(AbstractInstrument):
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
         *sweepers: Sweeper,
-    ) -> Dict[str, Union[IntegratedResults, StateResults]]:
+    ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
         """Executes the sweep and retrieves the readout results.
         Each readout pulse generates a separate acquisition.
         The relaxation_time and the number of shots have default values.

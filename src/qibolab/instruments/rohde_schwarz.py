@@ -11,11 +11,13 @@ from qibolab.instruments.abstract import InstrumentException, LocalOscillator
 
 
 class SGS100A(LocalOscillator):
-    def __init__(self, name, address):
+    def __init__(self, name, address, ref_osc_source="EXT"):
         super().__init__(name, address)
         self.device: LO_SGS100A = None
         self._power: float = None
         self._frequency: float = None
+        self._ref_osc_source: str = None
+        self.ref_osc_source = ref_osc_source
         self._device_parameters = {}
 
     @property
@@ -42,6 +44,18 @@ class SGS100A(LocalOscillator):
         if self.is_connected:
             self._set_device_parameter("power", x)
 
+    @property
+    def ref_osc_source(self):
+        if self.is_connected:
+            return self.device.ref_osc_source
+        return self._ref_osc_source
+
+    @ref_osc_source.setter
+    def ref_osc_source(self, x):
+        self._ref_osc_source = x
+        if self.is_connected:
+            self.device.ref_osc_source = x
+
     def connect(self):
         """
         Connects to the instrument using the IP address set in the runcard.
@@ -66,6 +80,7 @@ class SGS100A(LocalOscillator):
             self._set_device_parameter("frequency", self._frequency)
         if self._power is not None:
             self._set_device_parameter("power", self._power)
+        self.device.ref_osc_source = self._ref_osc_source
 
     def _set_device_parameter(self, parameter: str, value):
         """Sets a parameter of the instrument, if it changed from the last stored in the cache.
@@ -93,10 +108,11 @@ class SGS100A(LocalOscillator):
         """Erases the cache of instrument parameters."""
         self._device_parameters = {}
 
-    def setup(self, frequency=None, power=None, **kwargs):
+    def setup(self, frequency=None, power=None, ref_osc_source=None, **kwargs):
         """Configures the instrument.
 
         A connection to the instrument needs to be established beforehand.
+
         Args:
             **kwargs: dict = A dictionary of settings loaded from the runcard:
                 kwargs["power"]
@@ -108,11 +124,14 @@ class SGS100A(LocalOscillator):
             frequency = self.frequency
         if power is None:
             power = self.power
+        if ref_osc_source is None:
+            ref_osc_source = self.ref_osc_source
 
         if self.is_connected:
             # Load settings
             self.power = power
             self.frequency = frequency
+            self.ref_osc_source = ref_osc_source
         else:
             raise Exception("There is no connection to the instrument")
 

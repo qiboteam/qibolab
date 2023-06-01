@@ -1,9 +1,8 @@
 import numpy as np
 import pytest
 
-from qibolab import Platform
-from qibolab.instruments.qblox import Cluster, ClusterQCM_RF, ClusterQRM_RF
-from qibolab.paths import user_folder
+from qibolab import create_platform
+from qibolab.instruments.abstract import INSTRUMENTS_DATA_FOLDER
 from qibolab.pulses import Pulse, PulseSequence, ReadoutPulse
 
 from .conftest import load_from_platform
@@ -17,16 +16,16 @@ instruments_settings = {}
 @pytest.mark.qpu
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
 def test_instruments_qublox_init(platform_name, name):
-    platform = Platform(platform_name)
+    platform = create_platform(platform_name)
     settings = platform.settings
     # Instantiate instrument
-    instance, instr_settings = load_from_platform(Platform(platform_name), name)
+    instance, instr_settings = load_from_platform(create_platform(platform_name), name)
     instruments[name] = instance
     instruments_settings[name] = instr_settings
     assert instance.name == name
     assert instance.is_connected == False
     assert instance.device == None
-    assert instance.data_folder == user_folder / "instruments" / "data" / instance.tmp_folder.name.split("/")[-1]
+    assert instance.data_folder == INSTRUMENTS_DATA_FOLDER / instance.tmp_folder.name.split("/")[-1]
 
 
 @pytest.mark.qpu
@@ -38,7 +37,7 @@ def test_instruments_qublox_connect(name):
 @pytest.mark.qpu
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
 def test_instruments_qublox_setup(platform_name, name):
-    settings = Platform(platform_name).settings
+    settings = create_platform(platform_name).settings
     instruments[name].setup(**settings["settings"], **instruments_settings[name])
     for parameter in instruments_settings[name]:
         if parameter == "ports":
@@ -257,7 +256,7 @@ def test_instruments_qublox_set_device_paramters(name):
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
 def test_instruments_process_pulse_sequence_upload_play(platform_name, name):
     instrument = instruments[name]
-    settings = Platform(platform_name).settings
+    settings = create_platform(platform_name).settings
     instrument.setup(**settings["settings"], **instruments_settings[name])
     repetition_duration = settings["settings"]["repetition_duration"]
     instrument_pulses = {}
