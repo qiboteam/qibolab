@@ -307,7 +307,8 @@ class RFSoC(AbstractInstrument):
             qibolab results objects
         """
 
-        self.validate_sequence_and_update_cfg(sequence, execution_parameters)
+        self.validate_input_command(sequence, execution_parameters)
+        self.update_cfg(execution_parameters)
 
         if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
             average = False
@@ -335,7 +336,8 @@ class RFSoC(AbstractInstrument):
 
         return results
 
-    def validate_sequence_and_update_cfg(self, sequence: PulseSequence, execution_parameters: ExecutionParameters):
+    @staticmethod
+    def validate_input_command(sequence: PulseSequence, execution_parameters: ExecutionParameters):
         """Checks if sequence and execution_parameters are supported"""
         if any(pulse.duration < 10 for pulse in sequence):
             raise ValueError("The minimum pulse length supported is 10 ns")
@@ -344,7 +346,8 @@ class RFSoC(AbstractInstrument):
         if execution_parameters.fast_reset:
             raise NotImplementedError("Fast reset is not supported")
 
-        # if new value are passed, they are updated in the config obj
+    def update_cfg(self, execution_parameters: ExecutionParameters):
+        """Update rfsoc.Config object with new parameters"""
         if execution_parameters.nshots is not None:
             self.cfg.reps = execution_parameters.nshots
         if execution_parameters.relaxation_time is not None:
@@ -364,7 +367,7 @@ class RFSoC(AbstractInstrument):
             return [shots]
         return shots
 
-    def base_recursion_layer_sweep(
+    def play_sequence_in_sweep_recursion(
         self,
         qubits: List[Qubit],
         sequence: PulseSequence,
@@ -424,7 +427,7 @@ class RFSoC(AbstractInstrument):
         # Last layer for recursion.
 
         if len(sweepers) == 0:
-            return self.base_recursion_layer_sweep(qubits, sequence, or_sequence, execution_parameters)
+            return self.play_sequence_in_sweep_recursion(qubits, sequence, or_sequence, execution_parameters)
 
         if not self.get_if_python_sweep(sequence, qubits, *sweepers):
             toti, totq = self._execute_sweeps(sequence, qubits, sweepers, average)
@@ -603,7 +606,8 @@ class RFSoC(AbstractInstrument):
             results objects
         """
 
-        self.validate_sequence_and_update_cfg(sequence, execution_parameters)
+        self.validate_input_command(sequence, execution_parameters)
+        self.update_cfg(execution_parameters)
 
         if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
             average = False
