@@ -6,6 +6,7 @@ Tested on the following FPGA:
  *   ZCU111
 """
 
+import copy
 import json
 import socket
 from dataclasses import asdict
@@ -34,7 +35,7 @@ def convert_qubit(qubit: Qubit) -> rfsoc.Qubit:
 
 def replace_pulse_shape(rfsoc_pulse: rfsoc.Pulse, shape: PulseShape) -> rfsoc.Pulse:
     """Set pulse shape parameters in rfsoc pulse object"""
-    new = rfsoc.Pulse(**rfsoc_pulse.__dict__)
+    new = copy.copy(rfsoc_pulse)
     shape_name = new.shape = shape.name.lower()
     if shape_name in {"gaussian", "drag"}:
         new.rel_sigma = shape.rel_sigma
