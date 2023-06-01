@@ -373,6 +373,16 @@ class RFSoC(AbstractInstrument):
         execution_parameters: ExecutionParameters,
     ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
         """Last recursion layer, if no sweeps are present"""
+        res = self.play(qubits, sequence, execution_parameters)
+        newres = {}
+        serials = [pulse.serial for pulse in or_sequence.ro_pulses]
+        for idx, key in enumerate(res):
+            if idx % 2 == 1:
+                newres[serials[idx // 2]] = res[key]
+            else:
+                newres[key] = res[key]
+
+        return newres
 
     def recursive_python_sweep(
         self,
