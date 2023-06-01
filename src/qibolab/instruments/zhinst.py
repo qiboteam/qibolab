@@ -651,7 +651,8 @@ class Zurich(AbstractInstrument):
             exp.play(
                 signal=f"{section}{qubit.name}",
                 pulse=pulse.zhpulse,
-                phase=pulse.zhsweeper,
+                # phase=pulse.zhsweeper,
+                increment_oscillator_phase=pulse.zhsweeper,
             )
         elif "frequency" in partial_sweep.uid or partial_sweep.uid == "delay":
             # see if below also works for consistency
