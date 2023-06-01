@@ -900,10 +900,10 @@ class ClusterQRM_RF(AbstractInstrument):
                 self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
 
                 # DEBUG: QRM RF Save sequence to file
-                filename = self._debug_folder + f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
-                with open(filename, "w", encoding="utf-8") as file:
-                    json.dump(qblox_dict[sequencer], file, indent=4)
-                    file.write(sequencer.program)
+                # filename = self._debug_folder + f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
+                # with open(filename, "w", encoding="utf-8") as file:
+                #     json.dump(qblox_dict[sequencer], file, indent=4)
+                #     file.write(sequencer.program)
 
         # Clear acquisition memory and arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
@@ -915,9 +915,9 @@ class ClusterQRM_RF(AbstractInstrument):
         # self.device.print_readable_snapshot(update=True)
 
         # DEBUG: QRM RF Save Readable Snapshot
-        filename = self._debug_folder + f"Z_{self.name}_snapshot.json"
-        with open(filename, "w", encoding="utf-8") as file:
-            print_readable_snapshot(self.device, file, update=True)
+        # filename = self._debug_folder + f"Z_{self.name}_snapshot.json"
+        # with open(filename, "w", encoding="utf-8") as file:
+        #     print_readable_snapshot(self.device, file, update=True)
 
     def play_sequence(self):
         """Plays the sequence of pulses.

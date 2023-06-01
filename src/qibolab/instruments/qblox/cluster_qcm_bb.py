@@ -766,10 +766,10 @@ class ClusterQCM_BB(AbstractInstrument):
                 self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
 
                 # DEBUG: QCM Save sequence to file
-                filename = self._debug_folder + f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
-                with open(filename, "w", encoding="utf-8") as file:
-                    json.dump(qblox_dict[sequencer], file, indent=4)
-                    file.write(sequencer.program)
+                # filename = self._debug_folder + f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
+                # with open(filename, "w", encoding="utf-8") as file:
+                #     json.dump(qblox_dict[sequencer], file, indent=4)
+                #     file.write(sequencer.program)
 
         # Arm sequencers
         for sequencer_number in self._used_sequencers_numbers:
@@ -780,9 +780,9 @@ class ClusterQCM_BB(AbstractInstrument):
         # self.device.print_readable_snapshot(update=True)
 
         # DEBUG: QCM Save Readable Snapshot
-        filename = self._debug_folder + f"Z_{self.name}_snapshot.json"
-        with open(filename, "w", encoding="utf-8") as file:
-            print_readable_snapshot(self.device, file, update=True)
+        # filename = self._debug_folder + f"Z_{self.name}_snapshot.json"
+        # with open(filename, "w", encoding="utf-8") as file:
+        #     print_readable_snapshot(self.device, file, update=True)
 
     def play_sequence(self):
         """Executes the sequence of instructions."""
@@ -816,7 +816,7 @@ class ClusterQCM_BB(AbstractInstrument):
             log.warning("Unable to stop sequencers")
 
         try:
-            for port in ["o1", "o2", "o3", "o4"]:
+            for port in self.ports:
                 self.ports[port].offset = 0
 
             # self._set_device_parameter(self.device, "out0_offset", value=0)
