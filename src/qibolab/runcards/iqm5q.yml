@@ -109,8 +109,8 @@ native_gates:
     two_qubit:
         2-3: # qubit numbers
             CZ:
-            -   duration: 60
-                amplitude: -0.0073
+            -   duration: 56
+                amplitude: -0.54
                 frequency: 0
                 shape: Rectangular()
                 phase: null
@@ -163,7 +163,7 @@ characterization:
             drive_frequency: 4339731421
             T1: 0.
             T2: 0.
-            sweetspot: -0.17155 #0.5 #0.62 0.00
+            sweetspot: -0.186 #-0.17155 #0.5 #0.62 0.00
             filter: {}
             mean_gnd_states: -1.8517+0.6431j
             mean_exc_states: -0.8696+1.1473j
