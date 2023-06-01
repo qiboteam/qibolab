@@ -55,8 +55,8 @@ native_gates:
         2: # qubit number
             RX:
                 duration: 40 #200 #60
-                amplitude: 0.455
-                frequency: 4339287327  #4_401_600_000 #4_505_500_000 #4_321_500_000 # 4_541_100_000 #doesnt do anything requiered for qibolab to work
+                amplitude: 0.477
+                frequency: 4342116873 #4339287327
                 shape: Gaussian(5)
                 type: qd # qubit drive
                 start: 0
@@ -109,8 +109,8 @@ native_gates:
     two_qubit:
         2-3: # qubit numbers
             CZ:
-            -   duration: 56
-                amplitude: -0.54
+            -   duration: 66
+                amplitude: -0.52
                 frequency: 0
                 shape: Rectangular()
                 phase: null
@@ -118,10 +118,10 @@ native_gates:
                 # channel: L4-13
                 type: qf # qubit flux
             -   type: virtual_z
-                phase: 0
+                phase: 0.007
                 qubit: 3
             -   type: virtual_z
-                phase: 0
+                phase: 0.015
                 qubit: 2
              
             
@@ -160,10 +160,10 @@ characterization:
         2:
             readout_frequency: 6.109e+9  #6_112_000_000
             resonator_polycoef_flux: []
-            drive_frequency: 4339731421
+            drive_frequency: 4342116873
             T1: 0.
             T2: 0.
-            sweetspot: -0.186 #-0.17155 #0.5 #0.62 0.00
+            sweetspot: -0.1745 #0.5 #0.62 0.00
             filter: {}
             mean_gnd_states: -1.8517+0.6431j
             mean_exc_states: -0.8696+1.1473j

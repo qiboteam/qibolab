@@ -672,8 +672,8 @@ class Zurich(AbstractInstrument):
                 if sweeper.uid == "amplitude":
                     sweeper_amp_index = pulse.zhsweepers.index(sweeper)
                     sweeper.values = sweeper.values.copy()
-                    pulse.zhpulse.amplitude *= max(abs(sweeper.values))
-                    sweeper.values /= max(abs(sweeper.values))
+                    # pulse.zhpulse.amplitude *= max(abs(sweeper.values))
+                    # sweeper.values /= max(abs(sweeper.values))
                 else:
                     sweeper_dur_index = pulse.zhsweepers.index(sweeper)
 
@@ -789,14 +789,14 @@ class Zurich(AbstractInstrument):
         elif len(self.sequence_qibo.qd_pulses) != 0:
             play_after = self.play_after_set(self.sequence_qibo.qd_pulses, "drive")
 
-        for qubit in qubits.values():
-            if qubit.flux_coupler:
-                continue
-            q = qubit.name
-            if len(self.sequence[f"readout{q}"]) != 0:
-                for pulse in self.sequence[f"readout{q}"]:
-                    i = 0
-                    with exp.section(uid=f"sequence_measure{q}", play_after=play_after):
+        with exp.section(uid=f"sequence_measure", play_after=play_after):
+            for qubit in qubits.values():
+                if qubit.flux_coupler:
+                    continue
+                q = qubit.name
+                if len(self.sequence[f"readout{q}"]) != 0:
+                    for pulse in self.sequence[f"readout{q}"]:
+                        i = 0
                         pulse.zhpulse.uid += str(i)
 
                         """Integration weights definition or load from the chip folder"""
@@ -982,8 +982,8 @@ class Zurich(AbstractInstrument):
         if sweeper.parameter is Parameter.amplitude:
             for pulse in sweeper.pulses:
                 sweeper.values = sweeper.values.copy()
-                pulse.amplitude *= max(abs(sweeper.values))
-                sweeper.values /= max(abs(sweeper.values))
+                # pulse.amplitude *= max(abs(sweeper.values))
+                # sweeper.values /= max(abs(sweeper.values))
                 parameter = ZhSweeper(pulse, sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
 
         if sweeper.parameter is Parameter.bias:
