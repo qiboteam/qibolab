@@ -279,7 +279,7 @@ class RFSoC(AbstractInstrument):
                 if not tmp:
                     break
                 received.extend(tmp)
-        results = json.loads(received)
+        results = json.loads(received.decode("utf-8"))
         if isinstance(results, str) and "Error" in results:
             raise QibosoqError(results)
         return results["i"], results["q"]
