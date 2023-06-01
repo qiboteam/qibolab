@@ -17,7 +17,7 @@ import qibosoq.components as rfsoc
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.platform import Qubit
-from qibolab.pulses import Pulse, PulseSequence, PulseType
+from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType
 from qibolab.result import IntegratedResults, SampleResults
 from qibolab.sweeper import Parameter, Sweeper
 
@@ -32,18 +32,18 @@ def convert_qubit(qubit: Qubit) -> rfsoc.Qubit:
     return rfsoc.Qubit(0.0, None)
 
 
-def rfsoc_pulse_replace_shape(pulse: Pulse, rfsoc_pulse: rfsoc.Pulse) -> rfsoc.Pulse:
+def replace_pulse_shape(rfsoc_pulse: rfsoc.Pulse, shape: PulseShape) -> rfsoc.Pulse:
     """Set pulse shape parameters in rfsoc pulse object"""
     new = rfsoc.Pulse(**rfsoc_pulse.__dict__)
-    shape = new.shape = pulse.shape.name.lower()
-    if shape in {"gaussian", "drag"}:
-        new.rel_sigma = pulse.shape.rel_sigma
-        if shape == "drag":
-            new.beta = pulse.shape.beta
+    shape_name = new.shape = shape.name.lower()
+    if shape_name in {"gaussian", "drag"}:
+        new.rel_sigma = shape.rel_sigma
+        if shape_name == "drag":
+            new.beta = shape.beta
     return new
 
 
-def get_pulse_lo_frequency(pulse: Pulse, qubits: Dict[int, Qubit]) -> int:
+def pulse_lo_frequency(pulse: Pulse, qubits: Dict[int, Qubit]) -> int:
     """Returns local_oscillator frequency (HZ) of a pulse"""
     pulse_type = pulse.type.name.lower()
     try:
@@ -58,7 +58,7 @@ def convert_pulse(pulse: Pulse, qubits: Dict[int, Qubit]) -> rfsoc.Pulse:
     pulse_type = pulse.type.name.lower()
     dac = getattr(qubits[pulse.qubit], pulse_type).ports[0][1]
     adc = qubits[pulse.qubit].feedback.ports[0][1] if pulse_type == "readout" else None
-    lo_frequency = get_pulse_lo_frequency(pulse, qubits)
+    lo_frequency = pulse_lo_frequency(pulse, qubits)
 
     rfsoc_pulse = rfsoc.Pulse(
         frequency=(pulse.frequency - lo_frequency) * HZ_TO_MHZ,
@@ -72,7 +72,7 @@ def convert_pulse(pulse: Pulse, qubits: Dict[int, Qubit]) -> rfsoc.Pulse:
         name=pulse.serial,
         type=pulse_type,
     )
-    return rfsoc_pulse_replace_shape(pulse, rfsoc_pulse)
+    return replace_pulse_shape(rfsoc_pulse, pulse.shape)
 
 
 def convert_frequency_sweeper(sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubits: Dict[int, Qubit]):
@@ -80,7 +80,7 @@ def convert_frequency_sweeper(sweeper: rfsoc.Sweeper, sequence: PulseSequence, q
     for idx, jdx in enumerate(sweeper.indexes):
         if sweeper.parameter[idx] is rfsoc.Parameter.FREQUENCY:
             pulse = sequence[jdx]
-            lo_frequency = get_pulse_lo_frequency(pulse, qubits)
+            lo_frequency = pulse_lo_frequency(pulse, qubits)
 
             sweeper.starts[idx] = (sweeper.starts[idx] - lo_frequency) * HZ_TO_MHZ
             sweeper.stops[idx] = (sweeper.stops[idx] - lo_frequency) * HZ_TO_MHZ
@@ -319,8 +319,7 @@ class RFSoC(AbstractInstrument):
         results = {}
         adc_chs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
 
-        for j in range(len(adc_chs)):
-            channel = sequence.ro_pulses[j].qubit
+        for j, channel in enumerate(adc_chs):
             for i, ro_pulse in enumerate(sequence.ro_pulses.get_qubit_pulses(channel)):
                 i_pulse = np.array(toti[j][i])
                 q_pulse = np.array(totq[j][i])
@@ -372,7 +371,14 @@ class RFSoC(AbstractInstrument):
         or_sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
     ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
-        """Last recursion layer, if no sweeps are present"""
+        """Last recursion layer, if no sweeps are present
+
+        After playing the sequence, the resulting dictionary keys need
+        to be converted to the correct values.
+        Even indexes correspond to qubit number and are not changed.
+        Odd indexes correspond to readout pulses serials and are convert
+        to match the original sequence (of the sweep) and not the one just executed.
+        """
         res = self.play(qubits, sequence, execution_parameters)
         newres = {}
         serials = [pulse.serial for pulse in or_sequence.ro_pulses]
@@ -546,7 +552,7 @@ class RFSoC(AbstractInstrument):
         adcs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in original_ro])
         for k, k_val in enumerate(adcs):
             adc_ro = [pulse for pulse in original_ro if qubits[pulse.qubit].feedback.ports[0][1] == k_val]
-            for i, ro_pulse in enumerate(adc_ro):
+            for i, (ro_pulse, original_ro_pulse) in enumerate(zip(adc_ro, original_ro)):
                 i_vals = np.array(toti[k][i])
                 q_vals = np.array(totq[k][i])
 
@@ -560,7 +566,7 @@ class RFSoC(AbstractInstrument):
                     q_vals = np.reshape(q_vals, (self.cfg.reps, *q_vals.shape[:-1]))
 
                 if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
-                    qubit = qubits[original_ro[i].qubit]
+                    qubit = qubits[original_ro_pulse.qubit]
                     discriminated_shots = self.classify_shots(i_vals, q_vals, qubit)
                     if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
                         discriminated_shots = np.mean(discriminated_shots, axis=0)
@@ -568,7 +574,7 @@ class RFSoC(AbstractInstrument):
                 else:
                     result = execution_parameters.results_type(i_vals + 1j * q_vals)
 
-                results[original_ro[i].qubit] = results[ro_pulse.serial] = result
+                results[original_ro_pulse.qubit] = results[ro_pulse.serial] = result
         return results
 
     def sweep(
@@ -622,8 +628,8 @@ class RFSoC(AbstractInstrument):
         )
 
         if bias_change:
-            for idx in qubits:
-                if qubits[idx].flux is not None:
-                    qubits[idx].flux.bias = initial_biases[idx]
+            for idx, qubit in enumerate(qubits):
+                if qubit.flux is not None:
+                    qubit.flux.bias = initial_biases[idx]
 
         return results
