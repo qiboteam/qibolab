@@ -11,8 +11,11 @@ import numpy as np
 from laboneq.contrib.example_helpers.plotting.plot_helpers import plot_simulation
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
-from qibolab.paths import qibolab_folder
+from qibolab.instruments.abstract import (
+    INSTRUMENTS_DATA_FOLDER,
+    AbstractInstrument,
+    InstrumentException,
+)
 from qibolab.pulses import FluxPulse, PulseSequence, PulseType
 from qibolab.sweeper import Parameter
 
@@ -796,15 +799,14 @@ class Zurich(AbstractInstrument):
                         pulse.zhpulse.uid += str(i)
 
                         """Integration weights definition or load from the chip folder"""
-                        weights_file = Path(
-                            str(qibolab_folder)
-                            + f"/runcards/{self.chip}/weights/integration_weights_optimization_qubit_{q}.npy"
+                        weights_file = (
+                            INSTRUMENTS_DATA_FOLDER
+                            / f"{self.chip}/weights/integration_weights_optimization_qubit_{q}.npy"
                         )
                         if weights_file.is_file():
                             logging.info("I'm using optimized IW")
                             samples = np.load(
-                                str(qibolab_folder)
-                                + f"/runcards/{self.chip}/weights/integration_weights_optimization_qubit_{q}.npy",
+                                weights_file,
                                 allow_pickle=True,
                             )
                             if acquisition_type == lo.AcquisitionType.DISCRIMINATION:

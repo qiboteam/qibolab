@@ -3,7 +3,6 @@ import pytest
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.instruments.rfsoc import QickProgramConfig
-from qibolab.paths import qibolab_folder
 from qibolab.platform import Qubit
 from qibolab.pulses import PulseSequence
 from qibolab.result import (
