@@ -98,18 +98,6 @@ def test_rfsoc_init():
     assert isinstance(instrument.cfg, rfsoc.Config)
 
 
-def test_rfsoc_setup():
-    """Modify the rfsoc.Config object using `setup` and check that it changes accordingly"""
-    platform = create_platform("rfsoc")
-    instrument = platform.instruments[0]
-
-    target_cfg = rfsoc.Config(repetition_duration=1, adc_trig_offset=150)
-
-    instrument.setup(relaxation_time=1_000, adc_trig_offset=150)
-
-    assert instrument.cfg == target_cfg
-
-
 def test_classify_shots():
     """Creates fake IQ values and check classification works as expected"""
     qubit0 = Qubit(name="q0", threshold=1, iq_angle=np.pi / 2)

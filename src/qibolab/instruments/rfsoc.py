@@ -173,22 +173,8 @@ class RFSoC(AbstractInstrument):
     def disconnect(self):
         """Empty method to comply with AbstractInstrument interface."""
 
-    def setup(
-        self,
-        relaxation_time: int = None,
-        adc_trig_offset: int = None,
-    ):
-        """Changes the configuration of the instrument.
-
-        Args:
-            relaxation_time (int): delay before readout (ns).
-            adc_trig_offset (int): single offset for all adc triggers
-                                   (tproc CLK ticks).
-        """
-        if relaxation_time is not None:
-            self.cfg.repetition_duration = relaxation_time * NS_TO_US
-        if adc_trig_offset is not None:
-            self.cfg.adc_trig_offset = adc_trig_offset
+    def setup(self):
+        """Deprecated method."""
 
     def _execute_pulse_sequence(
         self,
