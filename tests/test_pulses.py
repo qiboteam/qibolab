@@ -5,7 +5,6 @@ import pathlib
 import numpy as np
 import pytest
 
-from qibolab.paths import qibolab_folder
 from qibolab.pulses import (
     IIR,
     SNZ,

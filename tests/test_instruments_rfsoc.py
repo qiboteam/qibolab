@@ -11,7 +11,6 @@ from qibolab.instruments.rfsoc import (
     convert_qubit,
     convert_sweep,
 )
-from qibolab.paths import qibolab_folder
 from qibolab.platform import Qubit
 from qibolab.pulses import Drag, Gaussian, Pulse, PulseSequence, PulseType, Rectangular
 from qibolab.result import (

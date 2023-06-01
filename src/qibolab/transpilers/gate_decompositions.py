@@ -399,7 +399,8 @@ class NativeGates(Transpiler):
             - All one-qubit gates are I, Z, RZ or U3.
             - All two-qubit gates are CZ or iSWAP based on two_qubit_natives.
             - All two-qubit gates have qubit 0 as target or control.
-        otherwise returns ``False``.
+
+            otherwise returns ``False``.
         """
         for gate in circuit.queue:
             if isinstance(gate, gates.M):
