@@ -13,7 +13,7 @@ from laboneq.contrib.example_helpers.plotting.plot_helpers import plot_simulatio
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import (
     INSTRUMENTS_DATA_FOLDER,
-    AbstractInstrument,
+    Instrument,
     InstrumentException,
 )
 from qibolab.pulses import FluxPulse, PulseSequence, PulseType
@@ -233,7 +233,7 @@ class ZhSweeperLine:
             )
 
 
-class Zurich(AbstractInstrument):
+class Zurich(Instrument):
     """Zurich driver main class"""
 
     def __init__(self, name, descriptor, use_emulation=False):

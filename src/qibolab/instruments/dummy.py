@@ -1,18 +1,88 @@
 import copy
 import time
+from dataclasses import dataclass, field
 from typing import Dict, List, Union
 
 import numpy as np
 from qibo.config import log, raise_error
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.instruments.abstract import AbstractInstrument
+from qibolab.instruments.abstract import Instrument
+from qibolab.instruments.port import Port
 from qibolab.platform import Qubit
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper
 
 
-class DummyInstrument(AbstractInstrument):
+@dataclass
+class DummyPort(Port):
+    name: str
+    _offset: float = 0.0
+    _lo_frequency: int = 0
+    _lo_power: int = 0
+    _gain: int = 0
+    _attenuation: int = 0
+    _power_range: int = 0
+    _filter: dict = field(default_factory=dict)
+
+    @property
+    def offset(self):
+        return self._offset
+
+    @offset.setter
+    def offset(self, value):
+        self._offset = value
+
+    @property
+    def lo_frequency(self):
+        return self._lo_frequency
+
+    @lo_frequency.setter
+    def lo_frequency(self, value):
+        self._lo_frequency = value
+
+    @property
+    def lo_power(self):
+        return self._lo_power
+
+    @lo_power.setter
+    def lo_power(self, value):
+        self._lo_power = value
+
+    @property
+    def gain(self):
+        return self._gain
+
+    @gain.setter
+    def gain(self, value):
+        self._gain = value
+
+    @property
+    def attenuation(self):
+        return self._attenuation
+
+    @attenuation.setter
+    def attenuation(self, value):
+        self._attenuation = value
+
+    @property
+    def power_range(self):
+        return self._power_range
+
+    @power_range.setter
+    def power_range(self, value):
+        self._power_range = value
+
+    @property
+    def filter(self):
+        return self._filter
+
+    @filter.setter
+    def filter(self, value):
+        self._filter = value
+
+
+class DummyInstrument(Instrument):
     """Dummy instrument that returns random voltage values.
 
     Useful for testing code without requiring access to hardware.
@@ -24,6 +94,15 @@ class DummyInstrument(AbstractInstrument):
             exists to keep the same interface with other
             instruments.
     """
+
+    def __init__(self, name, address):
+        super().__init__(name, address)
+        self.ports = {}
+
+    def __getitem__(self, value):
+        if value not in self.ports:
+            self.ports[value] = DummyPort(value)
+        return self.ports[value]
 
     def connect(self):
         log.info("Connecting to dummy instrument.")

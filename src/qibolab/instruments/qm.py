@@ -2,7 +2,7 @@ import collections
 import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 from qibo.config import log, raise_error
@@ -16,8 +16,9 @@ from qualang_tools.loops import from_array
 from qualang_tools.units import unit
 
 from qibolab import AcquisitionType, AveragingMode
-from qibolab.channels import check_max_bias
-from qibolab.instruments.abstract import AbstractInstrument
+from qibolab.channels import check_max_offset
+from qibolab.instruments.abstract import Instrument
+from qibolab.instruments.port import Port
 from qibolab.pulses import Pulse, PulseType, Rectangular
 from qibolab.result import (
     AveragedIntegratedResults,
@@ -28,6 +29,46 @@ from qibolab.result import (
     SampleResults,
 )
 from qibolab.sweeper import Parameter
+
+# TODO: Split the contents of this module to multiple files
+
+PortType = Tuple[str, int]
+"""Type for port definition, for example: ("con1", 2)."""
+
+
+@dataclass
+class QMPort(Port):
+    controller_i: PortType
+    controller_q: Optional[PortType] = None
+
+    # TODO: Shall we implement seperate setters for i and q?
+    _offset: float = 0.0
+    _gain: int = 0
+    _filter: Dict[str, float] = field(default_factory=dict)
+
+    @property
+    def offset(self):
+        return self._offset
+
+    @offset.setter
+    def offset(self, value):
+        self._offset = value
+
+    @property
+    def gain(self):
+        return self._gain
+
+    @gain.setter
+    def gain(self, value):
+        self._gain = value
+
+    @property
+    def filter(self):
+        return self._filter
+
+    @filter.setter
+    def filter(self, value):
+        self._filter = value
 
 
 @dataclass
@@ -89,13 +130,13 @@ class QMConfig:
         """
         if f"drive{qubit.name}" not in self.elements:
             # register drive controllers
-            self.register_analog_output_controllers(qubit.drive.ports)
+            self.register_analog_output_controllers(qubit.drive.port)
             # register element
             lo_frequency = math.floor(qubit.drive.local_oscillator.frequency)
             self.elements[f"drive{qubit.name}"] = {
                 "mixInputs": {
-                    "I": qubit.drive.ports[0],
-                    "Q": qubit.drive.ports[1],
+                    "I": qubit.drive.port.controller_i,
+                    "Q": qubit.drive.port.controller_q,
                     "lo_frequency": lo_frequency,
                     "mixer": f"mixer_drive{qubit.name}",
                 },
@@ -126,10 +167,10 @@ class QMConfig:
         """
         if f"readout{qubit.name}" not in self.elements:
             # register readout controllers
-            self.register_analog_output_controllers(qubit.readout.ports)
+            self.register_analog_output_controllers(qubit.readout.port)
             # register feedback controllers
             controllers = self.controllers
-            for con, port in qubit.feedback.ports:
+            for con, port in qubit.readout.port:
                 if con not in controllers:
                     controllers[con] = {
                         "analog_outputs": {},
@@ -150,16 +191,16 @@ class QMConfig:
             lo_frequency = math.floor(qubit.readout.local_oscillator.frequency)
             self.elements[f"readout{qubit.name}"] = {
                 "mixInputs": {
-                    "I": qubit.readout.ports[0],
-                    "Q": qubit.readout.ports[1],
+                    "I": qubit.readout.port.controller_i,
+                    "Q": qubit.readout.port.controller_q,
                     "lo_frequency": lo_frequency,
                     "mixer": f"mixer_readout{qubit.name}",
                 },
                 "intermediate_frequency": intermediate_frequency,
                 "operations": {},
                 "outputs": {
-                    "out1": qubit.feedback.ports[0],
-                    "out2": qubit.feedback.ports[1],
+                    "out1": qubit.feedback.port.controller_i,
+                    "out2": qubit.feedback.port.controller_q,
                 },
                 "time_of_flight": time_of_flight,
                 "smearing": smearing,
@@ -188,11 +229,11 @@ class QMConfig:
         """
         if f"flux{qubit.name}" not in self.elements:
             # register controller
-            self.register_analog_output_controllers(qubit.flux.ports, qubit.flux.bias, qubit.flux.filter)
+            self.register_analog_output_controllers(qubit.flux.port, qubit.flux.offset, qubit.flux.filter)
             # register element
             self.elements[f"flux{qubit.name}"] = {
                 "singleInput": {
-                    "port": qubit.flux.ports[0],
+                    "port": qubit.flux.port.controller_i,
                 },
                 "intermediate_frequency": intermediate_frequency,
                 "operations": {},
@@ -662,7 +703,8 @@ class Sequence:
         return qmpulse
 
 
-class QMOPX(AbstractInstrument):
+@dataclass
+class QMOPX(Instrument):
     """Instrument object for controlling Quantum Machines (QM) OPX controllers.
 
     Playing pulses on QM controllers requires a ``config`` dictionary and a program
@@ -676,31 +718,34 @@ class QMOPX(AbstractInstrument):
     Args:
         name (str): Name of the instrument instance.
         address (str): IP address and port for connecting to the OPX instruments.
-
-    Attributes:
-        is_connected (bool): Boolean that shows whether instruments are connected.
-        manager (:class:`qm.QuantumMachinesManager.QuantumMachinesManager`): Manager object
-            used for controlling the QM OPXs.
-        config (dict): Configuration dictionary required for pulse execution on the OPXs.
-        time_of_flight (int): Time of flight used for hardware signal integration.
-        smearing (int): Smearing used for hardware signal integration.
     """
 
-    def __init__(self, name, address):
-        # QuantumMachines manager is instantiated in ``platform.connect``
-        self.name = name
-        self.address = address
-        self.manager = None
-        self.is_connected = False
+    name: str
+    address: str
 
-        self.time_of_flight = 0
-        self.smearing = 0
-        # copied from qblox runcard, not used here yet
-        # hardware_avg: 1024
-        # sampling_rate: 1_000_000_000
-        # repetition_duration: 200_000
-        # minimum_delay_between_instructions: 4
-        self.config = QMConfig()
+    manager: Optional[QuantumMachinesManager] = None
+    """Manager object used for controlling the QM OPXs."""
+    config: QMConfig = field(default_factory=QMConfig)
+    """Configuration dictionary required for pulse execution on the OPXs."""
+    is_connected: bool = False
+    """Boolean that shows whether we are connected to the QM manager."""
+    time_of_flight: int = 0
+    """Time of flight used for hardware signal integration."""
+    smearing: int = 0
+    """Smearing used for hardware signal integration."""
+    ports: Dict[Tuple[PortType], QMPort] = field(default_factory=dict)
+    """Dictionary holding the ports of controllers that are connected."""
+
+    def __getitem__(self, value):
+        if not isinstance(value, tuple):
+            raise_error(TypeError, f"Cannot obtain port {value} from QMOPX.")
+        if not isinstance(value[0], tuple):
+            raise_error(TypeError, f"Cannot obtain port {value} from QMOPX.")
+        if len(value) > 2:
+            raise_error(ValueError, f"Cannot obtain port {value} from QMOPX.")
+        if value not in self.ports:
+            self.ports[value] = QMPort(*value)
+        return self.ports[value]
 
     def connect(self):
         """Connect to the QM manager."""
@@ -920,16 +965,16 @@ class QMOPX(AbstractInstrument):
         from qm.qua import set_dc_offset
 
         sweeper = sweepers[0]
-        bias0 = []
+        offset0 = []
         for qubit in sweeper.qubits:
-            b0 = qubit.flux.bias
-            max_bias = qubit.flux.max_bias
+            b0 = qubit.flux.offset
+            max_offset = qubit.flux.max_offset
             max_value = self.maximum_sweep_value(sweeper.values, b0)
-            check_max_bias(max_value, max_bias)
-            bias0.append(declare(fixed, value=b0))
+            check_max_offset(max_value, max_offset)
+            offset0.append(declare(fixed, value=b0))
         b = declare(fixed)
         with for_(*from_array(b, sweeper.values)):
-            for qubit, b0 in zip(sweeper.qubits, bias0):
+            for qubit, b0 in zip(sweeper.qubits, offset0):
                 with qua.if_((b + b0) >= 0.49):
                     set_dc_offset(f"flux{qubit.name}", "single", 0.49)
                 with qua.elif_((b + b0) <= -0.49):
