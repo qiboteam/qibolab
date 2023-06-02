@@ -234,23 +234,13 @@ class QbloxController:
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                 _res = acquisition_results[ro_pulse.serial][2]
                 if average:
-                    exp_res = np.mean(exp_res, axis=0)
+                    _res = np.mean(_res, axis=0)
             else:
                 ires = acquisition_results[ro_pulse.serial][0]
                 qres = acquisition_results[ro_pulse.serial][1]
                 _res = ires + 1j * qres
-                acquisition = options.results_type(_res)
 
-                # if options.acquisition_type is AcquisitionType.RAW:
-                #     if average:
-                #         acquisition = AveragedRawWaveformResults(ires + 1j * qres)
-                #     else:
-                #         acquisition = RawWaveformResults(ires + 1j * qres)
-                # if options.acquisition_type is AcquisitionType.INTEGRATION:
-                #     if average:
-                #         acquisition = AveragedIntegratedResults(ires + 1j * qres)
-                #     else:
-                #         acquisition = IntegratedResults(ires + 1j * qres)
+            acquisition = options.results_type(_res)
             data[ro_pulse.serial] = data[ro_pulse.qubit] = acquisition
 
             # data[ro_pulse.serial] = ExecutionResults.from_components(*acquisition_results[ro_pulse.serial])
