@@ -11,7 +11,6 @@ from qibolab.instruments.rfsoc import (
     convert_qubit,
     convert_sweep,
 )
-from qibolab.paths import qibolab_folder
 from qibolab.platform import Qubit
 from qibolab.pulses import Drag, Gaussian, Pulse, PulseSequence, PulseType, Rectangular
 from qibolab.result import (
@@ -97,18 +96,6 @@ def test_rfsoc_init():
     assert instrument.host == "0.0.0.0"
     assert instrument.port == 0
     assert isinstance(instrument.cfg, rfsoc.Config)
-
-
-def test_rfsoc_setup():
-    """Modify the rfsoc.Config object using `setup` and check that it changes accordingly"""
-    platform = create_platform("rfsoc")
-    instrument = platform.instruments[0]
-
-    target_cfg = rfsoc.Config(repetition_duration=1, adc_trig_offset=150)
-
-    instrument.setup(relaxation_time=1_000, adc_trig_offset=150)
-
-    assert instrument.cfg == target_cfg
 
 
 def test_classify_shots():
@@ -238,9 +225,7 @@ def test_convert_av_sweep_results():
     execution_parameters = ExecutionParameters(
         acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
     )
-    out_dict = instrument.convert_sweep_results(
-        sequence.ro_pulses, sequence, platform.qubits, avgi, avgq, execution_parameters
-    )
+    out_dict = instrument.convert_sweep_results(sequence.ro_pulses, platform.qubits, avgi, avgq, execution_parameters)
     targ_dict = {
         serial1: AveragedIntegratedResults(np.array([1, 2, 3]) + 1j * np.array([7, 8, 9])),
         serial2: AveragedIntegratedResults(np.array([4, 1, 2]) + 1j * np.array([-1, -2, -3])),
@@ -274,9 +259,7 @@ def test_convert_nav_sweep_results():
     execution_parameters = ExecutionParameters(
         acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
     )
-    out_dict = instrument.convert_sweep_results(
-        sequence.ro_pulses, sequence, platform.qubits, avgi, avgq, execution_parameters
-    )
+    out_dict = instrument.convert_sweep_results(sequence.ro_pulses, platform.qubits, avgi, avgq, execution_parameters)
     targ_dict = {
         serial1: AveragedIntegratedResults(np.array([1, 1, 2, 2, 3, 3]) + 1j * np.array([7, 7, 8, 8, 9, 9])),
         serial2: AveragedIntegratedResults(np.array([4, 4, 1, 1, 2, 2]) + 1j * np.array([-1, -1, -2, -2, -3, -3])),

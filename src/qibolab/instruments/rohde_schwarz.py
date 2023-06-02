@@ -112,6 +112,7 @@ class SGS100A(LocalOscillator):
         """Configures the instrument.
 
         A connection to the instrument needs to be established beforehand.
+
         Args:
             **kwargs: dict = A dictionary of settings loaded from the runcard:
                 kwargs["power"]
