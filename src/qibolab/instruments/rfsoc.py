@@ -97,9 +97,10 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: Dict[int, Q
             parameters.append(rfsoc.Parameter.BIAS)
             indexes.append(list(qubits.values()).index(qubit))
 
-            value = qubit.flux.bias
-            starts.append(sweeper.type.value(sweeper.values[0], value))
-            stops.append(sweeper.type.value(sweeper.values[-1], value))
+            base_value = qubit.flux.bias
+            values = sweeper.values(base_value)
+            starts.append(values[0])
+            stops.append(values[-1])
 
         if max(np.abs(starts)) > 1 or max(np.abs(stops)) > 1:
             raise ValueError("Sweeper amplitude is set to reach values higher than 1")
@@ -109,9 +110,10 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: Dict[int, Q
 
             name = sweeper.parameter.name
             parameters.append(getattr(rfsoc.Parameter, name.upper()))
-            value = getattr(pulse, name)
-            starts.append(sweeper.type.value(sweeper.values[0], value))
-            stops.append(sweeper.type.value(sweeper.values[-1], value))
+            base_value = getattr(pulse, name)
+            values = sweeper.values(base_value)
+            starts.append(values[0])
+            stops.append(values[-1])
 
     return rfsoc.Sweeper(
         parameter=parameters,
