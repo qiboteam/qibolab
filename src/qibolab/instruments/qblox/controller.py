@@ -232,12 +232,14 @@ class QbloxController:
         # TODO: move to QRM_RF.acquire()
         for ro_pulse in sequence.ro_pulses:
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                sample_res = acquisition_results[ro_pulse.serial][2]
-                acquisition = options.results_type(sample_res)
+                _res = acquisition_results[ro_pulse.serial][2]
+                if average:
+                    exp_res = np.mean(exp_res, axis=0)
             else:
                 ires = acquisition_results[ro_pulse.serial][0]
                 qres = acquisition_results[ro_pulse.serial][1]
-                acquisition = options.results_type(ires + 1j * qres)
+                _res = ires + 1j * qres
+                acquisition = options.results_type(_res)
 
                 # if options.acquisition_type is AcquisitionType.RAW:
                 #     if average:
