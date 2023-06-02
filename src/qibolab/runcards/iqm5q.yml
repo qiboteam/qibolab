@@ -165,11 +165,11 @@ characterization:
             T2: 0.
             sweetspot: -0.1745 #0.5 #0.62 0.00
             filter: {}
-            mean_gnd_states: -1.8517+0.6431j
-            mean_exc_states: -0.8696+1.1473j
+            mean_gnd_states: -1.8001+0.6622j
+            mean_exc_states: -0.6845+1.2281j
             # parameters for single shot classification
-            threshold: -0.6085
-            iq_angle: -0.474
+            threshold: -0.5175
+            iq_angle: -0.469
             alpha: 211604296
         3:
             readout_frequency: 5.8060e+9
@@ -179,10 +179,10 @@ characterization:
             T2: 0.
             sweetspot: 0. #-0.08
             filter: {}
-            mean_gnd_states: -4.0757-1.1911j
-            mean_exc_states: -4.1897+0.8349j
-            threshold: 0.9061
-            iq_angle: -2.221
+            mean_gnd_states: -4.0535-1.2066j
+            mean_exc_states: -4.1588+0.7182j
+            threshold: -0.2121
+            iq_angle: -1.625
             alpha: 214_000_000
         4:
             readout_frequency: 5.5240e+9
