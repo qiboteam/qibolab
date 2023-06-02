@@ -22,7 +22,6 @@ include = ["*.out", "*.yml"]
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.12"
-setuptools = "^67.8.0"
 qibo = "^0.1.12"
 networkx = "^3.0"
 more-itertools = "^9.1.0"
