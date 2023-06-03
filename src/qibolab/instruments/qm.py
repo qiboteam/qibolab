@@ -44,7 +44,12 @@ class QMPort(Port):
     # TODO: Shall we implement seperate setters for i and q?
     _offset: float = 0.0
     _gain: int = 0
-    _filter: Dict[str, float] = field(default_factory=dict)
+    _filter: Optional[Dict[str, float]] = None
+
+    def __iter__(self):
+        yield self.controller_i
+        if self.controller_q is not None:
+            yield self.controller_q
 
     @property
     def offset(self):
@@ -64,6 +69,10 @@ class QMPort(Port):
 
     @property
     def filter(self):
+        """Pulse shape filters. Relevant for ports connected to flux channels.
+
+        QM syntax should be followed for the filters.
+        """
         return self._filter
 
     @filter.setter
@@ -84,22 +93,20 @@ class QMConfig:
     integration_weights: dict = field(default_factory=dict)
     mixers: dict = field(default_factory=dict)
 
-    def register_analog_output_controllers(self, ports, offset=0.0, filter=None):
+    def register_analog_output_controllers(self, port):
         """Register controllers in the ``config``.
 
         Args:
-            ports (list): List of tuples ``(conX, port)``.
-            offset (float): Constant offset to be played in the given ports.
-                Relevant for ports connected to flux channels.
-            filter (dict): Pulse shape filters. Relevant for ports connected to flux channels.
-                QM syntax should be followed for the filters.
+            ports (QMPort): Port we are registering.
+                Contains information about the controller and port number and
+                some parameters (offset, gain, filter, etc.).
         """
-        for con, port in ports:
+        for con, port_number in port:
             if con not in self.controllers:
                 self.controllers[con] = {"analog_outputs": {}}
-            self.controllers[con]["analog_outputs"][port] = {"offset": offset}
-            if filter is not None:
-                self.controllers[con]["analog_outputs"][port]["filter"] = filter
+            self.controllers[con]["analog_outputs"][port_number] = {"offset": port.offset}
+            if port.filter is not None:
+                self.controllers[con]["analog_outputs"][port_number]["filter"] = port.filter
 
     @staticmethod
     def iq_imbalance(g, phi):
@@ -170,7 +177,7 @@ class QMConfig:
             self.register_analog_output_controllers(qubit.readout.port)
             # register feedback controllers
             controllers = self.controllers
-            for con, port in qubit.readout.port:
+            for con, port_number in qubit.feedback.port:
                 if con not in controllers:
                     controllers[con] = {
                         "analog_outputs": {},
@@ -185,8 +192,7 @@ class QMConfig:
                     }
                 if "analog_inputs" not in controllers[con]:
                     controllers[con]["analog_inputs"] = {}
-                controllers[con]["analog_inputs"][port] = {"offset": 0.0, "gain_db": qubit.feedback.gain}
-
+                controllers[con]["analog_inputs"][port_number] = {"offset": 0.0, "gain_db": qubit.feedback.port.gain}
             # register element
             lo_frequency = math.floor(qubit.readout.local_oscillator.frequency)
             self.elements[f"readout{qubit.name}"] = {
@@ -229,7 +235,7 @@ class QMConfig:
         """
         if f"flux{qubit.name}" not in self.elements:
             # register controller
-            self.register_analog_output_controllers(qubit.flux.port, qubit.flux.offset, qubit.flux.filter)
+            self.register_analog_output_controllers(qubit.flux.port)
             # register element
             self.elements[f"flux{qubit.name}"] = {
                 "singleInput": {
