@@ -7,7 +7,7 @@ import numpy as np
 from qibo.config import log, raise_error
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.instruments.abstract import Instrument
+from qibolab.instruments.abstract import Controller
 from qibolab.instruments.port import Port
 from qibolab.platform import Qubit
 from qibolab.pulses import PulseSequence, PulseType
@@ -82,7 +82,7 @@ class DummyPort(Port):
         self._filter = value
 
 
-class DummyInstrument(Instrument):
+class DummyInstrument(Controller):
     """Dummy instrument that returns random voltage values.
 
     Useful for testing code without requiring access to hardware.
