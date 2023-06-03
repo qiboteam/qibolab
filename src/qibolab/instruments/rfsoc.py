@@ -13,7 +13,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.instruments.abstract import AbstractInstrument
+from qibolab.instruments.abstract import Controller
 from qibolab.platform import Qubit
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import IntegratedResults, SampleResults
@@ -30,7 +30,7 @@ class QickProgramConfig:
     expts: Optional[int] = None
 
 
-class TII_RFSOC4x2(AbstractInstrument):
+class TII_RFSOC4x2(Controller):
     """Instrument object for controlling the RFSoC4x2 FPGA.
     Playing pulses requires first the execution of the ``setup`` function.
     The two way of executing pulses are with ``play`` (for arbitrary
@@ -51,16 +51,16 @@ class TII_RFSOC4x2(AbstractInstrument):
         self.cfg = QickProgramConfig()  # Containes the main settings
 
     def connect(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
 
     def start(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
 
     def stop(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
 
     def disconnect(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
 
     def setup(
         self,

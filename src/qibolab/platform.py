@@ -9,7 +9,7 @@ import yaml
 from qibo.config import log, raise_error
 
 from qibolab.channels import Channel, ChannelMap
-from qibolab.instruments.abstract import AbstractInstrument
+from qibolab.instruments.abstract import Instrument
 from qibolab.native import NativeType, SingleQubitNatives, TwoQubitNatives
 from qibolab.qubits import Qubit, QubitId, QubitPair
 
@@ -29,7 +29,7 @@ class Platform:
 
         self.name = name
         self.runcard = runcard
-        self.instruments: List[AbstractInstrument] = instruments
+        self.instruments: List[Instrument] = instruments
         self.channels: ChannelMap = channels
 
         self.qubits: Dict[QubitId, Qubit] = {}
