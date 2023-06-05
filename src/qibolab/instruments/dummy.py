@@ -9,6 +9,7 @@ from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.platform import Qubit
 from qibolab.pulses import PulseSequence, PulseType
+from qibolab.result import IntegratedResults, SampleResults
 from qibolab.sweeper import Parameter, Sweeper
 
 
@@ -69,35 +70,82 @@ class DummyInstrument(AbstractInstrument):
         qubits: Dict[Union[str, int], Qubit],
         sequence: PulseSequence,
         options: ExecutionParameters,
-        *sweepers: List[Sweeper]
+        *sweepers: List[Sweeper],
     ):
         results = {}
         sweeper_pulses = {}
 
         # create copy of the sequence
         copy_sequence = copy.deepcopy(sequence)
-        map_original_shifted = {pulse: pulse.serial for pulse in copy.deepcopy(copy_sequence).ro_pulses}
-
-        # create dictionary containing pulses for each sweeper that point to the same original sequence
-        # which is copy_sequence
-        for sweeper in sweepers:
-            if sweeper.pulses is not None:
-                sweeper_pulses[sweeper.parameter] = {
-                    pulse.serial: pulse for pulse in copy_sequence if pulse in sweeper.pulses
-                }
-
         # perform sweeping recursively
-        self._sweep_recursion(
+        results = self._sweep_recursion(
             qubits,
             copy_sequence,
-            copy.deepcopy(sequence),
+            sequence,
             options,
             *sweepers,
-            results=results,
-            sweeper_pulses=sweeper_pulses,
-            map_original_shifted=map_original_shifted
         )
+        sequence = copy_sequence
         return results
+
+    def play_sequence_in_sweep_recursion(
+        self,
+        qubits: List[Qubit],
+        sequence: PulseSequence,
+        or_sequence: PulseSequence,
+        options: ExecutionParameters,
+    ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
+        """Last recursion layer, if no sweeps are present
+
+        After playing the sequence, the resulting dictionary keys need
+        to be converted to the correct values.
+        Even indexes correspond to qubit number and are not changed.
+        Odd indexes correspond to readout pulses serials and are convert
+        to match the original sequence (of the sweep) and not the one just executed.
+        """
+        res = self.play(qubits, sequence, options)
+        newres = {}
+        serials = [pulse.serial for pulse in or_sequence.ro_pulses]
+        for idx, key in enumerate(res):
+            if idx % 2 == 1:
+                newres[serials[idx // 2]] = res[key]
+            else:
+                newres[key] = res[key]
+        return newres
+
+    def get_sequences_for_sweep(self, sequence, sweeper):
+        sequences = []
+        for kdx, val in enumerate(sweeper.values):
+            new_sequence = copy.deepcopy(sequence)
+            for pulse in sweeper.pulses:
+                idx = [p.serial for p in new_sequence].index(pulse.serial)
+                if sweeper.parameter in {Parameter.delay, Parameter.duration}:
+                    if sweeper.parameter is Parameter.duration:
+                        base_val = getattr(pulse, "duration")
+                        new_val = sweeper.get_values(base_val)[kdx]
+                        setattr(new_sequence[idx], "start", new_val)
+                        delta = new_val - base_val
+                    else:
+                        delta = val
+                    for seq_pulse in new_sequence[idx:]:
+                        base_val = getattr(seq_pulse, "start")
+                        setattr(seq_pulse, "start", base_val + delta)
+                else:
+                    base_val = getattr(pulse, sweeper.parameter.name)
+                    setattr(new_sequence[idx], sweeper.parameter.name, sweeper.get_values(base_val)[kdx])
+                    delta = getattr(pulse, sweeper.parameter.name)
+            sequences.append(new_sequence)
+        return sequences
+
+    def get_qubits_for_sweep(self, qubits, sweeper):
+        sweep_qubits = []
+        for kdx, val in enumerate(sweeper.values):
+            new_qubits = copy.deepcopy(qubits)
+            for idx, qubit in enumerate(sweeper.qubits):
+                base_val = getattr(qubit, sweeper.parameter.name)
+                setattr(new_qubits[idx], sweeper.parameter.name, sweeper.get_values(base_val)[kdx])
+            sweep_qubits.append(new_qubits)
+        return sweep_qubits
 
     def _sweep_recursion(
         self,
@@ -106,111 +154,30 @@ class DummyInstrument(AbstractInstrument):
         original_sequence,
         options,
         *sweepers,
-        results=None,
-        sweeper_pulses=None,
-        map_original_shifted=None
     ):
+        if len(sweepers) == 0:
+            return self.play_sequence_in_sweep_recursion(qubits, sequence, original_sequence, options)
+
         sweeper = sweepers[0]
 
-        # store values before starting to sweep
+        results = {}
         if sweeper.pulses is not None:
-            original_value = self._save_original_value(sweeper, sweeper_pulses)
-
-        # perform sweep recursively
-        for value in sweeper.values:
-            self._update_pulse_sequence_parameters(
-                qubits, sequence, sweeper, sweeper_pulses, original_sequence, map_original_shifted, value
-            )
-            if len(sweepers) > 1:
-                self._sweep_recursion(
-                    qubits,
-                    sequence,
-                    original_sequence,
-                    options,
-                    *sweepers[1:],
-                    results=results,
-                    sweeper_pulses=sweeper_pulses,
-                    map_original_shifted=map_original_shifted
-                )
-            else:
-                new_sequence = copy.deepcopy(sequence)
-                result = self.play(qubits, new_sequence, options)
-
-                # colllect result and append to original pulse
-                for original_pulse, new_serial in map_original_shifted.items():
-                    acquisition = result[new_serial]
-                    if original_pulse.serial in results:
-                        results[original_pulse.serial] += acquisition
-                        results[original_pulse.qubit] += acquisition
+            sequences = self.get_sequences_for_sweep(original_sequence, sweeper)
+            for sequence in sequences:
+                res = self._sweep_recursion(qubits, sequence, original_sequence, options, *sweepers[1:])
+                for key in res:
+                    if key in results:
+                        results[key] = results[key] + res[key]
                     else:
-                        results[original_pulse.serial] = acquisition
-                        results[original_pulse.qubit] = copy.copy(results[original_pulse.serial])
-        # restore initial value of the pulse
-        if sweeper.pulses is not None:
-            self._restore_initial_value(sweeper, sweeper_pulses, original_value)
-
-    def _save_original_value(self, sweeper, sweeper_pulses):
-        """Helper method for _sweep_recursion"""
-        original_value = {}
-        pulses = sweeper_pulses[sweeper.parameter]
-        # save original value of the parameter swept
-        for pulse in pulses:
-            if sweeper.parameter not in [Parameter.attenuation, Parameter.gain, Parameter.bias, Parameter.delay]:
-                original_value[pulse] = getattr(pulses[pulse], sweeper.parameter.name)
-        return original_value
-
-    def _restore_initial_value(self, sweeper, sweeper_pulses, original_value):
-        """Helper method for _sweep_recursion"""
-        pulses = sweeper_pulses[sweeper.parameter]
-        for pulse in pulses:
-            if sweeper.parameter not in [
-                Parameter.attenuation,
-                Parameter.gain,
-                Parameter.bias,
-                Parameter.delay,
-                Parameter.duration,
-            ]:
-                setattr(pulses[pulse], sweeper.parameter.name, original_value[pulse])
-
-    def _update_pulse_sequence_parameters(
-        self, qubits, sequence, sweeper, sweeper_pulses, original_sequence, map_original_shifted, value
-    ):
-        """Helper method for _sweep_recursion"""
-        if sweeper.pulses is not None:
-            pulses = sweeper_pulses[sweeper.parameter]
-            for pulse in pulses:
-                if sweeper.parameter is Parameter.frequency:
-                    if pulses[pulse].type is PulseType.READOUT:
-                        value += qubits[pulses[pulse].qubit].readout_frequency
+                        results[key] = res[key]
+            return results
+        else:
+            qubits_sweep = self.get_qubits_for_sweep(qubits, sweeper)
+            for new_qubits in qubits_sweep:
+                res = self._sweep_recursion(new_qubits, sequence, original_sequence, options, *sweepers[1:])
+                for key in res:
+                    if key in results:
+                        results[key] = results[key] + res[key]
                     else:
-                        value += qubits[pulses[pulse].qubit].drive_frequency
-                    setattr(pulses[pulse], sweeper.parameter.name, value)
-                elif sweeper.parameter is Parameter.amplitude:
-                    current_amplitude = pulses[pulse].amplitude
-                    setattr(pulses[pulse], sweeper.parameter.name, float(current_amplitude * value))
-                elif sweeper.parameter is Parameter.delay:
-                    pulses[pulse].start += value
-                elif sweeper.parameter is Parameter.duration:
-                    setattr(pulses[pulse], sweeper.parameter.name, value)
-                    ch_sequence = sequence.get_qubit_pulses(pulses[pulse].qubit)
-                    idx = ch_sequence.index(pulses[pulse])
-                    delta = value - pulses[pulse].duration
-                    for new_pulse in ch_sequence[idx:]:
-                        new_pulse.start += delta
-                else:
-                    setattr(pulses[pulse], sweeper.parameter.name, value)
-                if pulses[pulse].type is PulseType.READOUT:
-                    to_modify = [
-                        pulse1 for pulse1 in original_sequence.ro_pulses if pulse1.qubit == pulses[pulse].qubit
-                    ]
-                    if to_modify:
-                        map_original_shifted[to_modify[0]] = pulses[pulse].serial
-
-        if sweeper.qubits is not None:
-            for qubit in sweeper.qubits:
-                if sweeper.parameter is Parameter.attenuation:
-                    qubit.readout.attenuation = value
-                elif sweeper.parameter is Parameter.gain:
-                    qubit.drive.gain = value
-                elif sweeper.parameter is Parameter.bias:
-                    qubit.flux.offset = float(value)
+                        results[key] = res[key]
+            return results
