@@ -182,20 +182,6 @@ def create(runcard=RUNCARD):
     return platform
 
 
-def test_random_functions():
-    platform = create(RUNCARD)
-    IQM5q = platform.instruments[0]
-    IQM5q.start()
-    IQM5q.stop()
-    IQM5q.disconnect()
-
-
-# def test_connections():
-#     platform = create(RUNCARD)
-#     IQM5q = platform.design.instruments[0]
-#     # IQM5q.connect()
-
-
 @pytest.mark.parametrize("shape", ["Rectangular", "Gaussian", "GaussianSquare", "Drag"])
 def test_zhpulse(shape):
     if shape == "Rectangular":

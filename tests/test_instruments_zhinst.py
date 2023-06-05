@@ -12,6 +12,9 @@ from qibolab.sweeper import Parameter, Sweeper
 def test_connections():
     platform = create_platform("iqm5q")
     IQM5q = platform.instruments[0]
+    IQM5q.start()
+    IQM5q.stop()
+    IQM5q.disconnect()
     IQM5q.connect()
 
 
