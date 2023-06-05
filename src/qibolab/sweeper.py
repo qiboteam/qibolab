@@ -71,7 +71,7 @@ class Sweeper:
     """
 
     parameter: Parameter
-    _values: npt.NDArray
+    values: npt.NDArray
     pulses: Optional[list] = None
     qubits: Optional[list] = None
     type: Optional[SweeperType] = SweeperType.ABSOLUTE
@@ -86,6 +86,6 @@ class Sweeper:
         elif self.pulses is None and self.qubits is None:
             raise ValueError("Cannot use a sweeper without specifying pulses or qubits.")
 
-    def values(self, base_value):
+    def get_values(self, base_value):
         """Convert sweeper values depending on the sweeper type"""
-        return self.type.value(self._values, base_value)
+        return self.type.value(self.values, base_value)
