@@ -1,5 +1,7 @@
 import random
+from dataclasses import dataclass
 from enum import Enum, auto
+from typing import Optional, Union
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -9,7 +11,7 @@ from qibo import gates
 from qibo.config import log, raise_error
 from qibo.models import Circuit
 
-from qibolab.transpilers.gate_decompositions import TwoQubitNatives, translate_gate
+from qibolab.transpilers.abstract import Transpiler
 
 DEFAULT_INIT_SAMPLES = 100
 
@@ -22,14 +24,13 @@ class QubitInitMethod(Enum):
     custom = auto()
 
 
-class Transpiler:
+class GeneralConnectivity(Transpiler):
     """A class to perform initial qubit mapping and connectivity matching.
 
     Properties:
         connectivity (networkx.graph): chip connectivity.
         init_method (str or QubitInitMethod): initial qubit mapping method.
         init_samples (int): number of random qubit initializations for greedy initial qubit mapping.
-        two_qubit_natives (TwoQubitNatives or str): two qubit gate/s that can be implemented by the hardware.
         sampling_split (float): fraction of paths tested (between 0 and 1).
 
     Attributes:
@@ -41,16 +42,14 @@ class Transpiler:
         _added_swaps (int): number of swaps added to the circuit to match connectivity.
     """
 
-    def __init__(
-        self, connectivity, init_method="greedy", init_samples=None, two_qubit_natives="CZ", sampling_split=1.0
-    ):
+    def __init__(self, connectivity, init_method="greedy", init_samples=None, sampling_split=1.0, verbose=False):
         self.connectivity = connectivity
         self.init_method = init_method
         if self.init_method is QubitInitMethod.greedy and init_samples is None:
             init_samples = DEFAULT_INIT_SAMPLES
         self.init_samples = init_samples
-        self.two_qubit_natives = two_qubit_natives
         self.sampling_split = sampling_split
+        self.verbose = verbose
 
         self._circuit_repr = None
         self._mapping = None
@@ -58,52 +57,45 @@ class Transpiler:
         self._qubit_map = None
         self._transpiled_circuit = None
         self._circuit_position = 0
-        self._added_swaps = 0
 
-    def transpile(self, circuit, fuse_one_qubit=False, fusion_algorithm=False):
-        """Full transpilation, match connectivity and translation into native gates.
+        self._added_swaps = 0
+        self._initial_map = None
+        self._final_map = None
+
+    def tlog(self, message):
+        """Print messages only if ``verbose`` was set to ``True``."""
+        if self.verbose:
+            log.info(message)
+
+    def is_satisfied(self, circuit):
+        """Checks if a circuit can be executed on Hardware.
 
         Args:
-            circuit (:class:`qibo.models.Circuit`): circuit to be transpiled.
-            fuse_one_qubit (bool): Fuse two or more one qubit gates in sequence
-            fusion_algorithm (bool): Try to reduce the number of SWAP in the transpiler by using qibo fusion algorithm
+            circuit (qibo.models.Circuit): Circuit model to check.
+            connectivity (networkx.graph): chip connectivity.
+            verbose (bool): If ``True`` it prints debugging log messages.
 
-        Returns:
-            transpiled_circuit (qibo.Circuit): circut mapped to hardware topology with only native gates.
-            final_mapping (dict): logical to physical qubit mapping after the execution of the circuit.
-                key (int) is the logical qubit, value (int) is the physical qubit.
-            init_mapping (dict): logical to physical qubit mapping before the execution of the circuit
-                key (int) is the logical qubit, value (int) is the physical qubit.
-            added_swaps (int): number of swap gates added.
+        Returns ``True`` if the following conditions are satisfied:
+            - Circuit does not contain more than two-qubit gates.
+            - All one-qubit gates are I, Z, RZ or U3.
+            - All two-qubit gates are CZ or iSWAP based on two_qubit_natives.
+            - Circuit matches connectivity.
+
+            otherwise returns ``False``.
         """
+        for gate in circuit.queue:
+            if len(gate.qubits) > 2 and not isinstance(gate, gates.M):
+                self.tlog(f"{gate.name} acts on more than two qubits.")
+                return False
+            elif len(gate.qubits) == 2:
+                if gate.qubits not in self.connectivity.edges:
+                    self.tlog("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
+                    return False
 
-        # TODO: ask Stavros what this part of the code do and if it is useful in this case
-        if fusion_algorithm:
-            # Re-arrange gates using qibo's fusion algorithm
-            # this may reduce number of SWAPs when fixing for connectivity
-            fcircuit = circuit.fuse(max_qubits=2)
-            new = type(circuit)(circuit.nqubits)
-            for fgate in fcircuit.queue:
-                if isinstance(fgate, gates.FusedGate):
-                    new.add(fgate.gates)
-                else:
-                    new.add(fgate)
-            circuit = new
+        self.tlog("Circuit respects connectivity.")
+        return True
 
-        # Match connectivity
-        mapped_circuit, final_mapping, init_mapping, added_swaps = self.match_connectivity(circuit)
-        # Two-qubit gates to native
-        new = translate_circuit(mapped_circuit, two_qubit_natives=self.two_qubit_natives, translate_single_qubit=False)
-        # Optional: fuse one-qubit gates to reduce circuit depth
-        if fuse_one_qubit:
-            new = new.fuse(max_qubits=1)
-        # One-qubit gates to native
-        transpiled_circuit = translate_circuit(
-            new, two_qubit_natives=self.two_qubit_natives, translate_single_qubit=True
-        )
-        return transpiled_circuit, final_mapping, init_mapping, added_swaps
-
-    def match_connectivity(self, circuit):
+    def transpile(self, circuit):
         """Qubit mapping initialization and circuit connectivity matching.
 
         Args:
@@ -141,7 +133,24 @@ class Transpiler:
             self.transpiler_step(circuit)
         final_mapping = {key: init_qubit_map[self._qubit_map[i]] for i, key in enumerate(keys)}
         hardware_mapped_circuit = self.init_mapping_circuit(self._transpiled_circuit, init_qubit_map)
-        return hardware_mapped_circuit, final_mapping, init_mapping, self._added_swaps
+
+        # TODO: Are all those returns needed?
+        # return hardware_mapped_circuit, final_mapping, init_mapping, self._added_swaps
+        self._initial_map = init_mapping
+        self._final_map = final_mapping
+        return hardware_mapped_circuit, [final_mapping[i] for i in range(circuit.nqubits)]
+
+    @property
+    def initial_map(self):
+        return self._initial_map
+
+    @property
+    def final_map(self):
+        return self._final_map
+
+    @property
+    def added_swaps(self):
+        return self._added_swaps
 
     def transpiler_step(self, qibo_circuit):
         """Transpilation step. Find new mapping, add swap gates and apply gates that can be run with this configuration.
@@ -182,7 +191,6 @@ class Transpiler:
     @connectivity.setter
     def connectivity(self, connectivity):
         """Set the hardware chip connectivity.
-
         Args:
             connectivity (networkx graph): define connectivity.
         """
@@ -229,21 +237,6 @@ class Transpiler:
         if isinstance(init_method, str):
             init_method = QubitInitMethod[init_method]
         self._init_method = init_method
-
-    @property
-    def two_qubit_natives(self):
-        return self._two_qubit_natives
-
-    @two_qubit_natives.setter
-    def two_qubit_natives(self, two_qubit_natives):
-        """Set the native hardware two qubit gates.
-
-        Args:
-            two_qubit_natives (TwoQubitNatives or str):
-        """
-        if isinstance(two_qubit_natives, str):
-            two_qubit_natives = TwoQubitNatives[two_qubit_natives]
-        self._two_qubit_natives = two_qubit_natives
 
     @property
     def init_samples(self):
@@ -487,70 +480,3 @@ class Transpiler:
         old_mapping = self._qubit_map.copy()
         for key, value in self._mapping.items():
             self._qubit_map[value] = old_mapping[key]
-
-
-def translate_circuit(circuit, two_qubit_natives, translate_single_qubit=False):
-    """Translates a circuit to native gates.
-
-    Args:
-        circuit (qibo.models.Circuit): Circuit model to translate into native gates.
-        two_qubit_natives (list): List of two qubit native gates
-            supported by the quantum hardware ("CZ" and/or "iSWAP").
-        translate_single_qubit (bool):
-
-    Returns:
-        new (qibo.models.Circuit): Equivalent circuit with native gates.
-    """
-    new = type(circuit)(circuit.nqubits)
-    for gate in circuit.queue:
-        if len(gate.qubits) > 1 or translate_single_qubit:
-            new.add(translate_gate(gate, two_qubit_natives))
-        else:
-            new.add(gate)
-    return new
-
-
-def can_execute(circuit: Circuit, two_qubit_natives: TwoQubitNatives, connectivity: nx.Graph, verbose=True):
-    """Checks if a circuit can be executed on Hardware.
-
-    Args:
-        circuit (qibo.models.Circuit): Circuit model to check.
-        two_qubit_natives (TwoQubitNatives): two qubit gate/s that can be implemented by the hardware.
-        connectivity (networkx.graph): chip connectivity.
-        verbose (bool): If ``True`` it prints debugging log messages.
-
-    Returns ``True`` if the following conditions are satisfied:
-        - Circuit does not contain more than two-qubit gates.
-        - All one-qubit gates are I, Z, RZ or U3.
-        - All two-qubit gates are CZ or iSWAP based on two_qubit_natives.
-        - Circuit matches connectivity.
-    otherwise returns ``False``.
-    """
-
-    # pring messages only if ``verbose == True``
-    vlog = lambda msg: log.info(msg) if verbose else lambda msg: None
-    for gate in circuit.queue:
-        if isinstance(gate, gates.M):
-            continue
-
-        if len(gate.qubits) == 1:
-            if not isinstance(gate, (gates.I, gates.Z, gates.RZ, gates.U3)):
-                vlog(f"{gate.name} is not a single qubit native gate.")
-                return False
-
-        elif len(gate.qubits) == 2:
-            try:
-                if not (TwoQubitNatives.from_gate(gate) in two_qubit_natives):
-                    vlog(f"{gate.name} is not in two_qubit_native.")
-                    return False
-            except ValueError:
-                vlog(f"{gate.name} cannot be used as a two qubit native gate.")
-                return False
-            if gate.qubits not in connectivity.edges:
-                vlog("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
-                return False
-        else:
-            vlog(f"{gate.name} acts on more than two qubits.")
-            return False
-    vlog("Circuit can be executed.")
-    return True

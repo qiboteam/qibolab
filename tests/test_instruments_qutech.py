@@ -1,7 +1,7 @@
 import pytest
 
-from qibolab import Platform
-from qibolab.paths import user_folder
+from qibolab import create_platform
+from qibolab.instruments.abstract import INSTRUMENTS_DATA_FOLDER
 
 from .conftest import load_from_platform
 
@@ -11,13 +11,13 @@ from .conftest import load_from_platform
 def test_instruments_qutech_init(instrument):
     assert instrument.is_connected == True
     assert instrument.device == None
-    assert instrument.data_folder == user_folder / "instruments" / "data" / instrument.tmp_folder.name.split("/")[-1]
+    assert instrument.data_folder == INSTRUMENTS_DATA_FOLDER / instrument.tmp_folder.name.split("/")[-1]
 
 
 @pytest.mark.qpu
 @pytest.mark.parametrize("name", ["SPI"])
 def test_instruments_qutech_setup(platform_name, name):
-    platform = Platform(platform_name)
+    platform = create_platform(platform_name)
     settings = platform.settings
     instrument, instrument_settings = load_from_platform(platform, name)
     instrument.setup(**settings["settings"], **instrument_settings)

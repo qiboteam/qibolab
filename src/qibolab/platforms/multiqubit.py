@@ -4,15 +4,17 @@ import numpy as np
 import yaml
 from qibo.config import log, raise_error
 
-from qibolab.platforms.abstract import AbstractPlatform, Qubit
+from qibolab.channels import ChannelMap
+from qibolab.platform import Platform
 from qibolab.pulses import PulseSequence, PulseType
-from qibolab.result import ExecutionResults
-from qibolab.sweeper import Parameter, Sweeper
+from qibolab.qubits import Qubit
+from qibolab.result import IntegratedResults
+from qibolab.sweeper import Parameter
 
 
-class MultiqubitPlatform(AbstractPlatform):
+class MultiqubitPlatform(Platform):
     def __init__(self, name, runcard):
-        super().__init__(name, runcard)
+        super().__init__(name, runcard, [], ChannelMap())
         self.instruments = {}
         # Instantiate instruments
         for name in self.settings["instruments"]:
@@ -49,7 +51,7 @@ class MultiqubitPlatform(AbstractPlatform):
         super().reload_settings()
         self.characterization = self.settings["characterization"]
         self.qubit_channel_map = self.settings["qubit_channel_map"]
-        self.hardware_avg = self.settings["settings"]["hardware_avg"]
+        self.nshots = self.settings["settings"]["nshots"]
         self.relaxation_time = self.settings["settings"]["relaxation_time"]
 
         # FIX: Set attenuation again to the original value after sweep attenuation in punchout
