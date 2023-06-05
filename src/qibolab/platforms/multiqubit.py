@@ -4,7 +4,7 @@ import numpy as np
 import yaml
 from qibo.config import log, raise_error
 
-from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
+from qibolab import AcquisitionType, AveragingMode
 from qibolab.channels import ChannelMap
 from qibolab.platform import Platform
 from qibolab.pulses import PulseSequence, PulseType
