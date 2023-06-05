@@ -171,7 +171,7 @@ def test_qmsim_sweep_bias(simulator, folder):
         ro_pulses[qubit] = simulator.create_MZ_pulse(qubit, start=0)
         sequence.add(ro_pulses[qubit])
     values = [0, 0.005]
-    sweeper = Sweeper(Parameter.bias, values, qubits=qubits)
+    sweeper = Sweeper(Parameter.bias, values, qubits=[simulator.qubits[q] for q in qubits])
     options = ExecutionParameters(
         nshots=1, relaxation_time=20, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
     )
