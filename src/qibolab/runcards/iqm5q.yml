@@ -118,10 +118,10 @@ native_gates:
                 # channel: L4-13
                 type: qf # qubit flux
             -   type: virtual_z
-                phase: 0.007
+                phase: -0.5
                 qubit: 3
             -   type: virtual_z
-                phase: 0.015
+                phase: 3.6
                 qubit: 2
              
             
@@ -165,11 +165,11 @@ characterization:
             T2: 0.
             sweetspot: -0.1745 #0.5 #0.62 0.00
             filter: {}
-            mean_gnd_states: -1.8001+0.6622j
-            mean_exc_states: -0.6845+1.2281j
+            mean_gnd_states: -1.8139+0.6247j
+            mean_exc_states: -0.7124+1.2016j
             # parameters for single shot classification
-            threshold: -0.5175
-            iq_angle: -0.469
+            threshold: -0.6482
+            iq_angle: -0.482
             alpha: 211604296
         3:
             readout_frequency: 5.8060e+9
@@ -179,10 +179,10 @@ characterization:
             T2: 0.
             sweetspot: 0. #-0.08
             filter: {}
-            mean_gnd_states: -4.0535-1.2066j
-            mean_exc_states: -4.1588+0.7182j
-            threshold: -0.2121
-            iq_angle: -1.625
+            mean_gnd_states: -4.0074-1.2684j
+            mean_exc_states: -4.1706+0.7177j
+            threshold: -0.0695
+            iq_angle: -1.653 
             alpha: 214_000_000
         4:
             readout_frequency: 5.5240e+9
