@@ -20,7 +20,7 @@ from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.platform import Qubit
 from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType
 from qibolab.result import IntegratedResults, SampleResults
-from qibolab.sweeper import Parameter, Sweeper
+from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 HZ_TO_MHZ = 1e-6
 NS_TO_US = 1e-3
@@ -100,8 +100,10 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: Dict[int, Q
             parameters.append(rfsoc.Parameter.BIAS)
             indexes.append(list(qubits.values()).index(qubit))
 
-            starts.append(sweeper.values[0] + qubit.flux.bias)
-            stops.append(sweeper.values[-1] + qubit.flux.bias)
+            base_value = qubit.flux.bias
+            values = sweeper.get_values(base_value)
+            starts.append(values[0])
+            stops.append(values[-1])
 
         if max(np.abs(starts)) > 1 or max(np.abs(stops)) > 1:
             raise ValueError("Sweeper amplitude is set to reach values higher than 1")
@@ -111,15 +113,10 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: Dict[int, Q
 
             name = sweeper.parameter.name
             parameters.append(getattr(rfsoc.Parameter, name.upper()))
-            value = getattr(pulse, name)
-            if sweeper.parameter in {Parameter.frequency, Parameter.relative_phase}:
-                starts.append(sweeper.values[0] + value)
-                stops.append(sweeper.values[-1] + value)
-            elif sweeper.parameter is Parameter.amplitude:
-                starts.append(sweeper.values[0] * value)
-                stops.append(sweeper.values[-1] * value)
-            else:
-                raise NotImplementedError(f"Sweep parameter {sweeper.parameter} not implemented")
+            base_value = getattr(pulse, name)
+            values = sweeper.get_values(base_value)
+            starts.append(values[0])
+            stops.append(values[-1])
 
     return rfsoc.Sweeper(
         parameter=parameters,
