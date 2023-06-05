@@ -119,7 +119,7 @@ class DummyInstrument(AbstractInstrument):
         # perform sweep recursively
         for value in sweeper.values:
             self._update_pulse_sequence_parameters(
-                qubits, sweeper, sweeper_pulses, original_sequence, map_original_shifted, value
+                qubits, sequence, sweeper, sweeper_pulses, original_sequence, map_original_shifted, value
             )
             if len(sweepers) > 1:
                 self._sweep_recursion(
@@ -163,11 +163,17 @@ class DummyInstrument(AbstractInstrument):
         """Helper method for _sweep_recursion"""
         pulses = sweeper_pulses[sweeper.parameter]
         for pulse in pulses:
-            if sweeper.parameter not in [Parameter.attenuation, Parameter.gain, Parameter.bias, Parameter.delay]:
+            if sweeper.parameter not in [
+                Parameter.attenuation,
+                Parameter.gain,
+                Parameter.bias,
+                Parameter.delay,
+                Parameter.duration,
+            ]:
                 setattr(pulses[pulse], sweeper.parameter.name, original_value[pulse])
 
     def _update_pulse_sequence_parameters(
-        self, qubits, sweeper, sweeper_pulses, original_sequence, map_original_shifted, value
+        self, qubits, sequence, sweeper, sweeper_pulses, original_sequence, map_original_shifted, value
     ):
         """Helper method for _sweep_recursion"""
         if sweeper.pulses is not None:
@@ -184,6 +190,13 @@ class DummyInstrument(AbstractInstrument):
                     setattr(pulses[pulse], sweeper.parameter.name, float(current_amplitude * value))
                 elif sweeper.parameter is Parameter.delay:
                     pulses[pulse].start += value
+                elif sweeper.parameter is Parameter.duration:
+                    setattr(pulses[pulse], sweeper.parameter.name, value)
+                    ch_sequence = sequence.get_qubit_pulses(pulses[pulse].qubit)
+                    idx = ch_sequence.index(pulses[pulse])
+                    delta = value - pulses[pulse].duration
+                    for new_pulse in ch_sequence[idx:]:
+                        new_pulse.start += delta
                 else:
                     setattr(pulses[pulse], sweeper.parameter.name, value)
                 if pulses[pulse].type is PulseType.READOUT:
