@@ -795,9 +795,6 @@ class Zurich(AbstractInstrument):
                 if qubit.flux_coupler:
                     continue
                 q = qubit.name
-
-                # if q == 2:
-
                 if len(self.sequence[f"readout{q}"]) != 0:
                     for pulse in self.sequence[f"readout{q}"]:
                         i = 0
@@ -859,82 +856,8 @@ class Zurich(AbstractInstrument):
                             measure_pulse_amplitude=None,
                             acquire_delay=self.time_of_flight * NANO_TO_SECONDS,
                             reset_delay=relaxation_time * NANO_TO_SECONDS,
-                            # reset_delay=0,
                         )
                         i += 1
-
-        # with exp.section(uid=f"sequence_measure1", play_after="sequence_measure"):
-
-        #     for qubit in qubits.values():
-        #         if qubit.flux_coupler:
-        #             continue
-        #         q = qubit.name
-
-        #         if q == 3:
-
-        #             if len(self.sequence[f"readout{q}"]) != 0:
-        #                 for pulse in self.sequence[f"readout{q}"]:
-        #                     i = 0
-        #                     pulse.zhpulse.uid += str(i)
-
-        #                     """Integration weights definition or load from the chip folder"""
-        #                     weights_file = (
-        #                         INSTRUMENTS_DATA_FOLDER
-        #                         / f"{self.chip}/weights/integration_weights_optimization_qubit_{q}.npy"
-        #                     )
-        #                     if weights_file.is_file():
-        #                         logging.info("I'm using optimized IW")
-        #                         samples = np.load(
-        #                             weights_file,
-        #                             allow_pickle=True,
-        #                         )
-        #                         if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
-        #                             weight = lo.pulse_library.sampled_pulse_complex(
-        #                                 uid="weight" + pulse.zhpulse.uid,
-        #                                 samples=samples[0] * np.exp(1j * qubit.iq_angle),
-        #                             )
-        #                         else:
-        #                             weight = lo.pulse_library.sampled_pulse_complex(
-        #                                 uid="weight" + pulse.zhpulse.uid,
-        #                                 samples=samples[0],
-        #                             )
-        #                     else:
-        #                         logging.info("I'm using dumb IW")
-        #                         "We adjust for smearing and remove smearing/2 at the end"
-        #                         exp.delay(
-        #                             signal=f"acquire{q}",
-        #                             time=self.smearing * NANO_TO_SECONDS,
-        #                         )
-        #                         if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
-        #                             weight = lo.pulse_library.sampled_pulse_complex(
-        #                                 np.ones([int(pulse.pulse.duration * 2 - 3 * self.smearing * NANO_TO_SECONDS)])
-        #                                 * np.exp(1j * qubit.iq_angle)
-        #                             )
-        #                         else:
-        #                             weight = lo.pulse_library.const(
-        #                                 uid="weight" + pulse.zhpulse.uid,
-        #                                 length=round(pulse.pulse.duration * NANO_TO_SECONDS, 9)
-        #                                 - 1.5 * self.smearing * NANO_TO_SECONDS,
-        #                                 amplitude=1,
-        #                             )
-
-        #                     measure_pulse_parameters = {"phase": 0}
-
-        #                     exp.measure(
-        #                         acquire_signal=f"acquire{q}",
-        #                         handle=f"sequence{q}",
-        #                         integration_kernel=weight,
-        #                         integration_kernel_parameters=None,
-        #                         integration_length=None,
-        #                         measure_signal=f"measure{q}",
-        #                         measure_pulse=pulse.zhpulse,
-        #                         measure_pulse_length=round(pulse.pulse.duration * NANO_TO_SECONDS, 9),
-        #                         measure_pulse_parameters=measure_pulse_parameters,
-        #                         measure_pulse_amplitude=None,
-        #                         acquire_delay=self.time_of_flight * NANO_TO_SECONDS,
-        #                         reset_delay=relaxation_time * NANO_TO_SECONDS,
-        #                     )
-        #                     i += 1
 
     def fast_reset(self, exp, qubits, fast_reset):
         """
@@ -997,8 +920,6 @@ class Zurich(AbstractInstrument):
         for sweeper in sweepers:
             dimensions.append(len(sweeper.values))
 
-        # Re-arranging sweepers based on hardware limitations
-        # FIXME: Punchout and frequency case
         rearranging_axes, sweepers = self.rearrange_sweepers(sweepers)
         self.sweepers = sweepers
         # TODO: Read frequency for pulses instead of qubit patch
@@ -1013,8 +934,6 @@ class Zurich(AbstractInstrument):
 
         # TODO: General, several readouts and qubits
         "Get the results back"
-        # results = self.get_results(self, qubits, options, dimensions, rearranging_axes)
-
         results = {}
         for qubit in qubits.values():
             if qubit.flux_coupler:
@@ -1152,7 +1071,6 @@ class Zurich(AbstractInstrument):
         # connect to session
         self.sim_device = self.sim_session.connect(do_emulation=True)
         self.exp = self.sim_session.compile(self.experiment, compiler_settings=COMPILER_SETTINGS)
-        # self.offsets_off()
 
         # Plot simulated output signals with helper function
         plot_simulation(
