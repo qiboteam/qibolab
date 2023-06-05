@@ -353,38 +353,38 @@ class Platform:
     def sweep(self, sequence, options, *sweepers):
         """Executes a pulse sequence for different values of sweeped parameters.
 
-        Useful for performing chip characterization.
+            Useful for performing chip characterization.
 
-        Example:
-            .. testcode::
+            Example:
+                .. testcode::
 
-                import numpy as np
-                from qibolab.dummy import create_dummy
-                from qibolab.sweeper import Sweeper, Parameter
-                from qibolab.pulses import PulseSequence
-                from qibolab import ExecutionParameters
+                    import numpy as np
+                    from qibolab.dummy import create_dummy
+                    from qibolab.sweeper import Sweeper, Parameter
+                    from qibolab.pulses import PulseSequence
+                    from qibolab import ExecutionParameters
 
-    return platform
+        return platform
 
 
-                platform = create_dummy()
-                sequence = PulseSequence()
-                parameter = Parameter.frequency
-                pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
-                sequence.add(pulse)
-                parameter_range = np.random.randint(10, size=10)
-                sweeper = Sweeper(parameter, parameter_range, [pulse])
-                platform.sweep(sequence, ExecutionParameters(), sweeper)
+                    platform = create_dummy()
+                    sequence = PulseSequence()
+                    parameter = Parameter.frequency
+                    pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
+                    sequence.add(pulse)
+                    parameter_range = np.random.randint(10, size=10)
+                    sweeper = Sweeper(parameter, parameter_range, [pulse])
+                    platform.sweep(sequence, ExecutionParameters(), sweeper)
 
-        Args:
-            sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
-            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
-            *sweepers (:class:`qibolab.sweeper.Sweeper`): Sweeper objects that specify which
-                parameters are being sweeped.
-            **kwargs: May need them for something
+            Args:
+                sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
+                options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
+                *sweepers (:class:`qibolab.sweeper.Sweeper`): Sweeper objects that specify which
+                    parameters are being sweeped.
+                **kwargs: May need them for something
 
-        Returns:
-            Readout results acquired by after execution.
+            Returns:
+                Readout results acquired by after execution.
         """
         if options.nshots is None:
             options = replace(options, nshots=self.nshots)

@@ -181,7 +181,7 @@ class MultiqubitPlatform(Platform):
 
     def set_attenuation(self, qubit: Qubit, att):
         self.ro_port[qubit.name].attenuation = att
-    
+
     def set_gain(self, qubit, gain):
         self.qd_port[qubit].gain = gain
 
@@ -192,7 +192,7 @@ class MultiqubitPlatform(Platform):
             self.qf_port[qubit.name].offset = bias
 
     def get_attenuation(self, qubit: Qubit):
-        return self.ro_port[qubit.name].attenuation      
+        return self.ro_port[qubit.name].attenuation
 
     def get_bias(self, qubit: Qubit):
         if qubit.name in self.qbm:
@@ -371,8 +371,6 @@ class MultiqubitPlatform(Platform):
                         if len(_los) > 0:
                             self.instruments[name].ports[port].lo_frequency = _los[0]
 
-                
-
                 self.instruments[name].process_pulse_sequence(
                     instrument_pulses[name], navgs, nshots, repetition_duration, sweepers
                 )
@@ -438,16 +436,15 @@ class MultiqubitPlatform(Platform):
                 )
             )
 
-        #reverse sweepers exept for res punchout att
+        # reverse sweepers exept for res punchout att
         contains_attenuation_frequency = any(
-            sweepers_copy[i].parameter == Parameter.attenuation and
-            sweepers_copy[i + 1].parameter == Parameter.frequency
+            sweepers_copy[i].parameter == Parameter.attenuation
+            and sweepers_copy[i + 1].parameter == Parameter.frequency
             for i in range(len(sweepers_copy) - 1)
         )
 
         if not contains_attenuation_frequency:
             sweepers_copy.reverse()
-
 
         for pulse in sequence_copy.ro_pulses:
             map_id_serial[pulse.id] = pulse.serial
@@ -504,7 +501,7 @@ class MultiqubitPlatform(Platform):
         #     initial = {}
         #     for pulse in sweeper.pulses:
         #         initial[pulse.id] = pulse.frequency
-        
+
         # elif sweeper.parameter is Parameter.bias:
         #     initial = {}
         #     for qubit in sweeper.qubits:
