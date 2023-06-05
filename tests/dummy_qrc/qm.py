@@ -13,9 +13,7 @@ def create(runcard=RUNCARD):
 
     Used in ``test_instruments_qm.py`` and ``test_instruments_qmsim.py``
     """
-    controller = QMSim("qmopx", "0.0.0.0:0", simulation_duration=1000, cloud=False)
-    # set time of flight for readout integration (HARDCODED)
-    controller.time_of_flight = 280
+    controller = QMSim("qmopx", "0.0.0.0:0", simulation_duration=1000, cloud=False, time_of_flight=280)
 
     # Create channel objects and map controllers to channels
     channels = ChannelMap()
