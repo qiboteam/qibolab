@@ -3,7 +3,6 @@ import os
 import warnings
 from collections import defaultdict
 from dataclasses import replace
-from pathlib import Path
 
 import laboneq._token
 import laboneq.simple as lo
