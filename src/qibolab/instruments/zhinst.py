@@ -299,13 +299,9 @@ class Zurich(AbstractInstrument):
         if not self.is_connected:
             for _ in range(3):
                 try:
-                    self.device_setup = lo.DeviceSetup.from_dict(
-                        data=self.descriptor,
-                        server_host="localhost",
-                        server_port=SERVER_PORT,
-                        setup_name=self.name,
-                    )
+                    self.create_device_setup()
                     # To fully remove logging #configure_logging=False
+                    # I strongly advise to set it to 20 to have time estimates of the experiment duration!
                     self.session = lo.Session(self.device_setup, log_level=30)
                     self.device = self.session.connect(do_emulation=self.emulation)
                     self.is_connected = True
@@ -314,6 +310,14 @@ class Zurich(AbstractInstrument):
                     logging.critical(f"Unable to connect:\n{str(exc)}\nRetrying...")
             if not self.is_connected:
                 raise InstrumentException(self, f"Unable to connect to {self.name}")
+
+    def create_device_setup(self):
+        self.device_setup = lo.DeviceSetup.from_dict(
+            data=self.descriptor,
+            server_host="localhost",
+            server_port=SERVER_PORT,
+            setup_name=self.name,
+        )
 
     def start(self):
         pass
@@ -328,7 +332,6 @@ class Zurich(AbstractInstrument):
         else:
             logging.warning("Already disconnected")
 
-    # FIXME: Not working so it does not get the settings
     def setup(self, **_kwargs):
         pass
 
@@ -460,7 +463,6 @@ class Zurich(AbstractInstrument):
         self.calibration_step(qubits)
         self.create_exp(qubits, options)
 
-    # TODO: Play taking a big sequence with several acquire steps
     def play(self, qubits, sequence, options):
         """Play pulse sequence"""
         self.signal_map = {}
@@ -468,7 +470,6 @@ class Zurich(AbstractInstrument):
         if options.averaging_mode is AveragingMode.SINGLESHOT:
             dimensions = [options.nshots]
 
-        # TODO: Read frequency for pulses instead of qubit patch
         self.frequency_from_pulses(qubits, sequence)
 
         """
@@ -479,8 +480,6 @@ class Zurich(AbstractInstrument):
         self.experiment_flow(qubits, sequence, options)
         self.run_exp()
 
-        # TODO: General, several readouts and qubits
-        # TODO: Implement the new results!
         "Get the results back"
         results = {}
         for qubit in qubits.values():
@@ -656,18 +655,17 @@ class Zurich(AbstractInstrument):
             exp.play(
                 signal=f"{section}{qubit.name}",
                 pulse=pulse.zhpulse,
-                # phase=pulse.zhsweeper,
-                increment_oscillator_phase=pulse.zhsweeper,
+                phase=pulse.zhsweeper,  # FIXME: I believe this is the global phase sweep
+                # increment_oscillator_phase=pulse.zhsweeper, #FIXME: I believe this is the relative phase sweep
             )
         elif "frequency" in partial_sweep.uid or partial_sweep.uid == "delay":
-            # see if below also works for consistency
-            # elif any("frequency" in param for param in parameters) or any("delay" in param for param in parameters):
             exp.play(
                 signal=f"{section}{qubit.name}",
                 pulse=pulse.zhpulse,
                 phase=pulse.pulse.relative_phase,
             )
 
+    # FIXME: Now hardcoded for the flux pulse for 2q gates
     @staticmethod
     def play_sweep_select_dual(exp, qubit, pulse, section, parameters):
         if "amplitude" in parameters and "duration" in parameters:
@@ -922,7 +920,7 @@ class Zurich(AbstractInstrument):
 
         rearranging_axes, sweepers = self.rearrange_sweepers(sweepers)
         self.sweepers = sweepers
-        # TODO: Read frequency for pulses instead of qubit patch
+
         self.frequency_from_pulses(qubits, sequence)
 
         """
@@ -932,7 +930,6 @@ class Zurich(AbstractInstrument):
         self.experiment_flow(qubits, sequence, options, sweepers)
         self.run_exp()
 
-        # TODO: General, several readouts and qubits
         "Get the results back"
         results = {}
         for qubit in qubits.values():
