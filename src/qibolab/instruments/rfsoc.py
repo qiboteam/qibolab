@@ -16,7 +16,7 @@ import numpy as np
 import qibosoq.components as rfsoc
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.instruments.abstract import AbstractInstrument
+from qibolab.instruments.abstract import Controller
 from qibolab.platform import Qubit
 from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType
 from qibolab.result import IntegratedResults, SampleResults
@@ -135,7 +135,7 @@ class QibosoqError(RuntimeError):
     """
 
 
-class RFSoC(AbstractInstrument):
+class RFSoC(Controller):
     """Instrument object for controlling RFSoC FPGAs.
     The two way of executing pulses are with ``play`` (for arbitrary
     qibolab ``PulseSequence``) or with ``sweep`` that execute a
@@ -159,16 +159,16 @@ class RFSoC(AbstractInstrument):
         self.cfg = rfsoc.Config()
 
     def connect(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
 
     def start(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
 
     def stop(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
 
     def disconnect(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
 
     def setup(self):
         """Deprecated method."""

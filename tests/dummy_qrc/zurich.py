@@ -4,7 +4,7 @@ import pathlib
 import yaml
 
 from qibolab.channels import ChannelMap
-from qibolab.instruments.dummy_oscillator import DummyLocalOscillator as LocalOscillator
+from qibolab.instruments.oscillator import LocalOscillator
 from qibolab.instruments.zhinst import Zurich
 from qibolab.platform import Platform
 
