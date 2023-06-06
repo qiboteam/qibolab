@@ -51,7 +51,7 @@ class DummyInstrument(AbstractInstrument):
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                 values = np.random.rand(expts)
             if options.acquisition_type is AcquisitionType.RAW:
-                samples = int(ro_pulse.duration * sampling_rate)
+                samples = int(ro_pulse.duration * self.sampling_rate)
                 values = np.random.rand(samples * expts) * 100 + 1j * np.random.rand(samples * expts) * 100
             if options.acquisition_type is AcquisitionType.INTEGRATION:
                 values = np.random.rand(expts) * 100 + 1j * np.random.rand(expts) * 100
@@ -78,7 +78,7 @@ class DummyInstrument(AbstractInstrument):
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                 values = np.random.rand(expts)
             if options.acquisition_type is AcquisitionType.RAW:
-                samples = int(ro_pulse.duration * sampling_rate)
+                samples = int(ro_pulse.duration * self.sampling_rate)
                 values = np.random.rand(samples * expts) * 100 + 1j * np.random.rand(samples * expts) * 100
             if options.acquisition_type is AcquisitionType.INTEGRATION:
                 values = np.random.rand(expts) * 100 + 1j * np.random.rand(expts) * 100
