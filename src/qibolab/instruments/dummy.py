@@ -8,9 +8,8 @@ from qibo.config import log, raise_error
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import AbstractInstrument
 from qibolab.platform import Qubit
-from qibolab.pulses import PulseSequence, PulseType
-from qibolab.result import IntegratedResults, SampleResults
-from qibolab.sweeper import Parameter, Sweeper
+from qibolab.pulses import PulseSequence
+from qibolab.sweeper import Sweeper
 
 
 class DummyInstrument(AbstractInstrument):
