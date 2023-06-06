@@ -26,7 +26,7 @@ class DummyInstrument(AbstractInstrument):
             instruments.
     """
 
-    SAMPLING_RATE = 1
+    sampling_rate = 1
 
     def connect(self):
         log.info("Connecting to dummy instrument.")
