@@ -54,7 +54,24 @@ class DummyInstrument(AbstractInstrument):
                 )
                 results[qubit] = results[serial] = options.results_type(samples)
 
-            else:
+            if options.acquisition_type is AcquisitionType.RAW:
+                SAMPLING_RATE = 2  # Takes into account the ns for duration
+                samples = int(sequence.ro_pulses[qubit].duration * SAMPLING_RATE)
+
+                i = (
+                    np.random.rand(samples)
+                    if options.averaging_mode is AveragingMode.CYCLIC
+                    else np.random.rand(nshots)
+                )
+                q = (
+                    np.random.rand(samples)
+                    if options.averaging_mode is AveragingMode.CYCLIC
+                    else np.random.rand(nshots)
+                )
+                exp_res = i + 1j * q
+                results[qubit] = results[serial] = options.results_type(data=exp_res)
+
+            if options.acquisition_type is AcquisitionType.INTEGRATION:
                 i = np.random.rand(1) if options.averaging_mode is AveragingMode.CYCLIC else np.random.rand(nshots)
                 q = np.random.rand(1) if options.averaging_mode is AveragingMode.CYCLIC else np.random.rand(nshots)
                 exp_res = i + 1j * q
