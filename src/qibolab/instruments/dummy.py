@@ -12,8 +12,6 @@ from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import IntegratedResults, SampleResults
 from qibolab.sweeper import Parameter, Sweeper
 
-SAMPLING_RATE = 2  # (GSamples/s) Takes into account the ns for duration
-
 
 class DummyInstrument(AbstractInstrument):
     """Dummy instrument that returns random voltage values.
@@ -27,6 +25,8 @@ class DummyInstrument(AbstractInstrument):
             exists to keep the same interface with other
             instruments.
     """
+
+    SAMPLING_RATE = 1
 
     def connect(self):
         log.info("Connecting to dummy instrument.")
