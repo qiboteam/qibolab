@@ -145,7 +145,7 @@ RUNCARD = {
                         "qubit": 3,
                         "relative_start": 14,
                         "type": "qf",
-                    },          
+                    },
                     {
                         "duration": 34,
                         "amplitude": 0.1,
@@ -153,7 +153,7 @@ RUNCARD = {
                         "qubit": 3,
                         "relative_start": 0,
                         "type": "qf",
-                    },                              
+                    },
                     {"type": "virtual_z", "phase": -1.5707963267948966, "qubit": 3},
                     {"type": "virtual_z", "phase": -1.5707963267948966, "qubit": 0},
                 ]
