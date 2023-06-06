@@ -16,18 +16,40 @@ def test_dummy_initialization():
     platform.disconnect()
 
 
-def test_dummy_execute_pulse_sequence():
+@pytest.mark.parametrize("acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.RAW])
+def test_dummy_execute_pulse_sequence(acquisition):
     platform = create_platform("dummy")
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_readout_pulse(0, 0))
-    options = ExecutionParameters(nshots=None)
+    options = ExecutionParameters(nshots=None, acquisition_type=acquisition)
     result = platform.execute_pulse_sequence(sequence, options)
+
+
+def test_dummy_single_sweep_RAW():
+    swept_points = 5
+    platform = create_platform("dummy")
+    sequence = PulseSequence()
+    pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
+
+    parameter_range = np.random.randint(swept_points, size=swept_points)
+    sequence.add(pulse)
+    sweeper = Sweeper(Parameter.frequency, parameter_range, pulses=[pulse])
+    options = ExecutionParameters(
+        nshots=10,
+        averaging_mode=AveragingMode.CYCLIC,
+        acquisition_type=AcquisitionType.RAW,
+    )
+    results = platform.sweep(sequence, options, sweeper)
+    assert pulse.serial and pulse.qubit in results
+    results_len = len(results[pulse.qubit].magnitude)
+    expts = swept_points * (platform.sampling_rate * 1e-9 * pulse.duration)
+    assert results_len == int(expts)
 
 
 @pytest.mark.parametrize("parameter", Parameter)
 @pytest.mark.parametrize("average", [AveragingMode.SINGLESHOT, AveragingMode.CYCLIC])
 @pytest.mark.parametrize("acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION])
-@pytest.mark.parametrize("nshots", [100, 200])
+@pytest.mark.parametrize("nshots", [10, 20])
 def test_dummy_single_sweep(parameter, average, acquisition, nshots):
     swept_points = 5
     platform = create_platform("dummy")
@@ -70,7 +92,7 @@ def test_dummy_single_sweep(parameter, average, acquisition, nshots):
 @pytest.mark.parametrize("parameter2", Parameter)
 @pytest.mark.parametrize("average", [AveragingMode.SINGLESHOT, AveragingMode.CYCLIC])
 @pytest.mark.parametrize("acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION])
-@pytest.mark.parametrize("nshots", [100, 1000])
+@pytest.mark.parametrize("nshots", [10, 20])
 def test_dummy_double_sweep(parameter1, parameter2, average, acquisition, nshots):
     swept_points = 5
     platform = create_platform("dummy")
@@ -128,7 +150,7 @@ def test_dummy_double_sweep(parameter1, parameter2, average, acquisition, nshots
 @pytest.mark.parametrize("parameter", Parameter)
 @pytest.mark.parametrize("average", [AveragingMode.SINGLESHOT, AveragingMode.CYCLIC])
 @pytest.mark.parametrize("acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION])
-@pytest.mark.parametrize("nshots", [100, 1000])
+@pytest.mark.parametrize("nshots", [10, 20])
 def test_dummy_single_sweep_multiplex(parameter, average, acquisition, nshots):
     swept_points = 5
     platform = create_platform("dummy")
