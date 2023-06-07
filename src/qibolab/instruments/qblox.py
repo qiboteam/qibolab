@@ -15,7 +15,7 @@ from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
 from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qblox_instruments.qcodes_drivers.sequencer import Sequencer as QbloxSequencer
 
-from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
+from qibolab.instruments.abstract import Instrument, InstrumentException
 from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType, Waveform
 
 
@@ -122,13 +122,13 @@ class Sequencer:
         self.program: str = ""
 
 
-class Cluster(AbstractInstrument):
+class Cluster(Instrument):
     """A class to extend the functionality of qblox_instruments Cluster.
 
     The class exposes the attribute `reference_clock_source` that enables the
     selection of an internal or external clock source.
 
-    The class inherits from AbstractInstrument and implements its interface methods:
+    The class inherits from Instrument and implements its interface methods:
         __init__()
         connect()
         setup()
@@ -236,11 +236,11 @@ class Cluster(AbstractInstrument):
             raise Exception("The instrument cannot be set up, there is no connection")
 
     def start(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
         pass
 
     def stop(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
         pass
 
     def disconnect(self):
@@ -258,7 +258,7 @@ cluster: QbloxCluster = None
 # property of the class Cluster.
 
 
-class ClusterQRM_RF(AbstractInstrument):
+class ClusterQRM_RF(Instrument):
     """Qblox Cluster Qubit Readout Module RF driver.
 
     Qubit Readout Module RF (QRM-RF) is an instrument that integrates an arbitratry
@@ -306,7 +306,7 @@ class ClusterQRM_RF(AbstractInstrument):
                 10: o1
                 1: i1
 
-    The class inherits from AbstractInstrument and implements its interface methods:
+    The class inherits from Instrument and implements its interface methods:
         __init__()
         connect()
         setup()
@@ -1302,7 +1302,7 @@ class ClusterQRM_RF(AbstractInstrument):
         return integrated_signal
 
     def start(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
         pass
 
     def stop(self):
@@ -1313,12 +1313,12 @@ class ClusterQRM_RF(AbstractInstrument):
             pass
 
     def disconnect(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
         self._cluster = None
         self.is_connected = False
 
 
-class ClusterQCM_RF(AbstractInstrument):
+class ClusterQCM_RF(Instrument):
     """Qblox Cluster Qubit Control Module RF driver.
 
     Qubit Control Module RF (QCM-RF) is an instrument that integrates an arbitratry
@@ -1356,7 +1356,7 @@ class ClusterQCM_RF(AbstractInstrument):
             21: o1 # IQ Port = out0 & out1
             22: o2 # IQ Port = out2 & out3
 
-    The class inherits from AbstractInstrument and implements its interface methods:
+    The class inherits from Instrument and implements its interface methods:
         __init__()
         connect()
         setup()
@@ -2015,7 +2015,7 @@ class ClusterQCM_RF(AbstractInstrument):
             # )
 
     def start(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
         pass
 
     def stop(self):
@@ -2026,12 +2026,12 @@ class ClusterQCM_RF(AbstractInstrument):
             pass
 
     def disconnect(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
         self._cluster = None
         self.is_connected = False
 
 
-class ClusterQCM(AbstractInstrument):
+class ClusterQCM(Instrument):
     """Qblox Cluster Qubit Control Module Baseband driver.
 
     Qubit Control Module (QCM) is an arbitratry wave generator with two DACs connected to
@@ -2071,7 +2071,7 @@ class ClusterQCM(AbstractInstrument):
                 11: o3
                 12: o4
 
-    The class inherits from AbstractInstrument and implements its interface methods:
+    The class inherits from Instrument and implements its interface methods:
         __init__()
         connect()
         setup()
@@ -2712,7 +2712,7 @@ class ClusterQCM(AbstractInstrument):
             self.device.start_sequencer(sequencer_number)
 
     def start(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
         pass
 
     def stop(self):
@@ -2723,6 +2723,6 @@ class ClusterQCM(AbstractInstrument):
             pass
 
     def disconnect(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
         self._cluster = None
         self.is_connected = False

@@ -18,7 +18,7 @@ package runcards {
 }
 package instruments {
     package instruments/abstract.py{
-        abstract class AbstractInstrument{
+        abstract class Instrument{
             name: str
             address: str
             is_connected: bool
@@ -53,7 +53,7 @@ package instruments {
             --
             __init__(number: int)
         }
-        class Cluster extends AbstractInstrument{
+        class Cluster extends Instrument{
             device: QbloxCluster
             ..
             _device_parameters: dict
@@ -67,7 +67,7 @@ package instruments {
             _set_device_parameter(target, *parameters, value)
             _erase_device_parameters_cache()
         }
-        class ClusterQRM_RF extends AbstractInstrument{
+        class ClusterQRM_RF extends Instrument{
             DEFAULT_SEQUENCERS: dict
             SAMPLING_RATE: int
             device: QbloxQrmQcm
@@ -108,7 +108,7 @@ package instruments {
             _erase_device_parameters_cache()
             _process_acquisition_results(acquisition_results, readout_pulse: Pulse, demodulate=True)
         }
-        class ClusterQCM_RF extends AbstractInstrument{
+        class ClusterQCM_RF extends Instrument{
             DEFAULT_SEQUENCERS: dict
             SAMPLING_RATE: int
             device: QbloxQrmQcm
@@ -149,7 +149,7 @@ package instruments {
         WaveformsBuffer <.. Sequencer
     }
     package rohde_schwarz.py {
-        class SGS100A extends AbstractInstrument {
+        class SGS100A extends Instrument {
             device: LO_SGS100A
             power: int
             frequecy: int
@@ -171,7 +171,7 @@ package instruments {
         }
     }
     package qutech.py {
-        class SPI extends AbstractInstrument {
+        class SPI extends Instrument {
             device: SpiRack
             s4g_modules_settings: dict
             d5a_modules_settings: dict

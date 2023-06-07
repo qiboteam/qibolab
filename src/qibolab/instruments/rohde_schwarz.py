@@ -7,7 +7,8 @@ https://qcodes.github.io/Qcodes/api/generated/qcodes.instrument_drivers.rohde_sc
 """
 import qcodes.instrument_drivers.rohde_schwarz.SGS100A as LO_SGS100A
 
-from qibolab.instruments.abstract import InstrumentException, LocalOscillator
+from qibolab.instruments.abstract import InstrumentException
+from qibolab.instruments.oscillator import LocalOscillator
 
 
 class SGS100A(LocalOscillator):

@@ -4,13 +4,13 @@ import numpy as np
 from qibo.config import log, raise_error
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.instruments.abstract import AbstractInstrument
+from qibolab.instruments.abstract import Controller
 from qibolab.platform import Qubit
 from qibolab.pulses import PulseSequence
 from qibolab.sweeper import Sweeper
 
 
-class DummyInstrument(AbstractInstrument):
+class DummyInstrument(Controller):
     """Dummy instrument that returns random voltage values.
 
     Useful for testing code without requiring access to hardware.

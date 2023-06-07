@@ -3,7 +3,7 @@ from typing import Dict, List, Optional
 
 from qibo.config import raise_error
 
-from qibolab.instruments.abstract import LocalOscillator
+from qibolab.instruments.oscillator import LocalOscillator
 
 
 def check_max_bias(bias, max_bias):

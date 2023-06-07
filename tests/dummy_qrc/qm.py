@@ -1,7 +1,7 @@
 import pathlib
 
 from qibolab.channels import ChannelMap
-from qibolab.instruments.dummy_oscillator import DummyLocalOscillator as LocalOscillator
+from qibolab.instruments.oscillator import LocalOscillator
 from qibolab.instruments.qmsim import QMSim
 from qibolab.platform import Platform
 
