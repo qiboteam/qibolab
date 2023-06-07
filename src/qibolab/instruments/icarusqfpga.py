@@ -183,7 +183,7 @@ class IcarusQFPGA(Instrument):
 
             # Use the same socket to start listening for ADC data transfer.
             for _ in range(nshots):
-                for __ in self._adcs_to_read:
+                for _ in self._adcs_to_read:
                     # IcarusQ board may send channel/shot data out of order due to threading implementation.
                     # shotnum = struct.unpack("H", s.recv(2))[0]
                     channel = struct.unpack("H", s.recv(2))[0]
