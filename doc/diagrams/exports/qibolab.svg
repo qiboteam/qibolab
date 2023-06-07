@@ -15,7 +15,7 @@ cluster backends.py--><g id="cluster_backends.py"><path d="M467.5,700.6094 L556.
 cluster qibo.backends--><g id="cluster_qibo.backends"><path d="M470.5,624.6094 L574.5,624.6094 A3.75,3.75 0 0 1 577,627.1094 L584,648.2188 L611.5,648.2188 A2.5,2.5 0 0 1 614,650.7188 L614,690.1094 A2.5,2.5 0 0 1 611.5,692.6094 L470.5,692.6094 A2.5,2.5 0 0 1 468,690.1094 L468,627.1094 A2.5,2.5 0 0 1 470.5,624.6094 " fill="none" style="stroke:#000000;stroke-width:1.5;"/><line style="stroke:#000000;stroke-width:1.5;" x1="468" x2="584" y1="648.2188" y2="648.2188"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="103" x="472" y="641.1426">qibo.backends</text></g><!--MD5=[9fbd344a368b07973591f6fc72326f8e]
 cluster qibo.core.circuit--><g id="cluster_qibo.core.circuit"><path d="M624.5,624.6094 L740.5,624.6094 A3.75,3.75 0 0 1 743,627.1094 L750,648.2188 L750.5,648.2188 A2.5,2.5 0 0 1 753,650.7188 L753,690.1094 A2.5,2.5 0 0 1 750.5,692.6094 L624.5,692.6094 A2.5,2.5 0 0 1 622,690.1094 L622,627.1094 A2.5,2.5 0 0 1 624.5,624.6094 " fill="none" style="stroke:#000000;stroke-width:1.5;"/><line style="stroke:#000000;stroke-width:1.5;" x1="622" x2="750" y1="648.2188" y2="648.2188"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="115" x="626" y="641.1426">qibo.core.circuit</text></g><!--MD5=[b6b0a5b01e0e3c1b1ecef63d32e8c7ed]
 class platform_runcard.yml--><g id="elem_platform_runcard.yml"><rect codeLine="5" fill="#F1F1F1" height="32" id="platform_runcard.yml" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="165" x="70.5" y="380.6094"/><ellipse cx="85.5" cy="396.6094" fill="#DA70D6" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M84.6563,399.0469 L81.7031,393.2813 Q81.2813,393.2188 81.0703,392.9922 Q80.8594,392.7656 80.8594,392.4219 Q80.8594,392.0469 81.1172,391.8125 Q81.375,391.5781 82,391.5781 L83.5469,391.5781 Q84.1563,391.5781 84.4219,391.8125 Q84.6875,392.0469 84.6875,392.4219 Q84.6875,392.7969 84.4219,393.0391 Q84.1563,393.2813 83.5938,393.2813 L85.6094,397.1875 L87.5938,393.2813 Q87.0469,393.2813 86.7891,393.0391 Q86.5313,392.7969 86.5313,392.4219 Q86.5313,392.0469 86.7891,391.8125 Q87.0469,391.5781 87.6563,391.5781 L89.2656,391.5781 Q89.875,391.5781 90.1328,391.8125 Q90.3906,392.0469 90.3906,392.4219 Q90.3906,392.7656 90.1719,393 Q89.9531,393.2344 89.5,393.2813 L85.6094,400.9531 Q86.25,400.9531 86.4375,401.0781 Q86.8438,401.3438 86.8438,401.8125 Q86.8438,402.1875 86.5781,402.4219 Q86.3125,402.6563 85.7031,402.6563 L82,402.6563 Q81.375,402.6563 81.1172,402.4219 Q80.8594,402.1875 80.8594,401.8125 Q80.8594,401.4375 81.1172,401.1953 Q81.375,400.9531 82,400.9531 L83.6875,400.9531 L84.6563,399.0469 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="133" x="99.5" y="402.3379">platform_runcard.yml</text></g><!--MD5=[c7bc3a30b87c75335c59b402919ac157]
-class AbstractInstrument--><g id="elem_AbstractInstrument"><rect codeLine="20" fill="#F1F1F1" height="32" id="AbstractInstrument" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="151" x="341.5" y="304.6094"/><ellipse cx="356.5" cy="320.6094" fill="#A9DCDF" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M358.6875,322.375 L354.5469,322.375 L354.125,323.4063 L354.5469,323.4063 Q355.1563,323.4063 355.4219,323.6406 Q355.6875,323.875 355.6875,324.2656 Q355.6875,324.6406 355.4219,324.875 Q355.1563,325.1094 354.5469,325.1094 L352.25,325.1094 Q351.6406,325.1094 351.3828,324.875 Q351.125,324.6406 351.125,324.25 Q351.125,323.875 351.3984,323.6328 Q351.6719,323.3906 352.2969,323.4063 L354.9688,316.75 L353.8594,316.75 Q353.25,316.75 352.9844,316.5156 Q352.7188,316.2813 352.7188,315.8906 Q352.7188,315.5156 352.9844,315.2813 Q353.25,315.0469 353.8594,315.0469 L357.5313,315.0469 L360.9219,323.4063 Q361.5156,323.4063 361.7031,323.5469 Q362.0938,323.8125 362.0938,324.2656 Q362.0938,324.6406 361.8359,324.875 Q361.5781,325.1094 360.9688,325.1094 L358.6719,325.1094 Q358.0625,325.1094 357.7969,324.875 Q357.5313,324.6406 357.5313,324.25 Q357.5313,323.875 357.7969,323.6406 Q358.0625,323.4063 358.6719,323.4063 L359.0938,323.4063 L358.6875,322.375 Z M357.9688,320.6719 L356.6094,317.2969 L355.2344,320.6719 L357.9688,320.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="119" x="370.5" y="326.3379">AbstractInstrument</text></g><!--MD5=[dc7f329d18c0ca28446499aa662fb659]
+class Instrument--><g id="elem_Instrument"><rect codeLine="20" fill="#F1F1F1" height="32" id="Instrument" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="151" x="341.5" y="304.6094"/><ellipse cx="356.5" cy="320.6094" fill="#A9DCDF" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M358.6875,322.375 L354.5469,322.375 L354.125,323.4063 L354.5469,323.4063 Q355.1563,323.4063 355.4219,323.6406 Q355.6875,323.875 355.6875,324.2656 Q355.6875,324.6406 355.4219,324.875 Q355.1563,325.1094 354.5469,325.1094 L352.25,325.1094 Q351.6406,325.1094 351.3828,324.875 Q351.125,324.6406 351.125,324.25 Q351.125,323.875 351.3984,323.6328 Q351.6719,323.3906 352.2969,323.4063 L354.9688,316.75 L353.8594,316.75 Q353.25,316.75 352.9844,316.5156 Q352.7188,316.2813 352.7188,315.8906 Q352.7188,315.5156 352.9844,315.2813 Q353.25,315.0469 353.8594,315.0469 L357.5313,315.0469 L360.9219,323.4063 Q361.5156,323.4063 361.7031,323.5469 Q362.0938,323.8125 362.0938,324.2656 Q362.0938,324.6406 361.8359,324.875 Q361.5781,325.1094 360.9688,325.1094 L358.6719,325.1094 Q358.0625,325.1094 357.7969,324.875 Q357.5313,324.6406 357.5313,324.25 Q357.5313,323.875 357.7969,323.6406 Q358.0625,323.4063 358.6719,323.4063 L359.0938,323.4063 L358.6875,322.375 Z M357.9688,320.6719 L356.6094,317.2969 L355.2344,320.6719 L357.9688,320.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="119" x="370.5" y="326.3379">Instrument</text></g><!--MD5=[dc7f329d18c0ca28446499aa662fb659]
 class WaveformsBuffer--><g id="elem_WaveformsBuffer"><rect codeLine="36" fill="#F1F1F1" height="32" id="WaveformsBuffer" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="141" x="539.5" y="304.6094"/><ellipse cx="554.5" cy="320.6094" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M557.2656,316.4844 Q557.4219,316.2656 557.6094,316.1563 Q557.7969,316.0469 558.0156,316.0469 Q558.3906,316.0469 558.625,316.3047 Q558.8594,316.5625 558.8594,317.1719 L558.8594,318.625 Q558.8594,319.2344 558.625,319.5 Q558.3906,319.7656 558.0156,319.7656 Q557.6719,319.7656 557.4688,319.5625 Q557.2656,319.375 557.1563,318.8594 Q557.1094,318.5 556.9219,318.3125 Q556.5938,317.9375 555.9844,317.7188 Q555.375,317.5 554.75,317.5 Q553.9844,317.5 553.3516,317.8281 Q552.7188,318.1563 552.2266,318.9063 Q551.7344,319.6563 551.7344,320.6875 L551.7344,321.7813 Q551.7344,323.0156 552.625,323.8359 Q553.5156,324.6563 555.1094,324.6563 Q556.0469,324.6563 556.7031,324.4063 Q557.0938,324.25 557.5156,323.8125 Q557.7813,323.5469 557.9297,323.4688 Q558.0781,323.3906 558.2813,323.3906 Q558.6094,323.3906 558.8672,323.6484 Q559.125,323.9063 559.125,324.25 Q559.125,324.5938 558.7813,325 Q558.2813,325.5781 557.4844,325.9063 Q556.4063,326.3594 555.1094,326.3594 Q553.5938,326.3594 552.3906,325.7344 Q551.4063,325.2344 550.7188,324.1641 Q550.0313,323.0938 550.0313,321.8125 L550.0313,320.6563 Q550.0313,319.3281 550.6484,318.1797 Q551.2656,317.0313 552.3594,316.4141 Q553.4531,315.7969 554.6875,315.7969 Q555.4219,315.7969 556.0703,315.9609 Q556.7188,316.125 557.2656,316.4844 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="109" x="568.5" y="326.3379">WaveformsBuffer</text></g><!--MD5=[a340c818e1a574c4e337041b99b893a1]
 class Sequencer--><g id="elem_Sequencer"><rect codeLine="43" fill="#F1F1F1" height="32" id="Sequencer" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="101" x="559.5" y="380.6094"/><ellipse cx="574.5" cy="396.6094" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M577.2656,392.4844 Q577.4219,392.2656 577.6094,392.1563 Q577.7969,392.0469 578.0156,392.0469 Q578.3906,392.0469 578.625,392.3047 Q578.8594,392.5625 578.8594,393.1719 L578.8594,394.625 Q578.8594,395.2344 578.625,395.5 Q578.3906,395.7656 578.0156,395.7656 Q577.6719,395.7656 577.4688,395.5625 Q577.2656,395.375 577.1563,394.8594 Q577.1094,394.5 576.9219,394.3125 Q576.5938,393.9375 575.9844,393.7188 Q575.375,393.5 574.75,393.5 Q573.9844,393.5 573.3516,393.8281 Q572.7188,394.1563 572.2266,394.9063 Q571.7344,395.6563 571.7344,396.6875 L571.7344,397.7813 Q571.7344,399.0156 572.625,399.8359 Q573.5156,400.6563 575.1094,400.6563 Q576.0469,400.6563 576.7031,400.4063 Q577.0938,400.25 577.5156,399.8125 Q577.7813,399.5469 577.9297,399.4688 Q578.0781,399.3906 578.2813,399.3906 Q578.6094,399.3906 578.8672,399.6484 Q579.125,399.9063 579.125,400.25 Q579.125,400.5938 578.7813,401 Q578.2813,401.5781 577.4844,401.9063 Q576.4063,402.3594 575.1094,402.3594 Q573.5938,402.3594 572.3906,401.7344 Q571.4063,401.2344 570.7188,400.1641 Q570.0313,399.0938 570.0313,397.8125 L570.0313,396.6563 Q570.0313,395.3281 570.6484,394.1797 Q571.2656,393.0313 572.3594,392.4141 Q573.4531,391.7969 574.6875,391.7969 Q575.4219,391.7969 576.0703,391.9609 Q576.7188,392.125 577.2656,392.4844 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="69" x="588.5" y="402.3379">Sequencer</text></g><!--MD5=[26b1154f4b01dec99cfe7f1f8bee6bbb]
 class Cluster--><g id="elem_Cluster"><rect codeLine="55" fill="#F1F1F1" height="32" id="Cluster" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="77" x="689.5" y="380.6094"/><ellipse cx="704.5" cy="396.6094" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M707.2656,392.4844 Q707.4219,392.2656 707.6094,392.1563 Q707.7969,392.0469 708.0156,392.0469 Q708.3906,392.0469 708.625,392.3047 Q708.8594,392.5625 708.8594,393.1719 L708.8594,394.625 Q708.8594,395.2344 708.625,395.5 Q708.3906,395.7656 708.0156,395.7656 Q707.6719,395.7656 707.4688,395.5625 Q707.2656,395.375 707.1563,394.8594 Q707.1094,394.5 706.9219,394.3125 Q706.5938,393.9375 705.9844,393.7188 Q705.375,393.5 704.75,393.5 Q703.9844,393.5 703.3516,393.8281 Q702.7188,394.1563 702.2266,394.9063 Q701.7344,395.6563 701.7344,396.6875 L701.7344,397.7813 Q701.7344,399.0156 702.625,399.8359 Q703.5156,400.6563 705.1094,400.6563 Q706.0469,400.6563 706.7031,400.4063 Q707.0938,400.25 707.5156,399.8125 Q707.7813,399.5469 707.9297,399.4688 Q708.0781,399.3906 708.2813,399.3906 Q708.6094,399.3906 708.8672,399.6484 Q709.125,399.9063 709.125,400.25 Q709.125,400.5938 708.7813,401 Q708.2813,401.5781 707.4844,401.9063 Q706.4063,402.3594 705.1094,402.3594 Q703.5938,402.3594 702.3906,401.7344 Q701.4063,401.2344 700.7188,400.1641 Q700.0313,399.0938 700.0313,397.8125 L700.0313,396.6563 Q700.0313,395.3281 700.6484,394.1797 Q701.2656,393.0313 702.3594,392.4141 Q703.4531,391.7969 704.6875,391.7969 Q705.4219,391.7969 706.0703,391.9609 Q706.7188,392.125 707.2656,392.4844 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="45" x="718.5" y="402.3379">Cluster</text></g><!--MD5=[991a5bcbd11386b675f3d03d38cfb44b]
@@ -64,7 +64,7 @@ package runcards {
 }
 package instruments {
     package instruments/abstract.py{
-        abstract class AbstractInstrument{
+        abstract class Instrument{
             name: str
             address: str
             is_connected: bool
@@ -99,7 +99,7 @@ package instruments {
             - -
             __init__(number: int)
         }
-        class Cluster extends AbstractInstrument{
+        class Cluster extends Instrument{
             device: QbloxCluster
             ..
             _device_parameters: dict
@@ -113,7 +113,7 @@ package instruments {
             _set_device_parameter(target, *parameters, value)
             _erase_device_parameters_cache()
         }
-        class ClusterQRM_RF extends AbstractInstrument{
+        class ClusterQRM_RF extends Instrument{
             DEFAULT_SEQUENCERS: dict
             SAMPLING_RATE: int
             device: QbloxQrmQcm
@@ -154,7 +154,7 @@ package instruments {
             _erase_device_parameters_cache()
             _process_acquisition_results(acquisition_results, readout_pulse: Pulse, demodulate=True)
         }
-        class ClusterQCM_RF extends AbstractInstrument{
+        class ClusterQCM_RF extends Instrument{
             DEFAULT_SEQUENCERS: dict
             SAMPLING_RATE: int
             device: QbloxQrmQcm
@@ -195,7 +195,7 @@ package instruments {
         WaveformsBuffer <.. Sequencer
     }
     package rohde_schwarz.py {
-        class SGS100A extends AbstractInstrument {
+        class SGS100A extends Instrument {
             device: LO_SGS100A
             power: int
             frequecy: int
@@ -217,7 +217,7 @@ package instruments {
         }
     }
     package qutech.py {
-        class SPI extends AbstractInstrument {
+        class SPI extends Instrument {
             device: SpiRack
             s4g_modules_settings: dict
             d5a_modules_settings: dict
@@ -550,7 +550,7 @@ package runcards {
 }
 package instruments {
     package instruments/abstract.py{
-        abstract class AbstractInstrument{
+        abstract class Instrument{
             name: str
             address: str
             is_connected: bool
@@ -585,7 +585,7 @@ package instruments {
             - -
             __init__(number: int)
         }
-        class Cluster extends AbstractInstrument{
+        class Cluster extends Instrument{
             device: QbloxCluster
             ..
             _device_parameters: dict
@@ -599,7 +599,7 @@ package instruments {
             _set_device_parameter(target, *parameters, value)
             _erase_device_parameters_cache()
         }
-        class ClusterQRM_RF extends AbstractInstrument{
+        class ClusterQRM_RF extends Instrument{
             DEFAULT_SEQUENCERS: dict
             SAMPLING_RATE: int
             device: QbloxQrmQcm
@@ -640,7 +640,7 @@ package instruments {
             _erase_device_parameters_cache()
             _process_acquisition_results(acquisition_results, readout_pulse: Pulse, demodulate=True)
         }
-        class ClusterQCM_RF extends AbstractInstrument{
+        class ClusterQCM_RF extends Instrument{
             DEFAULT_SEQUENCERS: dict
             SAMPLING_RATE: int
             device: QbloxQrmQcm
@@ -681,7 +681,7 @@ package instruments {
         WaveformsBuffer <.. Sequencer
     }
     package rohde_schwarz.py {
-        class SGS100A extends AbstractInstrument {
+        class SGS100A extends Instrument {
             device: LO_SGS100A
             power: int
             frequecy: int
@@ -703,7 +703,7 @@ package instruments {
         }
     }
     package qutech.py {
-        class SPI extends AbstractInstrument {
+        class SPI extends Instrument {
             device: SpiRack
             s4g_modules_settings: dict
             d5a_modules_settings: dict

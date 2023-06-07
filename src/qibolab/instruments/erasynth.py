@@ -11,7 +11,8 @@ import time
 import requests
 from qcodes_contrib_drivers.drivers.ERAInstruments import ERASynthPlusPlus
 
-from qibolab.instruments.abstract import InstrumentException, LocalOscillator
+from qibolab.instruments.abstract import InstrumentException
+from qibolab.instruments.oscillator import LocalOscillator
 
 
 class ERA(LocalOscillator):
