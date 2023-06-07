@@ -635,6 +635,7 @@ class Zurich(Controller):
 
     @staticmethod
     def play_sweep_select_single(exp, qubit, pulse, section, parameters, partial_sweep):
+        """Play Zurich pulse when a single sweeper is involved"""
         if any("amplitude" in param for param in parameters):
             pulse.zhpulse.amplitude *= max(pulse.zhsweeper.values)
             pulse.zhsweeper.values /= max(pulse.zhsweeper.values)
@@ -668,6 +669,7 @@ class Zurich(Controller):
     # FIXME: Now hardcoded for the flux pulse for 2q gates
     @staticmethod
     def play_sweep_select_dual(exp, qubit, pulse, section, parameters):
+        """Play Zurich pulse when a two sweepers are involved on the same pulse"""
         if "amplitude" in parameters and "duration" in parameters:
             for sweeper in pulse.zhsweepers:
                 if sweeper.uid == "amplitude":
@@ -686,7 +688,7 @@ class Zurich(Controller):
             )
 
     def play_sweep(self, exp, qubit, pulse, section):
-        """Play Zurich pulse when a sweeper is involved"""
+        """Takes care of playing the sweepers and involved pulses for different options"""
 
         if isinstance(pulse, ZhSweeperLine):
             if pulse.zhsweeper.uid == "bias":
@@ -764,6 +766,7 @@ class Zurich(Controller):
 
     @staticmethod
     def play_after_set(sequence, type):
+        """Selects after which section the measurement goes"""
         longest = 0
         for pulse in sequence:
             if longest < pulse.finish:
@@ -877,6 +880,7 @@ class Zurich(Controller):
 
     @staticmethod
     def rearrange_sweepers(sweepers):
+        """Rearranges sweepers from qibocal based on device hardware limitations"""
         rearranging_axes = [[], []]
         if len(sweepers) == 2:
             if sweepers[1].parameter is Parameter.frequency:
@@ -900,6 +904,7 @@ class Zurich(Controller):
         return rearranging_axes, sweepers
 
     def offsets_off(self):
+        """Sets the offsets from the HDAWGs to 0 after each experiment"""
         for sigout in range(0, 8):
             self.session.devices["device_hdawg"].awgs[0].sigouts[sigout].offset = 0
         self.session.devices["device_hdawg2"].awgs[0].sigouts[0].offset = 0
@@ -980,7 +985,8 @@ class Zurich(Controller):
                 )
         if sweeper.parameter is Parameter.amplitude:
             for pulse in sweeper.pulses:
-                sweeper.values = sweeper.values.copy()
+                # FIXME: Check if needed on hardware
+                # sweeper.values = sweeper.values.copy()
                 pulse.amplitude *= max(abs(sweeper.values))
                 sweeper.values /= max(abs(sweeper.values))
                 parameter = ZhSweeper(pulse, sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
