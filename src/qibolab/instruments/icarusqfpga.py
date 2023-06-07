@@ -7,11 +7,11 @@ from typing import List
 
 import numpy as np
 
-from qibolab.instruments.abstract import AbstractInstrument
+from qibolab.instruments.abstract import Instrument
 from qibolab.pulses import Pulse
 
 
-class PulseBlaster(AbstractInstrument):
+class PulseBlaster(Instrument):
     """Driver for the 24-pin PulseBlaster TTL signal generator."""
 
     def __init__(self, name, address, port=5000):
@@ -75,7 +75,7 @@ class PulseBlaster(AbstractInstrument):
         return int("".join(["1" if i in set(pins) else "0" for i in reversed(range(24))]), 2)
 
 
-class IcarusQFPGA(AbstractInstrument):
+class IcarusQFPGA(Instrument):
     """Driver for the IcarusQ RFSoC socket-based implementation."""
 
     def __init__(self, name, address, port=8080):

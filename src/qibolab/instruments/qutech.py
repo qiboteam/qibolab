@@ -4,10 +4,10 @@ Class to interface with the SPI Rack Qutech Delft
 from qblox_instruments import SpiRack
 from qibo.config import log, raise_error
 
-from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
+from qibolab.instruments.abstract import Instrument, InstrumentException
 
 
-class SPI(AbstractInstrument):
+class SPI(Instrument):
     property_wrapper = lambda parent, device, *parameter: property(
         lambda self: device.get(parameter[0]), lambda self, x: parent._set_device_parameter(device, *parameter, value=x)
     )
