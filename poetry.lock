@@ -793,13 +793,13 @@ files = [
 
 [[package]]
 name = "datadog-api-client"
-version = "2.13.1"
+version = "2.13.2"
 description = "Collection of all Datadog Public endpoints"
 optional = true
 python-versions = ">=3.7"
 files = [
-    {file = "datadog-api-client-2.13.1.tar.gz", hash = "sha256:daa1e32d3ce71b9e0bc01d909a748706b880ad36248f9773b3068545026cb94c"},
-    {file = "datadog_api_client-2.13.1-py3-none-any.whl", hash = "sha256:9e5dc669ea4e428e54520e188594a552e0f4f10385abb2cf34c164d93f4e8ab3"},
+    {file = "datadog-api-client-2.13.2.tar.gz", hash = "sha256:e6fb697200aeaa390715f596a3e2ce4e8f9e083f8641b9e14c4f3c368fc10142"},
+    {file = "datadog_api_client-2.13.2-py3-none-any.whl", hash = "sha256:3dd5414e0c6b752b94c58cc242ca5af590a88801362e590079b850ff570fbd10"},
 ]
 
 [package.dependencies]
@@ -3799,32 +3799,29 @@ files = []
 develop = false
 
 [package.dependencies]
-qick = "^0.2"
+qick = "0.2.135"
 
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qibosoq.git"
-reference = "main"
-resolved_reference = "16679989617a47730720d38b60a24f20b95770a7"
+reference = "two-qubits-gates"
+resolved_reference = "6903df20bec38908b89de83ef0b28b10794c4ae7"
 
 [[package]]
 name = "qick"
-version = "0.2.150"
+version = "0.2.135"
 description = "Quantum Instrumentation Controller Kit software library"
 optional = true
 python-versions = ">=3.6, <4"
 files = [
-    {file = "qick-0.2.150-py3-none-any.whl", hash = "sha256:049b11e36b7b2b26c84d7a0db0e19ea2ee03b4191c8a033950acf38718e8c018"},
-    {file = "qick-0.2.150.tar.gz", hash = "sha256:d3ce6c37e8a0e9663c0cb533c5a2166e818f339f1f8b30cf5623e46858edc6a2"},
+    {file = "qick-0.2.135-py3-none-any.whl", hash = "sha256:e1bbefef86aae3aa014e93d05fffe6b6d7457ca4a735aef4dabdf73600039cff"},
+    {file = "qick-0.2.135.tar.gz", hash = "sha256:dd3055dc7de51c2e34e4e992d15901a662693b3612d82c9a6deb4dc4aff3e098"},
 ]
 
 [package.dependencies]
 numpy = "*"
 pynq = {version = ">=2.6", markers = "platform_machine == \"aarch64\" or platform_machine == \"armv7l\""}
 tqdm = "*"
-
-[package.extras]
-full = ["pyro4"]
 
 [[package]]
 name = "qm-octave"
@@ -5048,4 +5045,4 @@ zh = ["laboneq"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "4b32421967810306a3ba89c557032e812f78b70007babf5671fca77992c35d18"
+content-hash = "58172eb7217f86f8d6c3b1d950ca3a51b31ac23ffa08362ad97ac724335f4ac4"

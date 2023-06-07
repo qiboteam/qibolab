@@ -76,19 +76,30 @@ def convert_pulse(pulse: Pulse, qubits: Dict[int, Qubit]) -> rfsoc.Pulse:
     return replace_pulse_shape(rfsoc_pulse, pulse.shape)
 
 
-def convert_frequency_sweeper(sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubits: Dict[int, Qubit]):
+def convert_units_sweeper(sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubits: Dict[int, Qubit]):
     """Converts frequencies for `qibosoq.abstract.Sweeper` considering LO and HZ_TO_MHZ"""
     for idx, jdx in enumerate(sweeper.indexes):
-        if sweeper.parameter[idx] is rfsoc.Parameter.FREQUENCY:
+        parameter = sweeper.parameter[idx]
+        if parameter is rfsoc.Parameter.FREQUENCY:
             pulse = sequence[jdx]
             lo_frequency = pulse_lo_frequency(pulse, qubits)
 
             sweeper.starts[idx] = (sweeper.starts[idx] - lo_frequency) * HZ_TO_MHZ
             sweeper.stops[idx] = (sweeper.stops[idx] - lo_frequency) * HZ_TO_MHZ
+        elif parameter is rfsoc.Parameter.START:
+            sweeper.starts[idx] = list(np.array(sweeper.starts[idx]) * NS_TO_US)
+            sweeper.stops[idx] = list(np.array(sweeper.stops[idx]) * NS_TO_US)
+        elif parameter is rfsoc.Parameter.RELATIVE_PHASE:
+            sweeper.starts[idx] = list(np.degrees(np.array(sweeper.starts[idx])))
+            sweeper.stops[idx] = list(np.degrees(np.array(sweeper.stops[idx])))
 
 
 def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: Dict[int, Qubit]) -> rfsoc.Sweeper:
-    """Convert `qibolab.sweeper.Sweeper` to `qibosoq.abstract.Sweeper`"""
+    """Convert `qibolab.sweeper.Sweeper` to `qibosoq.abstract.Sweeper`.
+
+    Note that any unit conversion is not done in this function (to avoid to do it multiple times).
+    Conversion will be done in `convert_units_sweeper`.
+    """
 
     parameters = []
     starts = []
@@ -112,11 +123,35 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: Dict[int, Q
             indexes.append(sequence.index(pulse))
 
             name = sweeper.parameter.name
-            parameters.append(getattr(rfsoc.Parameter, name.upper()))
-            base_value = getattr(pulse, name)
-            values = sweeper.get_values(base_value)
-            starts.append(values[0])
-            stops.append(values[-1])
+            if name not in {"duration", "delay"}:
+                parameters.append(getattr(rfsoc.Parameter, name.upper()))
+                base_value = getattr(pulse, name)
+                values = sweeper.get_values(base_value)
+                starts.append(values[0])
+                stops.append(values[-1])
+
+            else:
+                if name == "duration":
+                    parameters.append(getattr(rfsoc.Parameter, name.upper()))
+                    base_value = getattr(pulse, name)
+                elif name == "delay":
+                    parameters.append(rfsoc.Parameter.START)
+                    base_value = pulse.start
+
+                values = sweeper.get_values(base_value)
+                starts.append(values[0])
+                stops.append(values[-1])
+
+                # TODO check if other drivers behave in this way
+                idx_sweep = sequence.index(pulse)
+                delta_start = values[0] - base_value
+                delta_stop = values[-1] - base_value
+
+                for next_pulse in sequence[idx_sweep:]:
+                    parameters.append(rfsoc.Parameter.START)
+                    indexes.append(sequence.index(next_pulse))
+                    starts.append(next_pulse.start + delta_start)
+                    stops.append(next_pulse.start + delta_stop)
 
     return rfsoc.Sweeper(
         parameter=parameters,
@@ -220,7 +255,7 @@ class RFSoC(Controller):
         """
 
         for sweeper in sweepers:
-            convert_frequency_sweeper(sweeper, sequence, qubits)
+            convert_units_sweeper(sweeper, sequence, qubits)
         server_commands = {
             "operation_code": rfsoc.OperationCode.EXECUTE_SWEEPS,
             "cfg": asdict(self.cfg),
@@ -427,17 +462,18 @@ class RFSoC(Controller):
         results = {}
         for idx in range(sweeper.expts):
             # update values
-            sweeper_parameter = sweeper.parameter[0].name.lower()
-            if sweeper_parameter in {
-                "amplitude",
-                "frequency",
-                "relative_phase",
-            }:
-                for jdx, _ in enumerate(sweeper.indexes):
-                    setattr(sequence[sweeper.indexes[jdx]], sweeper_parameter, values[jdx][idx])
-            else:
-                for kdx, jdx in enumerate(sweeper.indexes):
-                    qubits[jdx].flux.bias = values[kdx][idx]
+            for jdx, kdx in enumerate(sweeper.indexes):
+                sweeper_parameter = sweeper.parameter[jdx].name.lower()
+                if sweeper_parameter == "bias":
+                    qubits[kdx].flux.bias = values[jdx][idx]
+                elif sweeper_parameter in {
+                    "amplitude",
+                    "frequency",
+                    "relative_phase",
+                    "start",
+                    "duration",
+                }:
+                    setattr(sequence[kdx], sweeper_parameter, values[jdx][idx])
 
             res = self.recursive_python_sweep(
                 qubits, sequence, or_sequence, *sweepers[1:], average=average, execution_parameters=execution_parameters

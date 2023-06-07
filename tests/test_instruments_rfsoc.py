@@ -6,10 +6,10 @@ import qibosoq.components as rfsoc
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.instruments.rfsoc import (
-    convert_frequency_sweeper,
     convert_pulse,
     convert_qubit,
     convert_sweep,
+    convert_units_sweeper,
 )
 from qibolab.platform import Qubit
 from qibolab.pulses import Drag, Gaussian, Pulse, PulseSequence, PulseType, Rectangular
@@ -81,8 +81,8 @@ def test_convert_frequency_sweeper():
     seq.add(pulse0)
     seq.add(pulse1)
 
-    sweeper = rfsoc.Sweeper(10, [rfsoc.Parameter.FREQUENCY], [0], [10e6], [1])
-    convert_frequency_sweeper(sweeper, seq, platform.qubits)
+    sweeper = rfsoc.Sweeper(parameter=[rfsoc.Parameter.FREQUENCY], indexes=[1], starts=[0], stops=[10e6], expts=100)
+    convert_units_sweeper(sweeper, seq, platform.qubits)
 
     assert sweeper.starts == [-1]
     assert sweeper.stops == [9]
