@@ -37,7 +37,7 @@ from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
 from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qibo.config import log
 
-from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
+from qibolab.instruments.abstract import Instrument, InstrumentException
 from qibolab.instruments.qblox.debug import print_readable_snapshot
 from qibolab.instruments.qblox.q1asm import (
     Block,
@@ -56,7 +56,7 @@ from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType, Waveform
 from qibolab.sweeper import Parameter, Sweeper
 
 
-class ClusterQRM_RF(AbstractInstrument):
+class ClusterQRM_RF(Instrument):
     """Qblox Cluster Qubit Readout Module RF driver.
 
     Qubit Readout Module RF (QRM-RF) is an instrument that integrates an arbitrary wave generator, a digitizer,
@@ -98,7 +98,7 @@ class ClusterQRM_RF(AbstractInstrument):
                 rotation_angle              : 104.002
                 threshold                   : 0.012745
 
-    The class inherits from AbstractInstrument and implements its interface methods:
+    The class inherits from Instrument and implements its interface methods:
         __init__()
         connect()
         setup()
@@ -1266,7 +1266,7 @@ class ClusterQRM_RF(AbstractInstrument):
         return integrated_signal
 
     def start(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
         pass
 
     def stop(self):
@@ -1277,6 +1277,6 @@ class ClusterQRM_RF(AbstractInstrument):
             pass
 
     def disconnect(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
         self._cluster = None
         self.is_connected = False

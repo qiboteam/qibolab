@@ -33,16 +33,16 @@ https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/
 from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
 from qibo.config import log
 
-from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
+from qibolab.instruments.abstract import Instrument, InstrumentException
 
 
-class Cluster(AbstractInstrument):
+class Cluster(Instrument):
     """A class to extend the functionality of qblox_instruments Cluster.
 
     The class exposes the attribute `reference_clock_source` to enable the selection of an internal or external clock
     source.
 
-    The class inherits from AbstractInstrument and implements its interface methods:
+    The class inherits from Instrument and implements its interface methods:
         __init__()
         connect()
         setup()
@@ -151,11 +151,11 @@ class Cluster(AbstractInstrument):
             raise Exception("The instrument cannot be set up, there is no connection")
 
     def start(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
         pass
 
     def stop(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
         pass
 
     def disconnect(self):
