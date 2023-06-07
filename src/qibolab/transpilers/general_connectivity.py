@@ -80,7 +80,8 @@ class GeneralConnectivity(Transpiler):
             - All one-qubit gates are I, Z, RZ or U3.
             - All two-qubit gates are CZ or iSWAP based on two_qubit_natives.
             - Circuit matches connectivity.
-        otherwise returns ``False``.
+
+            otherwise returns ``False``.
         """
         for gate in circuit.queue:
             if len(gate.qubits) > 2 and not isinstance(gate, gates.M):

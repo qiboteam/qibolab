@@ -4,11 +4,11 @@ from typing import List
 import numpy as np
 from qibo.config import raise_error
 
-from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
+from qibolab.instruments.abstract import Instrument, InstrumentException
 from qibolab.pulses import Pulse
 
 
-class TektronixAWG5204(AbstractInstrument):
+class TektronixAWG5204(Instrument):
     def __init__(self, name, address):
         super().__init__(name, address)
         # Phase offset for each channel for IQ sideband optimziation
@@ -155,7 +155,7 @@ class TektronixAWG5204(AbstractInstrument):
             self.is_connected = False
 
 
-class MCAttenuator(AbstractInstrument):
+class MCAttenuator(Instrument):
     """Driver for the MiniCircuit RCDAT-8000-30 variable attenuator."""
 
     def connect(self):
@@ -184,7 +184,7 @@ class MCAttenuator(AbstractInstrument):
         pass
 
 
-class QuicSyn(AbstractInstrument):
+class QuicSyn(Instrument):
     """Driver for the National Instrument QuicSyn Lite local oscillator."""
 
     def connect(self):
@@ -227,7 +227,7 @@ class QuicSyn(AbstractInstrument):
             self.is_connected = False
 
 
-class AlazarADC(AbstractInstrument):
+class AlazarADC(Instrument):
     """Driver for the AlazarTech ATS9371 ADC."""
 
     def __init__(self, name, address):
