@@ -1,4 +1,4 @@
-from qibolab.channels import ChannelMap
+from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyInstrument
 from qibolab.platform import Platform
 from qibolab.pulses import SNZ
@@ -205,15 +205,17 @@ RUNCARD = {
 
 def create_dummy():
     """Create a dummy platform using the dummy instrument."""
+    # Create dummy controller
+    instrument = DummyInstrument(NAME, 0)
 
     # Create channel objects
     channels = ChannelMap()
-    channels |= "readout"
-    channels |= (f"drive-{i}" for i in range(RUNCARD["nqubits"]))
-    channels |= (f"flux-{i}" for i in range(RUNCARD["nqubits"]))
+    channels["readout"] = Channel("readout", port=instrument["readout"])
+    for i in range(RUNCARD["nqubits"]):
+        channels[f"drive-{i}"] = Channel(f"drive-{i}", port=instrument[f"drive-{i}"])
+    for i in range(RUNCARD["nqubits"]):
+        channels[f"flux-{i}"] = Channel(f"flux-{i}", port=instrument[f"flux-{i}"])
 
-    # Create dummy controller
-    instrument = DummyInstrument(NAME, 0)
     # Create platform
     platform = Platform(NAME, RUNCARD, [instrument], channels)
 

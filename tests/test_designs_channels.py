@@ -1,29 +1,22 @@
 import pytest
 
 from qibolab.channels import Channel, ChannelMap
+from qibolab.instruments.dummy import DummyPort
 
 
 def test_channel_init():
     channel = Channel("L1-test")
-    channel.ports = [("c1", 0), ("c2", 1)]
     assert channel.name == "L1-test"
-    with pytest.raises(NotImplementedError):
-        _ = channel.local_oscillator
 
 
 def test_channel_errors():
-    channel = Channel("L1-test")
-    channel.ports = [("c1", 0), ("c2", 1)]
-    with pytest.raises(TypeError):
-        channel.bias = "test"
-    channel.bias = 0.1
-    with pytest.raises(TypeError):
-        channel.filter = "test"
+    channel = Channel("L1-test", port=DummyPort("test"))
+    channel.offset = 0.1
     channel.filter = {}
     # attempt to set bias higher than the allowed value
-    channel.max_bias = 0.2
+    channel.max_offset = 0.2
     with pytest.raises(ValueError):
-        channel.bias = 0.3
+        channel.offset = 0.3
 
 
 def test_channel_map_from_names():

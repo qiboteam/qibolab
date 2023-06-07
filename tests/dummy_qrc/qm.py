@@ -1,6 +1,6 @@
 import pathlib
 
-from qibolab.channels import ChannelMap
+from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.oscillator import LocalOscillator
 from qibolab.instruments.qmsim import QMSim
 from qibolab.platform import Platform
@@ -13,37 +13,25 @@ def create(runcard=RUNCARD):
 
     Used in ``test_instruments_qm.py`` and ``test_instruments_qmsim.py``
     """
-    # Create channel objects
+    controller = QMSim("qmopx", "0.0.0.0:0", simulation_duration=1000, cloud=False, time_of_flight=280)
+
+    # Create channel objects and map controllers to channels
     channels = ChannelMap()
     # readout
-    channels |= ("L3-25_a", "L3-25_b")
+    channels["L3-25_a"] = Channel("L3-25_a", port=controller[(("con1", 10), ("con1", 9))])
+    channels["L3-25_b"] = Channel("L3-25_b", port=controller[(("con2", 10), ("con2", 9))])
     # feedback
-    channels |= ("L2-5_a", "L2-5_b")
-    # drive
-    channels |= (f"L3-{i}" for i in range(11, 16))
-    # flux
-    channels |= (f"L4-{i}" for i in range(1, 6))
-    # TWPA
-    channels |= "L4-26"
-
-    # Map controllers to qubit channels (HARDCODED)
-    # readout
-    channels["L3-25_a"].ports = [("con1", 10), ("con1", 9)]
-    channels["L3-25_b"].ports = [("con2", 10), ("con2", 9)]
-    # feedback
-    channels["L2-5_a"].ports = [("con1", 2), ("con1", 1)]
-    channels["L2-5_b"].ports = [("con2", 2), ("con2", 1)]
+    channels["L2-5_a"] = Channel("L2-5_a", port=controller[(("con1", 2), ("con1", 1))])
+    channels["L2-5_b"] = Channel("L2-5_b", port=controller[(("con2", 2), ("con2", 1))])
     # drive
     for i in range(1, 5):
-        channels[f"L3-1{i}"].ports = [("con1", 2 * i), ("con1", 2 * i - 1)]
-    channels["L3-15"].ports = [("con3", 2), ("con3", 1)]
+        channels[f"L3-1{i}"] = Channel(f"L3-1{i}", port=controller[(("con1", 2 * i), ("con1", 2 * i - 1))])
+    channels["L3-15"] = Channel("L3-15", port=controller[(("con3", 2), ("con3", 1))])
     # flux
     for i in range(1, 6):
-        channels[f"L4-{i}"].ports = [("con2", i)]
-
-    controller = QMSim("qmopx", "0.0.0.0:0", simulation_duration=1000, cloud=False)
-    # set time of flight for readout integration (HARDCODED)
-    controller.time_of_flight = 280
+        channels[f"L4-{i}"] = Channel(f"L4-{i}", port=controller[(("con2", i),)])
+    # TWPA
+    channels |= "L4-26"
 
     # Instantiate local oscillators (HARDCODED)
     local_oscillators = [
