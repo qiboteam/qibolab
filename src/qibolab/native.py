@@ -1,7 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass, field, fields, replace
 from enum import Flag, auto
-from typing import Dict, List, Optional, Union
+from typing import List, Optional, Union
 
 from qibo import gates
 from qibo.config import raise_error
