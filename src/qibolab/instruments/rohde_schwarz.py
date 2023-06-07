@@ -7,7 +7,8 @@ https://qcodes.github.io/Qcodes/api/generated/qcodes.instrument_drivers.rohde_sc
 """
 import qcodes.instrument_drivers.rohde_schwarz.SGS100A as LO_SGS100A
 
-from qibolab.instruments.abstract import InstrumentException, LocalOscillator
+from qibolab.instruments.abstract import InstrumentException
+from qibolab.instruments.oscillator import LocalOscillator
 
 
 class SGS100A(LocalOscillator):
@@ -112,6 +113,7 @@ class SGS100A(LocalOscillator):
         """Configures the instrument.
 
         A connection to the instrument needs to be established beforehand.
+
         Args:
             **kwargs: dict = A dictionary of settings loaded from the runcard:
                 kwargs["power"]

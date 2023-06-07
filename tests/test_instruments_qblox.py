@@ -2,8 +2,7 @@ import numpy as np
 import pytest
 
 from qibolab import create_platform
-from qibolab.instruments.qblox import Cluster, ClusterQCM_RF, ClusterQRM_RF
-from qibolab.paths import user_folder
+from qibolab.instruments.abstract import INSTRUMENTS_DATA_FOLDER
 from qibolab.pulses import Pulse, PulseSequence, ReadoutPulse
 
 from .conftest import load_from_platform
@@ -26,7 +25,7 @@ def test_instruments_qublox_init(platform_name, name):
     assert instance.name == name
     assert instance.is_connected == False
     assert instance.device == None
-    assert instance.data_folder == user_folder / "instruments" / "data" / instance.tmp_folder.name.split("/")[-1]
+    assert instance.data_folder == INSTRUMENTS_DATA_FOLDER / instance.tmp_folder.name.split("/")[-1]
 
 
 @pytest.mark.qpu

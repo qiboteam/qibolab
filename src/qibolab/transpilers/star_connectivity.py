@@ -30,11 +30,16 @@ class StarConnectivity(Transpiler):
     """Transforms an arbitrary circuit to one that can be executed on hardware.
 
     This transpiler produces a circuit that respects the following connectivity:
-        q
-        |
-    q -- q -- q
-        |
-        q
+
+
+    .. code-block:: text
+
+             q
+             |
+        q -- q -- q
+             |
+             q
+
     by adding SWAP gates when needed. It does not translate gates to native.
     """
 
@@ -58,7 +63,8 @@ class StarConnectivity(Transpiler):
         Returns ``True`` if the following conditions are satisfied:
             - Circuit does not contain more than two-qubit gates.
             - All two-qubit gates have qubit 0 as target or control.
-        otherwise returns ``False``.
+
+            otherwise returns ``False``.
         """
         for gate in circuit.queue:
             if len(gate.qubits) > 2 and not isinstance(gate, gates.M):

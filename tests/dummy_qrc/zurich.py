@@ -1,65 +1,31 @@
 import itertools
 import pathlib
 
-import yaml
+import laboneq.simple as lo
+import numpy as np
+import pytest
 
 from qibolab.channels import ChannelMap
-from qibolab.instruments.dummy_oscillator import DummyLocalOscillator as LocalOscillator
+from qibolab.instruments.oscillator import LocalOscillator
 from qibolab.instruments.zhinst import Zurich
 from qibolab.platform import Platform
 
 RUNCARD = pathlib.Path(__file__).parent / "zurich.yml"
 
 
-def create(runcard=RUNCARD):
-    """Create platform using Zurich Instrumetns (Zh) SHFQC, HDAWGs and PQSC.
-
-    Instrument related parameters are hardcoded in ``__init__`` and ``setup``.
-
-    Args:
-        runcard (str): Path to the runcard file.
+# Function returning a calibrated device setup
+def create_descriptor():
     """
-    # Create channel objects
-    channels = ChannelMap()
-    # readout
-    channels |= "L3-31"
-    # feedback
-    channels |= "L2-7"
-    # drive
-    channels |= (f"L4-{i}" for i in range(15, 20))
-    # flux qubits
-    channels |= (f"L4-{i}" for i in range(6, 11))
-    # flux couplers
-    channels |= (f"L4-{i}" for i in range(11, 15))
+    Function returning a device setup
+    """
 
-    # Map controllers to qubit channels
-    # feedback
-    channels["L3-31"].ports = [("device_shfqc", "[QACHANNELS/0/INPUT]")]
-    channels["L3-31"].power_range = 10
-    # readout
-    channels["L2-7"].ports = [("device_shfqc", "[QACHANNELS/0/OUTPUT]")]
-    channels["L2-7"].power_range = -25  # -5 for punchout
-    # drive
-    for i in range(5, 10):
-        channels[f"L4-1{i}"].ports = [("device_shfqc", f"SGCHANNELS/{i-5}/OUTPUT")]
-        channels[f"L4-1{i}"].power_range = -10
-
-    # flux qubits (CAREFUL WITH THIS !!!)
-    for i in range(6, 11):
-        channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-6}")]
-        # channels[f"L4-{i}"].power_range = 0 #This may not be the default value find it
-
-    # flux couplers (CAREFUL WITH THIS !!!)
-    for i in range(11, 14):
-        channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-11+5}")]
-        # channels[f"L4-{i}"].power_range = 0 #This may not be the default value find it
-
-    channels[f"L4-14"].ports = [("device_hdawg2", f"SIGOUTS/0")]
-    # channels["L4-14"].power_range = 0 #This may not be the default value find it
-
+    # Instantiate Zh set of instruments[They work as one]
     instruments = {
         "SHFQC": [{"address": "DEV12146", "uid": "device_shfqc"}],
-        "HDAWG": [{"address": "DEV8660", "uid": "device_hdawg"}, {"address": "DEV8673", "uid": "device_hdawg2"}],
+        "HDAWG": [
+            {"address": "DEV8660", "uid": "device_hdawg"},
+            {"address": "DEV8673", "uid": "device_hdawg2"},
+        ],
         "PQSC": [{"address": "DEV10055", "uid": "device_pqsc"}],
     }
 
@@ -96,9 +62,52 @@ def create(runcard=RUNCARD):
         "connections": connections,
     }
 
-    descriptor_yaml = yaml.dump(descriptor, sort_keys=False)
+    return descriptor
 
-    controller = Zurich("EL_ZURO", descriptor_yaml, use_emulation=False)
+
+def create(runcard=RUNCARD):
+    """Create platform using Zurich Instrumetns (Zh) SHFQC, HDAWGs and PQSC.
+
+    Instrument related parameters are hardcoded in ``__init__`` and ``setup``.
+
+    Args:
+        runcard (str): Path to the runcard file.
+    """
+    # Create channel objects
+    channels = ChannelMap()
+    # readout
+    channels |= "L3-31"
+    # feedback
+    channels |= "L2-7"
+    # drive
+    channels |= (f"L4-{i}" for i in range(15, 20))
+    # flux qubits
+    channels |= (f"L4-{i}" for i in range(6, 11))
+    # flux couplers
+    channels |= (f"L4-{i}" for i in range(11, 15))
+
+    # Map controllers to qubit channels
+    # feedback
+    channels["L3-31"].ports = [("device_shfqc", "[QACHANNELS/0/INPUT]")]
+    channels["L3-31"].power_range = 10
+    # readout
+    channels["L2-7"].ports = [("device_shfqc", "[QACHANNELS/0/OUTPUT]")]
+    channels["L2-7"].power_range = -25
+    # drive
+    for i in range(5, 10):
+        channels[f"L4-1{i}"].ports = [("device_shfqc", f"SGCHANNELS/{i-5}/OUTPUT")]
+        channels[f"L4-1{i}"].power_range = -10
+
+    # flux qubits (CAREFUL WITH THIS !!!)
+    for i in range(6, 11):
+        channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-6}")]
+    for i in range(11, 14):
+        channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-11+5}")]
+    channels[f"L4-14"].ports = [("device_hdawg2", f"SIGOUTS/0")]
+
+    descriptor = create_descriptor()
+
+    controller = Zurich("EL_ZURO", descriptor, use_emulation=False)
 
     # set time of flight for readout integration (HARDCODED)
     controller.time_of_flight = 280

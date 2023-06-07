@@ -11,7 +11,8 @@ import time
 import requests
 from qcodes_contrib_drivers.drivers.ERAInstruments import ERASynthPlusPlus
 
-from qibolab.instruments.abstract import InstrumentException, LocalOscillator
+from qibolab.instruments.abstract import InstrumentException
+from qibolab.instruments.oscillator import LocalOscillator
 
 
 class ERA(LocalOscillator):
@@ -115,6 +116,7 @@ class ERA(LocalOscillator):
         """Configures the instrument.
 
         A connection to the instrument needs to be established beforehand.
+
         Args:
             **kwargs: dict = A dictionary of settings loaded from the runcard:
                 kwargs["power"]

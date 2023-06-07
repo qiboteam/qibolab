@@ -17,7 +17,7 @@ from qualang_tools.units import unit
 
 from qibolab import AcquisitionType, AveragingMode
 from qibolab.channels import check_max_bias
-from qibolab.instruments.abstract import AbstractInstrument
+from qibolab.instruments.abstract import Controller
 from qibolab.pulses import Pulse, PulseType, Rectangular
 from qibolab.result import (
     AveragedIntegratedResults,
@@ -662,7 +662,7 @@ class Sequence:
         return qmpulse
 
 
-class QMOPX(AbstractInstrument):
+class QMOPX(Controller):
     """Instrument object for controlling Quantum Machines (QM) OPX controllers.
 
     Playing pulses on QM controllers requires a ``config`` dictionary and a program
@@ -750,8 +750,10 @@ class QMOPX(AbstractInstrument):
 
     def create_qmsequence(self, qubits, sequence):
         """Translates a :class:`qibolab.pulses.PulseSequence` to a :class:`qibolab.instruments.qm.Sequence`.
+
         Also register flux elements for all qubits (if applicable) so that all qubits are operated at their
         sweetspot.
+
         Args:
             qubits (list): List of :class:`qibolab.platforms.abstract.Qubit` objects
                 passed from the platform.
