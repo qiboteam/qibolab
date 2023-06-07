@@ -50,10 +50,10 @@ class DummyInstrument(AbstractInstrument):
         for ro_pulse in sequence.ro_pulses:
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                 values = np.random.rand(expts)
-            if options.acquisition_type is AcquisitionType.RAW:
+            elif options.acquisition_type is AcquisitionType.RAW:
                 samples = int(ro_pulse.duration * self.sampling_rate)
                 values = np.random.rand(samples * expts) * 100 + 1j * np.random.rand(samples * expts) * 100
-            if options.acquisition_type is AcquisitionType.INTEGRATION:
+            elif options.acquisition_type is AcquisitionType.INTEGRATION:
                 values = np.random.rand(expts) * 100 + 1j * np.random.rand(expts) * 100
             results[ro_pulse.qubit] = results[ro_pulse.serial] = options.results_type(values)
 
@@ -77,10 +77,10 @@ class DummyInstrument(AbstractInstrument):
         for ro_pulse in sequence.ro_pulses:
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                 values = np.random.rand(expts)
-            if options.acquisition_type is AcquisitionType.RAW:
+            elif options.acquisition_type is AcquisitionType.RAW:
                 samples = int(ro_pulse.duration * self.sampling_rate)
                 values = np.random.rand(samples * expts) * 100 + 1j * np.random.rand(samples * expts) * 100
-            if options.acquisition_type is AcquisitionType.INTEGRATION:
+            elif options.acquisition_type is AcquisitionType.INTEGRATION:
                 values = np.random.rand(expts) * 100 + 1j * np.random.rand(expts) * 100
             results[ro_pulse.qubit] = results[ro_pulse.serial] = options.results_type(values)
 
