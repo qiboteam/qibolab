@@ -791,7 +791,7 @@ class Zurich(Controller):
         elif len(self.sequence_qibo.qd_pulses) != 0:
             play_after = self.play_after_set(self.sequence_qibo.qd_pulses, "drive")
 
-        #Section on the outside loop allows for multiplex
+        # Section on the outside loop allows for multiplex
         with exp.section(uid=f"sequence_measure", play_after=play_after):
             for qubit in qubits.values():
                 if qubit.flux_coupler:
