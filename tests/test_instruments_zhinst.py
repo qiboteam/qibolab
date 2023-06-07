@@ -423,34 +423,32 @@ def test_experiment_sweep_punchouts(dummy_qrc, parameter):
     assert "acquire0" in IQM5q.experiment.signals
 
 
-# TODO: SIM NOT WORKING
-# def test_sim():
-#     platform = create_platform("zurich")
-#     platform.setup()
-#     IQM5q = platform.design.instruments[0]
-#     IQM5q.device_setup, descriptor = create_offline_device_setup()
-
-#     sequence = PulseSequence()
-#     qubits = {0: platform.qubits[0]}
-#     platform.qubits = qubits
-
-#     ro_pulses = {}
-#     qd_pulses = {}
-#     qf_pulses = {}
-#     for qubit in qubits:
-#         qd_pulses[qubit] = platform.create_RX_pulse(qubit, start=0)
-#         sequence.add(qd_pulses[qubit])
-#         ro_pulses[qubit] = platform.create_qubit_readout_pulse(qubit, start=qd_pulses[qubit].finish)
-#         sequence.add(ro_pulses[qubit])
-#         qf_pulses[qubit] = FluxPulse(
-#             start=0,
-#             duration=500,
-#             amplitude=1,
-#             shape=Rectangular(),
-#             channel=platform.qubits[qubit].flux.name,
-#             qubit=qubit,
-#         )
-#         sequence.add(qf_pulses[qubit])
+# TODO: Fix this
+def test_sim(dummy_qrc):
+    platform = create_platform("zurich")
+    platform.setup()
+    IQM5q = platform.instruments[0]
+    IQM5q.create_device_setup()
+    sequence = PulseSequence()
+    qubits = {0: platform.qubits[0]}
+    platform.qubits = qubits
+    ro_pulses = {}
+    qd_pulses = {}
+    qf_pulses = {}
+    for qubit in qubits:
+        qd_pulses[qubit] = platform.create_RX_pulse(qubit, start=0)
+        sequence.add(qd_pulses[qubit])
+        ro_pulses[qubit] = platform.create_qubit_readout_pulse(qubit, start=qd_pulses[qubit].finish)
+        sequence.add(ro_pulses[qubit])
+        qf_pulses[qubit] = FluxPulse(
+            start=0,
+            duration=500,
+            amplitude=1,
+            shape=Rectangular(),
+            channel=platform.qubits[qubit].flux.name,
+            qubit=qubit,
+        )
+        sequence.add(qf_pulses[qubit])
 
 
 @pytest.mark.qpu
