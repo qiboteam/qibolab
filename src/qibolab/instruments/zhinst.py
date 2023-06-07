@@ -58,6 +58,7 @@ def select_pulse(pulse, pulse_type):
             uid=(f"{pulse_type}_{pulse.qubit}_"),
             length=round(pulse.duration * NANO_TO_SECONDS, 9),
             amplitude=pulse.amplitude,
+            can_compress = True, 
         )
     if "Gaussian" in str(pulse.shape):
         sigma = pulse.shape.rel_sigma
@@ -673,7 +674,8 @@ class Zurich(Controller):
             for sweeper in pulse.zhsweepers:
                 if sweeper.uid == "amplitude":
                     sweeper_amp_index = pulse.zhsweepers.index(sweeper)
-                    sweeper.values = sweeper.values.copy()
+                    # sweeper.values = sweeper.values.copy()
+                    #FIXME: Dont change the values coming back to qibocal
                     pulse.zhpulse.amplitude *= max(abs(sweeper.values))
                     sweeper.values /= max(abs(sweeper.values))
                 else:
@@ -985,10 +987,12 @@ class Zurich(Controller):
                 )
         if sweeper.parameter is Parameter.amplitude:
             for pulse in sweeper.pulses:
-                # FIXME: Check if needed on hardware
                 # sweeper.values = sweeper.values.copy()
+                #FIXME: Dont change the values coming back to qibocal
+                
                 pulse.amplitude *= max(abs(sweeper.values))
                 sweeper.values /= max(abs(sweeper.values))
+                
                 parameter = ZhSweeper(pulse, sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
 
         if sweeper.parameter is Parameter.bias:
