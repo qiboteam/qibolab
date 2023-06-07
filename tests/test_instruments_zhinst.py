@@ -14,7 +14,6 @@ from qibolab.pulses import (
     Rectangular,
 )
 from qibolab.sweeper import Parameter, Sweeper
-from tests.dummy_qrc.zurich import create
 
 
 @pytest.mark.parametrize("shape", ["Rectangular", "Gaussian", "GaussianSquare", "Drag"])
