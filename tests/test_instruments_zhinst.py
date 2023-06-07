@@ -34,9 +34,9 @@ def test_zhpulse(shape):
 
 
 @pytest.mark.parametrize("parameter", [Parameter.bias, Parameter.delay])
-def test_select_sweeper(parameter):
+def test_select_sweeper(dummy_qrc, parameter):
     swept_points = 5
-    platform = create()
+    platform = create_platform("zurich")
     qubits = {0: platform.qubits[0]}
     sequence = PulseSequence()
     ro_pulses = {}
@@ -58,20 +58,20 @@ def test_select_sweeper(parameter):
         assert ZhSweeper.sweeper == sweeper
 
 
-def test_zhinst_setup():
-    platform = create()
+def test_zhinst_setup(dummy_qrc):
+    platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments[0]
     assert IQM5q.time_of_flight == 280
 
 
-def test_zhsequence():
+def test_zhsequence(dummy_qrc):
     qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
     ro_pulse = ReadoutPulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch1", qubit=0)
     sequence = PulseSequence()
     sequence.add(qd_pulse)
     sequence.add(ro_pulse)
-    IQM5q = create()
+    IQM5q = create_platform("zurich")
 
     IQM5q.instruments[0].sequence_zh(sequence, IQM5q.qubits, sweepers=[])
     zhsequence = IQM5q.instruments[0].sequence
@@ -84,8 +84,8 @@ def test_zhsequence():
     assert len(zhsequence["readout0"]) == 1
 
 
-def test_zhinst_register_readout_line():
-    platform = create()
+def test_zhinst_register_readout_line(dummy_qrc):
+    platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments[0]
     IQM5q.create_device_setup()
@@ -96,8 +96,8 @@ def test_zhinst_register_readout_line():
     assert "/logical_signal_groups/q0/measure_line" in IQM5q.calibration.calibration_items
 
 
-def test_zhinst_register_drive_line():
-    platform = create()
+def test_zhinst_register_drive_line(dummy_qrc):
+    platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments[0]
     IQM5q.create_device_setup()
@@ -107,8 +107,8 @@ def test_zhinst_register_drive_line():
     assert "/logical_signal_groups/q0/drive_line" in IQM5q.calibration.calibration_items
 
 
-def test_zhinst_register_flux_line():
-    platform = create()
+def test_zhinst_register_flux_line(dummy_qrc):
+    platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments[0]
     IQM5q.create_device_setup()
@@ -118,8 +118,8 @@ def test_zhinst_register_flux_line():
     assert "/logical_signal_groups/q0/flux_line" in IQM5q.calibration.calibration_items
 
 
-def test_experiment_execute_pulse_sequence():
-    platform = create()
+def test_experiment_execute_pulse_sequence(dummy_qrc):
+    platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments[0]
     IQM5q.create_device_setup()
@@ -158,8 +158,8 @@ def test_experiment_execute_pulse_sequence():
 
 
 @pytest.mark.parametrize("fast_reset", [True, False])
-def test_experiment_execute_pulse_sequence(fast_reset):
-    platform = create()
+def test_experiment_execute_pulse_sequence(dummy_qrc, fast_reset):
+    platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments[0]
     IQM5q.create_device_setup()
@@ -208,8 +208,8 @@ def test_experiment_execute_pulse_sequence(fast_reset):
 
 
 @pytest.mark.parametrize("parameter1", [Parameter.delay, Parameter.duration])
-def test_experiment_sweep_single(parameter1):
-    platform = create()
+def test_experiment_sweep_single(dummy_qrc, parameter1):
+    platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments[0]
     IQM5q.create_device_setup()
@@ -260,8 +260,8 @@ SweeperParameter = {
 
 @pytest.mark.parametrize("parameter1", Parameter)
 @pytest.mark.parametrize("parameter2", Parameter)
-def test_experiment_sweep_2d_general(parameter1, parameter2):
-    platform = create()
+def test_experiment_sweep_2d_general(dummy_qrc, parameter1, parameter2):
+    platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments[0]
     IQM5q.create_device_setup()
@@ -313,8 +313,8 @@ def test_experiment_sweep_2d_general(parameter1, parameter2):
     assert "acquire0" in IQM5q.experiment.signals
 
 
-def test_experiment_sweep_2d_specific():
-    platform = create()
+def test_experiment_sweep_2d_specific(dummy_qrc):
+    platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments[0]
     IQM5q.create_device_setup()
@@ -366,8 +366,8 @@ def test_experiment_sweep_2d_specific():
 
 
 @pytest.mark.parametrize("parameter", [Parameter.frequency, Parameter.amplitude, Parameter.bias])
-def test_experiment_sweep_punchouts(parameter):
-    platform = create()
+def test_experiment_sweep_punchouts(dummy_qrc, parameter):
+    platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments[0]
     IQM5q.create_device_setup()
@@ -425,7 +425,7 @@ def test_experiment_sweep_punchouts(parameter):
 
 # TODO: SIM NOT WORKING
 # def test_sim():
-#     platform = create()
+#     platform = create_platform("zurich")
 #     platform.setup()
 #     IQM5q = platform.design.instruments[0]
 #     IQM5q.device_setup, descriptor = create_offline_device_setup()
