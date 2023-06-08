@@ -87,11 +87,11 @@ def convert_units_sweeper(sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubit
             sweeper.starts[idx] = (sweeper.starts[idx] - lo_frequency) * HZ_TO_MHZ
             sweeper.stops[idx] = (sweeper.stops[idx] - lo_frequency) * HZ_TO_MHZ
         elif parameter is rfsoc.Parameter.START:
-            sweeper.starts[idx] = list(np.array(sweeper.starts[idx]) * NS_TO_US)
-            sweeper.stops[idx] = list(np.array(sweeper.stops[idx]) * NS_TO_US)
+            sweeper.starts[idx] = sweeper.starts[idx] * NS_TO_US
+            sweeper.stops[idx] = sweeper.stops[idx] * NS_TO_US
         elif parameter is rfsoc.Parameter.RELATIVE_PHASE:
-            sweeper.starts[idx] = list(np.degrees(np.array(sweeper.starts[idx])))
-            sweeper.stops[idx] = list(np.degrees(np.array(sweeper.stops[idx])))
+            sweeper.starts[idx] = np.degrees(sweeper.starts[idx])
+            sweeper.stops[idx] = np.degrees(sweeper.stops[idx])
 
 
 def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: Dict[int, Qubit]) -> rfsoc.Sweeper:
@@ -147,7 +147,7 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: Dict[int, Q
                 delta_start = values[0] - base_value
                 delta_stop = values[-1] - base_value
 
-                for next_pulse in sequence[idx_sweep:]:
+                for next_pulse in sequence[idx_sweep + 1 :]:
                     parameters.append(rfsoc.Parameter.START)
                     indexes.append(sequence.index(next_pulse))
                     starts.append(next_pulse.start + delta_start)

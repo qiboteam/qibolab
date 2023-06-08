@@ -19,11 +19,14 @@ from qibolab.result import (
     IntegratedResults,
     SampleResults,
 )
-from qibolab.sweeper import Parameter, Sweeper
+from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 
 def test_convert_qubit():
-    """Tests conversion from `qibolab.platforms.abstract.Qubit` to `rfsoc.Qubit`"""
+    """Tests conversion from `qibolab.platforms.abstract.Qubit` to `rfsoc.Qubit`.
+
+    Test conversion for flux qubit and for non-flux qubit.
+    """
 
     platform = create_platform("rfsoc")
     qubit = platform.qubits[0]
@@ -44,7 +47,10 @@ def test_convert_qubit():
 
 
 def test_convert_pulse():
-    """Tests conversion from `qibolab.pulses.Pulse` to `rfsoc.Pulse`"""
+    """Tests conversion from `qibolab.pulses.Pulse` to `rfsoc.Pulse`.
+
+    Test drive pulse (gaussian and drag), and readout with LO.
+    """
 
     platform = create_platform("rfsoc")
     qubit = platform.qubits[0]
@@ -66,8 +72,11 @@ def test_convert_pulse():
     assert convert_pulse(pulse, platform.qubits) == targ
 
 
-def test_convert_frequency_sweeper():
-    """Tests frequency conversion for `rfsoc.Sweeper` objects"""
+def test_convert_units_sweeper():
+    """Tests units conversion for `rfsoc.Sweeper` objects.
+
+    Test frequency conversion (with and without LO), start and relative phase sweepers.
+    """
     platform = create_platform("rfsoc")
     qubit = platform.qubits[0]
     qubit.drive.ports = [("name", 4)]
@@ -77,15 +86,112 @@ def test_convert_frequency_sweeper():
 
     seq = PulseSequence()
     pulse0 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(2), 0, PulseType.DRIVE, 0)
-    pulse1 = Pulse(0, 40, 0.9, 50e6, 0, Rectangular(), 0, PulseType.READOUT, 0)
+    pulse1 = Pulse(40, 40, 0.9, 50e6, 0, Rectangular(), 0, PulseType.READOUT, 0)
     seq.add(pulse0)
     seq.add(pulse1)
 
+    # frequency sweeper
     sweeper = rfsoc.Sweeper(parameter=[rfsoc.Parameter.FREQUENCY], indexes=[1], starts=[0], stops=[10e6], expts=100)
     convert_units_sweeper(sweeper, seq, platform.qubits)
 
     assert sweeper.starts == [-1]
     assert sweeper.stops == [9]
+
+    qubit.readout.local_oscillator.frequency = 0
+    sweeper = rfsoc.Sweeper(parameter=[rfsoc.Parameter.FREQUENCY], indexes=[1], starts=[0], stops=[10e6], expts=100)
+    convert_units_sweeper(sweeper, seq, platform.qubits)
+    assert sweeper.starts == [0]
+    assert sweeper.stops == [10]
+
+    # delay sweeper
+    sweeper = rfsoc.Sweeper(
+        parameter=[rfsoc.Parameter.START, rfsoc.Parameter.START],
+        indexes=[0, 1],
+        starts=[0, 40],
+        stops=[100, 140],
+        expts=100,
+    )
+    convert_units_sweeper(sweeper, seq, platform.qubits)
+    assert sweeper.starts == [0, 0.04]
+    assert sweeper.stops == [0.1, 0.14]
+
+    # phase sweeper
+    sweeper = rfsoc.Sweeper(
+        parameter=[rfsoc.Parameter.RELATIVE_PHASE], indexes=[0], starts=[0], stops=[np.pi], expts=180
+    )
+    convert_units_sweeper(sweeper, seq, platform.qubits)
+    assert sweeper.starts == [0]
+    assert sweeper.stops == [180]
+
+
+def test_convert_sweep():
+    """Test conversion between `Sweeper` and `rfsoc.Sweeper` objects.
+
+    Test bias sweep, amplitude error, frequency sweep, duration, delay.
+    """
+    platform = create_platform("rfsoc")
+    qubit = platform.qubits[0]
+    qubit.flux.bias = 0.05
+    qubit.flux.ports = [("name", 4)]
+    qubit.drive.ports = [("name", 4)]
+    qubit.readout.ports = [("name", 2)]
+
+    seq = PulseSequence()
+    pulse0 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(2), 0, PulseType.DRIVE, 0)
+    pulse1 = Pulse(40, 40, 0.9, 50e6, 0, Rectangular(), 0, PulseType.READOUT, 0)
+    seq.add(pulse0)
+    seq.add(pulse1)
+
+    sweeper = Sweeper(parameter=Parameter.bias, values=np.arange(-0.5, +0.5, 0.1), qubits=[qubit])
+    rfsoc_sweeper = convert_sweep(sweeper, seq, platform.qubits)
+    targ = rfsoc.Sweeper(expts=10, parameter=[rfsoc.Parameter.BIAS], starts=[-0.5], stops=[0.4], indexes=[0])
+    assert targ.expts == rfsoc_sweeper.expts
+    assert targ.parameter == rfsoc_sweeper.parameter
+    assert targ.starts == rfsoc_sweeper.starts
+    assert targ.stops == np.round(rfsoc_sweeper.stops, 2)
+    assert targ.indexes == rfsoc_sweeper.indexes
+    sweeper = Sweeper(
+        parameter=Parameter.bias, values=np.arange(-0.5, +0.5, 0.1), qubits=[qubit], type=SweeperType.OFFSET
+    )
+    rfsoc_sweeper = convert_sweep(sweeper, seq, platform.qubits)
+    targ = rfsoc.Sweeper(expts=10, parameter=[rfsoc.Parameter.BIAS], starts=[-0.45], stops=[0.45], indexes=[0])
+    assert targ.expts == rfsoc_sweeper.expts
+    assert targ.parameter == rfsoc_sweeper.parameter
+    assert targ.starts == rfsoc_sweeper.starts
+    assert targ.stops == np.round(rfsoc_sweeper.stops, 2)
+    assert targ.indexes == rfsoc_sweeper.indexes
+
+    qubit.flux.bias = 0.5
+    sweeper = Sweeper(parameter=Parameter.bias, values=np.arange(0, +1, 0.1), qubits=[qubit], type=SweeperType.OFFSET)
+    with pytest.raises(ValueError):
+        rfsoc_sweeper = convert_sweep(sweeper, seq, platform.qubits)
+
+    sweeper = Sweeper(parameter=Parameter.frequency, values=np.arange(0, 100, 1), pulses=[pulse0])
+    rfsoc_sweeper = convert_sweep(sweeper, seq, platform.qubits)
+    targ = rfsoc.Sweeper(expts=100, parameter=[rfsoc.Parameter.FREQUENCY], starts=[0], stops=[99], indexes=[0])
+    assert rfsoc_sweeper == targ
+
+    sweeper = Sweeper(parameter=Parameter.duration, values=np.arange(40, 100, 1), pulses=[pulse0])
+    rfsoc_sweeper = convert_sweep(sweeper, seq, platform.qubits)
+    targ = rfsoc.Sweeper(
+        expts=60,
+        parameter=[rfsoc.Parameter.DURATION, rfsoc.Parameter.START],
+        starts=[40, 40],
+        stops=[99, 99],
+        indexes=[0, 1],
+    )
+    assert rfsoc_sweeper == targ
+
+    sweeper = Sweeper(parameter=Parameter.delay, values=np.arange(0, 10, 1), pulses=[pulse0])
+    rfsoc_sweeper = convert_sweep(sweeper, seq, platform.qubits)
+    targ = rfsoc.Sweeper(
+        expts=10,
+        parameter=[rfsoc.Parameter.START, rfsoc.Parameter.START],
+        starts=[0, 40],
+        stops=[9, 49],
+        indexes=[0, 1],
+    )
+    assert rfsoc_sweeper == targ
 
 
 def test_rfsoc_init():
