@@ -657,7 +657,7 @@ class RFSoC(Controller):
         )
 
         if bias_change:
-            for idx, qubit in enumerate(qubits):
+            for idx, qubit in enumerate(qubits.values()):
                 if qubit.flux is not None:
                     qubit.flux.bias = initial_biases[idx]
 

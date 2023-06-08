@@ -204,6 +204,126 @@ def test_rfsoc_init():
     assert isinstance(instrument.cfg, rfsoc.Config)
 
 
+def test_play(mocker):
+    platform = create_platform("rfsoc")
+    instrument = platform.instruments[0]
+
+    seq = PulseSequence()
+    pulse0 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(2), 0, PulseType.DRIVE, 0)
+    pulse1 = Pulse(40, 40, 0.9, 50e6, 0, Rectangular(), 0, PulseType.READOUT, 0)
+    seq.add(pulse0)
+    seq.add(pulse1)
+
+    nshots = 100
+    server_results = ([[np.random.rand(nshots)]], [[np.random.rand(nshots)]])
+    mocker.patch("qibolab.instruments.rfsoc.RFSoC._open_connection", return_value=server_results)
+    parameters = ExecutionParameters(
+        nshots=nshots, acquisition_type=AcquisitionType.DISCRIMINATION, averaging_mode=AveragingMode.SINGLESHOT
+    )
+    results = instrument.play(platform.qubits, seq, parameters)
+    assert pulse1.serial in results.keys()
+
+    parameters = ExecutionParameters(
+        nshots=nshots, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.SINGLESHOT
+    )
+    results = instrument.play(platform.qubits, seq, parameters)
+    assert pulse1.serial in results.keys()
+
+    parameters = ExecutionParameters(
+        nshots=nshots, acquisition_type=AcquisitionType.DISCRIMINATION, averaging_mode=AveragingMode.CYCLIC
+    )
+    results = instrument.play(platform.qubits, seq, parameters)
+    assert pulse1.serial in results.keys()
+
+
+def test_sweep(mocker):
+    platform = create_platform("rfsoc")
+    instrument = platform.instruments[0]
+    qubit = platform.qubits[0]
+    qubit.flux.bias = 0.05
+    qubit.flux.ports = [("name", 4)]
+
+    seq = PulseSequence()
+    pulse0 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(2), 0, PulseType.DRIVE, 0)
+    pulse1 = Pulse(40, 40, 0.9, 50e6, 0, Rectangular(), 0, PulseType.READOUT, 0)
+    seq.add(pulse0)
+    seq.add(pulse1)
+    sweeper0 = Sweeper(parameter=Parameter.frequency, values=np.arange(0, 100, 1), pulses=[pulse0])
+    sweeper1 = Sweeper(parameter=Parameter.bias, values=np.arange(0, 0.1, 0.01), qubits=[qubit])
+
+    nshots = 100
+    server_results = ([[np.random.rand(nshots)]], [[np.random.rand(nshots)]])
+    mocker.patch("qibolab.instruments.rfsoc.RFSoC._open_connection", return_value=server_results)
+    parameters = ExecutionParameters(
+        nshots=nshots, acquisition_type=AcquisitionType.DISCRIMINATION, averaging_mode=AveragingMode.SINGLESHOT
+    )
+    results = instrument.sweep(platform.qubits, seq, parameters, sweeper0, sweeper1)
+    assert pulse1.serial in results.keys()
+
+    parameters = ExecutionParameters(
+        nshots=nshots, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.SINGLESHOT
+    )
+    results = instrument.sweep(platform.qubits, seq, parameters, sweeper0, sweeper1)
+    assert pulse1.serial in results.keys()
+
+    parameters = ExecutionParameters(
+        nshots=nshots, acquisition_type=AcquisitionType.DISCRIMINATION, averaging_mode=AveragingMode.CYCLIC
+    )
+    results = instrument.sweep(platform.qubits, seq, parameters, sweeper0, sweeper1)
+    assert pulse1.serial in results.keys()
+
+
+def test_validate_input_command():
+    platform = create_platform("rfsoc")
+    instrument = platform.instruments[0]
+
+    seq = PulseSequence()
+    pulse0 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(2), 0, PulseType.DRIVE, 0)
+    pulse1 = Pulse(40, 40, 0.9, 50e6, 0, Rectangular(), 0, PulseType.READOUT, 0)
+    seq.add(pulse0)
+    seq.add(pulse1)
+
+    parameters = ExecutionParameters(acquisition_type=AcquisitionType.RAW)
+    with pytest.raises(NotImplementedError):
+        results = instrument.play(platform.qubits, seq, parameters)
+
+    parameters = ExecutionParameters(fast_reset=True)
+    with pytest.raises(NotImplementedError):
+        results = instrument.play(platform.qubits, seq, parameters)
+
+    seq2 = seq.copy()
+    seq2[0].duration = 5
+    parameters = ExecutionParameters()
+    with pytest.raises(ValueError):
+        results = instrument.play(platform.qubits, seq2, parameters)
+
+
+def test_update_cfg(mocker):
+    platform = create_platform("rfsoc")
+    instrument = platform.instruments[0]
+
+    seq = PulseSequence()
+    pulse0 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(2), 0, PulseType.DRIVE, 0)
+    pulse1 = Pulse(40, 40, 0.9, 50e6, 0, Rectangular(), 0, PulseType.READOUT, 0)
+    seq.add(pulse0)
+    seq.add(pulse1)
+
+    nshots = 333
+    relax_time = 1e6
+    server_results = ([[np.random.rand(nshots)]], [[np.random.rand(nshots)]])
+    mocker.patch("qibolab.instruments.rfsoc.RFSoC._open_connection", return_value=server_results)
+    parameters = ExecutionParameters(
+        nshots=nshots,
+        acquisition_type=AcquisitionType.DISCRIMINATION,
+        averaging_mode=AveragingMode.SINGLESHOT,
+        relaxation_time=relax_time,
+    )
+    results = instrument.play(platform.qubits, seq, parameters)
+    assert instrument.cfg.reps == nshots
+    relax_time = relax_time * 1e-3
+    assert instrument.cfg.repetition_duration == relax_time
+
+
 def test_classify_shots():
     """Creates fake IQ values and check classification works as expected"""
     qubit0 = Qubit(name="q0", threshold=1, iq_angle=np.pi / 2)
@@ -423,7 +543,7 @@ def test_call_execute_sweeps():
 
 
 @pytest.mark.qpu
-def test_play():
+def test_play_qpu():
     """Sends a PulseSequence using `play` and check results are what expected"""
     platform = create_platform("rfsoc")
     instrument = platform.instruments[0]
@@ -442,7 +562,7 @@ def test_play():
 
 
 @pytest.mark.qpu
-def test_sweep():
+def test_sweep_qpu():
     """Sends a PulseSequence using `sweep` and check results are what expected"""
     platform = create_platform("rfsoc")
     instrument = platform.instruments[0]
