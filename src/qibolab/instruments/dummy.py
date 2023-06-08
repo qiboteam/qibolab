@@ -46,7 +46,10 @@ class DummyInstrument(Controller):
         results = {}
         for ro_pulse in sequence.ro_pulses:
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                values = np.random.rand(expts)
+                if options.averaging_mode is AveragingMode.SINGLESHOT:
+                    values = np.random.randint(2, size=expts)
+                elif options.averaging_mode is AveragingMode.CYCLIC:
+                    values = np.random.rand(expts)
             elif options.acquisition_type is AcquisitionType.RAW:
                 samples = int(ro_pulse.duration * self.sampling_rate)
                 values = np.random.rand(samples * expts) * 100 + 1j * np.random.rand(samples * expts) * 100
@@ -73,7 +76,10 @@ class DummyInstrument(Controller):
 
         for ro_pulse in sequence.ro_pulses:
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                values = np.random.rand(expts)
+                if options.averaging_mode is AveragingMode.SINGLESHOT:
+                    values = np.random.randint(2, size=expts)
+                elif options.averaging_mode is AveragingMode.CYCLIC:
+                    values = np.random.rand(expts)
             elif options.acquisition_type is AcquisitionType.RAW:
                 samples = int(ro_pulse.duration * self.sampling_rate)
                 values = np.random.rand(samples * expts) * 100 + 1j * np.random.rand(samples * expts) * 100
