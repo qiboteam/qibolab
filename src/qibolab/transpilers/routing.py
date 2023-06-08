@@ -21,6 +21,7 @@ def respect_connectivity(connectivity, circuit, verbose=False):
     Returns ``True`` if the following conditions are satisfied:
         - Circuit does not contain gates acting on more than two qubits.
         - Circuit matches connectivity.
+
     otherwise returns ``False``.
     """
 
@@ -104,7 +105,8 @@ class ShortestPaths(Transpiler):
         Returns ``True`` if the following conditions are satisfied:
             - Circuit does not contain more than two-qubit gates.
             - Circuit matches connectivity.
-            otherwise returns ``False``.
+
+        otherwise returns ``False``.
         """
         return respect_connectivity(connectivity=self.connectivity, circuit=circuit, verbose=self.verbose)
 
