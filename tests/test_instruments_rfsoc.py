@@ -22,12 +22,11 @@ from qibolab.result import (
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 
-def test_convert_qubit():
+def test_convert_qubit(dummy_qrc):
     """Tests conversion from `qibolab.platforms.abstract.Qubit` to `rfsoc.Qubit`.
 
     Test conversion for flux qubit and for non-flux qubit.
     """
-
     platform = create_platform("rfsoc")
     qubit = platform.qubits[0]
     qubit.flux.bias = 0.05
@@ -46,12 +45,11 @@ def test_convert_qubit():
     assert qubit == targ
 
 
-def test_convert_pulse():
+def test_convert_pulse(dummy_qrc):
     """Tests conversion from `qibolab.pulses.Pulse` to `rfsoc.Pulse`.
 
     Test drive pulse (gaussian and drag), and readout with LO.
     """
-
     platform = create_platform("rfsoc")
     qubit = platform.qubits[0]
     qubit.drive.ports = [("name", 4)]
@@ -72,7 +70,7 @@ def test_convert_pulse():
     assert convert_pulse(pulse, platform.qubits) == targ
 
 
-def test_convert_units_sweeper():
+def test_convert_units_sweeper(dummy_qrc):
     """Tests units conversion for `rfsoc.Sweeper` objects.
 
     Test frequency conversion (with and without LO), start and relative phase sweepers.
@@ -124,7 +122,7 @@ def test_convert_units_sweeper():
     assert sweeper.stops == [180]
 
 
-def test_convert_sweep():
+def test_convert_sweep(dummy_qrc):
     """Test conversion between `Sweeper` and `rfsoc.Sweeper` objects.
 
     Test bias sweep, amplitude error, frequency sweep, duration, delay.
@@ -194,7 +192,7 @@ def test_convert_sweep():
     assert rfsoc_sweeper == targ
 
 
-def test_rfsoc_init():
+def test_rfsoc_init(dummy_qrc):
     """Tests instrument can initilize and its attribute are assigned"""
     platform = create_platform("rfsoc")
     instrument = platform.instruments[0]
@@ -204,7 +202,7 @@ def test_rfsoc_init():
     assert isinstance(instrument.cfg, rfsoc.Config)
 
 
-def test_play(mocker):
+def test_play(mocker, dummy_qrc):
     platform = create_platform("rfsoc")
     instrument = platform.instruments[0]
 
@@ -236,7 +234,7 @@ def test_play(mocker):
     assert pulse1.serial in results.keys()
 
 
-def test_sweep(mocker):
+def test_sweep(mocker, dummy_qrc):
     platform = create_platform("rfsoc")
     instrument = platform.instruments[0]
     qubit = platform.qubits[0]
@@ -273,7 +271,7 @@ def test_sweep(mocker):
     assert pulse1.serial in results.keys()
 
 
-def test_validate_input_command():
+def test_validate_input_command(dummy_qrc):
     platform = create_platform("rfsoc")
     instrument = platform.instruments[0]
 
@@ -298,7 +296,7 @@ def test_validate_input_command():
         results = instrument.play(platform.qubits, seq2, parameters)
 
 
-def test_update_cfg(mocker):
+def test_update_cfg(mocker, dummy_qrc):
     platform = create_platform("rfsoc")
     instrument = platform.instruments[0]
 
@@ -324,7 +322,7 @@ def test_update_cfg(mocker):
     assert instrument.cfg.repetition_duration == relax_time
 
 
-def test_classify_shots():
+def test_classify_shots(dummy_qrc):
     """Creates fake IQ values and check classification works as expected"""
     qubit0 = Qubit(name="q0", threshold=1, iq_angle=np.pi / 2)
     qubit1 = Qubit(
@@ -343,7 +341,7 @@ def test_classify_shots():
     assert instrument.classify_shots(i_val, q_val, qubit1) is None
 
 
-def test_merge_sweep_results():
+def test_merge_sweep_results(dummy_qrc):
     """Creates fake dictionary of results and check merging works as expected"""
     dict_a = {"serial1": AveragedIntegratedResults(np.array([0 + 1j * 1]))}
     dict_b = {
@@ -371,7 +369,7 @@ def test_merge_sweep_results():
     assert (out_dict2["serial1"].serialize["MSR[V]"] == dict_a["serial1"].serialize["MSR[V]"]).all()
 
 
-def test_get_if_python_sweep():
+def test_get_if_python_sweep(dummy_qrc):
     """Creates pulse sequences and check if they can be swept by the firmware.
 
     Qibosoq does not support sweep on readout frequency, more than one sweep
@@ -428,7 +426,7 @@ def test_get_if_python_sweep():
         sweep1 = convert_sweep(sweep1, sequence_1, platform.qubits)
 
 
-def test_convert_av_sweep_results():
+def test_convert_av_sweep_results(dummy_qrc):
     """Qibosoq sends results using nested lists, check if the conversion
     to dictionary of AveragedResults, for averaged sweep, works as expected
     """
@@ -463,7 +461,7 @@ def test_convert_av_sweep_results():
     assert (out_dict[serial2].serialize["q[V]"] == targ_dict[serial2].serialize["q[V]"]).all()
 
 
-def test_convert_nav_sweep_results():
+def test_convert_nav_sweep_results(dummy_qrc):
     """Qibosoq sends results using nested lists, check if the conversion
     to dictionary of ExecutionResults, for not averaged sweep, works as expected
     """

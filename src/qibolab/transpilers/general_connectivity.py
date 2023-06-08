@@ -1,7 +1,5 @@
 import random
-from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Optional, Union
 
 import matplotlib.pyplot as plt
 import networkx as nx

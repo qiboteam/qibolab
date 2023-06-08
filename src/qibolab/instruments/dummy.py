@@ -1,5 +1,3 @@
-import copy
-import time
 from typing import Dict, List, Union
 
 import numpy as np
@@ -25,6 +23,8 @@ class DummyInstrument(Controller):
             instruments.
     """
 
+    sampling_rate = 1
+
     def connect(self):
         log.info("Connecting to dummy instrument.")
 
@@ -41,14 +41,16 @@ class DummyInstrument(Controller):
         log.info("Disconnecting dummy instrument.")
 
     def play(self, qubits: Dict[Union[str, int], Qubit], sequence: PulseSequence, options: ExecutionParameters):
-        ro_pulses = {pulse.qubit: pulse.serial for pulse in sequence.ro_pulses}
-
         expts = 1 if options.averaging_mode is AveragingMode.CYCLIC else options.nshots
+
         results = {}
         for ro_pulse in sequence.ro_pulses:
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                 values = np.random.rand(expts)
-            else:
+            elif options.acquisition_type is AcquisitionType.RAW:
+                samples = int(ro_pulse.duration * self.sampling_rate)
+                values = np.random.rand(samples * expts) * 100 + 1j * np.random.rand(samples * expts) * 100
+            elif options.acquisition_type is AcquisitionType.INTEGRATION:
                 values = np.random.rand(expts) * 100 + 1j * np.random.rand(expts) * 100
             results[ro_pulse.qubit] = results[ro_pulse.serial] = options.results_type(values)
 
@@ -72,7 +74,10 @@ class DummyInstrument(Controller):
         for ro_pulse in sequence.ro_pulses:
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                 values = np.random.rand(expts)
-            else:
+            elif options.acquisition_type is AcquisitionType.RAW:
+                samples = int(ro_pulse.duration * self.sampling_rate)
+                values = np.random.rand(samples * expts) * 100 + 1j * np.random.rand(samples * expts) * 100
+            elif options.acquisition_type is AcquisitionType.INTEGRATION:
                 values = np.random.rand(expts) * 100 + 1j * np.random.rand(expts) * 100
             results[ro_pulse.qubit] = results[ro_pulse.serial] = options.results_type(values)
 
