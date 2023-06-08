@@ -8,8 +8,7 @@ from qibo.config import log, raise_error
 from qibo.models import Circuit
 
 
-# TODO update circuit representation
-def create_circuit_repr(circuit):
+def create_circuit_repr(circuit: Circuit):
     """Translate qibo circuit into a list of two qubit gates to be used by the transpiler.
 
     Args:
@@ -19,14 +18,9 @@ def create_circuit_repr(circuit):
         translated_circuit (list): list containing qubits targeted by two qubit gates
     """
     translated_circuit = []
-    index = 0
     for gate in circuit.queue:
         if len(gate.qubits) == 2:
-            gate_qubits = list(gate.qubits)
-            gate_qubits.sort()
-            gate_qubits.append(index)
-            translated_circuit.append(gate_qubits)
-            index += 1
+            translated_circuit.append(sorted(gate.qubits))
         if len(gate.qubits) >= 3:
             raise_error(ValueError, "Gates targeting more than 2 qubits are not supported")
     return translated_circuit
@@ -37,7 +31,6 @@ class Placer(ABC):
 
     @abstractmethod
     def __init__(self, connectivity: nx.Graph, *args):
-        """"""
         self.connectivity = connectivity
 
     @abstractmethod

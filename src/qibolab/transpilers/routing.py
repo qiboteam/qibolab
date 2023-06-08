@@ -7,7 +7,7 @@ from qibo.config import log, raise_error
 from qibo.models import Circuit
 
 from qibolab.transpilers.abstract import Transpiler, create_circuit_repr
-from qibolab.transpilers.placer import Trivial, check_placement
+from qibolab.transpilers.placer import Trivial, assert_placement
 
 
 def respect_connectivity(connectivity, circuit, verbose=False):
@@ -273,7 +273,7 @@ class ShortestPaths(Transpiler):
                     "You are using more physical qubits than required by the circuit, some qubits will be added to the circuit"
                 )
             new_circuit = Circuit(nodes)
-        if not check_placement(new_circuit, self._mapping, verbose=False):
+        if not assert_placement(new_circuit, self._mapping, verbose=False):
             raise_error(ValueError, "The provided initial layout can't be used on this connectivity.")
         self._transpiled_circuit = new_circuit
 

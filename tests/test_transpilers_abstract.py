@@ -13,7 +13,7 @@ def test_circuit_representation():
     circuit.add(gates.CZ(3, 0))
     circuit.add(gates.CNOT(4, 0))
     repr = create_circuit_repr(circuit)
-    assert repr == [[0, 1, 0], [0, 2, 1], [0, 3, 2], [0, 4, 3]]
+    assert repr == [[0, 1], [0, 2], [0, 3], [0, 4]]
 
 
 def test_circuit_representation_fail():

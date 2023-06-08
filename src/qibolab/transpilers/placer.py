@@ -7,7 +7,7 @@ from qibo.models import Circuit
 from qibolab.transpilers.abstract import Placer, create_circuit_repr
 
 
-def check_placement(circuit: Circuit, layout: dict, verbose=False) -> bool:
+def assert_placement(circuit: Circuit, layout: dict, verbose=False) -> bool:
     """Checks if layout is correct and matches the number of qubits of the circuit.
 
     Args:
@@ -20,23 +20,22 @@ def check_placement(circuit: Circuit, layout: dict, verbose=False) -> bool:
         - layout matches the number of qubits in the circuit.
     otherwise returns ``False``.
     """
-    if not check_mapping_consistency(layout, verbose=verbose):
+    if not assert_mapping_consistency(layout, verbose=verbose):
         return False
     if circuit.nqubits == len(layout):
         if verbose:
             log.info("Layout can be used on circuit.")
         return True
-    elif circuit.nqubits > len(layout):
+    if circuit.nqubits > len(layout):
         if verbose:
             log.info("Layout can't be used on circuit. The circuit requires more qubits.")
         return False
-    else:
-        if verbose:
-            log.info("Layout can't be used on circuit. Ancillary extra qubits need to be added to the circuit.")
-        return False
+    if verbose:
+        log.info("Layout can't be used on circuit. Ancillary extra qubits need to be added to the circuit.")
+    return False
 
 
-def check_mapping_consistency(layout, verbose=False):
+def assert_mapping_consistency(layout, verbose=False):
     """Checks if layout is correct.
 
     Args:
@@ -46,10 +45,9 @@ def check_mapping_consistency(layout, verbose=False):
     Returns: ``True`` if layout is written in the correct form.
     otherwise returns ``False``.
     """
-    values = list(layout.values())
-    values.sort()
+    values = sorted(layout.values())
     keys = list(layout.keys())
-    ref_keys = list("q" + str(i) for i in range(len(keys)))
+    ref_keys = ["q" + str(i) for i in range(len(keys))]
     if keys != ref_keys:
         if verbose:
             log.info("Some physical qubits in the layout may be missing or duplicated")
@@ -118,9 +116,9 @@ class Custom(Placer):
         else:
             raise_error(TypeError, "Use dict or list to define mapping.")
         if circuit is not None:
-            if not check_placement(circuit, self.map, self.verbose):
+            if not assert_placement(circuit, self.map, self.verbose):
                 raise_error(ValueError)
-        elif not check_mapping_consistency(self.map, self.verbose):
+        elif not assert_mapping_consistency(self.map, self.verbose):
             raise_error(ValueError)
         return self.map
 
@@ -150,17 +148,17 @@ class Subgraph(Placer):
         circuit_repr = create_circuit_repr(circuit)
         if len(circuit_repr) < 3:
             raise_error(ValueError, "Circuit must contain at least two two qubit gates to implement subgraph placement")
-        H = nx.Graph()
-        H.add_nodes_from([i for i in range(self.connectivity.number_of_nodes())])
-        GM = nx.algorithms.isomorphism.GraphMatcher(self.connectivity, H)
+        h = nx.Graph()
+        h.add_nodes_from([i for i in range(self.connectivity.number_of_nodes())])
+        matcher = nx.algorithms.isomorphism.GraphMatcher(self.connectivity, h)
         i = 0
-        H.add_edge(circuit_repr[i][0], circuit_repr[i][1])
-        while GM.subgraph_is_monomorphic() == True:
-            result = GM
+        h.add_edge(circuit_repr[i][0], circuit_repr[i][1])
+        while matcher.subgraph_is_monomorphic() == True:
+            result = matcher
             i += 1
-            H.add_edge(circuit_repr[i][0], circuit_repr[i][1])
-            GM = nx.algorithms.isomorphism.GraphMatcher(self.connectivity, H)
-            if self.connectivity.number_of_edges() == H.number_of_edges() or i == len(circuit_repr) - 1:
+            h.add_edge(circuit_repr[i][0], circuit_repr[i][1])
+            matcher = nx.algorithms.isomorphism.GraphMatcher(self.connectivity, h)
+            if self.connectivity.number_of_edges() == h.number_of_edges() or i == len(circuit_repr) - 1:
                 keys = list(result.mapping.keys())
                 keys.sort()
                 return {i: result.mapping[i] for i in keys}
@@ -223,10 +221,11 @@ class Random(Placer):
         Returns:
             (int): lengh of the reduced circuit.
         """
-        new_circuit = circuit_repr.copy()
-        while new_circuit != [] and (new_circuit[0][0], new_circuit[0][1]) in graph.edges():
-            del new_circuit[0]
-        return len(new_circuit)
+        total_len = len(circuit_repr)
+        for allowed, gate in enumerate(circuit_repr):
+            if (gate) not in graph.edges():
+                break
+        return total_len - allowed
 
 
 # TODO: requires block decomposition

@@ -4,7 +4,7 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 
-from qibolab.transpilers.placer import Custom, Subgraph, Trivial, check_placement
+from qibolab.transpilers.placer import Custom, Subgraph, Trivial, assert_placement
 from qibolab.transpilers.routing import (
     ShortestPaths,
     remap_circuit,
@@ -16,12 +16,7 @@ def star_connectivity():
     Q = ["q" + str(i) for i in range(5)]
     chip = nx.Graph()
     chip.add_nodes_from(Q)
-    graph_list = [
-        (Q[0], Q[2]),
-        (Q[1], Q[2]),
-        (Q[3], Q[2]),
-        (Q[4], Q[2]),
-    ]
+    graph_list = [(Q[i], Q[2]) for i in range(5) if i != 2]
     chip.add_edges_from(graph_list)
     return chip
 
@@ -52,26 +47,25 @@ def generate_random_circuit(nqubits, ngates, seed=42):
     return circuit
 
 
-def test_is_satisfied():
-    transpiler = ShortestPaths(connectivity=star_connectivity(), verbose=False)
+def matched_circuit():
+    """Return a simple circuit that can be executed on star connectivity"""
     circuit = Circuit(5)
     circuit.add(gates.CZ(0, 2))
     circuit.add(gates.CZ(1, 2))
     circuit.add(gates.Z(1))
     circuit.add(gates.CZ(2, 1))
     circuit.add(gates.M(0))
-    assert transpiler.is_satisfied(circuit)
+    return circuit
+
+
+def test_is_satisfied():
+    transpiler = ShortestPaths(connectivity=star_connectivity(), verbose=False)
+    assert transpiler.is_satisfied(matched_circuit())
 
 
 @pytest.mark.parametrize("verbose", [True, False])
 def test_respect_connectivity(verbose):
-    circuit = Circuit(5)
-    circuit.add(gates.CZ(0, 2))
-    circuit.add(gates.CZ(1, 2))
-    circuit.add(gates.Z(1))
-    circuit.add(gates.CZ(2, 1))
-    circuit.add(gates.M(0))
-    assert respect_connectivity(star_connectivity(), circuit, verbose)
+    assert respect_connectivity(star_connectivity(), matched_circuit(), verbose)
 
 
 @pytest.mark.parametrize("verbose", [True, False])
@@ -142,31 +136,15 @@ def test_random_circuits_5q(gates, qubits):
     assert transpiler.added_swaps >= 0
     assert transpiler.is_satisfied(transpiled_circuit)
     assert respect_connectivity(star_connectivity(), transpiled_circuit)
-    assert check_placement(transpiled_circuit, final_qubit_map)
+    assert assert_placement(transpiled_circuit, final_qubit_map)
 
 
 def q21_connectivity():
+    """Returns connectivity map for the TII 21 qubit chip"""
     Q = ["q" + str(i) for i in range(21)]
     chip = nx.Graph()
     chip.add_nodes_from(Q)
-    graph_list_h = [
-        (Q[0], Q[1]),
-        (Q[1], Q[2]),
-        (Q[3], Q[4]),
-        (Q[4], Q[5]),
-        (Q[5], Q[6]),
-        (Q[6], Q[7]),
-        (Q[8], Q[9]),
-        (Q[9], Q[10]),
-        (Q[10], Q[11]),
-        (Q[11], Q[12]),
-        (Q[13], Q[14]),
-        (Q[14], Q[15]),
-        (Q[15], Q[16]),
-        (Q[16], Q[17]),
-        (Q[18], Q[19]),
-        (Q[19], Q[20]),
-    ]
+    graph_list_h = [(Q[i], Q[i + 1]) for i in range(20) if i % 5 != 2]
     graph_list_v = [
         (Q[3], Q[8]),
         (Q[8], Q[13]),
@@ -202,38 +180,35 @@ def test_random_circuits_21q(gates, qubits, split):
     assert transpiler.added_swaps >= 0
     assert transpiler.is_satisfied(transpiled_circuit)
     assert respect_connectivity(q21_connectivity(), transpiled_circuit)
-    assert check_placement(transpiled_circuit, final_qubit_map)
+    assert assert_placement(transpiled_circuit, final_qubit_map)
+
+
+def star_circuit():
+    circuit = Circuit(5)
+    for i in range(1, 5):
+        circuit.add(gates.CNOT(i, 0))
+    return circuit
 
 
 def test_star_circuit():
     placer = Subgraph(star_connectivity())
-    circuit = Circuit(5)
-    circuit.add(gates.CNOT(1, 0))
-    circuit.add(gates.CNOT(2, 0))
-    circuit.add(gates.CNOT(3, 0))
-    circuit.add(gates.CNOT(4, 0))
-    initial_layout = placer(circuit)
+    initial_layout = placer(star_circuit())
     transpiler = ShortestPaths(connectivity=star_connectivity())
-    transpiled_circuit, final_qubit_map = transpiler(circuit, initial_layout)
+    transpiled_circuit, final_qubit_map = transpiler(star_circuit(), initial_layout)
     assert transpiler.added_swaps == 0
     assert transpiler.is_satisfied(transpiled_circuit)
     assert respect_connectivity(star_connectivity(), transpiled_circuit)
-    assert check_placement(transpiled_circuit, final_qubit_map)
+    assert assert_placement(transpiled_circuit, final_qubit_map)
     assert final_qubit_map["q2"] == 0
 
 
 def test_star_circuit_custom_map():
     placer = Custom(map=[1, 0, 2, 3, 4], connectivity=star_connectivity())
     initial_layout = placer()
-    circuit = Circuit(5)
-    circuit.add(gates.CNOT(1, 0))
-    circuit.add(gates.CNOT(2, 0))
-    circuit.add(gates.CNOT(3, 0))
-    circuit.add(gates.CNOT(4, 0))
     transpiler = ShortestPaths(connectivity=star_connectivity())
-    transpiled_circuit, final_qubit_map = transpiler(circuit, initial_layout)
+    transpiled_circuit, final_qubit_map = transpiler(star_circuit(), initial_layout)
     assert transpiler.added_swaps == 1
     assert transpiler.is_satisfied(transpiled_circuit)
     assert respect_connectivity(star_connectivity(), transpiled_circuit)
-    assert check_placement(transpiled_circuit, final_qubit_map)
+    assert assert_placement(transpiled_circuit, final_qubit_map)
     assert final_qubit_map == {"q0": 1, "q1": 2, "q2": 0, "q3": 3, "q4": 4}

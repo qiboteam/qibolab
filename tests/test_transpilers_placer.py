@@ -1,8 +1,17 @@
+import networkx as nx
 import pytest
 from qibo import gates
 from qibo.models import Circuit
 
-from qibolab.transpilers.placer import *
+from qibolab.transpilers.placer import (
+    Backpropagation,
+    Custom,
+    Random,
+    Subgraph,
+    Trivial,
+    assert_mapping_consistency,
+    assert_placement,
+)
 
 
 def star_connectivity():
@@ -21,36 +30,34 @@ def star_connectivity():
 
 def star_circuit():
     circuit = Circuit(5)
-    circuit.add(gates.CNOT(1, 0))
-    circuit.add(gates.CNOT(2, 0))
-    circuit.add(gates.CNOT(3, 0))
-    circuit.add(gates.CNOT(4, 0))
+    for i in range(1, 5):
+        circuit.add(gates.CNOT(i, 0))
     return circuit
 
 
-def test_check_placement_true():
+def test_assert_placement_true():
     layout = {"q0": 0, "q1": 1, "q2": 2, "q3": 3, "q4": 4}
     circuit = Circuit(5)
-    assert check_placement(circuit, layout, verbose=True)
+    assert assert_placement(circuit, layout, verbose=True)
 
 
 @pytest.mark.parametrize("qubits", [5, 3])
 @pytest.mark.parametrize("layout", [{"q0": 0, "q1": 1, "q2": 2, "q3": 3}, {"q0": 0, "q0": 1, "q2": 2}])
-def test_check_placement_false(qubits, layout):
+def test_assert_placement_false(qubits, layout):
     circuit = Circuit(qubits)
-    assert not check_placement(circuit, layout, verbose=True)
+    assert not assert_placement(circuit, layout, verbose=True)
 
 
 def test_mapping_consistency_true():
     layout = {"q0": 0, "q1": 2, "q2": 1, "q3": 4, "q4": 3}
-    assert check_mapping_consistency(layout, verbose=True)
+    assert assert_mapping_consistency(layout, verbose=True)
 
 
 @pytest.mark.parametrize(
     "layout", [{"q0": 0, "q1": 0, "q2": 1, "q3": 4, "q4": 3}, {"q0": 0, "q1": 2, "q0": 1, "q3": 4, "q4": 3}]
 )
 def test_mapping_consistency_false(layout):
-    assert not check_mapping_consistency(layout, verbose=True)
+    assert not assert_mapping_consistency(layout, verbose=True)
 
 
 def test_trivial():
@@ -59,7 +66,7 @@ def test_trivial():
     placer = Trivial(connectivity=connectivity)
     layout = placer(circuit)
     assert layout == {"q0": 0, "q1": 1, "q2": 2, "q3": 3, "q4": 4}
-    assert check_placement(circuit, layout)
+    assert assert_placement(circuit, layout)
 
 
 @pytest.mark.parametrize("custom_layout", [[4, 3, 2, 1, 0], {"q0": 4, "q1": 3, "q2": 2, "q3": 1, "q4": 0}])
@@ -106,7 +113,7 @@ def test_subgraph_perfect():
     placer = Subgraph(connectivity=connectivity)
     layout = placer(star_circuit())
     assert layout["q2"] == 0
-    assert check_placement(star_circuit(), layout)
+    assert assert_placement(star_circuit(), layout)
 
 
 def test_subgraph_non_perfect():
@@ -123,7 +130,7 @@ def test_subgraph_non_perfect():
     circuit.add(gates.CNOT(1, 2))
     circuit.add(gates.CNOT(3, 1))
     layout = placer(circuit)
-    assert check_placement(circuit, layout)
+    assert assert_placement(circuit, layout)
 
 
 def test_subgraph_error():
@@ -139,7 +146,7 @@ def test_random(reps):
     connectivity = star_connectivity()
     placer = Random(connectivity=connectivity, samples=reps)
     layout = placer(star_circuit())
-    assert check_placement(star_circuit(), layout)
+    assert assert_placement(star_circuit(), layout)
 
 
 # TODO requires block circuit
@@ -148,4 +155,4 @@ def test_backpropagation(routing):
     connectivity = star_connectivity()
     placer = Backpropagation(connectivity, routing)
     layout = placer(star_circuit())
-    assert check_placement(star_circuit(), layout)
+    assert assert_placement(star_circuit(), layout)
