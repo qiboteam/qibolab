@@ -7,7 +7,7 @@ from qibo.config import log, raise_error
 from qibo.models import Circuit
 
 from qibolab.transpilers.abstract import Transpiler, create_circuit_repr
-from qibolab.transpilers.placer import Trivial, assert_placement
+from qibolab.transpilers.placer import assert_placement
 
 
 def respect_connectivity(connectivity, circuit, verbose=False):
@@ -19,7 +19,7 @@ def respect_connectivity(connectivity, circuit, verbose=False):
         verbose (bool): If ``True`` it prints info messages.
 
     Returns ``True`` if the following conditions are satisfied:
-        - Circuit does not contain more than two-qubit gates.
+        - Circuit does not contain gates acting on more than two qubits.
         - Circuit matches connectivity.
     otherwise returns ``False``.
     """
@@ -29,7 +29,7 @@ def respect_connectivity(connectivity, circuit, verbose=False):
             if verbose:
                 log.info(f"{gate.name} acts on more than two qubits.")
             return False
-        elif len(gate.qubits) == 2:
+        if len(gate.qubits) == 2:
             if ("q" + str(gate.qubits[0]), "q" + str(gate.qubits[1])) not in connectivity.edges:
                 if verbose:
                     log.info("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
@@ -170,7 +170,7 @@ class ShortestPaths(Transpiler):
             sampling_split (float): define fraction of shortest path tested.
         """
 
-        if sampling_split > 0.0 and 1.0 >= sampling_split:
+        if 0.0 < sampling_split <= 1.0:
             self._sampling_split = sampling_split
         else:
             raise_error(ValueError, "Sampling_split must be in (0:1]")
@@ -209,7 +209,7 @@ class ShortestPaths(Transpiler):
         path_middle = path[1:-1]
         mapping_list = []
         meeting_point_list = []
-        test_paths = list(range(len(path) - 1))
+        test_paths = range(len(path) - 1)
         if self.sampling_split != 1.0:
             test_paths = np.random.choice(
                 test_paths, size=int(np.ceil(len(test_paths) * self.sampling_split)), replace=False
@@ -265,7 +265,7 @@ class ShortestPaths(Transpiler):
         nodes = self.connectivity.number_of_nodes()
         if qubits > nodes:
             raise_error(ValueError, "There are not enough physical qubits in the hardware to map the circuit")
-        elif qubits == nodes:
+        if qubits == nodes:
             new_circuit = Circuit(nodes)
         else:
             if self.verbose:
@@ -294,16 +294,15 @@ class ShortestPaths(Transpiler):
                 index += 1
                 if index == matched_gates + 1:
                     break
-                else:
-                    self._transpiled_circuit.add(
-                        gate.on_qubits(
-                            {
-                                gate.qubits[0]: self._qubit_map[gate.qubits[0]],
-                                gate.qubits[1]: self._qubit_map[gate.qubits[1]],
-                            }
-                        )
+                self._transpiled_circuit.add(
+                    gate.on_qubits(
+                        {
+                            gate.qubits[0]: self._qubit_map[gate.qubits[0]],
+                            gate.qubits[1]: self._qubit_map[gate.qubits[1]],
+                        }
                     )
-                    self._circuit_position += 1
+                )
+                self._circuit_position += 1
 
     def add_swaps(self, path, meeting_point):
         """Add swaps to the transpiled circuit to move qubits
