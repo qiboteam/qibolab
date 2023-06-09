@@ -253,9 +253,7 @@ class Gaussian(PulseShape):
             )
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
-        raise RuntimeError(
-            "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
-        )
+        raise ShapeInitError
 
     @property
     def envelope_waveform_q(self) -> Waveform:
@@ -266,9 +264,7 @@ class Gaussian(PulseShape):
             waveform = Waveform(np.zeros(num_samples))
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
-        raise RuntimeError(
-            "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
-        )
+        raise ShapeInitError
 
     def __repr__(self):
         return f"{self.name}({format(self.rel_sigma, '.6f').rstrip('0').rstrip('.')})"
@@ -311,9 +307,7 @@ class Drag(PulseShape):
             waveform = Waveform(i)
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
-        raise RuntimeError(
-            "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
-        )
+        raise ShapeInitError
 
     @property
     def envelope_waveform_q(self) -> Waveform:
@@ -335,9 +329,7 @@ class Drag(PulseShape):
             waveform = Waveform(q)
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
-        raise RuntimeError(
-            "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
-        )
+        raise ShapeInitError
 
     def __repr__(self):
         return f"{self.name}({format(self.rel_sigma, '.6f').rstrip('0').rstrip('.')}, {format(self.beta, '.6f').rstrip('0').rstrip('.')})"
@@ -519,9 +511,7 @@ class eCap(PulseShape):
             )
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
-        raise RuntimeError(
-            "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
-        )
+        raise ShapeInitError
 
     @property
     def envelope_waveform_q(self) -> Waveform:
@@ -530,9 +520,7 @@ class eCap(PulseShape):
             waveform = Waveform(np.zeros(num_samples))
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
-        raise RuntimeError(
-            "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
-        )
+        raise ShapeInitError
 
     def __repr__(self):
         return f"{self.name}({format(self.alpha, '.6f').rstrip('0').rstrip('.')})"
