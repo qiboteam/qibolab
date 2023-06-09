@@ -15,6 +15,8 @@ class TektronixAWG5204(Instrument):
         self.channel_phase: "list[float]" = []
         # Time buffer at the start and end of the pulse sequence to ensure that the minimum samples of the instrument are reached
         self.pulse_buffer: float = 1e-6
+        self.device = None
+        self.sample_rate = None
 
     rw_property_wrapper = lambda parameter: property(
         lambda self: self.device.get(parameter),
@@ -233,6 +235,7 @@ class AlazarADC(Instrument):
     def __init__(self, name, address):
         super().__init__(name, address)
         self.controller = None
+        self.device = None
 
     def connect(self):
         if not self.is_connected:
@@ -330,11 +333,9 @@ class AlazarADC(Instrument):
 
     def start(self):
         """Starts the instrument."""
-        pass
 
     def stop(self):
         """Stops the instrument."""
-        pass
 
     def disconnect(self):
         if self.is_connected:

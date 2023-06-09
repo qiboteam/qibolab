@@ -217,6 +217,8 @@ def create_dummy():
     # Create platform
     platform = Platform(NAME, RUNCARD, [instrument], channels)
 
+    instrument.sampling_rate = platform.sampling_rate * 1e-9
+
     # map channels to qubits
     for qubit in platform.qubits:
         platform.qubits[qubit].readout = channels["readout"]

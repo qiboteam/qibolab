@@ -23,6 +23,8 @@ class DummyInstrument(Controller):
             instruments.
     """
 
+    sampling_rate = 1
+
     def connect(self):
         log.info("Connecting to dummy instrument.")
 
@@ -38,19 +40,26 @@ class DummyInstrument(Controller):
     def disconnect(self):
         log.info("Disconnecting dummy instrument.")
 
-    def play(self, qubits: Dict[Union[str, int], Qubit], sequence: PulseSequence, options: ExecutionParameters):
-        ro_pulses = {pulse.qubit: pulse.serial for pulse in sequence.ro_pulses}
-
-        expts = 1 if options.averaging_mode is AveragingMode.CYCLIC else options.nshots
+    def get_values(self, options, sequence, exp_points):
         results = {}
         for ro_pulse in sequence.ro_pulses:
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                values = np.random.rand(expts)
-            else:
-                values = np.random.rand(expts) * 100 + 1j * np.random.rand(expts) * 100
+                if options.averaging_mode is AveragingMode.SINGLESHOT:
+                    values = np.random.randint(2, size=exp_points)
+                elif options.averaging_mode is AveragingMode.CYCLIC:
+                    values = np.random.rand(exp_points)
+            elif options.acquisition_type is AcquisitionType.RAW:
+                samples = int(ro_pulse.duration * self.sampling_rate)
+                values = np.random.rand(samples * exp_points) * 100 + 1j * np.random.rand(samples * exp_points) * 100
+            elif options.acquisition_type is AcquisitionType.INTEGRATION:
+                values = np.random.rand(exp_points) * 100 + 1j * np.random.rand(exp_points) * 100
             results[ro_pulse.qubit] = results[ro_pulse.serial] = options.results_type(values)
-
         return results
+
+    def play(self, qubits: Dict[Union[str, int], Qubit], sequence: PulseSequence, options: ExecutionParameters):
+        exp_points = 1 if options.averaging_mode is AveragingMode.CYCLIC else options.nshots
+
+        return self.get_values(options, sequence, exp_points)
 
     def sweep(
         self,
@@ -59,19 +68,10 @@ class DummyInstrument(Controller):
         options: ExecutionParameters,
         *sweepers: List[Sweeper],
     ):
-        expts = 1
+        exp_points = 1
         for sweeper in sweepers:
-            expts *= len(sweeper.values)
+            exp_points *= len(sweeper.values)
         if options.averaging_mode is not AveragingMode.CYCLIC:
-            expts *= options.nshots
+            exp_points *= options.nshots
 
-        results = {}
-
-        for ro_pulse in sequence.ro_pulses:
-            if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                values = np.random.rand(expts)
-            else:
-                values = np.random.rand(expts) * 100 + 1j * np.random.rand(expts) * 100
-            results[ro_pulse.qubit] = results[ro_pulse.serial] = options.results_type(values)
-
-        return results
+        return self.get_values(options, sequence, exp_points)
