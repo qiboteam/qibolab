@@ -79,6 +79,7 @@ def select_pulse(pulse, pulse_type):
             length=round(pulse.duration * NANO_TO_SECONDS, 9),
             width=round(pulse.duration * NANO_TO_SECONDS, 9) * 0.9,  # 90% Flat
             amplitude=pulse.amplitude,
+            can_compress=can_compress,
             sigma=2 / sigma,
             zero_boundaries=False,
         )
