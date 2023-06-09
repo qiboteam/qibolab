@@ -54,10 +54,7 @@ def select_pulse(pulse, pulse_type):
     """Pulse translation"""
 
     if str(pulse.shape) == "Rectangular()":
-        can_compress = True
-        if pulse.type is PulseType.READOUT:
-            can_compress = False
-
+        can_compress = not pulse.type is PulseType.READOUT
         return lo.pulse_library.const(
             uid=(f"{pulse_type}_{pulse.qubit}_"),
             length=round(pulse.duration * NANO_TO_SECONDS, 9),
@@ -76,6 +73,7 @@ def select_pulse(pulse, pulse_type):
 
     if "GaussianSquare" in str(pulse.shape):
         sigma = pulse.shape.rel_sigma
+        can_compress = not pulse.type is PulseType.READOUT
         return lo.pulse_library.gaussian_square(
             uid=(f"{pulse_type}_{pulse.qubit}_"),
             length=round(pulse.duration * NANO_TO_SECONDS, 9),
