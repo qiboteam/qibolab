@@ -18,6 +18,7 @@ from qibolab.pulses import (
     PulseType,
     ReadoutPulse,
     Rectangular,
+    ShapeInitError,
     SplitPulse,
     Waveform,
     eCap,
@@ -318,6 +319,44 @@ def test_pulses_pulseshape_sampling_rate():
     # p13.plot()
     # p14.plot()
     PulseShape.SAMPLING_RATE = tmp
+
+
+def test_raise_shapeiniterror():
+    shape = Rectangular()
+    with pytest.raises(ShapeInitError):
+        shape.envelope_waveform_i
+    with pytest.raises(ShapeInitError):
+        shape.envelope_waveform_q
+
+    shape = Gaussian(0)
+    with pytest.raises(ShapeInitError):
+        shape.envelope_waveform_i
+    with pytest.raises(ShapeInitError):
+        shape.envelope_waveform_q
+
+    shape = Drag(0, 0)
+    with pytest.raises(ShapeInitError):
+        shape.envelope_waveform_i
+    with pytest.raises(ShapeInitError):
+        shape.envelope_waveform_q
+
+    shape = IIR([0], [0], None)
+    with pytest.raises(ShapeInitError):
+        shape.envelope_waveform_i
+    with pytest.raises(ShapeInitError):
+        shape.envelope_waveform_q
+
+    shape = SNZ(0, 0)
+    with pytest.raises(ShapeInitError):
+        shape.envelope_waveform_i
+    with pytest.raises(ShapeInitError):
+        shape.envelope_waveform_q
+
+    shape = eCap(0)
+    with pytest.raises(ShapeInitError):
+        shape.envelope_waveform_i
+    with pytest.raises(ShapeInitError):
+        shape.envelope_waveform_q
 
 
 def test_pulses_pulseshape_drag_shape():
@@ -945,6 +984,72 @@ def test_pulse_sequence_add():
     )
     assert len(sequence.pulses) == 2
     assert len(sequence.qd_pulses) == 2
+
+
+def test_pulse_sequence__add__():
+    sequence = PulseSequence()
+    sequence.add(
+        Pulse(
+            start=0,
+            frequency=200_000_000,
+            amplitude=0.3,
+            duration=60,
+            relative_phase=0,
+            shape="Gaussian(5)",
+            channel=1,
+        )
+    )
+    sequence.add(
+        Pulse(
+            start=64,
+            frequency=200_000_000,
+            amplitude=0.3,
+            duration=30,
+            relative_phase=0,
+            shape="Gaussian(5)",
+            channel=1,
+        )
+    )
+    with pytest.raises(TypeError):
+        sequence + 2
+    with pytest.raises(TypeError):
+        2 + sequence
+
+
+def test_pulse_sequence__mul__():
+    sequence = PulseSequence()
+    sequence.add(
+        Pulse(
+            start=0,
+            frequency=200_000_000,
+            amplitude=0.3,
+            duration=60,
+            relative_phase=0,
+            shape="Gaussian(5)",
+            channel=1,
+        )
+    )
+    sequence.add(
+        Pulse(
+            start=64,
+            frequency=200_000_000,
+            amplitude=0.3,
+            duration=30,
+            relative_phase=0,
+            shape="Gaussian(5)",
+            channel=1,
+        )
+    )
+    with pytest.raises(TypeError):
+        sequence * 2.5
+    with pytest.raises(TypeError):
+        sequence *= 2.5
+    with pytest.raises(TypeError):
+        sequence *= -1
+    with pytest.raises(TypeError):
+        sequence * -1
+    with pytest.raises(TypeError):
+        2.5 * sequence
 
 
 def test_pulse_sequence_add_readout():
