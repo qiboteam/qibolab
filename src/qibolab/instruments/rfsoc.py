@@ -291,7 +291,7 @@ class RFSoC(Controller):
             qibolab results objects
         """
 
-        self.validate_input_command(sequence, execution_parameters)
+        self.validate_input_command(sequence, execution_parameters, sweep=False)
         self.update_cfg(execution_parameters)
 
         if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
@@ -321,12 +321,15 @@ class RFSoC(Controller):
         return results
 
     @staticmethod
-    def validate_input_command(sequence: PulseSequence, execution_parameters: ExecutionParameters):
+    def validate_input_command(sequence: PulseSequence, execution_parameters: ExecutionParameters, sweep: bool):
         """Checks if sequence and execution_parameters are supported"""
         if any(pulse.duration < 10 for pulse in sequence):
             raise ValueError("The minimum pulse length supported is 10 ns")
         if execution_parameters.acquisition_type is AcquisitionType.RAW:
-            raise NotImplementedError("Raw data acquisition is not supported")
+            if sweep:
+                raise NotImplementedError("Raw data acquisition is not compatible with sweepers")
+            if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
+                raise NotImplementedError("Raw data acquisition can only be averaged")
         if execution_parameters.fast_reset:
             raise NotImplementedError("Fast reset is not supported")
 
@@ -590,7 +593,7 @@ class RFSoC(Controller):
             results objects
         """
 
-        self.validate_input_command(sequence, execution_parameters)
+        self.validate_input_command(sequence, execution_parameters, sweep=True)
         self.update_cfg(execution_parameters)
 
         if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
