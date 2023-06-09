@@ -136,11 +136,11 @@ class ShortestPaths(Transpiler):
         Args:
             qibo_circuit (qibo.models.Circuit): circuit to be transpiled.
         """
-        len_2q_circuit = len(self._circuit_repr)
+        len_before_step = len(self._circuit_repr)
         path, meeting_point = self.relocate()
         self.add_swaps(path, meeting_point)
         self.update_qubit_map()
-        self.add_gates(qibo_circuit, len_2q_circuit - len(self._circuit_repr))
+        self.add_gates(qibo_circuit, len_before_step - len(self._circuit_repr))
 
     def first_transpiler_step(self, qibo_circuit):
         """First transpilation step. Apply gates that can be run with the initial qubit mapping.
@@ -173,8 +173,8 @@ class ShortestPaths(Transpiler):
 
     def draw_connectivity(self):  # pragma: no cover
         """Draw connectivity graph."""
-        pos = nx.spectral_layout(self.connectivity)
-        nx.draw(self.connectivity, pos=pos, with_labels=True)
+        position = nx.spectral_layout(self.connectivity)
+        nx.draw(self.connectivity, pos=position, with_labels=True)
         plt.show()
 
     def reduce(self, graph):
