@@ -54,11 +54,16 @@ def select_pulse(pulse, pulse_type):
     """Pulse translation"""
 
     if str(pulse.shape) == "Rectangular()":
+        can_compress = True
+        if pulse.type is PulseType.READOUT:
+            can_compress = False
+            print(pulse)
+
         return lo.pulse_library.const(
             uid=(f"{pulse_type}_{pulse.qubit}_"),
             length=round(pulse.duration * NANO_TO_SECONDS, 9),
             amplitude=pulse.amplitude,
-            can_compress = True, 
+            can_compress=can_compress,
         )
     if "Gaussian" in str(pulse.shape):
         sigma = pulse.shape.rel_sigma
@@ -675,7 +680,7 @@ class Zurich(Controller):
                 if sweeper.uid == "amplitude":
                     sweeper_amp_index = pulse.zhsweepers.index(sweeper)
                     # sweeper.values = sweeper.values.copy()
-                    #FIXME: Dont change the values coming back to qibocal
+                    # FIXME: Dont change the values coming back to qibocal
                     pulse.zhpulse.amplitude *= max(abs(sweeper.values))
                     sweeper.values /= max(abs(sweeper.values))
                 else:
@@ -988,11 +993,11 @@ class Zurich(Controller):
         if sweeper.parameter is Parameter.amplitude:
             for pulse in sweeper.pulses:
                 # sweeper.values = sweeper.values.copy()
-                #FIXME: Dont change the values coming back to qibocal
-                
+                # FIXME: Dont change the values coming back to qibocal
+
                 pulse.amplitude *= max(abs(sweeper.values))
                 sweeper.values /= max(abs(sweeper.values))
-                
+
                 parameter = ZhSweeper(pulse, sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
 
         if sweeper.parameter is Parameter.bias:
