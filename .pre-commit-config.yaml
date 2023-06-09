@@ -27,4 +27,3 @@ repos:
     rev: v2.1.5
     hooks:
       - id: pycln
-        args: [--config=pyproject.toml]
