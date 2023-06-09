@@ -57,7 +57,6 @@ def select_pulse(pulse, pulse_type):
         can_compress = True
         if pulse.type is PulseType.READOUT:
             can_compress = False
-            print(pulse)
 
         return lo.pulse_library.const(
             uid=(f"{pulse_type}_{pulse.qubit}_"),
