@@ -1,4 +1,4 @@
-"""Platform for controlling quantum devices and create_dummy"""
+"""Platform for controlling quantum devices."""
 
 import math
 import re
