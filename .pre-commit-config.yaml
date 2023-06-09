@@ -38,4 +38,4 @@ repos:
       - id: pydocstyle
         args:
           - --select=D103,D200,D206,D300,D301
-        files: src/*
+        files: ^src/
