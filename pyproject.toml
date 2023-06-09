@@ -80,9 +80,8 @@ docs-clean = "make -C doc clean"
 test-docs = "make -C doc doctest"
 
 [tool.pylint.master]
-max-line-length = 1000
 output-format = "colorized"
-disable = ["E1123", "E1120"]
+disable = ["E1123", "E1120", "C0301"]
 
 [tool.pytest.ini_options]
 testpaths = ['tests/']
