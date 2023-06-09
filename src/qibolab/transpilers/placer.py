@@ -1,62 +1,49 @@
 import random
 
 import networkx as nx
-from qibo.config import log, raise_error
+from qibo.config import raise_error
 from qibo.models import Circuit
 
 from qibolab.transpilers.abstract import Placer, create_circuit_repr
 
 
-def assert_placement(circuit: Circuit, layout: dict, verbose=False) -> bool:
+class PlacementError(Exception):
+    """Raise for an error in the qubit placement"""
+
+
+def assert_placement(circuit: Circuit, layout: dict) -> bool:
     """Checks if layout is correct and matches the number of qubits of the circuit.
 
     Args:
         circuit (qibo.models.Circuit): Circuit model to check.
         layout (dict): physical to logical qubit mapping.
-        verbose (bool): if ``True`` it prints info messages.
 
-    Returns ``True`` if the following conditions are satisfied:
+    Raise PlacementError if the following conditions are not satisfied:
         - layout is written in the correct form.
         - layout matches the number of qubits in the circuit.
-    otherwise returns ``False``.
     """
-    if not assert_mapping_consistency(layout, verbose=verbose):
-        return False
-    if circuit.nqubits == len(layout):
-        if verbose:
-            log.info("Layout can be used on circuit.")
-        return True
+    assert_mapping_consistency(layout)
     if circuit.nqubits > len(layout):
-        if verbose:
-            log.info("Layout can't be used on circuit. The circuit requires more qubits.")
-        return False
-    if verbose:
-        log.info("Layout can't be used on circuit. Ancillary extra qubits need to be added to the circuit.")
-    return False
+        raise PlacementError("Layout can't be used on circuit. The circuit requires more qubits.")
+    if circuit.nqubits < len(layout):
+        raise PlacementError("Layout can't be used on circuit. Ancillary extra qubits need to be added to the circuit.")
 
 
-def assert_mapping_consistency(layout, verbose=False):
+def assert_mapping_consistency(layout):
     """Checks if layout is correct.
 
     Args:
         layout (dict): physical to logical qubit mapping.
-        verbose (bool): if ``True`` it prints info messages.
 
-    Returns: ``True`` if layout is written in the correct form.
-    otherwise returns ``False``.
+    Raise PlacementError if layout is not written in the correct form.
     """
     values = sorted(layout.values())
     keys = list(layout.keys())
     ref_keys = ["q" + str(i) for i in range(len(keys))]
     if keys != ref_keys:
-        if verbose:
-            log.info("Some physical qubits in the layout may be missing or duplicated.")
-        return False
+        raise PlacementError("Some physical qubits in the layout may be missing or duplicated.")
     if values != list(range(len(values))):
-        if verbose:
-            log.info("Some logical qubits in the layout may be missing or duplicated.")
-        return False
-    return True
+        raise PlacementError("Some logical qubits in the layout may be missing or duplicated.")
 
 
 class Trivial(Placer):
@@ -86,13 +73,11 @@ class Custom(Placer):
         example [1,2,0] or {"q0":1, "q1":2, "q2":0} to assign the
         physical qubits 0;1;2 to the logical qubits 1;2;0 respectively.
         connectivity (networkx.Graph): chip connectivity.
-        verbose (Bool): if "True" print info messages.
     """
 
     def __init__(self, map, connectivity=None, verbose=False):
         self.connectivity = connectivity
         self.map = map
-        self.verbose = verbose
 
     def __call__(self, circuit=None):
         """Return the custom placement if it can be applied to the given circuit (if given).
@@ -107,10 +92,9 @@ class Custom(Placer):
         else:
             raise_error(TypeError, "Use dict or list to define mapping.")
         if circuit is not None:
-            if not assert_placement(circuit, self.map, self.verbose):
-                raise_error(ValueError)
-        elif not assert_mapping_consistency(self.map, self.verbose):
-            raise_error(ValueError)
+            assert_placement(circuit, self.map)
+        else:
+            assert_mapping_consistency(self.map)
         return self.map
 
 
@@ -159,7 +143,7 @@ class Subgraph(Placer):
 class Random(Placer):
     """
     Random initialization with greedy policy, let a maximum number of 2-qubit
-    gates can be applied without introducing any SWAP gate
+    gates can be applied without introducing any SWAP gate.
 
     Attributes:
         connectivity (networkx.Graph): chip connectivity.

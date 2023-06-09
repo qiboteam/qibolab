@@ -4,7 +4,13 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 
-from qibolab.transpilers.placer import Custom, Subgraph, Trivial, assert_placement
+from qibolab.transpilers.placer import (
+    Custom,
+    PlacementError,
+    Subgraph,
+    Trivial,
+    assert_placement,
+)
 from qibolab.transpilers.routing import (
     ShortestPaths,
     remap_circuit,
@@ -120,7 +126,7 @@ def test_incorrect_initial_layout():
     circuit.add(gates.CNOT(3, 0))
     initial_layout = placer(circuit)
     transpiler = ShortestPaths(connectivity=star_connectivity())
-    with pytest.raises(ValueError):
+    with pytest.raises(PlacementError):
         transpiler(circuit, initial_layout)
 
 
@@ -136,7 +142,7 @@ def test_random_circuits_5q(gates, qubits):
     assert transpiler.added_swaps >= 0
     assert transpiler.is_satisfied(transpiled_circuit)
     assert respect_connectivity(star_connectivity(), transpiled_circuit)
-    assert assert_placement(transpiled_circuit, final_qubit_map)
+    assert_placement(transpiled_circuit, final_qubit_map)
 
 
 def q21_connectivity():
@@ -180,7 +186,7 @@ def test_random_circuits_21q(gates, qubits, split):
     assert transpiler.added_swaps >= 0
     assert transpiler.is_satisfied(transpiled_circuit)
     assert respect_connectivity(q21_connectivity(), transpiled_circuit)
-    assert assert_placement(transpiled_circuit, final_qubit_map)
+    assert_placement(transpiled_circuit, final_qubit_map)
 
 
 def star_circuit():
@@ -198,7 +204,7 @@ def test_star_circuit():
     assert transpiler.added_swaps == 0
     assert transpiler.is_satisfied(transpiled_circuit)
     assert respect_connectivity(star_connectivity(), transpiled_circuit)
-    assert assert_placement(transpiled_circuit, final_qubit_map)
+    assert_placement(transpiled_circuit, final_qubit_map)
     assert final_qubit_map["q2"] == 0
 
 
@@ -210,5 +216,5 @@ def test_star_circuit_custom_map():
     assert transpiler.added_swaps == 1
     assert transpiler.is_satisfied(transpiled_circuit)
     assert respect_connectivity(star_connectivity(), transpiled_circuit)
-    assert assert_placement(transpiled_circuit, final_qubit_map)
+    assert_placement(transpiled_circuit, final_qubit_map)
     assert final_qubit_map == {"q0": 1, "q1": 2, "q2": 0, "q3": 3, "q4": 4}

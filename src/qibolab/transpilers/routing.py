@@ -260,21 +260,20 @@ class ShortestPaths(Transpiler):
         """
         nodes = self.connectivity.number_of_nodes()
         if qubits > nodes:
-            raise_error(ValueError, "There are not enough physical qubits in the hardware to map the circuit")
+            raise_error(ValueError, "There are not enough physical qubits in the hardware to map the circuit.")
         if qubits == nodes:
             new_circuit = Circuit(nodes)
         else:
             if self.verbose:
                 log.info(
-                    "You are using more physical qubits than required by the circuit, some qubits will be added to the circuit"
+                    "You are using more physical qubits than required by the circuit, some ancillary qubits will be added to the circuit."
                 )
             new_circuit = Circuit(nodes)
-        if not assert_placement(new_circuit, self._mapping, verbose=False):
-            raise_error(ValueError, "The provided initial layout can't be used on this connectivity.")
+        assert_placement(new_circuit, self._mapping)
         self._transpiled_circuit = new_circuit
 
     def add_gates(self, qibo_circuit, matched_gates):
-        """Add one and two qubit gates to transpiled circuit until connectivity is matched
+        """Add one and two qubit gates to transpiled circuit until connectivity is matched.
 
         Args:
             qibo_circuit (:class:`qibo.models.Circuit`): circuit to be transpiled.
