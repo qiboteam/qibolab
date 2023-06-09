@@ -324,6 +324,8 @@ class RFSoC(Controller):
         if execution_parameters.acquisition_type is AcquisitionType.RAW:
             if sweep:
                 raise NotImplementedError("Raw data acquisition is not compatible with sweepers")
+            if len(sequence.ro_pulses) != 1:
+                raise NotImplementedError("Raw data acquisition is compatible only with a single readout")
             if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
                 raise NotImplementedError("Raw data acquisition can only be averaged")
         if execution_parameters.fast_reset:
