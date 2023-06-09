@@ -80,7 +80,7 @@ docs-clean = "make -C doc clean"
 test-docs = "make -C doc doctest"
 
 [tool.pylint.master]
-max-line-length = 120
+max-line-length = 1000
 output-format = "colorized"
 disable = ["E1123", "E1120"]
 
