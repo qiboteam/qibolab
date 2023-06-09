@@ -173,10 +173,7 @@ class RFSoC(Controller):
         """Empty deprecated method."""
 
     def _execute_pulse_sequence(
-        self,
-        sequence: PulseSequence,
-        qubits: dict[int, Qubit],
-        average: bool,
+        self, sequence: PulseSequence, qubits: dict[int, Qubit], average: bool, opcode: rfsoc.OperationCode
     ) -> tuple[list, list]:
         """Prepare the commands dictionary to send to the qibosoq server.
 
@@ -184,11 +181,12 @@ class RFSoC(Controller):
             sequence (`qibolab.pulses.PulseSequence`): arbitrary PulseSequence object to execute
             qubits: list of qubits (`qibolab.platforms.abstract.Qubit`) of the platform in the form of a dictionary
             average: if True returns averaged results, otherwise single shots
+            opcode: can be `rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE` or `rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE_RAW`
         Returns:
             Lists of I and Q value measured
         """
         server_commands = {
-            "operation_code": rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE,
+            "operation_code": opcode,
             "cfg": asdict(self.cfg),
             "sequence": [asdict(convert_pulse(pulse, qubits)) for pulse in sequence],
             "qubits": [asdict(convert_qubit(qubits[idx])) for idx in qubits],
@@ -293,7 +291,11 @@ class RFSoC(Controller):
         else:
             average = execution_parameters.averaging_mode is AveragingMode.CYCLIC
 
-        toti, totq = self._execute_pulse_sequence(sequence, qubits, average)
+        if execution_parameters.acquisition_type is AcquisitionType.RAW:
+            opcode = rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE_RAW
+        else:
+            opcode = rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE
+        toti, totq = self._execute_pulse_sequence(sequence, qubits, average, opcode)
 
         results = {}
         adc_chs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
