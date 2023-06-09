@@ -12,7 +12,7 @@ class PlacementError(Exception):
 
 
 def assert_placement(circuit: Circuit, layout: dict) -> bool:
-    """Checks if layout is correct and matches the number of qubits of the circuit.
+    """Check if layout is correct and matches the number of qubits of the circuit.
 
     Args:
         circuit (qibo.models.Circuit): Circuit model to check.
@@ -30,7 +30,7 @@ def assert_placement(circuit: Circuit, layout: dict) -> bool:
 
 
 def assert_mapping_consistency(layout):
-    """Checks if layout is correct.
+    """Check if layout is correct.
 
     Args:
         layout (dict): physical to logical qubit mapping.
@@ -47,7 +47,7 @@ def assert_mapping_consistency(layout):
 
 
 class Trivial(Placer):
-    """Places qubits according to the following simple notation: {'q0' : 0, 'q1' : 1, ..., 'qn' : n}.
+    """Place qubits according to the following simple notation: {'q0' : 0, 'q1' : 1, ..., 'qn' : n}.
 
     Attributes:
         connectivity (networkx.Graph): chip connectivity.

@@ -11,7 +11,7 @@ from qibolab.transpilers.placer import assert_placement
 
 
 def respect_connectivity(connectivity, circuit, verbose=False):
-    """Checks if a circuit can be executed on Hardware.
+    """Check if a circuit can be executed on Hardware.
 
     Args:
         circuit (qibo.models.Circuit): circuit model to check.
@@ -41,7 +41,7 @@ def respect_connectivity(connectivity, circuit, verbose=False):
 
 
 def remap_circuit(circuit, qubit_map):
-    """Maps logical to physical qubits in a circuit.
+    """Map logical to physical qubits in a circuit.
 
     Args:
         circuit (qibo.models.Circuit): qibo circuit to be remapped.
@@ -91,7 +91,7 @@ class ShortestPaths(Transpiler):
 
     # TODO: This may become a stand alone function
     def is_satisfied(self, circuit):
-        """Checks if a circuit can be executed on Hardware.
+        """Check if a circuit can be executed on Hardware.
 
         Args:
             circuit (qibo.models.Circuit): Circuit model to check.
@@ -131,7 +131,7 @@ class ShortestPaths(Transpiler):
         return hardware_mapped_circuit, final_mapping
 
     def transpiler_step(self, qibo_circuit):
-        """Transpilation step. Finds new mapping, adds swap gates and applies gates that can be run with this configuration.
+        """Transpilation step. Find new mapping, add swap gates and apply gates that can be run with this configuration.
 
         Args:
             qibo_circuit (qibo.models.Circuit): circuit to be transpiled.
@@ -300,7 +300,7 @@ class ShortestPaths(Transpiler):
                 self._circuit_position += 1
 
     def add_swaps(self, path, meeting_point):
-        """Adds swaps to the transpiled circuit to move qubits.
+        """Add swaps to the transpiled circuit to move qubits.
 
         Args:
             path (list): path to move qubits.
@@ -316,7 +316,7 @@ class ShortestPaths(Transpiler):
                 self._transpiled_circuit.add(gates.SWAP(self._qubit_map[b1], self._qubit_map[b2]))
 
     def update_qubit_map(self):
-        """Updates the qubit mapping after adding swaps."""
+        """Update the qubit mapping after adding swaps."""
         old_mapping = self._qubit_map.copy()
         for key, value in self._mapping.items():
             self._qubit_map[value] = old_mapping[key]
