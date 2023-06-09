@@ -27,7 +27,7 @@ def create_circuit_repr(circuit: Circuit):
 
 
 class Placer(ABC):
-    """A placer implments the initial logical-physical qubit mapping"""
+    """A placer implements the initial logical-physical qubit mapping"""
 
     @abstractmethod
     def __init__(self, connectivity: nx.Graph, *args):

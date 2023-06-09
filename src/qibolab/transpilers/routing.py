@@ -76,12 +76,6 @@ class ShortestPaths(Transpiler):
     """
 
     def __init__(self, connectivity: nx.Graph, sampling_split=1.0, verbose=False):
-        """Args:
-        connectivity (networkx.graph): chip connectivity.
-        sampling_split (float): fraction of paths tested (between 0 and 1).
-        verbose(bool): print info messages.
-
-        """
         self.connectivity = connectivity
         self.sampling_split = sampling_split
         self.verbose = verbose

@@ -13,7 +13,7 @@ def assert_placement(circuit: Circuit, layout: dict, verbose=False) -> bool:
     Args:
         circuit (qibo.models.Circuit): Circuit model to check.
         layout (dict): physical to logical qubit mapping.
-        verbose (bool): If ``True`` it prints info messages.
+        verbose (bool): if ``True`` it prints info messages.
 
     Returns ``True`` if the following conditions are satisfied:
         - layout is written in the correct form.
@@ -40,7 +40,7 @@ def assert_mapping_consistency(layout, verbose=False):
 
     Args:
         layout (dict): physical to logical qubit mapping.
-        verbose (bool): If ``True`` it prints info messages.
+        verbose (bool): if ``True`` it prints info messages.
 
     Returns: ``True`` if layout is written in the correct form.
     otherwise returns ``False``.
@@ -50,26 +50,23 @@ def assert_mapping_consistency(layout, verbose=False):
     ref_keys = ["q" + str(i) for i in range(len(keys))]
     if keys != ref_keys:
         if verbose:
-            log.info("Some physical qubits in the layout may be missing or duplicated")
+            log.info("Some physical qubits in the layout may be missing or duplicated.")
         return False
     if values != list(range(len(values))):
         if verbose:
-            log.info("Some logical qubits in the layout may be missing or duplicated")
+            log.info("Some logical qubits in the layout may be missing or duplicated.")
         return False
     return True
 
 
 class Trivial(Placer):
-    """Place qubits trivially, same logical and physical placement
+    """Places qubits according to the following simple notation: {'q0' : 0, 'q1' : 1, ..., 'qn' : n}.
 
     Attributes:
         connectivity (networkx.Graph): chip connectivity.
     """
 
     def __init__(self, connectivity=None):
-        """Args:
-        connectivity (networkx.graph): chip connectivity.
-        """
         self.connectivity = connectivity
 
     def __call__(self, circuit: Circuit):
@@ -85,20 +82,14 @@ class Custom(Placer):
     """Define a custom initial qubit mapping.
 
     Attributes:
-        map (list or dict): Physical to logical qubit mapping,
-        example [1,2,0] or {"q0":1, "q1":2, "q2":0} to assign the
-        physical qubits 0;1;2 to the logical qubits 1;2;0 respectively.
-        connectivity (networkx.Graph): chip connectivity.
-    """
-
-    def __init__(self, map, connectivity=None, verbose=False):
-        """Args:
-        map (list or dict): Physical to logical qubit mapping,
+        map (list or dict): physical to logical qubit mapping,
         example [1,2,0] or {"q0":1, "q1":2, "q2":0} to assign the
         physical qubits 0;1;2 to the logical qubits 1;2;0 respectively.
         connectivity (networkx.Graph): chip connectivity.
         verbose (Bool): if "True" print info messages.
-        """
+    """
+
+    def __init__(self, map, connectivity=None, verbose=False):
         self.connectivity = connectivity
         self.map = map
         self.verbose = verbose
@@ -133,9 +124,6 @@ class Subgraph(Placer):
     """
 
     def __init__(self, connectivity):
-        """Args:
-        connectivity (networkx.graph): chip connectivity.
-        """
         self.connectivity = connectivity
 
     def __call__(self, circuit: Circuit):
@@ -144,21 +132,22 @@ class Subgraph(Placer):
         Args:
             circuit (qibo.models.Circuit): Circuit to be transpiled.
         """
-        # TODO fix networkx.GM.mapping for small subgraphs
         circuit_repr = create_circuit_repr(circuit)
         if len(circuit_repr) < 3:
-            raise_error(ValueError, "Circuit must contain at least two two qubit gates to implement subgraph placement")
-        h = nx.Graph()
-        h.add_nodes_from([i for i in range(self.connectivity.number_of_nodes())])
-        matcher = nx.algorithms.isomorphism.GraphMatcher(self.connectivity, h)
+            raise_error(
+                ValueError, "Circuit must contain at least two two qubit gates to implement subgraph placement."
+            )
+        circuit_subgraph = nx.Graph()
+        circuit_subgraph.add_nodes_from([i for i in range(self.connectivity.number_of_nodes())])
+        matcher = nx.algorithms.isomorphism.GraphMatcher(self.connectivity, circuit_subgraph)
         i = 0
-        h.add_edge(circuit_repr[i][0], circuit_repr[i][1])
+        circuit_subgraph.add_edge(circuit_repr[i][0], circuit_repr[i][1])
         while matcher.subgraph_is_monomorphic() == True:
             result = matcher
             i += 1
-            h.add_edge(circuit_repr[i][0], circuit_repr[i][1])
-            matcher = nx.algorithms.isomorphism.GraphMatcher(self.connectivity, h)
-            if self.connectivity.number_of_edges() == h.number_of_edges() or i == len(circuit_repr) - 1:
+            circuit_subgraph.add_edge(circuit_repr[i][0], circuit_repr[i][1])
+            matcher = nx.algorithms.isomorphism.GraphMatcher(self.connectivity, circuit_subgraph)
+            if self.connectivity.number_of_edges() == circuit_subgraph.number_of_edges() or i == len(circuit_repr) - 1:
                 keys = list(result.mapping.keys())
                 keys.sort()
                 return {i: result.mapping[i] for i in keys}
@@ -178,10 +167,6 @@ class Random(Placer):
     """
 
     def __init__(self, connectivity, samples=100):
-        """Args:
-        connectivity (networkx.graph): chip connectivity.
-        samples (int): number of initial random layouts tested.
-        """
         self.connectivity = connectivity
         self.samples = samples
 
