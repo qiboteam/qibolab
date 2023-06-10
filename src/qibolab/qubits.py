@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional, Union
 
 from qibolab.channels import Channel
+from qibolab.maps import NamedMap, NamedType
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 
 QubitId = Union[str, int]
@@ -9,7 +10,7 @@ QubitId = Union[str, int]
 
 
 @dataclass
-class Qubit:
+class Qubit(NamedType):
     """Representation of a physical qubit.
 
     Qubit objects are instantiated by :class:`qibolab.platforms.platform.Platform`
@@ -94,3 +95,7 @@ class QubitPair:
     qubit1: Qubit
     qubit2: Qubit
     native_gates: TwoQubitNatives = field(default_factory=TwoQubitNatives)
+
+
+class QubitMap(NamedMap):
+    Type = Qubit

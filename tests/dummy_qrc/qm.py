@@ -1,6 +1,7 @@
 import pathlib
 
 from qibolab.channels import Channel, ChannelMap
+from qibolab.instruments import InstrumentMap
 from qibolab.instruments.oscillator import LocalOscillator
 from qibolab.instruments.qmsim import QMSim
 from qibolab.platform import Platform
@@ -31,39 +32,41 @@ def create(runcard=RUNCARD):
     # TWPA
     channels |= "L4-26"
 
-    # Instantiate local oscillators (HARDCODED)
-    local_oscillators = [
+    local_oscillators = InstrumentMap()
+    local_oscillators |= (
         LocalOscillator("lo_readout_a", "192.168.0.39"),
         LocalOscillator("lo_readout_b", "192.168.0.31"),
         LocalOscillator("lo_drive_low", "192.168.0.32"),
         LocalOscillator("lo_drive_mid", "192.168.0.33"),
         LocalOscillator("lo_drive_high", "192.168.0.34"),
         LocalOscillator("twpa_a", "192.168.0.35"),
-    ]
+    )
     # Set LO parameters
-    local_oscillators[0].frequency = 7_300_000_000
-    local_oscillators[1].frequency = 7_900_000_000
-    local_oscillators[2].frequency = 4_700_000_000
-    local_oscillators[3].frequency = 5_600_000_000
-    local_oscillators[4].frequency = 6_500_000_000
-    local_oscillators[0].power = 18.0
-    local_oscillators[1].power = 15.0
-    for i in range(2, 5):
-        local_oscillators[i].power = 16.0
+    local_oscillators["lo_readout_a"].frequency = 7_300_000_000
+    local_oscillators["lo_readout_b"].frequency = 7_900_000_000
+    local_oscillators["lo_drive_low"].frequency = 4_700_000_000
+    local_oscillators["lo_drive_mid"].frequency = 5_600_000_000
+    local_oscillators["lo_drive_high"].frequency = 6_500_000_000
+    local_oscillators["lo_readout_a"].power = 18.0
+    local_oscillators["lo_readout_b"].power = 15.0
+    for name in ["lo_drive_low", "lo_drive_mid", "lo_drive_high"]:
+        local_oscillators[name].power = 16.0
     # Set TWPA parameters
-    local_oscillators[5].frequency = 6_511_000_000
-    local_oscillators[5].power = 4.5
+    local_oscillators["twpa_a"].frequency = 6_511_000_000
+    local_oscillators["twpa_a"].power = 4.5
     # Map LOs to channels
-    channels["L3-25_a"].local_oscillator = local_oscillators[0]
-    channels["L3-25_b"].local_oscillator = local_oscillators[1]
-    channels["L3-15"].local_oscillator = local_oscillators[2]
-    channels["L3-11"].local_oscillator = local_oscillators[2]
-    channels["L3-12"].local_oscillator = local_oscillators[3]
-    channels["L3-13"].local_oscillator = local_oscillators[4]
-    channels["L3-14"].local_oscillator = local_oscillators[4]
-    channels["L4-26"].local_oscillator = local_oscillators[5]
+    channels["L3-25_a"].local_oscillator = local_oscillators["lo_readout_a"]
+    channels["L3-25_b"].local_oscillator = local_oscillators["lo_readout_b"]
+    channels["L3-15"].local_oscillator = local_oscillators["lo_drive_low"]
+    channels["L3-11"].local_oscillator = local_oscillators["lo_drive_low"]
+    channels["L3-12"].local_oscillator = local_oscillators["lo_drive_mid"]
+    channels["L3-13"].local_oscillator = local_oscillators["lo_drive_high"]
+    channels["L3-14"].local_oscillator = local_oscillators["lo_drive_high"]
+    channels["L4-26"].local_oscillator = local_oscillators["twpa_a"]
 
-    instruments = [controller] + local_oscillators
+    instruments = InstrumentMap()
+    instruments |= controller
+    instruments |= local_oscillators
     platform = Platform("qw5q_gold", runcard, instruments, channels)
 
     # assign channels to qubits

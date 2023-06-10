@@ -2,10 +2,12 @@ import tempfile
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+from qibolab.maps import NamedMap, NamedType
+
 INSTRUMENTS_DATA_FOLDER = Path.home() / ".qibolab" / "instruments" / "data"
 
 
-class Instrument(ABC):
+class Instrument(ABC, NamedType):
     """
     Parent class for all the instruments connected via TCPIP.
 
@@ -74,3 +76,7 @@ class InstrumentException(Exception):
         header = f"InstrumentException with {instrument.signature}"
         full_msg = header + ": " + message
         super().__init__(full_msg)
+
+
+class InstrumentMap(NamedMap):
+    Type = Instrument

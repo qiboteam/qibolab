@@ -4,14 +4,14 @@ import math
 import re
 from dataclasses import replace
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 
 import networkx as nx
 import yaml
 from qibo.config import log, raise_error
 
 from qibolab.channels import Channel, ChannelMap
-from qibolab.instruments.abstract import Controller, Instrument
+from qibolab.instruments.abstract import Controller, Instrument, InstrumentMap
 from qibolab.native import NativeType, SingleQubitNatives, TwoQubitNatives
 from qibolab.qubits import Qubit, QubitId, QubitPair
 
@@ -31,7 +31,7 @@ class Platform:
 
         self.name = name
         self.runcard = runcard
-        self.instruments: List[Instrument] = instruments
+        self.instruments: InstrumentMap = instruments
         self.channels: ChannelMap = channels
 
         self.qubits: Dict[QubitId, Qubit] = {}
@@ -290,7 +290,7 @@ class Platform:
     def connect(self):
         """Connect to all instruments."""
         if not self.is_connected:
-            for instrument in self.instruments:
+            for instrument in self.instruments.values():
                 try:
                     log.info(f"Connecting to instrument {instrument}.")
                     instrument.connect()
@@ -303,25 +303,25 @@ class Platform:
 
     def setup(self):
         """Prepares instruments to execute experiments."""
-        for instrument in self.instruments:
+        for instrument in self.instruments.values():
             instrument.setup()
 
     def start(self):
         """Starts all the instruments."""
         if self.is_connected:
-            for instrument in self.instruments:
+            for instrument in self.instruments.values():
                 instrument.start()
 
     def stop(self):
         """Starts all the instruments."""
         if self.is_connected:
-            for instrument in self.instruments:
+            for instrument in self.instruments.values():
                 instrument.stop()
 
     def disconnect(self):
         """Disconnects from instruments."""
         if self.is_connected:
-            for instrument in self.instruments:
+            for instrument in self.instruments.values():
                 instrument.disconnect()
         self.is_connected = False
 
@@ -343,7 +343,7 @@ class Platform:
             options = replace(options, relaxation_time=self.relaxation_time)
 
         result = {}
-        for instrument in self.instruments:
+        for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
                 new_result = instrument.play(self.qubits, sequence, options)
                 if isinstance(new_result, dict):
@@ -394,7 +394,7 @@ class Platform:
             options = replace(options, relaxation_time=self.relaxation_time)
 
         result = {}
-        for instrument in self.instruments:
+        for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
                 new_result = instrument.sweep(self.qubits, sequence, options, *sweepers)
                 if isinstance(new_result, dict):
