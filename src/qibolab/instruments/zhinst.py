@@ -556,7 +556,7 @@ class Zurich(Controller):
                     if pulse == element.pulse:
                         if isinstance(aux_list[aux_list.index(element)], ZhPulse):
                             aux_list.insert(
-                                aux_list.index(element) + 1,
+                                aux_list.index(element),
                                 ZhSweeperLine(sweeper, pulse.qubit, sequence),
                             )
                             break
@@ -762,6 +762,11 @@ class Zurich(Controller):
                                 i += 1
                         elif isinstance(pulse, ZhSweeperLine):
                             exp.delay(signal=f"drive{q}", time=pulse.zhsweeper)
+
+                    # TODO: Patch for T1 delay, general ?
+                    if isinstance(self.sequence[f"readout{q}"][0], ZhSweeperLine):
+                        exp.delay(signal=f"drive{q}", time=self.sequence[f"readout{q}"][0].zhsweeper)
+                        self.sequence[f"readout{q}"].remove(self.sequence[f"readout{q}"][0])
 
     @staticmethod
     def play_after_set(sequence, type):

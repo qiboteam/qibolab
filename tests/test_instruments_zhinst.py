@@ -292,8 +292,7 @@ def test_experiment_sweep_2d_general(dummy_qrc, parameter1, parameter2):
 
     sweepers = []
     if parameter1 in SweeperParameter:
-        if parameter1 is not Parameter.delay:
-            sweepers.append(Sweeper(parameter1, parameter_range_1, pulses=[ro_pulses[qubit]]))
+        sweepers.append(Sweeper(parameter1, parameter_range_1, pulses=[ro_pulses[qubit]]))
     if parameter2 in SweeperParameter:
         if parameter2 is Parameter.amplitude:
             if parameter1 is not Parameter.amplitude:
