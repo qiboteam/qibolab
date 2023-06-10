@@ -18,18 +18,16 @@ def create(runcard=RUNCARD):
     # Create channel objects and map controllers to channels
     channels = ChannelMap()
     # readout
-    channels["L3-25_a"] = Channel("L3-25_a", port=controller[(("con1", 10), ("con1", 9))])
-    channels["L3-25_b"] = Channel("L3-25_b", port=controller[(("con2", 10), ("con2", 9))])
+    channels |= Channel("L3-25_a", port=controller[(("con1", 10), ("con1", 9))])
+    channels |= Channel("L3-25_b", port=controller[(("con2", 10), ("con2", 9))])
     # feedback
-    channels["L2-5_a"] = Channel("L2-5_a", port=controller[(("con1", 2), ("con1", 1))])
-    channels["L2-5_b"] = Channel("L2-5_b", port=controller[(("con2", 2), ("con2", 1))])
+    channels |= Channel("L2-5_a", port=controller[(("con1", 2), ("con1", 1))])
+    channels |= Channel("L2-5_b", port=controller[(("con2", 2), ("con2", 1))])
     # drive
-    for i in range(1, 5):
-        channels[f"L3-1{i}"] = Channel(f"L3-1{i}", port=controller[(("con1", 2 * i), ("con1", 2 * i - 1))])
-    channels["L3-15"] = Channel("L3-15", port=controller[(("con3", 2), ("con3", 1))])
+    channels |= (Channel(f"L3-1{i}", port=controller[(("con1", 2 * i), ("con1", 2 * i - 1))]) for i in range(1, 5))
+    channels |= Channel("L3-15", port=controller[(("con3", 2), ("con3", 1))])
     # flux
-    for i in range(1, 6):
-        channels[f"L4-{i}"] = Channel(f"L4-{i}", port=controller[(("con2", i),)])
+    channels |= (Channel(f"L4-{i}", port=controller[(("con2", i),)]) for i in range(1, 6))
     # TWPA
     channels |= "L4-26"
 

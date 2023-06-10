@@ -209,12 +209,11 @@ def create_dummy():
     instrument = DummyInstrument(NAME, 0)
 
     # Create channel objects
+    nqubits = RUNCARD["nqubits"]
     channels = ChannelMap()
-    channels["readout"] = Channel("readout", port=instrument["readout"])
-    for i in range(RUNCARD["nqubits"]):
-        channels[f"drive-{i}"] = Channel(f"drive-{i}", port=instrument[f"drive-{i}"])
-    for i in range(RUNCARD["nqubits"]):
-        channels[f"flux-{i}"] = Channel(f"flux-{i}", port=instrument[f"flux-{i}"])
+    channels |= Channel("readout", port=instrument["readout"])
+    channels |= (Channel(f"drive-{i}", port=instrument[f"drive-{i}"]) for i in range(nqubits))
+    channels |= (Channel(f"flux-{i}", port=instrument[f"flux-{i}"]) for i in range(nqubits))
 
     # Create platform
     platform = Platform(NAME, RUNCARD, [instrument], channels)
