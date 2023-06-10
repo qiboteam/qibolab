@@ -1,3 +1,4 @@
+from dataclasses import dataclass, field
 from typing import Dict, List, Union
 
 import numpy as np
@@ -99,7 +100,7 @@ class DummyInstrument(Controller):
         self.ports = {}
 
     def __getitem__(self, port_name):
-        if value not in self.ports:
+        if port_name not in self.ports:
             self.ports[port_name] = DummyPort(port_name)
         return self.ports[port_name]
 
