@@ -19,8 +19,8 @@ def test_channel_errors():
         channel.offset = 0.3
 
 
-def test_channel_map_from_names():
-    channels = ChannelMap.from_names("a", "b")
+def test_channel_map_add():
+    channels = ChannelMap().add("a", "b")
     assert "a" in channels
     assert "b" in channels
     assert isinstance(channels["a"], Channel)
@@ -38,8 +38,8 @@ def test_channel_map_setitem():
 
 
 def test_channel_map_union():
-    channels1 = ChannelMap.from_names("a", "b")
-    channels2 = ChannelMap.from_names("c", "d")
+    channels1 = ChannelMap().add("a", "b")
+    channels2 = ChannelMap().add("c", "d")
     channels = channels1 | channels2
     for name in ["a", "b", "c", "d"]:
         assert name in channels
@@ -52,8 +52,8 @@ def test_channel_map_union():
 
 
 def test_channel_map_union_update():
-    channels = ChannelMap.from_names("a", "b")
-    channels |= ChannelMap.from_names("c", "d")
+    channels = ChannelMap().add("a", "b")
+    channels |= ChannelMap().add("c", "d")
     for name in ["a", "b", "c", "d"]:
         assert name in channels
         assert isinstance(channels[name], Channel)
