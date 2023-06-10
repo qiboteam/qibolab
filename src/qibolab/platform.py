@@ -1,6 +1,8 @@
+"""Platform for controlling quantum devices."""
+
 import math
 import re
-from dataclasses import dataclass, field, replace
+from dataclasses import replace
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -25,7 +27,7 @@ class Platform:
     """
 
     def __init__(self, name, runcard, instruments, channels):
-        log.info(f"Loading platform {name}")
+        log.info("Loading platform %s", name)
 
         self.name = name
         self.runcard = runcard
@@ -62,7 +64,7 @@ class Platform:
 
     def reload_settings(self):
         # TODO: Remove ``self.settings``
-        if self.settings == None:
+        if self.settings is None:
             # Load initial configuration
             if isinstance(self.runcard, dict):
                 settings = self.settings = self.runcard
@@ -94,13 +96,13 @@ class Platform:
                 # register channels to qubits when we are using the old format
                 # needed for ``NativeGates`` to work
                 if "qubit_channel_map" in self.settings:
-                    ro, qd, qf, _ = self.settings["qubit_channel_map"][q]
-                    if ro is not None:
-                        qubit.readout = Channel(ro)
-                    if qd is not None:
-                        qubit.drive = Channel(qd)
-                    if qf is not None:
-                        qubit.flux = Channel(qf)
+                    readout, drive, flux, _ = self.settings["qubit_channel_map"][q]
+                    if readout is not None:
+                        qubit.readout = Channel(readout)
+                    if drive is not None:
+                        qubit.drive = Channel(drive)
+                    if flux is not None:
+                        qubit.flux = Channel(flux)
                 # register single qubit native gates to Qubit objects
                 if q in self.native_gates["single_qubit"]:
                     qubit.native_gates = SingleQubitNatives.from_dict(qubit, self.native_gates["single_qubit"][q])

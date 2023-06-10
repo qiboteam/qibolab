@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
-from qibo.config import log, raise_error
+from qibo.config import raise_error
 from qm import qua
 from qm.qua import declare, declare_stream, fixed, for_
 from qm.qua._dsl import _ResultSource, _Variable  # for type declaration only
@@ -610,10 +610,9 @@ class QMPulse:
         """
         if self.wait_time_variable is not None:
             return self.wait_time_variable + self.wait_time
-        elif self.wait_time >= 4:
+        if self.wait_time >= 4:
             return self.wait_time
-        else:
-            return None
+        return None
 
     def declare_output(self, options, threshold=None, angle=None):
         average = options.averaging_mode is AveragingMode.CYCLIC
