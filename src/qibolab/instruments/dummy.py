@@ -98,10 +98,10 @@ class DummyInstrument(Controller):
         super().__init__(name, address)
         self.ports = {}
 
-    def __getitem__(self, value):
+    def __getitem__(self, port_name):
         if value not in self.ports:
-            self.ports[value] = DummyPort(value)
-        return self.ports[value]
+            self.ports[port_name] = DummyPort(port_name)
+        return self.ports[port_name]
 
     def connect(self):
         log.info("Connecting to dummy instrument.")

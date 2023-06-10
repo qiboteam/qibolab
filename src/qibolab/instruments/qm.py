@@ -32,14 +32,16 @@ from qibolab.sweeper import Parameter
 
 # TODO: Split the contents of this module to multiple files
 
-PortType = Tuple[str, int]
+PortId = Tuple[str, int]
 """Type for port definition, for example: ("con1", 2)."""
+IQPortId = Union[Tuple[PortId], Tuple[PortId, PortId]]
+"""Type for collections of IQ ports."""
 
 
 @dataclass
 class QMPort(Port):
-    controller_i: PortType
-    controller_q: Optional[PortType] = None
+    controller_i: PortId
+    controller_q: Optional[PortId] = None
 
     # TODO: Shall we implement seperate setters for i and q?
     _offset: float = 0.0
@@ -738,19 +740,13 @@ class QMOPX(Controller):
     """Time of flight used for hardware signal integration."""
     smearing: int = 0
     """Smearing used for hardware signal integration."""
-    ports: Dict[Tuple[PortType], QMPort] = field(default_factory=dict)
+    ports: Dict[IQPortId, QMPort] = field(default_factory=dict)
     """Dictionary holding the ports of controllers that are connected."""
 
-    def __getitem__(self, value):
-        if not isinstance(value, tuple):
-            raise_error(TypeError, f"Cannot obtain port {value} from QMOPX.")
-        if not isinstance(value[0], tuple):
-            raise_error(TypeError, f"Cannot obtain port {value} from QMOPX.")
-        if len(value) > 2:
-            raise_error(ValueError, f"Cannot obtain port {value} from QMOPX.")
-        if value not in self.ports:
-            self.ports[value] = QMPort(*value)
-        return self.ports[value]
+    def __getitem__(self, port_name: IQPortId):
+        if port_name not in self.ports:
+            self.ports[port_name] = QMPort(*port_name)
+        return self.ports[port_name]
 
     def connect(self):
         """Connect to the QM manager."""
