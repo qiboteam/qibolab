@@ -27,8 +27,8 @@ def test_convert_qubit(dummy_qrc):
 
     platform = create_platform("rfsoc")
     qubit = platform.qubits[0]
-    qubit.flux.bias = 0.05
-    qubit.flux.ports = [("name", 4)]
+    qubit.flux.port = platform.instruments[0][4]
+    qubit.flux.offset = 0.05
     qubit = convert_qubit(qubit)
     targ = rfsoc.Qubit(0.05, 4)
 
@@ -47,11 +47,12 @@ def test_convert_pulse(dummy_qrc):
     """Tests conversion from `qibolab.pulses.Pulse` to `rfsoc.Pulse`"""
 
     platform = create_platform("rfsoc")
+    controller = platform.instruments[0]
     qubit = platform.qubits[0]
-    qubit.drive.ports = [("name", 4)]
-    qubit.readout.ports = [("name", 2)]
-    qubit.feedback.ports = [("name", 1)]
-    qubit.readout.local_oscillator._frequency = 1e6
+    qubit.drive.port = controller[4]
+    qubit.readout.port = controller[2]
+    qubit.feedback.port = controller[1]
+    qubit.readout.local_oscillator.frequency = 1e6
 
     pulse = Pulse(0, 40, 0.9, 50e6, 0, Drag(5, 2), 0, PulseType.DRIVE, 0)
     targ = rfsoc.Pulse(50, 0.9, 0, 0, 0.04, pulse.serial, "drive", 4, None, "drag", 5, 2)
@@ -196,7 +197,7 @@ def test_get_if_python_sweep(dummy_qrc):
     sweep3 = convert_sweep(sweep3, sequence_1, platform.qubits)
     assert not instrument.get_if_python_sweep(sequence_1, platform.qubits, sweep1, sweep2, sweep3)
 
-    platform.qubits[0].flux.bias = 0.5
+    platform.qubits[0].flux.offset = 0.5
     sweep1 = Sweeper(parameter=Parameter.bias, values=np.arange(-1, 1, 0.1), qubits=[0])
     with pytest.raises(ValueError):
         sweep1 = convert_sweep(sweep1, sequence_1, platform.qubits)

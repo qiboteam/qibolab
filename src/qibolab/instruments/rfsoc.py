@@ -9,7 +9,7 @@ Tested on the following FPGA:
 import copy
 import json
 import socket
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
@@ -17,6 +17,7 @@ import qibosoq.components as rfsoc
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
+from qibolab.instruments.port import Port
 from qibolab.platform import Qubit
 from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType
 from qibolab.result import IntegratedResults, SampleResults
@@ -29,7 +30,7 @@ NS_TO_US = 1e-3
 def convert_qubit(qubit: Qubit) -> rfsoc.Qubit:
     """Convert `qibolab.platforms.abstract.Qubit` to `qibosoq.abstract.Qubit`"""
     if qubit.flux:
-        return rfsoc.Qubit(qubit.flux.bias, qubit.flux.ports[0][1])
+        return rfsoc.Qubit(qubit.flux.offset, qubit.flux.port.name)
     return rfsoc.Qubit(0.0, None)
 
 
@@ -49,7 +50,7 @@ def pulse_lo_frequency(pulse: Pulse, qubits: Dict[int, Qubit]) -> int:
     pulse_type = pulse.type.name.lower()
     try:
         lo_frequency = getattr(qubits[pulse.qubit], pulse_type).local_oscillator._frequency
-    except NotImplementedError:
+    except AttributeError:
         lo_frequency = 0
     return lo_frequency
 
@@ -57,8 +58,8 @@ def pulse_lo_frequency(pulse: Pulse, qubits: Dict[int, Qubit]) -> int:
 def convert_pulse(pulse: Pulse, qubits: Dict[int, Qubit]) -> rfsoc.Pulse:
     """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`"""
     pulse_type = pulse.type.name.lower()
-    dac = getattr(qubits[pulse.qubit], pulse_type).ports[0][1]
-    adc = qubits[pulse.qubit].feedback.ports[0][1] if pulse_type == "readout" else None
+    dac = getattr(qubits[pulse.qubit], pulse_type).port.name
+    adc = qubits[pulse.qubit].feedback.port.name if pulse_type == "readout" else None
     lo_frequency = pulse_lo_frequency(pulse, qubits)
 
     rfsoc_pulse = rfsoc.Pulse(
@@ -100,7 +101,7 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: Dict[int, Q
             parameters.append(rfsoc.Parameter.BIAS)
             indexes.append(list(qubits.values()).index(qubit))
 
-            base_value = qubit.flux.bias
+            base_value = qubit.flux.offset
             values = sweeper.get_values(base_value)
             starts.append(values[0])
             stops.append(values[-1])
@@ -125,6 +126,20 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: Dict[int, Q
         stops=stops,
         expts=len(sweeper.values),
     )
+
+
+@dataclass
+class RFSoCPort(Port):
+    name: int
+    _offset: float = 0.0
+
+    @property
+    def offset(self):
+        return self._offset
+
+    @offset.setter
+    def offset(self, value):
+        self._offset = value
 
 
 class QibosoqError(RuntimeError):
@@ -157,6 +172,12 @@ class RFSoC(Controller):
         self.host = address
         self.port = port
         self.cfg = rfsoc.Config()
+        self.ports = {}
+
+    def __getitem__(self, port_name: int) -> RFSoCPort:
+        if port_name not in self.ports:
+            self.ports[port_name] = RFSoCPort(port_name)
+        return self.ports[port_name]
 
     def connect(self):
         """Empty method to comply with Instrument interface."""
@@ -302,7 +323,7 @@ class RFSoC(Controller):
         toti, totq = self._execute_pulse_sequence(sequence, qubits, average)
 
         results = {}
-        adc_chs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
+        adc_chs = np.unique([qubits[p.qubit].feedback.port.name for p in sequence.ro_pulses])
 
         for j, channel in enumerate(adc_chs):
             for i, ro_pulse in enumerate(sequence.ro_pulses.get_qubit_pulses(channel)):
@@ -437,7 +458,7 @@ class RFSoC(Controller):
                     setattr(sequence[sweeper.indexes[jdx]], sweeper_parameter, values[jdx][idx])
             else:
                 for kdx, jdx in enumerate(sweeper.indexes):
-                    qubits[jdx].flux.bias = values[kdx][idx]
+                    qubits[jdx].flux.offset = values[kdx][idx]
 
             res = self.recursive_python_sweep(
                 qubits, sequence, or_sequence, *sweepers[1:], average=average, execution_parameters=execution_parameters
@@ -501,7 +522,7 @@ class RFSoC(Controller):
                     for pulse in sequence:
                         pulse_q = qubits[pulse.qubit]
                         pulse_is_ro = pulse.type == PulseType.READOUT
-                        pulse_ch = pulse_q.readout.ports[0][1] if pulse_is_ro else pulse_q.drive.ports[0][1]
+                        pulse_ch = pulse_q.readout.port.name if pulse_is_ro else pulse_q.drive.port.name
 
                         if pulse_ch in already_pulsed and pulse == sweep_pulse:
                             return True
@@ -536,9 +557,9 @@ class RFSoC(Controller):
         """
         results = {}
 
-        adcs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in original_ro])
+        adcs = np.unique([qubits[p.qubit].feedback.port.name for p in original_ro])
         for k, k_val in enumerate(adcs):
-            adc_ro = [pulse for pulse in original_ro if qubits[pulse.qubit].feedback.ports[0][1] == k_val]
+            adc_ro = [pulse for pulse in original_ro if qubits[pulse.qubit].feedback.port.name == k_val]
             for i, (ro_pulse, original_ro_pulse) in enumerate(zip(adc_ro, original_ro)):
                 i_vals = np.array(toti[k][i])
                 q_vals = np.array(totq[k][i])
@@ -604,7 +625,7 @@ class RFSoC(Controller):
 
         bias_change = any(sweep.parameter is Parameter.bias for sweep in sweepers)
         if bias_change:
-            initial_biases = [qubits[idx].flux.bias if qubits[idx].flux is not None else None for idx in qubits]
+            initial_biases = [qubits[idx].flux.offset if qubits[idx].flux is not None else None for idx in qubits]
 
         results = self.recursive_python_sweep(
             qubits,
@@ -618,6 +639,6 @@ class RFSoC(Controller):
         if bias_change:
             for idx, qubit in enumerate(qubits):
                 if qubit.flux is not None:
-                    qubit.flux.bias = initial_biases[idx]
+                    qubit.flux.offset = initial_biases[idx]
 
         return results
