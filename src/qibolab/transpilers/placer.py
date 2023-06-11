@@ -38,7 +38,7 @@ def assert_mapping_consistency(layout):
     Raise PlacementError if layout is not written in the correct form.
     """
     values = sorted(layout.values())
-    keys = list(layout.keys())
+    keys = list(layout)
     ref_keys = ["q" + str(i) for i in range(len(keys))]
     if keys != ref_keys:
         raise PlacementError("Some physical qubits in the layout may be missing or duplicated.")
