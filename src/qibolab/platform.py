@@ -302,9 +302,15 @@ class Platform:
         self.is_connected = True
 
     def setup(self):
-        """Prepares instruments to execute experiments."""
+        """Prepares instruments to execute experiments.
+
+        Sets flux port offsets to the qubit sweetspots.
+        """
         for instrument in self.instruments:
             instrument.setup()
+        for qubit in self.qubits.values():
+            if qubit.flux is not None and qubit.flux.offset != 0:
+                qubit.flux.offset = qubit.sweetspot
 
     def start(self):
         """Starts all the instruments."""
