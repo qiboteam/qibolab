@@ -225,7 +225,6 @@ def create_dummy():
         platform.qubits[qubit].readout = channels["readout"]
         platform.qubits[qubit].drive = channels[f"drive-{qubit}"]
         platform.qubits[qubit].flux = channels[f"flux-{qubit}"]
-        channels[f"flux-{qubit}"].qubit = platform.qubits[qubit]
         channels["readout"].attenuation = 0
 
     return platform

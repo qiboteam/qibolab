@@ -77,11 +77,9 @@ def create(runcard=RUNCARD):
 
     qubits[0].drive = channels["L3-15"]
     qubits[0].flux = channels["L4-5"]
-    channels["L4-5"].qubit = qubits[0]
     for q in range(1, 5):
         qubits[q].drive = channels[f"L3-{10 + q}"]
         qubits[q].flux = channels[f"L4-{q}"]
-        channels[f"L4-{q}"].qubit = qubits[q]
 
     # set maximum allowed bias values to protect amplifier
     # relevant only for qubits where an amplifier is used
