@@ -574,8 +574,8 @@ class ClusterQRM_RF(Instrument):
                 kwargs['channel_port_map'] (dict): a dictionary of (str: str) containing mappings between channel numbers and device ports:
                     example:
                     .. code-block:: python
-                        10: o1 # device output port o1 is connected to channel 10
-                        1: i1 # device input port i1 is connected to channel 1
+                        10: o1  # device output port o1 is connected to channel 10
+                        1: i1  # device input port i1 is connected to channel 1
 
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
@@ -1638,8 +1638,8 @@ class ClusterQCM_RF(Instrument):
                 kwargs['channel_port_map'] (dict): a dictionary of (str: str) containing mappings between channel numbers and device ports:
                     example:
                     .. code-block:: python
-                        10: o1 # device output port o1 is connected to channel 10
-                        20: o2 # device output port o2 is connected to channel 20
+                        10: o1  # device output port o1 is connected to channel 10
+                        20: o2  # device output port o2 is connected to channel 20
 
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
@@ -2348,10 +2348,10 @@ class ClusterQCM(Instrument):
                 kwargs['channel_port_map'] (dict): a dictionary of (str: str) containing mappings between channel numbers and device ports:
                     example:
                     .. code-block:: python
-                        10: o1 # device output port o1 is connected to channel 10
-                        20: o2 # device output port o2 is connected to channel 20
-                        30: o3 # device output port o1 is connected to channel 30
-                        40: o4 # device output port o2 is connected to channel 40
+                        10: o1  # device output port o1 is connected to channel 10
+                        20: o2  # device output port o2 is connected to channel 20
+                        30: o3  # device output port o1 is connected to channel 30
+                        40: o4  # device output port o2 is connected to channel 40
 
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.

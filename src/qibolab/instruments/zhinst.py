@@ -259,7 +259,7 @@ class ZhSweeperLine:
                 uid=sweeper.parameter.name,
                 values=sweeper.values,
             )
-        if sweeper.parameter is Parameter.delay:
+        if sweeper.parameter is Parameter.start:
             return lo.SweepParameter(
                 uid=sweeper.parameter.name,
                 values=sweeper.values * NANO_TO_SECONDS,
@@ -555,7 +555,7 @@ class Zurich(Controller):
 
         SWEEPER_SET = {"amplitude", "frequency", "duration", "relative_phase"}
         SWEEPER_BIAS = {"bias"}
-        SWEEPER_DELAY = {"delay"}
+        SWEEPER_START = {"start"}
 
         for sweeper in sweepers:
             if sweeper.parameter.name in SWEEPER_SET:
@@ -582,8 +582,8 @@ class Zurich(Controller):
                 for qubit in sweeper.qubits:
                     zhsequence[f"flux{qubit.name}"] = [ZhSweeperLine(sweeper, qubit, sequence)]
 
-            # FIXME: This may not place the Zhsweeper when the delay occurs among different sections or lines
-            if sweeper.parameter.name in SWEEPER_DELAY:
+            # FIXME: This may not place the Zhsweeper when the start occurs among different sections or lines
+            if sweeper.parameter.name in SWEEPER_START:
                 pulse = sweeper.pulses[0]
                 aux_list = zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"]
                 for element in aux_list:
@@ -692,7 +692,7 @@ class Zurich(Controller):
                 phase=pulse.zhsweeper,  # FIXME: I believe this is the global phase sweep
                 # increment_oscillator_phase=pulse.zhsweeper, #FIXME: I believe this is the relative phase sweep
             )
-        elif "frequency" in partial_sweep.uid or partial_sweep.uid == "delay":
+        elif "frequency" in partial_sweep.uid or partial_sweep.uid == "start":
             exp.play(
                 signal=f"{section}{qubit.name}",
                 pulse=pulse.zhpulse,
@@ -797,7 +797,7 @@ class Zurich(Controller):
                         elif isinstance(pulse, ZhSweeperLine):
                             exp.delay(signal=f"drive{q}", time=pulse.zhsweeper)
 
-                    # TODO: Patch for T1 delay, general ?
+                    # TODO: Patch for T1 start, general ?
                     if isinstance(self.sequence[f"readout{q}"][0], ZhSweeperLine):
                         exp.delay(signal=f"drive{q}", time=self.sequence[f"readout{q}"][0].zhsweeper)
                         self.sequence[f"readout{q}"].remove(self.sequence[f"readout{q}"][0])
@@ -1034,7 +1034,7 @@ class Zurich(Controller):
             for qubit in sweeper.qubits:
                 parameter = ZhSweeperLine(sweeper, qubit, self.sequence_qibo).zhsweeper
 
-        elif sweeper.parameter is Parameter.delay:
+        elif sweeper.parameter is Parameter.start:
             parameter = ZhSweeperLine(sweeper).zhsweeper
 
         elif parameter is None:

@@ -590,13 +590,13 @@ class QMPulse:
         """Time (in clock cycles) to wait before playing this pulse.
         Calculated and assigned by :meth:`qibolab.instruments.qm.Sequence.add`."""
         self.wait_time_variable: Optional[_Variable] = None
-        """Time (in clock cycles) to wait before playing this pulse when we are sweeping delay."""
+        """Time (in clock cycles) to wait before playing this pulse when we are sweeping start."""
         self.acquisition: Acquisition = None
         """Data class containing the variables required for data acquisition for the instrument."""
 
         self.next: set = set()
         """Pulses that will be played after the current pulse.
-        These pulses need to be re-aligned if we are sweeping the delay or duration."""
+        These pulses need to be re-aligned if we are sweeping the start or duration."""
 
         self.baked = None
         """Baking object implementing the pulse when 1ns resolution is needed."""
@@ -608,7 +608,7 @@ class QMPulse:
         """Instrument clock cycles (1 cycle = 4ns) to wait before playing the pulse.
 
         This property will be used in the QUA ``wait`` command, so that it is compatible
-        with and without delay sweepers.
+        with and without start sweepers.
         """
         if self.wait_time_variable is not None:
             return self.wait_time_variable + self.wait_time
@@ -985,22 +985,22 @@ class QMOPX(Controller):
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
 
-    def sweep_delay(self, sweepers, qubits, qmsequence, relaxation_time):
+    def sweep_start(self, sweepers, qubits, qmsequence, relaxation_time):
         sweeper = sweepers[0]
         if min(sweeper.values) < 16:
-            raise_error(ValueError, "Cannot sweep delay less than 16ns.")
+            raise_error(ValueError, "Cannot sweep start less than 16ns.")
 
-        delay = declare(int)
+        start = declare(int)
         values = np.array(sweeper.values) // 4
-        with for_(*from_array(delay, values.astype(int))):
+        with for_(*from_array(start, values.astype(int))):
             for pulse in sweeper.pulses:
                 qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
-                # find all pulses that are connected to ``qmpulse`` and update their delays
+                # find all pulses that are connected to ``qmpulse`` and update their starts
                 to_process = {qmpulse}
                 while to_process:
                     next_qmpulse = to_process.pop()
                     to_process |= next_qmpulse.next
-                    next_qmpulse.wait_time_variable = delay
+                    next_qmpulse.wait_time_variable = start
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
 
@@ -1009,7 +1009,7 @@ class QMOPX(Controller):
         Parameter.amplitude: sweep_amplitude,
         Parameter.relative_phase: sweep_relative_phase,
         Parameter.bias: sweep_bias,
-        Parameter.delay: sweep_delay,
+        Parameter.start: sweep_start,
     }
 
     def sweep_recursion(self, sweepers, qubits, qmsequence, relaxation_time):
