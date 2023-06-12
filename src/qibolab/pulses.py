@@ -547,26 +547,30 @@ class Pulse:
             from qibolab.pulses import Pulse, Gaussian
 
             # define Gaussian drive pulse
-            drive_pulse = Pulse(start=0,
-                                duration=60,
-                                amplitude=0.3,
-                                frequency=-200_000_000,
-                                relative_phase=0.0,
-                                shape=Gaussian(5),
-                                channel=1,
-                                type=PulseType.DRIVE,
-                                qubit=0)
+            drive_pulse = Pulse(
+                start=0,
+                duration=60,
+                amplitude=0.3,
+                frequency=-200_000_000,
+                relative_phase=0.0,
+                shape=Gaussian(5),
+                channel=1,
+                type=PulseType.DRIVE,
+                qubit=0,
+            )
 
             # define Rectangular readout pulse
-            readout_pulse = Pulse(start=intSymbolicExpression(60),
-                                  duration=2000,
-                                  amplitude=0.3,
-                                  frequency=20_000_000,
-                                  relative_phase=0.0,
-                                  shape=Rectangular(),
-                                  channel=2,
-                                  type=PulseType.READOUT,
-                                  qubit=0)
+            readout_pulse = Pulse(
+                start=intSymbolicExpression(60),
+                duration=2000,
+                amplitude=0.3,
+                frequency=20_000_000,
+                relative_phase=0.0,
+                shape=Rectangular(),
+                channel=2,
+                type=PulseType.READOUT,
+                qubit=0,
+            )
     """
 
     count: int = 0
