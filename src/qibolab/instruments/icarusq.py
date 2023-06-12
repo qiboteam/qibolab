@@ -201,9 +201,7 @@ class QuicSyn(Instrument):
             self.is_connected = True
 
     def setup(self, frequency: float, **kwargs):
-        """
-        Sets the frequency in Hz
-        """
+        """Sets the frequency in Hz."""
         if self.is_connected:
             self.device.write("0601")
             self.frequency(frequency)
@@ -254,9 +252,7 @@ class AlazarADC(Instrument):
             self.is_connected = True
 
     def setup(self, trigger_volts, **kwargs):
-        """
-        Sets the frequency in Hz
-        """
+        """Sets the frequency in Hz."""
         if self.is_connected:
             input_range_volts = 2.5
             trigger_level_code = int(128 + 127 * trigger_volts / input_range_volts)

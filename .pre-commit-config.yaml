@@ -28,3 +28,14 @@ repos:
     hooks:
       - id: pycln
         args: [--config=pyproject.toml]
+  - repo: https://github.com/adamchainz/blacken-docs
+    rev: 1.13.0
+    hooks:
+      - id: blacken-docs
+  - repo: https://github.com/pycqa/pydocstyle
+    rev: 6.3.0
+    hooks:
+      - id: pydocstyle
+        args:
+          - --select=D103,D200,D206,D300,D301
+        files: ^src/
