@@ -166,7 +166,12 @@ class PulseShape(ABC):
 
         (envelope_waveform_i, envelope_waveform_q) = self.envelope_waveforms
         result = []
-        for n, t, ii, qq in zip(np.arange(num_samples), time, envelope_waveform_i.data, envelope_waveform_q.data):
+        for n, t, ii, qq in zip(
+            np.arange(num_samples),
+            time,
+            envelope_waveform_i.data,
+            envelope_waveform_q.data,
+        ):
             result.append(mod_matrix[:, :, n] @ np.array([ii, qq]))
         mod_signals = np.array(result)
 
@@ -182,10 +187,7 @@ class PulseShape(ABC):
 
 
 class Rectangular(PulseShape):
-    """
-    Rectangular pulse shape.
-
-    """
+    """Rectangular pulse shape."""
 
     def __init__(self):
         self.name = "Rectangular"
@@ -218,8 +220,7 @@ class Rectangular(PulseShape):
 
 
 class Gaussian(PulseShape):
-    """
-    Gaussian pulse shape.
+    r"""Gaussian pulse shape.
 
     Args:
         rel_sigma (float): relative sigma so that the pulse standard deviation (sigma) = duration / rel_sigma
@@ -336,10 +337,7 @@ class Drag(PulseShape):
 
 
 class IIR(PulseShape):
-    """
-    IIR Filter using scipy.signal lfilter.
-
-    """
+    """IIR Filter using scipy.signal lfilter."""
 
     # https://arxiv.org/pdf/1907.04818.pdf (page 11 - filter formula S22)
     # p = [A, tau_iir]
@@ -475,7 +473,7 @@ class SNZ(PulseShape):
 
 
 class eCap(PulseShape):
-    """eCap pulse shape.
+    r"""eCap pulse shape.
 
     Args:
         alpha (float):
@@ -576,7 +574,16 @@ class Pulse:
     count: int = 0
 
     def __init__(
-        self, start, duration, amplitude, frequency, relative_phase, shape, channel, type=PulseType.DRIVE, qubit=0
+        self,
+        start,
+        duration,
+        amplitude,
+        frequency,
+        relative_phase,
+        shape,
+        channel,
+        type=PulseType.DRIVE,
+        qubit=0,
     ):
         # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
         #                    channel: int | str, type: PulseType | str  = PulseType.DRIVE, qubit: int | str = 0):
@@ -1043,8 +1050,20 @@ class Pulse:
         fig = plt.figure(figsize=(14, 5), dpi=200)
         gs = gridspec.GridSpec(ncols=2, nrows=1, width_ratios=[2, 1])
         ax1 = plt.subplot(gs[0])
-        ax1.plot(time, self.shape.envelope_waveform_i.data, label="envelope i", c="C0", linestyle="dashed")
-        ax1.plot(time, self.shape.envelope_waveform_q.data, label="envelope q", c="C1", linestyle="dashed")
+        ax1.plot(
+            time,
+            self.shape.envelope_waveform_i.data,
+            label="envelope i",
+            c="C0",
+            linestyle="dashed",
+        )
+        ax1.plot(
+            time,
+            self.shape.envelope_waveform_q.data,
+            label="envelope q",
+            c="C1",
+            linestyle="dashed",
+        )
         ax1.plot(time, self.shape.modulated_waveform_i.data, label="modulated i", c="C0")
         ax1.plot(time, self.shape.modulated_waveform_q.data, label="modulated q", c="C1")
         ax1.plot(time, -self.shape.envelope_waveform_i.data, c="silver", linestyle="dashed")
@@ -1056,8 +1075,18 @@ class Pulse:
         ax1.legend()
 
         ax2 = plt.subplot(gs[1])
-        ax2.plot(self.shape.modulated_waveform_i.data, self.shape.modulated_waveform_q.data, label="modulated", c="C3")
-        ax2.plot(self.shape.envelope_waveform_i.data, self.shape.envelope_waveform_q.data, label="envelope", c="C2")
+        ax2.plot(
+            self.shape.modulated_waveform_i.data,
+            self.shape.modulated_waveform_q.data,
+            label="modulated",
+            c="C3",
+        )
+        ax2.plot(
+            self.shape.envelope_waveform_i.data,
+            self.shape.envelope_waveform_q.data,
+            label="envelope",
+            c="C2",
+        )
         ax2.plot(
             self.shape.modulated_waveform_i.data[0],
             self.shape.modulated_waveform_q.data[0],
@@ -1100,11 +1129,29 @@ class ReadoutPulse(Pulse):
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
 
-    def __init__(self, start, duration, amplitude, frequency, relative_phase, shape, channel, qubit=0):
+    def __init__(
+        self,
+        start,
+        duration,
+        amplitude,
+        frequency,
+        relative_phase,
+        shape,
+        channel,
+        qubit=0,
+    ):
         # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
         #                    channel: int | str, qubit: int | str = 0):
         super().__init__(
-            start, duration, amplitude, frequency, relative_phase, shape, channel, type=PulseType.READOUT, qubit=qubit
+            start,
+            duration,
+            amplitude,
+            frequency,
+            relative_phase,
+            shape,
+            channel,
+            type=PulseType.READOUT,
+            qubit=qubit,
         )
 
     @property
@@ -1139,11 +1186,29 @@ class DrivePulse(Pulse):
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
 
-    def __init__(self, start, duration, amplitude, frequency, relative_phase, shape, channel, qubit=0):
+    def __init__(
+        self,
+        start,
+        duration,
+        amplitude,
+        frequency,
+        relative_phase,
+        shape,
+        channel,
+        qubit=0,
+    ):
         # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
         #                    channel: int | str, qubit: int | str = 0):
         super().__init__(
-            start, duration, amplitude, frequency, relative_phase, shape, channel, type=PulseType.DRIVE, qubit=qubit
+            start,
+            duration,
+            amplitude,
+            frequency,
+            relative_phase,
+            shape,
+            channel,
+            type=PulseType.DRIVE,
+            qubit=qubit,
         )
 
     @property
@@ -1161,7 +1226,17 @@ class FluxPulse(Pulse):
     def __init__(self, start, duration, amplitude, shape, channel, qubit=0):
         # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
         #                    channel: int | str, qubit: int | str = 0):
-        super().__init__(start, duration, amplitude, 0, 0, shape, channel, type=PulseType.FLUX, qubit=qubit)
+        super().__init__(
+            start,
+            duration,
+            amplitude,
+            0,
+            0,
+            shape,
+            channel,
+            type=PulseType.FLUX,
+            qubit=qubit,
+        )
 
     @property
     def envelope_waveform_i(self) -> Waveform:
@@ -1769,17 +1844,39 @@ class PulseSequence:
                         else:
                             num_samples = int(pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
                             time = pulse.start + np.arange(num_samples) / PulseShape.SAMPLING_RATE * 1e9
-                            ax.plot(time, pulse.shape.modulated_waveform_q.data, c="lightgrey")
-                            ax.plot(time, pulse.shape.modulated_waveform_i.data, c=f"C{str(n)}")
-                            ax.plot(time, pulse.shape.envelope_waveform_i.data, c=f"C{str(n)}")
-                            ax.plot(time, -pulse.shape.envelope_waveform_i.data, c=f"C{str(n)}")
+                            ax.plot(
+                                time,
+                                pulse.shape.modulated_waveform_q.data,
+                                c="lightgrey",
+                            )
+                            ax.plot(
+                                time,
+                                pulse.shape.modulated_waveform_i.data,
+                                c=f"C{str(n)}",
+                            )
+                            ax.plot(
+                                time,
+                                pulse.shape.envelope_waveform_i.data,
+                                c=f"C{str(n)}",
+                            )
+                            ax.plot(
+                                time,
+                                -pulse.shape.envelope_waveform_i.data,
+                                c=f"C{str(n)}",
+                            )
                         # TODO: if they overlap use different shades
                         ax.axhline(0, c="dimgrey")
                         ax.set_ylabel(f"qubit {qubit} \n channel {channel}")
                         for vl in vertical_lines:
                             ax.axvline(vl, c="slategrey", linestyle="--")
                         ax.axis([0, self.finish, -1, 1])
-                        ax.grid(visible=True, which="both", axis="both", color="#CCCCCC", linestyle="-")
+                        ax.grid(
+                            visible=True,
+                            which="both",
+                            axis="both",
+                            color="#CCCCCC",
+                            linestyle="-",
+                        )
             if savefig_filename:
                 plt.savefig(savefig_filename)
             else:

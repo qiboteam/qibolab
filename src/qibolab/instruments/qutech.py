@@ -1,6 +1,4 @@
-"""
-Class to interface with the SPI Rack Qutech Delft
-"""
+"""Class to interface with the SPI Rack Qutech Delft."""
 from qblox_instruments import SpiRack
 from qibo.config import log, raise_error
 
@@ -9,7 +7,8 @@ from qibolab.instruments.abstract import Instrument, InstrumentException
 
 class SPI(Instrument):
     property_wrapper = lambda parent, device, *parameter: property(
-        lambda self: device.get(parameter[0]), lambda self, x: parent._set_device_parameter(device, *parameter, value=x)
+        lambda self: device.get(parameter[0]),
+        lambda self, x: parent._set_device_parameter(device, *parameter, value=x),
     )
 
     def __init__(self, name, address):
@@ -21,9 +20,7 @@ class SPI(Instrument):
         self.device_parameters = {}
 
     def connect(self):
-        """
-        Connects to the instrument using the IP address set in the runcard.
-        """
+        """Connects to the instrument using the IP address set in the runcard."""
         if not self.is_connected:
             for attempt in range(3):
                 try:
@@ -78,7 +75,12 @@ class SPI(Instrument):
                     self.device.add_spi_module(settings[0], "S4g", module_name)
                 device = self.device.instrument_modules[module_name].instrument_modules["dac" + str(port_number - 1)]
                 self.dacs[channel] = type(
-                    "S4g_dac", (), {"current": self.property_wrapper(device, "current"), "device": device}
+                    "S4g_dac",
+                    (),
+                    {
+                        "current": self.property_wrapper(device, "current"),
+                        "device": device,
+                    },
                 )()
                 self.dacs[channel].device.span("range_min_bi")
                 # self.dacs[channel].current = current
@@ -92,7 +94,12 @@ class SPI(Instrument):
                     self.device.add_spi_module(settings[0], "D5a", module_name)
                 device = self.device.instrument_modules[module_name].instrument_modules["dac" + str(port_number - 1)]
                 self.dacs[channel] = type(
-                    "D5a_dac", (), {"voltage": self.property_wrapper(device, "voltage"), "device": device}
+                    "D5a_dac",
+                    (),
+                    {
+                        "voltage": self.property_wrapper(device, "voltage"),
+                        "device": device,
+                    },
                 )()
                 self.dacs[channel].device.span("range_min_bi")
                 # self.dacs[channel].voltage = voltage
