@@ -769,7 +769,9 @@ class Zurich(Controller):
                             exp.delay(signal=f"drive{q}", time=pulse.zhsweeper)
 
                     # TODO: Patch for T1 start, general ?
-                    if len(self.sequence[f"readout{q}"]) > 0 and isinstance(self.sequence[f"readout{q}"][0], ZhSweeperLine):
+                    if len(self.sequence[f"readout{q}"]) > 0 and isinstance(
+                        self.sequence[f"readout{q}"][0], ZhSweeperLine
+                    ):
                         exp.delay(signal=f"drive{q}", time=self.sequence[f"readout{q}"][0].zhsweeper)
                         self.sequence[f"readout{q}"].remove(self.sequence[f"readout{q}"][0])
 
