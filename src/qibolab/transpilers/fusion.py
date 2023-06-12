@@ -14,7 +14,7 @@ class Fusion(Transpiler):
     def is_satisfied(self, circuit):
         return True
 
-    def transpile(self, circuit):
+    def __call__(self, circuit):
         return circuit.fuse(max_qubits=self.max_qubits), list(range(circuit.nqubits))
 
 
@@ -26,7 +26,7 @@ class Rearrange(Fusion):
     but this has not been tested.
     """
 
-    def transpile(self, circuit):
+    def __call__(self, circuit):
         fcircuit = circuit.fuse(max_qubits=self.max_qubits)
         new = circuit.__class__(circuit.nqubits)
         for fgate in fcircuit.queue:
