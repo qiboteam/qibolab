@@ -27,7 +27,9 @@ repos:
     rev: v2.1.5
     hooks:
       - id: pycln
-        args: [--config=pyproject.toml]
+        args:
+          - --config=pyproject.toml
+          - --all
   - repo: https://github.com/adamchainz/blacken-docs
     rev: 1.13.0
     hooks:
