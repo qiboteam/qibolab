@@ -740,36 +740,37 @@ class Zurich(Controller):
         """qubit driving pulses"""
 
         for qubit in qubits.values():
+            q = qubit.name
             if not qubit.flux_coupler:
-                if self.sequence[f"drive{qubit.name}"]:
+                if self.sequence[f"drive{q}"]:
                     time = 0
                     sequences_drive = defaultdict(list)
                     last_pulse = 0
                     sequence_aux = []
                     i = 0
-                    for pulse in self.sequence[f"drive{qubit.name}"]:
-                        pulse_qibo = pulse.pulse
-                        if pulse_qibo.start - last_pulse > relaxation_time:
-                            sequences_drive[i] = sequence_aux
-                            sequence_aux = []
-                            i += 1
-                        sequence_aux.append(pulse)
-                        last_pulse = pulse_qibo.start
-                    sequences_drive[i] = sequence_aux
+                    for pulse in self.sequence[f"drive{q}"]:
+                        if not isinstance(pulse, ZhSweeperLine):
+                            pulse_qibo = pulse.pulse
+                            if pulse_qibo.start - last_pulse > relaxation_time:
+                                sequences_drive[i] = sequence_aux
+                                sequence_aux = []
+                                i += 1
+                            sequence_aux.append(pulse)
+                            last_pulse = pulse_qibo.start
+                        sequences_drive[i] = sequence_aux
 
                     i = 0
                     for sequence in sequences_drive.values():
                         j = 0
-
-                        with exp.section(uid=f"sequence_drive{qubit.name}_{i}"):
+                        with exp.section(uid=f"sequence_drive{q}_{i}"):
                             for pulse in sequence:
                                 if not isinstance(pulse, ZhSweeperLine):
                                     exp.delay(
-                                        signal=f"drive{qubit.name}", time=round(pulse.pulse.start * 1e-9, 9) - time
+                                        signal=f"drive{q}", time=round(pulse.pulse.start * NANO_TO_SECONDS, 9) - time
                                     )
                                     time += (
-                                        round(pulse.pulse.duration * 1e-9, 9)
-                                        + round(pulse.pulse.start * 1e-9, 9)
+                                        round(pulse.pulse.duration * NANO_TO_SECONDS, 9)
+                                        + round(pulse.pulse.start * NANO_TO_SECONDS, 9)
                                         - time
                                     )
                                     pulse.zhpulse.uid = pulse.zhpulse.uid + str(j)
@@ -780,20 +781,15 @@ class Zurich(Controller):
                                             set_oscillator_phase = 0
 
                                         exp.play(
-                                            signal=f"drive{qubit.name}",
+                                            signal=f"drive{q}",
                                             pulse=pulse.zhpulse,
                                             phase=pulse.pulse.relative_phase,
                                             set_oscillator_phase=set_oscillator_phase,
                                         )
                                         j += 1
                                 elif isinstance(pulse, ZhSweeperLine):
-                                    exp.delay(signal=f"drive{qubit.name}", time=pulse.zhsweeper)
+                                    exp.delay(signal=f"drive{q}", time=pulse.zhsweeper)
                         i += 1
-
-                    # TODO: Patch for T1 start, general ?
-                    if isinstance(self.sequence[f"readout{q}"][0], ZhSweeperLine):
-                        exp.delay(signal=f"drive{q}", time=self.sequence[f"readout{q}"][0].zhsweeper)
-                        self.sequence[f"readout{q}"].remove(self.sequence[f"readout{q}"][0])
 
                     # TODO: Patch for T1 start, general ?
                     if isinstance(self.sequence[f"readout{q}"][0], ZhSweeperLine):
@@ -834,10 +830,10 @@ class Zurich(Controller):
             q = qubit.name
             if len(self.sequence[f"readout{q}"]) != 0:
                 i = 0
-                for pulse in self.sequence[f"readout{qubit.name}"]:
+                for pulse in self.sequence[f"readout{q}"]:
                     if play_after is not None:
                         play_after_aux = play_after + f"_{i}"
-                    with exp.section(uid=f"sequence_measure{qubit.name}_{i}", play_after=play_after_aux):
+                    with exp.section(uid=f"sequence_measure{q}_{i}", play_after=play_after_aux):
                         pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
 
                         """Integration weights definition or load from the chip folder"""
@@ -884,18 +880,18 @@ class Zurich(Controller):
                             measure_pulse_parameters = None  # {"phase": 0}
 
                             exp.measure(
-                                acquire_signal=f"acquire{qubit.name}",
-                                handle=f"sequence{qubit.name}_{i}",
+                                acquire_signal=f"acquire{q}",
+                                handle=f"sequence{q}_{i}",
                                 integration_kernel=weight,
                                 integration_kernel_parameters=None,
                                 integration_length=None,
-                                measure_signal=f"measure{qubit.name}",
+                                measure_signal=f"measure{q}",
                                 measure_pulse=pulse.zhpulse,
-                                measure_pulse_length=round(pulse.pulse.duration * 1e-9, 9),
+                                measure_pulse_length=round(pulse.pulse.duration * NANO_TO_SECONDS, 9),
                                 measure_pulse_parameters=measure_pulse_parameters,
                                 measure_pulse_amplitude=None,
-                                acquire_delay=self.time_of_flight * 1e-9,
-                                reset_delay=relaxation_time * 1e-9,
+                                acquire_delay=self.time_of_flight * NANO_TO_SECONDS,
+                                reset_delay=relaxation_time * NANO_TO_SECONDS,
                             )
                             i += 1
 
