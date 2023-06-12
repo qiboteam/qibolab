@@ -995,7 +995,7 @@ class Zurich(Controller):
                 )
         if sweeper.parameter is Parameter.amplitude:
             for pulse in sweeper.pulses:
-                pulse.amplitude = pulse.amplitude.copy()
+                pulse = pulse.copy()
                 sweeper.values = sweeper.values.copy()
                 # FIXME: Dont change the values coming back to qibocal
 
