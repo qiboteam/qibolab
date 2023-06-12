@@ -101,7 +101,7 @@ def test_convert_units_sweeper(dummy_qrc):
     assert sweeper.starts == [0]
     assert sweeper.stops == [10]
 
-    # delay sweeper
+    # start sweeper
     sweeper = rfsoc.Sweeper(
         parameter=[rfsoc.Parameter.START, rfsoc.Parameter.START],
         indexes=[0, 1],
@@ -125,7 +125,7 @@ def test_convert_units_sweeper(dummy_qrc):
 def test_convert_sweep(dummy_qrc):
     """Test conversion between `Sweeper` and `rfsoc.Sweeper` objects.
 
-    Test bias sweep, amplitude error, frequency sweep, duration, delay.
+    Test bias sweep, amplitude error, frequency sweep, duration, start.
     """
     platform = create_platform("rfsoc")
     qubit = platform.qubits[0]
@@ -180,7 +180,7 @@ def test_convert_sweep(dummy_qrc):
     )
     assert rfsoc_sweeper == targ
 
-    sweeper = Sweeper(parameter=Parameter.delay, values=np.arange(0, 10, 1), pulses=[pulse0])
+    sweeper = Sweeper(parameter=Parameter.start, values=np.arange(0, 10, 1), pulses=[pulse0])
     rfsoc_sweeper = convert_sweep(sweeper, seq, platform.qubits)
     targ = rfsoc.Sweeper(
         expts=10,
