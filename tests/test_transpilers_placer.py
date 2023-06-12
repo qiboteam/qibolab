@@ -13,6 +13,7 @@ from qibolab.transpilers.placer import (
     assert_mapping_consistency,
     assert_placement,
 )
+from qibolab.transpilers.routing import ShortestPaths
 
 
 def star_connectivity():
@@ -153,8 +154,6 @@ def test_random(reps):
 
 
 def test_backpropagation():
-    from qibolab.transpilers.routing import ShortestPaths
-
     connectivity = star_connectivity()
     routing = ShortestPaths(connectivity=connectivity)
     placer = Backpropagation(connectivity, routing)
