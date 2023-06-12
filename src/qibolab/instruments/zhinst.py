@@ -778,12 +778,12 @@ class Zurich(Controller):
                                     elif isinstance(pulse, ZhPulse):
                                         if j == 0:
                                             set_oscillator_phase = 0
-                                        
+
                                         exp.play(
                                             signal=f"drive{qubit.name}",
                                             pulse=pulse.zhpulse,
                                             phase=pulse.pulse.relative_phase,
-                                            set_oscillator_phase = set_oscillator_phase,
+                                            set_oscillator_phase=set_oscillator_phase,
                                         )
                                         j += 1
                                 elif isinstance(pulse, ZhSweeperLine):
