@@ -63,7 +63,7 @@ class Trivial(Placer):
             circuit (qibo.models.Circuit): circuit to be transpiled.
         """
         if self.connectivity is not None:
-            if self.connectivity.number_of_nodes != circuit.nqubits:
+            if self.connectivity.number_of_nodes() != circuit.nqubits:
                 raise PlacementError(
                     "The number of nodes of the connectivity graph must match the number of qubits in the circuit"
                 )
