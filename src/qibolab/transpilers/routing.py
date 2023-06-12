@@ -6,38 +6,30 @@ from qibo import gates
 from qibo.config import log, raise_error
 from qibo.models import Circuit
 
-from qibolab.transpilers.abstract import Transpiler, create_circuit_repr
+from qibolab.transpilers.abstract import Router, create_circuit_repr
 from qibolab.transpilers.placer import assert_placement
 
 
-def respect_connectivity(connectivity, circuit, verbose=False):
-    """Check if a circuit can be executed on Hardware.
+class ConnectivityError(Exception):
+    """Raise for an error in the connectivity"""
+
+
+def assert_connectivity(connectivity, circuit):
+    """Assert if a circuit can be executed on Hardware.
+    No gates acting on more than two qubits.
+    All two qubit operations can be performed on hardware
 
     Args:
         circuit (qibo.models.Circuit): circuit model to check.
         connectivity (networkx.graph): chip connectivity.
-        verbose (bool): if ``True`` it prints info messages.
-
-    Returns ``True`` if the following conditions are satisfied:
-        - Circuit does not contain gates acting on more than two qubits.
-        - Circuit matches connectivity.
-
-    otherwise returns ``False``.
     """
 
     for gate in circuit.queue:
         if len(gate.qubits) > 2 and not isinstance(gate, gates.M):
-            if verbose:
-                log.info(f"{gate.name} acts on more than two qubits.")
-            return False
+            raise ConnectivityError(f"{gate.name} acts on more than two qubits.")
         if len(gate.qubits) == 2:
             if ("q" + str(gate.qubits[0]), "q" + str(gate.qubits[1])) not in connectivity.edges:
-                if verbose:
-                    log.info("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
-                return False
-    if verbose:
-        log.info("Circuit respects connectivity.")
-    return True
+                raise ConnectivityError("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
 
 
 def remap_circuit(circuit, qubit_map):
@@ -56,7 +48,7 @@ def remap_circuit(circuit, qubit_map):
     return new_circuit
 
 
-class ShortestPaths(Transpiler):
+class ShortestPaths(Router):
     """A class to perform initial qubit mapping and connectivity matching.
 
     Properties:
@@ -88,21 +80,6 @@ class ShortestPaths(Transpiler):
         self._qubit_map = None
         self._transpiled_circuit = None
         self._circuit_position = 0
-
-    # TODO: This may become a stand alone function
-    def is_satisfied(self, circuit):
-        """Check if a circuit can be executed on Hardware.
-
-        Args:
-            circuit (qibo.models.Circuit): Circuit model to check.
-
-        Returns ``True`` if the following conditions are satisfied:
-            - Circuit does not contain more than two-qubit gates.
-            - Circuit matches connectivity.
-
-        otherwise returns ``False``.
-        """
-        return respect_connectivity(connectivity=self.connectivity, circuit=circuit, verbose=self.verbose)
 
     def __call__(self, circuit, initial_layout):
         """Circuit connectivity matching.
@@ -322,7 +299,7 @@ class ShortestPaths(Transpiler):
             self._qubit_map[value] = old_mapping[key]
 
 
-class Sabre(Transpiler):
+class Sabre(Router):
     # TODO: requires block circuit
     """
     Routing algorithm proposed in

@@ -13,6 +13,7 @@ from qibolab.transpilers.placer import (
     assert_mapping_consistency,
     assert_placement,
 )
+from qibolab.transpilers.routing import ShortestPaths
 
 
 def star_connectivity():
@@ -152,10 +153,9 @@ def test_random(reps):
     assert_placement(star_circuit(), layout)
 
 
-# TODO requires block circuit
-@pytest.mark.parametrize("routing", [None])
-def test_backpropagation(routing):
+def test_backpropagation():
     connectivity = star_connectivity()
+    routing = ShortestPaths(connectivity=connectivity)
     placer = Backpropagation(connectivity, routing)
     layout = placer(star_circuit())
     assert_placement(star_circuit(), layout)

@@ -12,7 +12,7 @@ def create_circuit_repr(circuit: Circuit):
     """Translate qibo circuit into a list of two qubit gates to be used by the transpiler.
 
     Args:
-        circuit (:class:`qibo.models.Circuit`): circuit to be transpiled.
+        circuit (qibo.models.Circuit): circuit to be transpiled.
 
     Returns:
         translated_circuit (list): list containing qubits targeted by two qubit gates
@@ -38,10 +38,31 @@ class Placer(ABC):
         """Find initial qubit mapping
 
         Args:
-            circuit (:class:`qibo.models.Circuit`): circuit to be mapped.
+            circuit (qibo.models.Circuit): circuit to be mapped.
 
         Returns:
-            initial_layout (dict): dictionary containing the initial logical to physical qubit mapping
+            initial_layout (dict): dictionary containing the initial logical to physical qubit mapping.
+        """
+
+
+class Router(ABC):
+    """A router implements the mapping of a circuit on a specific hardware"""
+
+    @abstractmethod
+    def __init__(self, connectivity: nx.Graph, *args):
+        self.connectivity = connectivity
+
+    @abstractmethod
+    def __call__(self, circuit: Circuit, initial_layout: dict) -> Tuple[Circuit, dict]:
+        """Match circuit to hardware connectivity
+
+        Args:
+            circuit (qibo.models.Circuit): circuit to be routed.
+            initial_layout (dict): dictionary containing the initial logical to physical qubit mapping.
+
+        Returns:
+            matched_circuit (qibo.models.Circuit): routed circuit
+            final_layout (dict): dictionary containing the final logical to physical qubit mapping.
         """
 
 
