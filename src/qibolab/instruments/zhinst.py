@@ -2,7 +2,8 @@ import logging
 import os
 import warnings
 from collections import defaultdict
-from dataclasses import replace
+from dataclasses import dataclass, replace
+from typing import Tuple
 
 import laboneq._token
 import laboneq.simple as lo
@@ -15,6 +16,7 @@ from qibolab.instruments.abstract import (
     Controller,
     InstrumentException,
 )
+from qibolab.instruments.port import Port
 from qibolab.pulses import FluxPulse, PulseSequence, PulseType
 from qibolab.sweeper import Parameter
 
@@ -109,6 +111,31 @@ def select_pulse(pulse, pulse_type):
 
         x = pulse.envelope_waveform_i.data  No need for q ???
         """
+
+
+@dataclass
+class ZhPort(Port):
+    device_name: str
+    channel_path: str
+
+    _offset: float = 0.0
+    _power_range: int = 0
+
+    @property
+    def power_range(self):
+        return self._power_range
+
+    @power_range.setter
+    def power_range(self, value):
+        self._power_range = value
+
+    @property
+    def offset(self):
+        return self._offset
+
+    @offset.setter
+    def offset(self, value):
+        self._offset = value
 
 
 class ZhPulse:
@@ -242,7 +269,7 @@ class ZhSweeperLine:
 class Zurich(Controller):
     """Zurich driver main class"""
 
-    def __init__(self, name, descriptor, use_emulation=False):
+    def __init__(self, name, descriptor, use_emulation=False, time_of_flight=0.0, smearing=0.0):
         self.name = name
         "Setup name (str)"
 
@@ -269,8 +296,8 @@ class Zurich(Controller):
         self.device = None
         "Zurich device parameters for connection"
 
-        self.time_of_flight = 0.0
-        self.smearing = 0.0
+        self.time_of_flight = time_of_flight
+        self.smearing = smearing
         self.chip = "iqm5q"
         "Parameters read from the runcard not part of ExecutionParameters"
 
@@ -293,6 +320,13 @@ class Zurich(Controller):
         self.nt_sweeps = None
         "Storing sweepers"
         # Improve the storing of multiple sweeps
+
+        self.ports = {}
+
+    def __getitem__(self, port_name: Tuple[str, str]):
+        if port_name not in self.ports:
+            self.ports[port_name] = ZhPort(*port_name)
+        return self.ports[port_name]
 
     def connect(self):
         if not self.is_connected:
@@ -440,7 +474,7 @@ class Zurich(Controller):
             range=qubit.flux.power_range,
             port_delay=None,
             delay_signal=0,
-            voltage_offset=qubit.flux.bias,
+            voltage_offset=qubit.flux.offset,
         )
 
     def run_exp(self):
