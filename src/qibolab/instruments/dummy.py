@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Union
 
 import numpy as np
-from qibo.config import log, raise_error
+from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller

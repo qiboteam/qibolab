@@ -17,7 +17,6 @@ from qibolab.result import (
     AveragedIntegratedResults,
     AveragedSampleResults,
     IntegratedResults,
-    SampleResults,
 )
 from qibolab.sweeper import Parameter, Sweeper
 
