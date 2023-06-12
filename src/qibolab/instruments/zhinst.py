@@ -769,7 +769,7 @@ class Zurich(Controller):
                             exp.delay(signal=f"drive{q}", time=pulse.zhsweeper)
 
                     # TODO: Patch for T1 start, general ?
-                    if isinstance(self.sequence[f"readout{q}"][0], ZhSweeperLine):
+                    if len(self.sequence[f"readout{q}"]) > 0 and isinstance(self.sequence[f"readout{q}"][0], ZhSweeperLine):
                         exp.delay(signal=f"drive{q}", time=self.sequence[f"readout{q}"][0].zhsweeper)
                         self.sequence[f"readout{q}"].remove(self.sequence[f"readout{q}"][0])
 
@@ -957,6 +957,7 @@ class Zurich(Controller):
                 exp_res = np.moveaxis(exp_res, rearranging_axes[0], rearranging_axes[1])
                 if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                     data = np.array([exp_res]) if options.averaging_mode is AveragingMode.CYCLIC else np.array(exp_res)
+                    data = data.real
                     results[self.sequence[f"readout{q}"][0].pulse.serial] = options.results_type(data)
                 else:
                     results[self.sequence[f"readout{q}"][0].pulse.serial] = options.results_type(data=np.array(exp_res))
@@ -970,7 +971,7 @@ class Zurich(Controller):
 
         # FIXME: Include this on the reports
         # html containing the pulse sequence schedule
-        lo.show_pulse_sheet("pulses", self.exp)
+        # lo.show_pulse_sheet("pulses", self.exp)
         return results
 
     def sweep_recursion(self, qubits, exp, exp_calib, exp_options):
