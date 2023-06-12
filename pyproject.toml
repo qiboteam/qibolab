@@ -35,7 +35,7 @@ qualang-tools = { version = "==0.14.0", optional = true}
 setuptools = { version = ">67.0.0", optional = true }
 laboneq = { version ="==2.5.0", optional = true }
 # TODO change qibosoq when release
-qibosoq = { git = "https://github.com/qiboteam/qibosoq.git", branch = "raw-acquisition", optional = true}
+qibosoq = { git = "https://github.com/qiboteam/qibosoq.git", branch = "main", optional = true}
 
 [tool.poetry.group.docs]
 optional = true
