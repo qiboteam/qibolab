@@ -2,8 +2,6 @@ import itertools
 import pathlib
 
 import laboneq.simple as lo
-import numpy as np
-import pytest
 
 from qibolab.channels import ChannelMap
 from qibolab.instruments.oscillator import LocalOscillator

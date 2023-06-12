@@ -3,7 +3,6 @@ import pytest
 from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
-from qibo.states import CircuitResult
 
 from qibolab import create_platform
 from qibolab.compilers import Compiler

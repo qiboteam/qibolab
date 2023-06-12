@@ -7,7 +7,6 @@ from qibo.models import Circuit
 
 from qibolab import ExecutionParameters
 from qibolab.backends import QibolabBackend
-from qibolab.platform import Platform
 
 
 @pytest.fixture(scope="module")
