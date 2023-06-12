@@ -53,15 +53,20 @@ class Trivial(Placer):
         connectivity (networkx.Graph): chip connectivity.
     """
 
-    def __init__(self, connectivity=None):
+    def __init__(self, connectivity: nx.Graph = None):
         self.connectivity = connectivity
 
     def __call__(self, circuit: Circuit):
         """Find the trivial placement for the circuit.
 
         Args:
-            circuit (qibo.models.Circuit): Circuit model to check.
+            circuit (qibo.models.Circuit): circuit to be transpiled.
         """
+        if self.connectivity is not None:
+            if self.connectivity.number_of_nodes != circuit.nqubits:
+                raise PlacementError(
+                    "The number of nodes of the connectivity graph must match the number of qubits in the circuit"
+                )
         return dict(zip(list("q" + str(i) for i in range(circuit.nqubits)), range(circuit.nqubits)))
 
 
@@ -83,7 +88,7 @@ class Custom(Placer):
         """Return the custom placement if it can be applied to the given circuit (if given).
 
         Args:
-            circuit (qibo.models.Circuit): Circuit to be transpiled.
+            circuit (qibo.models.Circuit): circuit to be transpiled.
         """
         if isinstance(self.map, dict):
             pass
@@ -114,7 +119,7 @@ class Subgraph(Placer):
         """Find the initial layout of the given circuit using subgraph isomorphism.
 
         Args:
-            circuit (qibo.models.Circuit): Circuit to be transpiled.
+            circuit (qibo.models.Circuit): circuit to be transpiled.
         """
         circuit_repr = create_circuit_repr(circuit)
         if len(circuit_repr) < 3:
@@ -197,33 +202,44 @@ class Random(Placer):
         return total_len - allowed
 
 
-# TODO: requires block decomposition
 class Backpropagation(Placer):
     """
-    Place qubits based on the algorithm proposed in
-    https://doi.org/10.48550/arXiv.1809.02573
+    Place qubits based on the algorithm proposed in https://doi.org/10.48550/arXiv.1809.02573.
+    Works with ShortestPaths routing.
+
+    Attributes:
+        connectivity (networkx.Graph): chip connectivity.
+        routing_algorithm (qibolab.transpilers.routing.Transpiler): routing algorithm.
+        iterations (int): number of executions of the forward and backward routing steps.
     """
 
-    def __init__(self, connectivity, routing_algorithm, iterations=1, max_lookahead_gates=None):
+    def __init__(self, connectivity, routing_algorithm, iterations=1):
         self.connectivity = connectivity
-        self._routing = routing_algorithm
-        self._iterations = iterations
-        self._max_gates = max_lookahead_gates
+        self.routing_algorithm = routing_algorithm
+        self.iterations = iterations
 
-    def __call__(self, circuit):
-        # Start with trivial placement
-        self._circuit_repr = create_circuit_repr(circuit)
-        initial_placement = dict(zip(list("q" + str(i) for i in range(circuit.nqubits)), range(circuit.nqubits)))
-        for _ in range(self._iterations):
-            final_placement = self.forward_step(initial_placement)
-            initial_placement = self.backward_step(final_placement)
+    def __call__(self, circuit: Circuit):
+        """Find the initial layout of the given circuit using subgraph isomorphism.
+
+        Args:
+            circuit (qibo.models.Circuit): circuit to be transpiled.
+        """
+
+        initial_placer = Trivial(self.connectivity)
+        initial_placement = initial_placer(circuit=circuit)
+        reversed_circuit = circuit.invert()
+        for _ in range(self.iterations):
+            final_placement = self.routing_step(initial_placement, circuit)
+            initial_placement = self.routing_step(final_placement, reversed_circuit)
         return initial_placement
 
-    # TODO: requires block circuit
-    def forward_step(self, initial_placement):
-        return initial_placement
+    def routing_step(self, layout, circuit):
+        """Perform routing of the circuit.
 
-    # TODO: requires block circuit
-    def backward_step(self, final_placement):
-        # TODO: requires block circuit
-        return final_placement
+        Args:
+            layout (dict): intial qubit layout.
+            circuit (qibo.models.Circuit): circuit to be routed.
+        """
+
+        _, final_mapping = self.routing_algorithm(circuit, layout)
+        return final_mapping
