@@ -12,9 +12,10 @@ from qibolab.transpilers.placer import (
     assert_placement,
 )
 from qibolab.transpilers.routing import (
+    ConnectivityError,
     ShortestPaths,
+    assert_connectivity,
     remap_circuit,
-    respect_connectivity,
 )
 
 
@@ -64,28 +65,22 @@ def matched_circuit():
     return circuit
 
 
-def test_is_satisfied():
-    transpiler = ShortestPaths(connectivity=star_connectivity(), verbose=False)
-    assert transpiler.is_satisfied(matched_circuit())
+def test_assert_connectivity():
+    assert_connectivity(star_connectivity(), matched_circuit())
 
 
-@pytest.mark.parametrize("verbose", [True, False])
-def test_respect_connectivity(verbose):
-    assert respect_connectivity(star_connectivity(), matched_circuit(), verbose)
-
-
-@pytest.mark.parametrize("verbose", [True, False])
-def test_respect_connectivity_false(verbose):
+def test_assert_connectivity_false():
     circuit = Circuit(5)
     circuit.add(gates.CZ(0, 1))
-    assert not respect_connectivity(star_connectivity(), circuit, verbose)
+    with pytest.raises(ConnectivityError):
+        assert_connectivity(star_connectivity(), circuit)
 
 
-@pytest.mark.parametrize("verbose", [True, False])
-def test_respect_connectivity_3q(verbose):
+def test_assert_connectivity_3q():
     circuit = Circuit(5)
     circuit.add(gates.TOFFOLI(0, 1, 2))
-    assert not respect_connectivity(star_connectivity(), circuit, verbose)
+    with pytest.raises(ConnectivityError):
+        assert_connectivity(star_connectivity(), circuit)
 
 
 def test_remap_circuit():
@@ -140,8 +135,7 @@ def test_random_circuits_5q(gates, qubits):
     circuit = generate_random_circuit(nqubits=qubits, ngates=gates)
     transpiled_circuit, final_qubit_map = transpiler(circuit, initial_layout)
     assert transpiler.added_swaps >= 0
-    assert transpiler.is_satisfied(transpiled_circuit)
-    assert respect_connectivity(star_connectivity(), transpiled_circuit)
+    assert_connectivity(star_connectivity(), transpiled_circuit)
     assert_placement(transpiled_circuit, final_qubit_map)
 
 
@@ -184,8 +178,7 @@ def test_random_circuits_21q(gates, qubits, split):
     circuit = generate_random_circuit(nqubits=qubits, ngates=gates)
     transpiled_circuit, final_qubit_map = transpiler(circuit, initial_layout)
     assert transpiler.added_swaps >= 0
-    assert transpiler.is_satisfied(transpiled_circuit)
-    assert respect_connectivity(q21_connectivity(), transpiled_circuit)
+    assert_connectivity(q21_connectivity(), transpiled_circuit)
     assert_placement(transpiled_circuit, final_qubit_map)
 
 
@@ -202,8 +195,7 @@ def test_star_circuit():
     transpiler = ShortestPaths(connectivity=star_connectivity())
     transpiled_circuit, final_qubit_map = transpiler(star_circuit(), initial_layout)
     assert transpiler.added_swaps == 0
-    assert transpiler.is_satisfied(transpiled_circuit)
-    assert respect_connectivity(star_connectivity(), transpiled_circuit)
+    assert_connectivity(star_connectivity(), transpiled_circuit)
     assert_placement(transpiled_circuit, final_qubit_map)
     assert final_qubit_map["q2"] == 0
 
@@ -214,7 +206,6 @@ def test_star_circuit_custom_map():
     transpiler = ShortestPaths(connectivity=star_connectivity())
     transpiled_circuit, final_qubit_map = transpiler(star_circuit(), initial_layout)
     assert transpiler.added_swaps == 1
-    assert transpiler.is_satisfied(transpiled_circuit)
-    assert respect_connectivity(star_connectivity(), transpiled_circuit)
+    assert_connectivity(star_connectivity(), transpiled_circuit)
     assert_placement(transpiled_circuit, final_qubit_map)
     assert final_qubit_map == {"q0": 1, "q1": 2, "q2": 0, "q3": 3, "q4": 4}
