@@ -277,10 +277,10 @@ IcarusQFPGA
    :members:
    :member-order: bysource
 
-RFSoC 4x2
----------
+RFSoC
+-----
 
-.. autoclass:: qibolab.instruments.rfsoc.TII_RFSOC4x2
+.. autoclass:: qibolab.instruments.rfsoc.RFSoC
    :members:
    :member-order: bysource
 
@@ -307,7 +307,11 @@ Transpiler
    :members:
    :member-order: bysource
 
-.. automodule:: qibolab.transpilers.general_connectivity
+.. automodule:: qibolab.transpilers.routing
+   :members:
+   :member-order: bysource
+
+.. automodule:: qibolab.transpilers.placer
    :members:
    :member-order: bysource
 

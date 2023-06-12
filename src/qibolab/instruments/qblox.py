@@ -9,14 +9,13 @@ It does not support the operation of multiple clusters symultaneously.
 https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/
 """
 
-import json
 
 import numpy as np
 from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
 from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qblox_instruments.qcodes_drivers.sequencer import Sequencer as QbloxSequencer
 
-from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
+from qibolab.instruments.abstract import Instrument, InstrumentException
 from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType, Waveform
 
 
@@ -123,13 +122,13 @@ class Sequencer:
         self.program: str = ""
 
 
-class Cluster(AbstractInstrument):
+class Cluster(Instrument):
     """A class to extend the functionality of qblox_instruments Cluster.
 
     The class exposes the attribute `reference_clock_source` that enables the
     selection of an internal or external clock source.
 
-    The class inherits from AbstractInstrument and implements its interface methods:
+    The class inherits from Instrument and implements its interface methods:
         __init__()
         connect()
         setup()
@@ -237,11 +236,11 @@ class Cluster(AbstractInstrument):
             raise Exception("The instrument cannot be set up, there is no connection")
 
     def start(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
         pass
 
     def stop(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
         pass
 
     def disconnect(self):
@@ -259,7 +258,7 @@ cluster: QbloxCluster = None
 # property of the class Cluster.
 
 
-class ClusterQRM_RF(AbstractInstrument):
+class ClusterQRM_RF(Instrument):
     """Qblox Cluster Qubit Readout Module RF driver.
 
     Qubit Readout Module RF (QRM-RF) is an instrument that integrates an arbitratry
@@ -307,7 +306,7 @@ class ClusterQRM_RF(AbstractInstrument):
                 10: o1
                 1: i1
 
-    The class inherits from AbstractInstrument and implements its interface methods:
+    The class inherits from Instrument and implements its interface methods:
         __init__()
         connect()
         setup()
@@ -575,8 +574,8 @@ class ClusterQRM_RF(AbstractInstrument):
                 kwargs['channel_port_map'] (dict): a dictionary of (str: str) containing mappings between channel numbers and device ports:
                     example:
                     .. code-block:: python
-                        10: o1 # device output port o1 is connected to channel 10
-                        1: i1 # device input port i1 is connected to channel 1
+                        10: o1  # device output port o1 is connected to channel 10
+                        1: i1  # device input port i1 is connected to channel 1
 
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
@@ -863,9 +862,7 @@ class ClusterQRM_RF(AbstractInstrument):
                     body += initial_wait_instruction
 
                     for n in range(pulses.count):
-                        if (self.ports["i1"].hardware_demod_en or self.ports["o1"].hardware_mod_en) and pulses[
-                            n
-                        ].relative_phase != 0:
+                        if self.ports["i1"].hardware_demod_en or self.ports["o1"].hardware_mod_en:
                             # Set phase
                             phase = (pulses[n].relative_phase * 360 / (2 * np.pi)) % 360
                             phase = int(phase / 360 * 1e9)
@@ -1303,7 +1300,7 @@ class ClusterQRM_RF(AbstractInstrument):
         return integrated_signal
 
     def start(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
         pass
 
     def stop(self):
@@ -1314,12 +1311,12 @@ class ClusterQRM_RF(AbstractInstrument):
             pass
 
     def disconnect(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
         self._cluster = None
         self.is_connected = False
 
 
-class ClusterQCM_RF(AbstractInstrument):
+class ClusterQCM_RF(Instrument):
     """Qblox Cluster Qubit Control Module RF driver.
 
     Qubit Control Module RF (QCM-RF) is an instrument that integrates an arbitratry
@@ -1357,7 +1354,7 @@ class ClusterQCM_RF(AbstractInstrument):
             21: o1 # IQ Port = out0 & out1
             22: o2 # IQ Port = out2 & out3
 
-    The class inherits from AbstractInstrument and implements its interface methods:
+    The class inherits from Instrument and implements its interface methods:
         __init__()
         connect()
         setup()
@@ -1641,8 +1638,8 @@ class ClusterQCM_RF(AbstractInstrument):
                 kwargs['channel_port_map'] (dict): a dictionary of (str: str) containing mappings between channel numbers and device ports:
                     example:
                     .. code-block:: python
-                        10: o1 # device output port o1 is connected to channel 10
-                        20: o2 # device output port o2 is connected to channel 20
+                        10: o1  # device output port o1 is connected to channel 10
+                        20: o2  # device output port o2 is connected to channel 20
 
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
@@ -1927,7 +1924,7 @@ class ClusterQCM_RF(AbstractInstrument):
                             raise Exception(
                                 f"The minimum delay between pulses is {minimum_delay_between_instructions}ns."
                             )
-                        if self.ports[port].hardware_mod_en and pulses[n].relative_phase != 0:
+                        if self.ports[port].hardware_mod_en:
                             # Set phase
                             phase = (pulses[n].relative_phase * 360 / (2 * np.pi)) % 360
                             phase = int(phase / 360 * 1e9)
@@ -2016,7 +2013,7 @@ class ClusterQCM_RF(AbstractInstrument):
             # )
 
     def start(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
         pass
 
     def stop(self):
@@ -2027,12 +2024,12 @@ class ClusterQCM_RF(AbstractInstrument):
             pass
 
     def disconnect(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
         self._cluster = None
         self.is_connected = False
 
 
-class ClusterQCM(AbstractInstrument):
+class ClusterQCM(Instrument):
     """Qblox Cluster Qubit Control Module Baseband driver.
 
     Qubit Control Module (QCM) is an arbitratry wave generator with two DACs connected to
@@ -2072,7 +2069,7 @@ class ClusterQCM(AbstractInstrument):
                 11: o3
                 12: o4
 
-    The class inherits from AbstractInstrument and implements its interface methods:
+    The class inherits from Instrument and implements its interface methods:
         __init__()
         connect()
         setup()
@@ -2351,10 +2348,10 @@ class ClusterQCM(AbstractInstrument):
                 kwargs['channel_port_map'] (dict): a dictionary of (str: str) containing mappings between channel numbers and device ports:
                     example:
                     .. code-block:: python
-                        10: o1 # device output port o1 is connected to channel 10
-                        20: o2 # device output port o2 is connected to channel 20
-                        30: o3 # device output port o1 is connected to channel 30
-                        40: o4 # device output port o2 is connected to channel 40
+                        10: o1  # device output port o1 is connected to channel 10
+                        20: o2  # device output port o2 is connected to channel 20
+                        30: o3  # device output port o1 is connected to channel 30
+                        40: o4  # device output port o2 is connected to channel 40
 
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
@@ -2629,7 +2626,7 @@ class ClusterQCM(AbstractInstrument):
                             raise Exception(
                                 f"The minimum delay between pulses is {minimum_delay_between_instructions}ns."
                             )
-                        if self.ports[port].hardware_mod_en and pulses[n].relative_phase != 0:
+                        if self.ports[port].hardware_mod_en:
                             # Set phase
                             phase = (pulses[n].relative_phase * 360 / (2 * np.pi)) % 360
                             phase = int(phase / 360 * 1e9)
@@ -2713,7 +2710,7 @@ class ClusterQCM(AbstractInstrument):
             self.device.start_sequencer(sequencer_number)
 
     def start(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
         pass
 
     def stop(self):
@@ -2724,6 +2721,6 @@ class ClusterQCM(AbstractInstrument):
             pass
 
     def disconnect(self):
-        """Empty method to comply with AbstractInstrument interface."""
+        """Empty method to comply with Instrument interface."""
         self._cluster = None
         self.is_connected = False

@@ -4,17 +4,19 @@ from typing import List
 import numpy as np
 from qibo.config import raise_error
 
-from qibolab.instruments.abstract import AbstractInstrument, InstrumentException
+from qibolab.instruments.abstract import Instrument, InstrumentException
 from qibolab.pulses import Pulse
 
 
-class TektronixAWG5204(AbstractInstrument):
+class TektronixAWG5204(Instrument):
     def __init__(self, name, address):
         super().__init__(name, address)
         # Phase offset for each channel for IQ sideband optimziation
         self.channel_phase: "list[float]" = []
         # Time buffer at the start and end of the pulse sequence to ensure that the minimum samples of the instrument are reached
         self.pulse_buffer: float = 1e-6
+        self.device = None
+        self.sample_rate = None
 
     rw_property_wrapper = lambda parameter: property(
         lambda self: self.device.get(parameter),
@@ -155,7 +157,7 @@ class TektronixAWG5204(AbstractInstrument):
             self.is_connected = False
 
 
-class MCAttenuator(AbstractInstrument):
+class MCAttenuator(Instrument):
     """Driver for the MiniCircuit RCDAT-8000-30 variable attenuator."""
 
     def connect(self):
@@ -184,7 +186,7 @@ class MCAttenuator(AbstractInstrument):
         pass
 
 
-class QuicSyn(AbstractInstrument):
+class QuicSyn(Instrument):
     """Driver for the National Instrument QuicSyn Lite local oscillator."""
 
     def connect(self):
@@ -199,9 +201,7 @@ class QuicSyn(AbstractInstrument):
             self.is_connected = True
 
     def setup(self, frequency: float, **kwargs):
-        """
-        Sets the frequency in Hz
-        """
+        """Sets the frequency in Hz."""
         if self.is_connected:
             self.device.write("0601")
             self.frequency(frequency)
@@ -227,12 +227,13 @@ class QuicSyn(AbstractInstrument):
             self.is_connected = False
 
 
-class AlazarADC(AbstractInstrument):
+class AlazarADC(Instrument):
     """Driver for the AlazarTech ATS9371 ADC."""
 
     def __init__(self, name, address):
         super().__init__(name, address)
         self.controller = None
+        self.device = None
 
     def connect(self):
         if not self.is_connected:
@@ -251,9 +252,7 @@ class AlazarADC(AbstractInstrument):
             self.is_connected = True
 
     def setup(self, trigger_volts, **kwargs):
-        """
-        Sets the frequency in Hz
-        """
+        """Sets the frequency in Hz."""
         if self.is_connected:
             input_range_volts = 2.5
             trigger_level_code = int(128 + 127 * trigger_volts / input_range_volts)
@@ -330,11 +329,9 @@ class AlazarADC(AbstractInstrument):
 
     def start(self):
         """Starts the instrument."""
-        pass
 
     def stop(self):
         """Stops the instrument."""
-        pass
 
     def disconnect(self):
         if self.is_connected:

@@ -1,6 +1,8 @@
+"""Platform for controlling quantum devices."""
+
 import math
 import re
-from dataclasses import dataclass, field, replace
+from dataclasses import replace
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -9,7 +11,7 @@ import yaml
 from qibo.config import log, raise_error
 
 from qibolab.channels import Channel, ChannelMap
-from qibolab.instruments.abstract import AbstractInstrument
+from qibolab.instruments.abstract import Controller, Instrument
 from qibolab.native import NativeType, SingleQubitNatives, TwoQubitNatives
 from qibolab.qubits import Qubit, QubitId, QubitPair
 
@@ -25,11 +27,11 @@ class Platform:
     """
 
     def __init__(self, name, runcard, instruments, channels):
-        log.info(f"Loading platform {name}")
+        log.info("Loading platform %s", name)
 
         self.name = name
         self.runcard = runcard
-        self.instruments: List[AbstractInstrument] = instruments
+        self.instruments: List[Instrument] = instruments
         self.channels: ChannelMap = channels
 
         self.qubits: Dict[QubitId, Qubit] = {}
@@ -62,7 +64,7 @@ class Platform:
 
     def reload_settings(self):
         # TODO: Remove ``self.settings``
-        if self.settings == None:
+        if self.settings is None:
             # Load initial configuration
             if isinstance(self.runcard, dict):
                 settings = self.settings = self.runcard
@@ -94,13 +96,13 @@ class Platform:
                 # register channels to qubits when we are using the old format
                 # needed for ``NativeGates`` to work
                 if "qubit_channel_map" in self.settings:
-                    ro, qd, qf, _ = self.settings["qubit_channel_map"][q]
-                    if ro is not None:
-                        qubit.readout = Channel(ro)
-                    if qd is not None:
-                        qubit.drive = Channel(qd)
-                    if qf is not None:
-                        qubit.flux = Channel(qf)
+                    readout, drive, flux, _ = self.settings["qubit_channel_map"][q]
+                    if readout is not None:
+                        qubit.readout = Channel(readout)
+                    if drive is not None:
+                        qubit.drive = Channel(drive)
+                    if flux is not None:
+                        qubit.flux = Channel(flux)
                 # register single qubit native gates to Qubit objects
                 if q in self.native_gates["single_qubit"]:
                     qubit.native_gates = SingleQubitNatives.from_dict(qubit, self.native_gates["single_qubit"][q])
@@ -342,12 +344,13 @@ class Platform:
 
         result = {}
         for instrument in self.instruments:
-            new_result = instrument.play(self.qubits, sequence, options)
-            if isinstance(new_result, dict):
-                result.update(new_result)
-            elif new_result is not None:
-                # currently the result of QMSim is not a dict
-                result = new_result
+            if isinstance(instrument, Controller):
+                new_result = instrument.play(self.qubits, sequence, options)
+                if isinstance(new_result, dict):
+                    result.update(new_result)
+                elif new_result is not None:
+                    # currently the result of QMSim is not a dict
+                    result = new_result
         return result
 
     def sweep(self, sequence, options, *sweepers):
@@ -392,12 +395,13 @@ class Platform:
 
         result = {}
         for instrument in self.instruments:
-            new_result = instrument.sweep(self.qubits, sequence, options, *sweepers)
-            if isinstance(new_result, dict):
-                result.update(new_result)
-            elif new_result is not None:
-                # currently the result of QMSim is not a dict
-                result = new_result
+            if isinstance(instrument, Controller):
+                new_result = instrument.sweep(self.qubits, sequence, options, *sweepers)
+                if isinstance(new_result, dict):
+                    result.update(new_result)
+                elif new_result is not None:
+                    # currently the result of QMSim is not a dict
+                    result = new_result
         return result
 
     def __call__(self, sequence, options):
