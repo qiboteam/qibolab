@@ -307,7 +307,11 @@ Transpiler
    :members:
    :member-order: bysource
 
-.. automodule:: qibolab.transpilers.general_connectivity
+.. automodule:: qibolab.transpilers.routing
+   :members:
+   :member-order: bysource
+
+.. automodule:: qibolab.transpilers.placer
    :members:
    :member-order: bysource
 

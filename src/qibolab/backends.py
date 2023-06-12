@@ -92,7 +92,7 @@ class QibolabBackend(NumpyBackend):
             native_circuit = circuit
         else:
             # Transform a circuit into proper connectivity and native gates
-            native_circuit, qubit_map = self.transpiler.transpile(circuit)
+            native_circuit, qubit_map = self.transpiler(circuit)
             # TODO: Use the qubit map to properly map measurements
             if check_transpiled:
                 self.transpiler.check_execution(circuit, native_circuit)

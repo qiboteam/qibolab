@@ -31,24 +31,32 @@ from qibolab.pulses import Pulse, ReadoutPulse, PulseSequence
 # Define PulseSequence
 sequence = PulseSequence()
 # Add some pulses to the pulse sequence
-sequence.add(Pulse(start=0,
-                   amplitude=0.3,
-                   duration=4000,
-                   frequency=200_000_000,
-                   relative_phase=0,
-                   shape='Gaussian(5)', # Gaussian shape with std = duration / 5
-                   channel=1))
+sequence.add(
+    Pulse(
+        start=0,
+        amplitude=0.3,
+        duration=4000,
+        frequency=200_000_000,
+        relative_phase=0,
+        shape="Gaussian(5)",  # Gaussian shape with std = duration / 5
+        channel=1,
+    )
+)
 
-sequence.add(ReadoutPulse(start=4004,
-                          amplitude=0.9,
-                          duration=2000,
-                          frequency=20_000_000,
-                          relative_phase=0,
-                          shape='Rectangular',
-                          channel=2))
+sequence.add(
+    ReadoutPulse(
+        start=4004,
+        amplitude=0.9,
+        duration=2000,
+        frequency=20_000_000,
+        relative_phase=0,
+        shape="Rectangular",
+        channel=2,
+    )
+)
 
 # Define platform and load specific runcard
-runcard = qibolab_folder / 'runcards' / 'tii1q.yml'
+runcard = qibolab_folder / "runcards" / "tii1q.yml"
 platform = Platform("tii1q", runcard)
 
 # Connects to lab instruments using the details specified in the calibration settings.
