@@ -140,9 +140,7 @@ class Subgraph(Placer):
                 keys = list(result.mapping.keys())
                 keys.sort()
                 return {i: result.mapping[i] for i in keys}
-        keys = list(result.mapping.keys())
-        keys.sort()
-        return {i: result.mapping[i] for i in keys}
+        return dict(sorted(result.mapping.items()))
 
 
 class Random(Placer):
