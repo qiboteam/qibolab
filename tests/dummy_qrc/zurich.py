@@ -93,6 +93,10 @@ def create(runcard=RUNCARD):
     channels |= (Channel(f"L4-{i}", port=controller[("device_hdawg", f"SIGOUTS/{i-11+5}")]) for i in range(11, 14))
     channels |= Channel("L4-14", port=controller[("device_hdawg2", f"SIGOUTS/0")])
 
+    # SHFQC
+    # Sets the maximal Range of the Signal Output power.
+    # The instrument selects the closest available Range with a resolution of 5 dBm.
+
     # feedback
     channels["L3-31"].power_range = 10
     # readout
@@ -100,6 +104,17 @@ def create(runcard=RUNCARD):
     # drive
     for i in range(5, 10):
         channels[f"L4-1{i}"].power_range = -10
+
+    # HDAWGS
+    # Sets the output voltage range.
+    # The instrument selects the next higher available Range with a resolution of 0.4 Volts.
+
+    # flux
+    for i in range(6, 11):
+        channels[f"L4-{i}"].power_range = 0.8
+    # flux couplers
+    for i in range(11, 15):
+        channels[f"L4-{i}"].power_range = 0.8
 
     # Instantiate local oscillators
     local_oscillators = [LocalOscillator(f"lo_{kind}", None) for kind in ["readout"] + [f"drive_{n}" for n in range(4)]]
