@@ -38,7 +38,7 @@ def assert_mapping_consistency(layout):
     Raise PlacementError if layout is not written in the correct form.
     """
     values = sorted(layout.values())
-    keys = list(layout.keys())
+    keys = list(layout)
     ref_keys = ["q" + str(i) for i in range(len(keys))]
     if keys != ref_keys:
         raise PlacementError("Some physical qubits in the layout may be missing or duplicated.")
@@ -127,7 +127,7 @@ class Subgraph(Placer):
                 ValueError, "Circuit must contain at least two two qubit gates to implement subgraph placement."
             )
         circuit_subgraph = nx.Graph()
-        circuit_subgraph.add_nodes_from([i for i in range(self.connectivity.number_of_nodes())])
+        circuit_subgraph.add_nodes_from(range(self.connectivity.number_of_nodes()))
         matcher = nx.algorithms.isomorphism.GraphMatcher(self.connectivity, circuit_subgraph)
         i = 0
         circuit_subgraph.add_edge(circuit_repr[i][0], circuit_repr[i][1])
