@@ -15,6 +15,8 @@ class TektronixAWG5204(Instrument):
         self.channel_phase: "list[float]" = []
         # Time buffer at the start and end of the pulse sequence to ensure that the minimum samples of the instrument are reached
         self.pulse_buffer: float = 1e-6
+        self.device = None
+        self.sample_rate = None
 
     rw_property_wrapper = lambda parameter: property(
         lambda self: self.device.get(parameter),
@@ -199,9 +201,7 @@ class QuicSyn(Instrument):
             self.is_connected = True
 
     def setup(self, frequency: float, **kwargs):
-        """
-        Sets the frequency in Hz
-        """
+        """Sets the frequency in Hz."""
         if self.is_connected:
             self.device.write("0601")
             self.frequency(frequency)
@@ -233,6 +233,7 @@ class AlazarADC(Instrument):
     def __init__(self, name, address):
         super().__init__(name, address)
         self.controller = None
+        self.device = None
 
     def connect(self):
         if not self.is_connected:
@@ -251,9 +252,7 @@ class AlazarADC(Instrument):
             self.is_connected = True
 
     def setup(self, trigger_volts, **kwargs):
-        """
-        Sets the frequency in Hz
-        """
+        """Sets the frequency in Hz."""
         if self.is_connected:
             input_range_volts = 2.5
             trigger_level_code = int(128 + 127 * trigger_volts / input_range_volts)
@@ -330,11 +329,9 @@ class AlazarADC(Instrument):
 
     def start(self):
         """Starts the instrument."""
-        pass
 
     def stop(self):
         """Stops the instrument."""
-        pass
 
     def disconnect(self):
         if self.is_connected:

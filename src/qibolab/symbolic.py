@@ -1,3 +1,4 @@
+import re
 import sys
 
 
@@ -22,8 +23,6 @@ class SymbolicExpression:
 
     @staticmethod
     def collect_garbage():
-        import sys
-
         num_items = len(SymbolicExpression.instances)
         n = 0
         while len(SymbolicExpression.instances) > 0:
@@ -31,7 +30,6 @@ class SymbolicExpression:
             item = SymbolicExpression.instances[symbol]
 
             external_ref_count = sys.getrefcount(item)
-            import re
 
             internal_ref_count = 0
             for se in list(SymbolicExpression.instances):
@@ -115,14 +113,13 @@ class SymbolicExpression:
             SymbolicExpression.instances[symbol] = self  # Add a new reference with the new symbol
             if not self._symbol == symbol:
                 del SymbolicExpression.instances[self._symbol]  # Remove the previous reference
-            import re
 
             for se in SymbolicExpression.instances.values():  # Update all SymbolicExpressions with the symbol change
                 match_string = rf"\b{re.escape(self._symbol)}\b"
                 replacement = symbol
                 try:
                     se.expression = re.sub(match_string, replacement, se.expression)
-                except SymbolicExpression.InvalidExpressionError or SymbolicExpression.CircularReferenceError:
+                except (SymbolicExpression.InvalidExpressionError, SymbolicExpression.CircularReferenceError) as e:
                     pass
         self._symbol = symbol
         # test for CircularReferenceError
@@ -166,10 +163,7 @@ class SymbolicExpression:
     @property
     def is_constant(self) -> bool:
         try:
-            if str(self.type(self._expression)) == self._expression:
-                return True
-            else:
-                return False
+            return str(self.type(self._expression)) == self._expression
         except:
             return False
 
@@ -183,8 +177,6 @@ class SymbolicExpression:
         return response
 
     def evaluate(self, expression: str, *previous_evaluations):  # -> {self.type}:
-        import re
-
         for symbol in SymbolicExpression.instances.keys():
             if symbol in expression:
                 if symbol in previous_evaluations:
@@ -217,8 +209,6 @@ class SymbolicExpression:
         return result
 
     def _replace_internal_symbols(self, expression: str, *previous_evaluations):  # -> {self.type}:
-        import re
-
         symbol: str
         for symbol in SymbolicExpression.instances.keys():
             if symbol.startswith("_sym_") and symbol in expression:
@@ -250,67 +240,61 @@ class SymbolicExpression:
     def __lt__(self, other):
         if isinstance(other, SymbolicExpression):
             return self.value < other.value
-        elif isinstance(other, self.supported_types):
+        if isinstance(other, self.supported_types):
             return self.value < other
-        else:
-            raise TypeError(
-                f"Comparison operators expect SymbolicExpression or {self.type.__name__} arguments, got {type(other).__name__}"
-            )
+        raise TypeError(
+            f"Comparison operators expect SymbolicExpression or {self.type.__name__} arguments, got {type(other).__name__}"
+        )
 
     def __gt__(self, other):
         if isinstance(other, SymbolicExpression):
             return self.value > other.value
-        elif isinstance(other, self.supported_types):
+        if isinstance(other, self.supported_types):
             return self.value > other
-        else:
-            raise TypeError(
-                f"Comparison operators expect SymbolicExpression or {self.type.__name__} arguments, got {type(other).__name__}"
-            )
+        raise TypeError(
+            f"Comparison operators expect SymbolicExpression or {self.type.__name__} arguments, got {type(other).__name__}"
+        )
 
     def __le__(self, other):
         if isinstance(other, SymbolicExpression):
             return self.value <= other.value
-        elif isinstance(other, self.supported_types):
+        if isinstance(other, self.supported_types):
             return self.value <= other
-        else:
-            raise TypeError(
-                f"Comparison operators expect SymbolicExpression or {self.type.__name__} arguments, got {type(other).__name__}"
-            )
+        raise TypeError(
+            f"Comparison operators expect SymbolicExpression or {self.type.__name__} arguments, got {type(other).__name__}"
+        )
 
     def __ge__(self, other):
         if isinstance(other, SymbolicExpression):
             return self.value >= other.value
-        elif isinstance(other, self.supported_types):
+        if isinstance(other, self.supported_types):
             return self.value >= other
-        else:
-            raise TypeError(
-                f"Comparison operators expect SymbolicExpression or {self.type.__name__} arguments, got {type(other).__name__}"
-            )
+        raise TypeError(
+            f"Comparison operators expect SymbolicExpression or {self.type.__name__} arguments, got {type(other).__name__}"
+        )
 
     def __eq__(self, other):
         if isinstance(other, SymbolicExpression):
             return self.value == other.value
-        elif isinstance(other, self.supported_types):
+        if isinstance(other, self.supported_types):
             return self.value == other
-        else:
-            raise TypeError(
-                f"Comparison operators expect SymbolicExpression or {self.type.__name__} arguments, got {type(other).__name__}"
-            )
+        raise TypeError(
+            f"Comparison operators expect SymbolicExpression or {self.type.__name__} arguments, got {type(other).__name__}"
+        )
 
     def __ne__(self, other):
         if isinstance(other, SymbolicExpression):
             return self.value != other.value
-        elif isinstance(other, self.supported_types):
+        if isinstance(other, self.supported_types):
             return self.value != other
-        else:
-            raise TypeError(
-                f"Comparison operators expect SymbolicExpression or {self.type.__name__} arguments, got {type(other).__name__}"
-            )
+        raise TypeError(
+            f"Comparison operators expect SymbolicExpression or {self.type.__name__} arguments, got {type(other).__name__}"
+        )
 
     def __add__(self, other):  # -> SymbolicExpression:
         if isinstance(other, SymbolicExpression):
             return self.__class__(f"({self.symbol} + {other.symbol})")
-        elif (
+        if (
             self.type == float
             and isinstance(other, self.supported_types)
             or self.type == int
@@ -321,7 +305,7 @@ class SymbolicExpression:
     def __radd__(self, other):  # -> SymbolicExpression:
         if isinstance(other, SymbolicExpression):
             return self.__class__(f"({other.symbol} + {self.symbol})")
-        elif (
+        if (
             self.type == float
             and isinstance(other, self.supported_types)
             or self.type == int
@@ -332,7 +316,7 @@ class SymbolicExpression:
     def __sub__(self, other):  # -> SymbolicExpression:
         if isinstance(other, SymbolicExpression):
             return self.__class__(f"({self.symbol} - {other.symbol})")
-        elif (
+        if (
             self.type == float
             and isinstance(other, self.supported_types)
             or self.type == int
@@ -343,7 +327,7 @@ class SymbolicExpression:
     def __rsub__(self, other):  # -> SymbolicExpression:
         if isinstance(other, SymbolicExpression):
             return self.__class__(f"({other.symbol} - {self.symbol})")
-        elif (
+        if (
             self.type == float
             and isinstance(other, self.supported_types)
             or self.type == int
@@ -354,7 +338,7 @@ class SymbolicExpression:
     def __mul__(self, other):  # -> SymbolicExpression:
         if isinstance(other, SymbolicExpression):
             return self.__class__(f"({self.symbol} * {other.symbol})")
-        elif (
+        if (
             self.type == float
             and isinstance(other, self.supported_types)
             or self.type == int
@@ -365,7 +349,7 @@ class SymbolicExpression:
     def __rmul__(self, other):  # -> SymbolicExpression:
         if isinstance(other, SymbolicExpression):
             return self.__class__(f"({other.symbol} * {self.symbol})")
-        elif (
+        if (
             self.type == float
             and isinstance(other, self.supported_types)
             or self.type == int
@@ -376,7 +360,7 @@ class SymbolicExpression:
     def __floordiv__(self, other):  # -> SymbolicExpression:
         if isinstance(other, SymbolicExpression):
             return self.__class__(f"({self.symbol} // {other.symbol})")
-        elif (
+        if (
             self.type == float
             and isinstance(other, self.supported_types)
             or self.type == int
@@ -387,7 +371,7 @@ class SymbolicExpression:
     def __rfloordiv__(self, other):  # -> SymbolicExpression:
         if isinstance(other, SymbolicExpression):
             return self.__class__(f"({other.symbol} // {self.symbol})")
-        elif (
+        if (
             self.type == float
             and isinstance(other, self.supported_types)
             or self.type == int
@@ -398,7 +382,7 @@ class SymbolicExpression:
     def __mod__(self, other):  # -> SymbolicExpression:
         if isinstance(other, SymbolicExpression):
             return self.__class__(f"({self.symbol} % {other.symbol})")
-        elif (
+        if (
             self.type == float
             and isinstance(other, self.supported_types)
             or self.type == int
@@ -409,7 +393,7 @@ class SymbolicExpression:
     def __rmod__(self, other):  # -> SymbolicExpression:
         if isinstance(other, SymbolicExpression):
             return self.__class__(f"({other.symbol} % {self.symbol})")
-        elif (
+        if (
             self.type == float
             and isinstance(other, self.supported_types)
             or self.type == int
@@ -421,7 +405,7 @@ class SymbolicExpression:
         if isinstance(other, SymbolicExpression):
             self.expression = f"({self.expression} + {other.symbol})"
             return self
-        elif (
+        if (
             self.type == float
             and isinstance(other, self.supported_types)
             or self.type == int
@@ -437,7 +421,7 @@ class SymbolicExpression:
         if isinstance(other, SymbolicExpression):
             self.expression = f"({self.expression} - {other.symbol})"
             return self
-        elif (
+        if (
             self.type == float
             and isinstance(other, self.supported_types)
             or self.type == int
@@ -453,7 +437,7 @@ class SymbolicExpression:
         if isinstance(other, SymbolicExpression):
             self.expression = f"({self.expression} * {other.symbol})"
             return self
-        elif (
+        if (
             self.type == float
             and isinstance(other, self.supported_types)
             or self.type == int
@@ -469,7 +453,7 @@ class SymbolicExpression:
         if isinstance(other, SymbolicExpression):
             self.expression = f"({self.expression} // {other.symbol})"
             return self
-        elif (
+        if (
             self.type == float
             and isinstance(other, self.supported_types)
             or self.type == int
@@ -485,7 +469,7 @@ class SymbolicExpression:
         if isinstance(other, SymbolicExpression):
             self.expression = f"({self.expression} % {other.symbol})"
             return self
-        elif (
+        if (
             self.type == float
             and isinstance(other, self.supported_types)
             or self.type == int
