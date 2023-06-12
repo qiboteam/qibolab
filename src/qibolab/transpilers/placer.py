@@ -168,7 +168,7 @@ class Random(Placer):
         circuit_repr = create_circuit_repr(circuit)
         nodes = self.connectivity.number_of_nodes()
         keys = list(self.connectivity.nodes())
-        final_mapping = dict(zip(keys, list(range(nodes))))
+        final_mapping = dict(zip(keys, range(nodes)))
         final_graph = nx.relabel_nodes(self.connectivity, final_mapping)
         final_cost = self.cost(final_graph, circuit_repr)
         for _ in range(self.samples):
@@ -195,11 +195,10 @@ class Random(Placer):
         Returns:
             (int): lengh of the reduced circuit.
         """
-        total_len = len(circuit_repr)
         for allowed, gate in enumerate(circuit_repr):
-            if (gate) not in graph.edges():
+            if gate not in graph.edges():
                 break
-        return total_len - allowed
+        return len(circuit_repr) - allowed
 
 
 class Backpropagation(Placer):
