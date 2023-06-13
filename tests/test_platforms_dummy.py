@@ -8,7 +8,6 @@ from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 
 def test_dummy_initialization():
     platform = create_platform("dummy")
-    platform.reload_settings()
     platform.connect()
     platform.setup()
     platform.start()
@@ -42,7 +41,7 @@ def test_dummy_single_sweep_RAW():
     results = platform.sweep(sequence, options, sweeper)
     assert pulse.serial and pulse.qubit in results
     results_len = len(results[pulse.qubit].magnitude)
-    expts = swept_points * (platform.sampling_rate * 1e-9 * pulse.duration)
+    expts = swept_points * (platform.settings.sampling_rate * 1e-9 * pulse.duration)
     assert results_len == int(expts)
 
 

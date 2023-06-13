@@ -1,6 +1,7 @@
 import copy
 
 import numpy as np
+import yaml
 from qibo.config import log, raise_error
 
 from qibolab import AcquisitionType, AveragingMode
@@ -14,6 +15,12 @@ from qibolab.sweeper import Parameter
 class MultiqubitPlatform(Platform):
     def __init__(self, name, runcard):
         super().__init__(name, runcard, [], ChannelMap())
+
+        self.runcard = runcard
+        with open(runcard) as file:
+            self.settings = yaml.safe_load(file)
+        self.reload_settings()
+
         self.instruments = {}
         # Instantiate instruments
         for name in self.settings["instruments"]:
@@ -41,7 +48,6 @@ class MultiqubitPlatform(Platform):
                             self.qubit_instrument_map[qubit][self.qubit_channel_map[qubit].index(channel)] = name
 
     def reload_settings(self):
-        super().reload_settings()
         self.characterization = self.settings["characterization"]
         self.qubit_channel_map = self.settings["qubit_channel_map"]
         self.nshots = self.settings["settings"]["nshots"]
@@ -506,7 +512,6 @@ class MultiqubitPlatform(Platform):
                     self.set_bias(qubit, value)
 
     def measure_fidelity(self, qubits=None, nshots=None):
-        self.reload_settings()
         if not qubits:
             qubits = self.qubits
         results = {}

@@ -50,10 +50,10 @@ def test_platform():
 
 def test_multiqubitplatform_init(platform_name):
     platform = create_platform(platform_name)
-    with open(platform.runcard) as file:
-        settings = yaml.safe_load(file)
     if not isinstance(platform, MultiqubitPlatform):
         pytest.skip(f"Skipping MultiqubitPlatform specific test for {platform_name}.")
+    with open(platform.runcard) as file:
+        settings = yaml.safe_load(file)
     assert platform.name == platform_name
     assert platform.is_connected == False
     assert len(platform.instruments) == len(settings["instruments"])
@@ -70,7 +70,6 @@ def test_abstractplatform_pickle(platform_name):
     serial = pickle.dumps(platform)
     new_platform = pickle.loads(serial)
     assert new_platform.name == platform.name
-    assert new_platform.runcard == platform.runcard
     assert new_platform.settings == platform.settings
     assert new_platform.is_connected == platform.is_connected
 

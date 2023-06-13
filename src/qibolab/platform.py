@@ -2,9 +2,9 @@
 
 import math
 import re
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import networkx as nx
 import yaml
@@ -14,6 +14,15 @@ from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.abstract import Controller, Instrument
 from qibolab.native import NativeType, SingleQubitNatives, TwoQubitNatives
 from qibolab.qubits import Qubit, QubitId, QubitPair
+
+
+@dataclass
+class PlatformSettings:
+    """Platform settings and default execution settings read from the runcard."""
+
+    nshots: int = 1024
+    sampling_rate: int = int(1e9)
+    relaxation_time: int = int(1e5)
 
 
 class Platform:
@@ -30,88 +39,57 @@ class Platform:
         log.info("Loading platform %s", name)
 
         self.name = name
-        self.runcard = runcard
+        self.is_connected = False
         self.instruments: List[Instrument] = instruments
         self.channels: ChannelMap = channels
 
-        self.qubits: Dict[QubitId, Qubit] = {}
-        self.pairs: Dict[Tuple[QubitId, QubitId], QubitPair] = {}
-
-        # Values for the following are set from the runcard in ``reload_settings``
-        self.settings = None
-        self.is_connected = False
-
-        self.nqubits = None
-        self.resonator_type = None
-        self.topology = None
-
-        self.nshots = None
-        self.relaxation_time = None
-        self.sampling_rate = None
-
-        # TODO: Remove this (needed for the multiqubit platform)
-        self.native_gates = {}
-        self.two_qubit_native_types = NativeType(0)
-        # Load platform settings
-        self.reload_settings()
-
-    def __repr__(self):
-        return self.name
-
-    def _check_connected(self):
-        if not self.is_connected:  # pragma: no cover
-            raise_error(RuntimeError, "Cannot access instrument because it is not connected.")
-
-    def reload_settings(self):
-        # TODO: Remove ``self.settings``
-        if self.settings is None:
-            # Load initial configuration
-            if isinstance(self.runcard, dict):
-                settings = self.settings = self.runcard
-            else:
-                with open(self.runcard) as file:
-                    settings = self.settings = yaml.safe_load(file)
+        # Load initial configuration
+        if isinstance(runcard, dict):
+            settings = runcard
         else:
-            # Load current configuration
-            settings = self.settings
+            with open(runcard) as file:
+                settings = yaml.safe_load(file)
 
-        self.nqubits = settings["nqubits"]
-        if "resonator_type" in self.settings:
-            self.resonator_type = self.settings["resonator_type"]
+        self.nqubits: int = settings["nqubits"]
+        self.description: Optional[str] = settings["description"] if "description" in settings else None
+        if "resonator_type" in settings:
+            self.resonator_type = settings["resonator_type"]
         else:
             self.resonator_type = "3D" if self.nqubits == 1 else "2D"
 
-        self.relaxation_time = settings["settings"]["relaxation_time"]
-        self.nshots = settings["settings"]["nshots"]
-        self.sampling_rate = settings["settings"]["sampling_rate"]
-        self.native_gates = settings["native_gates"]
+        self.settings: PlatformSettings = PlatformSettings(**settings["settings"])
 
-        # Load characterization settings and create ``Qubit`` and ``Channel`` objects
-        for q in settings["qubits"]:
-            if q in self.qubits:
-                for name, value in settings["characterization"]["single_qubit"][q].items():
-                    setattr(self.qubits[q], name, value)
-            else:
-                self.qubits[q] = qubit = Qubit(q, **settings["characterization"]["single_qubit"][q])
-                # register channels to qubits when we are using the old format
-                # needed for ``NativeGates`` to work
-                if "qubit_channel_map" in self.settings:
-                    readout, drive, flux, _ = self.settings["qubit_channel_map"][q]
-                    if readout is not None:
-                        qubit.readout = Channel(readout)
-                    if drive is not None:
-                        qubit.drive = Channel(drive)
-                    if flux is not None:
-                        qubit.flux = Channel(flux)
-                # register single qubit native gates to Qubit objects
-                if q in self.native_gates["single_qubit"]:
-                    qubit.native_gates = SingleQubitNatives.from_dict(qubit, self.native_gates["single_qubit"][q])
+        # create qubit objects
+        self.qubits: Dict[QubitId, Qubit] = {
+            q: Qubit(q, **char) for q, char in settings["characterization"]["single_qubit"].items()
+        }
 
+        # register channels to qubits when we are using the old format (MultiqubitPlatform)
+        # this is needed for ``NativeGates`` to work
+        if "qubit_channel_map" in settings:
+            for q, qubit in self.qubits.items():
+                readout, drive, flux, _ = settings["qubit_channel_map"][q]
+                if readout is not None:
+                    qubit.readout = Channel(readout)
+                if drive is not None:
+                    qubit.drive = Channel(drive)
+                if flux is not None:
+                    qubit.flux = Channel(flux)
+
+        # TODO: Remove this (needed for the multiqubit platform)
+        self.native_gates = native_gates = settings["native_gates"]
+        # register single qubit native gates to ``Qubit`` objects
+        for q, gates in native_gates["single_qubit"].items():
+            self.qubits[q].native_gates = SingleQubitNatives.from_dict(self.qubits[q], gates)
+
+        # create ``QubitPair`` objects
+        self.pairs: Dict[Tuple[QubitId, QubitId], QubitPair] = {}
         for pair in settings["topology"]:
             pair = tuple(sorted(pair))
-            if pair not in self.pairs:
-                self.pairs[pair] = QubitPair(self.qubits[pair[0]], self.qubits[pair[1]])
-        # Load native two-qubit gates
+            self.pairs[pair] = QubitPair(self.qubits[pair[0]], self.qubits[pair[1]])
+
+        # register two qubit native gates to ``QubitPair`` objects
+        self.two_qubit_native_types = NativeType(0)
         if "two_qubit" in self.native_gates:
             for pair, gatedict in self.native_gates["two_qubit"].items():
                 pair = tuple(sorted(int(q) if q.isdigit() else q for q in pair.split("-")))
@@ -121,10 +99,16 @@ class Platform:
             # dummy value to avoid transpiler failure for single qubit devices
             self.two_qubit_native_types = NativeType.CZ
 
-        if self.topology is None:
-            self.topology = nx.Graph()
-            self.topology.add_nodes_from(self.qubits.keys())
-            self.topology.add_edges_from([(pair.qubit1.name, pair.qubit2.name) for pair in self.pairs.values()])
+        self.topology: nx.Graph = nx.Graph()
+        self.topology.add_nodes_from(self.qubits.keys())
+        self.topology.add_edges_from([(pair.qubit1.name, pair.qubit2.name) for pair in self.pairs.values()])
+
+    def __repr__(self):
+        return self.name
+
+    def _check_connected(self):
+        if not self.is_connected:  # pragma: no cover
+            raise_error(RuntimeError, "Cannot access instrument because it is not connected.")
 
     def dump(self, path: Path):
         settings = {
@@ -296,9 +280,6 @@ class Platform:
                 else:
                     raise_error(ValueError, f"Unknown parameter {par} for qubit {qubit}")
 
-        # reload_settings after execute any calibration routine keeping fitted parameters
-        self.reload_settings()
-
     def connect(self):
         """Connect to all instruments."""
         if not self.is_connected:
@@ -355,10 +336,10 @@ class Platform:
             Readout results acquired by after execution.
         """
         if options.nshots is None:
-            options = replace(options, nshots=self.nshots)
+            options = replace(options, nshots=self.settings.nshots)
 
         if options.relaxation_time is None:
-            options = replace(options, relaxation_time=self.relaxation_time)
+            options = replace(options, relaxation_time=self.settings.relaxation_time)
 
         result = {}
         for instrument in self.instruments:
@@ -406,10 +387,10 @@ class Platform:
             Readout results acquired by after execution.
         """
         if options.nshots is None:
-            options = replace(options, nshots=self.nshots)
+            options = replace(options, nshots=self.settings.nshots)
 
         if options.relaxation_time is None:
-            options = replace(options, relaxation_time=self.relaxation_time)
+            options = replace(options, relaxation_time=self.settings.relaxation_time)
 
         result = {}
         for instrument in self.instruments:

@@ -62,10 +62,6 @@ class ICPlatform(Platform):
         self._last_sequence = None
         self.hardware_avg = 1024
         super().__init__(name, runcard)
-        self.qubits = []
-        qubits = self.settings.get("qubits")
-        for qubit_dict in qubits.values():
-            self.qubits.append(Qubit(**qubit_dict))
 
     def run_calibration(self):  # pragma: no cover
         from qibo.config import raise_error
@@ -94,7 +90,7 @@ class ICPlatform(Platform):
 
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
         if nshots is None:
-            nshots = self.nshots
+            nshots = self.settings.nshots
 
         from qibolab.pulses import ReadoutPulse
 
@@ -160,7 +156,9 @@ class ICPlatform(Platform):
 
     def start_experiment(self):
         """Starts the instrument to start the experiment sequence."""
-        inst = self.fetch_instrument(self.settings.get("settings").get("experiment_start_instrument"))
+        inst = self.fetch_instrument(
+            self.settings.get("settings").get("experiment_start_instrument")
+        )  # pylint: disable=E1101
         inst.start_experiment()
 
     def fetch_qubit_pi_pulse(self, qubit_id=0) -> dict:
