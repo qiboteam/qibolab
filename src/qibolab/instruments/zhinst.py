@@ -483,16 +483,18 @@ class Zurich(Controller):
         results = {}
         for qubit in qubits.values():
             if not qubit.flux_coupler:
-                if self.sequence[f"readout{qubit.name}"]:
+                q = qubit.name
+                if len(self.sequence[f"readout{q}"]) != 0:
                     i = 0
                     for pulse in self.sequence[f"readout{qubit.name}"]:
-                        exp_res = self.results.get_data(f"sequence{qubit.name}_{i}")
+                        exp_res = self.results.get_data(f"sequence_{i}")
                         i += 1
                         if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                             if options.averaging_mode is AveragingMode.CYCLIC:
                                 states = np.array([exp_res])
                             else:
                                 states = np.array(exp_res)
+                            print(pulse.pulse.serial)
                             results[pulse.pulse.serial] = options.results_type(states)
                             results[pulse.pulse.qubit] = options.results_type(states)
                         else:
@@ -777,14 +779,14 @@ class Zurich(Controller):
                                     if isinstance(pulse, ZhSweeper):
                                         self.play_sweep(exp, qubit, pulse, section="drive")
                                     elif isinstance(pulse, ZhPulse):
-                                        if j == 0:
-                                            set_oscillator_phase = 0
+                                        # if j == 0:
+                                        # set_oscillator_phase = 0
 
                                         exp.play(
                                             signal=f"drive{q}",
                                             pulse=pulse.zhpulse,
                                             phase=pulse.pulse.relative_phase,
-                                            set_oscillator_phase=set_oscillator_phase,
+                                            # set_oscillator_phase=set_oscillator_phase,
                                         )
                                         j += 1
                                 elif isinstance(pulse, ZhSweeperLine):
@@ -803,8 +805,9 @@ class Zurich(Controller):
         for pulse in sequence:
             if longest < pulse.finish:
                 longest = pulse.finish
-                qubit_after = pulse.qubit
-        return f"sequence_{type}{qubit_after}"
+                # qubit_after = pulse.qubit
+        # return f"sequence_{type}{qubit_after}"
+        return f"sequence_{type}"
 
     # For pulsed spectroscopy, set integration_length and either measure_pulse or measure_pulse_length.
     # For CW spectroscopy, set only integration_length and do not specify the measure signal.
@@ -824,16 +827,19 @@ class Zurich(Controller):
         elif len(self.sequence_qibo.qd_pulses) != 0:
             play_after = self.play_after_set(self.sequence_qibo.qd_pulses, "drive")
 
-        for qubit in qubits.values():
-            if qubit.flux_coupler:
-                continue
-            q = qubit.name
-            if len(self.sequence[f"readout{q}"]) != 0:
+        i = 0
+        if play_after is not None:
+            play_after_aux = play_after + f"_{i}"
+
+        with exp.section(uid=f"sequence_measure_{i}", play_after=play_after_aux):
+            i = 0
+            for qubit in qubits.values():
+                if qubit.flux_coupler:
+                    continue
+                q = qubit.name
                 i = 0
-                for pulse in self.sequence[f"readout{q}"]:
-                    if play_after is not None:
-                        play_after_aux = play_after + f"_{i}"
-                    with exp.section(uid=f"sequence_measure{q}_{i}", play_after=play_after_aux):
+                if len(self.sequence[f"readout{q}"]) != 0:
+                    for pulse in self.sequence[f"readout{q}"]:
                         pulse.zhpulse.uid = pulse.zhpulse.uid + str(i)
 
                         """Integration weights definition or load from the chip folder"""
