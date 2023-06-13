@@ -156,9 +156,8 @@ class ICPlatform(Platform):
 
     def start_experiment(self):
         """Starts the instrument to start the experiment sequence."""
-        inst = self.fetch_instrument(
-            self.settings.get("settings").get("experiment_start_instrument")
-        )  # pylint: disable=E1101
+        # pylint: disable=E1101
+        inst = self.fetch_instrument(self.settings.get("settings").get("experiment_start_instrument"))
         inst.start_experiment()
 
     def fetch_qubit_pi_pulse(self, qubit_id=0) -> dict:

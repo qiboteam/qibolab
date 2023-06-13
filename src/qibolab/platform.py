@@ -163,16 +163,13 @@ class Platform:
                 # resonator_spectroscopy / resonator_spectroscopy_flux / resonator_punchout_attenuation
                 if par == "readout_frequency":
                     freq = int(value * 1e9)
-                    self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["frequency"] = freq
 
                     mz = self.qubits[qubit].native_gates.MZ
                     mz.frequency = freq
                     if mz.if_frequency is not None:
                         mz.if_frequency = freq - self.get_lo_readout_frequency(qubit)
-                        self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["if_frequency"] = mz.if_frequency
 
                     self.qubits[qubit].readout_frequency = freq
-                    self.settings["characterization"]["single_qubit"][qubit]["readout_frequency"] = freq
 
                 # resonator_punchout_attenuation
                 elif par == "readout_attenuation":
@@ -182,85 +179,70 @@ class Platform:
                 elif par == "bare_resonator_frequency":
                     freq = int(value * 1e9)
                     self.qubits[qubit].bare_resonator_frequency = freq
-                    self.settings["characterization"]["single_qubit"][qubit]["bare_resonator_frequency"] = freq
 
                 # resonator_spectroscopy_flux / qubit_spectroscopy_flux
                 elif par == "sweetspot":
                     sweetspot = float(value)
                     self.qubits[qubit].sweetspot = sweetspot
-                    self.settings["characterization"]["single_qubit"][qubit]["sweetspot"] = sweetspot
                     # set sweetspot as the flux offset (IS THIS NEEDED?)
                     self.qubits[qubit].flux.offset = sweetspot
 
                 # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
                 elif par == "drive_frequency":
                     freq = int(value * 1e9)
-                    self.settings["native_gates"]["single_qubit"][qubit]["RX"]["frequency"] = freq
 
                     self.qubits[qubit].native_gates.RX.frequency = freq
                     self.qubits[qubit].drive_frequency = freq
-                    self.settings["characterization"]["single_qubit"][qubit]["drive_frequency"] = freq
 
                 elif "amplitude" in par:
                     amplitude = float(value)
                     # resonator_spectroscopy
                     if par == "readout_amplitude" and not math.isnan(amplitude):
                         self.qubits[qubit].native_gates.MZ.amplitude = amplitude
-                        self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["amplitude"] = amplitude
 
                     # rabi_amplitude / flipping
                     if par == "drive_amplitude" or par == "amplitudes":
                         self.qubits[qubit].native_gates.RX.amplitude = amplitude
-                        self.settings["native_gates"]["single_qubit"][qubit]["RX"]["amplitude"] = amplitude
-                        self.settings["characterization"]["single_qubit"][qubit]["pi_pulse_amplitude"] = amplitude
 
                 # rabi_duration
                 elif par == "drive_length":
                     duration = int(value)
                     self.qubits[qubit].native_gates.RX.duration = duration
-                    self.settings["native_gates"]["single_qubit"][qubit]["RX"]["duration"] = duration
 
                 # ramsey
                 elif par == "t2":
                     t2 = float(value)
                     self.qubits[qubit].T2 = t2
-                    self.settings["characterization"]["single_qubit"][qubit]["T2"] = t2
 
                 # spin_echo
                 elif par == "t2_spin_echo":
                     t2_spin_echo = float(value)
                     self.qubits[qubit].T2_spin_echo = t2_spin_echo
-                    self.settings["characterization"]["single_qubit"][qubit]["T2_spin_echo"] = t2_spin_echo
 
                 # t1
                 elif par == "t1":
                     t1 = float(value)
                     self.qubits[qubit].T1 = t1
-                    self.settings["characterization"]["single_qubit"][qubit]["T1"] = t1
 
                 # classification
                 elif par == "threshold":
                     threshold = float(value)
-                    self.qubits[qubit].thresold = threshold
-                    self.settings["characterization"]["single_qubit"][qubit]["threshold"] = threshold
+                    self.qubits[qubit].threshold = threshold
 
                 # classification
                 elif par == "iq_angle":
                     iq_angle = float(value)
                     self.qubits[qubit].iq_angle = iq_angle
-                    self.settings["characterization"]["single_qubit"][qubit]["iq_angle"] = iq_angle
 
                 # classification
                 elif par == "mean_gnd_states":
                     mean_gnd_states = str(value)
                     self.qubits[qubit].mean_gnd_states = mean_gnd_states
-                    self.settings["characterization"]["single_qubit"][qubit]["mean_gnd_states"] = mean_gnd_states
 
                 # classification
                 elif par == "mean_exc_states":
                     mean_exc_states = str(value)
                     self.qubits[qubit].mean_exc_states = mean_exc_states
-                    self.settings["characterization"]["single_qubit"][qubit]["mean_exc_states"] = mean_exc_states
 
                 # drag pulse tunning
                 elif "beta" in par:
@@ -268,14 +250,12 @@ class Platform:
                     shape = rx.shape
                     rel_sigma = re.findall(r"[\d]+[.\d]+|[\d]*[.][\d]+|[\d]+", shape)[0]
                     rx.shape = f"Drag({rel_sigma}, {float(value)})"
-                    self.settings["native_gates"]["single_qubit"][qubit]["RX"]["shape"] = rx.shape
 
                 elif "length" in par:  # assume only drive length
                     self.qubits[qubit].native_gates.RX.duration = int(value)
 
                 elif par == "classifiers_hpars":
                     self.qubits[qubit].classifiers_hpars = value
-                    self.settings["characterization"]["single_qubit"][qubit]["classifiers_hpars"] = value
 
                 else:
                     raise_error(ValueError, f"Unknown parameter {par} for qubit {qubit}")

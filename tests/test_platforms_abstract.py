@@ -98,7 +98,6 @@ def test_update(platform_name, par):
             value = updates[par][i]
             if "frequency" in par:
                 value *= 1e9
-            assert value == float(platform.settings["characterization"]["single_qubit"][i][par])
             assert value == float(getattr(platform.qubits[i], par))
 
 
