@@ -511,7 +511,7 @@ class Zurich(Controller):
 
         # Mess that gets the sweeper and substitutes the pulse it sweeps in the right place
 
-        def nt_loop(self, sweeper):
+        def nt_loop(sweeper):
             if len(sweepers) == 2:
                 if not self.nt_sweeps:
                     self.nt_sweeps = [sweeper]
