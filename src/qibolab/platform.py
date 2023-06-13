@@ -127,8 +127,23 @@ class Platform:
             self.topology.add_edges_from([(pair.qubit1.name, pair.qubit2.name) for pair in self.pairs.values()])
 
     def dump(self, path: Path):
+        settings = {
+            "nqubits": self.nqubits,
+            "description": self.description,
+            "qubits": list(self.qubits),
+            "settings": {},
+            "resonator_type": self.resonator_type,
+            "topology": [list(pair) for pair in self.pairs],
+            "native_gates": {},
+            "characterization": {},
+        }
+        settings["native_gates"] = {
+            "single_qubit": {q: qubit.native_gates.to_dict for q, qubit in self.qubits.items()},
+            "two_qubit": {p: pair.native_gates.to_dict for p, pair in self.pairs.items()},
+        }
+        settings["characterization"] = {"single_qubit": {q: qubit.characterization for q, qubit in self.qubits.items()}}
         with open(path, "w") as file:
-            yaml.dump(self.settings, file, sort_keys=False, indent=4, default_flow_style=None)
+            yaml.dump(settings, file, sort_keys=False, indent=4, default_flow_style=None)
 
     def update(self, updates: dict):
         r"""Updates platform common runcard parameters after calibration actions.

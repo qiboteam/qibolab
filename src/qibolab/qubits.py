@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field
-from typing import List, Optional, Union
+from dataclasses import dataclass, field, fields
+from typing import ClassVar, List, Optional, Union
 
 from qibolab.channels import Channel
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
@@ -57,6 +57,7 @@ class Qubit:
     mixer_readout_g: float = 0.0
     mixer_readout_phi: float = 0.0
 
+    CHANNEL_NAMES: ClassVar[tuple] = ("readout", "feedback", "drive", "flux", "twpa")
     readout: Optional[Channel] = None
     feedback: Optional[Channel] = None
     twpa: Optional[Channel] = None
@@ -75,9 +76,16 @@ class Qubit:
 
     @property
     def channels(self):
-        for channel in [self.readout, self.feedback, self.drive, self.flux, self.twpa]:
+        for name in self.CHANNEL_NAMES:
+            channel = getattr(self, name)
             if channel is not None:
                 yield channel
+
+    @property
+    def characterization(self):
+        """Dictionary containing characterization parameters."""
+        exclude_fields = self.CHANNEL_NAMES + ("name", "flux_coupler", "native_gates")
+        return {fld.name: getattr(self, fld.name) for fld in fields(self) if fld.name not in exclude_fields}
 
 
 @dataclass
