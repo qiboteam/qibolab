@@ -163,12 +163,10 @@ class Platform:
                 # resonator_spectroscopy / resonator_spectroscopy_flux / resonator_punchout_attenuation
                 if par == "readout_frequency":
                     freq = int(value * 1e9)
-
                     mz = self.qubits[qubit].native_gates.MZ
                     mz.frequency = freq
                     if mz.if_frequency is not None:
                         mz.if_frequency = freq - self.get_lo_readout_frequency(qubit)
-
                     self.qubits[qubit].readout_frequency = freq
 
                 # resonator_punchout_attenuation
@@ -190,7 +188,6 @@ class Platform:
                 # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
                 elif par == "drive_frequency":
                     freq = int(value * 1e9)
-
                     self.qubits[qubit].native_gates.RX.frequency = freq
                     self.qubits[qubit].drive_frequency = freq
 
@@ -206,43 +203,35 @@ class Platform:
 
                 # rabi_duration
                 elif par == "drive_length":
-                    duration = int(value)
-                    self.qubits[qubit].native_gates.RX.duration = duration
+                    self.qubits[qubit].native_gates.RX.duration = int(value)
 
                 # ramsey
                 elif par == "t2":
-                    t2 = float(value)
-                    self.qubits[qubit].T2 = t2
+                    self.qubits[qubit].T2 = float(value)
 
                 # spin_echo
                 elif par == "t2_spin_echo":
-                    t2_spin_echo = float(value)
-                    self.qubits[qubit].T2_spin_echo = t2_spin_echo
+                    self.qubits[qubit].T2_spin_echo = float(value)
 
                 # t1
                 elif par == "t1":
-                    t1 = float(value)
-                    self.qubits[qubit].T1 = t1
+                    self.qubits[qubit].T1 = float(value)
 
                 # classification
                 elif par == "threshold":
-                    threshold = float(value)
-                    self.qubits[qubit].threshold = threshold
+                    self.qubits[qubit].threshold = float(value)
 
                 # classification
                 elif par == "iq_angle":
-                    iq_angle = float(value)
-                    self.qubits[qubit].iq_angle = iq_angle
+                    self.qubits[qubit].iq_angle = float(value)
 
                 # classification
                 elif par == "mean_gnd_states":
-                    mean_gnd_states = str(value)
-                    self.qubits[qubit].mean_gnd_states = mean_gnd_states
+                    self.qubits[qubit].mean_gnd_states = str(value)
 
                 # classification
                 elif par == "mean_exc_states":
-                    mean_exc_states = str(value)
-                    self.qubits[qubit].mean_exc_states = mean_exc_states
+                    self.qubits[qubit].mean_exc_states = str(value)
 
                 # drag pulse tunning
                 elif "beta" in par:
