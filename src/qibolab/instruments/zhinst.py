@@ -313,18 +313,18 @@ class Zurich(Controller):
         )
 
     def start(self):
-        pass
+        """Empty method to comply with Instrument interface."""
 
     def stop(self):
-        pass
+        """Empty method to comply with Instrument interface."""
 
     def disconnect(self):
         if self.is_connected:
             self.device = self.session.disconnect()
             self.is_connected = False
 
-    def setup(self):
-        pass
+    def setup(self, *args, **kwargs):
+        """Empty method to comply with Instrument interface."""
 
     def calibration_step(self, qubits):
         """
