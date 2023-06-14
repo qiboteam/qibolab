@@ -44,42 +44,14 @@ class QMPort(Port):
     controller_q: Optional[PortId] = None
 
     # TODO: Shall we implement seperate setters for i and q?
-    _offset: float = 0.0
-    _gain: int = 0
-    _filter: Optional[Dict[str, float]] = None
+    offset: float = 0.0
+    gain: int = 0
+    filters: Optional[Dict[str, float]] = None
 
     def __iter__(self):
         yield self.controller_i
         if self.controller_q is not None:
             yield self.controller_q
-
-    @property
-    def offset(self):
-        return self._offset
-
-    @offset.setter
-    def offset(self, value):
-        self._offset = value
-
-    @property
-    def gain(self):
-        return self._gain
-
-    @gain.setter
-    def gain(self, value):
-        self._gain = value
-
-    @property
-    def filter(self):
-        """Pulse shape filters. Relevant for ports connected to flux channels.
-
-        QM syntax should be followed for the filters.
-        """
-        return self._filter
-
-    @filter.setter
-    def filter(self, value):
-        self._filter = value
 
 
 @dataclass
@@ -107,8 +79,8 @@ class QMConfig:
             if con not in self.controllers:
                 self.controllers[con] = {"analog_outputs": {}}
             self.controllers[con]["analog_outputs"][port_number] = {"offset": port.offset}
-            if port.filter is not None:
-                self.controllers[con]["analog_outputs"][port_number]["filter"] = port.filter
+            if port.filters is not None:
+                self.controllers[con]["analog_outputs"][port_number]["filter"] = port.filters
 
     @staticmethod
     def iq_imbalance(g, phi):

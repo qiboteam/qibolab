@@ -118,24 +118,8 @@ class ZhPort(Port):
     device_name: str
     channel_path: str
 
-    _offset: float = 0.0
-    _power_range: int = 0
-
-    @property
-    def power_range(self):
-        return self._power_range
-
-    @power_range.setter
-    def power_range(self, value):
-        self._power_range = value
-
-    @property
-    def offset(self):
-        return self._offset
-
-    @offset.setter
-    def offset(self, value):
-        self._offset = value
+    offset: float = 0.0
+    power_range: int = 0
 
 
 class ZhPulse:

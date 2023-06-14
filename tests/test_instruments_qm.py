@@ -137,7 +137,7 @@ def test_qmopx_register_analog_output_controllers():
     opx = QMOPX(name, address)
     port = QMPort(("con2", 2))
     port.offset = 0.005
-    port.filter = {"feedforward": [1, -1], "feedback": [0.95]}
+    port.filters = {"feedforward": [1, -1], "feedback": [0.95]}
     opx.config.register_analog_output_controllers(port)
     controllers = opx.config.controllers
     assert controllers == {

@@ -129,15 +129,7 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Q
 @dataclass
 class RFSoCPort(Port):
     name: int
-    _offset: float = 0.0
-
-    @property
-    def offset(self):
-        return self._offset
-
-    @offset.setter
-    def offset(self, value):
-        self._offset = value
+    offset: float = 0.0
 
 
 class QibosoqError(RuntimeError):
