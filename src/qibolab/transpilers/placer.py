@@ -243,8 +243,6 @@ class Backpropagation(Placer):
         initial_placer = Trivial(self.connectivity)
         initial_placement = initial_placer(circuit=circuit)
         new_circuit = self.assemble_circuit(circuit)
-        # print("init_circuit:\n",circuit.draw())
-        # print("circuit:\n",new_circuit.draw())
         final_placement = self.routing_step(initial_placement, new_circuit)
         return final_placement
 
@@ -261,21 +259,16 @@ class Backpropagation(Placer):
         if self.gates is None:
             return circuit.invert()
         circuit_repr = create_circuit_repr(circuit)
-        # print("circuit_repr:", circuit_repr)
         circuit_gates = len(circuit_repr)
         if circuit_gates == 0:
             raise ValueError("The circuit must contain at least a two qubit gate.")
         reps = int(self.gates / circuit_gates)
-        # print("reps:", reps)
         remainder = self.gates % circuit_gates
-        # print("resto:",remainder)
         new_circuit_repr = []
         for _ in range(reps):
             new_circuit_repr += circuit_repr[:]
-            # print(new_circuit_repr)
             circuit_repr.reverse()
         new_circuit_repr += circuit_repr[0:remainder]
-        # print("end:", new_circuit_repr)
         new_circuit = Circuit(circuit.nqubits)
         for i in range(len(new_circuit_repr)):
             # As only the connectivity is important here we can replace everithing with CZ gates
