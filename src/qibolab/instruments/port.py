@@ -15,7 +15,8 @@ class Port:
     # each driver would have to implement all of them an raise errors
     # for parameters that are not supported.
 
-    # TODO: Add "abstract" setters for all properties
+    def __init__(self, name):
+        self.name = name
 
     @property
     def offset(self):

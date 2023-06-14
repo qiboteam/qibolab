@@ -37,16 +37,8 @@ class DummyInstrument(Controller):
             instruments.
     """
 
+    PortType = DummyPort
     sampling_rate = 1
-
-    def __init__(self, name, address):
-        super().__init__(name, address)
-        self.ports = {}
-
-    def __getitem__(self, port_name):
-        if port_name not in self.ports:
-            self.ports[port_name] = DummyPort(port_name)
-        return self.ports[port_name]
 
     def connect(self):
         log.info("Connecting to dummy instrument.")

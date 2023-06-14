@@ -116,9 +116,7 @@ def select_pulse(pulse, pulse_type):
 
 @dataclass
 class ZhPort(Port):
-    device_name: str
-    channel_path: str
-
+    name: Tuple[str, str]
     offset: float = 0.0
     power_range: int = 0
 
@@ -254,6 +252,8 @@ class ZhSweeperLine:
 class Zurich(Controller):
     """Zurich driver main class"""
 
+    PortType = ZhPort
+
     def __init__(self, name, descriptor, use_emulation=False, time_of_flight=0.0, smearing=0.0):
         self.name = name
         "Setup name (str)"
@@ -305,13 +305,7 @@ class Zurich(Controller):
         self.nt_sweeps = None
         "Storing sweepers"
         # Improve the storing of multiple sweeps
-
-        self.ports = {}
-
-    def __getitem__(self, port_name: Tuple[str, str]):
-        if port_name not in self.ports:
-            self.ports[port_name] = ZhPort(*port_name)
-        return self.ports[port_name]
+        self._ports = {}
 
     def connect(self):
         self.create_device_setup()

@@ -2,6 +2,8 @@ import tempfile
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+from qibolab.instruments.port import Port
+
 INSTRUMENTS_DATA_FOLDER = Path.home() / ".qibolab" / "instruments" / "data"
 
 
@@ -49,6 +51,20 @@ class Instrument(ABC):
 
 class Controller(Instrument):
     """Instrument that can play pulses (using waveform generator)."""
+
+    PortType = Port
+
+    def __init__(self, name, address):
+        super().__init__(name, address)
+        self._ports = {}
+
+    def __getitem__(self, port_name):
+        return self.ports(port_name)
+
+    def ports(self, port_name):
+        if port_name not in self._ports:
+            self._ports[port_name] = self.PortType(port_name)
+        return self._ports[port_name]
 
     @abstractmethod
     def play(self, *args, **kwargs):
