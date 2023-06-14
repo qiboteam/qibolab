@@ -103,12 +103,12 @@ class Channel:
         self.port.power_range = value
 
     @property
-    def filter(self):
-        return self.port.filter
+    def filters(self):
+        return self.port.filters
 
-    @filter.setter
-    def filter(self, value):
-        self.port.filter = value
+    @filters.setter
+    def filters(self, value):
+        self.port.filters = value
 
 
 @dataclass

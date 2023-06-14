@@ -78,15 +78,15 @@ class Port:
         raise_error(NotImplementedError, "Instruments do not support power range.")
 
     @property
-    def filter(self):
-        """Filter to be applied to the channel to reduce the distortions when sending flux pulses.
+    def filters(self):
+        """Filters to be applied to the channel to reduce the distortions when sending flux pulses.
 
         Useful for two-qubit gates.
         Quantum Machines associate filters to channels but this may not be the case
         in other instruments.
         """
-        raise_error(NotImplementedError, "Instruments do not support filter.")
+        raise_error(NotImplementedError, "Instruments do not support filters.")
 
-    @filter.setter
-    def filter(self, value):
-        raise_error(NotImplementedError, "Instruments do not support filter.")
+    @filters.setter
+    def filters(self, value):
+        raise_error(NotImplementedError, "Instruments do not support filters.")
