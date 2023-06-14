@@ -3,7 +3,6 @@ import pytest
 from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
-from qibo.states import CircuitResult
 
 from qibolab import create_platform
 from qibolab.compilers import Compiler
@@ -38,7 +37,7 @@ def compile_circuit(circuit, platform):
     if transpiler.is_satisfied(circuit):
         native_circuit = circuit
     else:
-        native_circuit, _ = transpiler.transpile(circuit)
+        native_circuit, _ = transpiler(circuit)
 
     sequence, _ = compiler.compile(native_circuit, platform)
     return sequence

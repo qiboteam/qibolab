@@ -3,7 +3,6 @@ import pytest
 from qm import qua
 
 from qibolab import AcquisitionType, ExecutionParameters, create_platform
-from qibolab.instruments.abstract import INSTRUMENTS_DATA_FOLDER
 from qibolab.instruments.qm import QMOPX, Acquisition, QMPulse, Sequence
 from qibolab.pulses import FluxPulse, Pulse, ReadoutPulse, Rectangular
 
