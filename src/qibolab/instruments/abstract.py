@@ -8,8 +8,7 @@ INSTRUMENTS_DATA_FOLDER = Path.home() / ".qibolab" / "instruments" / "data"
 
 
 class Instrument(ABC):
-    """
-    Parent class for all the instruments connected via TCPIP.
+    """Parent class for all the instruments connected via TCPIP.
 
     Args:
         name (str): Instrument name.
@@ -30,22 +29,27 @@ class Instrument(ABC):
 
     @abstractmethod
     def connect(self):
+        """Establish connection to the physical instrument."""
         raise NotImplementedError
 
     @abstractmethod
     def setup(self, *args, **kwargs):
+        """Upload settings to the physical instrument."""
         raise NotImplementedError
 
     @abstractmethod
     def start(self):
+        """Turn on the physical instrument."""
         raise NotImplementedError
 
     @abstractmethod
     def stop(self):
+        """Turn off the physical instrument."""
         raise NotImplementedError
 
     @abstractmethod
     def disconnect(self):
+        """Close connection to the physical instrument."""
         raise NotImplementedError
 
 
@@ -53,6 +57,7 @@ class Controller(Instrument):
     """Instrument that can play pulses (using waveform generator)."""
 
     PortType = Port
+    """Class used by the instrument to instantiate ports."""
 
     def __init__(self, name, address):
         super().__init__(name, address)
@@ -62,6 +67,16 @@ class Controller(Instrument):
         return self.ports(port_name)
 
     def ports(self, port_name):
+        """Get ports associated to this controller.
+
+        Args:
+            port_name: Identifier for the port. The type of the identifier
+                depends on the specialized port defined for each instrument.
+
+        Returns:
+            :class:`qibolab.instruments.port.Port` object providing the interface
+            for setting instrument parameters.
+        """
         if port_name not in self._ports:
             self._ports[port_name] = self.PortType(port_name)
         return self._ports[port_name]

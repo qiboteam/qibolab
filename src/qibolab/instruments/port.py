@@ -9,6 +9,9 @@ class Port:
     Drivers should subclass this interface and implement the getters
     and setters for all the parameters that are available for the
     corresponding instruments.
+
+    Each port is identified by the ``name`` attribute.
+    Note that the type of the identifier can be different of each port implementation.
     """
 
     # NOTE: We can convert all these to ``@abstractmethod`` but then
@@ -83,8 +86,8 @@ class Port:
         """Filters to be applied to the channel to reduce the distortions when sending flux pulses.
 
         Useful for two-qubit gates.
-        Quantum Machines associate filters to channels but this may not be the case
-        in other instruments.
+        Quantum Machines (:class:`qibolab.instruments.qm.QMOPX`) associate filters to channels
+        but this may not be the case in other instruments.
         """
         raise_error(NotImplementedError, "Instruments do not support filters.")
 
