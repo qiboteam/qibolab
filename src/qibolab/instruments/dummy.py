@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Dict, List, Union
 
 import numpy as np
@@ -64,14 +65,13 @@ class DummyInstrument(Controller):
                 results[ro_pulse.qubit] = results[ro_pulse.serial] = options.results_type(values)
 
         if isinstance(sequence, List):
-            values_sequence = []
+            results = defaultdict(list)
             for small_sequence in sequence:
                 for ro_pulse in small_sequence.ro_pulses:
                     values = self.get_values(options, small_sequence, exp_points)
-                    values_sequence.append(options.results_type(values))
-            results[ro_pulse.qubit] = results[ro_pulse.serial] = values_sequence
+                    results[ro_pulse.serial].append(options.results_type(values))
+                    results[ro_pulse.qubit].append(options.results_type(values))
 
-        # return self.get_values(options, sequence, exp_points)
         return results
 
     def sweep(
