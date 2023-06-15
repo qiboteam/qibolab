@@ -689,6 +689,9 @@ class Sequence:
         wait_time = pulse.start - self.clock[qmpulse.element]
         if wait_time >= 12:
             qmpulse.wait_time = wait_time // 4 + 1
+            if isinstance(previous, BakedPulse):
+                # avoid overlapping pulses when baking
+                qmpulse.wait_time += 2
             self.clock[qmpulse.element] += 4 * qmpulse.wait_time
         self.clock[qmpulse.element] += qmpulse.duration
 
