@@ -69,8 +69,8 @@ def test_qmpulse_previous_and_next():
         ro_qmpulses.append(qmsequence.add(ro_pulse))
 
     for qd_qmpulse, ro_qmpulse in zip(qd_qmpulses, ro_qmpulses):
-        assert len(qd_qmpulse.next) == 1
-        assert len(ro_qmpulse.next) == 0
+        assert len(qd_qmpulse.next_pulses) == 1
+        assert len(ro_qmpulse.next_pulses) == 0
 
 
 def test_qmpulse_previous_and_next_flux():
@@ -98,11 +98,11 @@ def test_qmpulse_previous_and_next_flux():
     drive22 = qmsequence.add(x_pulse_end)
     measure1 = qmsequence.add(measure_lowfreq)
     measure2 = qmsequence.add(measure_highfreq)
-    assert drive11.next == {drive12}
-    assert drive21.next == {flux2}
-    assert flux2.next == {drive22}
-    assert drive12.next == {measure1}
-    assert drive22.next == {measure2}
+    assert drive11.next_pulses == {drive12}
+    assert drive21.next_pulses == {flux2}
+    assert flux2.next_pulses == {drive22}
+    assert drive12.next_pulses == {measure1}
+    assert drive22.next_pulses == {measure2}
 
 
 # TODO: Test connect/disconnect

@@ -522,37 +522,56 @@ class ShotsAcquisition(Acquisition):
         return SampleResults(shots)
 
 
+@dataclass
 class QMPulse:
     """Wrapper around :class:`qibolab.pulses.Pulse` for easier translation to QUA program."""
 
-    def __init__(self, pulse: Pulse):
-        self.pulse: Pulse = pulse
-        """:class:`qibolab.pulses.Pulse` implemting the current pulse."""
-        self.element: str = f"{pulse.type.name.lower()}{pulse.qubit}"
-        """Element that the pulse will be played on, as defined in the QM config."""
-        self.operation: str = pulse.serial
-        """Name of the operation that is implementing the pulse in the QM config."""
-        self.relative_phase: float = pulse.relative_phase / (2 * np.pi)
-        """Relative phase of the pulse normalized to follow QM convention.
-        May be overrident when sweeping phase."""
-        self.duration: int = pulse.duration
-        """Duration of the pulse. May be overrident when sweeping duration."""
-        self.wait_time: int = 0
-        """Time (in clock cycles) to wait before playing this pulse.
-        Calculated and assigned by :meth:`qibolab.instruments.qm.Sequence.add`."""
-        self.wait_time_variable: Optional[_Variable] = None
-        """Time (in clock cycles) to wait before playing this pulse when we are sweeping start."""
-        self.acquisition: Acquisition = None
-        """Data class containing the variables required for data acquisition for the instrument."""
+    pulse: Pulse
+    """:class:`qibolab.pulses.Pulse` implemting the current pulse."""
+    element: Optional[str] = None
+    """Element that the pulse will be played on, as defined in the QM config."""
 
-        self.next: set = set()
-        """Pulses that will be played after the current pulse.
-        These pulses need to be re-aligned if we are sweeping the start or duration."""
+    """Name of the operation that is implementing the pulse in the QM config."""
+    relative_phase: Optional[float] = None
+    """Relative phase of the pulse normalized to follow QM convention.
+    May be overwritten when sweeping phase."""
+    wait_time: int = 0
+    """Time (in clock cycles) to wait before playing this pulse.
+    Calculated and assigned by :meth:`qibolab.instruments.qm.Sequence.add`."""
+    wait_time_variable: Optional[_Variable] = None
+    """Time (in clock cycles) to wait before playing this pulse when we are sweeping start."""
+    swept_duration: Optional[_Variable] = None
+    """Pulse duration when sweeping it."""
 
-        self.baked = None
-        """Baking object implementing the pulse when 1ns resolution is needed."""
-        self.baked_amplitude = None
-        """Amplitude of the baked pulse."""
+    acquisition: Optional[Acquisition] = None
+    """Data class containing the variables required for data acquisition for the instrument."""
+
+    next_pulses: set = field(default_factory=set)
+    """Pulses that will be played after the current pulse.
+    These pulses need to be re-aligned if we are sweeping the start or duration."""
+
+    baked = None
+    """Baking object implementing the pulse when 1ns resolution is needed."""
+    baked_amplitude = None
+    """Amplitude of the baked pulse."""
+
+    def __post_init__(self):
+        self.element: str = f"{self.pulse.type.name.lower()}{self.pulse.qubit}"
+        self.operation: str = self.pulse.serial
+        self.relative_phase: float = self.pulse.relative_phase / (2 * np.pi)
+
+    def __hash__(self):
+        return hash(self.pulse)
+
+    @property
+    def duration(self):
+        """Duration of the pulse as defined in the :class:`qibolab.pulses.PulseSequence`.
+
+        Remains constant even when we are sweeping the duration of this pulse.
+        """
+        if self.baked is not None:
+            return self.baked.get_op_length()
+        return self.pulse.duration
 
     @property
     def wait_cycles(self):
@@ -605,8 +624,6 @@ class QMPulse:
             # Append the baking object in the list to call it from the QUA program
             # self.segments.append(b)
 
-        self.duration = self.baked.get_op_length()
-
 
 @dataclass
 class Sequence:
@@ -648,7 +665,7 @@ class Sequence:
 
         previous = self._find_previous(pulse)
         if previous is not None:
-            previous.next.add(qmpulse)
+            previous.next_pulses.add(qmpulse)
 
         wait_time = pulse.start - self.clock[qmpulse.element]
         if wait_time >= 12:
@@ -812,7 +829,7 @@ class QMOPX(Controller):
                     else:
                         qmpulse.baked.run()
                 else:
-                    qua.play(qmpulse.operation, qmpulse.element)
+                    qua.play(qmpulse.operation, qmpulse.element, duration=qmpulse.swept_duration)
                 if needs_reset:
                     qua.reset_frame(qmpulse.element)
                     needs_reset = False
@@ -952,8 +969,28 @@ class QMOPX(Controller):
                 to_process = {qmpulse}
                 while to_process:
                     next_qmpulse = to_process.pop()
-                    to_process |= next_qmpulse.next
+                    to_process |= next_qmpulse.next_pulses
                     next_qmpulse.wait_time_variable = start
+
+            self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
+
+    def sweep_duration(self, sweepers, qubits, qmsequence, relaxation_time):
+        sweeper = sweepers[0]
+        # if min(sweeper.values) < 16:
+        #    raise_error(ValueError, "Cannot sweep start less than 16ns.")
+
+        dur = declare(int)
+        values = np.array(sweeper.values) // 4
+        with for_(*from_array(dur, values.astype(int))):
+            for pulse in sweeper.pulses:
+                qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
+                qmpulse.duration = dur
+                # find all pulses that are connected to ``qmpulse`` and update their starts
+                to_process = {qmpulse.next_pulses}
+                while to_process:
+                    next_qmpulse = to_process.pop()
+                    to_process |= next_qmpulse.next_pulses
+                    next_qmpulse.wait_time_variable = dur
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
 
