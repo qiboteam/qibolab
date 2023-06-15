@@ -582,6 +582,13 @@ class QMPulse:
             return self.wait_time
         return None
 
+    def play(self):
+        """Play the pulse.
+
+        Relevant only in the context of a QUA program.
+        """
+        qua.play(self.operation, self.element, duration=self.swept_duration)
+
     def declare_output(self, options, threshold=None, angle=None):
         average = options.averaging_mode is AveragingMode.CYCLIC
         acquisition_type = options.acquisition_type
@@ -605,8 +612,10 @@ DurationsType = Union[List[int], np.ndarray]
 
 @dataclass
 class BakedPulse(QMPulse):
+    """Baking allows 1ns resolution in the pulse waveforms."""
+
     segments: List[Baking] = field(default_factory=list)
-    """Baking object implementing the pulse when 1ns resolution is needed."""
+    """Baked segments implementing the pulse."""
     amplitude: Optional[float] = None
     """Amplitude of the baked pulse. Relevant only when sweeping amplitude."""
     durations: Optional[DurationsType] = None
@@ -634,6 +643,22 @@ class BakedPulse(QMPulse):
                 segment.add_op(self.pulse.serial, self.element, waveform)
                 segment.play(self.pulse.serial, self.element)
             self.segments.append(segment)
+
+    @property
+    def amplitude_array(self):
+        if self.amplitude is None:
+            return None
+        return [(self.element, self.amplitude)]
+
+    def play(self):
+        if self.swept_duration is not None:
+            with qua.switch_(self.swept_duration):
+                for dur, segment in zip(self.durations, self.segments):
+                    with qua.case_(dur):
+                        segment.run(amp_array=self.amplitude_array)
+        else:
+            segment = self.segments[0]
+            segment.run(amp_array=self.amplitude_array)
 
 
 @dataclass
@@ -839,23 +864,7 @@ class QMOPX(Controller):
                 if not isinstance(qmpulse.relative_phase, float) or qmpulse.relative_phase != 0:
                     qua.frame_rotation_2pi(qmpulse.relative_phase, qmpulse.element)
                     needs_reset = True
-                if isinstance(qmpulse, BakedPulse):
-                    if qmpulse.swept_duration is not None:
-                        with qua.switch_(qmpulse.swept_duration):
-                            for dur, segment in zip(qmpulse.durations, qmpulse.segments):
-                                with qua.case_(dur):
-                                    if qmpulse.amplitude is not None:
-                                        segment.run(amp_array=[(qmpulse.element, qmpulse.amplitude)])
-                                    else:
-                                        segment.run()
-                    else:
-                        segment = qmpulse.segments[0]
-                        if qmpulse.amplitude is not None:
-                            segment.run(amp_array=[(qmpulse.element, qmpulse.amplitude)])
-                        else:
-                            segment.run()
-                else:
-                    qua.play(qmpulse.operation, qmpulse.element, duration=qmpulse.swept_duration)
+                qmpulse.play()
                 if needs_reset:
                     qua.reset_frame(qmpulse.element)
                     needs_reset = False
