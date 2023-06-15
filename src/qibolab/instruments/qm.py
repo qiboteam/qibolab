@@ -2,7 +2,7 @@ import collections
 import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 import numpy as np
 from qibo.config import raise_error
@@ -546,9 +546,10 @@ class QMPulse:
     acquisition: Optional[Acquisition] = None
     """Data class containing the variables required for data acquisition for the instrument."""
 
-    next_pulses: set = field(default_factory=set)
+    next_pulses: Set["QMPulse"] = field(default_factory=set)
     """Pulses that will be played after the current pulse.
     These pulses need to be re-aligned if we are sweeping the start or duration."""
+    elements_to_align: Set[str] = field(default_factory=set)
 
     baked = None
     """Baking object implementing the pulse when 1ns resolution is needed."""
@@ -833,6 +834,8 @@ class QMOPX(Controller):
                 if needs_reset:
                     qua.reset_frame(qmpulse.element)
                     needs_reset = False
+                if len(qmpulse.elements_to_align) > 0:
+                    qua.align(qmpulse.element, *qmpulse.elements_to_align)
 
         # for Rabi-length?
         if relaxation_time > 0:
@@ -984,13 +987,19 @@ class QMOPX(Controller):
         with for_(*from_array(dur, values.astype(int))):
             for pulse in sweeper.pulses:
                 qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
-                qmpulse.duration = dur
-                # find all pulses that are connected to ``qmpulse`` and update their starts
-                to_process = {qmpulse.next_pulses}
+                qmpulse.swept_duration = dur
+                # find all pulses that are connected to ``qmpulse`` and align them
+                element_start = collections.defaultdict(int)
+                for next_pulse in qmpulse.next_pulses:
+                    element = next_pulse.element
+                    qmpulse.elements_to_align.add(element)
+                    element_start[element] = next_pulse.wait_time
+
+                to_process = set(qmpulse.next_pulses)
                 while to_process:
                     next_qmpulse = to_process.pop()
                     to_process |= next_qmpulse.next_pulses
-                    next_qmpulse.wait_time_variable = dur
+                    next_qmpulse.wait_time -= element_start[next_qmpulse.element]
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
 
@@ -1000,6 +1009,7 @@ class QMOPX(Controller):
         Parameter.relative_phase: sweep_relative_phase,
         Parameter.bias: sweep_bias,
         Parameter.start: sweep_start,
+        Parameter.duration: sweep_duration,
     }
 
     def sweep_recursion(self, sweepers, qubits, qmsequence, relaxation_time):

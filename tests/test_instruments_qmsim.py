@@ -171,7 +171,7 @@ def test_qmsim_sweep_bias(simulator, folder):
         ro_pulses[qubit] = simulator.create_MZ_pulse(qubit, start=0)
         sequence.add(ro_pulses[qubit])
     values = [0, 0.005]
-    sweeper = Sweeper(Parameter.bias, values, qubits=qubits)
+    sweeper = Sweeper(Parameter.bias, values, qubits=[simulator.qubits[q] for q in qubits])
     options = ExecutionParameters(
         nshots=1, relaxation_time=20, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
     )
@@ -223,6 +223,53 @@ def test_qmsim_sweep_start_two_pulses(simulator, folder):
     result = simulator.sweep(sequence, options, sweeper)
     samples = result.get_simulated_samples()
     assert_regression(samples, folder, "sweep_start_two_pulses")
+
+
+def test_qmsim_sweep_duration(simulator, folder):
+    simulator.instruments[0].simulation_duration = 1250
+    qubits = list(range(simulator.nqubits))
+    sequence = PulseSequence()
+    qd_pulses = {}
+    ro_pulses = {}
+    for qubit in qubits:
+        qd_pulses[qubit] = simulator.create_RX_pulse(qubit, start=0)
+        ro_pulses[qubit] = simulator.create_MZ_pulse(qubit, start=qd_pulses[qubit].finish)
+        sequence.add(qd_pulses[qubit])
+        sequence.add(ro_pulses[qubit])
+    values = [20, 60]
+    pulses = [qd_pulses[qubit] for qubit in qubits]
+    sweeper = Sweeper(Parameter.duration, values, pulses=pulses)
+    options = ExecutionParameters(
+        nshots=1, relaxation_time=0, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+    )
+    result = simulator.sweep(sequence, options, sweeper)
+    samples = result.get_simulated_samples()
+    assert_regression(samples, folder, "sweep_duration")
+
+
+def test_qmsim_sweep_duration_two_pulses(simulator, folder):
+    simulator.instruments[0].simulation_duration = 2000
+    qubits = list(range(simulator.nqubits))
+    sequence = PulseSequence()
+    qd_pulses1 = {}
+    qd_pulses2 = {}
+    ro_pulses = {}
+    for qubit in qubits:
+        qd_pulses1[qubit] = simulator.create_RX_pulse(qubit, start=0)
+        qd_pulses2[qubit] = simulator.create_RX_pulse(qubit, start=qd_pulses1[qubit].finish)
+        ro_pulses[qubit] = simulator.create_MZ_pulse(qubit, start=qd_pulses2[qubit].finish)
+        sequence.add(qd_pulses1[qubit])
+        sequence.add(qd_pulses2[qubit])
+        sequence.add(ro_pulses[qubit])
+    values = [20, 60]
+    pulses = [qd_pulses1[qubit] for qubit in qubits]
+    sweeper = Sweeper(Parameter.duration, values, pulses=pulses)
+    options = ExecutionParameters(
+        nshots=1, relaxation_time=0, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+    )
+    result = simulator.sweep(sequence, options, sweeper)
+    samples = result.get_simulated_samples()
+    assert_regression(samples, folder, "sweep_duration_two_pulses")
 
 
 gatelist = [
