@@ -38,7 +38,7 @@ from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qibo.config import log
 
 from qibolab.instruments.abstract import Instrument, InstrumentException
-from qibolab.instruments.qblox.debug import print_readable_snapshot
+from qibolab.instruments.qblox.port import ClusterRF_OutputPort, QbloxInputPort
 from qibolab.instruments.qblox.q1asm import (
     Block,
     Program,
@@ -226,38 +226,48 @@ class ClusterQRM_RF(Instrument):
                 # fails, providing a misleading error message
 
                 # create a class for each port with attributes mapped to the instrument parameters
-                self.ports["o1"] = type(
-                    f"port_o1",
-                    (),
-                    {
-                        "channel": None,
-                        "attenuation": self.property_wrapper("out0_att"),
-                        "lo_enabled": self.property_wrapper("out0_in0_lo_en"),
-                        "lo_frequency": self.property_wrapper("out0_in0_lo_freq"),
-                        "gain": self.sequencer_property_wrapper(
-                            self.DEFAULT_SEQUENCERS["o1"], "gain_awg_path0", "gain_awg_path1"
-                        ),
-                        "hardware_mod_en": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o1"], "mod_en_awg"),
-                        "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o1"], "nco_freq"),
-                        "nco_phase_offs": self.sequencer_property_wrapper(
-                            self.DEFAULT_SEQUENCERS["o1"], "nco_phase_offs"
-                        ),
-                    },
-                )()
-                self.ports["i1"] = type(
-                    f"port_i1",
-                    (),
-                    {
-                        "channel": None,
-                        "acquisition_hold_off": 0,
-                        "acquisition_duration": self.sequencer_property_wrapper(
-                            self.DEFAULT_SEQUENCERS["o1"], "integration_length_acq"
-                        ),
-                        "hardware_demod_en": self.sequencer_property_wrapper(
-                            self.DEFAULT_SEQUENCERS["i1"], "demod_en_acq"
-                        ),
-                    },
-                )()
+                # self.ports["o1"] = type(
+                #     f"port_o1",
+                #     (),
+                #     {
+                #         "channel": None,
+                #         "attenuation": self.property_wrapper("out0_att"),
+                #         "lo_enabled": self.property_wrapper("out0_in0_lo_en"),
+                #         "lo_frequency": self.property_wrapper("out0_in0_lo_freq"),
+                #         "gain": self.sequencer_property_wrapper(
+                #             self.DEFAULT_SEQUENCERS["o1"], "gain_awg_path0", "gain_awg_path1"
+                #         ),
+                #         "hardware_mod_en": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o1"], "mod_en_awg"),
+                #         "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o1"], "nco_freq"),
+                #         "nco_phase_offs": self.sequencer_property_wrapper(
+                #             self.DEFAULT_SEQUENCERS["o1"], "nco_phase_offs"
+                #         ),
+                #     },
+                # )()
+                self.ports["o1"] = ClusterRF_OutputPort(
+                    device=self.device, sequencer_number=self.DEFAULT_SEQUENCERS["o1"], number=1
+                )
+
+                # self.ports["i1"] = type(
+                #     f"port_i1",
+                #     (),
+                #     {
+                #         "channel": None,
+                #         "acquisition_hold_off": 0,
+                #         "acquisition_duration": self.sequencer_property_wrapper(
+                #             self.DEFAULT_SEQUENCERS["o1"], "integration_length_acq"
+                #         ),
+                #         "hardware_demod_en": self.sequencer_property_wrapper(
+                #             self.DEFAULT_SEQUENCERS["i1"], "demod_en_acq"
+                #         ),
+                #     },
+                # )()
+                self.ports["i1"] = QbloxInputPort(
+                    device=self.device,
+                    output_sequencer_number=self.DEFAULT_SEQUENCERS["o1"],
+                    input_sequencer_number=self.DEFAULT_SEQUENCERS["i1"],
+                    number=1,
+                )
 
                 # save reference to cluster
                 self._cluster = cluster
@@ -915,6 +925,7 @@ class ClusterQRM_RF(Instrument):
         # self.device.print_readable_snapshot(update=True)
 
         # DEBUG: QRM RF Save Readable Snapshot
+        # from qibolab.instruments.qblox.debug import print_readable_snapshot
         # filename = self._debug_folder + f"Z_{self.name}_snapshot.json"
         # with open(filename, "w", encoding="utf-8") as file:
         #     print_readable_snapshot(self.device, file, update=True)

@@ -38,7 +38,7 @@ from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qibo.config import log
 
 from qibolab.instruments.abstract import Instrument, InstrumentException
-from qibolab.instruments.qblox.debug import print_readable_snapshot
+from qibolab.instruments.qblox.port import ClusterRF_OutputPort
 from qibolab.instruments.qblox.q1asm import (
     Block,
     Program,
@@ -212,26 +212,29 @@ class ClusterQCM_RF(Instrument):
                 # create a class for each port with attributes mapped to the instrument parameters
                 for n in range(2):
                     port = "o" + str(n + 1)
-                    self.ports[port] = type(
-                        f"port_" + port,
-                        (),
-                        {
-                            "channel": None,
-                            "attenuation": self.property_wrapper(f"out{n}_att"),
-                            "lo_enabled": self.property_wrapper(f"out{n}_lo_en"),
-                            "lo_frequency": self.property_wrapper(f"out{n}_lo_freq"),
-                            "gain": self.sequencer_property_wrapper(
-                                self.DEFAULT_SEQUENCERS[port], "gain_awg_path0", "gain_awg_path1"
-                            ),
-                            "hardware_mod_en": self.sequencer_property_wrapper(
-                                self.DEFAULT_SEQUENCERS[port], "mod_en_awg"
-                            ),
-                            "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS[port], "nco_freq"),
-                            "nco_phase_offs": self.sequencer_property_wrapper(
-                                self.DEFAULT_SEQUENCERS[port], "nco_phase_offs"
-                            ),
-                        },
-                    )()
+                    # self.ports[port] = type(
+                    #     f"port_" + port,
+                    #     (),
+                    #     {
+                    #         "channel": None,
+                    #         "attenuation": self.property_wrapper(f"out{n}_att"),
+                    #         "lo_enabled": self.property_wrapper(f"out{n}_lo_en"),
+                    #         "lo_frequency": self.property_wrapper(f"out{n}_lo_freq"),
+                    #         "gain": self.sequencer_property_wrapper(
+                    #             self.DEFAULT_SEQUENCERS[port], "gain_awg_path0", "gain_awg_path1"
+                    #         ),
+                    #         "hardware_mod_en": self.sequencer_property_wrapper(
+                    #             self.DEFAULT_SEQUENCERS[port], "mod_en_awg"
+                    #         ),
+                    #         "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS[port], "nco_freq"),
+                    #         "nco_phase_offs": self.sequencer_property_wrapper(
+                    #             self.DEFAULT_SEQUENCERS[port], "nco_phase_offs"
+                    #         ),
+                    #     },
+                    # )()
+                    self.ports[port] = ClusterRF_OutputPort(
+                        device=self.device, sequencer_number=self.DEFAULT_SEQUENCERS[port], number=n + 1
+                    )
 
                 # save reference to cluster
                 self._cluster = cluster
@@ -800,6 +803,7 @@ class ClusterQCM_RF(Instrument):
         # self.device.print_readable_snapshot(update=True)
 
         # DEBUG: QCM RF Save Readable Snapshot
+        # from qibolab.instruments.qblox.debug import print_readable_snapshot
         # filename = self._debug_folder + f"Z_{self.name}_snapshot.json"
         # with open(filename, "w", encoding="utf-8") as file:
         #     print_readable_snapshot(self.device, file, update=True)
