@@ -55,7 +55,12 @@ class DummyInstrument(Controller):
                 values = np.random.rand(exp_points) * 100 + 1j * np.random.rand(exp_points) * 100
         return values
 
-    def play(self, qubits: Dict[Union[str, int], Qubit], sequence: PulseSequence, options: ExecutionParameters):
+    def play(
+        self,
+        qubits: Dict[Union[str, int], Qubit],
+        sequence: Union[PulseSequence, List[PulseSequence]],
+        options: ExecutionParameters,
+    ):
         exp_points = 1 if options.averaging_mode is AveragingMode.CYCLIC else options.nshots
         results = {}
 
@@ -87,4 +92,9 @@ class DummyInstrument(Controller):
         if options.averaging_mode is not AveragingMode.CYCLIC:
             exp_points *= options.nshots
 
-        return self.get_values(options, sequence, exp_points)
+        results = {}
+        for ro_pulse in sequence.ro_pulses:
+            values = self.get_values(options, sequence, exp_points)
+            results[ro_pulse.qubit] = results[ro_pulse.serial] = options.results_type(values)
+
+        return results
