@@ -2,7 +2,7 @@ import collections
 import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Union
 
 import numpy as np
 from qibo.config import raise_error
@@ -12,6 +12,7 @@ from qm.qua._dsl import _ResultSource, _Variable  # for type declaration only
 from qm.QuantumMachinesManager import QuantumMachinesManager
 from qualang_tools.addons.variables import assign_variables_to_element
 from qualang_tools.bakery import baking
+from qualang_tools.bakery.bakery import Baking
 from qualang_tools.loops import from_array
 from qualang_tools.units import unit
 
@@ -599,35 +600,26 @@ class QMPulse:
         self.acquisition.assign_element(self.element)
 
 
+DurationsType = Union[List[int], np.ndarray]
+
+
 @dataclass
 class BakedPulse(QMPulse):
-    baked = None
+    segments: List[Baking] = field(default_factory=list)
     """Baking object implementing the pulse when 1ns resolution is needed."""
-    baked_amplitude = None
-    """Amplitude of the baked pulse."""
-    segments: list = field(default_factory=list)
+    amplitude: Optional[float] = None
+    """Amplitude of the baked pulse. Relevant only when sweeping amplitude."""
+    durations: Optional[DurationsType] = None
 
     def __hash__(self):
         return super().__hash__()
 
     @property
     def duration(self):
-        if len(self.segments) > 0:
-            baked = self.segments[-1]
-        else:
-            baked = self.baked
-        return baked.get_op_length()
+        return self.segments[-1].get_op_length()
 
-    def bake(self, config: QMConfig):
-        with baking(config.__dict__, padding_method="right") as self.baked:
-            if self.pulse.duration == 0:
-                waveform = [0.0] * 16
-            else:
-                waveform = self.pulse.envelope_waveform_i.data.tolist()
-            self.baked.add_op(self.pulse.serial, self.element, waveform)
-            self.baked.play(self.pulse.serial, self.element)
-
-    def create_segments(self, config: QMConfig, durations: np.ndarray):
+    def bake(self, config: QMConfig, durations: DurationsType):
+        self.segments = []
         self.durations = durations
         for t in durations:
             with baking(config.__dict__, padding_method="right") as segment:
@@ -813,7 +805,7 @@ class QMOPX(Controller):
                 # register flux element (if it does not already exist)
                 self.config.register_flux_element(qubits[pulse.qubit], pulse.frequency)
                 qmpulse = BakedPulse(pulse)
-                qmpulse.bake(self.config)
+                qmpulse.bake(self.config, durations=[pulse.duration])
                 qmsequence.add(qmpulse)
             else:
                 qmpulse = QMPulse(pulse)
@@ -852,15 +844,16 @@ class QMOPX(Controller):
                         with qua.switch_(qmpulse.swept_duration):
                             for dur, segment in zip(qmpulse.durations, qmpulse.segments):
                                 with qua.case_(dur):
-                                    if qmpulse.baked_amplitude is not None:
-                                        segment.run(amp_array=[(qmpulse.element, qmpulse.baked_amplitude)])
+                                    if qmpulse.amplitude is not None:
+                                        segment.run(amp_array=[(qmpulse.element, qmpulse.amplitude)])
                                     else:
                                         segment.run()
                     else:
-                        if qmpulse.baked_amplitude is not None:
-                            qmpulse.baked.run(amp_array=[(qmpulse.element, qmpulse.baked_amplitude)])
+                        segment = qmpulse.segments[0]
+                        if qmpulse.amplitude is not None:
+                            segment.run(amp_array=[(qmpulse.element, qmpulse.amplitude)])
                         else:
-                            qmpulse.baked.run()
+                            segment.run()
                 else:
                     qua.play(qmpulse.operation, qmpulse.element, duration=qmpulse.swept_duration)
                 if needs_reset:
@@ -951,7 +944,7 @@ class QMOPX(Controller):
             for pulse in sweeper.pulses:
                 qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
                 if isinstance(qmpulse, BakedPulse):
-                    qmpulse.baked_amplitude = a
+                    qmpulse.amplitude = a
                 else:
                     qmpulse.operation = qmpulse.operation * amp(a)
 
@@ -1015,7 +1008,7 @@ class QMOPX(Controller):
             qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
             if isinstance(qmpulse, BakedPulse):
                 values = np.array(sweeper.values).astype(int)
-                qmpulse.create_segments(self.config, values)
+                qmpulse.bake(self.config, values)
             else:
                 values = np.array(sweeper.values).astype(int) // 4
 

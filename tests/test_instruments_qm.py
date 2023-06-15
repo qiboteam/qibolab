@@ -251,7 +251,7 @@ def test_qmopx_register_baked_pulse(dummy_qrc, duration):
     pulse = FluxPulse(3, duration, 0.05, Rectangular(), qubit.flux.name, qubit=qubit.name)
     qmpulse = BakedPulse(pulse)
     config = opx.config
-    qmpulse.bake(config)
+    qmpulse.bake(config, [pulse.duration])
 
     assert config.elements["flux3"]["operations"] == {"baked_Op_0": "flux3_baked_pulse_0"}
     if duration == 0:
