@@ -248,7 +248,7 @@ def test_qmsim_sweep_duration(simulator, folder):
 
 
 def test_qmsim_sweep_duration_two_pulses(simulator, folder):
-    simulator.instruments[0].simulation_duration = 2000
+    simulator.instruments[0].simulation_duration = 1250
     qubits = list(range(simulator.nqubits))
     sequence = PulseSequence()
     qd_pulses1 = {}

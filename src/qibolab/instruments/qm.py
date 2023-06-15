@@ -560,6 +560,7 @@ class QMPulse:
         self.element: str = f"{self.pulse.type.name.lower()}{self.pulse.qubit}"
         self.operation: str = self.pulse.serial
         self.relative_phase: float = self.pulse.relative_phase / (2 * np.pi)
+        self.elements_to_align.add(self.element)
 
     def __hash__(self):
         return hash(self.pulse)
@@ -834,8 +835,8 @@ class QMOPX(Controller):
                 if needs_reset:
                     qua.reset_frame(qmpulse.element)
                     needs_reset = False
-                if len(qmpulse.elements_to_align) > 0:
-                    qua.align(qmpulse.element, *qmpulse.elements_to_align)
+                if len(qmpulse.elements_to_align) > 1:
+                    qua.align(*qmpulse.elements_to_align)
 
         # for Rabi-length?
         if relaxation_time > 0:
@@ -989,17 +990,12 @@ class QMOPX(Controller):
                 qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
                 qmpulse.swept_duration = dur
                 # find all pulses that are connected to ``qmpulse`` and align them
-                element_start = collections.defaultdict(int)
-                for next_pulse in qmpulse.next_pulses:
-                    element = next_pulse.element
-                    qmpulse.elements_to_align.add(element)
-                    element_start[element] = next_pulse.wait_time
-
                 to_process = set(qmpulse.next_pulses)
                 while to_process:
                     next_qmpulse = to_process.pop()
                     to_process |= next_qmpulse.next_pulses
-                    next_qmpulse.wait_time -= element_start[next_qmpulse.element]
+                    qmpulse.elements_to_align.add(next_qmpulse.element)
+                    next_qmpulse.wait_time -= qmpulse.wait_time + qmpulse.duration // 4
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
 
