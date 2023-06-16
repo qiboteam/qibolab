@@ -52,8 +52,7 @@ def test_multiqubitplatform_init(platform_name):
     platform = create_platform(platform_name)
     if not isinstance(platform, MultiqubitPlatform):
         pytest.skip(f"Skipping MultiqubitPlatform specific test for {platform_name}.")
-    with open(platform.runcard) as file:
-        settings = yaml.safe_load(file)
+    settings = yaml.safe_load(platform.runcard.read_text())
     assert platform.name == platform_name
     assert platform.is_connected == False
     assert len(platform.instruments) == len(settings["instruments"])

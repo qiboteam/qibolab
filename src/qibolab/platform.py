@@ -47,8 +47,7 @@ class Platform:
         if isinstance(runcard, dict):
             settings = runcard
         else:
-            with open(runcard) as file:
-                settings = yaml.safe_load(file)
+            settings = yaml.safe_load(runcard.read_text())
 
         self.nqubits: int = settings["nqubits"]
         self.description: Optional[str] = settings["description"] if "description" in settings else None
