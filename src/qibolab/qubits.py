@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field, fields
-from typing import ClassVar, List, Optional, Union
+from typing import ClassVar, List, Optional, Tuple, Union
 
 from qibolab.channels import Channel
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
@@ -86,6 +86,10 @@ class Qubit:
         """Dictionary containing characterization parameters."""
         exclude_fields = self.CHANNEL_NAMES + ("name", "flux_coupler", "native_gates")
         return {fld.name: getattr(self, fld.name) for fld in fields(self) if fld.name not in exclude_fields}
+
+
+QubitPairId = Tuple[QubitId, QubitId]
+"""Type for holding ``QubitPair``s in the ``platform.pairs`` dictionary."""
 
 
 @dataclass

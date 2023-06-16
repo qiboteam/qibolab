@@ -4,7 +4,7 @@ import math
 import re
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import networkx as nx
 import yaml
@@ -13,7 +13,7 @@ from qibo.config import log, raise_error
 from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.abstract import Controller, Instrument
 from qibolab.native import NativeType, SingleQubitNatives, TwoQubitNatives
-from qibolab.qubits import Qubit, QubitId, QubitPair
+from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 
 
 @dataclass
@@ -82,7 +82,7 @@ class Platform:
             self.qubits[q].native_gates = SingleQubitNatives.from_dict(self.qubits[q], gates)
 
         # create ``QubitPair`` objects
-        self.pairs: Dict[Tuple[QubitId, QubitId], QubitPair] = {}
+        self.pairs: Dict[QubitPairId, QubitPair] = {}
         for pair in settings["topology"]:
             pair = tuple(sorted(pair))
             self.pairs[pair] = QubitPair(self.qubits[pair[0]], self.qubits[pair[1]])
