@@ -75,6 +75,7 @@ def test_abstractplatform_pickle(platform_name):
     assert new_platform.is_connected == platform.is_connected
 
 
+# TODO: this test should be improved
 @pytest.mark.parametrize(
     "par",
     [
@@ -91,7 +92,10 @@ def test_abstractplatform_pickle(platform_name):
 def test_update(platform_name, par):
     platform = create_platform(platform_name)
     new_values = np.ones(platform.nqubits)
-    updates = {par: {i: new_values[i] for i in range(platform.nqubits)}}
+    if par == "mean_gnd_states":
+        updates = {par: {i: [new_values[i], new_values[i]] for i in range(platform.nqubits)}}
+    else:
+        updates = {par: {i: new_values[i] for i in range(platform.nqubits)}}
     # TODO: fix the reload settings for qili1q_os2
     if not isinstance(platform, MultiqubitPlatform):
         platform.update(updates)
@@ -99,8 +103,12 @@ def test_update(platform_name, par):
             value = updates[par][i]
             if "frequency" in par:
                 value *= 1e9
-            assert value == float(platform.settings["characterization"]["single_qubit"][i][par])
-            assert value == float(getattr(platform.qubits[i], par))
+            if par == "mean_gnd_states":
+                assert value == platform.settings["characterization"]["single_qubit"][i][par]
+                assert value == getattr(platform.qubits[i], par)
+            else:
+                assert value == float(platform.settings["characterization"]["single_qubit"][i][par])
+                assert value == float(getattr(platform.qubits[i], par))
 
 
 @pytest.mark.qpu
