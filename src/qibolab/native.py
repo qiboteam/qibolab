@@ -69,9 +69,10 @@ class NativePulse:
 
     @property
     def to_dict(self):
-        data = {fld.name: getattr(self, fld.name) for fld in fields(self)}
+        data = {fld.name: getattr(self, fld.name) for fld in fields(self) if getattr(self, fld.name) is not None}
         del data["name"]
         data["qubit"] = self.qubit.name
+        data["type"] = data.pop("pulse_type").value
         return data
 
     def pulse(self, start, relative_phase=0.0):
@@ -183,8 +184,8 @@ class NativeSequence:
 class SingleQubitNatives:
     """Container with the native single-qubit gates acting on a specific qubit."""
 
-    MZ: Optional[NativePulse] = None
     RX: Optional[NativePulse] = None
+    MZ: Optional[NativePulse] = None
 
     @property
     def RX90(self) -> NativePulse:
@@ -223,7 +224,12 @@ class TwoQubitNatives:
 
     @property
     def to_dict(self):
-        return {fld.name: getattr(self, fld.name).to_dict for fld in fields(self)}
+        data = {}
+        for fld in fields(self):
+            gate = getattr(self, fld.name)
+            if gate is not None:
+                data[fld.name] = gate.to_dict
+        return data
 
     @property
     def types(self):

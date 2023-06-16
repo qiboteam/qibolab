@@ -100,6 +100,15 @@ def test_update(platform_name, par):
             assert value == float(getattr(platform.qubits[i], par))
 
 
+def test_dump(platform_name):
+    platform = create_platform(platform_name)
+    path = pathlib.Path(__file__).parent / f"test_dump_{platform_name}.yml"
+    platform.dump(path)
+    settings = yaml.safe_load(path.read_text())
+    assert settings["nqubits"] == platform.nqubits
+    os.remove(path)
+
+
 @pytest.mark.qpu
 def test_abstractplatform_setup_start_stop(platform):
     pass

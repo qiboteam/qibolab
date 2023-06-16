@@ -85,7 +85,11 @@ class Qubit:
     def characterization(self):
         """Dictionary containing characterization parameters."""
         exclude_fields = self.CHANNEL_NAMES + ("name", "flux_coupler", "native_gates")
-        return {fld.name: getattr(self, fld.name) for fld in fields(self) if fld.name not in exclude_fields}
+        data = {fld.name: getattr(self, fld.name) for fld in fields(self) if fld.name not in exclude_fields}
+        # fix for dumping complex numbers in yaml
+        data["mean_gnd_states"] = str(data["mean_gnd_states"])
+        data["mean_exc_states"] = str(data["mean_exc_states"])
+        return data
 
 
 QubitPairId = Tuple[QubitId, QubitId]

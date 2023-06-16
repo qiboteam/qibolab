@@ -2,7 +2,7 @@
 
 import math
 import re
-from dataclasses import dataclass, replace
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -114,19 +114,25 @@ class Platform:
             "nqubits": self.nqubits,
             "description": self.description,
             "qubits": list(self.qubits),
-            "settings": {},
+            "settings": asdict(self.settings),
             "resonator_type": self.resonator_type,
             "topology": [list(pair) for pair in self.pairs],
             "native_gates": {},
             "characterization": {},
         }
+        # add single qubit native gates
         settings["native_gates"] = {
             "single_qubit": {q: qubit.native_gates.to_dict for q, qubit in self.qubits.items()},
-            "two_qubit": {p: pair.native_gates.to_dict for p, pair in self.pairs.items()},
+            "two_qubit": {},
         }
+        # add two-qubit native gates
+        for p, pair in self.pairs.items():
+            natives = pair.native_gates.to_dict
+            if len(natives) > 0:
+                settings["native_gates"]["two_qubit"][f"{p[0]}-{p[1]}"] = natives
+        # add qubit characterization section
         settings["characterization"] = {"single_qubit": {q: qubit.characterization for q, qubit in self.qubits.items()}}
-        with open(path, "w") as file:
-            yaml.dump(settings, file, sort_keys=False, indent=4, default_flow_style=None)
+        path.write_text(yaml.dump(settings, sort_keys=False, indent=4, default_flow_style=None))
 
     def update(self, updates: dict):
         r"""Updates platform common runcard parameters after calibration actions.

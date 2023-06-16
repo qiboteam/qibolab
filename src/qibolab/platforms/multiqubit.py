@@ -61,6 +61,31 @@ class MultiqubitPlatform(Platform):
                 att = self.settings["instruments"][instrument_name]["settings"]["ports"][port]["attenuation"]
                 self.ro_port[qubit].attenuation = att
 
+    def dump(self, path):
+        settings = {
+            "nqubits": self.nqubits,
+            "description": self.description,
+            "qubits": list(self.qubits),
+            "settings": self.settings["settings"],
+            "resonator_type": self.resonator_type,
+            "topology": [list(pair) for pair in self.pairs],
+            "native_gates": {},
+            "characterization": {},
+        }
+        # add single qubit native gates
+        settings["native_gates"] = {
+            "single_qubit": {q: qubit.native_gates.to_dict for q, qubit in self.qubits.items()},
+            "two_qubit": {},
+        }
+        # add two-qubit native gates
+        for p, pair in self.pairs.items():
+            natives = pair.native_gates.to_dict
+            if len(natives) > 0:
+                settings["native_gates"]["two_qubit"][f"{p[0]}-{p[1]}"] = natives
+        # add qubit characterization section
+        settings["characterization"] = {"single_qubit": {q: qubit.characterization for q, qubit in self.qubits.items()}}
+        path.write_text(yaml.dump(settings, sort_keys=False, indent=4, default_flow_style=None))
+
     def update(self, updates: dict):
         r"""Updates platform dependent runcard parameters and set up platform instruments if needed.
 
