@@ -2,7 +2,7 @@ import collections
 import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple, Union
+from typing import ClassVar, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 from qibo.config import raise_error
@@ -40,46 +40,10 @@ IQPortId = Union[Tuple[PortId], Tuple[PortId, PortId]]
 
 @dataclass
 class QMPort(Port):
-    controller_i: PortId
-    controller_q: Optional[PortId] = None
-
-    # TODO: Shall we implement seperate setters for i and q?
-    _offset: float = 0.0
-    _gain: int = 0
-    _filter: Optional[Dict[str, float]] = None
-
-    def __iter__(self):
-        yield self.controller_i
-        if self.controller_q is not None:
-            yield self.controller_q
-
-    @property
-    def offset(self):
-        return self._offset
-
-    @offset.setter
-    def offset(self, value):
-        self._offset = value
-
-    @property
-    def gain(self):
-        return self._gain
-
-    @gain.setter
-    def gain(self, value):
-        self._gain = value
-
-    @property
-    def filter(self):
-        """Pulse shape filters. Relevant for ports connected to flux channels.
-
-        QM syntax should be followed for the filters.
-        """
-        return self._filter
-
-    @filter.setter
-    def filter(self, value):
-        self._filter = value
+    name: IQPortId
+    offset: float = 0.0
+    gain: int = 0
+    filters: Optional[Dict[str, float]] = None
 
 
 @dataclass
@@ -95,7 +59,7 @@ class QMConfig:
     integration_weights: dict = field(default_factory=dict)
     mixers: dict = field(default_factory=dict)
 
-    def register_analog_output_controllers(self, port):
+    def register_analog_output_controllers(self, port: QMPort):
         """Register controllers in the ``config``.
 
         Args:
@@ -103,12 +67,12 @@ class QMConfig:
                 Contains information about the controller and port number and
                 some parameters (offset, gain, filter, etc.).
         """
-        for con, port_number in port:
+        for con, port_number in port.name:
             if con not in self.controllers:
                 self.controllers[con] = {"analog_outputs": {}}
             self.controllers[con]["analog_outputs"][port_number] = {"offset": port.offset}
-            if port.filter is not None:
-                self.controllers[con]["analog_outputs"][port_number]["filter"] = port.filter
+            if port.filters is not None:
+                self.controllers[con]["analog_outputs"][port_number]["filter"] = port.filters
 
     @staticmethod
     def iq_imbalance(g, phi):
@@ -144,8 +108,8 @@ class QMConfig:
             lo_frequency = math.floor(qubit.drive.local_oscillator.frequency)
             self.elements[f"drive{qubit.name}"] = {
                 "mixInputs": {
-                    "I": qubit.drive.port.controller_i,
-                    "Q": qubit.drive.port.controller_q,
+                    "I": qubit.drive.port.name[0],
+                    "Q": qubit.drive.port.name[1],
                     "lo_frequency": lo_frequency,
                     "mixer": f"mixer_drive{qubit.name}",
                 },
@@ -179,7 +143,7 @@ class QMConfig:
             self.register_analog_output_controllers(qubit.readout.port)
             # register feedback controllers
             controllers = self.controllers
-            for con, port_number in qubit.feedback.port:
+            for con, port_number in qubit.feedback.port.name:
                 if con not in controllers:
                     controllers[con] = {
                         "analog_outputs": {},
@@ -199,16 +163,16 @@ class QMConfig:
             lo_frequency = math.floor(qubit.readout.local_oscillator.frequency)
             self.elements[f"readout{qubit.name}"] = {
                 "mixInputs": {
-                    "I": qubit.readout.port.controller_i,
-                    "Q": qubit.readout.port.controller_q,
+                    "I": qubit.readout.port.name[0],
+                    "Q": qubit.readout.port.name[1],
                     "lo_frequency": lo_frequency,
                     "mixer": f"mixer_readout{qubit.name}",
                 },
                 "intermediate_frequency": intermediate_frequency,
                 "operations": {},
                 "outputs": {
-                    "out1": qubit.feedback.port.controller_i,
-                    "out2": qubit.feedback.port.controller_q,
+                    "out1": qubit.feedback.port.name[0],
+                    "out2": qubit.feedback.port.name[1],
                 },
                 "time_of_flight": time_of_flight,
                 "smearing": smearing,
@@ -241,7 +205,7 @@ class QMConfig:
             # register element
             self.elements[f"flux{qubit.name}"] = {
                 "singleInput": {
-                    "port": qubit.flux.port.controller_i,
+                    "port": qubit.flux.port.name[0],
                 },
                 "intermediate_frequency": intermediate_frequency,
                 "operations": {},
@@ -727,6 +691,8 @@ class QMOPX(Controller):
         address (str): IP address and port for connecting to the OPX instruments.
     """
 
+    PortType: ClassVar = QMPort
+
     name: str
     address: str
 
@@ -740,13 +706,11 @@ class QMOPX(Controller):
     """Time of flight used for hardware signal integration."""
     smearing: int = 0
     """Smearing used for hardware signal integration."""
-    ports: Dict[IQPortId, QMPort] = field(default_factory=dict)
+    _ports: Dict[IQPortId, QMPort] = field(default_factory=dict)
     """Dictionary holding the ports of controllers that are connected."""
 
-    def __getitem__(self, port_name: IQPortId):
-        if port_name not in self.ports:
-            self.ports[port_name] = QMPort(*port_name)
-        return self.ports[port_name]
+    def __post_init__(self):
+        super().__init__(self.name, self.address)
 
     def connect(self):
         """Connect to the QM manager."""

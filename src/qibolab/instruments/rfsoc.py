@@ -129,15 +129,7 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Q
 @dataclass
 class RFSoCPort(Port):
     name: int
-    _offset: float = 0.0
-
-    @property
-    def offset(self):
-        return self._offset
-
-    @offset.setter
-    def offset(self, value):
-        self._offset = value
+    offset: float = 0.0
 
 
 class QibosoqError(RuntimeError):
@@ -159,6 +151,8 @@ class RFSoC(Controller):
         cfg (rfsoc.Config): Configuration dictionary required for pulse execution.
     """
 
+    PortType = RFSoCPort
+
     def __init__(self, name: str, address: str, port: int):
         """Set server information and base configuration.
 
@@ -171,12 +165,6 @@ class RFSoC(Controller):
         self.host = address
         self.port = port
         self.cfg = rfsoc.Config()
-        self.ports = {}
-
-    def __getitem__(self, port_name: int) -> RFSoCPort:
-        if port_name not in self.ports:
-            self.ports[port_name] = RFSoCPort(port_name)
-        return self.ports[port_name]
 
     def connect(self):
         """Empty method to comply with Instrument interface."""

@@ -9,13 +9,17 @@ class Port:
     Drivers should subclass this interface and implement the getters
     and setters for all the parameters that are available for the
     corresponding instruments.
+
+    Each port is identified by the ``name`` attribute.
+    Note that the type of the identifier can be different of each port implementation.
     """
 
     # NOTE: We can convert all these to ``@abstractmethod`` but then
     # each driver would have to implement all of them an raise errors
     # for parameters that are not supported.
 
-    # TODO: Add "abstract" setters for all properties
+    def __init__(self, name):
+        self.name = name
 
     @property
     def offset(self):
@@ -78,15 +82,15 @@ class Port:
         raise_error(NotImplementedError, "Instruments do not support power range.")
 
     @property
-    def filter(self):
-        """Filter to be applied to the channel to reduce the distortions when sending flux pulses.
+    def filters(self):
+        """Filters to be applied to the channel to reduce the distortions when sending flux pulses.
 
         Useful for two-qubit gates.
-        Quantum Machines associate filters to channels but this may not be the case
-        in other instruments.
+        Quantum Machines (:class:`qibolab.instruments.qm.QMOPX`) associate filters to channels
+        but this may not be the case in other instruments.
         """
-        raise_error(NotImplementedError, "Instruments do not support filter.")
+        raise_error(NotImplementedError, "Instruments do not support filters.")
 
-    @filter.setter
-    def filter(self, value):
-        raise_error(NotImplementedError, "Instruments do not support filter.")
+    @filters.setter
+    def filters(self, value):
+        raise_error(NotImplementedError, "Instruments do not support filters.")

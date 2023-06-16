@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field
-from typing import Dict, List, Union
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 from qibo.config import log
@@ -15,69 +15,13 @@ from qibolab.sweeper import Sweeper
 @dataclass
 class DummyPort(Port):
     name: str
-    _offset: float = 0.0
-    _lo_frequency: int = 0
-    _lo_power: int = 0
-    _gain: int = 0
-    _attenuation: int = 0
-    _power_range: int = 0
-    _filter: dict = field(default_factory=dict)
-
-    @property
-    def offset(self):
-        return self._offset
-
-    @offset.setter
-    def offset(self, value):
-        self._offset = value
-
-    @property
-    def lo_frequency(self):
-        return self._lo_frequency
-
-    @lo_frequency.setter
-    def lo_frequency(self, value):
-        self._lo_frequency = value
-
-    @property
-    def lo_power(self):
-        return self._lo_power
-
-    @lo_power.setter
-    def lo_power(self, value):
-        self._lo_power = value
-
-    @property
-    def gain(self):
-        return self._gain
-
-    @gain.setter
-    def gain(self, value):
-        self._gain = value
-
-    @property
-    def attenuation(self):
-        return self._attenuation
-
-    @attenuation.setter
-    def attenuation(self, value):
-        self._attenuation = value
-
-    @property
-    def power_range(self):
-        return self._power_range
-
-    @power_range.setter
-    def power_range(self, value):
-        self._power_range = value
-
-    @property
-    def filter(self):
-        return self._filter
-
-    @filter.setter
-    def filter(self, value):
-        self._filter = value
+    offset: float = 0.0
+    lo_frequency: int = 0
+    lo_power: int = 0
+    gain: int = 0
+    attenuation: int = 0
+    power_range: int = 0
+    filters: Optional[dict] = None
 
 
 class DummyInstrument(Controller):
@@ -93,16 +37,8 @@ class DummyInstrument(Controller):
             instruments.
     """
 
+    PortType = DummyPort
     sampling_rate = 1
-
-    def __init__(self, name, address):
-        super().__init__(name, address)
-        self.ports = {}
-
-    def __getitem__(self, port_name):
-        if port_name not in self.ports:
-            self.ports[port_name] = DummyPort(port_name)
-        return self.ports[port_name]
 
     def connect(self):
         log.info("Connecting to dummy instrument.")
