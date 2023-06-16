@@ -8,7 +8,7 @@ Tested on the following FPGA:
 import copy
 import json
 import socket
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from typing import Union
 
 import numpy as np
@@ -16,6 +16,7 @@ import qibosoq.components as rfsoc
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
+from qibolab.instruments.port import Port
 from qibolab.platform import Qubit
 from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType
 from qibolab.result import IntegratedResults, SampleResults
@@ -28,7 +29,7 @@ NS_TO_US = 1e-3
 def convert_qubit(qubit: Qubit) -> rfsoc.Qubit:
     """Convert `qibolab.platforms.abstract.Qubit` to `qibosoq.abstract.Qubit`."""
     if qubit.flux:
-        return rfsoc.Qubit(qubit.flux.bias, qubit.flux.ports[0][1])
+        return rfsoc.Qubit(qubit.flux.offset, qubit.flux.port.name)
     return rfsoc.Qubit(0.0, None)
 
 
@@ -48,7 +49,7 @@ def pulse_lo_frequency(pulse: Pulse, qubits: dict[int, Qubit]) -> int:
     pulse_type = pulse.type.name.lower()
     try:
         lo_frequency = getattr(qubits[pulse.qubit], pulse_type).local_oscillator._frequency
-    except NotImplementedError:
+    except AttributeError:
         lo_frequency = 0
     return lo_frequency
 
@@ -56,8 +57,8 @@ def pulse_lo_frequency(pulse: Pulse, qubits: dict[int, Qubit]) -> int:
 def convert_pulse(pulse: Pulse, qubits: dict[int, Qubit]) -> rfsoc.Pulse:
     """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`."""
     pulse_type = pulse.type.name.lower()
-    dac = getattr(qubits[pulse.qubit], pulse_type).ports[0][1]
-    adc = qubits[pulse.qubit].feedback.ports[0][1] if pulse_type == "readout" else None
+    dac = getattr(qubits[pulse.qubit], pulse_type).port.name
+    adc = qubits[pulse.qubit].feedback.port.name if pulse_type == "readout" else None
     lo_frequency = pulse_lo_frequency(pulse, qubits)
 
     rfsoc_pulse = rfsoc.Pulse(
@@ -109,7 +110,7 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Q
             parameters.append(rfsoc.Parameter.BIAS)
             indexes.append(list(qubits.values()).index(qubit))
 
-            base_value = qubit.flux.bias
+            base_value = qubit.flux.offset
             values = sweeper.get_values(base_value)
             starts.append(values[0])
             stops.append(values[-1])
@@ -160,6 +161,12 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Q
     )
 
 
+@dataclass
+class RFSoCPort(Port):
+    name: int
+    offset: float = 0.0
+
+
 class QibosoqError(RuntimeError):
     """Exception raised when qibosoq server encounters an error.
 
@@ -178,6 +185,8 @@ class RFSoC(Controller):
     Attributes:
         cfg (rfsoc.Config): Configuration dictionary required for pulse execution.
     """
+
+    PortType = RFSoCPort
 
     def __init__(self, name: str, address: str, port: int):
         """Set server information and base configuration.
@@ -333,7 +342,7 @@ class RFSoC(Controller):
         toti, totq = self._execute_pulse_sequence(sequence, qubits, average, opcode)
 
         results = {}
-        adc_chs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
+        adc_chs = np.unique([qubits[p.qubit].feedback.port.name for p in sequence.ro_pulses])
 
         for j, channel in enumerate(adc_chs):
             for i, ro_pulse in enumerate(sequence.ro_pulses.get_qubit_pulses(channel)):
@@ -542,7 +551,7 @@ class RFSoC(Controller):
                         for pulse in sequence:
                             pulse_q = qubits[pulse.qubit]
                             pulse_is_ro = pulse.type == PulseType.READOUT
-                            pulse_ch = pulse_q.readout.ports[0][1] if pulse_is_ro else pulse_q.drive.ports[0][1]
+                            pulse_ch = pulse_q.readout.name if pulse_is_ro else pulse_q.drive.name
 
                             if pulse_ch in already_pulsed and pulse == sweep_pulse:
                                 return True
@@ -577,9 +586,9 @@ class RFSoC(Controller):
         """
         results = {}
 
-        adcs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in original_ro])
+        adcs = np.unique([qubits[p.qubit].feedback.port.name for p in original_ro])
         for k, k_val in enumerate(adcs):
-            adc_ro = [pulse for pulse in original_ro if qubits[pulse.qubit].feedback.ports[0][1] == k_val]
+            adc_ro = [pulse for pulse in original_ro if qubits[pulse.qubit].feedback.port.name == k_val]
             for i, (ro_pulse, original_ro_pulse) in enumerate(zip(adc_ro, original_ro)):
                 i_vals = np.array(toti[k][i])
                 q_vals = np.array(totq[k][i])
@@ -645,7 +654,7 @@ class RFSoC(Controller):
 
         bias_change = any(sweep.parameter is Parameter.bias for sweep in sweepers)
         if bias_change:
-            initial_biases = [qubits[idx].flux.bias if qubits[idx].flux is not None else None for idx in qubits]
+            initial_biases = [qubits[idx].flux.offset if qubits[idx].flux is not None else None for idx in qubits]
 
         results = self.recursive_python_sweep(
             qubits,
@@ -659,6 +668,6 @@ class RFSoC(Controller):
         if bias_change:
             for idx, qubit in enumerate(qubits.values()):
                 if qubit.flux is not None:
-                    qubit.flux.bias = initial_biases[idx]
+                    qubit.flux.offset = initial_biases[idx]
 
         return results

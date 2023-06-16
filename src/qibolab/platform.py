@@ -177,9 +177,7 @@ class Platform:
 
                 # resonator_punchout_attenuation
                 elif par == "readout_attenuation":
-                    # TODO: Are we going to save the attenuation somwhere in the native_gates or characterization
-                    # in all platforms?
-                    True
+                    self.qubits[qubit].readout.attenuation = value
 
                 # resonator_punchout_attenuation
                 elif par == "bare_resonator_frequency":
@@ -192,6 +190,8 @@ class Platform:
                     sweetspot = float(value)
                     self.qubits[qubit].sweetspot = sweetspot
                     self.settings["characterization"]["single_qubit"][qubit]["sweetspot"] = sweetspot
+                    # set sweetspot as the flux offset (IS THIS NEEDED?)
+                    self.qubits[qubit].flux.offset = sweetspot
 
                 # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
                 elif par == "drive_frequency":
@@ -278,9 +278,6 @@ class Platform:
                     self.qubits[qubit].classifiers_hpars = value
                     self.settings["characterization"]["single_qubit"][qubit]["classifiers_hpars"] = value
 
-                elif par == "readout_attenuation":
-                    self.set_attenuation(qubit, value)
-
                 else:
                     raise_error(ValueError, f"Unknown parameter {par} for qubit {qubit}")
 
@@ -302,9 +299,15 @@ class Platform:
         self.is_connected = True
 
     def setup(self):
-        """Prepares instruments to execute experiments."""
+        """Prepares instruments to execute experiments.
+
+        Sets flux port offsets to the qubit sweetspots.
+        """
         for instrument in self.instruments:
             instrument.setup()
+        for qubit in self.qubits.values():
+            if qubit.flux is not None and qubit.flux.offset != 0:
+                qubit.flux.offset = qubit.sweetspot
 
     def start(self):
         """Starts all the instruments."""
