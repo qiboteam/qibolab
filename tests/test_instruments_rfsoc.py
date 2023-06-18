@@ -129,7 +129,7 @@ def test_convert_sweep(dummy_qrc):
     """
     platform = create_platform("rfsoc")
     qubit = platform.qubits[0]
-    qubit.flux.bias = 0.05
+    qubit.flux.offset = 0.05
     qubit.flux.ports = [("name", 4)]
     qubit.drive.ports = [("name", 4)]
     qubit.readout.ports = [("name", 2)]
@@ -159,7 +159,7 @@ def test_convert_sweep(dummy_qrc):
     assert targ.stops == np.round(rfsoc_sweeper.stops, 2)
     assert targ.indexes == rfsoc_sweeper.indexes
 
-    qubit.flux.bias = 0.5
+    qubit.flux.offset = 0.5
     sweeper = Sweeper(parameter=Parameter.bias, values=np.arange(0, +1, 0.1), qubits=[qubit], type=SweeperType.OFFSET)
     with pytest.raises(ValueError):
         rfsoc_sweeper = convert_sweep(sweeper, seq, platform.qubits)
@@ -238,7 +238,7 @@ def test_sweep(mocker, dummy_qrc):
     platform = create_platform("rfsoc")
     instrument = platform.instruments[0]
     qubit = platform.qubits[0]
-    qubit.flux.bias = 0.05
+    qubit.flux.offset = 0.05
     qubit.flux.ports = [("name", 4)]
 
     seq = PulseSequence()
