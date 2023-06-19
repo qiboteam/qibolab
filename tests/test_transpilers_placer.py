@@ -162,7 +162,7 @@ def test_backpropagation(gates):
     circuit = star_circuit()
     connectivity = star_connectivity()
     routing = ShortestPaths(connectivity=connectivity)
-    placer = Backpropagation(connectivity, routing, num_precedent_gates=gates)
+    placer = Backpropagation(connectivity, routing, previous_gates=gates)
     layout = placer(circuit)
     assert_placement(circuit, layout)
 
@@ -170,7 +170,7 @@ def test_backpropagation(gates):
 def test_backpropagation_no_gates():
     connectivity = star_connectivity()
     routing = ShortestPaths(connectivity=connectivity)
-    placer = Backpropagation(connectivity, routing, num_precedent_gates=10)
+    placer = Backpropagation(connectivity, routing, previous_gates=10)
     circuit = Circuit(5)
     with pytest.raises(ValueError):
         layout = placer(circuit)
