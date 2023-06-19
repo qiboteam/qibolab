@@ -59,7 +59,7 @@ class ShortestPaths(Router):
         verbose (bool): print info messages.
         initial_layout (dict): initial physical to logical qubit mapping
         added_swaps (int): number of swaps added to the circuit to match connectivity.
-        _qubit_pairs (list): quantum circuit represented as a list (only 2 qubit gates).
+        _gates_qubits_pairs (list): quantum circuit represented as a list (only 2 qubit gates).
         _mapping (dict): circuit to physical qubit mapping during transpiling.
         _graph (networkx.graph): qubit mapped as nodes of the connectivity graph.
         _qubit_map (np.array): circuit to physical qubit mapping during transpiling as vector.
@@ -74,7 +74,7 @@ class ShortestPaths(Router):
         self.initial_layout = None
         self.added_swaps = 0
         self.final_map = None
-        self._qubit_pairs = None
+        self._gates_qubits_pairs = None
         self._mapping = None
         self._graph = None
         self._qubit_map = None
@@ -95,11 +95,11 @@ class ShortestPaths(Router):
         self._mapping = initial_layout
         init_qubit_map = np.asarray(list(initial_layout.values()))
         self.initial_checks(circuit.nqubits)
-        self._qubit_pairs = find_qubit_pairs(circuit)
+        self._gates_qubits_pairs = find_qubit_pairs(circuit)
         self._graph = nx.relabel_nodes(self.connectivity, self._mapping)
         self._qubit_map = np.sort(init_qubit_map)
         self.first_transpiler_step(circuit)
-        while len(self._qubit_pairs) != 0:
+        while len(self._gates_qubits_pairs) != 0:
             self.transpiler_step(circuit)
         final_mapping = {
             key: self._qubit_map[init_qubit_map[i]] for i, key in enumerate(list(self.connectivity.nodes()))
@@ -113,11 +113,11 @@ class ShortestPaths(Router):
         Args:
             qibo_circuit (qibo.models.Circuit): circuit to be transpiled.
         """
-        len_before_step = len(self._qubit_pairs)
+        len_before_step = len(self._gates_qubits_pairs)
         path, meeting_point = self.relocate()
         self.add_swaps(path, meeting_point)
         self.update_qubit_map()
-        self.add_gates(qibo_circuit, len_before_step - len(self._qubit_pairs))
+        self.add_gates(qibo_circuit, len_before_step - len(self._gates_qubits_pairs))
 
     def first_transpiler_step(self, qibo_circuit):
         """First transpilation step. Apply gates that can be run with the initial qubit mapping.
@@ -127,9 +127,9 @@ class ShortestPaths(Router):
         """
         self._circuit_position = 0
         self.added_swaps = 0
-        len_2q_circuit = len(self._qubit_pairs)
-        self._qubit_pairs = self.reduce(self._graph)
-        self.add_gates(qibo_circuit, len_2q_circuit - len(self._qubit_pairs))
+        len_2q_circuit = len(self._gates_qubits_pairs)
+        self._gates_qubits_pairs = self.reduce(self._graph)
+        self.add_gates(qibo_circuit, len_2q_circuit - len(self._gates_qubits_pairs))
 
     @property
     def sampling_split(self):
@@ -163,7 +163,7 @@ class ShortestPaths(Router):
         Returns:
             new_circuit (list): reduced circuit.
         """
-        new_circuit = self._qubit_pairs.copy()
+        new_circuit = self._gates_qubits_pairs.copy()
         while new_circuit != [] and (new_circuit[0][0], new_circuit[0][1]) in graph.edges():
             del new_circuit[0]
         return new_circuit
@@ -226,7 +226,7 @@ class ShortestPaths(Router):
                     meeting_point = meeting_point_list[j]
         self._graph = final_graph
         self._mapping = final_mapping
-        self._qubit_pairs = final_circuit
+        self._gates_qubits_pairs = final_circuit
         return final_path, meeting_point
 
     def initial_checks(self, qubits):
