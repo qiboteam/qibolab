@@ -77,7 +77,7 @@ def convert_pulse(pulse: Pulse, qubits: dict[int, Qubit]) -> rfsoc.Pulse:
 
 
 def convert_units_sweeper(sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubits: dict[int, Qubit]):
-    """Converts units for `qibosoq.abstract.Sweeper` considering also LOs"""
+    """Convert units for `qibosoq.abstract.Sweeper` considering also LOs."""
     for idx, jdx in enumerate(sweeper.indexes):
         parameter = sweeper.parameter[idx]
         if parameter is rfsoc.Parameter.FREQUENCY:
@@ -141,12 +141,13 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Q
                 starts.append(values[0])
                 stops.append(values[-1])
 
-                # TODO check if other drivers behave in this way
                 idx_sweep = sequence.index(pulse)
                 delta_start = values[0] - base_value
                 delta_stop = values[-1] - base_value
 
                 for next_pulse in sequence[idx_sweep + 1 :]:
+                    if next_pulse.qubit != pulse.qubit:
+                        continue
                     parameters.append(rfsoc.Parameter.START)
                     indexes.append(sequence.index(next_pulse))
                     starts.append(next_pulse.start + delta_start)
@@ -163,8 +164,12 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Q
 
 @dataclass
 class RFSoCPort(Port):
+    """Port object of the RFSoC."""
+
     name: int
+    """DAC number."""
     offset: float = 0.0
+    """Amplitude factor for biasing."""
 
 
 class QibosoqError(RuntimeError):
