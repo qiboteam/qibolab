@@ -8,7 +8,7 @@ from qibo.config import log, raise_error
 from qibo.models import Circuit
 
 
-def create_circuit_repr(circuit: Circuit):
+def create_circuit_representation(circuit: Circuit):
     """Translate qibo circuit into a list of two qubit gates to be used by the transpiler.
 
     Args:

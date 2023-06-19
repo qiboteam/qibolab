@@ -6,7 +6,7 @@ from qibo import gates
 from qibo.config import log, raise_error
 from qibo.models import Circuit
 
-from qibolab.transpilers.abstract import Router, create_circuit_repr
+from qibolab.transpilers.abstract import Router, create_circuit_representation
 from qibolab.transpilers.placer import assert_placement
 
 
@@ -14,7 +14,7 @@ class ConnectivityError(Exception):
     """Raise for an error in the connectivity"""
 
 
-def assert_connectivity(connectivity, circuit):
+def assert_connectivity(connectivity: nx.Graph, circuit: Circuit):
     """Assert if a circuit can be executed on Hardware.
     No gates acting on more than two qubits.
     All two qubit operations can be performed on hardware
@@ -32,7 +32,7 @@ def assert_connectivity(connectivity, circuit):
                 raise ConnectivityError("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
 
 
-def remap_circuit(circuit, qubit_map):
+def remap_circuit(circuit: Circuit, qubit_map):
     """Map logical to physical qubits in a circuit.
 
     Args:
@@ -95,7 +95,7 @@ class ShortestPaths(Router):
         self._mapping = initial_layout
         init_qubit_map = np.asarray(list(initial_layout.values()))
         self.initial_checks(circuit.nqubits)
-        self._circuit_repr = create_circuit_repr(circuit)
+        self._circuit_repr = create_circuit_representation(circuit)
         self._graph = nx.relabel_nodes(self.connectivity, self._mapping)
         self._qubit_map = np.sort(init_qubit_map)
         self.first_transpiler_step(circuit)

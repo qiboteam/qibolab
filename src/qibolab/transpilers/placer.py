@@ -5,7 +5,7 @@ from qibo import gates
 from qibo.config import raise_error
 from qibo.models import Circuit
 
-from qibolab.transpilers.abstract import Placer, Router, create_circuit_repr
+from qibolab.transpilers.abstract import Placer, Router, create_circuit_representation
 
 
 class PlacementError(Exception):
@@ -84,7 +84,7 @@ class Custom(Placer):
         connectivity (networkx.Graph): chip connectivity.
     """
 
-    def __init__(self, map, connectivity=None, verbose=False):
+    def __init__(self, map, connectivity=None):
         self.connectivity = connectivity
         self.map = map
 
@@ -131,7 +131,7 @@ class Subgraph(Placer):
         Returns:
             (dict): physical to logical qubit mapping.
         """
-        circuit_repr = create_circuit_repr(circuit)
+        circuit_repr = create_circuit_representation(circuit)
         if len(circuit_repr) < 3:
             raise_error(
                 ValueError, "Circuit must contain at least two two qubit gates to implement subgraph placement."
@@ -176,16 +176,16 @@ class Random(Placer):
         Returns:
             (dict): physical to logical qubit mapping.
         """
-        circuit_repr = create_circuit_repr(circuit)
+        circuit_representation = create_circuit_representation(circuit)
         nodes = self.connectivity.number_of_nodes()
         keys = list(self.connectivity.nodes())
         final_mapping = dict(zip(keys, range(nodes)))
         final_graph = nx.relabel_nodes(self.connectivity, final_mapping)
-        final_cost = self.cost(final_graph, circuit_repr)
+        final_cost = self.cost(final_graph, circuit_representation)
         for _ in range(self.samples):
             mapping = dict(zip(keys, random.sample(range(nodes), nodes)))
             graph = nx.relabel_nodes(self.connectivity, mapping)
-            cost = self.cost(graph, circuit_repr)
+            cost = self.cost(graph, circuit_representation)
             if cost == 0:
                 return mapping
             if cost < final_cost:
@@ -220,15 +220,17 @@ class Backpropagation(Placer):
     Attributes:
         connectivity (networkx.Graph): chip connectivity.
         routing_algorithm (qibolab.transpilers.routing.Transpiler): routing algorithm.
-        gates (int): Number of two qubit gates considered before finding initial layout.
+        num_precedent_gates (int): number of two qubit gates considered before finding initial layout.
             if 'None' just one backward step will be implemented.
             If gates is greater than the number of two qubit gates in the circuit, the circuit will be routed more than once.
+            Example: on a circuit with four two qubit gates A-B-C-D using num_precedent_gates = 6,
+            the routing will be performed on the circuit C-D-D-C-B-A.
     """
 
-    def __init__(self, connectivity: nx.Graph, routing_algorithm: Router, gates=None):
+    def __init__(self, connectivity: nx.Graph, routing_algorithm: Router, num_precedent_gates=None):
         self.connectivity = connectivity
         self.routing_algorithm = routing_algorithm
-        self.gates = gates
+        self.num_precedent_gates = num_precedent_gates
 
     def __call__(self, circuit: Circuit):
         """Find the initial layout of the given circuit using backpropagation placement.
@@ -247,7 +249,9 @@ class Backpropagation(Placer):
         return final_placement
 
     def assemble_circuit(self, circuit: Circuit):
-        """Assemble the initial circuit to apply backpropagation placement based on the number of two qubit gates to be considered.
+        """Assemble a single circuit to apply backpropagation placement based on num_precedent_gates.
+        Example: for a circuit with four two qubit gates A-B-C-D using num_precedent_gates = 6,
+        the function will return the circuit C-D-D-C-B-A.
 
         Args:
             circuit (qibo.models.Circuit): circuit to be transpiled.
@@ -256,23 +260,22 @@ class Backpropagation(Placer):
             new_circuit (qibo.models.Circuit): assembled circuit to perform backpropagation placement.
         """
 
-        if self.gates is None:
+        if self.num_precedent_gates is None:
             return circuit.invert()
-        circuit_repr = create_circuit_repr(circuit)
-        circuit_gates = len(circuit_repr)
+        circuit_representation = create_circuit_representation(circuit)
+        circuit_gates = len(circuit_representation)
         if circuit_gates == 0:
             raise ValueError("The circuit must contain at least a two qubit gate.")
-        reps = int(self.gates / circuit_gates)
-        remainder = self.gates % circuit_gates
-        new_circuit_repr = []
-        for _ in range(reps):
-            new_circuit_repr += circuit_repr[:]
-            circuit_repr.reverse()
-        new_circuit_repr += circuit_repr[0:remainder]
+        repetitions, remainder = divmod(self.num_precedent_gates, circuit_gates)
+        assembled_circuit_representation = []
+        for _ in range(repetitions):
+            assembled_circuit_representation += circuit_representation[:]
+            circuit_representation.reverse()
+        assembled_circuit_representation += circuit_representation[0:remainder]
         new_circuit = Circuit(circuit.nqubits)
-        for i in range(len(new_circuit_repr)):
-            # As only the connectivity is important here we can replace everithing with CZ gates
-            new_circuit.add(gates.CZ(new_circuit_repr[i][0], new_circuit_repr[i][1]))
+        for i in range(len(assembled_circuit_representation)):
+            # As only the connectivity is important here we can replace everything with CZ gates
+            new_circuit.add(gates.CZ(assembled_circuit_representation[i][0], assembled_circuit_representation[i][1]))
         return new_circuit.invert()
 
     def routing_step(self, layout: dict, circuit: Circuit):
