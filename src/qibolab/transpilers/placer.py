@@ -131,8 +131,8 @@ class Subgraph(Placer):
         Returns:
             (dict): physical to logical qubit mapping.
         """
-        qubit_pairs = find_qubit_pairs(circuit)
-        if len(qubit_pairs) < 3:
+        gate_qubit_pairs = find_qubit_pairs(circuit)
+        if len(gate_qubit_pairs) < 3:
             raise_error(
                 ValueError, "Circuit must contain at least two two qubit gates to implement subgraph placement."
             )
@@ -140,13 +140,16 @@ class Subgraph(Placer):
         circuit_subgraph.add_nodes_from(range(self.connectivity.number_of_nodes()))
         matcher = nx.algorithms.isomorphism.GraphMatcher(self.connectivity, circuit_subgraph)
         i = 0
-        circuit_subgraph.add_edge(qubit_pairs[i][0], qubit_pairs[i][1])
+        circuit_subgraph.add_edge(gate_qubit_pairs[i][0], gate_qubit_pairs[i][1])
         while matcher.subgraph_is_monomorphic() == True:
             result = matcher
             i += 1
-            circuit_subgraph.add_edge(qubit_pairs[i][0], qubit_pairs[i][1])
+            circuit_subgraph.add_edge(gate_qubit_pairs[i][0], gate_qubit_pairs[i][1])
             matcher = nx.algorithms.isomorphism.GraphMatcher(self.connectivity, circuit_subgraph)
-            if self.connectivity.number_of_edges() == circuit_subgraph.number_of_edges() or i == len(qubit_pairs) - 1:
+            if (
+                self.connectivity.number_of_edges() == circuit_subgraph.number_of_edges()
+                or i == len(gate_qubit_pairs) - 1
+            ):
                 keys = list(result.mapping.keys())
                 keys.sort()
                 return {i: result.mapping[i] for i in keys}
@@ -176,16 +179,16 @@ class Random(Placer):
         Returns:
             (dict): physical to logical qubit mapping.
         """
-        qubit_pairs = find_qubit_pairs(circuit)
+        gate_qubit_pairs = find_qubit_pairs(circuit)
         nodes = self.connectivity.number_of_nodes()
         keys = list(self.connectivity.nodes())
         final_mapping = dict(zip(keys, range(nodes)))
         final_graph = nx.relabel_nodes(self.connectivity, final_mapping)
-        final_cost = self.cost(final_graph, qubit_pairs)
+        final_cost = self.cost(final_graph, gate_qubit_pairs)
         for _ in range(self.samples):
             mapping = dict(zip(keys, random.sample(range(nodes), nodes)))
             graph = nx.relabel_nodes(self.connectivity, mapping)
-            cost = self.cost(graph, qubit_pairs)
+            cost = self.cost(graph, gate_qubit_pairs)
             if cost == 0:
                 return mapping
             if cost < final_cost:
@@ -195,21 +198,21 @@ class Random(Placer):
         return final_mapping
 
     @staticmethod
-    def cost(graph, qubit_pairs):
+    def cost(graph, gate_qubit_pairs):
         """
         Compute the cost associated to an initial layout as the lengh of the reduced circuit.
 
         Args:
             graph (networkx.Graph): current hardware qubit mapping.
-            qubit_pairs (list): circuit representation.
+            gate_qubit_pairs (list): circuit representation.
 
         Returns:
             (int): lengh of the reduced circuit.
         """
-        for allowed, gate in enumerate(qubit_pairs):
+        for allowed, gate in enumerate(gate_qubit_pairs):
             if gate not in graph.edges():
                 break
-        return len(qubit_pairs) - allowed
+        return len(gate_qubit_pairs) - allowed
 
 
 class Backpropagation(Placer):
@@ -262,20 +265,20 @@ class Backpropagation(Placer):
 
         if self.previous_gates is None:
             return circuit.invert()
-        qubit_pairs = find_qubit_pairs(circuit)
-        circuit_gates = len(qubit_pairs)
+        gate_qubit_pairs = find_qubit_pairs(circuit)
+        circuit_gates = len(gate_qubit_pairs)
         if circuit_gates == 0:
             raise ValueError("The circuit must contain at least a two qubit gate.")
         repetitions, remainder = divmod(self.previous_gates, circuit_gates)
         assembled_qubit_pairs = []
         for _ in range(repetitions):
-            assembled_qubit_pairs += qubit_pairs[:]
-            qubit_pairs.reverse()
-        assembled_qubit_pairs += qubit_pairs[0:remainder]
+            assembled_qubit_pairs += gate_qubit_pairs[:]
+            gate_qubit_pairs.reverse()
+        assembled_qubit_pairs += gate_qubit_pairs[0:remainder]
         new_circuit = Circuit(circuit.nqubits)
-        for i in range(len(assembled_qubit_pairs)):
+        for qubits in assembled_qubit_pairs:
             # As only the connectivity is important here we can replace everything with CZ gates
-            new_circuit.add(gates.CZ(assembled_qubit_pairs[i][0], assembled_qubit_pairs[i][1]))
+            new_circuit.add(gates.CZ(qubits[0], qubits[1]))
         return new_circuit.invert()
 
     def routing_step(self, layout: dict, circuit: Circuit):
