@@ -223,17 +223,17 @@ class Backpropagation(Placer):
     Attributes:
         connectivity (networkx.Graph): chip connectivity.
         routing_algorithm (qibolab.transpilers.routing.Transpiler): routing algorithm.
-        previous_gates (int): number of two qubit gates considered before finding initial layout.
+        depth (int): number of two qubit gates considered before finding initial layout.
             if 'None' just one backward step will be implemented.
-            If previous_gates is greater than the number of two qubit gates in the circuit, the circuit will be routed more than once.
-            Example: on a circuit with four two qubit gates A-B-C-D using previous_gates = 6,
+            If depth is greater than the number of two qubit gates in the circuit, the circuit will be routed more than once.
+            Example: on a circuit with four two qubit gates A-B-C-D using depth = 6,
             the routing will be performed on the circuit C-D-D-C-B-A.
     """
 
-    def __init__(self, connectivity: nx.Graph, routing_algorithm: Router, previous_gates=None):
+    def __init__(self, connectivity: nx.Graph, routing_algorithm: Router, depth=None):
         self.connectivity = connectivity
         self.routing_algorithm = routing_algorithm
-        self.previous_gates = previous_gates
+        self.depth = depth
 
     def __call__(self, circuit: Circuit):
         """Find the initial layout of the given circuit using backpropagation placement.
@@ -252,8 +252,8 @@ class Backpropagation(Placer):
         return final_placement
 
     def assemble_circuit(self, circuit: Circuit):
-        """Assemble a single circuit to apply backpropagation placement based on previous_gates.
-        Example: for a circuit with four two qubit gates A-B-C-D using previous_gates = 6,
+        """Assemble a single circuit to apply backpropagation placement based on depth.
+        Example: for a circuit with four two qubit gates A-B-C-D using depth = 6,
         the function will return the circuit C-D-D-C-B-A.
 
         Args:
@@ -263,13 +263,13 @@ class Backpropagation(Placer):
             new_circuit (qibo.models.Circuit): assembled circuit to perform backpropagation placement.
         """
 
-        if self.previous_gates is None:
+        if self.depth is None:
             return circuit.invert()
         gate_qubit_pairs = find_qubit_pairs(circuit)
         circuit_gates = len(gate_qubit_pairs)
         if circuit_gates == 0:
             raise ValueError("The circuit must contain at least a two qubit gate.")
-        repetitions, remainder = divmod(self.previous_gates, circuit_gates)
+        repetitions, remainder = divmod(self.depth, circuit_gates)
         assembled_qubit_pairs = []
         for _ in range(repetitions):
             assembled_qubit_pairs += gate_qubit_pairs[:]
