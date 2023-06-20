@@ -21,6 +21,16 @@ class Parameter(Enum):
     bias = auto()
 
 
+FREQUENCY = Parameter.frequency
+AMPLITUDE = Parameter.amplitude
+DURATION = Parameter.duration
+RELATIVE_PHASE = Parameter.relative_phase
+START = Parameter.start
+ATTENUATION = Parameter.attenuation
+GAIN = Parameter.gain
+BIAS = Parameter.bias
+
+
 class SweeperType(Enum):
     """Type of the Sweeper"""
 

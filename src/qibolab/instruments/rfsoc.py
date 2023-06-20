@@ -20,7 +20,7 @@ from qibolab.instruments.port import Port
 from qibolab.platform import Qubit
 from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType
 from qibolab.result import IntegratedResults, SampleResults
-from qibolab.sweeper import Parameter, Sweeper
+from qibolab.sweeper import BIAS, DURATION, START, Parameter, Sweeper
 
 HZ_TO_MHZ = 1e-6
 NS_TO_US = 1e-3
@@ -105,7 +105,7 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Q
     stops = []
     indexes = []
 
-    if sweeper.parameter is Parameter.bias:
+    if sweeper.parameter is BIAS:
         for qubit in sweeper.qubits:
             parameters.append(rfsoc.Parameter.BIAS)
             indexes.append(list(qubits.values()).index(qubit))
@@ -122,7 +122,7 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Q
             indexes.append(sequence.index(pulse))
 
             name = sweeper.parameter.name
-            if name not in {"duration", "start"}:
+            if sweeper.parameter not in {DURATION, START}:
                 parameters.append(getattr(rfsoc.Parameter, name.upper()))
                 base_value = getattr(pulse, name)
                 values = sweeper.get_values(base_value)
@@ -130,10 +130,10 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Q
                 stops.append(values[-1])
 
             else:
-                if name == "duration":
+                if sweeper.parameter is DURATION:
                     parameters.append(getattr(rfsoc.Parameter, name.upper()))
                     base_value = getattr(pulse, name)
-                elif name == "start":
+                elif sweeper.parameter is START:
                     parameters.append(rfsoc.Parameter.START)
                     base_value = pulse.start
 
