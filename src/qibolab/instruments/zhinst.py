@@ -503,7 +503,7 @@ class Zurich(Controller):
 
         exp_dimensions = list(np.array(exp_res).shape)
         if dimensions != exp_dimensions:
-            logging.warning("dimensions %d , exp_dimensions %d", dimensions, exp_dimensions)
+            # logging.warning("dimensions %d , exp_dimensions %d", dimensions, exp_dimensions)
             warnings.warn("dimensions not properly ordered")
 
         # html containing the pulse sequence schedule
@@ -960,7 +960,7 @@ class Zurich(Controller):
 
         exp_dimensions = list(np.array(exp_res).shape)
         if dimensions != exp_dimensions:
-            logging.warning("dimensions %d , exp_dimensions %d", dimensions, exp_dimensions)
+            # logging.warning("dimensions %d , exp_dimensions %d", dimensions, exp_dimensions)
             warnings.warn("dimensions not properly ordered")
 
         self.offsets_off()
