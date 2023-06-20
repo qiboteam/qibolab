@@ -94,6 +94,11 @@ def convert_units_sweeper(sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubit
             sweeper.stops[idx] = np.degrees(sweeper.stops[idx])
 
 
+def convert_parameter(par: Parameter) -> rfsoc.Parameter:
+    """Convert a qibolab sweeper.Parameter into a qibosoq.Parameter."""
+    return getattr(rfsoc.Parameter, par.name.upper())
+
+
 def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Qubit]) -> rfsoc.Sweeper:
     """Convert `qibolab.sweeper.Sweeper` to `qibosoq.abstract.Sweeper`.
 
@@ -120,26 +125,18 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Q
     else:
         for pulse in sweeper.pulses:
             indexes.append(sequence.index(pulse))
+            base_value = getattr(pulse, sweeper.parameter.name)
+            values = sweeper.get_values(base_value)
+            starts.append(values[0])
+            stops.append(values[-1])
 
-            name = sweeper.parameter.name
             if sweeper.parameter not in {DURATION, START}:
-                parameters.append(getattr(rfsoc.Parameter, name.upper()))
-                base_value = getattr(pulse, name)
-                values = sweeper.get_values(base_value)
-                starts.append(values[0])
-                stops.append(values[-1])
-
+                parameters.append(convert_parameter(sweeper.parameter))
             else:
                 if sweeper.parameter is DURATION:
-                    parameters.append(getattr(rfsoc.Parameter, name.upper()))
-                    base_value = getattr(pulse, name)
+                    parameters.append(convert_parameter(sweeper.parameter))
                 elif sweeper.parameter is START:
                     parameters.append(rfsoc.Parameter.START)
-                    base_value = pulse.start
-
-                values = sweeper.get_values(base_value)
-                starts.append(values[0])
-                stops.append(values[-1])
 
                 idx_sweep = sequence.index(pulse)
                 delta_start = values[0] - base_value
@@ -539,28 +536,22 @@ class RFSoC(Controller):
             for sweep_idx, parameter in enumerate(sweeper.parameter):
                 if parameter is rfsoc.Parameter.BIAS:
                     continue
-                is_amp = parameter is rfsoc.Parameter.AMPLITUDE
-                is_freq = parameter is rfsoc.Parameter.FREQUENCY
-                is_duration = parameter is rfsoc.Parameter.DURATION
-
-                if is_duration:
+                if parameter is rfsoc.Parameter.DURATION:
                     return True
-                if is_freq or is_amp:
-                    is_ro = sequence[sweeper.indexes[sweep_idx]].type == PulseType.READOUT
-                    # if it's a sweep on the readout freq do a python sweep
-                    if is_freq and is_ro:
-                        return True
-                    for idx in sweeper.indexes:
-                        sweep_pulse = sequence[idx]
-                        already_pulsed = []
-                        for pulse in sequence:
-                            pulse_q = qubits[pulse.qubit]
-                            pulse_is_ro = pulse.type == PulseType.READOUT
-                            pulse_ch = pulse_q.readout.name if pulse_is_ro else pulse_q.drive.name
 
-                            if pulse_ch in already_pulsed and pulse == sweep_pulse:
-                                return True
-                            already_pulsed.append(pulse_ch)
+                is_freq = parameter is rfsoc.Parameter.FREQUENCY
+                is_ro = sequence[sweeper.indexes[sweep_idx]].type == PulseType.READOUT
+
+                # if it's a sweep on the readout freq do a python sweep
+                if is_freq and is_ro:
+                    return True
+
+            for idx in sweeper.indexes:
+                sweep_pulse = sequence[idx]
+                channel = sweep_pulse.channel
+                ch_pulses = sequence.get_channel_pulses(channel)
+                if len(ch_pulses) > 1:
+                    return True
         # if all passed, do a firmware sweep
         return False
 
