@@ -8,7 +8,7 @@ from qibo.config import log, raise_error
 from qibo.models import Circuit
 
 
-def find_qubit_pairs(circuit: Circuit):
+def find_gates_qubits_pairs(circuit: Circuit):
     """Translate qibo circuit into a list of pairs of qubits to be used by the transpiler.
 
     Args:
