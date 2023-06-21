@@ -353,6 +353,34 @@ class Platform:
                     result = new_result
         return result
 
+    def execute_pulse_sequences(self, sequence, options, **kwargs):
+        """Executes a List of PulseSequence.
+
+        Args:
+            sequence (List[:class:`qibolab.pulses.PulseSequence`]): Pulse sequences to execute.
+            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
+            **kwargs: May need them for something
+
+        Returns:
+            Readout results acquired by after execution.
+        """
+        if options.nshots is None:
+            options = replace(options, nshots=self.nshots)
+
+        if options.relaxation_time is None:
+            options = replace(options, relaxation_time=self.relaxation_time)
+
+        result = {}
+        for instrument in self.instruments:
+            if isinstance(instrument, Controller):
+                new_result = instrument.play_sequences(self.qubits, sequence, options)
+                if isinstance(new_result, dict):
+                    result.update(new_result)
+                elif new_result is not None:
+                    # currently the result of QMSim is not a dict
+                    result = new_result
+        return result
+
     def sweep(self, sequence, options, *sweepers):
         """Executes a pulse sequence for different values of sweeped parameters.
 

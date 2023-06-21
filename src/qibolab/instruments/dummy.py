@@ -58,24 +58,31 @@ class DummyInstrument(Controller):
     def play(
         self,
         qubits: Dict[Union[str, int], Qubit],
-        sequence: Union[PulseSequence, List[PulseSequence]],
+        sequence: PulseSequence,
         options: ExecutionParameters,
     ):
         exp_points = 1 if options.averaging_mode is AveragingMode.CYCLIC else options.nshots
         results = {}
 
-        if isinstance(sequence, PulseSequence):
-            for ro_pulse in sequence.ro_pulses:
-                values = self.get_values(options, sequence, exp_points)
-                results[ro_pulse.qubit] = results[ro_pulse.serial] = options.results_type(values)
+        for ro_pulse in sequence.ro_pulses:
+            values = self.get_values(options, sequence, exp_points)
+            results[ro_pulse.qubit] = results[ro_pulse.serial] = options.results_type(values)
 
-        if isinstance(sequence, List):
-            results = defaultdict(list)
-            for small_sequence in sequence:
-                for ro_pulse in small_sequence.ro_pulses:
-                    values = self.get_values(options, small_sequence, exp_points)
-                    results[ro_pulse.serial].append(options.results_type(values))
-                    results[ro_pulse.qubit].append(options.results_type(values))
+        return results
+
+    def play_sequences(
+        self,
+        qubits: Dict[Union[str, int], Qubit],
+        sequence: List[PulseSequence],
+        options: ExecutionParameters,
+    ):
+        exp_points = 1 if options.averaging_mode is AveragingMode.CYCLIC else options.nshots
+        results = defaultdict(list)
+        for small_sequence in sequence:
+            for ro_pulse in small_sequence.ro_pulses:
+                values = self.get_values(options, small_sequence, exp_points)
+                results[ro_pulse.serial].append(options.results_type(values))
+                results[ro_pulse.qubit].append(options.results_type(values))
 
         return results
 

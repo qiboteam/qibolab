@@ -52,15 +52,18 @@ class Controller(Instrument):
 
     @abstractmethod
     def play(self, *args, **kwargs):
-        """If the sequence is a PulseSequence play a pulse sequence and retrieve feedback.
-        If the sequence is a List play a pulses sequences by unrolling and retrieve feedback
+        """The sequence is a PulseSequence play a pulse sequence and retrieve feedback.
 
         Returns:
-            If the sequence is a PulseSequence:
             (Dict[ResultType]) mapping the serial of the readout pulses used to
             the acquired :class:`qibolab.result.ExecutionResults` object.
+        """
 
-            If the sequence is a List:
+    @abstractmethod
+    def play_sequences(self, *args, **kwargs):
+        """The sequence is a List play a pulses sequences by unrolling and retrieve feedback.
+
+        Returns:
             (Dict[List[ResultType]) mapping the serial of the readout pulses used to a list of
             the acquired :class:`qibolab.result.ExecutionResults` object.
         """
