@@ -153,7 +153,6 @@ characterization:
             T1: 0.0
             T2: 0.0
             sweetspot: 0.05 #Use this as an amplitude of the flux_bias
-            filter: {}
             mean_gnd_states: 1.5420+0.1813j
             mean_exc_states: 2.4499-0.5629j
             # parameters for single shot classification
@@ -173,7 +172,6 @@ characterization:
             T1: 0.
             T2: 0.
             sweetspot: 0.0
-            filter: {}
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
         2:
@@ -183,7 +181,6 @@ characterization:
             T1: 0.
             T2: 0.
             sweetspot: 0.0 #0.5 #0.62 0.00
-            filter: {}
             mean_gnd_states: -1.8243+1.5926j
             mean_exc_states: -0.8083+2.3929j
             # parameters for single shot classification
@@ -197,7 +194,6 @@ characterization:
             T1: 0.
             T2: 0.
             sweetspot: 0.0
-            filter: {}
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
         4:
@@ -207,7 +203,6 @@ characterization:
             T1: 0.
             T2: 0.
             sweetspot: 0.0
-            filter: {}
             mean_gnd_states: (0+0j)
             mean_exc_states: (0+0j)
             # parameters for single shot classification
@@ -215,22 +210,18 @@ characterization:
             iq_angle: 0.481 # -91.712 #191.016
         "c0":
             sweetspot: 0.
-            filter: {}
             # To save power values on the runcard
             # flux_range: -0
         "c1":
             sweetspot: 0.
-            filter: {}
             # To save power values on the runcard
             # flux_range: -0
         "c3":
             sweetspot: 0.
-            filter: {}
             # To save power values on the runcard
             # flux_range: -0
         "c4":
             sweetspot: 0. #0.8 #0.16
-            filter: {}
             # To save power values on the runcard
             # flux_range: -0
     # two_qubit:
@@ -239,13 +230,9 @@ characterization:
     #     0:
     #         # frequency: 3_753_000_000 or 3_503_000_000
     #         sweetspot: 0.1
-    #         filter: {}
     #     1:
     #         sweetspot: 0.0
-    #         filter: {}
     #     3:
     #         sweetspot: 0.0
-    #         filter: {}
     #     4:
     #         sweetspot: 0.0
-    #         filter: {}

@@ -1,6 +1,6 @@
 import pathlib
 
-from qibolab.channels import ChannelMap
+from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.oscillator import LocalOscillator
 from qibolab.instruments.qmsim import QMSim
 from qibolab.platform import Platform
@@ -13,37 +13,23 @@ def create(runcard=RUNCARD):
 
     Used in ``test_instruments_qm.py`` and ``test_instruments_qmsim.py``
     """
-    # Create channel objects
+    controller = QMSim("qmopx", "0.0.0.0:0", simulation_duration=1000, cloud=False, time_of_flight=280)
+
+    # Create channel objects and map controllers to channels
     channels = ChannelMap()
     # readout
-    channels |= ("L3-25_a", "L3-25_b")
+    channels |= Channel("L3-25_a", port=controller[(("con1", 10), ("con1", 9))])
+    channels |= Channel("L3-25_b", port=controller[(("con2", 10), ("con2", 9))])
     # feedback
-    channels |= ("L2-5_a", "L2-5_b")
+    channels |= Channel("L2-5_a", port=controller[(("con1", 2), ("con1", 1))])
+    channels |= Channel("L2-5_b", port=controller[(("con2", 2), ("con2", 1))])
     # drive
-    channels |= (f"L3-{i}" for i in range(11, 16))
+    channels |= (Channel(f"L3-1{i}", port=controller[(("con1", 2 * i), ("con1", 2 * i - 1))]) for i in range(1, 5))
+    channels |= Channel("L3-15", port=controller[(("con3", 2), ("con3", 1))])
     # flux
-    channels |= (f"L4-{i}" for i in range(1, 6))
+    channels |= (Channel(f"L4-{i}", port=controller[(("con2", i),)]) for i in range(1, 6))
     # TWPA
     channels |= "L4-26"
-
-    # Map controllers to qubit channels (HARDCODED)
-    # readout
-    channels["L3-25_a"].ports = [("con1", 10), ("con1", 9)]
-    channels["L3-25_b"].ports = [("con2", 10), ("con2", 9)]
-    # feedback
-    channels["L2-5_a"].ports = [("con1", 2), ("con1", 1)]
-    channels["L2-5_b"].ports = [("con2", 2), ("con2", 1)]
-    # drive
-    for i in range(1, 5):
-        channels[f"L3-1{i}"].ports = [("con1", 2 * i), ("con1", 2 * i - 1)]
-    channels["L3-15"].ports = [("con3", 2), ("con3", 1)]
-    # flux
-    for i in range(1, 6):
-        channels[f"L4-{i}"].ports = [("con2", i)]
-
-    controller = QMSim("qmopx", "0.0.0.0:0", simulation_duration=1000, cloud=False)
-    # set time of flight for readout integration (HARDCODED)
-    controller.time_of_flight = 280
 
     # Instantiate local oscillators (HARDCODED)
     local_oscillators = [
@@ -91,11 +77,12 @@ def create(runcard=RUNCARD):
 
     qubits[0].drive = channels["L3-15"]
     qubits[0].flux = channels["L4-5"]
-    channels["L4-5"].qubit = qubits[0]
     for q in range(1, 5):
         qubits[q].drive = channels[f"L3-{10 + q}"]
         qubits[q].flux = channels[f"L4-{q}"]
-        channels[f"L4-{q}"].qubit = qubits[q]
+
+    # set filter for flux channel
+    qubits[2].flux.filters = {"feedforward": [1.0684635881381783, -1.0163217174522334], "feedback": [0.947858129314055]}
 
     # set maximum allowed bias values to protect amplifier
     # relevant only for qubits where an amplifier is used

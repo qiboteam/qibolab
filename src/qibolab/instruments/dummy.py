@@ -1,14 +1,28 @@
-from typing import Dict, List
+from dataclasses import dataclass
+from typing import Dict, List, Optional
 
 import numpy as np
 from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
+from qibolab.instruments.port import Port
 from qibolab.platform import Qubit
 from qibolab.pulses import PulseSequence
 from qibolab.qubits import QubitId
 from qibolab.sweeper import Sweeper
+
+
+@dataclass
+class DummyPort(Port):
+    name: str
+    offset: float = 0.0
+    lo_frequency: int = 0
+    lo_power: int = 0
+    gain: int = 0
+    attenuation: int = 0
+    power_range: int = 0
+    filters: Optional[dict] = None
 
 
 class DummyInstrument(Controller):
@@ -24,6 +38,7 @@ class DummyInstrument(Controller):
             instruments.
     """
 
+    PortType = DummyPort
     sampling_rate = 1
 
     def connect(self):
