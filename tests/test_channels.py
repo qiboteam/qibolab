@@ -1,33 +1,26 @@
 import pytest
 
 from qibolab.channels import Channel, ChannelMap
+from qibolab.instruments.dummy import DummyPort
 
 
 def test_channel_init():
     channel = Channel("L1-test")
-    channel.ports = [("c1", 0), ("c2", 1)]
     assert channel.name == "L1-test"
-    with pytest.raises(NotImplementedError):
-        _ = channel.local_oscillator
 
 
 def test_channel_errors():
-    channel = Channel("L1-test")
-    channel.ports = [("c1", 0), ("c2", 1)]
-    with pytest.raises(TypeError):
-        channel.bias = "test"
-    channel.bias = 0.1
-    with pytest.raises(TypeError):
-        channel.filter = "test"
+    channel = Channel("L1-test", port=DummyPort("test"))
+    channel.offset = 0.1
     channel.filter = {}
     # attempt to set bias higher than the allowed value
-    channel.max_bias = 0.2
+    channel.max_offset = 0.2
     with pytest.raises(ValueError):
-        channel.bias = 0.3
+        channel.offset = 0.3
 
 
-def test_channel_map_from_names():
-    channels = ChannelMap.from_names("a", "b")
+def test_channel_map_add():
+    channels = ChannelMap().add("a", "b")
     assert "a" in channels
     assert "b" in channels
     assert isinstance(channels["a"], Channel)
@@ -45,8 +38,8 @@ def test_channel_map_setitem():
 
 
 def test_channel_map_union():
-    channels1 = ChannelMap.from_names("a", "b")
-    channels2 = ChannelMap.from_names("c", "d")
+    channels1 = ChannelMap().add("a", "b")
+    channels2 = ChannelMap().add("c", "d")
     channels = channels1 | channels2
     for name in ["a", "b", "c", "d"]:
         assert name in channels
@@ -59,8 +52,8 @@ def test_channel_map_union():
 
 
 def test_channel_map_union_update():
-    channels = ChannelMap.from_names("a", "b")
-    channels |= ChannelMap.from_names("c", "d")
+    channels = ChannelMap().add("a", "b")
+    channels |= ChannelMap().add("c", "d")
     for name in ["a", "b", "c", "d"]:
         assert name in channels
         assert isinstance(channels[name], Channel)

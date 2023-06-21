@@ -1,7 +1,6 @@
 import copy
 
 import numpy as np
-import yaml
 from qibo.config import log, raise_error
 
 from qibolab import AcquisitionType, AveragingMode
@@ -9,14 +8,6 @@ from qibolab.channels import ChannelMap
 from qibolab.platform import Platform
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.qubits import Qubit
-from qibolab.result import (
-    AveragedIntegratedResults,
-    AveragedRawWaveformResults,
-    AveragedSampleResults,
-    IntegratedResults,
-    RawWaveformResults,
-    SampleResults,
-)
 from qibolab.sweeper import Parameter
 
 

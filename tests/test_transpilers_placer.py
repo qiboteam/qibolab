@@ -120,9 +120,7 @@ def test_subgraph_perfect():
     assert_placement(star_circuit(), layout)
 
 
-def test_subgraph_non_perfect():
-    connectivity = star_connectivity()
-    placer = Subgraph(connectivity=connectivity)
+def imperfect_circuit():
     circuit = Circuit(5)
     circuit.add(gates.CNOT(1, 3))
     circuit.add(gates.CNOT(2, 4))
@@ -133,8 +131,14 @@ def test_subgraph_non_perfect():
     circuit.add(gates.CNOT(4, 3))
     circuit.add(gates.CNOT(1, 2))
     circuit.add(gates.CNOT(3, 1))
-    layout = placer(circuit)
-    assert_placement(circuit, layout)
+    return circuit
+
+
+def test_subgraph_non_perfect():
+    connectivity = star_connectivity()
+    placer = Subgraph(connectivity=connectivity)
+    layout = placer(imperfect_circuit())
+    assert_placement(imperfect_circuit(), layout)
 
 
 def test_subgraph_error():
@@ -153,9 +157,20 @@ def test_random(reps):
     assert_placement(star_circuit(), layout)
 
 
-def test_backpropagation():
+@pytest.mark.parametrize("gates", [None, 5, 13])
+def test_backpropagation(gates):
+    circuit = star_circuit()
     connectivity = star_connectivity()
     routing = ShortestPaths(connectivity=connectivity)
-    placer = Backpropagation(connectivity, routing)
-    layout = placer(star_circuit())
-    assert_placement(star_circuit(), layout)
+    placer = Backpropagation(connectivity, routing, depth=gates)
+    layout = placer(circuit)
+    assert_placement(circuit, layout)
+
+
+def test_backpropagation_no_gates():
+    connectivity = star_connectivity()
+    routing = ShortestPaths(connectivity=connectivity)
+    placer = Backpropagation(connectivity, routing, depth=10)
+    circuit = Circuit(5)
+    with pytest.raises(ValueError):
+        layout = placer(circuit)

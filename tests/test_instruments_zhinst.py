@@ -1,4 +1,3 @@
-import laboneq.simple as lo
 import numpy as np
 import pytest
 
