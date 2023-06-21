@@ -34,7 +34,7 @@ def test_dummy_execute_pulse_sequence_unrolling(acquisition):
     for _ in range(5):
         sequences.append(sequence)
     options = ExecutionParameters(nshots=None, acquisition_type=acquisition)
-    result = platform.execute_pulse_sequence(sequences, options)
+    result = platform.execute_pulse_sequences(sequences, options)
 
 
 def test_dummy_single_sweep_RAW():
