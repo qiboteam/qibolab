@@ -474,17 +474,19 @@ class RFSoC(Controller):
         for idx in range(sweeper.expts):
             # update values
             for jdx, kdx in enumerate(sweeper.indexes):
-                sweeper_parameter = sweeper.parameters[jdx].name.lower()
-                if sweeper_parameter == "bias":
+                sweeper_parameter = sweeper.parameters[jdx]
+                if sweeper_parameter is rfsoc.Parameter.BIAS:
                     qubits[kdx].flux.bias = values[jdx][idx]
-                elif sweeper_parameter in {
-                    "amplitude",
-                    "frequency",
-                    "relative_phase",
-                    "start",
-                    "duration",
-                }:
-                    setattr(sequence[kdx], sweeper_parameter, values[jdx][idx])
+                elif sweeper_parameter in rfsoc.Parameter.variants(
+                    {
+                        "amplitude",
+                        "frequency",
+                        "relative_phase",
+                        "start",
+                        "duration",
+                    }
+                ):
+                    setattr(sequence[kdx], sweeper_parameter.name.lower(), values[jdx][idx])
 
             res = self.recursive_python_sweep(
                 qubits, sequence, or_sequence, *sweepers[1:], average=average, execution_parameters=execution_parameters
