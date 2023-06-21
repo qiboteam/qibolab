@@ -306,7 +306,7 @@ class Platform:
         for instrument in self.instruments:
             instrument.setup()
         for qubit in self.qubits.values():
-            if qubit.flux is not None and qubit.flux.offset != 0:
+            if qubit.flux is not None and qubit.sweetspot != 0:
                 qubit.flux.offset = qubit.sweetspot
 
     def start(self):

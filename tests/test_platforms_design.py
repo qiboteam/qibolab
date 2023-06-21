@@ -25,10 +25,8 @@ def test_platform_lo_readout_frequency(platform):
 
 
 def test_platform_attenuation(platform):
-    with pytest.raises(NotImplementedError):
-        platform.set_attenuation(qubit, 10)
-    with pytest.raises(NotImplementedError):
-        platform.get_attenuation(qubit)
+    platform.set_attenuation(qubit, 10)
+    assert platform.get_attenuation(qubit) == 10
 
 
 def test_platform_gain(platform):

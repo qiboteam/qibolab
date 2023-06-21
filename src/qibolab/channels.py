@@ -87,8 +87,7 @@ class Channel:
 
     @property
     def attenuation(self):
-        """Attenuation that is applied to this port."""
-        raise_error(NotImplementedError, "Instruments do not support attenuation.")
+        return self.port.attenuation
 
     @attenuation.setter
     def attenuation(self, value):
