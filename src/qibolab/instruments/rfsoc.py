@@ -650,7 +650,7 @@ class RFSoC(Controller):
 
         sweepsequence = sequence.copy()
 
-        bias_change = any(sweep.parameter is Parameter.bias for sweep in sweepers)
+        bias_change = any(sweep.parameter is BIAS for sweep in sweepers)
         if bias_change:
             initial_biases = [qubits[idx].flux.offset if qubits[idx].flux is not None else None for idx in qubits]
 
