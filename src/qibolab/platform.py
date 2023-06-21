@@ -10,6 +10,7 @@ import networkx as nx
 import yaml
 from qibo.config import log, raise_error
 
+from qibolab import ExecutionParameters
 from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.abstract import Controller, Instrument
 from qibolab.native import NativeType, SingleQubitNatives, TwoQubitNatives
@@ -330,7 +331,7 @@ class Platform:
                 instrument.disconnect()
         self.is_connected = False
 
-    def execute_pulse_sequence(self, sequence: PulseSequence, options, **kwargs):
+    def execute_pulse_sequence(self, sequence: PulseSequence, options: ExecutionParameters, **kwargs):
         """Executes a pulse sequence.
 
         Returns:
@@ -353,7 +354,7 @@ class Platform:
                     result = new_result
         return result
 
-    def execute_pulse_sequences(self, sequences: List[PulseSequence], options, **kwargs):
+    def execute_pulse_sequences(self, sequences: List[PulseSequence], options: ExecutionParameters, **kwargs):
         """Executes a List of PulseSequence.
 
         Returns:
@@ -376,7 +377,7 @@ class Platform:
                     result = new_result
         return result
 
-    def sweep(self, sequence: PulseSequence, options, *sweepers: Sweeper):
+    def sweep(self, sequence: PulseSequence, options: ExecutionParameters, *sweepers: Sweeper):
         """Executes a pulse sequence for different values of sweeped parameters.
 
         Useful for performing chip characterization.

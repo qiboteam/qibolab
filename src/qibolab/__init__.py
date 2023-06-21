@@ -8,7 +8,6 @@ from typing import Optional
 
 from qibo.config import raise_error
 
-from qibolab.platform import Platform
 from qibolab.result import (
     AveragedIntegratedResults,
     AveragedRawWaveformResults,
