@@ -145,15 +145,15 @@ def test_dummy_double_sweep(parameter1, parameter2, average, acquisition, nshots
 
     if average:
         results_len = (
-            len(results[pulse.qubit].magnitude)
+            len(results[pulse.qubit].magnitude.flatten())
             if acquisition is AcquisitionType.INTEGRATION
-            else len(results[pulse.qubit].statistical_frequency)
+            else len(results[pulse.qubit].statistical_frequency.flatten())
         )
     else:
         results_len = (
-            len(results[pulse.qubit].magnitude)
+            len(results[pulse.qubit].magnitude.flatten())
             if acquisition is AcquisitionType.INTEGRATION
-            else len(results[pulse.qubit].samples)
+            else len(results[pulse.qubit].samples.flatten())
         )
 
     assert results_len == swept_points**2 if average else int(nshots * swept_points**2)
