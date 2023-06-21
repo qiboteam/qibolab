@@ -79,7 +79,7 @@ def convert_pulse(pulse: Pulse, qubits: dict[int, Qubit]) -> rfsoc.Pulse:
 def convert_units_sweeper(sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubits: dict[int, Qubit]):
     """Convert units for `qibosoq.abstract.Sweeper` considering also LOs."""
     for idx, jdx in enumerate(sweeper.indexes):
-        parameter = sweeper.parameter[idx]
+        parameter = sweeper.parameters[idx]
         if parameter is rfsoc.Parameter.FREQUENCY:
             pulse = sequence[jdx]
             lo_frequency = pulse_lo_frequency(pulse, qubits)
@@ -151,7 +151,7 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Q
                     stops.append(next_pulse.start + delta_stop)
 
     return rfsoc.Sweeper(
-        parameter=parameters,
+        parameters=parameters,
         indexes=indexes,
         starts=starts,
         stops=stops,
@@ -474,7 +474,7 @@ class RFSoC(Controller):
         for idx in range(sweeper.expts):
             # update values
             for jdx, kdx in enumerate(sweeper.indexes):
-                sweeper_parameter = sweeper.parameter[jdx].name.lower()
+                sweeper_parameter = sweeper.parameters[jdx].name.lower()
                 if sweeper_parameter == "bias":
                     qubits[kdx].flux.bias = values[jdx][idx]
                 elif sweeper_parameter in {
@@ -533,7 +533,7 @@ class RFSoC(Controller):
             loop, false otherwise
         """
         for sweeper in sweepers:
-            for sweep_idx, parameter in enumerate(sweeper.parameter):
+            for sweep_idx, parameter in enumerate(sweeper.parameters):
                 if parameter is rfsoc.Parameter.BIAS:
                     continue
                 if parameter is rfsoc.Parameter.DURATION:
