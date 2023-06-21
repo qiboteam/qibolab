@@ -89,21 +89,21 @@ def test_convert_units_sweeper(dummy_qrc):
     seq.add(pulse1)
 
     # frequency sweeper
-    sweeper = rfsoc.Sweeper(parameter=[rfsoc.Parameter.FREQUENCY], indexes=[1], starts=[0], stops=[10e6], expts=100)
+    sweeper = rfsoc.Sweeper(parameters=[rfsoc.Parameter.FREQUENCY], indexes=[1], starts=[0], stops=[10e6], expts=100)
     convert_units_sweeper(sweeper, seq, platform.qubits)
 
     assert sweeper.starts == [-1]
     assert sweeper.stops == [9]
 
     qubit.readout.local_oscillator.frequency = 0
-    sweeper = rfsoc.Sweeper(parameter=[rfsoc.Parameter.FREQUENCY], indexes=[1], starts=[0], stops=[10e6], expts=100)
+    sweeper = rfsoc.Sweeper(parameters=[rfsoc.Parameter.FREQUENCY], indexes=[1], starts=[0], stops=[10e6], expts=100)
     convert_units_sweeper(sweeper, seq, platform.qubits)
     assert sweeper.starts == [0]
     assert sweeper.stops == [10]
 
     # start sweeper
     sweeper = rfsoc.Sweeper(
-        parameter=[rfsoc.Parameter.START, rfsoc.Parameter.START],
+        parameters=[rfsoc.Parameter.START, rfsoc.Parameter.START],
         indexes=[0, 1],
         starts=[0, 40],
         stops=[100, 140],
@@ -115,7 +115,7 @@ def test_convert_units_sweeper(dummy_qrc):
 
     # phase sweeper
     sweeper = rfsoc.Sweeper(
-        parameter=[rfsoc.Parameter.RELATIVE_PHASE], indexes=[0], starts=[0], stops=[np.pi], expts=180
+        parameters=[rfsoc.Parameter.RELATIVE_PHASE], indexes=[0], starts=[0], stops=[np.pi], expts=180
     )
     convert_units_sweeper(sweeper, seq, platform.qubits)
     assert sweeper.starts == [0]
@@ -142,9 +142,9 @@ def test_convert_sweep(dummy_qrc):
 
     sweeper = Sweeper(parameter=Parameter.bias, values=np.arange(-0.5, +0.5, 0.1), qubits=[qubit])
     rfsoc_sweeper = convert_sweep(sweeper, seq, platform.qubits)
-    targ = rfsoc.Sweeper(expts=10, parameter=[rfsoc.Parameter.BIAS], starts=[-0.5], stops=[0.4], indexes=[0])
+    targ = rfsoc.Sweeper(expts=10, parameters=[rfsoc.Parameter.BIAS], starts=[-0.5], stops=[0.4], indexes=[0])
     assert targ.expts == rfsoc_sweeper.expts
-    assert targ.parameter == rfsoc_sweeper.parameter
+    assert targ.parameters == rfsoc_sweeper.parameters
     assert targ.starts == rfsoc_sweeper.starts
     assert targ.stops == np.round(rfsoc_sweeper.stops, 2)
     assert targ.indexes == rfsoc_sweeper.indexes
@@ -152,9 +152,9 @@ def test_convert_sweep(dummy_qrc):
         parameter=Parameter.bias, values=np.arange(-0.5, +0.5, 0.1), qubits=[qubit], type=SweeperType.OFFSET
     )
     rfsoc_sweeper = convert_sweep(sweeper, seq, platform.qubits)
-    targ = rfsoc.Sweeper(expts=10, parameter=[rfsoc.Parameter.BIAS], starts=[-0.45], stops=[0.45], indexes=[0])
+    targ = rfsoc.Sweeper(expts=10, parameters=[rfsoc.Parameter.BIAS], starts=[-0.45], stops=[0.45], indexes=[0])
     assert targ.expts == rfsoc_sweeper.expts
-    assert targ.parameter == rfsoc_sweeper.parameter
+    assert targ.parameters == rfsoc_sweeper.parameters
     assert targ.starts == rfsoc_sweeper.starts
     assert targ.stops == np.round(rfsoc_sweeper.stops, 2)
     assert targ.indexes == rfsoc_sweeper.indexes
@@ -166,14 +166,14 @@ def test_convert_sweep(dummy_qrc):
 
     sweeper = Sweeper(parameter=Parameter.frequency, values=np.arange(0, 100, 1), pulses=[pulse0])
     rfsoc_sweeper = convert_sweep(sweeper, seq, platform.qubits)
-    targ = rfsoc.Sweeper(expts=100, parameter=[rfsoc.Parameter.FREQUENCY], starts=[0], stops=[99], indexes=[0])
+    targ = rfsoc.Sweeper(expts=100, parameters=[rfsoc.Parameter.FREQUENCY], starts=[0], stops=[99], indexes=[0])
     assert rfsoc_sweeper == targ
 
     sweeper = Sweeper(parameter=Parameter.duration, values=np.arange(40, 100, 1), pulses=[pulse0])
     rfsoc_sweeper = convert_sweep(sweeper, seq, platform.qubits)
     targ = rfsoc.Sweeper(
         expts=60,
-        parameter=[rfsoc.Parameter.DURATION, rfsoc.Parameter.START],
+        parameters=[rfsoc.Parameter.DURATION, rfsoc.Parameter.START],
         starts=[40, 40],
         stops=[99, 99],
         indexes=[0, 1],
@@ -184,7 +184,7 @@ def test_convert_sweep(dummy_qrc):
     rfsoc_sweeper = convert_sweep(sweeper, seq, platform.qubits)
     targ = rfsoc.Sweeper(
         expts=10,
-        parameter=[rfsoc.Parameter.START, rfsoc.Parameter.START],
+        parameters=[rfsoc.Parameter.START, rfsoc.Parameter.START],
         starts=[0, 40],
         stops=[9, 49],
         indexes=[0, 1],
