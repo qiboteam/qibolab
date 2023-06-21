@@ -4,10 +4,10 @@ from qibo import gates
 from qibo.models import Circuit
 
 from qibolab.transpilers.placer import (
-    Backpropagation,
     Custom,
     PlacementError,
     Random,
+    ReverseTraversalTechnique,
     Subgraph,
     Trivial,
     assert_mapping_consistency,
@@ -158,19 +158,19 @@ def test_random(reps):
 
 
 @pytest.mark.parametrize("gates", [None, 5, 13])
-def test_backpropagation(gates):
+def test_ReverseTraversalTechnique(gates):
     circuit = star_circuit()
     connectivity = star_connectivity()
     routing = ShortestPaths(connectivity=connectivity)
-    placer = Backpropagation(connectivity, routing, depth=gates)
+    placer = ReverseTraversalTechnique(connectivity, routing, depth=gates)
     layout = placer(circuit)
     assert_placement(circuit, layout)
 
 
-def test_backpropagation_no_gates():
+def test_ReverseTraversalTechnique_no_gates():
     connectivity = star_connectivity()
     routing = ShortestPaths(connectivity=connectivity)
-    placer = Backpropagation(connectivity, routing, depth=10)
+    placer = ReverseTraversalTechnique(connectivity, routing, depth=10)
     circuit = Circuit(5)
     with pytest.raises(ValueError):
         layout = placer(circuit)
