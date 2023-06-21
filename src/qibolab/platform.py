@@ -13,7 +13,9 @@ from qibo.config import log, raise_error
 from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.abstract import Controller, Instrument
 from qibolab.native import NativeType, SingleQubitNatives, TwoQubitNatives
+from qibolab.pulses import PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPair
+from qibolab.sweeper import Sweeper
 
 
 class Platform:
@@ -328,13 +330,8 @@ class Platform:
                 instrument.disconnect()
         self.is_connected = False
 
-    def execute_pulse_sequence(self, sequence, options, **kwargs):
+    def execute_pulse_sequence(self, sequence: PulseSequence, options, **kwargs):
         """Executes a pulse sequence.
-
-        Args:
-            sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
-            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
-            **kwargs: May need them for something
 
         Returns:
             Readout results acquired by after execution.
@@ -356,13 +353,8 @@ class Platform:
                     result = new_result
         return result
 
-    def execute_pulse_sequences(self, sequence, options, **kwargs):
+    def execute_pulse_sequences(self, sequences: List[PulseSequence], options, **kwargs):
         """Executes a List of PulseSequence.
-
-        Args:
-            sequence (List[:class:`qibolab.pulses.PulseSequence`]): Pulse sequences to execute.
-            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
-            **kwargs: May need them for something
 
         Returns:
             Readout results acquired by after execution.
@@ -376,7 +368,7 @@ class Platform:
         result = {}
         for instrument in self.instruments:
             if isinstance(instrument, Controller):
-                new_result = instrument.play_sequences(self.qubits, sequence, options)
+                new_result = instrument.play_sequences(self.qubits, sequences, options)
                 if isinstance(new_result, dict):
                     result.update(new_result)
                 elif new_result is not None:
@@ -384,7 +376,7 @@ class Platform:
                     result = new_result
         return result
 
-    def sweep(self, sequence, options, *sweepers):
+    def sweep(self, sequence: PulseSequence, options, *sweepers: Sweeper):
         """Executes a pulse sequence for different values of sweeped parameters.
 
         Useful for performing chip characterization.
@@ -407,13 +399,6 @@ class Platform:
                 parameter_range = np.random.randint(10, size=10)
                 sweeper = Sweeper(parameter, parameter_range, [pulse])
                 platform.sweep(sequence, ExecutionParameters(), sweeper)
-
-        Args:
-            sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
-            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
-            *sweepers (:class:`qibolab.sweeper.Sweeper`): Sweeper objects that specify which
-                parameters are being sweeped.
-            **kwargs: May need them for something
 
         Returns:
             Readout results acquired by after execution.

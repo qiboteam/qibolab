@@ -83,7 +83,7 @@ class Controller(Instrument):
 
     @abstractmethod
     def play(self, *args, **kwargs):
-        """The sequence is a PulseSequence play a pulse sequence and retrieve feedback.
+        """Play a pulse sequence and retrieve feedback.
 
         Returns:
             (Dict[ResultType]) mapping the serial of the readout pulses used to
@@ -92,7 +92,7 @@ class Controller(Instrument):
 
     @abstractmethod
     def play_sequences(self, *args, **kwargs):
-        """The sequence is a List play a pulses sequences by unrolling and retrieve feedback.
+        """Play pulses sequences by unrolling and retrieve feedback.
 
         Returns:
             (Dict[List[ResultType]) mapping the serial of the readout pulses used to a list of

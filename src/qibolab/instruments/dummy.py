@@ -91,16 +91,16 @@ class DummyInstrument(Controller):
     def play_sequences(
         self,
         qubits: Dict[QubitId, Qubit],
-        sequence: List[PulseSequence],
+        sequences: List[PulseSequence],
         options: ExecutionParameters,
     ):
         exp_points = 1 if options.averaging_mode is AveragingMode.CYCLIC else options.nshots
         shape = (exp_points,)
 
         results = defaultdict(list)
-        for small_sequence in sequence:
-            for ro_pulse in small_sequence.ro_pulses:
-                values = self.get_values(options, small_sequence, shape)
+        for sequence in sequences:
+            for ro_pulse in sequence.ro_pulses:
+                values = self.get_values(options, sequence, shape)
                 results[ro_pulse.serial].append(options.results_type(values))
                 results[ro_pulse.qubit].append(options.results_type(values))
 
