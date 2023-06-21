@@ -215,7 +215,7 @@ class Random(Placer):
         return len(gates_qubits_pairs) - allowed
 
 
-class Backpropagation(Placer):
+class ReverseTraversalTechnique(Placer):
     """
     Place qubits based on the algorithm proposed in https://doi.org/10.48550/arXiv.1809.02573.
     Works with ShortestPaths routing.
@@ -236,7 +236,7 @@ class Backpropagation(Placer):
         self.depth = depth
 
     def __call__(self, circuit: Circuit):
-        """Find the initial layout of the given circuit using backpropagation placement.
+        """Find the initial layout of the given circuit using Reverse Traversal Technique placement.
 
         Args:
             circuit (qibo.models.Circuit): circuit to be transpiled.
@@ -252,7 +252,7 @@ class Backpropagation(Placer):
         return final_placement
 
     def assemble_circuit(self, circuit: Circuit):
-        """Assemble a single circuit to apply backpropagation placement based on depth.
+        """Assemble a single circuit to apply Reverse Traversal Technique placement based on depth.
         Example: for a circuit with four two qubit gates A-B-C-D using depth = 6,
         the function will return the circuit C-D-D-C-B-A.
 
@@ -260,7 +260,7 @@ class Backpropagation(Placer):
             circuit (qibo.models.Circuit): circuit to be transpiled.
 
         Returns:
-            new_circuit (qibo.models.Circuit): assembled circuit to perform backpropagation placement.
+            new_circuit (qibo.models.Circuit): assembled circuit to perform Reverse Traversal Technique placement.
         """
 
         if self.depth is None:
