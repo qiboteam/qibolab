@@ -158,7 +158,7 @@ def test_random(reps):
 
 
 @pytest.mark.parametrize("gates", [None, 5, 13])
-def test_ReverseTraversalTechnique(gates):
+def test_reverse_traversal_technique(gates):
     circuit = star_circuit()
     connectivity = star_connectivity()
     routing = ShortestPaths(connectivity=connectivity)
