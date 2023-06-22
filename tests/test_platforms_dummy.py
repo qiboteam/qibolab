@@ -41,9 +41,10 @@ def test_dummy_single_sweep_RAW():
     )
     results = platform.sweep(sequence, options, sweeper)
     assert pulse.serial and pulse.qubit in results
-    results_len = len(results[pulse.qubit].magnitude)
-    expts = swept_points * (platform.sampling_rate * 1e-9 * pulse.duration)
-    assert results_len == int(expts)
+    shape = results[pulse.qubit].magnitude.shape
+    samples = platform.sampling_rate * 1e-9 * pulse.duration
+
+    assert shape == (samples * swept_points,)
 
 
 @pytest.mark.parametrize("parameter", Parameter)
@@ -74,18 +75,18 @@ def test_dummy_single_sweep(parameter, average, acquisition, nshots):
 
     assert pulse.serial and pulse.qubit in results
     if average:
-        results_len = (
-            len(results[pulse.qubit].magnitude)
+        results_shape = (
+            results[pulse.qubit].magnitude.shape
             if acquisition is AcquisitionType.INTEGRATION
-            else len(results[pulse.qubit].statistical_frequency)
+            else results[pulse.qubit].statistical_frequency.shape
         )
     else:
-        results_len = (
-            len(results[pulse.qubit].magnitude)
+        results_shape = (
+            results[pulse.qubit].magnitude.shape
             if acquisition is AcquisitionType.INTEGRATION
-            else len(results[pulse.qubit].samples)
+            else results[pulse.qubit].samples.shape
         )
-    assert results_len == swept_points if average else int(nshots * swept_points)
+    assert results_shape == (swept_points,) if average else (nshots, swept_points)
 
 
 @pytest.mark.parametrize("parameter1", Parameter)
@@ -132,19 +133,19 @@ def test_dummy_double_sweep(parameter1, parameter2, average, acquisition, nshots
     assert ro_pulse.serial and ro_pulse.qubit in results
 
     if average:
-        results_len = (
-            len(results[pulse.qubit].magnitude.flatten())
+        results_shape = (
+            results[pulse.qubit].magnitude.shape
             if acquisition is AcquisitionType.INTEGRATION
-            else len(results[pulse.qubit].statistical_frequency.flatten())
+            else results[pulse.qubit].statistical_frequency.shape
         )
     else:
-        results_len = (
-            len(results[pulse.qubit].magnitude.flatten())
+        results_shape = (
+            results[pulse.qubit].magnitude.shape
             if acquisition is AcquisitionType.INTEGRATION
-            else len(results[pulse.qubit].samples.flatten())
+            else results[pulse.qubit].samples.shape
         )
 
-    assert results_len == swept_points**2 if average else int(nshots * swept_points**2)
+    assert results_shape == (swept_points, swept_points) if average else (nshots, swept_points, swept_points)
 
 
 @pytest.mark.parametrize("parameter", Parameter)
@@ -181,18 +182,18 @@ def test_dummy_single_sweep_multiplex(parameter, average, acquisition, nshots):
     for ro_pulse in ro_pulses.values():
         assert ro_pulse.serial and ro_pulse.qubit in results
         if average:
-            results_len = (
-                len(results[ro_pulse.qubit].magnitude)
+            results_shape = (
+                results[ro_pulse.qubit].magnitude.shape
                 if acquisition is AcquisitionType.INTEGRATION
-                else len(results[ro_pulse.qubit].statistical_frequency)
+                else results[ro_pulse.qubit].statistical_frequency.shape
             )
         else:
-            results_len = (
-                len(results[ro_pulse.qubit].magnitude)
+            results_shape = (
+                results[ro_pulse.qubit].magnitude.shape
                 if acquisition is AcquisitionType.INTEGRATION
-                else len(results[ro_pulse.qubit].samples)
+                else results[ro_pulse.qubit].samples.shape
             )
-        assert results_len == swept_points if average else int(nshots * swept_points)
+        assert results_shape == (swept_points,) if average else (nshots, swept_points)
 
 
 # TODO: add test_dummy_double_sweep_multiplex

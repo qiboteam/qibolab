@@ -86,8 +86,7 @@ class DummyInstrument(Controller):
         *sweepers: List[Sweeper],
     ):
         if options.averaging_mode is not AveragingMode.CYCLIC:
-            nshots = (options.nshots,)
-            shape = nshots + tuple(len(sweeper.values) for sweeper in sweepers)
+            shape = (options.nshots,) + tuple(len(sweeper.values) for sweeper in sweepers)
         else:
             shape = tuple(len(sweeper.values) for sweeper in sweepers)
         return self.get_values(options, sequence, shape)
