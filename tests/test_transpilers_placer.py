@@ -7,7 +7,7 @@ from qibolab.transpilers.placer import (
     Custom,
     PlacementError,
     Random,
-    ReverseTraversalTechnique,
+    ReverseTraversal,
     Subgraph,
     Trivial,
     assert_mapping_consistency,
@@ -158,19 +158,19 @@ def test_random(reps):
 
 
 @pytest.mark.parametrize("gates", [None, 5, 13])
-def test_ReverseTraversalTechnique(gates):
+def test_revers_traversal(gates):
     circuit = star_circuit()
     connectivity = star_connectivity()
     routing = ShortestPaths(connectivity=connectivity)
-    placer = ReverseTraversalTechnique(connectivity, routing, depth=gates)
+    placer = ReverseTraversal(connectivity, routing, depth=gates)
     layout = placer(circuit)
     assert_placement(circuit, layout)
 
 
-def test_ReverseTraversalTechnique_no_gates():
+def test_revers_traversal_no_gates():
     connectivity = star_connectivity()
     routing = ShortestPaths(connectivity=connectivity)
-    placer = ReverseTraversalTechnique(connectivity, routing, depth=10)
+    placer = ReverseTraversal(connectivity, routing, depth=10)
     circuit = Circuit(5)
     with pytest.raises(ValueError):
         layout = placer(circuit)
