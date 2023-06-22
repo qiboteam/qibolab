@@ -46,7 +46,7 @@ def calculate_psi(unitary):
     u_magic = np.dot(np.dot(np.conj(magic_basis.T), unitary), magic_basis)
     # construct and diagonalize UT_U
     ut_u = np.dot(u_magic.T, u_magic)
-    eigvals, psi_magic = np.linalg.eig(ut_u)
+    eigvals, psi_magic = np.linalg.eig(np.round(ut_u, decimals=20))
     # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
     psi_magic, _ = np.linalg.qr(psi_magic)
     # write psi in computational basis
