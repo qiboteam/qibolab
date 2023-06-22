@@ -158,7 +158,7 @@ def test_random(reps):
 
 
 @pytest.mark.parametrize("gates", [None, 5, 13])
-def test_revers_traversal(gates):
+def test_reverse_traversal(gates):
     circuit = star_circuit()
     connectivity = star_connectivity()
     routing = ShortestPaths(connectivity=connectivity)
@@ -167,7 +167,7 @@ def test_revers_traversal(gates):
     assert_placement(circuit, layout)
 
 
-def test_revers_traversal_no_gates():
+def test_reverse_traversal_no_gates():
     connectivity = star_connectivity()
     routing = ShortestPaths(connectivity=connectivity)
     placer = ReverseTraversal(connectivity, routing, depth=10)
