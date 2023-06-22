@@ -46,7 +46,7 @@ def calculate_psi(unitary):
     u_magic = np.dot(np.dot(np.conj(magic_basis.T), unitary), magic_basis)
     # construct and diagonalize UT_U
     ut_u = np.dot(u_magic.T, u_magic)
-    # When the matrix given to np.linalg.eig is a diagonal matrix up to machine precision the decomposition 
+    # When the matrix given to np.linalg.eig is a diagonal matrix up to machine precision the decomposition
     # is not accurate anymore. decimals = 20 works for random 2q Clifford unitaries.
     eigvals, psi_magic = np.linalg.eig(np.round(ut_u, decimals=20))
     # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
