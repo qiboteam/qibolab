@@ -14,7 +14,11 @@ from typing import Union
 import numpy as np
 import qibosoq.components as rfsoc
 
-from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
+from qibolab.execution_parameters import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.port import Port
 from qibolab.platform import Qubit

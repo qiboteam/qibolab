@@ -4,7 +4,12 @@ import numpy as np
 import pytest
 import qibosoq.components as rfsoc
 
-from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
+from qibolab import create_platform
+from qibolab.execution_parameters import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
 from qibolab.instruments.rfsoc import (
     convert_frequency_sweeper,
     convert_pulse,

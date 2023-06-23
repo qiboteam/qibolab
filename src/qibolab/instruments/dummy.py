@@ -4,7 +4,11 @@ from typing import Dict, List, Optional, Union
 import numpy as np
 from qibo.config import log
 
-from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
+from qibolab.execution_parameters import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.port import Port
 from qibolab.platform import Qubit

@@ -47,7 +47,7 @@ class Sweeper:
             from qibolab.dummy import create_dummy
             from qibolab.sweeper import Sweeper, Parameter
             from qibolab.pulses import PulseSequence
-            from qibolab import ExecutionParameters
+            from qibolab.execution_parameters import ExecutionParameters
 
 
             platform = create_dummy()

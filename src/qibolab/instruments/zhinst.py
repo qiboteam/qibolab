@@ -11,7 +11,11 @@ import numpy as np
 from laboneq.contrib.example_helpers.plotting.plot_helpers import plot_simulation
 from qibo.config import log
 
-from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
+from qibolab.execution_parameters import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
 from qibolab.instruments.abstract import INSTRUMENTS_DATA_FOLDER, Controller
 from qibolab.instruments.port import Port
 from qibolab.pulses import FluxPulse, PulseSequence, PulseType

@@ -15,8 +15,8 @@ from qualang_tools.bakery import baking
 from qualang_tools.loops import from_array
 from qualang_tools.units import unit
 
-from qibolab import AcquisitionType, AveragingMode
 from qibolab.channels import check_max_offset
+from qibolab.execution_parameters import AcquisitionType, AveragingMode
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.port import Port
 from qibolab.pulses import Pulse, PulseType, Rectangular

@@ -1,7 +1,12 @@
 import numpy as np
 import pytest
 
-from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
+from qibolab import create_platform
+from qibolab.execution_parameters import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
 from qibolab.pulses import PulseSequence
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 

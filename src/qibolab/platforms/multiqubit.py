@@ -3,8 +3,8 @@ import copy
 import numpy as np
 from qibo.config import log, raise_error
 
-from qibolab import AcquisitionType, AveragingMode
 from qibolab.channels import ChannelMap
+from qibolab.execution_parameters import AcquisitionType, AveragingMode
 from qibolab.platform import Platform
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.qubits import Qubit

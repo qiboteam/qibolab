@@ -19,8 +19,13 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 
-from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
+from qibolab import create_platform
 from qibolab.backends import QibolabBackend
+from qibolab.execution_parameters import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
 from qibolab.instruments.qmsim import QMSim
 from qibolab.pulses import SNZ, FluxPulse, PulseSequence, Rectangular
 from qibolab.sweeper import Parameter, Sweeper
