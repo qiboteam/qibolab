@@ -332,6 +332,7 @@ class Platform:
         self.is_connected = False
 
     def _execute(self, method, sequences, options, **kwargs):
+        """Executes the sequences on the controllers"""
         if options.nshots is None:
             options = replace(options, nshots=self.nshots)
 
@@ -350,9 +351,27 @@ class Platform:
         return result
 
     def execute_pulse_sequence(self, sequences: PulseSequence, options: ExecutionParameters, **kwargs):
+        """
+        Args:
+            sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequences to execute.
+            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
+            **kwargs: May need them for something
+        Returns:
+            Readout results acquired by after execution.
+        
+        """
         return self._execute("play", sequences, options, **kwargs)
 
     def execute_pulse_sequences(self, sequences: List[PulseSequence], options: ExecutionParameters, **kwargs):
+        """
+        Args:
+            sequence (List[:class:`qibolab.pulses.PulseSequence`]): Pulse sequences to execute.
+            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
+            **kwargs: May need them for something
+        Returns:
+            Readout results acquired by after execution.
+        
+        """
         return self._execute("play_sequences", sequences, options, **kwargs)
 
     def sweep(self, sequence: PulseSequence, options: ExecutionParameters, *sweepers: Sweeper):
