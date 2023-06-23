@@ -358,7 +358,7 @@ class Platform:
             **kwargs: May need them for something
         Returns:
             Readout results acquired by after execution.
-        
+
         """
         return self._execute("play", sequences, options, **kwargs)
 
@@ -370,7 +370,7 @@ class Platform:
             **kwargs: May need them for something
         Returns:
             Readout results acquired by after execution.
-        
+
         """
         return self._execute("play_sequences", sequences, options, **kwargs)
 
