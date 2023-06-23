@@ -1017,4 +1017,4 @@ class QMOPX(Controller):
         return self.fetch_results(result, qmsequence.ro_pulses)
 
     def play_sequences(self, qubits, sequence, options):
-        pass
+        raise NotImplementedError

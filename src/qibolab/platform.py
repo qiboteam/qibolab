@@ -331,12 +331,7 @@ class Platform:
                 instrument.disconnect()
         self.is_connected = False
 
-    def execute_pulse_sequence(self, sequence: PulseSequence, options: ExecutionParameters, **kwargs):
-        """Executes a pulse sequence.
-
-        Returns:
-            Readout results acquired by after execution.
-        """
+    def _execute(self, method, sequences, options, **kwargs):
         if options.nshots is None:
             options = replace(options, nshots=self.nshots)
 
@@ -346,36 +341,19 @@ class Platform:
         result = {}
         for instrument in self.instruments:
             if isinstance(instrument, Controller):
-                new_result = instrument.play(self.qubits, sequence, options)
+                new_result = getattr(instrument, method)(self.qubits, sequences, options)
                 if isinstance(new_result, dict):
                     result.update(new_result)
                 elif new_result is not None:
                     # currently the result of QMSim is not a dict
                     result = new_result
         return result
+
+    def execute_pulse_sequence(self, sequences: PulseSequence, options: ExecutionParameters, **kwargs):
+        return self._execute("play", sequences, options, **kwargs)
 
     def execute_pulse_sequences(self, sequences: List[PulseSequence], options: ExecutionParameters, **kwargs):
-        """Executes a List of PulseSequence.
-
-        Returns:
-            Readout results acquired by after execution.
-        """
-        if options.nshots is None:
-            options = replace(options, nshots=self.nshots)
-
-        if options.relaxation_time is None:
-            options = replace(options, relaxation_time=self.relaxation_time)
-
-        result = {}
-        for instrument in self.instruments:
-            if isinstance(instrument, Controller):
-                new_result = instrument.play_sequences(self.qubits, sequences, options)
-                if isinstance(new_result, dict):
-                    result.update(new_result)
-                elif new_result is not None:
-                    # currently the result of QMSim is not a dict
-                    result = new_result
-        return result
+        return self._execute("play_sequences", sequences, options, **kwargs)
 
     def sweep(self, sequence: PulseSequence, options: ExecutionParameters, *sweepers: Sweeper):
         """Executes a pulse sequence for different values of sweeped parameters.

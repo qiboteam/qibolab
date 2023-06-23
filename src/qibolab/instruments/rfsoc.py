@@ -326,7 +326,7 @@ class RFSoC(Controller):
         return results
 
     def play_sequences(self, qubits, sequence, options):
-        pass
+        raise NotImplementedError
 
     @staticmethod
     def validate_input_command(sequence: PulseSequence, execution_parameters: ExecutionParameters, sweep: bool):
