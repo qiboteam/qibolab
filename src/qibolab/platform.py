@@ -330,7 +330,7 @@ class Platform:
                 instrument.disconnect()
         self.is_connected = False
 
-    def execute_pulse_sequence(self, sequences: PulseSequence, options: ExecutionParameters, **kwargs):
+    def execute_pulse_sequence(self, sequence: PulseSequence, options: ExecutionParameters, **kwargs):
         """Executes a pulse sequence.
 
         Args:
