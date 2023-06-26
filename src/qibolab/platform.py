@@ -11,8 +11,10 @@ import yaml
 from qibo.config import log, raise_error
 
 from qibolab.channels import Channel, ChannelMap
+from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument
 from qibolab.native import NativeType, SingleQubitNatives, TwoQubitNatives
+from qibolab.pulses import PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPair
 
 
@@ -328,7 +330,7 @@ class Platform:
                 instrument.disconnect()
         self.is_connected = False
 
-    def execute_pulse_sequence(self, sequence, options, **kwargs):
+    def execute_pulse_sequence(self, sequence: PulseSequence, options: ExecutionParameters, **kwargs):
         """Executes a pulse sequence.
 
         Args:
@@ -368,7 +370,7 @@ class Platform:
                 from qibolab.dummy import create_dummy
                 from qibolab.sweeper import Sweeper, Parameter
                 from qibolab.pulses import PulseSequence
-                from qibolab import ExecutionParameters
+                from qibolab.execution_parameters import ExecutionParameters
 
 
                 platform = create_dummy()
