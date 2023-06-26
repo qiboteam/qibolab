@@ -5,6 +5,11 @@ from pathlib import Path
 
 from qibo.config import raise_error
 
+from qibolab.execution_parameters import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
 from qibolab.platform import Platform
 
 __version__ = im.version(__package__)

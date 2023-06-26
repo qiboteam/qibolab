@@ -1,12 +1,7 @@
 import numpy as np
 import pytest
 
-from qibolab import create_platform
-from qibolab.execution_parameters import (
-    AcquisitionType,
-    AveragingMode,
-    ExecutionParameters,
-)
+from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.instruments.zhinst import ZhPulse, ZhSweeperLine
 from qibolab.pulses import (
     Drag,

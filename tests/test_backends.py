@@ -5,8 +5,8 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 
+from qibolab import ExecutionParameters
 from qibolab.backends import QibolabBackend
-from qibolab.execution_parameters import ExecutionParameters
 
 
 @pytest.fixture(scope="module")

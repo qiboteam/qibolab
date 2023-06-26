@@ -2,8 +2,7 @@ import numpy as np
 import pytest
 from qm import qua
 
-from qibolab import create_platform
-from qibolab.execution_parameters import AcquisitionType, ExecutionParameters
+from qibolab import AcquisitionType, ExecutionParameters, create_platform
 
 # Are you testing Singleshot or Averaging ?
 from qibolab.instruments.qm import QMOPX, Acquisition, QMPort, QMPulse, Sequence
