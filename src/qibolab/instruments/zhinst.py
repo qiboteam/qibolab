@@ -337,7 +337,7 @@ class Zurich(Controller):
     def setup(self, *args, **kwargs):
         """Empty method to comply with Instrument interface."""
 
-    def calibration_step(self, qubits):
+    def calibration_step(self, qubits, options):
         """
         Zurich general pre experiment calibration definitions
 
@@ -360,6 +360,12 @@ class Zurich(Controller):
                         qubit=qubit,
                         intermediate_frequency=qubit.readout_frequency - qubit.readout.local_oscillator.frequency,
                     )
+                    if options.fast_reset is not False:
+                        if len(self.sequence[f"drive{qubit.name}"]) == 0:
+                            self.register_drive_line(
+                                qubit=qubit,
+                                intermediate_frequency=qubit.drive_frequency - qubit.drive.local_oscillator.frequency,
+                            )
         self.device_setup.set_calibration(self.calibration)
 
     def register_readout_line(self, qubit, intermediate_frequency):
@@ -468,7 +474,7 @@ class Zurich(Controller):
         Translation, Calibration, Experiment Definition.
         """
         self.sequence_zh(sequence, qubits, sweepers)
-        self.calibration_step(qubits)
+        self.calibration_step(qubits, options)
         self.create_exp(qubits, options)
 
     # pylint: disable=W0221
@@ -582,6 +588,9 @@ class Zurich(Controller):
                 if len(self.sequence[f"readout{q}"]) != 0:
                     signals.append(lo.ExperimentSignal(f"measure{q}"))
                     signals.append(lo.ExperimentSignal(f"acquire{q}"))
+                    if options.fast_reset is not False:
+                        if len(self.sequence[f"drive{q}"]) == 0:
+                            signals.append(lo.ExperimentSignal(f"drive{q}"))
 
         exp = lo.Experiment(
             uid="Sequence",
@@ -882,8 +891,10 @@ class Zurich(Controller):
             if qubit.flux_coupler:
                 continue
             q = qubit.name  # pylint: disable=C0103
-            with exp.section(uid=f"fast_reset{q}", play_after=f"sequence_measure{q}"):
+            with exp.section(uid=f"fast_reset{q}", play_after=f"sequence_measure"):
                 with exp.match_local(handle=f"sequence{q}"):
+                    with exp.case(state=0):
+                        pass
                     with exp.case(state=1):
                         exp.play(signal=f"drive{q}", pulse=ZhPulse(fast_reset[q]).zhpulse)
 
