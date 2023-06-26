@@ -11,8 +11,10 @@ import yaml
 from qibo.config import log, raise_error
 
 from qibolab.channels import Channel, ChannelMap
+from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument
 from qibolab.native import NativeType, SingleQubitNatives, TwoQubitNatives
+from qibolab.pulses import PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPair
 
 
@@ -177,9 +179,7 @@ class Platform:
 
                 # resonator_punchout_attenuation
                 elif par == "readout_attenuation":
-                    # TODO: Are we going to save the attenuation somwhere in the native_gates or characterization
-                    # in all platforms?
-                    True
+                    self.qubits[qubit].readout.attenuation = value
 
                 # resonator_punchout_attenuation
                 elif par == "bare_resonator_frequency":
@@ -192,6 +192,8 @@ class Platform:
                     sweetspot = float(value)
                     self.qubits[qubit].sweetspot = sweetspot
                     self.settings["characterization"]["single_qubit"][qubit]["sweetspot"] = sweetspot
+                    # set sweetspot as the flux offset (IS THIS NEEDED?)
+                    self.qubits[qubit].flux.offset = sweetspot
 
                 # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
                 elif par == "drive_frequency":
@@ -278,9 +280,6 @@ class Platform:
                     self.qubits[qubit].classifiers_hpars = value
                     self.settings["characterization"]["single_qubit"][qubit]["classifiers_hpars"] = value
 
-                elif par == "readout_attenuation":
-                    self.set_attenuation(qubit, value)
-
                 else:
                     raise_error(ValueError, f"Unknown parameter {par} for qubit {qubit}")
 
@@ -302,9 +301,15 @@ class Platform:
         self.is_connected = True
 
     def setup(self):
-        """Prepares instruments to execute experiments."""
+        """Prepares instruments to execute experiments.
+
+        Sets flux port offsets to the qubit sweetspots.
+        """
         for instrument in self.instruments:
             instrument.setup()
+        for qubit in self.qubits.values():
+            if qubit.flux is not None and qubit.sweetspot != 0:
+                qubit.flux.offset = qubit.sweetspot
 
     def start(self):
         """Starts all the instruments."""
@@ -325,7 +330,7 @@ class Platform:
                 instrument.disconnect()
         self.is_connected = False
 
-    def execute_pulse_sequence(self, sequence, options, **kwargs):
+    def execute_pulse_sequence(self, sequence: PulseSequence, options: ExecutionParameters, **kwargs):
         """Executes a pulse sequence.
 
         Args:
@@ -365,7 +370,7 @@ class Platform:
                 from qibolab.dummy import create_dummy
                 from qibolab.sweeper import Sweeper, Parameter
                 from qibolab.pulses import PulseSequence
-                from qibolab import ExecutionParameters
+                from qibolab.execution_parameters import ExecutionParameters
 
 
                 platform = create_dummy()

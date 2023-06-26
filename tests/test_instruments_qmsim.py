@@ -171,7 +171,7 @@ def test_qmsim_sweep_bias(simulator, folder):
         ro_pulses[qubit] = simulator.create_MZ_pulse(qubit, start=0)
         sequence.add(ro_pulses[qubit])
     values = [0, 0.005]
-    sweeper = Sweeper(Parameter.bias, values, qubits=qubits)
+    sweeper = Sweeper(Parameter.bias, values, qubits=[simulator.qubits[q] for q in qubits])
     options = ExecutionParameters(
         nshots=1, relaxation_time=20, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
     )
@@ -180,7 +180,7 @@ def test_qmsim_sweep_bias(simulator, folder):
     assert_regression(samples, folder, "sweep_bias")
 
 
-def test_qmsim_sweep_delay(simulator, folder):
+def test_qmsim_sweep_start(simulator, folder):
     qubits = list(range(simulator.nqubits))
     sequence = PulseSequence()
     qd_pulses = {}
@@ -192,16 +192,16 @@ def test_qmsim_sweep_delay(simulator, folder):
         sequence.add(ro_pulses[qubit])
     values = [20, 40]
     pulses = [ro_pulses[qubit] for qubit in qubits]
-    sweeper = Sweeper(Parameter.delay, values, pulses=pulses)
+    sweeper = Sweeper(Parameter.start, values, pulses=pulses)
     options = ExecutionParameters(
         nshots=1, relaxation_time=0, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
     )
     result = simulator.sweep(sequence, options, sweeper)
     samples = result.get_simulated_samples()
-    assert_regression(samples, folder, "sweep_delay")
+    assert_regression(samples, folder, "sweep_start")
 
 
-def test_qmsim_sweep_delay_two_pulses(simulator, folder):
+def test_qmsim_sweep_start_two_pulses(simulator, folder):
     qubits = list(range(simulator.nqubits))
     sequence = PulseSequence()
     qd_pulses1 = {}
@@ -216,13 +216,13 @@ def test_qmsim_sweep_delay_two_pulses(simulator, folder):
         sequence.add(ro_pulses[qubit])
     values = [20, 60]
     pulses = [qd_pulses2[qubit] for qubit in qubits]
-    sweeper = Sweeper(Parameter.delay, values, pulses=pulses)
+    sweeper = Sweeper(Parameter.start, values, pulses=pulses)
     options = ExecutionParameters(
         nshots=1, relaxation_time=0, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
     )
     result = simulator.sweep(sequence, options, sweeper)
     samples = result.get_simulated_samples()
-    assert_regression(samples, folder, "sweep_delay_two_pulses")
+    assert_regression(samples, folder, "sweep_start_two_pulses")
 
 
 gatelist = [

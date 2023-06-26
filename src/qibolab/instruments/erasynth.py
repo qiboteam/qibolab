@@ -54,9 +54,7 @@ class ERA(LocalOscillator):
             self._set_device_parameter("power", x)
 
     def connect(self):
-        """
-        Connects to the instrument using the IP address set in the runcard.
-        """
+        """Connects to the instrument using the IP address set in the runcard."""
         if not self.is_connected:
             for attempt in range(3):
                 try:

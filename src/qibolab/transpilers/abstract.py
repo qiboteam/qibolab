@@ -1,10 +1,69 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Tuple
 
+import networkx as nx
 import numpy as np
 from qibo.backends import NumpyBackend
-from qibo.config import log
+from qibo.config import log, raise_error
 from qibo.models import Circuit
+
+
+def find_gates_qubits_pairs(circuit: Circuit):
+    """Translate qibo circuit into a list of pairs of qubits to be used by the transpiler.
+
+    Args:
+        circuit (qibo.models.Circuit): circuit to be transpiled.
+
+    Returns:
+        translated_circuit (list): list containing qubits targeted by two qubit gates
+    """
+    translated_circuit = []
+    for gate in circuit.queue:
+        if len(gate.qubits) == 2:
+            translated_circuit.append(sorted(gate.qubits))
+        if len(gate.qubits) >= 3:
+            raise_error(ValueError, "Gates targeting more than 2 qubits are not supported")
+    return translated_circuit
+
+
+class Placer(ABC):
+    """A placer implements the initial logical-physical qubit mapping"""
+
+    @abstractmethod
+    def __init__(self, connectivity: nx.Graph, *args):
+        self.connectivity = connectivity
+
+    @abstractmethod
+    def __call__(self, circuit: Circuit) -> dict:
+        """Find initial qubit mapping
+
+        Args:
+            circuit (qibo.models.Circuit): circuit to be mapped.
+
+        Returns:
+            initial_layout (dict): dictionary containing the initial logical to physical qubit mapping.
+        """
+
+
+class Router(ABC):
+    """A router implements the mapping of a circuit on a specific hardware"""
+
+    @abstractmethod
+    def __init__(self, connectivity: nx.Graph, *args):
+        self.connectivity = connectivity
+
+    @abstractmethod
+    def __call__(self, circuit: Circuit, initial_layout: dict) -> Tuple[Circuit, dict]:
+        """Match circuit to hardware connectivity
+
+        Args:
+            circuit (qibo.models.Circuit): circuit to be routed.
+            initial_layout (dict): dictionary containing the initial logical to physical qubit mapping.
+
+        Returns:
+            matched_circuit (qibo.models.Circuit): routed circuit
+            final_layout (dict): dictionary containing the final logical to physical qubit mapping.
+        """
 
 
 class Transpiler(ABC):
@@ -28,7 +87,7 @@ class Transpiler(ABC):
                 :meth:`qibolab.transpilers.abstract.Transpiler.transpile`.
         """
         if transpiled_circuit is None:
-            transpiled_circuit, _ = self.transpile(original_circuit)
+            transpiled_circuit, _ = self(original_circuit)
 
         backend = NumpyBackend()
         target_state = backend.execute_circuit(original_circuit).state()
@@ -38,7 +97,7 @@ class Transpiler(ABC):
         log.info("Transpiler test passed.")
 
     @abstractmethod
-    def transpile(self, circuit: Circuit) -> Tuple[Circuit, List[int]]:
+    def __call__(self, circuit: Circuit) -> Tuple[Circuit, List[int]]:
         """Apply the transpiler transformation on a given circuit.
 
         Args:
@@ -48,4 +107,3 @@ class Transpiler(ABC):
             circuit (:class:`qibo.models.Circuit`): Circuit after transpilation.
             qubit_map (list): Order of qubits in the transpiled circuit.
         """
-        # TODO: Maybe use __call__?

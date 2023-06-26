@@ -8,7 +8,7 @@ from qibo.states import CircuitResult
 
 from qibolab import ExecutionParameters
 from qibolab import __version__ as qibolab_version
-from qibolab import create_platform, dummy
+from qibolab import create_platform
 from qibolab.compilers import Compiler
 from qibolab.platform import Platform
 from qibolab.transpilers import Pipeline
@@ -92,7 +92,7 @@ class QibolabBackend(NumpyBackend):
             native_circuit = circuit
         else:
             # Transform a circuit into proper connectivity and native gates
-            native_circuit, qubit_map = self.transpiler.transpile(circuit)
+            native_circuit, qubit_map = self.transpiler(circuit)
             # TODO: Use the qubit map to properly map measurements
             if check_transpiled:
                 self.transpiler.check_execution(circuit, native_circuit)

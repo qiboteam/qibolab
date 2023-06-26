@@ -22,13 +22,13 @@ class Pipeline(Transpiler):
                 return False
         return True
 
-    def transpile(self, circuit):
+    def __call__(self, circuit):
         if self.verbose:
             log.info("Transpiling circuit.")
         nqubits = circuit.nqubits
         total_map = list(range(nqubits))
         for transpiler in self.transpilers:
-            circuit, qubit_map = transpiler.transpile(circuit)
+            circuit, qubit_map = transpiler(circuit)
             total_map = [qubit_map[total_map[i]] for i in range(nqubits)]
         return circuit, total_map
 
