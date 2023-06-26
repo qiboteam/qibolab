@@ -1,5 +1,8 @@
 import numpy as np
 import pytest
+from qibo import gates, matrices
+from qibo.backends import NumpyBackend
+from qibo.models import Circuit
 from scipy.linalg import expm
 
 from qibolab.transpilers.unitary_decompositions import (
@@ -33,8 +36,6 @@ def random_unitary(nqubits):
 
 
 def bell_unitary(hx, hy, hz):
-    from qibo import matrices
-
     ham = (
         hx * np.kron(matrices.X, matrices.X)
         + hy * np.kron(matrices.Y, matrices.Y)
@@ -62,9 +63,6 @@ def assert_single_qubits(psi, ua, ub):
 
 
 def test_u3_decomposition():
-    from qibo import gates
-    from qibo.backends import NumpyBackend
-
     backend = NumpyBackend()
     theta, phi, lam = 0.1, 0.2, 0.3
     u3_matrix = gates.U3(0, theta, phi, lam).asmatrix(backend)
@@ -123,8 +121,6 @@ def test_ud_eigenvalues(run_number):
 
 @pytest.mark.parametrize("run_number", range(NREPS))
 def test_calculate_h_vector(run_number):
-    from qibo import matrices
-
     unitary = random_unitary(2)
     ua, ub, ud, va, vb = magic_decomposition(unitary)
     ud_diag = to_bell_diagonal(ud)
@@ -136,9 +132,6 @@ def test_calculate_h_vector(run_number):
 
 @pytest.mark.parametrize("run_number", range(NREPS))
 def test_cnot_decomposition(run_number):
-    from qibo.backends import NumpyBackend
-    from qibo.models import Circuit
-
     hx, hy, hz = np.random.random(3)
     target_matrix = bell_unitary(hx, hy, hz)
     c = Circuit(2)
@@ -149,9 +142,6 @@ def test_cnot_decomposition(run_number):
 
 @pytest.mark.parametrize("run_number", range(NREPS))
 def test_cnot_decomposition_light(run_number):
-    from qibo.backends import NumpyBackend
-    from qibo.models import Circuit
-
     hx, hy = np.random.random(2)
     target_matrix = bell_unitary(hx, hy, 0)
     c = Circuit(2)
@@ -162,9 +152,6 @@ def test_cnot_decomposition_light(run_number):
 
 @pytest.mark.parametrize("run_number", range(NREPS))
 def test_two_qubit_decomposition(run_number):
-    from qibo.backends import NumpyBackend
-    from qibo.models import Circuit
-
     backend = NumpyBackend()
     unitary = random_unitary(2)
     c = Circuit(2)
@@ -173,12 +160,24 @@ def test_two_qubit_decomposition(run_number):
     np.testing.assert_allclose(final_matrix, unitary, atol=ATOL)
 
 
+@pytest.mark.parametrize("gatename", ["CNOT", "CZ", "SWAP", "iSWAP", "fSim"])
+def test_two_qubit_decomposition_common_gates(gatename):
+    """Test general two-qubit decomposition on some common gates."""
+    backend = NumpyBackend()
+    if gatename == "fSim":
+        gate = gates.fSim(0, 1, theta=0.1, phi=0.2)
+    else:
+        gate = getattr(gates, gatename)(0, 1)
+    matrix = gate.asmatrix(backend)
+    c = Circuit(2)
+    c.add(two_qubit_decomposition(0, 1, matrix))
+    final_matrix = c.unitary(backend)
+    np.testing.assert_allclose(final_matrix, matrix, atol=ATOL)
+
+
 @pytest.mark.parametrize("run_number", range(NREPS))
 @pytest.mark.parametrize("hz_zero", [False, True])
 def test_two_qubit_decomposition_bell_unitary(run_number, hz_zero):
-    from qibo.backends import NumpyBackend
-    from qibo.models import Circuit
-
     backend = NumpyBackend()
     hx, hy, hz = (2 * np.random.random(3) - 1) * np.pi
     if hz_zero:
