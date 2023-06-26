@@ -12,6 +12,7 @@ from qibo.config import log, raise_error
 
 from qibolab import ExecutionParameters
 from qibolab.channels import Channel, ChannelMap
+from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument
 from qibolab.native import NativeType, SingleQubitNatives, TwoQubitNatives
 from qibolab.pulses import PulseSequence
@@ -386,7 +387,7 @@ class Platform:
                 from qibolab.dummy import create_dummy
                 from qibolab.sweeper import Sweeper, Parameter
                 from qibolab.pulses import PulseSequence
-                from qibolab import ExecutionParameters
+                from qibolab.execution_parameters import ExecutionParameters
 
 
                 platform = create_dummy()
