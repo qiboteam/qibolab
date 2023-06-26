@@ -10,7 +10,6 @@ import networkx as nx
 import yaml
 from qibo.config import log, raise_error
 
-from qibolab import ExecutionParameters
 from qibolab.channels import Channel, ChannelMap
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument
