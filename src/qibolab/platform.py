@@ -346,7 +346,7 @@ class Platform:
 
         if options.relaxation_time is None:
             options = replace(options, relaxation_time=self.relaxation_time)
-            
+
         if options.fast_reset is True:
             fast_reset = []
             for qubit in sequence.qubits:
