@@ -155,8 +155,9 @@ def test_experiment_execute_pulse_sequence(dummy_qrc):
     assert "acquire0" in IQM5q.experiment.signals
 
 
+@pytest.mark.parametrize("drive_flux", [True, False])
 @pytest.mark.parametrize("fast_reset", [True, False])
-def test_experiment_execute_pulse_sequence(dummy_qrc, fast_reset):
+def test_experiment_execute_pulse_sequence(dummy_qrc, drive_flux, fast_reset):
     platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments[0]
@@ -174,7 +175,8 @@ def test_experiment_execute_pulse_sequence(dummy_qrc, fast_reset):
         if fast_reset:
             fr_pulses[qubit] = platform.create_RX_pulse(qubit, start=0)
         qd_pulses[qubit] = platform.create_RX_pulse(qubit, start=0)
-        sequence.add(qd_pulses[qubit])
+        if drive_flux:
+            sequence.add(qd_pulses[qubit])
         ro_pulses[qubit] = platform.create_qubit_readout_pulse(qubit, start=qd_pulses[qubit].finish)
         sequence.add(ro_pulses[qubit])
         qf_pulses[qubit] = FluxPulse(
@@ -185,7 +187,8 @@ def test_experiment_execute_pulse_sequence(dummy_qrc, fast_reset):
             channel=platform.qubits[qubit].flux.name,
             qubit=qubit,
         )
-        sequence.add(qf_pulses[qubit])
+        if drive_flux:
+            sequence.add(qf_pulses[qubit])
 
     if fast_reset:
         fast_reset = fr_pulses

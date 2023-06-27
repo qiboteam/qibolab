@@ -27,6 +27,14 @@ def test_dummy_execute_pulse_sequence(acquisition):
     result = platform.execute_pulse_sequence(sequence, options)
 
 
+def test_dummy_execute_pulse_sequence_fast_reset():
+    platform = create_platform("dummy")
+    sequence = PulseSequence()
+    sequence.add(platform.create_qubit_readout_pulse(0, 0))
+    options = ExecutionParameters(nshots=None, fast_reset=True)
+    result = platform.execute_pulse_sequence(sequence, options)
+
+
 def test_dummy_single_sweep_RAW():
     platform = create_platform("dummy")
     sequence = PulseSequence()
@@ -48,11 +56,12 @@ def test_dummy_single_sweep_RAW():
     assert shape == (samples * SWEPT_POINTS,)
 
 
+@pytest.mark.parametrize("fast_reset", [True, False])
 @pytest.mark.parametrize("parameter", Parameter)
 @pytest.mark.parametrize("average", [AveragingMode.SINGLESHOT, AveragingMode.CYCLIC])
 @pytest.mark.parametrize("acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION])
 @pytest.mark.parametrize("nshots", [10, 20])
-def test_dummy_single_sweep(parameter, average, acquisition, nshots):
+def test_dummy_single_sweep(fast_reset, parameter, average, acquisition, nshots):
     platform = create_platform("dummy")
     sequence = PulseSequence()
     pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
@@ -69,6 +78,7 @@ def test_dummy_single_sweep(parameter, average, acquisition, nshots):
         nshots=nshots,
         averaging_mode=average,
         acquisition_type=acquisition,
+        fast_reset=fast_reset,
     )
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
     results = platform.sweep(sequence, options, sweeper)
