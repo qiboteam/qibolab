@@ -1070,6 +1070,9 @@ class Zurich(Controller):
             else:
                 self.define_exp(qubits, options, exp, exp_calib)
 
+    def play_sequences(self, qubits, sequence, options):
+        pass
+
     # -----------------------------------------------------------------------------
 
     def play_sim(self, qubits, sequence, options, sim_time):
