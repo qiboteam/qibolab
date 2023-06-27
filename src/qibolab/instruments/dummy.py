@@ -1,3 +1,4 @@
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
@@ -57,7 +58,6 @@ class DummyInstrument(Controller):
         log.info("Disconnecting dummy instrument.")
 
     def get_values(self, options, sequence, shape):
-        results = {}
         for ro_pulse in sequence.ro_pulses:
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                 if options.averaging_mode is AveragingMode.SINGLESHOT:
@@ -70,13 +70,41 @@ class DummyInstrument(Controller):
                 values = np.random.rand(*waveform_shape) * 100 + 1j * np.random.rand(*waveform_shape) * 100
             elif options.acquisition_type is AcquisitionType.INTEGRATION:
                 values = np.random.rand(*shape) * 100 + 1j * np.random.rand(*shape) * 100
-            results[ro_pulse.qubit] = results[ro_pulse.serial] = options.results_type(values)
-        return results
+        return values
 
-    def play(self, qubits: Dict[QubitId, Qubit], sequence: PulseSequence, options: ExecutionParameters):
+    def play(
+        self,
+        qubits: Dict[QubitId, Qubit],
+        sequence: PulseSequence,
+        options: ExecutionParameters,
+    ):
         exp_points = 1 if options.averaging_mode is AveragingMode.CYCLIC else options.nshots
         shape = (exp_points,)
-        return self.get_values(options, sequence, shape)
+        results = {}
+
+        for ro_pulse in sequence.ro_pulses:
+            values = self.get_values(options, sequence, shape)
+            results[ro_pulse.qubit] = results[ro_pulse.serial] = options.results_type(values)
+
+        return results
+
+    def play_sequences(
+        self,
+        qubits: Dict[QubitId, Qubit],
+        sequences: List[PulseSequence],
+        options: ExecutionParameters,
+    ):
+        exp_points = 1 if options.averaging_mode is AveragingMode.CYCLIC else options.nshots
+        shape = (exp_points,)
+
+        results = defaultdict(list)
+        for sequence in sequences:
+            for ro_pulse in sequence.ro_pulses:
+                values = self.get_values(options, sequence, shape)
+                results[ro_pulse.serial].append(options.results_type(values))
+                results[ro_pulse.qubit].append(options.results_type(values))
+
+        return results
 
     def sweep(
         self,
@@ -85,8 +113,15 @@ class DummyInstrument(Controller):
         options: ExecutionParameters,
         *sweepers: List[Sweeper],
     ):
+        results = {}
+
         if options.averaging_mode is not AveragingMode.CYCLIC:
             shape = (options.nshots,) + tuple(len(sweeper.values) for sweeper in sweepers)
         else:
             shape = tuple(len(sweeper.values) for sweeper in sweepers)
-        return self.get_values(options, sequence, shape)
+
+        for ro_pulse in sequence.ro_pulses:
+            values = self.get_values(options, sequence, shape)
+            results[ro_pulse.qubit] = results[ro_pulse.serial] = options.results_type(values)
+
+        return results

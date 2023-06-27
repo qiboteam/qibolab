@@ -27,6 +27,18 @@ def test_dummy_execute_pulse_sequence(acquisition):
     result = platform.execute_pulse_sequence(sequence, options)
 
 
+@pytest.mark.parametrize("acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION])
+def test_dummy_execute_pulse_sequence_unrolling(acquisition):
+    platform = create_platform("dummy")
+    sequences = []
+    sequence = PulseSequence()
+    sequence.add(platform.create_qubit_readout_pulse(0, 0))
+    for _ in range(5):
+        sequences.append(sequence)
+    options = ExecutionParameters(nshots=None, acquisition_type=acquisition)
+    result = platform.execute_pulse_sequences(sequences, options)
+
+
 def test_dummy_single_sweep_RAW():
     platform = create_platform("dummy")
     sequence = PulseSequence()
