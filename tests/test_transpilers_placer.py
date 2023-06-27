@@ -13,7 +13,7 @@ from qibolab.transpilers.placer import (
     assert_mapping_consistency,
     assert_placement,
 )
-from qibolab.transpilers.routing import ShortestPaths
+from qibolab.transpilers.router import ShortestPaths
 
 
 def star_connectivity():

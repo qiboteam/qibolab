@@ -11,7 +11,7 @@ from qibolab.transpilers.placer import (
     Trivial,
     assert_placement,
 )
-from qibolab.transpilers.routing import (
+from qibolab.transpilers.router import (
     ConnectivityError,
     ShortestPaths,
     assert_connectivity,

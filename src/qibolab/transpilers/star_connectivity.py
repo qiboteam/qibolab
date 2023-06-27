@@ -3,8 +3,6 @@ from dataclasses import dataclass
 from qibo import gates
 from qibo.config import log, raise_error
 
-from qibolab.transpilers.abstract import Transpiler
-
 
 def find_connected_qubit(qubits, queue, hardware_qubits):
     """Helper method for :meth:`qibolab.transpilers.fix_connecivity`.
@@ -26,7 +24,7 @@ def find_connected_qubit(qubits, queue, hardware_qubits):
 
 
 @dataclass
-class StarConnectivity(Transpiler):
+class StarConnectivity:
     """Transforms an arbitrary circuit to one that can be executed on hardware.
 
     This transpiler produces a circuit that respects the following connectivity:
@@ -52,7 +50,7 @@ class StarConnectivity(Transpiler):
         if self.verbose:
             log.info(message)
 
-    def is_satisfied(self, circuit, middle_qubit=2, verbose=True):
+    def is_satisfied(self, circuit, middle_qubit=2, verbose=False):
         """Checks if a circuit respects connectivity constraints.
 
         Args:
