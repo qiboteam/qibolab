@@ -86,13 +86,14 @@ def test_abstractplatform_pickle(platform_name):
         "drive_frequency",
         "iq_angle",
         "mean_gnd_states",
+        "mean_exc_states",
         "classifiers_hpars",
     ],
 )
 def test_update(platform_name, par):
     platform = create_platform(platform_name)
     new_values = np.ones(platform.nqubits)
-    if par == "mean_gnd_states":
+    if "states" in par:
         updates = {par: {i: [new_values[i], new_values[i]] for i in range(platform.nqubits)}}
     else:
         updates = {par: {i: new_values[i] for i in range(platform.nqubits)}}
@@ -103,7 +104,7 @@ def test_update(platform_name, par):
             value = updates[par][i]
             if "frequency" in par:
                 value *= 1e9
-            if par == "mean_gnd_states":
+            if "states" in par:
                 assert value == platform.settings["characterization"]["single_qubit"][i][par]
                 assert value == getattr(platform.qubits[i], par)
             else:
