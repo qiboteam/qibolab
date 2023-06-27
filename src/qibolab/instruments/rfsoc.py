@@ -459,7 +459,7 @@ class RFSoC(Controller):
         if len(sweepers) == 0:
             return self.play_sequence_in_sweep_recursion(qubits, sequence, or_sequence, execution_parameters)
 
-        if not self.get_if_python_sweep(sequence, qubits, *sweepers):
+        if not self.get_if_python_sweep(sequence, *sweepers):
             toti, totq = self._execute_sweeps(sequence, qubits, sweepers, average)
             res = self.convert_sweep_results(or_sequence, qubits, toti, totq, execution_parameters)
             return res
@@ -517,7 +517,7 @@ class RFSoC(Controller):
                 dict_a[serial] = dict_b[serial]
         return dict_a
 
-    def get_if_python_sweep(self, sequence: PulseSequence, qubits: list[Qubit], *sweepers: rfsoc.Sweeper) -> bool:
+    def get_if_python_sweep(self, sequence: PulseSequence, *sweepers: rfsoc.Sweeper) -> bool:
         """Check if a sweeper must be run with python loop or on hardware.
 
         To be run on qick internal loop a sweep must:
@@ -527,8 +527,6 @@ class RFSoC(Controller):
 
         Args:
             sequence (`qibolab.pulses.PulseSequence`). Pulse sequence to play.
-            qubits (list): List of `qibolab.platforms.utils.Qubit` objects
-                           passed from the platform.
             *sweepers (`qibosoq.abstract.Sweeper`): Sweeper objects.
         Returns:
             A boolean value true if the sweeper must be executed by python

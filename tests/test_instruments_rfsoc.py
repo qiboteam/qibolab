@@ -391,9 +391,9 @@ def test_get_if_python_sweep(dummy_qrc):
     sweep2 = convert_sweep(sweep2, sequence_1, platform.qubits)
     sweep3 = convert_sweep(sweep3, sequence_1, platform.qubits)
 
-    assert instrument.get_if_python_sweep(sequence_1, platform.qubits, sweep2)
-    assert not instrument.get_if_python_sweep(sequence_1, platform.qubits, sweep1)
-    assert not instrument.get_if_python_sweep(sequence_1, platform.qubits, sweep3)
+    assert instrument.get_if_python_sweep(sequence_1, sweep2)
+    assert not instrument.get_if_python_sweep(sequence_1, sweep1)
+    assert not instrument.get_if_python_sweep(sequence_1, sweep3)
 
     sequence_2 = PulseSequence()
     sequence_2.add(platform.create_RX_pulse(qubit=0, start=0))
@@ -403,8 +403,8 @@ def test_get_if_python_sweep(dummy_qrc):
     sweep1 = convert_sweep(sweep1, sequence_2, platform.qubits)
     sweep2 = convert_sweep(sweep2, sequence_2, platform.qubits)
 
-    assert not instrument.get_if_python_sweep(sequence_2, platform.qubits, sweep1)
-    assert not instrument.get_if_python_sweep(sequence_2, platform.qubits, sweep1, sweep2)
+    assert not instrument.get_if_python_sweep(sequence_2, sweep1)
+    assert not instrument.get_if_python_sweep(sequence_2, sweep1, sweep2)
 
     # TODO repetition
     platform = create_platform("rfsoc")
@@ -418,7 +418,7 @@ def test_get_if_python_sweep(dummy_qrc):
     sweep1 = convert_sweep(sweep1, sequence_1, platform.qubits)
     sweep2 = convert_sweep(sweep2, sequence_1, platform.qubits)
     sweep3 = convert_sweep(sweep3, sequence_1, platform.qubits)
-    assert not instrument.get_if_python_sweep(sequence_1, platform.qubits, sweep1, sweep2, sweep3)
+    assert not instrument.get_if_python_sweep(sequence_1, sweep1, sweep2, sweep3)
 
     platform.qubits[0].flux.offset = 0.5
     sweep1 = Sweeper(parameter=Parameter.bias, values=np.arange(-1, 1, 0.1), qubits=[0])
