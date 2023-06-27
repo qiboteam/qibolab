@@ -134,7 +134,7 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Q
                 parameters.append(convert_parameter(sweeper.parameter))
             else:
                 if sweeper.parameter is DURATION:
-                    parameters.append(convert_parameter(sweeper.parameter))
+                    parameters.append(rfsoc.Parameter.DURATION)
                 elif sweeper.parameter is START:
                     parameters.append(rfsoc.Parameter.START)
 
