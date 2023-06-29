@@ -54,7 +54,22 @@ def pulse_lo_frequency(pulse: Pulse, qubits: dict[int, Qubit]) -> int:
     return lo_frequency
 
 
-def convert_pulse(pulse: Pulse, qubits: dict[int, Qubit]) -> rfsoc.Pulse:
+def convert_pulse_sequence(sequence: PulseSequence, qubits: dict[int, Qubit]) -> list[rfsoc.Pulse]:
+    """Convert PulseSequence to list of rfosc pulses with relative time."""
+
+    abs_time = 0
+    list_sequence = []
+    for pulse in sequence:
+        abs_start = pulse.start * NS_TO_US
+        start_delay = abs_start - abs_time
+        pulse_dict = asdict(convert_pulse(pulse, qubits, start_delay))
+        list_sequence.append(pulse_dict)
+
+        abs_time += start_delay
+    return list_sequence
+
+
+def convert_pulse(pulse: Pulse, qubits: dict[int, Qubit], start_delay: float) -> rfsoc.Pulse:
     """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`."""
     pulse_type = pulse.type.name.lower()
     dac = getattr(qubits[pulse.qubit], pulse_type).port.name
@@ -65,7 +80,7 @@ def convert_pulse(pulse: Pulse, qubits: dict[int, Qubit]) -> rfsoc.Pulse:
         frequency=(pulse.frequency - lo_frequency) * HZ_TO_MHZ,
         amplitude=pulse.amplitude,
         relative_phase=np.degrees(pulse.relative_phase),
-        start=pulse.start * NS_TO_US,
+        start_delay=start_delay,
         duration=pulse.duration * NS_TO_US,
         dac=dac,
         adc=adc,
@@ -234,7 +249,7 @@ class RFSoC(Controller):
         server_commands = {
             "operation_code": opcode,
             "cfg": asdict(self.cfg),
-            "sequence": [asdict(convert_pulse(pulse, qubits)) for pulse in sequence],
+            "sequence": convert_pulse_sequence(sequence, qubits),
             "qubits": [asdict(convert_qubit(qubits[idx])) for idx in qubits],
             "readouts_per_experiment": len(sequence.ro_pulses),
             "average": average,
@@ -263,7 +278,7 @@ class RFSoC(Controller):
         server_commands = {
             "operation_code": rfsoc.OperationCode.EXECUTE_SWEEPS,
             "cfg": asdict(self.cfg),
-            "sequence": [asdict(convert_pulse(pulse, qubits)) for pulse in sequence],
+            "sequence": convert_pulse_sequence(sequence, qubits),
             "qubits": [asdict(convert_qubit(qubits[idx])) for idx in qubits],
             "sweepers": [asdict(sweeper) for sweeper in sweepers],
             "readouts_per_experiment": len(sequence.ro_pulses),
