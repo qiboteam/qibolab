@@ -39,7 +39,7 @@ def replace_pulse_shape(rfsoc_pulse: rfsoc_pulses.Pulse, shape: PulseShape) -> r
     pulse_dict = asdict(rfsoc_pulse)
 
     shape_name = shape.name.lower()
-    cls = rfsoc_pulses.pulse_class_from_shape(shape_name)
+    cls = rfsoc_pulses.Shape[shape_name].value
     args = {}
     if shape_name in {"gaussian", "drag"}:
         args["rel_sigma"] = shape.rel_sigma
