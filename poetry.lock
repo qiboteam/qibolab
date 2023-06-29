@@ -3851,7 +3851,7 @@ qick = "0.2.135"
 type = "git"
 url = "https://github.com/qiboteam/qibosoq.git"
 reference = "relative_time"
-resolved_reference = "a332b8eaf87aa0d018b36ff96c0c6392f156f9bc"
+resolved_reference = "f549c34afbde5cbaf0da84395be1be34ccfcf481"
 
 [[package]]
 name = "qick"
