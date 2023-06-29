@@ -20,7 +20,7 @@ from qibolab.instruments.port import Port
 from qibolab.platform import Qubit
 from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType
 from qibolab.result import IntegratedResults, SampleResults
-from qibolab.sweeper import BIAS, DURATION, START, Parameter, Sweeper
+from qibolab.sweeper import BIAS, START, Parameter, Sweeper
 
 HZ_TO_MHZ = 1e-6
 NS_TO_US = 1e-3
@@ -101,7 +101,7 @@ def convert_units_sweeper(sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubit
 
             sweeper.starts[idx] = (sweeper.starts[idx] - lo_frequency) * HZ_TO_MHZ
             sweeper.stops[idx] = (sweeper.stops[idx] - lo_frequency) * HZ_TO_MHZ
-        elif parameter is rfsoc.Parameter.START:
+        elif parameter is rfsoc.Parameter.DELAY:
             sweeper.starts[idx] = sweeper.starts[idx] * NS_TO_US
             sweeper.stops[idx] = sweeper.stops[idx] * NS_TO_US
         elif parameter is rfsoc.Parameter.RELATIVE_PHASE:
@@ -139,31 +139,21 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Q
             raise ValueError("Sweeper amplitude is set to reach values higher than 1")
     else:
         for pulse in sweeper.pulses:
-            indexes.append(sequence.index(pulse))
+            idx_sweep = sequence.index(pulse)
+            indexes.append(idx_sweep)
             base_value = getattr(pulse, sweeper.parameter.name)
+            if sweeper.parameter is START:
+                # do the conversion from start to delay
+                if idx_sweep != 0:
+                    base_value = base_value - sequence[idx_sweep - 1].start
             values = sweeper.get_values(base_value)
             starts.append(values[0])
             stops.append(values[-1])
 
-            if sweeper.parameter not in {DURATION, START}:
-                parameters.append(convert_parameter(sweeper.parameter))
+            if sweeper.parameter is START:
+                parameters.append(rfsoc.Parameter.DELAY)
             else:
-                if sweeper.parameter is DURATION:
-                    parameters.append(rfsoc.Parameter.DURATION)
-                elif sweeper.parameter is START:
-                    parameters.append(rfsoc.Parameter.START)
-
-                idx_sweep = sequence.index(pulse)
-                delta_start = values[0] - base_value
-                delta_stop = values[-1] - base_value
-
-                for next_pulse in sequence[idx_sweep + 1 :]:
-                    if next_pulse.qubit != pulse.qubit:
-                        continue
-                    parameters.append(rfsoc.Parameter.START)
-                    indexes.append(sequence.index(next_pulse))
-                    starts.append(next_pulse.start + delta_start)
-                    stops.append(next_pulse.start + delta_stop)
+                parameters.append(convert_parameter(sweeper.parameter))
 
     return rfsoc.Sweeper(
         parameters=parameters,
@@ -500,11 +490,12 @@ class RFSoC(Controller):
                         "amplitude",
                         "frequency",
                         "relative_phase",
-                        "start",
                         "duration",
                     }
                 ):
                     setattr(sequence[kdx], sweeper_parameter.name.lower(), values[jdx][idx])
+                elif sweeper is rfsoc.Parameter.DELAY:
+                    sequence[kdx].start_delay = values[jdx][idx]
 
             res = self.recursive_python_sweep(
                 qubits, sequence, or_sequence, *sweepers[1:], average=average, execution_parameters=execution_parameters
