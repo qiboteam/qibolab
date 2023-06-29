@@ -1,6 +1,7 @@
 """Instrument for using the Zurich Instruments (Zhinst) devices."""
 
 import os
+import time
 from collections import defaultdict
 from dataclasses import dataclass, replace
 from typing import Tuple
@@ -310,7 +311,7 @@ class Zurich(Controller):
         self.create_device_setup()
         # To fully remove logging #configure_logging=False
         # I strongly advise to set it to 20 to have time estimates of the experiment duration!
-        self.session = lo.Session(self.device_setup, log_level=30)
+        self.session = lo.Session(self.device_setup, log_level=20)
         self.device = self.session.connect(do_emulation=self.emulation)
         self.is_connected = True
 
@@ -448,8 +449,14 @@ class Zurich(Controller):
 
     def run_exp(self):
         """Compilation settings, compilation step, execution step and data retrival"""
+        start_compile = time.time()
         self.exp = self.session.compile(self.experiment, compiler_settings=COMPILER_SETTINGS)
+        stop_compile = time.time()
+        log.info(f"Zh: Compile: {stop_compile - start_compile}")
+        start_execute = time.time()
         self.results = self.session.run(self.exp)
+        stop_execute = time.time()
+        log.info(f"Zh: Execute + Connection: {stop_execute - start_execute}")
 
     @staticmethod
     def frequency_from_pulses(qubits, sequence):
@@ -467,9 +474,15 @@ class Zurich(Controller):
         Create the experiment object for the devices, following the steps separated one on each method:
         Translation, Calibration, Experiment Definition.
         """
+        start_pulse_translation = time.time()
         self.sequence_zh(sequence, qubits, sweepers)
+        stop_pulse_translation = time.time()
+        log.info(f"Zh: Pulse translation: {stop_pulse_translation - start_pulse_translation}")
+        start_create_exp = time.time()
         self.calibration_step(qubits)
         self.create_exp(qubits, options)
+        stop_create_exp = time.time()
+        log.info(f"Zh: Create experiment: {stop_create_exp - start_create_exp}")
 
     # pylint: disable=W0221
     def play(self, qubits, sequence, options):
@@ -851,7 +864,8 @@ class Zurich(Controller):
                                     amplitude=1,
                                 )
 
-                        measure_pulse_parameters = {"phase": 0}
+                        # measure_pulse_parameters = {"phase": 0}
+                        measure_pulse_parameters = {}
 
                         exp.measure(
                             acquire_signal=f"acquire{q}",
@@ -938,6 +952,7 @@ class Zurich(Controller):
         self.frequency_from_pulses(qubits, sequence)
 
         self.experiment_flow(qubits, sequence, options, sweepers)
+
         self.run_exp()
 
         #  Get the results back
@@ -1011,7 +1026,7 @@ class Zurich(Controller):
         with exp.sweep(
             uid=f"sweep_{sweeper.parameter.name.lower()}_{i}",  # FIXME: This uid trouble double freq ???
             parameter=parameter,
-            reset_oscillator_phase=True,  # FIXME: Should we reset this phase ???
+            reset_oscillator_phase=True,  # Dalse,  # FIXME: Should we reset this phase ???
         ):
             if len(self.sweepers) > 0:
                 self.sweep_recursion(qubits, exp, exp_calib, exp_options)

@@ -1,7 +1,7 @@
 """Platform for controlling quantum devices."""
-
 import math
 import re
+import time
 from dataclasses import replace
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -339,6 +339,12 @@ class Platform:
         if options.relaxation_time is None:
             options = replace(options, relaxation_time=self.relaxation_time)
 
+        if not isinstance(sequences, List):
+            ideal_time = (sequences.duration + options.relaxation_time) * options.nshots * 1e-9
+
+        log.info(f"Ideal: {ideal_time}")
+
+        start_execution = time.time()
         result = {}
         for instrument in self.instruments:
             if isinstance(instrument, Controller):
@@ -348,6 +354,8 @@ class Platform:
                 elif new_result is not None:
                     # currently the result of QMSim is not a dict
                     result = new_result
+        stop_execution = time.time()
+        log.info(f"Tot: {stop_execution - start_execution}")
         return result
 
     def execute_pulse_sequence(self, sequences: PulseSequence, options: ExecutionParameters, **kwargs):
@@ -407,6 +415,14 @@ class Platform:
         if options.relaxation_time is None:
             options = replace(options, relaxation_time=self.relaxation_time)
 
+        ideal_time = (sequence.duration + options.relaxation_time) * options.nshots
+        for sweeper in sweepers:
+            ideal_time *= len(sweeper.values)
+        ideal_time *= 1e-9
+
+        log.info(f"Ideal: {ideal_time}")
+
+        start_execution = time.time()
         result = {}
         for instrument in self.instruments:
             if isinstance(instrument, Controller):
@@ -416,6 +432,8 @@ class Platform:
                 elif new_result is not None:
                     # currently the result of QMSim is not a dict
                     result = new_result
+        stop_execution = time.time()
+        log.info(f"Execution: {stop_execution - start_execution}")
         return result
 
     def __call__(self, sequence, options):

@@ -56,7 +56,7 @@ class ERA(LocalOscillator):
     def connect(self):
         """Connects to the instrument using the IP address set in the runcard."""
         if not self.is_connected:
-            for attempt in range(3):
+            for attempt in range(5):
                 try:
                     if not self.ethernet:
                         self.device = ERASynthPlusPlus(f"{self.name}", f"TCPIP::{self.address}::INSTR")
