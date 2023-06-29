@@ -797,13 +797,13 @@ files = [
 
 [[package]]
 name = "datadog-api-client"
-version = "2.13.2"
+version = "2.14.0"
 description = "Collection of all Datadog Public endpoints"
 optional = true
 python-versions = ">=3.7"
 files = [
-    {file = "datadog-api-client-2.13.2.tar.gz", hash = "sha256:e6fb697200aeaa390715f596a3e2ce4e8f9e083f8641b9e14c4f3c368fc10142"},
-    {file = "datadog_api_client-2.13.2-py3-none-any.whl", hash = "sha256:3dd5414e0c6b752b94c58cc242ca5af590a88801362e590079b850ff570fbd10"},
+    {file = "datadog-api-client-2.14.0.tar.gz", hash = "sha256:b795aec3e0fdf841e8e4eef415e17d6e354f7bf5f3f39165ee2e69500f164891"},
+    {file = "datadog_api_client-2.14.0-py3-none-any.whl", hash = "sha256:f0e82da2a0b0ad58ca8265beba3d93b46f776ad809820614e92fe40e50a4727b"},
 ]
 
 [package.dependencies]
@@ -813,7 +813,7 @@ typing-extensions = "*"
 urllib3 = ">=1.15,<2.0"
 
 [package.extras]
-apm = ["ddtrace (>=1.12.0,<1.13.0)"]
+apm = ["ddtrace (>=1.15.0)"]
 async = ["aiosonic (==0.15.1)"]
 tests = ["aiosonic (==0.15.1)", "glom", "jinja2", "mypy", "pytest", "pytest-asyncio", "pytest-bdd (==6.0.1)", "pytest-randomly", "pytest-recording", "python-dateutil", "types-python-dateutil", "zstandard"]
 zstandard = ["zstandard"]
@@ -1631,13 +1631,13 @@ i18n = ["Babel (>=2.7)"]
 
 [[package]]
 name = "joblib"
-version = "1.2.0"
+version = "1.3.0"
 description = "Lightweight pipelining with Python functions"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "joblib-1.2.0-py3-none-any.whl", hash = "sha256:091138ed78f800342968c523bdde947e7a305b8594b910a0fea2ab83c3c6d385"},
-    {file = "joblib-1.2.0.tar.gz", hash = "sha256:e1cee4a79e4af22881164f218d4311f60074197fb707e082e803b61f6d137018"},
+    {file = "joblib-1.3.0-py3-none-any.whl", hash = "sha256:172d56d4c43dd6bcd953bea213018c4084cf754963bbf54b8dae40faea716b98"},
+    {file = "joblib-1.3.0.tar.gz", hash = "sha256:0b12a65dc76c530dbd790dd92881f75c40932b4254a7c8e608a868df408ca0a3"},
 ]
 
 [[package]]
@@ -3817,13 +3817,13 @@ test = ["coverage[toml] (>=6.2)", "mypy (>=0.940)", "pytest (>=6.2.2)", "pytest-
 
 [[package]]
 name = "qibo"
-version = "0.1.14"
+version = "0.1.15"
 description = "A framework for quantum computing with hardware acceleration."
 optional = false
 python-versions = ">=3.8,<3.12"
 files = [
-    {file = "qibo-0.1.14-py3-none-any.whl", hash = "sha256:3b6597b43fb3bfd9f4d22b441192e7e7d187b34957df0a37c2fa57e3ee6f1b66"},
-    {file = "qibo-0.1.14.tar.gz", hash = "sha256:59aaa9b22d4ab2f4a9c8e6a52474682e552e35729391ff4711faea159866f000"},
+    {file = "qibo-0.1.15-py3-none-any.whl", hash = "sha256:a6d4df4973eccd64dac03b2f1b554529c7e1d5d211282743a1fc924f6d161c8e"},
+    {file = "qibo-0.1.15.tar.gz", hash = "sha256:785e2abff2b170c4d8f5ddd19867c48c6eec6243d1bc2630e10bc8fd1822a092"},
 ]
 
 [package.dependencies]
@@ -3837,17 +3837,21 @@ tabulate = ">=0.9.0,<0.10.0"
 
 [[package]]
 name = "qibosoq"
-version = "0.0.1"
+version = "0.0.2"
 description = "QIBO Server On Qick (qibosoq) is the server component of qibolab to be run on RFSoC boards"
 optional = true
-python-versions = ">=3.8,<3.12"
-files = [
-    {file = "qibosoq-0.0.1-py3-none-any.whl", hash = "sha256:691e54902bc02446c3ae911bc0e0add64c2effb161c95ae7120263d32699322e"},
-    {file = "qibosoq-0.0.1.tar.gz", hash = "sha256:ed26772081311ee3de33aa3d82ccadbe716d002666f2879edfc5b625912228c5"},
-]
+python-versions = ">=3.8, <3.12"
+files = []
+develop = false
 
 [package.dependencies]
 qick = "0.2.135"
+
+[package.source]
+type = "git"
+url = "https://github.com/qiboteam/qibosoq.git"
+reference = "shape-classes"
+resolved_reference = "633fa87f33e322f70999fbc6d33f35b55897de7a"
 
 [[package]]
 name = "qick"
@@ -4193,30 +4197,30 @@ tests = ["black (>=22.3.0)", "flake8 (>=3.8.2)", "matplotlib (>=3.1.3)", "mypy (
 
 [[package]]
 name = "scipy"
-version = "1.11.0"
+version = "1.11.1"
 description = "Fundamental algorithms for scientific computing in Python"
 optional = false
 python-versions = "<3.13,>=3.9"
 files = [
-    {file = "scipy-1.11.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:2e4f14c11fbf825319dbd7f467639a241e7c956c34edb1e036ec7bb6271e4f7b"},
-    {file = "scipy-1.11.0-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:b269ed44e2e2e43611f2ae95ba551fd98abbdc1a7ea8268f72f75876982368c4"},
-    {file = "scipy-1.11.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:2c29bae479b17d85208dfdfc67e50d5944ee23211f236728aadde9b0b7c1c33e"},
-    {file = "scipy-1.11.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a53f9cebcfda6158c241c35a559407a4ef6b8cb0863eb4144958fe0a0b7c3dae"},
-    {file = "scipy-1.11.0-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:ebf4b2ea26d50312731ddba2406389c5ddcbff9d777cf3277ea11decc81e5dfb"},
-    {file = "scipy-1.11.0-cp310-cp310-win_amd64.whl", hash = "sha256:894ced9a2cdb050ff5e392f274617af46dca896d5c9112fa4a2019929554d321"},
-    {file = "scipy-1.11.0-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:7a92bd3cd4acad2e0e0b360176d5ec68b100983c8145add8a8233acddf4e5fcc"},
-    {file = "scipy-1.11.0-cp311-cp311-macosx_12_0_arm64.whl", hash = "sha256:586608ea35206257d4e0ce6f154a6cfef71723b2c1f6d40de5e0b0e8a81cd2ff"},
-    {file = "scipy-1.11.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d8e631c3c49c24f30828580b8126fe3be5cca5409dad5b797418a5b8965eeafa"},
-    {file = "scipy-1.11.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ccc70892ea674f93183c5c4139557b611e42f644dd755da4b19ca974ab770672"},
-    {file = "scipy-1.11.0-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:80015b8928f91bd40377b2b1010ba2e09b03680cbfc291208740494aeb8debf2"},
-    {file = "scipy-1.11.0-cp311-cp311-win_amd64.whl", hash = "sha256:6302c7cba5bf99c901653ff158746625526cc438f058bce41514d7469b79b2c3"},
-    {file = "scipy-1.11.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:c61ea63124da6a3cff38126426912cc86420898b4902a9bc5e5b6524547a6dcb"},
-    {file = "scipy-1.11.0-cp39-cp39-macosx_12_0_arm64.whl", hash = "sha256:684d44607eacd5dd367c7a9e76e922523fa9c0a7f2379a4d0fc4d70d751464cc"},
-    {file = "scipy-1.11.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:f0c9c160d117fe71cd2a12ef21cce8e0475ade2fd97c761ef327b9839089bd16"},
-    {file = "scipy-1.11.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:83867a63515c4e3fce3272d81200dda614d70f4c3a22f047d84021bfe83d7929"},
-    {file = "scipy-1.11.0-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:6666a1e31b2123a077f0dc7ab1053e36479cfd457fb9f5c367e7198505c6607a"},
-    {file = "scipy-1.11.0-cp39-cp39-win_amd64.whl", hash = "sha256:fad4006248513528e0c496de295a9f4d2b65086cc0e388f748e7dbf49fa12760"},
-    {file = "scipy-1.11.0.tar.gz", hash = "sha256:f9b0248cb9d08eead44cde47cbf6339f1e9aa0dfde28f5fb27950743e317bd5d"},
+    {file = "scipy-1.11.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:aec8c62fbe52914f9cf28d846cf0401dd80ab80788bbab909434eb336ed07c04"},
+    {file = "scipy-1.11.1-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:3b9963798df1d8a52db41a6fc0e6fa65b1c60e85d73da27ae8bb754de4792481"},
+    {file = "scipy-1.11.1-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:3e8eb42db36526b130dfbc417609498a6192381abc1975b91e3eb238e0b41c1a"},
+    {file = "scipy-1.11.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:366a6a937110d80dca4f63b3f5b00cc89d36f678b2d124a01067b154e692bab1"},
+    {file = "scipy-1.11.1-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:08d957ca82d3535b3b9ba6c8ff355d78fe975271874e2af267cb5add5bd78625"},
+    {file = "scipy-1.11.1-cp310-cp310-win_amd64.whl", hash = "sha256:e866514bc2d660608447b6ba95c8900d591f2865c07cca0aa4f7ff3c4ca70f30"},
+    {file = "scipy-1.11.1-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:ba94eeef3c9caa4cea7b402a35bb02a5714ee1ee77eb98aca1eed4543beb0f4c"},
+    {file = "scipy-1.11.1-cp311-cp311-macosx_12_0_arm64.whl", hash = "sha256:512fdc18c65f76dadaca139348e525646d440220d8d05f6d21965b8d4466bccd"},
+    {file = "scipy-1.11.1-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:cce154372f0ebe88556ed06d7b196e9c2e0c13080ecb58d0f35062dc7cc28b47"},
+    {file = "scipy-1.11.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b4bb943010203465ac81efa392e4645265077b4d9e99b66cf3ed33ae12254173"},
+    {file = "scipy-1.11.1-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:249cfa465c379c9bb2c20123001e151ff5e29b351cbb7f9c91587260602c58d0"},
+    {file = "scipy-1.11.1-cp311-cp311-win_amd64.whl", hash = "sha256:ffb28e3fa31b9c376d0fb1f74c1f13911c8c154a760312fbee87a21eb21efe31"},
+    {file = "scipy-1.11.1-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:39154437654260a52871dfde852adf1b93b1d1bc5dc0ffa70068f16ec0be2624"},
+    {file = "scipy-1.11.1-cp39-cp39-macosx_12_0_arm64.whl", hash = "sha256:b588311875c58d1acd4ef17c983b9f1ab5391755a47c3d70b6bd503a45bfaf71"},
+    {file = "scipy-1.11.1-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d51565560565a0307ed06fa0ec4c6f21ff094947d4844d6068ed04400c72d0c3"},
+    {file = "scipy-1.11.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b41a0f322b4eb51b078cb3441e950ad661ede490c3aca66edef66f4b37ab1877"},
+    {file = "scipy-1.11.1-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:396fae3f8c12ad14c5f3eb40499fd06a6fef8393a6baa352a652ecd51e74e029"},
+    {file = "scipy-1.11.1-cp39-cp39-win_amd64.whl", hash = "sha256:be8c962a821957fdde8c4044efdab7a140c13294997a407eaee777acf63cbf0c"},
+    {file = "scipy-1.11.1.tar.gz", hash = "sha256:fb5b492fa035334fd249f0973cc79ecad8b09c604b42a127a677b45a9a3d4289"},
 ]
 
 [package.dependencies]
@@ -4687,13 +4691,13 @@ test = ["argcomplete (>=2.0)", "pre-commit", "pytest", "pytest-mock"]
 
 [[package]]
 name = "typing-extensions"
-version = "4.6.3"
+version = "4.7.0"
 description = "Backported and Experimental Type Hints for Python 3.7+"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "typing_extensions-4.6.3-py3-none-any.whl", hash = "sha256:88a4153d8505aabbb4e13aacb7c486c2b4a33ca3b3f807914a9b4c844c471c26"},
-    {file = "typing_extensions-4.6.3.tar.gz", hash = "sha256:d91d5919357fe7f681a9f2b5b4cb2a5f1ef0a1e9f59c4d8ff0d3491e05c0ffd5"},
+    {file = "typing_extensions-4.7.0-py3-none-any.whl", hash = "sha256:5d8c9dac95c27d20df12fb1d97b9793ab8b2af8a3a525e68c80e21060c161771"},
+    {file = "typing_extensions-4.7.0.tar.gz", hash = "sha256:935ccf31549830cda708b42289d44b6f74084d616a00be651601a4f968e77c82"},
 ]
 
 [[package]]
@@ -5094,4 +5098,4 @@ zh = ["laboneq"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "84cb7bba5ae60970443856545c3e1d0e4dcc7018d8a3b022f6ef71045742b093"
+content-hash = "afe399be4e024a7fb698e5e79f0c6f50a023e8baa0121978bb1181797a585da8"
