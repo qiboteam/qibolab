@@ -554,7 +554,8 @@ class RFSoC(Controller):
                 # if it's a sweep on the readout freq do a python sweep
                 if is_freq and is_ro:
                     return True
-
+            if parameter is rfsoc.Parameter.DELAY:
+                continue
             for idx in sweeper.indexes:
                 sweep_pulse = sequence[idx]
                 channel = sweep_pulse.channel
