@@ -37,7 +37,6 @@ def replace_pulse_shape(rfsoc_pulse: rfsoc_pulses.Pulse, shape: PulseShape) -> r
     """Set pulse shape parameters in rfsoc_pulses pulse object."""
 
     pulse_dict = asdict(rfsoc_pulse)
-    del pulse_dict["shape"]
 
     shape_name = shape.name.lower()
     cls = rfsoc_pulses.pulse_class_from_shape(shape_name)

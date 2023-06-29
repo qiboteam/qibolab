@@ -3851,7 +3851,7 @@ qick = "0.2.135"
 type = "git"
 url = "https://github.com/qiboteam/qibosoq.git"
 reference = "shape-classes"
-resolved_reference = "633fa87f33e322f70999fbc6d33f35b55897de7a"
+resolved_reference = "28c212d46d8a4d9009c9fb063c1c0ddd2e86d86f"
 
 [[package]]
 name = "qick"

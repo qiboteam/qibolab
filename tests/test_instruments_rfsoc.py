@@ -59,11 +59,11 @@ def test_convert_pulse(dummy_qrc):
     qubit.readout.local_oscillator.frequency = 1e6
 
     pulse = Pulse(0, 40, 0.9, 50e6, 0, Drag(5, 2), 0, PulseType.DRIVE, 0)
-    targ = rfsoc_pulses.Drag(50, 0.9, 0, 0, 0.04, pulse.serial, "drive", 4, None, 5, 2)
+    targ = rfsoc_pulses.Drag(50, 0.9, 0, 0, 0.04, pulse.serial, "drive", 4, None, rel_sigma=5, beta=2)
     assert convert_pulse(pulse, platform.qubits) == targ
 
     pulse = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(2), 0, PulseType.DRIVE, 0)
-    targ = rfsoc_pulses.Gaussian(50, 0.9, 0, 0, 0.04, pulse.serial, "drive", 4, None, 2)
+    targ = rfsoc_pulses.Gaussian(50, 0.9, 0, 0, 0.04, pulse.serial, "drive", 4, None, rel_sigma=2)
     assert convert_pulse(pulse, platform.qubits) == targ
 
     pulse = Pulse(0, 40, 0.9, 50e6, 0, Rectangular(), 0, PulseType.READOUT, 0)
