@@ -256,15 +256,15 @@ class Platform:
 
                 # classification
                 elif par == "mean_gnd_states":
-                    mean_gnd_states = str(value)
-                    self.qubits[qubit].mean_gnd_states = mean_gnd_states
-                    self.settings["characterization"]["single_qubit"][qubit]["mean_gnd_states"] = mean_gnd_states
+                    gnd_state = [float(voltage) for voltage in value]
+                    self.qubits[qubit].mean_gnd_states = gnd_state
+                    self.settings["characterization"]["single_qubit"][qubit]["mean_gnd_states"] = gnd_state
 
                 # classification
                 elif par == "mean_exc_states":
-                    mean_exc_states = str(value)
-                    self.qubits[qubit].mean_exc_states = mean_exc_states
-                    self.settings["characterization"]["single_qubit"][qubit]["mean_exc_states"] = mean_exc_states
+                    exc_state = [float(voltage) for voltage in value]
+                    self.qubits[qubit].mean_exc_states = exc_state
+                    self.settings["characterization"]["single_qubit"][qubit]["mean_exc_states"] = exc_state
 
                 # drag pulse tunning
                 elif "beta" in par:
