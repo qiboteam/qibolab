@@ -192,8 +192,8 @@ RUNCARD = {
                 "T1": 0.0,
                 "T2": 0.0,
                 "sweetspot": 0.0,
-                "mean_gnd_states": (0 + 0j),
-                "mean_exc_states": (0 + 0j),
+                "mean_gnd_states": (0 + 1j),
+                "mean_exc_states": (1 + 0j),
                 "threshold": 0.0,
                 "iq_angle": 0.0,
             },
@@ -203,8 +203,8 @@ RUNCARD = {
                 "T1": 0.0,
                 "T2": 0.0,
                 "sweetspot": 0.0,
-                "mean_gnd_states": (0 + 0j),
-                "mean_exc_states": (0 + 0j),
+                "mean_gnd_states": (0.25 + 0j),
+                "mean_exc_states": (0 + 0.25j),
                 "threshold": 0.0,
                 "iq_angle": 0.0,
             },
@@ -214,8 +214,8 @@ RUNCARD = {
                 "T1": 0.0,
                 "T2": 0.0,
                 "sweetspot": 0.0,
-                "mean_gnd_states": (0 + 0j),
-                "mean_exc_states": (0 + 0j),
+                "mean_gnd_states": (0.5 + 0j),
+                "mean_exc_states": (0 + 0.5j),
                 "threshold": 0.0,
                 "iq_angle": 0.0,
             },
@@ -225,8 +225,8 @@ RUNCARD = {
                 "T1": 0.0,
                 "T2": 0.0,
                 "sweetspot": 0.0,
-                "mean_gnd_states": (0 + 0j),
-                "mean_exc_states": (0 + 0j),
+                "mean_gnd_states": (0.75 + 0j),
+                "mean_exc_states": (0 + 0.75j),
                 "threshold": 0.0,
                 "iq_angle": 0.0,
             },
@@ -236,8 +236,8 @@ RUNCARD = {
                 "T1": 0.0,
                 "T2": 0.0,
                 "sweetspot": 0.0,
-                "mean_gnd_states": (0 + 0j),
-                "mean_exc_states": (0 + 0j),
+                "mean_gnd_states": (1 + 0j),
+                "mean_exc_states": (0 + 1j),
                 "threshold": 0.0,
                 "iq_angle": 0.0,
             },
@@ -284,8 +284,13 @@ def create_dummy():
     # FIXME: This could be a way of getting qubits to coupler or we could get couplers to qubits
     # FIXME: Nicer way of getting this range
     # assign couplers to qubits
-    for c in itertools.chain(range(0, 2), range(3, 4)):
+    for c in itertools.chain(range(0, 2), range(3, 5)):
         platform.qubits[c].flux_coupler[f"c{c}"] = platform.qubits[f"c{c}"]
         platform.qubits[2].flux_coupler[f"c{c}"] = platform.qubits[f"c{c}"]
+        
+    # assign qubits to couplers
+    for c in itertools.chain(range(0, 2), range(3, 5)):
+        platform.qubits[f"c{c}"].flux_coupler[c] = [platform.qubits[c]]
+        platform.qubits[f"c{c}"].flux_coupler[c].append(platform.qubits[2])
 
     return platform
