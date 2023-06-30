@@ -287,7 +287,7 @@ def create_dummy():
     for c in itertools.chain(range(0, 2), range(3, 5)):
         platform.qubits[c].flux_coupler[f"c{c}"] = platform.qubits[f"c{c}"]
         platform.qubits[2].flux_coupler[f"c{c}"] = platform.qubits[f"c{c}"]
-        
+
     # assign qubits to couplers
     for c in itertools.chain(range(0, 2), range(3, 5)):
         platform.qubits[f"c{c}"].flux_coupler[c] = [platform.qubits[c]]
