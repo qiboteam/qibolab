@@ -20,7 +20,7 @@ from qibolab.instruments.port import Port
 from qibolab.platform import Qubit
 from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType
 from qibolab.result import IntegratedResults, SampleResults
-from qibolab.sweeper import BIAS, START, Parameter, Sweeper
+from qibolab.sweeper import BIAS, DURATION, START, Parameter, Sweeper
 
 HZ_TO_MHZ = 1e-6
 NS_TO_US = 1e-3
@@ -142,16 +142,27 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Q
             idx_sweep = sequence.index(pulse)
             indexes.append(idx_sweep)
             base_value = getattr(pulse, sweeper.parameter.name)
-            if sweeper.parameter is START:
+            if idx_sweep != 0 and sweeper.parameter is START:
                 # do the conversion from start to delay
-                if idx_sweep != 0:
-                    base_value = base_value - sequence[idx_sweep - 1].start
+                base_value = base_value - sequence[idx_sweep - 1].start
             values = sweeper.get_values(base_value)
             starts.append(values[0])
             stops.append(values[-1])
 
             if sweeper.parameter is START:
                 parameters.append(rfsoc.Parameter.DELAY)
+            elif sweeper.parameter is DURATION:
+                parameters.append(rfsoc.Parameter.DURATION)
+                delta_start = values[0] - base_value
+                delta_stop = values[-1] - base_value
+
+                if len(sequence) > idx_sweep + 1:
+                    # if duration-swept pulse is not last
+                    indexes.append(idx_sweep + 1)
+                    t0 = sequence[idx_sweep + 1].start - sequence[idx_sweep].start
+                    parameters.append(rfsoc.Parameter.DELAY)
+                    starts.append(t0 + delta_start)
+                    stops.append(t0 + delta_stop)
             else:
                 parameters.append(convert_parameter(sweeper.parameter))
 

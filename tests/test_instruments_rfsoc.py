@@ -173,10 +173,10 @@ def test_convert_sweep(dummy_qrc):
     rfsoc_sweeper = convert_sweep(sweeper, seq, platform.qubits)
     targ = rfsoc.Sweeper(
         expts=60,
-        parameters=[rfsoc.Parameter.DURATION],
-        starts=[40],
-        stops=[99],
-        indexes=[0],
+        parameters=[rfsoc.Parameter.DURATION, rfsoc.Parameter.DELAY],
+        starts=[40, 40],
+        stops=[99, 99],
+        indexes=[0, 1],
     )
     assert rfsoc_sweeper == targ
 
