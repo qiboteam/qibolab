@@ -8,11 +8,13 @@ Tested on the following FPGA:
 import copy
 import json
 import socket
+import time
 from dataclasses import asdict, dataclass
 from typing import Union
 
 import numpy as np
 import qibosoq.components as rfsoc
+from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
@@ -231,6 +233,7 @@ class RFSoC(Controller):
         Returns:
             Lists of I and Q value measured
         """
+        start_time = time.time()
         server_commands = {
             "operation_code": opcode,
             "cfg": asdict(self.cfg),
@@ -239,6 +242,8 @@ class RFSoC(Controller):
             "readouts_per_experiment": len(sequence.ro_pulses),
             "average": average,
         }
+        stop_time = time.time()
+        log.info(f"RFSoC translation (seq): {stop_time - start_time}")
         return self._open_connection(self.host, self.port, server_commands)
 
     def _execute_sweeps(
@@ -258,6 +263,7 @@ class RFSoC(Controller):
         Returns:
             Lists of I and Q value measured
         """
+        start_time = time.time()
         for sweeper in sweepers:
             convert_units_sweeper(sweeper, sequence, qubits)
         server_commands = {
@@ -269,6 +275,8 @@ class RFSoC(Controller):
             "readouts_per_experiment": len(sequence.ro_pulses),
             "average": average,
         }
+        stop_time = time.time()
+        log.info(f"RFSoC translation (sweep): {stop_time - start_time}")
         return self._open_connection(self.host, self.port, server_commands)
 
     @staticmethod
@@ -286,6 +294,7 @@ class RFSoC(Controller):
         Raise:
             Exception: if the server encounters and error, the same error is raised here
         """
+        start_time = time.time()
         # open a connection
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect((host, port))
@@ -303,6 +312,8 @@ class RFSoC(Controller):
         results = json.loads(received.decode("utf-8"))
         if isinstance(results, str) and "Error" in results:
             raise QibosoqError(results)
+        stop_time = time.time()
+        log.info(f"RFSoC execution: {stop_time - start_time}")
         return results["i"], results["q"]
 
     def play(
