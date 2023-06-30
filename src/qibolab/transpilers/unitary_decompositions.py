@@ -213,7 +213,9 @@ def two_qubit_decomposition(q0, q1, unitary):
         ud_diag = to_bell_diagonal(ud)
 
     hx, hy, hz = calculate_h_vector(ud_diag)
-    if hz == 0:
+    if np.allclose([hx, hy, hz], [0, 0, 0]):
+        gatelist = [gates.Unitary(u4 @ u1, q0), gates.Unitary(v4 @ v1, q1)]
+    elif np.allclose(hz, 0):
         gatelist = cnot_decomposition_light(q0, q1, hx, hy)
         if ud is None:
             return gatelist

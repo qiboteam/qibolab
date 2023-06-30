@@ -1,7 +1,6 @@
 from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyInstrument
 from qibolab.platform import Platform
-from qibolab.pulses import SNZ
 
 NAME = "dummy"
 RUNCARD = {
@@ -133,7 +132,7 @@ RUNCARD = {
                     {
                         "duration": 34,
                         "amplitude": 0.055,
-                        "shape": SNZ(1),
+                        "shape": "SNZ(1)",
                         "qubit": 3,
                         "relative_start": 0,
                         "type": "qf",
@@ -141,7 +140,7 @@ RUNCARD = {
                     {
                         "duration": 4,
                         "amplitude": 0.055,
-                        "shape": SNZ(1),
+                        "shape": "SNZ(1)",
                         "qubit": 3,
                         "relative_start": 14,
                         "type": "qf",
