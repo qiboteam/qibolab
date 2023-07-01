@@ -1,8 +1,6 @@
 """Instrument for using the Zurich Instruments (Zhinst) devices."""
 
-import logging
 import os
-import warnings
 from collections import defaultdict
 from dataclasses import dataclass, replace
 from typing import Tuple
@@ -11,6 +9,7 @@ import laboneq._token
 import laboneq.simple as lo
 import numpy as np
 from laboneq.contrib.example_helpers.plotting.plot_helpers import plot_simulation
+from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import INSTRUMENTS_DATA_FOLDER, Controller
@@ -503,8 +502,8 @@ class Zurich(Controller):
 
         exp_dimensions = list(np.array(exp_res).shape)
         if dimensions != exp_dimensions:
-            logging.warning("dimensions %d , exp_dimensions %d", dimensions, exp_dimensions)
-            warnings.warn("dimensions not properly ordered")
+            log.warning("dimensions %d , exp_dimensions %d", dimensions, exp_dimensions)
+            log.warning("dimensions not properly ordered")
 
         # html containing the pulse sequence schedule
         # lo.show_pulse_sheet("pulses", self.exp)
@@ -817,7 +816,7 @@ class Zurich(Controller):
                             / f"{self.chip}/weights/integration_weights_optimization_qubit_{q}.npy"
                         )
                         if weights_file.is_file():
-                            logging.info("I'm using optimized IW")
+                            log.info("I'm using optimized IW")
                             samples = np.load(
                                 weights_file,
                                 allow_pickle=True,
@@ -833,7 +832,7 @@ class Zurich(Controller):
                                     samples=samples[0],
                                 )
                         else:
-                            logging.info("I'm using dumb IW")
+                            log.info("I'm using dumb IW")
                             # We adjust for smearing and remove smearing/2 at the end
                             exp.delay(
                                 signal=f"acquire{q}",
@@ -877,7 +876,7 @@ class Zurich(Controller):
         we reach non fast reset fidelity
         https://quantum-computing.ibm.com/lab/docs/iql/manage/systems/reset/backend_reset
         """
-        logging.warning("Im fast resetting")
+        log.warning("Im fast resetting")
         for qubit_name in self.sequence_qibo.qubits:
             qubit = qubits[qubit_name]
             if qubit.flux_coupler:
@@ -900,7 +899,7 @@ class Zurich(Controller):
                     sweeper_changed = sweepers[1]
                     sweepers.remove(sweeper_changed)
                     sweepers.insert(0, sweeper_changed)
-                    warnings.warn("Sweepers were reordered")
+                    log.warning("Sweepers were reordered")
                 elif (
                     not sweepers[0].parameter is Parameter.amplitude
                     and sweepers[0].pulses[0].type is not PulseType.READOUT
@@ -910,7 +909,7 @@ class Zurich(Controller):
                     sweeper_changed = sweepers[1]
                     sweepers.remove(sweeper_changed)
                     sweepers.insert(0, sweeper_changed)
-                    warnings.warn("Sweepers were reordered")
+                    log.warning("Sweepers were reordered")
         return rearranging_axes, sweepers
 
     def offsets_off(self):
@@ -960,8 +959,8 @@ class Zurich(Controller):
 
         exp_dimensions = list(np.array(exp_res).shape)
         if dimensions != exp_dimensions:
-            logging.warning("dimensions %d , exp_dimensions %d", dimensions, exp_dimensions)
-            warnings.warn("dimensions not properly ordered")
+            log.warning("dimensions {}, exp_dimensions {}".format(dimensions, exp_dimensions))
+            log.warning("dimensions not properly ordered")
 
         self.offsets_off()
 
@@ -1027,7 +1026,7 @@ class Zurich(Controller):
         You want to avoid them so for now they are implement for a specific sweep.
         """
 
-        logging.info("nt Loop")
+        log.info("nt Loop")
 
         sweeper = self.nt_sweeps[0]
 
@@ -1059,6 +1058,9 @@ class Zurich(Controller):
                 self.sweep_recursion_nt(qubits, options, exp, exp_calib)
             else:
                 self.define_exp(qubits, options, exp, exp_calib)
+
+    def play_sequences(self, qubits, sequence, options):
+        pass
 
     # -----------------------------------------------------------------------------
 

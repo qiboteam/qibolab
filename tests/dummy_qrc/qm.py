@@ -81,6 +81,9 @@ def create(runcard=RUNCARD):
         qubits[q].drive = channels[f"L3-{10 + q}"]
         qubits[q].flux = channels[f"L4-{q}"]
 
+    # set filter for flux channel
+    qubits[2].flux.filters = {"feedforward": [1.0684635881381783, -1.0163217174522334], "feedback": [0.947858129314055]}
+
     # set maximum allowed bias values to protect amplifier
     # relevant only for qubits where an amplifier is used
     for q in range(5):

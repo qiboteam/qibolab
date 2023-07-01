@@ -86,7 +86,16 @@ class Controller(Instrument):
         """Play a pulse sequence and retrieve feedback.
 
         Returns:
-            (dict) mapping the serial of the readout pulses used to
+            (Dict[ResultType]) mapping the serial of the readout pulses used to
+            the acquired :class:`qibolab.result.ExecutionResults` object.
+        """
+
+    @abstractmethod
+    def play_sequences(self, *args, **kwargs):
+        """Play pulses sequences by unrolling and retrieve feedback.
+
+        Returns:
+            (Dict[List[ResultType]) mapping the serial of the readout pulses used to a list of
             the acquired :class:`qibolab.result.ExecutionResults` object.
         """
 

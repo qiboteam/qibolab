@@ -20,7 +20,7 @@ repos:
       - id: isort
         args: ["--profile", "black"]
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.6.0
+    rev: v3.7.0
     hooks:
       - id: pyupgrade
   - repo: https://github.com/hadialqattan/pycln
@@ -31,7 +31,7 @@ repos:
           - --config=pyproject.toml
           - --all
   - repo: https://github.com/adamchainz/blacken-docs
-    rev: 1.13.0
+    rev: 1.14.0
     hooks:
       - id: blacken-docs
   - repo: https://github.com/pycqa/pydocstyle
