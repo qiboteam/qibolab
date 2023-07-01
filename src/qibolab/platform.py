@@ -121,12 +121,12 @@ class Platform:
         }
         # add single qubit native gates
         settings["native_gates"] = {
-            "single_qubit": {q: qubit.native_gates.to_dict for q, qubit in self.qubits.items()},
+            "single_qubit": {q: qubit.native_gates.raw for q, qubit in self.qubits.items()},
             "two_qubit": {},
         }
         # add two-qubit native gates
         for p, pair in self.pairs.items():
-            natives = pair.native_gates.to_dict
+            natives = pair.native_gates.raw
             if len(natives) > 0:
                 settings["native_gates"]["two_qubit"][f"{p[0]}-{p[1]}"] = natives
         # add qubit characterization section

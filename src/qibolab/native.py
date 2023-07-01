@@ -68,7 +68,7 @@ class NativePulse:
         return cls(name, **kwargs)
 
     @property
-    def to_dict(self):
+    def raw(self):
         data = {fld.name: getattr(self, fld.name) for fld in fields(self) if getattr(self, fld.name) is not None}
         del data["name"]
         data["qubit"] = self.qubit.name
@@ -118,7 +118,7 @@ class VirtualZPulse:
     qubit: "Qubit"
 
     @property
-    def to_dict(self):
+    def raw(self):
         return {"type": "virtual_z", "phase": self.phase, "qubit": self.qubit.name}
 
 
@@ -162,8 +162,8 @@ class NativeSequence:
         return cls(name, pulses)
 
     @property
-    def to_dict(self):
-        return [pulse.to_dict for pulse in self.pulses]
+    def raw(self):
+        return [pulse.raw for pulse in self.pulses]
 
     def sequence(self, start=0):
         """Creates a :class:`qibolab.pulses.PulseSequence` object implementing the sequence."""
@@ -206,8 +206,8 @@ class SingleQubitNatives:
         return cls(**pulses)
 
     @property
-    def to_dict(self):
-        return {fld.name: getattr(self, fld.name).to_dict for fld in fields(self)}
+    def raw(self):
+        return {fld.name: getattr(self, fld.name).raw for fld in fields(self)}
 
 
 @dataclass
@@ -223,12 +223,12 @@ class TwoQubitNatives:
         return cls(**sequences)
 
     @property
-    def to_dict(self):
+    def raw(self):
         data = {}
         for fld in fields(self):
             gate = getattr(self, fld.name)
             if gate is not None:
-                data[fld.name] = gate.to_dict
+                data[fld.name] = gate.raw
         return data
 
     @property
