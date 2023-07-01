@@ -21,11 +21,18 @@ from qibolab.sweeper import Sweeper
 
 @dataclass
 class PlatformSettings:
-    """Platform settings and default execution settings read from the runcard."""
+    """Default execution settings read from the runcard."""
 
     nshots: int = 1024
+    """Default number of repetitions when executing a pulse sequence."""
     sampling_rate: int = int(1e9)
+    """Number of waveform samples supported by the instruments per second."""
     relaxation_time: int = int(1e5)
+    """Time in ns to wait for the qubit to relax to its ground state between shots."""
+    time_of_flight: int = 280
+    """Time in ns for the signal to reach the qubit from the instruments."""
+    smearing: int = 0
+    """Readout pulse window to be excluded during the signal integration."""
 
 
 class Platform:
