@@ -46,7 +46,9 @@ def calculate_psi(unitary):
     u_magic = np.dot(np.dot(np.conj(magic_basis.T), unitary), magic_basis)
     # construct and diagonalize UT_U
     ut_u = np.dot(u_magic.T, u_magic)
-    eigvals, psi_magic = np.linalg.eig(ut_u)
+    # When the matrix given to np.linalg.eig is a diagonal matrix up to machine precision the decomposition
+    # is not accurate anymore. decimals = 20 works for random 2q Clifford unitaries.
+    eigvals, psi_magic = np.linalg.eig(np.round(ut_u, decimals=20))
     # orthogonalize eigenvectors in the case of degeneracy (Gram-Schmidt)
     psi_magic, _ = np.linalg.qr(psi_magic)
     # write psi in computational basis
@@ -211,7 +213,9 @@ def two_qubit_decomposition(q0, q1, unitary):
         ud_diag = to_bell_diagonal(ud)
 
     hx, hy, hz = calculate_h_vector(ud_diag)
-    if hz == 0:
+    if np.allclose([hx, hy, hz], [0, 0, 0]):
+        gatelist = [gates.Unitary(u4 @ u1, q0), gates.Unitary(v4 @ v1, q1)]
+    elif np.allclose(hz, 0):
         gatelist = cnot_decomposition_light(q0, q1, hx, hy)
         if ud is None:
             return gatelist

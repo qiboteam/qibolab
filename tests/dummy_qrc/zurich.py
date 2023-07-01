@@ -3,7 +3,7 @@ import pathlib
 
 import laboneq.simple as lo
 
-from qibolab.channels import ChannelMap
+from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.oscillator import LocalOscillator
 from qibolab.instruments.zhinst import Zurich
 from qibolab.platform import Platform
@@ -71,45 +71,48 @@ def create(runcard=RUNCARD):
     Args:
         runcard (str): Path to the runcard file.
     """
-    # Create channel objects
+    descriptor = create_descriptor()
+
+    controller = Zurich("EL_ZURO", descriptor, use_emulation=False, time_of_flight=280, smearing=100)
+
+    # Create channel objects and map controllers
     channels = ChannelMap()
     # readout
-    channels |= "L3-31"
+    channels |= Channel("L3-31", port=controller[("device_shfqc", "[QACHANNELS/0/INPUT]")])
     # feedback
-    channels |= "L2-7"
+    channels |= Channel("L2-7", port=controller[("device_shfqc", "[QACHANNELS/0/OUTPUT]")])
     # drive
-    channels |= (f"L4-{i}" for i in range(15, 20))
-    # flux qubits
-    channels |= (f"L4-{i}" for i in range(6, 11))
+    channels |= (
+        Channel(f"L4-{i}", port=controller[("device_shfqc", f"SGCHANNELS/{i-5}/OUTPUT")]) for i in range(15, 20)
+    )
+    # flux qubits (CAREFUL WITH THIS !!!)
+    channels |= (Channel(f"L4-{i}", port=controller[("device_hdawg", f"SIGOUTS/{i-6}")]) for i in range(6, 11))
     # flux couplers
-    channels |= (f"L4-{i}" for i in range(11, 15))
+    channels |= (Channel(f"L4-{i}", port=controller[("device_hdawg", f"SIGOUTS/{i-11+5}")]) for i in range(11, 14))
+    channels |= Channel("L4-14", port=controller[("device_hdawg2", f"SIGOUTS/0")])
 
-    # Map controllers to qubit channels
+    # SHFQC
+    # Sets the maximal Range of the Signal Output power.
+    # The instrument selects the closest available Range with a resolution of 5 dBm.
+
     # feedback
-    channels["L3-31"].ports = [("device_shfqc", "[QACHANNELS/0/INPUT]")]
     channels["L3-31"].power_range = 10
     # readout
-    channels["L2-7"].ports = [("device_shfqc", "[QACHANNELS/0/OUTPUT]")]
     channels["L2-7"].power_range = -25
     # drive
     for i in range(5, 10):
-        channels[f"L4-1{i}"].ports = [("device_shfqc", f"SGCHANNELS/{i-5}/OUTPUT")]
         channels[f"L4-1{i}"].power_range = -10
 
-    # flux qubits (CAREFUL WITH THIS !!!)
+    # HDAWGS
+    # Sets the output voltage range.
+    # The instrument selects the next higher available Range with a resolution of 0.4 Volts.
+
+    # flux
     for i in range(6, 11):
-        channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-6}")]
-    for i in range(11, 14):
-        channels[f"L4-{i}"].ports = [("device_hdawg", f"SIGOUTS/{i-11+5}")]
-    channels[f"L4-14"].ports = [("device_hdawg2", f"SIGOUTS/0")]
-
-    descriptor = create_descriptor()
-
-    controller = Zurich("EL_ZURO", descriptor, use_emulation=False)
-
-    # set time of flight for readout integration (HARDCODED)
-    controller.time_of_flight = 280
-    controller.smearing = 100
+        channels[f"L4-{i}"].power_range = 0.8
+    # flux couplers
+    for i in range(11, 15):
+        channels[f"L4-{i}"].power_range = 0.8
 
     # Instantiate local oscillators
     local_oscillators = [LocalOscillator(f"lo_{kind}", None) for kind in ["readout"] + [f"drive_{n}" for n in range(4)]]
