@@ -10,7 +10,7 @@ import networkx as nx
 import yaml
 from qibo.config import log, raise_error
 
-from qibolab.channels import Channel, ChannelMap
+from qibolab.channels import ChannelMap
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument
 from qibolab.native import NativeType, SingleQubitNatives, TwoQubitNatives
@@ -62,34 +62,21 @@ class Platform:
             q: Qubit(q, **char) for q, char in settings["characterization"]["single_qubit"].items()
         }
 
-        # register channels to qubits when we are using the old format (MultiqubitPlatform)
-        # this is needed for ``NativeGates`` to work
-        if "qubit_channel_map" in settings:
-            for q, qubit in self.qubits.items():
-                readout, drive, flux, _ = settings["qubit_channel_map"][q]
-                if readout is not None:
-                    qubit.readout = Channel(readout)
-                if drive is not None:
-                    qubit.drive = Channel(drive)
-                if flux is not None:
-                    qubit.flux = Channel(flux)
-
-        # TODO: Remove this (needed for the multiqubit platform)
-        self.native_gates = native_gates = settings["native_gates"]
-        # register single qubit native gates to ``Qubit`` objects
-        for q, gates in native_gates["single_qubit"].items():
-            self.qubits[q].native_gates = SingleQubitNatives.from_dict(self.qubits[q], gates)
-
         # create ``QubitPair`` objects
         self.pairs: Dict[QubitPairId, QubitPair] = {}
         for pair in settings["topology"]:
             pair = tuple(sorted(pair))
             self.pairs[pair] = QubitPair(self.qubits[pair[0]], self.qubits[pair[1]])
 
+        # register single qubit native gates to ``Qubit`` objects
+        native_gates = settings["native_gates"]
+        for q, gates in native_gates["single_qubit"].items():
+            self.qubits[q].native_gates = SingleQubitNatives.from_dict(self.qubits[q], gates)
+
         # register two qubit native gates to ``QubitPair`` objects
         self.two_qubit_native_types = NativeType(0)
-        if "two_qubit" in self.native_gates:
-            for pair, gatedict in self.native_gates["two_qubit"].items():
+        if "two_qubit" in native_gates:
+            for pair, gatedict in native_gates["two_qubit"].items():
                 pair = tuple(sorted(int(q) if q.isdigit() else q for q in pair.split("-")))
                 self.pairs[pair].native_gates = TwoQubitNatives.from_dict(self.qubits, gatedict)
                 self.two_qubit_native_types |= self.pairs[pair].native_gates.types
