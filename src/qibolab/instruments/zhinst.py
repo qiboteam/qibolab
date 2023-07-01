@@ -924,6 +924,8 @@ class Zurich(Controller):
 
         self.signal_map = {}
 
+        self.nt_sweeps = None
+
         sweepers = list(sweepers)
 
         dimensions = []
