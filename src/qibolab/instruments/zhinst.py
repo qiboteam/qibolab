@@ -1,5 +1,6 @@
 """Instrument for using the Zurich Instruments (Zhinst) devices."""
 
+import copy
 import os
 from collections import defaultdict
 from dataclasses import dataclass, replace
@@ -169,7 +170,7 @@ class ZhSweeper:
         if sweeper.parameter is Parameter.amplitude:
             return lo.SweepParameter(
                 uid=sweeper.parameter.name,
-                values=sweeper.values,
+                values=copy.copy(sweeper.values),
             )
         if sweeper.parameter is Parameter.duration:
             return lo.SweepParameter(
@@ -991,12 +992,15 @@ class Zurich(Controller):
         if sweeper.parameter is Parameter.amplitude:
             for pulse in sweeper.pulses:
                 pulse = pulse.copy()
-                sweeper.values = sweeper.values.copy()
-
                 pulse.amplitude *= max(abs(sweeper.values))
-                sweeper.values /= max(abs(sweeper.values))
 
+                # FIXME: Proper copy(sweeper) here
+                # sweeper_aux = copy.copy(sweeper)
+                aux_max = max(abs(sweeper.values))
+
+                sweeper.values /= aux_max
                 parameter = ZhSweeper(pulse, sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
+                sweeper.values *= aux_max
 
         if sweeper.parameter is Parameter.bias:
             for qubit in sweeper.qubits:
@@ -1037,7 +1041,17 @@ class Zurich(Controller):
 
         if sweeper.parameter is Parameter.amplitude:
             for pulse in sweeper.pulses:
+                pulse = pulse.copy()
+                pulse.amplitude *= max(abs(sweeper.values))
+
+                # FIXME: Proper copy(sweeper) here
+                # sweeper_aux = copy.copy(sweeper)
+                aux_max = max(abs(sweeper.values))
+
+                sweeper.values /= aux_max
                 zhsweeper = ZhSweeper(pulse, sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
+                sweeper.values *= aux_max
+
                 zhsweeper.uid = "amplitude"  # f"amplitude{i}"
                 path = "DEV12146"  # Hardcoded for SHFQC(SHFQA)
                 parameter = zhsweeper
