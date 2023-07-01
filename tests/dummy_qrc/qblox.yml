@@ -117,5 +117,5 @@ characterization:
             T2: 12405
             state0_voltage: 2000
             state1_voltage: 1000
-            mean_gnd_states: (0.002704-0.000786j)
-            mean_exc_states: (-0.000596-0.000932j)
+            mean_gnd_states: [0.002704, 0.000786]
+            mean_exc_states: [-0.000596, 0.000932]

@@ -47,8 +47,8 @@ class Qubit:
     T2_spin_echo: int = 0
     state0_voltage: int = 0
     state1_voltage: int = 0
-    mean_gnd_states: complex = 0 + 0.0j
-    mean_exc_states: complex = 0 + 0.0j
+    mean_gnd_states: List[float] = field(default_factory=lambda: [0, 0])
+    mean_exc_states: List[float] = field(default_factory=lambda: [0, 0])
     resonator_polycoef_flux: List[float] = field(default_factory=list)
 
     # parameters for single shot classification
@@ -88,9 +88,6 @@ class Qubit:
         """Dictionary containing characterization parameters."""
         exclude_fields = CHANNEL_NAMES + ("name", "flux_coupler", "native_gates")
         data = {fld.name: getattr(self, fld.name) for fld in fields(self) if fld.name not in exclude_fields}
-        # fix for dumping complex numbers in yaml
-        data["mean_gnd_states"] = str(data["mean_gnd_states"])
-        data["mean_exc_states"] = str(data["mean_exc_states"])
         return data
 
 
