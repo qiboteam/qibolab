@@ -53,12 +53,8 @@ class Platform:
             settings = yaml.safe_load(runcard.read_text())
 
         self.nqubits: int = settings["nqubits"]
-        self.description: Optional[str] = settings["description"] if "description" in settings else None
-        if "resonator_type" in settings:
-            self.resonator_type = settings["resonator_type"]
-        else:
-            self.resonator_type = "3D" if self.nqubits == 1 else "2D"
-
+        self.description: Optional[str] = settings.get("description")
+        self.resonator_type: str = settings.get("resonator_type", "3D" if self.nqubits == 1 else "2D")
         self.settings: PlatformSettings = PlatformSettings(**settings["settings"])
 
         # create qubit objects

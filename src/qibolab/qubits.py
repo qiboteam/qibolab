@@ -1,11 +1,16 @@
 from dataclasses import dataclass, field, fields
-from typing import ClassVar, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 from qibolab.channels import Channel
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 
 QubitId = Union[str, int]
 """Type for qubit names."""
+
+CHANNEL_NAMES = ("readout", "feedback", "drive", "flux", "twpa")
+"""Names of channels that belong to a qubit.
+Not all channels are required to operate a qubit.
+"""
 
 
 @dataclass
@@ -55,7 +60,6 @@ class Qubit:
     mixer_readout_g: float = 0.0
     mixer_readout_phi: float = 0.0
 
-    CHANNEL_NAMES: ClassVar[tuple] = ("readout", "feedback", "drive", "flux", "twpa")
     readout: Optional[Channel] = None
     feedback: Optional[Channel] = None
     twpa: Optional[Channel] = None
@@ -74,7 +78,7 @@ class Qubit:
 
     @property
     def channels(self):
-        for name in self.CHANNEL_NAMES:
+        for name in CHANNEL_NAMES:
             channel = getattr(self, name)
             if channel is not None:
                 yield channel
@@ -82,7 +86,7 @@ class Qubit:
     @property
     def characterization(self):
         """Dictionary containing characterization parameters."""
-        exclude_fields = self.CHANNEL_NAMES + ("name", "flux_coupler", "native_gates")
+        exclude_fields = CHANNEL_NAMES + ("name", "flux_coupler", "native_gates")
         data = {fld.name: getattr(self, fld.name) for fld in fields(self) if fld.name not in exclude_fields}
         # fix for dumping complex numbers in yaml
         data["mean_gnd_states"] = str(data["mean_gnd_states"])
