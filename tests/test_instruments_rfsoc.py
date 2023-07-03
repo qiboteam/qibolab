@@ -48,9 +48,6 @@ def test_convert_qubit(dummy_qrc):
     assert qubit == targ
 
 
-# def replace_pulse_shape(rfsoc_pulse: rfsoc_pulses.Pulse, shape: PulseShape) -> rfsoc_pulses.Pulse:
-
-
 def test_replace_pulse_shape(dummy_qrc):
     """Test rfsoc pulse conversions."""
 
