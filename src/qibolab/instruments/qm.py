@@ -719,14 +719,22 @@ class Sequence:
         wait_time = pulse.start - self.clock[qmpulse.element]
         if wait_time >= 12:
             qmpulse.wait_time = wait_time // 4 + 1
-            if isinstance(previous, BakedPulse):
-                # avoid overlapping pulses when baking
-                qmpulse.wait_time += 2
             self.clock[qmpulse.element] += 4 * qmpulse.wait_time
         self.clock[qmpulse.element] += qmpulse.duration
 
         self.pulse_finish[pulse.finish].append(qmpulse)
         self.qmpulses.append(qmpulse)
+
+    def shift(self):
+        """Shift all pulses that come after a ``BakedPulse`` a bit to avoid overlapping pulses."""
+        to_shift = collections.deque()
+        for qmpulse in self.qmpulses:
+            if isinstance(qmpulse, BakedPulse):
+                to_shift.extend(qmpulse.next_pulses)
+        while to_shift:
+            qmpulse = to_shift.popleft()
+            qmpulse.wait_time += 2
+            to_shift.extend(qmpulse.next_pulses)
 
 
 @dataclass
@@ -849,6 +857,9 @@ class QMOPX(Controller):
                 if pulse.duration % 4 != 0 or pulse.duration < 16:
                     raise_error(NotImplementedError, "1ns resolution is available for flux pulses only.")
                 self.config.register_pulse(qubits[pulse.qubit], pulse, self.time_of_flight, self.smearing)
+
+        qmsequence.shift()
+
         return qmsequence
 
     @staticmethod
