@@ -5,14 +5,14 @@ Tested on the following FPGA:
     - RFSoC 4x2
     - ZCU111
 """
-import copy
 import json
 import socket
 from dataclasses import asdict, dataclass
 from typing import Union
 
 import numpy as np
-import qibosoq.components as rfsoc
+import qibosoq.components.base as rfsoc
+import qibosoq.components.pulses as rfsoc_pulses
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
@@ -33,15 +33,20 @@ def convert_qubit(qubit: Qubit) -> rfsoc.Qubit:
     return rfsoc.Qubit(0.0, None)
 
 
-def replace_pulse_shape(rfsoc_pulse: rfsoc.Pulse, shape: PulseShape) -> rfsoc.Pulse:
-    """Set pulse shape parameters in rfsoc pulse object."""
-    new = copy.copy(rfsoc_pulse)
-    shape_name = new.shape = shape.name.lower()
+def replace_pulse_shape(rfsoc_pulse: rfsoc_pulses.Pulse, shape: PulseShape) -> rfsoc_pulses.Pulse:
+    """Set pulse shape parameters in rfsoc_pulses pulse object."""
+
+    pulse_dict = asdict(rfsoc_pulse)
+
+    shape_name = shape.name.lower()
+    cls = rfsoc_pulses.Shape[shape_name].value
+    args = {}
     if shape_name in {"gaussian", "drag"}:
-        new.rel_sigma = shape.rel_sigma
+        args["rel_sigma"] = shape.rel_sigma
         if shape_name == "drag":
-            new.beta = shape.beta
-    return new
+            args["beta"] = shape.beta
+
+    return cls(**pulse_dict, **args)
 
 
 def pulse_lo_frequency(pulse: Pulse, qubits: dict[int, Qubit]) -> int:
@@ -54,7 +59,7 @@ def pulse_lo_frequency(pulse: Pulse, qubits: dict[int, Qubit]) -> int:
     return lo_frequency
 
 
-def convert_pulse_sequence(sequence: PulseSequence, qubits: dict[int, Qubit]) -> list[rfsoc.Pulse]:
+def convert_pulse_sequence(sequence: PulseSequence, qubits: dict[int, Qubit]) -> list[rfsoc_pulses.Pulse]:
     """Convert PulseSequence to list of rfosc pulses with relative time."""
 
     abs_time = 0
@@ -69,14 +74,14 @@ def convert_pulse_sequence(sequence: PulseSequence, qubits: dict[int, Qubit]) ->
     return list_sequence
 
 
-def convert_pulse(pulse: Pulse, qubits: dict[int, Qubit], start_delay: float) -> rfsoc.Pulse:
+def convert_pulse(pulse: Pulse, qubits: dict[int, Qubit], start_delay: float) -> rfsoc_pulses.Pulse:
     """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`."""
     pulse_type = pulse.type.name.lower()
     dac = getattr(qubits[pulse.qubit], pulse_type).port.name
     adc = qubits[pulse.qubit].feedback.port.name if pulse_type == "readout" else None
     lo_frequency = pulse_lo_frequency(pulse, qubits)
 
-    rfsoc_pulse = rfsoc.Pulse(
+    rfsoc_pulse = rfsoc_pulses.Pulse(
         frequency=(pulse.frequency - lo_frequency) * HZ_TO_MHZ,
         amplitude=pulse.amplitude,
         relative_phase=np.degrees(pulse.relative_phase),
@@ -84,7 +89,6 @@ def convert_pulse(pulse: Pulse, qubits: dict[int, Qubit], start_delay: float) ->
         duration=pulse.duration * NS_TO_US,
         dac=dac,
         adc=adc,
-        shape=None,
         name=pulse.serial,
         type=pulse_type,
     )
