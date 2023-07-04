@@ -4,7 +4,7 @@ from qm import SimulationConfig
 from qm.QuantumMachinesManager import QuantumMachinesManager
 from qualang_tools.simulator_tools import create_simulator_controller_connections
 
-from qibolab.instruments.qm import QMOPX
+from qibolab.instruments.qm.driver import QMOPX
 
 
 @dataclass
