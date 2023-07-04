@@ -1,40 +1,40 @@
-""" RFSoC FPGA driver.
+"""RFSoC FPGA driver.
 
 This driver needs a Qibosoq server installed and running
 Tested on the following FPGA:
- *   RFSoC 4x2
- *   ZCU111
+    - RFSoC 4x2
+    - ZCU111
 """
-
 import copy
 import json
 import socket
-from dataclasses import asdict
-from typing import Dict, List, Tuple, Union
+from dataclasses import asdict, dataclass
+from typing import Union
 
 import numpy as np
 import qibosoq.components as rfsoc
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
+from qibolab.instruments.port import Port
 from qibolab.platform import Qubit
 from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType
 from qibolab.result import IntegratedResults, SampleResults
-from qibolab.sweeper import Parameter, Sweeper, SweeperType
+from qibolab.sweeper import BIAS, DURATION, START, Parameter, Sweeper
 
 HZ_TO_MHZ = 1e-6
 NS_TO_US = 1e-3
 
 
 def convert_qubit(qubit: Qubit) -> rfsoc.Qubit:
-    """Convert `qibolab.platforms.abstract.Qubit` to `qibosoq.abstract.Qubit`"""
+    """Convert `qibolab.platforms.abstract.Qubit` to `qibosoq.abstract.Qubit`."""
     if qubit.flux:
-        return rfsoc.Qubit(qubit.flux.bias, qubit.flux.ports[0][1])
+        return rfsoc.Qubit(qubit.flux.offset, qubit.flux.port.name)
     return rfsoc.Qubit(0.0, None)
 
 
 def replace_pulse_shape(rfsoc_pulse: rfsoc.Pulse, shape: PulseShape) -> rfsoc.Pulse:
-    """Set pulse shape parameters in rfsoc pulse object"""
+    """Set pulse shape parameters in rfsoc pulse object."""
     new = copy.copy(rfsoc_pulse)
     shape_name = new.shape = shape.name.lower()
     if shape_name in {"gaussian", "drag"}:
@@ -44,21 +44,21 @@ def replace_pulse_shape(rfsoc_pulse: rfsoc.Pulse, shape: PulseShape) -> rfsoc.Pu
     return new
 
 
-def pulse_lo_frequency(pulse: Pulse, qubits: Dict[int, Qubit]) -> int:
-    """Returns local_oscillator frequency (HZ) of a pulse"""
+def pulse_lo_frequency(pulse: Pulse, qubits: dict[int, Qubit]) -> int:
+    """Return local_oscillator frequency (HZ) of a pulse."""
     pulse_type = pulse.type.name.lower()
     try:
         lo_frequency = getattr(qubits[pulse.qubit], pulse_type).local_oscillator._frequency
-    except NotImplementedError:
+    except AttributeError:
         lo_frequency = 0
     return lo_frequency
 
 
-def convert_pulse(pulse: Pulse, qubits: Dict[int, Qubit]) -> rfsoc.Pulse:
-    """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`"""
+def convert_pulse(pulse: Pulse, qubits: dict[int, Qubit]) -> rfsoc.Pulse:
+    """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`."""
     pulse_type = pulse.type.name.lower()
-    dac = getattr(qubits[pulse.qubit], pulse_type).ports[0][1]
-    adc = qubits[pulse.qubit].feedback.ports[0][1] if pulse_type == "readout" else None
+    dac = getattr(qubits[pulse.qubit], pulse_type).port.name
+    adc = qubits[pulse.qubit].feedback.port.name if pulse_type == "readout" else None
     lo_frequency = pulse_lo_frequency(pulse, qubits)
 
     rfsoc_pulse = rfsoc.Pulse(
@@ -76,31 +76,46 @@ def convert_pulse(pulse: Pulse, qubits: Dict[int, Qubit]) -> rfsoc.Pulse:
     return replace_pulse_shape(rfsoc_pulse, pulse.shape)
 
 
-def convert_frequency_sweeper(sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubits: Dict[int, Qubit]):
-    """Converts frequencies for `qibosoq.abstract.Sweeper` considering LO and HZ_TO_MHZ"""
+def convert_units_sweeper(sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubits: dict[int, Qubit]):
+    """Convert units for `qibosoq.abstract.Sweeper` considering also LOs."""
     for idx, jdx in enumerate(sweeper.indexes):
-        if sweeper.parameter[idx] is rfsoc.Parameter.FREQUENCY:
+        parameter = sweeper.parameters[idx]
+        if parameter is rfsoc.Parameter.FREQUENCY:
             pulse = sequence[jdx]
             lo_frequency = pulse_lo_frequency(pulse, qubits)
 
             sweeper.starts[idx] = (sweeper.starts[idx] - lo_frequency) * HZ_TO_MHZ
             sweeper.stops[idx] = (sweeper.stops[idx] - lo_frequency) * HZ_TO_MHZ
+        elif parameter is rfsoc.Parameter.START:
+            sweeper.starts[idx] = sweeper.starts[idx] * NS_TO_US
+            sweeper.stops[idx] = sweeper.stops[idx] * NS_TO_US
+        elif parameter is rfsoc.Parameter.RELATIVE_PHASE:
+            sweeper.starts[idx] = np.degrees(sweeper.starts[idx])
+            sweeper.stops[idx] = np.degrees(sweeper.stops[idx])
 
 
-def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: Dict[int, Qubit]) -> rfsoc.Sweeper:
-    """Convert `qibolab.sweeper.Sweeper` to `qibosoq.abstract.Sweeper`"""
+def convert_parameter(par: Parameter) -> rfsoc.Parameter:
+    """Convert a qibolab sweeper.Parameter into a qibosoq.Parameter."""
+    return getattr(rfsoc.Parameter, par.name.upper())
 
+
+def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Qubit]) -> rfsoc.Sweeper:
+    """Convert `qibolab.sweeper.Sweeper` to `qibosoq.abstract.Sweeper`.
+
+    Note that any unit conversion is not done in this function (to avoid to do it multiple times).
+    Conversion will be done in `convert_units_sweeper`.
+    """
     parameters = []
     starts = []
     stops = []
     indexes = []
 
-    if sweeper.parameter is Parameter.bias:
+    if sweeper.parameter is BIAS:
         for qubit in sweeper.qubits:
             parameters.append(rfsoc.Parameter.BIAS)
             indexes.append(list(qubits.values()).index(qubit))
 
-            base_value = qubit.flux.bias
+            base_value = qubit.flux.offset
             values = sweeper.get_values(base_value)
             starts.append(values[0])
             stops.append(values[-1])
@@ -110,16 +125,33 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: Dict[int, Q
     else:
         for pulse in sweeper.pulses:
             indexes.append(sequence.index(pulse))
-
-            name = sweeper.parameter.name
-            parameters.append(getattr(rfsoc.Parameter, name.upper()))
-            base_value = getattr(pulse, name)
+            base_value = getattr(pulse, sweeper.parameter.name)
             values = sweeper.get_values(base_value)
             starts.append(values[0])
             stops.append(values[-1])
 
+            if sweeper.parameter not in {DURATION, START}:
+                parameters.append(convert_parameter(sweeper.parameter))
+            else:
+                if sweeper.parameter is DURATION:
+                    parameters.append(rfsoc.Parameter.DURATION)
+                elif sweeper.parameter is START:
+                    parameters.append(rfsoc.Parameter.START)
+
+                idx_sweep = sequence.index(pulse)
+                delta_start = values[0] - base_value
+                delta_stop = values[-1] - base_value
+
+                for next_pulse in sequence[idx_sweep + 1 :]:
+                    if next_pulse.qubit != pulse.qubit:
+                        continue
+                    parameters.append(rfsoc.Parameter.START)
+                    indexes.append(sequence.index(next_pulse))
+                    starts.append(next_pulse.start + delta_start)
+                    stops.append(next_pulse.start + delta_stop)
+
     return rfsoc.Sweeper(
-        parameter=parameters,
+        parameters=parameters,
         indexes=indexes,
         starts=starts,
         stops=stops,
@@ -127,8 +159,18 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: Dict[int, Q
     )
 
 
+@dataclass
+class RFSoCPort(Port):
+    """Port object of the RFSoC."""
+
+    name: int
+    """DAC number."""
+    offset: float = 0.0
+    """Amplitude factor for biasing."""
+
+
 class QibosoqError(RuntimeError):
-    """Exception raised when qibosoq server encounters an error
+    """Exception raised when qibosoq server encounters an error.
 
     Attributes:
     message -- The error message received from the server (qibosoq)
@@ -137,6 +179,7 @@ class QibosoqError(RuntimeError):
 
 class RFSoC(Controller):
     """Instrument object for controlling RFSoC FPGAs.
+
     The two way of executing pulses are with ``play`` (for arbitrary
     qibolab ``PulseSequence``) or with ``sweep`` that execute a
     ``PulseSequence`` object with one or more ``Sweeper``.
@@ -145,14 +188,16 @@ class RFSoC(Controller):
         cfg (rfsoc.Config): Configuration dictionary required for pulse execution.
     """
 
+    PortType = RFSoCPort
+
     def __init__(self, name: str, address: str, port: int):
-        """__init__
+        """Set server information and base configuration.
+
         Args:
             name (str): Name of the instrument instance.
             address (str): IP and port of the server (ex. 192.168.0.10)
             port (int): Port of the server (ex.6000)
         """
-
         super().__init__(name, address=address)
         self.host = address
         self.port = port
@@ -171,27 +216,23 @@ class RFSoC(Controller):
         """Empty method to comply with Instrument interface."""
 
     def setup(self):
-        """Deprecated method."""
+        """Empty deprecated method."""
 
     def _execute_pulse_sequence(
-        self,
-        sequence: PulseSequence,
-        qubits: Dict[int, Qubit],
-        average: bool,
-    ) -> Tuple[list, list]:
-        """Prepares the dictionary to send to the qibosoq server in order
-           to execute a PulseSequence.
+        self, sequence: PulseSequence, qubits: dict[int, Qubit], average: bool, opcode: rfsoc.OperationCode
+    ) -> tuple[list, list]:
+        """Prepare the commands dictionary to send to the qibosoq server.
 
         Args:
             sequence (`qibolab.pulses.PulseSequence`): arbitrary PulseSequence object to execute
             qubits: list of qubits (`qibolab.platforms.abstract.Qubit`) of the platform in the form of a dictionary
             average: if True returns averaged results, otherwise single shots
+            opcode: can be `rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE` or `rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE_RAW`
         Returns:
             Lists of I and Q value measured
         """
-
         server_commands = {
-            "operation_code": rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE,
+            "operation_code": opcode,
             "cfg": asdict(self.cfg),
             "sequence": [asdict(convert_pulse(pulse, qubits)) for pulse in sequence],
             "qubits": [asdict(convert_qubit(qubits[idx])) for idx in qubits],
@@ -203,12 +244,11 @@ class RFSoC(Controller):
     def _execute_sweeps(
         self,
         sequence: PulseSequence,
-        qubits: Dict[int, Qubit],
-        sweepers: List[rfsoc.Sweeper],
+        qubits: dict[int, Qubit],
+        sweepers: list[rfsoc.Sweeper],
         average: bool,
-    ) -> Tuple[list, list]:
-        """Prepares the dictionary to send to the qibosoq server in order
-           to execute a sweep.
+    ) -> tuple[list, list]:
+        """Prepare the commands dictionary to send to the qibosoq server.
 
         Args:
             sequence (`qibolab.pulses.PulseSequence`): arbitrary PulseSequence object to execute
@@ -218,9 +258,8 @@ class RFSoC(Controller):
         Returns:
             Lists of I and Q value measured
         """
-
         for sweeper in sweepers:
-            convert_frequency_sweeper(sweeper, sequence, qubits)
+            convert_units_sweeper(sweeper, sequence, qubits)
         server_commands = {
             "operation_code": rfsoc.OperationCode.EXECUTE_SWEEPS,
             "cfg": asdict(self.cfg),
@@ -234,8 +273,7 @@ class RFSoC(Controller):
 
     @staticmethod
     def _open_connection(host: str, port: int, server_commands: dict):
-        """Sends to the server on board all the objects and information needed for
-           executing a sweep or a pulse sequence.
+        """Send to the server the commands needed for execution.
 
            The communication protocol is:
             * convert the dictionary containing all needed information in json
@@ -269,13 +307,14 @@ class RFSoC(Controller):
 
     def play(
         self,
-        qubits: Dict[int, Qubit],
+        qubits: dict[int, Qubit],
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
-    ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
-        """Executes the sequence of instructions and retrieves readout results.
-           Each readout pulse generates a separate acquisition.
-           The relaxation_time and the number of shots have default values.
+    ) -> dict[str, Union[IntegratedResults, SampleResults]]:
+        """Execute the sequence of instructions and retrieves readout results.
+
+        Each readout pulse generates a separate acquisition.
+        The relaxation_time and the number of shots have default values.
 
         Args:
             qubits (dict): List of `qibolab.platforms.utils.Qubit` objects
@@ -290,8 +329,7 @@ class RFSoC(Controller):
             A dictionary mapping the readout pulses serial and respective qubits to
             qibolab results objects
         """
-
-        self.validate_input_command(sequence, execution_parameters)
+        self.validate_input_command(sequence, execution_parameters, sweep=False)
         self.update_cfg(execution_parameters)
 
         if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
@@ -299,10 +337,14 @@ class RFSoC(Controller):
         else:
             average = execution_parameters.averaging_mode is AveragingMode.CYCLIC
 
-        toti, totq = self._execute_pulse_sequence(sequence, qubits, average)
+        if execution_parameters.acquisition_type is AcquisitionType.RAW:
+            opcode = rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE_RAW
+        else:
+            opcode = rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE
+        toti, totq = self._execute_pulse_sequence(sequence, qubits, average, opcode)
 
         results = {}
-        adc_chs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in sequence.ro_pulses])
+        adc_chs = np.unique([qubits[p.qubit].feedback.port.name for p in sequence.ro_pulses])
 
         for j, channel in enumerate(adc_chs):
             for i, ro_pulse in enumerate(sequence.ro_pulses.get_qubit_pulses(channel)):
@@ -320,26 +362,33 @@ class RFSoC(Controller):
 
         return results
 
+    def play_sequences(self, qubits, sequence, options):
+        raise NotImplementedError
+
     @staticmethod
-    def validate_input_command(sequence: PulseSequence, execution_parameters: ExecutionParameters):
-        """Checks if sequence and execution_parameters are supported"""
+    def validate_input_command(sequence: PulseSequence, execution_parameters: ExecutionParameters, sweep: bool):
+        """Check if sequence and execution_parameters are supported."""
         if any(pulse.duration < 10 for pulse in sequence):
             raise ValueError("The minimum pulse length supported is 10 ns")
         if execution_parameters.acquisition_type is AcquisitionType.RAW:
-            raise NotImplementedError("Raw data acquisition is not supported")
+            if sweep:
+                raise NotImplementedError("Raw data acquisition is not compatible with sweepers")
+            if len(sequence.ro_pulses) != 1:
+                raise NotImplementedError("Raw data acquisition is compatible only with a single readout")
+            if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
+                raise NotImplementedError("Raw data acquisition can only be averaged")
         if execution_parameters.fast_reset:
             raise NotImplementedError("Fast reset is not supported")
 
     def update_cfg(self, execution_parameters: ExecutionParameters):
-        """Update rfsoc.Config object with new parameters"""
+        """Update rfsoc.Config object with new parameters."""
         if execution_parameters.nshots is not None:
             self.cfg.reps = execution_parameters.nshots
         if execution_parameters.relaxation_time is not None:
             self.cfg.repetition_duration = execution_parameters.relaxation_time * NS_TO_US
 
-    def classify_shots(self, i_values: List[float], q_values: List[float], qubit: Qubit) -> List[float]:
-        """Classify IQ values using qubit threshold and rotation_angle if available in runcard"""
-
+    def classify_shots(self, i_values: list[float], q_values: list[float], qubit: Qubit) -> list[float]:
+        """Classify IQ values using qubit threshold and rotation_angle if available in runcard."""
         if qubit.iq_angle is None or qubit.threshold is None:
             return None
         angle = qubit.iq_angle
@@ -353,12 +402,12 @@ class RFSoC(Controller):
 
     def play_sequence_in_sweep_recursion(
         self,
-        qubits: List[Qubit],
+        qubits: list[Qubit],
         sequence: PulseSequence,
         or_sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
-    ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
-        """Last recursion layer, if no sweeps are present
+    ) -> dict[str, Union[IntegratedResults, SampleResults]]:
+        """Last recursion layer, if no sweeps are present.
 
         After playing the sequence, the resulting dictionary keys need
         to be converted to the correct values.
@@ -379,13 +428,13 @@ class RFSoC(Controller):
 
     def recursive_python_sweep(
         self,
-        qubits: List[Qubit],
+        qubits: list[Qubit],
         sequence: PulseSequence,
         or_sequence: PulseSequence,
         *sweepers: rfsoc.Sweeper,
         average: bool,
         execution_parameters: ExecutionParameters,
-    ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
+    ) -> dict[str, Union[IntegratedResults, SampleResults]]:
         """Execute a sweep of an arbitrary number of Sweepers via recursion.
 
         Args:
@@ -413,7 +462,7 @@ class RFSoC(Controller):
         if len(sweepers) == 0:
             return self.play_sequence_in_sweep_recursion(qubits, sequence, or_sequence, execution_parameters)
 
-        if not self.get_if_python_sweep(sequence, qubits, *sweepers):
+        if not self.get_if_python_sweep(sequence, *sweepers):
             toti, totq = self._execute_sweeps(sequence, qubits, sweepers, average)
             res = self.convert_sweep_results(or_sequence, qubits, toti, totq, execution_parameters)
             return res
@@ -427,17 +476,20 @@ class RFSoC(Controller):
         results = {}
         for idx in range(sweeper.expts):
             # update values
-            sweeper_parameter = sweeper.parameter[0].name.lower()
-            if sweeper_parameter in {
-                "amplitude",
-                "frequency",
-                "relative_phase",
-            }:
-                for jdx, _ in enumerate(sweeper.indexes):
-                    setattr(sequence[sweeper.indexes[jdx]], sweeper_parameter, values[jdx][idx])
-            else:
-                for kdx, jdx in enumerate(sweeper.indexes):
-                    qubits[jdx].flux.bias = values[kdx][idx]
+            for jdx, kdx in enumerate(sweeper.indexes):
+                sweeper_parameter = sweeper.parameters[jdx]
+                if sweeper_parameter is rfsoc.Parameter.BIAS:
+                    qubits[kdx].flux.bias = values[jdx][idx]
+                elif sweeper_parameter in rfsoc.Parameter.variants(
+                    {
+                        "amplitude",
+                        "frequency",
+                        "relative_phase",
+                        "start",
+                        "duration",
+                    }
+                ):
+                    setattr(sequence[kdx], sweeper_parameter.name.lower(), values[jdx][idx])
 
             res = self.recursive_python_sweep(
                 qubits, sequence, or_sequence, *sweepers[1:], average=average, execution_parameters=execution_parameters
@@ -447,10 +499,11 @@ class RFSoC(Controller):
 
     @staticmethod
     def merge_sweep_results(
-        dict_a: Dict[str, Union[IntegratedResults, SampleResults]],
-        dict_b: Dict[str, Union[IntegratedResults, SampleResults]],
-    ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
+        dict_a: dict[str, Union[IntegratedResults, SampleResults]],
+        dict_b: dict[str, Union[IntegratedResults, SampleResults]],
+    ) -> dict[str, Union[IntegratedResults, SampleResults]]:
         """Merge two dictionary mapping pulse serial to Results object.
+
         If dict_b has a key (serial) that dict_a does not have, simply add it,
         otherwise sum the two results
 
@@ -467,57 +520,53 @@ class RFSoC(Controller):
                 dict_a[serial] = dict_b[serial]
         return dict_a
 
-    def get_if_python_sweep(self, sequence: PulseSequence, qubits: List[Qubit], *sweepers: rfsoc.Sweeper) -> bool:
+    def get_if_python_sweep(self, sequence: PulseSequence, *sweepers: rfsoc.Sweeper) -> bool:
         """Check if a sweeper must be run with python loop or on hardware.
 
         To be run on qick internal loop a sweep must:
             * not be on the readout frequency
+            * not be a duration sweeper
             * only one pulse per channel supported
 
         Args:
             sequence (`qibolab.pulses.PulseSequence`). Pulse sequence to play.
-            qubits (list): List of `qibolab.platforms.utils.Qubit` objects
-                           passed from the platform.
             *sweepers (`qibosoq.abstract.Sweeper`): Sweeper objects.
         Returns:
             A boolean value true if the sweeper must be executed by python
             loop, false otherwise
         """
-
         for sweeper in sweepers:
-            is_amp = sweeper.parameter[0] is rfsoc.Parameter.AMPLITUDE
-            is_freq = sweeper.parameter[0] is rfsoc.Parameter.FREQUENCY
+            for sweep_idx, parameter in enumerate(sweeper.parameters):
+                if parameter is rfsoc.Parameter.BIAS:
+                    continue
+                if parameter is rfsoc.Parameter.DURATION:
+                    return True
 
-            if is_freq or is_amp:
-                is_ro = sequence[sweeper.indexes[0]].type == PulseType.READOUT
+                is_freq = parameter is rfsoc.Parameter.FREQUENCY
+                is_ro = sequence[sweeper.indexes[sweep_idx]].type == PulseType.READOUT
+
                 # if it's a sweep on the readout freq do a python sweep
                 if is_freq and is_ro:
                     return True
 
-                # check if the sweeped pulse is the first and only on the DAC channel
-                for idx in sweeper.indexes:
-                    sweep_pulse = sequence[idx]
-                    already_pulsed = []
-                    for pulse in sequence:
-                        pulse_q = qubits[pulse.qubit]
-                        pulse_is_ro = pulse.type == PulseType.READOUT
-                        pulse_ch = pulse_q.readout.ports[0][1] if pulse_is_ro else pulse_q.drive.ports[0][1]
-
-                        if pulse_ch in already_pulsed and pulse == sweep_pulse:
-                            return True
-                        already_pulsed.append(pulse_ch)
+            for idx in sweeper.indexes:
+                sweep_pulse = sequence[idx]
+                channel = sweep_pulse.channel
+                ch_pulses = sequence.get_channel_pulses(channel)
+                if len(ch_pulses) > 1:
+                    return True
         # if all passed, do a firmware sweep
         return False
 
     def convert_sweep_results(
         self,
         original_ro: PulseSequence,
-        qubits: List[Qubit],
-        toti: List[float],
-        totq: List[float],
+        qubits: list[Qubit],
+        toti: list[float],
+        totq: list[float],
         execution_parameters: ExecutionParameters,
-    ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
-        """Convert sweep res to qibolab dict res
+    ) -> dict[str, Union[IntegratedResults, SampleResults]]:
+        """Convert sweep res to qibolab dict res.
 
         Args:
             original_ro (`qibolab.pulses.PulseSequence`): Original PulseSequence
@@ -536,9 +585,9 @@ class RFSoC(Controller):
         """
         results = {}
 
-        adcs = np.unique([qubits[p.qubit].feedback.ports[0][1] for p in original_ro])
+        adcs = np.unique([qubits[p.qubit].feedback.port.name for p in original_ro])
         for k, k_val in enumerate(adcs):
-            adc_ro = [pulse for pulse in original_ro if qubits[pulse.qubit].feedback.ports[0][1] == k_val]
+            adc_ro = [pulse for pulse in original_ro if qubits[pulse.qubit].feedback.port.name == k_val]
             for i, (ro_pulse, original_ro_pulse) in enumerate(zip(adc_ro, original_ro)):
                 i_vals = np.array(toti[k][i])
                 q_vals = np.array(totq[k][i])
@@ -566,12 +615,13 @@ class RFSoC(Controller):
 
     def sweep(
         self,
-        qubits: Dict[int, Qubit],
+        qubits: dict[int, Qubit],
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
         *sweepers: Sweeper,
-    ) -> Dict[str, Union[IntegratedResults, SampleResults]]:
-        """Executes the sweep and retrieves the readout results.
+    ) -> dict[str, Union[IntegratedResults, SampleResults]]:
+        """Execute the sweep and retrieves the readout results.
+
         Each readout pulse generates a separate acquisition.
         The relaxation_time and the number of shots have default values.
 
@@ -589,8 +639,7 @@ class RFSoC(Controller):
             A dictionary mapping the readout pulses serial and respective qubits to
             results objects
         """
-
-        self.validate_input_command(sequence, execution_parameters)
+        self.validate_input_command(sequence, execution_parameters, sweep=True)
         self.update_cfg(execution_parameters)
 
         if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
@@ -602,9 +651,9 @@ class RFSoC(Controller):
 
         sweepsequence = sequence.copy()
 
-        bias_change = any(sweep.parameter is Parameter.bias for sweep in sweepers)
+        bias_change = any(sweep.parameter is BIAS for sweep in sweepers)
         if bias_change:
-            initial_biases = [qubits[idx].flux.bias if qubits[idx].flux is not None else None for idx in qubits]
+            initial_biases = [qubits[idx].flux.offset if qubits[idx].flux is not None else None for idx in qubits]
 
         results = self.recursive_python_sweep(
             qubits,
@@ -616,8 +665,8 @@ class RFSoC(Controller):
         )
 
         if bias_change:
-            for idx, qubit in enumerate(qubits):
+            for idx, qubit in enumerate(qubits.values()):
                 if qubit.flux is not None:
-                    qubit.flux.bias = initial_biases[idx]
+                    qubit.flux.offset = initial_biases[idx]
 
         return results

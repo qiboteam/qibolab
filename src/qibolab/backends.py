@@ -3,12 +3,12 @@ import itertools
 import numpy as np
 from qibo import __version__ as qibo_version
 from qibo.backends import NumpyBackend
-from qibo.config import log, raise_error
+from qibo.config import raise_error
 from qibo.states import CircuitResult
 
 from qibolab import ExecutionParameters
 from qibolab import __version__ as qibolab_version
-from qibolab import create_platform, dummy
+from qibolab import create_platform
 from qibolab.compilers import Compiler
 from qibolab.platform import Platform
 from qibolab.transpilers import Pipeline
@@ -82,7 +82,7 @@ class QibolabBackend(NumpyBackend):
                 fuse_one_qubit=fuse_one_qubit,
                 check_transpiled=check_transpiled,
             )
-        elif initial_state is not None:
+        if initial_state is not None:
             raise_error(
                 ValueError,
                 "Hardware backend only supports circuits as initial states.",
@@ -92,7 +92,7 @@ class QibolabBackend(NumpyBackend):
             native_circuit = circuit
         else:
             # Transform a circuit into proper connectivity and native gates
-            native_circuit, qubit_map = self.transpiler.transpile(circuit)
+            native_circuit, qubit_map = self.transpiler(circuit)
             # TODO: Use the qubit map to properly map measurements
             if check_transpiled:
                 self.transpiler.check_execution(circuit, native_circuit)

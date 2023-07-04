@@ -202,10 +202,44 @@ Results
    :show-inheritance:
    :member-order: bysource
 
-Instruments supported
+
+Abstract Instruments
+====================
+
+All instrument implementations should inherit the following class
+and implement its abstract methods
+
+.. autoclass:: qibolab.instruments.abstract.Instrument
+   :members:
+   :member-order: bysource
+
+Instruments that contain arbitrary waveform generators (AWGs) and
+can play pulses should inherit
+
+.. autoclass:: qibolab.instruments.abstract.Controller
+   :members:
+   :member-order: bysource
+
+Such instruments are connected to :class:`qibolab.instruments.port.Port`
+objects, which provide the user interface for setting instrument settings.
+
+.. autoclass:: qibolab.instruments.port.Port
+   :members:
+   :member-order: bysource
+
+Auxiliary instruments that do not play instruments can inherit
+:class:`qibolab.instruments.abstract.Instrument` directly.
+An example are local oscillators
+
+.. autoclass:: qibolab.instruments.oscillator.LocalOscillator
+   :members:
+   :member-order: bysource
+
+
+Supperted Instruments
 =====================
 
-Qibolab currently supports different instruments including
+Qibolab provides drivers for different instruments including
 local oscillators, qblox and FPGAs.
 
 Qblox
@@ -307,7 +341,11 @@ Transpiler
    :members:
    :member-order: bysource
 
-.. automodule:: qibolab.transpilers.general_connectivity
+.. automodule:: qibolab.transpilers.routing
+   :members:
+   :member-order: bysource
+
+.. automodule:: qibolab.transpilers.placer
    :members:
    :member-order: bysource
 

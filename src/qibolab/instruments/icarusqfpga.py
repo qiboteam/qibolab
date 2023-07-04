@@ -19,13 +19,15 @@ class PulseBlaster(Instrument):
         self.port = port
         self._pins = None
 
-    def setup(self, holdtime_ns, pins=list(range(24)), **kwargs):
+    def setup(self, holdtime_ns, pins=None, **kwargs):
         """Setup the PulseBlaster.
 
         Arguments:
             holdtime_ns (int): TTL pulse length and delay between TTL pulses. The experiment repetition frequency is 1 / (2 * holdtime_ns).
             pins (int): Pins to trigger in hex, defaults to all pins.
         """
+        if pins is None:
+            pins = list(range(24))
         self._pins = self._hexify(pins)
         self._holdtime = holdtime_ns
 
@@ -90,6 +92,7 @@ class IcarusQFPGA(Instrument):
         self._thread = None
         self._buffer = None
         self._adcs_to_read = None
+        self.nshots = None
 
     def setup(self, dac_sampling_rate, adcs_to_read, **kwargs):
         """Sets the sampling rate of the RFSoC. May need to be repeated several times due to multi-tile sync error.
@@ -158,7 +161,6 @@ class IcarusQFPGA(Instrument):
         """
         # Create buffer to hold ADC data.
         # TODO: Create flag to handle single shot measurement / buffer assignment per shot.
-        pass
 
     def _play(self, nshots):
         """Starts ADC data acquisition and transfer on the RFSoC."""
@@ -180,10 +182,10 @@ class IcarusQFPGA(Instrument):
                 s.sendall(struct.pack("B", adc))  # send ADC channel to read
 
             # Use the same socket to start listening for ADC data transfer.
-            for k in range(nshots):
-                for i in self._adcs_to_read:
+            for _ in range(nshots):
+                for _ in self._adcs_to_read:
                     # IcarusQ board may send channel/shot data out of order due to threading implementation.
-                    shotnum = struct.unpack("H", s.recv(2))[0]
+                    # shotnum = struct.unpack("H", s.recv(2))[0]
                     channel = struct.unpack("H", s.recv(2))[0]
 
                     # Start listening for ADC_SAMPLE_SIZE * 2 bytes corresponding to data per channel.

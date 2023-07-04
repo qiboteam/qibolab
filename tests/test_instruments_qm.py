@@ -3,7 +3,8 @@ import pytest
 from qm import qua
 
 from qibolab import AcquisitionType, ExecutionParameters, create_platform
-from qibolab.instruments.abstract import INSTRUMENTS_DATA_FOLDER
+
+# Are you testing Singleshot or Averaging ?
 from qibolab.instruments.qm import QMOPX, Acquisition, QMPort, QMPulse, Sequence
 from qibolab.pulses import FluxPulse, Pulse, ReadoutPulse, Rectangular
 
@@ -123,22 +124,22 @@ def test_qmopx_register_analog_output_controllers():
     name = "test"
     address = "0.0.0.0:0"
     opx = QMOPX(name, address)
-    port = QMPort(("con1", 1), ("con1", 2))
+    port = QMPort((("con1", 1), ("con1", 2)))
     opx.config.register_analog_output_controllers(port)
     controllers = opx.config.controllers
     assert controllers == {"con1": {"analog_outputs": {1: {"offset": 0.0}, 2: {"offset": 0.0}}}}
 
     opx = QMOPX(name, address)
-    port = QMPort(("con1", 1), ("con1", 2))
+    port = QMPort((("con1", 1), ("con1", 2)))
     port.offset = 0.005
     opx.config.register_analog_output_controllers(port)
     controllers = opx.config.controllers
     assert controllers == {"con1": {"analog_outputs": {1: {"offset": 0.005}, 2: {"offset": 0.005}}}}
 
     opx = QMOPX(name, address)
-    port = QMPort(("con2", 2))
+    port = QMPort((("con2", 2),))
     port.offset = 0.005
-    port.filter = {"feedforward": [1, -1], "feedback": [0.95]}
+    port.filters = {"feedforward": [1, -1], "feedback": [0.95]}
     opx.config.register_analog_output_controllers(port)
     controllers = opx.config.controllers
     assert controllers == {

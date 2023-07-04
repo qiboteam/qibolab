@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from qibo.config import raise_error
 
@@ -87,8 +87,7 @@ class Channel:
 
     @property
     def attenuation(self):
-        """Attenuation that is applied to this port."""
-        raise_error(NotImplementedError, "Instruments do not support attenuation.")
+        return self.port.attenuation
 
     @attenuation.setter
     def attenuation(self, value):
@@ -103,12 +102,12 @@ class Channel:
         self.port.power_range = value
 
     @property
-    def filter(self):
-        return self.port.filter
+    def filters(self):
+        return self.port.filters
 
-    @filter.setter
-    def filter(self, value):
-        self.port.filter = value
+    @filters.setter
+    def filters(self, value):
+        self.port.filters = value
 
 
 @dataclass
@@ -122,14 +121,19 @@ class ChannelMap:
 
     _channels: Dict[str, Channel] = field(default_factory=dict)
 
-    @classmethod
-    def from_names(cls, *names):
-        """Construct multiple :class:`qibolab.designs.channel.Channel` objects from names.
+    def add(self, *items):
+        """Add multiple items to the channel map.
 
-        Args:
-            names (str): List of channel names.
+        If :class:`qibolab.channels.Channel` objects are given they are added to the channel map.
+        If a different type is given, a :class:`qibolab.channels.Channel` with the
+        corresponding name is created and added to the channel map.
         """
-        return cls({name: Channel(name) for name in names})
+        for item in items:
+            if isinstance(item, Channel):
+                self[item.name] = item
+            else:
+                self[item] = Channel(item)
+        return self
 
     def __getitem__(self, name):
         return self._channels[name]
@@ -147,13 +151,13 @@ class ChannelMap:
         channels.update(channel_map._channels)
         return self.__class__(channels)
 
-    def __ior__(self, channel_map):
-        if not isinstance(channel_map, type(self)):
+    def __ior__(self, items):
+        if not isinstance(items, type(self)):
             try:
-                if isinstance(channel_map, str):
+                if isinstance(items, str):
                     raise TypeError
-                channel_map = type(self).from_names(*channel_map)
+                items = type(self)().add(*items)
             except TypeError:
-                channel_map = type(self).from_names(channel_map)
-        self._channels.update(channel_map._channels)
+                items = type(self)().add(items)
+        self._channels.update(items._channels)
         return self

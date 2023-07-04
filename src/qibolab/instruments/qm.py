@@ -2,10 +2,10 @@ import collections
 import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import ClassVar, Dict, List, Optional, Tuple, Union
 
 import numpy as np
-from qibo.config import log, raise_error
+from qibo.config import raise_error
 from qm import qua
 from qm.qua import declare, declare_stream, fixed, for_
 from qm.qua._dsl import _ResultSource, _Variable  # for type declaration only
@@ -32,52 +32,18 @@ from qibolab.sweeper import Parameter
 
 # TODO: Split the contents of this module to multiple files
 
-PortType = Tuple[str, int]
+PortId = Tuple[str, int]
 """Type for port definition, for example: ("con1", 2)."""
+IQPortId = Union[Tuple[PortId], Tuple[PortId, PortId]]
+"""Type for collections of IQ ports."""
 
 
 @dataclass
 class QMPort(Port):
-    controller_i: PortType
-    controller_q: Optional[PortType] = None
-
-    # TODO: Shall we implement seperate setters for i and q?
-    _offset: float = 0.0
-    _gain: int = 0
-    _filter: Optional[Dict[str, float]] = None
-
-    def __iter__(self):
-        yield self.controller_i
-        if self.controller_q is not None:
-            yield self.controller_q
-
-    @property
-    def offset(self):
-        return self._offset
-
-    @offset.setter
-    def offset(self, value):
-        self._offset = value
-
-    @property
-    def gain(self):
-        return self._gain
-
-    @gain.setter
-    def gain(self, value):
-        self._gain = value
-
-    @property
-    def filter(self):
-        """Pulse shape filters. Relevant for ports connected to flux channels.
-
-        QM syntax should be followed for the filters.
-        """
-        return self._filter
-
-    @filter.setter
-    def filter(self, value):
-        self._filter = value
+    name: IQPortId
+    offset: float = 0.0
+    gain: int = 0
+    filters: Optional[Dict[str, float]] = None
 
 
 @dataclass
@@ -93,7 +59,7 @@ class QMConfig:
     integration_weights: dict = field(default_factory=dict)
     mixers: dict = field(default_factory=dict)
 
-    def register_analog_output_controllers(self, port):
+    def register_analog_output_controllers(self, port: QMPort):
         """Register controllers in the ``config``.
 
         Args:
@@ -101,12 +67,12 @@ class QMConfig:
                 Contains information about the controller and port number and
                 some parameters (offset, gain, filter, etc.).
         """
-        for con, port_number in port:
+        for con, port_number in port.name:
             if con not in self.controllers:
                 self.controllers[con] = {"analog_outputs": {}}
             self.controllers[con]["analog_outputs"][port_number] = {"offset": port.offset}
-            if port.filter is not None:
-                self.controllers[con]["analog_outputs"][port_number]["filter"] = port.filter
+            if port.filters is not None:
+                self.controllers[con]["analog_outputs"][port_number]["filter"] = port.filters
 
     @staticmethod
     def iq_imbalance(g, phi):
@@ -142,8 +108,8 @@ class QMConfig:
             lo_frequency = math.floor(qubit.drive.local_oscillator.frequency)
             self.elements[f"drive{qubit.name}"] = {
                 "mixInputs": {
-                    "I": qubit.drive.port.controller_i,
-                    "Q": qubit.drive.port.controller_q,
+                    "I": qubit.drive.port.name[0],
+                    "Q": qubit.drive.port.name[1],
                     "lo_frequency": lo_frequency,
                     "mixer": f"mixer_drive{qubit.name}",
                 },
@@ -177,7 +143,7 @@ class QMConfig:
             self.register_analog_output_controllers(qubit.readout.port)
             # register feedback controllers
             controllers = self.controllers
-            for con, port_number in qubit.feedback.port:
+            for con, port_number in qubit.feedback.port.name:
                 if con not in controllers:
                     controllers[con] = {
                         "analog_outputs": {},
@@ -197,16 +163,16 @@ class QMConfig:
             lo_frequency = math.floor(qubit.readout.local_oscillator.frequency)
             self.elements[f"readout{qubit.name}"] = {
                 "mixInputs": {
-                    "I": qubit.readout.port.controller_i,
-                    "Q": qubit.readout.port.controller_q,
+                    "I": qubit.readout.port.name[0],
+                    "Q": qubit.readout.port.name[1],
                     "lo_frequency": lo_frequency,
                     "mixer": f"mixer_readout{qubit.name}",
                 },
                 "intermediate_frequency": intermediate_frequency,
                 "operations": {},
                 "outputs": {
-                    "out1": qubit.feedback.port.controller_i,
-                    "out2": qubit.feedback.port.controller_q,
+                    "out1": qubit.feedback.port.name[0],
+                    "out2": qubit.feedback.port.name[1],
                 },
                 "time_of_flight": time_of_flight,
                 "smearing": smearing,
@@ -239,7 +205,7 @@ class QMConfig:
             # register element
             self.elements[f"flux{qubit.name}"] = {
                 "singleInput": {
-                    "port": qubit.flux.port.controller_i,
+                    "port": qubit.flux.port.name[0],
                 },
                 "intermediate_frequency": intermediate_frequency,
                 "operations": {},
@@ -588,13 +554,13 @@ class QMPulse:
         """Time (in clock cycles) to wait before playing this pulse.
         Calculated and assigned by :meth:`qibolab.instruments.qm.Sequence.add`."""
         self.wait_time_variable: Optional[_Variable] = None
-        """Time (in clock cycles) to wait before playing this pulse when we are sweeping delay."""
+        """Time (in clock cycles) to wait before playing this pulse when we are sweeping start."""
         self.acquisition: Acquisition = None
         """Data class containing the variables required for data acquisition for the instrument."""
 
         self.next: set = set()
         """Pulses that will be played after the current pulse.
-        These pulses need to be re-aligned if we are sweeping the delay or duration."""
+        These pulses need to be re-aligned if we are sweeping the start or duration."""
 
         self.baked = None
         """Baking object implementing the pulse when 1ns resolution is needed."""
@@ -606,14 +572,13 @@ class QMPulse:
         """Instrument clock cycles (1 cycle = 4ns) to wait before playing the pulse.
 
         This property will be used in the QUA ``wait`` command, so that it is compatible
-        with and without delay sweepers.
+        with and without start sweepers.
         """
         if self.wait_time_variable is not None:
             return self.wait_time_variable + self.wait_time
-        elif self.wait_time >= 4:
+        if self.wait_time >= 4:
             return self.wait_time
-        else:
-            return None
+        return None
 
     def declare_output(self, options, threshold=None, angle=None):
         average = options.averaging_mode is AveragingMode.CYCLIC
@@ -726,6 +691,8 @@ class QMOPX(Controller):
         address (str): IP address and port for connecting to the OPX instruments.
     """
 
+    PortType: ClassVar = QMPort
+
     name: str
     address: str
 
@@ -739,19 +706,11 @@ class QMOPX(Controller):
     """Time of flight used for hardware signal integration."""
     smearing: int = 0
     """Smearing used for hardware signal integration."""
-    ports: Dict[Tuple[PortType], QMPort] = field(default_factory=dict)
+    _ports: Dict[IQPortId, QMPort] = field(default_factory=dict)
     """Dictionary holding the ports of controllers that are connected."""
 
-    def __getitem__(self, value):
-        if not isinstance(value, tuple):
-            raise_error(TypeError, f"Cannot obtain port {value} from QMOPX.")
-        if not isinstance(value[0], tuple):
-            raise_error(TypeError, f"Cannot obtain port {value} from QMOPX.")
-        if len(value) > 2:
-            raise_error(ValueError, f"Cannot obtain port {value} from QMOPX.")
-        if value not in self.ports:
-            self.ports[value] = QMPort(*value)
-        return self.ports[value]
+    def __post_init__(self):
+        super().__init__(self.name, self.address)
 
     def connect(self):
         """Connect to the QM manager."""
@@ -990,22 +949,22 @@ class QMOPX(Controller):
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
 
-    def sweep_delay(self, sweepers, qubits, qmsequence, relaxation_time):
+    def sweep_start(self, sweepers, qubits, qmsequence, relaxation_time):
         sweeper = sweepers[0]
         if min(sweeper.values) < 16:
-            raise_error(ValueError, "Cannot sweep delay less than 16ns.")
+            raise_error(ValueError, "Cannot sweep start less than 16ns.")
 
-        delay = declare(int)
+        start = declare(int)
         values = np.array(sweeper.values) // 4
-        with for_(*from_array(delay, values.astype(int))):
+        with for_(*from_array(start, values.astype(int))):
             for pulse in sweeper.pulses:
                 qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
-                # find all pulses that are connected to ``qmpulse`` and update their delays
+                # find all pulses that are connected to ``qmpulse`` and update their starts
                 to_process = {qmpulse}
                 while to_process:
                     next_qmpulse = to_process.pop()
                     to_process |= next_qmpulse.next
-                    next_qmpulse.wait_time_variable = delay
+                    next_qmpulse.wait_time_variable = start
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
 
@@ -1014,7 +973,7 @@ class QMOPX(Controller):
         Parameter.amplitude: sweep_amplitude,
         Parameter.relative_phase: sweep_relative_phase,
         Parameter.bias: sweep_bias,
-        Parameter.delay: sweep_delay,
+        Parameter.start: sweep_start,
     }
 
     def sweep_recursion(self, sweepers, qubits, qmsequence, relaxation_time):
@@ -1056,3 +1015,6 @@ class QMOPX(Controller):
 
         result = self.execute_program(experiment)
         return self.fetch_results(result, qmsequence.ro_pulses)
+
+    def play_sequences(self, qubits, sequence, options):
+        raise NotImplementedError

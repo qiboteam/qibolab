@@ -1,6 +1,8 @@
+"""Platform for controlling quantum devices."""
+
 import math
 import re
-from dataclasses import dataclass, field, replace
+from dataclasses import replace
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -9,9 +11,12 @@ import yaml
 from qibo.config import log, raise_error
 
 from qibolab.channels import Channel, ChannelMap
+from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument
 from qibolab.native import NativeType, SingleQubitNatives, TwoQubitNatives
+from qibolab.pulses import PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPair
+from qibolab.sweeper import Sweeper
 
 
 class Platform:
@@ -25,7 +30,7 @@ class Platform:
     """
 
     def __init__(self, name, runcard, instruments, channels):
-        log.info(f"Loading platform {name}")
+        log.info("Loading platform %s", name)
 
         self.name = name
         self.runcard = runcard
@@ -62,7 +67,7 @@ class Platform:
 
     def reload_settings(self):
         # TODO: Remove ``self.settings``
-        if self.settings == None:
+        if self.settings is None:
             # Load initial configuration
             if isinstance(self.runcard, dict):
                 settings = self.settings = self.runcard
@@ -94,13 +99,13 @@ class Platform:
                 # register channels to qubits when we are using the old format
                 # needed for ``NativeGates`` to work
                 if "qubit_channel_map" in self.settings:
-                    ro, qd, qf, _ = self.settings["qubit_channel_map"][q]
-                    if ro is not None:
-                        qubit.readout = Channel(ro)
-                    if qd is not None:
-                        qubit.drive = Channel(qd)
-                    if qf is not None:
-                        qubit.flux = Channel(qf)
+                    readout, drive, flux, _ = self.settings["qubit_channel_map"][q]
+                    if readout is not None:
+                        qubit.readout = Channel(readout)
+                    if drive is not None:
+                        qubit.drive = Channel(drive)
+                    if flux is not None:
+                        qubit.flux = Channel(flux)
                 # register single qubit native gates to Qubit objects
                 if q in self.native_gates["single_qubit"]:
                     qubit.native_gates = SingleQubitNatives.from_dict(qubit, self.native_gates["single_qubit"][q])
@@ -173,9 +178,7 @@ class Platform:
 
                 # resonator_punchout_attenuation
                 elif par == "readout_attenuation":
-                    # TODO: Are we going to save the attenuation somwhere in the native_gates or characterization
-                    # in all platforms?
-                    True
+                    self.qubits[qubit].readout.attenuation = value
 
                 # resonator_punchout_attenuation
                 elif par == "bare_resonator_frequency":
@@ -188,6 +191,8 @@ class Platform:
                     sweetspot = float(value)
                     self.qubits[qubit].sweetspot = sweetspot
                     self.settings["characterization"]["single_qubit"][qubit]["sweetspot"] = sweetspot
+                    # set sweetspot as the flux offset (IS THIS NEEDED?)
+                    self.qubits[qubit].flux.offset = sweetspot
 
                 # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
                 elif par == "drive_frequency":
@@ -249,15 +254,15 @@ class Platform:
 
                 # classification
                 elif par == "mean_gnd_states":
-                    mean_gnd_states = str(value)
-                    self.qubits[qubit].mean_gnd_states = mean_gnd_states
-                    self.settings["characterization"]["single_qubit"][qubit]["mean_gnd_states"] = mean_gnd_states
+                    gnd_state = [float(voltage) for voltage in value]
+                    self.qubits[qubit].mean_gnd_states = gnd_state
+                    self.settings["characterization"]["single_qubit"][qubit]["mean_gnd_states"] = gnd_state
 
                 # classification
                 elif par == "mean_exc_states":
-                    mean_exc_states = str(value)
-                    self.qubits[qubit].mean_exc_states = mean_exc_states
-                    self.settings["characterization"]["single_qubit"][qubit]["mean_exc_states"] = mean_exc_states
+                    exc_state = [float(voltage) for voltage in value]
+                    self.qubits[qubit].mean_exc_states = exc_state
+                    self.settings["characterization"]["single_qubit"][qubit]["mean_exc_states"] = exc_state
 
                 # drag pulse tunning
                 elif "beta" in par:
@@ -273,9 +278,6 @@ class Platform:
                 elif par == "classifiers_hpars":
                     self.qubits[qubit].classifiers_hpars = value
                     self.settings["characterization"]["single_qubit"][qubit]["classifiers_hpars"] = value
-
-                elif par == "readout_attenuation":
-                    self.set_attenuation(qubit, value)
 
                 else:
                     raise_error(ValueError, f"Unknown parameter {par} for qubit {qubit}")
@@ -298,9 +300,15 @@ class Platform:
         self.is_connected = True
 
     def setup(self):
-        """Prepares instruments to execute experiments."""
+        """Prepares instruments to execute experiments.
+
+        Sets flux port offsets to the qubit sweetspots.
+        """
         for instrument in self.instruments:
             instrument.setup()
+        for qubit in self.qubits.values():
+            if qubit.flux is not None and qubit.sweetspot != 0:
+                qubit.flux.offset = qubit.sweetspot
 
     def start(self):
         """Starts all the instruments."""
@@ -321,17 +329,8 @@ class Platform:
                 instrument.disconnect()
         self.is_connected = False
 
-    def execute_pulse_sequence(self, sequence, options, **kwargs):
-        """Executes a pulse sequence.
-
-        Args:
-            sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
-            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
-            **kwargs: May need them for something
-
-        Returns:
-            Readout results acquired by after execution.
-        """
+    def _execute(self, method, sequences, options, **kwargs):
+        """Executes the sequences on the controllers"""
         if options.nshots is None:
             options = replace(options, nshots=self.nshots)
 
@@ -341,7 +340,7 @@ class Platform:
         result = {}
         for instrument in self.instruments:
             if isinstance(instrument, Controller):
-                new_result = instrument.play(self.qubits, sequence, options)
+                new_result = getattr(instrument, method)(self.qubits, sequences, options)
                 if isinstance(new_result, dict):
                     result.update(new_result)
                 elif new_result is not None:
@@ -349,7 +348,31 @@ class Platform:
                     result = new_result
         return result
 
-    def sweep(self, sequence, options, *sweepers):
+    def execute_pulse_sequence(self, sequences: PulseSequence, options: ExecutionParameters, **kwargs):
+        """
+        Args:
+            sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequences to execute.
+            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
+            **kwargs: May need them for something
+        Returns:
+            Readout results acquired by after execution.
+
+        """
+        return self._execute("play", sequences, options, **kwargs)
+
+    def execute_pulse_sequences(self, sequences: List[PulseSequence], options: ExecutionParameters, **kwargs):
+        """
+        Args:
+            sequence (List[:class:`qibolab.pulses.PulseSequence`]): Pulse sequences to execute.
+            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
+            **kwargs: May need them for something
+        Returns:
+            Readout results acquired by after execution.
+
+        """
+        return self._execute("play_sequences", sequences, options, **kwargs)
+
+    def sweep(self, sequence: PulseSequence, options: ExecutionParameters, *sweepers: Sweeper):
         """Executes a pulse sequence for different values of sweeped parameters.
 
         Useful for performing chip characterization.
@@ -361,7 +384,7 @@ class Platform:
                 from qibolab.dummy import create_dummy
                 from qibolab.sweeper import Sweeper, Parameter
                 from qibolab.pulses import PulseSequence
-                from qibolab import ExecutionParameters
+                from qibolab.execution_parameters import ExecutionParameters
 
 
                 platform = create_dummy()
@@ -372,13 +395,6 @@ class Platform:
                 parameter_range = np.random.randint(10, size=10)
                 sweeper = Sweeper(parameter, parameter_range, [pulse])
                 platform.sweep(sequence, ExecutionParameters(), sweeper)
-
-        Args:
-            sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequence to execute.
-            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
-            *sweepers (:class:`qibolab.sweeper.Sweeper`): Sweeper objects that specify which
-                parameters are being sweeped.
-            **kwargs: May need them for something
 
         Returns:
             Readout results acquired by after execution.

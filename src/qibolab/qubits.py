@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple, Union
+from typing import List, Optional, Union
 
 from qibolab.channels import Channel
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
@@ -46,8 +46,6 @@ class Qubit:
     mean_exc_states: complex = 0 + 0.0j
     resonator_polycoef_flux: List[float] = field(default_factory=list)
 
-    # filters used for applying CZ gate
-    filter: dict = field(default_factory=dict)
     # parameters for single shot classification
     threshold: Optional[float] = None
     iq_angle: float = 0.0
