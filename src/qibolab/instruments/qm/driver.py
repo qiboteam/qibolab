@@ -13,7 +13,7 @@ from qibolab import AveragingMode
 from qibolab.channels import check_max_offset
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.qm.config import IQPortId, QMConfig, QMPort
-from qibolab.instruments.qm.sequence import BakedPulse, QMPulse, Sequence
+from qibolab.instruments.qm.sequence import BakedPulse, Sequence
 from qibolab.pulses import PulseType
 from qibolab.sweeper import Parameter
 
@@ -99,89 +99,13 @@ class QMOPX(Controller):
         machine = self.manager.open_qm(self.config.__dict__)
         return machine.execute(program)
 
-    def create_qmsequence(self, qubits, sequence):
-        """Translates a :class:`qibolab.pulses.PulseSequence` to a :class:`qibolab.instruments.qm.Sequence`.
-
-        Also register flux elements for all qubits (if applicable) so that all qubits are operated at their
-        sweetspot.
-
-        Args:
-            qubits (list): List of :class:`qibolab.platforms.abstract.Qubit` objects
-                passed from the platform.
-            sequence (:class:`qibolab.pulses.PulseSequence`). Pulse sequence to translate.
-        Returns:
-            (:class:`qibolab.instruments.qm.Sequence`) containing the pulses from given pulse sequence.
-        """
-        # register flux elements for all qubits so that they are
-        # always at sweetspot even when they are not used
-        for qubit in qubits.values():
-            if qubit.flux:
-                self.config.register_flux_element(qubit)
-
-        # Current driver cannot play overlapping pulses on drive and flux channels
-        # If we want to play overlapping pulses we need to define different elements on the same ports
-        # like we do for readout multiplex
-        qmsequence = Sequence()
-        for pulse in sorted(sequence.pulses, key=lambda pulse: (pulse.start, pulse.duration)):
-            if pulse.type is PulseType.FLUX:
-                # register flux element (if it does not already exist)
-                self.config.register_flux_element(qubits[pulse.qubit], pulse.frequency)
-                qmpulse = BakedPulse(pulse)
-                qmpulse.bake(self.config, durations=[pulse.duration])
-                qmsequence.add(qmpulse)
-            else:
-                qmpulse = QMPulse(pulse)
-                qmsequence.add(qmpulse)
-                if pulse.duration % 4 != 0 or pulse.duration < 16:
-                    raise_error(NotImplementedError, "1ns resolution is available for flux pulses only.")
-                self.config.register_pulse(qubits[pulse.qubit], pulse, self.time_of_flight, self.smearing)
-
-        qmsequence.shift()
-
-        return qmsequence
-
-    @staticmethod
-    def play_pulses(qmsequence, relaxation_time=0):
-        """Part of QUA program that plays an arbitrary pulse sequence.
-
-        Should be used inside a ``program()`` context.
-
-        Args:
-            qmsequence (list): Pulse sequence containing QM specific pulses (``qmpulse``).
-                These pulses are defined in :meth:`qibolab.instruments.qm.QMOPX.play` and
-                hold attributes for the ``element`` and ``operation`` that corresponds to
-                each pulse, as defined in the QM config.
-        """
-        needs_reset = False
-        qua.align()
-        for qmpulse in qmsequence.qmpulses:
-            pulse = qmpulse.pulse
-            if qmpulse.wait_cycles is not None:
-                qua.wait(qmpulse.wait_cycles, qmpulse.element)
-            if pulse.type is PulseType.READOUT:
-                qmpulse.acquisition.measure(qmpulse.operation, qmpulse.element)
-            else:
-                if not isinstance(qmpulse.relative_phase, float) or qmpulse.relative_phase != 0:
-                    qua.frame_rotation_2pi(qmpulse.relative_phase, qmpulse.element)
-                    needs_reset = True
-                qmpulse.play()
-                if needs_reset:
-                    qua.reset_frame(qmpulse.element)
-                    needs_reset = False
-                if len(qmpulse.elements_to_align) > 1:
-                    qua.align(*qmpulse.elements_to_align)
-
-        # for Rabi-length?
-        if relaxation_time > 0:
-            qua.wait(relaxation_time // 4)
-
-        # Save data to the stream processing
-        for qmpulse in qmsequence.ro_pulses:
-            qmpulse.acquisition.save()
-
     @staticmethod
     def fetch_results(result, ro_pulses):
-        """Fetches results from an executed experiment."""
+        """Fetches results from an executed experiment.
+
+        Defined as ``@staticmethod`` because it is overwritten
+        in :class:`qibolab.instruments.qm.simulator.QMSim`.
+        """
         # TODO: Update result asynchronously instead of waiting
         # for all values, in order to allow live plotting
         # using ``handles.is_processing()``
@@ -204,7 +128,13 @@ class QMOPX(Controller):
         if options.averaging_mode is AveragingMode.SINGLESHOT:
             buffer_dims.append(options.nshots)
 
-        qmsequence = self.create_qmsequence(qubits, sequence)
+        # register flux elements for all qubits so that they are
+        # always at sweetspot even when they are not used
+        for qubit in qubits.values():
+            if qubit.flux:
+                self.config.register_flux_element(qubit)
+
+        qmsequence = Sequence.create(qubits, sequence, self.config, self.time_of_flight, self.smearing)
         # play pulses using QUA
         with qua.program() as experiment:
             n = declare(int)
@@ -391,4 +321,4 @@ class QMOPX(Controller):
             else:
                 raise_error(NotImplementedError, f"Sweeper for {parameter} is not implemented.")
         else:
-            self.play_pulses(qmsequence, relaxation_time)
+            qmsequence.play(relaxation_time)

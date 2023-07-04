@@ -177,6 +177,39 @@ class Sequence:
     pulse_finish: Dict[int, List[QMPulse]] = field(default_factory=lambda: collections.defaultdict(list))
     """Map to find all pulses that finish at a given time (useful for ``_find_previous``)."""
 
+    @classmethod
+    def create(cls, qubits, sequence, config, time_of_flight, smearing):
+        """Translates a :class:`qibolab.pulses.PulseSequence` to a :class:`qibolab.instruments.qm.sequence.Sequence`.
+
+        Args:
+            qubits (list): List of :class:`qibolab.platforms.abstract.Qubit` objects
+                passed from the platform.
+            sequence (:class:`qibolab.pulses.PulseSequence`). Pulse sequence to translate.
+        Returns:
+            (:class:`qibolab.instruments.qm.Sequence`) containing the pulses from given pulse sequence.
+        """
+        # Current driver cannot play overlapping pulses on drive and flux channels
+        # If we want to play overlapping pulses we need to define different elements on the same ports
+        # like we do for readout multiplex
+        qmsequence = cls()
+        for pulse in sorted(sequence.pulses, key=lambda pulse: (pulse.start, pulse.duration)):
+            if pulse.type is PulseType.FLUX:
+                # register flux element (if it does not already exist)
+                config.register_flux_element(qubits[pulse.qubit], pulse.frequency)
+                qmpulse = BakedPulse(pulse)
+                qmpulse.bake(config, durations=[pulse.duration])
+                qmsequence.add(qmpulse)
+            else:
+                qmpulse = QMPulse(pulse)
+                qmsequence.add(qmpulse)
+                if pulse.duration % 4 != 0 or pulse.duration < 16:
+                    raise_error(NotImplementedError, "1ns resolution is available for flux pulses only.")
+                config.register_pulse(qubits[pulse.qubit], pulse, time_of_flight, smearing)
+
+        qmsequence.shift()
+
+        return qmsequence
+
     def _find_previous(self, pulse):
         for finish in reversed(sorted(self.pulse_finish.keys())):
             if finish <= pulse.start:
@@ -219,3 +252,41 @@ class Sequence:
             qmpulse = to_shift.popleft()
             qmpulse.wait_time += 2
             to_shift.extend(qmpulse.next_pulses)
+
+    def play(self, relaxation_time=0):
+        """Part of QUA program that plays an arbitrary pulse sequence.
+
+        Should be used inside a ``program()`` context.
+
+        Args:
+            qmsequence (:class:`qibolab.instruments.qm.sequence.Sequence`): Pulse sequence
+                containing QM specific pulses (``qmpulse``).
+                These pulses are defined in :meth:`qibolab.instruments.qm.QMOPX.play` and
+                hold attributes for the ``element`` and ``operation`` that corresponds to
+                each pulse, as defined in the QM config.
+        """
+        needs_reset = False
+        qua.align()
+        for qmpulse in self.qmpulses:
+            pulse = qmpulse.pulse
+            if qmpulse.wait_cycles is not None:
+                qua.wait(qmpulse.wait_cycles, qmpulse.element)
+            if pulse.type is PulseType.READOUT:
+                qmpulse.acquisition.measure(qmpulse.operation, qmpulse.element)
+            else:
+                if not isinstance(qmpulse.relative_phase, float) or qmpulse.relative_phase != 0:
+                    qua.frame_rotation_2pi(qmpulse.relative_phase, qmpulse.element)
+                    needs_reset = True
+                qmpulse.play()
+                if needs_reset:
+                    qua.reset_frame(qmpulse.element)
+                    needs_reset = False
+                if len(qmpulse.elements_to_align) > 1:
+                    qua.align(*qmpulse.elements_to_align)
+
+        if relaxation_time > 0:
+            qua.wait(relaxation_time // 4)
+
+        # Save data to the stream processing
+        for qmpulse in self.ro_pulses:
+            qmpulse.acquisition.save()
