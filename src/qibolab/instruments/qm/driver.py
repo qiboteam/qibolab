@@ -1,21 +1,15 @@
-import math
 from dataclasses import dataclass, field
 from typing import ClassVar, Dict, Optional
 
-import numpy as np
-from qibo.config import raise_error
 from qm import generate_qua_script, qua
-from qm.qua import declare, fixed, for_
+from qm.qua import declare, for_
 from qm.QuantumMachinesManager import QuantumMachinesManager
-from qualang_tools.loops import from_array
 
 from qibolab import AveragingMode
-from qibolab.channels import check_max_offset
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.qm.config import IQPortId, QMConfig, QMPort
-from qibolab.instruments.qm.sequence import BakedPulse, Sequence
-from qibolab.pulses import PulseType
-from qibolab.sweeper import Parameter
+from qibolab.instruments.qm.sequence import Sequence
+from qibolab.instruments.qm.sweepers import sweep
 
 
 @dataclass
@@ -144,7 +138,7 @@ class QMOPX(Controller):
                 qmpulse.declare_output(options, threshold, iq_angle)
 
             with for_(n, 0, n < options.nshots, n + 1):
-                self.sweep_recursion(list(sweepers), qubits, qmsequence, options.relaxation_time)
+                sweep(list(sweepers), qubits, qmsequence, options.relaxation_time, self.config)
 
             with qua.stream_processing():
                 for qmpulse in qmsequence.ro_pulses:
@@ -159,166 +153,3 @@ class QMOPX(Controller):
 
     def play_sequences(self, qubits, sequence, options):
         raise NotImplementedError
-
-    @staticmethod
-    def maximum_sweep_value(values, value0):
-        """Calculates maximum value that is reached during a sweep.
-
-        Useful to check whether a sweep exceeds the range of allowed values.
-        Note that both the array of values we sweep and the center value can
-        be negative, so we need to make sure that the maximum absolute value
-        is within range.
-
-        Args:
-            values (np.ndarray): Array of values we will sweep over.
-            value0 (float, int): Center value of the sweep.
-        """
-        return max(abs(min(values) + value0), abs(max(values) + value0))
-
-    def sweep_frequency(self, sweepers, qubits, qmsequence, relaxation_time):
-        from qm.qua import update_frequency
-
-        sweeper = sweepers[0]
-        freqs0 = []
-        for pulse in sweeper.pulses:
-            qubit = qubits[pulse.qubit]
-            if pulse.type is PulseType.DRIVE:
-                lo_frequency = math.floor(qubit.drive.local_oscillator.frequency)
-            elif pulse.type is PulseType.READOUT:
-                lo_frequency = math.floor(qubit.readout.local_oscillator.frequency)
-            else:
-                raise_error(NotImplementedError, f"Cannot sweep frequency of pulse of type {pulse.type}.")
-            # convert to IF frequency for readout and drive pulses
-            f0 = math.floor(pulse.frequency - lo_frequency)
-            freqs0.append(declare(int, value=f0))
-            # check if sweep is within the supported bandwidth [-400, 400] MHz
-            max_freq = self.maximum_sweep_value(sweeper.values, f0)
-            if max_freq > 4e8:
-                raise_error(ValueError, f"Frequency {max_freq} for qubit {qubit.name} is beyond instrument bandwidth.")
-
-        # is it fine to have this declaration inside the ``nshots`` QUA loop?
-        f = declare(int)
-        with for_(*from_array(f, sweeper.values.astype(int))):
-            for pulse, f0 in zip(sweeper.pulses, freqs0):
-                qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
-                update_frequency(qmpulse.element, f + f0)
-
-            self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-
-    def sweep_amplitude(self, sweepers, qubits, qmsequence, relaxation_time):
-        from qm.qua import amp
-
-        sweeper = sweepers[0]
-        # TODO: Consider sweeping amplitude without multiplication
-        if min(sweeper.values) < -2:
-            raise_error(ValueError, "Amplitude sweep values are <-2 which is not supported.")
-        if max(sweeper.values) > 2:
-            raise_error(ValueError, "Amplitude sweep values are >2 which is not supported.")
-
-        a = declare(fixed)
-        with for_(*from_array(a, sweeper.values)):
-            for pulse in sweeper.pulses:
-                qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
-                if isinstance(qmpulse, BakedPulse):
-                    qmpulse.amplitude = a
-                else:
-                    qmpulse.operation = qmpulse.operation * amp(a)
-
-            self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-
-    def sweep_relative_phase(self, sweepers, qubits, qmsequence, relaxation_time):
-        sweeper = sweepers[0]
-        relphase = declare(fixed)
-        with for_(*from_array(relphase, sweeper.values / (2 * np.pi))):
-            for pulse in sweeper.pulses:
-                qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
-                qmpulse.relative_phase = relphase
-
-            self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-
-    def sweep_bias(self, sweepers, qubits, qmsequence, relaxation_time):
-        from qm.qua import set_dc_offset
-
-        sweeper = sweepers[0]
-        offset0 = []
-        for qubit in sweeper.qubits:
-            b0 = qubit.flux.offset
-            max_offset = qubit.flux.max_offset
-            max_value = self.maximum_sweep_value(sweeper.values, b0)
-            check_max_offset(max_value, max_offset)
-            offset0.append(declare(fixed, value=b0))
-        b = declare(fixed)
-        with for_(*from_array(b, sweeper.values)):
-            for qubit, b0 in zip(sweeper.qubits, offset0):
-                with qua.if_((b + b0) >= 0.49):
-                    set_dc_offset(f"flux{qubit.name}", "single", 0.49)
-                with qua.elif_((b + b0) <= -0.49):
-                    set_dc_offset(f"flux{qubit.name}", "single", -0.49)
-                with qua.else_():
-                    set_dc_offset(f"flux{qubit.name}", "single", (b + b0))
-
-            self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-
-    def sweep_start(self, sweepers, qubits, qmsequence, relaxation_time):
-        sweeper = sweepers[0]
-        if min(sweeper.values) < 16:
-            raise_error(ValueError, "Cannot sweep start less than 16ns.")
-
-        start = declare(int)
-        values = np.array(sweeper.values) // 4
-        with for_(*from_array(start, values.astype(int))):
-            for pulse in sweeper.pulses:
-                qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
-                # find all pulses that are connected to ``qmpulse`` and update their starts
-                to_process = {qmpulse}
-                while to_process:
-                    next_qmpulse = to_process.pop()
-                    to_process |= next_qmpulse.next_pulses
-                    next_qmpulse.wait_time_variable = start
-
-            self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-
-    def sweep_duration(self, sweepers, qubits, qmsequence, relaxation_time):
-        sweeper = sweepers[0]
-        for pulse in sweeper.pulses:
-            qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
-            if isinstance(qmpulse, BakedPulse):
-                values = np.array(sweeper.values).astype(int)
-                qmpulse.bake(self.config, values)
-            else:
-                values = np.array(sweeper.values).astype(int) // 4
-
-        dur = declare(int)
-
-        with for_(*from_array(dur, values)):
-            for pulse in sweeper.pulses:
-                qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
-                qmpulse.swept_duration = dur
-                # find all pulses that are connected to ``qmpulse`` and align them
-                to_process = set(qmpulse.next_pulses)
-                while to_process:
-                    next_qmpulse = to_process.pop()
-                    to_process |= next_qmpulse.next_pulses
-                    qmpulse.elements_to_align.add(next_qmpulse.element)
-                    next_qmpulse.wait_time -= qmpulse.wait_time + qmpulse.duration // 4
-
-            self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
-
-    SWEEPERS = {
-        Parameter.frequency: sweep_frequency,
-        Parameter.amplitude: sweep_amplitude,
-        Parameter.relative_phase: sweep_relative_phase,
-        Parameter.bias: sweep_bias,
-        Parameter.start: sweep_start,
-        Parameter.duration: sweep_duration,
-    }
-
-    def sweep_recursion(self, sweepers, qubits, qmsequence, relaxation_time):
-        if len(sweepers) > 0:
-            parameter = sweepers[0].parameter
-            if parameter in self.SWEEPERS:
-                self.SWEEPERS[parameter](self, sweepers, qubits, qmsequence, relaxation_time)
-            else:
-                raise_error(NotImplementedError, f"Sweeper for {parameter} is not implemented.")
-        else:
-            qmsequence.play(relaxation_time)

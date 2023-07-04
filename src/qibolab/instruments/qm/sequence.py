@@ -25,7 +25,12 @@ DurationsType = Union[List[int], np.ndarray]
 
 @dataclass
 class QMPulse:
-    """Wrapper around :class:`qibolab.pulses.Pulse` for easier translation to QUA program."""
+    """Wrapper around :class:`qibolab.pulses.Pulse` for easier translation to QUA program.
+
+    These pulses are defined when :meth:`qibolab.instruments.qm.QMOPX.play` is called
+    and hold attributes for the ``element`` and ``operation`` that corresponds to each pulse,
+    as defined in the QM config.
+    """
 
     pulse: Pulse
     """:class:`qibolab.pulses.Pulse` implemting the current pulse."""
@@ -257,13 +262,6 @@ class Sequence:
         """Part of QUA program that plays an arbitrary pulse sequence.
 
         Should be used inside a ``program()`` context.
-
-        Args:
-            qmsequence (:class:`qibolab.instruments.qm.sequence.Sequence`): Pulse sequence
-                containing QM specific pulses (``qmpulse``).
-                These pulses are defined in :meth:`qibolab.instruments.qm.QMOPX.play` and
-                hold attributes for the ``element`` and ``operation`` that corresponds to
-                each pulse, as defined in the QM config.
         """
         needs_reset = False
         qua.align()
