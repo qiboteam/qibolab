@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import numpy as np
 import pytest
 from qm import qua
@@ -11,7 +13,7 @@ from qibolab.instruments.qm import (
     QMPulse,
     Sequence,
 )
-from qibolab.pulses import FluxPulse, Pulse, ReadoutPulse, Rectangular
+from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse, Rectangular
 
 
 def test_qmpulse():
@@ -282,3 +284,22 @@ def test_qmopx_register_baked_pulse(dummy_qrc, duration):
             "samples": 30 * [0.05] + 2 * [0],
             "is_overridable": False,
         }
+
+
+@patch("qibolab.instruments.qmsim.QMSim.execute_program")
+def test_qmopx_qubit_spectroscopy(mocker):
+    platform = create_platform("qm")
+    platform.setup()
+    opx = platform.instruments[0]
+    # disable program dump otherwise it will fail if we don't connect
+    opx.script_file_name = None
+    sequence = PulseSequence()
+    qd_pulses = {}
+    ro_pulses = {}
+    for qubit in [1, 2, 3]:
+        qd_pulses[qubit] = platform.create_qubit_drive_pulse(qubit, start=0, duration=500)
+        ro_pulses[qubit] = platform.create_qubit_readout_pulse(qubit, start=qd_pulses[qubit].finish)
+        sequence.add(qd_pulses[qubit])
+        sequence.add(ro_pulses[qubit])
+    options = ExecutionParameters(nshots=1024, relaxation_time=100000)
+    result = opx.play(platform.qubits, sequence, options)

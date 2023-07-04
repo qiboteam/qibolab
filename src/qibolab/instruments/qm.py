@@ -6,7 +6,7 @@ from typing import ClassVar, Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
 from qibo.config import raise_error
-from qm import qua
+from qm import generate_qua_script, qua
 from qm.qua import declare, declare_stream, fixed, for_
 from qm.qua._dsl import _ResultSource, _Variable  # for type declaration only
 from qm.QuantumMachinesManager import QuantumMachinesManager
@@ -771,6 +771,10 @@ class QMOPX(Controller):
     """Smearing used for hardware signal integration."""
     _ports: Dict[IQPortId, QMPort] = field(default_factory=dict)
     """Dictionary holding the ports of controllers that are connected."""
+    script_file_name: Optional[str] = "qua_script.txt"
+    """Name of the file that the QUA program will dumped in that after every execution.
+    If ``None`` the program will not be dumped.
+    """
 
     def __post_init__(self):
         super().__init__(self.name, self.address)
@@ -812,13 +816,6 @@ class QMOPX(Controller):
             TODO
         """
         machine = self.manager.open_qm(self.config.__dict__)
-
-        # for debugging only
-        from qm import generate_qua_script
-
-        with open("qua_script.txt", "w") as file:
-            file.write(generate_qua_script(program, self.config.__dict__))
-
         return machine.execute(program)
 
     def create_qmsequence(self, qubits, sequence):
@@ -1104,6 +1101,10 @@ class QMOPX(Controller):
             with qua.stream_processing():
                 for qmpulse in qmsequence.ro_pulses:
                     qmpulse.acquisition.download(*buffer_dims)
+
+        if self.script_file_name is not None:
+            with open(self.script_file_name, "w") as file:
+                file.write(generate_qua_script(experiment, self.config.__dict__))
 
         result = self.execute_program(experiment)
         return self.fetch_results(result, qmsequence.ro_pulses)
