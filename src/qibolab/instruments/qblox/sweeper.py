@@ -10,8 +10,6 @@ from qibolab.instruments.qblox.q1asm import (
     convert_gain,
     convert_offset,
     convert_phase,
-    loop_block,
-    wait_block,
 )
 from qibolab.sweeper import Parameter, Sweeper
 

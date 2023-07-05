@@ -31,7 +31,6 @@ https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/
 """
 
 from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
-from qibo.config import log
 
 from qibolab.instruments.abstract import Instrument, InstrumentException
 

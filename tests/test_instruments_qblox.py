@@ -3,10 +3,6 @@ import pytest
 
 from qibolab import create_platform
 from qibolab.instruments.abstract import INSTRUMENTS_DATA_FOLDER
-from qibolab.instruments.qblox.cluster import Cluster
-from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
-from qibolab.instruments.qblox.cluster_qcm_rf import ClusterQCM_RF
-from qibolab.instruments.qblox.cluster_qrm_rf import ClusterQRM_RF
 from qibolab.pulses import Pulse, PulseSequence, ReadoutPulse
 
 from .conftest import load_from_platform
@@ -161,7 +157,6 @@ def instrument_set_and_test_parameter_values(instrument, target, parameter, valu
 
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
 def test_instruments_qublox_set_device_paramters(name):
-    pass
     """   # TODO: add attitional paramter tests
     qrm
         platform.instruments['qrm_rf'].device.print_readable_snapshot(update=True)

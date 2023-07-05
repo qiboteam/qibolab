@@ -153,7 +153,6 @@ class PulseShape(ABC):
 
         pulse = self.pulse
         if abs(pulse._if) * 2 > PulseShape.SAMPLING_RATE:
-
             log.info(
                 f"WARNING: The frequency of pulse {pulse.serial} is higher than the nyqusit frequency ({int(PulseShape.SAMPLING_RATE // 2)}) for the device sampling rate: {int(PulseShape.SAMPLING_RATE)}"
             )
