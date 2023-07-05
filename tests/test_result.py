@@ -4,7 +4,6 @@ import pytest
 
 from qibolab.result import (
     AveragedIntegratedResults,
-    AveragedRawWaveformResults,
     AveragedSampleResults,
     IntegratedResults,
     RawWaveformResults,
