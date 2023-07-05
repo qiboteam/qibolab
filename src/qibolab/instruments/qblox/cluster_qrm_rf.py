@@ -254,7 +254,7 @@ class ClusterQRM_RF(Instrument):
                 #     },
                 # )()
                 self.ports["o1"].device = self.device
-
+                self.ports["o1"].module = self
                 # self.ports["i1"] = type(
                 #     f"port_i1",
                 #     (),
@@ -271,6 +271,7 @@ class ClusterQRM_RF(Instrument):
                 # )()
 
                 self.ports["i1"].device = self.device
+                self.ports["i1"].module = self
 
                 # save reference to cluster
                 self._cluster = cluster

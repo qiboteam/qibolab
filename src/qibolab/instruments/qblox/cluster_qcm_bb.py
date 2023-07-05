@@ -214,6 +214,7 @@ class ClusterQCM_BB(Instrument):
                     #     },
                     # )()
                     self.ports[port].device = self.device
+                    self.ports[port].module = self
 
                 # save reference to cluster
                 self._cluster = cluster
@@ -748,7 +749,7 @@ class ClusterQCM_BB(Instrument):
                 self._set_device_parameter(target, "channel_map_path1_out3_en", value=False)
 
         # There seems to be a bug in qblox that when any of the mappings between paths and outputs is set,
-        # the general offset goes to 0 (eventhou the parameter will still show the right value).
+        # the general offset goes to 0 (eventhough the parameter will still show the right value).
         # Until that is fixed, I'm going to always set the offset just before playing (bypassing the cache):
         self.device.out0_offset(self._device_parameters[self.device.name + "." + "out0_offset"])
         self.device.out1_offset(self._device_parameters[self.device.name + "." + "out1_offset"])

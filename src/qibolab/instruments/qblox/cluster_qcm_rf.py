@@ -238,6 +238,7 @@ class ClusterQCM_RF(Instrument):
                     #     },
                     # )()
                     self.ports[port].device = self.device
+                    self.ports[port].module = self
 
                 # save reference to cluster
                 self._cluster = cluster
