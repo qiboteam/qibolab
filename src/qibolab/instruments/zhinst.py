@@ -491,14 +491,21 @@ class Zurich(Controller):
                 continue
             q = qubit.name  # pylint: disable=C0103
             if len(self.sequence[f"readout{q}"]) != 0:
-                exp_res = self.results.get_data(f"sequence{q}")
-                if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                    data = np.array([exp_res]) if options.averaging_mode is AveragingMode.CYCLIC else np.array(exp_res)
-                    results[self.sequence[f"readout{q}"][0].pulse.serial] = options.results_type(data)
-                    results[self.sequence[f"readout{q}"][0].pulse.qubit] = options.results_type(data)
-                else:
-                    results[self.sequence[f"readout{q}"][0].pulse.serial] = options.results_type(data=np.array(exp_res))
-                    results[self.sequence[f"readout{q}"][0].pulse.qubit] = options.results_type(data=np.array(exp_res))
+                for i in range(len(self.sequence[f"readout{q}"])):
+                    exp_res = self.results.get_data(f"sequence{q}_{i}")
+                    if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+                        data = (
+                            np.array([exp_res]) if options.averaging_mode is AveragingMode.CYCLIC else np.array(exp_res)
+                        )
+                        results[self.sequence[f"readout{q}"][i].pulse.serial] = options.results_type(data)
+                        results[self.sequence[f"readout{q}"][i].pulse.qubit] = options.results_type(data)
+                    else:
+                        results[self.sequence[f"readout{q}"][i].pulse.serial] = options.results_type(
+                            data=np.array(exp_res)
+                        )
+                        results[self.sequence[f"readout{q}"][i].pulse.qubit] = options.results_type(
+                            data=np.array(exp_res)
+                        )
 
         exp_dimensions = list(np.array(exp_res).shape)
         if dimensions != exp_dimensions:
@@ -799,15 +806,19 @@ class Zurich(Controller):
         elif len(self.sequence_qibo.qd_pulses) != 0:
             play_after = self.play_after_set(self.sequence_qibo.qd_pulses, "drive")
 
-        # Section on the outside loop allows for multiplex
-        with exp.section(uid="sequence_measure", play_after=play_after):
-            for qubit in qubits.values():
-                if qubit.flux_coupler:
-                    continue
-                q = qubit.name  # pylint: disable=C0103
-                if len(self.sequence[f"readout{q}"]) != 0:
-                    for pulse in self.sequence[f"readout{q}"]:
-                        i = 0
+        # FIXME: Check multiplex still works
+        for qubit in qubits.values():
+            if qubit.flux_coupler:
+                continue
+            q = qubit.name  # pylint: disable=C0103
+
+            if len(self.sequence[f"readout{q}"]) != 0:
+                i = 0
+                for pulse in self.sequence[f"readout{q}"]:
+                    if i != 0:
+                        play_after = f"sequence_measure_{i-1}"
+                    # Section on the outside loop allows for multiplex
+                    with exp.section(uid=f"sequence_measure_{i}", play_after=play_after):
                         pulse.zhpulse.uid += str(i)
 
                         # Integration weights definition or load from the chip folder
@@ -853,9 +864,15 @@ class Zurich(Controller):
 
                         measure_pulse_parameters = {"phase": 0}
 
+                        if i == len(self.sequence[f"readout{q}"]) - 1:
+                            reset_delay = relaxation_time * NANO_TO_SECONDS
+                        else:
+                            # FIXME: Here time of flight or not ?
+                            reset_delay = 0  # 75 * NANO_TO_SECONDS
+
                         exp.measure(
                             acquire_signal=f"acquire{q}",
-                            handle=f"sequence{q}",
+                            handle=f"sequence{q}_{i}",
                             integration_kernel=weight,
                             integration_kernel_parameters=None,
                             integration_length=None,
@@ -865,7 +882,8 @@ class Zurich(Controller):
                             measure_pulse_parameters=measure_pulse_parameters,
                             measure_pulse_amplitude=None,
                             acquire_delay=self.time_of_flight * NANO_TO_SECONDS,
-                            reset_delay=relaxation_time * NANO_TO_SECONDS,
+                            # reset_delay=relaxation_time * NANO_TO_SECONDS,
+                            reset_delay=reset_delay,
                         )
                         i += 1
 
@@ -947,7 +965,7 @@ class Zurich(Controller):
                 continue
             q = qubit.name  # pylint: disable=C0103
             if len(self.sequence[f"readout{q}"]) != 0:
-                exp_res = self.results.get_data(f"sequence{q}")
+                exp_res = self.results.get_data(f"sequence{q}_{0}")
                 # Reorder dimensions
                 exp_res = np.moveaxis(exp_res, rearranging_axes[0], rearranging_axes[1])
                 if options.acquisition_type is AcquisitionType.DISCRIMINATION:
