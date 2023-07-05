@@ -193,6 +193,15 @@ class ClusterQRM_RF(Instrument):
         self.settings: dict = settings
         self.device: QbloxQrmQcm = None
         self.ports: dict = {}
+        self.ports["o1"] = ClusterRF_OutputPort(
+                    sequencer_number=self.DEFAULT_SEQUENCERS["o1"], 
+                    number=1
+                  )
+        self.ports["i1"] =  QbloxInputPort(
+                    output_sequencer_number=self.DEFAULT_SEQUENCERS["o1"],
+                    input_sequencer_number=self.DEFAULT_SEQUENCERS["i1"],
+                    number=1,
+                  )
         self.classification_parameters: dict = {}
         self.channels: list = []
 
@@ -244,9 +253,7 @@ class ClusterQRM_RF(Instrument):
                 #         ),
                 #     },
                 # )()
-                self.ports["o1"] = ClusterRF_OutputPort(
-                    device=self.device, sequencer_number=self.DEFAULT_SEQUENCERS["o1"], number=1
-                )
+                self.ports["o1"].device = self.device
 
                 # self.ports["i1"] = type(
                 #     f"port_i1",
@@ -262,12 +269,8 @@ class ClusterQRM_RF(Instrument):
                 #         ),
                 #     },
                 # )()
-                self.ports["i1"] = QbloxInputPort(
-                    device=self.device,
-                    output_sequencer_number=self.DEFAULT_SEQUENCERS["o1"],
-                    input_sequencer_number=self.DEFAULT_SEQUENCERS["i1"],
-                    number=1,
-                )
+
+                self.ports["i1"].device = self.device
 
                 # save reference to cluster
                 self._cluster = cluster

@@ -161,6 +161,11 @@ class ClusterQCM_BB(Instrument):
         self.settings: dict = settings
         self.device: QbloxQrmQcm = None
         self.ports: dict = {}
+        for n in range(4):
+            port = "o" + str(n + 1)
+            self.ports[port] = ClusterBB_OutputPort(
+                sequencer_number=self.DEFAULT_SEQUENCERS[port], number=n + 1
+            )
         self.channels: list = []
 
         self._debug_folder: str = ""
@@ -208,9 +213,7 @@ class ClusterQCM_BB(Instrument):
                     #         "qubit": None,
                     #     },
                     # )()
-                    self.ports[port] = ClusterBB_OutputPort(
-                        device=self.device, sequencer_number=self.DEFAULT_SEQUENCERS[port], number=n + 1
-                    )
+                    self.ports[port].device = self.device
 
                 # save reference to cluster
                 self._cluster = cluster

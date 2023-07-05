@@ -25,7 +25,7 @@ class QbloxPort:
         if not key in self._device_parameters:
             for parameter in parameters:
                 if not hasattr(target, parameter):
-                    raise Exception(f"The instrument {self.port_name} does not have parameters {parameter}")
+                    raise Exception(f"The instrument {target} does not have parameters {parameter}")
                 target.set(parameter, value)
             self._device_parameters[key] = value
         elif self._device_parameters[key] != value:
@@ -39,10 +39,10 @@ class QbloxPort:
 
 
 class QbloxOutputPort(Port, QbloxPort):
-    def __init__(self, device: QbloxQrmQcm, sequencer_number: int, number: int):
-        self.device: QbloxQrmQcm = device
+    def __init__(self, sequencer_number: int, number: int):
+        self.device: QbloxQrmQcm = None
         self.sequencer_number: int = sequencer_number
-        self.port_number: int = number
+        self.port_number: int = number - 1
         self.channel = None  # To be discontinued
         self.qubit = None  # To be discontinued
 
@@ -92,7 +92,7 @@ class QbloxOutputPort(Port, QbloxPort):
                 log.warning(f"Qblox offset needs to be between -2.5 and 2.5 V. Adjusting {value} to 2.5 V")
                 value = 2.5
 
-            elif value < 2.5:
+            elif value < -2.5:
                 log.warning(f"Qblox offset needs to be between -2.5 and 2.5 V. Adjusting {value} to -2.5 V")
                 value = -2.5
         else:
@@ -163,8 +163,10 @@ class ClusterRF_OutputPort(QbloxOutputPort):
     @property
     def lo_frequency(self):
         """Local oscillator frequency for the given port."""
-
-        return self.device.get(f"out{self.port_number}_lo_freq")
+        if self.device.is_qrm_type:
+            return self.device.get(f"out{self.port_number}_in{self.port_number}_lo_freq")
+        elif self.device.is_qcm_type:
+            return self.device.get(f"out{self.port_number}_lo_freq")
 
     @lo_frequency.setter
     def lo_frequency(self, value):
@@ -180,8 +182,10 @@ class ClusterRF_OutputPort(QbloxOutputPort):
                 value = int(2e9)
         else:
             raise_error(ValueError, f"Invalid lo-frequency {value}")
-
-        self._set_device_parameter(self.device, f"out{self.port_number}_lo_freq", value=value)
+        if self.device.is_qrm_type:
+            self._set_device_parameter(self.device, f"out{self.port_number}_in{self.port_number}_lo_freq", value=value)
+        elif self.device.is_qcm_type:
+            self._set_device_parameter(self.device, f"out{self.port_number}_lo_freq", value=value)
 
     # Note: for qublos, gain is equivalent to amplitude, since it does not bring any advantages
     # we plan to remove it soon.
@@ -239,11 +243,11 @@ class ClusterBB_OutputPort(QbloxOutputPort):
 
 
 class QbloxInputPort(QbloxPort):
-    def __init__(self, device: QbloxQrmQcm, output_sequencer_number: int, input_sequencer_number: int, number: int):
-        self.device: QbloxQrmQcm = device
+    def __init__(self, output_sequencer_number: int, input_sequencer_number: int, number: int):
+        self.device: QbloxQrmQcm = None
         self.output_sequencer_number: int = output_sequencer_number
         self.input_sequencer_number: int = input_sequencer_number
-        self.port_number: int = number
+        self.port_number: int = number - 1
         self.channel = None  # To be discontinued
         self.qubit = None  # To be discontinued
 
@@ -268,8 +272,8 @@ class QbloxInputPort(QbloxPort):
 
         return self.device.sequencers[self.output_sequencer_number].get(f"integration_length_acq")
 
-    @hardware_demod_en.setter
-    def hardware_demod_en(self, value):
+    @acquisition_duration.setter
+    def acquisition_duration(self, value):
         if isinstance(value, float):
             value = int(value)
         if isinstance(value, int):
