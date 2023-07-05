@@ -2,7 +2,6 @@ import pytest
 
 from qibolab import create_platform
 from qibolab.instruments.qblox.controller import QbloxController
-from qibolab.platform import Platform
 
 qubit = 0
 

@@ -144,10 +144,11 @@ class ClusterRF_OutputPort(QbloxOutputPort):
             raise_error(ValueError, f"Invalid lo_enabled {value}")
 
         if self.device.is_qrm_type:
-            self.module._set_device_parameter(self.device, f"out{self.port_number}_in{self.port_number}_lo_en", value=value)
+            self.module._set_device_parameter(
+                self.device, f"out{self.port_number}_in{self.port_number}_lo_en", value=value
+            )
         elif self.device.is_qcm_type:
             self.module._set_device_parameter(self.device, f"out{self.port_number}_lo_en", value=value)
-
 
     @property
     def lo_frequency(self):
@@ -172,7 +173,9 @@ class ClusterRF_OutputPort(QbloxOutputPort):
         else:
             raise_error(ValueError, f"Invalid lo-frequency {value}")
         if self.device.is_qrm_type:
-            self.module._set_device_parameter(self.device, f"out{self.port_number}_in{self.port_number}_lo_freq", value=value)
+            self.module._set_device_parameter(
+                self.device, f"out{self.port_number}_in{self.port_number}_lo_freq", value=value
+            )
         elif self.device.is_qcm_type:
             self.module._set_device_parameter(self.device, f"out{self.port_number}_lo_freq", value=value)
 
@@ -254,7 +257,9 @@ class QbloxInputPort(QbloxPort):
         if not isinstance(value, bool):
             raise_error(ValueError, f"Invalid hardware_demod_en {value}")
 
-        self.module._set_device_parameter(self.device.sequencers[self.input_sequencer_number], "demod_en_acq", value=value)
+        self.module._set_device_parameter(
+            self.device.sequencers[self.input_sequencer_number], "demod_en_acq", value=value
+        )
 
     @property
     def acquisition_duration(self):

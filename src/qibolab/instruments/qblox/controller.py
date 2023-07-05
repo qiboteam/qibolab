@@ -1,29 +1,15 @@
-import copy
-import os
 import signal
 
 import numpy as np
-import yaml
 from qibo.config import log, raise_error
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.channels import ChannelMap
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.qblox.cluster import Cluster
 from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
 from qibolab.instruments.qblox.cluster_qcm_rf import ClusterQCM_RF
 from qibolab.instruments.qblox.cluster_qrm_rf import ClusterQRM_RF
-from qibolab.platform import Platform
 from qibolab.pulses import PulseSequence, PulseType
-from qibolab.qubits import Qubit
-from qibolab.result import (
-    AveragedIntegratedResults,
-    AveragedRawWaveformResults,
-    AveragedSampleResults,
-    IntegratedResults,
-    RawWaveformResults,
-    SampleResults,
-)
 from qibolab.sweeper import Parameter, Sweeper
 
 

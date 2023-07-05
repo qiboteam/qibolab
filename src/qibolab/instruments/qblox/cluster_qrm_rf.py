@@ -37,23 +37,19 @@ from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
 from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qibo.config import log
 
-from qibolab.instruments.abstract import Instrument, InstrumentException
+from qibolab.instruments.abstract import Instrument
 from qibolab.instruments.qblox.port import ClusterRF_OutputPort, QbloxInputPort
 from qibolab.instruments.qblox.q1asm import (
     Block,
-    Program,
     Register,
-    convert_frequency,
-    convert_gain,
-    convert_offset,
     convert_phase,
     loop_block,
     wait_block,
 )
 from qibolab.instruments.qblox.sequencer import Sequencer, WaveformsBuffer
 from qibolab.instruments.qblox.sweeper import QbloxSweeper, QbloxSweeperType
-from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType, Waveform
-from qibolab.sweeper import Parameter, Sweeper
+from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType
+from qibolab.sweeper import Parameter
 
 
 class ClusterQRM_RF(Instrument):
@@ -193,15 +189,12 @@ class ClusterQRM_RF(Instrument):
         self.settings: dict = settings
         self.device: QbloxQrmQcm = None
         self.ports: dict = {}
-        self.ports["o1"] = ClusterRF_OutputPort(
-                    sequencer_number=self.DEFAULT_SEQUENCERS["o1"], 
-                    number=1
-                  )
-        self.ports["i1"] =  QbloxInputPort(
-                    output_sequencer_number=self.DEFAULT_SEQUENCERS["o1"],
-                    input_sequencer_number=self.DEFAULT_SEQUENCERS["i1"],
-                    number=1,
-                  )
+        self.ports["o1"] = ClusterRF_OutputPort(sequencer_number=self.DEFAULT_SEQUENCERS["o1"], number=1)
+        self.ports["i1"] = QbloxInputPort(
+            output_sequencer_number=self.DEFAULT_SEQUENCERS["o1"],
+            input_sequencer_number=self.DEFAULT_SEQUENCERS["i1"],
+            number=1,
+        )
         self.classification_parameters: dict = {}
         self.channels: list = []
 
@@ -930,6 +923,7 @@ class ClusterQRM_RF(Instrument):
 
         # DEBUG: QRM RF Save Readable Snapshot
         from qibolab.instruments.qblox.debug import print_readable_snapshot
+
         filename = self._debug_folder + f"Z_{self.name}_snapshot.json"
         with open(filename, "w", encoding="utf-8") as file:
             print_readable_snapshot(self.device, file, update=True)
