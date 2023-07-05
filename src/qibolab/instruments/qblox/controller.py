@@ -8,6 +8,7 @@ from qibo.config import log, raise_error
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.channels import ChannelMap
+from qibolab.instruments.abstract import Controller
 from qibolab.instruments.qblox.cluster import Cluster
 from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
 from qibolab.instruments.qblox.cluster_qcm_rf import ClusterQCM_RF
@@ -26,7 +27,7 @@ from qibolab.result import (
 from qibolab.sweeper import Parameter, Sweeper
 
 
-class QbloxController:
+class QbloxController(Controller):
     """A controller to manage qblox devices.
 
     Attributes:
@@ -36,6 +37,7 @@ class QbloxController:
 
     def __init__(self, name, cluster, modules):
         """Initialises the controller."""
+        super().__init__(name=name, address="")
         self.is_connected = False
         self.cluster: Cluster = cluster
         self.modules: dict = modules
@@ -250,6 +252,9 @@ class QbloxController:
 
     def play(self, qubits, sequence, options):
         return self._execute_pulse_sequence(sequence, options)
+
+    def play_sequences(self, *args, **kwargs):
+        raise_error(NotImplementedError, "play_sequences is not implemented in qblox driver yet.")
 
     def sweep(self, qubits: dict, sequence: PulseSequence, options: ExecutionParameters, *sweepers):
         """Executes a sequence of pulses while sweeping one or more parameters.
