@@ -157,7 +157,7 @@ def instrument_set_and_test_parameter_values(instrument, target, parameter, valu
 
 @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
 def test_instruments_qublox_set_device_paramters(name):
-    """   # TODO: add attitional paramter tests
+    """# TODO: add attitional paramter tests
     qrm
         platform.instruments['qrm_rf'].device.print_readable_snapshot(update=True)
         cluster_module16:
