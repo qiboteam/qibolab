@@ -231,7 +231,7 @@ class ClusterBB_OutputPort(QbloxOutputPort):
         self.module._set_device_parameter(self.device.sequencers[self.sequencer_number], "gain_awg_path0", value=value)
 
 
-class QbloxInputPort(QbloxPort):
+class QbloxInputPort():
     def __init__(self, output_sequencer_number: int, input_sequencer_number: int, number: int):
         self.device: QbloxQrmQcm = None
         self.module = None
