@@ -167,40 +167,40 @@ class QbloxController(Controller):
         module_pulses = {}
         data = {}
         for name in self.modules:
-            if isinstance(self.modules[name], (ClusterQRM_RF, ClusterQCM_RF)):
-                # from the pulse sequence, select those pulses to be synthesised by the module
-                module_pulses[name] = sequence.get_channel_pulses(*self.modules[name].channels)
+            # from the pulse sequence, select those pulses to be synthesised by the module
+            module_pulses[name] = sequence.get_channel_pulses(*self.modules[name].channels)
 
-                for port in self.modules[name].ports:
-                    # _los = []
-                    # _ifs = []
-                    port_pulses = module_pulses[name].get_channel_pulses(self.modules[name]._port_channel_map[port])
-                    # for pulse in port_pulses:
-                    #     if pulse.type == PulseType.READOUT:
-                    #         _if = int(self.native_gates["single_qubit"][pulse.qubit]["MZ"]["if_frequency"])
-                    #         pulse._if = _if
-                    #         _los.append(int(pulse.frequency - _if))
-                    #         _ifs.append(int(_if))
-                    #     elif pulse.type == PulseType.DRIVE:
-                    #         _if = int(self.native_gates["single_qubit"][pulse.qubit]["RX"]["if_frequency"])
-                    #         pulse._if = _if
-                    #         _los.append(int(pulse.frequency - _if))
-                    #         _ifs.append(int(_if))
+            for port in self.modules[name].ports:
+                # _los = []
+                # _ifs = []
+                port_pulses = module_pulses[name].get_channel_pulses(self.modules[name]._port_channel_map[port])
+                # for pulse in port_pulses:
+                #     if pulse.type == PulseType.READOUT:
+                #         _if = int(self.native_gates["single_qubit"][pulse.qubit]["MZ"]["if_frequency"])
+                #         pulse._if = _if
+                #         _los.append(int(pulse.frequency - _if))
+                #         _ifs.append(int(_if))
+                #     elif pulse.type == PulseType.DRIVE:
+                #         _if = int(self.native_gates["single_qubit"][pulse.qubit]["RX"]["if_frequency"])
+                #         pulse._if = _if
+                #         _los.append(int(pulse.frequency - _if))
+                #         _ifs.append(int(_if))
 
-                    # # where multiple qubits share the same lo (for example on a readout line), check lo consistency
-                    # if len(_los) > 1:
-                    #     for _ in range(1, len(_los)):
-                    #         if _los[0] != _los[_]:
-                    #             raise ValueError(
-                    #                 f"""Pulses:
-                    #                 {module_pulses[name]}
-                    #                 sharing the lo at device: {name} - port: {port}
-                    #                 cannot be synthesised with intermediate frequencies:
-                    #                 {_ifs}"""
-                    #             )
-                    # if len(_los) > 0:
-                    #     self.modules[name].ports[port].lo_frequency = _los[0]
+                # # where multiple qubits share the same lo (for example on a readout line), check lo consistency
+                # if len(_los) > 1:
+                #     for _ in range(1, len(_los)):
+                #         if _los[0] != _los[_]:
+                #             raise ValueError(
+                #                 f"""Pulses:
+                #                 {module_pulses[name]}
+                #                 sharing the lo at device: {name} - port: {port}
+                #                 cannot be synthesised with intermediate frequencies:
+                #                 {_ifs}"""
+                #             )
+                # if len(_los) > 0:
+                #     self.modules[name].ports[port].lo_frequency = _los[0]
 
+                if isinstance(self.modules[name], (ClusterQRM_RF, ClusterQCM_RF)):
                     # without access to _ifs _los cannot be set ^^^^^^
                     for pulse in port_pulses:
                         pulse._if = int(pulse.frequency - self.modules[name].ports[port].lo_frequency)
