@@ -161,6 +161,26 @@ class QbloxOutputPort(Port, QbloxPort):
 
 class ClusterRF_OutputPort(QbloxOutputPort):
     @property
+    def lo_enabled(self):
+        """Flag to enable local oscillator."""
+
+        if self.device.is_qrm_type:
+            return self.device.get(f"out{self.port_number}_in{self.port_number}_lo_en")
+        elif self.device.is_qcm_type:
+            return self.device.get(f"out{self.port_number}_lo_en")
+
+    @lo_enabled.setter
+    def lo_enabled(self, value):
+        if not isinstance(value, bool):
+            raise_error(ValueError, f"Invalid lo_enabled {value}")
+
+        if self.device.is_qrm_type:
+            self._set_device_parameter(self.device, f"out{self.port_number}_in{self.port_number}_lo_en", value=value)
+        elif self.device.is_qcm_type:
+            self._set_device_parameter(self.device, f"out{self.port_number}_lo_en", value=value)
+
+
+    @property
     def lo_frequency(self):
         """Local oscillator frequency for the given port."""
         if self.device.is_qrm_type:
