@@ -29,9 +29,13 @@ def maximum_sweep_value(values, value0):
 
 def _update_baked_pulses(sweeper, qmsequence, config):
     """Updates baked pulse if duration sweeper is used."""
+    qmpulse = qmsequence.pulse_to_qmpulse[sweeper.pulses[0].serial]
+    is_baked = isinstance(qmpulse, BakedPulse)
     for pulse in sweeper.pulses:
         qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
         if isinstance(qmpulse, BakedPulse):
+            if not is_baked:
+                raise_error(TypeError, "Duration sweeper cannot contain both baked and not baked pulses.")
             values = np.array(sweeper.values).astype(int)
             qmpulse.bake(config, values)
 
@@ -153,7 +157,7 @@ def _sweep_start(sweepers, qubits, qmsequence, relaxation_time):
             to_process = {qmpulse}
             while to_process:
                 next_qmpulse = to_process.pop()
-                to_process |= next_qmpulse.next_pulses
+                to_process |= next_qmpulse.next_
                 next_qmpulse.wait_time_variable = start
 
         _sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
@@ -161,24 +165,22 @@ def _sweep_start(sweepers, qubits, qmsequence, relaxation_time):
 
 def _sweep_duration(sweepers, qubits, qmsequence, relaxation_time):
     sweeper = sweepers[0]
-    for pulse in sweeper.pulses:
-        qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
-        if isinstance(qmpulse, BakedPulse):
-            values = np.array(sweeper.values).astype(int)
-        else:
-            values = np.array(sweeper.values).astype(int) // 4
+    qmpulse = qmsequence.pulse_to_qmpulse[sweeper.pulses[0].serial]
+    if isinstance(qmpulse, BakedPulse):
+        values = np.array(sweeper.values).astype(int)
+    else:
+        values = np.array(sweeper.values).astype(int) // 4
 
     dur = declare(int)
-
     with for_(*from_array(dur, values)):
         for pulse in sweeper.pulses:
             qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
             qmpulse.swept_duration = dur
             # find all pulses that are connected to ``qmpulse`` and align them
-            to_process = set(qmpulse.next_pulses)
+            to_process = set(qmpulse.next_)
             while to_process:
                 next_qmpulse = to_process.pop()
-                to_process |= next_qmpulse.next_pulses
+                to_process |= next_qmpulse.next_
                 qmpulse.elements_to_align.add(next_qmpulse.element)
                 next_qmpulse.wait_time -= qmpulse.wait_time + qmpulse.duration // 4
 

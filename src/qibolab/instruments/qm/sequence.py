@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Union
 
 import numpy as np
+from numpy import typing as npt
 from qibo.config import raise_error
 from qm import qua
 from qm.qua._dsl import _Variable  # for type declaration only
@@ -19,7 +20,7 @@ from qibolab.instruments.qm.acquisition import (
 from qibolab.instruments.qm.config import QMConfig
 from qibolab.pulses import Pulse, PulseType
 
-DurationsType = Union[List[int], np.ndarray]
+DurationsType = Union[List[int], npt.NDArray[int]]
 """Type of values that can be accepted in a duration sweeper."""
 
 
@@ -36,7 +37,7 @@ class QMPulse:
     """:class:`qibolab.pulses.Pulse` implemting the current pulse."""
     element: Optional[str] = None
     """Element that the pulse will be played on, as defined in the QM config."""
-
+    operation: Optional[str] = None
     """Name of the operation that is implementing the pulse in the QM config."""
     relative_phase: Optional[float] = None
     """Relative phase of the pulse normalized to follow QM convention.
@@ -52,7 +53,7 @@ class QMPulse:
     acquisition: Optional[Acquisition] = None
     """Data class containing the variables required for data acquisition for the instrument."""
 
-    next_pulses: Set["QMPulse"] = field(default_factory=set)
+    next_: Set["QMPulse"] = field(default_factory=set)
     """Pulses that will be played after the current pulse.
     These pulses need to be re-aligned if we are sweeping the start or duration."""
     elements_to_align: Set[str] = field(default_factory=set)
@@ -203,13 +204,12 @@ class Sequence:
                 config.register_flux_element(qubits[pulse.qubit], pulse.frequency)
                 qmpulse = BakedPulse(pulse)
                 qmpulse.bake(config, durations=[pulse.duration])
-                qmsequence.add(qmpulse)
             else:
-                qmpulse = QMPulse(pulse)
-                qmsequence.add(qmpulse)
                 if pulse.duration % 4 != 0 or pulse.duration < 16:
                     raise_error(NotImplementedError, "1ns resolution is available for flux pulses only.")
+                qmpulse = QMPulse(pulse)
                 config.register_pulse(qubits[pulse.qubit], pulse, time_of_flight, smearing)
+            qmsequence.add(qmpulse)
 
         qmsequence.shift()
 
@@ -236,7 +236,7 @@ class Sequence:
 
         previous = self._find_previous(pulse)
         if previous is not None:
-            previous.next_pulses.add(qmpulse)
+            previous.next_.add(qmpulse)
 
         wait_time = pulse.start - self.clock[qmpulse.element]
         if wait_time >= 12:
@@ -252,11 +252,11 @@ class Sequence:
         to_shift = collections.deque()
         for qmpulse in self.qmpulses:
             if isinstance(qmpulse, BakedPulse):
-                to_shift.extend(qmpulse.next_pulses)
+                to_shift.extend(qmpulse.next_)
         while to_shift:
             qmpulse = to_shift.popleft()
             qmpulse.wait_time += 2
-            to_shift.extend(qmpulse.next_pulses)
+            to_shift.extend(qmpulse.next_)
 
     def play(self, relaxation_time=0):
         """Part of QUA program that plays an arbitrary pulse sequence.
