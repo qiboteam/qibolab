@@ -17,8 +17,9 @@ from qibolab.instruments.qm.acquisition import (
     RawAcquisition,
     ShotsAcquisition,
 )
-from qibolab.instruments.qm.config import QMConfig
 from qibolab.pulses import Pulse, PulseType
+
+from .config import QMConfig
 
 DurationsType = Union[List[int], npt.NDArray[int]]
 """Type of values that can be accepted in a duration sweeper."""

@@ -7,9 +7,10 @@ from qm.QuantumMachinesManager import QuantumMachinesManager
 
 from qibolab import AveragingMode
 from qibolab.instruments.abstract import Controller
-from qibolab.instruments.qm.config import IQPortId, QMConfig, QMPort
-from qibolab.instruments.qm.sequence import Sequence
-from qibolab.instruments.qm.sweepers import sweep
+
+from .config import IQPortId, QMConfig, QMPort
+from .sequence import Sequence
+from .sweepers import sweep
 
 
 @dataclass
