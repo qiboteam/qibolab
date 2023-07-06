@@ -339,6 +339,9 @@ class Platform:
         if options.relaxation_time is None:
             options = replace(options, relaxation_time=self.relaxation_time)
 
+        time = (sequences.duration + options.relaxation_time) * options.nshots * 1e9
+        log.info("Minimal execution time (seq): {time}")
+
         result = {}
         for instrument in self.instruments:
             if isinstance(instrument, Controller):
@@ -406,6 +409,11 @@ class Platform:
 
         if options.relaxation_time is None:
             options = replace(options, relaxation_time=self.relaxation_time)
+
+        time = (sequence.duration + options.relaxation_time) * options.nshots * 1e9
+        for sweep in sweepers:
+            time *= len(sweep.values)
+        log.info("Minimal execution time (seq): {time}")
 
         result = {}
         for instrument in self.instruments:
