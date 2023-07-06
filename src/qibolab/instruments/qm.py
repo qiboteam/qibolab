@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar, Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
+from numpy import typing as npt
 from qibo.config import raise_error
 from qm import generate_qua_script, qua
 from qm.qua import declare, declare_stream, fixed, for_
@@ -544,7 +545,7 @@ class QMPulse:
     """:class:`qibolab.pulses.Pulse` implemting the current pulse."""
     element: Optional[str] = None
     """Element that the pulse will be played on, as defined in the QM config."""
-
+    operation: Optional[str] = None
     """Name of the operation that is implementing the pulse in the QM config."""
     relative_phase: Optional[float] = None
     """Relative phase of the pulse normalized to follow QM convention.
@@ -560,7 +561,7 @@ class QMPulse:
     acquisition: Optional[Acquisition] = None
     """Data class containing the variables required for data acquisition for the instrument."""
 
-    next_pulses: Set["QMPulse"] = field(default_factory=set)
+    next_: Set["QMPulse"] = field(default_factory=set)
     """Pulses that will be played after the current pulse.
     These pulses need to be re-aligned if we are sweeping the start or duration."""
     elements_to_align: Set[str] = field(default_factory=set)
@@ -620,7 +621,7 @@ class QMPulse:
         self.acquisition.assign_element(self.element)
 
 
-DurationsType = Union[List[int], np.ndarray]
+DurationsType = Union[List[int], npt.NDArray[int]]
 
 
 @dataclass
@@ -714,7 +715,7 @@ class Sequence:
 
         previous = self._find_previous(pulse)
         if previous is not None:
-            previous.next_pulses.add(qmpulse)
+            previous.next_.add(qmpulse)
 
         wait_time = pulse.start - self.clock[qmpulse.element]
         if wait_time >= 12:
@@ -730,11 +731,11 @@ class Sequence:
         to_shift = collections.deque()
         for qmpulse in self.qmpulses:
             if isinstance(qmpulse, BakedPulse):
-                to_shift.extend(qmpulse.next_pulses)
-        while to_shift:
+                to_shift.extend(qmpulse.next_)
+        while len(to_shift) > 0:
             qmpulse = to_shift.popleft()
             qmpulse.wait_time += 2
-            to_shift.extend(qmpulse.next_pulses)
+            to_shift.extend(qmpulse.next_)
 
 
 @dataclass
@@ -1023,9 +1024,9 @@ class QMOPX(Controller):
                 qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
                 # find all pulses that are connected to ``qmpulse`` and update their starts
                 to_process = {qmpulse}
-                while to_process:
+                while len(to_process) > 0:
                     next_qmpulse = to_process.pop()
-                    to_process |= next_qmpulse.next_pulses
+                    to_process |= next_qmpulse.next_
                     next_qmpulse.wait_time_variable = start
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
@@ -1047,10 +1048,10 @@ class QMOPX(Controller):
                 qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
                 qmpulse.swept_duration = dur
                 # find all pulses that are connected to ``qmpulse`` and align them
-                to_process = set(qmpulse.next_pulses)
-                while to_process:
+                to_process = set(qmpulse.next_)
+                while len(to_process) > 0:
                     next_qmpulse = to_process.pop()
-                    to_process |= next_qmpulse.next_pulses
+                    to_process |= next_qmpulse.next_
                     qmpulse.elements_to_align.add(next_qmpulse.element)
                     next_qmpulse.wait_time -= qmpulse.wait_time + qmpulse.duration // 4
 
