@@ -4,7 +4,8 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 
-from qibolab.transpilers.unroller import NativeType, translate_gate
+from qibolab.native import NativeType
+from qibolab.transpilers.unroller import translate_gate
 
 
 def assert_matrices_allclose(gate, two_qubit_natives):

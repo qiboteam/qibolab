@@ -3,15 +3,19 @@ import numpy as np
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 
-from qibolab.transpilers.abstract import Placer, Router
-from qibolab.transpilers.fusion import Fusion, Rearrange
+from qibolab.native import NativeType
+from qibolab.transpilers.abstract import Optimizer, Placer, Router, Unroller
 from qibolab.transpilers.placer import Trivial
 from qibolab.transpilers.router import ShortestPaths
 from qibolab.transpilers.unroller import NativeGates
 
 
+class TranspilerPipelineError(Exception):
+    """Raise when an error occurs in the transpiler pipeline"""
+
+
 # TODO: rearrange qubits based on the final qubit map (or it will not work for routed circuit)
-def assert_transpilation_equivalence(original_circuit: Circuit, transpiled_circuit: Circuit):
+def assert_cirucuit_equivalence(original_circuit: Circuit, transpiled_circuit: Circuit):
     """Checks that the transpiled circuit agrees with the original using simulation.
 
     Args:
@@ -25,73 +29,52 @@ def assert_transpilation_equivalence(original_circuit: Circuit, transpiled_circu
     np.testing.assert_allclose(fidelity, 1.0)
 
 
-class Complete:
-    """Complete transpiler pipeline consisting of smaller transpiler steps that are applied sequentially:
-    1) preprocessing
-    2) initial qubit placement
-    3) routing
-    4) optimization
-    5) gate translation
+class Passes:
+    """Define a transpiler pipeline consisting of smaller transpiler steps that are applied sequentially:
 
     Args:
-        placer (transpilers.abstract.Placer): algorithm to define initial qubit mapping.
-        router (transpilers.abstract.Router): algorithm to perform routing.
-        preprocessing (transpilers.abstract.Optimizer): circuit optimization before connectivity matching.
-        optimizer (transpilers.abstract.Optimizer): circuit optimization after connectivity matching.
-        unroller (transpilers.abstract.Unroller): circuit translation to native gates.
-
-        NB: preprocessing and optimizers can also be a list in order to perform several of these steps,
-        in the future when hopefully we will have more than one optimization procedure.
+        passes (list): list of passes to be applied sequentially,
+            if None default transpiler will be used, it requires hardware connectivity.
+        connectivity (nx.Graph): hardware qubit connectivity.
     """
 
-    def __init__(
-        self,
-        connectivity: nx.Graph,
-        placer: Placer = Trivial,
-        router: Router = ShortestPaths,
-        preprocessing=Rearrange,
-        optimizer=Fusion,
-        unroller=NativeGates,
-    ):
-        self.placer = placer
-        self.router = router
-        self.preprocessing = preprocessing
-        self.optimizer = optimizer
-        self.unroller = unroller
-        self.connectivity = connectivity
+    def __init__(self, passes: list = None, connectivity: nx.Graph = None):
+        if passes is None:
+            self.passes = self.default(connectivity)
+        else:
+            self.passes = passes
+
+    def default(self, connectivity: nx.Graph):
+        """Return the default transpiler pipeline for the required hardware connectivity."""
+        if not isinstance(connectivity, nx.Graph):
+            raise TranspilerPipelineError("Define the hardware chip connectivity to use default transpiler")
+        default_passes = []
+        # default placer pass
+        default_passes.append(Trivial(connectivity=connectivity))
+        # default router pass
+        default_passes.append(ShortestPaths(connectivity=connectivity))
+        # default unroller pass
+        default_passes.append(NativeGates(two_qubit_natives=NativeType.CZ))
+        return default_passes
 
     def __call__(self, circuit):
-        if self.preprocessing is not None:
-            circuit = self.preprocessing(circuit)
-        initial_layout = self.placer(circuit)
-        routed_circuit, final_map = self.router(circuit, initial_layout)
-        if self.optimizer is not None:
-            routed_circuit = self.optimizer(routed_circuit)
-        final_circuit = self.unroller(routed_circuit)
-        return final_circuit, final_map
-
-
-class ConnectivityMatch:
-    """Only connectivty matching"""
-
-    def __init__(self, connectivity: nx.Graph, placer: Placer = Trivial, router: Router = ShortestPaths):
-        self.placer = placer
-        self.router = router
-        self.connectivity = connectivity
-
-    def __call__(self, circuit):
-        initial_layout = self.placer(circuit)
-        routed_circuit, final_map = self.router(circuit, initial_layout)
-        return routed_circuit, final_map
-
-
-class Optimization:
-    """Only optimization steps"""
-
-    def __init__(self, optimizers=[Rearrange, Fusion]):
-        self.optimizers = optimizers
-
-    def __call__(self, circuit):
-        for optimizer in self.optimizers:
-            circuit = optimizer(circuit)
-        return circuit
+        layout = None
+        final_layout = None
+        for transpiler_pass in self.passes:
+            if isinstance(transpiler_pass, Optimizer):
+                circuit = transpiler_pass(circuit)
+            elif isinstance(transpiler_pass, Placer):
+                if layout == None:
+                    layout = transpiler_pass(circuit)
+                else:
+                    raise TranspilerPipelineError("You are defining more than one placer pass.")
+            elif isinstance(transpiler_pass, Router):
+                if self.layout is not None:
+                    circuit, final_layout = transpiler_pass(circuit, layout)
+                else:
+                    raise TranspilerPipelineError("Use a placement pass before routing.")
+            elif isinstance(transpiler_pass, Unroller):
+                circuit = transpiler_pass(circuit)
+            else:
+                TranspilerPipelineError("Unrecognised transpiler pass: ", transpiler_pass)
+        return circuit, final_layout

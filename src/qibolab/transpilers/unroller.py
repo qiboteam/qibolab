@@ -3,7 +3,7 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.config import raise_error
 
-from qibolab.native import NativeType
+from qibolab.native import TwoQubitNatives
 from qibolab.transpilers.abstract import Unroller
 from qibolab.transpilers.unitary_decompositions import (
     two_qubit_decomposition,
@@ -18,17 +18,17 @@ class NativeGates(Unroller):
     """Translates a circuit to native gates.
 
     Args:
-        circuit (qibo.models.Circuit): Circuit model to translate into native gates.
-        single_qubit_natives (?)
+        circuit (qibo.models.Circuit): circuit model to translate into native gates.
+        single_qubit_natives (Tuple): single qubit native gates.
         two_qubit_natives (NativeType): two qubit native gates supported by the quantum hardware.
 
     Returns:
-        translated_circuit (qibo.models.Circuit): Equivalent circuit with native gates.
+        translated_circuit (qibo.models.Circuit): equivalent circuit with native gates.
     """
 
     def __init__(
         self,
-        two_qubit_natives: NativeType,
+        two_qubit_natives: TwoQubitNatives,
         single_qubit_natives=(gates.I, gates.Z, gates.RZ, gates.U3),
         translate_single_qubit: bool = True,
     ):
@@ -50,13 +50,13 @@ class DecompositionError(Exception):
     """A decomposition error is raised when, during transpiling, gates are not correctly decomposed in native gates"""
 
 
-def assert_translation(
+def assert_decomposition(
     circuit, two_qubit_natives: NativeType, single_qubit_natives=(gates.I, gates.Z, gates.RZ, gates.U3)
 ):
-    """Checks if a circuit has been correctly translated into native gates.
+    """Checks if a circuit has been correctly decmposed into native gates.
 
     Args:
-        circuit (qibo.models.Circuit): Circuit model to check.
+        circuit (qibo.models.Circuit): circuit model to check.
     """
     for gate in circuit.queue:
         if isinstance(gate, gates.M):

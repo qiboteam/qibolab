@@ -34,7 +34,7 @@ class Placer(ABC):
         self.connectivity = connectivity
 
     @abstractmethod
-    def __call__(self, circuit: Circuit) -> dict:
+    def __call__(self, circuit: Circuit, *args) -> dict:
         """Find initial qubit mapping
 
         Args:
@@ -53,7 +53,7 @@ class Router(ABC):
         self.connectivity = connectivity
 
     @abstractmethod
-    def __call__(self, circuit: Circuit, initial_layout: dict) -> Tuple[Circuit, dict]:
+    def __call__(self, circuit: Circuit, initial_layout: dict, *args) -> Tuple[Circuit, dict]:
         """Match circuit to hardware connectivity.
 
         Args:
@@ -70,7 +70,7 @@ class Optimizer(ABC):
     """An optimizer tries to reduce the number of gates during transpilation."""
 
     @abstractmethod
-    def __call__(self, circuit: Circuit) -> Circuit:
+    def __call__(self, circuit: Circuit, *args) -> Circuit:
         """Find initial qubit mapping
 
         Args:
@@ -89,7 +89,7 @@ class Unroller(ABC):
         self.native_gates = native_gates
 
     @abstractmethod
-    def __call__(self, circuit: Circuit) -> Circuit:
+    def __call__(self, circuit: Circuit, *args) -> Circuit:
         """Find initial qubit mapping
 
         Args:

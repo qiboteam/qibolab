@@ -1,4 +1,4 @@
-from qibolab.transpilers.fusion import Fusion, Rearrange
+from qibolab.transpilers.optimizer import Fusion, Rearrange
 from qibolab.transpilers.pipeline import Complete, ConnectivityMatch, Optimization
 from qibolab.transpilers.placer import (
     Custom,
