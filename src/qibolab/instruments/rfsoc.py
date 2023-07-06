@@ -34,6 +34,11 @@ def convert_qubit(qubit: Qubit) -> rfsoc.Qubit:
 
 def replace_pulse_shape(rfsoc_pulse: rfsoc_pulses.Pulse, shape: PulseShape) -> rfsoc_pulses.Pulse:
     """Set pulse shape parameters in rfsoc_pulses pulse object."""
+    if shape.name not in {"Gaussian", "Drag", "Rectangular"}:
+        new_pulse = rfsoc_pulses.Arbitrary(
+            **asdict(rfsoc_pulse), i_values=shape.envelope_waveform_i, q_values=shape.envelope_waveform_q
+        )
+        return new_pulse
     new_pulse = getattr(rfsoc_pulses, shape.name)(**asdict(rfsoc_pulse))
     if shape.name in {"Gaussian", "Drag"}:
         new_pulse.rel_sigma = shape.rel_sigma
@@ -156,10 +161,10 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Q
                 if len(sequence) > idx_sweep + 1:
                     # if duration-swept pulse is not last
                     indexes.append(idx_sweep + 1)
-                    t0 = sequence[idx_sweep + 1].start - sequence[idx_sweep].start
+                    t_start = sequence[idx_sweep + 1].start - sequence[idx_sweep].start
                     parameters.append(rfsoc.Parameter.DELAY)
-                    starts.append(t0 + delta_start)
-                    stops.append(t0 + delta_stop)
+                    starts.append(t_start + delta_start)
+                    stops.append(t_start + delta_stop)
             else:
                 parameters.append(convert_parameter(sweeper.parameter))
 
