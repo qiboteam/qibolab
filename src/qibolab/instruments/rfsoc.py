@@ -5,14 +5,13 @@ Tested on the following FPGA:
     - RFSoC 4x2
     - ZCU111
 """
-import json
-import socket
 from dataclasses import asdict, dataclass
 from typing import Union
 
 import numpy as np
 import qibosoq.components.base as rfsoc
 import qibosoq.components.pulses as rfsoc_pulses
+from qibosoq import client
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
@@ -250,10 +249,9 @@ class RFSoC(Controller):
             "cfg": asdict(self.cfg),
             "sequence": convert_pulse_sequence(sequence, qubits),
             "qubits": [asdict(convert_qubit(qubits[idx])) for idx in qubits],
-            "readouts_per_experiment": len(sequence.ro_pulses),
             "average": average,
         }
-        return self._open_connection(self.host, self.port, server_commands)
+        return client.connect(server_commands, self.host, self.port)
 
     def _execute_sweeps(
         self,
@@ -280,44 +278,9 @@ class RFSoC(Controller):
             "sequence": convert_pulse_sequence(sequence, qubits),
             "qubits": [asdict(convert_qubit(qubits[idx])) for idx in qubits],
             "sweepers": [asdict(sweeper) for sweeper in sweepers],
-            "readouts_per_experiment": len(sequence.ro_pulses),
             "average": average,
         }
-        return self._open_connection(self.host, self.port, server_commands)
-
-    @staticmethod
-    def _open_connection(host: str, port: int, server_commands: dict):
-        """Send to the server the commands needed for execution.
-
-           The communication protocol is:
-            * convert the dictionary containing all needed information in json
-            * send to the server the length in byte of the encoded dictionary
-            * the server now will wait for that number of bytes
-            * send the  encoded dictionary
-            * wait for response (arbitray number of bytes)
-        Returns:
-            Lists of I and Q value measured
-        Raise:
-            Exception: if the server encounters and error, the same error is raised here
-        """
-        # open a connection
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.connect((host, port))
-            msg_encoded = bytes(json.dumps(server_commands), "utf-8")
-            # first send 4 bytes with the length of the message
-            sock.send(len(msg_encoded).to_bytes(4, "big"))
-            sock.send(msg_encoded)
-            # wait till the server is sending
-            received = bytearray()
-            while True:
-                tmp = sock.recv(4096)
-                if not tmp:
-                    break
-                received.extend(tmp)
-        results = json.loads(received.decode("utf-8"))
-        if isinstance(results, str) and "Error" in results:
-            raise QibosoqError(results)
-        return results["i"], results["q"]
+        return client.connect(server_commands, self.host, self.port)
 
     def play(
         self,

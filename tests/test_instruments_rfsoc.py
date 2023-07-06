@@ -242,7 +242,7 @@ def test_play(mocker, dummy_qrc):
 
     nshots = 100
     server_results = ([[np.random.rand(nshots)]], [[np.random.rand(nshots)]])
-    mocker.patch("qibolab.instruments.rfsoc.RFSoC._open_connection", return_value=server_results)
+    mocker.patch("qibosoq.client.connect", return_value=server_results)
     parameters = ExecutionParameters(
         nshots=nshots, acquisition_type=AcquisitionType.DISCRIMINATION, averaging_mode=AveragingMode.SINGLESHOT
     )
@@ -279,7 +279,7 @@ def test_sweep(mocker, dummy_qrc):
 
     nshots = 100
     server_results = ([[np.random.rand(nshots)]], [[np.random.rand(nshots)]])
-    mocker.patch("qibolab.instruments.rfsoc.RFSoC._open_connection", return_value=server_results)
+    mocker.patch("qibosoq.client.connect", return_value=server_results)
     parameters = ExecutionParameters(
         nshots=nshots, acquisition_type=AcquisitionType.DISCRIMINATION, averaging_mode=AveragingMode.SINGLESHOT
     )
@@ -337,7 +337,7 @@ def test_update_cfg(mocker, dummy_qrc):
     nshots = 333
     relax_time = 1e6
     server_results = ([[np.random.rand(nshots)]], [[np.random.rand(nshots)]])
-    mocker.patch("qibolab.instruments.rfsoc.RFSoC._open_connection", return_value=server_results)
+    mocker.patch("qibosoq.client.connect", return_value=server_results)
     parameters = ExecutionParameters(
         nshots=nshots,
         acquisition_type=AcquisitionType.DISCRIMINATION,
