@@ -806,24 +806,27 @@ class Zurich(Controller):
 
         readout_schedule = defaultdict(list)
         qubit_readout_schedule = defaultdict(list)
+        iq_angle_readout_schedule = defaultdict(list)
         for qubit in qubits.values():
             if qubit.flux_coupler:
                 continue
             q = qubit.name  # pylint: disable=C0103
+            iq_angle = qubit.iq_angle
             if len(self.sequence[f"readout{q}"]) != 0:
                 i = 0
                 for pulse in self.sequence[f"readout{q}"]:
                     readout_schedule[i].append(pulse)
                     qubit_readout_schedule[i].append(q)
+                    iq_angle_readout_schedule[i].append(iq_angle)
                     i += 1
 
         i = 0
-        for pulses, qubits in zip(readout_schedule.values(), qubit_readout_schedule.values()):
+        for pulses, qubits, iq_angles in zip(readout_schedule.values(), qubit_readout_schedule.values(), iq_angle_readout_schedule.values()):
             if i != 0:
                 play_after = f"sequence_measure_{i-1}"
             # Section on the outside loop allows for multiplex
             with exp.section(uid=f"sequence_measure_{i}", play_after=play_after):
-                for pulse, q in zip(pulses, qubits):
+                for pulse, q, iq_angle in zip(pulses, qubits, iq_angles):
                     pulse.zhpulse.uid += str(i)
 
                     # Integration weights definition or load from the chip folder
@@ -839,7 +842,8 @@ class Zurich(Controller):
                         if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
                             weight = lo.pulse_library.sampled_pulse_complex(
                                 uid="weight" + pulse.zhpulse.uid,
-                                samples=samples[0] * np.exp(1j * qubit.iq_angle),
+                                # samples=samples[0] * np.exp(1j * qubit.iq_angle),
+                                samples=samples[0] * np.exp(1j * iq_angle),
                             )
                         else:
                             weight = lo.pulse_library.sampled_pulse_complex(
@@ -854,9 +858,13 @@ class Zurich(Controller):
                             time=self.smearing * NANO_TO_SECONDS,
                         )
                         if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
+                            # weight = lo.pulse_library.sampled_pulse_complex(
+                            #     np.ones([int(pulse.pulse.duration * 2 - 3 * self.smearing * NANO_TO_SECONDS)])
+                            #     * np.exp(1j * qubit.iq_angle)
+                            # )
                             weight = lo.pulse_library.sampled_pulse_complex(
                                 np.ones([int(pulse.pulse.duration * 2 - 3 * self.smearing * NANO_TO_SECONDS)])
-                                * np.exp(1j * qubit.iq_angle)
+                                * np.exp(1j * iq_angle)
                             )
                         else:
                             weight = lo.pulse_library.const(
@@ -872,7 +880,7 @@ class Zurich(Controller):
                         reset_delay = relaxation_time * NANO_TO_SECONDS
                     else:
                         # FIXME: Here time of flight or not ?
-                        reset_delay = 0  # 75 * NANO_TO_SECONDS
+                        reset_delay = 0  # self.time_of_flight * NANO_TO_SECONDS
 
                     exp.measure(
                         acquire_signal=f"acquire{q}",
