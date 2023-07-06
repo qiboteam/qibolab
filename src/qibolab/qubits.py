@@ -11,6 +11,8 @@ CHANNEL_NAMES = ("readout", "feedback", "drive", "flux", "twpa")
 """Names of channels that belong to a qubit.
 Not all channels are required to operate a qubit.
 """
+EXCLUDED_FIELDS = CHANNEL_NAMES + ("name", "flux_coupler", "native_gates")
+"""Qubit dataclass fields that are excluded by the ``characterization`` property."""
 
 
 @dataclass
@@ -86,9 +88,7 @@ class Qubit:
     @property
     def characterization(self):
         """Dictionary containing characterization parameters."""
-        exclude_fields = CHANNEL_NAMES + ("name", "flux_coupler", "native_gates")
-        data = {fld.name: getattr(self, fld.name) for fld in fields(self) if fld.name not in exclude_fields}
-        return data
+        return {fld.name: getattr(self, fld.name) for fld in fields(self) if fld.name not in EXCLUDED_FIELDS}
 
 
 QubitPairId = Tuple[QubitId, QubitId]
