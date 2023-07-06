@@ -1033,16 +1033,22 @@ class QMOPX(Controller):
 
     def sweep_duration(self, sweepers, qubits, qmsequence, relaxation_time):
         sweeper = sweepers[0]
+
+        qmpulse = qmsequence.pulse_to_qmpulse[sweeper.pulses[0].serial]
+        is_baked = isinstance(qmpulse, BakedPulse)
+        if is_baked:
+            values = np.array(sweeper.values).astype(int)
+        else:
+            values = np.array(sweeper.values).astype(int) // 4
+
         for pulse in sweeper.pulses:
             qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
             if isinstance(qmpulse, BakedPulse):
-                values = np.array(sweeper.values).astype(int)
+                if not is_baked:
+                    raise_error(TypeError, "Duration sweeper cannot contain both baked and not baked pulses.")
                 qmpulse.bake(self.config, values)
-            else:
-                values = np.array(sweeper.values).astype(int) // 4
 
         dur = declare(int)
-
         with for_(*from_array(dur, values)):
             for pulse in sweeper.pulses:
                 qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
