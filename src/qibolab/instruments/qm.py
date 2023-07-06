@@ -848,13 +848,12 @@ class QMOPX(Controller):
                 self.config.register_flux_element(qubits[pulse.qubit], pulse.frequency)
                 qmpulse = BakedPulse(pulse)
                 qmpulse.bake(self.config, durations=[pulse.duration])
-                qmsequence.add(qmpulse)
             else:
                 qmpulse = QMPulse(pulse)
-                qmsequence.add(qmpulse)
                 if pulse.duration % 4 != 0 or pulse.duration < 16:
                     raise_error(NotImplementedError, "1ns resolution is available for flux pulses only.")
                 self.config.register_pulse(qubits[pulse.qubit], pulse, self.time_of_flight, self.smearing)
+            qmsequence.add(qmpulse)
 
         qmsequence.shift()
 
