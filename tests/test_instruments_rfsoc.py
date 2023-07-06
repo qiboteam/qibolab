@@ -1,5 +1,7 @@
 """Tests for RFSoC driver"""
 
+from dataclasses import asdict
+
 import numpy as np
 import pytest
 import qibosoq.components.base as rfsoc
@@ -11,6 +13,7 @@ from qibolab.instruments.rfsoc import (
     convert_qubit,
     convert_sweep,
     convert_units_sweeper,
+    replace_pulse_shape,
 )
 from qibolab.platform import Qubit
 from qibolab.pulses import Drag, Gaussian, Pulse, PulseSequence, PulseType, Rectangular
@@ -43,6 +46,30 @@ def test_convert_qubit(dummy_qrc):
     targ = rfsoc.Qubit(0.0, None)
 
     assert qubit == targ
+
+
+def test_replace_pulse_shape(dummy_qrc):
+    """Test rfsoc pulse conversions."""
+
+    pulse = rfsoc_pulses.Pulse(50, 0.9, 0, 0, 0.04, "name", "drive", 4, None)
+
+    new_pulse = replace_pulse_shape(pulse, Rectangular())
+    assert isinstance(new_pulse, rfsoc_pulses.Rectangular)
+    for key in asdict(pulse):
+        assert asdict(pulse)[key] == asdict(new_pulse)[key]
+
+    new_pulse = replace_pulse_shape(pulse, Gaussian(5))
+    assert isinstance(new_pulse, rfsoc_pulses.Gaussian)
+    assert new_pulse.rel_sigma == 5
+    for key in asdict(pulse):
+        assert asdict(pulse)[key] == asdict(new_pulse)[key]
+
+    new_pulse = replace_pulse_shape(pulse, Drag(5, 7))
+    assert isinstance(new_pulse, rfsoc_pulses.Drag)
+    assert new_pulse.rel_sigma == 5
+    assert new_pulse.beta == 7
+    for key in asdict(pulse):
+        assert asdict(pulse)[key] == asdict(new_pulse)[key]
 
 
 def test_convert_pulse(dummy_qrc):

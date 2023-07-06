@@ -35,18 +35,12 @@ def convert_qubit(qubit: Qubit) -> rfsoc.Qubit:
 
 def replace_pulse_shape(rfsoc_pulse: rfsoc_pulses.Pulse, shape: PulseShape) -> rfsoc_pulses.Pulse:
     """Set pulse shape parameters in rfsoc_pulses pulse object."""
-
-    pulse_dict = asdict(rfsoc_pulse)
-
-    shape_name = shape.name.lower()
-    cls = rfsoc_pulses.Shape[shape_name].value
-    args = {}
-    if shape_name in {"gaussian", "drag"}:
-        args["rel_sigma"] = shape.rel_sigma
-        if shape_name == "drag":
-            args["beta"] = shape.beta
-
-    return cls(**pulse_dict, **args)
+    new_pulse = getattr(rfsoc_pulses, shape.name)(**asdict(rfsoc_pulse))
+    if shape.name in {"Gaussian", "Drag"}:
+        new_pulse.rel_sigma = shape.rel_sigma
+        if shape.name == "Drag":
+            new_pulse.beta = shape.beta
+    return new_pulse
 
 
 def pulse_lo_frequency(pulse: Pulse, qubits: dict[int, Qubit]) -> int:
