@@ -64,7 +64,7 @@ def convert_pulse_sequence(sequence: PulseSequence, qubits: dict[int, Qubit]) ->
         pulse_dict = asdict(convert_pulse(pulse, qubits, start_delay))
         list_sequence.append(pulse_dict)
 
-        abs_time += start_delay
+        abs_time = abs_start
     return list_sequence
 
 
@@ -142,7 +142,7 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Q
             base_value = getattr(pulse, sweeper.parameter.name)
             if idx_sweep != 0 and sweeper.parameter is START:
                 # do the conversion from start to delay
-                base_value = base_value - sequence[idx_sweep - 1].start
+                base_value -= sequence[idx_sweep - 1].start
             values = sweeper.get_values(base_value)
             starts.append(values[0])
             stops.append(values[-1])
