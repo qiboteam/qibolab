@@ -1,6 +1,6 @@
 from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qibo.config import log, raise_error
-
+import numpy as np
 from qibolab.instruments.port import Port
 
 FREQUENCY_LIMIT = 500e6
@@ -25,9 +25,9 @@ class QbloxOutputPort(Port):
 
     @attenuation.setter
     def attenuation(self, value):
-        if isinstance(value, float):
+        if isinstance(value, (float, np.floating)):
             value = int(value)
-        if isinstance(value, int):
+        if isinstance(value, (int, np.integer)):
             if value > 60:
                 log.warning(f"Qblox attenuation needs to be between 0 and 60 dB. Adjusting {value} to 60dB")
                 value = 60
@@ -54,9 +54,9 @@ class QbloxOutputPort(Port):
 
     @offset.setter
     def offset(self, value):
-        if isinstance(value, int):
+        if isinstance(value, (int, np.integer)):
             value = float(value)
-        if isinstance(value, float):
+        if isinstance(value, (float, np.floating)):
             if value > 2.5:
                 log.warning(f"Qblox offset needs to be between -2.5 and 2.5 V. Adjusting {value} to 2.5 V")
                 value = 2.5
@@ -91,9 +91,9 @@ class QbloxOutputPort(Port):
 
     @nco_freq.setter
     def nco_freq(self, value):
-        if isinstance(value, float):
+        if isinstance(value, (float, np.floating)):
             value = int(value)
-        if isinstance(value, int):
+        if isinstance(value, (int, np.integer)):
             if value > FREQUENCY_LIMIT:
                 log.warning(
                     f"Qblox nco_freq needs to be between -{FREQUENCY_LIMIT} and {FREQUENCY_LIMIT} MHz. Adjusting {value} to {FREQUENCY_LIMIT} MHz"
@@ -118,9 +118,9 @@ class QbloxOutputPort(Port):
 
     @nco_phase_offs.setter
     def nco_phase_offs(self, value):
-        if isinstance(value, int):
+        if isinstance(value, (int, np.integer)):
             value = float(value)
-        if isinstance(value, float):
+        if isinstance(value, (float, np.floating)):
             value = value % 360
         else:
             raise_error(ValueError, f"Invalid nco_phase_offs {value}")
@@ -160,9 +160,9 @@ class ClusterRF_OutputPort(QbloxOutputPort):
 
     @lo_frequency.setter
     def lo_frequency(self, value):
-        if isinstance(value, float):
+        if isinstance(value, (float, np.floating)):
             value = int(value)
-        if isinstance(value, int):
+        if isinstance(value, (int, np.integer)):
             if value > 18e9:
                 log.warning(f"Qblox lo_frequency needs to be between 2e9 and 18e9 Hz. Adjusting {value} to 18e9 Hz")
                 value = int(18e9)
@@ -189,9 +189,9 @@ class ClusterRF_OutputPort(QbloxOutputPort):
 
     @gain.setter
     def gain(self, value):
-        if isinstance(value, int):
+        if isinstance(value, (int, np.integer)):
             value = float(value)
-        if isinstance(value, float):
+        if isinstance(value, (float, np.floating)):
             if value > 1.0:
                 log.warning(f"Qblox offset needs to be between -1 and 1. Adjusting {value} to 1")
                 value = 1.0
@@ -218,9 +218,9 @@ class ClusterBB_OutputPort(QbloxOutputPort):
 
     @gain.setter
     def gain(self, value):
-        if isinstance(value, int):
+        if isinstance(value, (int, np.integer)):
             value = float(value)
-        if isinstance(value, float):
+        if isinstance(value, (float, np.floating)):
             if value > 1.0:
                 log.warning(f"Qblox offset needs to be between -1 and 1. Adjusting {value} to 1")
                 value = 1.0
@@ -269,9 +269,9 @@ class QbloxInputPort:
 
     @acquisition_duration.setter
     def acquisition_duration(self, value):
-        if isinstance(value, float):
+        if isinstance(value, (float, np.floating)):
             value = int(value)
-        if isinstance(value, int):
+        if isinstance(value, (int, np.integer)):
             if value < 4:
                 log.warning(f"Qblox hardware_demod_en needs to be > 4ns. Adjusting {value} to 4 ns")
                 value = 4
