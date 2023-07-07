@@ -421,7 +421,7 @@ class ClusterQRM_RF(Instrument):
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
 
-    def _get_next_sequencer(self, port: str, frequency: int, qubit: None):
+    def _get_next_sequencer(self, port: str, frequency: int, qubits: dict, qubit: None):
         """Retrieves and configures the next avaliable sequencer.
 
         The parameters of the new sequencer are copied from those of the default sequencer, except for the intermediate
@@ -458,16 +458,19 @@ class ClusterQRM_RF(Instrument):
                 # TODO: Throw error in that event or implement non_overlapping_same_frequency_pulses
                 #       Even better, set the frequency before each pulse is played (would work with hardware modulation only)
             )
-        if self.ports["i1"].hardware_demod_en and qubit in self.classification_parameters:
+        # if self.ports["i1"].hardware_demod_en and qubit in self.classification_parameters:
+        if self.ports["i1"].hardware_demod_en and not qubits[qubit].threshold is None:
             self._set_device_parameter(
                 self.device.sequencers[next_sequencer_number],
                 "thresholded_acq_rotation",
-                value=self.classification_parameters[qubit]["rotation_angle"],
+                # value=self.classification_parameters[qubit]["rotation_angle"],
+                value=(qubits[qubit].iq_angle * 360 / (2 * np.pi)) % 360,
             )
             self._set_device_parameter(
                 self.device.sequencers[next_sequencer_number],
                 "thresholded_acq_threshold",
-                value=self.classification_parameters[qubit]["threshold"] * self.ports["i1"].acquisition_duration,
+                # value=self.classification_parameters[qubit]["threshold"] * self.ports["i1"].acquisition_duration,
+                value=qubits[qubit].threshold * self.ports["i1"].acquisition_duration,
             )
         # create sequencer wrapper
         sequencer = Sequencer(next_sequencer_number)
@@ -491,6 +494,7 @@ class ClusterQRM_RF(Instrument):
 
     def process_pulse_sequence(
         self,
+        qubits: dict,
         instrument_pulses: PulseSequence,
         navgs: int,
         nshots: int,
@@ -563,6 +567,7 @@ class ClusterQRM_RF(Instrument):
                 sequencer = self._get_next_sequencer(
                     port=port,
                     frequency=self.get_if(non_overlapping_pulses[0]),
+                    qubits=qubits,
                     qubit=non_overlapping_pulses[0].qubit,
                 )
                 # add the sequencer to the list of sequencers required by the port
@@ -592,6 +597,7 @@ class ClusterQRM_RF(Instrument):
                         sequencer = self._get_next_sequencer(
                             port=port,
                             frequency=self.get_if(non_overlapping_pulses[0]),
+                            qubits=qubits,
                             qubit=non_overlapping_pulses[0].qubit,
                         )
                         # add the sequencer to the list of sequencers required by the port

@@ -428,7 +428,13 @@ class ClusterQCM_BB(Instrument):
         return _if
 
     def process_pulse_sequence(
-        self, instrument_pulses: PulseSequence, navgs: int, nshots: int, repetition_duration: int, sweepers: list = []
+        self,
+        qubits: dict,
+        instrument_pulses: PulseSequence,
+        navgs: int,
+        nshots: int,
+        repetition_duration: int,
+        sweepers: list = [],
     ):
         """Processes a list of pulses, generating the waveforms and sequence program required by
         the instrument to synthesise them.

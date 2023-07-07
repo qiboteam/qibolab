@@ -102,6 +102,7 @@ class QbloxController(Controller):
 
     def _execute_pulse_sequence(
         self,
+        qubits: dict,
         sequence: PulseSequence,
         options: ExecutionParameters,
         sweepers: list() = [],  # list(Sweeper) = []
@@ -193,7 +194,7 @@ class QbloxController(Controller):
 
                 #  ask each module to generate waveforms & program and upload them to the device
                 self.modules[name].process_pulse_sequence(
-                    module_pulses[name], navgs, nshots, repetition_duration, sweepers
+                    qubits, module_pulses[name], navgs, nshots, repetition_duration, sweepers
                 )
 
                 # log.info(f"{self.modules[name]}: Uploading pulse sequence")
@@ -237,7 +238,7 @@ class QbloxController(Controller):
         return data
 
     def play(self, qubits, sequence, options):
-        return self._execute_pulse_sequence(sequence, options)
+        return self._execute_pulse_sequence(qubits, sequence, options)
 
     def play_sequences(self, *args, **kwargs):
         raise_error(NotImplementedError, "play_sequences is not implemented in qblox driver yet.")
@@ -403,7 +404,7 @@ class QbloxController(Controller):
                         results=results,
                     )
                 else:
-                    result = self._execute_pulse_sequence(sequence=sequence, options=options)
+                    result = self._execute_pulse_sequence(qubits=qubits, sequence=sequence, options=options)
                     for pulse in sequence.ro_pulses:
                         if results[pulse.id]:
                             results[pulse.id] += result[pulse.serial]
@@ -455,7 +456,7 @@ class QbloxController(Controller):
                             f"Real time sweeper execution time: {int(execution_time)//60}m {int(execution_time) % 60}s"
                         )
 
-                        result = self._execute_pulse_sequence(sequence, options, sweepers)
+                        result = self._execute_pulse_sequence(qubits, sequence, options, sweepers)
                         for pulse in sequence.ro_pulses:
                             if results[pulse.id]:
                                 results[pulse.id] += result[pulse.serial]
