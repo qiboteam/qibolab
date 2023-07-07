@@ -821,7 +821,9 @@ class Zurich(Controller):
                     i += 1
 
         i = 0
-        for pulses, qubits, iq_angles in zip(readout_schedule.values(), qubit_readout_schedule.values(), iq_angle_readout_schedule.values()):
+        for pulses, qubits, iq_angles in zip(
+            readout_schedule.values(), qubit_readout_schedule.values(), iq_angle_readout_schedule.values()
+        ):
             if i != 0:
                 play_after = f"sequence_measure_{i-1}"
             # Section on the outside loop allows for multiplex
