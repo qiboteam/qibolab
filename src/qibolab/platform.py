@@ -339,8 +339,8 @@ class Platform:
         if options.relaxation_time is None:
             options = replace(options, relaxation_time=self.relaxation_time)
 
-        time = (sequences.duration + options.relaxation_time) * options.nshots * 1e9
-        log.info("Minimal execution time (seq): {time}")
+        time = (sequences.duration + options.relaxation_time) * options.nshots * 1e-9
+        log.info(f"Minimal execution time (seq): {time}")
 
         result = {}
         for instrument in self.instruments:
@@ -410,10 +410,10 @@ class Platform:
         if options.relaxation_time is None:
             options = replace(options, relaxation_time=self.relaxation_time)
 
-        time = (sequence.duration + options.relaxation_time) * options.nshots * 1e9
+        time = (sequence.duration + options.relaxation_time) * options.nshots * 1e-9
         for sweep in sweepers:
             time *= len(sweep.values)
-        log.info("Minimal execution time (seq): {time}")
+        log.info(f"Minimal execution time (sweep): {time}")
 
         result = {}
         for instrument in self.instruments:
