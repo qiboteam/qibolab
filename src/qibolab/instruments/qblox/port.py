@@ -1,6 +1,7 @@
+import numpy as np
 from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qibo.config import log, raise_error
-import numpy as np
+
 from qibolab.instruments.port import Port
 
 FREQUENCY_LIMIT = 500e6
