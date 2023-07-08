@@ -8,8 +8,6 @@ settings:
     sampling_rate: 1000000000
     relaxation_time: 50_000
 
-resonator_type: 2D
-
 topology: [[0, 2], [1, 2], [2, 3], [2, 4]]
 
 native_gates:

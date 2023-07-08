@@ -1,6 +1,7 @@
 from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyInstrument
 from qibolab.platform import Platform
+from qibolab.utils import load_qubits, load_settings
 
 NAME = "dummy"
 RUNCARD = {
@@ -13,7 +14,6 @@ RUNCARD = {
         3,
     ],
     "settings": {"sampling_rate": 1000000000, "relaxation_time": 0, "nshots": 1024},
-    "resonator_type": "2D",
     "topology": [[0, 1], [1, 2], [0, 3]],
     "native_gates": {
         "single_qubit": {
@@ -213,17 +213,17 @@ def create_dummy():
     channels |= Channel("readout", port=instrument["readout"])
     channels |= (Channel(f"drive-{i}", port=instrument[f"drive-{i}"]) for i in range(nqubits))
     channels |= (Channel(f"flux-{i}", port=instrument[f"flux-{i}"]) for i in range(nqubits))
+    channels["readout"].attenuation = 0
 
-    # Create platform
-    platform = Platform(NAME, RUNCARD, [instrument], channels)
-
-    instrument.sampling_rate = platform.settings.sampling_rate * 1e-9
+    qubits, pairs = load_qubits(RUNCARD)
+    settings = load_settings(RUNCARD)
 
     # map channels to qubits
-    for qubit in platform.qubits:
-        platform.qubits[qubit].readout = channels["readout"]
-        platform.qubits[qubit].drive = channels[f"drive-{qubit}"]
-        platform.qubits[qubit].flux = channels[f"flux-{qubit}"]
-        channels["readout"].attenuation = 0
+    for q, qubit in qubits.items():
+        qubit.readout = channels["readout"]
+        qubit.drive = channels[f"drive-{q}"]
+        qubit.flux = channels[f"flux-{q}"]
 
-    return platform
+    instruments = {instrument.name: instrument}
+    instrument.sampling_rate = settings.sampling_rate * 1e-9
+    return Platform(NAME, qubits, pairs, instruments, settings, resonator_type="2D")

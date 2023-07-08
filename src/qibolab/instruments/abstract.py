@@ -4,6 +4,7 @@ from pathlib import Path
 
 from qibolab.instruments.port import Port
 
+InstrumentId = str
 INSTRUMENTS_DATA_FOLDER = Path.home() / ".qibolab" / "instruments" / "data"
 
 
@@ -16,7 +17,7 @@ class Instrument(ABC):
     """
 
     def __init__(self, name, address):
-        self.name: str = name
+        self.name: InstrumentId = name
         self.address: str = address
         self.is_connected: bool = False
         self.signature: str = f"{type(self).__name__}@{address}"

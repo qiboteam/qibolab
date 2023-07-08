@@ -1,6 +1,5 @@
 nqubits: 1
 qubits: [0]
-resonator_type: 3D
 topology: []
 settings:
     nshots: 1024

@@ -5,20 +5,24 @@ import yaml
 from qibo.config import log, raise_error
 
 from qibolab import AcquisitionType, AveragingMode
-from qibolab.channels import Channel, ChannelMap
+from qibolab.channels import Channel
 from qibolab.platform import Platform
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter
+from qibolab.utils import load_qubits
 
 
 class MultiqubitPlatform(Platform):
     def __init__(self, name, runcard):
-        super().__init__(name, runcard, [], ChannelMap())
-
         self.runcard = runcard
         with open(runcard) as file:
-            self.settings = yaml.safe_load(file)
+            settings = yaml.safe_load(file)
+
+        qubits, pairs = load_qubits(settings)
+        super().__init__(name, qubits, pairs, {})
+
+        self.settings = settings
         self.reload_settings()
 
         # register channels to qubits (needed for ``NativeGates`` to work)
