@@ -67,6 +67,7 @@ def create_descriptor():
 def create(runcard_path=RUNCARD):
     """Create platform using Zurich Instrumetns (Zh) SHFQC, HDAWGs and PQSC.
 
+    Based on IQM 5-qubit chip.
     Instrument related parameters are hardcoded in ``__init__`` and ``setup``.
 
     Args:

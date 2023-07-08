@@ -36,7 +36,6 @@ def create(runcard_path=RUNCARD):
     qubits, pairs = load_qubits(runcard)
 
     # assign channels to qubits
-    qubits = platform.qubits
     qubits[0].readout = channels["L3-18_ro"]
     qubits[0].feedback = channels["L2-RO"]
     qubits[0].drive = channels["L3-18_qd"]

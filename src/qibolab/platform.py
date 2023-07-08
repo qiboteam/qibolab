@@ -82,10 +82,8 @@ class Platform:
 
         settings = {
             "nqubits": self.nqubits,
-            "description": self.description,
             "qubits": list(self.qubits),
             "settings": asdict(self.settings),
-            "resonator_type": self.resonator_type,
         }
         settings.update(dump_qubits(self.qubits, self.pairs))
         path.write_text(yaml.dump(settings, sort_keys=False, indent=4, default_flow_style=None))

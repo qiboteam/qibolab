@@ -6,7 +6,6 @@ from qibolab.utils import load_qubits, load_settings
 NAME = "dummy"
 RUNCARD = {
     "nqubits": 4,
-    "description": "Dummy 2-qubits platform.",
     "qubits": [
         0,
         1,
@@ -203,7 +202,7 @@ RUNCARD = {
 
 
 def create_dummy():
-    """Create a dummy platform using the dummy instrument."""
+    """Create a dummy platform on two qubits using the dummy instrument."""
     # Create dummy controller
     instrument = DummyInstrument(NAME, 0)
 

@@ -12,6 +12,8 @@ RUNCARD = pathlib.Path(__file__).parent / "qm.yml"
 def create(runcard_path=RUNCARD):
     """Dummy platform using Quantum Machines (QM) OPXs and Rohde Schwarz local oscillators.
 
+    Based on QuantWare 5-qubit device.
+
     Used in ``test_instruments_qm.py`` and ``test_instruments_qmsim.py``
     """
     controller = QMSim("qmopx", "0.0.0.0:0", simulation_duration=1000, cloud=False, time_of_flight=280)
@@ -67,9 +69,11 @@ def create(runcard_path=RUNCARD):
     # create qubit objects
     runcard = load_runcard(runcard_path)
     qubits, pairs = load_qubits(runcard)
+    # remove witness qubit
+    del qubits[5]
 
     # assign channels to qubits
-    for q in [0, 1, 5]:
+    for q in [0, 1]:
         qubits[q].readout = channels["L3-25_a"]
         qubits[q].feedback = channels["L2-5_a"]
     for q in [2, 3, 4]:
@@ -90,7 +94,7 @@ def create(runcard_path=RUNCARD):
     for q in range(5):
         qubits[q].flux.max_bias = 0.2
 
-    instruments = {"opx": controller}
+    instruments = {controller.name: controller}
     instruments.update({lo.name: lo for lo in local_oscillators})
     settings = load_settings(runcard)
     return Platform("qw5q_gold", qubits, pairs, instruments, settings, resonator_type="2D")

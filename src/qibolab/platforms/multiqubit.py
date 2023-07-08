@@ -81,7 +81,6 @@ class MultiqubitPlatform(Platform):
     def dump(self, path):
         settings = {
             "nqubits": self.nqubits,
-            "description": self.description,
             "qubits": list(self.qubits),
             "settings": self.settings["settings"],
             "resonator_type": self.resonator_type,

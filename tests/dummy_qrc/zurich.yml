@@ -1,5 +1,4 @@
 nqubits: 5
-description: IQM 5-qubit device, controlled with Zurich Instruments.
 
 settings:
     nshots: 4096
