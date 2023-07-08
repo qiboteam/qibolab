@@ -87,15 +87,15 @@ def test_convert_pulse(dummy_qrc):
 
     pulse = Pulse(0, 40, 0.9, 50e6, 0, Drag(5, 2), 0, PulseType.DRIVE, 0)
     targ = rfsoc_pulses.Drag(50, 0.9, 0, 0, 0.04, pulse.serial, "drive", 4, None, rel_sigma=5, beta=2)
-    assert convert_pulse(pulse, platform.qubits) == targ
+    assert convert_pulse(pulse, platform.qubits, 0) == targ
 
     pulse = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(2), 0, PulseType.DRIVE, 0)
     targ = rfsoc_pulses.Gaussian(50, 0.9, 0, 0, 0.04, pulse.serial, "drive", 4, None, rel_sigma=2)
-    assert convert_pulse(pulse, platform.qubits) == targ
+    assert convert_pulse(pulse, platform.qubits, 0) == targ
 
     pulse = Pulse(0, 40, 0.9, 50e6, 0, Rectangular(), 0, PulseType.READOUT, 0)
     targ = rfsoc_pulses.Rectangular(49, 0.9, 0, 0, 0.04, pulse.serial, "readout", 2, 1)
-    assert convert_pulse(pulse, platform.qubits) == targ
+    assert convert_pulse(pulse, platform.qubits, 0) == targ
 
 
 def test_convert_units_sweeper(dummy_qrc):
@@ -131,7 +131,7 @@ def test_convert_units_sweeper(dummy_qrc):
 
     # start sweeper
     sweeper = rfsoc.Sweeper(
-        parameters=[rfsoc.Parameter.START, rfsoc.Parameter.START],
+        parameters=[rfsoc.Parameter.DELAY, rfsoc.Parameter.DELAY],
         indexes=[0, 1],
         starts=[0, 40],
         stops=[100, 140],
@@ -201,7 +201,7 @@ def test_convert_sweep(dummy_qrc):
     rfsoc_sweeper = convert_sweep(sweeper, seq, platform.qubits)
     targ = rfsoc.Sweeper(
         expts=60,
-        parameters=[rfsoc.Parameter.DURATION, rfsoc.Parameter.START],
+        parameters=[rfsoc.Parameter.DURATION, rfsoc.Parameter.DELAY],
         starts=[40, 40],
         stops=[99, 99],
         indexes=[0, 1],
@@ -212,10 +212,10 @@ def test_convert_sweep(dummy_qrc):
     rfsoc_sweeper = convert_sweep(sweeper, seq, platform.qubits)
     targ = rfsoc.Sweeper(
         expts=10,
-        parameters=[rfsoc.Parameter.START, rfsoc.Parameter.START],
-        starts=[0, 40],
-        stops=[9, 49],
-        indexes=[0, 1],
+        parameters=[rfsoc.Parameter.DELAY],
+        starts=[0],
+        stops=[9],
+        indexes=[0],
     )
     assert rfsoc_sweeper == targ
 
