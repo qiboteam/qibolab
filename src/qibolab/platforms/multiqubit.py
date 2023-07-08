@@ -83,7 +83,7 @@ class MultiqubitPlatform(Platform):
             "nqubits": self.nqubits,
             "qubits": list(self.qubits),
             "settings": self.settings["settings"],
-            "resonator_type": self.resonator_type,
+            "resonator_type": self.resonator_type.name,
             "topology": [list(pair) for pair in self.pairs],
             "native_gates": {},
             "characterization": {},

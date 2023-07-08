@@ -3,6 +3,7 @@
 import math
 import re
 from dataclasses import asdict, dataclass, field, replace
+from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -20,6 +21,13 @@ from qibolab.sweeper import Sweeper
 InstrumentMapType = Dict[InstrumentId, Instrument]
 QubitMapType = Dict[QubitId, Qubit]
 QubitPairMapType = Dict[QubitPairId, QubitPair]
+
+
+class ResonatorType(Enum):
+    """Available resonator types."""
+
+    dim2 = "2D"
+    dim3 = "3D"
 
 
 @dataclass
@@ -55,7 +63,7 @@ class Platform:
     instruments: InstrumentMapType
 
     settings: PlatformSettings = field(default_factory=PlatformSettings)
-    resonator_type: Optional[str] = None
+    resonator_type: Optional[ResonatorType] = None
 
     nqubits: int = 0
     is_connected: bool = False
@@ -65,8 +73,10 @@ class Platform:
     def __post_init__(self):
         log.info("Loading platform %s", self.name)
         self.nqubits = len(self.qubits)
-        if self.resonator_type == None:
-            self.resonator_type = "3D" if self.nqubits == 1 else "2D"
+        if isinstance(self.resonator_type, str):
+            self.resonator_type = ResonatorType(self.resonator_type)
+        elif self.resonator_type is None:
+            self.resonator_type = ResonatorType("3D") if self.nqubits == 1 else ResonatorType("2D")
 
         for pair in self.pairs.values():
             self.two_qubit_native_types |= pair.native_gates.types
