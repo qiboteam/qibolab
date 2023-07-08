@@ -113,7 +113,7 @@ def test_qmpulse_previous_and_next_flux():
 def test_qmopx_setup(dummy_qrc):
     platform = create_platform("qm")
     platform.setup()
-    opx = platform.instruments[0]
+    opx = platform.instruments["qmopx"]
     assert opx.time_of_flight == 280
 
 
@@ -149,7 +149,7 @@ def test_qmopx_register_analog_output_controllers():
 
 def test_qmopx_register_drive_element(dummy_qrc):
     platform = create_platform("qm")
-    opx = platform.instruments[0]
+    opx = platform.instruments["qmopx"]
     opx.config.register_drive_element(platform.qubits[0], intermediate_frequency=int(1e6))
     assert "drive0" in opx.config.elements
     target_element = {
@@ -164,7 +164,7 @@ def test_qmopx_register_drive_element(dummy_qrc):
 
 def test_qmopx_register_readout_element(dummy_qrc):
     platform = create_platform("qm")
-    opx = platform.instruments[0]
+    opx = platform.instruments["qmopx"]
     opx.config.register_readout_element(platform.qubits[2], int(1e6), opx.time_of_flight, opx.smearing)
     assert "readout2" in opx.config.elements
     target_element = {
@@ -186,7 +186,7 @@ def test_qmopx_register_readout_element(dummy_qrc):
 @pytest.mark.parametrize("pulse_type,qubit", [("drive", 2), ("readout", 1)])
 def test_qmopx_register_pulse(dummy_qrc, pulse_type, qubit):
     platform = create_platform("qm")
-    opx = platform.instruments[0]
+    opx = platform.instruments["qmopx"]
     if pulse_type == "drive":
         pulse = platform.create_RX_pulse(qubit, start=0)
         target_pulse = {
@@ -219,7 +219,7 @@ def test_qmopx_register_pulse(dummy_qrc, pulse_type, qubit):
 def test_qmopx_register_flux_pulse(dummy_qrc):
     qubit = 2
     platform = create_platform("qm")
-    opx = platform.instruments[0]
+    opx = platform.instruments["qmopx"]
     pulse = FluxPulse(0, 30, 0.005, Rectangular(), platform.qubits[qubit].flux.name, qubit)
     target_pulse = {
         "operation": "control",
@@ -237,7 +237,7 @@ def test_qmopx_register_flux_pulse(dummy_qrc):
 def test_qmopx_register_baked_pulse(dummy_qrc, duration):
     platform = create_platform("qm")
     qubit = platform.qubits[3]
-    opx = platform.instruments[0]
+    opx = platform.instruments["qmopx"]
     opx.config.register_flux_element(qubit)
     pulse = FluxPulse(3, duration, 0.05, Rectangular(), qubit.flux.name, qubit=qubit.name)
     qmpulse = QMPulse(pulse)

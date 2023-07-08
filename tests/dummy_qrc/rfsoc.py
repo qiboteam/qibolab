@@ -41,6 +41,6 @@ def create(runcard_path=RUNCARD):
     qubits[0].drive = channels["L3-18_qd"]
     qubits[0].flux = channels["L2-22_qf"]
 
-    instruments = {"rfsoc": controller, lo_twpa.name: lo_twpa, lo_era.name: lo_era}
+    instruments = {inst.name: inst for inst in [controller, lo_twpa, lo_era]}
     settings = load_settings(runcard)
     return Platform("tii_rfsoc4x2", qubits, pairs, instruments, settings, resonator_type="3D")
