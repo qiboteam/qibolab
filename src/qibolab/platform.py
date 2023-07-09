@@ -48,27 +48,32 @@ class PlatformSettings:
 
 @dataclass
 class Platform:
-    """Platform for controlling quantum devices.
-
-    Args:
-
-        runcard (str): path to the yaml file containing the platform setup.
-        instruments:
-    """
+    """Platform for controlling quantum devices."""
 
     name: str
     """Name of the platform."""
     qubits: QubitMapType
+    """Dictionary mapping qubit names to :class:`qibolab.qubits.Qubit` objects."""
     pairs: QubitPairMapType
+    """Dictionary mapping sorted tuples of qubit names to :class:`qibolab.qubits.QubitPair` objects."""
     instruments: InstrumentMapType
+    """Dictionary mapping instrument names to :class:`qibolab.instruments.abstract.Instrument` objects."""
 
     settings: PlatformSettings = field(default_factory=PlatformSettings)
+    """Container with default execution settings."""
     resonator_type: Optional[ResonatorType] = None
+    """Type of resonator (2D or 3D) in the used QPU.
+    Default is 3D for single-qubit chips and 2D for multi-qubit.
+    """
 
     nqubits: int = 0
+    """Total number of qubits in the QPU. Evaluated automatically from ``len(qubits)``."""
     is_connected: bool = False
+    """Flag for whether we are connected to the physical instruments."""
     two_qubit_native_types: NativeType = field(default_factory=lambda: NativeType(0))
+    """Types of two qubit native gates. Used by the transpiler."""
     topology: nx.Graph = field(default_factory=nx.Graph)
+    """Graph representing the qubit connectivity in the quantum chip."""
 
     def __post_init__(self):
         log.info("Loading platform %s", self.name)
@@ -88,6 +93,13 @@ class Platform:
         self.topology.add_edges_from([(pair.qubit1.name, pair.qubit2.name) for pair in self.pairs.values()])
 
     def dump(self, path: Path):
+        """Serializes the platform and saves it as a yaml file.
+
+        This follows the format explained in :ref:`Using runcards <using_runcards>`.
+
+        Args:
+            path (pathlib.Path): Path that the yaml file will be saved.
+        """
         from qibolab.utils import dump_qubits
 
         settings = {
