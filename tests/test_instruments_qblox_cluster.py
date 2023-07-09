@@ -3,7 +3,7 @@ import pytest
 from qibolab.instruments.abstract import Instrument, InstrumentException
 from qibolab.instruments.qblox.cluster import (
     Cluster,
-    ClusterSettings,
+    Cluster_Settings,
     ReferenceClockSource,
 )
 
@@ -15,7 +15,7 @@ ADDRESS = "192.168.0.6"
 def cluster():
     name = NAME
     address = ADDRESS
-    settings = ClusterSettings()
+    settings = Cluster_Settings()
 
     cluster = Cluster(name, address, settings)
     yield cluster
@@ -29,11 +29,11 @@ def test_ReferenceClockSource():
 
 def test_ClusterSettings():
     # Test default value
-    cs = ClusterSettings()
+    cs = Cluster_Settings()
     assert cs.reference_clock_source == ReferenceClockSource.INTERNAL
     # Test initialisation with all possible values
-    cs = ClusterSettings(reference_clock_source=ReferenceClockSource.INTERNAL)
-    cs = ClusterSettings(reference_clock_source=ReferenceClockSource.EXTERNAL)
+    cs = Cluster_Settings(reference_clock_source=ReferenceClockSource.INTERNAL)
+    cs = Cluster_Settings(reference_clock_source=ReferenceClockSource.EXTERNAL)
 
 
 def test_instrument_interface(cluster: Cluster):
