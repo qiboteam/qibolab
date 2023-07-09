@@ -24,13 +24,6 @@ MultiqubitPlatform (Qblox)
    :members:
    :member-order: bysource
 
-ICPlatform
-""""""""""
-
-.. autoclass:: qibolab.platforms.icplatform.ICPlatform
-   :members:
-   :member-order: bysource
-
 Runcard Utilities
 """""""""""""""""
 
