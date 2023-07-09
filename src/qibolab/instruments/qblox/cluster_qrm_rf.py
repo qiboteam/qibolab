@@ -38,7 +38,12 @@ from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qibo.config import log
 
 from qibolab.instruments.abstract import Instrument
-from qibolab.instruments.qblox.port import ClusterRF_OutputPort, QbloxInputPort
+from qibolab.instruments.qblox.port import (
+    ClusterRF_OutputPort,
+    ClusterRF_OutputPort_Settings,
+    QbloxInputPort,
+    QbloxInputPort_Settings,
+)
 from qibolab.instruments.qblox.q1asm import (
     Block,
     Register,
@@ -50,6 +55,16 @@ from qibolab.instruments.qblox.sequencer import Sequencer, WaveformsBuffer
 from qibolab.instruments.qblox.sweeper import QbloxSweeper, QbloxSweeperType
 from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType
 from qibolab.sweeper import Parameter
+
+
+class ClusterQRM_RF_Settings:
+    def __init__(self, ports=None):
+        if not ports:
+            ports: dict = {
+                "o1": ClusterRF_OutputPort_Settings(),
+                "i1": QbloxInputPort_Settings(),
+            }
+        self.ports = ports
 
 
 class ClusterQRM_RF(Instrument):
@@ -186,7 +201,7 @@ class ClusterQRM_RF(Instrument):
         """
 
         super().__init__(name, address)
-        self.settings: dict = settings
+        self.settings: ClusterQRM_RF_Settings = settings
         self.device: QbloxQrmQcm = None
         self.ports: dict = {}
         self.ports["o1"] = ClusterRF_OutputPort(sequencer_number=self.DEFAULT_SEQUENCERS["o1"], number=1)
@@ -386,38 +401,30 @@ class ClusterQRM_RF(Instrument):
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
-        settings = self.settings
+        settings: ClusterQRM_RF_Settings = self.settings
         if self.is_connected:
             # Load settings
-            self.ports["o1"].channel = settings["ports"]["o1"]["channel"]
+            port_settings: ClusterRF_OutputPort_Settings = settings.ports["o1"]
+            self.ports["o1"].channel = port_settings.channel
             self._port_channel_map["o1"] = self.ports["o1"].channel
-            self.ports["o1"].attenuation = settings["ports"]["o1"]["attenuation"]
-            self.ports["o1"].lo_enabled = settings["ports"]["o1"]["lo_enabled"]
-            self.ports["o1"].lo_frequency = settings["ports"]["o1"]["lo_frequency"]
-            self.ports["o1"].gain = settings["ports"]["o1"]["gain"]
-
-            if "hardware_mod_en" in settings["ports"]["o1"]:
-                self.ports["o1"].hardware_mod_en = settings["ports"]["o1"]["hardware_mod_en"]
-            else:
-                self.ports["o1"].hardware_mod_en = True
+            self.ports["o1"].attenuation = port_settings.attenuation
+            self.ports["o1"].lo_enabled = port_settings.lo_enabled
+            self.ports["o1"].lo_frequency = port_settings.lo_frequency
+            self.ports["o1"].gain = port_settings.gain
+            self.ports["o1"].hardware_mod_en = port_settings.hardware_mod_en
 
             self.ports["o1"].nco_freq = 0
             self.ports["o1"].nco_phase_offs = 0
 
-            self.ports["i1"].channel = settings["ports"]["i1"]["channel"]
+            port_settings: QbloxInputPort_Settings = settings.ports["i1"]
+            self.ports["i1"].channel = port_settings.channel
             self._port_channel_map["i1"] = self.ports["i1"].channel
-            if "hardware_demod_en" in settings["ports"]["i1"]:
-                self.ports["i1"].hardware_demod_en = settings["ports"]["i1"]["hardware_demod_en"]
-            else:
-                self.ports["i1"].hardware_demod_en = True
-
-            self.ports["i1"].acquisition_hold_off = settings["ports"]["i1"]["acquisition_hold_off"]
-            self.ports["i1"].acquisition_duration = settings["ports"]["i1"]["acquisition_duration"]
+            self.ports["i1"].hardware_demod_en = port_settings.hardware_demod_en
+            self.ports["i1"].acquisition_hold_off = port_settings.acquisition_hold_off
+            self.ports["i1"].acquisition_duration = port_settings.acquisition_duration
 
             self._channel_port_map = {v: k for k, v in self._port_channel_map.items()}
             self.channels = list(self._channel_port_map.keys())
-            if "classification_parameters" in settings:
-                self.classification_parameters = settings["classification_parameters"]
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
 

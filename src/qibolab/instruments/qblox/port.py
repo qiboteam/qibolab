@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import numpy as np
 from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qibo.config import log, raise_error
@@ -5,6 +7,35 @@ from qibo.config import log, raise_error
 from qibolab.instruments.port import Port
 
 FREQUENCY_LIMIT = 500e6
+
+
+@dataclass
+class QbloxOutputPort_Settings:
+    channel: str = None
+    qubit: str = None
+    attenuation: int = 60
+    offset: float = 0.0
+    hardware_mod_en: bool = True
+    gain: float = 1.0
+
+
+@dataclass
+class ClusterRF_OutputPort_Settings(QbloxOutputPort_Settings):
+    lo_enabled: bool = False
+    lo_frequency: int = 2_000_000_000
+
+
+@dataclass
+class ClusterBB_OutputPort_Settings(QbloxOutputPort_Settings):
+    pass
+
+
+@dataclass
+class QbloxInputPort_Settings:
+    channel: str = None
+    acquisition_hold_off: int = 0
+    acquisition_duration: int = 1000
+    hardware_demod_en: bool = True
 
 
 class QbloxOutputPort(Port):

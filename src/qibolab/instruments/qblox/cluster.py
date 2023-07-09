@@ -44,7 +44,7 @@ class ReferenceClockSource(Enum):
 
 
 @dataclass
-class ClusterSettings:
+class Cluster_Settings:
     """A class to store the settings of the Cluster instrument.
 
     Attributes:
@@ -80,11 +80,11 @@ class Cluster(Instrument):
             clock source or an external source.
     """
 
-    def __init__(self, name: str, address: str, settings: ClusterSettings = ClusterSettings()):
+    def __init__(self, name: str, address: str, settings: Cluster_Settings = Cluster_Settings()):
         """Initialises the instrument storing its name, address and settings."""
         super().__init__(name, address)
         self.device: QbloxCluster = None
-        self.settings: ClusterSettings = settings
+        self.settings: Cluster_Settings = settings
 
     @property
     def reference_clock_source(self) -> ReferenceClockSource:

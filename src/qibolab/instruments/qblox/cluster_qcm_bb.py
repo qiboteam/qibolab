@@ -37,7 +37,10 @@ from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qibo.config import log
 
 from qibolab.instruments.abstract import Instrument
-from qibolab.instruments.qblox.port import ClusterBB_OutputPort
+from qibolab.instruments.qblox.port import (
+    ClusterBB_OutputPort,
+    ClusterBB_OutputPort_Settings,
+)
 from qibolab.instruments.qblox.q1asm import (
     Block,
     Register,
@@ -49,6 +52,18 @@ from qibolab.instruments.qblox.sequencer import Sequencer, WaveformsBuffer
 from qibolab.instruments.qblox.sweeper import QbloxSweeper, QbloxSweeperType
 from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.sweeper import Parameter
+
+
+class ClusterQCM_BB_Settings:
+    def __init__(self, ports=None):
+        if not ports:
+            ports: dict = {
+                "o1": ClusterBB_OutputPort_Settings(),
+                "o2": ClusterBB_OutputPort_Settings(),
+                "o3": ClusterBB_OutputPort_Settings(),
+                "o4": ClusterBB_OutputPort_Settings(),
+            }
+        self.ports = ports
 
 
 class ClusterQCM_BB(Instrument):
@@ -153,7 +168,7 @@ class ClusterQCM_BB(Instrument):
         All class attributes are defined and initialised.
         """
         super().__init__(name, address)
-        self.settings: dict = settings
+        self.settings: ClusterQCM_BB_Settings = settings
         self.device: QbloxQrmQcm = None
         self.ports: dict = {}
         for n in range(4):
@@ -340,20 +355,18 @@ class ClusterQCM_BB(Instrument):
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
-        settings = self.settings
+        settings: ClusterQCM_BB_Settings = self.settings
         if self.is_connected:
             # Load settings
             for port in ["o1", "o2", "o3", "o4"]:
-                if port in settings["ports"]:
-                    self.ports[port].channel = settings["ports"][port]["channel"]
+                if port in settings.ports:
+                    port_settings: ClusterBB_OutputPort_Settings = settings.ports[port]
+                    self.ports[port].channel = port_settings.channel
                     self._port_channel_map[port] = self.ports[port].channel
-                    self.ports[port].gain = settings["ports"][port]["gain"]
-                    self.ports[port].offset = settings["ports"][port]["offset"]
-                    if "hardware_mod_en" in settings["ports"][port]:
-                        self.ports[port].hardware_mod_en = settings["ports"][port]["hardware_mod_en"]
-                    else:
-                        self.ports[port].hardware_mod_en = True
-                    self.ports[port].qubit = settings["ports"][port]["qubit"]
+                    self.ports[port].gain = port_settings.gain
+                    self.ports[port].offset = port_settings.offset
+                    self.ports[port].hardware_mod_en = port_settings.hardware_mod_en
+                    self.ports[port].qubit = port_settings.qubit
                     self.ports[port].nco_freq = 0
                     self.ports[port].nco_phase_offs = 0
                 else:
@@ -804,12 +817,13 @@ class ClusterQCM_BB(Instrument):
 
         from qibo.config import log
 
-        settings = self.settings
+        settings: ClusterQCM_BB_Settings = self.settings
         if self.is_connected:
             try:
                 for port in ["o1", "o2", "o3", "o4"]:
-                    if port in settings["ports"]:
-                        self.ports[port].offset = settings["ports"][port]["offset"]
+                    if port in settings.ports:
+                        port_settings: ClusterBB_OutputPort_Settings = settings.ports[port]
+                        self.ports[port].offset = port_settings.offset
             except:
                 log.warning("Unable to set offsets")
 

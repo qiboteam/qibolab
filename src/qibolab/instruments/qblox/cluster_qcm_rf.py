@@ -36,7 +36,10 @@ from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
 from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 
 from qibolab.instruments.abstract import Instrument
-from qibolab.instruments.qblox.port import ClusterRF_OutputPort
+from qibolab.instruments.qblox.port import (
+    ClusterRF_OutputPort,
+    ClusterRF_OutputPort_Settings,
+)
 from qibolab.instruments.qblox.q1asm import (
     Block,
     Register,
@@ -48,6 +51,16 @@ from qibolab.instruments.qblox.sequencer import Sequencer, WaveformsBuffer
 from qibolab.instruments.qblox.sweeper import QbloxSweeper, QbloxSweeperType
 from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.sweeper import Parameter
+
+
+class ClusterQCM_RF_Settings:
+    def __init__(self, ports=None):
+        if not ports:
+            ports: dict = {
+                "o1": ClusterRF_OutputPort_Settings(),
+                "o2": ClusterRF_OutputPort_Settings(),
+            }
+        self.ports = ports
 
 
 class ClusterQCM_RF(Instrument):
@@ -167,13 +180,13 @@ class ClusterQCM_RF(Instrument):
     parameters and caches their value using `_set_device_parameter()`.
     """
 
-    def __init__(self, name: str, address: str, settings: dict):
+    def __init__(self, name: str, address: str, settings: ClusterQCM_RF_Settings):
         """Initialises the instance.
 
         All class attributes are defined and initialised.
         """
         super().__init__(name, address)
-        self.settings: dict = settings
+        self.settings: ClusterQCM_RF_Settings = settings
         self.device: QbloxQrmQcm = None
         self.ports: dict = {}
         for n in range(2):
@@ -364,28 +377,27 @@ class ClusterQCM_RF(Instrument):
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
-        settings = self.settings
+        settings: ClusterQCM_RF_Settings = self.settings
         if self.is_connected:
             # Load settings
             for port in ["o1", "o2"]:
-                if port in settings["ports"]:
-                    self.ports[port].channel = settings["ports"][port]["channel"]
+                if port in settings.ports:
+                    port_settings: ClusterRF_OutputPort_Settings = settings.ports[port]
+                    self.ports[port].channel = port_settings.channel
                     self._port_channel_map[port] = self.ports[port].channel
-                    self.ports[port].attenuation = settings["ports"][port]["attenuation"]
-                    self.ports[port].lo_enabled = settings["ports"][port]["lo_enabled"]
-                    self.ports[port].lo_frequency = settings["ports"][port]["lo_frequency"]
-                    self.ports[port].gain = settings["ports"][port]["gain"]
-                    if "hardware_mod_en" in settings["ports"][port]:
-                        self.ports[port].hardware_mod_en = settings["ports"][port]["hardware_mod_en"]
-                    else:
-                        self.ports[port].hardware_mod_en = True
+                    self.ports[port].attenuation = port_settings.attenuation
+                    self.ports[port].lo_enabled = port_settings.lo_enabled
+                    self.ports[port].lo_frequency = port_settings.lo_frequency
+                    self.ports[port].gain = port_settings.gain
+                    self.ports[port].hardware_mod_en = port_settings.hardware_mod_en
+
                     self.ports[port].nco_freq = 0
                     self.ports[port].nco_phase_offs = 0
                 else:
                     if port in self.ports:
                         self.ports[port].attenuation = 60
                         self.ports[port].lo_enabled = False
-                        self.ports[port].lo_frequency = 2e9
+                        self.ports[port].lo_frequency = 2_000_000_000
                         self.ports[port].gain = 0
                         self.ports[port].hardware_mod_en = False
                         self.ports[port].nco_freq = 0
