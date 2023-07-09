@@ -32,7 +32,7 @@ from qibolab.platform import Platform
 NAME = "qblox"
 ADDRESS = "192.168.0.6"
 TIME_OF_FLIGHT = 500
-RUNCARD = pathlib.Path(__file__).parent / "qblox.yml"
+RUNCARD = pathlib.Path(__file__).parent / "qw5q_gold.yml"
 
 instruments_settings = {
     "cluster": Cluster_Settings(reference_clock_source=ReferenceClockSource.INTERNAL),
@@ -56,7 +56,6 @@ instruments_settings = {
             "o1": ClusterRF_OutputPort_Settings(
                 channel="L3-25_b",
                 attenuation=32,
-                lo_enabled=True,
                 lo_frequency=7_850_000_000,
                 gain=0.6,
             ),
@@ -115,7 +114,7 @@ instruments_settings = {
     "qcm_bb1": ClusterQCM_BB_Settings(
         {
             "o1": ClusterBB_OutputPort_Settings(channel="L4-1", gain=0.5, offset=0.2227, qubit=1),
-            "o`2`": ClusterBB_OutputPort_Settings(channel="L4-2", gain=0.5, offset=-0.3780, qubit=2),
+            "o2": ClusterBB_OutputPort_Settings(channel="L4-2", gain=0.5, offset=-0.3780, qubit=2),
             "o3": ClusterBB_OutputPort_Settings(channel="L4-3", gain=0.5, offset=-0.8899, qubit=3),
             "o4": ClusterBB_OutputPort_Settings(channel="L4-4", gain=0.5, offset=0.5890, qubit=4),
         }
