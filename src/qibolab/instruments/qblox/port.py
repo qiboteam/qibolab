@@ -21,7 +21,7 @@ class QbloxOutputPort_Settings:
 
 @dataclass
 class ClusterRF_OutputPort_Settings(QbloxOutputPort_Settings):
-    lo_enabled: bool = False
+    lo_enabled: bool = True
     lo_frequency: int = 2_000_000_000
 
 
