@@ -3,11 +3,29 @@ import pathlib
 import networkx as nx
 
 from qibolab.channels import Channel
-from qibolab.instruments.qblox.cluster import Cluster
-from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
-from qibolab.instruments.qblox.cluster_qcm_rf import ClusterQCM_RF
-from qibolab.instruments.qblox.cluster_qrm_rf import ClusterQRM_RF
+from qibolab.instruments.qblox.cluster import (
+    Cluster,
+    Cluster_Settings,
+    ReferenceClockSource,
+)
+from qibolab.instruments.qblox.cluster_qcm_bb import (
+    ClusterQCM_BB,
+    ClusterQCM_BB_Settings,
+)
+from qibolab.instruments.qblox.cluster_qcm_rf import (
+    ClusterQCM_RF,
+    ClusterQCM_RF_Settings,
+)
+from qibolab.instruments.qblox.cluster_qrm_rf import (
+    ClusterQRM_RF,
+    ClusterQRM_RF_Settings,
+)
 from qibolab.instruments.qblox.controller import QbloxController
+from qibolab.instruments.qblox.port import (
+    ClusterBB_OutputPort_Settings,
+    ClusterRF_OutputPort_Settings,
+    QbloxInputPort_Settings,
+)
 from qibolab.instruments.rohde_schwarz import SGS100A
 from qibolab.platform import Platform
 
@@ -17,108 +35,92 @@ TIME_OF_FLIGHT = 500
 RUNCARD = pathlib.Path(__file__).parent / "qblox.yml"
 
 instruments_settings = {
-    "cluster": {"settings": {"reference_clock_source": "internal"}},
-    "qrm_rf_a": {
-        "settings": {
-            "ports": {
-                "o1": {
-                    "channel": "L3-25_a",
-                    "attenuation": 38,
-                    "lo_enabled": True,
-                    "lo_frequency": 7_255_000_000,
-                    "gain": 0.6,
-                },
-                "i1": {
-                    "channel": "L2-5_a",
-                    "acquisition_hold_off": TIME_OF_FLIGHT,
-                    "acquisition_duration": 900,
-                },
-            },
+    "cluster": Cluster_Settings(reference_clock_source=ReferenceClockSource.INTERNAL),
+    "qrm_rf_a": ClusterQRM_RF_Settings(
+        {
+            "o1": ClusterRF_OutputPort_Settings(
+                channel="L3-25_a",
+                attenuation=38,
+                lo_frequency=7_255_000_000,
+                gain=0.6,
+            ),
+            "i1": QbloxInputPort_Settings(
+                channel="L2-5_a",
+                acquisition_hold_off=TIME_OF_FLIGHT,
+                acquisition_duration=900,
+            ),
         }
-    },
-    "qrm_rf_b": {
-        "settings": {
-            "ports": {
-                "o1": {
-                    "channel": "L3-25_b",
-                    "attenuation": 32,
-                    "lo_enabled": True,
-                    "lo_frequency": 7_850_000_000,
-                    "gain": 0.6,
-                },
-                "i1": {
-                    "channel": "L2-5_b",
-                    "acquisition_hold_off": TIME_OF_FLIGHT,
-                    "acquisition_duration": 900,
-                },
-            }
+    ),
+    "qrm_rf_b": ClusterQRM_RF_Settings(
+        {
+            "o1": ClusterRF_OutputPort_Settings(
+                channel="L3-25_b",
+                attenuation=32,
+                lo_enabled=True,
+                lo_frequency=7_850_000_000,
+                gain=0.6,
+            ),
+            "i1": QbloxInputPort_Settings(
+                channel="L2-5_b",
+                acquisition_hold_off=TIME_OF_FLIGHT,
+                acquisition_duration=900,
+            ),
         }
-    },
-    "qcm_rf0": {
-        "settings": {
-            "ports": {
-                "o1": {
-                    "channel": "L3-15",
-                    "attenuation": 20,
-                    "lo_enabled": True,
-                    "lo_frequency": 5_250_304_836,
-                    "gain": 0.470,
-                }
-            }
+    ),
+    "qcm_rf0": ClusterQCM_RF_Settings(
+        {
+            "o1": ClusterRF_OutputPort_Settings(
+                channel="L3-15",
+                attenuation=20,
+                lo_frequency=5_250_304_836,
+                gain=0.470,
+            )
         }
-    },
-    "qcm_rf1": {
-        "settings": {
-            "ports": {
-                "o1": {
-                    "channel": "L3-11",
-                    "attenuation": 20,
-                    "lo_enabled": True,
-                    "lo_frequency": 5_052_833_073,
-                    "gain": 0.570,
-                },
-                "o2": {
-                    "channel": "L3-12",
-                    "attenuation": 20,
-                    "lo_enabled": True,
-                    "lo_frequency": 5_995_371_914,
-                    "gain": 0.655,
-                },
-            }
+    ),
+    "qcm_rf1": ClusterQCM_RF_Settings(
+        {
+            "o1": ClusterRF_OutputPort_Settings(
+                channel="L3-11",
+                attenuation=20,
+                lo_frequency=5_052_833_073,
+                gain=0.570,
+            ),
+            "o2": ClusterRF_OutputPort_Settings(
+                channel="L3-12",
+                attenuation=20,
+                lo_frequency=5_995_371_914,
+                gain=0.655,
+            ),
         }
-    },
-    "qcm_rf2": {
-        "settings": {
-            "ports": {
-                "o1": {
-                    "channel": "L3-13",
-                    "attenuation": 20,
-                    "lo_enabled": True,
-                    "lo_frequency": 6_961_018_001,
-                    "gain": 0.550,
-                },
-                "o2": {
-                    "channel": "L3-14",
-                    "attenuation": 20,
-                    "lo_enabled": True,
-                    "lo_frequency": 6_786_543_060,
-                    "gain": 0.596,
-                },
-            }
+    ),
+    "qcm_rf2": ClusterQCM_RF_Settings(
+        {
+            "o1": ClusterRF_OutputPort_Settings(
+                channel="L3-13",
+                attenuation=20,
+                lo_frequency=6_961_018_001,
+                gain=0.550,
+            ),
+            "o2": ClusterRF_OutputPort_Settings(
+                channel="L3-14",
+                attenuation=20,
+                lo_frequency=6_786_543_060,
+                gain=0.596,
+            ),
         }
-    },
-    "qcm_bb0": {"settings": {"ports": {"o1": {"channel": "L4-5", "gain": 0.5, "offset": 0.5507, "qubit": 0}}}},
-    "qcm_bb1": {
-        "settings": {
-            "ports": {
-                "o1": {"channel": "L4-1", "gain": 0.5, "offset": 0.2227, "qubit": 1},
-                "o2": {"channel": "L4-2", "gain": 0.5, "offset": -0.3780, "qubit": 2},
-                "o3": {"channel": "L4-3", "gain": 0.5, "offset": -0.8899, "qubit": 3},
-                "o4": {"channel": "L4-4", "gain": 0.5, "offset": 0.5890, "qubit": 4},
-            }
+    ),
+    "qcm_bb0": ClusterQCM_BB_Settings(
+        {"o1": ClusterBB_OutputPort_Settings(channel="L4-5", gain=0.5, offset=0.5507, qubit=0)}
+    ),
+    "qcm_bb1": ClusterQCM_BB_Settings(
+        {
+            "o1": ClusterBB_OutputPort_Settings(channel="L4-1", gain=0.5, offset=0.2227, qubit=1),
+            "o`2`": ClusterBB_OutputPort_Settings(channel="L4-2", gain=0.5, offset=-0.3780, qubit=2),
+            "o3": ClusterBB_OutputPort_Settings(channel="L4-3", gain=0.5, offset=-0.8899, qubit=3),
+            "o4": ClusterBB_OutputPort_Settings(channel="L4-4", gain=0.5, offset=0.5890, qubit=4),
         }
-    },
-    "twpa_pump": {"settings": {"frequency": 6_535_900_000, "power": 4}},
+    ),
+    "twpa_pump": {"frequency": 6_535_900_000, "power": 4},
 }
 
 
@@ -130,7 +132,7 @@ def create(runcard=RUNCARD):
     """
 
     def instantiate_module(modules, cls, name, address, settings):
-        module_settings = settings[name]["settings"]
+        module_settings = settings[name]
         modules[name] = cls(name=name, address=address, settings=module_settings)
         return modules[name]
 
@@ -139,7 +141,7 @@ def create(runcard=RUNCARD):
     cluster = Cluster(
         name="cluster",
         address="192.168.0.6",
-        settings=instruments_settings["cluster"]["settings"],
+        settings=instruments_settings["cluster"],
     )
 
     qrm_rf_a = instantiate_module(
@@ -173,8 +175,8 @@ def create(runcard=RUNCARD):
     controller = QbloxController("qblox_controller", cluster, modules)
 
     twpa_pump = SGS100A(name="twpa_pump", address="192.168.0.37")
-    twpa_pump.frequency = instruments_settings["twpa_pump"]["settings"]["frequency"]
-    twpa_pump.power = instruments_settings["twpa_pump"]["settings"]["power"]
+    twpa_pump.frequency = instruments_settings["twpa_pump"]["frequency"]
+    twpa_pump.power = instruments_settings["twpa_pump"]["power"]
 
     instruments = [controller, twpa_pump]
 
