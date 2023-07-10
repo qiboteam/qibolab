@@ -339,11 +339,7 @@ class Platform:
         if options.relaxation_time is None:
             options = replace(options, relaxation_time=self.relaxation_time)
 
-        duration = 0
-        if isinstance(sequences, list):
-            duration = sum(seq.duration for seq in sequences)
-        else:
-            duration = sequences.duration
+        duration = sum(seq.duration for seq in sequences) if isinstance(sequences, list) else sequences.duration
         time = (duration + options.relaxation_time) * options.nshots * 1e-9
         log.info(f"Minimal execution time (seq): {time}")
 
