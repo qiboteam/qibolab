@@ -5,14 +5,13 @@ Tested on the following FPGA:
     - RFSoC 4x2
     - ZCU111
 """
-import json
-import socket
 from dataclasses import asdict, dataclass
 from typing import Union
 
 import numpy as np
 import qibosoq.components.base as rfsoc
 import qibosoq.components.pulses as rfsoc_pulses
+from qibosoq import client
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
@@ -35,6 +34,11 @@ def convert_qubit(qubit: Qubit) -> rfsoc.Qubit:
 
 def replace_pulse_shape(rfsoc_pulse: rfsoc_pulses.Pulse, shape: PulseShape) -> rfsoc_pulses.Pulse:
     """Set pulse shape parameters in rfsoc_pulses pulse object."""
+    if shape.name not in {"Gaussian", "Drag", "Rectangular"}:
+        new_pulse = rfsoc_pulses.Arbitrary(
+            **asdict(rfsoc_pulse), i_values=shape.envelope_waveform_i, q_values=shape.envelope_waveform_q
+        )
+        return new_pulse
     new_pulse = getattr(rfsoc_pulses, shape.name)(**asdict(rfsoc_pulse))
     if shape.name in {"Gaussian", "Drag"}:
         new_pulse.rel_sigma = shape.rel_sigma
@@ -157,10 +161,10 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Q
                 if len(sequence) > idx_sweep + 1:
                     # if duration-swept pulse is not last
                     indexes.append(idx_sweep + 1)
-                    t0 = sequence[idx_sweep + 1].start - sequence[idx_sweep].start
+                    t_start = sequence[idx_sweep + 1].start - sequence[idx_sweep].start
                     parameters.append(rfsoc.Parameter.DELAY)
-                    starts.append(t0 + delta_start)
-                    stops.append(t0 + delta_stop)
+                    starts.append(t_start + delta_start)
+                    stops.append(t_start + delta_stop)
             else:
                 parameters.append(convert_parameter(sweeper.parameter))
 
@@ -250,10 +254,9 @@ class RFSoC(Controller):
             "cfg": asdict(self.cfg),
             "sequence": convert_pulse_sequence(sequence, qubits),
             "qubits": [asdict(convert_qubit(qubits[idx])) for idx in qubits],
-            "readouts_per_experiment": len(sequence.ro_pulses),
             "average": average,
         }
-        return self._open_connection(self.host, self.port, server_commands)
+        return client.connect(server_commands, self.host, self.port)
 
     def _execute_sweeps(
         self,
@@ -280,44 +283,9 @@ class RFSoC(Controller):
             "sequence": convert_pulse_sequence(sequence, qubits),
             "qubits": [asdict(convert_qubit(qubits[idx])) for idx in qubits],
             "sweepers": [asdict(sweeper) for sweeper in sweepers],
-            "readouts_per_experiment": len(sequence.ro_pulses),
             "average": average,
         }
-        return self._open_connection(self.host, self.port, server_commands)
-
-    @staticmethod
-    def _open_connection(host: str, port: int, server_commands: dict):
-        """Send to the server the commands needed for execution.
-
-           The communication protocol is:
-            * convert the dictionary containing all needed information in json
-            * send to the server the length in byte of the encoded dictionary
-            * the server now will wait for that number of bytes
-            * send the  encoded dictionary
-            * wait for response (arbitray number of bytes)
-        Returns:
-            Lists of I and Q value measured
-        Raise:
-            Exception: if the server encounters and error, the same error is raised here
-        """
-        # open a connection
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.connect((host, port))
-            msg_encoded = bytes(json.dumps(server_commands), "utf-8")
-            # first send 4 bytes with the length of the message
-            sock.send(len(msg_encoded).to_bytes(4, "big"))
-            sock.send(msg_encoded)
-            # wait till the server is sending
-            received = bytearray()
-            while True:
-                tmp = sock.recv(4096)
-                if not tmp:
-                    break
-                received.extend(tmp)
-        results = json.loads(received.decode("utf-8"))
-        if isinstance(results, str) and "Error" in results:
-            raise QibosoqError(results)
-        return results["i"], results["q"]
+        return client.connect(server_commands, self.host, self.port)
 
     def play(
         self,
