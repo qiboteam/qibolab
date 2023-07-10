@@ -57,21 +57,6 @@ def pulse_lo_frequency(pulse: Pulse, qubits: dict[int, Qubit]) -> int:
     return lo_frequency
 
 
-def convert_pulse_sequence(sequence: PulseSequence, qubits: dict[int, Qubit]) -> list[rfsoc_pulses.Pulse]:
-    """Convert PulseSequence to list of rfosc pulses with relative time."""
-
-    abs_time = 0
-    list_sequence = []
-    for pulse in sequence:
-        abs_start = pulse.start * NS_TO_US
-        start_delay = abs_start - abs_time
-        pulse_dict = asdict(convert_pulse(pulse, qubits, start_delay))
-        list_sequence.append(pulse_dict)
-
-        abs_time += start_delay
-    return list_sequence
-
-
 def convert_pulse(pulse: Pulse, qubits: dict[int, Qubit], start_delay: float) -> rfsoc_pulses.Pulse:
     """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`."""
     pulse_type = pulse.type.name.lower()
@@ -91,6 +76,21 @@ def convert_pulse(pulse: Pulse, qubits: dict[int, Qubit], start_delay: float) ->
         type=pulse_type,
     )
     return replace_pulse_shape(rfsoc_pulse, pulse.shape)
+
+
+def convert_pulse_sequence(sequence: PulseSequence, qubits: dict[int, Qubit]) -> list[rfsoc_pulses.Pulse]:
+    """Convert PulseSequence to list of rfosc pulses with relative time."""
+
+    abs_time = 0
+    list_sequence = []
+    for pulse in sequence:
+        abs_start = pulse.start * NS_TO_US
+        start_delay = abs_start - abs_time
+        pulse_dict = asdict(convert_pulse(pulse, qubits, start_delay))
+        list_sequence.append(pulse_dict)
+
+        abs_time += start_delay
+    return list_sequence
 
 
 def convert_units_sweeper(sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubits: dict[int, Qubit]):
@@ -146,7 +146,7 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Q
             base_value = getattr(pulse, sweeper.parameter.name)
             if idx_sweep != 0 and sweeper.parameter is START:
                 # do the conversion from start to delay
-                base_value = base_value - sequence[idx_sweep - 1].start
+                base_value -= sequence[idx_sweep - 1].start
             values = sweeper.get_values(base_value)
             starts.append(values[0])
             stops.append(values[-1])

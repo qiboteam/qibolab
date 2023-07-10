@@ -33,7 +33,7 @@ class Qubit:
     bare_resonator_frequency: int = 0
     readout_frequency: int = 0  # this is the dressed frequency
     drive_frequency: int = 0
-    alpha: int = 0
+    anharmonicity: int = 0
     sweetspot: float = 0
     peak_voltage: float = 0
     pi_pulse_amplitude: float = 0
