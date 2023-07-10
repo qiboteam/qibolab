@@ -203,4 +203,4 @@ def convert(*args):
         return convert_pulse(*args)
     if isinstance(args[0], Sweeper):
         return convert_sweep(*args)
-    raise ValueError("Convert function received bad parameters.")
+    raise ValueError(f"Convert function received bad parameters ({type(args[0])}).")
