@@ -88,7 +88,7 @@ def test_zhsequence_multiple_ro(dummy_qrc):
     sequence.add(qd_pulse)
     ro_pulse = ReadoutPulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch1", qubit=0)
     sequence.add(ro_pulse)
-    ro_pulse = ReadoutPulse(0, 3040, 0.05, int(3e9), 0.0, Rectangular(), "ch1", qubit=0)
+    ro_pulse = ReadoutPulse(0, 5000, 0.05, int(3e9), 0.0, Rectangular(), "ch1", qubit=0)
     sequence.add(ro_pulse)
     IQM5q = create_platform("zurich")
 
@@ -99,7 +99,7 @@ def test_zhsequence_multiple_ro(dummy_qrc):
         IQM5q.instruments[0].sequence_zh("sequence", IQM5q.qubits, sweepers=[])
         zhsequence = IQM5q.instruments[0].sequence
 
-    assert len(zhsequence) == 3
+    assert len(zhsequence) == 2
     assert len(zhsequence["readout0"]) == 2
 
 
