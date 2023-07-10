@@ -7,7 +7,7 @@ from qibo.models import Circuit
 from qibolab import create_platform
 from qibolab.compilers import Compiler
 from qibolab.pulses import PulseSequence
-from qibolab.transpilers import Pipeline
+from qibolab.transpilers.pipeline import Passes
 
 
 def generate_circuit_with_gate(nqubits, gate, *params, **kwargs):
@@ -32,7 +32,7 @@ def test_u3_sim_agreement():
 
 def compile_circuit(circuit, platform):
     """Compile a circuit to a pulse sequence."""
-    transpiler = Pipeline.default(platform.two_qubit_native_types)
+    transpiler = Passes(connectivity=platform.topology)
     compiler = Compiler.default()
     if transpiler.is_satisfied(circuit):
         native_circuit = circuit

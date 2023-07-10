@@ -11,7 +11,7 @@ from qibolab import __version__ as qibolab_version
 from qibolab import create_platform
 from qibolab.compilers import Compiler
 from qibolab.platform import Platform
-from qibolab.transpilers import Pipeline
+from qibolab.transpilers.pipeline import Passes
 
 
 class QibolabBackend(NumpyBackend):
@@ -28,7 +28,7 @@ class QibolabBackend(NumpyBackend):
             "qibolab": qibolab_version,
         }
         self.compiler = Compiler.default()
-        self.transpiler = Pipeline.default(self.platform.two_qubit_native_types)
+        self.transpiler = Passes(connectivity=self.platform.topology)
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")

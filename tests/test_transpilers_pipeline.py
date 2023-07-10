@@ -2,6 +2,7 @@ import itertools
 
 import networkx as nx
 import numpy as np
+import pytest
 from qibo import gates
 from qibo.models import Circuit
 
@@ -54,5 +55,8 @@ def star_connectivity():
     return chip
 
 
-def test_pipeline_default():
+@pytest.mark.parametrize("ngates", [5, 10, 50])
+def test_pipeline_default(ngates):
+    circ = generate_random_circuit(nqubits=5, ngates=ngates)
     default_transpiler = Passes(connectivity=star_connectivity())
+    transpiled_circ = default_transpiler(circ)

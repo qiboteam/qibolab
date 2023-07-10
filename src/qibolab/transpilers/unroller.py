@@ -3,7 +3,7 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.config import raise_error
 
-from qibolab.native import TwoQubitNatives
+from qibolab.native import NativeType, TwoQubitNatives
 from qibolab.transpilers.abstract import Unroller
 from qibolab.transpilers.unitary_decompositions import (
     two_qubit_decomposition,
