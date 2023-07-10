@@ -5,14 +5,13 @@ Tested on the following FPGA:
     - RFSoC 4x2
     - ZCU111
 """
-import json
-import socket
 from dataclasses import asdict, dataclass
 from typing import Union
 
 import numpy as np
 import qibosoq.components.base as rfsoc
 import qibosoq.components.pulses as rfsoc_pulses
+from qibosoq import client
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
@@ -35,6 +34,11 @@ def convert_qubit(qubit: Qubit) -> rfsoc.Qubit:
 
 def replace_pulse_shape(rfsoc_pulse: rfsoc_pulses.Pulse, shape: PulseShape) -> rfsoc_pulses.Pulse:
     """Set pulse shape parameters in rfsoc_pulses pulse object."""
+    if shape.name not in {"Gaussian", "Drag", "Rectangular"}:
+        new_pulse = rfsoc_pulses.Arbitrary(
+            **asdict(rfsoc_pulse), i_values=shape.envelope_waveform_i, q_values=shape.envelope_waveform_q
+        )
+        return new_pulse
     new_pulse = getattr(rfsoc_pulses, shape.name)(**asdict(rfsoc_pulse))
     if shape.name in {"Gaussian", "Drag"}:
         new_pulse.rel_sigma = shape.rel_sigma
@@ -53,7 +57,7 @@ def pulse_lo_frequency(pulse: Pulse, qubits: dict[int, Qubit]) -> int:
     return lo_frequency
 
 
-def convert_pulse(pulse: Pulse, qubits: dict[int, Qubit]) -> rfsoc_pulses.Pulse:
+def convert_pulse(pulse: Pulse, qubits: dict[int, Qubit], start_delay: float) -> rfsoc_pulses.Pulse:
     """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`."""
     pulse_type = pulse.type.name.lower()
     dac = getattr(qubits[pulse.qubit], pulse_type).port.name
@@ -64,7 +68,7 @@ def convert_pulse(pulse: Pulse, qubits: dict[int, Qubit]) -> rfsoc_pulses.Pulse:
         frequency=(pulse.frequency - lo_frequency) * HZ_TO_MHZ,
         amplitude=pulse.amplitude,
         relative_phase=np.degrees(pulse.relative_phase),
-        start=pulse.start * NS_TO_US,
+        start_delay=start_delay,
         duration=pulse.duration * NS_TO_US,
         dac=dac,
         adc=adc,
@@ -72,6 +76,21 @@ def convert_pulse(pulse: Pulse, qubits: dict[int, Qubit]) -> rfsoc_pulses.Pulse:
         type=pulse_type,
     )
     return replace_pulse_shape(rfsoc_pulse, pulse.shape)
+
+
+def convert_pulse_sequence(sequence: PulseSequence, qubits: dict[int, Qubit]) -> list[rfsoc_pulses.Pulse]:
+    """Convert PulseSequence to list of rfosc pulses with relative time."""
+
+    abs_time = 0
+    list_sequence = []
+    for pulse in sequence:
+        abs_start = pulse.start * NS_TO_US
+        start_delay = abs_start - abs_time
+        pulse_dict = asdict(convert_pulse(pulse, qubits, start_delay))
+        list_sequence.append(pulse_dict)
+
+        abs_time += start_delay
+    return list_sequence
 
 
 def convert_units_sweeper(sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubits: dict[int, Qubit]):
@@ -84,7 +103,7 @@ def convert_units_sweeper(sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubit
 
             sweeper.starts[idx] = (sweeper.starts[idx] - lo_frequency) * HZ_TO_MHZ
             sweeper.stops[idx] = (sweeper.stops[idx] - lo_frequency) * HZ_TO_MHZ
-        elif parameter is rfsoc.Parameter.START:
+        elif parameter is rfsoc.Parameter.DELAY:
             sweeper.starts[idx] = sweeper.starts[idx] * NS_TO_US
             sweeper.stops[idx] = sweeper.stops[idx] * NS_TO_US
         elif parameter is rfsoc.Parameter.RELATIVE_PHASE:
@@ -122,31 +141,32 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Q
             raise ValueError("Sweeper amplitude is set to reach values higher than 1")
     else:
         for pulse in sweeper.pulses:
-            indexes.append(sequence.index(pulse))
+            idx_sweep = sequence.index(pulse)
+            indexes.append(idx_sweep)
             base_value = getattr(pulse, sweeper.parameter.name)
+            if idx_sweep != 0 and sweeper.parameter is START:
+                # do the conversion from start to delay
+                base_value -= sequence[idx_sweep - 1].start
             values = sweeper.get_values(base_value)
             starts.append(values[0])
             stops.append(values[-1])
 
-            if sweeper.parameter not in {DURATION, START}:
-                parameters.append(convert_parameter(sweeper.parameter))
-            else:
-                if sweeper.parameter is DURATION:
-                    parameters.append(rfsoc.Parameter.DURATION)
-                elif sweeper.parameter is START:
-                    parameters.append(rfsoc.Parameter.START)
-
-                idx_sweep = sequence.index(pulse)
+            if sweeper.parameter is START:
+                parameters.append(rfsoc.Parameter.DELAY)
+            elif sweeper.parameter is DURATION:
+                parameters.append(rfsoc.Parameter.DURATION)
                 delta_start = values[0] - base_value
                 delta_stop = values[-1] - base_value
 
-                for next_pulse in sequence[idx_sweep + 1 :]:
-                    if next_pulse.qubit != pulse.qubit:
-                        continue
-                    parameters.append(rfsoc.Parameter.START)
-                    indexes.append(sequence.index(next_pulse))
-                    starts.append(next_pulse.start + delta_start)
-                    stops.append(next_pulse.start + delta_stop)
+                if len(sequence) > idx_sweep + 1:
+                    # if duration-swept pulse is not last
+                    indexes.append(idx_sweep + 1)
+                    t_start = sequence[idx_sweep + 1].start - sequence[idx_sweep].start
+                    parameters.append(rfsoc.Parameter.DELAY)
+                    starts.append(t_start + delta_start)
+                    stops.append(t_start + delta_stop)
+            else:
+                parameters.append(convert_parameter(sweeper.parameter))
 
     return rfsoc.Sweeper(
         parameters=parameters,
@@ -232,12 +252,11 @@ class RFSoC(Controller):
         server_commands = {
             "operation_code": opcode,
             "cfg": asdict(self.cfg),
-            "sequence": [asdict(convert_pulse(pulse, qubits)) for pulse in sequence],
+            "sequence": convert_pulse_sequence(sequence, qubits),
             "qubits": [asdict(convert_qubit(qubits[idx])) for idx in qubits],
-            "readouts_per_experiment": len(sequence.ro_pulses),
             "average": average,
         }
-        return self._open_connection(self.host, self.port, server_commands)
+        return client.connect(server_commands, self.host, self.port)
 
     def _execute_sweeps(
         self,
@@ -261,47 +280,12 @@ class RFSoC(Controller):
         server_commands = {
             "operation_code": rfsoc.OperationCode.EXECUTE_SWEEPS,
             "cfg": asdict(self.cfg),
-            "sequence": [asdict(convert_pulse(pulse, qubits)) for pulse in sequence],
+            "sequence": convert_pulse_sequence(sequence, qubits),
             "qubits": [asdict(convert_qubit(qubits[idx])) for idx in qubits],
             "sweepers": [asdict(sweeper) for sweeper in sweepers],
-            "readouts_per_experiment": len(sequence.ro_pulses),
             "average": average,
         }
-        return self._open_connection(self.host, self.port, server_commands)
-
-    @staticmethod
-    def _open_connection(host: str, port: int, server_commands: dict):
-        """Send to the server the commands needed for execution.
-
-           The communication protocol is:
-            * convert the dictionary containing all needed information in json
-            * send to the server the length in byte of the encoded dictionary
-            * the server now will wait for that number of bytes
-            * send the  encoded dictionary
-            * wait for response (arbitray number of bytes)
-        Returns:
-            Lists of I and Q value measured
-        Raise:
-            Exception: if the server encounters and error, the same error is raised here
-        """
-        # open a connection
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.connect((host, port))
-            msg_encoded = bytes(json.dumps(server_commands), "utf-8")
-            # first send 4 bytes with the length of the message
-            sock.send(len(msg_encoded).to_bytes(4, "big"))
-            sock.send(msg_encoded)
-            # wait till the server is sending
-            received = bytearray()
-            while True:
-                tmp = sock.recv(4096)
-                if not tmp:
-                    break
-                received.extend(tmp)
-        results = json.loads(received.decode("utf-8"))
-        if isinstance(results, str) and "Error" in results:
-            raise QibosoqError(results)
-        return results["i"], results["q"]
+        return client.connect(server_commands, self.host, self.port)
 
     def play(
         self,
@@ -483,11 +467,12 @@ class RFSoC(Controller):
                         "amplitude",
                         "frequency",
                         "relative_phase",
-                        "start",
                         "duration",
                     }
                 ):
                     setattr(sequence[kdx], sweeper_parameter.name.lower(), values[jdx][idx])
+                elif sweeper is rfsoc.Parameter.DELAY:
+                    sequence[kdx].start_delay = values[jdx][idx]
 
             res = self.recursive_python_sweep(
                 qubits, sequence, or_sequence, *sweepers[1:], average=average, execution_parameters=execution_parameters
@@ -546,7 +531,8 @@ class RFSoC(Controller):
                 # if it's a sweep on the readout freq do a python sweep
                 if is_freq and is_ro:
                     return True
-
+            if parameter is rfsoc.Parameter.DELAY:
+                continue
             for idx in sweeper.indexes:
                 sweep_pulse = sequence[idx]
                 channel = sweep_pulse.channel
