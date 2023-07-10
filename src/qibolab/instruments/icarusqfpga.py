@@ -86,7 +86,7 @@ class RFSOC(AbstractInstrument):
 
             # Qubit drive microwave signals
             elif pulse.type == PulseType.DRIVE:
-                dac = qubit.drive.ports
+                dac = qubit.drive.ports[pulse.channel]
                 t = np.arange(start, end) / dac_sampling_rate
                 wfm = np.sin(2 * np.pi * pulse.frequency * t + pulse.relative_phase)
 
@@ -132,7 +132,9 @@ class RFSOC(AbstractInstrument):
                 self.device.adc[0].delay = delay_start_adc + self.channel_delay_offset_adc
 
                 if options.acquisition_type is AcquisitionType.DISCRIMINATION or AcquisitionType.INTEGRATION:
-                    self.device.program_qunit(readout_frequency=pulse.frequency, readout_time=pulse.duration * 1e-9)
+                    self.device.program_qunit(
+                        readout_frequency=pulse.frequency, readout_time=pulse.duration * 1e-9, qunit=pulse.qubit
+                    )
 
             waveform_array[dac, start:end] += self.device.dac_max_amplitude * pulse.amplitude * wfm
 
@@ -213,6 +215,7 @@ class RFSOC_RO(RFSOC):
         super().play(qubits, sequence, options)
         self.device.set_adc_trigger_repetition_rate(int(options.relaxation_time / 1e3))
         readout_pulses = list(filter(lambda pulse: pulse.type is PulseType.READOUT, sequence.pulses))
+        readout_qubits = {pulse.qubit for pulse in readout_pulses}
 
         if options.acquisition_type is AcquisitionType.RAW:
             self.device.set_adc_trigger_mode(0)
@@ -224,17 +227,19 @@ class RFSOC_RO(RFSOC):
         elif options.acquisition_type is AcquisitionType.INTEGRATION:
             self.device.set_adc_trigger_mode(1)
             self.device.set_qunit_mode(0)
-            I, Q = self.device.start_qunit_acquisition(options.nshots)
-            res = IntegratedResults(I + 1j * Q)
+            raw = self.device.start_qunit_acquisition(options.nshots, readout_qubits)
+
             if options.averaging_mode is not AveragingMode.SINGLESHOT:
-                res = res.average
-            return {readout_pulses[0].qubit: res}
+                res = {qubit: IntegratedResults(I + 1j * Q).average for qubit, (I, Q) in raw.items()}
+            else:
+                res = {qubit: IntegratedResults(I + 1j * Q) for qubit, (I, Q) in raw.items()}
+            return res
 
         elif options.acquisition_type is AcquisitionType.DISCRIMINATION:
             self.device.set_adc_trigger_mode(1)
             self.device.set_qunit_mode(1)
-            states = self.device.start_qunit_acquisition(options.nshots)
-            return {readout_pulses[0].qubit: SampleResults(states)}
+            raw = self.device.start_qunit_acquisition(options.nshots)
+            return {qubit: SampleResults(states) for qubit, states in raw.items()}
 
     def process_readout_signal(
         self,
