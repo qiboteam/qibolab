@@ -5,9 +5,9 @@ from qibo.models import Circuit
 
 from qibolab.native import NativeType
 from qibolab.transpilers.abstract import Optimizer, Placer, Router, Unroller
-from qibolab.transpilers.placer import Trivial
-from qibolab.transpilers.router import ShortestPaths
-from qibolab.transpilers.unroller import NativeGates
+from qibolab.transpilers.placer import Trivial, assert_placement
+from qibolab.transpilers.router import ShortestPaths, assert_connectivity
+from qibolab.transpilers.unroller import NativeGates, assert_decomposition
 
 
 class TranspilerPipelineError(Exception):
@@ -27,6 +27,16 @@ def assert_cirucuit_equivalence(original_circuit: Circuit, transpiled_circuit: C
     final_state = backend.execute_circuit(transpiled_circuit).state()
     fidelity = np.abs(np.dot(np.conj(target_state), final_state))
     np.testing.assert_allclose(fidelity, 1.0)
+
+
+def assert_transpiling(
+    circuit: Circuit, connectivity: nx.Graph, initial_layout: dict, final_layout: dict, native_gates: NativeType
+):
+    """Check that all transpiler passes have been executed correctly"""
+    assert_connectivity(circuit=circuit, connectivity=connectivity)
+    assert_decomposition(circuit=circuit, two_qubit_natives=native_gates)
+    assert_placement(circuit=circuit, layout=initial_layout)
+    assert_placement(circuit=circuit, layout=final_layout)
 
 
 class Passes:
@@ -58,19 +68,19 @@ class Passes:
         return default_passes
 
     def __call__(self, circuit):
-        layout = None
+        self.initial_layout = None
         final_layout = None
         for transpiler_pass in self.passes:
             if isinstance(transpiler_pass, Optimizer):
                 circuit = transpiler_pass(circuit)
             elif isinstance(transpiler_pass, Placer):
-                if layout == None:
-                    layout = transpiler_pass(circuit)
+                if self.initial_layout == None:
+                    self.initial_layout = transpiler_pass(circuit)
                 else:
                     raise TranspilerPipelineError("You are defining more than one placer pass.")
             elif isinstance(transpiler_pass, Router):
-                if self.layout is not None:
-                    circuit, final_layout = transpiler_pass(circuit, layout)
+                if self.initial_layout is not None:
+                    circuit, final_layout = transpiler_pass(circuit, self.initial_layout)
                 else:
                     raise TranspilerPipelineError("Use a placement pass before routing.")
             elif isinstance(transpiler_pass, Unroller):
@@ -78,3 +88,7 @@ class Passes:
             else:
                 TranspilerPipelineError("Unrecognised transpiler pass: ", transpiler_pass)
         return circuit, final_layout
+
+    def get_initial_layout(self):
+        """Return initial qubit layout"""
+        return self.initial_layout

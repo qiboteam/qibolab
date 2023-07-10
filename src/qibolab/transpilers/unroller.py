@@ -2,8 +2,9 @@ import numpy as np
 from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.config import raise_error
+from qibo.models import Circuit
 
-from qibolab.native import NativeType, TwoQubitNatives
+from qibolab.native import NativeType
 from qibolab.transpilers.abstract import Unroller
 from qibolab.transpilers.unitary_decompositions import (
     two_qubit_decomposition,
@@ -28,7 +29,7 @@ class NativeGates(Unroller):
 
     def __init__(
         self,
-        two_qubit_natives: TwoQubitNatives,
+        two_qubit_natives: NativeType,
         single_qubit_natives=(gates.I, gates.Z, gates.RZ, gates.U3),
         translate_single_qubit: bool = True,
     ):
@@ -36,13 +37,22 @@ class NativeGates(Unroller):
         self.single_qubit_natives = single_qubit_natives
         self.translate_single_qubit = translate_single_qubit
 
-    def __call__(self, circuit):
+    def __call__(self, circuit: Circuit):
+        two_qubit_translated_circuit = circuit.__class__(circuit.nqubits)
         translated_circuit = circuit.__class__(circuit.nqubits)
         for gate in circuit.queue:
             if len(gate.qubits) > 1 or self.translate_single_qubit:
-                translated_circuit.add(translate_gate(gate, self.two_qubit_natives))
+                two_qubit_translated_circuit.add(translate_gate(gate, self.two_qubit_natives))
             else:
-                translated_circuit.add(gate)
+                two_qubit_translated_circuit.add(gate)
+        if self.translate_single_qubit:
+            for gate in two_qubit_translated_circuit.queue:
+                if len(gate.qubits) == 1:
+                    translated_circuit.add(translate_gate(gate, self.two_qubit_natives))
+                else:
+                    translated_circuit.add(gate)
+        else:
+            translated_circuit = two_qubit_translated_circuit
         return translated_circuit
 
 
@@ -51,7 +61,7 @@ class DecompositionError(Exception):
 
 
 def assert_decomposition(
-    circuit, two_qubit_natives: NativeType, single_qubit_natives=(gates.I, gates.Z, gates.RZ, gates.U3)
+    circuit: Circuit, two_qubit_natives: NativeType, single_qubit_natives=(gates.I, gates.Z, gates.RZ, gates.U3)
 ):
     """Checks if a circuit has been correctly decmposed into native gates.
 

@@ -34,11 +34,7 @@ def compile_circuit(circuit, platform):
     """Compile a circuit to a pulse sequence."""
     transpiler = Passes(connectivity=platform.topology)
     compiler = Compiler.default()
-    if transpiler.is_satisfied(circuit):
-        native_circuit = circuit
-    else:
-        native_circuit, _ = transpiler(circuit)
-
+    native_circuit, _ = transpiler(circuit)
     sequence, _ = compiler.compile(native_circuit, platform)
     return sequence
 

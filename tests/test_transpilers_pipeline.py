@@ -6,7 +6,8 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 
-from qibolab.transpilers.pipeline import Passes
+from qibolab.native import NativeType
+from qibolab.transpilers.pipeline import Passes, assert_transpiling
 
 
 def generate_random_circuit(nqubits, ngates, seed=None):
@@ -59,4 +60,14 @@ def star_connectivity():
 def test_pipeline_default(ngates):
     circ = generate_random_circuit(nqubits=5, ngates=ngates)
     default_transpiler = Passes(connectivity=star_connectivity())
-    transpiled_circ = default_transpiler(circ)
+    transpiled_circ, final_layout = default_transpiler(circ)
+    print(circ.draw())
+    print(transpiled_circ.draw())
+    initial_layout = default_transpiler.get_initial_layout()
+    assert_transpiling(
+        circuit=transpiled_circ,
+        connectivity=star_connectivity(),
+        initial_layout=initial_layout,
+        final_layout=final_layout,
+        native_gates=NativeType.CZ,
+    )
