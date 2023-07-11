@@ -436,7 +436,7 @@ class ClusterQCM_BB(Instrument):
         if abs(_if) > self.FREQUENCY_LIMIT:
             raise RuntimeError(
                 f"""
-            Pulse frequency {_rf} cannot be synthesised, it exceeds the maximum frequency of {self.FREQUENCY_LIMIT}"""
+            Pulse frequency {_rf:_} cannot be synthesised, it exceeds the maximum frequency of {self.FREQUENCY_LIMIT:_}"""
             )
         return _if
 
@@ -854,5 +854,6 @@ class ClusterQCM_BB(Instrument):
 
     def disconnect(self):
         """Empty method to comply with Instrument interface."""
+        self._erase_device_parameters_cache()
         self._cluster = None
         self.is_connected = False

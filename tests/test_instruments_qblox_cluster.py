@@ -7,7 +7,7 @@ from qibolab.instruments.qblox.cluster import (
     ReferenceClockSource,
 )
 
-NAME = "TestCluster"
+NAME = "cluster"
 ADDRESS = "192.168.0.6"
 
 

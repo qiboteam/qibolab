@@ -460,8 +460,8 @@ class ClusterQCM_RF(Instrument):
         if abs(_if) > self.FREQUENCY_LIMIT:
             raise Exception(
                 f"""
-            Pulse frequency {_rf} cannot be synthesised with current lo frequency {_lo}.
-            The intermediate frequency {_if} would exceed the maximum frequency of {self.FREQUENCY_LIMIT}
+            Pulse frequency {_rf:_} cannot be synthesised with current lo frequency {_lo:_}.
+            The intermediate frequency {_if:_} would exceed the maximum frequency of {self.FREQUENCY_LIMIT:_}
             """
             )
         return _if
@@ -845,5 +845,6 @@ class ClusterQCM_RF(Instrument):
 
     def disconnect(self):
         """Empty method to comply with Instrument interface."""
+        self._erase_device_parameters_cache()
         self._cluster = None
         self.is_connected = False
