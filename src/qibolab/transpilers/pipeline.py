@@ -5,6 +5,7 @@ from qibo.models import Circuit
 
 from qibolab.native import NativeType
 from qibolab.transpilers.abstract import Optimizer, Placer, Router, Unroller
+from qibolab.transpilers.optimizer import Preprocessing
 from qibolab.transpilers.placer import Trivial, assert_placement
 from qibolab.transpilers.router import ShortestPaths, assert_connectivity
 from qibolab.transpilers.unroller import NativeGates, assert_decomposition
@@ -59,6 +60,8 @@ class Passes:
         if not isinstance(connectivity, nx.Graph):
             raise TranspilerPipelineError("Define the hardware chip connectivity to use default transpiler")
         default_passes = []
+        # preprocessing
+        default_passes.append(Preprocessing(connectivity=connectivity))
         # default placer pass
         default_passes.append(Trivial(connectivity=connectivity))
         # default router pass
