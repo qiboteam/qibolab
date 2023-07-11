@@ -5,14 +5,9 @@ import pytest
 from qm import qua
 
 from qibolab import AcquisitionType, ExecutionParameters, create_platform
-from qibolab.instruments.qm import (
-    QMOPX,
-    Acquisition,
-    BakedPulse,
-    QMPort,
-    QMPulse,
-    Sequence,
-)
+from qibolab.instruments.qm import QMOPX, QMPort
+from qibolab.instruments.qm.acquisition import Acquisition
+from qibolab.instruments.qm.sequence import BakedPulse, QMPulse, Sequence
 from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse, Rectangular
 
 
@@ -286,7 +281,7 @@ def test_qmopx_register_baked_pulse(dummy_qrc, duration):
         }
 
 
-@patch("qibolab.instruments.qmsim.QMSim.execute_program")
+@patch("qibolab.instruments.qm.simulator.QMSim.execute_program")
 def test_qmopx_qubit_spectroscopy(mocker):
     platform = create_platform("qm")
     platform.setup()

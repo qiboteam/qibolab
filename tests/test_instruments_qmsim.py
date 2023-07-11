@@ -21,7 +21,7 @@ from qibo.models import Circuit
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.backends import QibolabBackend
-from qibolab.instruments.qmsim import QMSim
+from qibolab.instruments.qm import QMSim
 from qibolab.pulses import SNZ, FluxPulse, PulseSequence, Rectangular
 from qibolab.sweeper import Parameter, Sweeper
 
