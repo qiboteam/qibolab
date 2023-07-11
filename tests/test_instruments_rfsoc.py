@@ -8,10 +8,8 @@ import qibosoq.components.base as rfsoc
 import qibosoq.components.pulses as rfsoc_pulses
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
-from qibolab.instruments.rfsoc import (
-    convert_pulse,
-    convert_qubit,
-    convert_sweep,
+from qibolab.instruments.rfsoc.convert import (
+    convert,
     convert_units_sweeper,
     replace_pulse_shape,
 )
@@ -34,7 +32,7 @@ def test_convert_qubit(dummy_qrc):
     qubit = platform.qubits[0]
     qubit.flux.port = platform.instruments[0][4]
     qubit.flux.offset = 0.05
-    qubit = convert_qubit(qubit)
+    qubit = convert(qubit)
     targ = rfsoc.Qubit(0.05, 4)
 
     assert qubit == targ
@@ -42,7 +40,7 @@ def test_convert_qubit(dummy_qrc):
     platform = create_platform("rfsoc")
     qubit = platform.qubits[0]
     qubit.flux = None
-    qubit = convert_qubit(qubit)
+    qubit = convert(qubit)
     targ = rfsoc.Qubit(0.0, None)
 
     assert qubit == targ
@@ -87,15 +85,15 @@ def test_convert_pulse(dummy_qrc):
 
     pulse = Pulse(0, 40, 0.9, 50e6, 0, Drag(5, 2), 0, PulseType.DRIVE, 0)
     targ = rfsoc_pulses.Drag(50, 0.9, 0, 0, 0.04, pulse.serial, "drive", 4, None, rel_sigma=5, beta=2)
-    assert convert_pulse(pulse, platform.qubits, 0) == targ
+    assert convert(pulse, platform.qubits, 0) == targ
 
     pulse = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(2), 0, PulseType.DRIVE, 0)
     targ = rfsoc_pulses.Gaussian(50, 0.9, 0, 0, 0.04, pulse.serial, "drive", 4, None, rel_sigma=2)
-    assert convert_pulse(pulse, platform.qubits, 0) == targ
+    assert convert(pulse, platform.qubits, 0) == targ
 
     pulse = Pulse(0, 40, 0.9, 50e6, 0, Rectangular(), 0, PulseType.READOUT, 0)
     targ = rfsoc_pulses.Rectangular(49, 0.9, 0, 0, 0.04, pulse.serial, "readout", 2, 1)
-    assert convert_pulse(pulse, platform.qubits, 0) == targ
+    assert convert(pulse, platform.qubits, 0) == targ
 
 
 def test_convert_units_sweeper(dummy_qrc):
@@ -169,7 +167,7 @@ def test_convert_sweep(dummy_qrc):
     seq.add(pulse1)
 
     sweeper = Sweeper(parameter=Parameter.bias, values=np.arange(-0.5, +0.5, 0.1), qubits=[qubit])
-    rfsoc_sweeper = convert_sweep(sweeper, seq, platform.qubits)
+    rfsoc_sweeper = convert(sweeper, seq, platform.qubits)
     targ = rfsoc.Sweeper(expts=10, parameters=[rfsoc.Parameter.BIAS], starts=[-0.5], stops=[0.4], indexes=[0])
     assert targ.expts == rfsoc_sweeper.expts
     assert targ.parameters == rfsoc_sweeper.parameters
@@ -179,7 +177,7 @@ def test_convert_sweep(dummy_qrc):
     sweeper = Sweeper(
         parameter=Parameter.bias, values=np.arange(-0.5, +0.5, 0.1), qubits=[qubit], type=SweeperType.OFFSET
     )
-    rfsoc_sweeper = convert_sweep(sweeper, seq, platform.qubits)
+    rfsoc_sweeper = convert(sweeper, seq, platform.qubits)
     targ = rfsoc.Sweeper(expts=10, parameters=[rfsoc.Parameter.BIAS], starts=[-0.45], stops=[0.45], indexes=[0])
     assert targ.expts == rfsoc_sweeper.expts
     assert targ.parameters == rfsoc_sweeper.parameters
@@ -190,15 +188,15 @@ def test_convert_sweep(dummy_qrc):
     qubit.flux.offset = 0.5
     sweeper = Sweeper(parameter=Parameter.bias, values=np.arange(0, +1, 0.1), qubits=[qubit], type=SweeperType.OFFSET)
     with pytest.raises(ValueError):
-        rfsoc_sweeper = convert_sweep(sweeper, seq, platform.qubits)
+        rfsoc_sweeper = convert(sweeper, seq, platform.qubits)
 
     sweeper = Sweeper(parameter=Parameter.frequency, values=np.arange(0, 100, 1), pulses=[pulse0])
-    rfsoc_sweeper = convert_sweep(sweeper, seq, platform.qubits)
+    rfsoc_sweeper = convert(sweeper, seq, platform.qubits)
     targ = rfsoc.Sweeper(expts=100, parameters=[rfsoc.Parameter.FREQUENCY], starts=[0], stops=[99], indexes=[0])
     assert rfsoc_sweeper == targ
 
     sweeper = Sweeper(parameter=Parameter.duration, values=np.arange(40, 100, 1), pulses=[pulse0])
-    rfsoc_sweeper = convert_sweep(sweeper, seq, platform.qubits)
+    rfsoc_sweeper = convert(sweeper, seq, platform.qubits)
     targ = rfsoc.Sweeper(
         expts=60,
         parameters=[rfsoc.Parameter.DURATION, rfsoc.Parameter.DELAY],
@@ -209,7 +207,7 @@ def test_convert_sweep(dummy_qrc):
     assert rfsoc_sweeper == targ
 
     sweeper = Sweeper(parameter=Parameter.start, values=np.arange(0, 10, 1), pulses=[pulse0])
-    rfsoc_sweeper = convert_sweep(sweeper, seq, platform.qubits)
+    rfsoc_sweeper = convert(sweeper, seq, platform.qubits)
     targ = rfsoc.Sweeper(
         expts=10,
         parameters=[rfsoc.Parameter.DELAY],
@@ -415,9 +413,9 @@ def test_get_if_python_sweep(dummy_qrc):
     sweep1 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 100, 10), pulses=[sequence_1[0]])
     sweep2 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 100, 10), pulses=[sequence_1[1]])
     sweep3 = Sweeper(parameter=Parameter.amplitude, values=np.arange(0.01, 0.5, 0.1), pulses=[sequence_1[1]])
-    sweep1 = convert_sweep(sweep1, sequence_1, platform.qubits)
-    sweep2 = convert_sweep(sweep2, sequence_1, platform.qubits)
-    sweep3 = convert_sweep(sweep3, sequence_1, platform.qubits)
+    sweep1 = convert(sweep1, sequence_1, platform.qubits)
+    sweep2 = convert(sweep2, sequence_1, platform.qubits)
+    sweep3 = convert(sweep3, sequence_1, platform.qubits)
 
     assert instrument.get_if_python_sweep(sequence_1, sweep2)
     assert not instrument.get_if_python_sweep(sequence_1, sweep1)
@@ -428,8 +426,8 @@ def test_get_if_python_sweep(dummy_qrc):
 
     sweep1 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 100, 10), pulses=[sequence_2[0]])
     sweep2 = Sweeper(parameter=Parameter.amplitude, values=np.arange(0.01, 0.5, 0.1), pulses=[sequence_2[0]])
-    sweep1 = convert_sweep(sweep1, sequence_2, platform.qubits)
-    sweep2 = convert_sweep(sweep2, sequence_2, platform.qubits)
+    sweep1 = convert(sweep1, sequence_2, platform.qubits)
+    sweep2 = convert(sweep2, sequence_2, platform.qubits)
 
     assert not instrument.get_if_python_sweep(sequence_2, sweep1)
     assert not instrument.get_if_python_sweep(sequence_2, sweep1, sweep2)
@@ -443,15 +441,15 @@ def test_get_if_python_sweep(dummy_qrc):
     sweep1 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 100, 10), pulses=[sequence_1[0]])
     sweep2 = Sweeper(parameter=Parameter.relative_phase, values=np.arange(0, 1, 0.01), pulses=[sequence_1[0]])
     sweep3 = Sweeper(parameter=Parameter.bias, values=np.arange(-0.1, 0.1, 0.001), qubits=[platform.qubits[0]])
-    sweep1 = convert_sweep(sweep1, sequence_1, platform.qubits)
-    sweep2 = convert_sweep(sweep2, sequence_1, platform.qubits)
-    sweep3 = convert_sweep(sweep3, sequence_1, platform.qubits)
+    sweep1 = convert(sweep1, sequence_1, platform.qubits)
+    sweep2 = convert(sweep2, sequence_1, platform.qubits)
+    sweep3 = convert(sweep3, sequence_1, platform.qubits)
     assert not instrument.get_if_python_sweep(sequence_1, sweep1, sweep2, sweep3)
 
     platform.qubits[0].flux.offset = 0.5
     sweep1 = Sweeper(parameter=Parameter.bias, values=np.arange(-1, 1, 0.1), qubits=[0])
     with pytest.raises(ValueError):
-        sweep1 = convert_sweep(sweep1, sequence_1, platform.qubits)
+        sweep1 = convert(sweep1, sequence_1, platform.qubits)
 
 
 def test_convert_av_sweep_results(dummy_qrc):
@@ -467,7 +465,7 @@ def test_convert_av_sweep_results(dummy_qrc):
     sequence.add(platform.create_MZ_pulse(qubit=0, start=100))
     sequence.add(platform.create_MZ_pulse(qubit=0, start=200))
     sweep1 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 35, 10), pulses=[sequence[0]])
-    sweep1 = convert_sweep(sweep1, sequence, platform.qubits)
+    sweep1 = convert(sweep1, sequence, platform.qubits)
     serial1 = sequence[1].serial
     serial2 = sequence[2].serial
 
@@ -501,7 +499,7 @@ def test_convert_nav_sweep_results(dummy_qrc):
     sequence.add(platform.create_MZ_pulse(qubit=0, start=100))
     sequence.add(platform.create_MZ_pulse(qubit=0, start=200))
     sweep1 = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 35, 10), pulses=[sequence[0]])
-    sweep1 = convert_sweep(sweep1, sequence, platform.qubits)
+    sweep1 = convert(sweep1, sequence, platform.qubits)
     serial1 = sequence[1].serial
     serial2 = sequence[2].serial
 
@@ -558,7 +556,7 @@ def test_call_execute_sweeps():
     sweep = Sweeper(parameter=Parameter.frequency, values=np.arange(10, 35, 10), pulses=[sequence[0]])
     expts = len(sweep.values)
 
-    sweep = [convert_sweep(sweep, sequence, platform.qubits)]
+    sweep = [convert(sweep, sequence, platform.qubits)]
     i_vals_nav, q_vals_nav = instrument._execute_sweeps(instrument.cfg, sequence, platform.qubits, sweep, 1, False)
     i_vals_av, q_vals_av = instrument._execute_sweeps(instrument.cfg, sequence, platform.qubits, sweep, 1, True)
 
