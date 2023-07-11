@@ -47,6 +47,7 @@ SWEEPER_SET = {"amplitude", "frequency", "duration", "relative_phase"}
 SWEEPER_BIAS = {"bias"}
 SWEEPER_START = {"start"}
 
+IMPLEMENTED_PULSES = {"Rectangular", "Gaussian", "GaussianSquare", "Drag"}
 
 # pylint: disable=R1710
 def select_pulse(pulse, pulse_type):
@@ -94,6 +95,13 @@ def select_pulse(pulse, pulse_type):
             beta=beta,
             zero_boundaries=False,
         )
+        
+    if str(pulse.shape) not in IMPLEMENTED_PULSES:
+        return sampled_pulse_real(
+                uid=(f"{pulse_type}_{pulse.qubit}_"),
+                samples = pulse.envelope_waveform_i.data,
+                can_compress = True,
+            )
 
     # TODO: if "Slepian" in str(pulse.shape):
     # Implement Slepian shaped flux pulse https://arxiv.org/pdf/0909.5368.pdf
