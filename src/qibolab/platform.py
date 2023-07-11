@@ -11,6 +11,7 @@ import yaml
 from qibo.config import log, raise_error
 
 from qibolab.channels import Channel, ChannelMap
+from qibolab.couplers import Coupler, CouplerId
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument
 from qibolab.native import NativeType, SingleQubitNatives, TwoQubitNatives
@@ -38,6 +39,7 @@ class Platform:
         self.channels: ChannelMap = channels
 
         self.qubits: Dict[QubitId, Qubit] = {}
+        self.couplers: Dict[CouplerId, Coupler] = {}
         self.pairs: Dict[Tuple[QubitId, QubitId], QubitPair] = {}
 
         # Values for the following are set from the runcard in ``reload_settings``
@@ -109,6 +111,19 @@ class Platform:
                 # register single qubit native gates to Qubit objects
                 if q in self.native_gates["single_qubit"]:
                     qubit.native_gates = SingleQubitNatives.from_dict(qubit, self.native_gates["single_qubit"][q])
+
+        for c in settings["couplers"]:
+            if c in self.couplers:
+                for name, value in settings["characterization"]["single_qubit"][c].items():
+                    setattr(self.couplers[c], name, value)
+            else:
+                self.couplers[c] = coupler = Coupler(c, **settings["characterization"]["single_qubit"][c])
+                # register channels to qubits when we are using the old format
+                # needed for ``NativeGates`` to work
+                if "qubit_channel_map" in self.settings:
+                    flux, _ = self.settings["qubit_channel_map"][c]
+                    if flux is not None:
+                        coupler.flux = Channel(flux)
 
         for pair in settings["topology"]:
             pair = tuple(sorted(pair))

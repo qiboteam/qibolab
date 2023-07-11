@@ -43,19 +43,19 @@ class DummyInstrument(Controller):
     sampling_rate = 1
 
     def connect(self):
-        log.info("Connecting to dummy instrument.")
+        log.info(f"Connecting to {self.name} instrument.")
 
     def setup(self, *args, **kwargs):
-        log.info("Setting up dummy instrument.")
+        log.info(f"Setting up {self.name} instrument.")
 
     def start(self):
-        log.info("Starting dummy instrument.")
+        log.info(f"Starting {self.name} instrument.")
 
     def stop(self):
-        log.info("Stopping dummy instrument.")
+        log.info(f"Stopping {self.name} instrument.")
 
     def disconnect(self):
-        log.info("Disconnecting dummy instrument.")
+        log.info(f"Disconnecting {self.name} instrument.")
 
     def get_values(self, options, sequence, shape):
         for ro_pulse in sequence.ro_pulses:

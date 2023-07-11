@@ -14,6 +14,8 @@ RUNCARD = {
         2,
         3,
         4,
+    ],
+    "couplers": [
         "c0",
         "c1",
         "c3",
@@ -250,7 +252,7 @@ RUNCARD = {
 }
 
 
-def create_dummy():
+def create_dummy2():
     """Create a dummy platform using the dummy instrument."""
     # Create dummy controller
     instrument = DummyInstrument(NAME, 0)
@@ -285,12 +287,12 @@ def create_dummy():
     # FIXME: Nicer way of getting this range
     # assign couplers to qubits
     for c in itertools.chain(range(0, 2), range(3, 5)):
-        platform.qubits[c].flux_coupler[f"c{c}"] = platform.qubits[f"c{c}"]
-        platform.qubits[2].flux_coupler[f"c{c}"] = platform.qubits[f"c{c}"]
+        platform.qubits[c].flux_coupler[f"c{c}"] = platform.couplers[f"c{c}"]
+        platform.qubits[2].flux_coupler[f"c{c}"] = platform.couplers[f"c{c}"]
 
     # assign qubits to couplers
     for c in itertools.chain(range(0, 2), range(3, 5)):
-        platform.qubits[f"c{c}"].flux_coupler[c] = [platform.qubits[c]]
-        platform.qubits[f"c{c}"].flux_coupler[c].append(platform.qubits[2])
+        platform.couplers[f"c{c}"].qubits[c] = [platform.qubits[c]]
+        platform.couplers[f"c{c}"].qubits[c].append(platform.qubits[2])
 
     return platform
