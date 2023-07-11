@@ -9,6 +9,7 @@ import laboneq._token
 import laboneq.simple as lo
 import numpy as np
 from laboneq.contrib.example_helpers.plotting.plot_helpers import plot_simulation
+from laboneq.dsl.experiment.pulse_library import sampled_pulse_real
 from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
@@ -48,6 +49,7 @@ SWEEPER_BIAS = {"bias"}
 SWEEPER_START = {"start"}
 
 IMPLEMENTED_PULSES = {"Rectangular", "Gaussian", "GaussianSquare", "Drag"}
+
 
 # pylint: disable=R1710
 def select_pulse(pulse, pulse_type):
@@ -95,19 +97,17 @@ def select_pulse(pulse, pulse_type):
             beta=beta,
             zero_boundaries=False,
         )
-        
+
+    # FIXME: Also get sampled pulses from qibolab directly ?
     if str(pulse.shape) not in IMPLEMENTED_PULSES:
         return sampled_pulse_real(
-                uid=(f"{pulse_type}_{pulse.qubit}_"),
-                samples = pulse.envelope_waveform_i.data,
-                can_compress = True,
-            )
+            uid=(f"{pulse_type}_{pulse.qubit}_"),
+            samples=pulse.envelope_waveform_i.data,
+            can_compress=True,
+        )
 
     # TODO: if "Slepian" in str(pulse.shape):
     # Implement Slepian shaped flux pulse https://arxiv.org/pdf/0909.5368.pdf
-
-    # TODO: if "Slepian" in str(pulse.shape):if "Sampled" in str(pulse.shape):
-    # Implement Sampled pulses for Optimal control algorithms like GRAPE"
 
     # """
     # Typically, the sampler function should discard ``length`` and ``amplitude``, and
@@ -117,8 +117,6 @@ def select_pulse(pulse, pulse_type):
 
     # They don't even do that on their notebooks
     # and just use lenght and amplitude but we have to check
-
-    # x = pulse.envelope_waveform_i.data  No need for q ???
 
 
 @dataclass
