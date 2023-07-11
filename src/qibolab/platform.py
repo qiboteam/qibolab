@@ -112,18 +112,19 @@ class Platform:
                 if q in self.native_gates["single_qubit"]:
                     qubit.native_gates = SingleQubitNatives.from_dict(qubit, self.native_gates["single_qubit"][q])
 
-        for c in settings["couplers"]:
-            if c in self.couplers:
-                for name, value in settings["characterization"]["single_qubit"][c].items():
-                    setattr(self.couplers[c], name, value)
-            else:
-                self.couplers[c] = coupler = Coupler(c, **settings["characterization"]["single_qubit"][c])
-                # register channels to qubits when we are using the old format
-                # needed for ``NativeGates`` to work
-                if "qubit_channel_map" in self.settings:
-                    flux, _ = self.settings["qubit_channel_map"][c]
-                    if flux is not None:
-                        coupler.flux = Channel(flux)
+        if "couplers" in settings:
+            for c in settings["couplers"]:
+                if c in self.couplers:
+                    for name, value in settings["characterization"]["single_qubit"][c].items():
+                        setattr(self.couplers[c], name, value)
+                else:
+                    self.couplers[c] = coupler = Coupler(c, **settings["characterization"]["single_qubit"][c])
+                    # register channels to qubits when we are using the old format
+                    # needed for ``NativeGates`` to work
+                    if "qubit_channel_map" in self.settings:
+                        flux, _ = self.settings["qubit_channel_map"][c]
+                        if flux is not None:
+                            coupler.flux = Channel(flux)
 
         for pair in settings["topology"]:
             pair = tuple(sorted(pair))
