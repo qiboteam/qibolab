@@ -274,14 +274,13 @@ def create_dummy2():
 
     # map channels to qubits
     for qubit in platform.qubits:
-        # FIXME: Nicer way of finding couplers among qubits maybe
-        if isinstance(qubit, str):
-            platform.qubits[qubit].flux = channels[f"flux_coupler-{qubit}"]
-            continue
         platform.qubits[qubit].readout = channels["readout"]
         platform.qubits[qubit].drive = channels[f"drive-{qubit}"]
         platform.qubits[qubit].flux = channels[f"flux-{qubit}"]
         channels["readout"].attenuation = 0
+
+    for coupler in platform.couplers:
+        platform.couplers[coupler].flux = channels[f"flux_coupler-{coupler}"]
 
     # FIXME: This could be a way of getting qubits to coupler or we could get couplers to qubits
     # FIXME: Nicer way of getting this range
