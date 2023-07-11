@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Tuple
 
 import networkx as nx
+from qibo import gates
 from qibo.config import raise_error
 from qibo.models import Circuit
 
@@ -19,9 +20,11 @@ def find_gates_qubits_pairs(circuit: Circuit):
     """
     translated_circuit = []
     for gate in circuit.queue:
-        if len(gate.qubits) == 2:
+        if isinstance(gate, gates.M):
+            pass
+        elif len(gate.qubits) == 2:
             translated_circuit.append(sorted(gate.qubits))
-        if len(gate.qubits) >= 3:
+        elif len(gate.qubits) >= 3:
             raise_error(ValueError, "Gates targeting more than 2 qubits are not supported")
     return translated_circuit
 
