@@ -41,7 +41,7 @@ class StarConnectivity:
     by adding SWAP gates when needed. It does not translate gates to native.
     """
 
-    middle_qubit: int
+    middle_qubit: int = 2
     """Qubit id of the qubit that is in the middle of the star."""
     verbose: bool = False
 
@@ -50,7 +50,7 @@ class StarConnectivity:
         if self.verbose:
             log.info(message)
 
-    def is_satisfied(self, circuit, middle_qubit=2, verbose=False):
+    def is_satisfied(self, circuit):
         """Checks if a circuit respects connectivity constraints.
 
         Args:
