@@ -53,7 +53,7 @@ def test_select_sweeper(dummy_qrc, parameter):
         sequence.add(ro_pulses[q])
 
         parameter_range = np.random.randint(swept_points, size=swept_points)
-        if parameter is Parameter.delay:
+        if parameter is Parameter.start:
             sweeper = Sweeper(parameter, parameter_range, pulses=[qd_pulses[q]])
         if parameter is Parameter.bias:
             sweeper = Sweeper(parameter, parameter_range, qubits=q)
@@ -297,7 +297,7 @@ def test_experiment_sweep_2d_general(dummy_qrc, parameter1, parameter2):
 
     sweepers = []
     if parameter1 in SweeperParameter:
-        if parameter1 is not Parameter.delay:
+        if parameter1 is not Parameter.start:
             sweepers.append(Sweeper(parameter1, parameter_range_1, pulses=[ro_pulses[qubit]]))
     if parameter2 in SweeperParameter:
         if parameter2 is Parameter.amplitude:
