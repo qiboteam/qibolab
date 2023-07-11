@@ -89,7 +89,7 @@ class QbloxController(Controller):
             for name in self.modules:
                 self.modules[name].stop()
         log.warning("QbloxController: all modules stopped.")
-        exit(0)
+        # exit(0)
 
     def disconnect(self):
         """Disconnects all modules."""
@@ -122,15 +122,15 @@ class QbloxController(Controller):
             raise_error(RuntimeError, "Execution failed because modules are not connected.")
 
         if options.averaging_mode == AveragingMode.SINGLESHOT:
-            nshots = options.nshots if options.nshots is not None else self.nshots
+            nshots = options.nshots
             navgs = 1
             average = False
         else:
-            navgs = options.nshots if options.nshots is not None else self.nshots
+            navgs = options.nshots
             nshots = 1
             average = True
 
-        relaxation_time = options.relaxation_time if options.relaxation_time is not None else self.relaxation_time
+        relaxation_time = options.relaxation_time
         repetition_duration = sequence.finish + relaxation_time
 
         # shots results are stored in separate bins
@@ -334,9 +334,9 @@ class QbloxController(Controller):
             initial = {}
             for pulse in sweeper.pulses:
                 if pulse.type == PulseType.READOUT:
-                    initial[pulse.id] = self.get_lo_readout_frequency(pulse.qubit)
+                    initial[pulse.id] = qubits[pulse.qubit].readout.lo_frequency
                 elif pulse.type == PulseType.DRIVE:
-                    initial[pulse.id] = self.get_lo_readout_frequency(pulse.qubit)
+                    initial[pulse.id] = qubits[pulse.qubit].drive.lo_frequency
 
         # until sweeper contains the information to determine whether the sweep should be relative or
         # absolute:
@@ -363,7 +363,10 @@ class QbloxController(Controller):
             for pulse in sweeper.pulses:
                 # qblox has an external and an internal gains
                 # when sweeping the internal, set the external to 1
-                self.set_gain(pulse.qubit, 1)
+                if pulse.type == PulseType.READOUT:
+                    qubits[pulse.qubit].readout.gain = 1
+                elif pulse.type == PulseType.DRIVE:
+                    qubits[pulse.qubit].drive.gain = 1
         elif sweeper.parameter is Parameter.amplitude:
             # qblox cannot sweep amplitude in real time, but sweeping gain is quivalent
             for pulse in sweeper.pulses:
