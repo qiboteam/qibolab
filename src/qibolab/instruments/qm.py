@@ -2,16 +2,18 @@ import collections
 import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import ClassVar, Dict, List, Optional, Tuple, Union
+from typing import ClassVar, Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
+from numpy import typing as npt
 from qibo.config import raise_error
-from qm import qua
+from qm import generate_qua_script, qua
 from qm.qua import declare, declare_stream, fixed, for_
 from qm.qua._dsl import _ResultSource, _Variable  # for type declaration only
 from qm.QuantumMachinesManager import QuantumMachinesManager
 from qualang_tools.addons.variables import assign_variables_to_element
 from qualang_tools.bakery import baking
+from qualang_tools.bakery.bakery import Baking
 from qualang_tools.loops import from_array
 from qualang_tools.units import unit
 
@@ -535,37 +537,51 @@ class ShotsAcquisition(Acquisition):
         return SampleResults(shots)
 
 
+@dataclass
 class QMPulse:
     """Wrapper around :class:`qibolab.pulses.Pulse` for easier translation to QUA program."""
 
-    def __init__(self, pulse: Pulse):
-        self.pulse: Pulse = pulse
-        """:class:`qibolab.pulses.Pulse` implemting the current pulse."""
-        self.element: str = f"{pulse.type.name.lower()}{pulse.qubit}"
-        """Element that the pulse will be played on, as defined in the QM config."""
-        self.operation: str = pulse.serial
-        """Name of the operation that is implementing the pulse in the QM config."""
-        self.relative_phase: float = pulse.relative_phase / (2 * np.pi)
-        """Relative phase of the pulse normalized to follow QM convention.
-        May be overrident when sweeping phase."""
-        self.duration: int = pulse.duration
-        """Duration of the pulse. May be overrident when sweeping duration."""
-        self.wait_time: int = 0
-        """Time (in clock cycles) to wait before playing this pulse.
-        Calculated and assigned by :meth:`qibolab.instruments.qm.Sequence.add`."""
-        self.wait_time_variable: Optional[_Variable] = None
-        """Time (in clock cycles) to wait before playing this pulse when we are sweeping start."""
-        self.acquisition: Acquisition = None
-        """Data class containing the variables required for data acquisition for the instrument."""
+    pulse: Pulse
+    """:class:`qibolab.pulses.Pulse` implemting the current pulse."""
+    element: Optional[str] = None
+    """Element that the pulse will be played on, as defined in the QM config."""
+    operation: Optional[str] = None
+    """Name of the operation that is implementing the pulse in the QM config."""
+    relative_phase: Optional[float] = None
+    """Relative phase of the pulse normalized to follow QM convention.
+    May be overwritten when sweeping phase."""
+    wait_time: int = 0
+    """Time (in clock cycles) to wait before playing this pulse.
+    Calculated and assigned by :meth:`qibolab.instruments.qm.Sequence.add`."""
+    wait_time_variable: Optional[_Variable] = None
+    """Time (in clock cycles) to wait before playing this pulse when we are sweeping start."""
+    swept_duration: Optional[_Variable] = None
+    """Pulse duration when sweeping it."""
 
-        self.next: set = set()
-        """Pulses that will be played after the current pulse.
-        These pulses need to be re-aligned if we are sweeping the start or duration."""
+    acquisition: Optional[Acquisition] = None
+    """Data class containing the variables required for data acquisition for the instrument."""
 
-        self.baked = None
-        """Baking object implementing the pulse when 1ns resolution is needed."""
-        self.baked_amplitude = None
-        """Amplitude of the baked pulse."""
+    next_: Set["QMPulse"] = field(default_factory=set)
+    """Pulses that will be played after the current pulse.
+    These pulses need to be re-aligned if we are sweeping the start or duration."""
+    elements_to_align: Set[str] = field(default_factory=set)
+
+    def __post_init__(self):
+        self.element: str = f"{self.pulse.type.name.lower()}{self.pulse.qubit}"
+        self.operation: str = self.pulse.serial
+        self.relative_phase: float = self.pulse.relative_phase / (2 * np.pi)
+        self.elements_to_align.add(self.element)
+
+    def __hash__(self):
+        return hash(self.pulse)
+
+    @property
+    def duration(self):
+        """Duration of the pulse as defined in the :class:`qibolab.pulses.PulseSequence`.
+
+        Remains constant even when we are sweeping the duration of this pulse.
+        """
+        return self.pulse.duration
 
     @property
     def wait_cycles(self):
@@ -579,6 +595,13 @@ class QMPulse:
         if self.wait_time >= 4:
             return self.wait_time
         return None
+
+    def play(self):
+        """Play the pulse.
+
+        Relevant only in the context of a QUA program.
+        """
+        qua.play(self.operation, self.element, duration=self.swept_duration)
 
     def declare_output(self, options, threshold=None, angle=None):
         average = options.averaging_mode is AveragingMode.CYCLIC
@@ -597,28 +620,59 @@ class QMPulse:
             raise_error(ValueError, f"Invalid acquisition type {acquisition_type}.")
         self.acquisition.assign_element(self.element)
 
-    def bake(self, config: QMConfig):
-        if self.baked is not None:
-            raise_error(RuntimeError, f"Bake was already called for {self.pulse}.")
-        # ! Only works for flux pulses that have zero Q waveform
 
-        # Create the different baked sequences, each one corresponding to a different truncated duration
-        # for t in range(self.pulse.duration + 1):
-        with baking(config.__dict__, padding_method="right") as self.baked:
-            # if t == 0:  # Otherwise, the baking will be empty and will not be created
-            #    wf = [0.0] * 16
-            # else:
-            # wf = waveform[:t].tolist()
-            if self.pulse.duration == 0:
-                waveform = [0.0] * 16
-            else:
-                waveform = self.pulse.envelope_waveform_i.data.tolist()
-            self.baked.add_op(self.pulse.serial, self.element, waveform)
-            self.baked.play(self.pulse.serial, self.element)
-            # Append the baking object in the list to call it from the QUA program
-            # self.segments.append(b)
+DurationsType = Union[List[int], npt.NDArray[int]]
 
-        self.duration = self.baked.get_op_length()
+
+@dataclass
+class BakedPulse(QMPulse):
+    """Baking allows 1ns resolution in the pulse waveforms."""
+
+    segments: List[Baking] = field(default_factory=list)
+    """Baked segments implementing the pulse."""
+    amplitude: Optional[float] = None
+    """Amplitude of the baked pulse. Relevant only when sweeping amplitude."""
+    durations: Optional[DurationsType] = None
+
+    def __hash__(self):
+        return super().__hash__()
+
+    @property
+    def duration(self):
+        return self.segments[-1].get_op_length()
+
+    def bake(self, config: QMConfig, durations: DurationsType):
+        self.segments = []
+        self.durations = durations
+        for t in durations:
+            with baking(config.__dict__, padding_method="right") as segment:
+                if t == 0:  # Otherwise, the baking will be empty and will not be created
+                    waveform = [0.0] * 16
+                else:
+                    original_waveform = self.pulse.envelope_waveform_i.data.tolist()
+                    expanded_waveform = list(original_waveform)
+                    for i in range(t // len(original_waveform)):
+                        expanded_waveform.extend(original_waveform)
+                    waveform = expanded_waveform[:t]
+                segment.add_op(self.pulse.serial, self.element, waveform)
+                segment.play(self.pulse.serial, self.element)
+            self.segments.append(segment)
+
+    @property
+    def amplitude_array(self):
+        if self.amplitude is None:
+            return None
+        return [(self.element, self.amplitude)]
+
+    def play(self):
+        if self.swept_duration is not None:
+            with qua.switch_(self.swept_duration):
+                for dur, segment in zip(self.durations, self.segments):
+                    with qua.case_(dur):
+                        segment.run(amp_array=self.amplitude_array)
+        else:
+            segment = self.segments[0]
+            segment.run(amp_array=self.amplitude_array)
 
 
 @dataclass
@@ -648,20 +702,20 @@ class Sequence:
                 for previous in reversed(last_pulses):
                     if previous.pulse.qubit == pulse.qubit:
                         return previous
+                # otherwise
+                if finish == pulse.start:
+                    return last_pulses[-1]
         return None
 
-    def add(self, pulse: Pulse):
-        if not isinstance(pulse, Pulse):
-            raise_error(TypeError, f"Pulse {pulse} has invalid type {type(pulse)}.")
-
-        qmpulse = QMPulse(pulse)
+    def add(self, qmpulse: QMPulse):
+        pulse = qmpulse.pulse
         self.pulse_to_qmpulse[pulse.serial] = qmpulse
         if pulse.type is PulseType.READOUT:
             self.ro_pulses.append(qmpulse)
 
         previous = self._find_previous(pulse)
         if previous is not None:
-            previous.next.add(qmpulse)
+            previous.next_.add(qmpulse)
 
         wait_time = pulse.start - self.clock[qmpulse.element]
         if wait_time >= 12:
@@ -671,7 +725,17 @@ class Sequence:
 
         self.pulse_finish[pulse.finish].append(qmpulse)
         self.qmpulses.append(qmpulse)
-        return qmpulse
+
+    def shift(self):
+        """Shift all pulses that come after a ``BakedPulse`` a bit to avoid overlapping pulses."""
+        to_shift = collections.deque()
+        for qmpulse in self.qmpulses:
+            if isinstance(qmpulse, BakedPulse):
+                to_shift.extend(qmpulse.next_)
+        while len(to_shift) > 0:
+            qmpulse = to_shift.popleft()
+            qmpulse.wait_time += 2
+            to_shift.extend(qmpulse.next_)
 
 
 @dataclass
@@ -708,6 +772,10 @@ class QMOPX(Controller):
     """Smearing used for hardware signal integration."""
     _ports: Dict[IQPortId, QMPort] = field(default_factory=dict)
     """Dictionary holding the ports of controllers that are connected."""
+    script_file_name: Optional[str] = "qua_script.txt"
+    """Name of the file that the QUA program will dumped in that after every execution.
+    If ``None`` the program will not be dumped.
+    """
 
     def __post_init__(self):
         super().__init__(self.name, self.address)
@@ -749,13 +817,6 @@ class QMOPX(Controller):
             TODO
         """
         machine = self.manager.open_qm(self.config.__dict__)
-
-        # for debugging only
-        from qm import generate_qua_script
-
-        with open("qua_script.txt", "w") as file:
-            file.write(generate_qua_script(program, self.config.__dict__))
-
         return machine.execute(program)
 
     def create_qmsequence(self, qubits, sequence):
@@ -782,15 +843,20 @@ class QMOPX(Controller):
         # like we do for readout multiplex
         qmsequence = Sequence()
         for pulse in sorted(sequence.pulses, key=lambda pulse: (pulse.start, pulse.duration)):
-            qmpulse = qmsequence.add(pulse)
             if pulse.type is PulseType.FLUX:
                 # register flux element (if it does not already exist)
                 self.config.register_flux_element(qubits[pulse.qubit], pulse.frequency)
-                qmpulse.bake(self.config)
+                qmpulse = BakedPulse(pulse)
+                qmpulse.bake(self.config, durations=[pulse.duration])
             else:
+                qmpulse = QMPulse(pulse)
                 if pulse.duration % 4 != 0 or pulse.duration < 16:
                     raise_error(NotImplementedError, "1ns resolution is available for flux pulses only.")
                 self.config.register_pulse(qubits[pulse.qubit], pulse, self.time_of_flight, self.smearing)
+            qmsequence.add(qmpulse)
+
+        qmsequence.shift()
+
         return qmsequence
 
     @staticmethod
@@ -817,16 +883,12 @@ class QMOPX(Controller):
                 if not isinstance(qmpulse.relative_phase, float) or qmpulse.relative_phase != 0:
                     qua.frame_rotation_2pi(qmpulse.relative_phase, qmpulse.element)
                     needs_reset = True
-                if qmpulse.baked is not None:
-                    if qmpulse.baked_amplitude is not None:
-                        qmpulse.baked.run(amp_array=[(qmpulse.element, qmpulse.baked_amplitude)])
-                    else:
-                        qmpulse.baked.run()
-                else:
-                    qua.play(qmpulse.operation, qmpulse.element)
+                qmpulse.play()
                 if needs_reset:
                     qua.reset_frame(qmpulse.element)
                     needs_reset = False
+                if len(qmpulse.elements_to_align) > 1:
+                    qua.align(*qmpulse.elements_to_align)
 
         # for Rabi-length?
         if relaxation_time > 0:
@@ -909,10 +971,10 @@ class QMOPX(Controller):
         with for_(*from_array(a, sweeper.values)):
             for pulse in sweeper.pulses:
                 qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
-                if qmpulse.baked is None:
-                    qmpulse.operation = qmpulse.operation * amp(a)
+                if isinstance(qmpulse, BakedPulse):
+                    qmpulse.amplitude = a
                 else:
-                    qmpulse.baked_amplitude = a
+                    qmpulse.operation = qmpulse.operation * amp(a)
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
 
@@ -961,10 +1023,42 @@ class QMOPX(Controller):
                 qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
                 # find all pulses that are connected to ``qmpulse`` and update their starts
                 to_process = {qmpulse}
-                while to_process:
+                while len(to_process) > 0:
                     next_qmpulse = to_process.pop()
-                    to_process |= next_qmpulse.next
+                    to_process |= next_qmpulse.next_
                     next_qmpulse.wait_time_variable = start
+
+            self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
+
+    def sweep_duration(self, sweepers, qubits, qmsequence, relaxation_time):
+        sweeper = sweepers[0]
+
+        qmpulse = qmsequence.pulse_to_qmpulse[sweeper.pulses[0].serial]
+        is_baked = isinstance(qmpulse, BakedPulse)
+        if is_baked:
+            values = np.array(sweeper.values).astype(int)
+        else:
+            values = np.array(sweeper.values).astype(int) // 4
+
+        for pulse in sweeper.pulses:
+            qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
+            if isinstance(qmpulse, BakedPulse):
+                if not is_baked:
+                    raise_error(TypeError, "Duration sweeper cannot contain both baked and not baked pulses.")
+                qmpulse.bake(self.config, values)
+
+        dur = declare(int)
+        with for_(*from_array(dur, values)):
+            for pulse in sweeper.pulses:
+                qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
+                qmpulse.swept_duration = dur
+                # find all pulses that are connected to ``qmpulse`` and align them
+                to_process = set(qmpulse.next_)
+                while len(to_process) > 0:
+                    next_qmpulse = to_process.pop()
+                    to_process |= next_qmpulse.next_
+                    qmpulse.elements_to_align.add(next_qmpulse.element)
+                    next_qmpulse.wait_time -= qmpulse.wait_time + qmpulse.duration // 4
 
             self.sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
 
@@ -974,6 +1068,7 @@ class QMOPX(Controller):
         Parameter.relative_phase: sweep_relative_phase,
         Parameter.bias: sweep_bias,
         Parameter.start: sweep_start,
+        Parameter.duration: sweep_duration,
     }
 
     def sweep_recursion(self, sweepers, qubits, qmsequence, relaxation_time):
@@ -1012,6 +1107,10 @@ class QMOPX(Controller):
             with qua.stream_processing():
                 for qmpulse in qmsequence.ro_pulses:
                     qmpulse.acquisition.download(*buffer_dims)
+
+        if self.script_file_name is not None:
+            with open(self.script_file_name, "w") as file:
+                file.write(generate_qua_script(experiment, self.config.__dict__))
 
         result = self.execute_program(experiment)
         return self.fetch_results(result, qmsequence.ro_pulses)
