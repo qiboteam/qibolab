@@ -14,6 +14,9 @@ from qibo.config import log
 from qibolab.instruments.abstract import InstrumentException
 from qibolab.instruments.oscillator import LocalOscillator
 
+MAX_RECONNECTION_ATTEMPTS = 10
+TIMEOUT = 10
+
 
 class ERA(LocalOscillator):
     def __init__(self, name, address, ethernet=True, reference_clock_source="internal"):
@@ -190,9 +193,9 @@ class ERA(LocalOscillator):
             value: str = The value to post.
         """
         value = str(value)
-        for _ in range(10):
+        for _ in range(MAX_RECONNECTION_ATTEMPTS):
             try:
-                response = requests.post(f"http://{self.address}/", data={name: value}, timeout=10)
+                response = requests.post(f"http://{self.address}/", data={name: value}, timeout=TIMEOUT)
                 if response.status_code == 200:
                     return True
                 break
@@ -209,9 +212,9 @@ class ERA(LocalOscillator):
         Args:
             name: str = The name of the value to get.
         """
-        for _ in range(10):
+        for _ in range(MAX_RECONNECTION_ATTEMPTS):
             try:
-                response = requests.post(f"http://{self.address}/", params={"readAll": 1}, timeout=10)
+                response = requests.post(f"http://{self.address}/", params={"readAll": 1}, timeout=TIMEOUT)
 
                 if response.status_code == 200:
                     # reponse.text is a dictonary in string format, convert it to a dictonary
