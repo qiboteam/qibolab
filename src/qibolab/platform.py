@@ -1,4 +1,4 @@
-"""Platform for controlling quantum devices."""
+"""A platform for executing quantum algorithms."""
 
 import math
 import re
@@ -20,7 +20,9 @@ from qibolab.sweeper import Sweeper
 
 
 class Platform:
-    """Platform for controlling quantum devices.
+    """A platform for executing quantum algorithms.
+
+    It consists of a quantum processor QPU and a set of controlling instruments.
 
     Args:
         name (str): name of the platform.
