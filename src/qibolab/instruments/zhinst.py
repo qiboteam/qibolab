@@ -896,7 +896,8 @@ class Zurich(Controller):
                     with exp.case(state=0):
                         pass
                     with exp.case(state=1):
-                        exp.play(signal=f"drive{q}", pulse=ZhPulse(fast_reset[q]).zhpulse)
+                        pulse = ZhPulse(qubit.native_gates.RX.pulse(0, 0))
+                        exp.play(signal=f"drive{q}", pulse=pulse.zhpulse)
 
     @staticmethod
     def rearrange_sweepers(sweepers):

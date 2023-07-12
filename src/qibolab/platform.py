@@ -360,12 +360,6 @@ class Platform:
             Readout results acquired by after execution.
 
         """
-        # TODO: Let's keep fast reset here only for now while things get checked
-        if options.fast_reset is True:
-            fast_reset = []
-            for qubit in sequences.qubits:
-                fast_reset.append(self.create_RX_pulse(qubit, 0))
-            options = replace(options, fast_reset=fast_reset)
 
         return self._execute("play", sequences, options, **kwargs)
 
@@ -413,12 +407,6 @@ class Platform:
 
         if options.relaxation_time is None:
             options = replace(options, relaxation_time=self.relaxation_time)
-
-        if options.fast_reset is True:
-            fast_reset = []
-            for qubit in sequence.qubits:
-                fast_reset.append(self.create_RX_pulse(qubit, 0))
-            options = replace(options, fast_reset=fast_reset)
 
         result = {}
         for instrument in self.instruments:
