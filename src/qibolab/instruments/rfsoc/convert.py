@@ -1,6 +1,6 @@
 """Convert helper functions for rfsoc driver."""
 from dataclasses import asdict
-from typing import overload
+from functools import singledispatch
 
 import numpy as np
 import qibosoq.components.base as rfsoc
@@ -57,14 +57,22 @@ def convert_units_sweeper(sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubit
             sweeper.stops[idx] = np.degrees(sweeper.stops[idx])
 
 
-def convert_qubit(qubit: Qubit) -> rfsoc.Qubit:
+@singledispatch
+def convert(*args):
+    """Convert from qibolab obj to qibosoq obj, overloaded."""
+    raise ValueError(f"Convert function received bad parameters ({type(args[0])}).")
+
+
+@convert.register
+def _(qubit: Qubit) -> rfsoc.Qubit:
     """Convert `qibolab.platforms.abstract.Qubit` to `qibosoq.abstract.Qubit`."""
     if qubit.flux:
         return rfsoc.Qubit(qubit.flux.offset, qubit.flux.port.name)
     return rfsoc.Qubit(0.0, None)
 
 
-def convert_pulse_sequence(sequence: PulseSequence, qubits: dict[int, Qubit]) -> list[rfsoc_pulses.Pulse]:
+@convert.register
+def _(sequence: PulseSequence, qubits: dict[int, Qubit]) -> list[rfsoc_pulses.Pulse]:
     """Convert PulseSequence to list of rfosc pulses with relative time."""
 
     abs_time = 0
@@ -72,14 +80,15 @@ def convert_pulse_sequence(sequence: PulseSequence, qubits: dict[int, Qubit]) ->
     for pulse in sequence:
         abs_start = pulse.start * NS_TO_US
         start_delay = abs_start - abs_time
-        pulse_dict = asdict(convert_pulse(pulse, qubits, start_delay))
+        pulse_dict = asdict(convert(pulse, qubits, start_delay))
         list_sequence.append(pulse_dict)
 
         abs_time += start_delay
     return list_sequence
 
 
-def convert_pulse(pulse: Pulse, qubits: dict[int, Qubit], start_delay: float) -> rfsoc_pulses.Pulse:
+@convert.register
+def _(pulse: Pulse, qubits: dict[int, Qubit], start_delay: float) -> rfsoc_pulses.Pulse:
     """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`."""
     pulse_type = pulse.type.name.lower()
     dac = getattr(qubits[pulse.qubit], pulse_type).port.name
@@ -100,12 +109,14 @@ def convert_pulse(pulse: Pulse, qubits: dict[int, Qubit], start_delay: float) ->
     return replace_pulse_shape(rfsoc_pulse, pulse.shape)
 
 
-def convert_parameter(par: Parameter) -> rfsoc.Parameter:
+@convert.register
+def _(par: Parameter) -> rfsoc.Parameter:
     """Convert a qibolab sweeper.Parameter into a qibosoq.Parameter."""
     return getattr(rfsoc.Parameter, par.name.upper())
 
 
-def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Qubit]) -> rfsoc.Sweeper:
+@convert.register
+def _(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Qubit]) -> rfsoc.Sweeper:
     """Convert `qibolab.sweeper.Sweeper` to `qibosoq.abstract.Sweeper`.
 
     Note that any unit conversion is not done in this function (to avoid to do it multiple times).
@@ -155,7 +166,7 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Q
                     starts.append(t_start + delta_start)
                     stops.append(t_start + delta_stop)
             else:
-                parameters.append(convert_parameter(sweeper.parameter))
+                parameters.append(convert(sweeper.parameter))
 
     return rfsoc.Sweeper(
         parameters=parameters,
@@ -164,43 +175,3 @@ def convert_sweep(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Q
         stops=stops,
         expts=len(sweeper.values),
     )
-
-
-@overload
-def convert(qubit: Qubit) -> rfsoc.Qubit:
-    """Convert `qibolab.platforms.abstract.Qubit` to `qibosoq.abstract.Qubit`."""
-
-
-@overload
-def convert(sequence: PulseSequence, qubits: dict[int, Qubit]) -> list[rfsoc_pulses.Pulse]:
-    """Convert PulseSequence to list of rfosc pulses with relative time."""
-
-
-@overload
-def convert(pulse: Pulse, qubits: dict[int, Qubit], start_delay: float) -> rfsoc_pulses.Pulse:
-    """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`."""
-
-
-@overload
-def convert(par: Parameter) -> rfsoc.Parameter:
-    """Convert a qibolab sweeper.Parameter into a qibosoq.Parameter."""
-
-
-@overload
-def convert(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Qubit]) -> rfsoc.Sweeper:
-    """Convert `qibolab.sweeper.Sweeper` to `qibosoq.abstract.Sweeper`."""
-
-
-def convert(*args):
-    """Convert from qibolab obj to qibosoq obj, overloaded."""
-    if isinstance(args[0], Qubit):
-        return convert_qubit(*args)
-    if isinstance(args[0], Parameter):
-        return convert_parameter(*args)
-    if isinstance(args[0], PulseSequence):
-        return convert_pulse_sequence(*args)
-    if isinstance(args[0], Pulse):
-        return convert_pulse(*args)
-    if isinstance(args[0], Sweeper):
-        return convert_sweep(*args)
-    raise ValueError(f"Convert function received bad parameters ({type(args[0])}).")

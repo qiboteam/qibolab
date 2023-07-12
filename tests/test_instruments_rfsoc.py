@@ -23,6 +23,26 @@ from qibolab.result import (
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 
+def test_convert_default(dummy_qrc):
+    """Test convert function raises errors when parameter have wrong types."""
+    platform = create_platform("rfsoc")
+    integer = 12
+    qubits = platform.qubits
+    sequence = PulseSequence()
+    sequence.add(Pulse(0, 40, 0.9, 50e6, 0, Drag(5, 2), 0, PulseType.DRIVE, 0))
+    parameter = Parameter.frequency
+
+    with pytest.raises(ValueError):
+        res = convert(integer)  # this conversion does not exist
+
+    with pytest.raises(ValueError):
+        res = convert(qubits, sequence)  # the order is wrong
+
+    with pytest.raises(TypeError):
+        # functools understand that is a convert_parameter and raises an error for the int
+        res = convert(parameter, integer)
+
+
 def test_convert_qubit(dummy_qrc):
     """Tests conversion from `qibolab.platforms.abstract.Qubit` to `rfsoc.Qubit`.
 
