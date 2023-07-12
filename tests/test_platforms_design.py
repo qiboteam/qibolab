@@ -1,17 +1,14 @@
 import pytest
 
 from qibolab import create_platform
-from qibolab.instruments.qblox.controller import QbloxController
 
 qubit = 0
 
 
 @pytest.fixture
 def platform(platform_name):
-    _platform = create_platform(platform_name)
-    if isinstance(_platform, QbloxController):
-        pytest.skip(f"Skipping Platform test for {_platform.name}")
-    return _platform
+    platform = create_platform(platform_name)
+    return platform
 
 
 def test_platform_lo_drive_frequency(platform):
