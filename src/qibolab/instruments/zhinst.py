@@ -9,7 +9,10 @@ import laboneq._token
 import laboneq.simple as lo
 import numpy as np
 from laboneq.contrib.example_helpers.plotting.plot_helpers import plot_simulation
-from laboneq.dsl.experiment.pulse_library import sampled_pulse_real
+from laboneq.dsl.experiment.pulse_library import (
+    sampled_pulse_complex,
+    sampled_pulse_real,
+)
 from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
@@ -52,54 +55,63 @@ SWEEPER_START = {"start"}
 def select_pulse(pulse, pulse_type):
     """Pulse translation"""
 
-    if str(pulse.shape) == "Rectangular()":
-        can_compress = pulse.type is not PulseType.READOUT
-        return lo.pulse_library.const(
-            uid=(f"{pulse_type}_{pulse.qubit}_"),
-            length=round(pulse.duration * NANO_TO_SECONDS, 9),
-            amplitude=pulse.amplitude,
-            can_compress=can_compress,
-        )
-    if "Gaussian" in str(pulse.shape):
-        sigma = pulse.shape.rel_sigma
-        return lo.pulse_library.gaussian(
-            uid=(f"{pulse_type}_{pulse.qubit}_"),
-            length=round(pulse.duration * NANO_TO_SECONDS, 9),
-            amplitude=pulse.amplitude,
-            sigma=2 / sigma,
-            zero_boundaries=False,
-        )
+    if "IIR" not in str(pulse.shape):
+        if str(pulse.shape) == "Rectangular()":
+            can_compress = pulse.type is not PulseType.READOUT
+            return lo.pulse_library.const(
+                uid=(f"{pulse_type}_{pulse.qubit}_"),
+                length=round(pulse.duration * NANO_TO_SECONDS, 9),
+                amplitude=pulse.amplitude,
+                can_compress=can_compress,
+            )
+        if "Gaussian" in str(pulse.shape):
+            sigma = pulse.shape.rel_sigma
+            return lo.pulse_library.gaussian(
+                uid=(f"{pulse_type}_{pulse.qubit}_"),
+                length=round(pulse.duration * NANO_TO_SECONDS, 9),
+                amplitude=pulse.amplitude,
+                sigma=2 / sigma,
+                zero_boundaries=False,
+            )
 
-    if "GaussianSquare" in str(pulse.shape):
-        sigma = pulse.shape.rel_sigma
-        can_compress = pulse.type is not PulseType.READOUT
-        return lo.pulse_library.gaussian_square(
-            uid=(f"{pulse_type}_{pulse.qubit}_"),
-            length=round(pulse.duration * NANO_TO_SECONDS, 9),
-            width=round(pulse.duration * NANO_TO_SECONDS, 9) * 0.9,  # 90% Flat
-            amplitude=pulse.amplitude,
-            can_compress=can_compress,
-            sigma=2 / sigma,
-            zero_boundaries=False,
-        )
+        if "GaussianSquare" in str(pulse.shape):
+            sigma = pulse.shape.rel_sigma
+            can_compress = pulse.type is not PulseType.READOUT
+            return lo.pulse_library.gaussian_square(
+                uid=(f"{pulse_type}_{pulse.qubit}_"),
+                length=round(pulse.duration * NANO_TO_SECONDS, 9),
+                width=round(pulse.duration * NANO_TO_SECONDS, 9) * 0.9,  # 90% Flat
+                amplitude=pulse.amplitude,
+                can_compress=can_compress,
+                sigma=2 / sigma,
+                zero_boundaries=False,
+            )
 
-    if "Drag" in str(pulse.shape):
-        sigma = pulse.shape.rel_sigma
-        beta = pulse.shape.beta
-        return lo.pulse_library.drag(
-            uid=(f"{pulse_type}_{pulse.qubit}_"),
-            length=round(pulse.duration * NANO_TO_SECONDS, 9),
-            amplitude=pulse.amplitude,
-            sigma=2 / sigma,
-            beta=beta,
-            zero_boundaries=False,
-        )
+        if "Drag" in str(pulse.shape):
+            sigma = pulse.shape.rel_sigma
+            beta = pulse.shape.beta
+            return lo.pulse_library.drag(
+                uid=(f"{pulse_type}_{pulse.qubit}_"),
+                length=round(pulse.duration * NANO_TO_SECONDS, 9),
+                amplitude=pulse.amplitude,
+                sigma=2 / sigma,
+                beta=beta,
+                zero_boundaries=False,
+            )
 
-    return sampled_pulse_real(
-        uid=(f"{pulse_type}_{pulse.qubit}_"),
-        samples=pulse.envelope_waveform_i.data,
-        can_compress=True,
-    )
+    if np.all(pulse.envelope_waveform_q.data == 0):
+        return sampled_pulse_real(
+            uid=(f"{pulse_type}_{pulse.qubit}_"),
+            samples=pulse.envelope_waveform_i.data,
+            can_compress=True,
+        )
+    else:
+        # TODO: Test this when we have pulses that use it
+        return sampled_pulse_complex(
+            uid=(f"{pulse_type}_{pulse.qubit}_"),
+            samples=pulse.envelope_waveform_i.data + (1j * pulse.envelope_waveform_q.data),
+            can_compress=True,
+        )
 
     # TODO: if "Slepian" in str(pulse.shape):
     # Implement Slepian shaped flux pulse https://arxiv.org/pdf/0909.5368.pdf

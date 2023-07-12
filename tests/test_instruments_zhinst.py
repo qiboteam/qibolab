@@ -4,6 +4,7 @@ import pytest
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.instruments.zhinst import ZhPulse, ZhSweeperLine
 from qibolab.pulses import (
+    IIR,
     SNZ,
     Drag,
     FluxPulse,
@@ -16,7 +17,7 @@ from qibolab.pulses import (
 from qibolab.sweeper import Parameter, Sweeper
 
 
-@pytest.mark.parametrize("shape", ["Rectangular", "Gaussian", "GaussianSquare", "Drag", "SNZ"])
+@pytest.mark.parametrize("shape", ["Rectangular", "Gaussian", "GaussianSquare", "Drag", "SNZ", "IIR"])
 def test_zhpulse(shape):
     if shape == "Rectangular":
         pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
@@ -28,10 +29,12 @@ def test_zhpulse(shape):
         pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Drag(5, 0.4), "ch0", qubit=0)
     if shape == "SNZ":
         pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, SNZ(10, 0.4), "ch0", qubit=0)
+    if shape == "IIR":
+        pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, IIR([10, 1], [0.4, 1], target=Gaussian(5)), "ch0", qubit=0)
 
     zhpulse = ZhPulse(pulse)
     assert zhpulse.pulse.serial == pulse.serial
-    if shape == "SNZ":
+    if shape == "SNZ" or shape == "IIR":
         assert len(zhpulse.zhpulse.samples) == 40 / 1e9 * 1e9  # * 2e9 When pulses stop hardcoding SamplingRate
     else:
         assert zhpulse.zhpulse.length == 40e-9
