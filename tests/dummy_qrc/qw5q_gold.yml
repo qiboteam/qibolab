@@ -153,6 +153,39 @@ native_gates:
               qubit: 2
               relative_start: 0
               type: qf
+        2-1:
+            CZ:
+            - duration: 32
+              amplitude: -0.6025
+              shape: Exponential(12, 5000, 0.1)
+              qubit: 3
+              relative_start: 0
+              type: qf
+            - duration: 20
+              amplitude: 0
+              shape: Rectangular())
+              qubit: 3
+              relative_start: 32
+              type: qf
+            - type: virtual_z
+              phase: -3.630
+              qubit: 3
+
+            - duration: 32
+              amplitude: 0
+              shape: Rectangular())
+              qubit: 2
+              relative_start: 0
+              type: qf
+            - duration: 20
+              amplitude: 0
+              shape: Rectangular())
+              qubit: 2
+              relative_start: 32
+              type: qf
+            - type: virtual_z
+              phase: -0.041
+              qubit: 2
 
 
 characterization:
