@@ -191,7 +191,9 @@ class ClusterQCM_RF(Instrument):
         self.ports: dict = {}
         for n in range(2):
             port = "o" + str(n + 1)
-            self.ports[port] = ClusterRF_OutputPort(sequencer_number=self.DEFAULT_SEQUENCERS[port], number=n + 1)
+            self.ports[port] = ClusterRF_OutputPort(
+                module=self, sequencer_number=self.DEFAULT_SEQUENCERS[port], number=n + 1
+            )
         self.channels: list = []
 
         self._debug_folder: str = ""
@@ -218,32 +220,6 @@ class ClusterQCM_RF(Instrument):
                 # save a reference to the underlying object
                 self.device = cluster.modules[int(self.address.split(":")[1]) - 1]
                 # TODO: test connection with the module before continuing
-
-                # create a class for each port with attributes mapped to the instrument parameters
-                for n in range(2):
-                    port = "o" + str(n + 1)
-                    # self.ports[port] = type(
-                    #     f"port_" + port,
-                    #     (),
-                    #     {
-                    #         "channel": None,
-                    #         "attenuation": self.property_wrapper(f"out{n}_att"),
-                    #         "lo_enabled": self.property_wrapper(f"out{n}_lo_en"),
-                    #         "lo_frequency": self.property_wrapper(f"out{n}_lo_freq"),
-                    #         "gain": self.sequencer_property_wrapper(
-                    #             self.DEFAULT_SEQUENCERS[port], "gain_awg_path0", "gain_awg_path1"
-                    #         ),
-                    #         "hardware_mod_en": self.sequencer_property_wrapper(
-                    #             self.DEFAULT_SEQUENCERS[port], "mod_en_awg"
-                    #         ),
-                    #         "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS[port], "nco_freq"),
-                    #         "nco_phase_offs": self.sequencer_property_wrapper(
-                    #             self.DEFAULT_SEQUENCERS[port], "nco_phase_offs"
-                    #         ),
-                    #     },
-                    # )()
-                    self.ports[port].device = self.device
-                    self.ports[port].module = self
 
                 # save reference to cluster
                 self._cluster = cluster

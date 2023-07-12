@@ -204,8 +204,9 @@ class ClusterQRM_RF(Instrument):
         self.settings: ClusterQRM_RF_Settings = settings
         self.device: QbloxQrmQcm = None
         self.ports: dict = {}
-        self.ports["o1"] = ClusterRF_OutputPort(sequencer_number=self.DEFAULT_SEQUENCERS["o1"], number=1)
+        self.ports["o1"] = ClusterRF_OutputPort(module=self, sequencer_number=self.DEFAULT_SEQUENCERS["o1"], number=1)
         self.ports["i1"] = QbloxInputPort(
+            module=self,
             output_sequencer_number=self.DEFAULT_SEQUENCERS["o1"],
             input_sequencer_number=self.DEFAULT_SEQUENCERS["i1"],
             number=1,
@@ -241,12 +242,6 @@ class ClusterQRM_RF(Instrument):
                 # TODO: test connection with the module before continuing. Currently if there is no
                 # connection the instruction self._set_device_parameter(self.device, "in0_att", value=0)
                 # fails, providing a misleading error message
-
-                self.ports["o1"].device = self.device
-                self.ports["o1"].module = self
-
-                self.ports["i1"].device = self.device
-                self.ports["i1"].module = self
 
                 # save reference to cluster
                 self._cluster = cluster
