@@ -524,6 +524,24 @@ class eCap(PulseShape):
         return f"{self.name}({format(self.alpha, '.6f').rstrip('0').rstrip('.')})"
 
 
+class Reset(PulseShape):
+    r"""Reset pulse shape."""
+
+    def __init__(self, resets: int):
+        self.name = "Reset"
+        self.pulse: Pulse = None
+        self.resets = resets
+
+    def envelope_waveform_i(self) -> Waveform:
+        return Waveform(np.zeros(n1))
+
+    def envelope_waveform_q(self) -> Waveform:
+        return Waveform(np.zeros(1))
+
+    def __repr__(self):
+        return f"{self.name}({format(self.resets, '.6f').rstrip('0').rstrip('.')})"
+
+
 class Pulse:
     """A class to represent a pulse to be sent to the QPU.
 
@@ -581,7 +599,7 @@ class Pulse:
         frequency,
         relative_phase,
         shape,
-        channel,
+        channel=None,
         type=PulseType.DRIVE,
         qubit=0,
     ):

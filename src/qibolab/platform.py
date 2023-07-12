@@ -14,7 +14,7 @@ from qibolab.channels import Channel, ChannelMap
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument
 from qibolab.native import NativeType, SingleQubitNatives, TwoQubitNatives
-from qibolab.pulses import PulseSequence
+from qibolab.pulses import PulseSequence, Reset
 from qibolab.qubits import Qubit, QubitId, QubitPair
 from qibolab.sweeper import Sweeper
 
@@ -421,6 +421,9 @@ class Platform:
 
     def __call__(self, sequence, options):
         return self.execute_pulse_sequence(sequence, options)
+
+    def reset_state(self, qubit, start=0, resets=1):
+        return self.qubits[qubit].native_gates.reset.pulse(start, shape=Reset(resets))
 
     def create_RX90_pulse(self, qubit, start=0, relative_phase=0):
         return self.qubits[qubit].native_gates.RX90.pulse(start, relative_phase)

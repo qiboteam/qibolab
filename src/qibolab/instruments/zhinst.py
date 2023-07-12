@@ -95,6 +95,9 @@ def select_pulse(pulse, pulse_type):
             zero_boundaries=False,
         )
 
+    if "Reset" in str(pulse.shape):
+        return int(pulse.shape.resets)
+
     # TODO: if "Slepian" in str(pulse.shape):
     # Implement Slepian shaped flux pulse https://arxiv.org/pdf/0909.5368.pdf
 
@@ -752,27 +755,33 @@ class Zurich(Controller):
             i = 0
             if len(self.sequence[f"drive{q}"]) != 0:
                 with exp.section(uid=f"sequence_drive{q}"):
+                    i = 0
                     for pulse in self.sequence[f"drive{q}"]:
-                        if not isinstance(pulse, ZhSweeperLine):
-                            exp.delay(
-                                signal=f"drive{q}",
-                                time=round(pulse.pulse.start * NANO_TO_SECONDS, 9) - time,
-                            )
-                            time = round(pulse.pulse.duration * NANO_TO_SECONDS, 9) + round(
-                                pulse.pulse.start * NANO_TO_SECONDS, 9
-                            )
-                            pulse.zhpulse.uid += str(i)
-                            if isinstance(pulse, ZhSweeper):
-                                self.play_sweep(exp, qubit, pulse, section="drive")
-                            elif isinstance(pulse, ZhPulse):
-                                exp.play(
-                                    signal=f"drive{q}",
-                                    pulse=pulse.zhpulse,
-                                    phase=pulse.pulse.relative_phase,
-                                )
+                        if isinstance(pulse.zhpulse, int):
+                            self.reset_state(exp, q, qubit, resets=pulse.zhpulse)
+                        else:
+                            with exp.section(uid=f"sequence_drive_{q}_{i}"):
+                                if not isinstance(pulse, ZhSweeperLine):
+                                    exp.delay(
+                                        signal=f"drive{q}",
+                                        time=round(pulse.pulse.start * NANO_TO_SECONDS, 9) - time,
+                                    )
+                                    time = round(pulse.pulse.duration * NANO_TO_SECONDS, 9) + round(
+                                        pulse.pulse.start * NANO_TO_SECONDS, 9
+                                    )
+                                    pulse.zhpulse.uid += str(i)
+                                    if isinstance(pulse, ZhSweeper):
+                                        self.play_sweep(exp, qubit, pulse, section="drive")
+                                    elif isinstance(pulse, ZhPulse):
+                                        exp.play(
+                                            signal=f"drive{q}",
+                                            pulse=pulse.zhpulse,
+                                            phase=pulse.pulse.relative_phase,
+                                        )
+                                        i += 1
+                                elif isinstance(pulse, ZhSweeperLine):
+                                    exp.delay(signal=f"drive{q}", time=pulse.zhsweeper)
                                 i += 1
-                        elif isinstance(pulse, ZhSweeperLine):
-                            exp.delay(signal=f"drive{q}", time=pulse.zhsweeper)
 
                     # TODO: Patch for T1 start, general ?
                     if len(self.sequence[f"readout{q}"]) > 0 and isinstance(
@@ -780,6 +789,68 @@ class Zurich(Controller):
                     ):
                         exp.delay(signal=f"drive{q}", time=self.sequence[f"readout{q}"][0].zhsweeper)
                         self.sequence[f"readout{q}"].remove(self.sequence[f"readout{q}"][0])
+
+    def reset_state(self, exp, q, qubit, resets):
+        """
+        Conditional fast reset after readout - small delay for signal processing
+        """
+        log.warning("I'm resetting")
+        # READ
+        for s in range(resets - 1):
+            with exp.section(uid=f"sequence_measure_reset{q}_{s}"):
+                for pulse in self.sequence[f"readout{q}"]:
+                    i = 0
+                    pulse.zhpulse.uid += str(i)
+
+                    # Integration weights definition or load from the chip folder
+                    weights_file = (
+                        INSTRUMENTS_DATA_FOLDER / f"{self.chip}/weights/integration_weights_optimization_qubit_{q}.npy"
+                    )
+                    if weights_file.is_file():
+                        samples = np.load(
+                            weights_file,
+                            allow_pickle=True,
+                        )
+                        weight = lo.pulse_library.sampled_pulse_complex(
+                            uid="weight" + pulse.zhpulse.uid,
+                            samples=samples[0] * np.exp(1j * qubit.iq_angle),
+                        )
+
+                    else:
+                        # We adjust for smearing and remove smearing/2 at the end
+                        exp.delay(
+                            signal=f"acquire{q}",
+                            time=self.smearing * NANO_TO_SECONDS,
+                        )
+                        weight = lo.pulse_library.sampled_pulse_complex(
+                            np.ones([int(pulse.pulse.duration * 2 - 3 * self.smearing * NANO_TO_SECONDS)])
+                            * np.exp(1j * qubit.iq_angle)
+                        )
+
+                    measure_pulse_parameters = {"phase": 0}
+
+                    exp.measure(
+                        acquire_signal=f"acquire{q}",
+                        handle=f"sequence_reset{q}_{s}",
+                        integration_kernel=weight,
+                        integration_kernel_parameters=None,
+                        integration_length=None,
+                        measure_signal=f"measure{q}",
+                        measure_pulse=pulse.zhpulse,
+                        measure_pulse_length=round(pulse.pulse.duration * NANO_TO_SECONDS, 9),
+                        measure_pulse_parameters=measure_pulse_parameters,
+                        measure_pulse_amplitude=None,
+                        acquire_delay=self.time_of_flight * NANO_TO_SECONDS,
+                        reset_delay=0,
+                    )
+
+            with exp.section(uid=f"fast_reset{q}_{s}"):
+                with exp.match_local(handle=f"sequence_reset{q}_{s}"):
+                    with exp.case(state=0):
+                        pass
+                    with exp.case(state=1):
+                        pulse = ZhPulse(qubit.native_gates.RX.pulse(0, 0))
+                        exp.play(signal=f"drive{q}", pulse=pulse.zhpulse)
 
     @staticmethod
     def play_after_set(sequence, ptype):
@@ -881,11 +952,8 @@ class Zurich(Controller):
     def fast_reset(self, exp, qubits, fast_reset):
         """
         Conditional fast reset after readout - small delay for signal processing
-        This is a very naive approach that can be improved by repeating this step until
-        we reach non fast reset fidelity
-        https://quantum-computing.ibm.com/lab/docs/iql/manage/systems/reset/backend_reset
         """
-        log.warning("Im fast resetting")
+        log.warning("I'm fast resetting")
         for qubit_name in self.sequence_qibo.qubits:
             qubit = qubits[qubit_name]
             if qubit.flux_coupler:

@@ -66,7 +66,7 @@ class NativePulse:
         kwargs["pulse_type"] = PulseType(kwargs.pop("type"))
         return cls(name, **kwargs, qubit=qubit)
 
-    def pulse(self, start, relative_phase=0.0):
+    def pulse(self, start, relative_phase=0.0, shape=None):
         """Construct the :class:`qibolab.pulses.Pulse` object implementing the gate.
 
         Args:
@@ -77,12 +77,16 @@ class NativePulse:
             A :class:`qibolab.pulses.DrivePulse` or :class:`qibolab.pulses.DrivePulse`
             or :class:`qibolab.pulses.FluxPulse` with the pulse parameters of the gate.
         """
+
+        if not shape:
+            shape = self.shape
+
         if self.pulse_type is PulseType.FLUX:
             return FluxPulse(
                 start + self.relative_start,
                 self.duration,
                 self.amplitude,
-                self.shape,
+                shape,
                 channel=self.qubit.flux.name,
                 qubit=self.qubit.name,
             )
@@ -95,7 +99,7 @@ class NativePulse:
             self.amplitude,
             self.frequency,
             relative_phase,
-            self.shape,
+            shape,
             channel,
             qubit=self.qubit.name,
         )
@@ -174,6 +178,11 @@ class SingleQubitNatives:
     def RX90(self) -> NativePulse:
         """RX90 native pulse is inferred from RX by halving its amplitude."""
         return replace(self.RX, name="RX90", amplitude=self.RX.amplitude / 2.0)
+
+    @property
+    def reset(self) -> NativePulse:
+        """RX90 native pulse is inferred from RX by halving its amplitude."""
+        return replace(self.RX, name="Reset", duration=0)
 
     @classmethod
     def from_dict(cls, qubit, native_gates):
