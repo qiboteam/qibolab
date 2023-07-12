@@ -36,14 +36,6 @@ class RFSoCPort(Port):
     """Amplitude factor for biasing."""
 
 
-class QibosoqError(RuntimeError):
-    """Exception raised when qibosoq server encounters an error.
-
-    Attributes:
-    message -- The error message received from the server (qibosoq)
-    """
-
-
 class RFSoC(Controller):
     """Instrument object for controlling RFSoC FPGAs.
 
@@ -310,7 +302,7 @@ class RFSoC(Controller):
             for jdx, kdx in enumerate(sweeper.indexes):
                 sweeper_parameter = sweeper.parameters[jdx]
                 if sweeper_parameter is rfsoc.Parameter.BIAS:
-                    qubits[kdx].flux.bias = values[jdx][idx]
+                    qubits[kdx].flux.offset = values[jdx][idx]
                 elif sweeper_parameter in rfsoc.Parameter.variants(
                     {
                         "amplitude",
