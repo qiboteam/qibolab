@@ -10,13 +10,15 @@ from qibolab.pulses import (
     Gaussian,
     Pulse,
     PulseSequence,
+    PulseShape,
     ReadoutPulse,
     Rectangular,
 )
 from qibolab.sweeper import Parameter, Sweeper
 
 
-@pytest.mark.parametrize("shape", ["Rectangular", "Gaussian", "GaussianSquare", "Drag", "SNZ"])
+# @pytest.mark.parametrize("shape", ["Rectangular", "Gaussian", "GaussianSquare", "Drag", "SNZ"])
+@pytest.mark.parametrize("shape", PulseShape)
 def test_zhpulse(shape):
     if shape == "Rectangular":
         pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
