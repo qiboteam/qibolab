@@ -64,7 +64,7 @@ def create(runcard=RUNCARD):
     channels["L4-26"].local_oscillator = local_oscillators[5]
 
     instruments = [controller] + local_oscillators
-    platform = Platform("qw5q_gold", runcard, instruments, channels)
+    platform = Platform("qw5q_gold_qm", runcard, instruments, channels)
 
     # assign channels to qubits
     qubits = platform.qubits
