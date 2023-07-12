@@ -49,7 +49,6 @@ SWEEPER_BIAS = {"bias"}
 SWEEPER_START = {"start"}
 
 
-# pylint: disable=R1710
 def select_pulse(pulse, pulse_type):
     """Pulse translation"""
 
