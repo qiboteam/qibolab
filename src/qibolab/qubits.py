@@ -37,6 +37,7 @@ class Qubit:
     Ec: int = 0
     Ej: int = 0
     g: int = 0
+    assigment_fidelity: int = 0
     sweetspot: float = 0
     peak_voltage: float = 0
     pi_pulse_amplitude: float = 0
