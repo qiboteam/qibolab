@@ -11,16 +11,21 @@ def platform(platform_name):
     return platform
 
 
+# qblox requires a connection to the devices
+# this will be decoupled in the future so that all drivers have the same behaviour
+@pytest.mark.qpu
 def test_platform_lo_drive_frequency(platform):
     platform.set_lo_drive_frequency(qubit, 1e9)
     assert platform.get_lo_drive_frequency(qubit) == 1e9
 
 
+@pytest.mark.qpu
 def test_platform_lo_readout_frequency(platform):
     platform.set_lo_readout_frequency(qubit, 1e9)
     assert platform.get_lo_readout_frequency(qubit) == 1e9
 
 
+@pytest.mark.qpu
 def test_platform_attenuation(platform):
     platform.set_attenuation(qubit, 10)
     assert platform.get_attenuation(qubit) == 10
