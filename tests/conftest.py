@@ -16,7 +16,7 @@ def pytest_addoption(parser):
         "--platforms",
         type=str,
         action="store",
-        default="qm,qblox",
+        default="qm,qblox,rfsoc,zurich",
         help="qpu platforms to test on",
     )
     parser.addoption(
