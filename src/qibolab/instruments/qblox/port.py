@@ -47,12 +47,15 @@ class QbloxOutputPort(Port):
         self.channel = None  # To be discontinued
         self.qubit = None  # To be discontinued
 
+        self._settings = QbloxOutputPort_Settings()
+
     # qibolab.instruments.port.Port interface implementation
 
     @property
     def attenuation(self) -> str:
         """Attenuation that is applied to this port."""
-
+        if self.device is None:
+            return self._settings.attenuation
         return self.device.get(f"out{self.port_number}_att")
 
     @attenuation.setter
@@ -76,12 +79,15 @@ class QbloxOutputPort(Port):
         else:
             raise_error(ValueError, f"Invalid attenuation {value}")
 
-        self.module._set_device_parameter(self.device, f"out{self.port_number}_att", value=value)
+        self._settings.attenuation = value
+        if self.module is not None:
+            self.module._set_device_parameter(self.device, f"out{self.port_number}_att", value=value)
 
     @property
     def offset(self):
         """DC offset that is applied to this port."""
-
+        if self.device is None:
+            return self._settings.offset
         return self.device.get(f"out{self.port_number}_offset")
 
     @offset.setter
@@ -99,7 +105,9 @@ class QbloxOutputPort(Port):
         else:
             raise_error(ValueError, f"Invalid offset {value}")
 
-        self.module._set_device_parameter(self.device, f"out{self.port_number}_offset", value=value)
+        self._settings.offset = value
+        if self.module is not None:
+            self.module._set_device_parameter(self.device, f"out{self.port_number}_offset", value=value)
 
     # Additional attributes needed by the driver
     @property
@@ -161,10 +169,13 @@ class QbloxOutputPort(Port):
 
 
 class ClusterRF_OutputPort(QbloxOutputPort):
+    def __init__(self, sequencer_number: int, number: int):
+        super().__init__(sequencer_number, number)
+        self._settings = ClusterRF_OutputPort_Settings()
+
     @property
     def lo_enabled(self):
         """Flag to enable local oscillator."""
-
         if self.device.is_qrm_type:
             return self.device.get(f"out{self.port_number}_in{self.port_number}_lo_en")
         elif self.device.is_qcm_type:
@@ -174,7 +185,6 @@ class ClusterRF_OutputPort(QbloxOutputPort):
     def lo_enabled(self, value):
         if not isinstance(value, bool):
             raise_error(ValueError, f"Invalid lo_enabled {value}")
-
         if self.device.is_qrm_type:
             self.module._set_device_parameter(
                 self.device, f"out{self.port_number}_in{self.port_number}_lo_en", value=value
@@ -185,6 +195,8 @@ class ClusterRF_OutputPort(QbloxOutputPort):
     @property
     def lo_frequency(self):
         """Local oscillator frequency for the given port."""
+        if self.device is None:
+            return self._settings.lo_frequency
         if self.device.is_qrm_type:
             return self.device.get(f"out{self.port_number}_in{self.port_number}_lo_freq")
         elif self.device.is_qcm_type:
@@ -204,19 +216,24 @@ class ClusterRF_OutputPort(QbloxOutputPort):
                 value = int(2e9)
         else:
             raise_error(ValueError, f"Invalid lo-frequency {value}")
-        if self.device.is_qrm_type:
-            self.module._set_device_parameter(
-                self.device, f"out{self.port_number}_in{self.port_number}_lo_freq", value=value
-            )
-        elif self.device.is_qcm_type:
-            self.module._set_device_parameter(self.device, f"out{self.port_number}_lo_freq", value=value)
+
+        self._settings.lo_frequency = value
+        print(f"value set to {value}")
+        if self.device is not None:
+            if self.device.is_qrm_type:
+                self.module._set_device_parameter(
+                    self.device, f"out{self.port_number}_in{self.port_number}_lo_freq", value=value
+                )
+            elif self.device.is_qcm_type:
+                self.module._set_device_parameter(self.device, f"out{self.port_number}_lo_freq", value=value)
 
     # Note: for qublos, gain is equivalent to amplitude, since it does not bring any advantages
     # we plan to remove it soon.
     @property
     def gain(self):
         """Gain that is applied to this port."""
-
+        if self.device is None:
+            return self._settings.gain
         return self.device.sequencers[self.sequencer_number].get(f"gain_awg_path0")
 
     @gain.setter
@@ -234,9 +251,11 @@ class ClusterRF_OutputPort(QbloxOutputPort):
         else:
             raise_error(ValueError, f"Invalid offset {value}")
 
-        self.module._set_device_parameter(
-            self.device.sequencers[self.sequencer_number], "gain_awg_path0", "gain_awg_path1", value=value
-        )
+        self._settings.gain = value
+        if self.module is not None:
+            self.module._set_device_parameter(
+                self.device.sequencers[self.sequencer_number], "gain_awg_path0", "gain_awg_path1", value=value
+            )
 
 
 class ClusterBB_OutputPort(QbloxOutputPort):
@@ -245,7 +264,8 @@ class ClusterBB_OutputPort(QbloxOutputPort):
     @property
     def gain(self):
         """Gain that is applied to this port."""
-
+        if self.device is None:
+            return self._settings.gain
         return self.device.sequencers[self.sequencer_number].get(f"gain_awg_path0")
 
     @gain.setter
@@ -263,7 +283,11 @@ class ClusterBB_OutputPort(QbloxOutputPort):
         else:
             raise_error(ValueError, f"Invalid offset {value}")
 
-        self.module._set_device_parameter(self.device.sequencers[self.sequencer_number], "gain_awg_path0", value=value)
+        self._settings.gain = value
+        if self.module is None:
+            self.module._set_device_parameter(
+                self.device.sequencers[self.sequencer_number], "gain_awg_path0", value=value
+            )
 
 
 class QbloxInputPort:

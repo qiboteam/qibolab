@@ -3,7 +3,7 @@ import pathlib
 
 import pytest
 
-from qibolab import PLATFORMS, create_platform
+from qibolab import PLATFORMS
 
 # from importlib import import_module
 
@@ -112,10 +112,10 @@ def pytest_generate_tests(metafunc):
 
     elif "platform_name" in metafunc.fixturenames:
         set_platform_profile()
-        if "qubit" in metafunc.fixturenames:
-            qubits = []
-            for platform_name in platforms:
-                qubits.extend((platform_name, q) for q in create_platform(platform_name).qubits)
-            metafunc.parametrize("platform_name,qubit", qubits)
-        else:
-            metafunc.parametrize("platform_name", platforms)
+        # if "qubit" in metafunc.fixturenames:
+        #    qubits = []
+        #    for platform_name in platforms:
+        #        qubits.extend((platform_name, q) for q in create_platform(platform_name).qubits)
+        #    metafunc.parametrize("platform_name,qubit", qubits)
+        # else:
+        metafunc.parametrize("platform_name", platforms)

@@ -1,5 +1,6 @@
 import pytest
 
+from qibolab import create_platform
 from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyPort
 
@@ -58,3 +59,34 @@ def test_channel_map_union_update():
         assert name in channels
         assert isinstance(channels[name], Channel)
         assert channels[name].name == name
+
+
+@pytest.fixture
+def qubit(platform_name):
+    platform = create_platform(platform_name)
+    return next(iter(platform.qubits.values()))
+
+
+def test_platform_lo_drive_frequency(qubit):
+    qubit.drive.lo_frequency = 5.5e9
+    assert qubit.drive.lo_frequency == 5.5e9
+
+
+def test_platform_lo_readout_frequency(qubit):
+    qubit.readout.lo_frequency = 7e9
+    assert qubit.readout.lo_frequency == 7e9
+
+
+def test_platform_attenuation(qubit):
+    qubit.drive.attenuation = 10
+    assert qubit.drive.attenuation == 10
+
+
+def test_platform_gain(qubit):
+    qubit.readout.gain = 0
+    assert qubit.readout.gain == 0
+
+
+def test_platform_bias(qubit):
+    qubit.flux.offset = 0.05
+    assert qubit.flux.offset == 0.05

@@ -144,7 +144,7 @@ def test_two_u3_to_sequence(platform_name):
     assert sequence.serial == s.serial
 
 
-def test_CZ_to_sequence(platform_name):
+def test_cz_to_sequence(platform_name):
     platform = create_platform(platform_name)
     if platform.nqubits > 1:
         circuit = Circuit(2)

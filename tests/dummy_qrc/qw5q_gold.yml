@@ -145,6 +145,15 @@ native_gates:
               phase: -0.041
               qubit: 2
 
+        2-1:
+            CZ:
+            - duration: 28
+              amplitude: -0.142
+              shape: Exponential(12, 5000, 0.1)
+              qubit: 2
+              relative_start: 0
+              type: qf
+
         2-0:
             CZ:
             - duration: 28
