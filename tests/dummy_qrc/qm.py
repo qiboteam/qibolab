@@ -2,7 +2,7 @@ import pathlib
 
 from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.oscillator import LocalOscillator
-from qibolab.instruments.qmsim import QMSim
+from qibolab.instruments.qm import QMSim
 from qibolab.platform import Platform
 
 RUNCARD = pathlib.Path(__file__).parent / "qm.yml"
