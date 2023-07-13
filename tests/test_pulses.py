@@ -394,7 +394,7 @@ def test_pulses_pulse_hash():
     p2 = p1.shallow_copy()
     p3 = p1.copy()
     assert p1 == p2
-    assert p3 == DrivePulse(t0, 40, 0.9, 100e6, 0, Drag(5, 1), 0)
+    assert p1 == p3
     t0 += 100
     assert p1 == p2
     assert p1 != p3
