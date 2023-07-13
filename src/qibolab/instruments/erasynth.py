@@ -6,13 +6,16 @@ https://qcodes.github.io/Qcodes_contrib_drivers/_modules/qcodes_contrib_drivers/
 """
 
 import json
-import time
 
 import requests
 from qcodes_contrib_drivers.drivers.ERAInstruments import ERASynthPlusPlus
+from qibo.config import log
 
 from qibolab.instruments.abstract import InstrumentException
 from qibolab.instruments.oscillator import LocalOscillator
+
+MAX_RECONNECTION_ATTEMPTS = 10
+TIMEOUT = 10
 
 
 class ERA(LocalOscillator):
@@ -190,11 +193,14 @@ class ERA(LocalOscillator):
             value: str = The value to post.
         """
         value = str(value)
-        for _ in range(3):
-            response = requests.post(f"http://{self.address}/", data={name: value}, timeout=1)
-            if response.status_code == 200:
-                return True
-            time.sleep(0.1)
+        for _ in range(MAX_RECONNECTION_ATTEMPTS):
+            try:
+                response = requests.post(f"http://{self.address}/", data={name: value}, timeout=TIMEOUT)
+                if response.status_code == 200:
+                    return True
+                break
+            except (ConnectionError, TimeoutError, requests.exceptions.ReadTimeout):
+                log.info("ERAsynth connection timed out, retrying...")
         raise InstrumentException(self, f"Unable to post {name}={value} to {self.name}")
 
     def _get(self, name):
@@ -206,11 +212,14 @@ class ERA(LocalOscillator):
         Args:
             name: str = The name of the value to get.
         """
-        for _ in range(3):
-            response = requests.post(f"http://{self.address}/", params={"readAll": 1}, timeout=1)
+        for _ in range(MAX_RECONNECTION_ATTEMPTS):
+            try:
+                response = requests.post(f"http://{self.address}/", params={"readAll": 1}, timeout=TIMEOUT)
 
-            if response.status_code == 200:
-                # reponse.text is a dictonary in string format, convert it to a dictonary
-                return json.loads(response.text)[name]
-            time.sleep(0.1)
+                if response.status_code == 200:
+                    # reponse.text is a dictonary in string format, convert it to a dictonary
+                    return json.loads(response.text)[name]
+                break
+            except (ConnectionError, TimeoutError, requests.exceptions.ReadTimeout):
+                log.info("ERAsynth connection timed out, retrying...")
         raise InstrumentException(self, f"Unable to get {name} from {self.name}")
