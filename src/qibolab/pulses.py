@@ -573,10 +573,7 @@ class eCap(PulseShape):
 
 
 class Custom(PulseShape):
-    """
-    Arbitrary shape
-
-    """
+    """Arbitrary shape."""
 
     def __init__(self, envelope):
         self.name = "Custom"
