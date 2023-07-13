@@ -144,16 +144,18 @@ def test_two_u3_to_sequence(platform_name):
     assert sequence.serial == s.serial
 
 
-def test_CZ_to_sequence(platform_name):
+def test_cz_to_sequence(platform_name):
     platform = create_platform(platform_name)
-    if platform.nqubits > 1:
-        circuit = Circuit(2)
-        circuit.add(gates.X(0))
-        circuit.add(gates.CZ(0, 1))
+    if (2, 1) not in platform.pairs:
+        pytest.skip("Skipping compiler CZ test because pair is not available.")
 
-        sequence = compile_circuit(circuit, platform)
-        test_sequence, virtual_z_phases = platform.create_CZ_pulse_sequence((2, 1))
-        assert len(sequence.pulses) == len(test_sequence) + 2
+    circuit = Circuit(2)
+    circuit.add(gates.X(0))
+    circuit.add(gates.CZ(0, 1))
+
+    sequence = compile_circuit(circuit, platform)
+    test_sequence, virtual_z_phases = platform.create_CZ_pulse_sequence((2, 1))
+    assert len(sequence.pulses) == len(test_sequence) + 2
 
 
 def test_add_measurement_to_sequence(platform_name):

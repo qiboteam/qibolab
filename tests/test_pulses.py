@@ -394,7 +394,7 @@ def test_pulses_pulse_hash():
     p2 = p1.shallow_copy()
     p3 = p1.copy()
     assert p1 == p2
-    assert p1 == p3
+    assert p3 == DrivePulse(t0, 40, 0.9, 100e6, 0, Drag(5, 1), 0)
     t0 += 100
     assert p1 == p2
     assert p1 != p3
@@ -727,7 +727,7 @@ def test_pulses_pulseshape_rectangular():
 
     num_samples = int(pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
     i, q = pulse.amplitude * np.ones(num_samples), pulse.amplitude * np.zeros(num_samples)
-    global_phase = 2 * np.pi * pulse.frequency * pulse.start / 1e9  # pulse start, duration and finish are in ns
+    global_phase = 2 * np.pi * pulse._if * pulse.start / 1e9  # pulse start, duration and finish are in ns
     mod_i, mod_q = modulate(i, q, num_samples, pulse._if, global_phase + pulse.relative_phase)
 
     np.testing.assert_allclose(pulse.shape.envelope_waveform_i.data, i)
@@ -842,7 +842,7 @@ def test_pulses_pulseshape_drag():
         * PulseShape.SAMPLING_RATE
         / 1e9
     )
-    global_phase = 2 * np.pi * pulse.frequency * pulse.start / 1e9  # pulse start, duration and finish are in ns
+    global_phase = 2 * np.pi * pulse._if * pulse.start / 1e9  # pulse start, duration and finish are in ns
     mod_i, mod_q = modulate(i, q, num_samples, pulse._if, global_phase + pulse.relative_phase)
 
     np.testing.assert_allclose(pulse.shape.envelope_waveform_i.data, i)
