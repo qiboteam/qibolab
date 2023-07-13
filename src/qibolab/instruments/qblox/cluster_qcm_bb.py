@@ -173,7 +173,9 @@ class ClusterQCM_BB(Instrument):
         self.ports: dict = {}
         for n in range(4):
             port = "o" + str(n + 1)
-            self.ports[port] = ClusterBB_OutputPort(sequencer_number=self.DEFAULT_SEQUENCERS[port], number=n + 1)
+            self.ports[port] = ClusterBB_OutputPort(
+                module=self, sequencer_number=self.DEFAULT_SEQUENCERS[port], number=n + 1
+            )
         self.channels: list = []
 
         self._debug_folder: str = ""
@@ -200,29 +202,6 @@ class ClusterQCM_BB(Instrument):
                 # save a reference to the underlying object
                 self.device = cluster.modules[int(self.address.split(":")[1]) - 1]
                 # TODO: test connection with the module before continuing
-
-                # create a class for each port with attributes mapped to the instrument parameters
-                for n in range(4):
-                    port = "o" + str(n + 1)
-                    # self.ports[port] = type(
-                    #     f"port_" + port,
-                    #     (),
-                    #     {
-                    #         "channel": None,
-                    #         "gain": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS[port], "gain_awg_path0"),
-                    #         "offset": self.property_wrapper(f"out{n}_offset"),
-                    #         "hardware_mod_en": self.sequencer_property_wrapper(
-                    #             self.DEFAULT_SEQUENCERS[port], "mod_en_awg"
-                    #         ),
-                    #         "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS[port], "nco_freq"),
-                    #         "nco_phase_offs": self.sequencer_property_wrapper(
-                    #             self.DEFAULT_SEQUENCERS[port], "nco_phase_offs"
-                    #         ),
-                    #         "qubit": None,
-                    #     },
-                    # )()
-                    self.ports[port].device = self.device
-                    self.ports[port].module = self
 
                 # save reference to cluster
                 self._cluster = cluster
@@ -436,7 +415,7 @@ class ClusterQCM_BB(Instrument):
         if abs(_if) > self.FREQUENCY_LIMIT:
             raise RuntimeError(
                 f"""
-            Pulse frequency {_rf} cannot be synthesised, it exceeds the maximum frequency of {self.FREQUENCY_LIMIT}"""
+            Pulse frequency {_rf:_} cannot be synthesised, it exceeds the maximum frequency of {self.FREQUENCY_LIMIT:_}"""
             )
         return _if
 
@@ -854,5 +833,6 @@ class ClusterQCM_BB(Instrument):
 
     def disconnect(self):
         """Empty method to comply with Instrument interface."""
+        self._erase_device_parameters_cache()
         self._cluster = None
         self.is_connected = False

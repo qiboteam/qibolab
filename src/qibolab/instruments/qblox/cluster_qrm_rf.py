@@ -194,7 +194,7 @@ class ClusterQRM_RF(Instrument):
     sequencer parameters and caches their value using `_set_device_parameter()`.
     """
 
-    def __init__(self, name: str, address: str, settings: dict):
+    def __init__(self, name: str, address: str, settings: ClusterQRM_RF_Settings):
         """Initialises the instance.
 
         All class attributes are defined and initialised.
@@ -204,8 +204,9 @@ class ClusterQRM_RF(Instrument):
         self.settings: ClusterQRM_RF_Settings = settings
         self.device: QbloxQrmQcm = None
         self.ports: dict = {}
-        self.ports["o1"] = ClusterRF_OutputPort(sequencer_number=self.DEFAULT_SEQUENCERS["o1"], number=1)
+        self.ports["o1"] = ClusterRF_OutputPort(module=self, sequencer_number=self.DEFAULT_SEQUENCERS["o1"], number=1)
         self.ports["i1"] = QbloxInputPort(
+            module=self,
             output_sequencer_number=self.DEFAULT_SEQUENCERS["o1"],
             input_sequencer_number=self.DEFAULT_SEQUENCERS["i1"],
             number=1,
@@ -242,45 +243,6 @@ class ClusterQRM_RF(Instrument):
                 # connection the instruction self._set_device_parameter(self.device, "in0_att", value=0)
                 # fails, providing a misleading error message
 
-                # create a class for each port with attributes mapped to the instrument parameters
-                # self.ports["o1"] = type(
-                #     f"port_o1",
-                #     (),
-                #     {
-                #         "channel": None,
-                #         "attenuation": self.property_wrapper("out0_att"),
-                #         "lo_enabled": self.property_wrapper("out0_in0_lo_en"),
-                #         "lo_frequency": self.property_wrapper("out0_in0_lo_freq"),
-                #         "gain": self.sequencer_property_wrapper(
-                #             self.DEFAULT_SEQUENCERS["o1"], "gain_awg_path0", "gain_awg_path1"
-                #         ),
-                #         "hardware_mod_en": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o1"], "mod_en_awg"),
-                #         "nco_freq": self.sequencer_property_wrapper(self.DEFAULT_SEQUENCERS["o1"], "nco_freq"),
-                #         "nco_phase_offs": self.sequencer_property_wrapper(
-                #             self.DEFAULT_SEQUENCERS["o1"], "nco_phase_offs"
-                #         ),
-                #     },
-                # )()
-                self.ports["o1"].device = self.device
-                self.ports["o1"].module = self
-                # self.ports["i1"] = type(
-                #     f"port_i1",
-                #     (),
-                #     {
-                #         "channel": None,
-                #         "acquisition_hold_off": 0,
-                #         "acquisition_duration": self.sequencer_property_wrapper(
-                #             self.DEFAULT_SEQUENCERS["o1"], "integration_length_acq"
-                #         ),
-                #         "hardware_demod_en": self.sequencer_property_wrapper(
-                #             self.DEFAULT_SEQUENCERS["i1"], "demod_en_acq"
-                #         ),
-                #     },
-                # )()
-
-                self.ports["i1"].device = self.device
-                self.ports["i1"].module = self
-
                 # save reference to cluster
                 self._cluster = cluster
                 self.is_connected = True
@@ -294,7 +256,7 @@ class ClusterQRM_RF(Instrument):
                     self.device, "scope_acq_avg_mode_en_path0", "scope_acq_avg_mode_en_path1", value=True
                 )
                 self._set_device_parameter(
-                    self.device, "scope_acq_sequencer_select", value=self.DEFAULT_SEQUENCERS["o1"]
+                    self.device, "scope_acq_sequencer_select", value=self.DEFAULT_SEQUENCERS["i1"]
                 )
                 self._set_device_parameter(
                     self.device, "scope_acq_trigger_level_path0", "scope_acq_trigger_level_path1", value=0
@@ -493,8 +455,8 @@ class ClusterQRM_RF(Instrument):
         if abs(_if) > self.FREQUENCY_LIMIT:
             raise Exception(
                 f"""
-            Pulse frequency {_rf} cannot be synthesised with current lo frequency {_lo}.
-            The intermediate frequency {_if} would exceed the maximum frequency of {self.FREQUENCY_LIMIT}
+            Pulse frequency {_rf:_} cannot be synthesised with current lo frequency {_lo:_}.
+            The intermediate frequency {_if:_} would exceed the maximum frequency of {self.FREQUENCY_LIMIT:_}
             """
             )
         return _if
@@ -1300,5 +1262,6 @@ class ClusterQRM_RF(Instrument):
 
     def disconnect(self):
         """Empty method to comply with Instrument interface."""
+        self._erase_device_parameters_cache()
         self._cluster = None
         self.is_connected = False

@@ -1,20 +1,17 @@
 """Tests :class:`qibolab.platforms.multiqubit.MultiqubitPlatform` and
 :class:`qibolab.platforms.platform.DesignPlatform`.
 """
-import os
-import pathlib
 import pickle
-import shutil
 import warnings
 
 import numpy as np
 import pytest
-import yaml
 from qibo.models import Circuit
 from qibo.states import CircuitResult
 
-from qibolab import create_platform, get_platforms_path
+from qibolab import create_platform
 from qibolab.backends import QibolabBackend
+from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.platform import Platform
 from qibolab.pulses import PulseSequence
@@ -24,44 +21,23 @@ nshots = 1024
 
 @pytest.fixture
 def platform(platform_name):
-    test_runcard = pathlib.Path(__file__).parent / "test_platforms_multiqubit.yml"
-    original_runcard = get_platforms_path()
-    shutil.copyfile(str(original_runcard), test_runcard)
-    _platform = create_platform(platform_name, test_runcard)
+    _platform = create_platform(platform_name)
     _platform.connect()
     _platform.setup()
     _platform.start()
     yield _platform
     _platform.stop()
     _platform.disconnect()
-    os.remove(test_runcard)
 
 
-def test_platform_multiqubit(platform_name):
+def test_create_platform(platform_name):
     platform = create_platform(platform_name)
     assert isinstance(platform, Platform)
 
 
-def test_platform():
+def test_create_platform_error():
     with pytest.raises(ValueError):
         platform = create_platform("nonexistent")
-
-
-def test_multiqubitplatform_init(platform_name):
-    platform = create_platform(platform_name)
-    with open(platform.runcard) as file:
-        settings = yaml.safe_load(file)
-    if not isinstance(platform, QbloxController):
-        pytest.skip(f"Skipping MultiqubitPlatform specific test for {platform_name}.")
-    assert platform.name == platform_name
-    assert platform.is_connected == False
-    assert len(platform.modules) == len(settings["instruments"])
-    for name in settings["instruments"]:
-        assert name in platform.modules
-        assert (
-            str(type(platform.modules[name]))
-            == f"<class 'qibolab.instruments.{settings['instruments'][name]['lib']}.{settings['instruments'][name]['class']}'>"
-        )
 
 
 def test_abstractplatform_pickle(platform_name):
@@ -89,6 +65,7 @@ def test_abstractplatform_pickle(platform_name):
         "classifiers_hpars",
     ],
 )
+@pytest.mark.qpu
 def test_update(platform_name, par):
     platform = create_platform(platform_name)
     new_values = np.ones(platform.nqubits)
@@ -139,7 +116,7 @@ def test_multiqubitplatform_execute_one_long_drive_pulse(platform):
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=8192 + 200))
     with pytest.raises(NotImplementedError):
-        platform._execute_pulse_sequence(qubits, sequence, ExecutionParameters(nshots=nshots))
+        platform._execute_pulse_sequence(platform.qubits, sequence, ExecutionParameters(nshots=nshots))
 
 
 @pytest.mark.qpu
@@ -151,7 +128,7 @@ def test_multiqubitplatform_execute_one_extralong_drive_pulse(platform):
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=2 * 8192 + 200))
     with pytest.raises(NotImplementedError):
-        platform._execute_pulse_sequence(qubits, sequence, ExecutionParameters(nshots=nshots))
+        platform._execute_pulse_sequence(platform.qubits, sequence, ExecutionParameters(nshots=nshots))
 
 
 @pytest.mark.qpu

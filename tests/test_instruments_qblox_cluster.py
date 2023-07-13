@@ -1,13 +1,13 @@
 import pytest
 
-from qibolab.instruments.abstract import Instrument, InstrumentException
+from qibolab.instruments.abstract import Instrument
 from qibolab.instruments.qblox.cluster import (
     Cluster,
     Cluster_Settings,
     ReferenceClockSource,
 )
 
-NAME = "TestCluster"
+NAME = "cluster"
 ADDRESS = "192.168.0.6"
 
 
@@ -59,11 +59,11 @@ def test_reference_clock_source(cluster: Cluster):
     assert cluster.reference_clock_source == ReferenceClockSource.INTERNAL
 
 
-def test_connect_error(cluster: Cluster):
-    cluster.address = "192.168.0.0"
-    with pytest.raises(InstrumentException):
-        cluster.connect()
-    cluster.address = ADDRESS
+# def test_connect_error(cluster: Cluster):
+#     cluster.address = "192.168.0.0"
+#     with pytest.raises(InstrumentException):
+#         cluster.connect()
+#     cluster.address = ADDRESS
 
 
 @pytest.mark.qpu

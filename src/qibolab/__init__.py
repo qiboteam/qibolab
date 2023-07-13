@@ -29,7 +29,9 @@ def get_platforms_path():
 
 
 def create_platform(name, runcard=None):
-    """Platform for controlling quantum devices.
+    """A platform for executing quantum algorithms.
+
+    It consists of a quantum processor QPU and a set of controlling instruments.
 
     Args:
         name (str): name of the platform. Options are 'tiiq', 'qili' and 'icarusq'.

@@ -1102,7 +1102,7 @@ class Pulse:
     def copy(self):  # -> Pulse|ReadoutPulse|DrivePulse|FluxPulse:
         """Returns a new Pulse object with the same attributes."""
 
-        if self.type == PulseType.READOUT:
+        if type(self) == ReadoutPulse:
             return ReadoutPulse(
                 self.start,
                 self.duration,
@@ -1113,7 +1113,7 @@ class Pulse:
                 self.channel,
                 self.qubit,
             )
-        elif self.type == PulseType.DRIVE:
+        elif type(self) == DrivePulse:
             return DrivePulse(
                 self.start,
                 self.duration,
@@ -1125,7 +1125,7 @@ class Pulse:
                 self.qubit,
             )
 
-        elif self.type == PulseType.FLUX:
+        elif type(self) == FluxPulse:
             return FluxPulse(
                 self.start,
                 self.duration,

@@ -89,7 +89,7 @@ class QbloxController(Controller):
             for name in self.modules:
                 self.modules[name].stop()
         log.warning("QbloxController: all modules stopped.")
-        # exit(0)
+        exit(0)
 
     def disconnect(self):
         """Disconnects all modules."""

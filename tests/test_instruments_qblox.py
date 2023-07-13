@@ -1,3 +1,34 @@
+""" Qblox instruments driver.
+
+Supports the following Instruments:
+    Cluster
+    Cluster QRM-RF
+    Cluster QCM-RF
+    Cluster QCM
+Compatible with qblox-instruments driver 0.9.0 (28/2/2023).
+It supports:
+    - multiplexed readout of up to 6 qubits
+    - hardware modulation, demodulation, and classification
+    - software modulation, with support for arbitrary pulses
+    - software demodulation
+    - binned acquisition
+    - real-time sweepers of
+        - pulse frequency (requires hardware modulation)
+        - pulse relative phase (requires hardware modulation)
+        - pulse amplitude
+        - pulse start
+        - pulse duration
+        - port gain
+        - port offset
+    - multiple readouts for the same qubit (sequence unrolling)
+    - max iq pulse length 8_192ns
+    - waveforms cache, uses additional free sequencers if the memory of one sequencer (16384) is exhausted
+    - instrument parameters cache
+    - safe disconnection of offsets on termination
+
+"""
+
+
 # from .conftest import load_from_platform
 
 # INSTRUMENTS_LIST = ["Cluster", "ClusterQRM_RF", "ClusterQCM_RF"]
@@ -150,7 +181,7 @@
 
 # @pytest.mark.parametrize("name", INSTRUMENTS_LIST)
 # def test_instruments_qublox_set_device_paramters(name):
-#     """# TODO: add attitional paramter tests
+#     """  # TODO: add attitional paramter tests
 #     qrm
 #         platform.instruments['qrm_rf'].device.print_readable_snapshot(update=True)
 #         cluster_module16:
