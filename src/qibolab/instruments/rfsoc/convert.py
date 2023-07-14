@@ -75,15 +75,18 @@ def _(qubit: Qubit) -> rfsoc.Qubit:
 def _(sequence: PulseSequence, qubits: dict[int, Qubit]) -> list[rfsoc_pulses.Pulse]:
     """Convert PulseSequence to list of rfosc pulses with relative time."""
 
-    abs_time = 0
+    last_pulse_start = 0
     list_sequence = []
     for pulse in sequence:
-        abs_start = pulse.start * NS_TO_US
-        start_delay = abs_start - abs_time
+        start_delay = (pulse.start - last_pulse_start) * NS_TO_US
+        if start_delay < 0:
+            # this should never happen, but did and I am not capable of reproducing it
+            # TODO: find the source of the issue and remove this check
+            raise ValueError("Start delay < 0")
         pulse_dict = asdict(convert(pulse, qubits, start_delay))
         list_sequence.append(pulse_dict)
 
-        abs_time += start_delay
+        last_pulse_start = pulse.start
     return list_sequence
 
 

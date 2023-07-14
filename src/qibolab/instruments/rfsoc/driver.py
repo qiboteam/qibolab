@@ -315,6 +315,11 @@ class RFSoC(Controller):
                 ):
                     setattr(sequence[kdx], sweeper_parameter.name.lower(), values[jdx][idx])
                 elif sweeper is rfsoc.Parameter.DELAY:
+                    start_delay = values[jdx][idx]
+                    if start_delay < 0:
+                        # this should never happen, but did and I am not capable of reproducing it
+                        # TODO: find the source of the issue and remove this check
+                        raise ValueError("Start delay < 0")
                     sequence[kdx].start_delay = values[jdx][idx]
 
             res = self.recursive_python_sweep(
