@@ -1005,8 +1005,12 @@ class Zurich(Controller):
                         )
                         data = data.real
                         results[self.sequence[f"readout{q}"][i].pulse.serial] = options.results_type(data)
+                        results[self.sequence[f"readout{q}"][i].pulse.qubit] = options.results_type(data)
                     else:
                         results[self.sequence[f"readout{q}"][i].pulse.serial] = options.results_type(
+                            data=np.array(exp_res)
+                        )
+                        results[self.sequence[f"readout{q}"][i].pulse.qubit] = options.results_type(
                             data=np.array(exp_res)
                         )
 
