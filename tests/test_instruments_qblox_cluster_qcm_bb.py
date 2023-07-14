@@ -7,18 +7,13 @@ from qibolab.instruments.qblox.cluster_qcm_bb import (
     ClusterQCM_BB,
     ClusterQCM_BB_Settings,
 )
+from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.instruments.qblox.port import (
     ClusterBB_OutputPort,
     ClusterBB_OutputPort_Settings,
 )
 from qibolab.pulses import FluxPulse, PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
-
-CLUSTER_NAME = "cluster"
-CLUSTER_ADDRESS = "192.168.0.6"
-
-MODULE_NAME = "qcm_bb"
-MODULE_ADDRESS = "192.168.0.6:2"
 
 O1_OUTPUT_CHANNEL = "L4-1"
 O1_GAIN = 0.5
@@ -42,13 +37,21 @@ O4_QUBIT = 4
 
 
 @pytest.fixture(scope="module")
-def cluster():
-    cluster = Cluster(CLUSTER_NAME, CLUSTER_ADDRESS, Cluster_Settings())
-    return cluster
+def controller(platform):
+    for instrument in platform.instruments:
+        if isinstance(instrument, QbloxController):
+            return instrument
+    pytest.skip(f"Skipping qblox test for {platform.name}.")
 
 
 @pytest.fixture(scope="module")
-def qcm_bb():
+def cluster(controller):
+    cluster = controller.cluster
+    return Cluster(cluster.name, cluster.address, Cluster_Settings())
+
+
+@pytest.fixture(scope="module")
+def qcm_bb(controller):
     settings = ClusterQCM_BB_Settings(
         {
             "o1": ClusterBB_OutputPort_Settings(
@@ -77,8 +80,10 @@ def qcm_bb():
             ),
         }
     )
-    qcm_bb = ClusterQCM_BB(MODULE_NAME, MODULE_ADDRESS, settings)
-    return qcm_bb
+    for module in controller.modules.values():
+        if isinstance(module, ClusterQCM_BB):
+            return ClusterQCM_BB(module.name, module.address, settings)
+    pytest.skip(f"Skipping qblox ClusterQCM_BB test for {controller.name}.")
 
 
 @pytest.fixture(scope="module")
@@ -108,8 +113,6 @@ def test_instrument_interface(qcm_bb: ClusterQCM_BB):
 
 
 def test_init(qcm_bb: ClusterQCM_BB):
-    assert qcm_bb.name == MODULE_NAME
-    assert qcm_bb.address == MODULE_ADDRESS
     assert type(qcm_bb.settings.ports["o1"]) == ClusterBB_OutputPort_Settings
     assert type(qcm_bb.settings.ports["o2"]) == ClusterBB_OutputPort_Settings
     assert type(qcm_bb.settings.ports["o3"]) == ClusterBB_OutputPort_Settings

@@ -7,6 +7,7 @@ from qibolab.instruments.qblox.cluster_qrm_rf import (
     ClusterQRM_RF,
     ClusterQRM_RF_Settings,
 )
+from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.instruments.qblox.port import (
     ClusterRF_OutputPort,
     ClusterRF_OutputPort_Settings,
@@ -16,11 +17,6 @@ from qibolab.instruments.qblox.port import (
 from qibolab.pulses import DrivePulse, PulseSequence, ReadoutPulse
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
-CLUSTER_NAME = "cluster"
-CLUSTER_ADDRESS = "192.168.0.6"
-
-MODULE_NAME = "qrm_rf"
-MODULE_ADDRESS = "192.168.0.6:10"
 OUTPUT_CHANNEL = "L3-25_a"
 INPUT_CHANNEL = "L2-5_a"
 ATTENUATION = 38
@@ -31,13 +27,21 @@ ACQUISITION_DURATION = 900
 
 
 @pytest.fixture(scope="module")
-def cluster():
-    cluster = Cluster(CLUSTER_NAME, CLUSTER_ADDRESS, Cluster_Settings())
-    return cluster
+def controller(platform):
+    for instrument in platform.instruments:
+        if isinstance(instrument, QbloxController):
+            return instrument
+    pytest.skip(f"Skipping qblox test for {platform.name}.")
 
 
 @pytest.fixture(scope="module")
-def qrm_rf():
+def cluster(controller):
+    cluster = controller.cluster
+    return Cluster(cluster.name, cluster.address, Cluster_Settings())
+
+
+@pytest.fixture(scope="module")
+def qrm_rf(controller):
     settings = ClusterQRM_RF_Settings(
         {
             "o1": ClusterRF_OutputPort_Settings(
@@ -53,8 +57,10 @@ def qrm_rf():
             ),
         }
     )
-    qrm_rf = ClusterQRM_RF(MODULE_NAME, MODULE_ADDRESS, settings)
-    return qrm_rf
+    for module in controller.modules.values():
+        if isinstance(module, ClusterQRM_RF):
+            return ClusterQRM_RF(module.name, module.address, settings)
+    pytest.skip(f"Skipping qblox ClusterQRM_RF test for {controller.name}.")
 
 
 @pytest.fixture(scope="module")
@@ -84,8 +90,6 @@ def test_instrument_interface(qrm_rf: ClusterQRM_RF):
 
 
 def test_init(qrm_rf: ClusterQRM_RF):
-    assert qrm_rf.name == MODULE_NAME
-    assert qrm_rf.address == MODULE_ADDRESS
     assert type(qrm_rf.settings.ports["o1"]) == ClusterRF_OutputPort_Settings
     assert type(qrm_rf.settings.ports["i1"]) == QbloxInputPort_Settings
     assert qrm_rf.device == None

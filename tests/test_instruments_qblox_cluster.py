@@ -6,19 +6,21 @@ from qibolab.instruments.qblox.cluster import (
     Cluster_Settings,
     ReferenceClockSource,
 )
-
-NAME = "cluster"
-ADDRESS = "192.168.0.6"
+from qibolab.instruments.qblox.controller import QbloxController
 
 
 @pytest.fixture(scope="module")
-def cluster():
-    name = NAME
-    address = ADDRESS
-    settings = Cluster_Settings()
+def controller(platform):
+    for instrument in platform.instruments:
+        if isinstance(instrument, QbloxController):
+            return instrument
+    pytest.skip(f"Skipping qblox test for {platform.name}.")
 
-    cluster = Cluster(name, address, settings)
-    yield cluster
+
+@pytest.fixture(scope="module")
+def cluster(controller):
+    cluster = controller.cluster
+    return Cluster(cluster.name, cluster.address, Cluster_Settings())
 
 
 def test_ReferenceClockSource():
@@ -46,8 +48,6 @@ def test_instrument_interface(cluster: Cluster):
 
 
 def test_init(cluster: Cluster):
-    assert cluster.name == NAME
-    assert cluster.address == ADDRESS
     assert cluster.settings.reference_clock_source == ReferenceClockSource.INTERNAL
     assert cluster.device == None
 

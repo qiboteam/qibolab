@@ -3,7 +3,7 @@ import pathlib
 
 import pytest
 
-from qibolab import PLATFORMS
+from qibolab import PLATFORMS, create_platform
 
 # from importlib import import_module
 
@@ -51,9 +51,20 @@ def dummy_qrc():
     set_platform_profile()
 
 
+# @pytest.fixture(scope="session")
+# def platforms():
+#    set_platform_profile()
+#    #platform_names = os.environ.get("TEST_PLATFORMS")
+#    platform_names = "qblox"
+#    platform_names = [] if platform_names is None else platform_names.split(",")
+#    return [create_platform(name) for name in platform_names]
+
+
 def pytest_generate_tests(metafunc):
-    platforms = metafunc.config.option.platforms
-    platforms = [] if platforms is None else platforms.split(",")
+    is_qpu = "qpu" in {m.name for m in metafunc.definition.iter_markers()}
+
+    platform_names = metafunc.config.option.platforms
+    platform_names = [] if platform_names is None else platform_names.split(",")
 
     if "simulator" in metafunc.fixturenames:
         address = metafunc.config.option.address
@@ -65,18 +76,23 @@ def pytest_generate_tests(metafunc):
             metafunc.parametrize("simulator", [(address, duration)], indirect=True)
             metafunc.parametrize("folder", [folder], indirect=True)
 
-    if "instrument" in metafunc.fixturenames:
-        if metafunc.module.__name__ == "tests.test_instruments_rohde_schwarz":
-            metafunc.parametrize("instrument", [(p, "SGS100A") for p in platforms], indirect=True)
-        elif metafunc.module.__name__ == "tests.test_instruments_erasynth":
-            metafunc.parametrize("instrument", [(p, "ERA") for p in platforms], indirect=True)
-        elif metafunc.module.__name__ == "tests.test_instruments_qutech":
-            metafunc.parametrize("instrument", [(p, "SPI") for p in platforms], indirect=True)
+    # if "instrument" in metafunc.fixturenames:
+    #    if metafunc.module.__name__ == "tests.test_instruments_rohde_schwarz":
+    #        metafunc.parametrize("instrument", [(p, "SGS100A") for p in platforms], indirect=True)
+    #    elif metafunc.module.__name__ == "tests.test_instruments_erasynth":
+    #        metafunc.parametrize("instrument", [(p, "ERA") for p in platforms], indirect=True)
+    #    elif metafunc.module.__name__ == "tests.test_instruments_qutech":
+    #        metafunc.parametrize("instrument", [(p, "SPI") for p in platforms], indirect=True)
 
-    elif "backend" in metafunc.fixturenames:
+    if "backend" in metafunc.fixturenames:
         set_platform_profile()
         metafunc.parametrize("backend", platforms, indirect=True)
 
     elif "platform_name" in metafunc.fixturenames:
         set_platform_profile()
-        metafunc.parametrize("platform_name", platforms)
+        metafunc.parametrize("platform_name", platform_names)
+
+    elif "platform" in metafunc.fixturenames:
+        set_platform_profile()
+        platforms = [create_platform(name) for name in platform_names]
+        metafunc.parametrize("platform", platforms, scope="session")
