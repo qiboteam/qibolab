@@ -1,12 +1,14 @@
+from unittest.mock import patch
+
 import numpy as np
 import pytest
 from qm import qua
 
 from qibolab import AcquisitionType, ExecutionParameters, create_platform
-
-# Are you testing Singleshot or Averaging ?
-from qibolab.instruments.qm import QMOPX, Acquisition, QMPort, QMPulse, Sequence
-from qibolab.pulses import FluxPulse, Pulse, ReadoutPulse, Rectangular
+from qibolab.instruments.qm import QMOPX, QMPort
+from qibolab.instruments.qm.acquisition import Acquisition
+from qibolab.instruments.qm.sequence import BakedPulse, QMPulse, Sequence
+from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse, Rectangular
 
 
 def test_qmpulse():
@@ -49,10 +51,10 @@ def test_qmsequence():
     qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
     ro_pulse = ReadoutPulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch1", qubit=0)
     qmsequence = Sequence()
-    with pytest.raises(TypeError):
+    with pytest.raises(AttributeError):
         qmsequence.add("test")
-    qmsequence.add(qd_pulse)
-    qmsequence.add(ro_pulse)
+    qmsequence.add(QMPulse(qd_pulse))
+    qmsequence.add(QMPulse(ro_pulse))
     assert len(qmsequence.pulse_to_qmpulse) == 2
     assert len(qmsequence.qmpulses) == 2
     assert len(qmsequence.ro_pulses) == 1
@@ -64,15 +66,17 @@ def test_qmpulse_previous_and_next():
     qd_qmpulses = []
     ro_qmpulses = []
     for qubit in range(nqubits):
-        qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), f"drive{qubit}", qubit=qubit)
-        qd_qmpulses.append(qmsequence.add(qd_pulse))
+        qd_pulse = QMPulse(Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), f"drive{qubit}", qubit=qubit))
+        qd_qmpulses.append(qd_pulse)
+        qmsequence.add(qd_pulse)
     for qubit in range(nqubits):
-        ro_pulse = ReadoutPulse(40, 100, 0.05, int(3e9), 0.0, Rectangular(), f"readout{qubit}", qubit=qubit)
-        ro_qmpulses.append(qmsequence.add(ro_pulse))
+        ro_pulse = QMPulse(ReadoutPulse(40, 100, 0.05, int(3e9), 0.0, Rectangular(), f"readout{qubit}", qubit=qubit))
+        ro_qmpulses.append(ro_pulse)
+        qmsequence.add(ro_pulse)
 
     for qd_qmpulse, ro_qmpulse in zip(qd_qmpulses, ro_qmpulses):
-        assert len(qd_qmpulse.next) == 1
-        assert len(ro_qmpulse.next) == 0
+        assert len(qd_qmpulse.next_) == 1
+        assert len(ro_qmpulse.next_) == 0
 
 
 def test_qmpulse_previous_and_next_flux():
@@ -92,19 +96,27 @@ def test_qmpulse_previous_and_next_flux():
     measure_lowfreq = ReadoutPulse(110, 100, 0.05, int(3e9), 0.0, Rectangular(), "readout1", qubit=1)
     measure_highfreq = ReadoutPulse(110, 100, 0.05, int(3e9), 0.0, Rectangular(), "readout2", qubit=2)
 
+    drive11 = QMPulse(y90_pulse)
+    drive21 = QMPulse(x_pulse_start)
+    flux2 = QMPulse(flux_pulse)
+    drive12 = QMPulse(theta_pulse)
+    drive22 = QMPulse(x_pulse_end)
+    measure1 = QMPulse(measure_lowfreq)
+    measure2 = QMPulse(measure_highfreq)
+
     qmsequence = Sequence()
-    drive11 = qmsequence.add(y90_pulse)
-    drive21 = qmsequence.add(x_pulse_start)
-    flux2 = qmsequence.add(flux_pulse)
-    drive12 = qmsequence.add(theta_pulse)
-    drive22 = qmsequence.add(x_pulse_end)
-    measure1 = qmsequence.add(measure_lowfreq)
-    measure2 = qmsequence.add(measure_highfreq)
-    assert drive11.next == {drive12}
-    assert drive21.next == {flux2}
-    assert flux2.next == {drive22}
-    assert drive12.next == {measure1}
-    assert drive22.next == {measure2}
+    qmsequence.add(drive11)
+    qmsequence.add(drive21)
+    qmsequence.add(flux2)
+    qmsequence.add(drive12)
+    qmsequence.add(drive22)
+    qmsequence.add(measure1)
+    qmsequence.add(measure2)
+    assert drive11.next_ == set()
+    assert drive21.next_ == {flux2}
+    assert flux2.next_ == {drive12, drive22}
+    assert drive12.next_ == {measure1}
+    assert drive22.next_ == {measure2}
 
 
 # TODO: Test connect/disconnect
@@ -240,9 +252,9 @@ def test_qmopx_register_baked_pulse(dummy_qrc, duration):
     opx = platform.instruments[0]
     opx.config.register_flux_element(qubit)
     pulse = FluxPulse(3, duration, 0.05, Rectangular(), qubit.flux.name, qubit=qubit.name)
-    qmpulse = QMPulse(pulse)
+    qmpulse = BakedPulse(pulse)
     config = opx.config
-    qmpulse.bake(config)
+    qmpulse.bake(config, [pulse.duration])
 
     assert config.elements["flux3"]["operations"] == {"baked_Op_0": "flux3_baked_pulse_0"}
     if duration == 0:
@@ -267,3 +279,22 @@ def test_qmopx_register_baked_pulse(dummy_qrc, duration):
             "samples": 30 * [0.05] + 2 * [0],
             "is_overridable": False,
         }
+
+
+@patch("qibolab.instruments.qm.simulator.QMSim.execute_program")
+def test_qmopx_qubit_spectroscopy(mocker):
+    platform = create_platform("qm")
+    platform.setup()
+    opx = platform.instruments[0]
+    # disable program dump otherwise it will fail if we don't connect
+    opx.script_file_name = None
+    sequence = PulseSequence()
+    qd_pulses = {}
+    ro_pulses = {}
+    for qubit in [1, 2, 3]:
+        qd_pulses[qubit] = platform.create_qubit_drive_pulse(qubit, start=0, duration=500)
+        ro_pulses[qubit] = platform.create_qubit_readout_pulse(qubit, start=qd_pulses[qubit].finish)
+        sequence.add(qd_pulses[qubit])
+        sequence.add(ro_pulses[qubit])
+    options = ExecutionParameters(nshots=1024, relaxation_time=100000)
+    result = opx.play(platform.qubits, sequence, options)

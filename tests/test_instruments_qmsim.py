@@ -21,7 +21,7 @@ from qibo.models import Circuit
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.backends import QibolabBackend
-from qibolab.instruments.qmsim import QMSim
+from qibolab.instruments.qm import QMSim
 from qibolab.pulses import SNZ, FluxPulse, PulseSequence, Rectangular
 from qibolab.sweeper import Parameter, Sweeper
 
@@ -225,6 +225,53 @@ def test_qmsim_sweep_start_two_pulses(simulator, folder):
     assert_regression(samples, folder, "sweep_start_two_pulses")
 
 
+def test_qmsim_sweep_duration(simulator, folder):
+    simulator.instruments[0].simulation_duration = 1250
+    qubits = list(range(simulator.nqubits))
+    sequence = PulseSequence()
+    qd_pulses = {}
+    ro_pulses = {}
+    for qubit in qubits:
+        qd_pulses[qubit] = simulator.create_RX_pulse(qubit, start=0)
+        ro_pulses[qubit] = simulator.create_MZ_pulse(qubit, start=qd_pulses[qubit].finish)
+        sequence.add(qd_pulses[qubit])
+        sequence.add(ro_pulses[qubit])
+    values = [20, 60]
+    pulses = [qd_pulses[qubit] for qubit in qubits]
+    sweeper = Sweeper(Parameter.duration, values, pulses=pulses)
+    options = ExecutionParameters(
+        nshots=1, relaxation_time=0, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+    )
+    result = simulator.sweep(sequence, options, sweeper)
+    samples = result.get_simulated_samples()
+    assert_regression(samples, folder, "sweep_duration")
+
+
+def test_qmsim_sweep_duration_two_pulses(simulator, folder):
+    simulator.instruments[0].simulation_duration = 1250
+    qubits = list(range(simulator.nqubits))
+    sequence = PulseSequence()
+    qd_pulses1 = {}
+    qd_pulses2 = {}
+    ro_pulses = {}
+    for qubit in qubits:
+        qd_pulses1[qubit] = simulator.create_RX_pulse(qubit, start=0)
+        qd_pulses2[qubit] = simulator.create_RX_pulse(qubit, start=qd_pulses1[qubit].finish)
+        ro_pulses[qubit] = simulator.create_MZ_pulse(qubit, start=qd_pulses2[qubit].finish)
+        sequence.add(qd_pulses1[qubit])
+        sequence.add(qd_pulses2[qubit])
+        sequence.add(ro_pulses[qubit])
+    values = [20, 60]
+    pulses = [qd_pulses1[qubit] for qubit in qubits]
+    sweeper = Sweeper(Parameter.duration, values, pulses=pulses)
+    options = ExecutionParameters(
+        nshots=1, relaxation_time=0, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+    )
+    result = simulator.sweep(sequence, options, sweeper)
+    samples = result.get_simulated_samples()
+    assert_regression(samples, folder, "sweep_duration_two_pulses")
+
+
 gatelist = [
     ["I", "I"],
     ["RX(pi)", "RX(pi)"],
@@ -277,7 +324,8 @@ def test_qmsim_allxy(simulator, folder, count, gate_pair):
     assert_regression(samples, folder, f"allxy{count}")
 
 
-def test_qmsim_chevron(simulator, folder):
+@pytest.mark.parametrize("sweep", [None, "1D", "2D"])
+def test_qmsim_chevron(simulator, folder, sweep):
     lowfreq, highfreq = 1, 2
     initialize_1 = simulator.create_RX_pulse(lowfreq, start=0, relative_phase=0)
     initialize_2 = simulator.create_RX_pulse(highfreq, start=0, relative_phase=0)
@@ -298,10 +346,23 @@ def test_qmsim_chevron(simulator, folder):
     sequence.add(measure_lowfreq)
     sequence.add(measure_highfreq)
 
-    options = ExecutionParameters(nshots=1)
-    result = simulator.execute_pulse_sequence(sequence, options)
+    options = ExecutionParameters(
+        nshots=1, relaxation_time=0, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+    )
+    if sweep is None:
+        result = simulator.execute_pulse_sequence(sequence, options)
+    elif sweep == "1D":
+        sweeper = Sweeper(Parameter.duration, [10, 60], pulses=[flux_pulse])
+        result = simulator.sweep(sequence, options, sweeper)
+    elif sweep == "2D":
+        duration_sweeper = Sweeper(Parameter.duration, [10, 40], pulses=[flux_pulse])
+        amplitude_sweeper = Sweeper(Parameter.amplitude, [0.5, 2], pulses=[flux_pulse])
+        result = simulator.sweep(sequence, options, duration_sweeper, amplitude_sweeper)
     samples = result.get_simulated_samples()
-    assert_regression(samples, folder, "chevron")
+    if sweep is None:
+        assert_regression(samples, folder, "chevron")
+    else:
+        assert_regression(samples, folder, f"chevron_sweep_{sweep}")
 
 
 @pytest.mark.parametrize("qubits", [[1, 2], [2, 3]])

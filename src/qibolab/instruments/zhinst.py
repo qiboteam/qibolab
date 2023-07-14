@@ -1,5 +1,6 @@
 """Instrument for using the Zurich Instruments (Zhinst) devices."""
 
+import copy
 import os
 from collections import defaultdict
 from dataclasses import dataclass, replace
@@ -9,6 +10,10 @@ import laboneq._token
 import laboneq.simple as lo
 import numpy as np
 from laboneq.contrib.example_helpers.plotting.plot_helpers import plot_simulation
+from laboneq.dsl.experiment.pulse_library import (
+    sampled_pulse_complex,
+    sampled_pulse_real,
+)
 from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
@@ -46,58 +51,69 @@ SWEEPER_BIAS = {"bias"}
 SWEEPER_START = {"start"}
 
 
-# pylint: disable=R1710
 def select_pulse(pulse, pulse_type):
     """Pulse translation"""
 
-    if str(pulse.shape) == "Rectangular()":
-        can_compress = pulse.type is not PulseType.READOUT
-        return lo.pulse_library.const(
-            uid=(f"{pulse_type}_{pulse.qubit}_"),
-            length=round(pulse.duration * NANO_TO_SECONDS, 9),
-            amplitude=pulse.amplitude,
-            can_compress=can_compress,
-        )
-    if "Gaussian" in str(pulse.shape):
-        sigma = pulse.shape.rel_sigma
-        return lo.pulse_library.gaussian(
-            uid=(f"{pulse_type}_{pulse.qubit}_"),
-            length=round(pulse.duration * NANO_TO_SECONDS, 9),
-            amplitude=pulse.amplitude,
-            sigma=2 / sigma,
-            zero_boundaries=False,
-        )
+    if "IIR" not in str(pulse.shape):
+        if str(pulse.shape) == "Rectangular()":
+            can_compress = pulse.type is not PulseType.READOUT
+            return lo.pulse_library.const(
+                uid=(f"{pulse_type}_{pulse.qubit}_"),
+                length=round(pulse.duration * NANO_TO_SECONDS, 9),
+                amplitude=pulse.amplitude,
+                can_compress=can_compress,
+            )
+        if "Gaussian" in str(pulse.shape):
+            sigma = pulse.shape.rel_sigma
+            return lo.pulse_library.gaussian(
+                uid=(f"{pulse_type}_{pulse.qubit}_"),
+                length=round(pulse.duration * NANO_TO_SECONDS, 9),
+                amplitude=pulse.amplitude,
+                sigma=2 / sigma,
+                zero_boundaries=False,
+            )
 
-    if "GaussianSquare" in str(pulse.shape):
-        sigma = pulse.shape.rel_sigma
-        can_compress = pulse.type is not PulseType.READOUT
-        return lo.pulse_library.gaussian_square(
-            uid=(f"{pulse_type}_{pulse.qubit}_"),
-            length=round(pulse.duration * NANO_TO_SECONDS, 9),
-            width=round(pulse.duration * NANO_TO_SECONDS, 9) * 0.9,  # 90% Flat
-            amplitude=pulse.amplitude,
-            can_compress=can_compress,
-            sigma=2 / sigma,
-            zero_boundaries=False,
-        )
+        if "GaussianSquare" in str(pulse.shape):
+            sigma = pulse.shape.rel_sigma
+            can_compress = pulse.type is not PulseType.READOUT
+            return lo.pulse_library.gaussian_square(
+                uid=(f"{pulse_type}_{pulse.qubit}_"),
+                length=round(pulse.duration * NANO_TO_SECONDS, 9),
+                width=round(pulse.duration * NANO_TO_SECONDS, 9) * 0.9,  # 90% Flat
+                amplitude=pulse.amplitude,
+                can_compress=can_compress,
+                sigma=2 / sigma,
+                zero_boundaries=False,
+            )
 
-    if "Drag" in str(pulse.shape):
-        sigma = pulse.shape.rel_sigma
-        beta = pulse.shape.beta
-        return lo.pulse_library.drag(
+        if "Drag" in str(pulse.shape):
+            sigma = pulse.shape.rel_sigma
+            beta = pulse.shape.beta
+            return lo.pulse_library.drag(
+                uid=(f"{pulse_type}_{pulse.qubit}_"),
+                length=round(pulse.duration * NANO_TO_SECONDS, 9),
+                amplitude=pulse.amplitude,
+                sigma=2 / sigma,
+                beta=beta,
+                zero_boundaries=False,
+            )
+
+    if np.all(pulse.envelope_waveform_q.data == 0):
+        return sampled_pulse_real(
             uid=(f"{pulse_type}_{pulse.qubit}_"),
-            length=round(pulse.duration * NANO_TO_SECONDS, 9),
-            amplitude=pulse.amplitude,
-            sigma=2 / sigma,
-            beta=beta,
-            zero_boundaries=False,
+            samples=pulse.envelope_waveform_i.data,
+            can_compress=True,
+        )
+    else:
+        # TODO: Test this when we have pulses that use it
+        return sampled_pulse_complex(
+            uid=(f"{pulse_type}_{pulse.qubit}_"),
+            samples=pulse.envelope_waveform_i.data + (1j * pulse.envelope_waveform_q.data),
+            can_compress=True,
         )
 
     # TODO: if "Slepian" in str(pulse.shape):
     # Implement Slepian shaped flux pulse https://arxiv.org/pdf/0909.5368.pdf
-
-    # TODO: if "Slepian" in str(pulse.shape):if "Sampled" in str(pulse.shape):
-    # Implement Sampled pulses for Optimal control algorithms like GRAPE"
 
     # """
     # Typically, the sampler function should discard ``length`` and ``amplitude``, and
@@ -107,8 +123,6 @@ def select_pulse(pulse, pulse_type):
 
     # They don't even do that on their notebooks
     # and just use lenght and amplitude but we have to check
-
-    # x = pulse.envelope_waveform_i.data  No need for q ???
 
 
 @dataclass
@@ -167,7 +181,7 @@ class ZhSweeper:
         if sweeper.parameter is Parameter.amplitude:
             return lo.SweepParameter(
                 uid=sweeper.parameter.name,
-                values=sweeper.values,
+                values=copy.copy(sweeper.values),
             )
         if sweeper.parameter is Parameter.duration:
             return lo.SweepParameter(
@@ -955,6 +969,8 @@ class Zurich(Controller):
 
         self.signal_map = {}
 
+        self.nt_sweeps = None
+
         sweepers = list(sweepers)
 
         dimensions = []
@@ -1028,12 +1044,15 @@ class Zurich(Controller):
         if sweeper.parameter is Parameter.amplitude:
             for pulse in sweeper.pulses:
                 pulse = pulse.copy()
-                sweeper.values = sweeper.values.copy()
-
                 pulse.amplitude *= max(abs(sweeper.values))
-                sweeper.values /= max(abs(sweeper.values))
 
+                # FIXME: Proper copy(sweeper) here
+                # sweeper_aux = copy.copy(sweeper)
+                aux_max = max(abs(sweeper.values))
+
+                sweeper.values /= aux_max
                 parameter = ZhSweeper(pulse, sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
+                sweeper.values *= aux_max
 
         if sweeper.parameter is Parameter.bias:
             for qubit in sweeper.qubits:
@@ -1074,7 +1093,17 @@ class Zurich(Controller):
 
         if sweeper.parameter is Parameter.amplitude:
             for pulse in sweeper.pulses:
+                pulse = pulse.copy()
+                pulse.amplitude *= max(abs(sweeper.values))
+
+                # FIXME: Proper copy(sweeper) here
+                # sweeper_aux = copy.copy(sweeper)
+                aux_max = max(abs(sweeper.values))
+
+                sweeper.values /= aux_max
                 zhsweeper = ZhSweeper(pulse, sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
+                sweeper.values *= aux_max
+
                 zhsweeper.uid = "amplitude"  # f"amplitude{i}"
                 path = "DEV12146"  # Hardcoded for SHFQC(SHFQA)
                 parameter = zhsweeper
