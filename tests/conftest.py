@@ -74,6 +74,7 @@ def pytest_generate_tests(metafunc):
             metafunc.parametrize("instrument", [(p, "SPI") for p in platforms], indirect=True)
 
     elif "backend" in metafunc.fixturenames:
+        set_platform_profile()
         metafunc.parametrize("backend", platforms, indirect=True)
 
     elif "platform_name" in metafunc.fixturenames:

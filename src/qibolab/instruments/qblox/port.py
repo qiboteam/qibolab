@@ -55,7 +55,7 @@ class QbloxOutputPort(Port):
     def attenuation(self) -> str:
         """Attenuation that is applied to this port."""
         if self.module.device:
-            self._settings.attenuation = self.device.get(f"out{self.port_number}_att")
+            self._settings.attenuation = self.module.device.get(f"out{self.port_number}_att")
         return self._settings.attenuation
 
     @attenuation.setter
@@ -87,7 +87,7 @@ class QbloxOutputPort(Port):
     def offset(self):
         """DC offset that is applied to this port."""
         if self.module.device:
-            self._settings.offset = self.device.get(f"out{self.port_number}_offset")
+            self._settings.offset = self.module.device.get(f"out{self.port_number}_offset")
         return self._settings.offset
 
     @offset.setter
@@ -187,8 +187,8 @@ class QbloxOutputPort(Port):
 
 
 class ClusterRF_OutputPort(QbloxOutputPort):
-    def __init__(self, sequencer_number: int, number: int):
-        super().__init__(sequencer_number, number)
+    def __init__(self, module, sequencer_number: int, number: int):
+        super().__init__(module, sequencer_number, number)
         self._settings = ClusterRF_OutputPort_Settings()
 
     @property
@@ -285,8 +285,13 @@ class ClusterRF_OutputPort(QbloxOutputPort):
 
 
 class ClusterBB_OutputPort(QbloxOutputPort):
-    # Note: for qublos, gain is equivalent to amplitude, since it does not bring any advantages
+    # Note: for qblox, gain is equivalent to amplitude, since it does not bring any advantages
     # we plan to remove it soon.
+
+    def __init__(self, module, sequencer_number: int, number: int):
+        super().__init__(module, sequencer_number, number)
+        self._settings = ClusterBB_OutputPort_Settings()
+
     @property
     def gain(self):
         """Gain that is applied to this port."""
