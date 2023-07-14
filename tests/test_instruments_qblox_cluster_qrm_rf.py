@@ -13,7 +13,7 @@ from qibolab.instruments.qblox.port import (
     QbloxInputPort,
     QbloxInputPort_Settings,
 )
-from qibolab.pulses import Pulse, PulseSequence, ReadoutPulse
+from qibolab.pulses import DrivePulse, PulseSequence, ReadoutPulse
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 CLUSTER_NAME = "cluster"
@@ -178,7 +178,7 @@ def test_setup(cluster: Cluster, qrm_rf: ClusterQRM_RF):
 def test_pulse_sequence(connected_qrm_rf: ClusterQRM_RF, dummy_qrc):
     ps = PulseSequence()
     for channel in connected_qrm_rf.channels:
-        ps.add(Pulse(0, 200, 1, 6.8e9, np.pi / 2, "Gaussian(5)", channel))
+        ps.add(DrivePulse(0, 200, 1, 6.8e9, np.pi / 2, "Gaussian(5)", channel))
         ps.add(ReadoutPulse(200, 2000, 1, 7.1e9, np.pi / 2, "Rectangular()", channel, qubit=0))
         ps.add(ReadoutPulse(200, 2000, 1, 7.2e9, np.pi / 2, "Rectangular()", channel, qubit=1))
     from qibolab import create_platform
@@ -203,7 +203,7 @@ def test_sweepers(connected_qrm_rf: ClusterQRM_RF, dummy_qrc):
     qd_pulses = {}
     ro_pulses = {}
     for channel in connected_qrm_rf.channels:
-        qd_pulses[0] = Pulse(0, 200, 1, 7e9, np.pi / 2, "Gaussian(5)", channel, qubit=0)
+        qd_pulses[0] = DrivePulse(0, 200, 1, 7e9, np.pi / 2, "Gaussian(5)", channel, qubit=0)
         ro_pulses[0] = ReadoutPulse(200, 2000, 1, 7.1e9, np.pi / 2, "Rectangular()", channel, qubit=0)
         ro_pulses[1] = ReadoutPulse(200, 2000, 1, 7.2e9, np.pi / 2, "Rectangular()", channel, qubit=1)
         ps.add(qd_pulses[0], ro_pulses[0], ro_pulses[1])

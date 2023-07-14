@@ -11,7 +11,7 @@ from qibolab.instruments.qblox.port import (
     ClusterRF_OutputPort,
     ClusterRF_OutputPort_Settings,
 )
-from qibolab.pulses import Pulse, PulseSequence
+from qibolab.pulses import DrivePulse, PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 CLUSTER_NAME = "cluster"
@@ -193,8 +193,8 @@ def test_setup(cluster: Cluster, qcm_rf: ClusterQCM_RF):
 @pytest.mark.qpu
 def test_pulse_sequence(connected_qcm_rf: ClusterQCM_RF, dummy_qrc):
     ps = PulseSequence()
-    ps.add(Pulse(0, 200, 1, O1_LO_FREQUENCY - 200e6, np.pi / 2, "Gaussian(5)", O1_OUTPUT_CHANNEL))
-    ps.add(Pulse(0, 200, 1, O2_LO_FREQUENCY - 200e6, np.pi / 2, "Gaussian(5)", O2_OUTPUT_CHANNEL))
+    ps.add(DrivePulse(0, 200, 1, O1_LO_FREQUENCY - 200e6, np.pi / 2, "Gaussian(5)", O1_OUTPUT_CHANNEL))
+    ps.add(DrivePulse(0, 200, 1, O2_LO_FREQUENCY - 200e6, np.pi / 2, "Gaussian(5)", O2_OUTPUT_CHANNEL))
     from qibolab import create_platform
 
     platform = create_platform("qblox")
@@ -213,8 +213,8 @@ def test_pulse_sequence(connected_qcm_rf: ClusterQCM_RF, dummy_qrc):
 @pytest.mark.qpu
 def test_sweepers(connected_qcm_rf: ClusterQCM_RF, dummy_qrc):
     ps = PulseSequence()
-    ps.add(Pulse(0, 200, 1, O1_LO_FREQUENCY - 200e6, np.pi / 2, "Gaussian(5)", O1_OUTPUT_CHANNEL))
-    ps.add(Pulse(0, 200, 1, O2_LO_FREQUENCY - 200e6, np.pi / 2, "Gaussian(5)", O2_OUTPUT_CHANNEL))
+    ps.add(DrivePulse(0, 200, 1, O1_LO_FREQUENCY - 200e6, np.pi / 2, "Gaussian(5)", O1_OUTPUT_CHANNEL))
+    ps.add(DrivePulse(0, 200, 1, O2_LO_FREQUENCY - 200e6, np.pi / 2, "Gaussian(5)", O2_OUTPUT_CHANNEL))
 
     from qibolab import create_platform
 
