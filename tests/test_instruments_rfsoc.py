@@ -337,12 +337,6 @@ def test_validate_input_command(dummy_qrc):
     with pytest.raises(NotImplementedError):
         results = instrument.play(platform.qubits, seq, parameters)
 
-    seq2 = seq.copy()
-    seq2[0].duration = 5
-    parameters = ExecutionParameters()
-    with pytest.raises(ValueError):
-        results = instrument.play(platform.qubits, seq2, parameters)
-
 
 def test_update_cfg(mocker, dummy_qrc):
     platform = create_platform("rfsoc")

@@ -167,10 +167,10 @@ class RFSoC(Controller):
         toti, totq = self._execute_pulse_sequence(sequence, qubits, average, opcode)
 
         results = {}
-        adc_chs = np.unique([qubits[p.qubit].feedback.port.name for p in sequence.ro_pulses])
+        probed_qubits = np.unique([p.qubit for p in sequence.ro_pulses])
 
-        for j, channel in enumerate(adc_chs):
-            for i, ro_pulse in enumerate(sequence.ro_pulses.get_qubit_pulses(channel)):
+        for j, qubit in enumerate(probed_qubits):
+            for i, ro_pulse in enumerate(sequence.ro_pulses.get_qubit_pulses(qubit)):
                 i_pulse = np.array(toti[j][i])
                 q_pulse = np.array(totq[j][i])
 
@@ -182,6 +182,8 @@ class RFSoC(Controller):
                 else:
                     result = execution_parameters.results_type(i_pulse + 1j * q_pulse)
                 results[ro_pulse.qubit] = results[ro_pulse.serial] = result
+
+        print(results)
 
         return results
 
