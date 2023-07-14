@@ -191,8 +191,6 @@ class RFSoC(Controller):
     @staticmethod
     def validate_input_command(sequence: PulseSequence, execution_parameters: ExecutionParameters, sweep: bool):
         """Check if sequence and execution_parameters are supported."""
-        if any(pulse.duration < 10 for pulse in sequence):
-            raise ValueError("The minimum pulse length supported is 10 ns")
         if execution_parameters.acquisition_type is AcquisitionType.RAW:
             if sweep:
                 raise NotImplementedError("Raw data acquisition is not compatible with sweepers")
@@ -294,6 +292,8 @@ class RFSoC(Controller):
         values = []
         for idx, _ in enumerate(sweeper.indexes):
             val = np.linspace(sweeper.starts[idx], sweeper.stops[idx], sweeper.expts)
+            if sweeper.parameters[idx] in rfsoc.Parameter.variants({"duration", "delay"}):
+                val = val.astype(int)
             values.append(val)
 
         results = {}
