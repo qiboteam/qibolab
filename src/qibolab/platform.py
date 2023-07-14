@@ -115,10 +115,10 @@ class Platform:
         if "couplers" in settings:
             for c in settings["couplers"]:
                 if c in self.couplers:
-                    for name, value in settings["characterization"]["single_qubit"][c].items():
+                    for name, value in settings["characterization"]["coupler"][c].items():
                         setattr(self.couplers[c], name, value)
                 else:
-                    self.couplers[c] = coupler = Coupler(c, **settings["characterization"]["single_qubit"][c])
+                    self.couplers[c] = coupler = Coupler(c, **settings["characterization"]["coupler"][c])
                     # register channels to qubits when we are using the old format
                     # needed for ``NativeGates`` to work
                     if "qubit_channel_map" in self.settings:
@@ -435,7 +435,7 @@ class Platform:
         result = {}
         for instrument in self.instruments:
             if isinstance(instrument, Controller):
-                new_result = instrument.sweep(self.qubits, sequence, options, *sweepers)
+                new_result = instrument.sweep(self.qubits, self.couplers, sequence, options, *sweepers)
                 if isinstance(new_result, dict):
                     result.update(new_result)
                 elif new_result is not None:

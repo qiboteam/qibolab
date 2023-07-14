@@ -486,7 +486,7 @@ class Zurich(Controller):
         self.create_exp(qubits, options)
 
     # pylint: disable=W0221
-    def play(self, qubits, sequence, options):
+    def play(self, qubits, couplers, sequence, options):
         """Play pulse sequence"""
         self.signal_map = {}
         dimensions = []
@@ -532,6 +532,7 @@ class Zurich(Controller):
 
         # Fill the sequences with pulses according to their lines in temporal order
         for pulse in sequence:
+            #FIXME: qubits[pulse.qubit]
             zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"].append(ZhPulse(pulse))
 
         # Mess that gets the sweeper and substitutes the pulse it sweeps in the right place
@@ -555,6 +556,13 @@ class Zurich(Controller):
                         nt_loop(sweeper)
                     for element in aux_list:
                         if pulse == element.pulse:
+                            
+                            #FIXME: qubits[pulse.qubit]
+                            # if pulse.qubit in qubits:
+                            #     print("here")
+                            # else:
+                            #     print("coupler")
+                            
                             if isinstance(aux_list[aux_list.index(element)], ZhPulse):
                                 aux_list[aux_list.index(element)] = ZhSweeper(pulse, sweeper, qubits[pulse.qubit])
                             elif isinstance(aux_list[aux_list.index(element)], ZhSweeper):
@@ -562,6 +570,7 @@ class Zurich(Controller):
 
             if sweeper.parameter.name in SWEEPER_BIAS:
                 for qubit in sweeper.qubits:
+                    print(qubit)
                     zhsequence[f"flux{qubit.name}"] = [ZhSweeperLine(sweeper, qubit, sequence)]
 
             # FIXME: This may not place the Zhsweeper when the start occurs among different sections or lines
@@ -932,7 +941,7 @@ class Zurich(Controller):
             self.session.devices["device_hdawg"].awgs[0].sigouts[sigout].offset = 0
         self.session.devices["device_hdawg2"].awgs[0].sigouts[0].offset = 0
 
-    def sweep(self, qubits, sequence: PulseSequence, options, *sweepers):
+    def sweep(self, qubits, couplers, sequence: PulseSequence, options, *sweepers):
         """Play pulse and sweepers sequence"""
 
         self.signal_map = {}
