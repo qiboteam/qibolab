@@ -22,6 +22,8 @@ from qibolab.result import (
 )
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
+QPU_PLATFORM = "rfsoc"  # "zcu111"
+
 
 def test_convert_default(dummy_qrc):
     """Test convert function raises errors when parameter have wrong types."""
@@ -40,7 +42,7 @@ def test_convert_default(dummy_qrc):
 
     with pytest.raises(TypeError):
         # functools understand that is a convert_parameter and raises an error for the int
-        res = convert(parameter, integer)
+        _ = convert(parameter, integer)
 
 
 def test_convert_qubit(dummy_qrc):
@@ -546,15 +548,19 @@ def test_call_executepulsesequence():
     """Executes a PulseSequence and check if result shape is as expected.
     Both for averaged results and not averaged results.
     """
-    platform = create_platform("rfsoc")
+    platform = create_platform(QPU_PLATFORM)
     instrument = platform.instruments[0]
 
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(qubit=0, start=0))
     sequence.add(platform.create_MZ_pulse(qubit=0, start=100))
 
-    i_vals_nav, q_vals_nav = instrument._execute_pulse_sequence(instrument.cfg, sequence, platform.qubits, 1, False)
-    i_vals_av, q_vals_av = instrument._execute_pulse_sequence(instrument.cfg, sequence, platform.qubits, 1, True)
+    i_vals_nav, q_vals_nav = instrument._execute_pulse_sequence(
+        sequence, platform.qubits, False, rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE
+    )
+    i_vals_av, q_vals_av = instrument._execute_pulse_sequence(
+        sequence, platform.qubits, True, rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE
+    )
 
     assert np.shape(i_vals_nav) == (1, 1, 1000)
     assert np.shape(q_vals_nav) == (1, 1, 1000)
@@ -564,10 +570,11 @@ def test_call_executepulsesequence():
 
 @pytest.mark.qpu
 def test_call_execute_sweeps():
-    """Executes a firmware sweep and check if result shape is as expected.
+    """Execute a firmware sweep and check if result shape is as expected.
+
     Both for averaged results and not averaged results.
     """
-    platform = create_platform("rfsoc")
+    platform = create_platform(QPU_PLATFORM)
     instrument = platform.instruments[0]
 
     sequence = PulseSequence()
@@ -577,8 +584,8 @@ def test_call_execute_sweeps():
     expts = len(sweep.values)
 
     sweep = [convert(sweep, sequence, platform.qubits)]
-    i_vals_nav, q_vals_nav = instrument._execute_sweeps(instrument.cfg, sequence, platform.qubits, sweep, 1, False)
-    i_vals_av, q_vals_av = instrument._execute_sweeps(instrument.cfg, sequence, platform.qubits, sweep, 1, True)
+    i_vals_nav, q_vals_nav = instrument._execute_sweeps(sequence, platform.qubits, sweep, False)
+    i_vals_av, q_vals_av = instrument._execute_sweeps(sequence, platform.qubits, sweep, True)
 
     assert np.shape(i_vals_nav) == (1, 1, expts, 1000)
     assert np.shape(q_vals_nav) == (1, 1, expts, 1000)
@@ -588,8 +595,8 @@ def test_call_execute_sweeps():
 
 @pytest.mark.qpu
 def test_play_qpu():
-    """Sends a PulseSequence using `play` and check results are what expected"""
-    platform = create_platform("rfsoc")
+    """Send a PulseSequence using `play` and check results are what expected."""
+    platform = create_platform(QPU_PLATFORM)
     instrument = platform.instruments[0]
 
     sequence = PulseSequence()
@@ -607,8 +614,8 @@ def test_play_qpu():
 
 @pytest.mark.qpu
 def test_sweep_qpu():
-    """Sends a PulseSequence using `sweep` and check results are what expected"""
-    platform = create_platform("rfsoc")
+    """Send a PulseSequence using `sweep` and check results are what expected."""
+    platform = create_platform(QPU_PLATFORM)
     instrument = platform.instruments[0]
 
     sequence = PulseSequence()
@@ -642,9 +649,9 @@ def test_sweep_qpu():
 
 
 @pytest.mark.qpu
-def test_python_reqursive_sweep():
-    """Sends a PulseSequence directly to `python_reqursive_sweep` and check results are what expected"""
-    platform = create_platform("rfsoc")
+def test_python_recursive_sweep():
+    """Send a PulseSequence directly to `python_reqursive_sweep` and check results are what expected."""
+    platform = create_platform(QPU_PLATFORM)
     instrument = platform.instruments[0]
 
     sequence = PulseSequence()
