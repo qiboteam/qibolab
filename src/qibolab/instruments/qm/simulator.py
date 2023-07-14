@@ -4,7 +4,7 @@ from qm import SimulationConfig
 from qm.QuantumMachinesManager import QuantumMachinesManager
 from qualang_tools.simulator_tools import create_simulator_controller_connections
 
-from qibolab.instruments.qm import QMOPX
+from .driver import QMOPX
 
 
 @dataclass
@@ -44,13 +44,6 @@ class QMSim(QMOPX):
 
     def execute_program(self, program):
         ncontrollers = len(self.config.controllers)
-
-        # for debugging only
-        from qm import generate_qua_script
-
-        with open("qua_script.txt", "w") as file:
-            file.write(generate_qua_script(program, self.config.__dict__))
-
         controller_connections = create_simulator_controller_connections(ncontrollers)
         simulation_config = SimulationConfig(
             duration=self.simulation_duration, controller_connections=controller_connections
