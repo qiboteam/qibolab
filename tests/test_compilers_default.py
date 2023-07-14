@@ -146,7 +146,7 @@ def test_two_u3_to_sequence(platform_name):
 
 def test_cz_to_sequence(platform_name):
     platform = create_platform(platform_name)
-    if (2, 1) not in platform.pairs:
+    if (1, 2) not in platform.pairs:
         pytest.skip("Skipping compiler CZ test because pair is not available.")
 
     circuit = Circuit(2)
