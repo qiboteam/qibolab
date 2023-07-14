@@ -395,6 +395,7 @@ def test_pulses_pulse_hash():
     p3 = p1.copy()
     assert p1 == p2
     assert p1 == p3
+
     t0 += 100
     assert p1 == p2
     assert p1 != p3

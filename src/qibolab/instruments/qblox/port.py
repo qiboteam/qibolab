@@ -285,8 +285,13 @@ class ClusterRF_OutputPort(QbloxOutputPort):
 
 
 class ClusterBB_OutputPort(QbloxOutputPort):
-    # Note: for qublos, gain is equivalent to amplitude, since it does not bring any advantages
+    # Note: for qblox, gain is equivalent to amplitude, since it does not bring any advantages
     # we plan to remove it soon.
+
+    def __init__(self, module, sequencer_number: int, number: int):
+        super().__init__(module, sequencer_number, number)
+        self._settings = ClusterBB_OutputPort_Settings()
+
     @property
     def gain(self):
         """Gain that is applied to this port."""

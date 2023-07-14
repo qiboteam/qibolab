@@ -207,7 +207,7 @@ def create(runcard=RUNCARD):
     channels["L4-26"] = Channel(name="L4-4", port=None)
 
     platform = Platform(
-        name="qw5q_gold_qblox",
+        name="dummy_qrc_qw5q_gold_qblox",
         runcard=runcard,
         instruments=instruments,
         channels=channels,
