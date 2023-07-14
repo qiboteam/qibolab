@@ -183,8 +183,6 @@ class RFSoC(Controller):
                     result = execution_parameters.results_type(i_pulse + 1j * q_pulse)
                 results[ro_pulse.qubit] = results[ro_pulse.serial] = result
 
-        print(results)
-
         return results
 
     def play_sequences(self, qubits, sequence, options):
