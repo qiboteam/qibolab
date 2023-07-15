@@ -50,7 +50,7 @@ from qibolab.instruments.qblox.q1asm import (
 from qibolab.instruments.qblox.sequencer import Sequencer, WaveformsBuffer
 from qibolab.instruments.qblox.sweeper import QbloxSweeper, QbloxSweeperType
 from qibolab.pulses import Pulse, PulseSequence, PulseType
-from qibolab.sweeper import Parameter
+from qibolab.sweeper import Parameter, SweeperType
 
 
 class ClusterQCM_RF_Settings:
@@ -599,11 +599,35 @@ class ClusterQCM_RF(Instrument):
                             idx_range = sequencer.waveforms_buffer.bake_pulse_waveforms(
                                 pulse, sweeper.values, self.ports[port].hardware_mod_en
                             )
-                            sweeper.qs = QbloxSweeper(
-                                program=program, type=QbloxSweeperType.duration, rel_values=idx_range
-                            )
+                            if sweeper.type == SweeperType.ABSOLUTE:
+                                sweeper.qs = QbloxSweeper(
+                                    program=program, type=QbloxSweeperType.duration, rel_values=idx_range
+                                )
+                            elif sweeper.type == SweeperType.OFFSET:
+                                sweeper.qs = QbloxSweeper(
+                                    program=program,
+                                    type=QbloxSweeperType.duration,
+                                    rel_values=idx_range,
+                                    add_to=reference_value,
+                                )
+                            elif sweeper.type == SweeperType.FACTOR:
+                                sweeper.qs = QbloxSweeper(
+                                    program=program,
+                                    type=QbloxSweeperType.duration,
+                                    rel_values=idx_range,
+                                    multiply_to=reference_value,
+                                )
                     else:
-                        sweeper.qs = QbloxSweeper.from_sweeper(program=program, sweeper=sweeper, add_to=reference_value)
+                        if sweeper.type == SweeperType.ABSOLUTE:
+                            sweeper.qs = QbloxSweeper.from_sweeper(program=program, sweeper=sweeper)
+                        elif sweeper.type == SweeperType.OFFSET:
+                            sweeper.qs = QbloxSweeper.from_sweeper(
+                                program=program, sweeper=sweeper, add_to=reference_value
+                            )
+                        elif sweeper.type == SweeperType.FACTOR:
+                            sweeper.qs = QbloxSweeper.from_sweeper(
+                                program=program, sweeper=sweeper, multiply_to=reference_value
+                            )
 
                     # FIXME: for qubit sweepers (Parameter.bias, Parameter.attenuation, Parameter.gain), the qubit
                     # information alone is not enough to determine what instrument parameter is to be swept.
