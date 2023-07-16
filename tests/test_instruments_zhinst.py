@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
-from qibolab.instruments.zhinst import ZhPulse, ZhSweeperLine
+from qibolab.instruments.zhinst import ZhPulse, ZhSweeperLine, Zurich
 from qibolab.pulses import (
     IIR,
     SNZ,
@@ -15,6 +15,8 @@ from qibolab.pulses import (
     Rectangular,
 )
 from qibolab.sweeper import Parameter, Sweeper
+
+from .conftest import get_instrument
 
 
 @pytest.mark.parametrize("shape", ["Rectangular", "Gaussian", "GaussianSquare", "Drag", "SNZ", "IIR"])
@@ -458,9 +460,15 @@ def test_sim(dummy_qrc):
         sequence.add(qf_pulses[qubit])
 
 
+@pytest.fixture(scope="module")
+def config(platform):
+    instrument = get_instrument(platform, Zurich)
+    return platform, instrument
+
+
 @pytest.mark.qpu
-def test_connections():
-    platform = create_platform("iqm5q")
+def test_connections(config):
+    platform, IQM5q = config
     IQM5q = platform.instruments[0]
     IQM5q.start()
     IQM5q.stop()
@@ -469,8 +477,8 @@ def test_connections():
 
 
 @pytest.mark.qpu
-def test_experiment_execute_pulse_sequence():
-    platform = create_platform("iqm5q")
+def test_experiment_execute_pulse_sequence(config):
+    platform, _ = config
     platform.connect()
     platform.setup()
 
@@ -509,8 +517,8 @@ def test_experiment_execute_pulse_sequence():
 
 
 @pytest.mark.qpu
-def test_experiment_sweep_2d_specific():
-    platform = create_platform("iqm5q")
+def test_experiment_sweep_2d_specific(config):
+    platform, _ = config
     platform.connect()
     platform.setup()
 
