@@ -831,9 +831,14 @@ class ClusterQCM_BB(Instrument):
 
     def stop(self):
         """Stops all sequencers"""
-
         from qibo.config import log
 
+        for sequencer_number in self._used_sequencers_numbers:
+            state = self.device.get_sequencer_state(sequencer_number)
+            if state.status != "STOPPED":
+                log.warning(
+                    f"Device {self.device.sequencers[sequencer_number].name} did not stop normally\nstate: {state}"
+                )
         try:
             self.device.stop_sequencer()
         except:
