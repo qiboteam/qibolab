@@ -550,20 +550,6 @@ class ClusterQCM_BB(Instrument):
                 for pulse in pulses:
                     pulse.sweeper = None
 
-                # define whether to sweep relative values or absolute values depending on the type of sweep
-                # TODO: let qibocal user decice and the decision to be attached to qibolab.Sweeper
-                # until then:
-
-                #   lo_frequency    - relative values added to the lo_frequency
-                #   attenuation     - absolute values
-                #   frequency       - relative values added to the pulse frequency
-                #   amplitude(gain) - absolute values
-                #   relative_phase  - absolute values
-                #   gain            - absolute values
-                #   bias(offset)    - absolute values
-                #   start           - absolute values
-                #   duration        - absolute values
-
                 for sweeper in sweepers:
                     reference_value = 0
                     if sweeper.parameter == Parameter.frequency:
@@ -574,6 +560,7 @@ class ClusterQCM_BB(Instrument):
                     if sweeper.parameter == Parameter.bias:
                         reference_value = self.ports[port].offset
 
+                    # create QbloxSweepers and attach them to qibolab sweeper
                     if sweeper.parameter == Parameter.duration and pulse in sweeper.pulses:
                         if pulse in sweeper.pulses:
                             # for duration sweepers bake waveforms

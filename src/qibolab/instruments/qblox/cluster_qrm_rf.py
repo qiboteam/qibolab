@@ -597,20 +597,6 @@ class ClusterQRM_RF(Instrument):
                 for pulse in pulses:
                     pulse.sweeper = None
 
-                # define whether to sweep relative values or absolute values depending on the type of sweep
-                # TODO: let qibocal user decice and the decision to be attached to qibolab.Sweeper
-                # until then:
-
-                #   lo_frequency    - relative values added to the lo_frequency
-                #   attenuation     - absolute values
-                #   frequency       - relative values added to the pulse frequency
-                #   amplitude(gain) - absolute values
-                #   relative_phase  - absolute values
-                #   gain            - absolute values
-                #   bias(offset)    - absolute values
-                #   start           - absolute values
-                #   duration        - absolute values
-
                 for sweeper in sweepers:
                     reference_value = 0
                     if sweeper.parameter == Parameter.frequency:
@@ -647,6 +633,16 @@ class ClusterQRM_RF(Instrument):
                                 rel_values=idx_range,
                                 multiply_to=reference_value,
                             )
+
+                    # elif sweeper.parameter == Parameter.bias:
+                    #     if sweeper.type == SweeperType.ABSOLUTE:
+                    #         sweeper.qs = QbloxSweeper.from_sweeper(
+                    #             program=program, sweeper=sweeper, add_to=-reference_value
+                    #         )
+                    #     elif sweeper.type == SweeperType.OFFSET:
+                    #         sweeper.qs = QbloxSweeper.from_sweeper(program=program, sweeper=sweeper)
+                    #     elif sweeper.type == SweeperType.FACTOR:
+                    #         raise Exception("SweeperType.FACTOR for Parameter.bias not supported")
                     else:
                         if sweeper.type == SweeperType.ABSOLUTE:
                             sweeper.qs = QbloxSweeper.from_sweeper(program=program, sweeper=sweeper)
