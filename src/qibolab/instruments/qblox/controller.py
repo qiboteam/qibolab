@@ -458,6 +458,7 @@ class QbloxController(Controller):
                                 for pulse in sweeper.pulses:
                                     # qblox has an external and an internal gains
                                     # when sweeping the internal, set the external to 1
+                                    # TODO check if it needs to be restored after execution
                                     if pulse.type == PulseType.READOUT:
                                         qubits[pulse.qubit].readout.gain = 1
                                     elif pulse.type == PulseType.DRIVE:
