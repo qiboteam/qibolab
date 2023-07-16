@@ -10,7 +10,7 @@ from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
 from qibolab.instruments.qblox.cluster_qcm_rf import ClusterQCM_RF
 from qibolab.instruments.qblox.cluster_qrm_rf import ClusterQRM_RF
 from qibolab.pulses import PulseSequence, PulseType
-from qibolab.sweeper import Parameter, Sweeper
+from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 
 class QbloxController(Controller):
@@ -102,6 +102,7 @@ class QbloxController(Controller):
 
     def _execute_pulse_sequence(
         self,
+        qubits: dict,
         sequence: PulseSequence,
         options: ExecutionParameters,
         sweepers: list() = [],  # list(Sweeper) = []
@@ -121,15 +122,15 @@ class QbloxController(Controller):
             raise_error(RuntimeError, "Execution failed because modules are not connected.")
 
         if options.averaging_mode == AveragingMode.SINGLESHOT:
-            nshots = options.nshots if options.nshots is not None else self.nshots
+            nshots = options.nshots
             navgs = 1
             average = False
         else:
-            navgs = options.nshots if options.nshots is not None else self.nshots
+            navgs = options.nshots
             nshots = 1
             average = True
 
-        relaxation_time = options.relaxation_time if options.relaxation_time is not None else self.relaxation_time
+        relaxation_time = options.relaxation_time
         repetition_duration = sequence.finish + relaxation_time
 
         # shots results are stored in separate bins
@@ -193,7 +194,7 @@ class QbloxController(Controller):
 
                 #  ask each module to generate waveforms & program and upload them to the device
                 self.modules[name].process_pulse_sequence(
-                    module_pulses[name], navgs, nshots, repetition_duration, sweepers
+                    qubits, module_pulses[name], navgs, nshots, repetition_duration, sweepers
                 )
 
                 # log.info(f"{self.modules[name]}: Uploading pulse sequence")
@@ -237,7 +238,7 @@ class QbloxController(Controller):
         return data
 
     def play(self, qubits, sequence, options):
-        return self._execute_pulse_sequence(sequence, options)
+        return self._execute_pulse_sequence(qubits, sequence, options)
 
     def play_sequences(self, *args, **kwargs):
         raise_error(NotImplementedError, "play_sequences is not implemented in qblox driver yet.")
@@ -273,6 +274,7 @@ class QbloxController(Controller):
                     values=sweeper.values,
                     pulses=ps,
                     qubits=sweeper.qubits,
+                    type=sweeper.type,
                 )
             )
 
@@ -326,47 +328,6 @@ class QbloxController(Controller):
             average (bool): A flag to indicate if the results of the shots should be averaged.
             relaxation_time (int): The the time to wait between repetitions to allow the qubit relax to ground state.
         """
-        sweeper = sweepers[0]
-
-        initial = {}
-        if sweeper.parameter is Parameter.lo_frequency:
-            initial = {}
-            for pulse in sweeper.pulses:
-                if pulse.type == PulseType.READOUT:
-                    initial[pulse.id] = self.get_lo_readout_frequency(pulse.qubit)
-                elif pulse.type == PulseType.DRIVE:
-                    initial[pulse.id] = self.get_lo_readout_frequency(pulse.qubit)
-
-        # until sweeper contains the information to determine whether the sweep should be relative or
-        # absolute:
-
-        # elif sweeper.parameter is Parameter.attenuation:
-        #     for qubit in sweeper.qubits:
-        #         initial[qubit] = self.get_attenuation(qubit)
-
-        # elif sweeper.parameter is Parameter.relative_phase:
-        #     initial = {}
-        #     for pulse in sweeper.pulses:
-        #         initial[pulse.id] = pulse.relative_phase
-
-        # elif sweeper.parameter is Parameter.frequency:
-        #     initial = {}
-        #     for pulse in sweeper.pulses:
-        #         initial[pulse.id] = pulse.frequency
-        # elif sweeper.parameter is Parameter.bias:
-        #     initial = {}
-        #     for qubit in sweeper.qubits:
-        #         initial[qubit] = self.get_bias(qubit)
-
-        elif sweeper.parameter is Parameter.gain:
-            for pulse in sweeper.pulses:
-                # qblox has an external and an internal gains
-                # when sweeping the internal, set the external to 1
-                self.set_gain(pulse.qubit, 1)
-        elif sweeper.parameter is Parameter.amplitude:
-            # qblox cannot sweep amplitude in real time, but sweeping gain is quivalent
-            for pulse in sweeper.pulses:
-                pulse.amplitude = 1
 
         for_loop_sweepers = [Parameter.attenuation, Parameter.lo_frequency]
         rt_sweepers = [
@@ -379,20 +340,55 @@ class QbloxController(Controller):
             Parameter.relative_phase,
         ]
 
+        sweeper: Sweeper = sweepers[0]
+
+        # until sweeper contains the information to determine whether the sweep should be relative or
+        # absolute:
+
+        # elif sweeper.parameter is Parameter.relative_phase:
+        #     initial = {}
+        #     for pulse in sweeper.pulses:
+        #         initial[pulse.id] = pulse.relative_phase
+
+        # elif sweeper.parameter is Parameter.frequency:
+        #     initial = {}
+        #     for pulse in sweeper.pulses:
+        #         initial[pulse.id] = pulse.frequency
+
         if sweeper.parameter in for_loop_sweepers:
             # perform sweep recursively
             for value in sweeper.values:
                 if sweeper.parameter is Parameter.attenuation:
+                    initial = {}
                     for qubit in sweeper.qubits:
-                        # self.set_attenuation(qubit, initial[qubit] + value)
-                        qubit.readout.attenuation = value
+                        initial[qubit.name] = qubits[qubit.name].readout.attenuation
+                        if sweeper.type == SweeperType.ABSOLUTE:
+                            qubit.readout.attenuation = value
+                        elif sweeper.type == SweeperType.OFFSET:
+                            qubit.readout.attenuation = initial[qubit.name] + value
+                        elif sweeper.type == SweeperType.FACTOR:
+                            qubit.readout.attenuation = initial[qubit.name] * value
 
                 elif sweeper.parameter is Parameter.lo_frequency:
+                    initial = {}
                     for pulse in sweeper.pulses:
                         if pulse.type == PulseType.READOUT:
-                            qubits[pulse.qubit].readout.lo_frequency = initial[pulse.id] + value
+                            initial[pulse.id] = qubits[pulse.qubit].readout.lo_frequency
+                            if sweeper.type == SweeperType.ABSOLUTE:
+                                qubits[pulse.qubit].readout.lo_frequency = value
+                            elif sweeper.type == SweeperType.OFFSET:
+                                qubits[pulse.qubit].readout.lo_frequency = initial[pulse.id] + value
+                            elif sweeper.type == SweeperType.FACTOR:
+                                qubits[pulse.qubit].readout.lo_frequency = initial[pulse.id] * value
+
                         elif pulse.type == PulseType.DRIVE:
-                            qubits[pulse.qubit].drive.lo_frequency = initial[pulse.id] + value
+                            initial[pulse.id] = qubits[pulse.qubit].drive.lo_frequency
+                            if sweeper.type == SweeperType.ABSOLUTE:
+                                qubits[pulse.qubit].drive.lo_frequency = value
+                            elif sweeper.type == SweeperType.OFFSET:
+                                qubits[pulse.qubit].drive.lo_frequency = initial[pulse.id] + value
+                            elif sweeper.type == SweeperType.FACTOR:
+                                qubits[pulse.qubit].drive.lo_frequency = initial[pulse.id] * value
 
                 if len(sweepers) > 1:
                     self._sweep_recursion(
@@ -403,7 +399,7 @@ class QbloxController(Controller):
                         results=results,
                     )
                 else:
-                    result = self._execute_pulse_sequence(sequence=sequence, options=options)
+                    result = self._execute_pulse_sequence(qubits=qubits, sequence=sequence, options=options)
                     for pulse in sequence.ro_pulses:
                         if results[pulse.id]:
                             results[pulse.id] += result[pulse.serial]
@@ -415,6 +411,8 @@ class QbloxController(Controller):
             # relative phase sweeps that cross 0 need to be split in two separate sweeps
             split_relative_phase = False
             if sweeper.parameter == Parameter.relative_phase:
+                if not sweeper.type == SweeperType.ABSOLUTE:
+                    raise_error(ValueError, "relative_phase sweeps other than ABSOLUTE are not supported by qblox yet")
                 from qibolab.instruments.qblox.q1asm import convert_phase
 
                 c_values = np.array([convert_phase(v) for v in sweeper.values])
@@ -455,7 +453,23 @@ class QbloxController(Controller):
                             f"Real time sweeper execution time: {int(execution_time)//60}m {int(execution_time) % 60}s"
                         )
 
-                        result = self._execute_pulse_sequence(sequence, options, sweepers)
+                        for sweeper in sweepers:
+                            if sweeper.parameter is Parameter.gain:
+                                for pulse in sweeper.pulses:
+                                    # qblox has an external and an internal gains
+                                    # when sweeping the internal, set the external to 1
+                                    # TODO check if it needs to be restored after execution
+                                    if pulse.type == PulseType.READOUT:
+                                        qubits[pulse.qubit].readout.gain = 1
+                                    elif pulse.type == PulseType.DRIVE:
+                                        qubits[pulse.qubit].drive.gain = 1
+
+                            elif sweeper.parameter is Parameter.amplitude:
+                                # qblox cannot sweep amplitude in real time, but sweeping gain is quivalent
+                                for pulse in sweeper.pulses:
+                                    pulse.amplitude = 1
+
+                        result = self._execute_pulse_sequence(qubits, sequence, options, sweepers)
                         for pulse in sequence.ro_pulses:
                             if results[pulse.id]:
                                 results[pulse.id] += result[pulse.serial]
@@ -511,82 +525,3 @@ class QbloxController(Controller):
                 else:
                     # TODO: reorder the sequence of the sweepers and the results
                     raise Exception("cannot execute a for-loop sweeper nested inside of a rt sweeper")
-
-    # def update(self, updates: dict):
-    #     r"""Updates platform dependent runcard parameters and set up modules if needed.
-
-    #     Args:
-
-    #         updates (dict): Dictionary containing the parameters to update the runcard.
-    #     """
-    #     for par, values in updates.items():
-    #         for qubit, value in values.items():
-    #             # resonator_punchout_attenuation
-    #             if par == "readout_attenuation":
-    #                 attenuation = int(value)
-    #                 # save settings
-    #                 instrument_name = self.qubit_instrument_map[qubit][0]
-    #                 port = self.qrm[qubit]._channel_port_map[self.qubit_channel_map[qubit][0]]
-    #                 self.settings["instruments"][instrument_name]["settings"]["ports"][port][
-    #                     "attenuation"
-    #                 ] = attenuation
-    #                 # configure RO attenuation
-    #                 self.ro_port[qubit].attenuation = attenuation
-
-    #             # resonator_spectroscopy_flux / qubit_spectroscopy_flux
-    #             if par == "sweetspot":
-    #                 sweetspot = float(value)
-    #                 # save settings
-    #                 instrument_name = self.qubit_instrument_map[qubit][2]
-    #                 port = self.qrm[qubit]._channel_port_map[self.qubit_channel_map[qubit][2]]
-    #                 self.settings["instruments"][instrument_name]["settings"]["ports"][port]["offset"] = sweetspot
-    #                 # configure module qcm_bb offset
-    #                 self.qb_port[qubit].current = sweetspot
-
-    #             # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
-    #             if par == "drive_frequency":
-    #                 freq = int(value * 1e9)
-
-    #                 # update Qblox qubit LO drive frequency config
-    #                 instrument_name = self.qubit_instrument_map[qubit][1]
-    #                 port = self.qdm[qubit]._channel_port_map[self.qubit_channel_map[qubit][1]]
-    #                 drive_if = self.qubits[qubit].native_gates.RX.if_frequency
-    #                 self.settings["instruments"][instrument_name]["settings"]["ports"][port]["lo_frequency"] = (
-    #                     freq - drive_if
-    #                 )
-
-    #                 # set Qblox qubit LO drive frequency
-    #                 self.qd_port[qubit].lo_frequency = freq - drive_if
-
-    #             # classification
-    #             if par == "threshold":
-    #                 threshold = float(value)
-    #                 # update Qblox qubit classification threshold
-    #                 instrument_name = self.qubit_instrument_map[qubit][0]
-    #                 self.settings["instruments"][instrument_name]["settings"]["classification_parameters"][qubit][
-    #                     "threshold"
-    #                 ] = threshold
-
-    #                 self.modules[instrument_name].setup(
-    #                     **self.settings["settings"],
-    #                     **self.settings["instruments"][instrument_name]["settings"],
-    #                 )
-
-    #             # classification
-    #             if par == "iq_angle":
-    #                 rotation_angle = float(value)
-    #                 rotation_angle = (
-    #                     rotation_angle * 360 / (2 * np.pi)
-    #                 ) % 360  # save rotation angle in degrees for qblox
-    #                 # update Qblox qubit classification iq angle
-    #                 instrument_name = self.qubit_instrument_map[qubit][0]
-    #                 self.settings["instruments"][instrument_name]["settings"]["classification_parameters"][qubit][
-    #                     "rotation_angle"
-    #                 ] = rotation_angle
-
-    #                 self.modules[instrument_name].setup(
-    #                     **self.settings["settings"],
-    #                     **self.settings["instruments"][instrument_name]["settings"],
-    #                 )
-
-    #             super().update(updates)

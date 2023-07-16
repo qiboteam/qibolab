@@ -30,9 +30,30 @@ The operation of multiple clusters simultaneously is not supported yet.
 https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/
 """
 
+from dataclasses import dataclass
+from enum import Enum
+
 from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
 
 from qibolab.instruments.abstract import Instrument, InstrumentException
+
+
+class ReferenceClockSource(Enum):
+    INTERNAL = "internal"
+    EXTERNAL = "external"
+
+
+@dataclass
+class Cluster_Settings:
+    """A class to store the settings of the Cluster instrument.
+
+    Attributes:
+        reference_clock_source (:class:`qibolab.instruments.qblox.cluster.ReferenceClockSource`):
+            (ReferenceClockSource.INTERNAL, ReferenceClockSource.EXTERNAL) Instructs the cluster to use the internal
+            clock source or an external source.
+    """
+
+    reference_clock_source: ReferenceClockSource = ReferenceClockSource.INTERNAL
 
 
 class Cluster(Instrument):
@@ -41,7 +62,7 @@ class Cluster(Instrument):
     The class exposes the attribute `reference_clock_source` to enable the selection of an internal or external clock
     source.
 
-    The class inherits from Instrument and implements its interface methods:
+    The class inherits from :class:`qibolab.instruments.abstract.Instrument` and implements its interface methods:
         __init__()
         connect()
         setup()
@@ -53,42 +74,39 @@ class Cluster(Instrument):
         device (QbloxCluster): A reference to the underlying `qblox_instruments.qcodes_drivers.cluster.Cluster` object.
             It can be used to access other features not directly exposed by this wrapper.
             https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/api_reference/cluster.html
-        reference_clock_source (str): ('internal', 'external') Instructs the cluster to use the internal clock source
-            or an external source.
+        settings (:class:`qibolab.instruments.qblox.cluster.ClusterSettings`): The instrument settings.
+        reference_clock_source (:class:`qibolab.instruments.qblox.cluster.ReferenceClockSource`):
+            (ReferenceClockSource.INTERNAL, ReferenceClockSource.EXTERNAL) Instructs the cluster to use the internal
+            clock source or an external source.
     """
 
-    def __init__(self, name: str, address: str, settings: dict):
-        """Initialises the instrument storing its name and address."""
+    def __init__(self, name: str, address: str, settings: Cluster_Settings = Cluster_Settings()):
+        """Initialises the instrument storing its name, address and settings."""
         super().__init__(name, address)
-        self.settings: dict = settings
-        self.reference_clock_source: str
         self.device: QbloxCluster = None
-
-        self._device_parameters = {}
+        self.settings: Cluster_Settings = settings
 
     @property
-    def reference_clock_source(self) -> str:
+    def reference_clock_source(self) -> ReferenceClockSource:
         if self.is_connected:
-            return self.device.get("reference_source")
-        else:
-            raise Exception(
-                f"Parameter reference_source cannot be accessed, there is no connection to cluster {self.name}."
-            )
+            _reference_clock_source = self.device.get("reference_source")
+            if _reference_clock_source == "internal":
+                self.settings.reference_clock_source = ReferenceClockSource.INTERNAL
+            elif _reference_clock_source == "external":
+                self.settings.reference_clock_source = ReferenceClockSource.EXTERNAL
+        return self.settings.reference_clock_source
 
     @reference_clock_source.setter
-    def reference_clock_source(self, value: str):
+    def reference_clock_source(self, value: ReferenceClockSource):
+        self.settings.reference_clock_source = value
         if self.is_connected:
-            self._set_device_parameter(self.device, "reference_source", value=value)
-        else:
-            raise Exception(
-                f"Parameter reference_source cannot be set up, there is no connection to cluster {self.name}."
-            )
+            self.device.set("reference_source", self.settings.reference_clock_source.value)
 
     def connect(self):
         """Connects to the cluster.
 
-        If the connection is successful, it saves a reference to the underlying object in the attribute `device`.
-        The instrument is reset on each connection.
+        If the connection is successful, it resets the instrument and configures it with the stored settings.
+        A reference to the underlying object is saved in the attribute `device`.
         """
         if not self.is_connected:
             for attempt in range(3):
@@ -106,48 +124,16 @@ class Cluster(Instrument):
         else:
             pass
 
-    def _set_device_parameter(self, target, *parameters, value):
-        """Sets a parameter of the instrument if its value changed from the last value stored in the cache.
+        # apply stored settings
+        self._setup()
 
-        Args:
-            target = an instance of qblox_instruments.qcodes_drivers.qcm_qrm.QcmQrm or
-                                    qblox_instruments.qcodes_drivers.sequencer.Sequencer
-            *parameters (list): A list of parameters to be cached and set.
-            value = The value to set the paramters.
-        Raises:
-            Exception = If attempting to set a parameter without a connection to the instrument.
-        """
+    def _setup(self):
         if self.is_connected:
-            key = target.name + "." + parameters[0]
-            if not key in self._device_parameters:
-                for parameter in parameters:
-                    if not hasattr(target, parameter):
-                        raise Exception(f"The instrument {self.name} does not have parameters {parameter}")
-                    target.set(parameter, value)
-                self._device_parameters[key] = value
-            elif self._device_parameters[key] != value:
-                for parameter in parameters:
-                    target.set(parameter, value)
-                self._device_parameters[key] = value
-        else:
-            raise Exception("There is no connection to the instrument {self.name}")
-
-    def _erase_device_parameters_cache(self):
-        """Erases the cache of instrument parameters."""
-        self._device_parameters = {}
+            self.device.set("reference_source", self.settings.reference_clock_source.value)
 
     def setup(self):
-        """Configures the instrument with the settings saved in the runcard.
-
-        Args:
-            **kwargs: A dictionary with the settings:
-                reference_clock_source
-        """
-        settings = self.settings
-        if self.is_connected:
-            self.reference_clock_source = settings["reference_clock_source"]
-        else:
-            raise Exception("The instrument cannot be set up, there is no connection")
+        """Configures the instrument with the stored settings."""
+        self._setup()
 
     def start(self):
         """Empty method to comply with Instrument interface."""

@@ -10,7 +10,7 @@ from qibolab.backends import QibolabBackend
 
 
 @pytest.fixture(scope="module")
-def backend(request):
+def backend(request: pytest.FixtureRequest):
     backend = QibolabBackend(request.param)
     backend.platform.connect()
     backend.platform.setup()
