@@ -74,9 +74,9 @@ def pytest_generate_tests(metafunc):
         if "qpu" in markers:
             # use real platforms
             platforms = [create_platform(name) for name in platform_names]
-            metafunc.parametrize("platform", platforms, scope="session")
+            metafunc.parametrize("platform", platforms, scope="module")
         else:
             # use platforms under ``dummy_qrc`` folder in tests
             set_platform_profile()
             platforms = [create_platform(name) for name in dummy_platform_names]
-            metafunc.parametrize("platform", platforms, scope="session")
+            metafunc.parametrize("platform", platforms, scope="module")
