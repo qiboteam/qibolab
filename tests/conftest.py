@@ -86,7 +86,7 @@ def pytest_generate_tests(metafunc):
 
     if "backend" in metafunc.fixturenames:
         set_platform_profile()
-        metafunc.parametrize("backend", platforms, indirect=True)
+        metafunc.parametrize("backend", platform_names, indirect=True)
 
     elif "platform_name" in metafunc.fixturenames:
         set_platform_profile()

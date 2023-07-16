@@ -1,5 +1,6 @@
 import pytest
 
+from qibolab.instruments.qblox.cluster import Cluster, Cluster_Settings
 from qibolab.instruments.qblox.controller import QbloxController
 
 
