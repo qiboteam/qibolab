@@ -1,6 +1,5 @@
 import pytest
 
-from qibolab import create_platform
 from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyPort
 
@@ -62,9 +61,8 @@ def test_channel_map_union_update():
 
 
 @pytest.fixture
-def qubit(platform_name):
-    platform = create_platform(platform_name)
-    return next(iter(platform.qubits.values()))
+def qubit(platform):
+    return next(iter(dummy_platform.qubits.values()))
 
 
 def test_platform_lo_drive_frequency(qubit):

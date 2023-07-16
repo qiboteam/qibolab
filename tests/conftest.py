@@ -5,18 +5,13 @@ import pytest
 
 from qibolab import PLATFORMS
 
-# from importlib import import_module
-
-
-# from qibolab.instruments.qblox.controller import QbloxController
-
 
 def pytest_addoption(parser):
     parser.addoption(
         "--platforms",
         type=str,
         action="store",
-        default="qm,qblox,rfsoc,zurich",
+        default=None,
         help="qpu platforms to test on",
     )
     parser.addoption(
@@ -51,9 +46,17 @@ def dummy_qrc():
     set_platform_profile()
 
 
+def get_instrument(platform, instrument_type):
+    for instrument in platform.instruments.values():
+        if isinstance(instrument, instrument_type):
+            return instrument
+    pytest.skip(f"Skipping {instrument_type.__name__} test for {platform.name}.")
+
+
 def pytest_generate_tests(metafunc):
-    platforms = metafunc.config.option.platforms
-    platforms = [] if platforms is None else platforms.split(",")
+    platform_names = metafunc.config.option.platforms
+    platform_names = [] if platform_names is None else platform_names.split(",")
+    dummy_platform_names = ["qm", "qblox", "rfsoc", "zurich"]
 
     if "simulator" in metafunc.fixturenames:
         address = metafunc.config.option.address
@@ -65,17 +68,15 @@ def pytest_generate_tests(metafunc):
             metafunc.parametrize("simulator", [(address, duration)], indirect=True)
             metafunc.parametrize("folder", [folder], indirect=True)
 
-    if "instrument" in metafunc.fixturenames:
-        if metafunc.module.__name__ == "tests.test_instruments_rohde_schwarz":
-            metafunc.parametrize("instrument", [(p, "SGS100A") for p in platforms], indirect=True)
-        elif metafunc.module.__name__ == "tests.test_instruments_erasynth":
-            metafunc.parametrize("instrument", [(p, "ERA") for p in platforms], indirect=True)
-        elif metafunc.module.__name__ == "tests.test_instruments_qutech":
-            metafunc.parametrize("instrument", [(p, "SPI") for p in platforms], indirect=True)
+    if "platform" in metafunc.fixturenames:
+        platforms = [create_platform(name) for name in platform_names]
+        metafunc.parametrize("platforms", platforms)
 
-    elif "backend" in metafunc.fixturenames:
-        metafunc.parametrize("backend", platforms, indirect=True)
-
-    elif "platform_name" in metafunc.fixturenames:
+    # TODO: Change this to platform and use marker qpu to distinguish
+    elif "dummy_platform" in metafunc.fixturenames:
         set_platform_profile()
-        metafunc.parametrize("platform_name", platforms)
+        platforms = [create_platform(name) for name in dummy_platform_names]
+        metafunc.parametrize("dummy_platform", platforms)
+
+
+# TODO: Continue removing platform_name from ``qutech`` onwards

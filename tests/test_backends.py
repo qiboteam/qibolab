@@ -10,8 +10,8 @@ from qibolab.backends import QibolabBackend
 
 
 @pytest.fixture(scope="module")
-def backend(request):
-    backend = QibolabBackend(request.param)
+def backend(platform):
+    backend = QibolabBackend(platform)
     backend.platform.connect()
     backend.platform.setup()
     yield backend
@@ -115,6 +115,5 @@ def test_superposition_for_all_qubits(backend):
     np.testing.assert_allclose(probs.T[1], target_probs, atol=0.05)
 
 
-# TODO: test other platforms (qili, icarusq)
 # TODO: test_circuit_result_tensor
 # TODO: test_circuit_result_representation
