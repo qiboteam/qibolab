@@ -2,18 +2,19 @@ import numpy as np
 import pytest
 
 from qibolab.instruments.abstract import Instrument
-from qibolab.instruments.qblox.cluster import Cluster, Cluster_Settings
+from qibolab.instruments.qblox.cluster import Cluster
 from qibolab.instruments.qblox.cluster_qcm_rf import (
     ClusterQCM_RF,
     ClusterQCM_RF_Settings,
 )
-from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.instruments.qblox.port import (
     ClusterRF_OutputPort,
     ClusterRF_OutputPort_Settings,
 )
 from qibolab.pulses import DrivePulse, PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
+
+from .qblox_fixtures import cluster, controller
 
 O1_OUTPUT_CHANNEL = "L3-11"
 O1_ATTENUATION = 20
@@ -24,20 +25,6 @@ O2_OUTPUT_CHANNEL = "L3-12"
 O2_ATTENUATION = 20
 O2_LO_FREQUENCY = 5_995_371_914
 O2_GAIN = 0.655
-
-
-@pytest.fixture(scope="module")
-def controller(platform):
-    for instrument in platform.instruments:
-        if isinstance(instrument, QbloxController):
-            return instrument
-    pytest.skip(f"Skipping qblox test for {platform.name}.")
-
-
-@pytest.fixture(scope="module")
-def cluster(controller):
-    cluster = controller.cluster
-    return Cluster(cluster.name, cluster.address, Cluster_Settings())
 
 
 @pytest.fixture(scope="module")

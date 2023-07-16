@@ -2,18 +2,19 @@ import numpy as np
 import pytest
 
 from qibolab.instruments.abstract import Instrument
-from qibolab.instruments.qblox.cluster import Cluster, Cluster_Settings
+from qibolab.instruments.qblox.cluster import Cluster
 from qibolab.instruments.qblox.cluster_qcm_bb import (
     ClusterQCM_BB,
     ClusterQCM_BB_Settings,
 )
-from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.instruments.qblox.port import (
     ClusterBB_OutputPort,
     ClusterBB_OutputPort_Settings,
 )
 from qibolab.pulses import FluxPulse, PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
+
+from .qblox_fixtures import cluster, controller
 
 O1_OUTPUT_CHANNEL = "L4-1"
 O1_GAIN = 0.5
@@ -34,20 +35,6 @@ O4_OUTPUT_CHANNEL = "L4-4"
 O4_GAIN = 0.5
 O4_OFFSET = 0.5890
 O4_QUBIT = 4
-
-
-@pytest.fixture(scope="module")
-def controller(platform):
-    for instrument in platform.instruments:
-        if isinstance(instrument, QbloxController):
-            return instrument
-    pytest.skip(f"Skipping qblox test for {platform.name}.")
-
-
-@pytest.fixture(scope="module")
-def cluster(controller):
-    cluster = controller.cluster
-    return Cluster(cluster.name, cluster.address, Cluster_Settings())
 
 
 @pytest.fixture(scope="module")
