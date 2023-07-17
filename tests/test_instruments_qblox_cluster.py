@@ -7,7 +7,7 @@ from qibolab.instruments.qblox.cluster import (
     ReferenceClockSource,
 )
 
-from .qblox_fixtures import cluster
+from .qblox_fixtures import cluster, controller  # nopycln: import
 
 
 def test_ReferenceClockSource():
