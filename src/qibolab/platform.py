@@ -193,8 +193,9 @@ class Platform:
                     sweetspot = float(value)
                     self.qubits[qubit].sweetspot = sweetspot
                     self.settings["characterization"]["single_qubit"][qubit]["sweetspot"] = sweetspot
-                    # set sweetspot as the flux offset (IS THIS NEEDED?)
-                    self.qubits[qubit].flux.offset = sweetspot
+                    if self.qubits[qubit].flux is not None:
+                        # set sweetspot as the flux offset (IS THIS NEEDED?)
+                        self.qubits[qubit].flux.offset = sweetspot
 
                 # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
                 elif par == "drive_frequency":

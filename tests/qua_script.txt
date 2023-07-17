@@ -1,0 +1,250 @@
+
+# Single QUA script generated at 2023-07-17 16:35:43.887003
+# QUA library version: 1.1.1
+
+from qm.qua import *
+
+with program() as prog:
+    v1 = declare(int, )
+    v2 = declare(fixed, )
+    v3 = declare(fixed, )
+    v4 = declare(bool, )
+    wait((4+(0*((Cast.to_int(v2)+Cast.to_int(v3))+Cast.to_int(v4)))), "readout0")
+    with for_(v1,0,(v1<5000),(v1+1)):
+        align()
+        measure("ReadoutPulse(0, 2000, 0.005, 5_228_200_000, 0, Rectangular(), readout, 0)", "readout0", None, dual_demod.full("cos", "out1", "sin", "out2", v2), dual_demod.full("minus_sin", "out1", "cos", "out2", v3))
+        assign(v4, (((v2*0.23264490557139142)-(v3*0.9725617450381638))>0.4906))
+        wait(75000, )
+        r1 = declare_stream()
+        save(v4, r1)
+    with stream_processing():
+        r1.buffer(5000).save("ReadoutPulse(0, 2000, 0.005, 5_228_200_000, 0, Rectangular(), readout, 0)_shots")
+
+
+config = {
+    "version": 1,
+    "controllers": {
+        "con3": {
+            "analog_outputs": {
+                "9": {
+                    "offset": 0.0,
+                },
+                "10": {
+                    "offset": 0.0,
+                },
+            },
+            "digital_outputs": {
+                "1": {},
+            },
+            "analog_inputs": {
+                "1": {
+                    "offset": 0.0,
+                    "gain_db": 0,
+                },
+                "2": {
+                    "offset": 0.0,
+                    "gain_db": 0,
+                },
+            },
+        },
+    },
+    "elements": {
+        "readout0": {
+            "mixInputs": {
+                "I": ('con3', 9),
+                "Q": ('con3', 10),
+                "lo_frequency": 5000000000,
+                "mixer": "mixer_readout0",
+            },
+            "intermediate_frequency": 228200000,
+            "operations": {
+                "ReadoutPulse(40, 2000, 0.005, 5_228_200_000, 0, Rectangular(), readout, 0)": "ReadoutPulse(40, 2000, 0.005, 5_228_200_000, 0, Rectangular(), readout, 0)",
+                "ReadoutPulse(0, 2000, 0.005, 5_228_200_000, 0, Rectangular(), readout, 0)": "ReadoutPulse(0, 2000, 0.005, 5_228_200_000, 0, Rectangular(), readout, 0)",
+            },
+            "outputs": {
+                "out1": ('con3', 1),
+                "out2": ('con3', 2),
+            },
+            "time_of_flight": 280,
+            "smearing": 0,
+        },
+    },
+    "pulses": {
+        "ReadoutPulse(40, 2000, 0.005, 5_228_200_000, 0, Rectangular(), readout, 0)": {
+            "operation": "measurement",
+            "length": 2000,
+            "waveforms": {
+                "I": "constant_wf0.005",
+                "Q": "constant_wf0.005",
+            },
+            "integration_weights": {
+                "cos": "cosine_weights0",
+                "sin": "sine_weights0",
+                "minus_sin": "minus_sine_weights0",
+            },
+            "digital_marker": "ON",
+        },
+        "ReadoutPulse(0, 2000, 0.005, 5_228_200_000, 0, Rectangular(), readout, 0)": {
+            "operation": "measurement",
+            "length": 2000,
+            "waveforms": {
+                "I": "constant_wf0.005",
+                "Q": "constant_wf0.005",
+            },
+            "integration_weights": {
+                "cos": "cosine_weights0",
+                "sin": "sine_weights0",
+                "minus_sin": "minus_sine_weights0",
+            },
+            "digital_marker": "ON",
+        },
+    },
+    "waveforms": {
+        "constant_wf0.005": {
+            "type": "constant",
+            "sample": 0.005,
+        },
+    },
+    "digital_waveforms": {
+        "ON": {
+            "samples": [(1, 0)],
+        },
+    },
+    "integration_weights": {
+        "cosine_weights0": {
+            "cosine": [(0.23264490557139142, 2000)],
+            "sine": [(-0.9725617450381638, 2000)],
+        },
+        "sine_weights0": {
+            "cosine": [(0.9725617450381638, 2000)],
+            "sine": [(0.23264490557139142, 2000)],
+        },
+        "minus_sine_weights0": {
+            "cosine": [(-0.9725617450381638, 2000)],
+            "sine": [(-0.23264490557139142, 2000)],
+        },
+    },
+    "mixers": {
+        "mixer_readout0": [{'intermediate_frequency': 228200000, 'lo_frequency': 5000000000, 'correction': [1.0, 0.0, 0.0, 1.0]}],
+    },
+}
+
+loaded_config = {
+    "version": 1,
+    "controllers": {
+        "con3": {
+            "type": "opx1",
+            "analog_outputs": {
+                "9": {
+                    "offset": 0.0,
+                    "delay": 0,
+                    "shareable": False,
+                },
+                "10": {
+                    "offset": 0.0,
+                    "delay": 0,
+                    "shareable": False,
+                },
+            },
+            "analog_inputs": {
+                "1": {
+                    "offset": 0.0,
+                    "gain_db": 0,
+                    "shareable": False,
+                },
+                "2": {
+                    "offset": 0.0,
+                    "gain_db": 0,
+                    "shareable": False,
+                },
+            },
+            "digital_outputs": {
+                "1": {
+                    "shareable": False,
+                },
+            },
+        },
+    },
+    "oscillators": {},
+    "elements": {
+        "readout0": {
+            "digitalInputs": {},
+            "digitalOutputs": {},
+            "outputs": {
+                "out1": ('con3', 1),
+                "out2": ('con3', 2),
+            },
+            "time_of_flight": 280,
+            "smearing": 0,
+            "intermediate_frequency": 228200000.0,
+            "operations": {
+                "ReadoutPulse(40, 2000, 0.005, 5_228_200_000, 0, Rectangular(), readout, 0)": "ReadoutPulse(40, 2000, 0.005, 5_228_200_000, 0, Rectangular(), readout, 0)",
+                "ReadoutPulse(0, 2000, 0.005, 5_228_200_000, 0, Rectangular(), readout, 0)": "ReadoutPulse(0, 2000, 0.005, 5_228_200_000, 0, Rectangular(), readout, 0)",
+            },
+            "mixInputs": {
+                "I": ('con3', 9),
+                "Q": ('con3', 10),
+                "mixer": "mixer_readout0",
+                "lo_frequency": 5000000000.0,
+            },
+        },
+    },
+    "pulses": {
+        "ReadoutPulse(40, 2000, 0.005, 5_228_200_000, 0, Rectangular(), readout, 0)": {
+            "length": 2000,
+            "waveforms": {
+                "I": "constant_wf0.005",
+                "Q": "constant_wf0.005",
+            },
+            "digital_marker": "ON",
+            "integration_weights": {
+                "cos": "cosine_weights0",
+                "sin": "sine_weights0",
+                "minus_sin": "minus_sine_weights0",
+            },
+            "operation": "measurement",
+        },
+        "ReadoutPulse(0, 2000, 0.005, 5_228_200_000, 0, Rectangular(), readout, 0)": {
+            "length": 2000,
+            "waveforms": {
+                "I": "constant_wf0.005",
+                "Q": "constant_wf0.005",
+            },
+            "digital_marker": "ON",
+            "integration_weights": {
+                "cos": "cosine_weights0",
+                "sin": "sine_weights0",
+                "minus_sin": "minus_sine_weights0",
+            },
+            "operation": "measurement",
+        },
+    },
+    "waveforms": {
+        "constant_wf0.005": {
+            "sample": 0.005,
+            "type": "constant",
+        },
+    },
+    "digital_waveforms": {
+        "ON": {
+            "samples": [(1, 0)],
+        },
+    },
+    "integration_weights": {
+        "cosine_weights0": {
+            "cosine": [(0.23264490557139142, 2000)],
+            "sine": [(-0.9725617450381638, 2000)],
+        },
+        "sine_weights0": {
+            "cosine": [(0.9725617450381638, 2000)],
+            "sine": [(0.23264490557139142, 2000)],
+        },
+        "minus_sine_weights0": {
+            "cosine": [(-0.9725617450381638, 2000)],
+            "sine": [(-0.23264490557139142, 2000)],
+        },
+    },
+    "mixers": {
+        "mixer_readout0": [{'intermediate_frequency': 228200000.0, 'lo_frequency': 5000000000.0, 'correction': [1.0, 0.0, 0.0, 1.0]}],
+    },
+}

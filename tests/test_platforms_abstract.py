@@ -55,20 +55,20 @@ def test_abstractplatform_pickle(platform):
 def test_update(platform, par):
     new_values = np.ones(platform.nqubits)
     if "states" in par:
-        updates = {par: {i: [new_values[i], new_values[i]] for i in range(platform.nqubits)}}
+        updates = {par: {q: [new_values[i], new_values[i]] for i, q in enumerate(platform.qubits)}}
     else:
-        updates = {par: {i: new_values[i] for i in range(platform.nqubits)}}
+        updates = {par: {q: new_values[i] for i, q in enumerate(platform.qubits)}}
     platform.update(updates)
-    for i in range(platform.nqubits):
+    for i, qubit in platform.qubits.items():
         value = updates[par][i]
         if "frequency" in par:
             value *= 1e9
         if "states" in par:
             assert value == platform.settings["characterization"]["single_qubit"][i][par]
-            assert value == getattr(platform.qubits[i], par)
+            assert value == getattr(qubit, par)
         else:
             assert value == float(platform.settings["characterization"]["single_qubit"][i][par])
-            assert value == float(getattr(platform.qubits[i], par))
+            assert value == float(getattr(qubit, par))
 
 
 @pytest.fixture(scope="module")
@@ -98,7 +98,7 @@ def test_platform_execute_empty(connected_platform):
 def test_platform_execute_one_drive_pulse(connected_platform):
     # One drive pulse
     platform = connected_platform
-    qubit = next(iter(platform.qubits.values()))
+    qubit = next(iter(platform.qubits))
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
     platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
@@ -108,29 +108,27 @@ def test_platform_execute_one_drive_pulse(connected_platform):
 def test_multiqubitplatform_execute_one_long_drive_pulse(connected_platform):
     # Long duration
     platform = connected_platform
-    qubit = next(iter(platform.qubits.values()))
+    qubit = next(iter(platform.qubits))
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=8192 + 200))
-    with pytest.raises(NotImplementedError):
-        platform._execute_pulse_sequence(platform.qubits, sequence, ExecutionParameters(nshots=nshots))
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
 
 
 @pytest.mark.qpu
 def test_multiqubitplatform_execute_one_extralong_drive_pulse(connected_platform):
     # Extra Long duration
     platform = connected_platform
-    qubit = next(iter(platform.qubits.values()))
+    qubit = next(iter(platform.qubits))
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=2 * 8192 + 200))
-    with pytest.raises(NotImplementedError):
-        platform._execute_pulse_sequence(platform.qubits, sequence, ExecutionParameters(nshots=nshots))
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
 
 
 @pytest.mark.qpu
 def test_multiqubitplatform_execute_one_drive_one_readout(connected_platform):
     # One drive pulse and one readout pulse
     platform = connected_platform
-    qubit = next(iter(platform.qubits.values()))
+    qubit = next(iter(platform.qubits))
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
     sequence.add(platform.create_qubit_readout_pulse(qubit, start=200))
@@ -141,7 +139,7 @@ def test_multiqubitplatform_execute_one_drive_one_readout(connected_platform):
 def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout(connected_platform):
     # Multiple qubit drive pulses and one readout pulse
     platform = connected_platform
-    qubit = next(iter(platform.qubits.values()))
+    qubit = next(iter(platform.qubits))
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=204, duration=200))
@@ -156,7 +154,7 @@ def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout_no_spacing
 ):
     # Multiple qubit drive pulses and one readout pulse with no spacing between them
     platform = connected_platform
-    qubit = next(iter(platform.qubits.values()))
+    qubit = next(iter(platform.qubits))
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=200, duration=200))
@@ -171,7 +169,7 @@ def test_multiqubitplatform_execute_multiple_overlaping_drive_pulses_one_readout
 ):
     # Multiple overlapping qubit drive pulses and one readout pulse
     platform = connected_platform
-    qubit = next(iter(platform.qubits.values()))
+    qubit = next(iter(platform.qubits))
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=200, duration=200))
@@ -184,7 +182,7 @@ def test_multiqubitplatform_execute_multiple_overlaping_drive_pulses_one_readout
 def test_multiqubitplatform_execute_multiple_readout_pulses(connected_platform):
     # Multiple readout pulses
     platform = connected_platform
-    qubit = next(iter(platform.qubits.values()))
+    qubit = next(iter(platform.qubits))
     sequence = PulseSequence()
     qd_pulse1 = platform.create_qubit_drive_pulse(qubit, start=0, duration=200)
     ro_pulse1 = platform.create_qubit_readout_pulse(qubit, start=200)
