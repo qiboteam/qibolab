@@ -61,30 +61,30 @@ def test_channel_map_union_update():
 
 
 @pytest.fixture
-def qubit(platform):
+def first_qubit(platform):
     return next(iter(platform.qubits.values()))
 
 
-def test_platform_lo_drive_frequency(qubit):
-    qubit.drive.lo_frequency = 5.5e9
-    assert qubit.drive.lo_frequency == 5.5e9
+def test_platform_lo_drive_frequency(first_qubit):
+    first_qubit.drive.lo_frequency = 5.5e9
+    assert first_qubit.drive.lo_frequency == 5.5e9
 
 
-def test_platform_lo_readout_frequency(qubit):
-    qubit.readout.lo_frequency = 7e9
-    assert qubit.readout.lo_frequency == 7e9
+def test_platform_lo_readout_frequency(first_qubit):
+    first_qubit.readout.lo_frequency = 7e9
+    assert first_qubit.readout.lo_frequency == 7e9
 
 
-def test_platform_attenuation(qubit):
-    qubit.drive.attenuation = 10
-    assert qubit.drive.attenuation == 10
+def test_platform_attenuation(first_qubit):
+    first_qubit.drive.attenuation = 10
+    assert first_qubit.drive.attenuation == 10
 
 
-def test_platform_gain(qubit):
-    qubit.readout.gain = 0
-    assert qubit.readout.gain == 0
+def test_platform_gain(first_qubit):
+    first_qubit.readout.gain = 0
+    assert first_qubit.readout.gain == 0
 
 
-def test_platform_bias(qubit):
-    qubit.flux.offset = 0.05
-    assert qubit.flux.offset == 0.05
+def test_platform_bias(first_qubit):
+    first_qubit.flux.offset = 0.05
+    assert first_qubit.flux.offset == 0.05

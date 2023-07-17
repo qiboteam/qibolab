@@ -77,9 +77,17 @@ def pytest_generate_tests(metafunc):
             # use real platforms
             os.environ[PLATFORMS] = ORIGINAL_PLATFORMS
             platforms = [create_platform(name) for name in platform_names]
-            metafunc.parametrize("platform", platforms, scope="module")
         else:
             # use platforms under ``dummy_qrc`` folder in tests
             set_platform_profile()
             platforms = [create_platform(name) for name in dummy_platform_names]
+        if "qubit" in metafunc.fixturenames:
+            config = [
+                (platform, q)
+                for platform in platforms
+                for q, qubit in platform.qubits.items()
+                if qubit.drive is not None
+            ]
+            metafunc.parametrize("platform,qubit", config, scope="module")
+        else:
             metafunc.parametrize("platform", platforms, scope="module")

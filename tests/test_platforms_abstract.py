@@ -53,13 +53,14 @@ def test_abstractplatform_pickle(platform):
 )
 @pytest.mark.qpu
 def test_update(platform, par):
-    new_values = np.ones(platform.nqubits)
+    qubits = {q: qubit for q, qubit in platform.qubits.items() if qubit.readout is not None and qubit.drive is not None}
+    new_values = np.ones(len(qubits))
     if "states" in par:
-        updates = {par: {q: [new_values[i], new_values[i]] for i, q in enumerate(platform.qubits)}}
+        updates = {par: {q: [new_values[i], new_values[i]] for i, q in enumerate(qubits)}}
     else:
-        updates = {par: {q: new_values[i] for i, q in enumerate(platform.qubits)}}
+        updates = {par: {q: new_values[i] for i, q in enumerate(qubits)}}
     platform.update(updates)
-    for i, qubit in platform.qubits.items():
+    for i, qubit in qubits.items():
         value = updates[par][i]
         if "frequency" in par:
             value *= 1e9
@@ -105,6 +106,7 @@ def test_platform_execute_one_drive_pulse(connected_platform):
 
 
 @pytest.mark.qpu
+@pytest.mark.xfail(raises=NotImplementedError, reason="Qblox does not support long waveforms.")
 def test_multiqubitplatform_execute_one_long_drive_pulse(connected_platform):
     # Long duration
     platform = connected_platform
@@ -115,6 +117,7 @@ def test_multiqubitplatform_execute_one_long_drive_pulse(connected_platform):
 
 
 @pytest.mark.qpu
+@pytest.mark.xfail(raises=NotImplementedError, reason="Qblox does not support long waveforms.")
 def test_multiqubitplatform_execute_one_extralong_drive_pulse(connected_platform):
     # Extra Long duration
     platform = connected_platform
@@ -195,16 +198,10 @@ def test_multiqubitplatform_execute_multiple_readout_pulses(connected_platform):
     platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
 
 
-@pytest.fixture
-def qubits(connected_platform):
-    for qubit in connected_platform.qubits:
-        yield connected_platform, qubit
-
-
 @pytest.mark.qpu
 @pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
-def test_excited_state_probabilities_pulses(qubits):
-    platform, qubit = qubits
+def test_excited_state_probabilities_pulses(connected_platform, qubit):
+    platform = connected_platform
     backend = QibolabBackend(platform)
     qd_pulse = platform.create_RX_pulse(qubit)
     ro_pulse = platform.create_MZ_pulse(qubit, start=qd_pulse.duration)
@@ -222,8 +219,8 @@ def test_excited_state_probabilities_pulses(qubits):
 @pytest.mark.qpu
 @pytest.mark.parametrize("start_zero", [False, True])
 @pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
-def test_ground_state_probabilities_pulses(qubits, start_zero):
-    platform, qubit = qubits
+def test_ground_state_probabilities_pulses(connected_platform, qubit, start_zero):
+    platform = connected_platform
     backend = QibolabBackend(platform)
     if start_zero:
         ro_pulse = platform.create_MZ_pulse(qubit, start=0)
