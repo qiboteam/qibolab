@@ -5,7 +5,7 @@ import pytest
 
 from qibolab import PLATFORMS, create_platform
 
-ORIGINAL_PLATFORMS = os.environ.get(PLATFORMS)
+ORIGINAL_PLATFORMS = os.environ.get(PLATFORMS, "")
 
 
 def pytest_addoption(parser):
