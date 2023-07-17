@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from qibolab.instruments.rohde_schwarz import SGS100A
@@ -12,13 +13,14 @@ def instrument(platform):
 
 @pytest.mark.qpu
 def test_instruments_rohde_schwarz_init(instrument):
-    assert instrument.is_connected == True
+    instrument.connect()
+    assert instrument.is_connected
     assert instrument.device
-    assert instrument.data_folder == INSTRUMENTS_DATA_FOLDER / instrument.tmp_folder.name.split("/")[-1]
+    instrument.disconnect()
 
 
 @pytest.mark.qpu
-def test_instruments_rohde_schwarz_setup(platform):
+def test_instruments_rohde_schwarz_setup(instrument):
     instrument.connect()
     instrument.setup(frequency=5e9, power=0)
     assert instrument.frequency == 5e9
@@ -34,10 +36,12 @@ def set_and_test_parameter_values(instrument, parameter, values):
 
 @pytest.mark.qpu
 def test_instruments_rohde_schwarz_set_device_paramter(instrument):
+    instrument.connect()
     set_and_test_parameter_values(
         instrument, f"power", np.arange(-120, 0, 10)
     )  # Max power is 25dBm but to be safe testing only until 0dBm
     set_and_test_parameter_values(instrument, f"frequency", np.arange(1e6, 12750e6, 1e9))
+    instrument.disconnect()
     """   # TODO: add attitional paramter tests
     SGS100A:
         parameter            value

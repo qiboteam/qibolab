@@ -19,7 +19,7 @@ def test_instruments_qutech_init(spi):
 
 
 @pytest.mark.qpu
-def test_instruments_qutech_disconnect(instrument):
+def test_instruments_qutech_disconnect(spi):
     spi.connect()
     assert spi.is_connected == True
     spi.disconnect()
@@ -29,4 +29,4 @@ def test_instruments_qutech_disconnect(instrument):
 @pytest.mark.qpu
 def test_instruments_qutech_close(spi):
     spi.close()
-    assert instrument.is_connected == False
+    assert spi.is_connected == False

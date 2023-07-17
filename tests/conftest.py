@@ -5,6 +5,8 @@ import pytest
 
 from qibolab import PLATFORMS, create_platform
 
+ORIGINAL_PLATFORMS = os.environ.get(PLATFORMS)
+
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -48,7 +50,7 @@ def dummy_qrc():
 
 
 def get_instrument(platform, instrument_type):
-    for instrument in platform.instruments.values():
+    for instrument in platform.instruments:
         if isinstance(instrument, instrument_type):
             return instrument
     pytest.skip(f"Skipping {instrument_type.__name__} test for {platform.name}.")
@@ -73,6 +75,7 @@ def pytest_generate_tests(metafunc):
         markers = {marker.name for marker in metafunc.definition.iter_markers()}
         if "qpu" in markers:
             # use real platforms
+            os.environ[PLATFORMS] = ORIGINAL_PLATFORMS
             platforms = [create_platform(name) for name in platform_names]
             metafunc.parametrize("platform", platforms, scope="module")
         else:

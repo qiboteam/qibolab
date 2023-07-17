@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from qibolab.instruments.erasynth import ERA
@@ -12,9 +13,10 @@ def era(platform):
 
 @pytest.mark.qpu
 def test_instruments_erasynth_init(era):
+    era.connect()
     assert era.is_connected == True
     assert era.device
-    assert era.data_folder == INSTRUMENTS_DATA_FOLDER / era.tmp_folder.name.split("/")[-1]
+    era.disconnect()
 
 
 @pytest.mark.qpu
@@ -34,10 +36,12 @@ def set_and_test_parameter_values(instrument, parameter, values):
 
 @pytest.mark.qpu
 def test_instruments_erasynth_set_device_paramter(era):
+    era.connect()
     set_and_test_parameter_values(
         era, f"power", np.arange(-60, 0, 10)
     )  # Max power is 25dBm but to be safe testing only until 0dBm
     set_and_test_parameter_values(era, f"frequency", np.arange(250e3, 15e9, 1e9))
+    era.disconnect()
 
 
 @pytest.mark.qpu
