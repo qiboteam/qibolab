@@ -3,6 +3,7 @@ from qblox_instruments.qcodes_drivers.sequencer import Sequencer as QbloxSequenc
 
 from qibolab.instruments.qblox.q1asm import Program
 from qibolab.pulses import Pulse, PulseSequence, PulseType
+from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 
 class WaveformsBuffer:
@@ -20,12 +21,17 @@ class WaveformsBuffer:
 
         pass
 
+    class NotEnoughMemoryForBaking(Exception):
+        """An error raised when there is not enough memory left to bake pulses."""
+
+        pass
+
     def __init__(self):
         """Initialises the buffer with an empty list of unique waveforms."""
         self.unique_waveforms: list = []  # Waveform
         self.available_memory: int = WaveformsBuffer.SIZE
 
-    def add_waveforms(self, pulse: Pulse, hardware_mod_en: bool):
+    def add_waveforms(self, pulse: Pulse, hardware_mod_en: bool, sweepers: list[Sweeper]):
         """Adds a pair of i and q waveforms to the list of unique waveforms.
 
         Waveforms are added to the list if they were not there before.
@@ -38,29 +44,50 @@ class WaveformsBuffer:
         Raises:
             NotEnoughMemory: If the memory needed to store the waveforms in more than the memory avalible.
         """
-        if hardware_mod_en:
-            waveform_i, waveform_q = pulse.envelope_waveforms
-        else:
-            waveform_i, waveform_q = pulse.modulated_waveforms
+        pulse_copy = pulse.copy()
+        for sweeper in sweepers:
+            if sweeper.pulses and sweeper.parameter == Parameter.amplitude:
+                if pulse in sweeper.pulses:
+                    pulse_copy.amplitude = 1
 
-        pulse.waveform_i = waveform_i
-        pulse.waveform_q = waveform_q
+        baking_required = False
+        for sweeper in sweepers:
+            if sweeper.pulses and sweeper.parameter == Parameter.duration:
+                if pulse in sweeper.pulses:
+                    baking_required = True
+                    if sweeper.type == SweeperType.ABSOLUTE:
+                        values = sweeper.values
+                    elif sweeper.type == SweeperType.OFFSET:
+                        values = sweeper.values + pulse.duration
+                    elif sweeper.type == SweeperType.OFFSET:
+                        values = sweeper.values * pulse.duration
 
-        if waveform_i not in self.unique_waveforms or waveform_q not in self.unique_waveforms:
-            memory_needed = 0
-            if not waveform_i in self.unique_waveforms:
-                memory_needed += len(waveform_i)
-            if not waveform_q in self.unique_waveforms:
-                memory_needed += len(waveform_q)
-
-            if self.available_memory >= memory_needed:
-                if not waveform_i in self.unique_waveforms:
-                    self.unique_waveforms.append(waveform_i)
-                if not waveform_q in self.unique_waveforms:
-                    self.unique_waveforms.append(waveform_q)
-                self.available_memory -= memory_needed
+        if not baking_required:
+            if hardware_mod_en:
+                waveform_i, waveform_q = pulse_copy.envelope_waveforms
             else:
-                raise WaveformsBuffer.NotEnoughMemory
+                waveform_i, waveform_q = pulse_copy.modulated_waveforms
+
+            pulse.waveform_i = waveform_i
+            pulse.waveform_q = waveform_q
+
+            if waveform_i not in self.unique_waveforms or waveform_q not in self.unique_waveforms:
+                memory_needed = 0
+                if not waveform_i in self.unique_waveforms:
+                    memory_needed += len(waveform_i)
+                if not waveform_q in self.unique_waveforms:
+                    memory_needed += len(waveform_q)
+
+                if self.available_memory >= memory_needed:
+                    if not waveform_i in self.unique_waveforms:
+                        self.unique_waveforms.append(waveform_i)
+                    if not waveform_q in self.unique_waveforms:
+                        self.unique_waveforms.append(waveform_q)
+                    self.available_memory -= memory_needed
+                else:
+                    raise WaveformsBuffer.NotEnoughMemory
+        else:
+            pulse.idx_range = self.bake_pulse_waveforms(pulse_copy, values, hardware_mod_en)
 
     def bake_pulse_waveforms(
         self, pulse: Pulse, values: list(), hardware_mod_en: bool
@@ -90,7 +117,7 @@ class WaveformsBuffer:
         """
         # In order to generate waveforms for each duration value, the pulse will need to be modified.
         # To avoid any conflicts, make a copy of the pulse first.
-        p = pulse.copy()
+        pulse_copy = pulse.copy()
 
         # there may be other waveforms stored already, set first index as the next available
         first_idx = len(self.unique_waveforms)
@@ -100,11 +127,11 @@ class WaveformsBuffer:
             idx_range = np.arange(first_idx, first_idx + len(values), 1)
 
             for duration in values:
-                p.duration = duration
+                pulse_copy.duration = duration
                 if hardware_mod_en:
-                    waveform = p.envelope_waveform_i
+                    waveform = pulse_copy.envelope_waveform_i
                 else:
-                    waveform = p.modulated_waveform_i
+                    waveform = pulse_copy.modulated_waveform_i
 
                 padded_duration = int(np.ceil(duration / 4)) * 4
                 memory_needed = padded_duration
@@ -115,17 +142,17 @@ class WaveformsBuffer:
                     self.unique_waveforms.append(waveform)
                     self.available_memory -= memory_needed
                 else:
-                    raise WaveformsBuffer.NotEnoughMemory
+                    raise WaveformsBuffer.NotEnoughMemoryForBaking
         else:
             # for any other pulse type, store both i and q waveforms
             idx_range = np.arange(first_idx, first_idx + len(values) * 2, 2)
 
             for duration in values:
-                p.duration = duration
+                pulse_copy.duration = duration
                 if hardware_mod_en:
-                    waveform_i, waveform_q = p.envelope_waveforms
+                    waveform_i, waveform_q = pulse_copy.envelope_waveforms
                 else:
-                    waveform_i, waveform_q = p.modulated_waveforms
+                    waveform_i, waveform_q = pulse_copy.modulated_waveforms
 
                 padded_duration = int(np.ceil(duration / 4)) * 4
                 memory_needed = padded_duration * 2
@@ -138,7 +165,7 @@ class WaveformsBuffer:
                     self.unique_waveforms.append(waveform_q)
                     self.available_memory -= memory_needed
                 else:
-                    raise WaveformsBuffer.NotEnoughMemory
+                    raise WaveformsBuffer.NotEnoughMemoryForBaking
 
         return idx_range
 

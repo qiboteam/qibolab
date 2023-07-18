@@ -550,7 +550,7 @@ class ClusterQRM_RF(Instrument):
                     pulse: Pulse = pulses_to_be_processed[0]
                     # attempt to save the waveforms to the sequencer waveforms buffer
                     try:
-                        sequencer.waveforms_buffer.add_waveforms(pulse, self.ports[port].hardware_mod_en)
+                        sequencer.waveforms_buffer.add_waveforms(pulse, self.ports[port].hardware_mod_en, sweepers)
                         sequencer.pulses.add(pulse)
                         pulses_to_be_processed.remove(pulse)
 
@@ -622,25 +622,23 @@ class ClusterQRM_RF(Instrument):
                                 for pulse in pulses:
                                     if pulse in sweeper.pulses:
                                         reference_value = pulse.amplitude  # uses the amplitude of the first pulse
-                                        pulse.amplitude = 1
                             if sweeper.parameter == Parameter.duration and pulse in sweeper.pulses:
                                 # for duration sweepers bake waveforms
-                                idx_range = sequencer.waveforms_buffer.bake_pulse_waveforms(
-                                    pulse, sweeper.values, self.ports[port].hardware_mod_en
-                                )
-                                reference_value = idx_range
-
-                            # create QbloxSweepers and attach them to qibolab sweeper
-                            if sweeper.type == SweeperType.OFFSET and reference_value:
-                                sweeper.qs = QbloxSweeper.from_sweeper(
-                                    program=program, sweeper=sweeper, add_to=reference_value
-                                )
-                            elif sweeper.type == SweeperType.FACTOR and reference_value:
-                                sweeper.qs = QbloxSweeper.from_sweeper(
-                                    program=program, sweeper=sweeper, multiply_to=reference_value
+                                sweeper.qs = QbloxSweeper(
+                                    program=program, type=QbloxSweeperType.duration, rel_values=pulse.idx_range
                                 )
                             else:
-                                sweeper.qs = QbloxSweeper.from_sweeper(program=program, sweeper=sweeper)
+                                # create QbloxSweepers and attach them to qibolab sweeper
+                                if sweeper.type == SweeperType.OFFSET and reference_value:
+                                    sweeper.qs = QbloxSweeper.from_sweeper(
+                                        program=program, sweeper=sweeper, add_to=reference_value
+                                    )
+                                elif sweeper.type == SweeperType.FACTOR and reference_value:
+                                    sweeper.qs = QbloxSweeper.from_sweeper(
+                                        program=program, sweeper=sweeper, multiply_to=reference_value
+                                    )
+                                else:
+                                    sweeper.qs = QbloxSweeper.from_sweeper(program=program, sweeper=sweeper)
 
                             # finally attach QbloxSweepers to the pulses being swept
                             sweeper.qs.update_parameters = True
@@ -865,11 +863,6 @@ class ClusterQRM_RF(Instrument):
 
                 # wrap pulses block in sweepers loop blocks
                 for sweeper in sweepers:
-                    # if we wanted to make any of these sweepers relative:
-                    # Parameter.bias: sequencer.qubit in [_.name for _ in sweeper.qubits] # + self.ports[port].offset
-                    # Parameter.amplitude: sequencer.pulses[0] in sweeper.pulses: # + self.ports[port].gain
-                    # Parameter.frequency: sequencer.pulses[0] in sweeper.pulses # + self.get_if(sequencer.pulses[0])
-
                     body_block = sweeper.qs.block(inner_block=body_block)
 
                 nshots_block: Block = loop_block(
