@@ -192,13 +192,13 @@ class QbloxController(Controller):
                     for pulse in port_pulses:
                         pulse._if = int(pulse.frequency - self.modules[name].ports[port].lo_frequency)
 
-                #  ask each module to generate waveforms & program and upload them to the device
-                self.modules[name].process_pulse_sequence(
-                    qubits, module_pulses[name], navgs, nshots, repetition_duration, sweepers
-                )
+            #  ask each module to generate waveforms & program and upload them to the device
+            self.modules[name].process_pulse_sequence(
+                qubits, module_pulses[name], navgs, nshots, repetition_duration, sweepers
+            )
 
-                # log.info(f"{self.modules[name]}: Uploading pulse sequence")
-                self.modules[name].upload()
+            # log.info(f"{self.modules[name]}: Uploading pulse sequence")
+            self.modules[name].upload()
 
         # play the sequence or sweep
         for name in self.modules:
@@ -453,21 +453,21 @@ class QbloxController(Controller):
                             f"Real time sweeper execution time: {int(execution_time)//60}m {int(execution_time) % 60}s"
                         )
 
-                        for sweeper in sweepers:
-                            if sweeper.parameter is Parameter.gain:
-                                for pulse in sweeper.pulses:
-                                    # qblox has an external and an internal gains
-                                    # when sweeping the internal, set the external to 1
-                                    # TODO check if it needs to be restored after execution
-                                    if pulse.type == PulseType.READOUT:
-                                        qubits[pulse.qubit].readout.gain = 1
-                                    elif pulse.type == PulseType.DRIVE:
-                                        qubits[pulse.qubit].drive.gain = 1
+                        # for sweeper in sweepers:
+                        #     if sweeper.parameter is Parameter.amplitude:
+                        #         # qblox cannot sweep amplitude in real time, but sweeping gain is quivalent
+                        #         for pulse in sweeper.pulses:
+                        #             pulse.amplitude = 1
 
-                            elif sweeper.parameter is Parameter.amplitude:
-                                # qblox cannot sweep amplitude in real time, but sweeping gain is quivalent
-                                for pulse in sweeper.pulses:
-                                    pulse.amplitude = 1
+                        #     elif sweeper.parameter is Parameter.gain:
+                        #         for pulse in sweeper.pulses:
+                        #             # qblox has an external and an internal gains
+                        #             # when sweeping the internal, set the external to 1
+                        #             # TODO check if it needs to be restored after execution
+                        #             if pulse.type == PulseType.READOUT:
+                        #                 qubits[pulse.qubit].readout.gain = 1
+                        #             elif pulse.type == PulseType.DRIVE:
+                        #                 qubits[pulse.qubit].drive.gain = 1
 
                         result = self._execute_pulse_sequence(qubits, sequence, options, sweepers)
                         for pulse in sequence.ro_pulses:
