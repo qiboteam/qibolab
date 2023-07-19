@@ -221,7 +221,8 @@ def test_qmopx_register_pulse(dummy_qrc, pulse_type, qubit):
             },
         }
 
-    opx.config.register_pulse(platform.qubits[qubit], pulse, opx.time_of_flight, opx.smearing)
+    opx.config.register_element(platform.qubits[qubit], pulse, opx.time_of_flight, opx.smearing)
+    opx.config.register_pulse(platform.qubits[qubit], pulse)
     assert opx.config.pulses[pulse.serial] == target_pulse
     assert target_pulse["waveforms"]["I"] in opx.config.waveforms
     assert target_pulse["waveforms"]["Q"] in opx.config.waveforms
@@ -238,8 +239,8 @@ def test_qmopx_register_flux_pulse(dummy_qrc):
         "length": pulse.duration,
         "waveforms": {"single": "constant_wf0.005"},
     }
-
-    opx.config.register_pulse(platform.qubits[qubit], pulse, opx.time_of_flight, opx.smearing)
+    opx.config.register_element(platform.qubits[qubit], pulse)
+    opx.config.register_pulse(platform.qubits[qubit], pulse)
     assert opx.config.pulses[pulse.serial] == target_pulse
     assert target_pulse["waveforms"]["single"] in opx.config.waveforms
     assert opx.config.elements[f"flux{qubit}"]["operations"][pulse.serial] == pulse.serial

@@ -129,7 +129,7 @@ class QMOPX(Controller):
             if qubit.flux:
                 self.config.register_flux_element(qubit)
 
-        qmsequence = Sequence.create(qubits, sequence, self.config, self.time_of_flight, self.smearing)
+        qmsequence = Sequence.create(qubits, sequence, sweepers, self.config, self.time_of_flight, self.smearing)
         # play pulses using QUA
         with qua.program() as experiment:
             n = declare(int)
