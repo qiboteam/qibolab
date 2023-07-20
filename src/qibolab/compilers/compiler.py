@@ -5,13 +5,13 @@ from qibo import gates
 from qibo.config import raise_error
 
 from qibolab.compilers.default import (
+    align_rule,
     cz_rule,
     identity_rule,
     measurement_rule,
     rz_rule,
     u3_rule,
     z_rule,
-    align_rule,
 )
 from qibolab.pulses import PulseSequence, ReadoutPulse
 
