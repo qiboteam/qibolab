@@ -11,6 +11,7 @@ from qibolab.compilers.default import (
     rz_rule,
     u3_rule,
     z_rule,
+    align_rule,
 )
 from qibolab.pulses import PulseSequence, ReadoutPulse
 
@@ -47,6 +48,7 @@ class Compiler:
                 gates.U3: u3_rule,
                 gates.CZ: cz_rule,
                 gates.M: measurement_rule,
+                gates.Align: align_rule,
             }
         )
 
