@@ -4,6 +4,8 @@ import pytest
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.instruments.zhinst import ZhPulse, ZhSweeperLine
 from qibolab.pulses import (
+    IIR,
+    SNZ,
     Drag,
     FluxPulse,
     Gaussian,
@@ -15,7 +17,7 @@ from qibolab.pulses import (
 from qibolab.sweeper import Parameter, Sweeper
 
 
-@pytest.mark.parametrize("shape", ["Rectangular", "Gaussian", "GaussianSquare", "Drag"])
+@pytest.mark.parametrize("shape", ["Rectangular", "Gaussian", "GaussianSquare", "Drag", "SNZ", "IIR"])
 def test_zhpulse(shape):
     if shape == "Rectangular":
         pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
@@ -25,10 +27,17 @@ def test_zhpulse(shape):
         pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Gaussian(5), "ch0", qubit=0)
     if shape == "Drag":
         pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Drag(5, 0.4), "ch0", qubit=0)
+    if shape == "SNZ":
+        pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, SNZ(10, 0.4), "ch0", qubit=0)
+    if shape == "IIR":
+        pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, IIR([10, 1], [0.4, 1], target=Gaussian(5)), "ch0", qubit=0)
 
     zhpulse = ZhPulse(pulse)
     assert zhpulse.pulse.serial == pulse.serial
-    assert zhpulse.zhpulse.length == 40e-9
+    if shape == "SNZ" or shape == "IIR":
+        assert len(zhpulse.zhpulse.samples) == 40 / 1e9 * 1e9  # * 2e9 When pulses stop hardcoding SamplingRate
+    else:
+        assert zhpulse.zhpulse.length == 40e-9
 
 
 @pytest.mark.parametrize("parameter", [Parameter.bias, Parameter.start])
@@ -291,7 +300,8 @@ def test_experiment_sweep_2d_general(dummy_qrc, parameter1, parameter2):
 
     sweepers = []
     if parameter1 in SweeperParameter:
-        sweepers.append(Sweeper(parameter1, parameter_range_1, pulses=[ro_pulses[qubit]]))
+        if parameter1 is not Parameter.start:
+            sweepers.append(Sweeper(parameter1, parameter_range_1, pulses=[ro_pulses[qubit]]))
     if parameter2 in SweeperParameter:
         if parameter2 is Parameter.amplitude:
             if parameter1 is not Parameter.amplitude:
