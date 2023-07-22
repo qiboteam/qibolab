@@ -78,14 +78,13 @@ class RFSoC(Controller):
         """Empty deprecated method."""
 
     def _execute_pulse_sequence(
-        self, sequence: PulseSequence, qubits: dict[int, Qubit], average: bool, opcode: rfsoc.OperationCode
+        self, sequence: PulseSequence, qubits: dict[int, Qubit], opcode: rfsoc.OperationCode
     ) -> tuple[list, list]:
         """Prepare the commands dictionary to send to the qibosoq server.
 
         Args:
             sequence (`qibolab.pulses.PulseSequence`): arbitrary PulseSequence object to execute
             qubits: list of qubits (`qibolab.platforms.abstract.Qubit`) of the platform in the form of a dictionary
-            average: if True returns averaged results, otherwise single shots
             opcode: can be `rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE` or `rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE_RAW`
         Returns:
             Lists of I and Q value measured
@@ -95,7 +94,6 @@ class RFSoC(Controller):
             "cfg": asdict(self.cfg),
             "sequence": convert(sequence, qubits),
             "qubits": [asdict(convert(qubits[idx])) for idx in qubits],
-            "average": average,
         }
         return client.connect(server_commands, self.host, self.port)
 
@@ -104,7 +102,6 @@ class RFSoC(Controller):
         sequence: PulseSequence,
         qubits: dict[int, Qubit],
         sweepers: list[rfsoc.Sweeper],
-        average: bool,
     ) -> tuple[list, list]:
         """Prepare the commands dictionary to send to the qibosoq server.
 
@@ -112,7 +109,6 @@ class RFSoC(Controller):
             sequence (`qibolab.pulses.PulseSequence`): arbitrary PulseSequence object to execute
             qubits: list of qubits (`qibolab.platforms.abstract.Qubit`) of the platform in the form of a dictionary
             sweepers: list of `qibosoq.abstract.Sweeper` objects
-            average: if True returns averaged results, otherwise single shots
         Returns:
             Lists of I and Q value measured
         """
@@ -124,7 +120,6 @@ class RFSoC(Controller):
             "sequence": convert(sequence, qubits),
             "qubits": [asdict(convert(qubits[idx])) for idx in qubits],
             "sweepers": [asdict(sweeper) for sweeper in sweepers],
-            "average": average,
         }
         return client.connect(server_commands, self.host, self.port)
 
@@ -156,15 +151,15 @@ class RFSoC(Controller):
         self.update_cfg(execution_parameters)
 
         if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
-            average = False
+            self.cfg.average = False
         else:
-            average = execution_parameters.averaging_mode is AveragingMode.CYCLIC
+            self.cfg.average = execution_parameters.averaging_mode is AveragingMode.CYCLIC
 
         if execution_parameters.acquisition_type is AcquisitionType.RAW:
             opcode = rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE_RAW
         else:
             opcode = rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE
-        toti, totq = self._execute_pulse_sequence(sequence, qubits, average, opcode)
+        toti, totq = self._execute_pulse_sequence(sequence, qubits, opcode)
 
         results = {}
         probed_qubits = np.unique([p.qubit for p in sequence.ro_pulses])
@@ -253,7 +248,6 @@ class RFSoC(Controller):
         sequence: PulseSequence,
         or_sequence: PulseSequence,
         *sweepers: rfsoc.Sweeper,
-        average: bool,
         execution_parameters: ExecutionParameters,
     ) -> dict[str, Union[IntegratedResults, SampleResults]]:
         """Execute a sweep of an arbitrary number of Sweepers via recursion.
@@ -267,7 +261,6 @@ class RFSoC(Controller):
             or_sequence (`qibolab.pulses.PulseSequence`): Reference to original
                     sequence to not modify.
             *sweepers (`qibolab.Sweeper`): Sweeper objects.
-            average (bool): if True averages on nshots
             execution_parameters (`qibolab.ExecutionParameters`): Parameters (nshots,
                                                         relaxation_time,
                                                         fast_reset,
@@ -284,7 +277,7 @@ class RFSoC(Controller):
             return self.play_sequence_in_sweep_recursion(qubits, sequence, or_sequence, execution_parameters)
 
         if not self.get_if_python_sweep(sequence, *sweepers):
-            toti, totq = self._execute_sweeps(sequence, qubits, sweepers, average)
+            toti, totq = self._execute_sweeps(sequence, qubits, sweepers)
             res = self.convert_sweep_results(or_sequence, qubits, toti, totq, execution_parameters)
             return res
 
@@ -317,7 +310,7 @@ class RFSoC(Controller):
                     sequence[kdx].start_delay = values[jdx][idx]
 
             res = self.recursive_python_sweep(
-                qubits, sequence, or_sequence, *sweepers[1:], average=average, execution_parameters=execution_parameters
+                qubits, sequence, or_sequence, *sweepers[1:], execution_parameters=execution_parameters
             )
             results = self.merge_sweep_results(results, res)
         return results  # already in the right format
@@ -418,12 +411,7 @@ class RFSoC(Controller):
                 i_vals = np.array(toti[k][i])
                 q_vals = np.array(totq[k][i])
 
-                if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
-                    average = False
-                else:
-                    average = execution_parameters.averaging_mode is AveragingMode.CYCLIC
-
-                if not average:
+                if not self.cfg.average:
                     i_vals = np.reshape(i_vals, (self.cfg.reps, *i_vals.shape[:-1]))
                     q_vals = np.reshape(q_vals, (self.cfg.reps, *q_vals.shape[:-1]))
 
@@ -469,9 +457,9 @@ class RFSoC(Controller):
         self.update_cfg(execution_parameters)
 
         if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
-            average = False
+            self.cfg.average = False
         else:
-            average = execution_parameters.averaging_mode is AveragingMode.CYCLIC
+            self.cfg.average = execution_parameters.averaging_mode is AveragingMode.CYCLIC
 
         rfsoc_sweepers = [convert(sweep, sequence, qubits) for sweep in sweepers]
 
@@ -486,7 +474,6 @@ class RFSoC(Controller):
             sweepsequence,
             sequence.ro_pulses,
             *rfsoc_sweepers,
-            average=average,
             execution_parameters=execution_parameters,
         )
 

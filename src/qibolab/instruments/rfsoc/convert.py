@@ -21,12 +21,14 @@ def replace_pulse_shape(rfsoc_pulse: rfsoc_pulses.Pulse, shape: PulseShape) -> r
             **asdict(rfsoc_pulse), i_values=shape.envelope_waveform_i, q_values=shape.envelope_waveform_q
         )
         return new_pulse
-    new_pulse = getattr(rfsoc_pulses, shape.name)(**asdict(rfsoc_pulse))
-    if shape.name in {"Gaussian", "Drag"}:
-        new_pulse.rel_sigma = shape.rel_sigma
-        if shape.name == "Drag":
-            new_pulse.beta = shape.beta
-    return new_pulse
+    new_pulse_cls = getattr(rfsoc_pulses, shape.name)  # (**asdict(rfsoc_pulse))
+    if shape.name == "Rectangular":
+        return new_pulse_cls(**asdict(rfsoc_pulse))
+    if shape.name == "Gaussian":
+        return new_pulse_cls(**asdict(rfsoc_pulse), rel_sigma=shape.rel_sigma)
+    if shape.name == "Drag":
+        return new_pulse_cls(**asdict(rfsoc_pulse), rel_sigma=shape.rel_sigma, beta=shape.beta)
+    raise NotImplementedError(f"Shape {shape} not supported.")
 
 
 def pulse_lo_frequency(pulse: Pulse, qubits: dict[int, Qubit]) -> int:
