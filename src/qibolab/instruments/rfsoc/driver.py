@@ -9,6 +9,7 @@ from dataclasses import asdict, dataclass
 from typing import Union
 
 import numpy as np
+import numpy.typing as npt
 import qibosoq.components.base as rfsoc
 from qibosoq import client
 
@@ -203,10 +204,12 @@ class RFSoC(Controller):
         if execution_parameters.relaxation_time is not None:
             self.cfg.repetition_duration = execution_parameters.relaxation_time * NS_TO_US
 
-    def classify_shots(self, i_values: list[float], q_values: list[float], qubit: Qubit) -> list[float]:
+    def classify_shots(
+        self, i_values: npt.NDArray[np.float64], q_values: npt.NDArray[np.float64], qubit: Qubit
+    ) -> npt.NDArray[np.float64]:
         """Classify IQ values using qubit threshold and rotation_angle if available in runcard."""
         if qubit.iq_angle is None or qubit.threshold is None:
-            return None
+            raise ValueError("Classification parameters were not provided")
         angle = qubit.iq_angle
         threshold = qubit.threshold
 
@@ -218,7 +221,7 @@ class RFSoC(Controller):
 
     def play_sequence_in_sweep_recursion(
         self,
-        qubits: list[Qubit],
+        qubits: dict[int, Qubit],
         sequence: PulseSequence,
         or_sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
@@ -244,7 +247,7 @@ class RFSoC(Controller):
 
     def recursive_python_sweep(
         self,
-        qubits: list[Qubit],
+        qubits: dict[int, Qubit],
         sequence: PulseSequence,
         or_sequence: PulseSequence,
         *sweepers: rfsoc.Sweeper,
@@ -289,7 +292,7 @@ class RFSoC(Controller):
                 val = val.astype(int)
             values.append(val)
 
-        results = {}
+        results: dict[str, Union[IntegratedResults, SampleResults]] = {}
         for idx in range(sweeper.expts):
             # update values
             for jdx, kdx in enumerate(sweeper.indexes):
@@ -380,9 +383,9 @@ class RFSoC(Controller):
     def convert_sweep_results(
         self,
         original_ro: PulseSequence,
-        qubits: list[Qubit],
-        toti: list[float],
-        totq: list[float],
+        qubits: dict[int, Qubit],
+        toti: list[list[list[float]]],
+        totq: list[list[list[float]]],
         execution_parameters: ExecutionParameters,
     ) -> dict[str, Union[IntegratedResults, SampleResults]]:
         """Convert sweep res to qibolab dict res.

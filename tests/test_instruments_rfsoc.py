@@ -380,7 +380,8 @@ def test_classify_shots(dummy_qrc):
     target_shots = np.array([1, 1, 0, 0, 0, 0, 0])
 
     assert (target_shots == shots).all()
-    assert instrument.classify_shots(i_val, q_val, qubit1) is None
+    with pytest.raises(ValueError):
+        instrument.classify_shots(i_val, q_val, qubit1)
 
 
 def test_merge_sweep_results(dummy_qrc):
