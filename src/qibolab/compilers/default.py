@@ -70,12 +70,11 @@ def measurement_rule(gate, platform):
 
 def align_rule(gate, platform):
     """Align gate to hold/delay execution of the circuit on the specified qubits."""
-    delay = gate.init_args[-1]
     sequence = PulseSequence()
-    if delay == 0:
+    if gate.delay == 0:
         return sequence, {}
     for qubit in gate.target_qubits:
-        delay_pulse = platform.create_qubit_drive_pulse(qubit, start=0, duration=delay)
+        delay_pulse = platform.create_qubit_drive_pulse(qubit, start=0, duration=gate.delay)
         delay_pulse.amplitude = delay_pulse.frequency = 0
         sequence.add(delay_pulse)
     return sequence, {}
