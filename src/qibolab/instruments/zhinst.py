@@ -503,21 +503,17 @@ class Zurich(Controller):
                 continue
             q = qubit.name  # pylint: disable=C0103
             if len(self.sequence[f"readout{q}"]) != 0:
-                for i in range(len(self.sequence[f"readout{q}"])):
+                for i, ropulse in enumerate(self.sequence[f"readout{q}"]):
                     exp_res = self.results.get_data(f"sequence{q}_{i}")
                     if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                         data = (
                             np.array([exp_res]) if options.averaging_mode is AveragingMode.CYCLIC else np.array(exp_res)
                         )
-                        results[self.sequence[f"readout{q}"][i].pulse.serial] = options.results_type(data)
-                        results[self.sequence[f"readout{q}"][i].pulse.qubit] = options.results_type(data)
+                        results[ropulse.pulse.serial] = options.results_type(data)
+                        results[ropulse.pulse.qubit] = options.results_type(data)
                     else:
-                        results[self.sequence[f"readout{q}"][i].pulse.serial] = options.results_type(
-                            data=np.array(exp_res)
-                        )
-                        results[self.sequence[f"readout{q}"][i].pulse.qubit] = options.results_type(
-                            data=np.array(exp_res)
-                        )
+                        results[ropulse.pulse.serial] = options.results_type(data=np.array(exp_res))
+                        results[ropulse.pulse.qubit] = options.results_type(data=np.array(exp_res))
 
         exp_dimensions = list(np.array(exp_res).shape)
         if dimensions != exp_dimensions:
@@ -827,16 +823,13 @@ class Zurich(Controller):
             q = qubit.name  # pylint: disable=C0103
             iq_angle = qubit.iq_angle
             if len(self.sequence[f"readout{q}"]) != 0:
-                i = 0
-                for pulse in self.sequence[f"readout{q}"]:
+                for i, pulse in enumerate(self.sequence[f"readout{q}"]):
                     readout_schedule[i].append(pulse)
                     qubit_readout_schedule[i].append(q)
                     iq_angle_readout_schedule[i].append(iq_angle)
-                    i += 1
 
-        i = 0
-        for pulses, qubits, iq_angles in zip(
-            readout_schedule.values(), qubit_readout_schedule.values(), iq_angle_readout_schedule.values()
+        for i, (pulses, qubits, iq_angles) in enumerate(
+            zip(readout_schedule.values(), qubit_readout_schedule.values(), iq_angle_readout_schedule.values())
         ):
             if i != 0:
                 play_after = f"sequence_measure_{i-1}"
@@ -874,10 +867,6 @@ class Zurich(Controller):
                             time=self.smearing * NANO_TO_SECONDS,
                         )
                         if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
-                            # weight = lo.pulse_library.sampled_pulse_complex(
-                            #     np.ones([int(pulse.pulse.duration * 2 - 3 * self.smearing * NANO_TO_SECONDS)])
-                            #     * np.exp(1j * qubit.iq_angle)
-                            # )
                             weight = lo.pulse_library.sampled_pulse_complex(
                                 np.ones([int(pulse.pulse.duration * 2 - 3 * self.smearing * NANO_TO_SECONDS)])
                                 * np.exp(1j * iq_angle)
@@ -913,7 +902,6 @@ class Zurich(Controller):
                         # reset_delay=relaxation_time * NANO_TO_SECONDS,
                         reset_delay=reset_delay,
                     )
-                i += 1
 
     def fast_reset(self, exp, qubits, fast_reset):
         """
