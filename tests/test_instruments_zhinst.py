@@ -91,6 +91,27 @@ def test_zhsequence(dummy_qrc):
     assert len(zhsequence["readout0"]) == 1
 
 
+def test_zhsequence_multiple_ro(dummy_qrc):
+    sequence = PulseSequence()
+    qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
+    sequence.add(qd_pulse)
+    ro_pulse = ReadoutPulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch1", qubit=0)
+    sequence.add(ro_pulse)
+    ro_pulse = ReadoutPulse(0, 5000, 0.05, int(3e9), 0.0, Rectangular(), "ch1", qubit=0)
+    sequence.add(ro_pulse)
+    IQM5q = create_platform("zurich")
+
+    IQM5q.instruments[0].sequence_zh(sequence, IQM5q.qubits, sweepers=[])
+    zhsequence = IQM5q.instruments[0].sequence
+
+    with pytest.raises(AttributeError):
+        IQM5q.instruments[0].sequence_zh("sequence", IQM5q.qubits, sweepers=[])
+        zhsequence = IQM5q.instruments[0].sequence
+
+    assert len(zhsequence) == 2
+    assert len(zhsequence["readout0"]) == 2
+
+
 def test_zhinst_register_readout_line(dummy_qrc):
     platform = create_platform("zurich")
     platform.setup()
