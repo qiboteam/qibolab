@@ -164,6 +164,37 @@ def test_experiment_execute_pulse_sequence(dummy_qrc):
     assert "acquire0" in IQM5q.experiment.signals
 
 
+def test_experiment_fast_reset_readout(dummy_qrc):
+    platform = create_platform("zurich")
+    platform.setup()
+    IQM5q = platform.instruments[0]
+    IQM5q.create_device_setup()
+
+    sequence = PulseSequence()
+    qubits = {0: platform.qubits[0]}
+    platform.qubits = qubits
+
+    ro_pulses = {}
+    fr_pulses = {}
+    for qubit in qubits:
+        fr_pulses[qubit] = platform.create_RX_pulse(qubit, start=0)
+        ro_pulses[qubit] = platform.create_qubit_readout_pulse(qubit, start=0)
+        sequence.add(ro_pulses[qubit])
+
+    options = ExecutionParameters(
+        relaxation_time=300e-6,
+        fast_reset=fr_pulses,
+        acquisition_type=AcquisitionType.INTEGRATION,
+        averaging_mode=AveragingMode.CYCLIC,
+    )
+
+    IQM5q.experiment_flow(qubits, sequence, options)
+
+    assert "drive0" in IQM5q.experiment.signals
+    assert "measure0" in IQM5q.experiment.signals
+    assert "acquire0" in IQM5q.experiment.signals
+
+
 @pytest.mark.parametrize("fast_reset", [True, False])
 def test_experiment_execute_pulse_sequence(dummy_qrc, fast_reset):
     platform = create_platform("zurich")
