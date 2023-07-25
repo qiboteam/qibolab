@@ -3,7 +3,7 @@ from qblox_instruments.qcodes_drivers.sequencer import Sequencer as QbloxSequenc
 
 from qibolab.instruments.qblox.q1asm import Program
 from qibolab.pulses import Pulse, PulseSequence, PulseType
-from qibolab.sweeper import Parameter, Sweeper, SweeperType
+from qibolab.sweeper import Parameter, Sweeper
 
 
 class WaveformsBuffer:
@@ -19,12 +19,8 @@ class WaveformsBuffer:
     class NotEnoughMemory(Exception):
         """An error raised when there is not enough memory left to add more waveforms."""
 
-        pass
-
     class NotEnoughMemoryForBaking(Exception):
         """An error raised when there is not enough memory left to bake pulses."""
-
-        pass
 
     def __init__(self):
         """Initialises the buffer with an empty list of unique waveforms."""
@@ -55,12 +51,7 @@ class WaveformsBuffer:
             if sweeper.pulses and sweeper.parameter == Parameter.duration:
                 if pulse in sweeper.pulses:
                     baking_required = True
-                    if sweeper.type == SweeperType.ABSOLUTE:
-                        values = sweeper.values
-                    elif sweeper.type == SweeperType.OFFSET:
-                        values = sweeper.values + pulse.duration
-                    elif sweeper.type == SweeperType.OFFSET:
-                        values = sweeper.values * pulse.duration
+                    values = sweeper.get_values(pulse.duration)
 
         if not baking_required:
             if hardware_mod_en:

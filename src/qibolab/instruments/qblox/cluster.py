@@ -34,6 +34,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
+from qibo.config import log
 
 from qibolab.instruments.abstract import Instrument, InstrumentException
 
@@ -45,7 +46,7 @@ class ReferenceClockSource(Enum):
 
 @dataclass
 class Cluster_Settings:
-    """A class to store the settings of the Cluster instrument.
+    """Settings of the Cluster instrument.
 
     Attributes:
         reference_clock_source (:class:`qibolab.instruments.qblox.cluster.ReferenceClockSource`):
@@ -117,12 +118,10 @@ class Cluster(Instrument):
                     self.is_connected = True
                     break
                 except Exception as exc:
-                    print(f"Unable to connect:\n{str(exc)}\nRetrying...")
+                    log.info(f"Unable to connect:\n{str(exc)}\nRetrying...")
                 # TODO: if not able to connect after 3 attempts, check for ping response and reboot
             if not self.is_connected:
                 raise InstrumentException(self, f"Unable to connect to {self.name}")
-        else:
-            pass
 
         # apply stored settings
         self._setup()
@@ -137,11 +136,9 @@ class Cluster(Instrument):
 
     def start(self):
         """Empty method to comply with Instrument interface."""
-        pass
 
     def stop(self):
         """Empty method to comply with Instrument interface."""
-        pass
 
     def disconnect(self):
         """Closes the connection to the instrument."""

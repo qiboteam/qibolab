@@ -426,7 +426,7 @@ class ClusterQCM_BB(Instrument):
         navgs: int,
         nshots: int,
         repetition_duration: int,
-        sweepers: list = [],
+        sweepers: None,
     ):
         """Processes a list of pulses, generating the waveforms and sequence program required by
         the instrument to synthesise them.
@@ -457,6 +457,8 @@ class ClusterQCM_BB(Instrument):
             repetition_duration (int): The total duration of the pulse sequence execution plus the reset/relaxation time.
             sweepers (list(Sweeper)): A list of Sweeper objects to be implemented.
         """
+        if sweepers is None:
+            sweepers = []
         sequencer: Sequencer
         sweeper: Sweeper
 
@@ -825,8 +827,6 @@ class ClusterQCM_BB(Instrument):
     def start(self):
         """Empty method to comply with Instrument interface."""
 
-        from qibo.config import log
-
         settings: ClusterQCM_BB_Settings = self.settings
         if self.is_connected:
             try:
@@ -839,7 +839,6 @@ class ClusterQCM_BB(Instrument):
 
     def stop(self):
         """Stops all sequencers"""
-        from qibo.config import log
 
         for sequencer_number in self._used_sequencers_numbers:
             state = self.device.get_sequencer_state(sequencer_number)
