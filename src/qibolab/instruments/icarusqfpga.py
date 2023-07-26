@@ -65,10 +65,12 @@ class RFSOC(AbstractInstrument):
         Arguments:
             qubits (dict): Dictionary of qubit IDs mapped to qubit objects.
             sequence (PulseSequence): Pulse sequence to be played on this instrument.
-            options (ExecutionParameters): Unused.
+            options (ExecutionParameters): Execution parameters for readout and repetition.
         """
 
-        waveform_array = np.zeros((self.device.dac_nchannels, self.device.dac_sample_size))
+        waveform_array = {dac.id: np.zeros(dac.max_samples) for dac in self.device.dac}
+
+        dac_end_addr = {dac.id: 0 for dac in self.device.dac}
         dac_sampling_rate = self.device.dac_sampling_rate * 1e6
 
         # We iterate over the seuence of pulses and generate the waveforms for each type of pulses
@@ -81,7 +83,7 @@ class RFSOC(AbstractInstrument):
             # Flux pulses
             # TODO: Add envelope support for flux pulses
             if pulse.type == PulseType.FLUX:
-                dac = qubit.flux.ports
+                dac = qubit.flux.ports[pulse.channel]
                 wfm = np.ones(num_samples)
 
             # Qubit drive microwave signals
@@ -136,9 +138,11 @@ class RFSOC(AbstractInstrument):
                         readout_frequency=pulse.frequency, readout_time=pulse.duration * 1e-9, qunit=pulse.qubit
                     )
 
-            waveform_array[dac, start:end] += self.device.dac_max_amplitude * pulse.amplitude * wfm
+            waveform_array[dac][start:end] += self.device.dac_max_amplitude * pulse.amplitude * wfm
+            dac_end_addr[dac] = max(end >> 4, dac_end_addr[dac])
 
-        self.device.upload_waveform(waveform_array)
+        payload = [(dac, wfm, dac_end_addr[dac]) for dac, wfm in waveform_array.items() if dac_end_addr[dac] != 0]
+        self.device.upload_waveform(payload)
 
     def connect(self):
         """Currently we only connect to the board when we have to send a command."""
