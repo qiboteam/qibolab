@@ -692,7 +692,7 @@ class ClusterQCM_RF(Instrument):
                 pulses_block = Block("play")
                 # Add an initial wait instruction for the first pulse of the sequence
                 initial_wait_block = wait_block(
-                    wait_time=pulses[0].start, register=Register(program), force_multiples_of_4=False
+                    wait_time=pulses[0].start, register=Register(program), force_multiples_of_four=False
                 )
                 pulses_block += initial_wait_block
 
@@ -748,7 +748,7 @@ class ClusterQCM_RF(Instrument):
                 body_block.append_spacer()
 
                 final_reset_block = wait_block(
-                    wait_time=time_between_repetitions, register=Register(program), force_multiples_of_4=False
+                    wait_time=time_between_repetitions, register=Register(program), force_multiples_of_four=False
                 )
 
                 body_block += final_reset_block

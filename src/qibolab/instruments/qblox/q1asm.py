@@ -170,13 +170,13 @@ class Register:
         self._name = value
 
 
-def wait_block(wait_time: int, register: Register, force_multiples_of_4: bool = False):
+def wait_block(wait_time: int, register: Register, force_multiples_of_four: bool = False):
     """Generates blocks of code to implement long delays.
 
     Arguments:
         wait_time (int): the total time to wait.
         register (:class:`qibolab.instruments.qblox.qblox_q1asm.Register`): the register used to loop
-        force_multiples_of_4 (bool): a flag that forces the delay to be a multiple of 4(ns)
+        force_multiples_of_four (bool): a flag that forces the delay to be a multiple of 4(ns)
     """
     n_loops: int
     loop_wait: int
@@ -220,7 +220,7 @@ def wait_block(wait_time: int, register: Register, force_multiples_of_4: bool = 
     else:
         raise ValueError("wait_time > 65535**2 is not supported yet.")
 
-    if force_multiples_of_4:
+    if force_multiples_of_four:
         wait = int(np.ceil(wait / 4)) * 4
 
     wait_time = n_loops * loop_wait + wait

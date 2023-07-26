@@ -741,7 +741,7 @@ class ClusterQRM_RF(Instrument):
                 pulses_block = Block("play_and_acquire")
                 # Add an initial wait instruction for the first pulse of the sequence
                 initial_wait_block = wait_block(
-                    wait_time=pulses[0].start, register=Register(program), force_multiples_of_4=True
+                    wait_time=pulses[0].start, register=Register(program), force_multiples_of_four=True
                 )
                 pulses_block += initial_wait_block
 
@@ -851,7 +851,7 @@ class ClusterQRM_RF(Instrument):
                     final_reset_block.append(f"set_cond 0, {active_reset_address}, 0, 4")
                 else:
                     final_reset_block = wait_block(
-                        wait_time=time_between_repetitions, register=Register(program), force_multiples_of_4=False
+                        wait_time=time_between_repetitions, register=Register(program), force_multiples_of_four=False
                     )
                 final_reset_block.append_spacer()
                 final_reset_block.append(f"add {bin_n}, 1, {bin_n}", "increase bin counter")
