@@ -2,12 +2,13 @@ import tempfile
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+from qibolab.instruments.port import Port
+
 INSTRUMENTS_DATA_FOLDER = Path.home() / ".qibolab" / "instruments" / "data"
 
 
-class AbstractInstrument(ABC):
-    """
-    Parent class for all the instruments connected via TCPIP.
+class Instrument(ABC):
+    """Parent class for all the instruments connected via TCPIP.
 
     Args:
         name (str): Instrument name.
@@ -28,33 +29,77 @@ class AbstractInstrument(ABC):
 
     @abstractmethod
     def connect(self):
+        """Establish connection to the physical instrument."""
         raise NotImplementedError
 
     @abstractmethod
     def setup(self, *args, **kwargs):
+        """Upload settings to the physical instrument."""
         raise NotImplementedError
 
     @abstractmethod
     def start(self):
+        """Turn on the physical instrument."""
         raise NotImplementedError
 
     @abstractmethod
     def stop(self):
+        """Turn off the physical instrument."""
         raise NotImplementedError
 
     @abstractmethod
     def disconnect(self):
+        """Close connection to the physical instrument."""
         raise NotImplementedError
 
+
+class Controller(Instrument):
+    """Instrument that can play pulses (using waveform generator)."""
+
+    PortType = Port
+    """Class used by the instrument to instantiate ports."""
+
+    def __init__(self, name, address):
+        super().__init__(name, address)
+        self._ports = {}
+
+    def __getitem__(self, port_name):
+        return self.ports(port_name)
+
+    def ports(self, port_name):
+        """Get ports associated to this controller.
+
+        Args:
+            port_name: Identifier for the port. The type of the identifier
+                depends on the specialized port defined for each instrument.
+
+        Returns:
+            :class:`qibolab.instruments.port.Port` object providing the interface
+            for setting instrument parameters.
+        """
+        if port_name not in self._ports:
+            self._ports[port_name] = self.PortType(port_name)
+        return self._ports[port_name]
+
+    @abstractmethod
     def play(self, *args, **kwargs):
         """Play a pulse sequence and retrieve feedback.
 
         Returns:
-            (dict) mapping the serial of the readout pulses used to
+            (Dict[ResultType]) mapping the serial of the readout pulses used to
             the acquired :class:`qibolab.result.ExecutionResults` object.
         """
-        raise NotImplementedError(f"Instrument {self.name} does not support play.")
 
+    @abstractmethod
+    def play_sequences(self, *args, **kwargs):
+        """Play pulses sequences by unrolling and retrieve feedback.
+
+        Returns:
+            (Dict[List[ResultType]) mapping the serial of the readout pulses used to a list of
+            the acquired :class:`qibolab.result.ExecutionResults` object.
+        """
+
+    @abstractmethod
     def sweep(self, *args, **kwargs):
         """Play a pulse sequence while sweeping one or more parameters.
 
@@ -62,26 +107,10 @@ class AbstractInstrument(ABC):
             (dict) mapping the serial of the readout pulses used to
             the acquired :class:`qibolab.result.ExecutionResults` object.
         """
-        raise NotImplementedError(f"Instrument {self.name} does not support sweep.")
-
-
-class LocalOscillator(AbstractInstrument):
-    """Abstraction for local oscillator instruments.
-
-    Local oscillators are used to upconvert signals, when
-    the controllers cannot send sufficiently high frequencies
-    to address the qubits and resonators.
-    """
-
-    def play(self, *args, **kwargs):
-        """Local oscillators do not play pulses."""
-
-    def sweep(self, *args, **kwargs):
-        """Local oscillators do not play pulses."""
 
 
 class InstrumentException(Exception):
-    def __init__(self, instrument: AbstractInstrument, message: str):
+    def __init__(self, instrument: Instrument, message: str):
         header = f"InstrumentException with {instrument.signature}"
         full_msg = header + ": " + message
         super().__init__(full_msg)

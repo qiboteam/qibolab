@@ -6,12 +6,16 @@ https://qcodes.github.io/Qcodes_contrib_drivers/_modules/qcodes_contrib_drivers/
 """
 
 import json
-import time
 
 import requests
 from qcodes_contrib_drivers.drivers.ERAInstruments import ERASynthPlusPlus
+from qibo.config import log
 
-from qibolab.instruments.abstract import InstrumentException, LocalOscillator
+from qibolab.instruments.abstract import InstrumentException
+from qibolab.instruments.oscillator import LocalOscillator
+
+MAX_RECONNECTION_ATTEMPTS = 10
+TIMEOUT = 10
 
 
 class ERA(LocalOscillator):
@@ -29,8 +33,7 @@ class ERA(LocalOscillator):
         if self.is_connected:
             if self.ethernet:
                 return int(self._get("frequency"))
-            else:
-                return self.device.get("frequency")
+            return self.device.get("frequency")
         return self._frequency
 
     @frequency.setter
@@ -44,8 +47,7 @@ class ERA(LocalOscillator):
         if self.is_connected:
             if self.ethernet:
                 return float(self._get("amplitude"))
-            else:
-                return self.device.get("power")
+            return self.device.get("power")
         return self._power
 
     @power.setter
@@ -55,9 +57,7 @@ class ERA(LocalOscillator):
             self._set_device_parameter("power", x)
 
     def connect(self):
-        """
-        Connects to the instrument using the IP address set in the runcard.
-        """
+        """Connects to the instrument using the IP address set in the runcard."""
         if not self.is_connected:
             for attempt in range(3):
                 try:
@@ -71,12 +71,12 @@ class ERA(LocalOscillator):
                 except KeyError as exc:
                     print(f"Unable to connect:\n{str(exc)}\nRetrying...")
                     self.name += "_" + str(attempt)
-                except Exception as exc:
+                except ConnectionError as exc:
                     print(f"Unable to connect:\n{str(exc)}\nRetrying...")
             if not self.is_connected:
                 raise InstrumentException(self, f"Unable to connect to {self.name}")
         else:
-            raise Exception("There is an open connection to the instrument already")
+            raise RuntimeError("There is an open connection to the instrument already")
         # set proper frequency and power if they were changed before connecting
         if self._frequency is not None:
             self._set_device_parameter("frequency", self._frequency)
@@ -96,7 +96,7 @@ class ERA(LocalOscillator):
             if self.is_connected:
                 if not self.ethernet:
                     if not hasattr(self.device, parameter):
-                        raise Exception(f"The instrument {self.name} does not have parameter {parameter}")
+                        raise ValueError(f"The instrument {self.name} does not have parameter {parameter}")
                     self.device.set(parameter, value)
                 else:
                     if parameter == "power":
@@ -105,7 +105,7 @@ class ERA(LocalOscillator):
                         self._post("frequency", int(value))
                 self._device_parameters[parameter] = value
             else:
-                raise Exception(f"Attempting to set {parameter} without a connection to the instrument")
+                raise ConnectionError(f"Attempting to set {parameter} without a connection to the instrument")
 
     def _erase_device_parameters_cache(self):
         """Erases the cache of the instrument parameters."""
@@ -141,7 +141,7 @@ class ERA(LocalOscillator):
                 elif kwargs["reference_clock_source"] == "external":
                     self.device.ref_osc_source("ext")
                 else:
-                    raise Exception(f"Invalid reference clock source {kwargs['reference_clock_source']}")
+                    raise ValueError(f"Invalid reference clock source {kwargs['reference_clock_source']}")
             else:
                 self._post("rfoutput", 0)
 
@@ -150,9 +150,9 @@ class ERA(LocalOscillator):
                 elif kwargs["reference_clock_source"] == "external":
                     self._post("reference_int_ext", 1)
                 else:
-                    raise Exception(f"Invalid reference clock source {kwargs['reference_clock_source']}")
+                    raise ValueError(f"Invalid reference clock source {kwargs['reference_clock_source']}")
         else:
-            raise Exception("There is no connection to the instrument")
+            raise ConnectionError("There is no connection to the instrument")
 
     def start(self):
         self.on()
@@ -193,12 +193,14 @@ class ERA(LocalOscillator):
             value: str = The value to post.
         """
         value = str(value)
-        for _ in range(3):
-            response = requests.post(f"http://{self.address}/", data={name: value}, timeout=1)
-            if response.status_code == 200:
-                return True
-            else:
-                time.sleep(0.1)
+        for _ in range(MAX_RECONNECTION_ATTEMPTS):
+            try:
+                response = requests.post(f"http://{self.address}/", data={name: value}, timeout=TIMEOUT)
+                if response.status_code == 200:
+                    return True
+                break
+            except (ConnectionError, TimeoutError, requests.exceptions.ReadTimeout):
+                log.info("ERAsynth connection timed out, retrying...")
         raise InstrumentException(self, f"Unable to post {name}={value} to {self.name}")
 
     def _get(self, name):
@@ -210,12 +212,14 @@ class ERA(LocalOscillator):
         Args:
             name: str = The name of the value to get.
         """
-        for _ in range(3):
-            response = requests.post(f"http://{self.address}/", params={"readAll": 1}, timeout=1)
+        for _ in range(MAX_RECONNECTION_ATTEMPTS):
+            try:
+                response = requests.post(f"http://{self.address}/", params={"readAll": 1}, timeout=TIMEOUT)
 
-            if response.status_code == 200:
-                # reponse.text is a dictonary in string format, convert it to a dictonary
-                return json.loads(response.text)[name]
-            else:
-                time.sleep(0.1)
+                if response.status_code == 200:
+                    # reponse.text is a dictonary in string format, convert it to a dictonary
+                    return json.loads(response.text)[name]
+                break
+            except (ConnectionError, TimeoutError, requests.exceptions.ReadTimeout):
+                log.info("ERAsynth connection timed out, retrying...")
         raise InstrumentException(self, f"Unable to get {name} from {self.name}")

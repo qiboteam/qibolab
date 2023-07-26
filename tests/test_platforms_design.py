@@ -1,7 +1,6 @@
 import pytest
 
 from qibolab import create_platform
-from qibolab.platform import Platform
 from qibolab.platforms.multiqubit import MultiqubitPlatform
 
 qubit = 0

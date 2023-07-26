@@ -1,5 +1,7 @@
+import operator
 from dataclasses import dataclass
 from enum import Enum, auto
+from functools import partial
 from typing import Optional
 
 import numpy.typing as npt
@@ -12,11 +14,29 @@ class Parameter(Enum):
     amplitude = auto()
     duration = auto()
     relative_phase = auto()
-    delay = auto()
+    start = auto()
 
     attenuation = auto()
     gain = auto()
     bias = auto()
+
+
+FREQUENCY = Parameter.frequency
+AMPLITUDE = Parameter.amplitude
+DURATION = Parameter.duration
+RELATIVE_PHASE = Parameter.relative_phase
+START = Parameter.start
+ATTENUATION = Parameter.attenuation
+GAIN = Parameter.gain
+BIAS = Parameter.bias
+
+
+class SweeperType(Enum):
+    """Type of the Sweeper"""
+
+    ABSOLUTE = partial(lambda x, y=None: x)
+    FACTOR = operator.mul
+    OFFSET = operator.add
 
 
 QubitParameter = {Parameter.bias, Parameter.attenuation, Parameter.gain}
@@ -51,24 +71,31 @@ class Sweeper:
 
     Args:
         parameter (`qibolab.sweeper.Parameter`): parameter to be swept, possible choices are frequency, attenuation, amplitude, current and gain.
-        values (np.ndarray): sweep range. If the parameter is `frequency` the sweep will be a shift around the readout frequency
-            in case of a `ReadoutPulse` or around the drive frequency for a generic `Pulse`. If the parameter is `amplitude` the range is
-            normalized with the current amplitude of the pulse. For other parameters the sweep will be performed directly over the range specified.
+        _values (np.ndarray): sweep range. If the parameter of the sweep is a pulse parameter, if the sweeper type is not ABSOLUTE, the base value
+            will be taken from the runcard pulse parameters. If the sweep parameter is Bias, the base value will be the sweetspot of the qubits.
         pulses (list) : list of `qibolab.pulses.Pulse` to be swept (optional).
         qubits (list): list of `qibolab.platforms.abstract.Qubit` to be swept (optional).
+        type (SweeperType): can be ABSOLUTE (the sweeper range is swept directly),
+            FACTOR (sweeper values are multiplied by base value), OFFSET (sweeper values are added
+            to base value)
     """
 
     parameter: Parameter
     values: npt.NDArray
     pulses: Optional[list] = None
     qubits: Optional[list] = None
+    type: Optional[SweeperType] = SweeperType.ABSOLUTE
 
     def __post_init__(self):
         if self.pulses is not None and self.qubits is not None:
             raise ValueError("Cannot use a sweeper on both pulses and qubits.")
-        elif self.pulses is not None and self.parameter in QubitParameter:
+        if self.pulses is not None and self.parameter in QubitParameter:
             raise ValueError(f"Cannot sweep {self.parameter} without specifying qubits.")
-        elif self.qubits is not None and self.parameter not in QubitParameter:
+        if self.qubits is not None and self.parameter not in QubitParameter:
             raise ValueError(f"Cannot sweep {self.parameter} without specifying pulses.")
-        elif self.pulses is None and self.qubits is None:
+        if self.pulses is None and self.qubits is None:
             raise ValueError("Cannot use a sweeper without specifying pulses or qubits.")
+
+    def get_values(self, base_value):
+        """Convert sweeper values depending on the sweeper type"""
+        return self.type.value(self.values, base_value)

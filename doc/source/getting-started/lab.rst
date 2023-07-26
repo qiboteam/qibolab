@@ -2,7 +2,7 @@ How to connect Qibolab to your lab
 ==================================
 
 In this section we will show how to let ``Qibolab`` communicate with your lab’s instruments and run an experiment.
-``Qibolab`` has an abstract class `AbstractInstrument <https://github.com/qiboteam/qibolab/blob/main/src/qibolab/instruments/abstract.py>`_
+``Qibolab`` has an abstract class `Instrument <https://github.com/qiboteam/qibolab/blob/main/src/qibolab/instruments/abstract.py>`_
 with some abstract methods such as ``start``, ``stop``, ``connect``.
 In order to set up one instrument, you have to build a child class and implement the methods you need.
 Here we implemented an easy instrument class (``DummyInstrument``) as a little example.
@@ -10,7 +10,7 @@ Here we implemented an easy instrument class (``DummyInstrument``) as a little e
 .. code-block:: python
 
     from qibolab.platforms.abstract import AbstractPlatform
-    from qibolab.instruments.abstract import AbstractInstrument
+    from qibolab.instruments.abstract import Instrument
     import yaml
     import numpy as np
     from qibo.config import log, raise_error
@@ -18,34 +18,33 @@ Here we implemented an easy instrument class (``DummyInstrument``) as a little e
     from qibolab.pulses import Pulse, ReadoutPulse, PulseSequence
 
 
-    class DummyInstrument(AbstractInstrument):
+    class DummyInstrument(Instrument):
+        def __init__(self):
+            pass
 
-            def __init__(self):
-                pass
+        def start(self):
+            # Insert code to turn on the instrument
+            pass
 
-            def start(self):
-                # Insert code to turn on the instrument
-                pass
+        def stop(self):
+            # Insert code to stop the instrument
+            pass
 
-            def stop (self):
-                # Insert code to stop the instrument
-                pass
+        def connect(self):
+            # Insert code to connect the instrument
+            pass
 
-            def connect(self):
-                # Insert code to connect the instrument
-                pass
+        def disconnect(self):
+            # Insert code to disconnect the instrument
+            pass
 
-            def disconnect(self):
-                # Insert code to disconnect the instrument
-                pass
+        def setup(self):
+            # Insert code to set up the instrument
+            pass
 
-            def setup(self):
-                # Insert code to set up the instrument
-                pass
-
-            def set_device_parameter(self, *args, **kwargs):
-                # Insert code to set up the instrument's parameters
-                pass
+        def set_device_parameter(self, *args, **kwargs):
+            # Insert code to set up the instrument's parameters
+            pass
 
 After all the devices have a proper class, they have to be coordinated to perform an experiment.
 In ``Qibolab`` we can do this with a class (``DummyPlatform``) that inherits the methods
@@ -85,8 +84,8 @@ input pulse sequences and return the readout results.
 .. code-block:: python
 
     class DummyPlatform(AbstractPlatform):
-        #Dummy platform that returns random voltage values.
-        #Args:
+        # Dummy platform that returns random voltage values.
+        # Args:
         #   name (str): name of the platform.
         #   runcard (str): path to the runcard
         def __init__(self, name, runcard):
@@ -138,7 +137,7 @@ To start the experiment, simply initialize the platform and launch the desired m
 
 .. code-block:: python
 
-    platform = DummyPlatform("dummy","path/to/dummy.yml")
+    platform = DummyPlatform("dummy", "path/to/dummy.yml")
     sequence = PulseSequence()
 
     # Add some pulses to the pulse sequence

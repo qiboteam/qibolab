@@ -1,10 +1,13 @@
+from dataclasses import dataclass
+
 from qm import SimulationConfig
 from qm.QuantumMachinesManager import QuantumMachinesManager
 from qualang_tools.simulator_tools import create_simulator_controller_connections
 
-from qibolab.instruments.qm import QMOPX
+from .driver import QMOPX
 
 
+@dataclass
 class QMSim(QMOPX):
     """Instrument for using the Quantum Machines (QM) OPX simulator.
 
@@ -19,11 +22,12 @@ class QMSim(QMOPX):
             Default is ``False``.
     """
 
-    def __init__(self, name, address, simulation_duration, cloud=False):
-        super().__init__(name, address)
-        self.cloud = cloud
-        # convert simulation duration from ns to clock cycles
-        self.simulation_duration = simulation_duration // 4
+    simulation_duration: int = 1000
+    cloud: bool = False
+
+    def __post_init__(self):
+        """Convert simulation duration from ns to clock cycles."""
+        self.simulation_duration //= 4
 
     def connect(self):
         host, port = self.address.split(":")
@@ -40,13 +44,6 @@ class QMSim(QMOPX):
 
     def execute_program(self, program):
         ncontrollers = len(self.config.controllers)
-
-        # for debugging only
-        from qm import generate_qua_script
-
-        with open("qua_script.txt", "w") as file:
-            file.write(generate_qua_script(program, self.config.__dict__))
-
         controller_connections = create_simulator_controller_connections(ncontrollers)
         simulation_config = SimulationConfig(
             duration=self.simulation_duration, controller_connections=controller_connections

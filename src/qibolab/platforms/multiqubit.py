@@ -1,14 +1,13 @@
 import copy
 
 import numpy as np
-import yaml
 from qibo.config import log, raise_error
 
+from qibolab import AcquisitionType, AveragingMode
 from qibolab.channels import ChannelMap
 from qibolab.platform import Platform
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.qubits import Qubit
-from qibolab.result import IntegratedResults
 from qibolab.sweeper import Parameter
 
 
@@ -279,11 +278,21 @@ class MultiqubitPlatform(Platform):
                 self.instruments[name].disconnect()
             self.is_connected = False
 
-    def execute_pulse_sequence(self, sequence: PulseSequence, nshots=None):
+    def execute_pulse_sequence(self, sequence, options, **kwargs):
         if not self.is_connected:
             raise_error(RuntimeError, "Execution failed because instruments are not connected.")
-        if nshots is None:
+
+        if options.averaging_mode == AveragingMode.SINGLESHOT:
+            nshots = 1
+            self.average = False
+        elif options.averaging_mode == AveragingMode.CYCLIC:
+            nshots = options.nshots
+            self.average = True
+
+        if options.nshots is None:
             nshots = self.nshots
+
+        relaxation_time = options.relaxation_time
 
         instrument_pulses = {}
         changed = {}
@@ -332,16 +341,23 @@ class MultiqubitPlatform(Platform):
                         acquisition_results[key].update(value)
                     else:
                         acquisition_results[key] = value
-
         data = {}
         for serial in acquisition_results:
             for if_pulse, original in changed.items():
                 if serial == if_pulse.serial:
-                    data[original] = data[if_pulse.qubit] = IntegratedResults(acquisition_results[serial])
+                    if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+                        exp_res = acquisition_results[serial][2]
+                        if self.average:
+                            exp_res = np.mean(exp_res, axis=0)
+                    else:
+                        ires = acquisition_results[serial][0][0]
+                        qres = acquisition_results[serial][1][0]
+                        exp_res = ires + 1j * qres
 
+                    data[original] = data[if_pulse.qubit] = options.results_type(exp_res)
         return data
 
-    def sweep(self, sequence, *sweepers, nshots=1024, average=True, relaxation_time=None):
+    def sweep(self, sequence, options, *sweepers, **kwargs):
         results = {}
         sweeper_pulses = {}
         # create copy of the sequence
@@ -360,10 +376,8 @@ class MultiqubitPlatform(Platform):
         self._sweep_recursion(
             copy_sequence,
             copy.deepcopy(sequence),
+            options,
             *sweepers,
-            nshots=nshots,
-            average=average,
-            relaxation_time=relaxation_time,
             results=results,
             sweeper_pulses=sweeper_pulses,
             map_original_shifted=map_original_shifted,
@@ -375,10 +389,8 @@ class MultiqubitPlatform(Platform):
         self,
         sequence,
         original_sequence,
+        options,
         *sweepers,
-        nshots=1024,
-        average=True,
-        relaxation_time=None,
         results=None,
         sweeper_pulses=None,
         map_original_shifted=None,
@@ -397,20 +409,19 @@ class MultiqubitPlatform(Platform):
                 self._sweep_recursion(
                     sequence,
                     original_sequence,
+                    options,
                     *sweepers[1:],
-                    nshots=nshots,
-                    average=average,
-                    relaxation_time=relaxation_time,
                     results=results,
                     sweeper_pulses=sweeper_pulses,
                     map_original_shifted=map_original_shifted,
                 )
             else:
                 new_sequence = copy.deepcopy(sequence)
-                result = self.execute_pulse_sequence(new_sequence, nshots)
+                result = self.execute_pulse_sequence(new_sequence, options)
+
                 # colllect result and append to original pulse
                 for original_pulse, new_serial in map_original_shifted.items():
-                    acquisition = result[new_serial].average if average else result[new_serial]
+                    acquisition = result[new_serial]
 
                     if original_pulse.serial in results:
                         results[original_pulse.serial] += acquisition

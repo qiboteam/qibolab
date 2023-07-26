@@ -17,8 +17,10 @@ methods. In particular the developer should:
 
     .. code:: python
 
-        elif name == "example":
-            from qibolab.platforms.example import ExamplePlatform as Device
+         if ...:
+             ...
+         elif name == "example":
+             from qibolab.platforms.example import ExamplePlatform as Device
 
 * Load your platform with:
 

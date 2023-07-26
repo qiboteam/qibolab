@@ -1,14 +1,8 @@
-import numpy as np
-from qibo.config import raise_error
-
-from qibolab.instruments.abstract import (
-    AbstractInstrument,
-    InstrumentException,
-    LocalOscillator,
-)
+from qibolab.instruments.abstract import Instrument, InstrumentException
+from qibolab.instruments.oscillator import LocalOscillator
 
 
-class MCAttenuator(AbstractInstrument):
+class MCAttenuator(Instrument):
     """Driver for the MiniCircuit RCDAT-8000-30 variable attenuator."""
 
     def connect(self):
@@ -75,9 +69,7 @@ class QuicSyn(LocalOscillator):
         self.device.write("FREQ {:f}Hz".format(freq))
 
     def setup(self, frequency: float, **kwargs):
-        """
-        Sets the frequency in Hz
-        """
+        """Sets the frequency in Hz."""
         if self.is_connected:
             self.device.write("0601")
             self.frequency = frequency

@@ -1,19 +1,35 @@
+from dataclasses import dataclass
 from typing import Dict, List
 
 import numpy as np
-from qibo.config import log, raise_error
+from qibo.config import log
 from scipy.signal.windows import gaussian, hamming
 
-from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.instruments.abstract import AbstractInstrument
+from qibolab.execution_parameters import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
+from qibolab.instruments.abstract import Controller, Instrument
+from qibolab.instruments.port import Port
 from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.qubits import Qubit, QubitId
 from qibolab.result import IntegratedResults, SampleResults
 from qibolab.sweeper import Sweeper
 
 
-class RFSOC(AbstractInstrument):
+@dataclass
+class RFSOCPort(Port):
+    name: str
+    dac: int = None
+    adc: int = None
+    attenuator: Instrument = None
+
+
+class RFSOC(Controller):
     """Driver for the IcarusQ RFSoC socket-based implementation."""
+
+    PortType = RFSOCPort
 
     def __init__(self, name, address, port=8080):
         from icarusq_rfsoc_driver import IcarusQRFSoC
@@ -76,6 +92,7 @@ class RFSOC(AbstractInstrument):
         # We iterate over the seuence of pulses and generate the waveforms for each type of pulses
         for pulse in sequence.pulses:
             qubit = qubits[pulse.qubit]
+            dac = self.ports(pulse.channel).dac
             start = int(pulse.start * 1e-9 * dac_sampling_rate)
             end = int((pulse.start + pulse.duration) * 1e-9 * dac_sampling_rate)
             num_samples = end - start
@@ -83,7 +100,6 @@ class RFSOC(AbstractInstrument):
             # Flux pulses
             # TODO: Add envelope support for flux pulses
             if pulse.type == PulseType.FLUX:
-                dac = qubit.flux.ports[pulse.channel]
                 wfm = np.ones(num_samples)
 
             # Qubit drive microwave signals
@@ -108,7 +124,7 @@ class RFSOC(AbstractInstrument):
             elif pulse.type == PulseType.READOUT:
                 # For readout pulses, we move the corresponding DAC/ADC pair to the start of the pulse to save memory
                 # This locks the phase of the readout in the demodulation
-                dac, adc = qubit.readout.ports
+                adc = self.ports(pulse.channel).adc
                 start = 0
                 end = int(pulse.duration * 1e-9 * dac_sampling_rate)
 
@@ -144,6 +160,11 @@ class RFSOC(AbstractInstrument):
         payload = [(dac, wfm, dac_end_addr[dac]) for dac, wfm in waveform_array.items() if dac_end_addr[dac] != 0]
         self.device.upload_waveform(payload)
 
+    def play_sequences(
+        self, qubits: Dict[QubitId, Qubit], sequences: List[PulseSequence], options: ExecutionParameters
+    ):
+        pass
+
     def connect(self):
         """Currently we only connect to the board when we have to send a command."""
         # Request the version from the board
@@ -168,10 +189,6 @@ class RFSOC_RO(RFSOC):
 
         self.qubit_adc_map = {}
         self.adcs_to_read: List[int] = None
-
-        self.lo_channel = None
-        self.lo_data = None
-        self.lo_frequency = None
 
     def setup(
         self,
@@ -245,6 +262,11 @@ class RFSOC_RO(RFSOC):
             raw = self.device.start_qunit_acquisition(options.nshots)
             return {qubit: SampleResults(states) for qubit, states in raw.items()}
 
+    def play_sequences(
+        self, qubits: Dict[QubitId, Qubit], sequences: List[PulseSequence], options: ExecutionParameters
+    ):
+        return [self.play(qubits, sequence, options) for sequence in sequences]
+
     def process_readout_signal(
         self,
         adc_raw_data: Dict[int, np.ndarray],
@@ -275,7 +297,7 @@ class RFSOC_RO(RFSOC):
 
         return results
 
-    def sweeper(
+    def sweep(
         self, qubits: Dict[QubitId, Qubit], sequence: PulseSequence, options: ExecutionParameters, *sweeper: Sweeper
     ):
-        sweepsequence = sequence.copy()
+        raise NotImplementedError
