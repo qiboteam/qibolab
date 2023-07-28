@@ -2769,6 +2769,7 @@ files = [
     {file = "Pillow-10.0.0-cp311-cp311-musllinux_1_1_aarch64.whl", hash = "sha256:3b08d4cc24f471b2c8ca24ec060abf4bebc6b144cb89cba638c720546b1cf538"},
     {file = "Pillow-10.0.0-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:d737a602fbd82afd892ca746392401b634e278cb65d55c4b7a8f48e9ef8d008d"},
     {file = "Pillow-10.0.0-cp311-cp311-win_amd64.whl", hash = "sha256:3a82c40d706d9aa9734289740ce26460a11aeec2d9c79b7af87bb35f0073c12f"},
+    {file = "Pillow-10.0.0-cp311-cp311-win_arm64.whl", hash = "sha256:bc2ec7c7b5d66b8ec9ce9f720dbb5fa4bace0f545acd34870eff4a369b44bf37"},
     {file = "Pillow-10.0.0-cp312-cp312-macosx_10_10_x86_64.whl", hash = "sha256:d80cf684b541685fccdd84c485b31ce73fc5c9b5d7523bf1394ce134a60c6883"},
     {file = "Pillow-10.0.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:76de421f9c326da8f43d690110f0e79fe3ad1e54be811545d7d91898b4c8493e"},
     {file = "Pillow-10.0.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:81ff539a12457809666fef6624684c008e00ff6bf455b4b89fd00a140eecd640"},
@@ -2778,6 +2779,7 @@ files = [
     {file = "Pillow-10.0.0-cp312-cp312-musllinux_1_1_aarch64.whl", hash = "sha256:d50b6aec14bc737742ca96e85d6d0a5f9bfbded018264b3b70ff9d8c33485551"},
     {file = "Pillow-10.0.0-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:00e65f5e822decd501e374b0650146063fbb30a7264b4d2744bdd7b913e0cab5"},
     {file = "Pillow-10.0.0-cp312-cp312-win_amd64.whl", hash = "sha256:f31f9fdbfecb042d046f9d91270a0ba28368a723302786c0009ee9b9f1f60199"},
+    {file = "Pillow-10.0.0-cp312-cp312-win_arm64.whl", hash = "sha256:1ce91b6ec08d866b14413d3f0bbdea7e24dfdc8e59f562bb77bc3fe60b6144ca"},
     {file = "Pillow-10.0.0-cp38-cp38-macosx_10_10_x86_64.whl", hash = "sha256:349930d6e9c685c089284b013478d6f76e3a534e36ddfa912cde493f235372f3"},
     {file = "Pillow-10.0.0-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:3a684105f7c32488f7153905a4e3015a3b6c7182e106fe3c37fbb5ef3e6994c3"},
     {file = "Pillow-10.0.0-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b4f69b3700201b80bb82c3a97d5e9254084f6dd5fb5b16fc1a7b974260f89f43"},
@@ -3876,13 +3878,13 @@ test = ["coverage[toml] (>=6.2)", "mypy (>=0.940)", "pytest (>=6.2.2)", "pytest-
 
 [[package]]
 name = "qibo"
-version = "0.1.15"
+version = "0.1.16"
 description = "A framework for quantum computing with hardware acceleration."
 optional = false
 python-versions = ">=3.8,<3.12"
 files = [
-    {file = "qibo-0.1.15-py3-none-any.whl", hash = "sha256:a6d4df4973eccd64dac03b2f1b554529c7e1d5d211282743a1fc924f6d161c8e"},
-    {file = "qibo-0.1.15.tar.gz", hash = "sha256:785e2abff2b170c4d8f5ddd19867c48c6eec6243d1bc2630e10bc8fd1822a092"},
+    {file = "qibo-0.1.16-py3-none-any.whl", hash = "sha256:ef31f63d8994827e3b104dbae32a5ebf6f07c0555fd93bc26fab2445b93a9f07"},
+    {file = "qibo-0.1.16.tar.gz", hash = "sha256:37d5a5590927684a8d1f12a0736dc3073fcadf00ed736489c61515b3340e32d3"},
 ]
 
 [package.dependencies]
@@ -4267,6 +4269,7 @@ files = [
     {file = "rustworkx-0.13.0-cp310-cp310-manylinux_2_12_i686.manylinux2010_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:71d5ff92bdb7b9d9324e2d07d9331675723ecc8efd5e8290f5cec14b3f53f12b"},
     {file = "rustworkx-0.13.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:9592ed33482113cb524c060f733fe6677e3f0e1caafcc3c0589bee03f9218d9c"},
     {file = "rustworkx-0.13.0-cp310-cp310-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:2d66be71bec30e45fcc660b17b06584584c004d884be2d92d9c381caa2d43bd2"},
+    {file = "rustworkx-0.13.0-cp310-cp310-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:641c44f62196c7a2bdfa262feafe9db3710b45e7ae3b3e7dac57edf3e788b7bb"},
     {file = "rustworkx-0.13.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5feab550fe029b4db24ed3ea95936f9fa9753827507a354d262dcf68dfa490db"},
     {file = "rustworkx-0.13.0-cp310-cp310-win32.whl", hash = "sha256:4c669747786e58d42adb909ac39af1d5a764275a52e96e7e3445519718a7b40f"},
     {file = "rustworkx-0.13.0-cp310-cp310-win_amd64.whl", hash = "sha256:3112b72cd254a4e1ea8f7e2ab672960f54fa04a2f40f4ee4c1967e3f0cbdffb9"},
@@ -4276,6 +4279,7 @@ files = [
     {file = "rustworkx-0.13.0-cp311-cp311-manylinux_2_12_i686.manylinux2010_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:6afda2a693cd55bcd1ab4decf14d33fd4486a8c8bded0230f617c9e2fb6b19cf"},
     {file = "rustworkx-0.13.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:f31417ee53554d2b9007187108cacf393749984db1a0b8663af6d24481dee9c8"},
     {file = "rustworkx-0.13.0-cp311-cp311-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:d5b1964c1845c5d46d1f260182434ef9700feda9be12d7a8b778591983d22936"},
+    {file = "rustworkx-0.13.0-cp311-cp311-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:d6764c06b0863fe1be82e2c560b226c9f0b5e5ca228323f2bf6f9b78905592cd"},
     {file = "rustworkx-0.13.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d20b8913cade8a836a8072bfae9441ae441a1604a9eb9870301cb3645f262e92"},
     {file = "rustworkx-0.13.0-cp311-cp311-win32.whl", hash = "sha256:624aa1b1425a3adbf22b80d3f263b236d9e4dfc2d0eab2a7378d0629a06a0b12"},
     {file = "rustworkx-0.13.0-cp311-cp311-win_amd64.whl", hash = "sha256:24978e6984232050100be125098f7deefea046cb97a4bc92b7d12b260af9956c"},
@@ -4283,6 +4287,7 @@ files = [
     {file = "rustworkx-0.13.0-cp37-cp37m-manylinux_2_12_i686.manylinux2010_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:d31bc8dff1e5c3761357943aabbcace651662232efa50f9ce4855b4ac5b50c53"},
     {file = "rustworkx-0.13.0-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:85ded90a8599ef94cb457e8df003ccbf4861ecd604c5f095a61cbb4d918b1809"},
     {file = "rustworkx-0.13.0-cp37-cp37m-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:0dc00d20e7526d567280e6477d1816352bf8688401ef44b52cc68adf67f9770b"},
+    {file = "rustworkx-0.13.0-cp37-cp37m-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:fbb321d2eb7decf8e0215e0735b526a232ac28613147dd95f5e0f5a93fd8c98b"},
     {file = "rustworkx-0.13.0-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:71f09845499a1122ae3bb3dd4ce0ad5e0927737fd4ae30d378e34e89ad422931"},
     {file = "rustworkx-0.13.0-cp37-cp37m-win32.whl", hash = "sha256:2a9bbf4862ddc6b7e48b64e2222b10285b439ec5a542c3c3652ed89af3ddd014"},
     {file = "rustworkx-0.13.0-cp37-cp37m-win_amd64.whl", hash = "sha256:ce6c3cbeb24444ce3260a4c205923622f462753f9c965d612cbfed0a568120bf"},
@@ -4292,6 +4297,7 @@ files = [
     {file = "rustworkx-0.13.0-cp38-cp38-manylinux_2_12_i686.manylinux2010_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:e1814d6994bb1feeda373f845af40b230ea5e6af078d48601d623d773db19b15"},
     {file = "rustworkx-0.13.0-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:9d9af143694e7b1fa65c8c32a5ccbce4aeb4a48c53bc0a0db18e1c9a4a089831"},
     {file = "rustworkx-0.13.0-cp38-cp38-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:e7dd62dc51eb9563de78a1266c8faea844a54283e8b52f3d690f9154acd751e4"},
+    {file = "rustworkx-0.13.0-cp38-cp38-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:4b6803f1e444ef4cdae2b35e9fec5582c41d0f2c64608ec7416459f19e180a00"},
     {file = "rustworkx-0.13.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:796db1f89acf20624fa41115cb9c630413c16364ce2b7a9d1e6f7fd770631085"},
     {file = "rustworkx-0.13.0-cp38-cp38-win32.whl", hash = "sha256:505dfd386d8388a0a0996bc9d64fc8a4fbd3fe5e8f8362af03c48567ee8e1332"},
     {file = "rustworkx-0.13.0-cp38-cp38-win_amd64.whl", hash = "sha256:84de10641d380dd165bf4250ea2f299542921d4daa85b1c7d39f0f0ef022c107"},
@@ -4301,6 +4307,7 @@ files = [
     {file = "rustworkx-0.13.0-cp39-cp39-manylinux_2_12_i686.manylinux2010_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:01234e9c8572ec0060c13041bba162f902fdaf3ca731bb950831e8ccb1e27cc4"},
     {file = "rustworkx-0.13.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:27879a7df24a10ee06531b74131af4647262d66023a10c413bc656f601d5c06d"},
     {file = "rustworkx-0.13.0-cp39-cp39-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:99f215edd23f15e051e65dfe90664a1bcfa0c235c13ced9c7f336da2f6a35be3"},
+    {file = "rustworkx-0.13.0-cp39-cp39-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:76f948e2aa69561ca2e255f2a1d86dce005be58753c33f87bc78fdfdcd152267"},
     {file = "rustworkx-0.13.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:bdd235fd83382264801756e2d38f9f09b113a62691984e2d3fc19570c6372198"},
     {file = "rustworkx-0.13.0-cp39-cp39-win32.whl", hash = "sha256:6dea6c5474f1b05e0345702a9368b33c8854c767389b0f571f0044301655a651"},
     {file = "rustworkx-0.13.0-cp39-cp39-win_amd64.whl", hash = "sha256:622379712710534092c8e83f694708ea79fe715b65f3c5894660f6cef7c7678e"},
