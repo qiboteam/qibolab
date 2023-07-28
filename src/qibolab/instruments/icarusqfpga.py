@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Union
 
 import numpy as np
 from qibo.config import log
@@ -15,7 +15,7 @@ from qibolab.instruments.port import Port
 from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.qubits import Qubit, QubitId
 from qibolab.result import IntegratedResults, SampleResults
-from qibolab.sweeper import Sweeper
+from qibolab.sweeper import Parameter, Sweeper
 
 
 @dataclass
@@ -254,13 +254,19 @@ class RFSOC_RO(RFSOC):
                 res = {qubit: IntegratedResults(I + 1j * Q).average for qubit, (I, Q) in raw.items()}
             else:
                 res = {qubit: IntegratedResults(I + 1j * Q) for qubit, (I, Q) in raw.items()}
+
+            for ro_pulse in readout_pulses:
+                res[ro_pulse.serial] = res[ro_pulse.qubit]
             return res
 
         elif options.acquisition_type is AcquisitionType.DISCRIMINATION:
             self.device.set_adc_trigger_mode(1)
             self.device.set_qunit_mode(1)
             raw = self.device.start_qunit_acquisition(options.nshots)
-            return {qubit: SampleResults(states) for qubit, states in raw.items()}
+            res = {qubit: SampleResults(states) for qubit, states in raw.items()}
+            for ro_pulse in readout_pulses:
+                res[ro_pulse.serial] = res[ro_pulse.qubit]
+            return res
 
     def play_sequences(
         self, qubits: Dict[QubitId, Qubit], sequences: List[PulseSequence], options: ExecutionParameters
@@ -293,11 +299,63 @@ class RFSOC_RO(RFSOC):
             results[readout_pulse.qubit] = IntegratedResults(I + 1j * Q)
 
             if options.averaging_mode is not AveragingMode.SINGLESHOT:
-                results[readout_pulse.qubit] = results[readout_pulse.qubit].average
+                results[readout_pulse.qubit] = results[readout_pulse.serial] = results[readout_pulse.qubit].average
+            else:
+                results[readout_pulse.serial] = results[readout_pulse.qubit]
 
         return results
 
     def sweep(
         self, qubits: Dict[QubitId, Qubit], sequence: PulseSequence, options: ExecutionParameters, *sweeper: Sweeper
     ):
-        raise NotImplementedError
+        if len(sweeper > 1):
+            raise NotImplementedError
+
+        sweep = sweeper[0]
+        res = {}
+
+        attribute = {
+            Parameter.amplitude: "amplitude",
+            Parameter.duration: "duration",
+            Parameter.frequency: "frequency",
+            Parameter.relative_phase: "relative_phase",
+            Parameter.start: "start",
+        }
+
+        for val in sweep.values():
+            if sweep.parameter is Parameter.attenuation:
+                qubits[sweep.pulses[0].qubit].readout.port.attenuator.attenuation = val
+
+            elif sweep.parameter is Parameter.gain or Parameter.bias:
+                raise NotImplementedError
+
+            else:
+                for pulse in sweep.pulses:
+                    setattr(pulse, attribute[sweep.parameter], val)
+
+            res = self.merge_sweep_results(res, self.play(qubits, sequence, options))
+
+        return res
+
+    @staticmethod
+    def merge_sweep_results(
+        dict_a: """dict[str, Union[IntegratedResults, SampleResults]]""",
+        dict_b: """dict[str, Union[IntegratedResults, SampleResults]]""",
+    ) -> """dict[str, Union[IntegratedResults, SampleResults]]""":
+        """Merge two dictionary mapping pulse serial to Results object.
+
+        If dict_b has a key (serial) that dict_a does not have, simply add it,
+        otherwise sum the two results
+
+        Args:
+            dict_a (dict): dict mapping ro pulses serial to qibolab res objects
+            dict_b (dict): dict mapping ro pulses serial to qibolab res objects
+        Returns:
+            A dict mapping the readout pulses serial to qibolab results objects
+        """
+        for serial in dict_b:
+            if serial in dict_a:
+                dict_a[serial] = dict_a[serial] + dict_b[serial]
+            else:
+                dict_a[serial] = dict_b[serial]
+        return dict_a
