@@ -2,162 +2,341 @@ How to connect Qibolab to your lab
 ==================================
 
 In this section we will show how to let ``Qibolab`` communicate with your lab’s instruments and run an experiment.
-``Qibolab`` has an abstract class `Instrument <https://github.com/qiboteam/qibolab/blob/main/src/qibolab/instruments/abstract.py>`_
-with some abstract methods such as ``start``, ``stop``, ``connect``.
-In order to set up one instrument, you have to build a child class and implement the methods you need.
-Here we implemented an easy instrument class (``DummyInstrument``) as a little example.
 
-.. code-block:: python
+The main required object, in this case, is the `Platform`.
+A Platform is defined as a QPU (one or more qubits) cotrolled by one ore more instruments.
 
-    from qibolab.platforms.abstract import AbstractPlatform
-    from qibolab.instruments.abstract import Instrument
-    import yaml
-    import numpy as np
-    from qibo.config import log, raise_error
-    import time
-    from qibolab.pulses import Pulse, ReadoutPulse, PulseSequence
+How to define a platform for a self-hosted QPU?
+-----------------------------------------------
+
+The :class:`qibolab.platform.Platform` object holds all the information
+required to execute programs, and in particular :class:`qibolab.pulses.PulseSequence`
+in a real QPU. It is comprised by different objects that contain information
+about the qubit characterization and connectivity, the native gates and the
+lab's instrumentation.
+
+The following cell shows how to define a single qubit platform from scratch,
+using different Qibolab primitives.
+
+.. code-block::  python
+
+    from qibolab import Platform
+    from qibolab.qubits import Qubit
+    from qibolab.pulses import PulseType
+    from qibolab.channels import ChannelMap, Channel
+    from qibolab.native import NativePulse, SingleQubitNatives
+    from qibolab.instruments.dummy import DummyInstrument
+
+    def create():
+        # Create a controller instrument
+        instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
+
+        # Create channel objects and assign to them the controller ports
+        channels = ChannelMap()
+        channels |= Channel("ch1out", port=instrument["o1"])
+        channels |= Channel("ch2", port=instrument["o2"])
+        channels |= Channel("ch1in", port=instrument["i1"])
+
+        # create the qubit object
+        qubit = Qubit(0)
+        # assign native gates to the qubit
+        qubit.native_gates = SingleQubitNatives(
+            RX=NativePulse(
+                name="RX",
+                duration=40,
+                amplitude=0.05,
+                shape="Gaussian(5)",
+                pulse_type=PulseType.DRIVE,
+                qubit=qubit,
+                frequency=int(4.5e9)
+            ),
+            MZ=NativePulse(
+                name="MZ",
+                duration=1000,
+                amplitude=0.005,
+                shape="Rectangular()",
+                pulse_type=PulseType.READOUT,
+                qubit=qubit,
+                frequency=int(7e9)
+            )
+        )
+        # assign channels to the qubit
+        qubit.readout = channels["ch1out"]
+        qubit.feedback = channels["ch1in"]
+        qubit.drive = channels["ch2"]
+
+        # create dictionaries of the different objects
+        qubits = {qubit.name: qubit}
+        pairs = {} # empty as for single qubit we have no qubit pairs
+        instruments = {instrument.name: instrument}
+        return Platform("my_platform", qubits, pairs, instruments, resonator_type="3D")
 
 
-    class DummyInstrument(Instrument):
-        def __init__(self):
-            pass
+This code creates a platform with a single qubit that is controlled by the
+:class:`qibolab.instruments.dummy.DummyInstrument`. In real applications, if
+Qibolab provides drivers for the instruments in the lab, these can be directly
+used in place of the ``DummyInstrument`` above, otherwise new drivers need to
+be coded following the abstract :class:`qibolab.instruments.abstract.Instrument`
+interface.
 
-        def start(self):
-            # Insert code to turn on the instrument
-            pass
+Furthermore, above we defined three channels that connect the
+qubit to the control instrument and we assigned two native gates to the qubit.
+In this example we neglected or characterization parameters associated to the
+qubit. These can be passed when defining the :class:`qibolab.qubits.Qubit`
+objects.
 
-        def stop(self):
-            # Insert code to stop the instrument
-            pass
+When the QPU contains more than one qubit, some of the qubits are connected
+so that two-qubit gates can be applied. For such connected pairs of qubits one
+needs to additionally define :class:`qibolab.qubits.QubitPair` objects,
+which hold the parameters of the two-qubit gates.
 
-        def connect(self):
-            # Insert code to connect the instrument
-            pass
+.. code-block::  python
 
-        def disconnect(self):
-            # Insert code to disconnect the instrument
-            pass
+    from qibolab.qubits import Qubit, QubitPair
+    from qibolab.pulses import PulseType
+    from qibolab.native import NativePulse, NativeSequence, SingleQubitNatives, TwoQubitNatives
 
-        def setup(self):
-            # Insert code to set up the instrument
-            pass
-
-        def set_device_parameter(self, *args, **kwargs):
-            # Insert code to set up the instrument's parameters
-            pass
-
-After all the devices have a proper class, they have to be coordinated to perform an experiment.
-In ``Qibolab`` we can do this with a class (``DummyPlatform``) that inherits the methods
-from ``AbstractPlatform`` and reads the useful information from the runcard below
-(in this example we save it as ``dummy.yml``):
-
-.. code-block:: yaml
-
-    nqubits: 1
-    description: Dummy platform runcard to use for testing.
-    # Instruments' settings
-    settings:
-        hardware_avg: 1024
-        sampling_rate: 1_000_000_000
-        repetition_duration: 200_000
-        minimum_delay_between_instructions: 4
-    # time to sleep every time ``execute_pulse_sequence`` is called
-    sleep_time: 1
-    # list of qubits' IDs
-    qubits: [0]
-    # Qubits' properties
-    characterization:
-        single_qubit:
-            0:
-                resonator_freq: 7824855425
-                qubit_freq: 5082441303
-                T1: 21160
-                T2: 17214
-                state0_voltage: 847
-                state1_voltage: 251
-                mean_gnd_states: (-0.0008313786783245074+0.00044815319987281076j)
-                mean_exc_states: (-0.00022773024569023835+0.0003203066357136082j)
-
-The class ``DummyPlatform`` has a method ``execute_pulse_sequence`` that executes the
-input pulse sequences and return the readout results.
-
-.. code-block:: python
-
-    class DummyPlatform(AbstractPlatform):
-        # Dummy platform that returns random voltage values.
-        # Args:
-        #   name (str): name of the platform.
-        #   runcard (str): path to the runcard
-        def __init__(self, name, runcard):
-            self.name = name
-            self.runcard = runcard
-            self.is_connected = False
-            # Load platform settings
-            with open(runcard) as file:
-                self.settings = yaml.safe_load(file)
-            # create dummy instruments
-            nqubits = self.settings.get("nqubits")
-            self.qcm = {i: DummyInstrument() for i in range(nqubits)}
-            self.qrm = {i: DummyInstrument() for i in range(nqubits)}
-
-        def reload_settings(self):
-            log.info("Dummy platform does not support setting reloading.")
-
-        def run_calibration(self, show_plots=False):
-            raise_error(NotImplementedError)
-
-        def connect(self):
-            log.info("Connecting to dummy platform.")
-
-        def setup(self):
-            log.info("Setting up dummy platform.")
-
-        def start(self):
-            log.info("Starting dummy platform.")
-
-        def stop(self):
-            log.info("Stopping dummy platform.")
-
-        def disconnect(self):
-            log.info("Disconnecting dummy platform.")
-
-        def to_sequence(self, sequence, gate):
-            raise_error(NotImplementedError)
-
-        def execute_pulse_sequence(self, sequence, nshots=None):
-            time.sleep(self.settings.get("sleep_time"))
-            ro_pulses = {pulse.qubit: pulse.serial for pulse in sequence.ro_pulses}
-            results = {}
-            for qubit, pulse in ro_pulses.items():
-                i, q = np.random.random(2)
-                results[qubit] = {pulse: (np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q)}
-            return results
-
-To start the experiment, simply initialize the platform and launch the desired method.
-
-.. code-block:: python
-
-    platform = DummyPlatform("dummy", "path/to/dummy.yml")
-    sequence = PulseSequence()
-
-    # Add some pulses to the pulse sequence
-
-    sequence.add(
-        ReadoutPulse(
-            start=4004,
-            amplitude=0.9,
-            duration=2000,
-            frequency=20_000_000,
-            relative_phase=0,
-            shape="Rectangular",
-            channel=2,
-            qubit=0,
+    # create the qubit objects
+    qubit0 = Qubit(0)
+    qubit1 = Qubit(1)
+    # assign single-qubit native gates to each qubit
+    qubit0.native_gates = SingleQubitNatives(
+        RX=NativePulse(
+            name="RX",
+            duration=40,
+            amplitude=0.05,
+            shape="Gaussian(5)",
+            pulse_type=PulseType.DRIVE,
+            qubit=qubit0,
+            frequency=int(4.7e9)
+        ),
+        MZ=NativePulse(
+            name="MZ",
+            duration=1000,
+            amplitude=0.005,
+            shape="Rectangular()",
+            pulse_type=PulseType.READOUT,
+            qubit=qubit0,
+            frequency=int(7e9)
+        )
+    )
+    qubit1.native_gates = SingleQubitNatives(
+        RX=NativePulse(
+            name="RX",
+            duration=40,
+            amplitude=0.05,
+            shape="Gaussian(5)",
+            pulse_type=PulseType.DRIVE,
+            qubit=qubit1,
+            frequency=int(5.1e9)
+        ),
+        MZ=NativePulse(
+            name="MZ",
+            duration=1000,
+            amplitude=0.005,
+            shape="Rectangular()",
+            pulse_type=PulseType.READOUT,
+            qubit=qubit1,
+            frequency=int(7.5e9)
         )
     )
 
-    output = platform.execute_pulse_sequence(sequence)
-    print(output)
+    # define the pair of qubits
+    pair = QubitPair(qubit0, qubit1)
+    pair.native_gates = TwoQubitNatives(
+        CZ=NativeSequence(
+            name="CZ"
+            pulses=[
+                NativePulse(
+                    name="CZ1",
+                    duration=30,
+                    amplitude=0.005,
+                    shape="Rectangular()",
+                    pulse_type=PulseType.FLUX,
+                    qubit=qubit1,
+                )
+            ])
+    )
 
-The diagram below summmarises the workflow followed in this example to run an experiment.
 
-.. image:: qibolab_workflow.png
+The platform automatically creates the connectivity graph of the given chip
+using the dictionary of :class:`qibolab.qubits.QubitPair` objects.
+
+Registering platforms
+^^^^^^^^^^^^^^^^^^^^^
+
+The ``create()`` function defined in the above example can be called or
+imported directly in any Python script.
+Alternatively, it is also possible to make the platform available as
+
+.. code-block::  python
+
+    from qibolab import Platform
+
+    # Define platform and load specific runcard
+    platform = Platform("my_platform")
+
+
+To do so, ``create()`` needs to be saved in a module called ``my_platform.py``
+and the environment flag ``QIBOLAB_PLATFORMS`` needs to point to the directory
+that contains this module.
+
+.. _using_runcards:
+
+Using runcards
+^^^^^^^^^^^^^^
+
+Operating a QPU requires calibrating a set of parameters, the number of
+which increases with the number of qubits. Hardcoding such parameters
+in the ``create()`` function, as shown in the above examples, is not
+scalable. However, since ``create()`` is part of a Python module,
+is is possible to load parameters from an external file or database.
+
+Qibolab provides some utility functions, accessible through :py:mod:`qibolab.utils`,
+for loading calibration parameters stored in a YAML file with a specific format.
+We call such file a runcard. Here is a runcard for a two-qubit system:
+
+.. code-block::  yaml
+
+    nqubits: 2
+
+    qubits: [0, 1]
+
+    settings:
+        nshots: 1024
+        sampling_rate: 1000000000
+        relaxation_time: 50_000
+
+    topology: [[0, 1]]
+
+    native_gates:
+        single_qubit:
+            0: # qubit number
+                RX:
+                    duration: 40
+                    amplitude: 0.0484
+                    frequency: 4_855_663_000
+                    shape: Drag(5, -0.02)
+                    type: qd # qubit drive
+                    start: 0
+                    phase: 0
+                MZ:
+                    duration: 620
+                    amplitude: 0.003575
+                    frequency: 7_453_265_000
+                    shape: Rectangular()
+                    type: ro # readout
+                    start: 0
+                    phase: 0
+            1: # qubit number
+                RX:
+                    duration: 40
+                    amplitude: 0.05682
+                    frequency: 5_800_563_000
+                    shape: Drag(5, -0.04)
+                    type: qd # qubit drive
+                    start: 0
+                    phase: 0
+                MZ:
+                    duration: 960
+                    amplitude: 0.00325
+                    frequency: 7_655_107_000
+                    shape: Rectangular()
+                    type: ro # readout
+                    start: 0
+                    phase: 0
+
+        two_qubit:
+            0-1:
+                CZ:
+                - duration: 30
+                  amplitude: 0.055
+                  shape: Rectangular()
+                  qubit: 1
+                  relative_start: 0
+                  type: qf
+                - type: virtual_z
+                  phase: -1.5707963267948966
+                  qubit: 0
+                - type: virtual_z
+                  phase: -1.5707963267948966
+                  qubit: 1
+
+    characterization:
+        single_qubit:
+            0:
+                readout_frequency: 7_453_265_000
+                drive_frequency: 4_855_663_000
+                T1: 0.0
+                T2: 0.0
+                sweetspot: -0.047
+                # parameters for single shot classification
+                threshold: 0.00028502261712637096
+                iq_angle: 1.283105298787488
+            1:
+                readout_frequency: 7_655_107_000
+                drive_frequency: 5_800_563_000
+                T1: 0.0
+                T2: 0.0
+                sweetspot: -0.045
+                # parameters for single shot classification
+                threshold: 0.0002694329123116206
+                iq_angle: 4.912447775569025
+
+
+This file contains different sections: ``qubits`` is a list with
+the qubit names, ``settings`` defines default execution parameters,
+``topology`` defines the qubit connectivity (qubit pairs),
+``native_gates`` specifies the calibrated pulse parameters for
+implementing single and two-qubit gates and ``characterization``
+provides the physical parameters associated to each qubit.
+Note that such parameters may slightly differ depending on the
+QPU architecture, however the pulses under ``native_gates``
+should comply with the :class:`qibolab.pulses.Pulse` API
+and the parameters under ``characterization`` should be
+a subset of :class:`qibolab.qubits.Qubit` attributes.
+
+Providing the above runcard is not sufficient to instantiate
+a :class:`qibolab.platform.Platform`. This should still be done
+using a ``create()`` method, however this is significantly
+simplified by ``qibolab.utils``. Here is the ``create()``
+method that loads the parameters of the above runcard:
+
+.. code-block::  python
+
+    from pathlib import Path
+    from qibolab import Platform
+    from qibolab.channels import ChannelMap, Channel
+    from qibolab.utils import load_runcard, load_qubits, load_settings
+    from qibolab.instruments.dummy import DummyInstrument
+
+
+    def create():
+        # Create a controller instrument
+        instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
+
+        # Create channel objects and assign to them the controller ports
+        channels = ChannelMap()
+        channels |= Channel("ch1out", port=instrument["o1"])
+        channels |= Channel("ch2", port=instrument["o2"])
+        channels |= Channel("ch3", port=instrument["o3"])
+        channels |= Channel("ch1in", port=instrument["i1"])
+
+        # create ``Qubit`` and ``QubitPair`` objects by loading the runcard
+        runcard = load_runcard(Path(__file__).parent / "my_platform.yml")
+        qubits, pairs = load_qubits(runcard)
+
+        # assign channels to the qubit
+        for q in range(2):
+            qubits[q].readout = channels["ch1out"]
+            qubits[q].feedback = channels["ch1in"]
+            qubits[q].drive = channels[f"ch{q + 2}"]
+
+        # create dictionary of instruments
+        instruments = {instrument.name: instrument}
+        # load ``settings`` from the runcard
+        settings = load_settings(runcard)
+        return Platform("my_platform", qubits, pairs, instruments, settings, resonator_type="2D")
+
+Note that this assumes that the runcard is saved as ``my_platform.yml`` in the
+same directory with the Python file that contains ``create()``.
