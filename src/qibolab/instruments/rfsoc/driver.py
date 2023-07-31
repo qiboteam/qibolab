@@ -120,7 +120,7 @@ class RFSoC(Controller):
             "cfg": asdict(self.cfg),
             "sequence": convert(sequence, qubits),
             "qubits": [asdict(convert(qubits[idx])) for idx in qubits],
-            "sweepers": [asdict(sweeper) for sweeper in sweepers],
+            "sweepers": [sweeper.serialized for sweeper in sweepers],
         }
         return client.connect(server_commands, self.host, self.port)
 
