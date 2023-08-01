@@ -170,13 +170,13 @@ class Register:
         self._name = value
 
 
-def wait_block(wait_time: int, register: Register, force_multiples_of_4: bool = False):
+def wait_block(wait_time: int, register: Register, force_multiples_of_four: bool = False):
     """Generates blocks of code to implement long delays.
 
     Arguments:
         wait_time (int): the total time to wait.
         register (:class:`qibolab.instruments.qblox.qblox_q1asm.Register`): the register used to loop
-        force_multiples_of_4 (bool): a flag that forces the delay to be a multiple of 4(ns)
+        force_multiples_of_four (bool): a flag that forces the delay to be a multiple of 4(ns)
     """
     n_loops: int
     loop_wait: int
@@ -220,7 +220,7 @@ def wait_block(wait_time: int, register: Register, force_multiples_of_4: bool = 
     else:
         raise ValueError("wait_time > 65535**2 is not supported yet.")
 
-    if force_multiples_of_4:
+    if force_multiples_of_four:
         wait = int(np.ceil(wait / 4)) * 4
 
     wait_time = n_loops * loop_wait + wait
@@ -339,19 +339,3 @@ def convert_offset(offset: float):
         return 2**15 - 1
     else:
         return int(np.floor(normalised_offset * 2**15)) % 2**32  # two's complement 32 bit number? or 12 or 24?
-
-
-# https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/tutorials/nco.html#Fast-chirped-pulses-using-Q1ASM
-# The sequencer program can fundamentally only support integer values.
-# However, the NCO has a frequency resolution of 0.25 Hz and supports 1e9 phase values.
-# Therefore, frequencies in the sequencer program must be given as an integer multiple of 1/4 Hz,
-# and phases as an integer multiple of 360/1e9 degrees.
-
-# Internally, the processor stores negative values using two’s complement.
-# This has some implications for our program:
-# - We cannot directly store a negative value in a register.
-#    Substracting a larger value from a smaller one works as expected though.
-# - Immediate values are handled by the compiler, i.e. set_freq-100 gives the expected result of -25 Hz.
-# - Comparisons (jlt, jge) with registers storing a negative value do not work as expected,
-#    as the smallest negative number is larger than the largest positive number.
-#    To keep the program general we should therefore use loop instead.

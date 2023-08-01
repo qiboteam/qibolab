@@ -40,6 +40,8 @@ class QbloxInputPort_Settings:
 
 
 class QbloxOutputPort(Port):
+    """qibolab.instruments.port.Port interface implementation for Qblox instruments"""
+
     def __init__(self, module, sequencer_number: int, number: int):
         self.module = module
         self.sequencer_number: int = sequencer_number
@@ -48,8 +50,6 @@ class QbloxOutputPort(Port):
         self.qubit = None  # To be discontinued
 
         self._settings = QbloxOutputPort_Settings()
-
-    # qibolab.instruments.port.Port interface implementation
 
     @property
     def attenuation(self) -> str:
