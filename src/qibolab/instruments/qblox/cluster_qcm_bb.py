@@ -366,7 +366,7 @@ class ClusterQCM_BB(Instrument):
         else:
             raise Exception("The instrument cannot be set up, there is no connection")
 
-    def _get_next_sequencer(self, port, frequency, qubit: None):
+    def _get_next_sequencer(self, port, frequency, qubits: dict, qubit: None):
         """Retrieves and configures the next avaliable sequencer.
 
         The parameters of the new sequencer are copied from those of the default sequencer, except for the
@@ -401,6 +401,17 @@ class ClusterQCM_BB(Instrument):
                 # TODO: Throw error in that event or implement for non_overlapping_same_frequency_pulses
                 #       Even better, set the frequency before each pulse is played (would work with hardware modulation only)
             )
+
+            #set sequencer port offset to the runcard value
+            # self._set_device_parameter(
+            #     self.device.sequencers[next_sequencer_number],
+            #     "out0_offset", #How to select device parameter offset??
+            #     value=qubits[qubit].sweetspot,
+            # )
+            
+            self.ports[port].offset = qubits[qubit].sweetspot
+
+
         # create sequencer wrapper
         sequencer = Sequencer(next_sequencer_number)
         sequencer.qubit = qubit
@@ -489,6 +500,7 @@ class ClusterQCM_BB(Instrument):
                     sequencer = self._get_next_sequencer(
                         port=port,
                         frequency=self.get_if(non_overlapping_pulses[0]),
+                        qubits=qubits,
                         qubit=non_overlapping_pulses[0].qubit,
                     )
                     # add the sequencer to the list of sequencers required by the port
@@ -518,12 +530,13 @@ class ClusterQCM_BB(Instrument):
                             sequencer = self._get_next_sequencer(
                                 port=port,
                                 frequency=self.get_if(non_overlapping_pulses[0]),
+                                qubits=qubits,
                                 qubit=non_overlapping_pulses[0].qubit,
                             )
                             # add the sequencer to the list of sequencers required by the port
                             self._sequencers[port].append(sequencer)
             else:
-                sequencer = self._get_next_sequencer(port=port, frequency=0, qubit=self.ports[port].qubit)
+                sequencer = self._get_next_sequencer(port=port, frequency=0, qubits=qubits, qubit=self.ports[port].qubit)
                 # add the sequencer to the list of sequencers required by the port
                 self._sequencers[port].append(sequencer)
 
