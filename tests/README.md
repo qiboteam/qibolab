@@ -6,7 +6,7 @@ with or without QPU access.
 ## Tests without QPU
 
 Tests can be executed on any machine by executing
-```py
+```sh
 pytest
 ```
 
@@ -18,7 +18,7 @@ with the `qpu` marker, using the platforms in the
 
 Tests marked using `@pytest.mark.qpu` require access
 to control electronics. These can be executed using
-```py
+```sh
 pytest -m qpu --platform {my_platform_name}
 ```
 
