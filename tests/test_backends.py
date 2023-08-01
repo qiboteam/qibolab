@@ -8,7 +8,7 @@ from qibo.models import Circuit
 from qibolab.backends import QibolabBackend
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def backend(connected_platform):
     connected_platform.setup()
     connected_platform.start()

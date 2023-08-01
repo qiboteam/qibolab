@@ -77,7 +77,7 @@ def platform(request):
     return create_platform(request.param)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def connected_platform(request):
     """Platform that has access to QPU instruments.
 
