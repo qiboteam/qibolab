@@ -339,4 +339,3 @@ def convert_offset(offset: float):
         return 2**15 - 1
     else:
         return int(np.floor(normalised_offset * 2**15)) % 2**32  # two's complement 32 bit number? or 12 or 24?
-
