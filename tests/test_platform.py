@@ -51,8 +51,7 @@ def test_abstractplatform_pickle(platform):
         "classifiers_hpars",
     ],
 )
-def test_update(qpu_platform, par):
-    platform = qpu_platform
+def test_update(platform, par):
     qubits = {q: qubit for q, qubit in platform.qubits.items() if qubit.readout is not None and qubit.drive is not None}
     new_values = np.ones(len(qubits))
     if "states" in par:

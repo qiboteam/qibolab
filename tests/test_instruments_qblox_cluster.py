@@ -7,7 +7,12 @@ from qibolab.instruments.qblox.cluster import (
     ReferenceClockSource,
 )
 
-from .qblox_fixtures import cluster, controller  # nopycln: import
+from .qblox_fixtures import (  # nopycln: import
+    cluster,
+    connected_cluster,
+    connected_controller,
+    controller,
+)
 
 
 def test_ReferenceClockSource():
@@ -54,32 +59,24 @@ def test_reference_clock_source(cluster: Cluster):
 
 
 @pytest.mark.qpu
-def test_connect(cluster: Cluster):
-    cluster.connect()
-    assert cluster.is_connected
-    cluster.disconnect()
+def test_connect(connected_cluster: Cluster):
+    assert connected_cluster.is_connected
 
 
 @pytest.mark.qpu
-def test_setup(cluster: Cluster):
-    cluster.connect()
-    cluster.setup()
-    cluster.disconnect()
+def test_setup(connected_cluster: Cluster):
+    connected_cluster.setup()
 
 
 @pytest.mark.qpu
-def test_start_stop(cluster: Cluster):
-    cluster.connect()
-    cluster.start()
-    cluster.stop()
-    cluster.disconnect()
+def test_start_stop(connected_cluster: Cluster):
+    connected_cluster.start()
+    connected_cluster.stop()
 
 
 @pytest.mark.qpu
-def test_reference_clock_source_device(cluster: Cluster):
-    cluster.connect()
-    cluster.reference_clock_source = ReferenceClockSource.EXTERNAL
-    assert cluster.device.get("reference_source") == "external"
-    cluster.reference_clock_source = ReferenceClockSource.INTERNAL
-    assert cluster.device.get("reference_source") == "internal"
-    cluster.disconnect()
+def test_reference_clock_source_device(connected_cluster: Cluster):
+    connected_cluster.reference_clock_source = ReferenceClockSource.EXTERNAL
+    assert connected_cluster.device.get("reference_source") == "external"
+    connected_cluster.reference_clock_source = ReferenceClockSource.INTERNAL
+    assert connected_cluster.device.get("reference_source") == "internal"

@@ -19,9 +19,13 @@ def test_instruments_rohde_schwarz_init(instrument):
 
 @pytest.mark.qpu
 def test_instruments_rohde_schwarz_setup(instrument):
+    original_frequency = instrument.frequency
+    original_power = instrument.power
     instrument.setup(frequency=5e9, power=0)
     assert instrument.frequency == 5e9
     assert instrument.power == 0
+    instrument.frequency = original_frequency
+    instrument.power = original_power
 
 
 def set_and_test_parameter_values(instrument, parameter, values):
@@ -32,6 +36,9 @@ def set_and_test_parameter_values(instrument, parameter, values):
 
 @pytest.mark.qpu
 def test_instruments_rohde_schwarz_set_device_paramter(instrument):
+    original_frequency = instrument.frequency
+    original_power = instrument.power
+
     set_and_test_parameter_values(
         instrument, f"power", np.arange(-120, 0, 10)
     )  # Max power is 25dBm but to be safe testing only until 0dBm
@@ -60,6 +67,9 @@ def test_instruments_rohde_schwarz_set_device_paramter(instrument):
     status                :	None
     timeout               :	5 (s)
     """
+
+    instrument.frequency = original_frequency
+    instrument.power = original_power
 
 
 @pytest.mark.qpu

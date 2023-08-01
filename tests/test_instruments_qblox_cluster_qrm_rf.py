@@ -95,7 +95,10 @@ def test_init(qrm_rf: ClusterQRM_RF):
 
 
 @pytest.mark.qpu
-def test_connect(cluster: Cluster, qrm_rf: ClusterQRM_RF):
+def test_connect(connected_cluster: Cluster, connected_qrm_rf: ClusterQRM_RF):
+    cluster = connected_cluster
+    qrm_rf = connected_qrm_rf
+
     cluster.connect()
     qrm_rf.connect(cluster.device)
     assert qrm_rf.is_connected
@@ -134,12 +137,12 @@ def test_connect(cluster: Cluster, qrm_rf: ClusterQRM_RF):
         assert qrm_rf.device.sequencers[s].get("channel_map_path0_out0_en") == False
         assert qrm_rf.device.sequencers[s].get("channel_map_path1_out1_en") == False
 
-    qrm_rf.disconnect()
-    cluster.disconnect()
-
 
 @pytest.mark.qpu
-def test_setup(cluster: Cluster, qrm_rf: ClusterQRM_RF):
+def test_setup(connected_cluster: Cluster, connected_qrm_rf: ClusterQRM_RF):
+    cluster = connected_cluster
+    qrm_rf = connected_qrm_rf
+
     cluster.connect()
     qrm_rf.connect(cluster.device)
     qrm_rf.setup()

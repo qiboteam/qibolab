@@ -17,9 +17,13 @@ def test_instruments_erasynth_connect(era):
 
 @pytest.mark.qpu
 def test_instruments_erasynth_setup(era):
+    original_frequency = era.frequency
+    original_power = era.power
     era.setup(frequency=5e9, power=-10)
     assert era.frequency == 5e9
     assert era.power == -10
+    era.frequency = original_frequency
+    era.power = original_power
 
 
 @pytest.mark.qpu

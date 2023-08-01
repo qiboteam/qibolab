@@ -30,6 +30,10 @@ Qibolab should be pointed to the directory that contains
 the platform creation modules via the `QIBOLAB_PLATFORMS`
 environment variable.
 
+When running tests on QPU, the instruments that are available
+in the given platform are known and the related tests are
+executed or skipped automatically.
+
 [qibolab_platforms_qrc](https://github.com/qiboteam/qibolab_platforms_qrc) provides some examples on how to
 define different platforms.
 
