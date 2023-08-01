@@ -60,11 +60,6 @@ class QbloxController(Controller):
         for name in self.modules:
             self.modules[name].setup()
 
-    def reload_settings(self):
-        """Reloads initial settings."""
-
-        if self.is_connected:
-            self.setup()
 
     def start(self):
         """Starts all modules."""
