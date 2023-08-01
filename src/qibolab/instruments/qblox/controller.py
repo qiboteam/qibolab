@@ -60,12 +60,6 @@ class QbloxController(Controller):
         for name in self.modules:
             self.modules[name].setup()
 
-    def reload_settings(self):
-        """Reloads initial settings."""
-
-        if self.is_connected:
-            self.setup()
-
     def start(self):
         """Starts all modules."""
         self.cluster.start()
@@ -447,12 +441,6 @@ class QbloxController(Controller):
 
                     # split the sweep if the number of bins is larget than the memory of the sequencer (2**17)
                     if num_bins < 2**17:
-                        repetition_duration = sequence.finish + options.relaxation_time
-                        execution_time = navgs * num_bins * ((repetition_duration + 1000 * len(sweepers)) * 1e-9)
-                        log.info(
-                            f"Real time sweeper execution time: {int(execution_time)//60}m {int(execution_time) % 60}s"
-                        )
-
                         # for sweeper in sweepers:
                         #     if sweeper.parameter is Parameter.amplitude:
                         #         # qblox cannot sweep amplitude in real time, but sweeping gain is quivalent

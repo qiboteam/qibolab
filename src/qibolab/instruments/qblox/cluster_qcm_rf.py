@@ -449,7 +449,7 @@ class ClusterQCM_RF(Instrument):
         navgs: int,
         nshots: int,
         repetition_duration: int,
-        sweepers: list = [],
+        sweepers: None,
     ):
         """Processes a sequence of pulses and sweepers, generating the waveforms and program required by
         the instrument to synthesise them.
@@ -480,6 +480,8 @@ class ClusterQCM_RF(Instrument):
             repetition_duration (int): The total duration of the pulse sequence execution plus the reset/relaxation time.
             sweepers (list(Sweeper)): A list of Sweeper objects to be implemented.
         """
+        if sweepers is None:
+            sweepers = []
         sequencer: Sequencer
         sweeper: Sweeper
 
@@ -692,7 +694,7 @@ class ClusterQCM_RF(Instrument):
                 pulses_block = Block("play")
                 # Add an initial wait instruction for the first pulse of the sequence
                 initial_wait_block = wait_block(
-                    wait_time=pulses[0].start, register=Register(program), force_multiples_of_4=False
+                    wait_time=pulses[0].start, register=Register(program), force_multiples_of_four=False
                 )
                 pulses_block += initial_wait_block
 
@@ -748,7 +750,7 @@ class ClusterQCM_RF(Instrument):
                 body_block.append_spacer()
 
                 final_reset_block = wait_block(
-                    wait_time=time_between_repetitions, register=Register(program), force_multiples_of_4=False
+                    wait_time=time_between_repetitions, register=Register(program), force_multiples_of_four=False
                 )
 
                 body_block += final_reset_block
