@@ -51,8 +51,8 @@ def test_abstractplatform_pickle(platform):
         "classifiers_hpars",
     ],
 )
-@pytest.mark.qpu
 def test_update(qpu_platform, par):
+    platform = qpu_platform
     qubits = {q: qubit for q, qubit in platform.qubits.items() if qubit.readout is not None and qubit.drive is not None}
     new_values = np.ones(len(qubits))
     if "states" in par:
@@ -74,6 +74,7 @@ def test_update(qpu_platform, par):
 
 @pytest.fixture(scope="module")
 def qpu_platform(connected_platform):
+    connected_platform.connect()
     connected_platform.setup()
     connected_platform.start()
     yield connected_platform
@@ -198,38 +199,48 @@ def test_multiqubitplatform_execute_multiple_readout_pulses(qpu_platform):
 
 @pytest.mark.qpu
 @pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
-def test_excited_state_probabilities_pulses(qpu_platform, qubit):
+def test_excited_state_probabilities_pulses(qpu_platform):
     platform = qpu_platform
+    qubits = [q for q, qb in platform.qubits.items() if qb.drive is not None]
     backend = QibolabBackend(platform)
-    qd_pulse = platform.create_RX_pulse(qubit)
-    ro_pulse = platform.create_MZ_pulse(qubit, start=qd_pulse.duration)
     sequence = PulseSequence()
-    sequence.add(qd_pulse)
-    sequence.add(ro_pulse)
+    for qubit in qubits:
+        qd_pulse = platform.create_RX_pulse(qubit)
+        ro_pulse = platform.create_MZ_pulse(qubit, start=qd_pulse.duration)
+        sequence.add(qd_pulse)
+        sequence.add(ro_pulse)
     result = platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=5000))
 
-    cr = CircuitResult(backend, Circuit(platform.nqubits), result, nshots=5000)
-    probs = backend.circuit_result_probabilities(cr, qubits=[qubit])
+    nqubits = len(qubits)
+    cr = CircuitResult(backend, Circuit(nqubits), result, nshots=5000)
+    probs = [backend.circuit_result_probabilities(cr, qubits=[qubit]) for qubit in qubits]
     warnings.warn(f"Excited state probabilities: {probs}")
-    np.testing.assert_allclose(probs, [0, 1], atol=0.05)
+    target_probs = np.zeros((nqubits, 2))
+    target_probs[:, 1] = 1
+    np.testing.assert_allclose(probs, target_probs, atol=0.05)
 
 
 @pytest.mark.qpu
 @pytest.mark.parametrize("start_zero", [False, True])
 @pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
-def test_ground_state_probabilities_pulses(qpu_platform, qubit, start_zero):
+def test_ground_state_probabilities_pulses(qpu_platform, start_zero):
     platform = qpu_platform
+    qubits = [q for q, qb in platform.qubits.items() if qb.drive is not None]
     backend = QibolabBackend(platform)
-    if start_zero:
-        ro_pulse = platform.create_MZ_pulse(qubit, start=0)
-    else:
-        qd_pulse = platform.create_RX_pulse(qubit)
-        ro_pulse = platform.create_MZ_pulse(qubit, start=qd_pulse.duration)
     sequence = PulseSequence()
-    sequence.add(ro_pulse)
+    for qubit in qubits:
+        if start_zero:
+            ro_pulse = platform.create_MZ_pulse(qubit, start=0)
+        else:
+            qd_pulse = platform.create_RX_pulse(qubit)
+            ro_pulse = platform.create_MZ_pulse(qubit, start=qd_pulse.duration)
+        sequence.add(ro_pulse)
     result = platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=5000))
 
-    cr = CircuitResult(backend, Circuit(platform.nqubits), result, nshots=5000)
-    probs = backend.circuit_result_probabilities(cr, qubits=[qubit])
+    nqubits = len(qubits)
+    cr = CircuitResult(backend, Circuit(nqubits), result, nshots=5000)
+    probs = [backend.circuit_result_probabilities(cr, qubits=[qubit]) for qubit in qubits]
     warnings.warn(f"Ground state probabilities: {probs}")
-    np.testing.assert_allclose(probs, [1, 0], atol=0.05)
+    target_probs = np.zeros((nqubits, 2))
+    target_probs[:, 0] = 1
+    np.testing.assert_allclose(probs, target_probs, atol=0.05)

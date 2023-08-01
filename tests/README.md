@@ -19,7 +19,7 @@ with the `qpu` marker, using the platforms in the
 Tests marked using `@pytest.mark.qpu` require access
 to control electronics. These can be executed using
 ```py
-pytest -m qpu --platforms {my_platform_name}
+pytest -m qpu --platform {my_platform_name}
 ```
 
 Where `{my_platform_name}` is the name of the platform
@@ -33,7 +33,7 @@ environment variable.
 [qibolab_platforms_qrc](https://github.com/qiboteam/qibolab_platforms_qrc) provides some examples on how to
 define different platforms.
 
-Note that the `--platforms` option used in the `pytest`
+Note that the `--platform` option used in the `pytest`
 command above specifies the platforms used by `qpu` tests.
-Non-qpu tests will still use the platforms under `tests/dummy_qrc` regardless of the `--platforms` option and the
+Non-qpu tests will still use the platforms under `tests/dummy_qrc` regardless of the `--platform` option and the
 value of `QIBOLAB_PLATFORMS` environment variable.

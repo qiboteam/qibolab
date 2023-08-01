@@ -461,25 +461,21 @@ def test_sim(dummy_qrc):
 
 
 @pytest.fixture(scope="module")
-def config(platform):
-    instrument = get_instrument(platform, Zurich)
-    return platform, instrument
+def instrument(connected_platform):
+    return get_instrument(connected_platform, Zurich)
 
 
 @pytest.mark.qpu
-def test_connections(config):
-    platform, IQM5q = config
-    IQM5q = platform.instruments[0]
-    IQM5q.start()
-    IQM5q.stop()
-    IQM5q.disconnect()
-    IQM5q.connect()
+def test_connections(instrument):
+    instrument.start()
+    instrument.stop()
+    instrument.disconnect()
+    instrument.connect()
 
 
 @pytest.mark.qpu
-def test_experiment_execute_pulse_sequence(config):
-    platform, _ = config
-    platform.connect()
+def test_experiment_execute_pulse_sequence(connected_platform, instrument):
+    platform = connected_platform
     platform.setup()
 
     sequence = PulseSequence()
@@ -517,9 +513,8 @@ def test_experiment_execute_pulse_sequence(config):
 
 
 @pytest.mark.qpu
-def test_experiment_sweep_2d_specific(config):
-    platform, _ = config
-    platform.connect()
+def test_experiment_sweep_2d_specific(connected_platform, instrument):
+    platform = connected_platform
     platform.setup()
 
     sequence = PulseSequence()

@@ -545,17 +545,16 @@ def test_convert_nav_sweep_results(dummy_qrc):
 
 
 @pytest.fixture(scope="module")
-def config(platform):
-    instrument = get_instrument(platform, RFSoC)
-    return platform, instrument
+def instrument(connected_platform):
+    return get_instrument(connected_platform, RFSoC)
 
 
 @pytest.mark.qpu
-def test_call_executepulsesequence(config):
+def test_call_executepulsesequence(connected_platform, instrument):
     """Executes a PulseSequence and check if result shape is as expected.
     Both for averaged results and not averaged results.
     """
-    platform, instrument = config
+    platform = connected_platform
 
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(qubit=0, start=0))
@@ -571,11 +570,11 @@ def test_call_executepulsesequence(config):
 
 
 @pytest.mark.qpu
-def test_call_execute_sweeps(config):
+def test_call_execute_sweeps(connected_platform, instrument):
     """Executes a firmware sweep and check if result shape is as expected.
     Both for averaged results and not averaged results.
     """
-    platform, instrument = config
+    platform = connected_platform
 
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(qubit=0, start=0))
@@ -594,9 +593,9 @@ def test_call_execute_sweeps(config):
 
 
 @pytest.mark.qpu
-def test_play_qpu(config):
+def test_play_qpu(connected_platform, instrument):
     """Sends a PulseSequence using `play` and check results are what expected"""
-    platform, instrument = config
+    platform = connected_platform
 
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(qubit=0, start=0))
@@ -612,9 +611,9 @@ def test_play_qpu(config):
 
 
 @pytest.mark.qpu
-def test_sweep_qpu(config):
+def test_sweep_qpu(connected_platform, instrument):
     """Sends a PulseSequence using `sweep` and check results are what expected"""
-    platform, instrument = config
+    platform = connected_platform
 
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(qubit=0, start=0))
@@ -647,9 +646,9 @@ def test_sweep_qpu(config):
 
 
 @pytest.mark.qpu
-def test_python_reqursive_sweep(config):
+def test_python_reqursive_sweep(connected_platform, instrument):
     """Sends a PulseSequence directly to `python_reqursive_sweep` and check results are what expected"""
-    platform, instrument = config
+    platform = connected_platform
 
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(qubit=0, start=0))
