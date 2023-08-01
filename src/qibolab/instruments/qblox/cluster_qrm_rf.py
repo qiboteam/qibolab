@@ -468,7 +468,7 @@ class ClusterQRM_RF(Instrument):
         navgs: int,
         nshots: int,
         repetition_duration: int,
-        sweepers: None,
+        sweepers=None,
     ):
         """Processes a sequence of pulses and sweepers, generating the waveforms and program required by
         the instrument to synthesise them.

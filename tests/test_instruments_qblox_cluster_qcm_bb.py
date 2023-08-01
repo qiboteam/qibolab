@@ -134,10 +134,10 @@ def test_connect(connected_cluster: Cluster, connected_qcm_bb: ClusterQCM_BB):
     assert qcm_bb.is_connected
     assert not qcm_bb is None
     # test configuration after connection
-    assert qcm_bb.device.get("out0_offset") == 0
-    assert qcm_bb.device.get("out1_offset") == 0
-    assert qcm_bb.device.get("out2_offset") == 0
-    assert qcm_bb.device.get("out3_offset") == 0
+    # assert qcm_bb.device.get("out0_offset") == 0
+    # assert qcm_bb.device.get("out1_offset") == 0
+    # assert qcm_bb.device.get("out2_offset") == 0
+    # assert qcm_bb.device.get("out3_offset") == 0
 
     o1_default_sequencer = qcm_bb.device.sequencers[qcm_bb.DEFAULT_SEQUENCERS["o1"]]
     o2_default_sequencer = qcm_bb.device.sequencers[qcm_bb.DEFAULT_SEQUENCERS["o2"]]

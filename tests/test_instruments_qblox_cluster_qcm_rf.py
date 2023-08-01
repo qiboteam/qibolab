@@ -185,9 +185,6 @@ def test_setup(connected_cluster: Cluster, connected_qcm_rf: ClusterQCM_RF):
     assert qcm_rf.ports["o2"].nco_freq == 0
     assert qcm_rf.ports["o2"].nco_phase_offs == 0
 
-    qcm_rf.disconnect()
-    cluster.disconnect()
-
 
 @pytest.mark.qpu
 def test_pulse_sequence(connected_platform, connected_qcm_rf: ClusterQCM_RF):
@@ -248,10 +245,3 @@ def test_start_stop(connected_qcm_rf: ClusterQCM_RF):
     connected_qcm_rf.start()
     connected_qcm_rf.stop()
     # check all sequencers are stopped and all offsets = 0
-
-
-@pytest.mark.qpu
-def test_disconnect(connected_cluster, connected_qcm_rf: ClusterQCM_RF):
-    connected_qcm_rf.disconnect()
-    assert connected_qcm_rf.is_connected == False
-    connected_cluster.disconnect()

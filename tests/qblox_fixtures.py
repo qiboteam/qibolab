@@ -26,11 +26,13 @@ def cluster(controller):
     return get_cluster(controller)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def connected_controller(connected_platform):
     return get_controller(connected_platform)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def connected_cluster(connected_controller):
-    return get_cluster(connected_controller)
+    cluster = get_cluster(connected_controller)
+    cluster.connect()
+    return cluster

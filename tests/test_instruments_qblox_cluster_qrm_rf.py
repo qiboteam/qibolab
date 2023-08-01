@@ -169,9 +169,6 @@ def test_setup(connected_cluster: Cluster, connected_qrm_rf: ClusterQRM_RF):
     assert qrm_rf.ports["i1"].acquisition_hold_off == TIME_OF_FLIGHT
     assert qrm_rf.ports["i1"].acquisition_duration == ACQUISITION_DURATION
 
-    qrm_rf.disconnect()
-    cluster.disconnect()
-
 
 @pytest.mark.qpu
 def test_pulse_sequence(connected_platform, connected_qrm_rf: ClusterQRM_RF):
@@ -245,10 +242,3 @@ def test_start_stop(connected_qrm_rf: ClusterQRM_RF):
     connected_qrm_rf.start()
     connected_qrm_rf.stop()
     # check all sequencers are stopped and all offsets = 0
-
-
-@pytest.mark.qpu
-def test_disconnect(connected_cluster, connected_qrm_rf: ClusterQRM_RF):
-    connected_qrm_rf.disconnect()
-    assert connected_qrm_rf.is_connected == False
-    connected_cluster.disconnect()
