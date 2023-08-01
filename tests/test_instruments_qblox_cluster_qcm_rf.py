@@ -14,7 +14,7 @@ from qibolab.instruments.qblox.port import (
 from qibolab.pulses import DrivePulse, PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
-from .qblox_fixtures import cluster, controller
+from .qblox_fixtures import cluster, connected_cluster, connected_controller, controller
 
 O1_OUTPUT_CHANNEL = "L3-11"
 O1_ATTENUATION = 20
@@ -27,8 +27,7 @@ O2_LO_FREQUENCY = 5_995_371_914
 O2_GAIN = 0.655
 
 
-@pytest.fixture(scope="module")
-def qcm_rf(controller):
+def get_qcm_rf(controller):
     settings = ClusterQCM_RF_Settings(
         {
             "o1": ClusterRF_OutputPort_Settings(
@@ -52,13 +51,19 @@ def qcm_rf(controller):
 
 
 @pytest.fixture(scope="module")
-def connected_qcm_rf(cluster: Cluster, qcm_rf: ClusterQCM_RF):
-    cluster.connect()
-    qcm_rf.connect(cluster.device)
+def qcm_rf(controller):
+    return get_qcm_rf(controller)
+
+
+@pytest.fixture(scope="module")
+def connected_qcm_rf(connected_cluster, connected_controller):
+    qcm_rf = get_qcm_rf(connected_controller)
+    connected_cluster.connect()
+    qcm_rf.connect(connected_cluster.device)
     qcm_rf.setup()
     yield qcm_rf
     qcm_rf.disconnect()
-    cluster.disconnect()
+    connected_cluster.disconnect()
 
 
 def test_ClusterQCM_RF_Settings():
@@ -182,14 +187,12 @@ def test_setup(cluster: Cluster, qcm_rf: ClusterQCM_RF):
 
 
 @pytest.mark.qpu
-def test_pulse_sequence(connected_qcm_rf: ClusterQCM_RF, dummy_qrc):
+def test_pulse_sequence(connected_platform, connected_qcm_rf: ClusterQCM_RF):
     ps = PulseSequence()
     ps.add(DrivePulse(0, 200, 1, O1_LO_FREQUENCY - 200e6, np.pi / 2, "Gaussian(5)", O1_OUTPUT_CHANNEL))
     ps.add(DrivePulse(0, 200, 1, O2_LO_FREQUENCY - 200e6, np.pi / 2, "Gaussian(5)", O2_OUTPUT_CHANNEL))
-    from qibolab import create_platform
 
-    platform = create_platform("qblox")
-    qubits = platform.qubits
+    qubits = connected_platform.qubits
     connected_qcm_rf.ports["o2"].hardware_mod_en = True
     connected_qcm_rf.process_pulse_sequence(qubits, ps, 1000, 1, 10000)
     connected_qcm_rf.upload()
@@ -202,15 +205,12 @@ def test_pulse_sequence(connected_qcm_rf: ClusterQCM_RF, dummy_qrc):
 
 
 @pytest.mark.qpu
-def test_sweepers(connected_qcm_rf: ClusterQCM_RF, dummy_qrc):
+def test_sweepers(connected_platform, connected_qcm_rf: ClusterQCM_RF):
     ps = PulseSequence()
     ps.add(DrivePulse(0, 200, 1, O1_LO_FREQUENCY - 200e6, np.pi / 2, "Gaussian(5)", O1_OUTPUT_CHANNEL))
     ps.add(DrivePulse(0, 200, 1, O2_LO_FREQUENCY - 200e6, np.pi / 2, "Gaussian(5)", O2_OUTPUT_CHANNEL))
 
-    from qibolab import create_platform
-
-    platform = create_platform("qblox")
-    qubits = platform.qubits
+    qubits = connected_platform.qubits
 
     freq_width = 300e6 * 2
     freq_step = freq_width // 100
@@ -248,9 +248,7 @@ def test_start_stop(connected_qcm_rf: ClusterQCM_RF):
 
 
 @pytest.mark.qpu
-def test_disconnect(cluster: Cluster, qcm_rf: ClusterQCM_RF):
-    cluster.connect()
-    qcm_rf.connect(cluster.device)
-    qcm_rf.disconnect()
-    assert qcm_rf.is_connected == False
-    cluster.disconnect()
+def test_disconnect(connected_cluster, connected_qcm_rf: ClusterQCM_RF):
+    connected_qcm_rf.disconnect()
+    assert connected_qcm_rf.is_connected == False
+    connected_cluster.disconnect()

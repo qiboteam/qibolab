@@ -16,19 +16,19 @@ def get_cluster(controller):
     return Cluster(cluster.name, cluster.address, Cluster_Settings())
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def controller(platform):
     return get_controller(platform)
+
+
+@pytest.fixture(scope="module")
+def cluster(controller):
+    return get_cluster(controller)
 
 
 @pytest.fixture(scope="session")
 def connected_controller(connected_platform):
     return get_controller(connected_platform)
-
-
-@pytest.fixture(scope="session")
-def cluster(controller):
-    return get_cluster(controller)
 
 
 @pytest.fixture(scope="session")

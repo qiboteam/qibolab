@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import pytest
 
@@ -14,7 +16,7 @@ from qibolab.instruments.qblox.port import (
 from qibolab.pulses import FluxPulse, PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
-from .qblox_fixtures import cluster, controller
+from .qblox_fixtures import cluster, connected_cluster, connected_controller, controller
 
 O1_OUTPUT_CHANNEL = "L4-1"
 O1_GAIN = 0.5
@@ -78,13 +80,14 @@ def qcm_bb(controller):
 
 
 @pytest.fixture(scope="module")
-def connected_qcm_bb(connected_cluster: Cluster, qcm_bb: ClusterQCM_BB):
-    cluster.connect()
-    qcm_bb.connect(cluster.device)
+def connected_qcm_bb(connected_cluster, connected_controller):
+    qcm_bb = get_qcm_bb(connected_controller)
+    connected_cluster.connect()
+    qcm_bb.connect(connected_cluster.device)
     qcm_bb.setup()
     yield qcm_bb
     qcm_bb.disconnect()
-    cluster.disconnect()
+    connected_cluster.disconnect()
 
 
 def test_ClusterQCM_BB_Settings():
@@ -122,7 +125,9 @@ def test_init(qcm_bb: ClusterQCM_BB):
 
 
 @pytest.mark.qpu
-def test_connect(connected_cluster: Cluster, connected_qcm_bb: ClusterQCM_BB):
+def test_connect(cluster: Cluster, qcm_bb: ClusterQCM_BB):
+    cluster.connect()
+    qcm_bb.connect(cluster.device)
     assert qcm_bb.is_connected
     assert not qcm_bb is None
     # test configuration after connection
@@ -182,15 +187,16 @@ def test_connect(connected_cluster: Cluster, connected_qcm_bb: ClusterQCM_BB):
         assert qcm_bb.device.sequencers[s].get("channel_map_path0_out2_en") == False
         assert qcm_bb.device.sequencers[s].get("channel_map_path1_out3_en") == False
 
+    qcm_bb.disconnect()
+    cluster.disconnect()
+
 
 @pytest.mark.qpu
-def test_setup(cluster: Cluster, qcm_bb: ClusterQCM_BB):
-    cluster.connect()
-    qcm_bb.connect(cluster.device)
+def test_setup(connected_qcm_bb: ClusterQCM_BB):
+    qcm_bb = connected_qcm_bb
     qcm_bb.setup()
 
     assert qcm_bb.ports["o1"].channel == O1_OUTPUT_CHANNEL
-    import math
 
     o1_default_sequencer = qcm_bb.device.sequencers[qcm_bb.DEFAULT_SEQUENCERS["o1"]]
     assert math.isclose(o1_default_sequencer.get("gain_awg_path0"), O1_GAIN, rel_tol=1e-4)
@@ -201,7 +207,6 @@ def test_setup(cluster: Cluster, qcm_bb: ClusterQCM_BB):
     assert qcm_bb.ports["o1"].nco_phase_offs == 0
 
     assert qcm_bb.ports["o2"].channel == O2_OUTPUT_CHANNEL
-    import math
 
     o2_default_sequencer = qcm_bb.device.sequencers[qcm_bb.DEFAULT_SEQUENCERS["o2"]]
     assert math.isclose(o2_default_sequencer.get("gain_awg_path0"), O2_GAIN, rel_tol=1e-4)
@@ -212,7 +217,6 @@ def test_setup(cluster: Cluster, qcm_bb: ClusterQCM_BB):
     assert qcm_bb.ports["o2"].nco_phase_offs == 0
 
     assert qcm_bb.ports["o3"].channel == O3_OUTPUT_CHANNEL
-    import math
 
     o3_default_sequencer = qcm_bb.device.sequencers[qcm_bb.DEFAULT_SEQUENCERS["o3"]]
     assert math.isclose(o3_default_sequencer.get("gain_awg_path0"), O3_GAIN, rel_tol=1e-4)
@@ -223,7 +227,6 @@ def test_setup(cluster: Cluster, qcm_bb: ClusterQCM_BB):
     assert qcm_bb.ports["o3"].nco_phase_offs == 0
 
     assert qcm_bb.ports["o4"].channel == O4_OUTPUT_CHANNEL
-    import math
 
     o4_default_sequencer = qcm_bb.device.sequencers[qcm_bb.DEFAULT_SEQUENCERS["o4"]]
     assert math.isclose(o4_default_sequencer.get("gain_awg_path0"), O4_GAIN, rel_tol=1e-4)
@@ -233,21 +236,15 @@ def test_setup(cluster: Cluster, qcm_bb: ClusterQCM_BB):
     assert qcm_bb.ports["o4"].nco_freq == 0
     assert qcm_bb.ports["o4"].nco_phase_offs == 0
 
-    qcm_bb.disconnect()
-    cluster.disconnect()
-
 
 @pytest.mark.qpu
-def test_pulse_sequence(connected_qcm_bb: ClusterQCM_BB, dummy_qrc):
+def test_pulse_sequence(connected_platform, connected_qcm_bb: ClusterQCM_BB):
     ps = PulseSequence()
     ps.add(FluxPulse(40, 70, 0.5, "Rectangular", O1_OUTPUT_CHANNEL))
     ps.add(FluxPulse(0, 50, 0.3, "Rectangular", O2_OUTPUT_CHANNEL))
     ps.add(FluxPulse(20, 100, 0.02, "Rectangular", O3_OUTPUT_CHANNEL))
     ps.add(FluxPulse(32, 48, 0.4, "Rectangular", O4_OUTPUT_CHANNEL))
-    from qibolab import create_platform
-
-    platform = create_platform("qblox")
-    qubits = platform.qubits
+    qubits = connected_platform.qubits
     connected_qcm_bb.ports["o2"].hardware_mod_en = True
     connected_qcm_bb.process_pulse_sequence(qubits, ps, 1000, 1, 10000)
     connected_qcm_bb.upload()
@@ -260,16 +257,13 @@ def test_pulse_sequence(connected_qcm_bb: ClusterQCM_BB, dummy_qrc):
 
 
 @pytest.mark.qpu
-def test_sweepers(connected_qcm_bb: ClusterQCM_BB, dummy_qrc):
+def test_sweepers(connected_platform, connected_qcm_bb: ClusterQCM_BB):
     ps = PulseSequence()
     ps.add(FluxPulse(40, 70, 0.5, "Rectangular", O1_OUTPUT_CHANNEL))
     ps.add(FluxPulse(0, 50, 0.3, "Rectangular", O2_OUTPUT_CHANNEL))
     ps.add(FluxPulse(20, 100, 0.02, "Rectangular", O3_OUTPUT_CHANNEL))
     ps.add(FluxPulse(32, 48, 0.4, "Rectangular", O4_OUTPUT_CHANNEL))
-    from qibolab import create_platform
-
-    platform = create_platform("qblox")
-    qubits = platform.qubits
+    qubits = connected_platform.qubits
 
     amplitude_range = np.linspace(0, 0.25, 50)
     sweeper = Sweeper(
@@ -289,12 +283,3 @@ def test_start_stop(connected_qcm_bb: ClusterQCM_BB):
     connected_qcm_bb.start()
     connected_qcm_bb.stop()
     # check all sequencers are stopped and all offsets = 0
-
-
-@pytest.mark.qpu
-def test_disconnect(cluster: Cluster, qcm_bb: ClusterQCM_BB):
-    cluster.connect()
-    qcm_bb.connect(cluster.device)
-    qcm_bb.disconnect()
-    assert qcm_bb.is_connected == False
-    cluster.disconnect()
