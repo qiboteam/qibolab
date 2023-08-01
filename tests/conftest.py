@@ -6,15 +6,16 @@ import pytest
 from qibolab import PLATFORMS, create_platform
 
 ORIGINAL_PLATFORMS = os.environ.get(PLATFORMS, "")
+DUMMY_PLATFORM_NAMES = ["qm", "qblox", "rfsoc", "zurich"]
 
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--platforms",
+        "--platform",
         type=str,
         action="store",
         default=None,
-        help="qpu platforms to test on",
+        help="qpu platform to test on",
     )
     parser.addoption(
         "--address",
@@ -56,11 +57,24 @@ def get_instrument(platform, instrument_type):
     pytest.skip(f"Skipping {instrument_type.__name__} test for {platform.name}.")
 
 
-def pytest_generate_tests(metafunc):
-    platform_names = metafunc.config.option.platforms
-    platform_names = [] if platform_names is None else platform_names.split(",")
-    dummy_platform_names = ["qm", "qblox", "rfsoc", "zurich"]
+@pytest.fixture(scope="module", params=DUMMY_PLATFORM_NAMES)
+def platform(request):
+    set_platform_profile()
+    return create_platform(request.param)
 
+
+@pytest.fixture(scope="session")
+def connected_platform(request):
+    os.environ[PLATFORMS] = ORIGINAL_PLATFORMS
+    name = request.config.getoption("--platform")
+    platform = create_platform(name)
+    platform.connect()
+    platform.setup()
+    yield platform
+    platform.disconnect()
+
+
+def pytest_generate_tests(metafunc):
     if "simulator" in metafunc.fixturenames:
         address = metafunc.config.option.address
         if address is None:
@@ -71,23 +85,23 @@ def pytest_generate_tests(metafunc):
             metafunc.parametrize("simulator", [(address, duration)], indirect=True)
             metafunc.parametrize("folder", [folder], indirect=True)
 
-    if "platform" in metafunc.fixturenames:
-        markers = {marker.name for marker in metafunc.definition.iter_markers()}
-        if "qpu" in markers:
-            # use real platforms
-            os.environ[PLATFORMS] = ORIGINAL_PLATFORMS
-            platforms = [create_platform(name) for name in platform_names]
-        else:
-            # use platforms under ``dummy_qrc`` folder in tests
-            set_platform_profile()
-            platforms = [create_platform(name) for name in dummy_platform_names]
-        if "qubit" in metafunc.fixturenames:
-            config = [
-                (platform, q)
-                for platform in platforms
-                for q, qubit in platform.qubits.items()
-                if qubit.drive is not None
-            ]
-            metafunc.parametrize("platform,qubit", config, scope="module")
-        else:
-            metafunc.parametrize("platform", platforms, scope="module")
+    # if "platform" in metafunc.fixturenames:
+    #    markers = {marker.name for marker in metafunc.definition.iter_markers()}
+    #    if "qpu" in markers:
+    #        # use real platforms
+    #        os.environ[PLATFORMS] = ORIGINAL_PLATFORMS
+    #        platforms = [create_platform(name) for name in platform_names]
+    #    else:
+    #        # use platforms under ``dummy_qrc`` folder in tests
+    #        set_platform_profile()
+    #        platforms = [create_platform(name) for name in dummy_platform_names]
+    #    if "qubit" in metafunc.fixturenames:
+    #        config = [
+    #            (platform, q)
+    #            for platform in platforms
+    #            for q, qubit in platform.qubits.items()
+    #            if qubit.drive is not None
+    #        ]
+    #        metafunc.parametrize("platform,qubit", config, scope="module")
+    #    else:
+    #        metafunc.parametrize("platform", platforms, scope="session")

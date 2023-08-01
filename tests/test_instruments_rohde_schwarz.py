@@ -7,25 +7,21 @@ from .conftest import get_instrument
 
 
 @pytest.fixture(scope="module")
-def instrument(platform):
-    return get_instrument(platform, SGS100A)
+def instrument(connected_platform):
+    return get_instrument(connected_platform, SGS100A)
 
 
 @pytest.mark.qpu
 def test_instruments_rohde_schwarz_init(instrument):
-    instrument.connect()
     assert instrument.is_connected
     assert instrument.device
-    instrument.disconnect()
 
 
 @pytest.mark.qpu
 def test_instruments_rohde_schwarz_setup(instrument):
-    instrument.connect()
     instrument.setup(frequency=5e9, power=0)
     assert instrument.frequency == 5e9
     assert instrument.power == 0
-    instrument.disconnect()
 
 
 def set_and_test_parameter_values(instrument, parameter, values):
@@ -70,9 +66,5 @@ def test_instruments_rohde_schwarz_set_device_paramter(instrument):
 
 @pytest.mark.qpu
 def test_instruments_rohde_schwarz_start_stop_disconnect(instrument):
-    instrument.connect()
-    assert instrument.is_connected
     instrument.start()
     instrument.stop()
-    instrument.disconnect()
-    assert not instrument.is_connected

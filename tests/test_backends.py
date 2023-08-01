@@ -8,13 +8,12 @@ from qibo.models import Circuit
 from qibolab.backends import QibolabBackend
 
 
-@pytest.fixture(scope="module")
-def backend(platform):
-    backend = QibolabBackend(platform)
-    backend.platform.connect()
-    backend.platform.setup()
-    yield backend
-    backend.platform.disconnect()
+@pytest.fixture(scope="session")
+def backend(connected_platform):
+    connected_platform.setup()
+    connected_platform.start()
+    yield QibolabBackend(connected_platform)
+    connected_platform.stop()
 
 
 def generate_circuit_with_gate(nqubits, gate, **kwargs):

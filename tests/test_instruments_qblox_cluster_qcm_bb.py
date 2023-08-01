@@ -37,8 +37,7 @@ O4_OFFSET = 0.5890
 O4_QUBIT = 4
 
 
-@pytest.fixture(scope="module")
-def qcm_bb(controller):
+def get_qcm_bb(controller):
     settings = ClusterQCM_BB_Settings(
         {
             "o1": ClusterBB_OutputPort_Settings(
@@ -74,7 +73,12 @@ def qcm_bb(controller):
 
 
 @pytest.fixture(scope="module")
-def connected_qcm_bb(cluster: Cluster, qcm_bb: ClusterQCM_BB):
+def qcm_bb(controller):
+    return get_qcm_bb(controller)
+
+
+@pytest.fixture(scope="module")
+def connected_qcm_bb(connected_cluster: Cluster, qcm_bb: ClusterQCM_BB):
     cluster.connect()
     qcm_bb.connect(cluster.device)
     qcm_bb.setup()
@@ -118,9 +122,7 @@ def test_init(qcm_bb: ClusterQCM_BB):
 
 
 @pytest.mark.qpu
-def test_connect(cluster: Cluster, qcm_bb: ClusterQCM_BB):
-    cluster.connect()
-    qcm_bb.connect(cluster.device)
+def test_connect(connected_cluster: Cluster, connected_qcm_bb: ClusterQCM_BB):
     assert qcm_bb.is_connected
     assert not qcm_bb is None
     # test configuration after connection
@@ -179,9 +181,6 @@ def test_connect(cluster: Cluster, qcm_bb: ClusterQCM_BB):
         assert qcm_bb.device.sequencers[s].get("channel_map_path1_out1_en") == False
         assert qcm_bb.device.sequencers[s].get("channel_map_path0_out2_en") == False
         assert qcm_bb.device.sequencers[s].get("channel_map_path1_out3_en") == False
-
-    qcm_bb.disconnect()
-    cluster.disconnect()
 
 
 @pytest.mark.qpu

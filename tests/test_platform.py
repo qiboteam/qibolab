@@ -52,7 +52,7 @@ def test_abstractplatform_pickle(platform):
     ],
 )
 @pytest.mark.qpu
-def test_update(platform, par):
+def test_update(qpu_platform, par):
     qubits = {q: qubit for q, qubit in platform.qubits.items() if qubit.readout is not None and qubit.drive is not None}
     new_values = np.ones(len(qubits))
     if "states" in par:
@@ -73,32 +73,30 @@ def test_update(platform, par):
 
 
 @pytest.fixture(scope="module")
-def connected_platform(platform):
-    platform.connect()
-    platform.setup()
-    platform.start()
-    yield platform
-    platform.stop()
-    platform.disconnect()
+def qpu_platform(connected_platform):
+    connected_platform.setup()
+    connected_platform.start()
+    yield connected_platform
+    connected_platform.stop()
 
 
 @pytest.mark.qpu
-def test_abstractplatform_setup_start_stop(connected_platform):
+def test_abstractplatform_setup_start_stop(qpu_platform):
     pass
 
 
 @pytest.mark.qpu
-def test_platform_execute_empty(connected_platform):
+def test_platform_execute_empty(qpu_platform):
     # an empty pulse sequence
-    platform = connected_platform
+    platform = qpu_platform
     sequence = PulseSequence()
     platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
 
 
 @pytest.mark.qpu
-def test_platform_execute_one_drive_pulse(connected_platform):
+def test_platform_execute_one_drive_pulse(qpu_platform):
     # One drive pulse
-    platform = connected_platform
+    platform = qpu_platform
     qubit = next(iter(platform.qubits))
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
@@ -107,9 +105,9 @@ def test_platform_execute_one_drive_pulse(connected_platform):
 
 @pytest.mark.qpu
 @pytest.mark.xfail(raises=NotImplementedError, reason="Qblox does not support long waveforms.")
-def test_multiqubitplatform_execute_one_long_drive_pulse(connected_platform):
+def test_multiqubitplatform_execute_one_long_drive_pulse(qpu_platform):
     # Long duration
-    platform = connected_platform
+    platform = qpu_platform
     qubit = next(iter(platform.qubits))
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=8192 + 200))
@@ -118,9 +116,9 @@ def test_multiqubitplatform_execute_one_long_drive_pulse(connected_platform):
 
 @pytest.mark.qpu
 @pytest.mark.xfail(raises=NotImplementedError, reason="Qblox does not support long waveforms.")
-def test_multiqubitplatform_execute_one_extralong_drive_pulse(connected_platform):
+def test_multiqubitplatform_execute_one_extralong_drive_pulse(qpu_platform):
     # Extra Long duration
-    platform = connected_platform
+    platform = qpu_platform
     qubit = next(iter(platform.qubits))
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=2 * 8192 + 200))
@@ -128,9 +126,9 @@ def test_multiqubitplatform_execute_one_extralong_drive_pulse(connected_platform
 
 
 @pytest.mark.qpu
-def test_multiqubitplatform_execute_one_drive_one_readout(connected_platform):
+def test_multiqubitplatform_execute_one_drive_one_readout(qpu_platform):
     # One drive pulse and one readout pulse
-    platform = connected_platform
+    platform = qpu_platform
     qubit = next(iter(platform.qubits))
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
@@ -139,9 +137,9 @@ def test_multiqubitplatform_execute_one_drive_one_readout(connected_platform):
 
 
 @pytest.mark.qpu
-def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout(connected_platform):
+def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout(qpu_platform):
     # Multiple qubit drive pulses and one readout pulse
-    platform = connected_platform
+    platform = qpu_platform
     qubit = next(iter(platform.qubits))
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
@@ -153,10 +151,10 @@ def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout(connected_
 
 @pytest.mark.qpu
 def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout_no_spacing(
-    connected_platform,
+    qpu_platform,
 ):
     # Multiple qubit drive pulses and one readout pulse with no spacing between them
-    platform = connected_platform
+    platform = qpu_platform
     qubit = next(iter(platform.qubits))
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
@@ -168,10 +166,10 @@ def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout_no_spacing
 
 @pytest.mark.qpu
 def test_multiqubitplatform_execute_multiple_overlaping_drive_pulses_one_readout(
-    connected_platform,
+    qpu_platform,
 ):
     # Multiple overlapping qubit drive pulses and one readout pulse
-    platform = connected_platform
+    platform = qpu_platform
     qubit = next(iter(platform.qubits))
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
@@ -182,9 +180,9 @@ def test_multiqubitplatform_execute_multiple_overlaping_drive_pulses_one_readout
 
 
 @pytest.mark.qpu
-def test_multiqubitplatform_execute_multiple_readout_pulses(connected_platform):
+def test_multiqubitplatform_execute_multiple_readout_pulses(qpu_platform):
     # Multiple readout pulses
-    platform = connected_platform
+    platform = qpu_platform
     qubit = next(iter(platform.qubits))
     sequence = PulseSequence()
     qd_pulse1 = platform.create_qubit_drive_pulse(qubit, start=0, duration=200)
@@ -200,8 +198,8 @@ def test_multiqubitplatform_execute_multiple_readout_pulses(connected_platform):
 
 @pytest.mark.qpu
 @pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
-def test_excited_state_probabilities_pulses(connected_platform, qubit):
-    platform = connected_platform
+def test_excited_state_probabilities_pulses(qpu_platform, qubit):
+    platform = qpu_platform
     backend = QibolabBackend(platform)
     qd_pulse = platform.create_RX_pulse(qubit)
     ro_pulse = platform.create_MZ_pulse(qubit, start=qd_pulse.duration)
@@ -219,8 +217,8 @@ def test_excited_state_probabilities_pulses(connected_platform, qubit):
 @pytest.mark.qpu
 @pytest.mark.parametrize("start_zero", [False, True])
 @pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
-def test_ground_state_probabilities_pulses(connected_platform, qubit, start_zero):
-    platform = connected_platform
+def test_ground_state_probabilities_pulses(qpu_platform, qubit, start_zero):
+    platform = qpu_platform
     backend = QibolabBackend(platform)
     if start_zero:
         ro_pulse = platform.create_MZ_pulse(qubit, start=0)

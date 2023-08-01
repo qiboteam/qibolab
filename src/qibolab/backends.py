@@ -129,7 +129,7 @@ class QibolabBackend(NumpyBackend):
     def circuit_result_probabilities(self, result: CircuitResult, qubits=None):
         """Returns the probability of the qubit being in state |0>"""
         if qubits is None:  # pragma: no cover
-            qubits = result.measurement_gate.qubits
+            qubits = [self.platform.get_qubit(q) for q in result.measurement_gate.qubits]
 
         # basic classification
         probabilities = []
