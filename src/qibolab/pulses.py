@@ -226,7 +226,7 @@ class Exponential(PulseShape):
         tau (float): Parameter that controls the decay of the first exponential function
         upsilon (float): Parameter that controls the decay of the second exponential function
         g (float): Parameter that weights the second exponential function
-        
+
 
     .. math::
 

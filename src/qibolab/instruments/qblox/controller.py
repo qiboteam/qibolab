@@ -60,7 +60,6 @@ class QbloxController(Controller):
         for name in self.modules:
             self.modules[name].setup()
 
-
     def start(self):
         """Starts all modules."""
         self.cluster.start()
