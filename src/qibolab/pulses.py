@@ -220,7 +220,19 @@ class Rectangular(PulseShape):
 
 
 class Exponential(PulseShape):
-    """ """
+    r"""Exponential pulse shape (Square pulse with an exponential decay).
+
+    Args:
+        tau (float): Parameter that controls the decay of the first exponential function
+        upsilon (float): Parameter that controls the decay of the second exponential function
+        g (float): Parameter that weights the second exponential function
+
+
+    .. math::
+
+        A\\frac{\\exp\\left(-\\frac{x}{\\text{upsilon}}\\right) + g \\exp\\left(-\\frac{x}{\\text{tau}}\\right)}{1 + g}
+
+    """
 
     def __init__(self, tau: float, upsilon: float, g: float = 0.1):
         self.name = "Exponential"
