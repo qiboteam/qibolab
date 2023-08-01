@@ -402,15 +402,14 @@ class ClusterQCM_BB(Instrument):
                 #       Even better, set the frequency before each pulse is played (would work with hardware modulation only)
             )
 
-            #set sequencer port offset to the runcard value
+            # set sequencer port offset to the runcard value
             # self._set_device_parameter(
             #     self.device.sequencers[next_sequencer_number],
             #     "out0_offset", #How to select device parameter offset??
             #     value=qubits[qubit].sweetspot,
             # )
-            
-            self.ports[port].offset = qubits[qubit].sweetspot
 
+            self.ports[port].offset = qubits[qubit].sweetspot
 
         # create sequencer wrapper
         sequencer = Sequencer(next_sequencer_number)
@@ -536,7 +535,9 @@ class ClusterQCM_BB(Instrument):
                             # add the sequencer to the list of sequencers required by the port
                             self._sequencers[port].append(sequencer)
             else:
-                sequencer = self._get_next_sequencer(port=port, frequency=0, qubits=qubits, qubit=self.ports[port].qubit)
+                sequencer = self._get_next_sequencer(
+                    port=port, frequency=0, qubits=qubits, qubit=self.ports[port].qubit
+                )
                 # add the sequencer to the list of sequencers required by the port
                 self._sequencers[port].append(sequencer)
 
