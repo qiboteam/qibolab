@@ -51,6 +51,12 @@ def dummy_qrc():
 
 
 def get_instrument(platform, instrument_type):
+    """Finds if an instrument of a given type exists in the given platform.
+
+    If the platform does not have such an instrument, the corresponding test
+    that asked for this instrument is skipped.
+    This ensures that QPU tests are executed only on the available instruments.
+    """
     for instrument in platform.instruments:
         if isinstance(instrument, instrument_type):
             return instrument
@@ -59,12 +65,27 @@ def get_instrument(platform, instrument_type):
 
 @pytest.fixture(scope="module", params=DUMMY_PLATFORM_NAMES)
 def platform(request):
+    """Dummy platform to be used when there is no access to QPU.
+
+    This fixture should be used only by tests that do are not marked
+    as ``qpu``.
+
+    Dummy platforms are defined in ``tests/dummy_qrc`` and do not
+    need to be updated over time.
+    """
     set_platform_profile()
     return create_platform(request.param)
 
 
 @pytest.fixture(scope="session")
 def connected_platform(request):
+    """Platform that has access to QPU instruments.
+
+    This fixture should be used for tests that are marked as ``qpu``.
+
+    These platforms are defined in the folder specified by
+    the ``QIBOLAB_PLATFORMS`` environment variable.
+    """
     os.environ[PLATFORMS] = ORIGINAL_PLATFORMS
     name = request.config.getoption("--platform")
     platform = create_platform(name)
@@ -72,36 +93,3 @@ def connected_platform(request):
     platform.setup()
     yield platform
     platform.disconnect()
-
-
-def pytest_generate_tests(metafunc):
-    if "simulator" in metafunc.fixturenames:
-        address = metafunc.config.option.address
-        if address is None:
-            pytest.skip("Skipping QM simulator tests because address was not provided.")
-        else:
-            duration = metafunc.config.option.simulation_duration
-            folder = metafunc.config.option.folder
-            metafunc.parametrize("simulator", [(address, duration)], indirect=True)
-            metafunc.parametrize("folder", [folder], indirect=True)
-
-    # if "platform" in metafunc.fixturenames:
-    #    markers = {marker.name for marker in metafunc.definition.iter_markers()}
-    #    if "qpu" in markers:
-    #        # use real platforms
-    #        os.environ[PLATFORMS] = ORIGINAL_PLATFORMS
-    #        platforms = [create_platform(name) for name in platform_names]
-    #    else:
-    #        # use platforms under ``dummy_qrc`` folder in tests
-    #        set_platform_profile()
-    #        platforms = [create_platform(name) for name in dummy_platform_names]
-    #    if "qubit" in metafunc.fixturenames:
-    #        config = [
-    #            (platform, q)
-    #            for platform in platforms
-    #            for q, qubit in platform.qubits.items()
-    #            if qubit.drive is not None
-    #        ]
-    #        metafunc.parametrize("platform,qubit", config, scope="module")
-    #    else:
-    #        metafunc.parametrize("platform", platforms, scope="session")
