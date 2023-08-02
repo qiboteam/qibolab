@@ -48,12 +48,11 @@ def convert_units_sweeper(sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubit
         if parameter is rfsoc.Parameter.FREQUENCY:
             pulse = sequence[jdx]
             lo_frequency = pulse_lo_frequency(pulse, qubits)
-
             sweeper.starts[idx] = (sweeper.starts[idx] - lo_frequency) * HZ_TO_MHZ
             sweeper.stops[idx] = (sweeper.stops[idx] - lo_frequency) * HZ_TO_MHZ
         elif parameter is rfsoc.Parameter.DELAY:
-            sweeper.starts[idx] = sweeper.starts[idx] * NS_TO_US
-            sweeper.stops[idx] = sweeper.stops[idx] * NS_TO_US
+            sweeper.starts[idx] *= NS_TO_US
+            sweeper.stops[idx] *= NS_TO_US
         elif parameter is rfsoc.Parameter.RELATIVE_PHASE:
             sweeper.starts[idx] = np.degrees(sweeper.starts[idx])
             sweeper.stops[idx] = np.degrees(sweeper.stops[idx])

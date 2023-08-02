@@ -158,8 +158,8 @@ def test_convert_units_sweeper(dummy_qrc):
         expts=100,
     )
     convert_units_sweeper(sweeper, seq, platform.qubits)
-    assert sweeper.starts == [0, 0.04]
-    assert sweeper.stops == [0.1, 0.14]
+    assert (sweeper.starts == [0, 0.04]).all()
+    assert (sweeper.stops == [0.1, 0.14]).all()
 
     # phase sweeper
     sweeper = rfsoc.Sweeper(
@@ -226,7 +226,11 @@ def test_convert_sweep(dummy_qrc):
         stops=[99, 99],
         indexes=[0, 1],
     )
-    assert rfsoc_sweeper == targ
+    assert (rfsoc_sweeper.starts == targ.starts).all()
+    assert (rfsoc_sweeper.stops == targ.stops).all()
+    assert rfsoc_sweeper.expts == targ.expts
+    assert rfsoc_sweeper.parameters == targ.parameters
+    assert rfsoc_sweeper.indexes == targ.indexes
 
     sweeper = Sweeper(parameter=Parameter.start, values=np.arange(0, 10, 1), pulses=[pulse0])
     rfsoc_sweeper = convert(sweeper, seq, platform.qubits)
