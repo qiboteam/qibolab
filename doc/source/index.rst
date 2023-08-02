@@ -35,11 +35,9 @@ Contents
     :maxdepth: 2
     :caption: Main documentation
 
-    developer-guides/index
+    main-documentation/index
 
 .. toctree::
-    :maxdepth: 2
-    :caption: API reference
 
     api-reference/index
 
