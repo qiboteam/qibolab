@@ -298,7 +298,7 @@ class RFSoC(Controller):
             for jdx, kdx in enumerate(sweeper.indexes):
                 sweeper_parameter = sweeper.parameters[jdx]
                 if sweeper_parameter is rfsoc.Parameter.BIAS:
-                    qubits[kdx].flux.offset = values[jdx][idx]
+                    qubits[list(qubits.keys())[kdx]].flux.offset = values[jdx][idx]
                 elif sweeper_parameter in rfsoc.Parameter.variants(
                     {
                         "amplitude",
