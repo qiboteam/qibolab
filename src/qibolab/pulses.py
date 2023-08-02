@@ -256,10 +256,7 @@ class Exponential(PulseShape):
 
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
-        else:
-            raise Exception(
-                "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
-            )
+        raise ShapeInitError
 
     @property
     def envelope_waveform_q(self) -> Waveform:
@@ -270,10 +267,7 @@ class Exponential(PulseShape):
             waveform = Waveform(np.zeros(num_samples))
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
-        else:
-            raise Exception(
-                "PulseShape attribute pulse must be initialised in order to be able to generate pulse envelopes"
-            )
+        raise ShapeInitError
 
     def __repr__(self):
         return f"{self.name}({format(self.tau, '.3f').rstrip('0').rstrip('.')}, {format(self.upsilon, '.3f').rstrip('0').rstrip('.')}, {format(self.g, '.3f').rstrip('0').rstrip('.')})"
@@ -611,10 +605,7 @@ class Custom(PulseShape):
             waveform = Waveform(self.envelope * self.pulse.amplitude)
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
-        else:
-            raise Exception(
-                "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
-            )
+        raise ShapeInitError
 
     @property
     def envelope_waveform_q(self) -> Waveform:
@@ -627,10 +618,7 @@ class Custom(PulseShape):
             waveform = Waveform(self.envelope * self.pulse.amplitude)
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
-        else:
-            raise Exception(
-                "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
-            )
+        raise ShapeInitError
 
     def __repr__(self):
         return f"{self.name}({self.envelope[:3]}, ...)"

@@ -8,6 +8,7 @@ import qibosoq.components.base as rfsoc
 import qibosoq.components.pulses as rfsoc_pulses
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
+from qibolab.instruments.rfsoc import RFSoC
 from qibolab.instruments.rfsoc.convert import (
     convert,
     convert_units_sweeper,
@@ -21,6 +22,8 @@ from qibolab.result import (
     IntegratedResults,
 )
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
+
+from .conftest import get_instrument
 
 
 def test_convert_default(dummy_qrc):
@@ -541,13 +544,17 @@ def test_convert_nav_sweep_results(dummy_qrc):
     assert (out_dict[serial2].serialize["q[V]"] == targ_dict[serial2].serialize["q[V]"]).all()
 
 
+@pytest.fixture(scope="module")
+def instrument(connected_platform):
+    return get_instrument(connected_platform, RFSoC)
+
+
 @pytest.mark.qpu
-def test_call_executepulsesequence():
+def test_call_executepulsesequence(connected_platform, instrument):
     """Executes a PulseSequence and check if result shape is as expected.
     Both for averaged results and not averaged results.
     """
-    platform = create_platform("rfsoc")
-    instrument = platform.instruments[0]
+    platform = connected_platform
 
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(qubit=0, start=0))
@@ -563,12 +570,11 @@ def test_call_executepulsesequence():
 
 
 @pytest.mark.qpu
-def test_call_execute_sweeps():
+def test_call_execute_sweeps(connected_platform, instrument):
     """Executes a firmware sweep and check if result shape is as expected.
     Both for averaged results and not averaged results.
     """
-    platform = create_platform("rfsoc")
-    instrument = platform.instruments[0]
+    platform = connected_platform
 
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(qubit=0, start=0))
@@ -587,10 +593,9 @@ def test_call_execute_sweeps():
 
 
 @pytest.mark.qpu
-def test_play_qpu():
+def test_play_qpu(connected_platform, instrument):
     """Sends a PulseSequence using `play` and check results are what expected"""
-    platform = create_platform("rfsoc")
-    instrument = platform.instruments[0]
+    platform = connected_platform
 
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(qubit=0, start=0))
@@ -606,10 +611,9 @@ def test_play_qpu():
 
 
 @pytest.mark.qpu
-def test_sweep_qpu():
+def test_sweep_qpu(connected_platform, instrument):
     """Sends a PulseSequence using `sweep` and check results are what expected"""
-    platform = create_platform("rfsoc")
-    instrument = platform.instruments[0]
+    platform = connected_platform
 
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(qubit=0, start=0))
@@ -642,10 +646,9 @@ def test_sweep_qpu():
 
 
 @pytest.mark.qpu
-def test_python_reqursive_sweep():
+def test_python_reqursive_sweep(connected_platform, instrument):
     """Sends a PulseSequence directly to `python_reqursive_sweep` and check results are what expected"""
-    platform = create_platform("rfsoc")
-    instrument = platform.instruments[0]
+    platform = connected_platform
 
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(qubit=0, start=0))

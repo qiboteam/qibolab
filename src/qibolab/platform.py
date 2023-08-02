@@ -193,8 +193,9 @@ class Platform:
                     sweetspot = float(value)
                     self.qubits[qubit].sweetspot = sweetspot
                     self.settings["characterization"]["single_qubit"][qubit]["sweetspot"] = sweetspot
-                    # set sweetspot as the flux offset (IS THIS NEEDED?)
-                    self.qubits[qubit].flux.offset = sweetspot
+                    if self.qubits[qubit].flux is not None:
+                        # set sweetspot as the flux offset (IS THIS NEEDED?)
+                        self.qubits[qubit].flux.offset = sweetspot
 
                 # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
                 elif par == "drive_frequency":
@@ -430,15 +431,28 @@ class Platform:
     def __call__(self, sequence, options):
         return self.execute_pulse_sequence(sequence, options)
 
+    def get_qubit(self, qubit):
+        """Return the name of the physical qubit corresponding to a logical qubit.
+
+        Temporary fix for the compiler to work for platforms where the qubits
+        are not named as 0, 1, 2, ...
+        """
+        try:
+            return self.qubits[qubit].name
+        except KeyError:
+            return list(self.qubits.keys())[qubit]
+
     def create_RX90_pulse(self, qubit, start=0, relative_phase=0):
+        qubit = self.get_qubit(qubit)
         return self.qubits[qubit].native_gates.RX90.pulse(start, relative_phase)
 
     def create_RX_pulse(self, qubit, start=0, relative_phase=0):
+        qubit = self.get_qubit(qubit)
         return self.qubits[qubit].native_gates.RX.pulse(start, relative_phase)
 
     def create_CZ_pulse_sequence(self, qubits, start=0):
         # Check in the settings if qubits[0]-qubits[1] is a key
-        pair = tuple(sorted(qubits))
+        pair = tuple(sorted(self.get_qubit(q) for q in qubits))
         if pair not in self.pairs or self.pairs[pair].native_gates.CZ is None:
             raise_error(
                 ValueError,
@@ -447,26 +461,31 @@ class Platform:
         return self.pairs[pair].native_gates.CZ.sequence(start)
 
     def create_MZ_pulse(self, qubit, start):
+        qubit = self.get_qubit(qubit)
         return self.qubits[qubit].native_gates.MZ.pulse(start)
 
     def create_qubit_drive_pulse(self, qubit, start, duration, relative_phase=0):
+        qubit = self.get_qubit(qubit)
         pulse = self.qubits[qubit].native_gates.RX.pulse(start, relative_phase)
         pulse.duration = duration
         return pulse
 
     def create_qubit_readout_pulse(self, qubit, start):
+        qubit = self.get_qubit(qubit)
         return self.create_MZ_pulse(qubit, start)
 
     # TODO Remove RX90_drag_pulse and RX_drag_pulse, replace them with create_qubit_drive_pulse
     # TODO Add RY90 and RY pulses
 
     def create_RX90_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
+        qubit = self.get_qubit(qubit)
         pulse = self.qubits[qubit].native_gates.RX90.pulse(start, relative_phase)
         if beta is not None:
             pulse.shape = "Drag(5," + str(beta) + ")"
         return pulse
 
     def create_RX_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
+        qubit = self.get_qubit(qubit)
         pulse = self.qubits[qubit].native_gates.RX.pulse(start, relative_phase)
         if beta is not None:
             pulse.shape = "Drag(5," + str(beta) + ")"

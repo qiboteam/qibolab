@@ -468,7 +468,7 @@ class ClusterQRM_RF(Instrument):
         navgs: int,
         nshots: int,
         repetition_duration: int,
-        sweepers: list() = [],  # sweepers: list(Sweeper) = []
+        sweepers=None,
     ):
         """Processes a sequence of pulses and sweepers, generating the waveforms and program required by
         the instrument to synthesise them.
@@ -503,6 +503,8 @@ class ClusterQRM_RF(Instrument):
             repetition_duration (int): The total duration of the pulse sequence execution plus the reset/relaxation time.
             sweepers (list(Sweeper)): A list of Sweeper objects to be implemented.
         """
+        if sweepers is None:
+            sweepers = []
         sequencer: Sequencer
         sweeper: Sweeper
 

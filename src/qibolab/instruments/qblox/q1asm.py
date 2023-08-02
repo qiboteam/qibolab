@@ -188,7 +188,7 @@ def wait_block(wait_time: int, register: Register, force_multiples_of_four: bool
     # extra_wait and wait_loop_step need to be multiples of 4ns *
 
     if wait_time < 0:
-        raise ValueError("wait_time must be possitive.")
+        raise ValueError("wait_time must be positive.")
 
     elif wait_time == 0:
         n_loops = 0
