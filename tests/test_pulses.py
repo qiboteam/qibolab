@@ -395,6 +395,7 @@ def test_pulses_pulse_hash():
     p3 = p1.copy()
     assert p1 == p2
     assert p1 == p3
+
     t0 += 100
     assert p1 == p2
     assert p1 != p3
@@ -727,8 +728,8 @@ def test_pulses_pulseshape_rectangular():
 
     num_samples = int(pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
     i, q = pulse.amplitude * np.ones(num_samples), pulse.amplitude * np.zeros(num_samples)
-    global_phase = 2 * np.pi * pulse.frequency * pulse.start / 1e9  # pulse start, duration and finish are in ns
-    mod_i, mod_q = modulate(i, q, num_samples, pulse.frequency, global_phase + pulse.relative_phase)
+    global_phase = 2 * np.pi * pulse._if * pulse.start / 1e9  # pulse start, duration and finish are in ns
+    mod_i, mod_q = modulate(i, q, num_samples, pulse._if, global_phase + pulse.relative_phase)
 
     np.testing.assert_allclose(pulse.shape.envelope_waveform_i.data, i)
     np.testing.assert_allclose(pulse.shape.envelope_waveform_q.data, q)
@@ -745,11 +746,11 @@ def test_pulses_pulseshape_rectangular():
     )
     assert (
         pulse.shape.modulated_waveform_i.serial
-        == f"Modulated_Waveform_I(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse.frequency, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
+        == f"Modulated_Waveform_I(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse._if, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
     )
     assert (
         pulse.shape.modulated_waveform_q.serial
-        == f"Modulated_Waveform_Q(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse.frequency, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
+        == f"Modulated_Waveform_Q(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse._if, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
     )
 
 
@@ -782,7 +783,7 @@ def test_pulses_pulseshape_gaussian():
     )
     q = pulse.amplitude * np.zeros(num_samples)
     global_phase = 2 * np.pi * pulse.frequency * pulse.start / 1e9  # pulse start, duration and finish are in ns
-    mod_i, mod_q = modulate(i, q, num_samples, pulse.frequency, global_phase + pulse.relative_phase)
+    mod_i, mod_q = modulate(i, q, num_samples, pulse._if, global_phase + pulse.relative_phase)
 
     np.testing.assert_allclose(pulse.shape.envelope_waveform_i.data, i)
     np.testing.assert_allclose(pulse.shape.envelope_waveform_q.data, q)
@@ -799,11 +800,11 @@ def test_pulses_pulseshape_gaussian():
     )
     assert (
         pulse.shape.modulated_waveform_i.serial
-        == f"Modulated_Waveform_I(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse.frequency, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
+        == f"Modulated_Waveform_I(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse._if, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
     )
     assert (
         pulse.shape.modulated_waveform_q.serial
-        == f"Modulated_Waveform_Q(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse.frequency, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
+        == f"Modulated_Waveform_Q(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse._if, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
     )
 
 
@@ -842,8 +843,8 @@ def test_pulses_pulseshape_drag():
         * PulseShape.SAMPLING_RATE
         / 1e9
     )
-    global_phase = 2 * np.pi * pulse.frequency * pulse.start / 1e9  # pulse start, duration and finish are in ns
-    mod_i, mod_q = modulate(i, q, num_samples, pulse.frequency, global_phase + pulse.relative_phase)
+    global_phase = 2 * np.pi * pulse._if * pulse.start / 1e9  # pulse start, duration and finish are in ns
+    mod_i, mod_q = modulate(i, q, num_samples, pulse._if, global_phase + pulse.relative_phase)
 
     np.testing.assert_allclose(pulse.shape.envelope_waveform_i.data, i)
     np.testing.assert_allclose(pulse.shape.envelope_waveform_q.data, q)
@@ -860,11 +861,11 @@ def test_pulses_pulseshape_drag():
     )
     assert (
         pulse.shape.modulated_waveform_i.serial
-        == f"Modulated_Waveform_I(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse.frequency, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
+        == f"Modulated_Waveform_I(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse._if, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
     )
     assert (
         pulse.shape.modulated_waveform_q.serial
-        == f"Modulated_Waveform_Q(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse.frequency, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
+        == f"Modulated_Waveform_Q(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse._if, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
     )
 
 
