@@ -93,6 +93,27 @@ def test_zhsequence(dummy_qrc):
     assert len(zhsequence["readout0"]) == 1
 
 
+def test_zhsequence_multiple_ro(dummy_qrc):
+    sequence = PulseSequence()
+    qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
+    sequence.add(qd_pulse)
+    ro_pulse = ReadoutPulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch1", qubit=0)
+    sequence.add(ro_pulse)
+    ro_pulse = ReadoutPulse(0, 5000, 0.05, int(3e9), 0.0, Rectangular(), "ch1", qubit=0)
+    sequence.add(ro_pulse)
+    IQM5q = create_platform("zurich")
+
+    IQM5q.instruments[0].sequence_zh(sequence, IQM5q.qubits, sweepers=[])
+    zhsequence = IQM5q.instruments[0].sequence
+
+    with pytest.raises(AttributeError):
+        IQM5q.instruments[0].sequence_zh("sequence", IQM5q.qubits, sweepers=[])
+        zhsequence = IQM5q.instruments[0].sequence
+
+    assert len(zhsequence) == 2
+    assert len(zhsequence["readout0"]) == 2
+
+
 def test_zhinst_register_readout_line(dummy_qrc):
     platform = create_platform("zurich")
     platform.setup()
@@ -162,6 +183,37 @@ def test_experiment_execute_pulse_sequence(dummy_qrc):
     IQM5q.experiment_flow(qubits, sequence, options)
 
     assert "flux0" in IQM5q.experiment.signals
+    assert "measure0" in IQM5q.experiment.signals
+    assert "acquire0" in IQM5q.experiment.signals
+
+
+def test_experiment_fast_reset_readout(dummy_qrc):
+    platform = create_platform("zurich")
+    platform.setup()
+    IQM5q = platform.instruments[0]
+    IQM5q.create_device_setup()
+
+    sequence = PulseSequence()
+    qubits = {0: platform.qubits[0]}
+    platform.qubits = qubits
+
+    ro_pulses = {}
+    fr_pulses = {}
+    for qubit in qubits:
+        fr_pulses[qubit] = platform.create_RX_pulse(qubit, start=0)
+        ro_pulses[qubit] = platform.create_qubit_readout_pulse(qubit, start=0)
+        sequence.add(ro_pulses[qubit])
+
+    options = ExecutionParameters(
+        relaxation_time=300e-6,
+        fast_reset=fr_pulses,
+        acquisition_type=AcquisitionType.INTEGRATION,
+        averaging_mode=AveragingMode.CYCLIC,
+    )
+
+    IQM5q.experiment_flow(qubits, sequence, options)
+
+    assert "drive0" in IQM5q.experiment.signals
     assert "measure0" in IQM5q.experiment.signals
     assert "acquire0" in IQM5q.experiment.signals
 

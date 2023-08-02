@@ -26,8 +26,6 @@ from qibolab.sweeper import Parameter
 os.environ["LABONEQ_TOKEN"] = "not required"
 laboneq._token.is_valid_token = lambda _token: True  # pylint: disable=W0212
 
-# FIXME: I think is a hardware limitation but I cant sweep multiple drive oscillator at the same time
-
 NANO_TO_SECONDS = 1e-9
 SERVER_PORT = "8004"
 COMPILER_SETTINGS = {
@@ -351,7 +349,7 @@ class Zurich(Controller):
     def setup(self, *args, **kwargs):
         """Empty method to comply with Instrument interface."""
 
-    def calibration_step(self, qubits):
+    def calibration_step(self, qubits, options):
         """
         Zurich general pre experiment calibration definitions
 
@@ -374,6 +372,12 @@ class Zurich(Controller):
                         qubit=qubit,
                         intermediate_frequency=qubit.readout_frequency - qubit.readout.local_oscillator.frequency,
                     )
+                    if options.fast_reset is not False:
+                        if len(self.sequence[f"drive{qubit.name}"]) == 0:
+                            self.register_drive_line(
+                                qubit=qubit,
+                                intermediate_frequency=qubit.drive_frequency - qubit.drive.local_oscillator.frequency,
+                            )
         self.device_setup.set_calibration(self.calibration)
 
     def register_readout_line(self, qubit, intermediate_frequency):
@@ -482,7 +486,7 @@ class Zurich(Controller):
         Translation, Calibration, Experiment Definition.
         """
         self.sequence_zh(sequence, qubits, sweepers)
-        self.calibration_step(qubits)
+        self.calibration_step(qubits, options)
         self.create_exp(qubits, options)
 
     # pylint: disable=W0221
@@ -505,14 +509,17 @@ class Zurich(Controller):
                 continue
             q = qubit.name  # pylint: disable=C0103
             if len(self.sequence[f"readout{q}"]) != 0:
-                exp_res = self.results.get_data(f"sequence{q}")
-                if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                    data = np.array([exp_res]) if options.averaging_mode is AveragingMode.CYCLIC else np.array(exp_res)
-                    results[self.sequence[f"readout{q}"][0].pulse.serial] = options.results_type(data)
-                    results[self.sequence[f"readout{q}"][0].pulse.qubit] = options.results_type(data)
-                else:
-                    results[self.sequence[f"readout{q}"][0].pulse.serial] = options.results_type(data=np.array(exp_res))
-                    results[self.sequence[f"readout{q}"][0].pulse.qubit] = options.results_type(data=np.array(exp_res))
+                for i, ropulse in enumerate(self.sequence[f"readout{q}"]):
+                    exp_res = self.results.get_data(f"sequence{q}_{i}")
+                    if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+                        data = (
+                            np.array([exp_res]) if options.averaging_mode is AveragingMode.CYCLIC else np.array(exp_res)
+                        )
+                        results[ropulse.pulse.serial] = options.results_type(data)
+                        results[ropulse.pulse.qubit] = options.results_type(data)
+                    else:
+                        results[ropulse.pulse.serial] = options.results_type(data=np.array(exp_res))
+                        results[ropulse.pulse.qubit] = options.results_type(data=np.array(exp_res))
 
         exp_dimensions = list(np.array(exp_res).shape)
         if dimensions != exp_dimensions:
@@ -596,6 +603,9 @@ class Zurich(Controller):
                 if len(self.sequence[f"readout{q}"]) != 0:
                     signals.append(lo.ExperimentSignal(f"measure{q}"))
                     signals.append(lo.ExperimentSignal(f"acquire{q}"))
+                    if options.fast_reset is not False:
+                        if len(self.sequence[f"drive{q}"]) == 0:
+                            signals.append(lo.ExperimentSignal(f"drive{q}"))
 
         exp = lo.Experiment(
             uid="Sequence",
@@ -813,75 +823,94 @@ class Zurich(Controller):
         elif len(self.sequence_qibo.qd_pulses) != 0:
             play_after = self.play_after_set(self.sequence_qibo.qd_pulses, "drive")
 
-        # Section on the outside loop allows for multiplex
-        with exp.section(uid="sequence_measure", play_after=play_after):
-            for qubit in qubits.values():
-                if qubit.flux_coupler:
-                    continue
-                q = qubit.name  # pylint: disable=C0103
-                if len(self.sequence[f"readout{q}"]) != 0:
-                    for pulse in self.sequence[f"readout{q}"]:
-                        i = 0
-                        pulse.zhpulse.uid += str(i)
+        readout_schedule = defaultdict(list)
+        qubit_readout_schedule = defaultdict(list)
+        iq_angle_readout_schedule = defaultdict(list)
+        for qubit in qubits.values():
+            if qubit.flux_coupler:
+                continue
+            q = qubit.name  # pylint: disable=C0103
+            iq_angle = qubit.iq_angle
+            if len(self.sequence[f"readout{q}"]) != 0:
+                for i, pulse in enumerate(self.sequence[f"readout{q}"]):
+                    readout_schedule[i].append(pulse)
+                    qubit_readout_schedule[i].append(q)
+                    iq_angle_readout_schedule[i].append(iq_angle)
 
-                        # Integration weights definition or load from the chip folder
-                        weights_file = (
-                            INSTRUMENTS_DATA_FOLDER
-                            / f"{self.chip}/weights/integration_weights_optimization_qubit_{q}.npy"
+        for i, (pulses, qubits, iq_angles) in enumerate(
+            zip(readout_schedule.values(), qubit_readout_schedule.values(), iq_angle_readout_schedule.values())
+        ):
+            if i != 0:
+                play_after = f"sequence_measure_{i-1}"
+            # Section on the outside loop allows for multiplex
+            with exp.section(uid=f"sequence_measure_{i}", play_after=play_after):
+                for pulse, q, iq_angle in zip(pulses, qubits, iq_angles):
+                    pulse.zhpulse.uid += str(i)
+
+                    # Integration weights definition or load from the chip folder
+                    weights_file = (
+                        INSTRUMENTS_DATA_FOLDER / f"{self.chip}/weights/integration_weights_optimization_qubit_{q}.npy"
+                    )
+                    if weights_file.is_file():
+                        log.info("I'm using optimized IW")
+                        samples = np.load(
+                            weights_file,
+                            allow_pickle=True,
                         )
-                        if weights_file.is_file():
-                            log.info("I'm using optimized IW")
-                            samples = np.load(
-                                weights_file,
-                                allow_pickle=True,
+                        if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
+                            weight = lo.pulse_library.sampled_pulse_complex(
+                                uid="weight" + pulse.zhpulse.uid,
+                                # samples=samples[0] * np.exp(1j * qubit.iq_angle),
+                                samples=samples[0] * np.exp(1j * iq_angle),
                             )
-                            if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
-                                weight = lo.pulse_library.sampled_pulse_complex(
-                                    uid="weight" + pulse.zhpulse.uid,
-                                    samples=samples[0] * np.exp(1j * qubit.iq_angle),
-                                )
-                            else:
-                                weight = lo.pulse_library.sampled_pulse_complex(
-                                    uid="weight" + pulse.zhpulse.uid,
-                                    samples=samples[0],
-                                )
                         else:
-                            log.info("I'm using dumb IW")
-                            # We adjust for smearing and remove smearing/2 at the end
-                            exp.delay(
-                                signal=f"acquire{q}",
-                                time=self.smearing * NANO_TO_SECONDS,
+                            weight = lo.pulse_library.sampled_pulse_complex(
+                                uid="weight" + pulse.zhpulse.uid,
+                                samples=samples[0],
                             )
-                            if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
-                                weight = lo.pulse_library.sampled_pulse_complex(
-                                    np.ones([int(pulse.pulse.duration * 2 - 3 * self.smearing * NANO_TO_SECONDS)])
-                                    * np.exp(1j * qubit.iq_angle)
-                                )
-                            else:
-                                weight = lo.pulse_library.const(
-                                    uid="weight" + pulse.zhpulse.uid,
-                                    length=round(pulse.pulse.duration * NANO_TO_SECONDS, 9)
-                                    - 1.5 * self.smearing * NANO_TO_SECONDS,
-                                    amplitude=1,
-                                )
-
-                        measure_pulse_parameters = {"phase": 0}
-
-                        exp.measure(
-                            acquire_signal=f"acquire{q}",
-                            handle=f"sequence{q}",
-                            integration_kernel=weight,
-                            integration_kernel_parameters=None,
-                            integration_length=None,
-                            measure_signal=f"measure{q}",
-                            measure_pulse=pulse.zhpulse,
-                            measure_pulse_length=round(pulse.pulse.duration * NANO_TO_SECONDS, 9),
-                            measure_pulse_parameters=measure_pulse_parameters,
-                            measure_pulse_amplitude=None,
-                            acquire_delay=self.time_of_flight * NANO_TO_SECONDS,
-                            reset_delay=relaxation_time * NANO_TO_SECONDS,
+                    else:
+                        log.info("I'm using dumb IW")
+                        # We adjust for smearing and remove smearing/2 at the end
+                        exp.delay(
+                            signal=f"acquire{q}",
+                            time=self.smearing * NANO_TO_SECONDS,
                         )
-                        i += 1
+                        if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
+                            weight = lo.pulse_library.sampled_pulse_complex(
+                                np.ones([int(pulse.pulse.duration * 2 - 3 * self.smearing * NANO_TO_SECONDS)])
+                                * np.exp(1j * iq_angle)
+                            )
+                        else:
+                            weight = lo.pulse_library.const(
+                                uid="weight" + pulse.zhpulse.uid,
+                                length=round(pulse.pulse.duration * NANO_TO_SECONDS, 9)
+                                - 1.5 * self.smearing * NANO_TO_SECONDS,
+                                amplitude=1,
+                            )
+
+                    measure_pulse_parameters = {"phase": 0}
+
+                    if i == len(self.sequence[f"readout{q}"]) - 1:
+                        reset_delay = relaxation_time * NANO_TO_SECONDS
+                    else:
+                        # FIXME: Here time of flight or not ?
+                        reset_delay = 0  # self.time_of_flight * NANO_TO_SECONDS
+
+                    exp.measure(
+                        acquire_signal=f"acquire{q}",
+                        handle=f"sequence{q}_{i}",
+                        integration_kernel=weight,
+                        integration_kernel_parameters=None,
+                        integration_length=None,
+                        measure_signal=f"measure{q}",
+                        measure_pulse=pulse.zhpulse,
+                        measure_pulse_length=round(pulse.pulse.duration * NANO_TO_SECONDS, 9),
+                        measure_pulse_parameters=measure_pulse_parameters,
+                        measure_pulse_amplitude=None,
+                        acquire_delay=self.time_of_flight * NANO_TO_SECONDS,
+                        # reset_delay=relaxation_time * NANO_TO_SECONDS,
+                        reset_delay=reset_delay,
+                    )
 
     def fast_reset(self, exp, qubits, fast_reset):
         """
@@ -896,10 +925,13 @@ class Zurich(Controller):
             if qubit.flux_coupler:
                 continue
             q = qubit.name  # pylint: disable=C0103
-            with exp.section(uid=f"fast_reset{q}", play_after=f"sequence_measure{q}"):
+            with exp.section(uid=f"fast_reset{q}", play_after=f"sequence_measure"):
                 with exp.match_local(handle=f"sequence{q}"):
+                    with exp.case(state=0):
+                        pass
                     with exp.case(state=1):
-                        exp.play(signal=f"drive{q}", pulse=ZhPulse(fast_reset[q]).zhpulse)
+                        pulse = ZhPulse(qubit.native_gates.RX.pulse(0, 0))
+                        exp.play(signal=f"drive{q}", pulse=pulse.zhpulse)
 
     @staticmethod
     def rearrange_sweepers(sweepers):
@@ -963,15 +995,24 @@ class Zurich(Controller):
                 continue
             q = qubit.name  # pylint: disable=C0103
             if len(self.sequence[f"readout{q}"]) != 0:
-                exp_res = self.results.get_data(f"sequence{q}")
-                # Reorder dimensions
-                exp_res = np.moveaxis(exp_res, rearranging_axes[0], rearranging_axes[1])
-                if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                    data = np.array([exp_res]) if options.averaging_mode is AveragingMode.CYCLIC else np.array(exp_res)
-                    data = data.real
-                    results[self.sequence[f"readout{q}"][0].pulse.serial] = options.results_type(data)
-                else:
-                    results[self.sequence[f"readout{q}"][0].pulse.serial] = options.results_type(data=np.array(exp_res))
+                for i in range(len(self.sequence[f"readout{q}"])):
+                    exp_res = self.results.get_data(f"sequence{q}_{i}")
+                    # Reorder dimensions
+                    exp_res = np.moveaxis(exp_res, rearranging_axes[0], rearranging_axes[1])
+                    if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+                        data = (
+                            np.array([exp_res]) if options.averaging_mode is AveragingMode.CYCLIC else np.array(exp_res)
+                        )
+                        data = data.real
+                        results[self.sequence[f"readout{q}"][i].pulse.serial] = options.results_type(data)
+                        results[self.sequence[f"readout{q}"][i].pulse.qubit] = options.results_type(data)
+                    else:
+                        results[self.sequence[f"readout{q}"][i].pulse.serial] = options.results_type(
+                            data=np.array(exp_res)
+                        )
+                        results[self.sequence[f"readout{q}"][i].pulse.qubit] = options.results_type(
+                            data=np.array(exp_res)
+                        )
 
         exp_dimensions = list(np.array(exp_res).shape)
         if dimensions != exp_dimensions:

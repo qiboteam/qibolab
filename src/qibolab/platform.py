@@ -365,6 +365,7 @@ class Platform:
             Readout results acquired by after execution.
 
         """
+
         return self._execute("play", sequences, options, **kwargs)
 
     def execute_pulse_sequences(self, sequences: List[PulseSequence], options: ExecutionParameters, **kwargs):
