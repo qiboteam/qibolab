@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from qibolab.instruments.abstract import Instrument
-from qibolab.instruments.qblox.cluster import Cluster, Cluster_Settings
+from qibolab.instruments.qblox.cluster import Cluster
 from qibolab.instruments.qblox.cluster_qcm_rf import (
     ClusterQCM_RF,
     ClusterQCM_RF_Settings,
@@ -14,11 +14,8 @@ from qibolab.instruments.qblox.port import (
 from qibolab.pulses import DrivePulse, PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
-CLUSTER_NAME = "cluster"
-CLUSTER_ADDRESS = "192.168.0.6"
+from .qblox_fixtures import cluster, connected_cluster, connected_controller, controller
 
-MODULE_NAME = "qcm_rf"
-MODULE_ADDRESS = "192.168.0.6:3"
 O1_OUTPUT_CHANNEL = "L3-11"
 O1_ATTENUATION = 20
 O1_LO_FREQUENCY = 5_052_833_073
@@ -30,14 +27,7 @@ O2_LO_FREQUENCY = 5_995_371_914
 O2_GAIN = 0.655
 
 
-@pytest.fixture(scope="module")
-def cluster():
-    cluster = Cluster(CLUSTER_NAME, CLUSTER_ADDRESS, Cluster_Settings())
-    return cluster
-
-
-@pytest.fixture(scope="module")
-def qcm_rf():
+def get_qcm_rf(controller):
     settings = ClusterQCM_RF_Settings(
         {
             "o1": ClusterRF_OutputPort_Settings(
@@ -54,18 +44,26 @@ def qcm_rf():
             ),
         }
     )
-    qcm_rf = ClusterQCM_RF(MODULE_NAME, MODULE_ADDRESS, settings)
-    return qcm_rf
+    for module in controller.modules.values():
+        if isinstance(module, ClusterQCM_RF):
+            return ClusterQCM_RF(module.name, module.address, settings)
+    pytest.skip(f"Skipping qblox ClusterQCM_RF test for {controller.name}.")
 
 
 @pytest.fixture(scope="module")
-def connected_qcm_rf(cluster: Cluster, qcm_rf: ClusterQCM_RF):
-    cluster.connect()
-    qcm_rf.connect(cluster.device)
+def qcm_rf(controller):
+    return get_qcm_rf(controller)
+
+
+@pytest.fixture(scope="module")
+def connected_qcm_rf(connected_cluster, connected_controller):
+    qcm_rf = get_qcm_rf(connected_controller)
+    connected_cluster.connect()
+    qcm_rf.connect(connected_cluster.device)
     qcm_rf.setup()
     yield qcm_rf
     qcm_rf.disconnect()
-    cluster.disconnect()
+    connected_cluster.disconnect()
 
 
 def test_ClusterQCM_RF_Settings():
@@ -85,8 +83,6 @@ def test_instrument_interface(qcm_rf: ClusterQCM_RF):
 
 
 def test_init(qcm_rf: ClusterQCM_RF):
-    assert qcm_rf.name == MODULE_NAME
-    assert qcm_rf.address == MODULE_ADDRESS
     assert type(qcm_rf.settings.ports["o1"]) == ClusterRF_OutputPort_Settings
     assert type(qcm_rf.settings.ports["o2"]) == ClusterRF_OutputPort_Settings
     assert qcm_rf.device == None
@@ -99,7 +95,10 @@ def test_init(qcm_rf: ClusterQCM_RF):
 
 
 @pytest.mark.qpu
-def test_connect(cluster: Cluster, qcm_rf: ClusterQCM_RF):
+def test_connect(connected_cluster: Cluster, connected_qcm_rf: ClusterQCM_RF):
+    cluster = connected_cluster
+    qcm_rf = connected_qcm_rf
+
     cluster.connect()
     qcm_rf.connect(cluster.device)
     assert qcm_rf.is_connected
@@ -144,12 +143,12 @@ def test_connect(cluster: Cluster, qcm_rf: ClusterQCM_RF):
         assert qcm_rf.device.sequencers[s].get("channel_map_path0_out2_en") == False
         assert qcm_rf.device.sequencers[s].get("channel_map_path1_out3_en") == False
 
-    qcm_rf.disconnect()
-    cluster.disconnect()
-
 
 @pytest.mark.qpu
-def test_setup(cluster: Cluster, qcm_rf: ClusterQCM_RF):
+def test_setup(connected_cluster: Cluster, connected_qcm_rf: ClusterQCM_RF):
+    cluster = connected_cluster
+    qcm_rf = connected_qcm_rf
+
     cluster.connect()
     qcm_rf.connect(cluster.device)
     qcm_rf.setup()
@@ -186,19 +185,14 @@ def test_setup(cluster: Cluster, qcm_rf: ClusterQCM_RF):
     assert qcm_rf.ports["o2"].nco_freq == 0
     assert qcm_rf.ports["o2"].nco_phase_offs == 0
 
-    qcm_rf.disconnect()
-    cluster.disconnect()
-
 
 @pytest.mark.qpu
-def test_pulse_sequence(connected_qcm_rf: ClusterQCM_RF, dummy_qrc):
+def test_pulse_sequence(connected_platform, connected_qcm_rf: ClusterQCM_RF):
     ps = PulseSequence()
     ps.add(DrivePulse(0, 200, 1, O1_LO_FREQUENCY - 200e6, np.pi / 2, "Gaussian(5)", O1_OUTPUT_CHANNEL))
     ps.add(DrivePulse(0, 200, 1, O2_LO_FREQUENCY - 200e6, np.pi / 2, "Gaussian(5)", O2_OUTPUT_CHANNEL))
-    from qibolab import create_platform
 
-    platform = create_platform("qblox")
-    qubits = platform.qubits
+    qubits = connected_platform.qubits
     connected_qcm_rf.ports["o2"].hardware_mod_en = True
     connected_qcm_rf.process_pulse_sequence(qubits, ps, 1000, 1, 10000)
     connected_qcm_rf.upload()
@@ -211,15 +205,12 @@ def test_pulse_sequence(connected_qcm_rf: ClusterQCM_RF, dummy_qrc):
 
 
 @pytest.mark.qpu
-def test_sweepers(connected_qcm_rf: ClusterQCM_RF, dummy_qrc):
+def test_sweepers(connected_platform, connected_qcm_rf: ClusterQCM_RF):
     ps = PulseSequence()
     ps.add(DrivePulse(0, 200, 1, O1_LO_FREQUENCY - 200e6, np.pi / 2, "Gaussian(5)", O1_OUTPUT_CHANNEL))
     ps.add(DrivePulse(0, 200, 1, O2_LO_FREQUENCY - 200e6, np.pi / 2, "Gaussian(5)", O2_OUTPUT_CHANNEL))
 
-    from qibolab import create_platform
-
-    platform = create_platform("qblox")
-    qubits = platform.qubits
+    qubits = connected_platform.qubits
 
     freq_width = 300e6 * 2
     freq_step = freq_width // 100
@@ -254,12 +245,3 @@ def test_start_stop(connected_qcm_rf: ClusterQCM_RF):
     connected_qcm_rf.start()
     connected_qcm_rf.stop()
     # check all sequencers are stopped and all offsets = 0
-
-
-@pytest.mark.qpu
-def test_disconnect(cluster: Cluster, qcm_rf: ClusterQCM_RF):
-    cluster.connect()
-    qcm_rf.connect(cluster.device)
-    qcm_rf.disconnect()
-    assert qcm_rf.is_connected == False
-    cluster.disconnect()

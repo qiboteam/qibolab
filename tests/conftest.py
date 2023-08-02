@@ -3,21 +3,19 @@ import pathlib
 
 import pytest
 
-from qibolab import PLATFORMS
+from qibolab import PLATFORMS, create_platform
 
-# from importlib import import_module
-
-
-# from qibolab.instruments.qblox.controller import QbloxController
+ORIGINAL_PLATFORMS = os.environ.get(PLATFORMS, "")
+DUMMY_PLATFORM_NAMES = ["qm", "qblox", "rfsoc", "zurich"]
 
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--platforms",
+        "--platform",
         type=str,
         action="store",
-        default="qm,qblox,rfsoc,zurich",
-        help="qpu platforms to test on",
+        default=None,
+        help="qpu platform to test on",
     )
     parser.addoption(
         "--address",
@@ -43,6 +41,7 @@ def pytest_addoption(parser):
 
 
 def set_platform_profile():
+    """Point platforms environment to the ``tests/dummy_qrc`` folder."""
     os.environ[PLATFORMS] = str(pathlib.Path(__file__).parent / "dummy_qrc")
 
 
@@ -51,32 +50,46 @@ def dummy_qrc():
     set_platform_profile()
 
 
-def pytest_generate_tests(metafunc):
-    platforms = metafunc.config.option.platforms
-    platforms = [] if platforms is None else platforms.split(",")
+def get_instrument(platform, instrument_type):
+    """Finds if an instrument of a given type exists in the given platform.
 
-    if "simulator" in metafunc.fixturenames:
-        address = metafunc.config.option.address
-        if address is None:
-            pytest.skip("Skipping QM simulator tests because address was not provided.")
-        else:
-            duration = metafunc.config.option.simulation_duration
-            folder = metafunc.config.option.folder
-            metafunc.parametrize("simulator", [(address, duration)], indirect=True)
-            metafunc.parametrize("folder", [folder], indirect=True)
+    If the platform does not have such an instrument, the corresponding test
+    that asked for this instrument is skipped.
+    This ensures that QPU tests are executed only on the available instruments.
+    """
+    for instrument in platform.instruments:
+        if isinstance(instrument, instrument_type):
+            return instrument
+    pytest.skip(f"Skipping {instrument_type.__name__} test for {platform.name}.")
 
-    if "instrument" in metafunc.fixturenames:
-        if metafunc.module.__name__ == "tests.test_instruments_rohde_schwarz":
-            metafunc.parametrize("instrument", [(p, "SGS100A") for p in platforms], indirect=True)
-        elif metafunc.module.__name__ == "tests.test_instruments_erasynth":
-            metafunc.parametrize("instrument", [(p, "ERA") for p in platforms], indirect=True)
-        elif metafunc.module.__name__ == "tests.test_instruments_qutech":
-            metafunc.parametrize("instrument", [(p, "SPI") for p in platforms], indirect=True)
 
-    elif "backend" in metafunc.fixturenames:
-        set_platform_profile()
-        metafunc.parametrize("backend", platforms, indirect=True)
+@pytest.fixture(scope="module", params=DUMMY_PLATFORM_NAMES)
+def platform(request):
+    """Dummy platform to be used when there is no access to QPU.
 
-    elif "platform_name" in metafunc.fixturenames:
-        set_platform_profile()
-        metafunc.parametrize("platform_name", platforms)
+    This fixture should be used only by tests that do are not marked
+    as ``qpu``.
+
+    Dummy platforms are defined in ``tests/dummy_qrc`` and do not
+    need to be updated over time.
+    """
+    set_platform_profile()
+    return create_platform(request.param)
+
+
+@pytest.fixture(scope="module")
+def connected_platform(request):
+    """Platform that has access to QPU instruments.
+
+    This fixture should be used for tests that are marked as ``qpu``.
+
+    These platforms are defined in the folder specified by
+    the ``QIBOLAB_PLATFORMS`` environment variable.
+    """
+    os.environ[PLATFORMS] = ORIGINAL_PLATFORMS
+    name = request.config.getoption("--platform")
+    platform = create_platform(name)
+    platform.connect()
+    platform.setup()
+    yield platform
+    platform.disconnect()

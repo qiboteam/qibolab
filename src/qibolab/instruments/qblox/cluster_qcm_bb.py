@@ -436,7 +436,7 @@ class ClusterQCM_BB(Instrument):
         navgs: int,
         nshots: int,
         repetition_duration: int,
-        sweepers: None,
+        sweepers=None,
     ):
         """Processes a list of pulses, generating the waveforms and sequence program required by
         the instrument to synthesise them.
