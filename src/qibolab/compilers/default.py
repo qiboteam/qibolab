@@ -32,7 +32,7 @@ def gpi2_rule(gate, platform):
     sequence = PulseSequence()
     pulse = platform.create_RX90_pulse(qubit, start=0, relative_phase=theta)
     sequence.add(pulse)
-    return sequence, {qubit: gate.parameters[0]}
+    return sequence, {}
 
 
 def u3_rule(gate, platform):
