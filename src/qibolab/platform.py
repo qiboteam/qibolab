@@ -1,4 +1,4 @@
-"""Platform for controlling quantum devices."""
+"""A platform for executing quantum algorithms."""
 
 import math
 import re
@@ -20,7 +20,9 @@ from qibolab.sweeper import Sweeper
 
 
 class Platform:
-    """Platform for controlling quantum devices.
+    """A platform for executing quantum algorithms.
+
+    It consists of a quantum processor QPU and a set of controlling instruments.
 
     Args:
         name (str): name of the platform.
@@ -139,26 +141,24 @@ class Platform:
         Args:
 
             updates (dict): Dictionary containing the parameters to update the runcard. A typical dictionary should be of the following form
-                            {`parameter_to_update_in_runcard`:{`qubit0`:`par_value_qubit0`, ..., `qubit_i`:`par_value_qubit_i`, ...}}.
-                            The parameters that can be updated by this method are:
-                                - readout_frequency (GHz)
-                                - readout_attenuation (dimensionless)
-                                - bare_resonator_frequency (GHz)
-                                - sweetspot(V)
-                                - drive_frequency (GHz)
-                                - readout_amplitude (dimensionless)
-                                - drive_amplitude (dimensionless)
-                                - drive_length
-                                - t2 (ns)
-                                - t2_spin_echo (ns)
-                                - t1 (ns)
-                                - thresold(V)
-                                - iq_angle(deg)
-                                - mean_gnd_states(V)
-                                - mean_exc_states(V)
-                                - beta(dimensionless)
-
-
+                {`parameter_to_update_in_runcard`:{`qubit0`:`par_value_qubit0`, ..., `qubit_i`:`par_value_qubit_i`, ...}}.
+                The parameters that can be updated by this method are:
+                    - readout_frequency (GHz)
+                    - readout_attenuation (dimensionless)
+                    - bare_resonator_frequency (GHz)
+                    - sweetspot(V)
+                    - drive_frequency (GHz)
+                    - readout_amplitude (dimensionless)
+                    - drive_amplitude (dimensionless)
+                    - drive_length
+                    - t2 (ns)
+                    - t2_spin_echo (ns)
+                    - t1 (ns)
+                    - thresold(V)
+                    - iq_angle(deg)
+                    - mean_gnd_states(V)
+                    - mean_exc_states(V)
+                    - beta(dimensionless)
 
         """
 
@@ -193,8 +193,9 @@ class Platform:
                     sweetspot = float(value)
                     self.qubits[qubit].sweetspot = sweetspot
                     self.settings["characterization"]["single_qubit"][qubit]["sweetspot"] = sweetspot
-                    # set sweetspot as the flux offset (IS THIS NEEDED?)
-                    self.qubits[qubit].flux.offset = sweetspot
+                    if self.qubits[qubit].flux is not None:
+                        # set sweetspot as the flux offset (IS THIS NEEDED?)
+                        self.qubits[qubit].flux.offset = sweetspot
 
                 # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
                 elif par == "drive_frequency":
@@ -364,6 +365,7 @@ class Platform:
             Readout results acquired by after execution.
 
         """
+
         return self._execute("play", sequences, options, **kwargs)
 
     def execute_pulse_sequences(self, sequences: List[PulseSequence], options: ExecutionParameters, **kwargs):
@@ -430,15 +432,28 @@ class Platform:
     def __call__(self, sequence, options):
         return self.execute_pulse_sequence(sequence, options)
 
+    def get_qubit(self, qubit):
+        """Return the name of the physical qubit corresponding to a logical qubit.
+
+        Temporary fix for the compiler to work for platforms where the qubits
+        are not named as 0, 1, 2, ...
+        """
+        try:
+            return self.qubits[qubit].name
+        except KeyError:
+            return list(self.qubits.keys())[qubit]
+
     def create_RX90_pulse(self, qubit, start=0, relative_phase=0):
+        qubit = self.get_qubit(qubit)
         return self.qubits[qubit].native_gates.RX90.pulse(start, relative_phase)
 
     def create_RX_pulse(self, qubit, start=0, relative_phase=0):
+        qubit = self.get_qubit(qubit)
         return self.qubits[qubit].native_gates.RX.pulse(start, relative_phase)
 
     def create_CZ_pulse_sequence(self, qubits, start=0):
         # Check in the settings if qubits[0]-qubits[1] is a key
-        pair = tuple(sorted(qubits))
+        pair = tuple(sorted(self.get_qubit(q) for q in qubits))
         if pair not in self.pairs or self.pairs[pair].native_gates.CZ is None:
             raise_error(
                 ValueError,
@@ -447,26 +462,31 @@ class Platform:
         return self.pairs[pair].native_gates.CZ.sequence(start)
 
     def create_MZ_pulse(self, qubit, start):
+        qubit = self.get_qubit(qubit)
         return self.qubits[qubit].native_gates.MZ.pulse(start)
 
     def create_qubit_drive_pulse(self, qubit, start, duration, relative_phase=0):
+        qubit = self.get_qubit(qubit)
         pulse = self.qubits[qubit].native_gates.RX.pulse(start, relative_phase)
         pulse.duration = duration
         return pulse
 
     def create_qubit_readout_pulse(self, qubit, start):
+        qubit = self.get_qubit(qubit)
         return self.create_MZ_pulse(qubit, start)
 
     # TODO Remove RX90_drag_pulse and RX_drag_pulse, replace them with create_qubit_drive_pulse
     # TODO Add RY90 and RY pulses
 
     def create_RX90_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
+        qubit = self.get_qubit(qubit)
         pulse = self.qubits[qubit].native_gates.RX90.pulse(start, relative_phase)
         if beta is not None:
             pulse.shape = "Drag(5," + str(beta) + ")"
         return pulse
 
     def create_RX_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
+        qubit = self.get_qubit(qubit)
         pulse = self.qubits[qubit].native_gates.RX.pulse(start, relative_phase)
         if beta is not None:
             pulse.shape = "Drag(5," + str(beta) + ")"
@@ -479,11 +499,11 @@ class Platform:
             qubit (int): qubit whose local oscillator will be modified.
             freq (int): new value of the frequency in Hz.
         """
-        self.qubits[qubit].drive.local_oscillator.frequency = freq
+        self.qubits[qubit].drive.lo_frequency = freq
 
     def get_lo_drive_frequency(self, qubit):
         """Get frequency of the qubit drive local oscillator in Hz."""
-        return self.qubits[qubit].drive.local_oscillator.frequency
+        return self.qubits[qubit].drive.lo_frequency
 
     def set_lo_readout_frequency(self, qubit, freq):
         """Set frequency of the qubit drive local oscillator.
@@ -492,11 +512,11 @@ class Platform:
             qubit (int): qubit whose local oscillator will be modified.
             freq (int): new value of the frequency in Hz.
         """
-        self.qubits[qubit].readout.local_oscillator.frequency = freq
+        self.qubits[qubit].readout.lo_frequency = freq
 
     def get_lo_readout_frequency(self, qubit):
         """Get frequency of the qubit readout local oscillator in Hz."""
-        return self.qubits[qubit].readout.local_oscillator.frequency
+        return self.qubits[qubit].readout.lo_frequency
 
     def set_lo_twpa_frequency(self, qubit, freq):
         """Set frequency of the local oscillator of the TWPA to which the qubit's feedline is connected to.
@@ -505,11 +525,11 @@ class Platform:
             qubit (int): qubit whose local oscillator will be modified.
             freq (int): new value of the frequency in Hz.
         """
-        self.qubits[qubit].twpa.local_oscillator.frequency = freq
+        self.qubits[qubit].twpa.lo_frequency = freq
 
     def get_lo_twpa_frequency(self, qubit):
         """Get frequency of the local oscillator of the TWPA to which the qubit's feedline is connected to in Hz."""
-        return self.qubits[qubit].twpa.local_oscillator.frequency
+        return self.qubits[qubit].twpa.lo_frequency
 
     def set_lo_twpa_power(self, qubit, power):
         """Set power of the local oscillator of the TWPA to which the qubit's feedline is connected to.
@@ -517,12 +537,12 @@ class Platform:
         Args:
             qubit (int): qubit whose local oscillator will be modified.
             power (int): new value of the power in dBm.
-        self.qubits[qubit].twpa.local_oscillator.power = power
         """
+        self.qubits[qubit].twpa.lo_power = power
 
     def get_lo_twpa_power(self, qubit):
         """Get power of the local oscillator of the TWPA to which the qubit's feedline is connected to in dBm."""
-        return self.qubits[qubit].twpa.local_oscillator.power
+        return self.qubits[qubit].twpa.lo_power
 
     def set_attenuation(self, qubit, att):
         """Set attenuation value. Usefeul for calibration routines such as punchout.

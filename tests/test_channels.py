@@ -58,3 +58,33 @@ def test_channel_map_union_update():
         assert name in channels
         assert isinstance(channels[name], Channel)
         assert channels[name].name == name
+
+
+@pytest.fixture
+def first_qubit(platform):
+    return next(iter(platform.qubits.values()))
+
+
+def test_platform_lo_drive_frequency(first_qubit):
+    first_qubit.drive.lo_frequency = 5.5e9
+    assert first_qubit.drive.lo_frequency == 5.5e9
+
+
+def test_platform_lo_readout_frequency(first_qubit):
+    first_qubit.readout.lo_frequency = 7e9
+    assert first_qubit.readout.lo_frequency == 7e9
+
+
+def test_platform_attenuation(first_qubit):
+    first_qubit.drive.attenuation = 10
+    assert first_qubit.drive.attenuation == 10
+
+
+def test_platform_gain(first_qubit):
+    first_qubit.readout.gain = 0
+    assert first_qubit.readout.gain == 0
+
+
+def test_platform_bias(first_qubit):
+    first_qubit.flux.offset = 0.05
+    assert first_qubit.flux.offset == 0.05
