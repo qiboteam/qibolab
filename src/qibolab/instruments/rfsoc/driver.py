@@ -279,14 +279,11 @@ class RFSoC(Controller):
         if len(sweepers) == 0:
             return self.play_sequence_in_sweep_recursion(qubits, sequence, or_sequence, execution_parameters)
 
-        print("AA")
         if not self.get_if_python_sweep(sequence, *sweepers):
-            print("BB")
             toti, totq = self._execute_sweeps(sequence, qubits, sweepers)
             res = self.convert_sweep_results(or_sequence, qubits, toti, totq, execution_parameters)
             return res
 
-        print("CC")
         sweeper = sweepers[0]
         values = []
         for idx, _ in enumerate(sweeper.indexes):
