@@ -16,18 +16,23 @@ NS_TO_US = 1e-3
 
 def replace_pulse_shape(rfsoc_pulse: rfsoc_pulses.Pulse, shape: PulseShape) -> rfsoc_pulses.Pulse:
     """Set pulse shape parameters in rfsoc_pulses pulse object."""
-    if shape.name not in {"Gaussian", "Drag", "Rectangular"}:
+    if shape.name not in {"Gaussian", "Drag", "Rectangular", "Exponential"}:
         new_pulse = rfsoc_pulses.Arbitrary(
             **asdict(rfsoc_pulse), i_values=shape.envelope_waveform_i, q_values=shape.envelope_waveform_q
         )
         return new_pulse
-    new_pulse_cls = getattr(rfsoc_pulses, shape.name)  # (**asdict(rfsoc_pulse))
+    if shape.name in {"Gaussian", "Drag", "Rectangular"}:
+        new_pulse_cls = getattr(rfsoc_pulses, shape.name)
+    elif shape.name == "Exponential":
+        new_pulse_cls = rfsoc_pulses.FluxExponential
     if shape.name == "Rectangular":
         return new_pulse_cls(**asdict(rfsoc_pulse))
     if shape.name == "Gaussian":
         return new_pulse_cls(**asdict(rfsoc_pulse), rel_sigma=shape.rel_sigma)
     if shape.name == "Drag":
         return new_pulse_cls(**asdict(rfsoc_pulse), rel_sigma=shape.rel_sigma, beta=shape.beta)
+    if shape.name == "Exponential":
+        return new_pulse_cls(**asdict(rfsoc_pulse), tau=shape.rel_sigma, upsilon=shape.upsilon, weight=shape.g)
     raise NotImplementedError(f"Shape {shape} not supported.")
 
 

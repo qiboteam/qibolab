@@ -348,6 +348,7 @@ class RFSoC(Controller):
             * not be on the readout frequency
             * not be a duration sweeper
             * only one pulse per channel supported
+            * flux pulses are not compatible with sweepers
 
         Args:
             sequence (`qibolab.pulses.PulseSequence`). Pulse sequence to play.
@@ -356,6 +357,8 @@ class RFSoC(Controller):
             A boolean value true if the sweeper must be executed by python
             loop, false otherwise
         """
+        if any(pulse.type is PulseType.FLUX for pulse in sequence):
+            return True
         for sweeper in sweepers:
             all_bias = True
             for sweep_idx, parameter in enumerate(sweeper.parameters):
