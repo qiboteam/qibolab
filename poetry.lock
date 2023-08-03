@@ -3913,8 +3913,8 @@ qick = "0.2.135"
 [package.source]
 type = "git"
 url = "https://github.com/qiboteam/qibosoq.git"
-reference = "main"
-resolved_reference = "b8bc0d2588b2a8bc1c4b9dc09f4652aa55005dd7"
+reference = "two-qubits-gates"
+resolved_reference = "31f5aee953afeaaac5f15ac200e894239ecb1033"
 
 [[package]]
 name = "qick"
@@ -5280,4 +5280,4 @@ zh = ["laboneq"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "a5ff48274527232945b03b607818e9da9abc628f6ecfd0bb8419c38a9dd9da71"
+content-hash = "07e2e0b8ea5a50e55cf41d884d77155e477f1e5e1986432003d4fdcc35ee04e8"
