@@ -279,11 +279,14 @@ class RFSoC(Controller):
         if len(sweepers) == 0:
             return self.play_sequence_in_sweep_recursion(qubits, sequence, or_sequence, execution_parameters)
 
+        print("AA")
         if not self.get_if_python_sweep(sequence, *sweepers):
+            print("BB")
             toti, totq = self._execute_sweeps(sequence, qubits, sweepers)
             res = self.convert_sweep_results(or_sequence, qubits, toti, totq, execution_parameters)
             return res
 
+        print("CC")
         sweeper = sweepers[0]
         values = []
         for idx, _ in enumerate(sweeper.indexes):
@@ -357,25 +360,20 @@ class RFSoC(Controller):
             loop, false otherwise
         """
         for sweeper in sweepers:
-            all_bias = True
-            for sweep_idx, parameter in enumerate(sweeper.parameters):
-                if parameter is rfsoc.Parameter.BIAS:
-                    continue
-                else:
-                    all_bias = False
-                if parameter is rfsoc.Parameter.DURATION:
-                    return True
-                elif parameter is rfsoc.Parameter.DELAY:
-                    continue
+            if all(parameter is rfsoc.Parameter.BIAS for parameter in sweeper.parameters):
+                continue
+            if all(parameter is rfsoc.Parameter.DELAY for parameter in sweeper.parameters):
+                continue
+            if any(parameter is rfsoc.Parameter.DURATION for parameter in sweeper.parameters):
+                return True
 
+            for sweep_idx, parameter in enumerate(sweeper.parameters):
                 is_freq = parameter is rfsoc.Parameter.FREQUENCY
                 is_ro = sequence[sweeper.indexes[sweep_idx]].type == PulseType.READOUT
-
                 # if it's a sweep on the readout freq do a python sweep
                 if is_freq and is_ro:
                     return True
-            if all_bias:
-                continue
+
             for idx in sweeper.indexes:
                 sweep_pulse = sequence[idx]
                 channel = sweep_pulse.channel
