@@ -19,6 +19,7 @@ class Parameter(Enum):
     attenuation = auto()
     gain = auto()
     bias = auto()
+    lo_frequency = auto()
 
 
 FREQUENCY = Parameter.frequency

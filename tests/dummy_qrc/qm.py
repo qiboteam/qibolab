@@ -2,7 +2,7 @@ import pathlib
 
 from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.oscillator import LocalOscillator
-from qibolab.instruments.qmsim import QMSim
+from qibolab.instruments.qm import QMSim
 from qibolab.platform import Platform
 
 RUNCARD = pathlib.Path(__file__).parent / "qm.yml"
@@ -64,7 +64,7 @@ def create(runcard=RUNCARD):
     channels["L4-26"].local_oscillator = local_oscillators[5]
 
     instruments = [controller] + local_oscillators
-    platform = Platform("qw5q_gold", runcard, instruments, channels)
+    platform = Platform("qw5q_gold_qm", runcard, instruments, channels)
 
     # assign channels to qubits
     qubits = platform.qubits
