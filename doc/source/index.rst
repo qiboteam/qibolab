@@ -48,7 +48,7 @@ Contents
 
     main-documentation/index
     api-reference/index
-    developer-guides/index
+    Ddeveloper-guides <https://qibo.science/qibo/stable/developer-guides/index.html>
 
 .. toctree::
     :maxdepth: 2
