@@ -32,7 +32,7 @@ from qibolab.platform import Platform
 NAME = "qblox"
 ADDRESS = "192.168.0.6"
 TIME_OF_FLIGHT = 500
-RUNCARD = pathlib.Path(__file__).parent / "qw5q_gold.yml"
+RUNCARD = pathlib.Path(__file__).parent / "qblox.yml"
 
 instruments_settings = {
     "cluster": Cluster_Settings(reference_clock_source=ReferenceClockSource.INTERNAL),
@@ -207,7 +207,7 @@ def create(runcard=RUNCARD):
     channels["L4-26"] = Channel(name="L4-4", port=None)
 
     platform = Platform(
-        name="dummy_qrc_qw5q_gold_qblox",
+        name="dummy_qrc_qblox",
         runcard=runcard,
         instruments=instruments,
         channels=channels,
