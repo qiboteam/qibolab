@@ -1,9 +1,6 @@
 """RFSoC FPGA driver.
 
-This driver needs a Qibosoq server installed and running
-Tested on the following FPGA:
-    - RFSoC 4x2
-    - ZCU111
+The driver needs a Qibosoq server installed and running.
 """
 from dataclasses import asdict, dataclass
 from typing import Union

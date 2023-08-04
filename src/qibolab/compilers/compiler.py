@@ -76,7 +76,7 @@ class Compiler:
         """Decorator for registering a function as a rule in the compiler.
 
         Using this decorator is optional. Alternatively the user can set the rules directly
-        via ``__setitem__`.
+        via ``__setitem__``.
 
         Args:
             gate_cls: Qibo gate object that the rule will be assigned to.
@@ -112,14 +112,13 @@ class Compiler:
 
         Args:
             circuit (qibo.models.Circuit): Qibo circuit that respects the platform's
-                connectivity and native gates.
+                                           connectivity and native gates.
             platform (qibolab.platforms.abstract.AbstractPlatform): Platform used
                 to load the native pulse representations.
 
         Returns:
             sequence (qibolab.pulses.PulseSequence): Pulse sequence that implements the circuit.
-            measurement_map (dict): Map from each measurement gate to the sequence of  readout pulses
-                implementing it.
+            measurement_map (dict): Map from each measurement gate to the sequence of  readout pulse implementing it.
         """
         sequence = PulseSequence()
         # FIXME: This will not work with qubits that have string names
