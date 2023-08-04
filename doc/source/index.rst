@@ -1,8 +1,3 @@
-.. Qibolab documentation master file, created by
-   sphinx-quickstart on Sat Nov 13 11:10:09 2021.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 .. title::
    Qibolab
 
@@ -10,16 +5,32 @@
 What is Qibolab?
 ================
 
-Qibolab is the dedicated `Qibo <https://github.com/qiboteam/qibo>`_ backend for
-the automatic deployment of quantum circuits on quantum hardware.
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.7973899.svg
+   :target: https://doi.org/10.5281/zenodo.7973899
 
-Qibolab key features:
+Qibolab is the dedicated `Qibo <https://github.com/qiboteam/qibo>`_ backend for
+quantum hardware control. This module automates the implementation of quantum
+circuits on quantum hardware. Qibolab includes:
+
+1. *Platform API*: support custom allocation of quantum hardware platforms / lab setup.
+2. *Drivers*: supports commercial and open-source firmware for hardware control.
+3. *Arbitrary pulse API*: provide a library of custom pulses for execution through instruments.
+4. *Transpiler*: compiles quantum circuits into pulse sequences matching chip topology.
+5. *Quantum Circuit Deployment*: seamlessly deploys quantum circuit models on
+   quantum hardware.
+
+Components
+----------
+
+.. image:: platform_object.svg
+
+Key features
+------------
 
 * Deploy Qibo models on quantum hardware easily.
 * Create custom experimental drivers for custom lab setup.
 * Support multiple heterogeneous platforms.
 * Use existing calibration procedures for experimentalists.
-
 
 Contents
 ========
@@ -36,10 +47,14 @@ Contents
     :caption: Main documentation
 
     main-documentation/index
+    api-reference/index
+    developer-guides/index
 
 .. toctree::
+    :maxdepth: 2
+    :caption: Appendix
 
-    api-reference/index
+    Publications <https://qibo.science/qibo/stable/appendix/citing-qibo.html>
 
 .. toctree::
     :maxdepth: 1

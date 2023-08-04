@@ -1,4 +1,4 @@
-code overview
+Code overview
 =============
 
 The Qibolab framework implements a common system to deal with heterogeneous
