@@ -32,10 +32,6 @@ class PlatformSettings:
     """Number of waveform samples supported by the instruments per second."""
     relaxation_time: int = int(1e5)
     """Time in ns to wait for the qubit to relax to its ground state between shots."""
-    time_of_flight: int = 280
-    """Time in ns for the signal to reach the qubit from the instruments."""
-    smearing: int = 0
-    """Readout pulse window to be excluded during the signal integration."""
 
 
 @dataclass

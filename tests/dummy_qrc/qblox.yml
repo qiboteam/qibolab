@@ -10,9 +10,6 @@ qubits: [0, 1, 2, 3, 4, 5]
 
 topology: [[0, 2], [1, 2], [2, 3], [2, 4]]
 
-resonator_type: 2D
-
-
 native_gates:
     single_qubit:
         0: # qubit id
