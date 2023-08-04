@@ -121,6 +121,8 @@ onequbit_dec.add(gates.RY, lambda gate: [gates.U3(0, gate.parameters[0], 0, 0)])
 # apply virtually by changing ``phase`` instead of using pulses
 onequbit_dec.add(gates.RZ, lambda gate: [gates.RZ(0, gate.parameters[0])])
 # apply virtually by changing ``phase`` instead of using pulses
+onequbit_dec.add(gates.GPI2, lambda gate: [gates.GPI2(0, gate.parameters[0])])
+# implemented as single RX90 pulse
 onequbit_dec.add(gates.U1, lambda gate: [gates.RZ(0, gate.parameters[0])])
 onequbit_dec.add(gates.U2, lambda gate: [gates.U3(0, np.pi / 2, gate.parameters[0], gate.parameters[1])])
 onequbit_dec.add(gates.U3, lambda gate: [gates.U3(0, gate.parameters[0], gate.parameters[1], gate.parameters[2])])

@@ -2,7 +2,7 @@ import pathlib
 
 from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.oscillator import LocalOscillator
-from qibolab.instruments.qmsim import QMSim
+from qibolab.instruments.qm import QMSim
 from qibolab.platform import Platform
 from qibolab.utils import load_qubits, load_runcard, load_settings
 
@@ -97,4 +97,4 @@ def create(runcard_path=RUNCARD):
     instruments = {controller.name: controller}
     instruments.update({lo.name: lo for lo in local_oscillators})
     settings = load_settings(runcard)
-    return Platform("qw5q_gold", qubits, pairs, instruments, settings, resonator_type="2D")
+    return Platform("qm", qubits, pairs, instruments, settings, resonator_type="2D")

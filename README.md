@@ -17,7 +17,7 @@ Some of the key features of Qibolab are:
 
 ## Documentation
 
-The qibolab backend documentation is available at https://qibolab.readthedocs.io.
+The qibolab backend documentation is available at [https://qibo.science/qibolab/stable/](https://qibo.science/qibolab/stable/).
 
 ## Minimum working example
 
@@ -108,4 +108,4 @@ for _ in range(5):
 If you use the package please cite the following references:
 - https://arxiv.org/abs/2009.01845
 - https://doi.org/10.5281/zenodo.3997194
-- DOI paper and zenodo
+- DOI paper
