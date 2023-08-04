@@ -3,7 +3,6 @@
 import math
 import re
 from dataclasses import asdict, dataclass, field, replace
-from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -21,13 +20,6 @@ from qibolab.sweeper import Sweeper
 InstrumentMapType = Dict[InstrumentId, Instrument]
 QubitMapType = Dict[QubitId, Qubit]
 QubitPairMapType = Dict[QubitPairId, QubitPair]
-
-
-class ResonatorType(Enum):
-    """Available resonator types."""
-
-    dim2 = "2D"
-    dim3 = "3D"
 
 
 @dataclass
@@ -61,7 +53,7 @@ class Platform:
 
     settings: PlatformSettings = field(default_factory=PlatformSettings)
     """Container with default execution settings."""
-    resonator_type: Optional[ResonatorType] = None
+    resonator_type: Optional[str] = None
     """Type of resonator (2D or 3D) in the used QPU.
     Default is 3D for single-qubit chips and 2D for multi-qubit.
     """
@@ -75,10 +67,8 @@ class Platform:
 
     def __post_init__(self):
         log.info("Loading platform %s", self.name)
-        if isinstance(self.resonator_type, str):
-            self.resonator_type = ResonatorType(self.resonator_type)
-        elif self.resonator_type is None:
-            self.resonator_type = ResonatorType("3D") if self.nqubits == 1 else ResonatorType("2D")
+        if self.resonator_type is None:
+            self.resonator_type = "3D" if self.nqubits == 1 else "2D"
 
         for pair in self.pairs.values():
             self.two_qubit_native_types |= pair.native_gates.types
@@ -88,6 +78,9 @@ class Platform:
 
         self.topology.add_nodes_from(self.qubits.keys())
         self.topology.add_edges_from([(pair.qubit1.name, pair.qubit2.name) for pair in self.pairs.values()])
+
+    def __str__(self):
+        return self.name
 
     @property
     def nqubits(self) -> int:
