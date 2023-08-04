@@ -45,7 +45,7 @@ def simulator(request):
     duration = request.config.getoption("--simulation-duration")
     controller = QMSim("qmopx", address, simulation_duration=duration, cloud=True)
     controller.time_of_flight = 280
-    platform.instruments[0] = controller
+    platform.instruments["qmopx"] = controller
     platform.connect()
     platform.setup()
     yield platform
@@ -231,8 +231,9 @@ def test_qmsim_sweep_start_two_pulses(simulator, folder):
 
 
 def test_qmsim_sweep_duration(simulator, folder):
-    original_duration = simulator.instruments[0].simulation_duration
-    simulator.instruments[0].simulation_duration = 1250
+    controller = simulator.instruments["qmopx"]
+    original_duration = controller.simulation_duration
+    controller.simulation_duration = 1250
     qubits = list(range(simulator.nqubits))
     sequence = PulseSequence()
     qd_pulses = {}
@@ -251,12 +252,13 @@ def test_qmsim_sweep_duration(simulator, folder):
     result = simulator.sweep(sequence, options, sweeper)
     samples = result.get_simulated_samples()
     assert_regression(samples, folder, "sweep_duration")
-    simulator.instruments[0].simulation_duration = original_duration
+    controller.simulation_duration = original_duration
 
 
 def test_qmsim_sweep_duration_two_pulses(simulator, folder):
-    original_duration = simulator.instruments[0].simulation_duration
-    simulator.instruments[0].simulation_duration = 1250
+    controller = simulator.instruments["qmopx"]
+    original_duration = controller.simulation_duration
+    controller.simulation_duration = 1250
     qubits = list(range(simulator.nqubits))
     sequence = PulseSequence()
     qd_pulses1 = {}
@@ -278,7 +280,7 @@ def test_qmsim_sweep_duration_two_pulses(simulator, folder):
     result = simulator.sweep(sequence, options, sweeper)
     samples = result.get_simulated_samples()
     assert_regression(samples, folder, "sweep_duration_two_pulses")
-    simulator.instruments[0].simulation_duration = original_duration
+    controller.simulation_duration = original_duration
 
 
 gatelist = [
