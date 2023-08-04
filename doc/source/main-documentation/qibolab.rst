@@ -18,7 +18,7 @@ In the platform, the main methods can be divided in different sections:
 
 The idea of the ``Platform`` is to serve as the only exposed object to the user so, for example, we can easily write an example of experiment, whithout any need of going into the low-level instrument-dpecific code.
 
-For example, let's first define a platform (that we consider to be a single qubit platform) using the ``create`` method presented in :doc:`/getting-started/lab`:
+For example, let's first define a platform (that we consider to be a single qubit platform) using the ``create`` method presented in :doc:`/tutorials/lab`:
 
 .. code-block::  python
 
@@ -71,3 +71,84 @@ Finally, we can stop instruments and close connections.
 
     platform.stop()
     platform.disconnect()
+
+
+Qubits
+======
+
+The :class:`qibolab.qubits.Qubit` is a representation of a physical qubit, it mainly contains three elements:
+
+    - channels
+    - parameters
+    - native_gates
+
+The channels, better explained in the channels section, represent the physical wires in a laboratory.
+The channels are all optional and come in different types:
+
+    - readout (from controller device to the qubits)
+    - feedback (from qubits to controller)
+    - twpa (pump to the twpa)
+    - drive
+    - flux
+    - flux_coupler
+
+The settable parameters, that are read from the runcard when the platform is initialized, are:
+
+    - bare_resonator_frequency
+    - readout_frequency
+    - drive_frequency
+    - anharmonicity
+    - Ec
+    - Ej
+    - g
+    - assigment_fidelity
+    - sweetspot
+    - peak_vol`tage
+    - pi_pulse_amplitude
+    - T1
+    - T2
+    - T2_spin_echo
+    - state0_voltage
+    - state1_voltage
+    - mean_gnd_states
+    - mean_exc_states
+    - threshold
+    - iq_angle
+
+Native
+======
+
+Channels
+========
+
+Pulses
+======
+
+In Qibolab we have a dedicated API to pulses and pulses sequence, which
+at the moment works for both qblox and FPGAs setups.
+
+The main component of the API is the :class:`qibolab.pulses.Pulse` object,
+which enables the user to code a pulse with specific parameters. We provide
+also a special object for the ``ReadoutPulse`` given its importance when dealing
+with a quantum hardware. Moreover, we supports different kinds of :class:`qibolab.pulses.PulseShape`.
+
+The :class:`qibolab.pulses.PulseSequence` class enables to combine different pulses
+into a sequence through the ``add`` method.
+
+Symbolic expressions
+====================
+
+Sweepers
+========
+
+Results
+=======
+
+Execution Parameters
+====================
+
+Transpiler
+==========
+
+Instruments
+===========

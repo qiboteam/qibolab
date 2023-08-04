@@ -23,15 +23,16 @@ class Compiler:
     pulse sequence and some virtual Z-phases.
 
     A rule is a function that takes two argumens:
-        gate (:class:`qibo.gates.abstract.Gate`): Gate object to be compiled.
-        platform (:class:`qibolab.platforms.abstract.AbstractPlatform`): Platform object to read
+        - gate (:class:`qibo.gates.abstract.Gate`): Gate object to be compiled.
+        - platform (:class:`qibolab.platforms.abstract.AbstractPlatform`): Platform object to read
             native gate pulses from.
-    and returns
-        sequence (:class:`qibolab.pulses.PulseSequence`): Sequence of pulses that implement
-            the given gate.
-        virtual_z_phases (dict): Dictionary mapping qubits to virtual Z-phases induced by the gate.
 
-    See ``qibolab.compilers.default`` for an example of a compiler implementation.
+    and returns:
+        - sequence (:class:`qibolab.pulses.PulseSequence`): Sequence of pulses that implement
+            the given gate.
+        - virtual_z_phases (dict): Dictionary mapping qubits to virtual Z-phases induced by the gate.
+
+    See :class:`qibolab.compilers.default` for an example of a compiler implementation.
     """
 
     rules: dict = field(default_factory=dict)

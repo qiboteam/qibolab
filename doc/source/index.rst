@@ -40,7 +40,7 @@ Contents
     :caption: Introduction
 
     getting-started/index
-    code-examples/index
+    tutorials/index
 
 .. toctree::
     :maxdepth: 2
