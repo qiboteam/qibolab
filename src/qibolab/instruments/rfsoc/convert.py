@@ -32,7 +32,7 @@ def replace_pulse_shape(rfsoc_pulse: rfsoc_pulses.Pulse, shape: PulseShape) -> r
     if shape.name == "Drag":
         return new_pulse_cls(**asdict(rfsoc_pulse), rel_sigma=shape.rel_sigma, beta=shape.beta)
     if shape.name == "Exponential":
-        return new_pulse_cls(**asdict(rfsoc_pulse), tau=shape.rel_sigma, upsilon=shape.upsilon, weight=shape.g)
+        return new_pulse_cls(**asdict(rfsoc_pulse), tau=shape.tau, upsilon=shape.upsilon, weight=shape.g)
     raise NotImplementedError(f"Shape {shape} not supported.")
 
 
