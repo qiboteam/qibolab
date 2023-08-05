@@ -61,9 +61,8 @@ _______________________
 
 .. _Instruments:
 
-Instruments supported
+Supported instruments
 ^^^^^^^^^^^^^^^^^^^^^
-
 
 Qibolab supports the following control instruments:
 
@@ -79,9 +78,18 @@ This can be done with:
 
 .. code-block:: bash
 
-      pip install qibolab[qm,zh,qblox,rfsoc]  # for installation from releases
-      conda install -c conda-forge qibolab[qm,zh,qblox,rfsoc]  # for installation from conda
-      poetry install -E qm -E zh -E qblox -E rfsoc  # for installation from source
+      # for installation from releases
+      pip install qibolab[qm,zh,qblox,rfsoc]
+
+      # or for installation from source
+      poetry install -E qm -E zh -E qblox -E rfsoc
+
+Or with conda
+
+.. code-block:: bash
+
+      conda install -c conda-forge qibolab[qm,zh,qblox,rfsoc]
+
 
 With the extras being:
 
