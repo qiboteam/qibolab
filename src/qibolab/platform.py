@@ -145,22 +145,22 @@ class Platform:
                             {`parameter_to_update_in_runcard`: {`qubit0`:`par_value_qubit0`, ..., `qubit_i`:`par_value_qubit_i`, ...}}.
                             The parameters that can be updated by this method are:
 
-                                - readout_frequency (GHz)
-                                - readout_attenuation (dimensionless)
-                                - bare_resonator_frequency (GHz)
-                                - sweetspot(V)
-                                - drive_frequency (GHz)
-                                - readout_amplitude (dimensionless)
-                                - drive_amplitude (dimensionless)
-                                - drive_length
-                                - t2 (ns)
-                                - t2_spin_echo (ns)
-                                - t1 (ns)
-                                - thresold(V)
-                                - iq_angle(deg)
-                                - mean_gnd_states(V)
-                                - mean_exc_states(V)
-                                - beta(dimensionless)
+                            - readout_frequency (GHz)
+                            - readout_attenuation (dimensionless)
+                            - bare_resonator_frequency (GHz)
+                            - sweetspot(V)
+                            - drive_frequency (GHz)
+                            - readout_amplitude (dimensionless)
+                            - drive_amplitude (dimensionless)
+                            - drive_length
+                            - t2 (ns)
+                            - t2_spin_echo (ns)
+                            - t1 (ns)
+                            - thresold(V)
+                            - iq_angle(deg)
+                            - mean_gnd_states(V)
+                            - mean_exc_states(V)
+                            - beta(dimensionless)
 
         """
 

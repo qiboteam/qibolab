@@ -47,7 +47,7 @@ Contents
     :caption: Main documentation
 
     main-documentation/index
-    api-reference/index
+    api-reference/modules
     Developer guides <https://qibo.science/qibo/stable/developer-guides/index.html>
 
 .. toctree::

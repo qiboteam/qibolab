@@ -228,7 +228,7 @@ class Exponential(PulseShape):
 
     .. math::
 
-        A\\frac{\\exp\\left(-\\frac{x}{\\text{upsilon}}\\right) + g \\exp\\left(-\\frac{x}{\\text{tau}}\\right)}{1 + g}
+        A\frac{\exp\left(-\frac{x}{\text{upsilon}}\right) + g \exp\left(-\frac{x}{\text{tau}}\right)}{1 + g}
 
     """
 
@@ -279,7 +279,7 @@ class Gaussian(PulseShape):
 
     .. math::
 
-        A\\exp^{-\\frac{1}{2}\\frac{(t-\\mu)^2}{\\sigma^2}}
+        A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}
     """
 
     def __init__(self, rel_sigma: float):
@@ -532,8 +532,8 @@ class eCap(PulseShape):
 
     .. math::
 
-        e_\\cap(t,\\alpha) &=& A[1 + \\tanh(\\alpha t/t_\\theta)][1 + \\tanh(\\alpha (1 - t/t_\\theta))]\\\\
-        &\\times& [1 + \\tanh(\\alpha/2)]^{-2}
+        e_{\cap(t,\alpha)} &=& A[1 + \tanh(\alpha t/t_\theta)][1 + \tanh(\alpha (1 - t/t_\theta))]\\
+        &\times& [1 + \tanh(\alpha/2)]^{-2}
 
     """
 
