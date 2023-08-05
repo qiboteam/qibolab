@@ -7,24 +7,30 @@ How to execute a pulse sequence on a given platform?
 ----------------------------------------------------
 
 First, we create the pulse sequence that will be executed.
-We can do this by defining a ``PulseSequence`` object and adding different
-pulses (:class:`qibolab.pulses.Pulse`) through the ``PulseSequence.add()`` method:
+We can do this by defining a :class:`qibolab.pulses.PulseSequence` object and adding different
+pulses (:class:`qibolab.pulses.Pulse`) through the :func:`qibolab.pulses.PulseSequence.add()` method:
 
 .. code-block::  python
 
-    from qibolab.pulses import Pulse, ReadoutPulse, PulseSequence
-    from qibolab.pulse_shapes import Rectangular, Gaussian
+    from qibolab.pulses import (
+        Pulse,
+        DrivePulse,
+        ReadoutPulse,
+        PulseSequence
+        Rectangular,
+        Gaussian
+    )
 
     # Define PulseSequence
     sequence = PulseSequence()
 
     # Add some pulses to the pulse sequence
-    sequence.add(Pulse(start=0,
-                        frequency=200000000.0,
-                        amplitude=0.3,
-                        duration=60,
-                        phase=0,
-                        shape=Gaussian(5))) # Gaussian shape with std = duration / 5
+    sequence.add(DrivePulse(start=0,
+                            frequency=200000000,
+                            amplitude=0.3,
+                            duration=60,
+                            phase=0,
+                            shape=Gaussian(5)))
     sequence.add(ReadoutPulse(start=70,
                               frequency=20000000.0,
                               amplitude=0.5,
@@ -34,7 +40,7 @@ pulses (:class:`qibolab.pulses.Pulse`) through the ``PulseSequence.add()`` metho
 
 The next step consists in connecting to a specific lab in which
 the pulse sequence will be executed. In order to do this we
-allocate a platform  object ``Platform("name")`` where ``name`` is
+allocate a platform  object via the :func:`qibolab.create_platform("name")` where ``name`` is
 the name of the platform that will be used. The ``Platform`` constructor
 also takes care of loading the runcard containing all the calibration
 settings for that specific platform.
@@ -47,18 +53,23 @@ specified.
 
 .. code-block::  python
 
-    from qibolab import Platform
+    from qibolab import create_platform
+    from qibolab.execution_parameters import ExecutionParameters
 
     # Define platform and load specific runcard
-    platform = Platform("tii1q")
+    platform = create_platform("tii1q")
     # Connects to lab instruments using the details specified in the calibration settings.
     platform.connect()
     # Configures instruments using the loaded calibration settings.
     platform.setup()
     # Turns on the local oscillators
     platform.start()
+    options = ExecutionParameters(
+        nshots=1000,
+        relaxation_time=100
+    )
     # Executes a pulse sequence.
-    results = platform.execute(ps, nshots=10)
+    results = platform.execute(ps, options=options)
     # Turn off lab instruments
     platform.stop()
     # Disconnect from the instruments

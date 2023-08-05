@@ -1,5 +1,8 @@
+Main elements
+=============
+
 Platforms
-=========
+---------
 
 Qibolab provides support to different quantum laboratories.
 
@@ -75,7 +78,7 @@ Finally, we can stop instruments and close connections.
 
 
 Qubits
-======
+------
 
 The :class:`qibolab.qubits.Qubit` class serves as a comprehensive representation of a physical qubit within the Qibolab framework.
 It encapsulates three fundamental elements crucial to qubit control and operation:
@@ -120,7 +123,7 @@ Notable settable parameters include:
 - iq_angle
 
 Channels
-========
+--------
 
 In Qibolab, channels serve as abstractions for physical wires within a laboratory setup.
 Each :class:`qibolab.channels.Channel` object corresponds to a specific type of connection, simplifying the process of controlling quantum pulses across the experimental setup.
@@ -187,7 +190,7 @@ To assign local oscillators, the procedure is simple:
     channel2.local_oscillator = local_oscillator
 
 Pulses
-======
+------
 
 In Qibolab, an extensive API is available for working with pulses and pulse sequences, a fundamental aspect of quantum experiments.
 At the heart of this API is the :class:`qibolab.pulses.Pulse` object, which empowers users to define and customize pulses with specific parameters.
@@ -295,10 +298,10 @@ Typical experiments may include both pre-defined pulses and new ones:
    options is an :class:`qibolab.execution_parameters.ExecutionParameters` object, detailed in a separate section.
 
 Symbolic expressions
-====================
+--------------------
 
 Sweepers
-========
+--------
 
 Sweeper objects, represented by the :class:`qibolab.sweeper.Sweeper` class, stand as a crucial component in experiments and calibration tasks within the Qibolab framework.
 
@@ -422,7 +425,7 @@ Let's say that the RX pulse has, from the runcard, a frequency of 4.5 GHz and an
    It is possible that the sweeper will raise an error, if not supported, or that it will be automatically converted as a list of pulse sequences to perform sequentially.
 
 Execution Parameters
-====================
+--------------------
 
 In the course of several examples, you've encountered the ``options`` argument in function calls like:
 
@@ -463,7 +466,7 @@ Supported averaging modes, available through the :class:`qibolab.execution_param
 
 
 Results
-=======
+-------
 
 Within the qibolab API, a variety of result types are available, contingent upon the chosen acquisition options. These results can be broadly classified into three main categories, based on the AcquisitionType:
 
@@ -517,13 +520,13 @@ The shape of the values of an integreted acquisition with 2 sweepers will be:
    shape = (options.nshots, len(sweeper1.values), len(sweeper2.values))
 
 Transpiler
-==========
+----------
 
 Native
-======
+------
 
 Instruments
-===========
+-----------
 
 One the key features of qibolab is its support for multiple different instruments.
 A list of all the supported instruments follows:

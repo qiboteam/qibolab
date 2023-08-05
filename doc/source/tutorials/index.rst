@@ -9,5 +9,7 @@ In this section we present code examples from basic to advanced features impleme
     :maxdepth: 2
 
     lab
-    instrument
     basic
+    circuits
+    calibration
+    instrument
