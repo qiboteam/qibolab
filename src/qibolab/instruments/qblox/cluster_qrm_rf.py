@@ -1,34 +1,4 @@
-""" Qblox instruments driver.
-
-Supports the following Instruments:
-    Cluster
-    Cluster QRM-RF
-    Cluster QCM-RF
-    Cluster QCM
-Compatible with qblox-instruments driver 0.9.0 (28/2/2023).
-It supports:
-    - multiplexed readout of up to 6 qubits
-    - hardware modulation, demodulation, and classification
-    - software modulation, with support for arbitrary pulses
-    - software demodulation
-    - binned acquisition
-    - real-time sweepers of
-        - pulse frequency (requires hardware modulation)
-        - pulse relative phase (requires hardware modulation)
-        - pulse amplitude
-        - pulse start
-        - pulse duration
-        - port gain
-        - port offset
-    - multiple readouts for the same qubit (sequence unrolling)
-    - max iq pulse length 8_192ns
-    - waveforms cache, uses additional free sequencers if the memory of one sequencer (16384) is exhausted
-    - instrument parameters cache
-    - safe disconnection of offsets on termination
-
-The operation of multiple clusters simultaneously is not supported yet.
-https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/
-"""
+""" Qblox Cluster QRM-RF driver."""
 
 import json
 
@@ -86,6 +56,8 @@ class ClusterQRM_RF(Instrument):
     instrument only happens when the parameters change. This caching is done with the method
     `_set_device_parameter(target, *parameters, value)`.
 
+    .. code-block:: text
+
         ports:
             o1:                                             # output port settings
                 channel                     : L3-25a
@@ -109,14 +81,6 @@ class ClusterQRM_RF(Instrument):
                 rotation_angle              : 104.002
                 threshold                   : 0.012745
 
-    The class inherits from Instrument and implements its interface methods:
-        __init__()
-        connect()
-        setup()
-        start()
-        stop()
-        disconnect()
-
     Attributes:
         name (str): A unique name given to the instrument.
         address (str): IP_address:module_number; the IP address of the cluster and
@@ -126,52 +90,54 @@ class ClusterQRM_RF(Instrument):
             https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/api_reference/qcm_qrm.html
 
         ports = A dictionary giving access to the input and output ports objects.
-            ports['o1']: Output port
-            ports['i1']: Input port
 
-            ports['o1'].channel (int | str): the id of the refrigerator channel the output port o1 is connected to.
-            ports['o1'].attenuation (int): (mapped to qrm.out0_att) Controls the attenuation applied to the output
-                port. It must be a multiple of 2.
-            ports['o1'].lo_enabled (bool): (mapped to qrm.out0_in0_lo_en) Enables or disables the local oscillator.
-            ports['o1'].lo_frequency (int): (mapped to qrm.out0_in0_lo_freq) Sets the frequency of the local oscillator.
-            ports['o1'].gain (float): (mapped to qrm.sequencers[0].gain_awg_path0 and qrm.sequencers[0].gain_awg_path1)
-                Sets the gain on both paths of the output port.
-            ports['o1'].hardware_mod_en (bool): (mapped to qrm.sequencers[0].mod_en_awg) Enables pulse modulation
-                in hardware. When set to False, pulse modulation is done in software, at the host computer, and the
-                modulated pulse waveform is uploaded to the instrument. When set to True, the envelope of the pulse
-                is uploaded to the instrument and it is modulated in real time by the FPGA of the instrument, using
-                the sequencer nco (numerically controlled oscillator).
-            ports['o1'].nco_freq (int): (mapped to qrm.sequencers[0].nco_freq). Mapped, but not configurable from
-                the runcard.
-            ports['o1'].nco_phase_offs = (mapped to qrm.sequencers[0].nco_phase_offs). Mapped, but not configurable
-                from the runcard.
+            - ports['o1']: Output port
+            - ports['i1']: Input port
 
-            ports['i1'].channel (int | str): the id of the refrigerator channel the input port o1 is connected to.
-            ports['i1'].acquisition_hold_off (int): Delay between the moment the readout pulse starts to be played and
-                the start of the acquisition, in ns. It must be > 0 and multiple of 4.
-            ports['i1'].acquisition_duration (int): (mapped to qrm.sequencers[0].integration_length_acq) Duration
-            of the pulse acquisition, in ns. It must be > 0 and multiple of 4.
-            ports['i1'].hardware_demod_en (bool): (mapped to qrm.sequencers[0].demod_en_acq) Enables demodulation
-                and integration of the acquired pulses in hardware. When set to False, the filtration, demodulation
-                and integration of the acquired pulses is done at the host computer. When set to True, the
-                demodulation, integration and discretization of the pulse is done in real time at the FPGA of the
-                instrument.
+            - ports['o1'].channel (int | str): the id of the refrigerator channel the output port o1 is connected to.
+            - ports['o1'].attenuation (int): (mapped to qrm.out0_att) Controls the attenuation applied to the output
+              port. It must be a multiple of 2.
+            - ports['o1'].lo_enabled (bool): (mapped to qrm.out0_in0_lo_en) Enables or disables the local oscillator.
+            - ports['o1'].lo_frequency (int): (mapped to qrm.out0_in0_lo_freq) Sets the frequency of the local oscillator.
+            - ports['o1'].gain (float): (mapped to qrm.sequencers[0].gain_awg_path0 and qrm.sequencers[0].gain_awg_path1)
+              Sets the gain on both paths of the output port.
+            - ports['o1'].hardware_mod_en (bool): (mapped to qrm.sequencers[0].mod_en_awg) Enables pulse modulation
+              in hardware. When set to False, pulse modulation is done in software, at the host computer, and the
+              modulated pulse waveform is uploaded to the instrument. When set to True, the envelope of the pulse
+              is uploaded to the instrument and it is modulated in real time by the FPGA of the instrument, using
+              the sequencer nco (numerically controlled oscillator).
+            - ports['o1'].nco_freq (int): (mapped to qrm.sequencers[0].nco_freq). Mapped, but not configurable from
+              the runcard.
+            - ports['o1'].nco_phase_offs = (mapped to qrm.sequencers[0].nco_phase_offs). Mapped, but not configurable
+              from the runcard.
+
+            - ports['i1'].channel (int | str): the id of the refrigerator channel the input port o1 is connected to.
+            - ports['i1'].acquisition_hold_off (int): Delay between the moment the readout pulse starts to be played and
+              the start of the acquisition, in ns. It must be > 0 and multiple of 4.
+            - ports['i1'].acquisition_duration (int): (mapped to qrm.sequencers[0].integration_length_acq) Duration
+              of the pulse acquisition, in ns. It must be > 0 and multiple of 4.
+            - ports['i1'].hardware_demod_en (bool): (mapped to qrm.sequencers[0].demod_en_acq) Enables demodulation
+              and integration of the acquired pulses in hardware. When set to False, the filtration, demodulation
+              and integration of the acquired pulses is done at the host computer. When set to True, the
+              demodulation, integration and discretization of the pulse is done in real time at the FPGA of the
+              instrument.
+
+                - Sequencer 0 is used always for acquisitions and it is the first sequencer used to synthesise pulses.
+                - Sequencer 1 to 6 are used as needed to synthesise simultaneous pulses on the same channel (required in
+                  multiplexed readout) or when the memory of the default sequencers rans out.
 
         classification_parameters (dict): A dictionary containing the parameters needed classify the state of each qubit.
             from a single shot measurement:
-                qubit_id (dict): the id of the qubit
-                    rotation_angle (float): 0   # in degrees 0.0<=v<=360.0. The angle of the rotation applied at the
-                        origin of the i q plane, that put the centroids of the state |0> and state |1> in a horizontal line.
-                        The rotation puts the centroid of state |1> to the right side of centroid of state |0>.
-                    threshold (float): 0        # in V. The real component of the point along the horizontal line
-                        connecting both state centroids (after being rotated), that maximises the fidelity of the
-                        classification.
+        qubit_id (dict): the id of the qubit
+            rotation_angle (float): 0   # in degrees 0.0<=v<=360.0. The angle of the rotation applied at the
+            origin of the i q plane, that put the centroids of the state ``|0>`` and state ``|1>`` in a horizontal line.
+            The rotation puts the centroid of state ``|1>`` to the right side of centroid of state ``|0>``.
+        threshold (float): 0        # in V. The real component of the point along the horizontal line
+            connecting both state centroids (after being rotated), that maximises the fidelity of the
+            classification.
 
         channels (list): A list of the channels to which the instrument is connected.
 
-        Sequencer 0 is used always for acquisitions and it is the first sequencer used to synthesise pulses.
-        Sequencer 1 to 6 are used as needed to synthesise simultaneous pulses on the same channel (required in
-        multiplexed readout) or when the memory of the default sequencers rans out.
 
     """
 
@@ -330,35 +296,36 @@ class ClusterQRM_RF(Instrument):
         A connection to the instrument needs to be established beforehand.
         Args:
             **kwargs: dict = A dictionary of settings loaded from the runcard:
-                kwargs['ports']['o1']['channel'] (int | str): the id of the refrigerator channel the output port o1 is
-                    connected to.
-                kwargs['ports']['o1']['attenuation'] (int): [0 to 60 dBm, in multiples of 2] attenuation at the output.
-                kwargs['ports']['o1']['lo_enabled'] (bool): enable or disable local oscillator for up-conversion.
-                kwargs['ports']['o1']['lo_frequency'] (int): [2_000_000_000 to 18_000_000_000 Hz] local oscillator
-                    frequency.
-                kwargs['ports']['o1']['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox
-                    recommends to keep `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their
-                    linear regime, if necessary, lowering the attenuation applied at the output.
-                kwargs['ports']['o1']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are
-                    modulated to the intermediate frequency using the numerically controlled oscillator within the
-                    fpga. It only requires the upload of the pulse envelope waveform.
-                kwargs['ports']['i1']['channel'] (int | str): the id of the refrigerator channel the input port i1 is
-                    connected to.
-                kwargs['ports']['i1']['hardware_demod_en'] (bool): enables Hardware Demodulation. In this mode, the
-                    sequencers of the fpga demodulate, integrate and classify the results for every shot. Once
-                    integrated, the i and q values and the result of the classification requires much less memory,
-                    so they can be stored for every shot in separate `bins` and retrieved later. Hardware Demodulation
-                    also allows making multiple readouts on the same qubit at different points in the circuit, which is
-                    not possible with Software Demodulation.
-                kwargs['acquisition_hold_off'] (int): [0 to 16834 ns, in multiples of 4] the time between the moment
-                    the start of the readout pulse begins to be played, and the start of the acquisition. This is used
-                    to account for the time of flight of the pulses from the output port to the input port.
-                kwargs['acquisition_duration'] (int): [0 to 8192 ns] the duration of the acquisition. It is limited by
-                    the amount of memory available in the fpga to store i q samples.
-                kwargs['classification_parameters'][qubit_id][rotation_angle] (float): [0.0 to 359.999 deg] the angle
-                    to rotate the results so that the projection on the real axis renders the maximum fidelity.
-                kwargs['classification_parameters'][qubit_id][threshold] (float): [-1.0 to 1.0 Volt] the voltage to be
-                    used as threshold to classify the state of each shot.
+
+                - kwargs['ports']['o1']['channel'] (int | str): the id of the refrigerator channel the output port o1 is
+                  connected to.
+                - kwargs['ports']['o1']['attenuation'] (int): [0 to 60 dBm, in multiples of 2] attenuation at the output.
+                - kwargs['ports']['o1']['lo_enabled'] (bool): enable or disable local oscillator for up-conversion.
+                - kwargs['ports']['o1']['lo_frequency'] (int): [2_000_000_000 to 18_000_000_000 Hz] local oscillator
+                  frequency.
+                - kwargs['ports']['o1']['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox
+                  recommends to keep `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their
+                  linear regime, if necessary, lowering the attenuation applied at the output.
+                - kwargs['ports']['o1']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are
+                  modulated to the intermediate frequency using the numerically controlled oscillator within the
+                  fpga. It only requires the upload of the pulse envelope waveform.
+                - kwargs['ports']['i1']['channel'] (int | str): the id of the refrigerator channel the input port i1 is
+                  connected to.
+                - kwargs['ports']['i1']['hardware_demod_en'] (bool): enables Hardware Demodulation. In this mode, the
+                  sequencers of the fpga demodulate, integrate and classify the results for every shot. Once
+                  integrated, the i and q values and the result of the classification requires much less memory,
+                  so they can be stored for every shot in separate `bins` and retrieved later. Hardware Demodulation
+                  also allows making multiple readouts on the same qubit at different points in the circuit, which is
+                  not possible with Software Demodulation.
+                - kwargs['acquisition_hold_off'] (int): [0 to 16834 ns, in multiples of 4] the time between the moment
+                  the start of the readout pulse begins to be played, and the start of the acquisition. This is used
+                  to account for the time of flight of the pulses from the output port to the input port.
+                - kwargs['acquisition_duration'] (int): [0 to 8192 ns] the duration of the acquisition. It is limited by
+                  the amount of memory available in the fpga to store i q samples.
+                - kwargs['classification_parameters'][qubit_id][rotation_angle] (float): [0.0 to 359.999 deg] the angle
+                  to rotate the results so that the projection on the real axis renders the maximum fidelity.
+                - kwargs['classification_parameters'][qubit_id][threshold] (float): [-1.0 to 1.0 Volt] the voltage to be
+                  used as threshold to classify the state of each shot.
 
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
@@ -476,13 +443,15 @@ class ClusterQRM_RF(Instrument):
         The output of the process is a list of sequencers used for each port, configured with the information
         required to play the sequence.
         The following features are supported:
+
             - multiplexed readout of up to 6 qubits
             - overlapping pulses
             - hardware modulation, demodulation, and classification
             - software modulation, with support for arbitrary pulses
             - software demodulation
             - binned acquisition
-            - real-time sweepers of
+            -  real-time sweepers of
+
                 - pulse frequency (requires hardware modulation)
                 - pulse relative phase (requires hardware modulation)
                 - pulse amplitude
@@ -490,6 +459,7 @@ class ClusterQRM_RF(Instrument):
                 - pulse duration
                 - port gain
                 - port offset
+
             - multiple readouts for the same qubit (sequence unrolling)
             - pulses of up to 8192 pairs of i, q samples
             - sequencer memory optimisation (waveforms cache)
@@ -956,74 +926,77 @@ class ClusterQRM_RF(Instrument):
         Returns:
             The results returned vary depending on whether demodulation is performed in software or hardware:
             - Software Demodulation:
-                Every readout pulse triggers an acquisition, where the 16384 i and q samples of the waveform
-                acquired by the ADC are saved into a dedicated memory within the FPGA. This is what qblox calls
-                *scoped acquisition*. The results of multiple shots are averaged in this memory, and cannot be
-                retrieved independently. The resulting waveforms averages (i and q) are then demodulated and
-                integrated in software (and finally divided by the number of samples).
-                Since Software Demodulation relies on the data of the scoped acquisition and that data is the
-                average of all acquisitions, **only one readout pulse per qubit is supported**, so that
-                the averages all correspond to reading the same quantum state.
-                Multiple symultaneous readout pulses on different qubits are supported.
-                The results returned are:
-                    acquisition_results["averaged_raw"] (dict): a dictionary containing tuples with the averages of
-                        the i and q waveforms for every readout pulse:
-                        ([i samples], [q samples])
-                        The data for a specific reaout pulse can be obtained either with:
-                            `acquisition_results["averaged_raw"][ro_pulse.serial]`
-                            `acquisition_results["averaged_raw"][ro_pulse.qubit]`
+              Every readout pulse triggers an acquisition, where the 16384 i and q samples of the waveform
+              acquired by the ADC are saved into a dedicated memory within the FPGA. This is what qblox calls
+              *scoped acquisition*. The results of multiple shots are averaged in this memory, and cannot be
+              retrieved independently. The resulting waveforms averages (i and q) are then demodulated and
+              integrated in software (and finally divided by the number of samples).
+              Since Software Demodulation relies on the data of the scoped acquisition and that data is the
+              average of all acquisitions, **only one readout pulse per qubit is supported**, so that
+              the averages all correspond to reading the same quantum state.
+              Multiple symultaneous readout pulses on different qubits are supported.
+              The results returned are:
 
-                    acquisition_results["averaged_demodulated_integrated"] (dict): a dictionary containing tuples
-                    with the results of demodulating and integrating (averaging over time) the average of the
-                    waveforms for every pulse:
-                        `(amplitude[V], phase[rad], i[V], q[V])`
-                    The data for a specific readout pulse can be obtained either with:
-                        `acquisition_results["averaged_demodulated_integrated"][ro_pulse.serial]`
-                        `acquisition_results["averaged_demodulated_integrated"][ro_pulse.qubit]`
-                    Or directly with:
-                        `acquisition_results[ro_pulse.serial]`
-                        `acquisition_results[ro_pulse.qubit]`
+                - acquisition_results["averaged_raw"] (dict): a dictionary containing tuples with the averages of
+                  the i and q waveforms for every readout pulse:
+                  ([i samples], [q samples])
+                  The data for a specific reaout pulse can be obtained either with:
+
+                    - `acquisition_results["averaged_raw"][ro_pulse.serial]`
+                    - `acquisition_results["averaged_raw"][ro_pulse.qubit]`
+
+                - acquisition_results["averaged_demodulated_integrated"] (dict): a dictionary containing tuples
+                  with the results of demodulating and integrating (averaging over time) the average of the
+                  waveforms for every pulse: ``(amplitude[V], phase[rad], i[V], q[V])``
+
+              The data for a specific readout pulse can be obtained either with:
+
+                - `acquisition_results["averaged_demodulated_integrated"][ro_pulse.serial]`
+                - `acquisition_results["averaged_demodulated_integrated"][ro_pulse.qubit]`
+
+              Or directly with:
+
+                - `acquisition_results[ro_pulse.serial]`
+                - `acquisition_results[ro_pulse.qubit]`
 
             - Hardware Demodulation:
-                With hardware demodulation activated, the FPGA can demodulate, integrate (average over time), and classify
-                each shot individually, saving the results on separate bins. The raw data of each acquisition continues to
-                be averaged as with software modulation, so there is no way to access the raw data of each shot (unless
-                executed one shot at a time). The FPGA uses fixed point arithmetic for the demodulation and integration;
-                if the power level of the signal at the input port is low (the minimum resolution of the ADC is 240uV)
-                rounding precission errors can accumulate and render wrong results. It is advisable to have a power level
-                at least higher than 5mV.
+              With hardware demodulation activated, the FPGA can demodulate, integrate (average over time), and classify
+              each shot individually, saving the results on separate bins. The raw data of each acquisition continues to
+              be averaged as with software modulation, so there is no way to access the raw data of each shot (unless
+              executed one shot at a time). The FPGA uses fixed point arithmetic for the demodulation and integration;
+              if the power level of the signal at the input port is low (the minimum resolution of the ADC is 240uV)
+              rounding precission errors can accumulate and render wrong results. It is advisable to have a power level
+              at least higher than 5mV.
+              The results returned are:
 
-                The results returned are:
-                    acquisition_results["demodulated_integrated_averaged"] (dict): a dictionary containing tuples
-                    with the results of demodulating and integrating (averaging over time) each shot waveform and then
-                    averaging of the many shots:
-                        `(amplitude[V], phase[rad], i[V], q[V])`
-                    acquisition_results["demodulated_integrated_binned"] (dict): a dictionary containing tuples of lists
-                    with the results of demodulating and integrating every shot waveform:
-                        `([amplitudes[V]], [phases[rad]], [is[V]], [qs[V]])`
-                    acquisition_results["demodulated_integrated_classified_binned"] (dict): a dictionary containing lists
-                    with the results of demodulating, integrating and classifying every shot:
-                        `([states[0 or 1]])`
-                    acquisition_results["probability"] (dict): a dictionary containing the frequency of state 1 measurements:
-                        total number of shots classified as 1 / number of shots
+                - acquisition_results["demodulated_integrated_averaged"] (dict): a dictionary containing tuples
+                  with the results of demodulating and integrating (averaging over time) each shot waveform and then
+                  averaging of the many shots: ``(amplitude[V], phase[rad], i[V], q[V])``
+                - acquisition_results["demodulated_integrated_binned"] (dict): a dictionary containing tuples of lists
+                  with the results of demodulating and integrating every shot waveform: ``([amplitudes[V]], [phases[rad]], [is[V]], [qs[V]])``
+                - acquisition_results["demodulated_integrated_classified_binned"] (dict): a dictionary containing lists
+                  with the results of demodulating, integrating and classifying every shot: ``([states[0 or 1]])``
+                - acquisition_results["probability"] (dict): a dictionary containing the frequency of state 1 measurements:
+                      total number of shots classified as 1 / number of shots
 
-                If the number of readout pulses per qubit is only one, then the following is also provided:
-                    acquisition_results["averaged_raw"] (dict): a dictionary containing tuples with the averages of
-                        the i and q waveforms for every readout pulse:
-                        ([i samples], [q samples])
-                    acquisition_results["averaged_demodulated_integrated"] (dict): a dictionary containing tuples
-                    with the results of demodulating and integrating (averaging over time) the average of the
-                    waveforms for every pulse:
-                        `(amplitude[V], phase[rad], i[V], q[V])`
+              If the number of readout pulses per qubit is only one, then the following is also provided:
 
-                    The data within each of the above dictionaries, for a specific readout pulse or for the last readout
-                    pulse of a qubit can be retrieved either with:
-                        `acquisition_results[dictionary_name][ro_pulse.serial]`
-                        `acquisition_results[dictionary_name][ro_pulse.qubit]`
+                - acquisition_results["averaged_raw"] (dict): a dictionary containing tuples with the averages of
+                  the i and q waveforms for every readout pulse: ``([i samples], [q samples])``
+                - acquisition_results["averaged_demodulated_integrated"] (dict): a dictionary containing tuples
+                  with the results of demodulating and integrating (averaging over time) the average of the
+                  waveforms for every pulse: ``(amplitude[V], phase[rad], i[V], q[V])``
 
-                    And acquisition_results["averaged_demodulated_integrated"] directly with:
-                        `acquisition_results[ro_pulse.serial]`
-                        `acquisition_results[ro_pulse.qubit]`
+              The data within each of the above dictionaries, for a specific readout pulse or for the last readout
+              pulse of a qubit can be retrieved either with:
+
+                - `acquisition_results[dictionary_name][ro_pulse.serial]`
+                - `acquisition_results[dictionary_name][ro_pulse.qubit]`
+
+              And acquisition_results["averaged_demodulated_integrated"] directly with:
+
+                - `acquisition_results[ro_pulse.serial]`
+                - `acquisition_results[ro_pulse.qubit]`
 
         """
 

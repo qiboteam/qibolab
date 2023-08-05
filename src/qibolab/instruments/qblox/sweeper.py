@@ -17,14 +17,14 @@ from qibolab.sweeper import Parameter, Sweeper
 class QbloxSweeperType(Enum):
     """An enumeration for the different types of sweepers supported by qblox.
 
-    frequency: sweeps pulse frequency by adjusting the sequencer `nco_freq` with q1asm command `set_freq`.
-    gain: sweeps sequencer gain by adjusting the sequencer `gain_awg_path0` and `gain_awg_path1` with q1asm command
-        `set_awg_gain`. Since the gain is a parameter between -1 and 1 that multiplies the samples of the waveforms
-        before they are fed to the DACs, it can be used to sweep the pulse amplitude.
-    offset: sweeps sequencer offset by adjusting the sequencer `offset_awg_path0` and `offset_awg_path1` with q1asm
-        command `set_awg_offs`
-    start: sweeps pulse start.
-    duration: sweeps pulse duration.
+    - frequency: sweeps pulse frequency by adjusting the sequencer `nco_freq` with q1asm command `set_freq`.
+    - gain: sweeps sequencer gain by adjusting the sequencer `gain_awg_path0` and `gain_awg_path1` with q1asm command
+      `set_awg_gain`. Since the gain is a parameter between -1 and 1 that multiplies the samples of the waveforms
+      before they are fed to the DACs, it can be used to sweep the pulse amplitude.
+    - offset: sweeps sequencer offset by adjusting the sequencer `offset_awg_path0` and `offset_awg_path1` with q1asm
+      command `set_awg_offs`
+    - start: sweeps pulse start.
+    - duration: sweeps pulse duration.
     """
 
     frequency = auto()
@@ -42,9 +42,11 @@ class QbloxSweeper:
     """A custom sweeper object with the data and functionality required by qblox instruments.
 
     It is responsible for generating the q1asm code required to execute sweeps in a sequencer. The object can be
-        initialised with either:
-            a :class:`qibolab.sweepers.Sweeper` using the :func:`qibolab.instruments.qblox.QbloxSweeper.from_sweeper`, or
-            a range of values and a sweeper type (:class:`qibolab.instruments.qblox.QbloxSweeperType`)
+    initialised with either:
+
+    - a :class:`qibolab.sweepers.Sweeper` using the :func:`qibolab.instruments.qblox.QbloxSweeper.from_sweeper`, or
+    - a range of values and a sweeper type (:class:`qibolab.instruments.qblox.QbloxSweeperType`)
+
     Like most FPGAs, qblox FPGAs do not support floating point arithmetics. All parameters that can be manipulated in
     real time within the FPGA are represented as two's complement integers.
 
@@ -58,7 +60,7 @@ class QbloxSweeper:
             a parameter of the sequencer needs to be swept or not.
 
     Methods:
-        block(inner_block: :class:`qibolab.instruments.qblox_q1asm.Block): generates the block of q1asm code that implements
+        block(inner_block: :class:`qibolab.instruments.qblox_q1asm.Block`): generates the block of q1asm code that implements
             the sweep.
     """
 
@@ -214,6 +216,8 @@ class QbloxSweeper:
 
         The q1asm code for a sweeper has the following structure:
 
+        .. code-block:: text
+
             # header_block
             # initialise register with start value
             move    0, R0           # 0 = start value, R0 = register name
@@ -238,7 +242,7 @@ class QbloxSweeper:
                                     # with R0 values of 0, 2500, 5000, 7500 and 10000
 
         Args:
-            inner_block (:class:`qibolab.instruments.qblox_q1asm.Block): the block of q1asm code to be repeated within
+            inner_block (:class:`qibolab.instruments.qblox_q1asm.Block`): the block of q1asm code to be repeated within
                 the loop.
 
         """

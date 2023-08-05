@@ -1,34 +1,4 @@
-""" Qblox instruments driver.
-
-Supports the following Instruments:
-    Cluster
-    Cluster QRM-RF
-    Cluster QCM-RF
-    Cluster QCM
-Compatible with qblox-instruments driver 0.9.0 (28/2/2023).
-It supports:
-    - multiplexed readout of up to 6 qubits
-    - hardware modulation, demodulation, and classification
-    - software modulation, with support for arbitrary pulses
-    - software demodulation
-    - binned acquisition
-    - real-time sweepers of
-        - pulse frequency (requires hardware modulation)
-        - pulse relative phase (requires hardware modulation)
-        - pulse amplitude
-        - pulse start
-        - pulse duration
-        - port gain
-        - port offset
-    - multiple readouts for the same qubit (sequence unrolling)
-    - max iq pulse length 8_192ns
-    - waveforms cache, uses additional free sequencers if the memory of one sequencer (16384) is exhausted
-    - instrument parameters cache
-    - safe disconnection of offsets on termination
-
-The operation of multiple clusters simultaneously is not supported yet.
-https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/
-"""
+""" Qblox Cluster QCM-RF driver."""
 
 import json
 
@@ -83,6 +53,8 @@ class ClusterQCM_RF(Instrument):
     the communication with the instrument only happens when the parameters change.
     This caching is done with the method `_set_device_parameter(target, *parameters, value)`.
 
+    .. code-block:: text
+
         ports:
             o1:                     # output port settings
                 channel                      : L3-11
@@ -97,14 +69,6 @@ class ClusterQCM_RF(Instrument):
                 lo_frequency                 : 5_091_155_529    # (Hz) from 2e9 to 18e9
                 gain                         : 0.28             # for path0 and path1 -1.0<=v<=1.0
 
-    The class inherits from Instrument and implements its interface methods:
-        __init__()
-        connect()
-        setup()
-        start()
-        stop()
-        disconnect()
-
     Attributes:
         name (str): A unique name given to the instrument.
         address (str): IP_address:module_number (the IP address of the cluster and
@@ -115,49 +79,52 @@ class ClusterQCM_RF(Instrument):
             https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/api_reference/qcm_qrm.html
 
         ports = A dictionary giving access to the output ports objects.
-            ports['o1']
-            ports['o2']
 
-            ports['o1'].channel (int | str): the id of the refrigerator channel the port is connected to.
-            ports['o1'].attenuation (int): (mapped to qrm.out0_att) Controls the attenuation applied to
-                the output port. Must be a multiple of 2
-            ports['o1'].lo_enabled (bool): (mapped to qrm.out0_in0_lo_en) Enables or disables the
-                local oscillator.
-            ports['o1'].lo_frequency (int): (mapped to qrm.out0_in0_lo_freq) Sets the frequency of the
-                local oscillator.
-            ports['o1'].gain (float): (mapped to qrm.sequencers[0].gain_awg_path0 and qrm.sequencers[0].gain_awg_path1)
-                Sets the gain on both paths of the output port.
-            ports['o1'].hardware_mod_en (bool): (mapped to qrm.sequencers[0].mod_en_awg) Enables pulse
-                modulation in hardware. When set to False, pulse modulation is done at the host computer
-                and a modulated pulse waveform should be uploaded to the instrument. When set to True,
-                the envelope of the pulse should be uploaded to the instrument and it modulates it in
-                real time by its FPGA using the sequencer nco (numerically controlled oscillator).
-            ports['o1'].nco_freq (int): (mapped to qrm.sequencers[0].nco_freq)        # TODO mapped, but not configurable from the runcard
-            ports['o1'].nco_phase_offs = (mapped to qrm.sequencers[0].nco_phase_offs) # TODO mapped, but not configurable from the runcard
+            - ports['o1']
+            - ports['o2']
 
-            ports['o2'].channel (int | str): the id of the refrigerator channel the port is connected to.
-            ports['o2'].attenuation (int): (mapped to qrm.out1_att) Controls the attenuation applied to
-                the output port. Must be a multiple of 2
-            ports['o2'].lo_enabled (bool): (mapped to qrm.out1_lo_en) Enables or disables the
-                local oscillator.
-            ports['o2'].lo_frequency (int): (mapped to qrm.out1_lo_freq) Sets the frequency of the
-                local oscillator.
-            ports['o2'].gain (float): (mapped to qrm.sequencers[1].gain_awg_path0 and qrm.sequencers[0].gain_awg_path1)
-                Sets the gain on both paths of the output port.
-            ports['o2'].hardware_mod_en (bool): (mapped to qrm.sequencers[1].mod_en_awg) Enables pulse
-                modulation in hardware. When set to False, pulse modulation is done at the host computer
-                and a modulated pulse waveform should be uploaded to the instrument. When set to True,
-                the envelope of the pulse should be uploaded to the instrument and it modulates it in
-                real time by its FPGA using the sequencer nco (numerically controlled oscillator).
-            ports['o2'].nco_freq (int): (mapped to qrm.sequencers[1].nco_freq)        # TODO mapped, but not configurable from the runcard
-            ports['o2'].nco_phase_offs = (mapped to qrm.sequencers[1].nco_phase_offs) # TODO mapped, but not configurable from the runcard
+            - ports['o1'].channel (int | str): the id of the refrigerator channel the port is connected to.
+            - ports['o1'].attenuation (int): (mapped to qrm.out0_att) Controls the attenuation applied to
+              the output port. Must be a multiple of 2
+            - ports['o1'].lo_enabled (bool): (mapped to qrm.out0_in0_lo_en) Enables or disables the
+              local oscillator.
+            - ports['o1'].lo_frequency (int): (mapped to qrm.out0_in0_lo_freq) Sets the frequency of the
+              local oscillator.
+            - ports['o1'].gain (float): (mapped to qrm.sequencers[0].gain_awg_path0 and qrm.sequencers[0].gain_awg_path1)
+              Sets the gain on both paths of the output port.
+            - ports['o1'].hardware_mod_en (bool): (mapped to qrm.sequencers[0].mod_en_awg) Enables pulse
+              modulation in hardware. When set to False, pulse modulation is done at the host computer
+              and a modulated pulse waveform should be uploaded to the instrument. When set to True,
+              the envelope of the pulse should be uploaded to the instrument and it modulates it in
+              real time by its FPGA using the sequencer nco (numerically controlled oscillator).
+            - ports['o1'].nco_freq (int): (mapped to qrm.sequencers[0].nco_freq)        # TODO mapped, but not configurable from the runcard
+            - ports['o1'].nco_phase_offs = (mapped to qrm.sequencers[0].nco_phase_offs) # TODO mapped, but not configurable from the runcard
+
+            - ports['o2'].channel (int | str): the id of the refrigerator channel the port is connected to.
+            - ports['o2'].attenuation (int): (mapped to qrm.out1_att) Controls the attenuation applied to
+              the output port. Must be a multiple of 2
+            - ports['o2'].lo_enabled (bool): (mapped to qrm.out1_lo_en) Enables or disables the
+              local oscillator.
+            - ports['o2'].lo_frequency (int): (mapped to qrm.out1_lo_freq) Sets the frequency of the
+              local oscillator.
+            - ports['o2'].gain (float): (mapped to qrm.sequencers[1].gain_awg_path0 and qrm.sequencers[0].gain_awg_path1)
+              Sets the gain on both paths of the output port.
+            - ports['o2'].hardware_mod_en (bool): (mapped to qrm.sequencers[1].mod_en_awg) Enables pulse
+              modulation in hardware. When set to False, pulse modulation is done at the host computer
+              and a modulated pulse waveform should be uploaded to the instrument. When set to True,
+              the envelope of the pulse should be uploaded to the instrument and it modulates it in
+              real time by its FPGA using the sequencer nco (numerically controlled oscillator).
+            - ports['o2'].nco_freq (int): (mapped to qrm.sequencers[1].nco_freq)        # TODO mapped, but not configurable from the runcard
+            - ports['o2'].nco_phase_offs = (mapped to qrm.sequencers[1].nco_phase_offs) # TODO mapped, but not configurable from the runcard
+
+                - Sequencer 0 is always the first sequencer used to synthesise pulses on port o1.
+                - Sequencer 1 is always the first sequencer used to synthesise pulses on port o2.
+                - Sequencer 2 to 6 are used as needed to sinthesise simultaneous pulses on the same channel
+                  or when the memory of the default sequencers rans out.
+
 
         channels (list): A list of the channels to which the instrument is connected.
 
-        Sequencer 0 is always the first sequencer used to synthesise pulses on port o1.
-        Sequencer 1 is always the first sequencer used to synthesise pulses on port o2.
-        Sequencer 2 to 6 are used as needed to sinthesise simultaneous pulses on the same channel
-        or when the memory of the default sequencers rans out.
 
     """
 
@@ -330,25 +297,26 @@ class ClusterQCM_RF(Instrument):
         A connection to the instrument needs to be established beforehand.
         Args:
             **kwargs: dict = A dictionary of settings loaded from the runcard:
-                kwargs['ports']['o1']['channel'] (int | str): the id of the refrigerator channel the output port o1 is connected to.
-                kwargs['ports']['o1']['attenuation'] (int): [0 to 60 dBm, in multiples of 2] attenuation at the output.
-                kwargs['ports']['o1']['lo_enabled'] (bool): enable or disable local oscillator for up-conversion.
-                kwargs['ports']['o1']['lo_frequency'] (int): [2_000_000_000 to 18_000_000_000 Hz] local oscillator frequency.
-                kwargs['ports']['o1']['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
-                    `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their linear regime, if necessary, lowering the attenuation
-                    applied at the output.
-                kwargs['ports']['o1']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
-                    using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
 
-                kwargs['ports']['o2']['channel'] (int | str): the id of the refrigerator channel the output port o2 is connected to.
-                kwargs['ports']['o2']['attenuation'] (int): [0 to 60 dBm, in multiples of 2] attenuation at the output.
-                kwargs['ports']['o2']['lo_enabled'] (bool): enable or disable local oscillator for up-conversion.
-                kwargs['ports']['o2']['lo_frequency'] (int): [2_000_000_000 to 18_000_000_000 Hz] local oscillator frequency.
-                kwargs['ports']['o2']['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
-                    `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their linear regime, if necessary, lowering the attenuation
-                    applied at the output.
-                kwargs['ports']['o2']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
-                    using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
+                - kwargs['ports']['o1']['channel'] (int | str): the id of the refrigerator channel the output port o1 is connected to.
+                - kwargs['ports']['o1']['attenuation'] (int): [0 to 60 dBm, in multiples of 2] attenuation at the output.
+                - kwargs['ports']['o1']['lo_enabled'] (bool): enable or disable local oscillator for up-conversion.
+                - kwargs['ports']['o1']['lo_frequency'] (int): [2_000_000_000 to 18_000_000_000 Hz] local oscillator frequency.
+                - kwargs['ports']['o1']['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
+                  `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their linear regime, if necessary, lowering the attenuation
+                  applied at the output.
+                - kwargs['ports']['o1']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
+                  using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
+
+                - kwargs['ports']['o2']['channel'] (int | str): the id of the refrigerator channel the output port o2 is connected to.
+                - kwargs['ports']['o2']['attenuation'] (int): [0 to 60 dBm, in multiples of 2] attenuation at the output.
+                - kwargs['ports']['o2']['lo_enabled'] (bool): enable or disable local oscillator for up-conversion.
+                - kwargs['ports']['o2']['lo_frequency'] (int): [2_000_000_000 to 18_000_000_000 Hz] local oscillator frequency.
+                - kwargs['ports']['o2']['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
+                  `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their linear regime, if necessary, lowering the attenuation
+                  applied at the output.
+                - kwargs['ports']['o2']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
+                  using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
 
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
@@ -457,10 +425,12 @@ class ClusterQCM_RF(Instrument):
         The output of the process is a list of sequencers used for each port, configured with the information
         required to play the sequence.
         The following features are supported:
+
             - overlapping pulses
             - hardware modulation
             - software modulation, with support for arbitrary pulses
             - real-time sweepers of
+
                 - pulse frequency (requires hardware modulation)
                 - pulse relative phase (requires hardware modulation)
                 - pulse amplitude
@@ -468,6 +438,7 @@ class ClusterQCM_RF(Instrument):
                 - pulse duration
                 - port gain
                 - port offset
+
             - sequencer memory optimisation (waveforms cache)
             - extended waveform memory with the use of multiple sequencers
             - pulses of up to 8192 pairs of i, q samples

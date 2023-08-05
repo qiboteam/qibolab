@@ -524,3 +524,18 @@ Native
 
 Instruments
 ===========
+
+One the key features of qibolab is its support for multiple different instruments.
+A list of all the supported instruments follows:
+
+Controllers:
+    - Dummy Instrument: :class:`qibolab.instruments.dummy.DummyInstrument`
+    - Zurich Instruments: :class:`qibolab.instruments.zhinst.Zurich`
+    - Quantum Machines: :class:`qibolab.instruments.qm.driver.QMOPX`
+    - Qblox: :class:`qibolab.instruments.qblox.cluster.Cluster`
+    - Xilinx RFSoCs: :class:`qibolab.instruments.rfsoc.driver.RFSoC`
+
+Other Instruments:
+    - Erasynth++: :class:`qibolab.instruments.erasynth.ERA`
+    - RohseSchwarz SGS100A: :class:`qibolab.instruments.rohde_schwarz.SGS100A`
+    - Qutech SPI rack: :class:`qibolab.instruments.qutech.SPI`
