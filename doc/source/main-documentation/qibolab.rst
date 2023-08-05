@@ -267,11 +267,32 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
     sequence_ch1 = sequence.get_channel_pulses("channel1")  # Selecting pulses on channel 1
     print(f"We have {sequence_ch1.count} pulses on channel 1.")
 
+.. warning::
+
+    Pulses in PulseSequences are ordered automatically following the start time (and the channel if needed). Not by the definition order.
+
 When conducting experiments on quantum hardware, pulse sequences are vital. Assuming you have already initialized a platform, executing an experiment is as simple as:
 
 .. code-block:: python
 
    result = my_platform.execute_pulse_sequence(sequence)
+
+Lastly, when conducting an experiment, it is not always required to define a pulse from scratch.
+Usual pulses, as pi-pulses or measurements are already defined in the platform runcard and can be easily initialized with platform methods.
+Typical experiments may include both pre-defined pulses and new ones:
+
+.. code-block:: python
+
+    sequence = PulseSequence()
+    sequence.add(my_platform.create_RX_pulse())
+    sequence.add(DrivePulse(...))
+    sequence.add(my_platform.create_MZ_pulse())
+
+    results = my_platform.execute_pulse_sequence(sequence, options=options)
+
+.. note::
+
+   options is an :class:`qibolab.execution_parameters.ExecutionParameters` object, detailed in a separate section.
 
 Symbolic expressions
 ====================
@@ -279,11 +300,221 @@ Symbolic expressions
 Sweepers
 ========
 
-Results
-=======
+Sweeper objects, represented by the :class:`qibolab.sweeper.Sweeper` class, stand as a crucial component in experiments and calibration tasks within the Qibolab framework.
+
+Consider a scenario where a resonator spectroscopy experiment is performed. This process involves a sequence of steps:
+
+1. Define a pulse sequence.
+2. Define a readout pulse with frequency A.
+3. Execute the sequence.
+4. Define a new readout pulse with frequency A + $\epsilon$.
+5. Execute the sequence again.
+6. Repeat for increasing frequencies A + 2$\epsilon$, A + 3$\epsilon$, and so on.
+
+This approach is suboptimal and time-consuming, mainly due to the frequent communication between the control device and the Qibolab user after each execution. Such communication overhead significantly extends experiment duration.
+
+In supported control devices, an efficient technique involves defining a "sweeper" or a parameter scan directly on the device. This scan, applied to specific parameters, allows multiple variations to be executed in a single communication round, drastically reducing experiment time.
+
+To address the inefficiency, Qibolab introduces the concept of Sweeper objects.
+
+Sweeper objects in Qibolab are characterized by a :class:`qibolab.sweeper.Parameter`. This parameter, crucial to the sweeping process, can be one of several types:
+
+- Frequency
+- Amplitude
+- Duration
+- Relative_phase
+- Start
+
+--
+
+- Attenuation
+- Gain
+- Bias
+
+The first group includes parameters of the pulses, while the second group include parameters of a different type that, in qibolab, are linked to a qubit object.
+
+To designate the qubit or pulse to which a sweeper is applied, you can utilize the ``pulses`` or ``qubits`` parameter within the Sweeper object.
+
+.. note::
+
+   It is possible to simultaneously execute the same sweeper on different pulses or qubits. The ``pulses`` or ``qubits`` attribute is designed as a list, allowing for this flexibility.
+
+To effectively specify the sweeping behavior, Qibolab provides the ``values`` attribute along with the ``type`` attribute.
+
+The ``values`` attribute comprises an array of numerical values that define the sweeper's progression. To facilitate multi-qubit execution, these numbers can be interpreted in three ways:
+
+- Absolute Values: Represented by `qibolab.sweeper.PulseType.ABSOLUTE`, these values are used directly.
+- Relative Values with Offset: Utilizing `qibolab.sweeper.PulseType.OFFSET`, these values are relative to a designated base value, corresponding to the pulse or qubit value.
+- Relative Values with Factor: Employing `qibolab.sweeper.PulseType.FACTOR`, these values are scaled by a factor from the base value, akin to a multiplier.
+
+For offset and factor sweepers, the base value is determined by the respective pulse or qubit value.
+
+Let's see some examples.
+Consider now a system with three qubits (qubit 0, qubit 1, qubit 2) with resonator frequency at 4 GHz, 5 GHz and 6 GHz.
+A tipical resonator spectroscopy experiment could be defined with:
+
+.. code-block:: python
+
+    sequence = PulseSequence()
+    sequence.add(my_platform.create_MZ_pulse(0))  # readout pulse for qubit 0 at 4 GHz
+    sequence.add(my_platform.create_MZ_pulse(1))  # readout pulse for qubit 1 at 5 GHz
+    sequence.add(my_platform.create_MZ_pulse(2))  # readout pulse for qubit 2 at 6 GHz
+
+    sweeper = Sweeper(
+        parameter=Parameter.frequency,
+        values=np.arange(-200_000, +200_000, 1),  # define an interval of swept values
+        pulses=[sequence[0], sequence[1], sequence[2]],
+        type=SweeperType.OFFSET,
+    )
+
+    results = my_platform.sweep(sequence, options, sweeper)
+
+.. note::
+
+   options is an :class:`qibolab.execution_parameters.ExecutionParameters` object, detailed in a separate section.
+
+In this way, we first define a sweeper with an interval of 400 MHz (-200 MHz --- 200 MHz), assigning it to all three readout pulses and setting is as an offset sweeper. The resulting probed frequency will then be:
+    - for qubit 0: [3.8 GHz, 4.2 GHz]
+    - for qubit 1: [4.8 GHz, 5.2 GHz]
+    - for qubit 2: [5.8 GHz, 6.2 GHz]
+
+If we had used the SweeperType absolute, we would have probed for all qubits the same frequencies [-200 MHz, 200 MHz].
+
+.. note::
+
+   The default SweeperType is absolute!
+
+For factor sweepers, usually useful when dealing with amplitudes, the base value is multipled by the values set.
+
+It is possible to define and executes multiple sweepers at the same time.
+For example:
+
+.. code-block:: python
+
+    sequence = PulseSequence()
+
+    sequence.add(my_platform.create_RX_pulse())
+    sequence.add(my_platform.create_MZ_pulse(start=sequence[0].finish))
+
+    sweeper_freq = Sweeper(
+        parameter=Parameter.frequency,
+        values=np.arange(-100_000, +100_000, 10_000),
+        pulses=[sequence[0]],
+        type=SweeperType.OFFSET,
+    )
+    sweeper_amp = Sweeper(
+        parameter=Parameter.amplitude,
+        values=np.arange(0, 1.5, 0.1),
+        pulses=[sequence[0]],
+        type=SweeperType.FACTOR,
+    )
+
+    results = my_platform.sweep(sequence, options, sweeper_freq, sweeper_amp)
+
+Let's say that the RX pulse has, from the runcard, a frequency of 4.5 GHz and an amplitude of 0.3, the parameter space probed will be:
+
+- amplitudes: [0, 0.03, 0.06, 0.09, 0.12, ..., 0.39, 0.42]
+- frequencies: [4.4999, 4.49991, 4.49992, ...., 4.50008, 4.50009] (GHz)
+
+.. warning::
+
+   Different control devices may have different limitations on the sweepers.
+   It is possible that the sweeper will raise an error, if not supported, or that it will be automatically converted as a list of pulse sequences to perform sequentially.
 
 Execution Parameters
 ====================
+
+In the course of several examples, you've encountered the ``options`` argument in function calls like:
+
+.. code-block:: python
+
+   res = my_platform.execute_pulse_sequence(..., options=options)
+   res = my_platform.sweep(..., options=options)
+
+Let's now delve into the details of the ``options`` parameter and understand its components.
+
+The ``options`` parameter, represented by the :class:`qibolab.execution_parameters.ExecutionParameters` class, is a vital element for every hardware execution. It encompasses essential information that tailors the execution to specific requirements:
+
+- ``nshots``: Specifies the number of experiment repetitions.
+- ``relaxation_time``: Introduces a wait time between repetitions, measured in nanoseconds (ns).
+- ``fast_reset``: Enables or disables fast reset functionality, if supported; raises an error if not supported.
+- ``acquisition_type``: Determines the acquisition mode for results.
+- ``averaging_mode``: Defines the mode for result averaging.
+
+The first three parameters are straightforward in their purpose. However, let's take a closer look at the last two parameters.
+
+Supported acquisition types, accessible via the :class:`qibolab.execution_parameters.AcquisitionType` enumeration, include:
+
+- Discrimination: Distinguishes states based on acquired voltages.
+- Integration: Returns demodulated and integrated waveforms.
+- Raw: Offers demodulated, yet unintegrated waveforms.
+- Spectroscopy: Designed specifically for spectroscopy applications, primarily supported by Zurich Instruments devices.
+
+Supported averaging modes, available through the :class:`qibolab.execution_parameters.AveragingMode` enumeration, consist of:
+
+- Cyclic: Provides averaged results, yielding a single IQ point per measurement.
+- Singleshot: Supplies non-averaged results.
+
+.. note::
+
+    Two averaging modes actually exists: cyclic and sequential.
+    In sequential mode, a sweeper is executed with the repetition loop nested inside, while cyclic mode places the sweeper as the outermost loop. Cyclic execution generally offers better noise resistance.
+    Ideally, use the cyclic mode. However, some devices lack support for it and will automatically convert it to sequential execution.
+
+
+Results
+=======
+
+Within the qibolab API, a variety of result types are available, contingent upon the chosen acquisition options. These results can be broadly classified into three main categories, based on the AcquisitionType:
+
+- Integrated Results (:class:`qibolab.result.IntegratedResults`)
+- Raw Waveform Results (:class:`qibolab.result.RawWaveformResults`)
+- Sampled Results (:class:`qibolab.result.SampleResults`)
+
+Furthermore, depending on whether results are averaged or not, they can be presented in an averaged version (as seen in :class:`qibolab.results.AveragedIntegratedResults`).
+
+The result categories align as follows:
+
+- AveragingMode: cyclic or sequential ->
+    - AcquisitionType: integration -> :class:`qibolab.results.AveragedIntegratedResults`
+    - AcquisitionType: raw -> :class:`qibolab.results.AveragedRawWaveformResults`
+    - AcquisitionType: discrimination -> :class:`qibolab.results.AveragedSampleResults`
+- AveragingMode: singleshot ->
+    - AcquisitionType: integration -> :class:`qibolab.results.IntegratedResults`
+    - AcquisitionType: raw -> :class:`qibolab.results.RawWaveformResults`
+    - AcquisitionType: discrimination -> :class:`qibolab.results.SampleResults`
+
+Let's now delve into a typical use case for result objects within the qibolab framework:
+
+.. code-block:: python
+
+    sequence = PulseSequence()
+    sequence.add(drive_pulse_1)
+    sequence.add(...)
+    sequence.add(measurement_pulse)
+
+    options = ExecutionParameters(
+        nshots=1000,
+        relaxation_time=10,
+        fast_reset=False,
+        acquisition_type=AcquisitionType.INTEGRATION,
+        averaging_mode=AveragingMode.CYCLIC,
+    )
+
+    res = my_platform.execute_pulse_sequence(sequence, options=options)
+
+The ``res`` object will manifest as a dictionary, mapping the measurement pulse serial to its corresponding results.
+
+The values related to the results will be find in the ``voltages`` attribute for IntegratedResults and RawWaveformResults, while for SampleResults  the values are in ``samples``.
+
+While for execution of sequences the results represent single measurements, but what happens for sweepers?
+the results will be upgraded: from values to arrays and from arrays to matrices.
+
+The shape of the values of an integreted acquisition with 2 sweepers will be:
+
+.. code-block:: python
+
+   shape = (options.nshots, len(sweeper1.values), len(sweeper2.values))
 
 Transpiler
 ==========
