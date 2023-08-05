@@ -307,9 +307,9 @@ Consider a scenario where a resonator spectroscopy experiment is performed. This
 1. Define a pulse sequence.
 2. Define a readout pulse with frequency A.
 3. Execute the sequence.
-4. Define a new readout pulse with frequency A + $\epsilon$.
+4. Define a new readout pulse with frequency A + :math:`\epsilon`.
 5. Execute the sequence again.
-6. Repeat for increasing frequencies A + 2$\epsilon$, A + 3$\epsilon$, and so on.
+6. Repeat for increasing frequencies A + 2 :math:`\epsilon`, A + 3 :math:`\epsilon`, and so on.
 
 This approach is suboptimal and time-consuming, mainly due to the frequent communication between the control device and the Qibolab user after each execution. Such communication overhead significantly extends experiment duration.
 
@@ -528,14 +528,84 @@ Instruments
 One the key features of qibolab is its support for multiple different instruments.
 A list of all the supported instruments follows:
 
-Controllers:
+Controllers (subclasses of :class:`qibolab.instruments.abstract.Controller`):
     - Dummy Instrument: :class:`qibolab.instruments.dummy.DummyInstrument`
     - Zurich Instruments: :class:`qibolab.instruments.zhinst.Zurich`
     - Quantum Machines: :class:`qibolab.instruments.qm.driver.QMOPX`
     - Qblox: :class:`qibolab.instruments.qblox.cluster.Cluster`
     - Xilinx RFSoCs: :class:`qibolab.instruments.rfsoc.driver.RFSoC`
 
-Other Instruments:
+Other Instruments (subclasses of :class:`qibolab.instruments.abstract.Instrument`):
     - Erasynth++: :class:`qibolab.instruments.erasynth.ERA`
     - RohseSchwarz SGS100A: :class:`qibolab.instruments.rohde_schwarz.SGS100A`
     - Qutech SPI rack: :class:`qibolab.instruments.qutech.SPI`
+
+Instruments all implement a set of methods:
+
+- connect
+- setup
+- start
+- stop
+- disconnect
+
+While the controllers, the main instruments in a typical setup, add other two methods:
+
+- execute_pulse_sequence
+- sweep
+
+Some more detail on the interal functionalities of instruments is given in :doc:`/tutorials/instrument`
+
+The most important instruments are the controller, the following is a table of the current supported (or not supported) features, dev stands for `under development`:
+
+.. csv-table:: Supported features
+    :header: "Feature", "RFSoC", "Qblox", "QM", "ZH"
+    :widths: 25, 5, 5, 5, 5
+
+    "Arbitrary pulse sequence",     "yes","yes","yes","yes"
+    "Arbitrary waveforms",          "yes","yes","yes","yes"
+    "Multiplexed readout",          "yes","yes","yes","yes"
+    "Hardware classification",      "no","yes","yes","yes"
+    "Fast reset",                   "dev","dev","dev","dev"
+    "Device simulation",            "no","no","yes","dev"
+    "RTS frequency",                "yes","yes","yes","yes"
+    "RTS amplitude",                "yes","yes","yes","yes"
+    "RTS duration",                 "yes","yes","yes","yes"
+    "RTS start",                    "yes","yes","yes","yes"
+    "RTS relative phase",           "yes","yes","yes","yes"
+    "RTS 2D any combination",       "yes","yes","yes","yes"
+    "Sequence unrolling",           "dev","dev","dev","dev"
+    "Hardware averaging",           "yes","yes","yes","yes"
+    "Singleshot (no averaging)",    "yes","yes","yes","yes"
+    "Integrated acquisition",       "yes","yes","yes","yes"
+    "Classified acquisition",       "yes","yes","yes","yes"
+    "Raw waveform acquisition",     "yes","yes","yes","yes"
+
+
+Zurich Instrument
+^^^^^^^^^^^^^^^^^
+
+Quantum Machines
+^^^^^^^^^^^^^^^^^
+
+Qblox
+^^^^^
+
+Supports the following Instruments:
+
+- Cluster
+- Cluster QRM-RF
+- Cluster QCM-RF
+- Cluster QCM
+
+Compatible with qblox-instruments driver 0.9.0 (28/2/2023).
+
+RFSoCs
+^^^^^^
+
+Compatible and tested with:
+
+- Xilinx RFSoC4x2
+- Xilinx ZCU111
+- Xilinx ZCU216
+
+Technically compatible with any board running ``qibosoq``.
