@@ -64,6 +64,8 @@ _______________________
 Supported instruments
 ^^^^^^^^^^^^^^^^^^^^^
 
+.. image:: qibolab_instruments.png
+
 Qibolab supports the following control instruments:
 
 * Quantum Machines
