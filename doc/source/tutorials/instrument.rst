@@ -1,5 +1,5 @@
-How to add a new instrument in Qibolab
-======================================
+How to add a new instrument in Qibolab?
+=======================================
 
 Currently, ``Qibolab`` support various instruments:
 as **controller**:
@@ -79,7 +79,7 @@ Here, let's write a basic example of instrument whose job is to deliver a fixed 
             """Stop biasing."""
             self.device.off(bias)
 
-Add a Controller
+Add a controller
 ----------------
 
 The controller is an instrument that has some additional methods, its abstract implementation can be found in :class:`qibolab.instruments.abstract.Controller`.

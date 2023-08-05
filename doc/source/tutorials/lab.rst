@@ -1,10 +1,11 @@
-How to connect Qibolab to your lab
-==================================
+How to connect Qibolab to your lab?
+===================================
 
 In this section we will show how to let ``Qibolab`` communicate with your lab’s instruments and run an experiment.
 
-The main required object, in this case, is the `Platform`.
-A Platform is defined as a QPU (one or more qubits) cotrolled by one ore more instruments.
+The main required object, in this case, is the `Platform`. A Platform is defined
+as a QPU (quantum processing unit with one or more qubits) controlled by one ore
+more instruments.
 
 How to define a platform for a self-hosted QPU?
 -----------------------------------------------
