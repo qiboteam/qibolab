@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 
 from recommonmark.transform import AutoStructify
+from sphinx.ext import apidoc
 
 import qibolab
 
@@ -124,7 +125,7 @@ def run_apidoc(_):
     source = Path(__file__).parent
     docs_dest = source / "api-reference"
     package = source.parents[1] / "src" / "qibolab"
-    apidoc.main(["--module-first --implicit-namespaces --no-toc", "-o", str(docs_dest), str(package)])
+    apidoc.main(["--no-toc", "--module-first", "-o", str(docs_dest), str(package)])
 
 
 def setup(app):
@@ -132,7 +133,7 @@ def setup(app):
     app.add_transform(AutoStructify)
     app.add_css_file("css/style.css")
 
-    # app.connect("builder-inited", run_apidoc)
+    app.connect("builder-inited", run_apidoc)
 
 
 html_show_sourcelink = False
