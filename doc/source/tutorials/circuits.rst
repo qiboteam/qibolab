@@ -102,8 +102,9 @@ results:
     simulation = execute_rotation()
 
     # plot results
-    plt.plot(hardware, label="rfsoc")
-    plt.plot(simulation, label="numpy")
+    exp_angles = np.arange(0, 2 * np.pi, np.pi / 16)
+    plt.plot(exp_angles, hardware, label="qibolab hardware")
+    plt.plot(exp_angles, simulation, label="numpy")
 
     plt.legend()
     plt.ylabel("P(1)")
@@ -112,5 +113,4 @@ results:
 
 Returns the following plot:
 
-.. image:: rotation.png
-    :scale: 50%
+.. image:: rotation.svg

@@ -182,4 +182,4 @@ See, for example, the already implemented ports:
 * :class:`qibolab.instruments.rfsoc.driver.RFSoCPort`
 * :class:`qibolab.instruments.qm.config.QMPort`
 * :class:`qibolab.instruments.zhinst.ZhPort`
-* :class:`qibolab.instruments.qblox.driver.QBloxPort`
+* :class:`qibolab.instruments.qblox.port`

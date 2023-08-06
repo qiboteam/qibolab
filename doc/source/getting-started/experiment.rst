@@ -169,4 +169,4 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
 
     plt.plot(frequencies, plt.amplitudes)
 
-.. image:: ../tutorials/resonator_spectroscopy.png
+.. image:: ../tutorials/resonator_spectroscopy.svg

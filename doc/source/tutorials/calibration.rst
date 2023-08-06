@@ -72,7 +72,7 @@ In few seconds, the experiment will be finished and we can proceed to plot it.
 
     plt.plot(frequencies, plt.amplitudes)
 
-.. image:: resonator_spectroscopy.png
+.. image:: resonator_spectroscopy.svg
 
 
 Qubit spectroscopy
@@ -131,7 +131,7 @@ We can now proceed to launch on hardware:
 
     plt.plot(frequencies, plt.amplitudes)
 
-.. image:: qubit_spectroscopy.png
+.. image:: qubit_spectroscopy.svg
 
 Single shot classification
 --------------------------
@@ -190,4 +190,4 @@ This experiment serves to assess the effectiveness of single-qubit calibration a
         label="Zero state",
     )
 
-.. image:: classification.png
+.. image:: classification.svg
