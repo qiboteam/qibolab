@@ -1,10 +1,5 @@
-"""RFSoC FPGA driver.
+"""RFSoC FPGA driver."""
 
-This driver needs a Qibosoq server installed and running
-Tested on the following FPGA:
-    - RFSoC 4x2
-    - ZCU111
-"""
 from dataclasses import asdict, dataclass
 from typing import Union
 
@@ -298,7 +293,7 @@ class RFSoC(Controller):
             for jdx, kdx in enumerate(sweeper.indexes):
                 sweeper_parameter = sweeper.parameters[jdx]
                 if sweeper_parameter is rfsoc.Parameter.BIAS:
-                    qubits[list(qubits.keys())[kdx]].flux.offset = values[jdx][idx]
+                    qubits[list(qubits)[kdx]].flux.offset = values[jdx][idx]
                 elif sweeper_parameter in rfsoc.Parameter.variants(
                     {
                         "amplitude",
@@ -360,25 +355,20 @@ class RFSoC(Controller):
         if any(pulse.type is PulseType.FLUX for pulse in sequence):
             return True
         for sweeper in sweepers:
-            all_bias = True
-            for sweep_idx, parameter in enumerate(sweeper.parameters):
-                if parameter is rfsoc.Parameter.BIAS:
-                    continue
-                else:
-                    all_bias = False
-                if parameter is rfsoc.Parameter.DURATION:
-                    return True
-                elif parameter is rfsoc.Parameter.DELAY:
-                    continue
+            if all(parameter is rfsoc.Parameter.BIAS for parameter in sweeper.parameters):
+                continue
+            if all(parameter is rfsoc.Parameter.DELAY for parameter in sweeper.parameters):
+                continue
+            if any(parameter is rfsoc.Parameter.DURATION for parameter in sweeper.parameters):
+                return True
 
+            for sweep_idx, parameter in enumerate(sweeper.parameters):
                 is_freq = parameter is rfsoc.Parameter.FREQUENCY
                 is_ro = sequence[sweeper.indexes[sweep_idx]].type == PulseType.READOUT
-
                 # if it's a sweep on the readout freq do a python sweep
                 if is_freq and is_ro:
                     return True
-            if all_bias:
-                continue
+
             for idx in sweeper.indexes:
                 sweep_pulse = sequence[idx]
                 channel = sweep_pulse.channel
