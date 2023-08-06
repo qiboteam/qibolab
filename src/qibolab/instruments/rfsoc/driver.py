@@ -1,10 +1,5 @@
-"""RFSoC FPGA driver.
+"""RFSoC FPGA driver."""
 
-This driver needs a Qibosoq server installed and running
-Tested on the following FPGA:
-    - RFSoC 4x2
-    - ZCU111
-"""
 from dataclasses import asdict, dataclass
 from typing import Union
 
@@ -298,7 +293,7 @@ class RFSoC(Controller):
             for jdx, kdx in enumerate(sweeper.indexes):
                 sweeper_parameter = sweeper.parameters[jdx]
                 if sweeper_parameter is rfsoc.Parameter.BIAS:
-                    qubits[list(qubits.keys())[kdx]].flux.offset = values[jdx][idx]
+                    qubits[list(qubits)[kdx]].flux.offset = values[jdx][idx]
                 elif sweeper_parameter in rfsoc.Parameter.variants(
                     {
                         "amplitude",

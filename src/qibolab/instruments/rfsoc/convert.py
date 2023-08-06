@@ -21,7 +21,7 @@ def replace_pulse_shape(rfsoc_pulse: rfsoc_pulses.Pulse, shape: PulseShape) -> r
             **asdict(rfsoc_pulse), i_values=shape.envelope_waveform_i, q_values=shape.envelope_waveform_q
         )
         return new_pulse
-    new_pulse_cls = getattr(rfsoc_pulses, shape.name)  # (**asdict(rfsoc_pulse))
+    new_pulse_cls = getattr(rfsoc_pulses, shape.name)
     if shape.name == "Rectangular":
         return new_pulse_cls(**asdict(rfsoc_pulse))
     if shape.name == "Gaussian":
